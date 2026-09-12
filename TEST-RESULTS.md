@@ -4,9 +4,10 @@ Fecha de cierre: 2026-09-13.
 
 ## Node.js/TypeScript
 
-- Suite `@p2lrn/toolkit`: **32/32 pasados, 0 fallos**.
+- Suite `@p2lrn/toolkit`: **34/34 pasados, 0 fallos**.
 - Legacy Alpha15 validados: **17/17**.
 - P2LRN canónicos validados: **17/17**.
+- Ejemplos distribuidos en `@p2lrn/toolkit` canónicos P2LRN: **2/2** (`minimal`, `web`).
 - Fuentes anidadas preservadas byte a byte: **4/4** (SCORM, H5P, cmi5, QTI).
 - Autoría canónica `open -> build`: **17/17** con `contentRoot` idéntico.
 - API `@p2lrn/toolkit/authoring`: create/load/update/open/build: **OK**.
