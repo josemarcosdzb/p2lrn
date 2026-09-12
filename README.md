@@ -76,12 +76,15 @@ Studio y otros hosts no deben enlazarse a los módulos internos de Creator. La f
 import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
 
 const workspace = P2LRNAuthoringWorkspace.open('curso.p2lrn', './workspace');
-workspace.update((draft) => {
-  draft.course.title.es = 'Curso editado';
-  draft.course.revision += 1;
+workspace.setCourseMetadata({
+  title: 'Curso editado',
+  incrementRevision: true,
 });
+workspace.addUnit({key: 'unidad-1', title: 'Unidad 1'});
 workspace.build('curso-editado.p2lrn', {strictProfiles: true});
 ```
+
+Studio debe usar estas operaciones tipadas para la edición normal. `project` es un snapshot desacoplado para inspección; `replace` y `update` quedan como escapes de bajo nivel deprecados para compatibilidad.
 
 La matriz `packages/toolkit/config/authoring-capabilities.json` separa explícitamente autoría, round-trip, lectura, preservación y `deliver`; no equipara la preservación de un estándar externo con su ejecución completa.
 

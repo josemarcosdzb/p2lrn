@@ -14,7 +14,6 @@ node dist/cli/main.js --help
 
 Primary commands include `p2lrn-validate`, `p2lrn-reader`, `p2lrn-create`, `p2lrn-convert`, `p2lrn-delta`, `p2lrn-trust`, `p2lrn-inspect`, `p2lrn-repack`, `p2lrn-extract-source`, `p2lrn-rebuild-examples`, `p2lrn-build-web-sdk` and `p2lrn-build-advanced-example`.
 
-
 ## Stable authoring API
 
 `@p2lrn/toolkit/authoring` is the supported integration boundary for P2LRN Studio and other editors. `AUTHORING_API_VERSION` is currently `1`; the editable project schema is `0.3.0`.
@@ -23,9 +22,15 @@ Primary commands include `p2lrn-validate`, `p2lrn-reader`, `p2lrn-create`, `p2lr
 import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
 
 const workspace = P2LRNAuthoringWorkspace.open('course.p2lrn', './workspace');
-workspace.update((draft) => { draft.course.revision += 1; });
+workspace.setCourseMetadata({
+  title: 'Curso editado',
+  incrementRevision: true,
+});
+workspace.addUnit({key: 'unidad-1', title: 'Unidad 1'});
 workspace.build('course-v2.p2lrn', {strictProfiles: true});
 ```
+
+Studio should use the typed authoring methods for normal edits. `project` is a detached inspection snapshot; `replace` and callback-based `update` remain deprecated low-level compatibility escape hatches.
 
 CLI equivalent:
 
