@@ -23,10 +23,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .import/p2rln-code.tar.gz.b64.part-* | base64 --decode > /tmp/p2rln-code.tar.gz
-          echo 'd054a3d507bb03e144c1057cb2fd9d21153dc5d6616145cf1a4e1455942c2785  /tmp/p2rln-code.tar.gz' | sha256sum -c -
-          tar -tzf /tmp/p2rln-code.tar.gz >/dev/null
-          tar -xzf /tmp/p2rln-code.tar.gz -C .
+          cat .import/p2rln-code.tar.xz.b64.part-* | base64 --decode > /tmp/p2rln-code.tar.xz
+          echo 'bb6f9c482d225f7acc214ba0dd0a297c2544b0e1fd5022d1bc31f224030ce366  /tmp/p2rln-code.tar.xz' | sha256sum -c -
+          tar -tJf /tmp/p2rln-code.tar.xz >/dev/null
+          tar -xJf /tmp/p2rln-code.tar.xz -C .
 
       - name: Verify requested source areas
         shell: bash
