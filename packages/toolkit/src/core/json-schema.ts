@@ -1,5 +1,8 @@
 import {ValidationError} from './errors.js';
 import {SCHEMA_REGISTRY} from './schema-registry.js';
+import {CREATOR_PROJECT_SCHEMA_030} from './creator-project-schema.js';
+
+const DEFAULT_SCHEMA_REGISTRY: Readonly<Record<string, any>> = Object.freeze({...SCHEMA_REGISTRY, [CREATOR_PROJECT_SCHEMA_030.$id]: CREATOR_PROJECT_SCHEMA_030});
 
 export interface SchemaIssue {path:string; message:string;}
 function typeOk(v:any,t:string):boolean{switch(t){case'null':return v===null;case'object':return !!v&&typeof v==='object'&&!Array.isArray(v);case'array':return Array.isArray(v);case'string':return typeof v==='string';case'number':return typeof v==='number'&&Number.isFinite(v);case'integer':return Number.isSafeInteger(v);case'boolean':return typeof v==='boolean';default:return true;}}
@@ -34,6 +37,6 @@ function run(schema:any,value:any,path:string,root:any,registry:Record<string,an
   }
   if(!silent)issues.push(...local);return ok;
 }
-export function schemaIssues(schemaOrId:any,value:any,registry:Record<string,any>={...SCHEMA_REGISTRY}):SchemaIssue[]{const root=typeof schemaOrId==='string'?registry[schemaOrId]:schemaOrId;if(!root)return[issue('$',`JSON Schema is not installed: ${schemaOrId}`)];const out:SchemaIssue[]=[];run(root,value,'$',root,registry,out);return out;}
+export function schemaIssues(schemaOrId:any,value:any,registry:Record<string,any>={...DEFAULT_SCHEMA_REGISTRY}):SchemaIssue[]{const root=typeof schemaOrId==='string'?registry[schemaOrId]:schemaOrId;if(!root)return[issue('$',`JSON Schema is not installed: ${schemaOrId}`)];const out:SchemaIssue[]=[];run(root,value,'$',root,registry,out);return out;}
 export function validateSchema(schemaOrId:any,value:any,label='document'):any{const errors=schemaIssues(schemaOrId,value);if(errors.length)throw new ValidationError(`invalid ${label}:\n${errors.slice(0,20).map((e)=>`${e.path}: ${e.message}`).join('\n')}`);return value;}
-export function schemaById(id:string):any{const s=(SCHEMA_REGISTRY as Record<string,any>)[id];if(!s)throw new ValidationError(`reference document is not installed: ${id}`);return structuredClone(s);}
+export function schemaById(id:string):any{const s=(DEFAULT_SCHEMA_REGISTRY as Record<string,any>)[id];if(!s)throw new ValidationError(`reference document is not installed: ${id}`);return structuredClone(s);}

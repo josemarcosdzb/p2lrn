@@ -12,7 +12,8 @@ const WEB_CONTENT_MAPPING_EXTENSION = 'https://p2lrn.org/extension/web-content-b
 export const RANGE_INTEGRITY_PATH = 'integrity/range-integrity.json';
 const te = new TextEncoder();
 function jsonBytes(obj) { return te.encode(JSON.stringify(obj, null, 2) + '\n'); }
-function descriptor(path, data, mediaType) { return { path, mediaType, size: data.byteLength, byteDigest: sha256(data), contentDigest: contentDigest(data, mediaType, path) }; }
+function descriptor(path, data, mediaType, schema) { const out = { path, mediaType, size: data.byteLength, byteDigest: sha256(data), contentDigest: contentDigest(data, mediaType, path) }; if (schema)
+    out.schema = schema; return out; }
 function assetPath(data) { const h = sha256(data).slice(7); return `assets/sha256/${h.slice(0, 2)}/${h.slice(2, 4)}/${h}`; }
 function copyFields(source, target, names) { for (const name of names)
     if (Object.prototype.hasOwnProperty.call(source, name))
@@ -60,11 +61,12 @@ export function compileProject(projectRoot, project) {
     if (project.targetFormatVersion !== FORMAT_VERSION)
         throw new ProjectError(`unsupported targetFormatVersion: ${project.targetFormatVersion}`);
     const ns = uuidNamespace(project.projectId), ids = new Map();
-    ids.set(project.course.key, portableUrn(ns, 'course', project.course.key));
+    const entityId = (item, kind) => canonicalIdentifier(String(item.portableId ?? portableUrn(ns, kind, item.key)));
+    ids.set(project.course.key, entityId(project.course, 'course'));
     for (const [group, kind] of [['units', 'unit'], ['resources', 'resource'], ['activities', 'activity'], ['objectives', 'objective']])
         for (const item of project[group])
-            ids.set(item.key, portableUrn(ns, kind, item.key));
-    const payloads = new Map(), payloadMedia = new Map(), entities = [];
+            ids.set(item.key, entityId(item, kind));
+    const payloads = new Map(), payloadMedia = new Map(), payloadMethods = new Map(), payloadSchemas = new Map(), entities = [];
     const used = new Set([PROFILE.course]);
     const c = project.course;
     const course = { id: ids.get(c.key), type: 'course', revision: c.revision, title: c.title, children: (c.children ?? []).map((k) => ids.get(k)) };
@@ -91,7 +93,7 @@ export function compileProject(projectRoot, project) {
             repKeys.add(rep.key);
             const source = rep.source;
             let mt = rep.mediaType;
-            const rout = { id: portableUrn(ns, 'representation', `${item.key}:${rep.key}`), role: rep.role };
+            const rout = { id: canonicalIdentifier(String(rep.portableId ?? portableUrn(ns, 'representation', `${item.key}:${rep.key}`))), role: rep.role };
             if (source.type === 'file') {
                 const src = resolveProjectFile(projectRoot, source.path), data = readFileSync(src);
                 mt = mt ?? guessMediaType(src);
@@ -99,6 +101,19 @@ export function compileProject(projectRoot, project) {
                 putPayload(payloads, payloadMedia, path, data, mt);
                 rout.location = { type: 'embedded', path };
                 rout.originalName = rep.originalName ?? basename(src);
+            }
+            else if (source.type === 'package-file' || source.type === 'package-member') {
+                const src = resolveProjectFile(projectRoot, source.path), data = readFileSync(src);
+                mt = mt ?? guessMediaType(source.packagePath);
+                const path = source.packagePath;
+                putPayload(payloads, payloadMedia, path, data, source.packageMediaType ?? mt);
+                if (source.method === 0 || source.method === 8)
+                    payloadMethods.set(path, source.method);
+                if (source.schema)
+                    payloadSchemas.set(path, canonicalIdentifier(source.schema));
+                rout.location = source.type === 'package-member' ? { type: 'package-member', package: path, member: source.member } : { type: 'embedded', path };
+                if (Object.prototype.hasOwnProperty.call(rep, 'originalName'))
+                    rout.originalName = rep.originalName;
             }
             else if (source.type === 'web-directory') {
                 if (rep.profile != null && !profileIs(rep.profile, 'webContent'))
@@ -118,7 +133,7 @@ export function compileProject(projectRoot, project) {
             else if (source.type === 'remote') {
                 mt = mt ?? 'application/octet-stream';
                 rout.location = { type: 'remote', href: source.href, ...(source.expectedDigest ? { expectedDigest: source.expectedDigest } : {}) };
-                if (rep.originalName)
+                if (Object.prototype.hasOwnProperty.call(rep, 'originalName'))
                     rout.originalName = rep.originalName;
             }
             else
@@ -150,8 +165,8 @@ export function compileProject(projectRoot, project) {
             out.resources = item.resources.map((k) => ids.get(k));
         if (item.objectives)
             out.objectives = item.objectives.map((k) => ids.get(k));
-        if (item.children?.length)
-            out.children = item.children.map((k) => ids.get(k));
+        if (Object.prototype.hasOwnProperty.call(item, 'children'))
+            out.children = (item.children ?? []).map((k) => ids.get(k));
         for (const uri of Object.keys(item.extensions ?? {})) {
             const canonical = canonicalIdentifier(uri);
             if (canonical.startsWith('https://p2lrn.org/profile/'))
@@ -166,38 +181,66 @@ export function compileProject(projectRoot, project) {
             out.extensions = canonicalizeJsonIdentifiers(item.extensions);
         entities.push(out);
     }
+    if (project.entityOrder) {
+        const byId = new Map(entities.map((e) => [e.id, e]));
+        const ordered = project.entityOrder.map((key) => byId.get(ids.get(key)));
+        entities.splice(0, entities.length, ...ordered);
+    }
     const relations = project.relations.map((rel) => ({ source: ids.get(rel.source), predicate: canonicalIdentifier(rel.predicate), target: ids.get(rel.target), ...(rel.extensions ? { extensions: canonicalizeJsonIdentifiers(rel.extensions) } : {}) }));
-    const graph = { graphVersion: FORMAT_VERSION, entities, relations, extensions: { 'org.p2lrn.creator': { projectVersion: project.projectVersion, projectId: project.projectId } } };
+    const graph = { graphVersion: FORMAT_VERSION, entities, relations };
+    if (project.graphPolicy === 'preserve') {
+        if (project.graphExtensions !== undefined)
+            graph.extensions = canonicalizeJsonIdentifiers(project.graphExtensions);
+    }
+    else
+        graph.extensions = { 'org.p2lrn.creator': { projectVersion: project.creatorMetadataVersion ?? project.projectVersion, projectId: project.projectId } };
     if (project.provenance) {
         const b = jsonBytes(project.provenance);
         payloads.set('provenance/transformation.json', b);
         payloadMedia.set('provenance/transformation.json', 'application/json');
+        graph.extensions ??= {};
+        graph.extensions['org.p2lrn.creator'] ??= { projectVersion: project.projectVersion, projectId: project.projectId };
         graph.extensions['org.p2lrn.creator'].provenance = 'provenance/transformation.json';
     }
+    for (const f of project.preservedFiles ?? []) {
+        const src = resolveProjectFile(projectRoot, f.path), data = readFileSync(src), path = f.packagePath, mt = f.mediaType;
+        putPayload(payloads, payloadMedia, path, data, mt);
+        if (f.method === 0 || f.method === 8)
+            payloadMethods.set(path, f.method);
+        if (f.schema)
+            payloadSchemas.set(path, canonicalIdentifier(f.schema));
+    }
     const seekable = [...payloadMedia.entries()].filter(([, mt]) => ['audio/', 'video/'].some((p) => baseMediaType(mt).startsWith(p)) && prefersStored(mt)).map(([p]) => p);
-    if (seekable.length) {
+    if (project.graphPolicy !== 'preserve' && seekable.length) {
         const b = jsonBytes(rangeIndex(payloads, seekable));
         payloads.set(RANGE_INTEGRITY_PATH, b);
         payloadMedia.set(RANGE_INTEGRITY_PATH, RANGE_INTEGRITY_MEDIA_TYPE);
+        payloadMethods.set(RANGE_INTEGRITY_PATH, 8);
         graph.extensions[RANGE_INTEGRITY_EXTENSION] = { version: '1', indexPath: RANGE_INTEGRITY_PATH };
     }
     const graphBytes = jsonBytes(graph), graphDesc = descriptor('content/graph.json', graphBytes, 'application/json');
     graphDesc.schema = `https://p2lrn.org/schema/graph/${FORMAT_VERSION}`;
-    const explicit = new Map((project.profiles ?? []).map((p) => { const id = canonicalIdentifier(p.id); return [id, { ...p, id }]; }));
-    explicit.set(PROFILE.course, { id: PROFILE.course, version: FORMAT_VERSION, requirement: 'required' });
-    for (const p of [...used].sort())
-        if (!explicit.has(p))
-            explicit.set(p, { id: p, version: FORMAT_VERSION, requirement: 'optional' });
-    const profiles = [...explicit.values()].sort((a, b) => a.id.localeCompare(b.id));
-    const files = [...payloads.keys()].sort().map((p) => descriptor(p, payloads.get(p), payloadMedia.get(p)));
-    const manifest = { format: FORMAT, formatVersion: FORMAT_VERSION, packageId: 'urn:uuid:00000000-0000-4000-8000-000000000000', entrypoints: [{ id: course.id, type: 'course', role: 'primary' }], graph: graphDesc, profiles, files, integrity: { algorithm: 'sha256', contentRoot: 'sha256:' + '0'.repeat(64) } };
+    let profiles;
+    if (project.profilePolicy === 'preserve')
+        profiles = (project.profiles ?? []).map((p) => ({ ...p, id: canonicalIdentifier(p.id) }));
+    else {
+        const explicit = new Map((project.profiles ?? []).map((p) => { const id = canonicalIdentifier(p.id); return [id, { ...p, id }]; }));
+        explicit.set(PROFILE.course, { id: PROFILE.course, version: FORMAT_VERSION, requirement: 'required' });
+        for (const p of [...used].sort())
+            if (!explicit.has(p))
+                explicit.set(p, { id: p, version: FORMAT_VERSION, requirement: 'optional' });
+        profiles = [...explicit.values()].sort((a, b) => a.id.localeCompare(b.id));
+    }
+    const entrypoints = (project.entrypoints ?? [{ key: c.key, type: 'course', role: 'primary' }]).map((e) => ({ id: ids.get(e.key), type: e.type, role: e.role }));
+    const files = [...payloads.keys()].sort().map((p) => descriptor(p, payloads.get(p), payloadMedia.get(p), payloadSchemas.get(p)));
+    const manifest = { format: FORMAT, formatVersion: FORMAT_VERSION, packageId: 'urn:uuid:00000000-0000-4000-8000-000000000000', entrypoints, graph: graphDesc, profiles, files, integrity: { algorithm: 'sha256', contentRoot: 'sha256:' + '0'.repeat(64) } };
     manifest.integrity.contentRoot = computeContentRoot(manifest);
     manifest.packageId = portableUrn(ns, 'package', manifest.integrity.contentRoot + `|revision:${c.revision}`);
     const manifestBytes = jsonBytes(manifest);
     payloads.set('META-INF/manifest.json', manifestBytes);
     payloads.set('content/graph.json', graphBytes);
     const mediaByPath = new Map([['META-INF/manifest.json', 'application/json'], ['content/graph.json', 'application/json'], ...payloadMedia.entries()]);
-    return { manifest, payloads, mediaByPath, graph };
+    const methodsByPath = new Map(payloadMethods);
+    return { manifest, payloads, mediaByPath, methodsByPath, graph };
 }
-export function buildProject(projectRoot, output, strictProfiles = false) { const loaded = loadProject(projectRoot), root = resolve(loaded.path, '..'), compiled = compileProject(root, loaded.project); mkdirSync(resolve(output, '..'), { recursive: true }); const entries = [...compiled.payloads.keys()].sort().map((path) => ({ path, data: compiled.payloads.get(path), mediaType: compiled.mediaByPath.get(path) })); const bytes = writeZip(entries); writeFileSync(output, bytes); const validation = validatePackageBytes(bytes, { strictProfiles }); return { project: loaded.path, output, formatVersion: compiled.manifest.formatVersion, packageId: compiled.manifest.packageId, contentRoot: compiled.manifest.integrity.contentRoot, entities: validation.summary.entities, files: validation.summary.files, validation }; }
-//# sourceMappingURL=builder.js.map
+export function buildProject(projectRoot, output, strictProfiles = false) { const loaded = loadProject(projectRoot), root = resolve(loaded.path, '..'), compiled = compileProject(root, loaded.project); mkdirSync(resolve(output, '..'), { recursive: true }); const entries = [...compiled.payloads.keys()].sort().map((path) => ({ path, data: compiled.payloads.get(path), mediaType: compiled.mediaByPath.get(path), method: compiled.methodsByPath.get(path) })); const bytes = writeZip(entries); writeFileSync(output, bytes); const validation = validatePackageBytes(bytes, { strictProfiles }); return { project: loaded.path, output, formatVersion: compiled.manifest.formatVersion, packageId: compiled.manifest.packageId, contentRoot: compiled.manifest.integrity.contentRoot, entities: validation.summary.entities, files: validation.summary.files, validation }; }

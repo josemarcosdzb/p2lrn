@@ -25,6 +25,10 @@
     "./creator": {
       "types": "./dist/creator/index.d.ts",
       "import": "./dist/creator/index.js"
+    },
+    "./authoring": {
+      "types": "./dist/authoring/index.d.ts",
+      "import": "./dist/authoring/index.js"
     }
   },
   "bin": {

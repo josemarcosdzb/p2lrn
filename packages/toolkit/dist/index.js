@@ -1,4 +1,4 @@
 export * from './core/index.js';
 export * from './reader/index.js';
 export * from './creator/index.js';
-//# sourceMappingURL=index.js.map
+export * from './authoring/index.js';

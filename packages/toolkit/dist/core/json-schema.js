@@ -1,5 +1,7 @@
 import { ValidationError } from './errors.js';
 import { SCHEMA_REGISTRY } from './schema-registry.js';
+import { CREATOR_PROJECT_SCHEMA_030 } from './creator-project-schema.js';
+const DEFAULT_SCHEMA_REGISTRY = Object.freeze({ ...SCHEMA_REGISTRY, [CREATOR_PROJECT_SCHEMA_030.$id]: CREATOR_PROJECT_SCHEMA_030 });
 function typeOk(v, t) { switch (t) {
     case 'null': return v === null;
     case 'object': return !!v && typeof v === 'object' && !Array.isArray(v);
@@ -176,10 +178,9 @@ function run(schema, value, path, root, registry, issues, silent = false) {
         issues.push(...local);
     return ok;
 }
-export function schemaIssues(schemaOrId, value, registry = { ...SCHEMA_REGISTRY }) { const root = typeof schemaOrId === 'string' ? registry[schemaOrId] : schemaOrId; if (!root)
+export function schemaIssues(schemaOrId, value, registry = { ...DEFAULT_SCHEMA_REGISTRY }) { const root = typeof schemaOrId === 'string' ? registry[schemaOrId] : schemaOrId; if (!root)
     return [issue('$', `JSON Schema is not installed: ${schemaOrId}`)]; const out = []; run(root, value, '$', root, registry, out); return out; }
 export function validateSchema(schemaOrId, value, label = 'document') { const errors = schemaIssues(schemaOrId, value); if (errors.length)
     throw new ValidationError(`invalid ${label}:\n${errors.slice(0, 20).map((e) => `${e.path}: ${e.message}`).join('\n')}`); return value; }
-export function schemaById(id) { const s = SCHEMA_REGISTRY[id]; if (!s)
+export function schemaById(id) { const s = DEFAULT_SCHEMA_REGISTRY[id]; if (!s)
     throw new ValidationError(`reference document is not installed: ${id}`); return structuredClone(s); }
-//# sourceMappingURL=json-schema.js.map

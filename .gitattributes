@@ -1,0 +1,20 @@
+* text=auto eol=lf
+
+*.p2lrn binary
+*.p2rln binary
+*.h5p binary
+*.zip binary
+*.tgz binary
+*.whl binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.mp3 binary
+*.mp4 binary
+*.webm binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

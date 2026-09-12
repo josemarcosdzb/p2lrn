@@ -1,19 +1,20 @@
 #!/usr/bin/env node
 import { dirname, join, resolve } from 'node:path';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { addComponent, addComposite, addFile, addQuestionnaire, addUnit, addUrl, addWebContent, loadProject, newProject, PROJECT_FILE, saveProject } from '../creator/project.js';
+import { addComponent, addComposite, addFile, addQuestionnaire, addUnit, addUrl, addWebContent, loadProject, newProject, PROJECT_FILE, saveProject, upgradeProjectWorkspace } from '../creator/project.js';
 import { buildProject, guessMediaType } from '../creator/builder.js';
 import { convertExternalPackage } from '../creator/external.js';
 import { ingestAulaP2PReader } from '../creator/aulap2p-ingest.js';
 import { extractAulaP2PCourse, ingestAulaP2PCourse } from '../creator/aulap2p-course.js';
 import { referenceComponentCatalog } from '../core/component-authoring.js';
+import { openPackageAsProject } from '../creator/import-project.js';
 import { parse, flag, opt, opts, printJson, req, fail, CliExit, isMain } from './util.js';
 function withProject(path, fn) { const l = loadProject(path), root = dirname(l.path), r = fn(root, l.project); saveProject(l.path, l.project); return { path: l.path, result: r, project: l.project }; }
 export function main(argv = process.argv.slice(2)) {
     try {
         const p = parse(argv);
         if (flag(p, 'help')) {
-            process.stdout.write('Usage: p2lrn-create <init|add-unit|add-file|add-web-content|add-questionnaire|add-component|add-composite|add-url|build|convert|ingest-aulap2p|ingest-aulap2p-course|extract-aulap2p-course|component-catalog|validate-component-authoring|show> ...\n');
+            process.stdout.write('Usage: p2lrn-create <init|open|upgrade|add-unit|add-file|add-web-content|add-questionnaire|add-component|add-composite|add-url|build|convert|ingest-aulap2p|ingest-aulap2p-course|extract-aulap2p-course|component-catalog|validate-component-authoring|show> ...\n');
             return;
         }
         const cmd = req(p.positional[0], 'command');
@@ -26,6 +27,13 @@ export function main(argv = process.argv.slice(2)) {
             const project = newProject(req(opt(p, 'title'), '--title'), opt(p, 'language', 'es'), opt(p, 'description'));
             saveProject(path, project);
             r = { project: path, projectId: project.projectId, course: project.course.title };
+        }
+        else if (cmd === 'open') {
+            r = openPackageAsProject(req(p.positional[1], 'package'), req(p.positional[2], 'project_directory'), { force: flag(p, 'force') });
+        }
+        else if (cmd === 'upgrade') {
+            const x = upgradeProjectWorkspace(req(p.positional[1], 'project'));
+            r = { sourceProject: x.sourcePath, project: x.projectPath, fromVersion: x.fromVersion, toVersion: x.toVersion, changed: x.changed };
         }
         else if (cmd === 'add-unit') {
             const proj = req(p.positional[1], 'project'), key = req(opt(p, 'key'), '--key'), title = req(opt(p, 'title'), '--title'), x = withProject(proj, (_root, pr) => addUnit(pr, key, title, opt(p, 'language', 'es'), opt(p, 'role', 'module'), opt(p, 'parent', 'course')));
@@ -97,4 +105,3 @@ export function main(argv = process.argv.slice(2)) {
 }
 if (isMain(import.meta.url))
     main();
-//# sourceMappingURL=create.js.map

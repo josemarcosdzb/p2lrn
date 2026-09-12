@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "1",
+  "authoringApiVersion": "1",
+  "projectVersion": "0.3.0",
+  "formatVersion": "0.4.0",
+  "scope": "course-authoring",
+  "profiles": [
+    {
+      "id": "https://p2lrn.org/profile/course",
+      "native": true,
+      "creator": {"author": true, "openRebuild": true, "transformExternal": false},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/web-content",
+      "native": true,
+      "creator": {"author": true, "openRebuild": true, "transformExternal": false},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": true}
+    },
+    {
+      "id": "https://p2lrn.org/profile/native-questionnaire",
+      "native": true,
+      "creator": {"author": true, "openRebuild": true, "transformExternal": false},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": true}
+    },
+    {
+      "id": "https://p2lrn.org/profile/native-composite",
+      "native": true,
+      "creator": {"author": true, "openRebuild": true, "transformExternal": false},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": true}
+    },
+    {
+      "id": "https://p2lrn.org/profile/native-component",
+      "native": true,
+      "creator": {"author": true, "openRebuild": true, "transformExternal": false},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": true}
+    },
+    {
+      "id": "https://p2lrn.org/profile/scorm",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": true},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/cmi5",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": true},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/common-cartridge",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": true},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/qti",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": true},
+      "reader": {"validate": true, "read": false, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/h5p",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": true},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/tincan-package",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": true},
+      "reader": {"validate": true, "read": true, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/lti",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": false},
+      "reader": {"validate": false, "read": true, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/case",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": false},
+      "reader": {"validate": false, "read": true, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/xapi",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": false},
+      "reader": {"validate": false, "read": true, "preserve": true, "deliver": false}
+    },
+    {
+      "id": "https://p2lrn.org/profile/accessibility",
+      "native": false,
+      "creator": {"author": false, "openRebuild": true, "transformExternal": false},
+      "reader": {"validate": false, "read": true, "preserve": true, "deliver": false}
+    }
+  ]
+}
