@@ -34,4 +34,4 @@ These points are intentionally not frozen by 0.4.0.
 - Implement a real QTI 3 delivery engine before declaring QTI `deliver` capability.
 - Finish the H5P real-browser gate and formal runtime capability negotiation. The candidate already resolves exact bundled/host libraries and keeps execution on an isolated origin without auto-downloading missing dependencies.
 - Define cmi5/xAPI launch-session handling while keeping LRS credentials outside P2LRN.
-- Build a native desktop bundle for Windows/macOS/Linux so file association does not depend on a Python installation.
+- Build a native desktop bundle for Windows/macOS/Linux so file association does not depend on a global Node/npm installation.

@@ -25,8 +25,8 @@ Alpha 13 had already adapted the AulaP2P CMI model. Alpha 14 additionally adapte
 
 The portable modules are:
 
-- `p2lrn_reader/web/xml-lite.js`;
-- `p2lrn_reader/web/scorm2004-sequencing.js`;
+- `packages/toolkit/web/xml-lite.js`;
+- `packages/toolkit/web/scorm2004-sequencing.js`;
 - the corresponding generated `web_sdk/dist/` copies.
 
 ## What Alpha 15 now executes

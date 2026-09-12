@@ -1,6 +1,6 @@
 > **Nota de migración P2LRN/Node:** este documento deriva de la especificación Alpha15 anterior. Las reglas de formato se conservan; cualquier referencia a la antigua implementación Python es histórica. La implementación principal actual es `@p2lrn/toolkit` en Node.js/TypeScript.
 
-# P2LRN Creator System 0.2.0
+# P2LRN Creator System 0.3.0
 
 ## 1. Purpose
 
@@ -43,7 +43,7 @@ Both paths must end in the same Core package contract.
 
 ## 3. Editable workspace is not part of the standard
 
-The reference Creator uses `p2lrn.project.json`, but this file is an authoring implementation detail.
+The reference Creator uses `p2lrn.project.json` project contract `0.3.0`, but this file is an authoring implementation detail.
 Other editors may use SQL, YAML, a visual graph, Git, a CMS or any other internal representation.
 They must not be required to adopt the reference Creator project schema.
 
@@ -56,8 +56,7 @@ content/graph.json
 
 ## 4. Stable portable identities
 
-The Creator generates entity identifiers deterministically from the project identity and human-readable project keys.
-Rebuilding the same project therefore preserves Course/Unit/Activity/Resource/Object IDs.
+For newly authored entities the Creator generates identifiers deterministically from the project identity and human-readable project keys. For a package opened into an editable workspace, project `0.3.0` stores the imported `portableId` explicitly and the Builder MUST reuse it. Rebuilding an unchanged imported project therefore preserves Course/Unit/Activity/Resource/Object/Representation IDs.
 
 Local editor/database IDs are never serialized as P2LRN identity.
 
@@ -157,3 +156,42 @@ p2lrn-create add-component course component.json --key notice --parent module
 ```
 
 The Creator validates `native-component/0.1` before mutation, creates exactly one Resource + Activity and uses the normal content-addressed Builder path. It does not copy component implementation code, migration code or permission grants into the package. Runtime compatibility is not confused with format validity: a structurally valid future runtime-contract value can still be packaged/preserved even when the current Reader cannot deliver it.
+
+
+## 10. Open existing P2LRN as an editable workspace
+
+The Node/TypeScript Creator supports a preservation-first authoring round-trip:
+
+```text
+course.p2lrn
+ -> validate and open
+ -> p2lrn.project.json 0.3.0 + materialized package files
+ -> edit understood fields
+ -> build
+ -> course-v2.p2lrn
+```
+
+Project `0.3.0` adds the state required to avoid destructive reconstruction: imported `portableId` values, explicit entity order and entrypoints, profile/graph preserve policies, and `preservedFiles`/`package-file` sources for package members that Studio does not need to reinterpret. Multiple representations may share one physical package payload only when their source declarations are consistent. A preserved file may not silently collide with an editable representation payload.
+
+For an unchanged canonical P2LRN course package, the required regression is the neutral logical round-trip gate: `contentRoot` MUST remain identical. ZIP byte identity and `packageId` are not required. Imported external packages embedded as opaque payloads retain their bytes.
+
+The current reference authoring workspace is course-oriented and requires one primary course entrypoint. Core packages with a different top-level authoring shape remain valid P2LRN and can be validated/read/repacked, but are not falsely claimed as editable course workspaces.
+
+## 11. Stable Studio integration boundary
+
+Studio MUST consume `@p2lrn/toolkit/authoring`, not Creator implementation files. The public API version is independent from the workspace schema version. Version 1 exposes workspace creation, package opening, load/reload, validated replacement/update and build.
+
+Capability claims are machine-readable in `config/authoring-capabilities.json`. Native authoring parity requires each native profile to be authorable by Creator and readable/preservable by Reader. External profiles distinguish transform/preserve support from runtime `deliver` support.
+
+
+## 12. Legacy authoring migration
+
+Creator project 0.1/0.2 files remain loadable, but Studio should migrate them before editing:
+
+```text
+p2lrn-create upgrade workspace
+```
+
+The migration validates both the source and target contracts, writes canonical `p2lrn.project.json` 0.3.0, and leaves the historical project file in place. `creatorMetadataVersion` is retained as a compatibility baseline for the emitted Creator extension so a no-op workspace-schema upgrade does not itself modify `contentRoot`.
+
+Opening an Alpha15 P2RLN package follows a different path: the already-authoritative canonical repack algorithm first normalizes P2RLN-owned JSON/paths/digests to P2LRN, then the normal P2LRN authoring importer materializes the workspace. External package payloads remain opaque and byte-preserved.

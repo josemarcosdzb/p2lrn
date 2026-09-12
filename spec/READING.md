@@ -253,27 +253,27 @@ The following require explicit later action and are never implicit in `open`, `v
 Inspect a package:
 
 ```bash
-python3 tools/read.py course.p2lrn --summary --tree
+p2lrn-inspect course.p2lrn --summary --tree
 ```
 
 Build activity read plans:
 
 ```bash
-python3 tools/read.py course.p2lrn --plan --mode read
+p2lrn-inspect course.p2lrn --plan --mode read
 ```
 
 Build a target-neutral LMS import plan:
 
 ```bash
-python3 tools/read.py course.p2lrn --import-plan
+p2lrn-inspect course.p2lrn --import-plan
 ```
 
 Inspect transformation provenance:
 
 ```bash
-python3 tools/read.py course.p2lrn --transformation
+p2lrn-inspect course.p2lrn --transformation
 ```
 
 ## 11. First-party Reading System
 
-Core structural APIs are also consumed by the first-party `p2lrn_reader` application. `READING.md` defines safe read semantics; `READING-SYSTEM.md` defines the user-facing host that owns the `.p2lrn` file association and delegates specialized execution to runtimes.
+Core structural APIs are also consumed by the first-party `p2lrn-reader` Node.js/TypeScript application. `READING.md` defines safe read semantics; `READING-SYSTEM.md` defines the user-facing host that owns the `.p2lrn` file association and delegates specialized execution to runtimes.

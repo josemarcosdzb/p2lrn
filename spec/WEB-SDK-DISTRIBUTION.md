@@ -19,7 +19,7 @@ The package content remains thin. Player code, renderer modules, CSS, component 
 
 ## One runtime authority
 
-`p2lrn_reader/web` remains the source runtime used by the reference Reading System. `tools/build_web_sdk.py` copies the embeddable JS/CSS closure without rebundling or rewriting those runtime files.
+`packages/toolkit/web` is the source runtime used by the Node.js/TypeScript Reading System. `p2lrn-build-web-sdk` copies the embeddable JS/CSS closure without rebundling or rewriting those runtime files.
 
 The build deliberately excludes Reader-application UI files:
 
@@ -62,7 +62,7 @@ import {
 } from '@p2lrn/player';
 ```
 
-Package version is npm SemVer `0.4.0-alpha.15`; the Python Toolkit/Reader version is PEP 440 `0.4.0a15`.
+The current Node.js/TypeScript package line uses npm SemVer `0.5.0-alpha.1`; Alpha15 Python versioning is historical reference metadata only.
 
 ## Public browser API
 
@@ -80,7 +80,6 @@ Package version is npm SemVer `0.4.0-alpha.15`; the Python Toolkit/Reader versio
 `<p2lrn-player>` automatically chooses a compatible renderer when `renderer` is absent. The `renderer` attribute is an explicit strict request; there is no synthetic `renderer="auto"` value.
 
 Runtime events retain their existing names, including `p2lrn:complete`.
-
 
 ## Server/runtime-host export
 
@@ -118,7 +117,7 @@ The package is intentionally marked `UNLICENSED` until the project owner selects
 
 A Web SDK release must prove at least:
 
-1. generated runtime files are byte-identical to `p2lrn_reader/web` except distribution-only entrypoints;
+1. generated runtime files are byte-identical to `packages/toolkit/web` except distribution-only entrypoints;
 2. Reader-only UI files do not leak into npm/CDN output;
 3. every local import/stylesheet URL resolves inside `dist/`;
 4. build output is reproducible;

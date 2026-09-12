@@ -526,7 +526,7 @@ No se introduce una copia del ejecutable del lector dentro de cada `.p2lrn`, por
 Uso de referencia:
 
 ```bash
-python3 -m p2lrn_reader curso.p2lrn
+p2lrn-reader curso.p2lrn
 ```
 
 Una instalación puede asociar posteriormente `.p2lrn` al lector para que un doble clic produzca el mismo flujo.

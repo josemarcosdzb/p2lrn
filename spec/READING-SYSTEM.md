@@ -116,10 +116,10 @@ External/network delivery is always an explicit action after the package has bee
 
 ## 7. Reference implementation
 
-P2LRN 0.4.0 ships `p2lrn_reader`, a dependency-free Python reference host with a local browser UI. It binds to loopback, protects the session with a random token, and exposes only validated package data.
+The primary Reading System is the Node.js/TypeScript `p2lrn-reader` command from `@p2lrn/toolkit`. It binds to loopback, protects the session with a random token, and exposes only validated package data.
 
 ```bash
-python3 -m p2lrn_reader course.p2lrn
+p2lrn-reader course.p2lrn
 ```
 
 The reference host currently delivers passive Web Content, browser-native media, the experimental native questionnaire profile and the experimental native composite profile. Alpha 15 also contains the bounded SCORM 1.2/2004 runtime, the Alpha 13 isolated runtime-host, the Alpha 14 recovered manifest/navigation base, and the bounded hierarchical rule/attempt/rollup subset described in `spec/SCORM-WEB-RUNTIME.md`. The capability document still does not advertise blanket SCORM `deliver` conformance; global-objective mappings, the remaining sequencing controls, exhaustive CMI coverage and broader conformance evidence remain gates. Other specialized profiles remain inspect/preserve-only until their actual runtimes are implemented. The same modular player is used by the framework-neutral `<p2lrn-player>` Web Component; see `spec/NATIVE-ACTIVITY-RUNTIME.md` and `spec/SCORM-WEB-RUNTIME.md`.
@@ -128,9 +128,7 @@ Since 0.4.0a8 the local `/package.p2lrn` endpoint implements HTTP byte ranges an
 
 Since 0.4.0a10 a plain same-origin static host may opt into the standalone `p2lrn-sw.js` bridge. Chunk-protected stored audio/video can then answer browser media ranges without a first-party application endpoint, while small mapped web assets are fully verified before delivery. Installation is explicit and refuses to replace an unrelated Service Worker that already owns the requested scope. Hosts with their own Service Worker should integrate the P2LRN registration/fetch protocol rather than install a competing worker. See `spec/STATIC-BROWSER-BRIDGE.md`.
 
-
-Since 0.4.0a11 the same browser runtime is also emitted as a reproducible Web SDK/npm/CDN tree. This is a distribution form of `p2lrn_reader/web`, not a separate Reading System implementation. The generated classic loader and ESM entrypoint register the existing Web Component and preserve lazy renderer loading. See `spec/WEB-SDK-DISTRIBUTION.md`.
-
+Since 0.4.0a11 the same browser runtime is also emitted as a reproducible Web SDK/npm/CDN tree. This is a distribution form of `packages/toolkit/web`, not a separate Reading System implementation. The generated classic loader and ESM entrypoint register the existing Web Component and preserve lazy renderer loading. See `spec/WEB-SDK-DISTRIBUTION.md`.
 
 Since 0.4.0a12 the player can open an integrity-verified nested ZIP behind a `package-member` representation and route SCORM 1.2/2004 content to a dedicated renderer. In 0.4.0a13 that renderer can use a separately hosted `/runtime` endpoint on another origin, giving the SCO canonical parent-frame API discovery while keeping the LMS document cross-origin. CMI state remains external to `.p2lrn` and is persisted only through Host Adapter v1. The package is still authoritative for SCORM semantics; P2LRN Core sequencing is not substituted for SCORM sequencing.
 

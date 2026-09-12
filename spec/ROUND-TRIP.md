@@ -29,7 +29,7 @@ The physical ZIP, JSON whitespace, ZIP timestamps and `packageId` MAY differ.
 
 For a lossless neutral repack, `contentRoot` MUST remain identical and all preservable payload bytes MUST survive unchanged.
 
-The reference `tools/repack.py` demonstrates this without knowing SCORM/H5P/cmi5/QTI internals.
+The Node/TypeScript `p2lrn-repack` implementation demonstrates this without knowing SCORM/H5P/cmi5/QTI internals.
 
 ## 3. LMS semantic round-trip
 
@@ -74,3 +74,21 @@ A processor cannot claim `Round-Trip` for a feature it silently discards.
 ## 5. Required future 1.0 gate
 
 Before P2LRN can reasonably claim mature interoperability, the same conformance corpus should pass through at least two independent implementations and include a real LMS A -> P2LRN -> LMS B -> P2LRN semantic comparison.
+
+
+## 6. Editable authoring round-trip
+
+For the course-authoring surface, P2LRN additionally tests:
+
+```text
+canonical course.p2lrn
+ -> @p2lrn/toolkit/authoring open
+ -> editable project 0.3.0
+ -> no changes
+ -> build
+ -> rebuilt.p2lrn
+```
+
+The no-op result MUST preserve the original `contentRoot`, imported portable entity/representation identities, entrypoints, entity order, profile declarations and opaque package payloads. This is stronger than merely opening the package in a Reader, but it does not require the ZIP bytes or generated `packageId` to be identical.
+
+If an author changes semantic content, the `contentRoot` is expected to change while unaffected imported portable IDs remain stable. For preserved SCORM/H5P/cmi5/QTI source packages, wrapper edits MUST NOT rewrite the nested source bytes.

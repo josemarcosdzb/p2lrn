@@ -69,10 +69,10 @@ Public-key governance, publisher identity, revocation, certificate chains/transp
 
 ## 5. CLI
 
-Install the optional cryptographic dependency with the trust extra:
+Install the Node.js/TypeScript toolkit. Ed25519 uses the Node crypto runtime and needs no Python trust extra:
 
 ```bash
-pip install 'p2lrn-toolkit[trust]'
+npm install @p2lrn/toolkit
 ```
 
 Generate a key pair:
