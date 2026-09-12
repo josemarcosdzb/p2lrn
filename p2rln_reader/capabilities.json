@@ -1,0 +1,151 @@
+{
+  "product": {
+    "name": "P2RLN Reading System",
+    "version": "0.4.0a15"
+  },
+  "p2rlnVersions": [
+    "0.4.0"
+  ],
+  "roles": [
+    "validator",
+    "reader",
+    "preserver",
+    "player"
+  ],
+  "profiles": [
+    {
+      "id": "https://p2rln.org/profile/course",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/web-content",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve",
+        "deliver"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/native-questionnaire",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve",
+        "deliver"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/native-composite",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve",
+        "deliver"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/native-component",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve",
+        "deliver"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/scorm",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/cmi5",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/common-cartridge",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/qti",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/h5p",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/tincan-package",
+      "version": "0.4.0",
+      "modes": [
+        "validate",
+        "read",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/lti",
+      "version": "0.4.0",
+      "modes": [
+        "read",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/case",
+      "version": "0.4.0",
+      "modes": [
+        "read",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/xapi",
+      "version": "0.4.0",
+      "modes": [
+        "read",
+        "preserve"
+      ]
+    },
+    {
+      "id": "https://p2rln.org/profile/accessibility",
+      "version": "0.4.0",
+      "modes": [
+        "read",
+        "preserve"
+      ]
+    }
+  ]
+}
