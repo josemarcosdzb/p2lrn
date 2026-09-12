@@ -1,0 +1,55 @@
+name: Import P2RLN source tree
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.import/source.ready'
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct verified source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .import/p2rln-code.tar.gz.b64.part-* | base64 --decode > /tmp/p2rln-code.tar.gz
+          echo 'd054a3d507bb03e144c1057cb2fd9d21153dc5d6616145cf1a4e1455942c2785  /tmp/p2rln-code.tar.gz' | sha256sum -c -
+          tar -tzf /tmp/p2rln-code.tar.gz >/dev/null
+          tar -xzf /tmp/p2rln-code.tar.gz -C .
+
+      - name: Verify requested source areas
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in \
+            p2rln_creator p2rln_reader p2rln_ref tests schemas profiles tools web_sdk; do
+            test -d "$path"
+          done
+          test -f pyproject.toml
+          test -f SHA256SUMS.txt
+
+      - name: Commit canonical source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .import
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'Import complete P2RLN Alpha15 source tree'
+          git push origin HEAD:main
