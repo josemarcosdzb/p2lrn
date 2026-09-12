@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { ProjectError } from '../core/errors.js';
 import { newUrnUuid } from '../core/uuid.js';
@@ -34,7 +34,8 @@ export function upgradeProject(project) { validateProject(project); const next =
     next.profilePolicy = 'derive'; if (next.graphPolicy === undefined)
     next.graphPolicy = 'derive'; if (next.preservedFiles === undefined)
     next.preservedFiles = []; validateProject(next); return next; }
-export function upgradeProjectWorkspace(root) { const loaded = loadProject(root), fromVersion = String(loaded.project.projectVersion), project = upgradeProject(loaded.project), target = join(dirname(loaded.path), PROJECT_FILE), changed = fromVersion !== project.projectVersion || resolve(loaded.path) !== resolve(target); saveProject(target, project); return { sourcePath: loaded.path, projectPath: target, fromVersion, toVersion: project.projectVersion, changed, project }; }
+export function upgradeProjectWorkspace(root) { const loaded = loadProject(root), fromVersion = String(loaded.project.projectVersion), project = upgradeProject(loaded.project), workspace = dirname(loaded.path), target = join(workspace, PROJECT_FILE), legacy = join(workspace, LEGACY_PROJECT_FILE), changed = fromVersion !== project.projectVersion || resolve(loaded.path) !== resolve(target) || existsSync(legacy); saveProject(target, project); if (resolve(legacy) !== resolve(target) && existsSync(legacy))
+    rmSync(legacy); return { sourcePath: loaded.path, projectPath: target, fromVersion, toVersion: project.projectVersion, changed, project }; }
 export function entityByKey(project, key) { if (project.course?.key === key)
     return project.course; for (const group of ['units', 'resources', 'activities', 'objectives'])
     for (const e of project[group] ?? [])
@@ -58,9 +59,9 @@ export function validateProject(project) {
     if (project.targetFormatVersion !== FORMAT_VERSION)
         throw new ProjectError(`unsupported targetFormatVersion: ${project.targetFormatVersion}`);
     if (typeof project.projectId !== 'string' || !project.projectId)
-        throw new ProjectError('projectId is required');
+        throw new ProjectError 'projectId is required');
     if (!project.course || typeof project.course !== 'object')
-        throw new ProjectError('course is required');
+        throw new ProjectError 'course is required');
     for (const group of ['units', 'resources', 'activities', 'objectives', 'relations', 'profiles'])
         if (!Array.isArray(project[group]))
             throw new ProjectError(`${group} must be an array`);
@@ -68,7 +69,7 @@ export function validateProject(project) {
     if (keys.some((k) => typeof k !== 'string' || !KEY_RE.test(k)))
         throw new ProjectError('invalid project entity key');
     if (new Set(keys).size !== keys.length)
-        throw new ProjectError('project entity keys must be globally unique');
+        throw new ProjectError 'project entity keys must be globally unique');
     const known = new Set(keys), kind = keyKind(project), hierarchy = [project.course, ...project.units, ...project.activities];
     for (const e of hierarchy) {
         for (const child of e.children ?? [])
@@ -105,7 +106,7 @@ export function validateProject(project) {
             throw new ProjectError('portableId values must be globally unique');
         if (project.entityOrder) {
             if (project.entityOrder.length !== keys.length || new Set(project.entityOrder).size !== keys.length || project.entityOrder.some((k) => !known.has(k)))
-                throw new ProjectError('entityOrder must contain every entity key exactly once');
+                throw new ProjectError 'entityOrder must contain every entity key exactly once');
         }
         for (const ep of project.entrypoints ?? [])
             if (!known.has(ep.key))
@@ -160,3 +161,4 @@ export function validateProject(project) {
         }
     }
 }
+//# sourceMappingURL=project-model.js.map

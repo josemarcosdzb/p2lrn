@@ -13,7 +13,19 @@ Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeS
 
 ## Identidad P2LRN
 
-La salida nueva usa `P2LRN`, `https://p2lrn.org/`, `.p2lrn`, `application/vnd.p2lrn...`, `org.p2lrn...`, `urn:p2lrn:...` y `p2lrn:*`. Los paquetes Alpha15 anteriores (`P2RLN`, `p2rln.org`, `.p2rln`) se siguen leyendo.
+La salida nueva usa:
+
+```text
+P2LRN
+https://p2lrn.org/
+.p2lrn
+application/vnd.p2lrn...
+org.p2lrn...
+urn:p2lrn:...
+p2lrn:*
+```
+
+Los paquetes Alpha15 anteriores (`P2RLN`, `p2rln.org`, `.p2rln`) se siguen leyendo. Sus bytes y hashes se verifican antes de normalizar identificadores en memoria.
 
 ## Instalación local
 
@@ -22,27 +34,67 @@ npm install ./packages/toolkit \
             ./npm/p2lrn-player-0.5.0-alpha.1.tgz
 ```
 
-Comandos principales: `p2lrn-validate`, `p2lrn-reader`, `p2lrn-create`, `p2lrn-convert`, `p2lrn-repack`, `p2lrn-inspect`, `p2lrn-extract-source`, `p2lrn-delta`, `p2lrn-trust`, `p2lrn-build-web-sdk`, `p2lrn-rebuild-examples` y `p2lrn-build-advanced-example`.
+Comandos principales:
+
+```text
+p2lrn-validate
+p2lrn-reader
+p2lrn-create
+p2lrn-convert
+p2lrn-repack
+p2lrn-inspect
+p2lrn-extract-source
+p2lrn-delta
+p2lrn-trust
+p2lrn-build-web-sdk
+p2lrn-rebuild-examples
+p2lrn-build-advanced-example
+```
+
+Migrar un paquete antiguo sin reconstruirlo manualmente:
+
+```bash
+p2lrn-repack curso.p2rln curso.p2lrn --canonicalize-identifiers
+```
+
+El migrador recalcula manifests/digests/`contentRoot` y rutas content-addressed cuando cambia JSON, pero preserva byte a byte los paquetes SCORM/H5P/cmi5/QTI anidados. También conserva `ZIP_STORED` cuando `range-integrity` depende de offsets físicos.
 
 ## Autoría editable y Studio
+
+La implementación Node puede abrir un paquete P2LRN canónico como workspace editable y volver a construirlo sin pérdida lógica:
 
 ```bash
 p2lrn-create open curso.p2lrn ./workspace
 p2lrn-create build ./workspace curso-reconstruido.p2lrn --strict-profiles
-p2lrn-create upgrade ./workspace
 ```
 
-El contrato de proyecto actual es `0.3.0`. Conserva IDs portables importados, orden del grafo, entrypoints, perfiles y payloads opacos. Los **17/17 paquetes canónicos** hacen `open -> build` conservando exactamente `contentRoot`, y los **17/17 P2RLN Alpha15** se abren y reconstruyen como P2LRN canónico.
+El contrato de proyecto actual es `0.3.0`. Conserva IDs portables importados, orden del grafo, entrypoints, declaraciones de perfiles y payloads opacos. El gate de regresión abre los **17/17 paquetes canónicos** y exige que un rebuild sin cambios conserve exactamente el mismo `contentRoot`.
 
-La frontera pública para Studio es `@p2lrn/toolkit/authoring`:
+Studio y otros hosts no deben enlazarse a los módulos internos de Creator. La frontera pública es `@p2lrn/toolkit/authoring`:
 
 ```ts
 import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
+
 const workspace = P2LRNAuthoringWorkspace.open('curso.p2lrn', './workspace');
-workspace.update((draft) => { draft.course.title.es = 'Curso editado'; draft.course.revision += 1; });
+workspace.update((draft) => {
+  draft.course.title.es = 'Curso editado';
+  draft.course.revision += 1;
+});
 workspace.build('curso-editado.p2lrn', {strictProfiles: true});
 ```
 
-La matriz `packages/toolkit/config/authoring-capabilities.json` separa autoría, round-trip, lectura, preservación y `deliver`; preservar un estándar externo no se declara como ejecución completa.
+La matriz `packages/toolkit/config/authoring-capabilities.json` separa explícitamente autoría, round-trip, lectura, preservación y `deliver`; no equipara la preservación de un estándar externo con su ejecución completa.
 
-Python queda exclusivamente en `reference-python-alpha15/` como referencia de conformidad. Véanse `MIGRATION-NODE.md`, `TEST-RESULTS.md`, `COMPATIBILITY.md` y `spec/AUTHORING-API.md`.
+Los proyectos de Creator `0.1.0`/`0.2.0` se migran explícitamente con:
+
+```bash
+p2lrn-create upgrade ./workspace
+```
+
+La migración escribe `p2lrn.project.json` 0.3.0 y, sólo después de escribirlo y validarlo correctamente, elimina el alias histórico `p2rln.project.json` del workspace para evitar dos autoridades editables. Mantiene el resultado lógico del build. Los **17/17 paquetes P2RLN Alpha15** también pueden abrirse directamente; primero pasan por la canonización P2RLN existente y después se materializan como workspace editable P2LRN.
+
+## Límites que no se falsean
+
+La migración de lenguaje no convierte automáticamente los runtimes externos en conformidad total. SCORM y H5P conservan sus gates experimentales/especializados; cmi5, QTI y LTI siguen negociándose mediante sus capacidades/runtimes correspondientes. El Reader no declara `deliver` donde no existe una ejecución real soportada.
+
+Véanse `MIGRATION-NODE.md`, `TEST-RESULTS.md` y `COMPATIBILITY.md`.

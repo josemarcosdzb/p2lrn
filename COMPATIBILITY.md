@@ -14,4 +14,4 @@
 
 Se conservan lectores/aliases para `P2RLN`, `https://p2rln.org/`, `.p2rln`, `p2rln.project.json`, MIME/URN/extensiones antiguas, `p2rlnVersions`, `<p2rln-player>`, global `P2RLN`, eventos/protocolos Alpha15, rutas Service Worker antiguas y envelopes H5P/SCORM antiguos.
 
-La compatibilidad no convierte esos nombres en autoridad nueva: sólo evita romper material Alpha15 existente.
+La compatibilidad no convierte esos nombres en autoridad nueva: sólo evita romper material Alpha15 existente. En autoría, `p2rln.project.json` se acepta únicamente como entrada legacy; `upgrade` escribe `p2lrn.project.json` y elimina el alias antiguo sólo después de una escritura y validación correctas.
