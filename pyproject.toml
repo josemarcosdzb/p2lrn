@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "p2rln-toolkit"
+version = "0.4.0a15"
+description = "Reference creator, reader and validator toolkit for the P2RLN learning-package format"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.18"]
+
+[project.optional-dependencies]
+trust = ["cryptography>=42"]
+
+[project.scripts]
+p2rln-reader = "p2rln_reader.__main__:main"
+p2rln-validate = "p2rln_reader.validate_cli:main"
+p2rln-create = "p2rln_creator.cli:main"
+p2rln-convert = "p2rln_creator.convert_cli:main"
+p2rln-trust = "p2rln_ref.trust_cli:main"
+p2rln-delta = "p2rln_ref.delta_cli:main"
+
+[tool.setuptools]
+packages = ["p2rln_reader", "p2rln_ref", "p2rln_creator"]
+
+[tool.setuptools.package-data]
+p2rln_reader = ["web/*.html", "web/*.js", "web/*.css", "web/renderers/*.js", "web/runtime-host/*.html", "web/runtime-host/*.js", "capabilities.json", "component-capabilities.json"]
+p2rln_ref = ["schemas/*.json", "component-catalog.json"]
+p2rln_creator = ["schemas/*.json"]
