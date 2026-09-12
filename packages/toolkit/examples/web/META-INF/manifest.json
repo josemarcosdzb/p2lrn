@@ -1,0 +1,45 @@
+{
+  "format": "P2RLN",
+  "formatVersion": "0.4.0",
+  "packageId": "urn:uuid:30000000-0000-4000-8000-000000000010",
+  "entrypoints": [
+    {
+      "id": "urn:uuid:30000000-0000-4000-8000-000000000001",
+      "type": "course",
+      "role": "primary"
+    }
+  ],
+  "graph": {
+    "path": "content/graph.json",
+    "schema": "https://p2rln.org/schema/graph/0.4.0",
+    "mediaType": "application/json",
+    "size": 1243,
+    "byteDigest": "sha256:c241a7038d93633773f194d49fd13048ae7894157c4a3daf91780bff2f735a21",
+    "contentDigest": "sha256:b07a14157ee859e168cf0b87b9af7b08d03d83101313880cc400234107fd8b69"
+  },
+  "profiles": [
+    {
+      "id": "https://p2rln.org/profile/course",
+      "version": "0.4.0",
+      "requirement": "required"
+    },
+    {
+      "id": "https://p2rln.org/profile/web-content",
+      "version": "0.4.0",
+      "requirement": "required"
+    }
+  ],
+  "files": [
+    {
+      "path": "assets/sha256/dc/ec/dceccde48b60d115db5bad12d0361fa8d76d0df8df143c134f0a50067e7616db",
+      "mediaType": "text/html",
+      "size": 141,
+      "byteDigest": "sha256:dceccde48b60d115db5bad12d0361fa8d76d0df8df143c134f0a50067e7616db",
+      "contentDigest": "sha256:dceccde48b60d115db5bad12d0361fa8d76d0df8df143c134f0a50067e7616db"
+    }
+  ],
+  "integrity": {
+    "algorithm": "sha256",
+    "contentRoot": "sha256:c7930ba48f6158e3d3cf52b9dd00aac77284e201d1b8a86503c131979b7dd757"
+  }
+}

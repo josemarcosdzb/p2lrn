@@ -1,0 +1,60 @@
+{
+  "name": "@p2lrn/toolkit",
+  "version": "0.5.0-alpha.1",
+  "description": "Node.js/TypeScript implementation of the P2LRN learning package toolkit",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js"
+    },
+    "./reader": {
+      "types": "./dist/reader/index.d.ts",
+      "import": "./dist/reader/index.js"
+    },
+    "./creator": {
+      "types": "./dist/creator/index.d.ts",
+      "import": "./dist/creator/index.js"
+    }
+  },
+  "bin": {
+    "p2lrn": "./dist/cli/main.js",
+    "p2lrn-validate": "./dist/cli/validate.js",
+    "p2lrn-reader": "./dist/cli/read.js",
+    "p2lrn-create": "./dist/cli/create.js",
+    "p2lrn-convert": "./dist/cli/convert.js",
+    "p2lrn-delta": "./dist/cli/delta.js",
+    "p2lrn-trust": "./dist/cli/trust.js",
+    "p2lrn-inspect": "./dist/tools/inspect.js",
+    "p2lrn-repack": "./dist/tools/repack.js",
+    "p2lrn-extract-source": "./dist/tools/extract-source.js",
+    "p2lrn-rebuild-examples": "./dist/tools/rebuild-examples.js",
+    "p2lrn-build-web-sdk": "./dist/tools/build-web-sdk.js",
+    "p2lrn-build-advanced-example": "./dist/tools/build-advanced-example.js",
+    "p2lrn-wrap-external": "./dist/cli/convert.js"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "check": "npm run build && npm test"
+  },
+  "files": [
+    "dist/",
+    "config/",
+    "web/",
+    "web-sdk-src/",
+    "examples/",
+    "README.md"
+  ]
+}

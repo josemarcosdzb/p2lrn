@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2rln.org/schema/native-component/0.1",
+  "title": "P2RLN Native Component Instance 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "component", "data"],
+  "properties": {
+    "schema": {"const": "https://p2rln.org/schema/native-component/0.1"},
+    "version": {"const": "0.1"},
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "componentVersion", "dataVersion", "runtimeContractVersion"],
+      "properties": {
+        "id": {"type": "string", "format": "uri", "minLength": 3, "maxLength": 500},
+        "componentVersion": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._+\\-]+$"},
+        "dataVersion": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._+\\-]+$"},
+        "runtimeContractVersion": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9._+\\-]+$"}
+      }
+    },
+    "data": {"type": "object"},
+    "schemas": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data": {"type": "string", "format": "uri"},
+        "editor": {"type": "string", "format": "uri"},
+        "state": {"type": "string", "format": "uri"}
+      }
+    },
+    "title": {"type": "string", "minLength": 1, "maxLength": 500},
+    "description": {"type": "string", "maxLength": 5000},
+    "language": {"type": "string", "minLength": 1, "maxLength": 64},
+    "extensions": {
+      "type": "object",
+      "propertyNames": {"type": "string", "format": "uri"},
+      "additionalProperties": true
+    }
+  }
+}

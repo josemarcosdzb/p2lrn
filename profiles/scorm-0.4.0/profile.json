@@ -1,0 +1,41 @@
+{
+  "id": "https://p2lrn.org/profile/scorm",
+  "version": "0.4.0",
+  "title": "P2LRN SCORM Package Profile",
+  "status": "experimental",
+  "description": "Preserves a SCORM 1.2 or SCORM 2004 package as an executable representation while projecting course/item structure into the P2LRN graph when available.",
+  "capabilities": [
+    "scorm.validate",
+    "scorm.read",
+    "scorm.write",
+    "scorm.preserve",
+    "scorm.deliver"
+  ],
+  "requires": [
+    "https://p2lrn.org/profile/course"
+  ],
+  "optionalDependencies": [],
+  "preservation": "opaque-allowed",
+  "normativeReferences": [
+    "https://adlnet.gov/projects/scorm/"
+  ],
+  "rules": [
+    "An original SCORM ZIP SHOULD be preserved byte-for-byte when available.",
+    "The SCORM manifest and runtime remain authoritative for SCORM launch, sequencing and run-time behavior.",
+    "P2LRN MAY project organization/item/resource metadata into Core entities but MUST NOT claim that projection replaces SCORM sequencing semantics.",
+    "A representation using this profile SHOULD expose detected SCORM version, manifest path, resource identifier, launch href and scormType in its profile extension.",
+    "Server-side source files found inside a preserved SCORM package MUST NOT be executed merely because the package was imported."
+  ],
+  "bindings": [
+    {
+      "standard": "ADL SCORM",
+      "version": "1.2",
+      "reference": "https://adlnet.gov/projects/scorm/"
+    },
+    {
+      "standard": "ADL SCORM",
+      "version": "2004",
+      "reference": "https://adlnet.gov/projects/scorm/"
+    }
+  ]
+}

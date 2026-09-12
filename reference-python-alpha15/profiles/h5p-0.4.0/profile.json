@@ -1,0 +1,35 @@
+{
+  "id": "https://p2rln.org/profile/h5p",
+  "version": "0.4.0",
+  "title": "P2RLN H5P Profile",
+  "status": "experimental",
+  "description": "Binds a P2RLN activity to an H5P package while preserving H5P content and distinguishing packages with bundled libraries from packages that depend on libraries supplied by the host.",
+  "capabilities": [
+    "h5p.validate",
+    "h5p.read",
+    "h5p.write",
+    "h5p.preserve",
+    "h5p.deliver"
+  ],
+  "requires": [],
+  "optionalDependencies": [],
+  "preservation": "opaque-allowed",
+  "normativeReferences": [
+    "https://h5p.org/documentation/developers/h5p-specification"
+  ],
+  "rules": [
+    "An original .h5p package SHOULD be preserved byte-for-byte when available.",
+    "P2RLN MUST NOT reinterpret h5p.json, content.json, library.json or semantics.json as Core structures.",
+    "A representation SHOULD record mainLibrary, embedTypes, declared dependencies and dependencyMode (bundled, external or mixed).",
+    "A processor MAY preserve an H5P representation without having all declared H5P libraries installed.",
+    "Delivery requires an H5P-capable runtime and all required libraries; preservation alone does not imply delivery capability.",
+    "Delivery MUST occur inside the H5P runtime/security boundary rather than by treating the package as passive Core content."
+  ],
+  "bindings": [
+    {
+      "standard": "H5P Package Specification",
+      "version": "unspecified",
+      "reference": "https://h5p.org/documentation/developers/h5p-specification"
+    }
+  ]
+}

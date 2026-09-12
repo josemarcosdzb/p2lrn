@@ -1,0 +1,29 @@
+{
+  "id": "https://p2lrn.org/profile/native-questionnaire",
+  "version": "0.4.0",
+  "title": "P2LRN Native Questionnaire Profile",
+  "status": "experimental",
+  "description": "Defines a portable, declarative questionnaire representation that a P2LRN Reading System can render and score without requiring a foreign runtime.",
+  "capabilities": [
+    "native-questionnaire.validate",
+    "native-questionnaire.read",
+    "native-questionnaire.write",
+    "native-questionnaire.preserve",
+    "native-questionnaire.deliver"
+  ],
+  "requires": [],
+  "optionalDependencies": [
+    "https://p2lrn.org/profile/qti"
+  ],
+  "preservation": "semantic-required",
+  "rules": [
+    "The representation media type MUST be application/vnd.p2lrn.questionnaire+json.",
+    "Question, choice, blank and matching identifiers are portable activity-internal identifiers and MUST NOT be installation-local database identifiers.",
+    "Learner answers, attempts, grades and persisted runtime state MUST NOT be embedded as questionnaire design state.",
+    "embedded-key grading is portable and offline-capable but does not provide answer-key secrecy because the key is delivered to the client.",
+    "host grading MAY omit embedded solutions; the runtime then emits answers but MUST NOT fabricate an authoritative score.",
+    "A Reading System MUST NOT claim delivery of a questionnaire containing timeLimitSeconds unless that runtime actually enforces the declared timing semantics.",
+    "Advanced assessment semantics for which QTI is authoritative SHOULD use the QTI profile rather than redefining QTI in this profile."
+  ],
+  "bindings": []
+}

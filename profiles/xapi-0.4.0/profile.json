@@ -1,0 +1,31 @@
+{
+  "id": "https://p2lrn.org/profile/xapi",
+  "version": "0.4.0",
+  "title": "P2LRN xAPI Profile",
+  "status": "experimental",
+  "description": "Declares xAPI activity/verb/profile semantics that a delivered P2LRN activity may emit; learner statements themselves remain outside the portable course package.",
+  "capabilities": [
+    "xapi.read",
+    "xapi.write",
+    "xapi.emit",
+    "xapi.preserve"
+  ],
+  "requires": [],
+  "optionalDependencies": [],
+  "preservation": "semantic-required",
+  "normativeReferences": [
+    "https://standards.ieee.org/ieee/9274.1.1/7321/"
+  ],
+  "rules": [
+    "P2LRN MUST NOT store learner statement history as course content.",
+    "Activity identifiers and declared verbs/profiles SHOULD remain stable across round-trips.",
+    "LRS endpoints and credentials are deployment state and MUST NOT be embedded as secrets."
+  ],
+  "bindings": [
+    {
+      "standard": "IEEE xAPI",
+      "version": "9274.1.1-2023 / ISO/IEC/IEEE 39274-1-1:2025 adoption",
+      "reference": "https://standards.ieee.org/ieee/9274.1.1/7321/"
+    }
+  ]
+}

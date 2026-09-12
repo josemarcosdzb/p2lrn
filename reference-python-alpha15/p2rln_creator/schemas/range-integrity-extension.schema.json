@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2rln.org/schema/range-integrity-extension/1",
+  "title": "P2RLN Range Integrity Extension 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "indexPath"],
+  "properties": {
+    "version": {"const": "1"},
+    "indexPath": {"type": "string", "minLength": 1}
+  }
+}

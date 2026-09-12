@@ -1,0 +1,48 @@
+:host { color: #111827; }
+.p2rln-game-shell { display: grid; gap: 1rem; font-family: system-ui, sans-serif; }
+.p2rln-game-header { display: grid; gap: .3rem; }
+.p2rln-game-header h2, .p2rln-game-header p { margin: 0; }
+.p2rln-game-kicker { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.p2rln-game-description { color: #4b5563; }
+.p2rln-game-board { display: grid; gap: .75rem; }
+.p2rln-game-actions { display: flex; flex-wrap: wrap; gap: .55rem; }
+.p2rln-game-button, .p2rln-game-card, .p2rln-game-cell, .p2rln-game-choice, .p2rln-rosco-letter { border: 1px solid #9ca3af; border-radius: .55rem; background: #fff; color: inherit; font: inherit; padding: .65rem .8rem; cursor: pointer; }
+.p2rln-game-button:disabled, .p2rln-game-card:disabled, .p2rln-game-cell:disabled, .p2rln-game-choice:disabled { cursor: default; opacity: .68; }
+.p2rln-game-card.is-selected, .p2rln-game-choice.is-selected { outline: 2px solid currentColor; outline-offset: 2px; }
+.p2rln-game-card.is-solved, .p2rln-game-cell.is-solved, .p2rln-game-choice.is-solved { font-weight: 700; }
+.p2rln-memory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: .55rem; }
+.p2rln-match-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 1rem; }
+.p2rln-match-column { display: grid; align-content: start; gap: .5rem; }
+.p2rln-order-card { border: 1px solid #d1d5db; border-radius: .65rem; padding: .85rem; display: grid; gap: .65rem; }
+.p2rln-order-row { display: grid; grid-template-columns: 1fr auto; gap: .5rem; align-items: center; }
+.p2rln-order-controls { display: flex; gap: .25rem; }
+.p2rln-vf-list { display: grid; gap: .75rem; }
+.p2rln-vf-card { border: 1px solid #d1d5db; border-radius: .65rem; padding: .85rem; display: grid; gap: .6rem; }
+.p2rln-game-status { min-height: 1.4em; margin: 0; }
+.p2rln-grid-scroll { overflow: auto; max-width: 100%; }
+.p2rln-word-grid, .p2rln-crossword-grid { border-collapse: collapse; margin: 0 auto; }
+.p2rln-word-grid td, .p2rln-crossword-grid td { padding: 0; }
+.p2rln-game-cell { border-radius: 0; min-width: 2rem; min-height: 2rem; padding: .35rem; }
+.p2rln-word-grid .p2rln-game-cell.is-start { outline: 2px solid currentColor; position: relative; z-index: 1; }
+.p2rln-crossword-block { width: 2rem; height: 2rem; background: transparent; }
+.p2rln-crossword-cell { position: relative; width: 2rem; height: 2rem; border: 1px solid #6b7280; background: #fff; }
+.p2rln-crossword-cell input { width: 100%; height: 100%; box-sizing: border-box; border: 0; text-align: center; font: inherit; text-transform: uppercase; background: transparent; }
+.p2rln-crossword-number { position: absolute; inset: .05rem auto auto .12rem; font-size: .55rem; pointer-events: none; }
+.p2rln-clues { display: grid; grid-template-columns: repeat(auto-fit,minmax(14rem,1fr)); gap: 1rem; }
+.p2rln-clues h3 { margin-bottom: .35rem; }
+.p2rln-clues ol { margin-top: 0; padding-left: 1.5rem; }
+.p2rln-rosco { display: flex; flex-wrap: wrap; gap: .35rem; justify-content: center; }
+.p2rln-rosco-letter { border-radius: 999px; width: 2.3rem; height: 2.3rem; padding: 0; display: grid; place-items: center; }
+.p2rln-rosco-letter.is-current { outline: 2px solid currentColor; outline-offset: 2px; }
+.p2rln-rosco-letter.is-solved { font-weight: 800; }
+.p2rln-rosco-challenge { border: 1px solid #d1d5db; border-radius: .65rem; padding: 1rem; display: grid; gap: .65rem; }
+.p2rln-game-input { width: 100%; box-sizing: border-box; font: inherit; padding: .65rem; border: 1px solid #9ca3af; border-radius: .5rem; }
+.p2rln-3d-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(16rem,.7fr); gap: 1rem; align-items: start; }
+.p2rln-3d-canvas { width: 100%; max-width: 100%; border: 1px solid #6b7280; border-radius: .65rem; background: #111827; }
+.p2rln-3d-controls { display: grid; gap: .7rem; }
+@media (max-width: 700px) { .p2rln-match-grid, .p2rln-3d-layout { grid-template-columns: 1fr; } .p2rln-game-cell, .p2rln-crossword-block, .p2rln-crossword-cell { min-width: 1.7rem; width: 1.7rem; min-height: 1.7rem; height: 1.7rem; } }
+
+.p2rln-game-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}

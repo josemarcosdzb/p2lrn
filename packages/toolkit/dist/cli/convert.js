@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { convertExternalPackage } from '../creator/external.js';
+import { parse, opt, printJson, req, fail, CliExit, isMain } from './util.js';
+export function main(argv = process.argv.slice(2)) { try {
+    const p = parse(argv);
+    if (p.options.has('help')) {
+        process.stdout.write('Usage: p2lrn-convert <source> <output.p2lrn> [--package-root DIR] [--report FILE]\n');
+        return;
+    }
+    const report = convertExternalPackage(req(p.positional[0], 'source'), req(p.positional[1], 'output'), opt(p, 'package-root')), reportPath = opt(p, 'report');
+    if (reportPath) {
+        mkdirSync(dirname(reportPath), { recursive: true });
+        writeFileSync(reportPath, JSON.stringify(report, null, 2) + '\n');
+    }
+    printJson(report);
+}
+catch (e) {
+    if (e instanceof CliExit)
+        return;
+    fail('P2LRN Convert error', e);
+} }
+if (isMain(import.meta.url))
+    main();
+//# sourceMappingURL=convert.js.map

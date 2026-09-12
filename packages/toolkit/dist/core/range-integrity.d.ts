@@ -1,0 +1,13 @@
+export declare const RANGE_INTEGRITY_EXTENSION = "org.p2lrn.rangeIntegrity";
+export declare const LEGACY_RANGE_INTEGRITY_EXTENSION = "org.p2rln.rangeIntegrity";
+export declare const RANGE_INTEGRITY_VERSION = "1";
+export declare const RANGE_INTEGRITY_MEDIA_TYPE = "application/vnd.p2lrn.range-integrity+json";
+export declare const LEGACY_RANGE_INTEGRITY_MEDIA_TYPE = "application/vnd.p2rln.range-integrity+json";
+export declare const DEFAULT_CHUNK_SIZE: number;
+export declare const MIN_CHUNK_SIZE: number;
+export declare const MAX_CHUNK_SIZE: number;
+export declare function chunkDigests(data: Uint8Array, chunkSize?: number): string[];
+export declare function buildRangeIntegrityMap(payloads: Map<string, Uint8Array> | Record<string, Uint8Array>, paths: Iterable<string>, chunkSize?: number): Record<string, unknown>;
+export declare function validateRangeIntegrityMap(index: any, inventory?: Set<string>): any;
+export declare function isRangeIntegrityExtension(value: string | undefined): boolean;
+export declare function isRangeIntegrityMediaType(value: string | undefined): boolean;

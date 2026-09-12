@@ -1,0 +1,53 @@
+#!/usr/bin/env node
+// @ts-nocheck
+import { spawn } from 'node:child_process';
+import { P2LRNReadingSystem, ReaderServer } from '../reader/index.js';
+import { parse, flag, opt, printJson, req, fail, CliExit, isMain } from './util.js';
+function open(url) { const platform = process.platform; if (platform === 'win32')
+    spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
+else if (platform === 'darwin')
+    spawn('open', [url], { detached: true, stdio: 'ignore' }).unref();
+else
+    spawn('xdg-open', [url], { detached: true, stdio: 'ignore' }).unref(); }
+export async function main(argv = process.argv.slice(2)) { try {
+    const p = parse(argv);
+    if (flag(p, 'help')) {
+        process.stdout.write('Usage: p2lrn-reader <package> [--summary|--tree|--read-plan|--import-plan] [--port N] [--no-browser]\n');
+        return;
+    }
+    const pkg = req(p.positional[0], 'package'), s = new P2LRNReadingSystem(pkg, { validateProfilePayloads: !flag(p, 'no-profile-payload-validation') });
+    let printed = false;
+    if (flag(p, 'summary')) {
+        printJson(s.summary());
+        printed = true;
+    }
+    if (flag(p, 'tree')) {
+        printJson(s.tree());
+        printed = true;
+    }
+    if (flag(p, 'read-plan')) {
+        printJson(s.readPlan());
+        printed = true;
+    }
+    if (flag(p, 'import-plan')) {
+        printJson(s.importPlan());
+        printed = true;
+    }
+    if (printed)
+        return;
+    const server = new ReaderServer(s, '127.0.0.1', Number(opt(p, 'port', '0')), false), url = await server.start();
+    process.stdout.write(`P2LRN Reader: ${url}\n`);
+    if (!flag(p, 'no-browser'))
+        open(url);
+    const stop = async () => { await server.stop(); process.exitCode = 0; };
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
+}
+catch (e) {
+    if (e instanceof CliExit)
+        return;
+    fail('P2LRN Reader error', e);
+} }
+if (isMain(import.meta.url))
+    void main();
+//# sourceMappingURL=read.js.map

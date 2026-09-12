@@ -1,0 +1,38 @@
+{
+  "id": "https://p2lrn.org/profile/cmi5",
+  "version": "0.4.0",
+  "title": "P2LRN cmi5 Profile",
+  "status": "experimental",
+  "description": "Preserves cmi5 course packages and maps Course/Block/AU structure to P2LRN Course/Unit/Activity entities without replacing cmi5 launch or xAPI runtime semantics.",
+  "capabilities": [
+    "cmi5.validate",
+    "cmi5.read",
+    "cmi5.write",
+    "cmi5.preserve",
+    "cmi5.deliver"
+  ],
+  "requires": [
+    "https://p2lrn.org/profile/course"
+  ],
+  "optionalDependencies": [
+    "https://p2lrn.org/profile/xapi"
+  ],
+  "preservation": "semantic-required",
+  "normativeReferences": [
+    "https://aicc.github.io/CMI-5_Spec_Current/"
+  ],
+  "rules": [
+    "cmi5.xml remains authoritative for AU launch rules and cmi5-specific runtime semantics.",
+    "cmi5 Course SHOULD map to the P2LRN Course identity when a stable absolute identifier is provided.",
+    "cmi5 Block SHOULD map to Unit and AU SHOULD map to Activity.",
+    "moveOn, masteryScore, launchMethod, launchParameters, entitlementKey and AU URL MUST be preserved when present.",
+    "Remote AU URLs MUST NOT be dereferenced during package validation."
+  ],
+  "bindings": [
+    {
+      "standard": "cmi5",
+      "version": "1.x",
+      "reference": "https://aicc.github.io/CMI-5_Spec_Current/"
+    }
+  ]
+}

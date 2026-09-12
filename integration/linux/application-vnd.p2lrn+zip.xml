@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/vnd.p2lrn+zip">
+    <comment>P2LRN learning package</comment>
+    <glob pattern="*.p2lrn"/>
+  </mime-type>
+</mime-info>

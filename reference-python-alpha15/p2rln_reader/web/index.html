@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>P2RLN Reader</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <strong>P2RLN Reader</strong>
+      <span id="format"></span>
+    </div>
+    <div id="integrity" class="status">Validando…</div>
+  </header>
+  <main>
+    <aside>
+      <div class="aside-head">
+        <div id="course-title" class="course-title">Curso</div>
+        <div id="package-meta" class="muted"></div>
+      </div>
+      <nav id="tree" aria-label="Contenido del curso"></nav>
+    </aside>
+    <section class="workspace">
+      <div id="empty" class="empty">
+        <h1>P2RLN</h1>
+        <p>Selecciona un elemento del curso.</p>
+      </div>
+      <div id="detail" hidden>
+        <div class="detail-head">
+          <div>
+            <div id="entity-type" class="eyebrow"></div>
+            <h1 id="entity-title"></h1>
+          </div>
+          <span id="view-status" class="pill"></span>
+        </div>
+        <div id="message" class="message" hidden></div>
+        <div id="native-viewer" class="native-viewer" hidden></div>
+        <iframe id="viewer" sandbox="allow-same-origin" referrerpolicy="no-referrer" hidden></iframe>
+        <pre id="raw"></pre>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

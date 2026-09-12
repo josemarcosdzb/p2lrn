@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/schema/component-capabilities/0.1",
+  "title": "P2LRN Host Component Capabilities 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "components"
+  ],
+  "properties": {
+    "schema": {
+      "const": "https://p2lrn.org/schema/component-capabilities/0.1"
+    },
+    "version": {
+      "const": "0.1"
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "componentVersion",
+          "runtimeContractVersion",
+          "inputDataVersions",
+          "targetDataVersion"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uri",
+            "minLength": 3,
+            "maxLength": 500
+          },
+          "componentVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "runtimeContractVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "inputDataVersions": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "targetDataVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "authoringDataVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "dataSchemas": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "editorSchemas": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "additionalProperties": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      }
+    }
+  }
+}

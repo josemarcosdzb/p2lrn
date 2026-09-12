@@ -1,0 +1,424 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { basename, dirname } from 'node:path';
+import { FORMAT_VERSION, FORMAT, PROFILE as CORE_PROFILE } from '../core/constants.js';
+import { computeContentRoot, contentDigest, sha256 } from '../core/integrity.js';
+import { parseIJson } from '../core/ijson.js';
+import { uuid5 } from '../core/uuid.js';
+import { ZipArchive, writeZip } from '../core/zip.js';
+import { validatePackageBytes } from '../core/validator.js';
+import { attrLocal, descendants, firstDirectChild, localName, namespaceUri, parseXml, textContent } from '../core/xml-lite.js';
+import { guessMediaType } from './builder.js';
+const NS = '12d4c8f7-1b78-4bf2-9f7c-a2d215f8d8f5';
+const URI_RE = /^[A-Za-z][A-Za-z0-9+.-]*:/;
+export const EXTERNAL_PROFILE = {
+    h5p: 'https://p2lrn.org/profile/h5p', scorm: 'https://p2lrn.org/profile/scorm', cmi5: 'https://p2lrn.org/profile/cmi5',
+    'common-cartridge': 'https://p2lrn.org/profile/common-cartridge', 'tincan-package': 'https://p2lrn.org/profile/tincan-package',
+    'web-content': 'https://p2lrn.org/profile/web-content', qti: 'https://p2lrn.org/profile/qti', lti: 'https://p2lrn.org/profile/lti'
+};
+const td = new TextDecoder('utf-8', { fatal: true }), te = new TextEncoder();
+const SOURCE_ZIP_LIMITS = { entries: 20000, entryBytes: 16 * 1024 * 1024 * 1024, totalUncompressedBytes: 128 * 1024 * 1024 * 1024, centralDirectoryBytes: 128 * 1024 * 1024, compressionRatio: 500 };
+function jsonBytes(v) { return te.encode(JSON.stringify(v, null, 2) + '\n'); }
+function cleanObject(v) { return Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined && x !== null && x !== '')); }
+function stableUrn(seed, kind, key) { return `urn:uuid:${uuid5(NS, `${seed}|${kind}|${key}`)}`; }
+function portableId(seed, kind, source) { const s = (source ?? '').trim(); return s && URI_RE.test(s) ? s : stableUrn(seed, kind, s || kind); }
+function titleMap(value, lang = 'und') { const v = (value ?? '').replace(/\s+/g, ' ').trim(); return { [lang]: v || 'Untitled' }; }
+function langMap(container, fallback = 'und') { if (!container)
+    return {}; const result = {}; for (const el of descendants(container)) {
+    if (localName(el.name).toLowerCase() === 'langstring') {
+        const value = textContent(el);
+        if (value) {
+            const lang = el.attributes.lang ?? el.attributes['xml:lang'] ?? fallback;
+            result[lang] = value;
+        }
+    }
+} if (Object.keys(result).length)
+    return result; const value = textContent(container); return value ? { [fallback]: value } : {}; }
+function firstDesc(node, name) { return descendants(node).find((x) => localName(x.name) === name); }
+function firstResourceFile(src) { if (!src)
+    return undefined; return descendants(src).find((x) => localName(x.name) === 'file' && x.attributes.href)?.attributes.href; }
+function packagePath(data) { const d = sha256(data), h = d.slice(7); return [`packages/sha256/${h.slice(0, 2)}/${h.slice(2, 4)}/${h}`, d]; }
+function descriptor(path, data, mediaType = 'application/zip') { const d = sha256(data); return { path, mediaType, size: data.byteLength, byteDigest: d, contentDigest: mediaType === 'application/json' ? contentDigest(data, mediaType, path) : d }; }
+function rep(seed, profile, ppath, originalName, metadata, key) { return { id: stableUrn(seed, 'representation', key), role: 'original-package', mediaType: 'application/zip', profile, originalName, location: { type: 'embedded', path: ppath }, extensions: { [profile]: metadata } }; }
+function memberRep(seed, profile, ppath, member, metadata, key, role = 'rendered', mediaType) { return { id: stableUrn(seed, 'representation', key), role, mediaType: mediaType ?? guessMediaType(member), profile, location: { type: 'package-member', package: ppath, member }, extensions: { [profile]: metadata } }; }
+function normalizedSubpackage(archive, root) { const prefix = root.replace(/^\/+|\/+$/g, '') + '/'; const files = new Map(); for (const name of archive.names()) {
+    if (!name.startsWith(prefix))
+        continue;
+    const rel = name.slice(prefix.length);
+    if (rel)
+        files.set(rel, archive.read(name));
+} if (!files.size)
+    throw new Error(`package root not found or empty: ${root}`); const bytes = writeZip([...files].sort(([a], [b]) => a.localeCompare(b)).map(([path, data]) => ({ path, data, method: 8 }))); return { bytes, files }; }
+function loadSource(path, packageRoot) { const original = readFileSync(path); const archive = ZipArchive.open(original, SOURCE_ZIP_LIMITS); if (packageRoot) {
+    const normalized = normalizedSubpackage(archive, packageRoot);
+    return { original, packageBytes: normalized.bytes, files: normalized.files, normalizedRoot: packageRoot.replace(/^\/+|\/+$/g, '') };
+} const files = new Map(); for (const name of archive.names())
+    files.set(name, archive.read(name)); return { original, packageBytes: original, files }; }
+export function detectExternalPackage(files) { const names = new Set(files.keys()); if (names.has('h5p.json'))
+    return 'h5p'; if (names.has('cmi5.xml'))
+    return 'cmi5'; if (names.has('tincan.xml'))
+    return 'tincan-package'; if (names.has('imsmanifest.xml')) {
+    const root = parseXml(files.get('imsmanifest.xml'));
+    let schema = '', schemaversion = '';
+    for (const el of descendants(root)) {
+        if (localName(el.name) === 'schema' && textContent(el))
+            schema = textContent(el);
+        if (localName(el.name) === 'schemaversion' && textContent(el))
+            schemaversion = textContent(el);
+    }
+    void schemaversion;
+    const ns = namespaceUri(root);
+    if (schema.includes('QTI Package') || ns.includes('qti/qtiv3p0') || ns.includes('imsqtiasi_v3p0'))
+        return 'qti';
+    if (schema.includes('Common Cartridge') || ns.includes('imscc'))
+        return 'common-cartridge';
+    const scormAttr = descendants(root).some((el) => Object.keys(el.attributes).some((k) => localName(k).toLowerCase() === 'scormtype'));
+    if (schema.includes('SCORM') || scormAttr || names.has('adlcp_rootv1p2.xsd'))
+        return 'scorm';
+} throw new Error('unsupported or unrecognized package format'); }
+function basicLtiMetadata(files, src) { const member = firstResourceFile(src); if (!member || !files.has(member))
+    return undefined; let root; try {
+    root = parseXml(files.get(member));
+}
+catch {
+    return undefined;
+} const firstText = (name) => { const e = descendants(root).find((x) => localName(x.name) === name); return e ? textContent(e) || undefined : undefined; }; const launch = firstText('secure_launch_url') ?? firstText('launch_url'); return { sourceStandard: 'IMS Basic LTI', sourceVersion: '1.0', descriptorMember: member, title: firstText('title'), description: firstText('description'), launchUrl: launch, targetLinkUri: launch, rebindRequired: true, migrationTarget: 'LTI 1.3' }; }
+function ccWebLinkMetadata(files, src) { const member = firstResourceFile(src); if (!member || !files.has(member))
+    return undefined; let root; try {
+    root = parseXml(files.get(member));
+}
+catch {
+    return undefined;
+} let title = '', href = ''; for (const el of descendants(root)) {
+    const ln = localName(el.name);
+    if (ln === 'title' && !title)
+        title = textContent(el);
+    else if (ln === 'url' && !href)
+        href = el.attributes.href ?? textContent(el);
+} return href ? { descriptorMember: member, title: title || undefined, href, sourceStandard: 'IMS Common Cartridge Web Link' } : undefined; }
+function ccDiscussionMetadata(files, src) { const member = firstResourceFile(src); if (!member || !files.has(member))
+    return undefined; let root; try {
+    root = parseXml(files.get(member));
+}
+catch {
+    return undefined;
+} let title = '', body = '', textType = ''; for (const el of descendants(root)) {
+    const ln = localName(el.name);
+    if (ln === 'title' && !title)
+        title = textContent(el);
+    else if (ln === 'text' && !body) {
+        body = textContent(el);
+        textType = el.attributes.texttype ?? '';
+    }
+} return cleanObject({ descriptorMember: member, title, text: body, textType, sourceStandard: 'IMS Common Cartridge Discussion Topic' }); }
+function imsManifestInfo(data, names) { const root = parseXml(data); let schema = '', version = ''; for (const el of descendants(root)) {
+    if (localName(el.name) === 'schema' && textContent(el))
+        schema = textContent(el);
+    if (localName(el.name) === 'schemaversion' && textContent(el))
+        version = textContent(el);
+} const orgs = descendants(root).find((x) => localName(x.name) === 'organizations'); const orgList = orgs?.children.filter((x) => localName(x.name) === 'organization') ?? []; let org = orgList.find((o) => o.attributes.identifier === orgs?.attributes.default); if (!org)
+    org = orgList[0]; const resources = new Map(); for (const el of descendants(root))
+    if (localName(el.name) === 'resource' && el.attributes.identifier)
+        resources.set(el.attributes.identifier, el); if (!version)
+    version = 'unknown'; if ((schema.includes('SCORM') || !schema.includes('SCORM')) && version === 'unknown' && names.has('adlcp_rootv1p2.xsd'))
+    version = '1.2-inferred'; return { root, org, resources, schema, version }; }
+function scormOrCcGraph(kind, seed, files, ppath, originalName) {
+    const profile = EXTERNAL_PROFILE[kind], info = imsManifestInfo(files.get('imsmanifest.xml'), new Set(files.keys())), { root, org, resources, schema, version } = info;
+    const orgTitle = org ? textContent(firstDirectChild(org, 'title')) : '';
+    let metadataTitle = '';
+    const metadata = firstDirectChild(root, 'metadata');
+    if (metadata) {
+        for (const titleEl of descendants(metadata)) {
+            if (localName(titleEl.name) === 'title') {
+                const stringEl = descendants(titleEl).find((x) => ['string', 'langstring'].includes(localName(x.name)));
+                metadataTitle = textContent(stringEl ?? titleEl);
+                if (metadataTitle)
+                    break;
+            }
+        }
+    }
+    const resolvedTitle = orgTitle || metadataTitle || originalName, courseId = stableUrn(seed, 'course', root.attributes.identifier ?? originalName);
+    const entities = [];
+    const course = { id: courseId, type: 'course', revision: 1, title: titleMap(resolvedTitle), children: [], extensions: { [profile]: cleanObject({ manifest: 'imsmanifest.xml', sourceManifestIdentifier: root.attributes.identifier, sourceSchema: schema || undefined, sourceSchemaVersion: version, resourceCount: resources.size }) } };
+    entities.push(course);
+    const resourceEntities = new Map();
+    const resourceFor = (refid) => {
+        if (resourceEntities.has(refid))
+            return resourceEntities.get(refid).id;
+        const src = resources.get(refid);
+        const meta = { manifest: 'imsmanifest.xml', resourceIdentifier: refid };
+        const href = src?.attributes.href, typ = src?.attributes.type, scormType = src ? attrLocal(src, 'scormtype') : undefined, member = href ?? firstResourceFile(src);
+        if (href != null)
+            meta.href = href;
+        if (member != null)
+            meta.member = member;
+        if (typ != null)
+            meta.resourceType = typ;
+        if (scormType != null)
+            meta.scormType = scormType;
+        if (kind === 'scorm')
+            meta.scormVersion = version;
+        const rid = stableUrn(seed, 'resource', refid || href || 'resource'), reps = [rep(seed, profile, ppath, originalName, meta, 'res-package:' + (refid || ''))];
+        if (kind === 'scorm' && member && files.has(member))
+            reps.push(memberRep(seed, EXTERNAL_PROFILE.scorm, ppath, member, meta, 'res-launch:' + (refid || ''), 'primary'));
+        else if (kind === 'common-cartridge' && src) {
+            const st = typ ?? '';
+            if (st === 'webcontent' && member && files.has(member))
+                reps.push(memberRep(seed, EXTERNAL_PROFILE['web-content'], ppath, member, { sourceProfile: 'Common Cartridge', resourceIdentifier: refid }, 'cc-web:' + refid, 'rendered'));
+            else if (st.includes('assessment') && member && files.has(member)) {
+                const qmeta = { sourceStandard: '1EdTech QTI', sourceVersion: '1.2', resourceIdentifier: refid, member, preservedFrom: 'Common Cartridge' };
+                reps.push(memberRep(seed, EXTERNAL_PROFILE.qti, ppath, member, qmeta, 'cc-qti:' + refid, 'primary', 'application/xml'));
+            }
+            else if (st.includes('basiclti')) {
+                const lm = basicLtiMetadata(files, src);
+                if (lm?.launchUrl)
+                    reps.push({ id: stableUrn(seed, 'representation', 'cc-lti:' + refid), role: 'primary', mediaType: 'application/vnd.ims.lti.v1.ltilink', profile: EXTERNAL_PROFILE.lti, location: { type: 'remote', href: lm.launchUrl }, extensions: { [EXTERNAL_PROFILE.lti]: cleanObject(lm) } });
+            }
+            else if (st.startsWith('imswl_')) {
+                const wm = ccWebLinkMetadata(files, src);
+                if (wm && URI_RE.test(wm.href)) {
+                    reps.push({ id: stableUrn(seed, 'representation', 'cc-weblink:' + refid), role: 'primary', mediaType: 'text/html', profile: EXTERNAL_PROFILE['web-content'], location: { type: 'remote', href: wm.href }, extensions: { [EXTERNAL_PROFILE['web-content']]: { sourceProfile: 'Common Cartridge', resourceIdentifier: refid, sourceType: 'web-link' } } });
+                    meta.webLink = cleanObject(wm);
+                }
+            }
+            else if (st.startsWith('imsdt_')) {
+                const dm = ccDiscussionMetadata(files, src);
+                if (dm)
+                    meta.discussionTopic = dm;
+                if (member && files.has(member))
+                    reps.push(memberRep(seed, profile, ppath, member, meta, 'cc-discussion:' + refid, 'primary', 'application/xml'));
+            }
+            else if (member && files.has(member))
+                reps.push(memberRep(seed, profile, ppath, member, meta, 'cc-member:' + refid, 'primary'));
+        }
+        const r = { id: rid, type: 'resource', representations: reps, extensions: { [profile]: { sourceResourceIdentifier: refid, resourceType: typ ?? 'unknown' } } };
+        resourceEntities.set(refid, r);
+        entities.push(r);
+        return rid;
+    };
+    const activityType = (srcType) => kind === 'scorm' ? 'https://p2lrn.org/type/scorm-activity' : (srcType ?? '').includes('assessment') ? 'https://p2lrn.org/type/assessment' : (srcType ?? '').includes('basiclti') ? 'https://p2lrn.org/type/external-tool' : (srcType ?? '').startsWith('imsdt_') ? 'https://p2lrn.org/type/discussion' : (srcType ?? '').startsWith('imswl_') ? 'https://p2lrn.org/type/web-link' : 'https://p2lrn.org/type/resource-view';
+    const projectItem = (item) => { const srcId = item.attributes.identifier ?? stableUrn(seed, 'source-item', 'missing'), refid = item.attributes.identifierref, title = textContent(firstDirectChild(item, 'title')) || srcId, children = item.children.filter((c) => localName(c.name) === 'item'); if (refid) {
+        const srcRes = resources.get(refid), srcType = srcRes?.attributes.type, eid = stableUrn(seed, 'activity', srcId), e = { id: eid, type: 'activity', activityType: activityType(srcType), title: titleMap(title), resource: resourceFor(refid), extensions: { [profile]: { sourceItemIdentifier: srcId, sourceResourceIdentifier: refid } } };
+        if (children.length)
+            e.children = children.map(projectItem);
+        entities.push(e);
+        return eid;
+    } const eid = stableUrn(seed, 'unit', srcId), e = { id: eid, type: 'unit', role: 'https://p2lrn.org/role/source-group', title: titleMap(title), children: [], extensions: { [profile]: { sourceItemIdentifier: srcId } } }; entities.push(e); e.children = children.map(projectItem); return eid; };
+    if (org)
+        course.children = org.children.filter((x) => localName(x.name) === 'item').map(projectItem);
+    if (kind === 'common-cartridge')
+        for (const refid of [...resources.keys()].sort())
+            resourceFor(refid);
+    const counts = {};
+    for (const r of resources.values()) {
+        const t = r.attributes.type ?? 'unknown';
+        counts[t] = (counts[t] ?? 0) + 1;
+    }
+    course.extensions[profile].resourceTypeCounts = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
+    if (kind === 'scorm')
+        course.extensions[profile].scoCount = [...resources.values()].filter((r) => Object.entries(r.attributes).some(([k, v]) => localName(k).toLowerCase() === 'scormtype' && v.toLowerCase() === 'sco')).length;
+    else
+        course.extensions[profile].cartridgeVersion = version;
+    return [entities, courseId, { title: resolvedTitle, version, resourceCount: resources.size }];
+}
+function manifestLomTitle(root) { const metadata = firstDirectChild(root, 'metadata'); if (!metadata)
+    return ''; for (const t of descendants(metadata)) {
+    if (localName(t.name) === 'title') {
+        const s = descendants(t).find((x) => ['string', 'langstring'].includes(localName(x.name))), v = textContent(s ?? t);
+        if (v)
+            return v;
+    }
+} return ''; }
+function resourceLomTitle(src) { if (!src)
+    return ''; const metadata = firstDirectChild(src, 'metadata'); if (!metadata)
+    return ''; for (const t of descendants(metadata)) {
+    if (localName(t.name) === 'title') {
+        const s = descendants(t).find((x) => ['string', 'langstring'].includes(localName(x.name))), v = textContent(s ?? t);
+        if (v)
+            return v;
+    }
+} return ''; }
+function qtiInteractions(src) { const out = []; if (!src)
+    return out; for (const e of descendants(src))
+    if (localName(e.name) === 'interactionType') {
+        const v = textContent(e);
+        if (v && !out.includes(v))
+            out.push(v);
+    } return out; }
+function qtiGraph(seed, files, ppath, originalName) { const profile = EXTERNAL_PROFILE.qti, root = parseXml(files.get('imsmanifest.xml')); let schema = '', version = 'unknown'; for (const e of descendants(root)) {
+    if (localName(e.name) === 'schema' && textContent(e))
+        schema = textContent(e);
+    if (localName(e.name) === 'schemaversion' && textContent(e))
+        version = textContent(e);
+} const resources = descendants(root).filter((e) => localName(e.name) === 'resource' && e.attributes.identifier), title = manifestLomTitle(root) || originalName, courseId = stableUrn(seed, 'course', root.attributes.identifier ?? originalName), course = { id: courseId, type: 'course', revision: 1, title: titleMap(title), children: [], extensions: { [profile]: cleanObject({ manifest: 'imsmanifest.xml', sourceManifestIdentifier: root.attributes.identifier, sourceSchema: schema || 'QTI Package', sourceVersion: version, resourceCount: resources.length }) } }, entities = [course]; let itemCount = 0, testCount = 0, supportCount = 0; for (const src of resources) {
+    const refid = src.attributes.identifier, rtype = src.attributes.type ?? 'unknown', member = src.attributes.href ?? firstResourceFile(src), dependencies = src.children.filter((x) => localName(x.name) === 'dependency' && x.attributes.identifierref).map((x) => x.attributes.identifierref), interactions = qtiInteractions(src), meta = cleanObject({ manifest: 'imsmanifest.xml', resourceIdentifier: refid, resourceType: rtype, sourceVersion: version, member });
+    if (interactions.length)
+        meta.interactionTypes = interactions;
+    if (dependencies.length)
+        meta.dependencies = dependencies;
+    const rid = stableUrn(seed, 'resource', 'qti:' + refid), reps = [rep(seed, profile, ppath, originalName, meta, 'qti-package:' + refid)], lower = rtype.toLowerCase(), isItem = lower.includes('qti_item') || lower.includes('assessmentitem') || lower.includes('item_xml'), isTest = lower.includes('qti_test') || lower.includes('assessmenttest') || lower.includes('test_xml');
+    if (member && files.has(member)) {
+        const media = member.toLowerCase().endsWith('.xml') ? 'application/xml' : guessMediaType(member);
+        if (isItem || isTest)
+            reps.push(memberRep(seed, profile, ppath, member, meta, 'qti-member:' + refid, 'primary', media));
+        else
+            reps.push(memberRep(seed, EXTERNAL_PROFILE['web-content'], ppath, member, { sourceProfile: 'QTI', sourceVersion: version, resourceIdentifier: refid }, 'qti-support:' + refid, 'primary', media));
+    }
+    const tr = resourceLomTitle(src) || refid;
+    entities.push({ id: rid, type: 'resource', title: titleMap(tr), representations: reps, extensions: { [profile]: { sourceResourceIdentifier: refid, resourceType: rtype, dependencies } } });
+    if (isItem || isTest) {
+        const aid = stableUrn(seed, 'activity', 'qti:' + refid), ext = { sourceResourceIdentifier: refid, sourceVersion: version, resourceType: rtype };
+        if (interactions.length)
+            ext.interactionTypes = interactions;
+        entities.push({ id: aid, type: 'activity', activityType: isTest ? 'https://p2lrn.org/type/assessment-test' : 'https://p2lrn.org/type/assessment-item', title: titleMap(tr), resource: rid, extensions: { [profile]: ext } });
+        course.children.push(aid);
+        if (isTest)
+            testCount++;
+        else
+            itemCount++;
+    }
+    else
+        supportCount++;
+} Object.assign(course.extensions[profile], { itemCount, testCount, supportResourceCount: supportCount }); return [entities, courseId, { title, version, itemCount, testCount, resourceCount: resources.length }]; }
+function h5pGraph(seed, files, ppath, originalName) { const profile = EXTERNAL_PROFILE.h5p, h = parseIJson(files.get('h5p.json'), 'h5p.json'), declared = []; for (const bucket of ['preloadedDependencies', 'dynamicDependencies', 'editorDependencies'])
+    for (const d of h[bucket] ?? [])
+        declared.push({ kind: bucket, machineName: d.machineName, majorVersion: d.majorVersion, minorVersion: d.minorVersion }); const embedded = new Map(); for (const [name, data] of files) {
+    if (name.split('/').length === 2 && name.endsWith('/library.json')) {
+        try {
+            const lib = parseIJson(data, name), mn = lib.machineName, major = Number(lib.majorVersion), minor = Number(lib.minorVersion);
+            if (mn && Number.isInteger(major) && Number.isInteger(minor))
+                embedded.set(`${mn}|${major}|${minor}`, [String(mn), major, minor]);
+        }
+        catch { }
+    }
+} const required = new Map(); for (const d of h.preloadedDependencies ?? []) {
+    const major = Number(d.majorVersion), minor = Number(d.minorVersion);
+    if (d.machineName && Number.isInteger(major) && Number.isInteger(minor))
+        required.set(`${d.machineName}|${major}|${minor}`, [String(d.machineName), major, minor]);
+} const matched = [...required.keys()].filter((k) => embedded.has(k)), missing = [...required.entries()].filter(([k]) => !embedded.has(k)).map(([, v]) => v).sort((a, b) => a[0].localeCompare(b[0]) || a[1] - b[1] || a[2] - b[2]), mode = required.size && !missing.length ? 'bundled' : matched.length ? 'mixed' : 'external', title = h.title || originalName, lang = h.language || 'und', courseId = stableUrn(seed, 'course', title), actId = stableUrn(seed, 'activity', 'h5p'), resId = stableUrn(seed, 'resource', 'h5p'), metadata = cleanObject({ mainLibrary: h.mainLibrary, language: lang, embedTypes: h.embedTypes ?? [], dependencyMode: mode, declaredDependencies: declared, embeddedLibraryCount: embedded.size, missingPreloadedDependencies: missing.map(([machineName, majorVersion, minorVersion]) => ({ machineName, majorVersion, minorVersion })) }); return [[{ id: courseId, type: 'course', revision: 1, title: titleMap(title, lang), languages: lang ? [lang] : [], children: [actId] }, { id: actId, type: 'activity', activityType: 'https://p2lrn.org/type/h5p', title: titleMap(title, lang), resource: resId }, { id: resId, type: 'resource', title: titleMap(title, lang), representations: [rep(seed, profile, ppath, originalName, metadata, 'h5p')] }], courseId, { title, mainLibrary: h.mainLibrary, dependencyMode: mode, embeddedLibraryCount: embedded.size }]; }
+function cmi5Graph(seed, files, ppath, originalName) { const profile = EXTERNAL_PROFILE.cmi5, root = parseXml(files.get('cmi5.xml')), courseSrc = root.children.find((x) => localName(x.name) === 'course'), sourceCourseId = courseSrc?.attributes.id, courseId = portableId(seed, 'course', sourceCourseId); let title = langMap(firstDirectChild(courseSrc, 'title')), desc = langMap(firstDirectChild(courseSrc, 'description')); if (!Object.keys(title).length)
+    title = titleMap(originalName); const entities = [], course = { id: courseId, type: 'course', revision: 1, title, children: [], extensions: { [profile]: cleanObject({ manifest: 'cmi5.xml', sourceCourseId }) } }; if (Object.keys(desc).length)
+    course.description = desc; entities.push(course); let auCount = 0, blockCount = 0; const project = (el) => { const ln = localName(el.name), src = el.attributes.id, tm = langMap(firstDirectChild(el, 'title')); const titleValue = Object.keys(tm).length ? tm : titleMap(src || ln), dm = langMap(firstDirectChild(el, 'description')); if (ln === 'block') {
+    blockCount++;
+    const eid = portableId(seed, 'unit', src), e = { id: eid, type: 'unit', role: 'https://p2lrn.org/role/cmi5-block', title: titleValue, children: [], extensions: { [profile]: { sourceId: src } } };
+    if (Object.keys(dm).length)
+        e.description = dm;
+    entities.push(e);
+    e.children = el.children.filter((x) => ['block', 'au'].includes(localName(x.name))).map(project);
+    return eid;
+} if (ln === 'au') {
+    auCount++;
+    const suffix = src || String(auCount), eid = portableId(seed, 'activity', src), rid = stableUrn(seed, 'resource', 'au:' + suffix), meta = { manifest: 'cmi5.xml', auId: src };
+    for (const a of ['moveOn', 'masteryScore', 'launchMethod'])
+        if (el.attributes[a] != null)
+            meta[a] = el.attributes[a];
+    for (const [childName, key] of [['url', 'url'], ['launchParameters', 'launchParameters'], ['entitlementKey', 'entitlementKey']]) {
+        const value = textContent(firstDirectChild(el, childName));
+        if (value)
+            meta[key] = value;
+    }
+    const reps = [rep(seed, profile, ppath, originalName, meta, 'au-package:' + suffix)], launch = meta.url;
+    if (launch) {
+        if (URI_RE.test(launch))
+            reps.push({ id: stableUrn(seed, 'representation', 'au-launch:' + suffix), role: 'primary', mediaType: 'text/html', profile, location: { type: 'remote', href: launch }, extensions: { [profile]: meta } });
+        else if (files.has(launch))
+            reps.push(memberRep(seed, profile, ppath, launch, meta, 'au-launch:' + suffix, 'primary'));
+    }
+    const res = { id: rid, type: 'resource', representations: reps }, act = { id: eid, type: 'activity', activityType: 'https://p2lrn.org/type/cmi5-au', title: titleValue, resource: rid, extensions: { [profile]: Object.fromEntries(Object.entries(meta).filter(([k]) => k !== 'manifest')) } };
+    if (Object.keys(dm).length)
+        act.description = dm;
+    entities.push(res, act);
+    return eid;
+} throw new Error(`unsupported cmi5 structural element ${ln}`); }; course.children = root.children.filter((x) => ['block', 'au'].includes(localName(x.name))).map(project); Object.assign(course.extensions[profile], { auCount, blockCount }); return [entities, courseId, { title: Object.values(title)[0], auCount, blockCount }]; }
+function tincanGraph(seed, files, ppath, originalName) { const profile = EXTERNAL_PROFILE['tincan-package'], root = parseXml(files.get('tincan.xml')), actSrc = descendants(root).find((x) => localName(x.name).toLowerCase() === 'activity'), srcId = actSrc?.attributes.id; let name = '', launch = ''; if (actSrc)
+    for (const e of descendants(actSrc)) {
+        const ln = localName(e.name).toLowerCase();
+        if (ln === 'name' && !name)
+            name = textContent(e);
+        else if (ln === 'launch' && !launch)
+            launch = textContent(e);
+    } const title = name || originalName, courseId = stableUrn(seed, 'course', srcId || title), aid = stableUrn(seed, 'activity', srcId || title), rid = stableUrn(seed, 'resource', srcId || title), meta = cleanObject({ manifest: 'tincan.xml', sourceActivityId: srcId, launch }); return [[{ id: courseId, type: 'course', revision: 1, title: titleMap(title), children: [aid] }, { id: aid, type: 'activity', activityType: 'https://p2lrn.org/type/legacy-tincan-package', title: titleMap(title), resource: rid, extensions: { [profile]: meta } }, { id: rid, type: 'resource', representations: [rep(seed, profile, ppath, originalName, meta, 'tincan')] }], courseId, { title, sourceActivityId: srcId, launch }]; }
+function buildTransformationReport(kind, src, originalName, sourceHex, packageHex, ppath, normalizedRoot, entities, courseId) {
+    const mappings = [], sourceProfile = EXTERNAL_PROFILE[kind];
+    for (const e of entities) {
+        const ext = e.extensions?.[sourceProfile] ?? {};
+        let locator;
+        if (e.type === 'course') {
+            const sid = ext.sourceManifestIdentifier ?? ext.sourceCourseId ?? ext.sourceActivityId;
+            locator = `${['scorm', 'common-cartridge', 'qti'].includes(kind) ? 'imsmanifest.xml' : kind === 'cmi5' ? 'cmi5.xml' : kind === 'tincan-package' ? 'tincan.xml' : 'h5p.json'}#${sid ?? 'root'}`;
+        }
+        else if (['unit', 'activity'].includes(e.type)) {
+            const sid = ext.sourceItemIdentifier ?? ext.sourceResourceIdentifier ?? ext.sourceId ?? ext.auId ?? ext.sourceActivityId;
+            if (sid)
+                locator = `source#${sid}`;
+        }
+        else if (e.type === 'resource') {
+            const sid = ext.sourceResourceIdentifier ?? ext.resourceIdentifier;
+            if (sid)
+                locator = `resource#${sid}`;
+        }
+        if (locator)
+            mappings.push({ sourceLocator: locator, targetId: e.id, targetType: e.type, operation: 'projected', fidelity: 'semantic' });
+        if (e.type === 'resource')
+            for (const r of e.representations ?? []) {
+                const loc = r.location ?? {};
+                if (r.role === 'original-package')
+                    mappings.push({ sourceLocator: originalName, targetId: r.id, targetType: 'representation', operation: 'preserved', fidelity: normalizedRoot == null ? 'exact' : 'semantic' });
+                else if (loc.type === 'package-member')
+                    mappings.push({ sourceLocator: `${originalName}#${loc.member}`, targetId: r.id, targetType: 'representation', operation: 'projected', fidelity: 'exact' });
+            }
+    }
+    const unique = [], seen = new Set();
+    for (const m of mappings) {
+        const key = [m.sourceLocator, m.targetId, m.targetType, m.operation].join('|');
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(m);
+        }
+    }
+    const warnings = [];
+    let structuralProjection = 'minimal';
+    if (kind === 'common-cartridge') {
+        structuralProjection = 'partial';
+        warnings.push('Common Cartridge organization and full manifest resource inventory are projected; source-standard-specific XML remains authoritative inside the preserved cartridge.', 'Legacy QTI 1.2 resources are surfaced as QTI representations but are not silently migrated to QTI 3.', 'Legacy Basic LTI resources are projected as external-tool intent and require local LTI re-binding; they are not relabeled as completed LTI 1.3 registrations.');
+    }
+    else if (kind === 'scorm') {
+        structuralProjection = 'partial';
+        warnings.push('SCORM hierarchy/launch metadata are projected; SCORM sequencing and runtime data-model semantics remain authoritative in the preserved SCORM package.');
+    }
+    else if (kind === 'cmi5') {
+        structuralProjection = 'partial';
+        warnings.push('cmi5 course/block/AU structure is projected; runtime/xAPI execution semantics remain authoritative to cmi5/xAPI.');
+    }
+    else if (kind === 'qti') {
+        structuralProjection = 'partial';
+        warnings.push('QTI package/item/test inventory and launchable members are projected; QTI item/test scoring, interaction and processing semantics remain authoritative in the preserved QTI package.');
+    }
+    else if (kind === 'h5p')
+        warnings.push('H5P package metadata and dependency mode are projected; H5P library/content semantics remain authoritative inside the preserved .h5p package.');
+    else if (kind === 'tincan-package')
+        warnings.push('Legacy tincan.xml launch metadata is projected without claiming modern xAPI package standardization.');
+    const losses = normalizedRoot ? [{ sourceLocator: src, reason: 'Files outside --package-root are intentionally excluded from the normalized educational subpackage.', recoverableFromPreservedPackage: false }] : [];
+    return { version: '0.4.0', source: { format: kind, fileName: basename(src), byteDigest: 'sha256:' + sourceHex, preservedPackageDigest: 'sha256:' + packageHex, preservedPath: ppath, preservation: normalizedRoot ? 'normalized-subpackage' : 'bit-exact', ...(normalizedRoot ? { normalizedFromRoot: normalizedRoot } : {}) }, target: { format: 'P2LRN', formatVersion: '0.4.0', entrypoint: courseId }, fidelity: { sourceBytes: normalizedRoot ? 'normalized' : 'exact', structuralProjection, runtimeSemantics: 'delegated-to-source-profile' }, mappings: unique, warnings, losses };
+}
+function profilesUsed(entities) { const out = new Set(); for (const e of entities) {
+    for (const ns of Object.keys(e.extensions ?? {}))
+        if (ns.startsWith('https://p2lrn.org/profile/'))
+            out.add(ns);
+    if (e.type === 'resource')
+        for (const r of e.representations ?? [])
+            if (r.profile)
+                out.add(r.profile);
+} return out; }
+export function convertExternalPackage(source, output, packageRoot) { const loaded = loadSource(source, packageRoot), kind = detectExternalPackage(loaded.files), profile = EXTERNAL_PROFILE[kind], sourceHex = sha256(loaded.original).slice(7), packageHex = sha256(loaded.packageBytes).slice(7), seed = packageHex, [ppath] = packagePath(loaded.packageBytes), originalName = loaded.normalizedRoot ? basename(loaded.normalizedRoot) + '.zip' : basename(source); let tuple; if (kind === 'scorm' || kind === 'common-cartridge')
+    tuple = scormOrCcGraph(kind, seed, loaded.files, ppath, originalName);
+else if (kind === 'qti')
+    tuple = qtiGraph(seed, loaded.files, ppath, originalName);
+else if (kind === 'h5p')
+    tuple = h5pGraph(seed, loaded.files, ppath, originalName);
+else if (kind === 'cmi5')
+    tuple = cmi5Graph(seed, loaded.files, ppath, originalName);
+else
+    tuple = tincanGraph(seed, loaded.files, ppath, originalName); const [entities, courseId, details] = tuple, transform = buildTransformationReport(kind, source, originalName, sourceHex, packageHex, ppath, loaded.normalizedRoot, entities, courseId), transformPath = 'provenance/transformation.json', graph = { graphVersion: '0.4.0', entities, relations: [], extensions: { 'org.p2lrn.import': { sourceFormat: kind, sourceSha256: 'sha256:' + sourceHex, packageSha256: 'sha256:' + packageHex, ...(loaded.normalizedRoot ? { normalizedFromRoot: loaded.normalizedRoot } : {}) }, 'org.p2lrn.transform': { report: transformPath, version: '0.4.0' } } }, graphBytes = jsonBytes(graph), graphDesc = descriptor('content/graph.json', graphBytes, 'application/json'); graphDesc.schema = 'https://p2lrn.org/schema/graph/0.4.0'; const transformBytes = jsonBytes(transform), transformDesc = descriptor(transformPath, transformBytes, 'application/json'), fileDesc = descriptor(ppath, loaded.packageBytes), used = profilesUsed(entities); used.add(profile); const profiles = [{ id: CORE_PROFILE.course, version: '0.4.0', requirement: 'required' }]; for (const pid of [...used].sort())
+    if (pid !== CORE_PROFILE.course)
+        profiles.push({ id: pid, version: '0.4.0', requirement: pid === profile ? 'required' : 'optional' }); const manifest = { format: FORMAT, formatVersion: FORMAT_VERSION, packageId: stableUrn(seed, 'package', 'p2lrn-wrapper'), entrypoints: [{ id: courseId, type: 'course', role: 'primary' }], graph: graphDesc, profiles, files: [fileDesc, transformDesc], integrity: { algorithm: 'sha256', contentRoot: 'sha256:' + '0'.repeat(64) } }; manifest.integrity.contentRoot = computeContentRoot(manifest); const manifestBytes = jsonBytes(manifest), outer = writeZip([{ path: 'META-INF/manifest.json', data: manifestBytes, mediaType: 'application/json', method: 8 }, { path: 'content/graph.json', data: graphBytes, mediaType: 'application/json', method: 8 }, { path: transformPath, data: transformBytes, mediaType: 'application/json', method: 8 }, { path: ppath, data: loaded.packageBytes, mediaType: 'application/zip', method: 0 }]); mkdirSync(dirname(output), { recursive: true }); writeFileSync(output, outer); const validation = validatePackageBytes(outer, { strictProfiles: true, validateProfilePayloads: true }); return { source, packageRoot, detectedFormat: kind, profile, sourceSha256: 'sha256:' + sourceHex, preservedPackageSha256: 'sha256:' + packageHex, preservedBitForBit: packageRoot == null, details, entities: entities.length, p2lrn: output, p2rln: output, validation, transformation: { fidelity: transform.fidelity, warnings: transform.warnings, losses: transform.losses } }; }
+//# sourceMappingURL=external.js.map

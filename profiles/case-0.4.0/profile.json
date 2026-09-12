@@ -1,0 +1,31 @@
+{
+  "id": "https://p2lrn.org/profile/case",
+  "version": "0.4.0",
+  "title": "P2LRN CASE Alignment Profile",
+  "status": "experimental",
+  "description": "Binds P2LRN objectives, alignments and rubrics to stable CASE 1.1 identifiers without copying a whole competency service into Core.",
+  "capabilities": [
+    "case.read",
+    "case.write",
+    "case.resolve",
+    "case.preserve"
+  ],
+  "requires": [],
+  "optionalDependencies": [],
+  "preservation": "semantic-required",
+  "normativeReferences": [
+    "https://standards.1edtech.org/case/"
+  ],
+  "rules": [
+    "P2LRN SHOULD reference stable CASE identifiers when the source provides them.",
+    "CASE documents MAY be preserved as resources when offline portability is required.",
+    "A Core validator MUST NOT dereference CASE URLs during package validation."
+  ],
+  "bindings": [
+    {
+      "standard": "1EdTech CASE",
+      "version": "1.1",
+      "reference": "https://standards.1edtech.org/case/"
+    }
+  ]
+}

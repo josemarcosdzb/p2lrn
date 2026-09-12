@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+import { main as validate } from './validate.js';
+import { main as create } from './create.js';
+import { main as convert } from './convert.js';
+import { main as delta } from './delta.js';
+import { main as trust } from './trust.js';
+import { main as read } from './read.js';
+import { main as inspect } from '../tools/inspect.js';
+import { main as repack } from '../tools/repack.js';
+import { main as extractSource } from '../tools/extract-source.js';
+const [command, ...args] = process.argv.slice(2);
+if (command === '--help' || command === '-h' || !command) {
+    process.stdout.write('Usage: p2lrn <validate|reader|inspect|create|convert|repack|extract-source|delta|trust> ...\n');
+    if (!command)
+        process.exitCode = 2;
+}
+else if (command === 'validate')
+    validate(args);
+else if (command === 'create')
+    create(args);
+else if (command === 'convert' || command === 'wrap-external')
+    convert(args);
+else if (command === 'delta')
+    delta(args);
+else if (command === 'trust')
+    trust(args);
+else if (command === 'read' || command === 'reader')
+    void read(args);
+else if (command === 'inspect')
+    inspect(args);
+else if (command === 'repack')
+    repack(args);
+else if (command === 'extract-source')
+    extractSource(args);
+else {
+    process.stderr.write('Usage: p2lrn <validate|reader|inspect|create|convert|repack|extract-source|delta|trust> ...\n');
+    process.exitCode = 2;
+}
+//# sourceMappingURL=main.js.map

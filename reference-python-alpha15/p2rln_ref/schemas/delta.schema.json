@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2rln.org/schema/delta/0.1",
+  "title": "P2RLN Detached Delta 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "base", "target", "payloads"],
+  "properties": {
+    "schema": {"const": "https://p2rln.org/schema/delta/0.1"},
+    "version": {"const": "0.1"},
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formatVersion", "contentRoot"],
+      "properties": {
+        "formatVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+        "contentRoot": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formatVersion", "packageId", "contentRoot", "manifestByteDigest", "graphByteDigest"],
+      "properties": {
+        "formatVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+        "packageId": {"type": "string", "format": "uri", "minLength": 3, "maxLength": 500},
+        "contentRoot": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "manifestByteDigest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "graphByteDigest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "payloads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "deltaPath", "byteDigest", "size"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1, "maxLength": 1000},
+          "deltaPath": {"type": "string", "pattern": "^payloads/", "minLength": 10, "maxLength": 1100},
+          "byteDigest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "size": {"type": "integer", "minimum": 0, "maximum": 9007199254740991}
+        }
+      }
+    }
+  }
+}

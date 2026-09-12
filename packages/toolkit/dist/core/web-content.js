@@ -1,0 +1,27 @@
+import { ValidationError } from './errors.js';
+import { LEGACY_NS, NS, canonicalIdentifier, profileIs } from './constants.js';
+export const WEB_CONTENT_PROFILE = `${NS}profile/web-content`;
+export const LEGACY_WEB_CONTENT_PROFILE = `${LEGACY_NS}profile/web-content`;
+export const WEB_CONTENT_MAPPING_EXTENSION = `${NS}extension/web-content-bundle`;
+export const LEGACY_WEB_CONTENT_MAPPING_EXTENSION = `${LEGACY_NS}extension/web-content-bundle`;
+export const WEB_CONTENT_EXTENSION_VERSION = '1';
+export function safeLogicalPath(value) { const s = String(value ?? ''); if (!s || s.startsWith('/') || s.includes('\\') || s.includes('\0'))
+    throw new ValidationError(`unsafe web-content logical path: ${JSON.stringify(s)}`); const parts = s.split('/'); if (parts.some((p) => !p || p === '.' || p === '..'))
+    throw new ValidationError(`unsafe web-content logical path: ${JSON.stringify(s)}`); return parts.join('/'); }
+export function isWebContentProfile(value) { return profileIs(value, 'webContent'); }
+export function validateWebContentMapping(rep, inventory) { const extensions = rep.extensions ?? {}; const key = Object.keys(extensions).find((k) => canonicalIdentifier(k) === WEB_CONTENT_MAPPING_EXTENSION); const ext = key ? extensions[key] : undefined; if (ext == null)
+    return null; if (!ext || typeof ext !== 'object' || Array.isArray(ext))
+    throw new ValidationError('web-content bundle extension must be an object'); if (ext.version !== WEB_CONTENT_EXTENSION_VERSION)
+    throw new ValidationError(`unsupported web-content mapping version: ${JSON.stringify(ext.version)}`); const entrypoint = safeLogicalPath(ext.entrypoint ?? ''), assets = ext.assets; if (!assets || typeof assets !== 'object' || Array.isArray(assets) || !Object.keys(assets).length)
+    throw new ValidationError('web-content assets must be a non-empty object'); if (Object.keys(assets).length > 5000)
+    throw new ValidationError('web-content mapping contains more than 5000 assets'); const normalized = {}; for (const [logical, embedded] of Object.entries(assets)) {
+    const p = safeLogicalPath(logical);
+    if (p !== logical)
+        throw new ValidationError(`web-content logical path is not canonical: ${JSON.stringify(logical)}`);
+    if (typeof embedded !== 'string' || !inventory.has(embedded))
+        throw new ValidationError(`web-content asset is not inventoried: ${p}`);
+    normalized[p] = embedded;
+} if (!(entrypoint in normalized))
+    throw new ValidationError('web-content entrypoint is absent from assets mapping'); const loc = rep.location ?? {}; if (loc.type !== 'embedded' || loc.path !== normalized[entrypoint])
+    throw new ValidationError('web-content representation location must match the mapped entrypoint payload'); return { version: WEB_CONTENT_EXTENSION_VERSION, entrypoint, assets: normalized }; }
+//# sourceMappingURL=web-content.js.map

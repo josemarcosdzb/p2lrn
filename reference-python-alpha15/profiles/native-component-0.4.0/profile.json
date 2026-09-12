@@ -1,0 +1,25 @@
+{
+  "id": "https://p2rln.org/profile/native-component",
+  "version": "0.4.0",
+  "title": "P2RLN Native Component Instance Profile",
+  "status": "experimental",
+  "description": "Declares thin data-only component instances resolved against trusted host-installed Component Registry implementations.",
+  "capabilities": [
+    "native-component.validate",
+    "native-component.read",
+    "native-component.write",
+    "native-component.preserve",
+    "native-component.deliver"
+  ],
+  "requires": [],
+  "optionalDependencies": [],
+  "preservation": "semantic-required",
+  "rules": [
+    "The representation media type MUST be application/vnd.p2rln.component+json.",
+    "The package instance MUST identify componentVersion, dataVersion and runtimeContractVersion independently.",
+    "Component implementation code, migrations and privileged capability grants MUST come from the trusted host, not from automatic package JavaScript execution.",
+    "Runtime data migration MUST be deterministic with respect to the source data and registered migration path and MUST NOT mutate the package bytes.",
+    "Unknown or incompatible component implementations MUST fail explicitly or use another Core representation; they MUST NOT be silently reinterpreted."
+  ],
+  "bindings": []
+}

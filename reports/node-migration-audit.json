@@ -1,0 +1,30 @@
+{
+  "release": "0.5.0-alpha.1",
+  "primary": "Node.js/TypeScript",
+  "pythonRole": "reference-only",
+  "legacyExamples": 17,
+  "canonicalExamples": 17,
+  "mapping": {
+    "p2rln_ref.validator": "packages/toolkit/src/core/validator.ts",
+    "p2rln_ref.reader": "packages/toolkit/src/reader/index.ts",
+    "p2rln_ref.integrity+jcs": "packages/toolkit/src/core/integrity.ts + jcs.ts + ijson.ts",
+    "p2rln_ref.range_integrity": "packages/toolkit/src/core/range-integrity.ts",
+    "p2rln_ref.native_questionnaire": "packages/toolkit/src/core/native-questionnaire.ts",
+    "p2rln_ref.native_component": "packages/toolkit/src/core/native-component.ts + component-authoring.ts",
+    "p2rln_ref.native_composite": "packages/toolkit/src/core/native-composite.ts",
+    "p2rln_ref.delta": "packages/toolkit/src/core/delta.ts",
+    "p2rln_ref.detached_signature": "packages/toolkit/src/core/detached-signature.ts",
+    "p2rln_creator.project+builder": "packages/toolkit/src/creator/project.ts + builder.ts",
+    "p2rln_creator.external": "packages/toolkit/src/creator/external.ts",
+    "p2rln_creator.aulap2p": "packages/toolkit/src/creator/aulap2p-*.ts",
+    "p2rln_reader.app/server": "packages/toolkit/src/reader/system.ts + server.ts",
+    "tools": "packages/toolkit/src/tools + src/cli",
+    "browser runtime": "packages/toolkit/web + packages/player"
+  },
+  "canonicalIdentifiers": {
+    "format": "P2LRN",
+    "namespace": "https://p2lrn.org/",
+    "extension": ".p2lrn",
+    "projectFile": "p2lrn.project.json"
+  }
+}

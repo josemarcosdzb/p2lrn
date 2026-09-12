@@ -1,0 +1,33 @@
+{
+  "id": "https://p2lrn.org/profile/tincan-package",
+  "version": "0.4.0",
+  "title": "P2LRN Legacy Tin Can Package Profile",
+  "status": "experimental",
+  "description": "Preserves legacy tincan.xml launch packages. This is deliberately distinct from the xAPI statement protocol itself.",
+  "capabilities": [
+    "tincan-package.validate",
+    "tincan-package.read",
+    "tincan-package.preserve",
+    "tincan-package.deliver"
+  ],
+  "requires": [
+    "https://p2lrn.org/profile/course"
+  ],
+  "optionalDependencies": [],
+  "preservation": "opaque-allowed",
+  "normativeReferences": [
+    "https://github.com/RusticiSoftware/TinCanJS"
+  ],
+  "rules": [
+    "A tincan.xml package MUST NOT be mislabeled as the xAPI specification itself.",
+    "Original launch metadata SHOULD be preserved even when identifiers are placeholders or are not valid absolute URIs.",
+    "Legacy package launch data MUST NOT weaken P2LRN URL/network safety rules during validation."
+  ],
+  "bindings": [
+    {
+      "standard": "Legacy Tin Can launch package",
+      "version": "legacy",
+      "reference": "https://github.com/RusticiSoftware/TinCanJS"
+    }
+  ]
+}

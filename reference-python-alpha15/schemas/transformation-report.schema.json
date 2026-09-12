@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2rln.org/schema/transformation-report/0.4.0",
+  "title": "P2RLN Transformation Report 0.4.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "source", "target", "fidelity", "mappings", "warnings", "losses"],
+  "properties": {
+    "version": {"const": "0.4.0"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "byteDigest", "preservedPackageDigest", "preservation"],
+      "properties": {
+        "format": {"type": "string", "minLength": 1},
+        "fileName": {"type": "string", "minLength": 1},
+        "byteDigest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "preservedPackageDigest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "preservedPath": {"type": "string", "minLength": 1},
+        "preservation": {"enum": ["bit-exact", "normalized-subpackage"]},
+        "normalizedFromRoot": {"type": "string", "minLength": 1}
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "formatVersion", "entrypoint"],
+      "properties": {
+        "format": {"const": "P2RLN"},
+        "formatVersion": {"const": "0.4.0"},
+        "entrypoint": {"type": "string", "format": "uri"}
+      }
+    },
+    "fidelity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceBytes", "structuralProjection", "runtimeSemantics"],
+      "properties": {
+        "sourceBytes": {"enum": ["exact", "normalized"]},
+        "structuralProjection": {"enum": ["complete", "partial", "minimal", "opaque"]},
+        "runtimeSemantics": {"enum": ["delegated-to-source-profile", "projected", "not-applicable"]}
+      }
+    },
+    "mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sourceLocator", "targetId", "targetType", "operation"],
+        "properties": {
+          "sourceLocator": {"type": "string", "minLength": 1},
+          "targetId": {"type": "string", "format": "uri"},
+          "targetType": {"enum": ["course", "unit", "activity", "resource", "objective", "representation"]},
+          "operation": {"enum": ["identity", "projected", "preserved", "generated"]},
+          "fidelity": {"enum": ["exact", "semantic", "partial", "opaque"]},
+          "notes": {"type": "string"}
+        }
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "losses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sourceLocator", "reason"],
+        "properties": {
+          "sourceLocator": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1},
+          "recoverableFromPreservedPackage": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2rln.org/schema/web-content-bundle/1",
+  "title": "P2RLN passive web-content bundle mapping v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "entrypoint", "assets"],
+  "properties": {
+    "version": {"const": "1"},
+    "entrypoint": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*\\\\)(?!.*\\u0000).+$"
+    },
+    "assets": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 5000,
+      "propertyNames": {
+        "minLength": 1,
+        "maxLength": 2048,
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*\\\\)(?!.*\\u0000).+$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      }
+    }
+  }
+}

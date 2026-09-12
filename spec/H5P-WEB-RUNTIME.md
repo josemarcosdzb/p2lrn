@@ -1,10 +1,12 @@
+> **Nota de migración P2LRN/Node:** este documento deriva de la especificación Alpha15 anterior. Las reglas de formato se conservan; cualquier referencia a la antigua implementación Python es histórica. La implementación principal actual es `@p2lrn/toolkit` en Node.js/TypeScript.
+
 # H5P Web Runtime boundary
 
-Status: implementation candidate layered on P2RLN Core 0.4.0. This document does not declare general H5P `deliver` conformance.
+Status: implementation candidate layered on P2LRN Core 0.4.0. This document does not declare general H5P `deliver` conformance.
 
 ## 1. Purpose
 
-P2RLN preserves an imported `.h5p` package bit-for-bit and projects only enough metadata to negotiate a runtime. H5P remains authoritative for H5P content semantics, library metadata and xAPI events. P2RLN does not translate H5P into a second proprietary activity model and does not copy a player into each `.p2rln` package.
+P2LRN preserves an imported `.h5p` package bit-for-bit and projects only enough metadata to negotiate a runtime. H5P remains authoritative for H5P content semantics, library metadata and xAPI events. P2LRN does not translate H5P into a second proprietary activity model and does not copy a player into each `.p2lrn` package.
 
 The browser implementation adds a host-side H5P runtime path while keeping learner state, platform identity, credentials and LRS authority outside the portable package.
 
@@ -12,8 +14,8 @@ The browser implementation adds a host-side H5P runtime path while keeping learn
 
 ```text
 application origin
-  P2RLN player
-    -> verify outer .p2rln
+  P2LRN player
+    -> verify outer .p2lrn
     -> verify/open preserved nested .h5p
     -> inspect h5p.json + content/content.json + library metadata
     -> create bounded binary runtime session
@@ -28,9 +30,9 @@ isolated runtime origin
   H5P content executes only inside the isolated runtime origin
 ```
 
-The H5P shell and the embedding application must not share an origin. The player rejects a same-origin H5P runtime URL with `P2RLN_H5P_RUNTIME_ORIGIN_NOT_ISOLATED`.
+The H5P shell and the embedding application must not share an origin. The player rejects a same-origin H5P runtime URL with `P2LRN_H5P_RUNTIME_ORIGIN_NOT_ISOLATED`.
 
-The control channel is a transferred `MessageChannel`. No learner/runtime token is put in the `.p2rln`, URL query or URL fragment.
+The control channel is a transferred `MessageChannel`. No learner/runtime token is put in the `.p2lrn`, URL query or URL fragment.
 
 ## 3. Runtime asset model
 
@@ -44,7 +46,7 @@ The integration target used for this implementation is `tunapanda/h5p-standalone
 
 The repository does not currently vendor those upstream bytes. Therefore the source-level/session gates in this candidate are not equivalent to a real-browser H5P 3.8.2 conformance gate.
 
-If the required runtime assets are absent, `/health` reports `h5p.configured=false`, the H5P shell returns 503, and P2RLN must not claim H5P `deliver` capability.
+If the required runtime assets are absent, `/health` reports `h5p.configured=false`, the H5P shell returns 503, and P2LRN must not claim H5P `deliver` capability.
 
 ## 4. Preserved package inspection
 
@@ -65,11 +67,11 @@ The Creator projects `dependencyMode` as:
 - `external`: none of the directly required dependencies is bundled;
 - `mixed`: only part of that direct set is bundled.
 
-The profile validator recalculates this value from the preserved `.h5p` and rejects contradictory P2RLN metadata.
+The profile validator recalculates this value from the preserved `.h5p` and rejects contradictory P2LRN metadata.
 
 ## 5. Runtime session protocol
 
-The player does not Base64-encode the `.h5p`. It sends a binary `application/vnd.p2rln.h5p-session` payload:
+The player does not Base64-encode the `.h5p`. It sends a binary `application/vnd.p2lrn.h5p-session` payload:
 
 ```text
 uint32be magic = 0x50324835  # "P2H5"
@@ -78,7 +80,7 @@ manifestLength bytes UTF-8 JSON
 concatenated uncompressed file bytes
 ```
 
-The JSON manifest uses protocol `p2rln-h5p-session/1` and contains canonical, contiguous `{path, offset, length}` descriptors. The server rejects unsafe paths, duplicate files, gaps, overlaps, trailing bytes, excessive file counts and excessive total bytes.
+The JSON manifest uses protocol `p2lrn-h5p-session/1` and contains canonical, contiguous `{path, offset, length}` descriptors. The server rejects unsafe paths, duplicate files, gaps, overlaps, trailing bytes, excessive file counts and excessive total bytes.
 
 Sessions are random, ephemeral and memory bounded. Defaults are:
 
@@ -102,7 +104,7 @@ Resolution order for each exact dependency is:
 1. library embedded in the preserved `.h5p`;
 2. exact version in the host-configured `h5pLibrariesDir`.
 
-A missing exact dependency returns `P2RLN_H5P_LIBRARIES_MISSING`. If one graph requires two incompatible versions of the same `machineName`, the session is rejected with `P2RLN_H5P_LIBRARY_VERSION_CONFLICT` rather than serving an arbitrary version.
+A missing exact dependency returns `P2LRN_H5P_LIBRARIES_MISSING`. If one graph requires two incompatible versions of the same `machineName`, the session is rejected with `P2LRN_H5P_LIBRARY_VERSION_CONFLICT` rather than serving an arbitrary version.
 
 Folder aliases are bound to the version selected for that session. This is required because older H5P packages use unversioned library directory names while newer packages can use `MachineName-major.minor` names.
 
@@ -129,7 +131,7 @@ Bounds before crossing the runtime channel:
 
 Values must be JSON serializable. Oversized or unserializable values are rejected as runtime errors rather than persisted blindly.
 
-H5P xAPI events are emitted as `p2rln:xapi` with `authoritative:false`. Any LMS/LRS integration must rebuild trusted actor, authority, registration/session identifiers and other platform-owned fields server-side. The package/runtime statement is content-generated input, not an authenticated LRS statement.
+H5P xAPI events are emitted as `p2lrn:xapi` with `authoritative:false`. Any LMS/LRS integration must rebuild trusted actor, authority, registration/session identifiers and other platform-owned fields server-side. The package/runtime statement is content-generated input, not an authenticated LRS statement.
 
 Scores extracted from non-terminal interactions may be surfaced as runtime events. `HostAdapter.reportScore` is invoked only for terminal `completed`, `passed` or `failed` xAPI verbs. Those score payloads are also marked non-authoritative.
 
@@ -149,7 +151,7 @@ Remote YouTube/video/iframe H5P content is therefore not silently enabled. A fut
 
 ## 10. Current real-package gates
 
-Using the three supplied H5P packages after full `.p2rln` transformation and outer-container verification:
+Using the three supplied H5P packages after full `.p2lrn` transformation and outer-container verification:
 
 | Package | Main library | Mode | Runtime-session result |
 | --- | --- | --- | --- |
@@ -178,4 +180,4 @@ A general `deliver` claim still requires at least:
 
 An exact `library.json` is not sufficient to make a host-provided H5P library runnable. Before a runtime session is accepted, the host also verifies every file declared by that library's `preloadedJs` and `preloadedCss`. The same rule applies recursively to every preloaded dependency and to libraries bundled inside the `.h5p` payload.
 
-If any declared preloaded asset is absent, unsafe, outside the configured library root, or resolves through a symbolic-link escape, session creation fails closed with `P2RLN_H5P_LIBRARY_ASSETS_MISSING` (HTTP 409). A 201 response therefore means that both the exact dependency graph and its declared preloaded runtime assets are physically present.
+If any declared preloaded asset is absent, unsafe, outside the configured library root, or resolves through a symbolic-link escape, session creation fails closed with `P2LRN_H5P_LIBRARY_ASSETS_MISSING` (HTTP 409). A 201 response therefore means that both the exact dependency graph and its declared preloaded runtime assets are physically present.

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=P2LRN Reader
+Comment=Open P2LRN learning packages
+Exec=p2lrn-reader %f
+Terminal=false
+MimeType=application/vnd.p2lrn+zip;
+Categories=Education;

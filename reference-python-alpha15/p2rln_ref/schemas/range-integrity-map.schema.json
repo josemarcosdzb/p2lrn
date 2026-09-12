@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2rln.org/schema/range-integrity-map/1",
+  "title": "P2RLN Range Integrity Map 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "algorithm", "chunkSize", "entries"],
+  "properties": {
+    "version": {"const": "1"},
+    "algorithm": {"const": "sha256"},
+    "chunkSize": {"type": "integer", "minimum": 65536, "maximum": 8388608},
+    "entries": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"type": "string", "minLength": 1},
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["size", "byteDigest", "chunks"],
+        "properties": {
+          "size": {"type": "integer", "minimum": 0},
+          "byteDigest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "chunks": {
+            "type": "array",
+            "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+          }
+        }
+      }
+    }
+  }
+}

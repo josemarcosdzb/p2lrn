@@ -1,0 +1,47 @@
+{
+  "schema": "https://p2rln.org/schema/component-catalog/0.1",
+  "version": "0.1",
+  "components": [
+    {
+      "id": "https://p2rln.org/component/callout",
+      "componentVersion": "1",
+      "runtimeContractVersion": "1",
+      "title": {
+        "es": "Aviso",
+        "en": "Callout"
+      },
+      "description": {
+        "es": "Bloque declarativo de aviso o información.",
+        "en": "Declarative notice/information block."
+      },
+      "authoringDataVersion": "2",
+      "dataSchemas": {
+        "1": "https://p2rln.org/component/callout/schema/data/1",
+        "2": "https://p2rln.org/component/callout/schema/data/2"
+      },
+      "editorSchemas": {
+        "2": "https://p2rln.org/component/callout/editor/2"
+      }
+    },
+    {
+      "id": "https://p2rln.org/component/timeline",
+      "componentVersion": "1",
+      "runtimeContractVersion": "1",
+      "title": {
+        "es": "Línea temporal",
+        "en": "Timeline"
+      },
+      "description": {
+        "es": "Secuencia declarativa de hitos o acontecimientos.",
+        "en": "Declarative sequence of milestones or events."
+      },
+      "authoringDataVersion": "1",
+      "dataSchemas": {
+        "1": "https://p2rln.org/component/timeline/schema/data/1"
+      },
+      "editorSchemas": {
+        "1": "https://p2rln.org/component/timeline/editor/1"
+      }
+    }
+  ]
+}

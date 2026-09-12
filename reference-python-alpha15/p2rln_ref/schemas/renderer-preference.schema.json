@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2rln.org/schema/renderer-preference/1",
+  "title": "P2RLN renderer preference extension alpha 2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "preferred"
+  ],
+  "properties": {
+    "preferred": {
+      "type": "string",
+      "format": "uri",
+      "minLength": 1
+    },
+    "alternatives": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "format": "uri",
+        "minLength": 1
+      }
+    },
+    "required": {
+      "type": "boolean",
+      "default": false
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    }
+  }
+}

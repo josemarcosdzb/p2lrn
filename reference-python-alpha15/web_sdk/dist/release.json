@@ -1,0 +1,350 @@
+{
+  "schema": "https://p2rln.org/schema/web-sdk-release/1",
+  "version": "1",
+  "webSdkVersion": "0.4.0-alpha.15",
+  "toolkitVersion": "0.4.0a15",
+  "coreVersion": "0.4.0",
+  "entrypoints": {
+    "classic": "p2rln.js",
+    "module": "p2rln.esm.js",
+    "serviceWorker": "p2rln-sw.js"
+  },
+  "files": [
+    {
+      "path": "built-in-renderers.js",
+      "bytes": 5790,
+      "sha256": "sha256:46c30d2d93d752d0e7e9b174ea56c588b044284d2dfbf90aa868cffafa377243",
+      "sri": "sha384-/oAR2icwaeDZxO5NkM5xXTR57J2nJDBra9x1LLw7ZAxRPsIA+pXHRB8gprWkCXrq"
+    },
+    {
+      "path": "component-registry.js",
+      "bytes": 11671,
+      "sha256": "sha256:bcf980cbf4e11bcef15cca0dab4a477ba0d19d88574174774abc6c18258f892b",
+      "sri": "sha384-3flvAhK8HmAlY6eP85+ovEovEev957Iq0rj2lC68jWobmN6n941nUnf0dTuI4aeA"
+    },
+    {
+      "path": "component.css",
+      "bytes": 1117,
+      "sha256": "sha256:5df6a46b73dbfe9317eaa2e328d9c6e62c408c1da0571f6e202dc03bdec991fe",
+      "sri": "sha384-IM07HelWKBoi30CmDlm7xHAPGfK8gFtSxRr+ezqYXm05Ucgxcnf64108UypebdZW"
+    },
+    {
+      "path": "composite-runtime.js",
+      "bytes": 9378,
+      "sha256": "sha256:e7a3348f633b84b31be4c6276d31f631e75b22f0fb58fb488acc080a862f9fa3",
+      "sri": "sha384-Y/PXuxh1iWG+sXBLkmMpASnnd62Br5RDYQiZqgTGWuUIUa98xFY+ZMSr3+FR7MjC"
+    },
+    {
+      "path": "composite.css",
+      "bytes": 793,
+      "sha256": "sha256:e362b5ee2424407a7e0c601d39306a0bdf3a18b1a34a986ef36e70c3110117d5",
+      "sri": "sha384-kgyA43unb0pvaFup2jpAZzEeoGi1ynd2WgjGaxGM5j7zahZMCiwJBQhHQwh2tnzZ"
+    },
+    {
+      "path": "dependency-registry.js",
+      "bytes": 3177,
+      "sha256": "sha256:43fc33d646159aae3bdf7e66d4a47ebe55b7728ff754c4fe13dd4d085831008c",
+      "sri": "sha384-/ElLEESxlRK5iLfayGJppbKHdHyE8CmigeBITs9Fxajwg3gSmuBjc49MU8SdBOos"
+    },
+    {
+      "path": "h5p-package.js",
+      "bytes": 7668,
+      "sha256": "sha256:f20dc3d8492f335e2dea5ed5153877cea176086204fcddd892ab7a0e9275a801",
+      "sri": "sha384-ie4qj4Iv5fqn4bSk6055QgwY53bmCdmQo4OpKzgFsKwHfuxW97TlpAT2BaqxgCbU"
+    },
+    {
+      "path": "host-adapter.js",
+      "bytes": 1026,
+      "sha256": "sha256:dda55834f159218bef8df413e3ea118b6475f1fcec81cc5b65e1c8d7722b86a1",
+      "sri": "sha384-2NJGV49mjtoSkj/c69lOJgf074fSwZ8s+F4TyCA8S9xq+Jd2wO7V/YdVwwDP5wR6"
+    },
+    {
+      "path": "native-component-core.js",
+      "bytes": 3075,
+      "sha256": "sha256:42ed91f6f0182f338fa72b1b6e50959b63b5c5f31f7ab081ec3a817357a31bd6",
+      "sri": "sha384-924wYL4lPcEBv6w/LTKVVxQIM5MCt/IeH3D7oOvJVoZegVKeWkMn7+GtYd2QrxRz"
+    },
+    {
+      "path": "native-composite-core.js",
+      "bytes": 3394,
+      "sha256": "sha256:3e88aab2d981389481e8e7b29286b80a71da2782d76e3ce7defbccff1ad7ae68",
+      "sri": "sha384-Wi+/DLmyQ8KbF14rE8f03764nrS6E616ahKWd17yxRVXs3ImNVUsP+n30Xk2rmtE"
+    },
+    {
+      "path": "p2rln-player.css",
+      "bytes": 1520,
+      "sha256": "sha256:c51db557abfe524b35e9de335560c6ad762211f882f241a0972039f903727a3e",
+      "sri": "sha384-CEGUWSs2MPyXc2yPyEjYgVjEVD3XTc5amxx9wCATaCEMCc/eQbniO8UC8pWJd69D"
+    },
+    {
+      "path": "p2rln-player.js",
+      "bytes": 36347,
+      "sha256": "sha256:7279f0f7645ad0166d07cf5f82d3d7625f163876af016217487bfba429b0b2f9",
+      "sri": "sha384-ACaEzM6JcGErn2IGmAwgrB2HwEoVADvY+IDNedkSnh5SePXEH1Sl5sUFgoxeifJi"
+    },
+    {
+      "path": "p2rln-sw.js",
+      "bytes": 15904,
+      "sha256": "sha256:8b2e83d59e35b48319cef632501e40e1c2103834317fcb902377d5643b1e022f",
+      "sri": "sha384-QY03GATox0WFHZAaoN2Ne0LfSByWqNMbASAYUS4iqWb0+b/L+ax6AHLcg0FQyzqh"
+    },
+    {
+      "path": "p2rln.esm.js",
+      "bytes": 1878,
+      "sha256": "sha256:7a9fe233165c0bfc03b0a0fdbcd07f5ec65fe9a0a0784dc95a9db7cf4aa17d9c",
+      "sri": "sha384-c89RYb/EyUZe4FphKaSiIQE8xxWOnPSvVBzYT48o6TmXMG63GW8+HZsh0eJb71D5"
+    },
+    {
+      "path": "p2rln.js",
+      "bytes": 1343,
+      "sha256": "sha256:350118161ff2c282d951c6daadaba7a3a3cf0bf39d8206a1a397e8b0b881d422",
+      "sri": "sha384-C3hwC3TOKc/81iJxmIIsUPSn/r4f0EBikhrewCvKNWxxGyYqsVoQpAiGFWJ8OPRO"
+    },
+    {
+      "path": "package-member.js",
+      "bytes": 3870,
+      "sha256": "sha256:36557f0fc6981881461278870d8869b228f8e73982f2178274d765893f2bc1bc",
+      "sri": "sha384-9aKYXMZ3HXNhDNjU3y8Lhsp0cWhJVZ/orwIdgckZsieVYuCK9LFMg3IY9FikX3qT"
+    },
+    {
+      "path": "questionnaire-core.js",
+      "bytes": 14089,
+      "sha256": "sha256:26640e0a01d8670e900af974b002a85e8a0659f1c63edfd710e56fb70f380e61",
+      "sri": "sha384-FKrm8DzVP8sq6L41usqnGlcRWwBMJ577dhki00QaJf/6l+NXrZ3QPc8Nz0/1i0p8"
+    },
+    {
+      "path": "questionnaire-game-runtime.js",
+      "bytes": 2089,
+      "sha256": "sha256:f4ce55cd813677ac78fb3e8c734449f61f84887974a5c8fb06eb73972575db94",
+      "sri": "sha384-eLBrmQpD3POn26eBwh8t3WdLWwbc3EW+i/rNCOiIxv6YEYp2GIgE+bWan4vCFI9A"
+    },
+    {
+      "path": "questionnaire-games-core.js",
+      "bytes": 31629,
+      "sha256": "sha256:1d652b2d6c5ae9a128858f1c9dcb5e3e6dc864c4317689a3fea50164ef930018",
+      "sri": "sha384-++K2wQYr313IMZYApZsTvu9tYrO6u4eH1ldQlykDv+THBWs+/7ztgt3mGaTulC+T"
+    },
+    {
+      "path": "questionnaire-games.css",
+      "bytes": 4207,
+      "sha256": "sha256:e9f314a573d821cb0203d373a7c95b5c0a27651c0109293759d3c45a333453e4",
+      "sri": "sha384-vfgykSHAWKEA0zSLTa7Y1RD81Cakb2sBtinwapgtnw1X4aTgj9pdjn7Cm4BPGSUw"
+    },
+    {
+      "path": "questionnaire-runtime.js",
+      "bytes": 15031,
+      "sha256": "sha256:48dba3a8faccfc98f4a1cbc4c7c50a4d735e874c4111cb7730840b38f249b7d8",
+      "sri": "sha384-REGfyDzK4ma4a5JGY/YzHDEJTYRXUZHwtr+xYoZ52hp7wStWTSLM3EErkw87KO0d"
+    },
+    {
+      "path": "questionnaire-session.js",
+      "bytes": 19107,
+      "sha256": "sha256:ff58fe905026abf7190bf23c832bd6db6569b1153ca8f229eae68f32c5ef25ff",
+      "sri": "sha384-yKfjmu8+iZ7vShXvUrEDICoZgbJHH7Rn3CmJQEjt/ewoimdNp3T7EAnfiqGfM4c7"
+    },
+    {
+      "path": "questionnaire.css",
+      "bytes": 2767,
+      "sha256": "sha256:ea12297520397b1531b1e9ebc252f6dfc07e013bbd3e30b5e90929c8415e7f76",
+      "sri": "sha384-1+WuHgbX1l610V/lOc5FJkp7xFE02eR+RWowRNbr8pOJ3crPzn0YuDcEiIrrVZia"
+    },
+    {
+      "path": "range-integrity-core.js",
+      "bytes": 3095,
+      "sha256": "sha256:03c815ddea4c1fe6985b9ec76c7d32ae92a59c936cf1dfbafd28de5ffe2cf44d",
+      "sri": "sha384-kdHEg+uAP9pdWwGG9kWFD6Gspd4Cpo9Se36HWf5OtCtUpG8lPFcJCGbhUsUJBAUD"
+    },
+    {
+      "path": "renderer-registry.js",
+      "bytes": 8356,
+      "sha256": "sha256:d14b3db9a8fb0a7b3d653c19d6e15a705d610b285cb4a8880d7f97bfd0ef28e5",
+      "sri": "sha384-q49Ah6i/SY2uJ5RWVoYvraSPVnte9pGLBmUi37GEvdRoT9vhsNp/YfxnMwkUrT1k"
+    },
+    {
+      "path": "renderers/component-callout.js",
+      "bytes": 912,
+      "sha256": "sha256:e7eb44c294ce081a9ed6b8f120d531cd7f3eb65f20dd1a3b6480840e8073581c",
+      "sri": "sha384-LS3dcdPXMLQ/1Rf0n/+RIem10o0DCAHSzGoJE9sgOpydIly+LvJ8r07wZwndAHyU"
+    },
+    {
+      "path": "renderers/component-timeline.js",
+      "bytes": 1365,
+      "sha256": "sha256:b2785036b2e66fe9e808f31d17778819df32c01b32bbb9b0f8f13a1c8b50fe5a",
+      "sri": "sha384-/tSewgGjUY+84LGLvdQ6dwkMWaVsmP4I+0VqhWV7c9QONyi86ZnOSdecI4xn+9kw"
+    },
+    {
+      "path": "renderers/game-common.js",
+      "bytes": 3889,
+      "sha256": "sha256:2fc31c3b7975a57010c89d13efbed48321fbab2ab29226f3aab5df5e412d87c7",
+      "sri": "sha384-m/4R6raw/Sq1iKxKlXicxabaUIwVvmeUkpLrEForxHXX6pEBzVfGaYTWSeEIDYMC"
+    },
+    {
+      "path": "renderers/h5p-runtime.js",
+      "bytes": 10237,
+      "sha256": "sha256:6d2eea7a75e3bd9973a2380aa29806a7c19e7cff0566f6f7eaec5af6aa17e6af",
+      "sri": "sha384-b1KsN70hvrKXMvQv9v2bSXXq28henfPcjBRRrasErjl9yWr06uf3iwOOYrCAgNEL"
+    },
+    {
+      "path": "renderers/native-component.js",
+      "bytes": 2040,
+      "sha256": "sha256:3d8888ad11580e5e9a53ee189916bf61860230891111cce5f13fc878983d9ddc",
+      "sri": "sha384-krNSjysZod8kwThCTs5sqT8rxtMWJan4nCb03G3zRvp2vrbSb6qbj+eHGngMXGR4"
+    },
+    {
+      "path": "renderers/native-composite.js",
+      "bytes": 505,
+      "sha256": "sha256:2fd9347c8cd036c82b85f5757e997c7d0131b3eeeac0d98942b996ce85c471b1",
+      "sri": "sha384-1ZTmp5eDN13AsuiMn+O65aSL4rj4hrZZax3npcr6VsY9xahraLyRbzDwoNqDA6yB"
+    },
+    {
+      "path": "renderers/passive-media.js",
+      "bytes": 1670,
+      "sha256": "sha256:20ac4520c71a129d9671776fd7bb06f71214517e9bbbed50c129809df3ebd5b4",
+      "sri": "sha384-9F7q6cYrXa//e80UOOZUn6doujND/jnTbQu2ESwjk3wRxqHzFtBE2aSKy23UqDhC"
+    },
+    {
+      "path": "renderers/passive-text.js",
+      "bytes": 3151,
+      "sha256": "sha256:141960fba6c385952016727847048649020e62e80887e064628b8907ea1c031c",
+      "sri": "sha384-OS/QWjEPHToTA0/J8BCxA0Il3ahfdY7Hj82rUm9nOvod2j7JbaCTXXUl11AdbUtF"
+    },
+    {
+      "path": "renderers/questionnaire-3d.js",
+      "bytes": 6503,
+      "sha256": "sha256:8de1d21e446096e643313f88c6e895cb665f28c88ac38c03d5f40f91171b6977",
+      "sri": "sha384-rvstaoQ8DDfwAKsoe8o8ZJ4HyT13AmTqj66eGxbPFgdrvKwLLenASFRPEWw1vRoz"
+    },
+    {
+      "path": "renderers/questionnaire-crossword.js",
+      "bytes": 2841,
+      "sha256": "sha256:708134decea9fef82833f92df069c0446dc1827b9b9e877f829adc6e3c19e938",
+      "sri": "sha384-BdT21sFiw0Fu1RkL6MQUzJ6TlFCAA33fQecSpig/NAChJgUz+euFIn6STXsykG8+"
+    },
+    {
+      "path": "renderers/questionnaire-matching.js",
+      "bytes": 2629,
+      "sha256": "sha256:bd786c31be7b79535a3944485a01f88062a3cda1641462191ec63b2c8e4a3be0",
+      "sri": "sha384-i3cWVCxKQsLNfPQOicZ0vGxo42F7a1daJgO6+rGRg21oM8RsqEY1oM8NtclN85Qq"
+    },
+    {
+      "path": "renderers/questionnaire-memory.js",
+      "bytes": 2826,
+      "sha256": "sha256:3c79fcc69e9c629d803d2c4e4100e35842457b45524c15fe8df0b4525355d4ff",
+      "sri": "sha384-+51wxkt8tviAZAg10f45I8UxzU2+t+gQBDhAJ5hAmhXqw34wkCIu8/Lx1zoAw+KM"
+    },
+    {
+      "path": "renderers/questionnaire-ordering.js",
+      "bytes": 1872,
+      "sha256": "sha256:a408c0034c366b2b03ee43afcd5b5a2c01322f42ae18e2c4974ea8bdc8afb326",
+      "sri": "sha384-EsKvgzDqP5Cr6XICsh8gP8j8dwb5dvN+WYmgq1WkixOaU1UIh0V2dpsUi0J9TxL1"
+    },
+    {
+      "path": "renderers/questionnaire-rosco.js",
+      "bytes": 2570,
+      "sha256": "sha256:60db68ddb6214aca08090b22031f61c265b7ec99641007c5228328d220b11186",
+      "sri": "sha384-yRvfhZSpFCQLLj7ywp5UM/0Pog5Vx6q9zhaAoFMMNpQT0ZnqM/3Zm+WyTLeKJwtS"
+    },
+    {
+      "path": "renderers/questionnaire-standard.js",
+      "bytes": 776,
+      "sha256": "sha256:1014c984d84e4d66feb0d174a243b09c3d608e2ae9ba7932b060260e78330f03",
+      "sri": "sha384-J3dnwEAjU8U+fhlXP6msXowggOdSLoOSgu6EMH/LQXSziiN/juD5Qm+ou7SM6VD2"
+    },
+    {
+      "path": "renderers/questionnaire-true-false.js",
+      "bytes": 1157,
+      "sha256": "sha256:4ab7658e6dc92d340a20bc0bd57dd5c197d195c4442c680760848263a4eca9a5",
+      "sri": "sha384-rTQXzJjFk//GGajIVkL9DEKdoUDrmBAW2JUoxh6ObYsdg6ZoWXKXjH9RgXNqMUc5"
+    },
+    {
+      "path": "renderers/questionnaire-word-search.js",
+      "bytes": 2885,
+      "sha256": "sha256:fa52fca6cee5bc4ed707e4c0c8bb31f11af12ee6f7ea26b58a3171a2a5cd8aa1",
+      "sri": "sha384-p7rZmHIv+lYEeLTG1yLwO771gXqR0Ktwo9RlLOyFHKrzSfkOAXBQ0igjXBZneWGW"
+    },
+    {
+      "path": "renderers/scorm-runtime.js",
+      "bytes": 22783,
+      "sha256": "sha256:00f44a10a4ae74055ce539f0b0b9879ecb62d4b6ed7b436fb68063cd78faccbe",
+      "sri": "sha384-GQEgyWwgtw7KyfY4UrjaJ8D4lXdcC4WHn16xkBt4qRDROBfTmzRE/Ghs64/xP1LP"
+    },
+    {
+      "path": "runtime-events.js",
+      "bytes": 2407,
+      "sha256": "sha256:5242aace3e88c1746add7c468220b7391bf2feec7c8b5ff42594807b947a17e8",
+      "sri": "sha384-/xwS6cf5XtEqLKNVnIzg5T1/SvT1SvaxQZQsF+LlVKyIcL5CkG7i9IZuSx1CMuIO"
+    },
+    {
+      "path": "runtime-host/h5p-host.js",
+      "bytes": 4493,
+      "sha256": "sha256:e82c96df653aa25714f2ecfe695c82c6e5e9a51891906ac64e01c93df1958028",
+      "sri": "sha384-H2dQR9K4UggZK1+v9sDv6f7O9uKMZUhspVq6X/9VtG4ukWGsP90Pb8a3pcf2SHJ5"
+    },
+    {
+      "path": "runtime-host/h5p.html",
+      "bytes": 585,
+      "sha256": "sha256:e6ec0e1d63e8fa9e612ef7240bcd4147d2fb6e5ca91d9f7ff18707848b0c7152",
+      "sri": "sha384-RALvlL4iYn1AmrnP4D9uMypkCM6TPoMDeIgIFrY2EoByWMsbK+jXF/5AODZGj2aM"
+    },
+    {
+      "path": "runtime-host/scorm-host.js",
+      "bytes": 11570,
+      "sha256": "sha256:c1af90cb2bd1401b04c84ecdd68594a3b857c95e791c4e693b972054f2f88353",
+      "sri": "sha384-Z8EB/BVfcRl+MCLrBkSJzEdfgbmdmP9tDDStEof61iVFeQffUyAxKji3IKc+LnSe"
+    },
+    {
+      "path": "runtime-host/scorm.html",
+      "bytes": 659,
+      "sha256": "sha256:925e215d6a000629a5bdcec92178c1a9ef990a7492c94d5a74d5a88a409b6bdc",
+      "sri": "sha384-jIJ5Z092AVO+x3crgVepGLjcP7fg0YwCQhW3xvlDEbMRMp4mIhcl4sGUUSEWteTf"
+    },
+    {
+      "path": "runtime-host-config.js",
+      "bytes": 2912,
+      "sha256": "sha256:9097067bf2309916d55b0f29c9d5d3d9c3c86f56cb88d0d59f91180c97fee53a",
+      "sri": "sha384-xH6tQEpGvEtrdUjNmTFaOQko+RXkC73CwL4+2csXIIHS0hCTOwCc1S95L9Vlcbwy"
+    },
+    {
+      "path": "scorm-runtime-core.js",
+      "bytes": 21128,
+      "sha256": "sha256:6fe95b5a871f747d60bcc689588108609835049411f7f0498c3c5797f31704d2",
+      "sri": "sha384-10nWhVf11mkNWFhfBG/FzA8pqsCy2d1H4I9HBzb2jOv6jujjfA7ujYB32ck6m9wh"
+    },
+    {
+      "path": "scorm2004-sequencing.js",
+      "bytes": 34922,
+      "sha256": "sha256:e9338a575c01183da1636825c8f80d4c98bb9ff861391430a7f332f9588788af",
+      "sri": "sha384-7cmoT9d/fgGPWqqvuxrRXCamXSbVZYvOT1zwJAT2jFJKAuLxPEUBFVYKxJih2zNc"
+    },
+    {
+      "path": "static-resource-bridge.js",
+      "bytes": 7161,
+      "sha256": "sha256:512060101e46329c9a313158185c8b811e7b862f7e9f8cf0a2428e184024510c",
+      "sri": "sha384-IdcZLvcEMPI8R9aq1A0J+DGTGugZjup/Snp8sh9zk21myXQJCcWFikBEjpt/iOkz"
+    },
+    {
+      "path": "stream-integrity.js",
+      "bytes": 7135,
+      "sha256": "sha256:8cbe422a2844dae5a5c24cd8ef9d9300ecaafd33cc028b8faab92e40dc588066",
+      "sri": "sha384-dUdYHgXrodGpJgIauF+9b0zdyqCAJER5VR/w712uMBOuAeELdGu5HPgwE+MaVpjL"
+    },
+    {
+      "path": "web-content-core.js",
+      "bytes": 2599,
+      "sha256": "sha256:886e965196d662c2364c09a01d412fb45734ae94b9b86afe9ec4fbae3bd7d771",
+      "sri": "sha384-tU3wu1+WYnNUu7c42bW0dICC1tZy6xuqr8N0Cv/IumxMC80yKbk/bTk31ReIr4h6"
+    },
+    {
+      "path": "xml-lite.js",
+      "bytes": 3743,
+      "sha256": "sha256:ad16a034d2ca7af0b9b8eb152d31082177205776309c85556eb433e4ad3319db",
+      "sri": "sha384-CmsMv2veLvEh6Cz17j39XpIjZ8NLqPl91QYcpaqbYwKjQG0lmoLzUn9lIZhyDSAu"
+    },
+    {
+      "path": "zip-source.js",
+      "bytes": 28091,
+      "sha256": "sha256:89d469c917c4d92d55c95e104d75e2df9cb4c863c17adef978d535e9c8829855",
+      "sri": "sha384-wxndgqb7Wk+0C3X1J2UB3xDBXnK/NSMlgACMxzQIF945QXdjSwx5YZ9R0B9alyTg"
+    }
+  ]
+}

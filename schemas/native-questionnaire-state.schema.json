@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/schema/native-questionnaire-state/0.2",
+  "title": "P2LRN native questionnaire external runtime state 0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "currentQuestion",
+    "questionOrder",
+    "answers",
+    "completed",
+    "attemptsCompleted",
+    "completionReason",
+    "gameState",
+    "timing"
+  ],
+  "properties": {
+    "version": {
+      "const": "p2lrn-questionnaire-state/0.2"
+    },
+    "currentQuestion": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "questionOrder": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "answers": {
+      "type": "object"
+    },
+    "completed": {
+      "type": "boolean"
+    },
+    "attemptsCompleted": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "completionReason": {
+      "enum": [
+        null,
+        "submitted",
+        "time-limit",
+        "question-time-limit"
+      ]
+    },
+    "score": {
+      "type": "object"
+    },
+    "gameState": {
+      "type": "object"
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attemptStartedAt",
+        "attemptDeadlineAt",
+        "questionStartedAt",
+        "questionDeadlineAt",
+        "expiredQuestions"
+      ],
+      "properties": {
+        "attemptStartedAt": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "attemptDeadlineAt": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "questionStartedAt": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "questionDeadlineAt": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "expiredQuestions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

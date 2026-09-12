@@ -1,0 +1,38 @@
+{
+  "id": "https://p2rln.org/profile/web-content",
+  "version": "0.4.0",
+  "title": "P2RLN Passive Web Content Profile",
+  "status": "experimental",
+  "description": "Defines passive HTML/CSS-based educational representations without arbitrary executable JavaScript dependencies.",
+  "capabilities": [
+    "web-content.validate",
+    "web-content.read",
+    "web-content.write",
+    "web-content.preserve",
+    "web-content.deliver"
+  ],
+  "requires": [],
+  "optionalDependencies": [],
+  "preservation": "opaque-allowed",
+  "normativeReferences": [
+    "https://html.spec.whatwg.org/",
+    "https://www.w3.org/TR/WCAG22/"
+  ],
+  "rules": [
+    "Representations MUST identify this profile with their profile URI.",
+    "HTML representations MUST NOT require arbitrary executable JavaScript under this profile.",
+    "Referenced embedded resources MUST be inventoried in the manifest.",
+    "Deliverers SHOULD target WCAG 2.2 AA for authored web content.",
+    "A multi-file passive web representation MAY declare https://p2rln.org/extension/web-content-bundle using mapping version 1.",
+    "A web-content bundle mapping MUST identify one safe relative entrypoint and a complete logical-path to inventoried embedded-payload map.",
+    "Reading Systems MUST NOT treat package HTML as permission to execute arbitrary JavaScript or fetch undeclared package assets.",
+    "Reading Systems that support relative bundle assets SHOULD resolve them through a host-controlled virtual resource bridge rather than rewriting the portable graph."
+  ],
+  "bindings": [
+    {
+      "standard": "HTML Living Standard / WCAG",
+      "version": "current",
+      "reference": "https://html.spec.whatwg.org/"
+    }
+  ]
+}

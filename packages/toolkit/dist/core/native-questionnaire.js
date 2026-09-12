@@ -1,0 +1,272 @@
+import { ValidationError } from './errors.js';
+import { NATIVE, PROFILE, NS, canonicalIdentifier } from './constants.js';
+export const NATIVE_QUESTIONNAIRE_PROFILE = PROFILE.nativeQuestionnaire;
+export const NATIVE_QUESTIONNAIRE_SCHEMA = `${NS}schema/native-questionnaire/0.4.0`;
+export const NATIVE_QUESTIONNAIRE_MEDIA_TYPE = NATIVE.questionnaireMediaType;
+export const NATIVE_QUESTIONNAIRE_VERSION = '0.4.0';
+const TOKEN = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
+const LANGUAGE = /^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/;
+const COMMON = new Set(['id', 'type', 'prompt', 'points', 'penalty', 'scoring', 'timeLimitSeconds', 'explanation', 'required']);
+function obj(v, label) { if (!v || typeof v !== 'object' || Array.isArray(v))
+    throw new ValidationError(`${label} must be an object`); return v; }
+function arr(v, label, min = 0) { if (!Array.isArray(v) || v.length < min)
+    throw new ValidationError(`${label} must be an array${min ? ` with at least ${min} item(s)` : ''}`); return v; }
+function str(v, label, min = 1, max = Infinity) { if (typeof v !== 'string' || v.length < min || v.length > max)
+    throw new ValidationError(`${label} must be a string with length ${min}..${max === Infinity ? 'unbounded' : max}`); return v; }
+function num(v, label, min = 0, max = 1_000_000) { if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max)
+    throw new ValidationError(`${label} must be a number in ${min}..${max}`); return v; }
+function int(v, label, min = 1) { if (!Number.isSafeInteger(v) || v < min)
+    throw new ValidationError(`${label} must be an integer >= ${min}`); return v; }
+function allowed(o, keys, label) { for (const k of Object.keys(o))
+    if (!keys.has(k))
+        throw new ValidationError(`${label} has unsupported property: ${k}`); }
+function uri(v, label) { const s = str(v, label, 3, 500); try {
+    new URL(s);
+}
+catch {
+    throw new ValidationError(`${label} must be an absolute URI`);
+} return s; }
+function token(v, label) { const s = str(v, label, 1, 160); if (!TOKEN.test(s))
+    throw new ValidationError(`${label} has invalid token syntax`); return s; }
+function item(v, label) { const o = obj(v, label); allowed(o, new Set(['id', 'text']), label); token(o.id, `${label}.id`); str(o.text, `${label}.text`, 1, 2000); return o; }
+function uniqueStrings(values, label) { const out = values.map((x, i) => token(x, `${label}[${i}]`)); if (new Set(out).size !== out.length)
+    throw new ValidationError(`${label} must contain unique items`); return out; }
+function validateCommon(q, label) { token(q.id, `${label}.id`); str(q.prompt, `${label}.prompt`, 1, 10000); num(q.points, `${label}.points`); if (q.penalty !== undefined)
+    num(q.penalty, `${label}.penalty`); if (q.scoring !== undefined && !['all-or-nothing', 'partial-per-item', 'partial-with-penalty'].includes(q.scoring))
+    throw new ValidationError(`${label}.scoring is invalid`); if (q.timeLimitSeconds !== undefined)
+    int(q.timeLimitSeconds, `${label}.timeLimitSeconds`); if (q.explanation !== undefined)
+    str(q.explanation, `${label}.explanation`, 0, 10000); if (q.required !== undefined && typeof q.required !== 'boolean')
+    throw new ValidationError(`${label}.required must be boolean`); }
+function validateItems(values, label, min) { const ids = new Set(); for (const [i, v] of arr(values, label, min).entries()) {
+    const x = item(v, `${label}[${i}]`);
+    if (ids.has(x.id))
+        throw new ValidationError(`duplicate ${label} id: ${x.id}`);
+    ids.add(x.id);
+} return ids; }
+function validateQuestionShape(q0, index) {
+    const label = `questions[${index}]`, q = obj(q0, label);
+    validateCommon(q, label);
+    const t = q.type;
+    if (!['single-choice', 'multiple-choice', 'true-false', 'text', 'fill-blanks', 'ordering', 'matching'].includes(t))
+        throw new ValidationError(`${label}.type is unsupported: ${t}`);
+    if (['single-choice', 'multiple-choice', 'true-false'].includes(t)) {
+        allowed(q, new Set([...COMMON, 'choices', 'solution']), label);
+        validateItems(q.choices, `${label}.choices`, 2);
+        if (q.solution !== undefined) {
+            const s = obj(q.solution, `${label}.solution`);
+            allowed(s, new Set(['choiceIds']), `${label}.solution`);
+            uniqueStrings(arr(s.choiceIds, `${label}.solution.choiceIds`, 1), `${label}.solution.choiceIds`);
+        }
+        return q;
+    }
+    if (t === 'text') {
+        allowed(q, new Set([...COMMON, 'solution']), label);
+        if (q.solution !== undefined) {
+            const s = obj(q.solution, `${label}.solution`);
+            allowed(s, new Set(['acceptedAnswers']), `${label}.solution`);
+            const a = arr(s.acceptedAnswers, `${label}.solution.acceptedAnswers`, 1);
+            for (const [i, v] of a.entries())
+                str(v, `${label}.solution.acceptedAnswers[${i}]`, 1, 5000);
+            if (new Set(a).size !== a.length)
+                throw new ValidationError(`${label}.solution.acceptedAnswers must be unique`);
+        }
+        return q;
+    }
+    if (t === 'fill-blanks') {
+        allowed(q, new Set([...COMMON, 'body', 'blanks', 'solution']), label);
+        if (q.body !== undefined)
+            str(q.body, `${label}.body`, 0, 20000);
+        const blanks = arr(q.blanks, `${label}.blanks`, 1);
+        for (const [i, v] of blanks.entries()) {
+            const b = obj(v, `${label}.blanks[${i}]`);
+            allowed(b, new Set(['id', 'label', 'options']), `${label}.blanks[${i}]`);
+            token(b.id, `${label}.blanks[${i}].id`);
+            if (b.label !== undefined)
+                str(b.label, `${label}.blanks[${i}].label`, 0, 1000);
+            if (b.options !== undefined) {
+                const opts = arr(b.options, `${label}.blanks[${i}].options`);
+                for (const [j, x] of opts.entries())
+                    str(x, `${label}.blanks[${i}].options[${j}]`, 1, 2000);
+                if (new Set(opts).size !== opts.length)
+                    throw new ValidationError(`${label}.blanks[${i}].options must be unique`);
+            }
+        }
+        if (q.solution !== undefined) {
+            const s = obj(q.solution, `${label}.solution`);
+            allowed(s, new Set(['answers']), `${label}.solution`);
+            const answers = obj(s.answers, `${label}.solution.answers`);
+            if (!Object.keys(answers).length)
+                throw new ValidationError(`${label}.solution.answers must not be empty`);
+            for (const [k, vals] of Object.entries(answers)) {
+                const a = arr(vals, `${label}.solution.answers.${k}`, 1);
+                for (const [j, x] of a.entries())
+                    str(x, `${label}.solution.answers.${k}[${j}]`, 1, 5000);
+                if (new Set(a).size !== a.length)
+                    throw new ValidationError(`${label}.solution.answers.${k} must be unique`);
+            }
+        }
+        return q;
+    }
+    if (t === 'ordering') {
+        allowed(q, new Set([...COMMON, 'items', 'solution']), label);
+        validateItems(q.items, `${label}.items`, 2);
+        if (q.solution !== undefined) {
+            const s = obj(q.solution, `${label}.solution`);
+            allowed(s, new Set(['order']), `${label}.solution`);
+            uniqueStrings(arr(s.order, `${label}.solution.order`, 2), `${label}.solution.order`);
+        }
+        return q;
+    }
+    allowed(q, new Set([...COMMON, 'left', 'right', 'solution']), label);
+    validateItems(q.left, `${label}.left`, 1);
+    validateItems(q.right, `${label}.right`, 1);
+    if (q.solution !== undefined) {
+        const s = obj(q.solution, `${label}.solution`);
+        allowed(s, new Set(['pairs']), `${label}.solution`);
+        for (const [i, p0] of arr(s.pairs, `${label}.solution.pairs`, 1).entries()) {
+            const p = obj(p0, `${label}.solution.pairs[${i}]`);
+            allowed(p, new Set(['left', 'right']), `${label}.solution.pairs[${i}]`);
+            token(p.left, `${label}.solution.pairs[${i}].left`);
+            token(p.right, `${label}.solution.pairs[${i}].right`);
+        }
+    }
+    return q;
+}
+function ids(items, label) { const s = new Set(); for (const x of items) {
+    if (s.has(x.id))
+        throw new ValidationError(`duplicate ${label} id: ${x.id}`);
+    if (!TOKEN.test(x.id))
+        throw new ValidationError(`invalid ${label} id: ${x.id}`);
+    s.add(x.id);
+} return s; }
+function semantic(q, embedded) { const qid = q.id, t = q.type, solution = q.solution; if (embedded && solution === undefined)
+    throw new ValidationError(`${qid}: embedded-key grading requires a solution`); if (['single-choice', 'multiple-choice', 'true-false'].includes(t)) {
+    const choiceIds = ids(q.choices, `${qid} choice`);
+    if (t === 'true-false' && choiceIds.size !== 2)
+        throw new ValidationError(`${qid}: true-false requires exactly two choices`);
+    if (solution) {
+        const sol = [...solution.choiceIds];
+        const unknown = sol.filter((x) => !choiceIds.has(x));
+        if (unknown.length)
+            throw new ValidationError(`${qid}: solution references unknown choices: ${JSON.stringify(unknown)}`);
+        if (['single-choice', 'true-false'].includes(t) && sol.length !== 1)
+            throw new ValidationError(`${qid}: ${t} requires exactly one correct choice`);
+    }
+    return;
+} if (t === 'fill-blanks') {
+    const blankIds = ids(q.blanks, `${qid} blank`);
+    if (solution) {
+        const answerIds = new Set(Object.keys(solution.answers));
+        if (blankIds.size !== answerIds.size || [...blankIds].some((x) => !answerIds.has(x))) {
+            const missing = [...blankIds].filter((x) => !answerIds.has(x)).sort(), extra = [...answerIds].filter((x) => !blankIds.has(x)).sort();
+            throw new ValidationError(`${qid}: blank solution id mismatch; missing=${JSON.stringify(missing)}, extra=${JSON.stringify(extra)}`);
+        }
+    }
+    return;
+} if (t === 'ordering') {
+    const itemIds = ids(q.items, `${qid} ordering item`);
+    if (solution) {
+        const order = new Set(solution.order);
+        if (order.size !== itemIds.size || [...itemIds].some((x) => !order.has(x)))
+            throw new ValidationError(`${qid}: ordering solution must contain every item exactly once`);
+    }
+    return;
+} if (t === 'matching') {
+    const left = ids(q.left, `${qid} matching-left`), right = ids(q.right, `${qid} matching-right`);
+    if (solution) {
+        const seen = new Set();
+        for (const p of solution.pairs) {
+            if (!left.has(p.left) || !right.has(p.right))
+                throw new ValidationError(`${qid}: matching solution references an unknown item`);
+            if (seen.has(p.left))
+                throw new ValidationError(`${qid}: matching solution repeats left item ${p.left}`);
+            seen.add(p.left);
+        }
+        if (seen.size !== left.size || [...left].some((x) => !seen.has(x)))
+            throw new ValidationError(`${qid}: matching solution must define one pair for every left item`);
+    }
+    return;
+} if (t === 'text')
+    return; throw new ValidationError(`${qid}: unsupported question type ${t}`); }
+export function validateQuestionnaire(payload) { const p = obj(payload, 'questionnaire'); allowed(p, new Set(['schema', 'version', 'title', 'description', 'language', 'grading', 'presentation', 'attemptPolicy', 'questions', 'extensions']), 'questionnaire'); if (canonicalIdentifier(String(p.schema ?? '')) !== NATIVE_QUESTIONNAIRE_SCHEMA)
+    throw new ValidationError('questionnaire.schema is invalid'); if (p.version !== NATIVE_QUESTIONNAIRE_VERSION)
+    throw new ValidationError('questionnaire.version is invalid'); str(p.title, 'questionnaire.title', 1, 500); if (p.description !== undefined)
+    str(p.description, 'questionnaire.description', 0, 5000); if (p.language !== undefined && (!LANGUAGE.test(p.language) || p.language.length > 64))
+    throw new ValidationError('questionnaire.language is invalid'); const grading = obj(p.grading, 'questionnaire.grading'); allowed(grading, new Set(['mode']), 'questionnaire.grading'); if (!['embedded-key', 'host'].includes(grading.mode))
+    throw new ValidationError('questionnaire.grading.mode is invalid'); if (p.presentation !== undefined) {
+    const x = obj(p.presentation, 'questionnaire.presentation');
+    allowed(x, new Set(['questionMode', 'shuffleQuestions', 'showFeedback']), 'questionnaire.presentation');
+    if (x.questionMode !== undefined && !['one-at-a-time', 'all'].includes(x.questionMode))
+        throw new ValidationError('questionnaire.presentation.questionMode is invalid');
+    if (x.shuffleQuestions !== undefined && typeof x.shuffleQuestions !== 'boolean')
+        throw new ValidationError('questionnaire.presentation.shuffleQuestions must be boolean');
+    if (x.showFeedback !== undefined && !['after-submit', 'never'].includes(x.showFeedback))
+        throw new ValidationError('questionnaire.presentation.showFeedback is invalid');
+} if (p.attemptPolicy !== undefined) {
+    const x = obj(p.attemptPolicy, 'questionnaire.attemptPolicy');
+    allowed(x, new Set(['maxAttempts', 'timeLimitSeconds']), 'questionnaire.attemptPolicy');
+    if (x.maxAttempts !== undefined)
+        int(x.maxAttempts, 'questionnaire.attemptPolicy.maxAttempts');
+    if (x.timeLimitSeconds !== undefined)
+        int(x.timeLimitSeconds, 'questionnaire.attemptPolicy.timeLimitSeconds');
+} if (p.extensions !== undefined) {
+    const x = obj(p.extensions, 'questionnaire.extensions');
+    for (const k of Object.keys(x))
+        uri(k, `questionnaire.extensions.${k}`);
+} const questions = arr(p.questions, 'questionnaire.questions', 1).map(validateQuestionShape); const seen = new Set(); for (const q of questions) {
+    if (seen.has(q.id))
+        throw new ValidationError(`duplicate question id: ${q.id}`);
+    seen.add(q.id);
+    semantic(q, grading.mode === 'embedded-key');
+} return payload; }
+export function normalizeQuestionText(value) { return String(value ?? '').normalize('NFKC').trim().toLowerCase().split(/\s+/).filter(Boolean).join(' '); }
+function round(value, digits) { const scale = 10 ** digits; const x = value * scale; const floor = Math.floor(x), frac = x - floor; let n; if (Math.abs(frac - 0.5) < 1e-12)
+    n = floor % 2 === 0 ? floor : floor + 1;
+else
+    n = Math.round(x); return n / scale; }
+function defaultScoring(q) { return ['single-choice', 'true-false', 'text'].includes(q.type) ? 'all-or-nothing' : 'partial-per-item'; }
+function bounded(q, hits, errors, total) { const points = Number(q.points ?? 0); if (total <= 0 || points <= 0)
+    return 0; const mode = q.scoring ?? defaultScoring(q); let raw = mode === 'all-or-nothing' ? (hits === total && errors === 0 ? points : 0) : hits * (points / total); if (mode === 'partial-with-penalty')
+    raw -= errors * Number(q.penalty ?? 0); return round(Math.min(points, Math.max(0, raw)), 2); }
+export function scoreQuestion(question, answer) { const qid = question.id, points = round(Number(question.points ?? 0), 2), solution = question.solution; if (solution === undefined)
+    return { questionId: qid, graded: false, correct: null, hits: 0, errors: 0, pointsAwarded: 0, pointsPossible: points }; answer = answer && typeof answer === 'object' && !Array.isArray(answer) ? answer : {}; let hits = 0, errors = 0, total = 1; if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) {
+    const selected = new Set((Array.isArray(answer.choiceIds) ? answer.choiceIds : []).filter((x) => typeof x === 'string' || typeof x === 'number').map(String)), correct = new Set(solution.choiceIds.map(String));
+    hits = [...selected].filter((x) => correct.has(x)).length;
+    errors = [...selected].filter((x) => !correct.has(x)).length;
+    total = question.type === 'multiple-choice' ? correct.size : 1;
+}
+else if (question.type === 'text') {
+    const actual = normalizeQuestionText(answer.text), accepted = new Set(solution.acceptedAnswers.map(normalizeQuestionText));
+    hits = actual && accepted.has(actual) ? 1 : 0;
+    errors = hits ? 0 : 1;
+}
+else if (question.type === 'fill-blanks') {
+    const supplied = answer.blanks && typeof answer.blanks === 'object' && !Array.isArray(answer.blanks) ? answer.blanks : {}, expected = solution.answers;
+    total = Object.keys(expected).length;
+    for (const [id, vals] of Object.entries(expected)) {
+        const actual = normalizeQuestionText(supplied[id]), valid = new Set(vals.map(normalizeQuestionText));
+        if (actual && valid.has(actual))
+            hits++;
+        else
+            errors++;
+    }
+}
+else if (question.type === 'ordering') {
+    const supplied = Array.isArray(answer.order) ? answer.order : [], expected = solution.order;
+    total = expected.length;
+    hits = expected.reduce((n, x, i) => n + (i < supplied.length && String(supplied[i]) === String(x) ? 1 : 0), 0);
+    errors = total - hits;
+}
+else if (question.type === 'matching') {
+    const supplied = answer.pairs && typeof answer.pairs === 'object' && !Array.isArray(answer.pairs) ? answer.pairs : {}, expected = Object.fromEntries(solution.pairs.map((p) => [p.left, p.right]));
+    total = Object.keys(expected).length;
+    hits = Object.entries(expected).filter(([l, r]) => String(supplied[l] ?? '') === String(r)).length;
+    errors = total - hits;
+}
+else
+    throw new ValidationError(`${qid}: unsupported question type ${question.type}`); const awarded = bounded(question, hits, errors, total), correct = Math.abs(awarded - points) <= 1e-9 && errors === 0; return { questionId: qid, graded: true, correct, hits, errors, pointsAwarded: awarded, pointsPossible: points }; }
+export function scoreQuestionnaire(payload, answers) { validateQuestionnaire(payload); answers = answers && typeof answers === 'object' && !Array.isArray(answers) ? answers : {}; if (payload.grading.mode === 'host') {
+    const questions = payload.questions.map((q) => ({ questionId: q.id, graded: false, correct: null, hits: 0, errors: 0, pointsAwarded: 0, pointsPossible: round(Number(q.points ?? 0), 2) })), max = round(questions.reduce((s, x) => s + x.pointsPossible, 0), 2);
+    return { graded: false, raw: 0, max, normalized: null, questions };
+} const questions = payload.questions.map((q) => scoreQuestion(q, answers[q.id])), max = round(questions.reduce((s, x) => s + x.pointsPossible, 0), 2), raw = round(questions.reduce((s, x) => s + x.pointsAwarded, 0), 2), graded = questions.every((x) => x.graded); return { graded, raw, max, normalized: !graded || max <= 0 ? null : round(raw / max, 6), questions }; }
+//# sourceMappingURL=native-questionnaire.js.map

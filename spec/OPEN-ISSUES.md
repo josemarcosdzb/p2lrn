@@ -1,0 +1,37 @@
+> **Nota de migración P2LRN/Node:** este documento deriva de la especificación Alpha15 anterior. Las reglas de formato se conservan; cualquier referencia a la antigua implementación Python es histórica. La implementación principal actual es `@p2lrn/toolkit` en Node.js/TypeScript.
+
+# P2LRN 0.4.0 Open issues before a 1.0 candidate
+
+These points are intentionally not frozen by 0.4.0.
+
+1. Formal ownership/governance of the `p2lrn.org` namespace and public registry URIs.
+2. Actual IANA media type registration. `application/vnd.p2lrn+zip` is only a candidate string in this draft.
+3. Final signature profile and trust governance. Core 0.4.0 still reserves/rejects embedded signature payloads. Toolkit alpha 7 implements an experimental detached Ed25519 `.p2lrn.sig` with separate cryptographic-validity/trust results and content/package scopes; publisher identity, revocation, key rotation and independent interoperability remain open.
+4. QTI: full QTI 3 item/test semantic conformance and certified QTI validation/delivery. Direct package projection and legacy-QTI version separation now exist.
+5. H5P: exact host/library resolution and isolated runtime sessions now have a reference candidate; still open are formal capability negotiation for exact library availability, real-browser conformance across representative content types, selective remote-content permissions and independent interoperability.
+6. SCORM: complete sequencing/navigation projection rules without pretending Core can replace SCORM runtime semantics.
+7. cmi5: complete conformance coverage for every CourseStructure rule, remote AU URLs, launch modes and xAPI runtime integration.
+8. Common Cartridge: deeper semantic adapters for discussion topics, web links and specialized legacy resource types. The full manifest resource inventory is now preserved/projected, and QTI/Basic LTI are surfaced separately.
+9. Complete executable/conformance implementations for the new LTI, CASE, xAPI and accessibility profile drafts; add Caliper and credential profiles.
+10. Formal metadata vocabulary alignment with LRMI/Schema.org/IEEE 2881 without forcing JSON-LD on Core readers.
+11. Course cloning and stable portable-ID persistence rules across LMS databases.
+12. Registry rules for activity types, relation predicates, profile identifiers and capability identifiers.
+13. Independent second implementation and shared interoperability corpus before 1.0.
+14. Streaming/very-large-package profile and external content-addressed stores. Toolkit alpha 8 implements browser HTTP Range opening, ZIP64 central-directory support and lazy per-payload verification. Alpha 9 adds host-verified virtual inner-resource URLs, stored-member seek delivery and relative passive-HTML bundles. External CAS policy, nested-package streaming and standardized very-large-content packaging remain open.
+15. Delta/update/version-history/merge semantics. Toolkit alpha 7 implements an experimental detached resource-level `.p2lrn.delta` that reuses exact base payload bytes and reconstructs a fully validated target package atomically. Binary/chunk diffs, update feeds, rollback protection, version-history DAGs, merge/conflict semantics and independent interoperability remain open; none are folded into Core.
+16. A formal nested-package validation API so Core validators can remain lightweight while profile validators can be certified independently.
+
+17. Complete AulaP2P adapter implementation against the live `aulap2p.curso.v1` model, including persistent portable-ID mapping and transactional import.
+18. Independent non-AulaP2P implementation for the cross-LMS semantic round-trip gate.
+19. Native activity/component model beyond questionnaires: the host-side renderer/dependency/component registries, lazy loading, thin-package rule, permission gate, graph-backed native composite activity, versioned Host Adapter/runtime-event contract, independent component/data/runtime version axes, deterministic host-side component data migrations, and a reference `component-catalog/0.1` + declarative `component-editor/0.1` authoring contract are implemented through trust/delta alpha 7, with reference Callout and Timeline components. Still open: public component-registry/governance/discovery rules, independent Studio/runtime interoperability evidence, sandboxed package-supplied executable components (if ever allowed), and a richer standard component vocabulary beyond those reference components.
+20. Native questionnaire conformance: independent renderer, accessibility test corpus, high-stakes/server-grading protocol, clock-authority guidance for high-stakes hosts, and mapping boundaries with QTI. Max-attempt enforcement plus resumable total/per-question timing are implemented in the reference runtime.
+21. Browser player: Alpha 8 implements ZIP64, HTTP Range opening, lazy payload authentication, bounded full fallback and large binary Blob/stream APIs without whole-package buffering. Alpha 9 adds a versioned host `resolveResourceUrl` bridge, direct Range seek for stored media in the first-party Reader, centralized seekable ZIP packaging and mapped relative passive-HTML assets. Alpha 10 adds a static-host Service Worker bridge plus per-chunk SHA-256 range integrity for stored audio/video. Alpha 11 adds a reproducible npm/CDN/self-host distribution of the same runtime, a classic loader, ESM exports, TypeScript declarations and explicit runtime-version conflict detection. Alpha 12 adds integrity-backed nested `package-member` reading plus a bounded opaque-sandbox SCORM 1.2/2004 runtime with Host Adapter state/score flow. Alpha 13 adds the NPM/runtime-host isolated-origin topology, canonical `parent.API`/`parent.API_1484_11` placement and opener compatibility. Alpha 14 recovers the AulaP2P SCORM 2004 manifest parser and linear navigation base, exposes request-valid state and relaunches resolved SCO targets after `Terminate()`. Still open: public publication/namespace ownership, random seek for intrinsically non-seekable deflated members, adaptive-media-specific delivery policy, coexistence adapters for major third-party Service Worker frameworks and broader real-browser/CDN interoperability evidence.
+22. Alternative renderers: reference 2D game modes and a lightweight WebGL2 order/match mode now consume the same native questionnaire/state model. Still open: independent renderer conformance, richer accessible game interaction, and broader 3D/simulation component vocabulary.
+
+## Reading-system work after 0.4.0
+
+- Promote the Alpha 14 SCORM 1.2/2004 runtime from bounded experimental launch/tracking/navigation to general delivery only after condition-rule execution, control-mode enforcement, objective/rollup state, complete sequencing/termination behavior, exhaustive CMI conformance and broader real-browser corpus gates pass. Parent/opener-only API discovery and the basic linear resolver are no longer open gates.
+- Implement a real QTI 3 delivery engine before declaring QTI `deliver` capability.
+- Finish the H5P real-browser gate and formal runtime capability negotiation. The candidate already resolves exact bundled/host libraries and keeps execution on an isolated origin without auto-downloading missing dependencies.
+- Define cmi5/xAPI launch-session handling while keeping LRS credentials outside P2LRN.
+- Build a native desktop bundle for Windows/macOS/Linux so file association does not depend on a Python installation.

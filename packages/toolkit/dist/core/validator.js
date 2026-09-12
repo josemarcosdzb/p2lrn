@@ -1,0 +1,484 @@
+import { readFileSync } from 'node:fs';
+import { ValidationError } from './errors.js';
+import { computeContentRoot, contentDigest, sha256, baseMediaType } from './integrity.js';
+import { parseIJson } from './ijson.js';
+import { ZipArchive, DEFAULT_ZIP_LIMITS, safeZipPath } from './zip.js';
+import { FORMAT_VERSION, KNOWN_PROFILES, KNOWN_PROFILE_VERSIONS, LEGACY_FORMAT, FORMAT, PROFILE, NATIVE, NS, LEGACY_NS, canonicalIdentifier, canonicalProfileId, profileIs, identifierIs } from './constants.js';
+import { validateQuestionnaire } from './native-questionnaire.js';
+import { validateComponentInstance } from './native-component.js';
+import { validateComposite } from './native-composite.js';
+import { validateSchema } from './json-schema.js';
+import { validateWebContentMapping, isWebContentProfile } from './web-content.js';
+import { parseXml, descendants, localName, firstDirectChild, textContent, namespaceUri, attrLocal } from './xml-lite.js';
+const RANGE_EXTENSION = 'org.p2lrn.rangeIntegrity';
+const RANGE_MEDIA = 'application/vnd.p2lrn.range-integrity+json';
+function schemaId(format, suffix) { return `${format === LEGACY_FORMAT ? LEGACY_NS : NS}schema/${suffix}`; }
+function extensionValue(ext, canonical) { for (const [key, value] of Object.entries(ext ?? {}))
+    if (canonicalIdentifier(key) === canonical)
+        return value; return undefined; }
+function profileExtension(rep, canonicalProfile) { const ext = rep.extensions ?? {}; for (const [key, value] of Object.entries(ext))
+    if (canonicalIdentifier(key) === canonicalProfile)
+        return value; return undefined; }
+function record(value, label) { if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new ValidationError(`${label} must be an object`); return value; }
+function array(value, label) { if (!Array.isArray(value))
+    throw new ValidationError(`${label} must be an array`); return value; }
+function string(value, label) { if (typeof value !== 'string' || !value)
+    throw new ValidationError(`${label} must be a non-empty string`); return value; }
+function integer(value, label) { if (!Number.isSafeInteger(value))
+    throw new ValidationError(`${label} must be a safe integer`); return value; }
+function validateManifestShape(value) {
+    const m = record(value, 'manifest');
+    const format = string(m.format, 'manifest.format');
+    if (format !== LEGACY_FORMAT && format !== FORMAT)
+        throw new ValidationError(`unsupported format: ${format}`);
+    if (m.formatVersion !== FORMAT_VERSION)
+        throw new ValidationError(`unsupported formatVersion: ${m.formatVersion}`);
+    string(m.packageId, 'manifest.packageId');
+    array(m.entrypoints, 'manifest.entrypoints');
+    if (!m.entrypoints.length)
+        throw new ValidationError('manifest.entrypoints must not be empty');
+    array(m.profiles, 'manifest.profiles');
+    array(m.files, 'manifest.files');
+    const g = record(m.graph, 'manifest.graph');
+    if (g.path !== 'content/graph.json')
+        throw new ValidationError('Core 0.4.0 requires graph.path == content/graph.json');
+    string(g.schema, 'manifest.graph.schema');
+    string(g.mediaType, 'manifest.graph.mediaType');
+    integer(g.size, 'manifest.graph.size');
+    string(g.byteDigest, 'manifest.graph.byteDigest');
+    string(g.contentDigest, 'manifest.graph.contentDigest');
+    const integrity = record(m.integrity, 'manifest.integrity');
+    if (integrity.algorithm !== 'sha256')
+        throw new ValidationError('manifest.integrity.algorithm must be sha256');
+    string(integrity.contentRoot, 'manifest.integrity.contentRoot');
+    for (const [i, e] of m.entrypoints.entries()) {
+        const x = record(e, `manifest.entrypoints[${i}]`);
+        string(x.id, `entrypoint[${i}].id`);
+        string(x.type, `entrypoint[${i}].type`);
+        string(x.role, `entrypoint[${i}].role`);
+    }
+    for (const [i, p] of m.profiles.entries()) {
+        const x = record(p, `manifest.profiles[${i}]`);
+        string(x.id, `profile[${i}].id`);
+        string(x.version, `profile[${i}].version`);
+        string(x.requirement, `profile[${i}].requirement`);
+    }
+    for (const [i, f] of m.files.entries()) {
+        const x = record(f, `manifest.files[${i}]`);
+        string(x.path, `file[${i}].path`);
+        string(x.mediaType, `file[${i}].mediaType`);
+        integer(x.size, `file[${i}].size`);
+        string(x.byteDigest, `file[${i}].byteDigest`);
+        string(x.contentDigest, `file[${i}].contentDigest`);
+    }
+    return m;
+}
+function validateGraphShape(value) { const g = record(value, 'graph'); if (g.graphVersion !== FORMAT_VERSION)
+    throw new ValidationError(`unsupported graphVersion: ${g.graphVersion}`); array(g.entities, 'graph.entities'); array(g.relations, 'graph.relations'); for (const [i, e] of g.entities.entries()) {
+    const x = record(e, `graph.entities[${i}]`);
+    string(x.id, `entity[${i}].id`);
+    string(x.type, `entity[${i}].type`);
+    if (x.children !== undefined)
+        array(x.children, `entity[${i}].children`);
+    if (x.type === 'resource')
+        array(x.representations, `resource ${x.id}.representations`);
+} return g; }
+export function validateGraphSemantics(graph, manifest) {
+    const ids = new Map(), portable = new Set();
+    for (const e of graph.entities) {
+        if (ids.has(e.id))
+            throw new ValidationError(`duplicate entity id: ${e.id}`);
+        ids.set(e.id, e);
+        portable.add(e.id);
+    }
+    for (const e of graph.entities)
+        if (e.type === 'resource')
+            for (const rep of e.representations ?? []) {
+                if (portable.has(rep.id))
+                    throw new ValidationError(`duplicate portable id across graph: ${rep.id}`);
+                portable.add(rep.id);
+            }
+    const must = (id, ctx, allowed) => { const target = ids.get(id); if (!target)
+        throw new ValidationError(`broken reference ${ctx}: ${id}`); if (allowed && !allowed.has(target.type))
+        throw new ValidationError(`type mismatch ${ctx}: ${id} is ${target.type}, expected ${[...allowed].sort().join(', ')}`); return target; };
+    for (const e of graph.entities) {
+        const children = e.children ?? [];
+        if (new Set(children).size !== children.length)
+            throw new ValidationError(`duplicate child reference in entity: ${e.id}`);
+        for (const child of children)
+            must(child, `${e.id}.children`);
+        if (e.resource)
+            must(e.resource, `${e.id}.resource`, new Set(['resource']));
+        for (const r of e.resources ?? [])
+            must(r, `${e.id}.resources`, new Set(['resource']));
+        for (const o of e.objectives ?? [])
+            must(o, `${e.id}.objectives`, new Set(['objective']));
+    }
+    for (const rel of graph.relations) {
+        must(String(rel.source), 'relation.source');
+        must(String(rel.target), 'relation.target');
+    }
+    for (const ep of manifest.entrypoints)
+        must(ep.id, 'manifest.entrypoint', new Set([ep.type]));
+    const state = new Map();
+    const dfs = (id, trail) => { const st = state.get(id) ?? 0; if (st === 1)
+        throw new ValidationError(`children cycle: ${[...trail, id].join(' -> ')}`); if (st === 2)
+        return; state.set(id, 1); for (const child of ids.get(id)?.children ?? [])
+        dfs(child, [...trail, id]); state.set(id, 2); };
+    for (const id of ids.keys())
+        dfs(id, []);
+    const inventory = new Set([manifest.graph.path, ...manifest.files.map((f) => f.path)]), declared = new Set(manifest.profiles.map((p) => canonicalIdentifier(p.id)));
+    const rangeExt = extensionValue(graph.extensions, RANGE_EXTENSION);
+    if (rangeExt) {
+        validateSchema(schemaId(manifest.format, 'range-integrity-extension/1'), rangeExt, 'range-integrity extension');
+        if (!inventory.has(String(rangeExt.indexPath)))
+            throw new ValidationError(`range-integrity index is not inventoried: ${rangeExt.indexPath}`);
+    }
+    const rendererHint = `${NS}ext/renderer-preference/1`;
+    const checkExtensions = (ext, context, holderType) => { for (const [namespace, value] of Object.entries(ext ?? {})) {
+        const canonical = canonicalIdentifier(namespace);
+        if (canonical.startsWith(`${NS}profile/`) && !declared.has(canonical))
+            throw new ValidationError(`profile extension not declared in manifest at ${context}: ${namespace}`);
+        if (canonical === rendererHint) {
+            if (holderType !== 'activity')
+                throw new ValidationError(`renderer preference extension is only valid on activities: ${context}`);
+            validateSchema(schemaId(manifest.format, 'renderer-preference/1'), value, `renderer preference at ${context}`);
+        }
+    } };
+    for (const e of graph.entities) {
+        checkExtensions(e.extensions, e.id, e.type);
+        if (e.type === 'resource')
+            for (const rep of e.representations ?? [])
+                checkExtensions(rep.extensions, rep.id, 'representation');
+    }
+    for (let i = 0; i < graph.relations.length; i++)
+        checkExtensions(graph.relations[i].extensions, `relation[${i}]`, 'relation');
+    for (const e of graph.entities) {
+        if (e.type !== 'resource')
+            continue;
+        const reps = e.representations ?? [], repIds = new Set();
+        for (const rep of reps) {
+            if (repIds.has(rep.id))
+                throw new ValidationError(`duplicate representation id in ${e.id}: ${rep.id}`);
+            repIds.add(rep.id);
+            if (rep.profile && !declared.has(canonicalIdentifier(rep.profile)))
+                throw new ValidationError(`representation profile not declared in manifest: ${rep.profile}`);
+            const loc = record(rep.location ?? {}, `representation ${rep.id}.location`);
+            if (loc.type === 'embedded' && !inventory.has(String(loc.path)))
+                throw new ValidationError(`embedded representation not inventoried: ${loc.path}`);
+            if (loc.type === 'package-member') {
+                if (!inventory.has(String(loc.package)))
+                    throw new ValidationError(`package-member package not inventoried: ${loc.package}`);
+                if (!String(loc.package).startsWith('packages/sha256/'))
+                    throw new ValidationError(`package-member must reference packages/sha256 payload: ${loc.package}`);
+                safeZipPath(String(loc.member));
+            }
+        }
+    }
+    for (const e of graph.entities) {
+        if (e.type === 'activity' && identifierIs(e.activityType, NATIVE.compositeActivityType)) {
+            const children = e.children ?? [];
+            if (!children.length)
+                throw new ValidationError(`native composite activity has no children: ${e.id}`);
+            for (const id of children)
+                if (must(id, `${e.id}.children`).type !== 'activity')
+                    throw new ValidationError(`native composite child must resolve to an activity: ${e.id} -> ${id}`);
+            if (!e.resource)
+                throw new ValidationError(`native composite activity has no configuration resource: ${e.id}`);
+            const res = ids.get(e.resource), ok = (res?.representations ?? []).some((r) => profileIs(r.profile, 'nativeComposite') && canonicalIdentifier(baseMediaType(r.mediaType)) === NATIVE.compositeMediaType && r.location?.type === 'embedded');
+            if (!ok)
+                throw new ValidationError(`native composite activity resource has no embedded ${PROFILE.nativeComposite} representation with media type ${NATIVE.compositeMediaType}: ${e.id}`);
+        }
+        if (e.type === 'activity' && identifierIs(e.activityType, NATIVE.componentActivityType)) {
+            if (!e.resource)
+                throw new ValidationError(`native component activity has no component resource: ${e.id}`);
+            const res = ids.get(e.resource), ok = (res?.representations ?? []).some((r) => profileIs(r.profile, 'nativeComponent') && canonicalIdentifier(baseMediaType(r.mediaType)) === NATIVE.componentMediaType && r.location?.type === 'embedded');
+            if (!ok)
+                throw new ValidationError(`native component activity resource has no embedded ${PROFILE.nativeComponent} representation with media type ${NATIVE.componentMediaType}: ${e.id}`);
+        }
+    }
+    if (manifest.profiles.some((p) => profileIs(p.id, 'course'))) {
+        const primary = manifest.entrypoints.filter((e) => e.type === 'course' && e.role === 'primary');
+        if (primary.length !== 1)
+            throw new ValidationError('Course Profile requires exactly one primary course entrypoint');
+    }
+    return ids;
+}
+function validateRangeIntegrity(graph, manifest, archive) { const ext = extensionValue(graph.extensions, RANGE_EXTENSION); if (!ext)
+    return; const path = string(ext.indexPath, 'range-integrity indexPath'); const desc = manifest.files.find((f) => f.path === path); if (!desc)
+    throw new ValidationError('range-integrity index is not declared in manifest files'); if (canonicalIdentifier(baseMediaType(desc.mediaType)) !== RANGE_MEDIA)
+    throw new ValidationError('range-integrity index has the wrong media type'); const obj = record(parseIJson(archive.read(path), 'range-integrity map'), 'range-integrity map'); validateSchema(schemaId(manifest.format, 'range-integrity-map/1'), obj, 'range-integrity map'); if (obj.version !== '1' || obj.algorithm !== 'sha256')
+    throw new ValidationError('unsupported range-integrity map'); const chunkSize = integer(obj.chunkSize, 'range-integrity chunkSize'); if (chunkSize < 65536 || chunkSize > 8 * 1024 * 1024)
+    throw new ValidationError('range-integrity chunkSize is outside supported bounds'); const entries = record(obj.entries, 'range-integrity entries'); if (!Object.keys(entries).length)
+    throw new ValidationError('range-integrity entries must be a non-empty object'); for (const [target, e0] of Object.entries(entries)) {
+    const e = record(e0, `range-integrity ${target}`), d = manifest.files.find((f) => f.path === target);
+    if (!d)
+        throw new ValidationError(`range-integrity target is not a manifest file: ${target}`);
+    const chunks = array(e.chunks, `range-integrity chunks ${target}`), expected = e.size === 0 ? 0 : Math.ceil(e.size / chunkSize);
+    if (chunks.length !== expected)
+        throw new ValidationError(`range-integrity chunk count mismatch for ${target}: expected ${expected}, got ${chunks.length}`);
+    if (e.size !== d.size || e.byteDigest !== d.byteDigest)
+        throw new ValidationError(`range-integrity target metadata mismatch: ${target}`);
+    if (archive.entries.get(target)?.method !== 0)
+        throw new ValidationError(`range-integrity target must be ZIP_STORED: ${target}`);
+    const data = archive.read(target), actual = [];
+    for (let o = 0; o < data.byteLength; o += chunkSize)
+        actual.push(sha256(data.slice(o, o + chunkSize)));
+    if (JSON.stringify(actual) !== JSON.stringify(chunks))
+        throw new ValidationError(`range-integrity chunk digest mismatch: ${target}`);
+} }
+function validatePackageMembers(graph, archive) { const by = new Map(); for (const e of graph.entities) {
+    if (e.type !== 'resource')
+        continue;
+    for (const rep of e.representations ?? []) {
+        const l = rep.location;
+        if (l?.type === 'package-member') {
+            if (!by.has(l.package))
+                by.set(l.package, new Set());
+            by.get(l.package).add(l.member);
+        }
+    }
+} for (const [path, members] of by) {
+    const nested = ZipArchive.open(archive.read(path), { ...DEFAULT_ZIP_LIMITS, entries: 20000, compressionRatio: 500 });
+    const names = new Set(nested.names());
+    for (const m of members)
+        if (!names.has(m))
+            throw new ValidationError(`package-member target missing: ${path}#${m}`);
+} }
+function nestedFiles(bytes, label) { let archive; try {
+    archive = ZipArchive.open(bytes, { ...DEFAULT_ZIP_LIMITS, entries: 20000, compressionRatio: 500 });
+}
+catch (e) {
+    throw new ValidationError(`${label}: ${e instanceof Error ? e.message : String(e)}`);
+} const files = new Map(); for (const name of archive.names())
+    files.set(name, archive.read(name)); return { archive, files }; }
+function relativeLaunchExists(files, href, label) { if (!href)
+    return; const value = href.trim(); if (!value)
+    return; try {
+    const u = new URL(value);
+    if (u.protocol)
+        return;
+}
+catch { } const path = value.split('#', 1)[0].split('?', 1)[0].replace(/^\/+/, ''); if (path && !files.has(path))
+    throw new ValidationError(`${label}: relative launch target missing from preserved package: ${path}`); }
+function requireXml(files, name, label) { const data = files.get(name); if (!data)
+    throw new ValidationError(`${label} profile payload requires root ${name}`); try {
+    return parseXml(data);
+}
+catch (e) {
+    throw new ValidationError(`${label === 'cmi5' ? 'cmi5.xml' : label + ' ' + name} invalid XML: ${e instanceof Error ? e.message : String(e)}`);
+} }
+function h5pDependencies(value, label) { if (value == null)
+    return []; if (!Array.isArray(value))
+    throw new ValidationError(`H5P ${label} must be an array`); return value.map((dep, index) => { if (!dep || typeof dep !== 'object' || Array.isArray(dep) || typeof dep.machineName !== 'string' || !dep.machineName)
+    throw new ValidationError(`H5P ${label}[${index}] requires machineName`); const major = Number(dep.majorVersion), minor = Number(dep.minorVersion); if (!Number.isInteger(major) || !Number.isInteger(minor))
+    throw new ValidationError(`H5P ${label}[${index}] requires integer majorVersion/minorVersion`); if (major < 0 || minor < 0)
+    throw new ValidationError(`H5P ${label}[${index}] has negative majorVersion/minorVersion`); return [dep.machineName, major, minor]; }); }
+function tupleKey(x) { return `${x[0]}\0${x[1]}\0${x[2]}`; }
+function validateProfilePayloads(graph, archive) {
+    const checked = new Set();
+    for (const e of graph.entities) {
+        if (e.type !== 'resource')
+            continue;
+        for (const rep of e.representations ?? []) {
+            const rawProfile = rep.profile, profile = canonicalProfileId(rawProfile), l = (rep.location ?? {});
+            if (profile === PROFILE.webContent) {
+                validateWebContentMapping(rep, new Set(archive.names()));
+                continue;
+            }
+            if (profile === PROFILE.nativeComposite || profile === PROFILE.nativeComponent || profile === PROFILE.nativeQuestionnaire) {
+                if (l.type !== 'embedded')
+                    throw new ValidationError(`${profile === PROFILE.nativeComposite ? 'native composite' : profile === PROFILE.nativeComponent ? 'native component' : 'native questionnaire'} profile requires an embedded JSON representation`);
+                const expected = profile === PROFILE.nativeComposite ? NATIVE.compositeMediaType : profile === PROFILE.nativeComponent ? NATIVE.componentMediaType : NATIVE.questionnaireMediaType, label = profile === PROFILE.nativeComposite ? 'native composite' : profile === PROFILE.nativeComponent ? 'native component' : 'native questionnaire';
+                if (canonicalIdentifier(baseMediaType(rep.mediaType)) !== expected)
+                    throw new ValidationError(`${label} media type must be ${expected}: ${rep.mediaType}`);
+                const key = `${profile}|${l.path}`;
+                if (!checked.has(key)) {
+                    checked.add(key);
+                    const payload = parseIJson(archive.read(l.path), `${label} ${l.path}`);
+                    if (profile === PROFILE.nativeComposite)
+                        validateComposite(payload);
+                    else if (profile === PROFILE.nativeComponent)
+                        validateComponentInstance(payload);
+                    else
+                        validateQuestionnaire(payload);
+                }
+                continue;
+            }
+            if (![PROFILE.h5p, PROFILE.scorm, PROFILE.cmi5, PROFILE.commonCartridge, PROFILE.qti, PROFILE.tincan].includes(profile) || l.type !== 'embedded')
+                continue;
+            const key = `${profile}|${l.path}`;
+            if (checked.has(key))
+                continue;
+            checked.add(key);
+            const { files } = nestedFiles(archive.read(l.path), `${profile} ${l.path}`), names = new Set(files.keys());
+            if (profile === PROFILE.h5p) {
+                if (!names.has('h5p.json') || !names.has('content/content.json'))
+                    throw new ValidationError('H5P profile payload requires h5p.json and content/content.json');
+                const h5p = record(parseIJson(files.get('h5p.json'), 'nested h5p.json'), 'nested h5p.json'), content = record(parseIJson(files.get('content/content.json'), 'nested H5P content/content.json'), 'nested H5P content/content.json');
+                void content;
+                const mainLibrary = h5p.mainLibrary;
+                if (typeof mainLibrary !== 'string' || !mainLibrary.trim())
+                    throw new ValidationError('H5P h5p.json requires a non-empty mainLibrary');
+                const requiredList = h5pDependencies(h5p.preloadedDependencies, 'preloadedDependencies'), required = new Map(requiredList.map((x) => [tupleKey(x), x]));
+                if (!requiredList.some((x) => x[0] === mainLibrary))
+                    throw new ValidationError('H5P mainLibrary must be declared in preloadedDependencies');
+                const embedded = new Map();
+                for (const [name, data] of files) {
+                    if ((name.match(/\//g)?.length ?? 0) !== 1 || !name.endsWith('/library.json'))
+                        continue;
+                    const library = record(parseIJson(data, `nested H5P ${name}`), `nested H5P ${name}`);
+                    if (typeof library.machineName !== 'string' || !library.machineName)
+                        throw new ValidationError(`H5P ${name} requires machineName`);
+                    const major = Number(library.majorVersion), minor = Number(library.minorVersion);
+                    if (!Number.isInteger(major) || !Number.isInteger(minor))
+                        throw new ValidationError(`H5P ${name} requires integer majorVersion/minorVersion`);
+                    const tuple = [library.machineName, major, minor];
+                    embedded.set(tupleKey(tuple), tuple);
+                    h5pDependencies(library.preloadedDependencies, `${name} preloadedDependencies`);
+                }
+                const matched = [...required.keys()].filter((k) => embedded.has(k)), missing = [...required.keys()].filter((k) => !embedded.has(k)), actualMode = required.size && missing.length === 0 ? 'bundled' : matched.length ? 'mixed' : 'external', declared = profileExtension(rep, profile);
+                if (declared && typeof declared === 'object' && !Array.isArray(declared)) {
+                    if (declared.mainLibrary != null && declared.mainLibrary !== mainLibrary)
+                        throw new ValidationError('H5P P2LRN metadata mainLibrary does not match preserved h5p.json');
+                    if (declared.dependencyMode != null && declared.dependencyMode !== actualMode)
+                        throw new ValidationError('H5P P2LRN metadata dependencyMode does not match preserved package');
+                    if (declared.embeddedLibraryCount != null && declared.embeddedLibraryCount !== embedded.size)
+                        throw new ValidationError('H5P P2LRN metadata embeddedLibraryCount does not match preserved package');
+                }
+            }
+            else if (profile === PROFILE.scorm) {
+                const root = requireXml(files, 'imsmanifest.xml', 'SCORM');
+                for (const node of descendants(root))
+                    if (localName(node.name) === 'resource') {
+                        const href = attrLocal(node, 'href');
+                        if (href)
+                            relativeLaunchExists(files, href, 'SCORM');
+                    }
+            }
+            else if (profile === PROFILE.commonCartridge) {
+                requireXml(files, 'imsmanifest.xml', 'Common Cartridge');
+            }
+            else if (profile === PROFILE.qti) {
+                const root = requireXml(files, 'imsmanifest.xml', 'QTI');
+                let schema = '', qtiResources = 0;
+                for (const node of descendants(root)) {
+                    const ln = localName(node.name);
+                    if (ln === 'schema') {
+                        const value = textContent(node);
+                        if (value)
+                            schema = value;
+                    }
+                    if (ln === 'resource') {
+                        const rtype = (attrLocal(node, 'type') ?? '').toLowerCase();
+                        if (rtype.includes('qti'))
+                            qtiResources++;
+                        const href = attrLocal(node, 'href');
+                        if (href)
+                            relativeLaunchExists(files, href, 'QTI');
+                    }
+                }
+                const ns = namespaceUri(root);
+                if (!schema.includes('QTI Package') && !ns.includes('qti/qtiv3p0') && qtiResources === 0)
+                    throw new ValidationError('QTI profile payload does not identify a QTI package');
+                if (qtiResources === 0)
+                    throw new ValidationError('QTI profile payload has no QTI resources');
+            }
+            else if (profile === PROFILE.cmi5) {
+                const root = requireXml(files, 'cmi5.xml', 'cmi5');
+                for (const node of descendants(root))
+                    if (localName(node.name) === 'au') {
+                        const href = textContent(firstDirectChild(node, 'url'));
+                        relativeLaunchExists(files, href, 'cmi5');
+                    }
+            }
+            else if (profile === PROFILE.tincan) {
+                const root = requireXml(files, 'tincan.xml', 'Legacy Tin Can');
+                for (const node of descendants(root))
+                    if (localName(node.name).toLowerCase() === 'launch')
+                        relativeLaunchExists(files, textContent(node), 'Tin Can package');
+            }
+        }
+    }
+}
+export function validatePackageBytes(bytes, options = {}) {
+    const archive = ZipArchive.open(bytes);
+    const names = archive.names();
+    if (names.filter((n) => n === 'META-INF/manifest.json').length !== 1)
+        throw new ValidationError('package must contain exactly one META-INF/manifest.json');
+    const manifest = validateManifestShape(parseIJson(archive.read('META-INF/manifest.json'), 'manifest'));
+    validateSchema(schemaId(manifest.format, 'manifest/0.4.0'), manifest, 'manifest');
+    const graphPath = manifest.graph.path;
+    if (names.filter((n) => n === graphPath).length !== 1)
+        throw new ValidationError('package must contain exactly one content/graph.json');
+    const profiles = manifest.profiles.map((p) => canonicalIdentifier(p.id));
+    if (new Set(profiles).size !== profiles.length)
+        throw new ValidationError('manifest declares the same profile id more than once');
+    const ep = manifest.entrypoints.map((e) => `${e.id}\u0000${e.type}\u0000${e.role}`);
+    if (new Set(ep).size !== ep.length)
+        throw new ValidationError('manifest declares duplicate entrypoints');
+    const declared = [graphPath, ...manifest.files.map((f) => f.path)];
+    if (new Set(declared).size !== declared.length)
+        throw new ValidationError('manifest declares duplicate paths');
+    const allowed = new Set(['META-INF/manifest.json', ...declared]);
+    for (const name of names) {
+        if (name.startsWith('META-INF/signatures/'))
+            throw new ValidationError('signature payloads are reserved but not supported by Core 0.4.0');
+        if (!allowed.has(name))
+            throw new ValidationError(`uninventoried payload: ${name}`);
+    }
+    for (const path of declared)
+        if (!archive.entries.has(path))
+            throw new ValidationError(`manifest declares missing payload: ${path}`);
+    for (const d of [manifest.graph, ...manifest.files]) {
+        const data = archive.read(d.path);
+        if (data.byteLength !== d.size)
+            throw new ValidationError(`size mismatch: ${d.path}`);
+        if (sha256(data) !== d.byteDigest)
+            throw new ValidationError(`byteDigest mismatch: ${d.path}`);
+        if (contentDigest(data, d.mediaType, d.path) !== d.contentDigest)
+            throw new ValidationError(`contentDigest mismatch: ${d.path}`);
+        for (const prefix of ['assets/sha256', 'packages/sha256'])
+            if (d.path.startsWith(`${prefix}/`)) {
+                const hex = d.byteDigest.split(':', 2)[1] ?? '';
+                const expected = `${prefix}/${hex.slice(0, 2)}/${hex.slice(2, 4)}/${hex}`;
+                if (d.path !== expected)
+                    throw new ValidationError(`content-addressed path does not match byteDigest: ${d.path}`);
+            }
+    }
+    const graph = validateGraphShape(parseIJson(archive.read(graphPath), 'graph'));
+    validateSchema(schemaId(manifest.format, 'graph/0.4.0'), graph, 'graph');
+    const inventory = new Set([manifest.graph.path, ...manifest.files.map((f) => f.path)]);
+    for (const e of graph.entities)
+        if (e.type === 'resource')
+            for (const rep of e.representations ?? [])
+                if (isWebContentProfile(rep.profile))
+                    validateWebContentMapping(rep, inventory);
+    const entities = validateGraphSemantics(graph, manifest);
+    validateRangeIntegrity(graph, manifest, archive);
+    validatePackageMembers(graph, archive);
+    const transform = extensionValue(graph.extensions, 'org.p2lrn.transform');
+    if (transform) {
+        const reportPath = transform.report;
+        if (!reportPath)
+            throw new ValidationError('org.p2lrn.transform requires report path');
+        if (!manifest.files.some((f) => f.path === reportPath))
+            throw new ValidationError('transformation report is not inventoried');
+        validateSchema(schemaId(manifest.format, 'transformation-report/0.4.0'), parseIJson(archive.read(reportPath), 'transformation report'), 'transformation report');
+    }
+    if (options.validateProfilePayloads)
+        validateProfilePayloads(graph, archive);
+    const root = computeContentRoot(manifest);
+    if (root !== manifest.integrity.contentRoot)
+        throw new ValidationError(`contentRoot mismatch: expected ${root}, manifest has ${manifest.integrity.contentRoot}`);
+    const unknown = manifest.profiles.filter((p) => p.requirement === 'required' && !KNOWN_PROFILES.has(canonicalIdentifier(p.id)) && !KNOWN_PROFILES.has(p.id)).map((p) => p.id);
+    const versions = manifest.profiles.filter((p) => { const id = canonicalIdentifier(p.id); return p.requirement === 'required' && id in KNOWN_PROFILE_VERSIONS && !KNOWN_PROFILE_VERSIONS[id].includes(p.version); }).map((p) => `${p.id}@${p.version}`);
+    if (options.strictProfiles && unknown.length)
+        throw new ValidationError(`unknown required profiles: ${unknown.join(', ')}`);
+    if (options.strictProfiles && versions.length)
+        throw new ValidationError(`unsupported required profile versions: ${versions.join(', ')}`);
+    return { summary: { format: manifest.format, formatVersion: manifest.formatVersion, packageId: manifest.packageId, contentRoot: root, entities: graph.entities.length, files: manifest.files.length, unknownRequiredProfiles: unknown }, manifest, graph, archive, entities };
+}
+export function validatePackageFile(path, options = {}) { return validatePackageBytes(readFileSync(path), options); }
+//# sourceMappingURL=validator.js.map

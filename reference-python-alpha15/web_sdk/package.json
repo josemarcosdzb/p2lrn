@@ -1,0 +1,49 @@
+{
+  "name": "@p2rln/player",
+  "version": "0.4.0-alpha.15",
+  "description": "Embeddable Web Component runtime for P2RLN learning packages",
+  "type": "module",
+  "sideEffects": true,
+  "main": "./dist/p2rln.esm.js",
+  "module": "./dist/p2rln.esm.js",
+  "browser": "./dist/p2rln.esm.js",
+  "unpkg": "./dist/p2rln.js",
+  "jsdelivr": "./dist/p2rln.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/p2rln.esm.js",
+      "default": "./dist/p2rln.esm.js"
+    },
+    "./loader": "./dist/p2rln.js",
+    "./service-worker": "./dist/p2rln-sw.js",
+    "./package.json": "./package.json",
+    "./server": {
+      "types": "./types/server.d.ts",
+      "import": "./server/runtime-host.mjs",
+      "default": "./server/runtime-host.mjs"
+    }
+  },
+  "bin": {
+    "p2rln-copy-sw": "./bin/p2rln-copy-sw.mjs"
+  },
+  "files": [
+    "dist/",
+    "types/",
+    "schemas/",
+    "bin/",
+    "README.md",
+    "server/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "p2rln",
+    "learning",
+    "web-component",
+    "lms"
+  ],
+  "license": "UNLICENSED"
+}

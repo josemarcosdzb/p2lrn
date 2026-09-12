@@ -1,0 +1,10 @@
+.p2rln-composite { display: grid; gap: 1rem; }
+.p2rln-composite__heading h2 { margin: 0 0 .35rem; }
+.p2rln-composite__heading p { margin: .25rem 0; }
+.p2rln-composite__status { font-size: .9rem; opacity: .8; }
+.p2rln-composite__nav { display: flex; flex-wrap: wrap; gap: .5rem; }
+.p2rln-composite__nav button, .p2rln-composite__actions button { font: inherit; border: 1px solid #cbd5e1; border-radius: .55rem; background: #fff; padding: .55rem .8rem; cursor: pointer; }
+.p2rln-composite__nav button[aria-current="step"] { border-width: 2px; }
+.p2rln-composite__nav button:disabled, .p2rln-composite__actions button:disabled { cursor: not-allowed; opacity: .5; }
+.p2rln-composite__stage { min-width: 0; }
+.p2rln-composite__actions { display: flex; gap: .5rem; justify-content: space-between; }

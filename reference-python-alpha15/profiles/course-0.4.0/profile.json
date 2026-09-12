@@ -1,0 +1,25 @@
+{
+  "id": "https://p2rln.org/profile/course",
+  "version": "0.4.0",
+  "title": "P2RLN Course Profile",
+  "status": "experimental",
+  "description": "Defines a package whose primary entrypoint is a portable course graph.",
+  "capabilities": [
+    "course.validate",
+    "course.read",
+    "course.write",
+    "course.preserve",
+    "course.deliver"
+  ],
+  "requires": [],
+  "optionalDependencies": [],
+  "preservation": "semantic-required",
+  "rules": [
+    "The manifest MUST contain exactly one primary entrypoint of type course.",
+    "The primary entrypoint MUST resolve to a course entity in graph.json.",
+    "All children references MUST resolve to graph entities.",
+    "The children hierarchy MUST be acyclic.",
+    "A lossless processor MUST NOT silently remove unsupported optional profile data."
+  ],
+  "bindings": []
+}

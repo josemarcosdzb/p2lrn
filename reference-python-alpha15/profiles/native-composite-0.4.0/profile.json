@@ -1,0 +1,25 @@
+{
+  "id": "https://p2rln.org/profile/native-composite",
+  "version": "0.4.0",
+  "title": "P2RLN Native Composite Activity Profile",
+  "status": "experimental",
+  "description": "Defines a thin declarative activity that composes child Activities already present in the P2RLN graph without duplicating their content or runtime code.",
+  "capabilities": [
+    "native-composite.validate",
+    "native-composite.read",
+    "native-composite.write",
+    "native-composite.preserve",
+    "native-composite.deliver"
+  ],
+  "requires": [],
+  "optionalDependencies": [],
+  "preservation": "semantic-required",
+  "rules": [
+    "The representation media type MUST be application/vnd.p2rln.composite+json.",
+    "The enclosing Activity children array is the sole authority for child identity and order; the composite JSON MUST NOT duplicate the child list.",
+    "Composite learner state MUST be stored externally and MUST NOT be written back into the package.",
+    "A sequence MUST NOT silently skip a child that fails to render or complete.",
+    "A composite renderer MUST use the same installed Renderer Registry to deliver child activities rather than bundling child runtime engines into the package."
+  ],
+  "bindings": []
+}

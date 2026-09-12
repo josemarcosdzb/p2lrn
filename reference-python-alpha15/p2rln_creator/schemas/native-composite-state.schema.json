@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2rln.org/schema/native-composite-state/0.1",
+  "title": "P2RLN Native Composite Runtime State 0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "currentChild", "completedChildren", "completed", "scores"],
+  "properties": {
+    "version": {"const": "p2rln-composite-state/0.1"},
+    "currentChild": {"type": ["string", "null"], "format": "uri"},
+    "completedChildren": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "format": "uri"}
+    },
+    "completed": {"type": "boolean"},
+    "completionReason": {"type": ["string", "null"], "maxLength": 128},
+    "scores": {
+      "type": "object",
+      "propertyNames": {"type": "string", "format": "uri"},
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

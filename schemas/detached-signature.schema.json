@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/schema/detached-signature/1",
+  "title": "P2LRN Detached Signature v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "algorithm",
+    "keyId",
+    "publicKey",
+    "target",
+    "signature"
+  ],
+  "properties": {
+    "schema": {
+      "const": "https://p2lrn.org/schema/detached-signature/1"
+    },
+    "version": {
+      "const": "1"
+    },
+    "algorithm": {
+      "const": "Ed25519"
+    },
+    "keyId": {
+      "type": "string",
+      "pattern": "^urn:p2lrn:key:ed25519:sha256:[0-9a-f]{64}$"
+    },
+    "publicKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "encoding",
+        "value"
+      ],
+      "properties": {
+        "format": {
+          "const": "raw"
+        },
+        "encoding": {
+          "const": "base64url"
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 43,
+          "maxLength": 44
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "format",
+        "formatVersion",
+        "contentRoot"
+      ],
+      "properties": {
+        "scope": {
+          "enum": [
+            "content",
+            "package"
+          ]
+        },
+        "format": {
+          "const": "P2LRN"
+        },
+        "formatVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "contentRoot": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "packageId": {
+          "type": "string",
+          "format": "uri",
+          "minLength": 3,
+          "maxLength": 500
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "package"
+              }
+            },
+            "required": [
+              "scope"
+            ]
+          },
+          "then": {
+            "required": [
+              "packageId"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "content"
+              }
+            },
+            "required": [
+              "scope"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "packageId"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 86,
+      "maxLength": 88
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "date": "2026-09-12",
+  "node": {
+    "toolkitTests": {"passed": 20, "failed": 0, "skipped": 0},
+    "legacyPackagesValidated": 17,
+    "canonicalPackagesValidated": 17,
+    "externalSourcesByteExact": 4,
+    "canonicalJsonParsed": 39,
+    "canonicalNamespaceResiduals": 0,
+    "webSdkFiles": 62,
+    "npmBinsChecked": 14,
+    "cleanInstallSmoke": true,
+    "publicTypesWithoutImplicitAtTypesNode": true
+  },
+  "pythonReference": {
+    "runs": [
+      {"passed": 49, "skipped": 5, "failed": 0},
+      {"passed": 99, "skipped": 0, "failed": 0},
+      {"passed": 68, "skipped": 7, "failed": 0}
+    ],
+    "total": {"passed": 216, "skipped": 12, "failed": 0},
+    "role": "reference-only"
+  }
+}

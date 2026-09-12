@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2rln.org/schema/runtime-event/1",
+  "title": "P2RLN Runtime Event Envelope 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "type", "timestamp", "context", "payload"],
+  "properties": {
+    "schema": {"const": "https://p2rln.org/schema/runtime-event/1"},
+    "version": {"const": "1"},
+    "type": {"type": "string", "pattern": "^p2rln:[a-z][a-z0-9-]*$", "maxLength": 96},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "context": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
