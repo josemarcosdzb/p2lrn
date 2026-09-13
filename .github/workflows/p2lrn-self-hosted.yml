@@ -40,6 +40,13 @@ jobs:
           node --version
           npm --version
 
+      - name: Install toolkit build dependency
+        shell: bash
+        working-directory: packages/toolkit
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock typescript@5.9.2
+
       - name: Validate toolkit
         shell: bash
         working-directory: packages/toolkit
