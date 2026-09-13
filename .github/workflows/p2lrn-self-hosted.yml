@@ -1,0 +1,61 @@
+name: P2LRN self-hosted validation
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-self-hosted-main
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate P2LRN on dedicated self-hosted runner
+    runs-on: self-hosted
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout exact main head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify runner and repository identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "RUNNER_NAME=${RUNNER_NAME}"
+          echo "RUNNER_OS=${RUNNER_OS}"
+          echo "RUNNER_ARCH=${RUNNER_ARCH}"
+          echo "GITHUB_REPOSITORY=${GITHUB_REPOSITORY}"
+          echo "GITHUB_SHA=${GITHUB_SHA}"
+          pwd
+          git status --short
+          git rev-parse HEAD
+          node --version
+          npm --version
+
+      - name: Validate toolkit
+        shell: bash
+        working-directory: packages/toolkit
+        run: |
+          set -euo pipefail
+          npm test
+
+      - name: Validate installable Player distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test packages/player/test/distribution.test.mjs
+
+      - name: Verify repository stayed clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          git status --short
+          test -z "$(git status --porcelain)"
