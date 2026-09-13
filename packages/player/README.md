@@ -28,6 +28,30 @@ import {mountP2LRN, createHostAdapter} from '@p2lrn/player';
 
 The import registers `<p2lrn-player>` as a side effect.
 
+## HTML contract
+
+The canonical declarative surface is deliberately small:
+
+```html
+<p2lrn-player
+  src="/courses/course.p2lrn"
+  node="urn:uuid:optional-graph-node"
+  renderer="https://p2lrn.org/renderer/optional-strict-choice"
+  runtime-base-url="https://runtime.example.com/runtime/">
+</p2lrn-player>
+```
+
+- `src` is required for playback and identifies the `.p2lrn` package URL.
+- `node` is optional; when omitted the primary package entrypoint is used.
+- `renderer` is optional and is a strict renderer request. When omitted the trusted runtime negotiates a compatible renderer.
+- `runtime-base-url` is optional and points SCORM/H5P execution at an isolated trusted runtime host.
+
+The same values are reflected by the runtime API. Host-specific persistence, telemetry and verified virtual-resource delivery use Host Adapter v1. Identity, authorization and enrolment are deliberately outside this HTML contract; a protected host must resolve `src` according to its own deployment contract rather than serialize long-lived credentials into package markup.
+
+Changing `src` reloads and verifies the package. Changing `node`, `renderer` or `runtime-base-url` re-renders the already opened package when possible. `reload()` forces a fresh package load.
+
+Runtime events are DOM `CustomEvent` values using the canonical `p2lrn:*` namespace, including `p2lrn:ready`, `p2lrn:rendered`, activity/progress/state/score/completion events and `p2lrn:error`. Host-specific persistence or telemetry belongs in Host Adapter v1, not in the package.
+
 ## Isolated SCORM/H5P runtime host
 
 ```js

@@ -96,9 +96,9 @@
     },
     {
       "path": "p2lrn.esm.js",
-      "bytes": 1878,
-      "sha256": "sha256:56d70fb480d853b537e5000afbf30dcf042eadfa474b6b3dfbc9fbf53dbb570d",
-      "sri": "sha384-F1bMgXs/q7Rr1J9ucITQq25hTON3i8DAGCtSRDo9i4FZZprJloxj0avLmdIcihFx"
+      "bytes": 2649,
+      "sha256": "sha256:f25355ab4f7509bfafa1451dc88609b1edfb5ac5706c271f00aceb5a8af8cf24",
+      "sri": "sha384-9jRTfvlbE5Dc5agopPIAkK0NrLzal0hyTUJq2fps07sleAjkZ653iWPD2IL5KrmD"
     },
     {
       "path": "p2lrn.js",

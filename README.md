@@ -27,6 +27,12 @@ p2lrn:*
 
 Los paquetes Alpha15 anteriores (`P2RLN`, `p2rln.org`, `.p2rln`) se siguen leyendo. Sus bytes y hashes se verifican antes de normalizar identificadores en memoria.
 
+## Runtime/Player independiente
+
+`@p2lrn/player` es el runtime web instalable y la etiqueta canónica es `<p2lrn-player>`. El Player depende del formato P2LRN, no de AulaP2P ni de un editor concreto. Las integraciones de producto se conectan desde código de host mediante Host Adapter v1 y, cuando corresponde, `runtimeBaseUrl` para runtimes aislados. Identidad de usuario, permisos, matrícula, credenciales, resolución de URLs protegidas y persistencia durable permanecen fuera del paquete y fuera del Core.
+
+La integración específica de AulaP2P y el futuro Studio de escritorio son consumidores separados de esta base; no forman parte del runtime genérico ni se implementan en este bloque.
+
 ## Instalación local
 
 ```bash

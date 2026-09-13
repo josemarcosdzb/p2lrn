@@ -2,14 +2,14 @@
 
 # P2LRN Web SDK distribution
 
-Status: experimental in Web SDK `0.4.0-alpha.15` / Toolkit and Reading System `0.4.0a15`. P2LRN Core remains `0.4.0`.
+Status: installable Node/browser distribution contract for Web SDK `0.5.0-alpha.1` and P2LRN Core `0.4.0`. The runtime remains versioned independently from Core.
 
 ## Goal
 
 A normal web host should need one trusted library load and one custom element:
 
 ```html
-<script src="https://cdn.example/@p2lrn/player/0.4.0-alpha.15/dist/p2lrn.js"></script>
+<script src="https://cdn.example/@p2lrn/player/0.5.0-alpha.1/dist/p2lrn.js"></script>
 <p2lrn-player src="/courses/course.p2lrn"></p2lrn-player>
 ```
 
@@ -79,7 +79,19 @@ The current Node.js/TypeScript package line uses npm SemVer `0.5.0-alpha.1`; Alp
 
 `<p2lrn-player>` automatically chooses a compatible renderer when `renderer` is absent. The `renderer` attribute is an explicit strict request; there is no synthetic `renderer="auto"` value.
 
+### Custom-element contract
+
+The canonical element is `<p2lrn-player>`. Its HTML attributes are intentionally limited to non-secret portable configuration:
+
+- `src`: package URL; required to load a package;
+- `node`: optional graph entity id; primary entrypoint when absent;
+- `renderer`: optional strict renderer id; normal negotiation when absent;
+- `runtime-base-url`: optional isolated SCORM/H5P runtime-host base URL.
+
+The element exposes `reload()` and Host Adapter v1 remains the JavaScript integration boundary for learner state, score, events and verified virtual resources. Identity, authorization, enrolment and durable state belong to the embedding host. A protected deployment must resolve `src` according to its host integration contract; credentials are not part of the portable HTML contract or P2LRN package data. No AulaP2P identifier or credential is part of the Player contract.
+
 Runtime events retain their existing names, including `p2lrn:complete`.
+
 
 ## Server/runtime-host export
 
@@ -115,7 +127,7 @@ The package is intentionally marked `UNLICENSED` until the project owner selects
 
 ## Release gate
 
-A Web SDK release must prove at least:
+The Node release gate is implemented in `packages/player/test/distribution.test.mjs`. A Web SDK release must prove at least:
 
 1. generated runtime files are byte-identical to `packages/toolkit/web` except distribution-only entrypoints;
 2. Reader-only UI files do not leak into npm/CDN output;
