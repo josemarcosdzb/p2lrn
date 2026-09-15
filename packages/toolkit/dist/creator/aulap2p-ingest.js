@@ -2,7 +2,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSyn
 import { basename, dirname, isAbsolute, join, relative } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { sha256 } from '../core/integrity.js';
-import { URL_NAMESPACE, uuid5 } from '../core/uuid.js';
+import { URL_NAMESPACE, portableUrn, uuid5, uuidNamespace } from '../core/uuid.js';
 import { addFile, addUnit, newProject, PROJECT_FILE, saveProject } from './project.js';
 import { buildProject, guessMediaType } from './builder.js';
 export const AULAP2P_DOCUMENT_SCHEMA = 'aulap2p.documento.extraido.v2';
@@ -10,6 +10,7 @@ export const AULAP2P_MULTIMODAL_SCHEMA = 'aulap2p.documento.multimodal.v2';
 export const AULAP2P_BRIDGE_SCHEMA = 'p2lrn.aulap2p-reader-envelope.v1';
 export const LEGACY_AULAP2P_BRIDGE_SCHEMA = 'p2rln.aulap2p-reader-envelope.v1';
 export const AULAP2P_PROVENANCE_NS = 'https://p2lrn.org/ext/provenance';
+const TRANSFORMATION_PATH = 'provenance/transformation.json';
 export class AulaP2PIngestError extends Error {
     constructor(message) { super(message); this.name = 'AulaP2PIngestError'; }
 }
@@ -50,6 +51,10 @@ function validateDocument(document) { if (!document || typeof document !== 'obje
         throw new AulaP2PIngestError(`canonical document requires object field: ${field}`); for (const field of ['bloques', 'tablas', 'advertencias'])
     if (!Array.isArray(document[field]))
         throw new AulaP2PIngestError(`canonical document requires array field: ${field}`); orderedItems(document); }
+function preservedAssetPath(hexDigest) { return `assets/sha256/${hexDigest.slice(0, 2)}/${hexDigest.slice(2, 4)}/${hexDigest}`; }
+function warningMessage(warning) { if (typeof warning === 'string')
+    return warning; const text = String(warning?.mensaje ?? warning?.message ?? '').trim(); return text || JSON.stringify(sorted(warning)); }
+function mappedId(namespace, kind, key) { return portableUrn(namespace, kind, key); }
 export function ingestAulaP2PReader(inputJson, output, options = {}) { let raw; try {
     raw = JSON.parse(new TextDecoder().decode(readFileSync(inputJson)));
 }
@@ -65,27 +70,32 @@ else if (raw?.version === AULAP2P_DOCUMENT_SCHEMA) {
 }
 else
     throw new AulaP2PIngestError(`expected ${AULAP2P_DOCUMENT_SCHEMA} or ${AULAP2P_BRIDGE_SCHEMA}`); validateDocument(document); if (options.sourceFile && !existsSync(options.sourceFile))
-    throw new AulaP2PIngestError(`source file not found: ${options.sourceFile}`); const sourceDigest = options.sourceFile ? sha256(readFileSync(options.sourceFile)).slice(7) : jsonDigest(document), language = lang(document, options.language), courseTitle = title(document, options.sourceFile), sourceItems = orderedItems(document), assets = assetIndex(envelope, options.assetRoot), root = join('/tmp', `p2lrn-aulap2p-${randomUUID()}`); mkdirSync(root, { recursive: true }); try {
+    throw new AulaP2PIngestError(`source file not found: ${options.sourceFile}`); const canonicalDigest = jsonDigest(document), sourceDigest = options.sourceFile ? sha256(readFileSync(options.sourceFile)).slice(7) : canonicalDigest, language = lang(document, options.language), courseTitle = title(document, options.sourceFile), sourceItems = orderedItems(document), assets = assetIndex(envelope, options.assetRoot), root = join('/tmp', `p2lrn-aulap2p-${randomUUID()}`); mkdirSync(root, { recursive: true }); try {
     const project = newProject(courseTitle, language, 'Imported through the AulaP2P canonical document reader');
     project.projectId = 'urn:uuid:' + uuid5(URL_NAMESPACE, `p2lrn:aulap2p-reader:${sourceDigest}`);
-    project.provenance = { schema: 'p2lrn.transformation.v1', source: { adapter: 'AulaP2PReaderAdapter', documentSchema: AULAP2P_DOCUMENT_SCHEMA, multimodalSchema: document.secuenciaMultimodal?.version, detectedFormat: document.origen?.tipoArchivoDetectado, extractionStrategy: document.origen?.estrategiaExtraccion, sha256: `sha256:${sourceDigest}` }, warnings: document.advertencias.filter((w) => w && typeof w === 'object' && !Array.isArray(w)), losses: [], rules: ['Prisma/local IDs are never exported as portable identity', 'internal AulaP2P URLs are never converted into remote P2LRN locations', 'source coordinates and extraction confidence are preserved as provenance', 'PREGUNTA/SOLUCION document nodes are content evidence only; native assessments require reconciled aulap2p.curso.v1 questionnaires'] };
+    const namespace = uuidNamespace(project.projectId), preservedPath = options.sourceFile ? preservedAssetPath(sourceDigest) : undefined, transformation = { version: '0.4.0', source: { format: String(document.origen?.tipoArchivoDetectado ?? 'aulap2p-document'), fileName: options.sourceFile ? basename(options.sourceFile) : String(document.origen?.nombreArchivo ?? basename(inputJson)), byteDigest: `sha256:${sourceDigest}`, canonicalDocumentDigest: `sha256:${canonicalDigest}`, adapter: 'AulaP2PReaderAdapter', documentSchema: AULAP2P_DOCUMENT_SCHEMA, multimodalSchema: document.secuenciaMultimodal?.version, extractionStrategy: document.origen?.estrategiaExtraccion, readerWarnings: document.advertencias.filter((w) => w != null), ...(preservedPath ? { preservedPackageDigest: `sha256:${sourceDigest}`, preservedPath, preservation: 'bit-exact' } : {}) }, target: { format: 'P2LRN', formatVersion: '0.4.0', entrypoint: mappedId(namespace, 'course', project.course.key) }, fidelity: { sourceBytes: options.sourceFile ? 'exact' : 'not-preserved', structuralProjection: 'partial', runtimeSemantics: 'projected-document' }, mappings: [], warnings: document.advertencias.filter((w) => w != null).map(warningMessage), losses: [], rules: ['Prisma/local IDs are never exported as portable identity', 'internal AulaP2P URLs are never converted into remote P2LRN locations', 'source coordinates and extraction confidence are preserved as provenance', 'PREGUNTA/SOLUCION document nodes are content evidence only; native assessments require reconciled aulap2p.curso.v1 questionnaires'] };
+    project.graphPolicy = 'preserve';
+    project.graphExtensions = { 'org.p2lrn.transform': { report: TRANSFORMATION_PATH, version: '0.4.0' } };
+    project.provenance = transformation;
     addUnit(project, 'document', courseTitle, language, 'document', 'course');
+    transformation.mappings.push({ sourceLocator: 'aulap2p:document', targetId: mappedId(namespace, 'unit', 'document'), targetType: 'unit', operation: 'projected', fidelity: 'semantic' });
     const generated = join(root, 'generated');
     mkdirSync(generated, { recursive: true });
     let unresolvedImages = 0, created = 0;
-    sourceItems.forEach(([item], idx) => { const index = idx + 1, kind = String(item.tipo ?? 'PARRAFO').toUpperCase(), sourceId = String(item.id ?? item.tempId ?? `item-${index}`), key = safeKey(`${String(index).padStart(4, '0')}-${kind.toLowerCase()}-${createHash('sha1').update(te.encode(sourceId)).digest('hex').slice(0, 8)}`, `item-${index}`), provenance = provenanceNode(item); if (['IMAGEN', 'IMAGEN_REFERENCIADA', 'GRAFICO'].includes(kind)) {
+    sourceItems.forEach(([item], idx) => { const index = idx + 1, kind = String(item.tipo ?? 'PARRAFO').toUpperCase(), sourceId = String(item.id ?? item.tempId ?? `item-${index}`), key = safeKey(`${String(index).padStart(4, '0')}-${kind.toLowerCase()}-${createHash('sha1').update(te.encode(sourceId)).digest('hex').slice(0, 8)}`, `item-${index}`), provenance = provenanceNode(item), recordMapping = (resource, activity) => { const locator = `aulap2p:${sourceId}`; transformation.mappings.push({ sourceLocator: locator, targetId: mappedId(namespace, 'resource', resource.key), targetType: 'resource', operation: 'projected', fidelity: 'semantic' }, { sourceLocator: locator, targetId: mappedId(namespace, 'activity', activity.key), targetType: 'activity', operation: 'projected', fidelity: 'semantic' }); }; if (['IMAGEN', 'IMAGEN_REFERENCIADA', 'GRAFICO'].includes(kind)) {
         const image = imagePath(item, assets);
         if (image) {
             const [resource, activity] = addFile(root, project, image, key, String(item.texto ?? basename(image)), { language, parent: 'document', mediaType: guessMediaType(image), role: 'primary', activityType: 'https://p2lrn.org/type/resource', copyFile: true });
             addProv(resource, provenance);
             addProv(activity, provenance);
+            recordMapping(resource, activity);
             created++;
         }
         else
             unresolvedImages++;
         return;
     } const fragment = renderText(item, language); if (!fragment)
-        return; const path = join(generated, `${key}.html`); writeFileSync(path, fragment); const [resource, activity] = addFile(root, project, path, key, String(item.texto ?? kind).slice(0, 160), { language, parent: 'document', mediaType: 'text/html', profile: 'https://p2lrn.org/profile/web-content', role: 'primary', activityType: 'https://p2lrn.org/type/resource', copyFile: false }); addProv(resource, provenance); addProv(activity, provenance); created++; });
+        return; const path = join(generated, `${key}.html`); writeFileSync(path, fragment); const [resource, activity] = addFile(root, project, path, key, String(item.texto ?? kind).slice(0, 160), { language, parent: 'document', mediaType: 'text/html', profile: 'https://p2lrn.org/profile/web-content', role: 'primary', activityType: 'https://p2lrn.org/type/resource', copyFile: false }); addProv(resource, provenance); addProv(activity, provenance); recordMapping(resource, activity); created++; });
     if (options.sourceFile) {
         const target = join(root, 'source', basename(options.sourceFile));
         mkdirSync(dirname(target), { recursive: true });
@@ -93,10 +103,13 @@ else
         const resource = { key: 'res-original-source', title: { [language]: `Fuente original: ${basename(options.sourceFile)}` }, representations: [{ key: 'source', role: 'source', mediaType: guessMediaType(options.sourceFile), originalName: basename(options.sourceFile), source: { type: 'file', path: relative(root, target).replaceAll('\\', '/') } }] };
         addProv(resource, { role: 'original-source', sha256: `sha256:${sourceDigest}` });
         project.resources.push(resource);
+        const locator = basename(options.sourceFile);
+        transformation.mappings.push({ sourceLocator: locator, targetId: mappedId(namespace, 'resource', resource.key), targetType: 'resource', operation: 'preserved', fidelity: 'exact' }, { sourceLocator: locator, targetId: mappedId(namespace, 'representation', `${resource.key}:source`), targetType: 'representation', operation: 'preserved', fidelity: 'exact' });
     }
     if (unresolvedImages) {
-        project.provenance.warnings.push({ ruta: 'assets', nivel: 'ADVERTENCIA', mensaje: `${unresolvedImages} image node(s) had only local AulaP2P references and were not exported without materialized bytes.` });
-        project.provenance.losses.push({ kind: 'unresolved-local-asset', count: unresolvedImages, reason: 'portable bytes were not supplied by the bridge' });
+        const message = `${unresolvedImages} image node(s) had only local AulaP2P references and were not exported without materialized bytes.`;
+        transformation.warnings.push(message);
+        transformation.losses.push({ kind: 'unresolved-local-asset', count: unresolvedImages, reason: 'portable bytes were not supplied by the bridge' });
     }
     saveProject(join(root, PROJECT_FILE), project);
     const result = buildProject(root, output, Boolean(options.strictProfiles));
