@@ -59,9 +59,9 @@ export function validateProject(project) {
     if (project.targetFormatVersion !== FORMAT_VERSION)
         throw new ProjectError(`unsupported targetFormatVersion: ${project.targetFormatVersion}`);
     if (typeof project.projectId !== 'string' || !project.projectId)
-        throw new ProjectError 'projectId is required');
+        throw new ProjectError('projectId is required');
     if (!project.course || typeof project.course !== 'object')
-        throw new ProjectError 'course is required');
+        throw new ProjectError('course is required');
     for (const group of ['units', 'resources', 'activities', 'objectives', 'relations', 'profiles'])
         if (!Array.isArray(project[group]))
             throw new ProjectError(`${group} must be an array`);
@@ -69,7 +69,7 @@ export function validateProject(project) {
     if (keys.some((k) => typeof k !== 'string' || !KEY_RE.test(k)))
         throw new ProjectError('invalid project entity key');
     if (new Set(keys).size !== keys.length)
-        throw new ProjectError 'project entity keys must be globally unique');
+        throw new ProjectError('project entity keys must be globally unique');
     const known = new Set(keys), kind = keyKind(project), hierarchy = [project.course, ...project.units, ...project.activities];
     for (const e of hierarchy) {
         for (const child of e.children ?? [])
@@ -106,7 +106,7 @@ export function validateProject(project) {
             throw new ProjectError('portableId values must be globally unique');
         if (project.entityOrder) {
             if (project.entityOrder.length !== keys.length || new Set(project.entityOrder).size !== keys.length || project.entityOrder.some((k) => !known.has(k)))
-                throw new ProjectError 'entityOrder must contain every entity key exactly once');
+                throw new ProjectError('entityOrder must contain every entity key exactly once');
         }
         for (const ep of project.entrypoints ?? [])
             if (!known.has(ep.key))
