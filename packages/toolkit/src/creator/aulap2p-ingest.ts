@@ -12,6 +12,14 @@ export const AULAP2P_BRIDGE_SCHEMA='p2lrn.aulap2p-reader-envelope.v1';
 export const LEGACY_AULAP2P_BRIDGE_SCHEMA='p2rln.aulap2p-reader-envelope.v1';
 export const AULAP2P_PROVENANCE_NS='https://p2lrn.org/ext/provenance';
 const TRANSFORMATION_PATH='provenance/transformation.json';
+const AULAP2P_GRAPH_EXTENSION='org.p2lrn.aulap2p';
+const TRANSFORMATION_RULES=[
+  'Prisma/local IDs are never exported as portable identity',
+  'internal AulaP2P URLs are never converted into remote P2LRN locations',
+  'source coordinates and extraction confidence are preserved as provenance',
+  'PREGUNTA/SOLUCION document nodes are content evidence only; native assessments require reconciled aulap2p.curso.v1 questionnaires',
+] as const;
+
 export class AulaP2PIngestError extends Error{constructor(message:string){super(message);this.name='AulaP2PIngestError';}}
 const te=new TextEncoder();
 function sorted(v:any):any{if(Array.isArray(v))return v.map(sorted);if(v&&typeof v==='object')return Object.fromEntries(Object.keys(v).sort().map((k)=>[k,sorted(v[k])]));return v;}
@@ -30,5 +38,149 @@ function validateDocument(document:any):void{if(!document||typeof document!=='ob
 function preservedAssetPath(hexDigest:string):string{return`assets/sha256/${hexDigest.slice(0,2)}/${hexDigest.slice(2,4)}/${hexDigest}`;}
 function warningMessage(warning:any):string{if(typeof warning==='string')return warning;const text=String(warning?.mensaje??warning?.message??'').trim();return text||JSON.stringify(sorted(warning));}
 function mappedId(namespace:string,kind:string,key:string):string{return portableUrn(namespace,kind,key);}
+
 export interface AulaP2PIngestOptions{sourceFile?:string;assetRoot?:string;language?:string;strictProfiles?:boolean;}
-export function ingestAulaP2PReader(inputJson:string,output:string,options:AulaP2PIngestOptions={}):any{let raw:any;try{raw=JSON.parse(new TextDecoder().decode(readFileSync(inputJson)));}catch(e){throw new AulaP2PIngestError(`invalid AulaP2P Reader JSON: ${e instanceof Error?e.message:String(e)}`);}let envelope:any,document:any;if([AULAP2P_BRIDGE_SCHEMA,LEGACY_AULAP2P_BRIDGE_SCHEMA].includes(raw?.schema)){envelope=raw;document=raw.document;}else if(raw?.version===AULAP2P_DOCUMENT_SCHEMA){envelope={schema:AULAP2P_BRIDGE_SCHEMA,document:raw,assets:[]};document=raw;}else throw new AulaP2PIngestError(`expected ${AULAP2P_DOCUMENT_SCHEMA} or ${AULAP2P_BRIDGE_SCHEMA}`);validateDocument(document);if(options.sourceFile&&!existsSync(options.sourceFile))throw new AulaP2PIngestError(`source file not found: ${options.sourceFile}`);const canonicalDigest=jsonDigest(document),sourceDigest=options.sourceFile?sha256(readFileSync(options.sourceFile)).slice(7):canonicalDigest,language=lang(document,options.language),courseTitle=title(document,options.sourceFile),sourceItems=orderedItems(document),assets=assetIndex(envelope,options.assetRoot),root=join('/tmp',`p2lrn-aulap2p-${randomUUID()}`);mkdirSync(root,{recursive:true});try{const project=newProject(courseTitle,language,'Imported through the AulaP2P canonical document reader') as CreatorProject&Record<string,any>;project.projectId='urn:uuid:'+uuid5(URL_NAMESPACE,`p2lrn:aulap2p-reader:${sourceDigest}`);const namespace=uuidNamespace(project.projectId),preservedPath=options.sourceFile?preservedAssetPath(sourceDigest):undefined,transformation:any={version:'0.4.0',source:{format:String(document.origen?.tipoArchivoDetectado??'aulap2p-document'),fileName:options.sourceFile?basename(options.sourceFile):String(document.origen?.nombreArchivo??basename(inputJson)),byteDigest:`sha256:${sourceDigest}`,canonicalDocumentDigest:`sha256:${canonicalDigest}`,adapter:'AulaP2PReaderAdapter',documentSchema:AULAP2P_DOCUMENT_SCHEMA,multimodalSchema:document.secuenciaMultimodal?.version,extractionStrategy:document.origen?.estrategiaExtraccion,readerWarnings:document.advertencias.filter((w:any)=>w!=null),...(preservedPath?{preservedPackageDigest:`sha256:${sourceDigest}`,preservedPath,preservation:'bit-exact'}:{})},target:{format:'P2LRN',formatVersion:'0.4.0',entrypoint:mappedId(namespace,'course',project.course.key)},fidelity:{sourceBytes:options.sourceFile?'exact':'not-preserved',structuralProjection:'partial',runtimeSemantics:'projected-document'},mappings:[],warnings:document.advertencias.filter((w:any)=>w!=null).map(warningMessage),losses:[],rules:['Prisma/local IDs are never exported as portable identity','internal AulaP2P URLs are never converted into remote P2LRN locations','source coordinates and extraction confidence are preserved as provenance','PREGUNTA/SOLUCION document nodes are content evidence only; native assessments require reconciled aulap2p.curso.v1 questionnaires']};project.graphPolicy='preserve';project.graphExtensions={'org.p2lrn.transform':{report:TRANSFORMATION_PATH,version:'0.4.0'}};project.provenance=transformation;addUnit(project,'document',courseTitle,language,'document','course');transformation.mappings.push({sourceLocator:'aulap2p:document',targetId:mappedId(namespace,'unit','document'),targetType:'unit',operation:'projected',fidelity:'semantic'});const generated=join(root,'generated');mkdirSync(generated,{recursive:true});let unresolvedImages=0,created=0;sourceItems.forEach(([item],idx)=>{const index=idx+1,kind=String(item.tipo??'PARRAFO').toUpperCase(),sourceId=String(item.id??item.tempId??`item-${index}`),key=safeKey(`${String(index).padStart(4,'0')}-${kind.toLowerCase()}-${createHash('sha1').update(te.encode(sourceId)).digest('hex').slice(0,8)}`,`item-${index}`),provenance=provenanceNode(item),recordMapping=(resource:any,activity:any)=>{const locator=`aulap2p:${sourceId}`;transformation.mappings.push({sourceLocator:locator,targetId:mappedId(namespace,'resource',resource.key),targetType:'resource',operation:'projected',fidelity:'semantic'},{sourceLocator:locator,targetId:mappedId(namespace,'activity',activity.key),targetType:'activity',operation:'projected',fidelity:'semantic'});};if(['IMAGEN','IMAGEN_REFERENCIADA','GRAFICO'].includes(kind)){const image=imagePath(item,assets);if(image){const [resource,activity]=addFile(root,project,image,key,String(item.texto??basename(image)),{language,parent:'document',mediaType:guessMediaType(image),role:'primary',activityType:'https://p2lrn.org/type/resource',copyFile:true});addProv(resource,provenance);addProv(activity,provenance);recordMapping(resource,activity);created++;}else unresolvedImages++;return;}const fragment=renderText(item,language);if(!fragment)return;const path=join(generated,`${key}.html`);writeFileSync(path,fragment);const [resource,activity]=addFile(root,project,path,key,String(item.texto??kind).slice(0,160),{language,parent:'document',mediaType:'text/html',profile:'https://p2lrn.org/profile/web-content',role:'primary',activityType:'https://p2lrn.org/type/resource',copyFile:false});addProv(resource,provenance);addProv(activity,provenance);recordMapping(resource,activity);created++;});if(options.sourceFile){const target=join(root,'source',basename(options.sourceFile));mkdirSync(dirname(target),{recursive:true});copyFileSync(options.sourceFile,target);const resource:any={key:'res-original-source',title:{[language]:`Fuente original: ${basename(options.sourceFile)}`},representations:[{key:'source',role:'source',mediaType:guessMediaType(options.sourceFile),originalName:basename(options.sourceFile),source:{type:'file',path:relative(root,target).replaceAll('\\','/')}}]};addProv(resource,{role:'original-source',sha256:`sha256:${sourceDigest}`});project.resources.push(resource);const locator=basename(options.sourceFile);transformation.mappings.push({sourceLocator:locator,targetId:mappedId(namespace,'resource',resource.key),targetType:'resource',operation:'preserved',fidelity:'exact'},{sourceLocator:locator,targetId:mappedId(namespace,'representation',`${resource.key}:source`),targetType:'representation',operation:'preserved',fidelity:'exact'});}if(unresolvedImages){const message=`${unresolvedImages} image node(s) had only local AulaP2P references and were not exported without materialized bytes.`;transformation.warnings.push(message);transformation.losses.push({kind:'unresolved-local-asset',count:unresolvedImages,reason:'portable bytes were not supplied by the bridge'});}saveProject(join(root,PROJECT_FILE),project);const result:any=buildProject(root,output,Boolean(options.strictProfiles));Object.assign(result,{ingestion:'aulap2p-reader',sourceDocumentSchema:document.version,sourceItems:sourceItems.length,createdActivities:created,unresolvedImages,sourcePreserved:Boolean(options.sourceFile)});return result;}finally{rmSync(root,{recursive:true,force:true});}}
+
+export function ingestAulaP2PReader(inputJson:string,output:string,options:AulaP2PIngestOptions={}):any{
+  const inputBytes=readFileSync(inputJson);
+  let raw:any;
+  try{raw=JSON.parse(new TextDecoder().decode(inputBytes));}catch(e){throw new AulaP2PIngestError(`invalid AulaP2P Reader JSON: ${e instanceof Error?e.message:String(e)}`);}
+  let envelope:any,document:any;
+  if([AULAP2P_BRIDGE_SCHEMA,LEGACY_AULAP2P_BRIDGE_SCHEMA].includes(raw?.schema)){envelope=raw;document=raw.document;}
+  else if(raw?.version===AULAP2P_DOCUMENT_SCHEMA){envelope={schema:AULAP2P_BRIDGE_SCHEMA,document:raw,assets:[]};document=raw;}
+  else throw new AulaP2PIngestError(`expected ${AULAP2P_DOCUMENT_SCHEMA} or ${AULAP2P_BRIDGE_SCHEMA}`);
+  validateDocument(document);
+  if(options.sourceFile&&!existsSync(options.sourceFile))throw new AulaP2PIngestError(`source file not found: ${options.sourceFile}`);
+
+  const canonicalDigest=jsonDigest(document);
+  const normalizedCanonicalBytes=te.encode(JSON.stringify(sorted(document),null,2)+'\n');
+  const inputDigest=sha256(inputBytes).slice(7);
+  const originalSourceBytes=options.sourceFile?readFileSync(options.sourceFile):undefined;
+  const preservedBytes=originalSourceBytes??normalizedCanonicalBytes;
+  const preservedDigest=sha256(preservedBytes).slice(7);
+  const identityDigest=options.sourceFile?preservedDigest:inputDigest;
+  const language=lang(document,options.language);
+  const courseTitle=title(document,options.sourceFile);
+  const sourceItems=orderedItems(document);
+  const assets=assetIndex(envelope,options.assetRoot);
+  const root=join('/tmp',`p2lrn-aulap2p-${randomUUID()}`);
+  mkdirSync(root,{recursive:true});
+
+  try{
+    const project=newProject(courseTitle,language,'Imported through the AulaP2P canonical document reader') as CreatorProject&Record<string,any>;
+    project.projectId='urn:uuid:'+uuid5(URL_NAMESPACE,`p2lrn:aulap2p-reader:${identityDigest}`);
+    const namespace=uuidNamespace(project.projectId);
+    const preservedPath=preservedAssetPath(preservedDigest);
+    const sourceLocator=options.sourceFile?basename(options.sourceFile):(raw?.schema?'bridge-envelope#document':'$');
+    const transformation:any={
+      version:'0.4.0',
+      source:{
+        format:options.sourceFile?String(document.origen?.tipoArchivoDetectado??'unknown'):AULAP2P_DOCUMENT_SCHEMA,
+        fileName:options.sourceFile?basename(options.sourceFile):basename(inputJson),
+        byteDigest:`sha256:${options.sourceFile?preservedDigest:inputDigest}`,
+        preservedPackageDigest:`sha256:${preservedDigest}`,
+        preservedPath,
+        preservation:options.sourceFile?'bit-exact':'normalized-subpackage',
+        ...(!options.sourceFile?{normalizedFromRoot:raw?.schema?'document':'$'}:{}),
+      },
+      target:{format:'P2LRN',formatVersion:'0.4.0',entrypoint:mappedId(namespace,'course',project.course.key)},
+      fidelity:{sourceBytes:options.sourceFile?'exact':'normalized',structuralProjection:'partial',runtimeSemantics:'projected'},
+      mappings:[],
+      warnings:document.advertencias.filter((w:any)=>w!=null).map(warningMessage),
+      losses:[],
+    };
+
+    project.graphPolicy='preserve';
+    project.graphExtensions={
+      'org.p2lrn.transform':{report:TRANSFORMATION_PATH,version:'0.4.0'},
+      [AULAP2P_GRAPH_EXTENSION]:{
+        adapter:'AulaP2PReaderAdapter',
+        documentSchema:AULAP2P_DOCUMENT_SCHEMA,
+        multimodalSchema:document.secuenciaMultimodal?.version,
+        detectedFormat:document.origen?.tipoArchivoDetectado,
+        extractionStrategy:document.origen?.estrategiaExtraccion,
+        canonicalDocumentDigest:`sha256:${canonicalDigest}`,
+        readerWarnings:document.advertencias.filter((w:any)=>w!=null),
+        rules:[...TRANSFORMATION_RULES],
+      },
+    };
+    project.provenance=transformation;
+
+    addUnit(project,'document',courseTitle,language,'document','course');
+    transformation.mappings.push({sourceLocator:'aulap2p:document',targetId:mappedId(namespace,'unit','document'),targetType:'unit',operation:'projected',fidelity:'semantic'});
+
+    const generated=join(root,'generated');
+    mkdirSync(generated,{recursive:true});
+    let unresolvedImages=0,created=0;
+    sourceItems.forEach(([item],idx)=>{
+      const index=idx+1;
+      const kind=String(item.tipo??'PARRAFO').toUpperCase();
+      const sourceId=String(item.id??item.tempId??`item-${index}`);
+      const key=safeKey(`${String(index).padStart(4,'0')}-${kind.toLowerCase()}-${createHash('sha1').update(te.encode(sourceId)).digest('hex').slice(0,8)}`,`item-${index}`);
+      const provenance=provenanceNode(item);
+      const recordMapping=(resource:any,activity:any)=>{
+        const locator=`aulap2p:${sourceId}`;
+        transformation.mappings.push(
+          {sourceLocator:locator,targetId:mappedId(namespace,'resource',resource.key),targetType:'resource',operation:'projected',fidelity:'semantic'},
+          {sourceLocator:locator,targetId:mappedId(namespace,'activity',activity.key),targetType:'activity',operation:'projected',fidelity:'semantic'},
+        );
+      };
+      if(['IMAGEN','IMAGEN_REFERENCIADA','GRAFICO'].includes(kind)){
+        const image=imagePath(item,assets);
+        if(image){
+          const [resource,activity]=addFile(root,project,image,key,String(item.texto??basename(image)),{language,parent:'document',mediaType:guessMediaType(image),role:'primary',activityType:'https://p2lrn.org/type/resource',copyFile:true});
+          addProv(resource,provenance);
+          addProv(activity,provenance);
+          recordMapping(resource,activity);
+          created++;
+        }else{
+          unresolvedImages++;
+          transformation.losses.push({sourceLocator:`aulap2p:${sourceId}`,reason:'portable bytes were not supplied by the AulaP2P bridge'});
+        }
+        return;
+      }
+      const fragment=renderText(item,language);
+      if(!fragment)return;
+      const path=join(generated,`${key}.html`);
+      writeFileSync(path,fragment);
+      const [resource,activity]=addFile(root,project,path,key,String(item.texto??kind).slice(0,160),{language,parent:'document',mediaType:'text/html',profile:'https://p2lrn.org/profile/web-content',role:'primary',activityType:'https://p2lrn.org/type/resource',copyFile:false});
+      addProv(resource,provenance);
+      addProv(activity,provenance);
+      recordMapping(resource,activity);
+      created++;
+    });
+
+    const sourceName=options.sourceFile?basename(options.sourceFile):'aulap2p-document.json';
+    const sourceTarget=join(root,'source',sourceName);
+    mkdirSync(dirname(sourceTarget),{recursive:true});
+    if(options.sourceFile)copyFileSync(options.sourceFile,sourceTarget);else writeFileSync(sourceTarget,preservedBytes);
+    const sourceResource:any={
+      key:options.sourceFile?'res-original-source':'res-canonical-source',
+      title:{[language]:options.sourceFile?`Fuente original: ${sourceName}`:'Documento canónico AulaP2P preservado'},
+      representations:[{
+        key:'source',
+        role:'source',
+        mediaType:options.sourceFile?guessMediaType(options.sourceFile):'application/json',
+        originalName:sourceName,
+        source:{type:'file',path:relative(root,sourceTarget).replaceAll('\\','/')},
+      }],
+    };
+    addProv(sourceResource,{role:options.sourceFile?'original-source':'canonical-source',sha256:`sha256:${preservedDigest}`});
+    project.resources.push(sourceResource);
+    transformation.mappings.push(
+      {sourceLocator,targetId:mappedId(namespace,'resource',sourceResource.key),targetType:'resource',operation:'preserved',fidelity:options.sourceFile?'exact':'semantic'},
+      {sourceLocator,targetId:mappedId(namespace,'representation',`${sourceResource.key}:source`),targetType:'representation',operation:'preserved',fidelity:options.sourceFile?'exact':'semantic'},
+    );
+
+    if(unresolvedImages){
+      transformation.warnings.push(`${unresolvedImages} image node(s) had only local AulaP2P references and were not exported without materialized bytes.`);
+    }
+
+    saveProject(join(root,PROJECT_FILE),project);
+    const result:any=buildProject(root,output,Boolean(options.strictProfiles));
+    Object.assign(result,{ingestion:'aulap2p-reader',sourceDocumentSchema:document.version,sourceItems:sourceItems.length,createdActivities:created,unresolvedImages,sourcePreserved:Boolean(options.sourceFile),canonicalSourcePreserved:!options.sourceFile});
+    return result;
+  }finally{
+    rmSync(root,{recursive:true,force:true});
+  }
+}
