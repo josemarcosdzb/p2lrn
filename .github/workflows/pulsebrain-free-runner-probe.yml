@@ -1,0 +1,48 @@
+name: PulseBrain free runner probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pulsebrain-free-runner-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pulsebrain-free-runner-probe
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - name: Probe runner and PulseBrain services
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          echo "RUNNER_NAME=$RUNNER_NAME"
+          echo "RUNNER_OS=$RUNNER_OS"
+          echo "RUNNER_ARCH=$RUNNER_ARCH"
+          echo "HOST=$(hostname)"
+          echo "USER=$(whoami)"
+          echo "HOME=$HOME"
+          echo "NODE=$(node --version 2>/dev/null || true)"
+          echo "OLLAMA:"
+          curl -sS --max-time 5 http://127.0.0.1:11434/api/tags || true
+          echo
+          echo "PULSEBRAIN_BRIDGE:"
+          curl -sS --max-time 5 http://127.0.0.1:43121/health || true
+          echo
+          echo "PULSEBRAIN_LOCAL:"
+          curl -sS --max-time 5 http://127.0.0.1:5174/api/health || true
+          echo
+          echo "KNOWN_PATHS:"
+          for p in /home/usuario/pulsebrain /home/usuario/pulsebrain-main /home/usuario/cerebro-main /mnt/c/Users/usuario/AppData/Local/PulseBrain; do
+            if [ -e "$p" ]; then
+              echo "EXISTS $p"
+              ls -ld "$p"
+            fi
+          done
