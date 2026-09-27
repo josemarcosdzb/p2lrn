@@ -9,6 +9,11 @@ import {
   AUTHORING_PROJECT_VERSION,
   P2LRNAuthoringWorkspace,
 } from '@p2lrn/toolkit/authoring';
+import {
+  DefaultP2LRNDocumentReader,
+  createDefaultDocumentExtractorRegistry,
+  resolveDocumentOutline,
+} from '@p2lrn/document-reader';
 
 const APP_ROOT=fileURLToPath(new URL('./', import.meta.url));
 const PUBLIC_ROOT=join(APP_ROOT,'public');
@@ -19,6 +24,8 @@ const BUILDS_ROOT=join(DATA_ROOT,'builds');
 const HOST=process.env.P2LRN_EDITOR_HOST||'127.0.0.1';
 const PORT=Number(process.env.P2LRN_EDITOR_PORT||4173);
 const MAX_JSON=1024*1024;
+const MAX_DOCUMENT_BYTES=Number(process.env.P2LRN_EDITOR_MAX_DOCUMENT_BYTES||256*1024*1024);
+const documentReader=new DefaultP2LRNDocumentReader({registry:createDefaultDocumentExtractorRegistry()});
 
 mkdirSync(PROJECTS_ROOT,{recursive:true});
 mkdirSync(BUILDS_ROOT,{recursive:true});
@@ -45,11 +52,13 @@ function safeFile(root,relative){
   if(target!==base&&!target.startsWith(prefix))return null;
   return target;
 }
-async function bodyJson(req){
+async function bodyBytes(req,limit){
   const chunks=[];let total=0;
-  for await(const chunk of req){total+=chunk.length;if(total>MAX_JSON)throw new Error('Request body too large.');chunks.push(chunk);}
-  if(!total)return {};
-  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  for await(const chunk of req){total+=chunk.length;if(total>limit)throw new Error(`Request body exceeds ${limit} bytes.`);chunks.push(chunk);}
+  return Buffer.concat(chunks,total);
+}
+async function bodyJson(req){
+  const bytes=await bodyBytes(req,MAX_JSON);if(!bytes.length)return {};return JSON.parse(bytes.toString('utf8'));
 }
 function load(id){return P2LRNAuthoringWorkspace.load(projectRoot(id));}
 function projectView(workspace){return{summary:workspace.summary(),project:workspace.project};}
@@ -69,7 +78,16 @@ const server=createServer(async(req,res)=>{
   try{
     const url=new URL(req.url||'/','http://editor.invalid'),path=url.pathname,method=String(req.method||'GET').toUpperCase();
     if(path==='/api/health'&&method==='GET')return json(res,200,{ok:true,editor:'0.1.0-alpha.1',authoringApi:AUTHORING_API_VERSION,authoringProject:AUTHORING_PROJECT_VERSION,format:AUTHORING_FORMAT_VERSION});
-    if(path==='/api/projects'&&method==='GET')return json(res,200,{projects:listProjects()});
+    if(path==='/api/documents/inspect'&&method==='POST'){
+      const name=String(url.searchParams.get('name')||'').trim();
+      if(!name)throw new Error('Document name is required.');
+      const bytes=await bodyBytes(req,MAX_DOCUMENT_BYTES);
+      if(!bytes.length)throw new Error('Document is empty.');
+      const result=await documentReader.read({name,bytes:new Uint8Array(bytes),mediaType:String(req.headers['content-type']||'')||undefined});
+      const outline=resolveDocumentOutline(result.document);
+      return json(res,200,{document:result.document,outline,assetCount:result.assets.length});
+    }
+        if(path==='/api/projects'&&method==='GET')return json(res,200,{projects:listProjects()});
     if(path==='/api/projects'&&method==='POST'){
       const input=await bodyJson(req),id=randomUUID();
       const workspace=P2LRNAuthoringWorkspace.create(projectRoot(id),{
@@ -100,7 +118,17 @@ const server=createServer(async(req,res)=>{
         const input=await bodyJson(req),w=load(id),children=Array.isArray(input.children)?input.children.map(String):[];
         const result=w.setChildren(decodeURIComponent(cm[1]),children);return json(res,200,{id,result,...projectView(w)});
       }
-      if(tail==='build'&&method==='POST'){
+      if(tail==='questionnaires'&&method==='POST'){
+        const input=await bodyJson(req),w=load(id);
+        const key=String(input.key||('quiz-'+randomUUID().slice(0,8)));
+        const title=String(input.title||input.data?.title||'Cuestionario');
+        const result=w.addQuestionnaireData({
+          data:input.data,key,title,parent:String(input.parent||'course'),language:String(input.language||'es'),
+          renderer:input.renderer==null?undefined:String(input.renderer),rendererVersion:input.rendererVersion==null?undefined:String(input.rendererVersion)
+        });
+        return json(res,201,{id,result,...projectView(w)});
+      }
+            if(tail==='build'&&method==='POST'){
         const w=load(id),output=buildPath(id),result=w.build(output,{strictProfiles:true});
         return json(res,200,{id,result,packageUrl:`/api/projects/${encodeURIComponent(id)}/package`});
       }
