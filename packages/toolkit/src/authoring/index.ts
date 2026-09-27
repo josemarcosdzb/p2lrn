@@ -1,5 +1,5 @@
-import {existsSync, mkdirSync, readdirSync, rmSync} from 'node:fs';
-import {dirname, resolve} from 'node:path';
+import {existsSync, mkdirSync, readdirSync, rmSync, writeFileSync} from 'node:fs';
+import {dirname, join, resolve} from 'node:path';
 import {ProjectError} from '../core/errors.js';
 import {FORMAT_VERSION, canonicalIdentifier} from '../core/constants.js';
 import {buildProject, type BuildResult} from '../creator/builder.js';
@@ -39,6 +39,7 @@ export interface AuthoringFileOptions { source:string; key:string; title:string;
 export interface AuthoringUrlOptions { url:string; key:string; title:string; language?:string; parent?:string; mediaType?:string; profile?:string; role?:string; activityType?:string; }
 export interface AuthoringWebContentOptions { sourceDirectory:string; entrypoint?:string; key:string; title:string; language?:string; parent?:string; copyDirectory?:boolean; }
 export interface AuthoringQuestionnaireOptions { source:string; key:string; title?:string; language?:string; parent?:string; copyFile?:boolean; renderer?:string; rendererVersion?:string; }
+export interface AuthoringQuestionnaireDataOptions { data:unknown; key:string; title?:string; language?:string; parent?:string; renderer?:string; rendererVersion?:string; }
 export interface AuthoringComponentOptions { source:string; key:string; title?:string; language?:string; parent?:string; copyFile?:boolean; }
 export interface AuthoringCompositeOptions { key:string; title:string; children:string[]; language?:string; parent?:string; mode?:'sequence'|'free'; completion?:'all'|'any'; navigation?:'linear'|'open'; moveChildren?:boolean; }
 export interface AuthoringMoveOptions { key:string; parent:string; index?:number; }
@@ -143,6 +144,19 @@ export class P2LRNAuthoringWorkspace {
   addQuestionnaire(options:AuthoringQuestionnaireOptions):AuthoringResourceActivityResult{
     return this.#edit((draft)=>{const parent=options.parent??'course';const [resource,activity]=creatorAddQuestionnaire(this.root,draft,options.source,options.key,options.title,{language:options.language??'es',parent,copyFile:options.copyFile!==false,renderer:options.renderer,rendererVersion:options.rendererVersion});return{resourceKey:resource.key,activityKey:activity.key,parentKey:parent};});
   }
+  addQuestionnaireData(options:AuthoringQuestionnaireDataOptions):AuthoringResourceActivityResult{
+    const tempDir=join(this.root,'.p2lrn-authoring-tmp');
+    const tempFile=join(tempDir,`${options.key}.questionnaire.json`);
+    mkdirSync(tempDir,{recursive:true});
+    writeFileSync(tempFile,JSON.stringify(options.data,null,2)+'\n');
+    try{
+      return this.addQuestionnaire({source:tempFile,key:options.key,title:options.title,language:options.language,parent:options.parent,copyFile:true,renderer:options.renderer,rendererVersion:options.rendererVersion});
+    }finally{
+      rmSync(tempFile,{force:true});
+      try{if(readdirSync(tempDir).length===0)rmSync(tempDir,{recursive:true,force:true});}catch{}
+    }
+  }
+
   addComponent(options:AuthoringComponentOptions):AuthoringResourceActivityResult{
     return this.#edit((draft)=>{const parent=options.parent??'course';const [resource,activity]=creatorAddComponent(this.root,draft,options.source,options.key,options.title,{language:options.language??'es',parent,copyFile:options.copyFile!==false});return{resourceKey:resource.key,activityKey:activity.key,parentKey:parent};});
   }
