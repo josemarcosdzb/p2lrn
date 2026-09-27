@@ -6,3 +6,4 @@ export * from './finalize.js';
 export * from './defaults.js';
 export * from './extractors/plain-text.js';
 export * from './extractors/markdown.js';
+export * from './structure.js';
