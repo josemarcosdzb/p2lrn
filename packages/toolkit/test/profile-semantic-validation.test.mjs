@@ -5,6 +5,7 @@ import {validateGraphSemantics} from '../dist/core/validator.js';
 const XAPI='https://p2lrn.org/profile/xapi';
 const ACCESS='https://p2lrn.org/profile/accessibility';
 const CASE='https://p2lrn.org/profile/case';
+const LTI='https://p2lrn.org/profile/lti';
 
 function fixture(){
   const course='urn:uuid:00000000-0000-4000-8000-000000000001';
@@ -21,6 +22,7 @@ function fixture(){
       {id:XAPI,version:'0.4.0',requirement:'optional'},
       {id:ACCESS,version:'0.4.0',requirement:'optional'},
       {id:CASE,version:'0.4.0',requirement:'optional'},
+      {id:LTI,version:'0.4.0',requirement:'optional'},
     ]
   };
   const graph={graphVersion:'0.4.0',relations:[],entities:[
@@ -71,4 +73,15 @@ test('Core semantic validation accepts valid xAPI, accessibility and CASE metada
   }];
   const entities=validateGraphSemantics(f.graph,f.manifest);
   assert.equal(entities.size,4);
+});
+
+
+test('Core semantic validation rejects secrets embedded in LTI representation intent',()=>{
+  const f=fixture();
+  f.resource.representations[0].extensions={[LTI]:{
+    targetLinkUri:'https://tool.example.invalid/resource/42',
+    rebindRequired:true,
+    client_secret:'must-not-travel'
+  }};
+  assert.throws(()=>validateGraphSemantics(f.graph,f.manifest),/credential field/i);
 });
