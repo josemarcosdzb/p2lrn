@@ -13,6 +13,8 @@ import {
   DefaultP2LRNDocumentReader,
   createDefaultDocumentExtractorRegistry,
   resolveDocumentOutline,
+  splitLessonAuthoringSegments,
+  detectedQuestionToNative,
 } from '@p2lrn/document-reader';
 
 const APP_ROOT=fileURLToPath(new URL('./', import.meta.url));
@@ -79,8 +81,9 @@ function htmlEscape(value){
 }
 function safeAssetName(reference){
   const raw=basename(String(reference?.name||reference?.id||'asset'));
-  const clean=raw.replace(/[^A-Za-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'');
-  return clean||'asset';
+  const clean=raw.replace(/[^A-Za-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'')||'asset';
+  const digest=String(reference?.byteDigest||reference?.id||'asset').replace(/[^A-Za-z0-9]+/g,'').slice(-12)||'asset';
+  return digest+'-'+clean;
 }
 function renderTable(table){
   if(!table)return '';
@@ -154,8 +157,14 @@ function transactionalWorkspace(id,operation){
     const workspace=P2LRNAuthoringWorkspace.load(stage);
     const result=operation(workspace,stage);
     renameSync(root,backup);
-    try{renameSync(stage,root);}catch(error){renameSync(backup,root);throw error;}
-    rmSync(backup,{recursive:true,force:true});
+    try{renameSync(stage,root);}catch(error){
+      try{renameSync(backup,root);}catch(restoreError){
+        const failure=new Error('Import promotion failed and the original workspace could not be restored automatically.');
+        failure.cause={promotion:error,restore:restoreError};throw failure;
+      }
+      throw error;
+    }
+    try{rmSync(backup,{recursive:true,force:true});}catch{}
     return result;
   }catch(error){
     rmSync(stage,{recursive:true,force:true});
@@ -166,7 +175,7 @@ function importDocumentIntoWorkspace(workspace,stageRoot,result,outline){
   const hash=String(result.document.inventory.documentHash||'').replace(/^sha256:/,'');
   const prefix='imp-'+hash.slice(0,10);
   const language=result.document.metadata.language||workspace.project.course.languages?.[0]||'es';
-  const created={modules:0,lessons:0,activities:0,questions:0};
+  const created={modules:0,lessons:0,activities:0,questions:0,hostGradedQuestions:0};
   let moduleIndex=0;
   for(const module of outline.modules){
     moduleIndex+=1;
@@ -177,14 +186,44 @@ function importDocumentIntoWorkspace(workspace,stageRoot,result,outline){
       lessonIndex+=1;
       const lessonKey=(prefix+'-m'+moduleIndex+'-l'+lessonIndex).slice(0,120);
       workspace.addUnit({key:lessonKey,title:lesson.title,language,role:'lesson',parent:moduleKey});created.lessons+=1;
-      const webKey=(prefix+'-w'+moduleIndex+'-'+lessonIndex).slice(0,120);
-      const webRoot=join(stageRoot,'.p2lrn-import-tmp',webKey);
-      mkdirSync(webRoot,{recursive:true});
-      writeFileSync(join(webRoot,'index.html'),renderLessonHtml(result.document,lesson,result.assets,webRoot));
-      workspace.addWebContent({sourceDirectory:webRoot,entrypoint:'index.html',key:webKey,title:lesson.title,language,parent:lessonKey,copyDirectory:true});
-      created.activities+=1;
-      created.questions+=(lesson.content||[]).filter(x=>x.kind==='QUESTION').length;
-      rmSync(webRoot,{recursive:true,force:true});
+      const segments=splitLessonAuthoringSegments(result.document,lesson);
+      let contentIndex=0,questionIndex=0;
+      for(const segment of segments){
+        if(segment.kind==='content'){
+          if(!segment.content.length)continue;
+          contentIndex+=1;
+          const webKey=(prefix+'-w'+moduleIndex+'-'+lessonIndex+'-'+contentIndex).slice(0,120);
+          const webRoot=join(stageRoot,'.p2lrn-import-tmp',webKey);
+          mkdirSync(webRoot,{recursive:true});
+          writeFileSync(join(webRoot,'index.html'),renderLessonHtml(result.document,{...lesson,content:segment.content},result.assets,webRoot));
+          workspace.addWebContent({sourceDirectory:webRoot,entrypoint:'index.html',key:webKey,title:segments.length===1?lesson.title:`${lesson.title} · contenido ${contentIndex}`,language,parent:lessonKey,copyDirectory:true});
+          created.activities+=1;
+          rmSync(webRoot,{recursive:true,force:true});
+          continue;
+        }
+        questionIndex+=1;
+        const converted=detectedQuestionToNative(segment.question);
+        const quizKey=(prefix+'-q'+moduleIndex+'-'+lessonIndex+'-'+questionIndex).slice(0,120);
+        const payload={
+          schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',
+          version:'0.4.0',
+          title:segment.question.prompt,
+          language,
+          grading:{mode:converted.grading},
+          presentation:{questionMode:'one-at-a-time',showFeedback:'after-submit'},
+          questions:[converted.question],
+          extensions:{
+            'https://p2lrn.org/ext/source-document/1':{
+              documentHash:result.document.inventory.documentHash,
+              sourceBlockIds:segment.question.sourceBlockIds,
+              confidence:segment.question.confidence,
+              requiresReview:converted.grading==='host',
+            }
+          }
+        };
+        workspace.addQuestionnaireData({data:payload,key:quizKey,title:segment.question.prompt,language,parent:lessonKey});
+        created.activities+=1;created.questions+=1;if(converted.grading==='host')created.hostGradedQuestions+=1;
+      }
     }
   }
   const tmpRoot=join(stageRoot,'.p2lrn-import-tmp');
