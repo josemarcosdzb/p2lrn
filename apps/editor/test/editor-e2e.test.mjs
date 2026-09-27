@@ -52,12 +52,46 @@ test('Editor API creates a native quiz and builds a downloadable P2LRN package',
     assert.equal(afterDuplicate.summary.counts.units,2);
     assert.equal(afterDuplicate.summary.counts.activities,1);
 
+    const assessment=new TextEncoder().encode([
+      '# 2 Evaluación',
+      '',
+      '## 2.1 Repaso',
+      '',
+      'Contenido antes.',
+      '',
+      '1. ¿Qué componente ejecuta instrucciones?',
+      '',
+      'A) CPU',
+      '',
+      'B) RAM',
+      '',
+      'Respuesta: A',
+      '',
+      'Contenido después.',
+    ].join('\n'));
+    const assessmentResponse=await fetch(base+`/api/projects/${created.id}/import-document?name=evaluacion.md`,{method:'POST',headers:{'Content-Type':'text/markdown'},body:assessment});
+    assert.equal(assessmentResponse.status,201);
+    const assessmentImport=await assessmentResponse.json();
+    assert.equal(assessmentImport.imported.created.modules,1);
+    assert.equal(assessmentImport.imported.created.lessons,1);
+    assert.equal(assessmentImport.imported.created.questions,1);
+    assert.equal(assessmentImport.imported.created.hostGradedQuestions,0);
+    assert.equal(assessmentImport.imported.created.activities,3);
+    assert.equal(assessmentImport.summary.counts.units,4);
+    assert.equal(assessmentImport.summary.counts.activities,4);
+    const lesson=assessmentImport.project.units.find(x=>Object.values(x.title||{}).includes('2.1 Repaso'));
+    assert.equal(lesson.children.length,3);
+    const activityByKey=new Map(assessmentImport.project.activities.map(x=>[x.key,x]));
+    assert.match(activityByKey.get(lesson.children[0]).activityType,/resource/);
+    assert.match(activityByKey.get(lesson.children[1]).activityType,/assessment/);
+    assert.match(activityByKey.get(lesson.children[2]).activityType,/resource/);
+
     const quiz={
       schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:'Quiz E2E',language:'es',
       grading:{mode:'embedded-key'},questions:[{id:'q1',type:'true-false',prompt:'P2LRN es portable',points:1,choices:[{id:'true',text:'Verdadero'},{id:'false',text:'Falso'}],solution:{choiceIds:['true']}}]
     };
     const authored=await json(base+`/api/projects/${created.id}/questionnaires`,{method:'POST',body:JSON.stringify({title:'Quiz E2E',renderer:'https://p2lrn.org/renderer/questionnaire/standard',data:quiz})});
-    assert.equal(authored.summary.counts.activities,2);
+    assert.equal(authored.summary.counts.activities,5);
     const built=await json(base+`/api/projects/${created.id}/build`,{method:'POST',body:'{}'});
     assert.match(built.result.contentRoot,/^sha256:/);
     const packageResponse=await fetch(base+built.packageUrl);assert.equal(packageResponse.status,200);
