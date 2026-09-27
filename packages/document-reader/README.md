@@ -26,6 +26,8 @@ Native extractors currently registered:
 - JSON, XML and YAML as structure-preserving preformatted source;
 - CSV as a canonical table;
 - RTF text with explicit warning for unsupported embedded picture groups;
-- TeX section/list text with explicit warning for unresolved external graphics.
+- TeX section/list text with explicit warning for unresolved external graphics;
+- ODT ZIP/XML with document-order text, tables, lists and materialized internal images;
+- EPUB OPF/spine XHTML with spine order and materialized chapter-relative images.
 
-ODT and EPUB are the next ZIP/XML extractors. PDF remains intentionally separate because production-quality PDF requires a real PDF text/layout engine and OCR fallback; the reference Reader must not replace that with a weak regex parser.
+PDF remains intentionally separate because production-quality PDF requires a real PDF text/layout engine and OCR fallback; the reference Reader must not replace that with a weak regex parser.
