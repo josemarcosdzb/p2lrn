@@ -1,4 +1,4 @@
-function escapeRegex(value:string):string{return value.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&');}
+function escapeRegex(value:string):string{return value.replace(/[.*+?^$()|[\]\\{}]/g,'\\function escapeRegex(value:string):string{return value.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&');}');}
 export function xmlDecode(value:string):string{
   return value.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(_m,n)=>String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi,(_m,n)=>String.fromCodePoint(parseInt(n,16)));
 }
