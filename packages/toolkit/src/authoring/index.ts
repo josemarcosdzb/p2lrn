@@ -3,6 +3,7 @@ import {dirname, join, resolve} from 'node:path';
 import {ProjectError} from '../core/errors.js';
 import {FORMAT_VERSION, canonicalIdentifier} from '../core/constants.js';
 import {createCaseAlignment, type CaseAlignmentInput} from '../core/case.js';
+import {XAPI_PROFILE,createXapiActivityDeclaration,type XapiActivityDeclarationInput} from '../core/xapi.js';
 import {buildProject, type BuildResult} from '../creator/builder.js';
 import {openPackageAsProject, type OpenPackageProjectOptions} from '../creator/import-project.js';
 import {
@@ -59,6 +60,7 @@ export interface AuthoringObjectiveResult { objectiveKey:string; }
 export interface AuthoringCaseAlignmentResult { objectiveKey:string; alignment:ReturnType<typeof createCaseAlignment>; }
 export interface AuthoringRelationResult { source:string; predicate:string; target:string; }
 export interface AuthoringActivityResult { activityKey:string; }
+export interface AuthoringXapiActivityResult { activityKey:string; declaration:ReturnType<typeof createXapiActivityDeclaration>; }
 export interface AuthoringDuplicateResult { sourceKey:string; newKey:string; kind:'unit'|'resource'|'activity'|'objective'; }
 export interface AuthoringRemoveResult { removed:string[]; }
 
@@ -234,6 +236,22 @@ export class P2LRNAuthoringWorkspace {
       if(options.resources!==undefined){const value=uniqueKeys(options.resources,'resources');if(value===undefined||value.length===0)delete activity.resources;else activity.resources=value;}
       if(options.objectives!==undefined){const value=uniqueKeys(options.objectives,'objectives');if(value===undefined||value.length===0)delete activity.objectives;else activity.objectives=value;}
       return{activityKey:key};
+    });
+  }
+
+  setXapiActivity(activityKey:string,input:XapiActivityDeclarationInput|null):AuthoringXapiActivityResult|AuthoringActivityResult{
+    return this.#edit((draft)=>{
+      const activity=entityByKey(draft,activityKey);
+      if(!draft.activities.includes(activity))throw new ProjectError(`entity is not an activity: ${activityKey}`);
+      activity.extensions??={};
+      if(input===null){
+        delete activity.extensions[XAPI_PROFILE];
+        if(Object.keys(activity.extensions).length===0)delete activity.extensions;
+        return{activityKey};
+      }
+      const declaration=createXapiActivityDeclaration(input);
+      activity.extensions[XAPI_PROFILE]=clone(declaration);
+      return{activityKey,declaration};
     });
   }
 
