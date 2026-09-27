@@ -10,3 +10,4 @@ export * from './structure.js';
 export * from './office/zip.js';
 export * from './extractors/docx.js';
 export * from './extractors/pptx.js';
+export * from './questions.js';
