@@ -14,7 +14,7 @@ function httpUrl(value,label){
   if(!['http:','https:'].includes(url.protocol))throw Object.assign(new Error(`cmi5 ${label} must use HTTP(S).`),{code:'P2LRN_CMI5_LAUNCH_INVALID'});
   return url;
 }
-function validateLaunch(result){
+export function validateCmi5Launch(result){
   if(!result||typeof result!=='object'||typeof result.url!=='string')throw Object.assign(new Error('The host did not return a cmi5 launch URL.'),{code:'P2LRN_CMI5_LAUNCH_UNAVAILABLE'});
   const url=httpUrl(result.url,'launch');
   for(const key of ['endpoint','fetch','actor','registration','activityId'])if(!url.searchParams.get(key))throw Object.assign(new Error(`cmi5 launch URL is missing required parameter: ${key}`),{code:'P2LRN_CMI5_LAUNCH_INVALID'});
@@ -53,13 +53,26 @@ export async function render({container,representation,entity,resource,eventTarg
     title:entity?.title??resource?.title??null,
   });
   let resolved;
-  try{resolved=validateLaunch(await adapter.resolveRuntimeLaunch(request,Object.freeze({...context,runtime:'cmi5'})));}
+  try{resolved=validateCmi5Launch(await adapter.resolveRuntimeLaunch(request,Object.freeze({...context,runtime:'cmi5'})));}
   catch(error){
     if(!error.code)error.code='P2LRN_CMI5_LAUNCH_FAILED';
     throw error;
   }
 
   let destroyed=false,popup=null;
+  let completionTask=null;
+  if(resolved.completion&&typeof resolved.completion.then==='function'){
+    completionTask=Promise.resolve(resolved.completion).then(async(outcome)=>{
+      if(destroyed)return;
+      const data=outcome&&typeof outcome==='object'&&!Array.isArray(outcome)?outcome:{};
+      const score=data.score&&typeof data.score==='object'?{...data.score,runtime:'cmi5',authoritative:true}:null;
+      if(score){
+        emit(eventTarget,adapter,context,'p2lrn:score',score);
+        if(adapter?.reportScore)try{await adapter.reportScore(score,{...context,runtime:'cmi5'});}catch(error){emit(eventTarget,adapter,context,'p2lrn:error',{phase:'cmi5-report-score',error:String(error?.message??error)});}
+      }
+      emit(eventTarget,adapter,context,'p2lrn:complete',{authoritative:true,sessionId:resolved.sessionId??null,moveOn:data.moveOn??meta.moveOn??null,score,outcome:data});
+    }).catch(error=>{if(!destroyed)emit(eventTarget,adapter,context,'p2lrn:error',{phase:'cmi5-session',error:String(error?.message??error)});});
+  }
   const shell=document.createElement('section');shell.className='p2lrn-cmi5-runtime';
   if(resolved.launchMethod==='OwnWindow'){
     const message=document.createElement('p');message.textContent='Esta actividad cmi5 requiere abrirse en una ventana propia.';
@@ -86,7 +99,7 @@ export async function render({container,representation,entity,resource,eventTarg
   emit(eventTarget,adapter,context,'p2lrn:statechange',{state:{prepared:true,launchMethod:resolved.launchMethod,sessionId:resolved.sessionId??null},authoritative:false});
   return Object.freeze({
     kind:'cmi5',launchMethod:resolved.launchMethod,sessionId:resolved.sessionId??null,
-    flush:async()=>undefined,
+    flush:async()=>completionTask?Promise.race([completionTask,Promise.resolve()]):undefined,
     destroy(){destroyed=true;container.replaceChildren();},
   });
 }
