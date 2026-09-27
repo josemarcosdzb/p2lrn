@@ -8,6 +8,7 @@ function fail(code,message){const error=new Error(message);error.code=code;throw
 function httpUrl(value,label){
   let url;try{url=new URL(String(value));}catch{fail('P2LRN_LTI_LAUNCH_INVALID',`Invalid LTI ${label} URL.`);}
   if(!['http:','https:'].includes(url.protocol))fail('P2LRN_LTI_LAUNCH_INVALID',`LTI ${label} must use HTTP(S).`);
+  if(url.username||url.password)fail('P2LRN_LTI_LAUNCH_INVALID',`LTI ${label} must not contain embedded credentials.`);
   return url;
 }
 export function validateLti13Launch(result){

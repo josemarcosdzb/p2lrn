@@ -12,6 +12,7 @@ function metadata(representation,entity){
 function httpUrl(value,label){
   let url;try{url=new URL(String(value));}catch{throw Object.assign(new Error(`Invalid cmi5 ${label} URL.`),{code:'P2LRN_CMI5_LAUNCH_INVALID'});}
   if(!['http:','https:'].includes(url.protocol))throw Object.assign(new Error(`cmi5 ${label} must use HTTP(S).`),{code:'P2LRN_CMI5_LAUNCH_INVALID'});
+  if(url.username||url.password)throw Object.assign(new Error(`cmi5 ${label} must not contain embedded credentials.`),{code:'P2LRN_CMI5_LAUNCH_INVALID'});
   return url;
 }
 export function validateCmi5Launch(result){

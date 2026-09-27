@@ -22,6 +22,7 @@ test('LTI 1.3 launch gate requires explicit protocol and confirmed host rebind',
 test('LTI launch gate only accepts HTTP(S) host session URLs and known presentation modes',()=>{
   assert.equal(validateLti13Launch({...launch(),presentation:'window'}).presentation,'window');
   assert.throws(()=>validateLti13Launch({...launch(),url:'javascript:alert(1)'}),error=>error?.code==='P2LRN_LTI_LAUNCH_INVALID');
+  assert.throws(()=>validateLti13Launch({...launch(),url:'https://user:secret@platform.example.invalid/lti/session'}),error=>error?.code==='P2LRN_LTI_LAUNCH_INVALID');
   assert.throws(()=>validateLti13Launch({...launch(),presentation:'popup-maybe'}),error=>error?.code==='P2LRN_LTI_PRESENTATION_UNSUPPORTED');
 });
 

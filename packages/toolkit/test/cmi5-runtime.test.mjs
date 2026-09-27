@@ -38,6 +38,9 @@ test('cmi5 launch gate rejects invalid actor, registration and non-http endpoint
   assert.throws(()=>validateCmi5Launch(launch({params:{registration:'not-a-uuid'}})),error=>error?.code==='P2LRN_CMI5_LAUNCH_INVALID');
   assert.throws(()=>validateCmi5Launch(launch({params:{endpoint:'javascript:alert(1)'}})),error=>error?.code==='P2LRN_CMI5_LAUNCH_INVALID');
   assert.throws(()=>validateCmi5Launch(launch({params:{fetch:'file:///secret'}})),error=>error?.code==='P2LRN_CMI5_LAUNCH_INVALID');
+  assert.throws(()=>validateCmi5Launch(launch({url:'https://user:secret@content.example.invalid/launch?endpoint=https%3A%2F%2Flrs.example.invalid%2F&fetch=https%3A%2F%2Flms.example.invalid%2Ffetch&actor=%7B%22account%22%3A%7B%22homePage%22%3A%22https%3A%2F%2Flms.example.invalid%22%2C%22name%22%3A%22learner%22%7D%7D&registration=760e3480-ba55-4991-94b0-01820dbd23a2&activityId=https%3A%2F%2Fexample.invalid%2Fau'})),error=>error?.code==='P2LRN_CMI5_LAUNCH_INVALID');
+  assert.throws(()=>validateCmi5Launch(launch({params:{endpoint:'https://user:secret@lrs.example.invalid/xapi/'}})),error=>error?.code==='P2LRN_CMI5_LAUNCH_INVALID');
+  assert.throws(()=>validateCmi5Launch(launch({params:{fetch:'https://user:secret@lms.example.invalid/fetch'}})),error=>error?.code==='P2LRN_CMI5_LAUNCH_INVALID');
 });
 
 test('cmi5 launch gate only accepts AnyWindow and OwnWindow',()=>{
