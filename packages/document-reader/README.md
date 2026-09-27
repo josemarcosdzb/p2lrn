@@ -28,6 +28,7 @@ Native extractors currently registered:
 - RTF text with explicit warning for unsupported embedded picture groups;
 - TeX section/list text with explicit warning for unresolved external graphics;
 - ODT ZIP/XML with document-order text, tables, lists and materialized internal images;
-- EPUB OPF/spine XHTML with spine order and materialized chapter-relative images.
+- EPUB OPF/spine XHTML with spine order and materialized chapter-relative images;
+- XLSX workbook sheet order, shared/inline strings, sparse cells, formulas and canonical sheet tables.
 
 PDF remains intentionally separate because production-quality PDF requires a real PDF text/layout engine and OCR fallback; the reference Reader must not replace that with a weak regex parser.
