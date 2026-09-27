@@ -1,7 +1,7 @@
 import {finalizeCanonicalDocument} from '../finalize.js';
 import type {DocumentExtractor} from '../contracts.js';
 import type {CanonicalBlock,CanonicalTable,SourceDocumentInput} from '../types.js';
-import {semanticLineRole} from '../source-lines.js';
+import {isNumberedSourceLine,semanticLineRole} from '../source-lines.js';
 
 function inline(text:string):string{return text
   .replace(/!\[([^\]]*)\]\(([^)]+)\)/g,(_m,a,u)=>`${String(a).trim()||'Image'} [image: ${String(u).trim()}]`)
@@ -17,7 +17,7 @@ export const markdownExtractor:DocumentExtractor={
   async extract(input:SourceDocumentInput){
     const source=new TextDecoder('utf-8',{fatal:false}).decode(input.bytes).replace(/\r\n?/g,'\n');
     if(!source.trim())throw new Error('Markdown document is empty.');
-    const lines=source.split('\n'),blocks:CanonicalBlock[]=[],tables:CanonicalTable[]=[];let paragraph:string[]=[];let paragraphLine=1;let inCode=false,code:string[]=[],codeLine=1,language:string|undefined;let questionActive=false;
+    const lines=source.split('\n'),blocks:CanonicalBlock[]=[],tables:CanonicalTable[]=[];let paragraph:string[]=[];let paragraphLine=1;let inCode=false,code:string[]=[],codeLine=1,language:string|undefined;let questionActive=false,quizSectionActive=false;
     const flushParagraph=()=>{if(!paragraph.length)return;const text=inline(paragraph.join(' '));paragraph=[];if(text)blocks.push({id:`md-b${blocks.length+1}`,type:'PARAGRAPH',text,order:blocks.length+1,source:{format:'MARKDOWN',raw:{role:'PARAGRAPH',lineStart:paragraphLine}}});};
     const flushCode=()=>{const text=code.join('\n').trimEnd();code=[];if(text)blocks.push({id:`md-b${blocks.length+1}`,type:'PARAGRAPH',text,order:blocks.length+1,source:{format:'MARKDOWN',raw:{role:'CODE_BLOCK',language,lineStart:codeLine,preserveWhitespace:true}}});};
     for(let i=0;i<lines.length;i++){
@@ -26,7 +26,9 @@ export const markdownExtractor:DocumentExtractor={
       if(inCode){code.push(raw);continue;}
       if(!trim.trim()){flushParagraph();continue;}
       const next=lines[i+1]?.trim()??'';
-      const semanticRole=semanticLineRole(trim.trim());
+      const detectedSemanticRole=semanticLineRole(trim.trim());
+      const promotedQuestion=quizSectionActive&&!questionActive&&detectedSemanticRole==='option'&&isNumberedSourceLine(trim.trim());
+      const semanticRole=promotedQuestion?'question':detectedSemanticRole;
       const semanticBoundary=semanticRole==='question'||semanticRole==='solution'||semanticRole==='quiz'||(semanticRole==='option'&&questionActive);
       if(semanticBoundary){
         flushParagraph();
@@ -39,7 +41,8 @@ export const markdownExtractor:DocumentExtractor={
           order:blocks.length+1,
           source:{format:'MARKDOWN',raw:{role:semanticRole==='quiz'?'QUIZ_HEADING':'SEMANTIC_LINE',semanticLineRole,line:i+1}}
         });
-        if(semanticRole==='question')questionActive=true;
+        if(semanticRole==='quiz'){quizSectionActive=true;questionActive=false;}
+        else if(semanticRole==='question')questionActive=true;
         else if(semanticRole==='solution')questionActive=false;
         continue;
       }
@@ -48,10 +51,10 @@ export const markdownExtractor:DocumentExtractor={
         for(let j=i+2;j<lines.length;j++){const l=lines[j]?.trim()??'';if(!l||!l.includes('|'))break;const c=cells(l);if(!c.length)break;rows.push(Array.from({length:cols.length},(_,k)=>inline(c[k]??'')));end=j;}
         if(rows.length){tables.push({id:`md-t${tables.length+1}`,order:blocks.length+tables.length+1,name:`Table ${tables.length+1}`,columns:cols,rows:rows.map(r=>Object.fromEntries(cols.map((col,k)=>[col,r[k]??'']))),source:{format:'MARKDOWN',raw:{lineStart:i+1,lineEnd:end+1}}});blocks.push({id:`md-table-ref-${tables.length}`,type:'TABLE',text:tables.at(-1)!.name??'',order:blocks.length+1,source:{format:'MARKDOWN',raw:{tableId:tables.at(-1)!.id}}});i=end;continue;}
       }
-      const h=trim.trim().match(/^(#{1,6})\s+(.+?)\s*#*$/);if(h){flushParagraph();questionActive=false;blocks.push({id:`md-b${blocks.length+1}`,type:'TITLE',text:inline(h[2]!),level:h[1]!.length,order:blocks.length+1,source:{format:'MARKDOWN',raw:{headingLevel:h[1]!.length,line:i+1}}});continue;}
-      if(trim.trim()&&/^(?:=+|-+)\s*$/.test(next)){flushParagraph();questionActive=false;blocks.push({id:`md-b${blocks.length+1}`,type:'TITLE',text:inline(trim.trim()),level:next.startsWith('=')?1:2,order:blocks.length+1,source:{format:'MARKDOWN',raw:{headingLevel:next.startsWith('=')?1:2,line:i+1}}});i++;continue;}
-      const list=raw.match(/^(\s*)(?:[-*+]\s+|(\d+)[.)]\s+)(.+)$/);if(list){flushParagraph();questionActive=false;blocks.push({id:`md-b${blocks.length+1}`,type:'LIST',text:inline(list[3]!),order:blocks.length+1,source:{format:'MARKDOWN',raw:{line:i+1,listLevel:Math.floor((list[1]?.replace(/\t/g,'  ').length??0)/2),ordered:Boolean(list[2]),ordinal:list[2]?Number(list[2]):undefined}}});continue;}
-      const quote=raw.match(/^\s*>\s?(.*)$/);if(quote){flushParagraph();questionActive=false;blocks.push({id:`md-b${blocks.length+1}`,type:'PARAGRAPH',text:inline(quote[1]!),order:blocks.length+1,source:{format:'MARKDOWN',raw:{role:'BLOCKQUOTE',line:i+1}}});continue;}
+      const h=trim.trim().match(/^(#{1,6})\s+(.+?)\s*#*$/);if(h){flushParagraph();questionActive=false;quizSectionActive=semanticLineRole(inline(h[2]!))==='quiz';blocks.push({id:`md-b${blocks.length+1}`,type:'TITLE',text:inline(h[2]!),level:h[1]!.length,order:blocks.length+1,source:{format:'MARKDOWN',raw:{headingLevel:h[1]!.length,line:i+1}}});continue;}
+      if(trim.trim()&&/^(?:=+|-+)\s*$/.test(next)){flushParagraph();questionActive=false;quizSectionActive=semanticLineRole(inline(trim.trim()))==='quiz';blocks.push({id:`md-b${blocks.length+1}`,type:'TITLE',text:inline(trim.trim()),level:next.startsWith('=')?1:2,order:blocks.length+1,source:{format:'MARKDOWN',raw:{headingLevel:next.startsWith('=')?1:2,line:i+1}}});i++;continue;}
+      const list=raw.match(/^(\s*)(?:[-*+]\s+|(\d+)[.)]\s+)(.+)$/);if(list){flushParagraph();questionActive=false;quizSectionActive=false;blocks.push({id:`md-b${blocks.length+1}`,type:'LIST',text:inline(list[3]!),order:blocks.length+1,source:{format:'MARKDOWN',raw:{line:i+1,listLevel:Math.floor((list[1]?.replace(/\t/g,'  ').length??0)/2),ordered:Boolean(list[2]),ordinal:list[2]?Number(list[2]):undefined}}});continue;}
+      const quote=raw.match(/^\s*>\s?(.*)$/);if(quote){flushParagraph();questionActive=false;quizSectionActive=false;blocks.push({id:`md-b${blocks.length+1}`,type:'PARAGRAPH',text:inline(quote[1]!),order:blocks.length+1,source:{format:'MARKDOWN',raw:{role:'BLOCKQUOTE',line:i+1}}});continue;}
       if(/^\s*(?:---+|___+|\*\*\*+)\s*$/.test(raw)){flushParagraph();blocks.push({id:`md-b${blocks.length+1}`,type:'SEPARATOR',text:'',order:blocks.length+1,source:{format:'MARKDOWN',raw:{line:i+1}}});continue;}
       if(!paragraph.length)paragraphLine=i+1;paragraph.push(trim.trim());questionActive=false;
     }
