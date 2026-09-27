@@ -1,23 +1,26 @@
 import {finalizeCanonicalDocument} from '../finalize.js';
-import {inferredHeadingLevel,semanticLineRole} from '../source-lines.js';
+import {inferredHeadingLevel,isNumberedSourceLine,semanticLineRole} from '../source-lines.js';
 import type {DocumentExtractor} from '../contracts.js';
 import type {CanonicalBlock,SourceDocumentInput} from '../types.js';
 
 function clean(value:string):string{return value.replace(/\u0000/g,'').replace(/\r\n?/g,'\n').trim();}
 interface TextSegment {text:string;line:number;level?:number;role?:'question'|'option'|'solution'|'quiz';}
 function paragraphize(text:string):TextSegment[]{
-  const out:TextSegment[]=[],pending:string[]=[];let start=1,questionActive=false;
+  const out:TextSegment[]=[],pending:string[]=[];let start=1,questionActive=false,quizSectionActive=false;
   const flush=()=>{const value=pending.join(' ').replace(/\s+/g,' ').trim();if(value)out.push({text:value,line:start});pending.length=0;};
   text.split('\n').forEach((raw,index)=>{
     const line=raw.trim();
     if(!line){flush();start=index+2;return;}
-    const level=inferredHeadingLevel(line),role=semanticLineRole(line);
+    const level=inferredHeadingLevel(line),detectedRole=semanticLineRole(line);
+    const promotedQuestion=quizSectionActive&&!questionActive&&detectedRole==='option'&&isNumberedSourceLine(line);
+    const role=promotedQuestion?'question':detectedRole;
     const semanticBoundary=role==='question'||role==='solution'||role==='quiz'||(role==='option'&&questionActive);
     if(level||semanticBoundary){
       flush();out.push({text:line,line:index+1,...(level?{level}:{}),...(role?{role}:{})});
-      if(role==='question')questionActive=true;
+      if(role==='quiz'){quizSectionActive=true;questionActive=false;}
+      else if(level){quizSectionActive=false;questionActive=false;}
+      else if(role==='question')questionActive=true;
       else if(role==='solution')questionActive=false;
-      else if(role!=='option'&&role!=='quiz')questionActive=false;
       start=index+2;return;
     }
     if(!pending.length)start=index+1;
