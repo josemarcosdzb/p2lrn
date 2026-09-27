@@ -89,6 +89,7 @@ class Qti3Runtime{
       this.notice='Introduce una respuesta antes de finalizar.';this.render();return null;
     }
     const score=scoreQti3Response(this.item,this.state.response);
+    this.emit('p2lrn:answer',{response:clone(this.state.response),responseIdentifier:this.item.interaction.responseIdentifier,itemIdentifier:this.item.identifier,final:true});
     this.state.completed=true;this.state.score=score;this.notice='';this.save();
     this.emit('p2lrn:score',score);
     if(this.adapter?.reportScore){
