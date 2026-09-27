@@ -545,7 +545,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     if (!resource || resource.type !== 'resource') { this.#stageMessage(stage, 'El recurso no existe o no es reproducible.'); return null; }
 
     const allRepresentations = [...(resource.representations ?? [])];
-    const representations = allRepresentations.filter((candidate) => ['embedded', 'package-member'].includes(candidate.location?.type));
+    const representations = allRepresentations.filter((candidate) => ['embedded', 'package-member'].includes(candidate.location?.type) || (candidate.location?.type === 'remote' && canonicalIdentifier(candidate.profile) === 'https://p2lrn.org/profile/cmi5'));
     if (!representations.length) {
       this.#stageMessage(stage, allRepresentations.length ? 'El reproductor web no abre representaciones remotas sin un adaptador compatible.' : 'El recurso no contiene representaciones.');
       return null;
@@ -579,8 +579,18 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       try {
         const module = await defaultRendererRegistry.load(candidate, context);
         this.#ensureRendererStyles(module.stylesheets ?? []);
-        const payload = await representationPayload(this._package, rep);
-        const bytes = module.acceptsPayload === true ? null : await payload.read();
+        let payload = null;
+        let bytes = null;
+        if (rep.location?.type === 'remote') {
+          if (module.acceptsRemote !== true) {
+            const error = new Error(`Renderer ${candidate.descriptor.id} does not accept remote representations.`);
+            error.code = 'P2LRN_RENDERER_INCOMPATIBLE';
+            throw error;
+          }
+        } else {
+          payload = await representationPayload(this._package, rep);
+          bytes = module.acceptsPayload === true ? null : await payload.read();
+        }
         const runtime = await module.render({
           container: stage,
           bytes,
