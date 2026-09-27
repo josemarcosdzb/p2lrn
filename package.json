@@ -1,0 +1,20 @@
+{
+  "name": "p2lrn-monorepo",
+  "private": true,
+  "version": "0.5.0-alpha.1",
+  "type": "module",
+  "workspaces": [
+    "packages/toolkit",
+    "packages/player",
+    "apps/editor"
+  ],
+  "scripts": {
+    "build:toolkit": "npm run build --workspace @p2lrn/toolkit",
+    "test:toolkit": "npm test --workspace @p2lrn/toolkit",
+    "test:player": "node --test packages/player/test/*.test.mjs",
+    "editor": "npm run start --workspace @p2lrn/editor"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
