@@ -49,7 +49,7 @@ test('reader dispatches through neutral extractor registry',async()=>{
 });
 
 test('reader rejects formats without registered extractor',async()=>{
-  const reader=new DefaultP2LRNDocumentReader();
+  const reader=new DefaultP2LRNDocumentReader({registry:new DocumentExtractorRegistry()});
   await assert.rejects(()=>reader.read({name:'curso.docx',bytes:new Uint8Array([1])}),/No document extractor registered for DOCX/);
 });
 
