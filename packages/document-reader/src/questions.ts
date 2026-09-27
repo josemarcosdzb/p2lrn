@@ -39,13 +39,28 @@ function optionText(text:string):{label:string;text:string}|null{
 function solutionText(text:string):string|null{
   const m=text.replace(/\s+/g,' ').trim().match(SOLUTION);return m?.[1]?.trim()||null;
 }
-function semanticRaw(block:CanonicalBlock,role:string,confidence:number,extra:Record<string,unknown>={}){
-  return{...(block.source?.raw??{}),semanticRole:role,semanticConfidence:confidence,...extra};
+export type QuestionSemanticRole='QUESTION'|'OPTION'|'SOLUTION';
+export interface QuestionSemanticObservation {
+  role:QuestionSemanticRole;
+  semanticText:string;
+  confidence:number;
+  optionLabel?:string;
+}
+function record(value:unknown):Record<string,unknown>{
+  return value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:{};
+}
+export function questionSemanticObservations(document:CanonicalDocument):Record<string,QuestionSemanticObservation>{
+  const raw=record(document.raw),semantic=record(raw.questionSemantics),observations=record(semantic.observations);
+  return observations as Record<string,QuestionSemanticObservation>;
+}
+export function questionSemanticObservation(document:CanonicalDocument,blockId:string|undefined):QuestionSemanticObservation|undefined{
+  return blockId?questionSemanticObservations(document)[blockId]:undefined;
 }
 
 export function observeQuestionSemantics(document:CanonicalDocument):CanonicalDocument{
-  const next=structuredClone(document),blocks=[...next.blocks].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
-  let quizContext=false,activeQuestion=false,changed=0;
+  const blocks=[...document.blocks].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
+  const observations:Record<string,QuestionSemanticObservation>={};
+  let quizContext=false,activeQuestion=false;
   for(const block of blocks){
     if(block.type==='TITLE'){
       quizContext=QUIZ_HEADING.test(block.text.trim());
@@ -55,35 +70,31 @@ export function observeQuestionSemantics(document:CanonicalDocument):CanonicalDo
     if(!['PARAGRAPH','LIST','OPTION','QUESTION','SOLUTION'].includes(block.type))continue;
     const solution=solutionText(block.text);
     if(solution&&activeQuestion){
-      block.type='SOLUTION';
-      block.source={format:block.source?.format??next.source.format,raw:semanticRaw(block,'SOLUTION',0.99,{semanticText:solution})};
-      changed+=1;activeQuestion=false;continue;
+      observations[block.id]={role:'SOLUTION',semanticText:solution,confidence:0.99};
+      activeQuestion=false;continue;
     }
     const option=optionText(block.text);
     if(option&&activeQuestion){
-      block.type='OPTION';
-      block.source={format:block.source?.format??next.source.format,raw:semanticRaw(block,'OPTION',0.98,{semanticText:option.text,optionLabel:option.label})};
-      changed+=1;continue;
+      observations[block.id]={role:'OPTION',semanticText:option.text,confidence:0.98,optionLabel:option.label};
+      continue;
     }
     const question=questionText(block.text,quizContext);
     if(question){
-      block.type='QUESTION';
-      block.source={format:block.source?.format??next.source.format,raw:semanticRaw(block,'QUESTION',question.confidence,{semanticText:question.text})};
-      changed+=1;activeQuestion=true;continue;
+      observations[block.id]={role:'QUESTION',semanticText:question.text,confidence:question.confidence};
+      activeQuestion=true;continue;
     }
-    if(activeQuestion&&block.type!=='OPTION')activeQuestion=false;
+    activeQuestion=false;
   }
-  if(!changed)return document;
-  const blockById=new Map(blocks.map(b=>[b.id,b]));
-  next.sequence.nodes=next.sequence.nodes.map(node=>{
-    const block=blockById.get(node.id);if(!block)return node;
-    if(block.type==='QUESTION')return{...node,type:'QUESTION',data:{...(node.data??{}),sourceBlockType:'QUESTION',semanticText:block.source?.raw?.semanticText}};
-    if(block.type==='SOLUTION')return{...node,type:'SOLUTION',data:{...(node.data??{}),sourceBlockType:'SOLUTION',semanticText:block.source?.raw?.semanticText}};
-    if(block.type==='OPTION')return{...node,type:'PARAGRAPH',data:{...(node.data??{}),sourceBlockType:'OPTION',semanticText:block.source?.raw?.semanticText,optionLabel:block.source?.raw?.optionLabel}};
-    return node;
-  });
-  next.warnings=[...next.warnings,{path:'semantics.questions',message:`Detected ${blocks.filter(b=>b.type==='QUESTION').length} explicit question block(s); option/solution evidence remains source-traceable.`,level:'INFO'}];
-  return next;
+  const count=Object.values(observations).filter(x=>x.role==='QUESTION').length;
+  if(!count)return document;
+  return{
+    ...document,
+    raw:{
+      ...record(document.raw),
+      questionSemantics:{version:'P2LRN_QUESTION_OBSERVATIONS_V1',observations},
+    },
+    warnings:[...document.warnings,{path:'semantics.questions',message:`Detected ${count} explicit question block(s); semantic interpretation is stored separately from immutable source blocks.`,level:'INFO'}],
+  };
 }
 
 export const questionSemanticPostProcessor:DocumentPostProcessor={
@@ -101,26 +112,28 @@ export function splitLessonAuthoringSegments(document:CanonicalDocument,lesson:O
     if(item.kind!=='QUESTION'){content.push(item);continue;}
     flush();
     const questionBlock=item.sourceBlockId?blocks.get(item.sourceBlockId):undefined;
+    const questionObservation=questionSemanticObservation(document,item.sourceBlockId);
     const question:DetectedQuestion={
       id:`question-${item.sourceBlockId??item.id}`,
-      prompt:String(questionBlock?.source?.raw?.semanticText??item.text??questionBlock?.text??item.title??'Pregunta'),
+      prompt:String(questionObservation?.semanticText??item.text??questionBlock?.text??item.title??'Pregunta'),
       sourceBlockId:item.sourceBlockId??item.id,
       sourceBlockIds:[item.sourceBlockId??item.id],
       options:[],
-      confidence:Number(questionBlock?.source?.raw?.semanticConfidence??0.9),
+      confidence:Number(questionObservation?.confidence??0.9),
     };
     let cursor=index+1;
     for(;cursor<lesson.content.length;cursor++){
       const candidate=lesson.content[cursor]!;
       if(candidate.kind==='QUESTION')break;
       const block=candidate.sourceBlockId?blocks.get(candidate.sourceBlockId):undefined;
-      const sourceType=block?.type;
-      if(sourceType==='OPTION'){
-        question.options.push({label:typeof block.source?.raw?.optionLabel==='string'?block.source.raw.optionLabel:undefined,text:String(block.source?.raw?.semanticText??block.text),sourceBlockId:block.id});
+      const observation=questionSemanticObservation(document,candidate.sourceBlockId);
+      const sourceType=observation?.role??block?.type;
+      if(sourceType==='OPTION'&&block){
+        question.options.push({label:observation?.optionLabel,text:String(observation?.semanticText??block.text),sourceBlockId:block.id});
         question.sourceBlockIds.push(block.id);continue;
       }
       if(candidate.kind==='SOLUTION'||sourceType==='SOLUTION'){
-        question.solution=String(block?.source?.raw?.semanticText??candidate.text??block?.text??'')||undefined;
+        question.solution=String(observation?.semanticText??candidate.text??block?.text??'')||undefined;
         question.solutionSourceBlockId=block?.id??candidate.sourceBlockId;
         if(question.solutionSourceBlockId)question.sourceBlockIds.push(question.solutionSourceBlockId);
         continue;
