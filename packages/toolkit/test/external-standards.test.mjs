@@ -127,21 +127,29 @@ test('Common Cartridge projects organization order and validates all relative re
   <metadata><schema>IMS Common Cartridge</schema><schemaversion>1.3.0</schemaversion></metadata>
   <organizations default="org"><organization identifier="org"><title>Cartridge</title>
     <item identifier="i1" identifierref="r1"><title>Primero</title></item>
-    <item identifier="i2" identifierref="r2"><title>Segundo</title></item>
+    <item identifier="i2" identifierref="r2"></item>
   </organization></organizations>
   <resources>
     <resource identifier="r1" type="webcontent" href="web/index.html"><file href="web/index.html"/></resource>
-    <resource identifier="r2" type="imswl_xmlv1p3" href="links/link.xml"><file href="links/link.xml"/><dependency identifierref="r1"/></resource>
+    <resource identifier="r2" type="imswl_xmlv1p3" href="links/link.xml">
+      <metadata><lom><general><title><string language="es">Segundo desde LOM</string></title></general></lom></metadata>
+      <file href="links/link.xml"/><file href="links/icon.png"/><dependency identifierref="r1"/>
+    </resource>
   </resources>
 </manifest>`],
     ['web/index.html','<!doctype html><title>Web</title>'],
-    ['links/link.xml','<webLink><title>OpenAI</title><url href="https://example.invalid/"/></webLink>']
+    ['links/link.xml','<webLink><title>OpenAI</title><url href="https://example.invalid/"/></webLink>'],
+    ['links/icon.png',new Uint8Array([1,2,3])]
   ]);
   assert.equal(report.detectedFormat,'common-cartridge');
   assert.ok(profileIds(reader).has('https://p2lrn.org/profile/common-cartridge'));
   const course=reader.package.graph.entities.find(x=>x.type==='course');
   const titles=course.children.map(id=>reader.package.graph.entities.find(x=>x.id===id)?.title?.und);
-  assert.deepEqual(titles,['Primero','Segundo']);
+  assert.deepEqual(titles,['Primero','Segundo desde LOM']);
+  const resource=reader.package.graph.entities.find(x=>x.type==='resource'&&x.extensions?.['https://p2lrn.org/profile/common-cartridge']?.sourceResourceIdentifier==='r2');
+  assert.deepEqual(resource.extensions['https://p2lrn.org/profile/common-cartridge'].files,['links/link.xml','links/icon.png']);
+  assert.deepEqual(resource.extensions['https://p2lrn.org/profile/common-cartridge'].dependencies,['r1']);
+  assert.equal(resource.title.es,'Segundo desde LOM');
 }));
 
 test('Common Cartridge rejects missing files, unknown item references and unknown dependencies',()=>withTemp('p2lrn-cc-bad-',dir=>{
