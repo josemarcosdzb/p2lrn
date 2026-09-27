@@ -43,10 +43,11 @@ test('runtime initialized event maps to an actor-free xAPI statement intent',()=
 });
 
 test('answered, scored and completed events carry only portable result data',()=>{
-  const answered=runtimeEventToXapiStatementIntent(event('p2lrn:answer',{response:['A','C'],correct:true}));
+  const answered=runtimeEventToXapiStatementIntent(event('p2lrn:answer',{response:['A','C'],correct:true,final:true,questionId:'q1'}));
   assert.equal(answered.verb.id,'http://adlnet.gov/expapi/verbs/answered');
   assert.equal(answered.result.response,'["A","C"]');
   assert.equal(answered.result.success,true);
+  assert.equal(answered.source.questionId,'q1');
 
   const scored=runtimeEventToXapiStatementIntent(event('p2lrn:score',{raw:8,max:10,normalized:0.8,passed:true}));
   assert.equal(scored.verb.id,'http://adlnet.gov/expapi/verbs/scored');
@@ -86,4 +87,10 @@ test('Host Adapter retains the xAPI statement-intent callback',async()=>{
   await adapter.emitXapiStatementIntent(runtimeEventToXapiStatementIntent(event('p2lrn:activityready')),event('p2lrn:activityready').context);
   assert.equal(received.length,1);
   assert.equal(received[0].intent.object.id,declaration.activityId);
+});
+
+
+test('intermediate answer edits never become xAPI answered statements',()=>{
+  const edit=event('p2lrn:answer',{response:'partial',questionId:'q1',final:false});
+  assert.equal(runtimeEventToXapiStatementIntent(edit),null);
 });
