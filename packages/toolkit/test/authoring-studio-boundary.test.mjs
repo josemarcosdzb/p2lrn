@@ -42,7 +42,7 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
 
     const questionnaire=join(dir,'questionnaire.json');
     extractProfilePayload('native-questionnaire-course.p2lrn','https://p2lrn.org/profile/native-questionnaire',questionnaire);
-    workspace.addQuestionnaire({source:questionnaire,key:'quiz',parent:'unidad'});
+    workspace.addQuestionnaireData({data:JSON.parse(readFileSync(questionnaire,'utf8')),key:'quiz',parent:'unidad'});
 
     const component=join(dir,'component.json');
     extractProfilePayload('native-component-course.p2lrn','https://p2lrn.org/profile/native-component',component);
