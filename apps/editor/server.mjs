@@ -121,6 +121,11 @@ function renderLessonHtml(document,lesson,assets,webRoot){
         }
         const alt=htmlEscape(block?.text||reference.name||'');
         body.push('<figure data-source-block-id="'+htmlEscape(block?.id||'')+'"><img src="'+htmlEscape(relative)+'" alt="'+alt+'"></figure>');
+      }else{
+        const raw=block?.source?.raw&&typeof block.source.raw==='object'?block.source.raw:{};
+        const label=htmlEscape(block?.text||reference?.name||'Imagen no materializada');
+        const source=htmlEscape(String(raw.src||reference?.sourcePath||''));
+        body.push('<figure class="p2lrn-unmaterialized-image" data-source-block-id="'+htmlEscape(block?.id||'')+'"><div role="img" aria-label="'+label+'">'+label+'</div>'+(source?'<figcaption>Recurso no materializado: '+source+'</figcaption>':'')+'</figure>');
       }
       continue;
     }
@@ -142,12 +147,14 @@ function renderLessonHtml(document,lesson,assets,webRoot){
     if(item.title&&block?.type==='TITLE'){
       const level=Math.min(6,Math.max(2,Number(block.level||3)));
       body.push('<h'+level+' data-source-block-id="'+htmlEscape(block.id)+'">'+htmlEscape(item.title)+'</h'+level+'>');
+    }else if(block?.source?.raw?.preserveWhitespace===true){
+      body.push('<pre data-source-block-id="'+htmlEscape(block?.id||'')+'">'+htmlEscape(item.text||block?.text||'')+'</pre>');
     }else{
       body.push('<p data-source-block-id="'+htmlEscape(block?.id||'')+'">'+htmlEscape(item.text||block?.text||'')+'</p>');
     }
   }
   closeList();
-  return '<!doctype html><html lang="'+htmlEscape(document.metadata.language||'es')+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+htmlEscape(lesson.title)+'</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:900px;margin:auto;padding:32px}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #bbb;padding:.5rem;text-align:left}.p2lrn-question,.p2lrn-solution{border-left:4px solid currentColor;padding:.75rem 1rem;margin:1rem 0;background:#f7f7f7}</style></head><body><h1>'+htmlEscape(lesson.title)+'</h1>'+body.join('\n')+'</body></html>';
+  return '<!doctype html><html lang="'+htmlEscape(document.metadata.language||'es')+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+htmlEscape(lesson.title)+'</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:900px;margin:auto;padding:32px}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #bbb;padding:.5rem;text-align:left}.p2lrn-question,.p2lrn-solution{border-left:4px solid currentColor;padding:.75rem 1rem;margin:1rem 0;background:#f7f7f7}pre{overflow:auto;white-space:pre-wrap}.p2lrn-unmaterialized-image{border:1px dashed #888;padding:1rem}.p2lrn-unmaterialized-image figcaption{font-size:.875rem;word-break:break-all}</style></head><body><h1>'+htmlEscape(lesson.title)+'</h1>'+body.join('\n')+'</body></html>';
 }
 function transactionalWorkspace(id,operation){
   const root=projectRoot(id),stage=join(DATA_ROOT,'staging',id+'-'+randomUUID()),backup=root+'.backup-'+randomUUID();

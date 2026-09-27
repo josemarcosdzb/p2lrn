@@ -16,7 +16,7 @@ function stripMarkup(value:string,preserve=false):string{
 }
 function htmlAttr(attrs:string,name:string):string|undefined{
   const escaped=name.replace(/[^A-Za-z0-9_-]/g,'\\$&');
-  const match=attrs.match(new RegExp('(?:^|\\s)'+escaped+'\\s*=\\s*(?:"([^"]*)"|\\'([^\\']*)\\'|([^\\s>]+))','i'));
+  const match=attrs.match(new RegExp(`(?:^|\\s)${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`,'i'));
   return decodeEntities(match?.[1]??match?.[2]??match?.[3]??'').trim()||undefined;
 }
 function uniqueColumns(values:string[]):string[]{
