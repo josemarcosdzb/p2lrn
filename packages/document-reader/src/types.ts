@@ -27,7 +27,7 @@ export type TraceOrigin='NATIVE'|'OCR'|'INFERRED'|'USER';
 export type ExtractionEngine='NATIVE'|'DOCLING'|'PDFJS'|'OCR';
 
 export interface BoundingBox {
-  x:number;y:number;width:number;height:number;
+  x?:number;y?:number;width?:number;height?:number;
   coordinateSystem?:'TOP_LEFT'|'BOTTOM_LEFT'|'UNKNOWN';
   canvasWidth?:number;canvasHeight?:number;
 }
