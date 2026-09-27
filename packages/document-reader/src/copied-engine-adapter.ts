@@ -12,6 +12,7 @@ import {ExtractorJsonService} from './engine/lectura/extractores/extractor-json.
 import {ExtractorTextoEstructuradoService} from './engine/lectura/extractores/extractor-texto-estructurado.service.js';
 import {ExtractorDocxService} from './engine/lectura/extractores/extractor-docx.service.js';
 import {ExtractorPptxService} from './engine/lectura/extractores/extractor-pptx.service.js';
+import {ExtractorExcelService} from './engine/lectura/extractores/extractor-excel.service.js';
 import {NormalizadorFidelidadDocxService} from './engine/lectura/normalizacion/normalizador-fidelidad-docx.service.js';
 import {NormalizadorFidelidadPptxService} from './engine/lectura/normalizacion/normalizador-fidelidad-pptx.service.js';
 import {DocumentAssetPlacementService} from './engine/lectura/placement/document-asset-placement.service.js';
@@ -21,7 +22,7 @@ import type {ArchivoImportacionSubido} from './engine/types/archivo-importacion-
 import type {DocumentoExtraidoFinalCanonico} from './engine/lectura/types/documento-extraido-canonico.type.js';
 import type {TipoArchivoDetectado,EstrategiaExtraccionDocumento} from './engine/lectura/types/tipo-archivo-detectado.type.js';
 
-const COPIED_FORMATS=new Set<TipoArchivoDetectado>(['TXT','MARKDOWN','HTML','RTF','TEX','XML','YAML','ODT','EPUB','CSV','JSON','DOCX','PPTX']);
+const COPIED_FORMATS=new Set<TipoArchivoDetectado>(['TXT','MARKDOWN','HTML','RTF','TEX','XML','YAML','ODT','EPUB','CSV','JSON','DOCX','PPTX','XLSX']);
 
 function sourceFile(input:SourceDocumentInput):ArchivoImportacionSubido{
   const buffer=Buffer.from(input.bytes.buffer,input.bytes.byteOffset,input.bytes.byteLength);
@@ -107,6 +108,7 @@ export class CopiedCanonicalSourceReader{
   readonly placement=new DocumentAssetPlacementService();
   readonly docx=new ExtractorDocxService(this.assets,this.placement);
   readonly pptx=new ExtractorPptxService(this.assets,this.placement);
+  readonly excel=new ExtractorExcelService(this.assets,this.placement);
   readonly docxFidelity=new NormalizadorFidelidadDocxService();
   readonly pptxFidelity=new NormalizadorFidelidadPptxService();
 
@@ -131,6 +133,9 @@ export class CopiedCanonicalSourceReader{
       case'PPTX':
         extracted=await this.pptx.extraer({archivo,deteccion,usuarioId:1});
         extracted=await this.pptxFidelity.normalizar(extracted,archivo);
+        break;
+      case'XLSX':
+        extracted=await this.excel.extraer({archivo,deteccion,usuarioId:1});
         break;
       case'HTML':case'RTF':case'TEX':case'XML':case'YAML':case'ODT':case'EPUB':
         extracted=await this.structured.extraer({archivo,deteccion});break;
