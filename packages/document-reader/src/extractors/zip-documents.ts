@@ -2,15 +2,16 @@ import {createHash} from 'node:crypto';
 import {basename} from 'node:path';
 import {finalizeCanonicalDocument} from '../finalize.js';
 import {bytesText,readZipEntries} from '../office/zip.js';
-import {attr,blocks,guessImageMediaType,xmlDecode,xmlText} from '../office/xml.js';
+import {attr,blocks,guessImageMediaType,xmlDecode} from '../office/xml.js';
 import {htmlExtractor} from './text-structured.js';
 import type {DocumentExtractor,DocumentReadContext,FormatDetection} from '../contracts.js';
 import type {AssetReference,CanonicalBlock,CanonicalTable,MaterializedAsset,SourceDocumentInput} from '../types.js';
 
 function digest(bytes:Uint8Array):string{return 'sha256:'+createHash('sha256').update(bytes).digest('hex');}
-function cleanText(value:string):string{return xmlDecode(value.replace(/<text:(?:line-break|tab)\b[^>]*\/?\s*>/gi,' ')).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();}
+function cleanText(value:string):string{return xmlDecode(value.replace(/<text:(?:line-break|tab)\b[^>]*\/?\s*>/gi,' ').replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim();}
 function packagePath(base:string,target:string):string{
   const raw=target.split(/[?#]/,1)[0]!.replace(/\\/g,'/');
+  if(/^\/|^[A-Za-z][A-Za-z0-9+.-]*:|^\/\//.test(raw))throw new Error(`Package reference is not a relative archive member: ${target}`);
   const parts=base.split('/');parts.pop();
   for(const part of raw.split('/')){
     if(!part||part==='.')continue;
@@ -28,7 +29,7 @@ function makeAsset(format:'ODT'|'EPUB',path:string,bytes:Uint8Array,index:number
 }
 
 function odtTable(xml:string,id:string,order:number):CanonicalTable{
-  const matrix=blocks(xml,'table:table-row').map(row=>blocks(row.xml,'table:table-cell').map(cell=>xmlText(cell.xml,['text:p','text:span'])));
+  const matrix=blocks(xml,'table:table-row').map(row=>blocks(row.xml,'table:table-cell').map(cell=>cleanText(cell.xml)));
   const width=Math.max(1,...matrix.map(row=>row.length)),header=matrix[0]??[],columns=uniqueColumns(Array.from({length:width},(_,i)=>header[i]??'')),data=matrix.slice(1);
   return{id,order,name:`Tabla ${id.replace(/\D/g,'')||''}`.trim(),columns,rows:data.map(row=>Object.fromEntries(columns.map((column,i)=>[column,row[i]??'']))),cells:{headers:header.length?[header.map(value=>({text:value,header:true}))]:[],rows:data.map(row=>row.map(value=>({text:value})))},source:{format:'ODT',raw:{parser:'P2LRN_ODT_V1'}}};
 }
@@ -52,11 +53,11 @@ export const odtExtractor:DocumentExtractor={
     for(let index=0;index<elements.length;index++){const match=elements[index]!,tag=match[1]!.toLowerCase(),fragment=match[0];
       if(tag==='table:table'){tableIndex+=1;order+=1;const table=odtTable(fragment,`odt-table-${tableIndex}`,order);tables.push(table);out.push({id:`odt-table-block-${tableIndex}`,type:'TABLE',text:table.name??`Tabla ${tableIndex}`,order,source:{format:'ODT',raw:{tableId:table.id,internalFile:'content.xml',sourceElementOrder:index}}});addImages(fragment,index);continue;}
       if(tag==='text:list'){
-        for(const item of blocks(fragment,'text:list-item')){const value=xmlText(item.xml,['text:p','text:span']);if(value){order+=1;out.push({id:`odt-list-${order}`,type:'LIST',text:value,order,source:{format:'ODT',raw:{internalFile:'content.xml',sourceElementOrder:index}}});}}
+        for(const item of blocks(fragment,'text:list-item')){const value=cleanText(item.xml);if(value){order+=1;out.push({id:`odt-list-${order}`,type:'LIST',text:value,order,source:{format:'ODT',raw:{internalFile:'content.xml',sourceElementOrder:index}}});}}
         addImages(fragment,index);continue;
       }
-      const value=xmlText(fragment,['text:span','text:p','text:h'])||cleanText(fragment),heading=tag==='text:h',level=heading?Number(attr(fragment.match(/<text:h\b([^>]*)>/i)?.[1]??'','text:outline-level')??1):undefined;
-      if(value){order+=1;out.push({id:`odt-block-${order}`,type:heading?'TITLE':'PARAGRAPH',text:value,order,level:Number.isInteger(level)&&level!>0?Math.min(9,level!):undefined,source:{format:'ODT',raw:{internalFile:'content.xml',sourceElementOrder:index}}});}
+      const value=cleanText(fragment),heading=tag==='text:h',level=heading?Number(attr(fragment.match(/<text:h\b([^>]*)>/i)?.[1]??'','text:outline-level')??1):undefined;
+      if(value){order+=1;out.push({id:`odt-block-${order}`,type:heading?'TITLE':'PARAGRAPH',text:value,order,level:typeof level==='number'&&Number.isInteger(level)&&level>0?Math.min(9,level):undefined,source:{format:'ODT',raw:{internalFile:'content.xml',sourceElementOrder:index}}});}
       addImages(fragment,index);
     }
     if(/<office:annotation\b/i.test(content))warnings.push({path:'odt.annotations',message:'ODT contains annotations/comments; they are not promoted to visible course content.',level:'WARNING'});
@@ -78,7 +79,9 @@ function epubPackage(entries:Map<string,Uint8Array>){
 export const epubExtractor:DocumentExtractor={
   id:'p2lrn.epub.v1',formats:['EPUB'],
   async extract(input,_detection,context:DocumentReadContext){
-    const entries=await readZipEntries(input.bytes,{maxFiles:context.maxFiles,maxUncompressedBytes:context.maxUncompressedBytes}),pkg=epubPackage(entries);
+    const entries=await readZipEntries(input.bytes,{maxFiles:context.maxFiles,maxUncompressedBytes:context.maxUncompressedBytes});
+    const mimetype=bytesText(entries,'mimetype').trim();if(mimetype&&mimetype!=='application/epub+zip')throw new Error(`EPUB mimetype is invalid: ${mimetype}`);
+    const pkg=epubPackage(entries);
     const blocksOut:CanonicalBlock[]=[],tables:CanonicalTable[]=[],assets:MaterializedAsset[]=[],assetByPath=new Map<string,AssetReference>(),warnings=[] as Array<{path:string;message:string;level:'WARNING'}>;let order=0;
     const htmlDetection:FormatDetection={format:'HTML',confidence:1,reason:'EPUB spine XHTML'};
     for(let spineIndex=0;spineIndex<pkg.spine.length;spineIndex++){
@@ -91,10 +94,10 @@ export const epubExtractor:DocumentExtractor={
       for(const block of part.document.blocks){
         order+=1;const raw={...(block.source?.raw??{}),internalFile:item.path,spineIndex};let asset=block.asset;
         if(block.type==='TABLE'&&typeof raw.tableId==='string'&&tableIdMap.has(raw.tableId))raw.tableId=tableIdMap.get(raw.tableId)!;
-        if(block.type==='IMAGE'&&!asset&&typeof raw.src==='string'&&!raw.src.startsWith('data:')){
+        if(block.type==='IMAGE'&&!asset&&typeof raw.src==='string'&&!/^data:/i.test(raw.src)){
           let path:string|undefined;try{path=packagePath(item.path,raw.src);}catch(error){warnings.push({path:`epub.spine[${spineIndex}].image`,message:String(error instanceof Error?error.message:error),level:'WARNING'});}
           if(path){const imageBytes=entries.get(path);if(imageBytes){let ref=assetByPath.get(path);if(!ref){if(context.maxImages!=null&&assets.length>=context.maxImages)throw new Error(`EPUB exceeds image-count limit: ${context.maxImages}`);const materialized=makeAsset('EPUB',path,imageBytes,assets.length+1);assets.push(materialized);ref=materialized.reference;assetByPath.set(path,ref);}asset=ref;raw.unmaterialized=false;raw.assetPath=path;}else warnings.push({path:`epub.spine[${spineIndex}].image`,message:`EPUB image is referenced but missing: ${path}`,level:'WARNING'});}}
-        if(block.asset){const existing=part.assets.find(value=>value.reference.id===block.asset?.id);if(existing){const id=`epub-inline-${spineIndex+1}-${assets.length+1}`,reference={...existing.reference,id,sourcePath:item.path+'#data-uri'};assets.push({reference,bytes:existing.bytes});asset=reference;}}
+        if(block.asset){const existing=part.assets.find(value=>value.reference.id===block.asset?.id);if(existing){if(context.maxImages!=null&&assets.length>=context.maxImages)throw new Error(`EPUB exceeds image-count limit: ${context.maxImages}`);const id=`epub-inline-${spineIndex+1}-${assets.length+1}`,reference={...existing.reference,id,sourcePath:item.path+'#data-uri'};assets.push({reference,bytes:existing.bytes});asset=reference;}}
         blocksOut.push({...block,id:`epub-${spineIndex+1}-${block.id}`,order,asset,source:{format:'EPUB',raw}});
       }
       for(const warning of part.document.warnings)if(!/Image bytes were not embedded/.test(warning.message))warnings.push({path:`epub.spine[${spineIndex}].${warning.path}`,message:warning.message,level:warning.level==='ERROR'?'WARNING':warning.level??'WARNING'});
