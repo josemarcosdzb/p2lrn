@@ -4,8 +4,6 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { addComponent, addComposite, addFile, addQuestionnaire, addUnit, addUrl, addWebContent, loadProject, newProject, PROJECT_FILE, saveProject, upgradeProjectWorkspace } from '../creator/project.js';
 import { buildProject, guessMediaType } from '../creator/builder.js';
 import { convertExternalPackage } from '../creator/external.js';
-import { ingestAulaP2PReader } from '../creator/aulap2p-ingest.js';
-import { extractAulaP2PCourse, ingestAulaP2PCourse } from '../creator/aulap2p-course.js';
 import { referenceComponentCatalog } from '../core/component-authoring.js';
 import { openPackageAsProject } from '../creator/import-project.js';
 import { parse, flag, opt, opts, printJson, req, fail, CliExit, isMain } from './util.js';
@@ -14,7 +12,7 @@ export function main(argv = process.argv.slice(2)) {
     try {
         const p = parse(argv);
         if (flag(p, 'help')) {
-            process.stdout.write('Usage: p2lrn-create <init|open|upgrade|add-unit|add-file|add-web-content|add-questionnaire|add-component|add-composite|add-url|build|convert|ingest-aulap2p|ingest-aulap2p-course|extract-aulap2p-course|component-catalog|validate-component-authoring|show> ...\n');
+            process.stdout.write('Usage: p2lrn-create <init|open|upgrade|add-unit|add-file|add-web-content|add-questionnaire|add-component|add-composite|add-url|build|convert|component-catalog|validate-component-authoring|show> ...\n');
             return;
         }
         const cmd = req(p.positional[0], 'command');
@@ -83,12 +81,9 @@ export function main(argv = process.argv.slice(2)) {
             r = buildProject(req(p.positional[1], 'project'), req(p.positional[2], 'output'), flag(p, 'strict-profiles'));
         else if (cmd === 'convert')
             r = convertExternalPackage(req(p.positional[1], 'source'), req(p.positional[2], 'output'), opt(p, 'package-root'));
-        else if (cmd === 'ingest-aulap2p')
-            r = ingestAulaP2PReader(req(p.positional[1], 'reader_json'), req(p.positional[2], 'output'), { sourceFile: opt(p, 'source-file'), assetRoot: opt(p, 'asset-root'), language: opt(p, 'language'), strictProfiles: flag(p, 'strict-profiles') });
-        else if (cmd === 'ingest-aulap2p-course')
-            r = ingestAulaP2PCourse(req(p.positional[1], 'course_json'), req(p.positional[2], 'output'), { assetRoot: opt(p, 'asset-root'), language: opt(p, 'language', 'es'), strictProfiles: flag(p, 'strict-profiles') });
-        else if (cmd === 'extract-aulap2p-course')
-            r = extractAulaP2PCourse(req(p.positional[1], 'package'), req(p.positional[2], 'output_json'));
+                    r = ingestAulaP2PReader(req(p.positional[1], 'reader_json'), req(p.positional[2], 'output'), { sourceFile: opt(p, 'source-file'), assetRoot: opt(p, 'asset-root'), language: opt(p, 'language'), strictProfiles: flag(p, 'strict-profiles') });
+                    r = ingestAulaP2PCourse(req(p.positional[1], 'course_json'), req(p.positional[2], 'output'), { assetRoot: opt(p, 'asset-root'), language: opt(p, 'language', 'es'), strictProfiles: flag(p, 'strict-profiles') });
+                    r = extractAulaP2PCourse(req(p.positional[1], 'package'), req(p.positional[2], 'output_json'));
         else if (cmd === 'show') {
             const l = loadProject(req(p.positional[1], 'project')), pr = l.project;
             r = { project: l.path, projectId: pr.projectId, targetFormatVersion: pr.targetFormatVersion, course: pr.course, counts: { units: pr.units.length, resources: pr.resources.length, activities: pr.activities.length, objectives: pr.objectives.length, relations: pr.relations.length } };

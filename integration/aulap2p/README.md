@@ -1,41 +1,31 @@
 # Historical AulaP2P Reader migration
 
-This directory records implementation provenance for Reader code being migrated into P2LRN.
+This directory records provenance for Reader and bridge work that historically originated in AulaP2P.
 
 Reviewed source: `josemarcosfrodo/aulap2p`, branch `universal`.
 
-The current P2LRN architecture does **not** depend on AulaP2P at runtime. The target is:
+The active P2LRN architecture has no AulaP2P runtime, API or CLI dependency:
 
 ```text
 source document
   -> @p2lrn/document-reader
-  -> canonical P2LRN authoring document
-  -> P2LRN Editor
+  -> P2LRN Editor editable model
   -> @p2lrn/toolkit/authoring
   -> course.p2lrn
 ```
 
-The modern AulaP2P Reader remains useful as the migration source for proven behavior such as:
+AulaP2P is now just another possible producer/consumer of the portable format. It has no privileged bridge in `@p2lrn/toolkit/creator` and no AulaP2P-specific command in `p2lrn-create`.
 
-- format detection;
-- DOCX/PPTX/PDF extractors;
-- source-order preservation;
-- image/table placement;
-- OCR reconciliation;
-- multimodal sequence reconstruction;
-- question/solution observations;
-- stable provenance and trace inventory;
-- regression fixtures.
+The old adapters, bridge specifications and their focused regression test were moved under `integration/aulap2p/legacy/` on 2026-09-27. They are frozen migration evidence only:
 
-During migration all platform-specific concerns must be removed or replaced by neutral interfaces:
+- they are outside `packages/toolkit/src`;
+- they are not TypeScript build inputs;
+- they are not package exports;
+- they are not CLI commands;
+- they are not runtime dependencies.
 
-- NestJS decorators/providers;
-- Prisma/database identities;
-- `usuarioId`;
-- `archivoId`;
-- private AulaP2P URLs;
-- authentication and enrolment;
-- AulaP2P storage services;
-- `aulap2p.*` schema/version identifiers.
+Historical canonical package fixtures may remain in the general conformance corpus when they test a generic property such as reading/preserving an already-built P2LRN package.
 
-Legacy `creator/aulap2p-*` adapters and `AULAP2P-*-BRIDGE.md` documents remain temporarily for compatibility and migration evidence. They are not the target architecture and should be removed only after the neutral Reader corpus proves equivalent behavior.
+The modern AulaP2P Reader remains useful only as provenance for behaviors migrated into the neutral Reader, including format detection, source ordering, image/table placement, OCR reconciliation, multimodal reconstruction, question observations and regression fixtures.
+
+Platform-specific concerns must not re-enter the neutral Reader or P2LRN Core: Prisma/database identities, users, authentication, enrolment, private AulaP2P URLs, storage services and AulaP2P schema identifiers are host-specific state.

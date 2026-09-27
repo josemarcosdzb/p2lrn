@@ -49,7 +49,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npm run check:creator-schema && tsc -p tsconfig.json",
+    "build": "npm run clean && npm run check:creator-schema && tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm run build && npm test",
     "generate:creator-schema": "node scripts/generate-creator-project-schema.mjs",

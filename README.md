@@ -4,7 +4,7 @@ Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeS
 
 ## Autoridad actual
 
-- `packages/toolkit/`: Core, validación, ZIP/ZIP64, `contentRoot`, Creator, API estable de autoría para Studio, Reader, servidor local, conversión/preservación de paquetes externos, puentes AulaP2P, cuestionarios/componentes/composites, delta y firmas Ed25519.
+- `packages/toolkit/`: Core, validación, ZIP/ZIP64, `contentRoot`, Creator, API estable de autoría para Studio, Reader, servidor local, conversión/preservación de paquetes externos, cuestionarios/componentes/composites, delta y firmas Ed25519.
 - `packages/player/`: Web SDK/browser runtime, renderers, Service Worker, hosts aislados SCORM/H5P y tipos TypeScript.
 - `npm/`: artefactos de distribución publicados. El toolkit autoritativo se instala desde `packages/toolkit/`; su tarball se regenera con `npm pack` al publicar una entrega.
 - `schemas/`, `profiles/`, `spec/`, `integration/`: material canónico con namespace P2LRN.
@@ -31,7 +31,7 @@ Los paquetes Alpha15 anteriores (`P2RLN`, `p2rln.org`, `.p2rln`) se siguen leyen
 
 `@p2lrn/player` es el runtime web instalable y la etiqueta canónica es `<p2lrn-player>`. El Player depende del formato P2LRN, no de AulaP2P ni de un editor concreto. Las integraciones de producto se conectan desde código de host mediante Host Adapter v1 y, cuando corresponde, `runtimeBaseUrl` para runtimes aislados. Identidad de usuario, permisos, matrícula, credenciales, resolución de URLs protegidas y persistencia durable permanecen fuera del paquete y fuera del Core.
 
-La integración específica de AulaP2P y el futuro Studio de escritorio son consumidores separados de esta base; no forman parte del runtime genérico ni se implementan en este bloque.
+AulaP2P no tiene integración privilegiada dentro del toolkit: puede producir, importar o reproducir `.p2lrn` mediante las mismas APIs públicas que cualquier otro consumidor. El Editor de referencia usa `@p2lrn/document-reader` y `@p2lrn/toolkit/authoring`; la procedencia histórica del Reader está aislada bajo `integration/aulap2p/legacy/` y no forma parte de la API, CLI ni runtime genéricos.
 
 ## Instalación local
 
