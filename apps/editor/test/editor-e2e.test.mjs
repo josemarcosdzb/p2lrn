@@ -36,12 +36,28 @@ test('Editor API creates a native quiz and builds a downloadable P2LRN package',
     const health=await json(base+'/api/health');assert.equal(health.ok,true);
     const created=await json(base+'/api/projects',{method:'POST',body:JSON.stringify({title:'Curso E2E',language:'es'})});
     assert.ok(created.id);
+
+    const markdown=new TextEncoder().encode('# 1 Fundamentos\n\n## 1.1 Introducción\n\nContenido importado.\n');
+    const importedResponse=await fetch(base+`/api/projects/${created.id}/import-document?name=curso.md`,{method:'POST',headers:{'Content-Type':'text/markdown'},body:markdown});
+    assert.equal(importedResponse.status,201);
+    const imported=await importedResponse.json();
+    assert.equal(imported.imported.created.modules,1);
+    assert.equal(imported.imported.created.lessons,1);
+    assert.equal(imported.summary.counts.units,2);
+    assert.equal(imported.summary.counts.activities,1);
+
+    const duplicateResponse=await fetch(base+`/api/projects/${created.id}/import-document?name=curso.md`,{method:'POST',headers:{'Content-Type':'text/markdown'},body:markdown});
+    assert.equal(duplicateResponse.status,400);
+    const afterDuplicate=await json(base+`/api/projects/${created.id}`);
+    assert.equal(afterDuplicate.summary.counts.units,2);
+    assert.equal(afterDuplicate.summary.counts.activities,1);
+
     const quiz={
       schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:'Quiz E2E',language:'es',
       grading:{mode:'embedded-key'},questions:[{id:'q1',type:'true-false',prompt:'P2LRN es portable',points:1,choices:[{id:'true',text:'Verdadero'},{id:'false',text:'Falso'}],solution:{choiceIds:['true']}}]
     };
     const authored=await json(base+`/api/projects/${created.id}/questionnaires`,{method:'POST',body:JSON.stringify({title:'Quiz E2E',renderer:'https://p2lrn.org/renderer/questionnaire/standard',data:quiz})});
-    assert.equal(authored.summary.counts.activities,1);
+    assert.equal(authored.summary.counts.activities,2);
     const built=await json(base+`/api/projects/${created.id}/build`,{method:'POST',body:'{}'});
     assert.match(built.result.contentRoot,/^sha256:/);
     const packageResponse=await fetch(base+built.packageUrl);assert.equal(packageResponse.status,200);
