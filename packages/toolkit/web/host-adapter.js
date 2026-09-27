@@ -1,5 +1,5 @@
 export const HOST_ADAPTER_VERSION = '1';
-const CALLBACKS = ['loadState', 'saveState', 'reportScore', 'emitEvent', 'resolveResourceUrl'];
+const CALLBACKS = ['loadState', 'saveState', 'reportScore', 'emitEvent', 'resolveResourceUrl', 'resolveRuntimeLaunch'];
 
 export function createHostAdapter(implementation = {}) {
   if (!implementation || typeof implementation !== 'object' || Array.isArray(implementation)) throw new TypeError('P2LRN host adapter must be an object.');
