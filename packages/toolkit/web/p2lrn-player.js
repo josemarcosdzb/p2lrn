@@ -545,7 +545,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     if (!resource || resource.type !== 'resource') { this.#stageMessage(stage, 'El recurso no existe o no es reproducible.'); return null; }
 
     const allRepresentations = [...(resource.representations ?? [])];
-    const representations = allRepresentations.filter((candidate) => ['embedded', 'package-member'].includes(candidate.location?.type) || (candidate.location?.type === 'remote' && canonicalIdentifier(candidate.profile) === 'https://p2lrn.org/profile/cmi5'));
+    const representations = allRepresentations.filter((candidate) => ['embedded', 'package-member'].includes(candidate.location?.type) || (candidate.location?.type === 'remote' && ['https://p2lrn.org/profile/cmi5','https://p2lrn.org/profile/lti'].includes(canonicalIdentifier(candidate.profile))));
     if (!representations.length) {
       this.#stageMessage(stage, allRepresentations.length ? 'El reproductor web no abre representaciones remotas sin un adaptador compatible.' : 'El recurso no contiene representaciones.');
       return null;
