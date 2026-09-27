@@ -98,6 +98,16 @@ test('Editor API creates a native quiz and builds a downloadable P2LRN package',
     assert.match(packageResponse.headers.get('content-type')||'',/application\/vnd\.p2lrn\+zip/);
     const bytes=new Uint8Array(await packageResponse.arrayBuffer());assert.equal(bytes[0],0x50);assert.equal(bytes[1],0x4b);
     const player=await fetch(base+'/player/p2lrn.esm.js');assert.equal(player.status,200);assert.ok((await player.text()).includes('P2LRN'));
+    for(const runtimePath of [
+      '/player/renderers/qti3-runtime.js',
+      '/player/renderers/cmi5-runtime.js',
+      '/player/renderers/lti13-runtime.js',
+      '/player/xapi-intent.js'
+    ]){
+      const runtime=await fetch(base+runtimePath);
+      assert.equal(runtime.status,200,runtimePath);
+      assert.ok((await runtime.text()).length>100,runtimePath);
+    }
   }finally{
     child.kill('SIGTERM');await new Promise(r=>setTimeout(r,50));if(!child.killed)child.kill('SIGKILL');rmSync(dataDir,{recursive:true,force:true});
   }
