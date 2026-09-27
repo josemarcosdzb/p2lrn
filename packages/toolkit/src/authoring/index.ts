@@ -46,6 +46,8 @@ export interface AuthoringObjectiveOptions { key:string; title:string; language?
 export interface AuthoringRelationOptions { source:string; predicate:string; target:string; extensions?:Record<string,unknown>; }
 export interface AuthoringActivityOptions { activityType?:string; resource?:string|null; resources?:string[]|null; objectives?:string[]|null; }
 export interface AuthoringRendererOptions { renderer:string|null; rendererVersion?:string|null; required?:boolean; }
+export interface AuthoringDuplicateOptions { key:string; newKey:string; parent?:string; title?:string; language?:string; }
+export interface AuthoringRemoveOptions { key:string; cascadeOwnedResource?:boolean; }
 export interface AuthoringUnitResult { unitKey:string; parentKey:string; }
 export interface AuthoringResourceActivityResult { resourceKey:string; activityKey:string; parentKey:string; }
 export interface AuthoringEntityTextResult { key:string; language:string; }
@@ -54,6 +56,8 @@ export interface AuthoringMoveResult { key:string; parentKey:string; index:numbe
 export interface AuthoringObjectiveResult { objectiveKey:string; }
 export interface AuthoringRelationResult { source:string; predicate:string; target:string; }
 export interface AuthoringActivityResult { activityKey:string; }
+export interface AuthoringDuplicateResult { sourceKey:string; newKey:string; kind:'unit'|'resource'|'activity'|'objective'; }
+export interface AuthoringRemoveResult { removed:string[]; }
 
 export interface AuthoringWorkspaceSummary {
   apiVersion:typeof AUTHORING_API_VERSION;
@@ -221,6 +225,90 @@ export class P2LRNAuthoringWorkspace {
       }
       activity.extensions[RENDERER_HINT_EXTENSION]=hint;
       return{activityKey};
+    });
+  }
+
+  duplicateEntity(options:AuthoringDuplicateOptions):AuthoringDuplicateResult{
+    return this.#edit((draft)=>{
+      const source=entityByKey(draft,options.key);
+      if(source===draft.course)throw new ProjectError('course cannot be duplicated as a child entity');
+      assertNewKey(draft,options.newKey);
+      const copy=clone(source);
+      delete copy.portableId;
+      copy.key=options.newKey;
+      const language=normalizedLanguage(options.language,draft);
+      if(options.title!==undefined){
+        const value=options.title.trim();
+        if(!value)throw new ProjectError('duplicate title must not be empty');
+        copy.title={...(copy.title??{}),[language]:value};
+      }
+      let kind:AuthoringDuplicateResult['kind'];
+      if(draft.units.includes(source)){
+        kind='unit';copy.children=[];
+        draft.units.push(copy);
+        appendChild(draft,options.parent??'course',copy.key);
+      }else if(draft.resources.includes(source)){
+        kind='resource';
+        copy.representations=(copy.representations??[]).map((rep:any)=>{const next=clone(rep);delete next.portableId;return next;});
+        draft.resources.push(copy);
+      }else if(draft.activities.includes(source)){
+        kind='activity';
+        if(Array.isArray(copy.children))copy.children=[];
+        draft.activities.push(copy);
+        appendChild(draft,options.parent??'course',copy.key);
+      }else if(draft.objectives.includes(source)){
+        kind='objective';
+        draft.objectives.push(copy);
+      }else throw new ProjectError(`unsupported entity kind for duplicate: ${options.key}`);
+      if(Array.isArray(draft.entityOrder)){
+        const index=draft.entityOrder.indexOf(options.key);
+        draft.entityOrder.splice(index<0?draft.entityOrder.length:index+1,0,options.newKey);
+      }
+      return{sourceKey:options.key,newKey:options.newKey,kind};
+    });
+  }
+
+  removeEntity(options:AuthoringRemoveOptions):AuthoringRemoveResult{
+    return this.#edit((draft)=>{
+      const entity=entityByKey(draft,options.key);
+      if(entity===draft.course)throw new ProjectError('course cannot be removed');
+      const refs:string[]=[];
+      for(const parent of hierarchyParents(draft))if((parent.children??[]).includes(options.key))refs.push(`child of ${parent.key}`);
+      for(const activity of draft.activities){
+        if(activity===entity)continue;
+        if(activity.resource===options.key||(activity.resources??[]).includes(options.key))refs.push(`resource of ${activity.key}`);
+        if((activity.objectives??[]).includes(options.key))refs.push(`objective of ${activity.key}`);
+      }
+      for(const relation of draft.relations)if(relation.source===options.key||relation.target===options.key)refs.push('relation endpoint');
+      if(refs.length&&!(draft.units.includes(entity)||draft.activities.includes(entity)))throw new ProjectError(`entity is still referenced: ${options.key} (${[...new Set(refs)].join(', ')})`);
+
+      const removed=[options.key];
+      removeChildReferences(draft,options.key);
+      draft.relations=draft.relations.filter((r:any)=>r.source!==options.key&&r.target!==options.key);
+      for(const activity of draft.activities){
+        if(activity.resource===options.key)delete activity.resource;
+        if(Array.isArray(activity.resources)){activity.resources=activity.resources.filter((k:string)=>k!==options.key);if(!activity.resources.length)delete activity.resources;}
+        if(Array.isArray(activity.objectives)){activity.objectives=activity.objectives.filter((k:string)=>k!==options.key);if(!activity.objectives.length)delete activity.objectives;}
+      }
+
+      if(draft.units.includes(entity)){
+        if((entity.children??[]).length)throw new ProjectError(`unit must be empty before removal: ${options.key}`);
+        draft.units=draft.units.filter((x:any)=>x!==entity);
+      }else if(draft.activities.includes(entity)){
+        if((entity.children??[]).length)throw new ProjectError(`activity must be empty before removal: ${options.key}`);
+        const ownedResource=entity.resource&&draft.resources.find((r:any)=>r.key===entity.resource);
+        draft.activities=draft.activities.filter((x:any)=>x!==entity);
+        if(options.cascadeOwnedResource&&ownedResource){
+          const used=draft.activities.some((a:any)=>a.resource===ownedResource.key||(a.resources??[]).includes(ownedResource.key));
+          if(!used){draft.resources=draft.resources.filter((r:any)=>r!==ownedResource);removed.push(ownedResource.key);}
+        }
+      }else if(draft.resources.includes(entity)){
+        draft.resources=draft.resources.filter((x:any)=>x!==entity);
+      }else if(draft.objectives.includes(entity)){
+        draft.objectives=draft.objectives.filter((x:any)=>x!==entity);
+      }
+      if(Array.isArray(draft.entityOrder))draft.entityOrder=draft.entityOrder.filter((k:string)=>!removed.includes(k));
+      return{removed};
     });
   }
 
