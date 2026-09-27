@@ -116,6 +116,7 @@
       "id": "https://p2lrn.org/profile/lti",
       "version": "0.4.0",
       "modes": [
+        "validate",
         "read",
         "preserve"
       ]
@@ -124,6 +125,7 @@
       "id": "https://p2lrn.org/profile/case",
       "version": "0.4.0",
       "modes": [
+        "validate",
         "read",
         "preserve"
       ]
@@ -132,6 +134,7 @@
       "id": "https://p2lrn.org/profile/xapi",
       "version": "0.4.0",
       "modes": [
+        "validate",
         "read",
         "preserve"
       ]
@@ -140,6 +143,7 @@
       "id": "https://p2lrn.org/profile/accessibility",
       "version": "0.4.0",
       "modes": [
+        "validate",
         "read",
         "preserve"
       ]
