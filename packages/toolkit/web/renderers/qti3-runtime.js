@@ -147,7 +147,7 @@ class Qti3Runtime{
     const extended=this.item.interaction.type==='extended-text';
     const input=el(extended?'textarea':'input',{class:'p2lrn-qti3-text',...(extended?{}:{type:'text'})});
     input.value=String(this.state.response??'');
-    if(this.item.interaction.expectedLength)input.setAttribute('maxlength',String(Math.max(this.item.interaction.expectedLength*4,this.item.interaction.expectedLength)));
+    if(this.item.interaction.expectedLength&&!extended)input.setAttribute('size',String(Math.min(120,Math.max(1,this.item.interaction.expectedLength))));
     if(this.item.interaction.placeholderText)input.setAttribute('placeholder',this.item.interaction.placeholderText);
     if(this.item.interaction.patternMask&&!extended)input.setAttribute('pattern',this.item.interaction.patternMask);
     input.addEventListener('input',()=>this.setResponse(input.value));
