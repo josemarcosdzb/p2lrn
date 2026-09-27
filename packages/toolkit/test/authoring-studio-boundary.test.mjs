@@ -54,6 +54,9 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     workspace.addRelation({source:'act-quiz',predicate:'https://p2lrn.org/relation/assesses',target:'objetivo-1'});
     workspace.setObjective('objetivo-1',{description:'Objetivo actualizado'});
     workspace.moveEntity({key:'act-component',parent:'unidad-2',index:0});
+    workspace.duplicateEntity({key:'objetivo-1',newKey:'objetivo-2',title:'Objetivo duplicado'});
+    workspace.duplicateEntity({key:'act-enlace',newKey:'act-enlace-copia',title:'Enlace copia',parent:'unidad-2'});
+    workspace.removeEntity({key:'act-enlace-copia'});
 
     workspace.setChildren('unidad',['act-enlace','act-nota','act-web','act-quiz']);
     workspace.addComposite({key:'secuencia',title:'Secuencia',children:['act-enlace','act-nota'],parent:'unidad',mode:'sequence',completion:'all'});
@@ -61,7 +64,7 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     const summary=workspace.summary();
     assert.equal(summary.counts.units,2);
     assert.equal(summary.counts.activities,6);
-    assert.equal(summary.counts.objectives,1);
+    assert.equal(summary.counts.objectives,2);
     assert.equal(summary.counts.relations,1);
     const saved=JSON.parse(readFileSync(workspace.projectFile,'utf8'));
     assert.equal(saved.course.title.es,'Curso Studio tipado');
@@ -71,6 +74,9 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     assert.deepEqual(saved.activities.find((x)=>x.key==='act-quiz').objectives,['objetivo-1']);
     assert.equal(saved.activities.find((x)=>x.key==='act-quiz').extensions['https://p2lrn.org/ext/renderer-preference/1'].preferred,'https://p2lrn.org/renderer/questionnaire/rosco');
     assert.equal(saved.objectives.find((x)=>x.key==='objetivo-1').description.es,'Objetivo actualizado');
+    assert.equal(saved.objectives.find((x)=>x.key==='objetivo-2').title.es,'Objetivo duplicado');
+    assert.equal(saved.objectives.find((x)=>x.key==='objetivo-2').portableId,undefined);
+    assert.equal(saved.activities.some((x)=>x.key==='act-enlace-copia'),false);
     assert.equal(saved.relations[0].predicate,'https://p2lrn.org/relation/assesses');
 
     workspace.build(out,{strictProfiles:true});
