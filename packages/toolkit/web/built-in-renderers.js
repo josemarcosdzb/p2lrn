@@ -24,6 +24,7 @@ import {
 export const SCORM_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/scorm/runtime';
 export const H5P_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/h5p/runtime';
 export const QTI3_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/qti3/runtime';
+export const CMI5_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/cmi5/runtime';
 export const PASSIVE_MEDIA_RENDERER = 'https://p2lrn.org/renderer/passive/media';
 export const PASSIVE_TEXT_RENDERER = 'https://p2lrn.org/renderer/passive/text';
 
@@ -48,6 +49,13 @@ export function registerBuiltInRenderers(registry) {
     dependencies: [DOM_DEPENDENCY],
     supports: ({representation}) => ['embedded','package-member'].includes(representation?.location?.type),
     load: () => import('./renderers/qti3-runtime.js'),
+  });
+  registry.register({
+    id: CMI5_RUNTIME_RENDERER, version: '1', priority: 106, presentation: 'external-runtime',
+    profiles: ['https://p2lrn.org/profile/cmi5'], mediaTypes: ['text/html', 'application/xhtml+xml'],
+    roles: ['primary'], dependencies: [DOM_DEPENDENCY],
+    supports: ({representation}) => ['remote','package-member','embedded'].includes(representation?.location?.type),
+    load: () => import('./renderers/cmi5-runtime.js'),
   });
   registry.register({
     id: SCORM_RUNTIME_RENDERER, version: '1', priority: 110, presentation: 'external-runtime',
