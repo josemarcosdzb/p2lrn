@@ -1,34 +1,41 @@
-# AulaP2P integration for the P2LRN Creator
+# Historical AulaP2P Reader migration
 
-Reviewed authority: `josemarcosfrodo/aulap2p`, branch `universal`.
+This directory records implementation provenance for Reader code being migrated into P2LRN.
 
-The integration intentionally reuses the existing AulaP2P Reader boundary instead of copying its extractors into P2LRN:
+Reviewed source: `josemarcosfrodo/aulap2p`, branch `universal`.
 
-- `backend/src/conversion/aulap2p/aulap2p-reader.adapter.ts`
-- `backend/src/cursos/importacion/deteccion-archivo/detector-tipo-archivo.service.ts`
-- `backend/src/cursos/importacion/lectura/lector-documento.service.ts`
-- `backend/src/cursos/importacion/lectura/types/documento-extraido-canonico.type.ts`
-- `backend/src/cursos/importacion/lectura/types/documento-multimodal-canonico-v2.type.ts`
-
-Recommended in-process AulaP2P flow:
+The current P2LRN architecture does **not** depend on AulaP2P at runtime. The target is:
 
 ```text
-uploaded file
-  -> AulaP2PReaderAdapter.detect/read
-  -> DocumentoExtraidoCanonico
-  -> materialize referenced image/file bytes as bridge assets
-  -> p2lrn.aulap2p-reader-envelope.v1
-  -> P2LRN Creator adapter
-  -> P2LRN Builder
+source document
+  -> @p2lrn/document-reader
+  -> canonical P2LRN authoring document
+  -> P2LRN Editor
+  -> @p2lrn/toolkit/authoring
   -> course.p2lrn
 ```
 
-The envelope is a bridge contract, not a P2LRN Core object. The adapter may use `archivoId` transiently to correlate a materialized file, but it must not write that ID or its internal URL into portable P2LRN identity.
+The modern AulaP2P Reader remains useful as the migration source for proven behavior such as:
 
-For a process boundary, serialize the canonical document/envelope as JSON and call:
+- format detection;
+- DOCX/PPTX/PDF extractors;
+- source-order preservation;
+- image/table placement;
+- OCR reconciliation;
+- multimodal sequence reconstruction;
+- question/solution observations;
+- stable provenance and trace inventory;
+- regression fixtures.
 
-```bash
-p2lrn-create ingest-aulap2p envelope.json course.p2lrn --asset-root bridge-assets --source-file original.docx
-```
+During migration all platform-specific concerns must be removed or replaced by neutral interfaces:
 
-For an in-process future AulaP2P integration, the same mapping logic should be ported behind a P2LRN Creator adapter rather than reimplementing the Reader.
+- NestJS decorators/providers;
+- Prisma/database identities;
+- `usuarioId`;
+- `archivoId`;
+- private AulaP2P URLs;
+- authentication and enrolment;
+- AulaP2P storage services;
+- `aulap2p.*` schema/version identifiers.
+
+Legacy `creator/aulap2p-*` adapters and `AULAP2P-*-BRIDGE.md` documents remain temporarily for compatibility and migration evidence. They are not the target architecture and should be removed only after the neutral Reader corpus proves equivalent behavior.
