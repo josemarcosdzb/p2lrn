@@ -142,6 +142,7 @@ test('Markdown quiz lines stay distinct without blank separators while ordinary 
     'B) RAM',
     'Respuesta: A',
     '',
+    '### Pasos',
     '1. Primer paso normal',
     '2. Segundo paso normal',
   ].join('\n');
