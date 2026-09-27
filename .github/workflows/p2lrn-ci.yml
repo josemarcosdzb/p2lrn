@@ -31,17 +31,17 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install toolkit build dependencies
-        working-directory: packages/toolkit
+      - name: Install workspace dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Verify generated Creator schema
-        working-directory: packages/toolkit
-        run: npm run check:creator-schema
+        run: npm run check:creator-schema --workspace @p2lrn/toolkit
 
       - name: Build and test toolkit
-        working-directory: packages/toolkit
-        run: npm test
+        run: npm test --workspace @p2lrn/toolkit
+
+      - name: Build and test document reader
+        run: npm test --workspace @p2lrn/document-reader
 
       - name: Rebuild Player distribution from canonical runtime
         run: node packages/toolkit/dist/tools/build-web-sdk.js --root packages/toolkit --output packages/player/dist
@@ -49,7 +49,7 @@ jobs:
       - name: Test Player distribution
         working-directory: packages/player
         env:
-          PATH: ${{ github.workspace }}/packages/toolkit/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+          PATH: ${{ github.workspace }}/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         run: node --test test/*.test.mjs
 
       - name: Verify generated files are committed and reproducible
