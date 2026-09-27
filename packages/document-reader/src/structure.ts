@@ -46,7 +46,17 @@ function numbering(text:string):Numbering|undefined{
 function isQuizHeading(text:string):boolean{
   return /^(?:cuestionario|quiz|evaluaci[oó]n|examen|test|preguntas?)(?:\b|\s|:)/i.test(normalize(text));
 }
-function contentKind(block:CanonicalBlock):OutlineContentKind{
+function questionObservation(document:CanonicalDocument,blockId:string):{role?:string;semanticText?:string}|undefined{
+  const raw=document.raw&&typeof document.raw==='object'&&!Array.isArray(document.raw)?document.raw as Record<string,unknown>:undefined;
+  const semantics=raw?.questionSemantics&&typeof raw.questionSemantics==='object'&&!Array.isArray(raw.questionSemantics)?raw.questionSemantics as Record<string,unknown>:undefined;
+  const observations=semantics?.observations&&typeof semantics.observations==='object'&&!Array.isArray(semantics.observations)?semantics.observations as Record<string,unknown>:undefined;
+  const value=observations?.[blockId];
+  return value&&typeof value==='object'&&!Array.isArray(value)?value as {role?:string;semanticText?:string}:undefined;
+}
+function contentKind(document:CanonicalDocument,block:CanonicalBlock):OutlineContentKind{
+  const role=questionObservation(document,block.id)?.role;
+  if(role==='QUESTION')return'QUESTION';
+  if(role==='SOLUTION')return'SOLUTION';
   switch(block.type){
     case'QUESTION':return'QUESTION';case'SOLUTION':return'SOLUTION';case'TABLE':return'TABLE';case'IMAGE':return'IMAGE';case'SEPARATOR':return'SEPARATOR';default:return'CONTENT';
   }
@@ -113,13 +123,14 @@ export function resolveDocumentOutline(document:CanonicalDocument):DocumentOutli
       continue;
     }
 
-    const kind=contentKind(block);
+    const kind=contentKind(document,block);
+    const semanticText=questionObservation(document,block.id)?.semanticText;
     // A numbered paragraph remains content unless extraction/reconciliation has
     // explicitly classified it as QUESTION. This prevents quiz numbering from
     // becoming course hierarchy.
     if(kind==='QUESTION')quizContext=true;
     if(kind==='SOLUTION'&&!quizContext)outline.warnings.push(`Solution without active question context at source order ${block.order}`);
-    attach({id:key('content',block.id),kind,sourceBlockId:block.id,text:block.text,level:block.level,order:block.order});
+    attach({id:key('content',block.id),kind,sourceBlockId:block.id,text:semanticText??block.text,level:block.level,order:block.order});
   }
 
   // Tables are independent observations and are attached by source order when
