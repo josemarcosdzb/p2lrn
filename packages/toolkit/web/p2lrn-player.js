@@ -351,7 +351,8 @@ function titleOf(entity) {
   return title.es ?? title.en ?? title.und ?? Object.values(title)[0] ?? entity?.id ?? 'P2LRN';
 }
 
-function roleRank(rep) { return ROLE_SCORE[rep.role] ?? 0; }
+export function representationRoleRank(rep, preferredRole = null) { return (ROLE_SCORE[rep?.role] ?? 0) + (preferredRole && String(rep?.role ?? '') === String(preferredRole) ? 1000 : 0); }
+function roleRank(rep) { return representationRoleRank(rep); }
 
 function compareStrings(a, b) {
   const left = String(a ?? '');
@@ -372,7 +373,7 @@ const HTMLElementBase = globalThis.HTMLElement ?? class {};
 export class P2LRNPlayerElement extends HTMLElementBase {
   static get p2lrnVersion() { return P2LRN_WEB_SDK_VERSION; }
   static get p2rlnVersion() { return P2LRN_WEB_SDK_VERSION; }
-  static get observedAttributes() { return ['src', 'node', 'renderer', 'runtime-base-url']; }
+  static get observedAttributes() { return ['src', 'node', 'renderer', 'runtime-base-url', 'representation-role']; }
 
   constructor() {
     super();
@@ -406,6 +407,11 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     else this.setAttribute('runtime-base-url', String(value));
   }
   get runtimeBaseUrl() { return this.getAttribute('runtime-base-url') || getRuntimeHostConfig().baseUrl; }
+  set preferredRepresentationRole(value) {
+    if (value == null || String(value).trim() === '') this.removeAttribute('representation-role');
+    else this.setAttribute('representation-role', String(value).trim());
+  }
+  get preferredRepresentationRole() { return this.getAttribute('representation-role') || null; }
 
   async reload() {
     const src = this.getAttribute('src');
@@ -560,7 +566,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         entity,
         resource,
         requestedRenderer: strictRenderer,
-        roleRank,
+        roleRank: (representation) => representationRoleRank(representation, this.preferredRepresentationRole),
         excludeRendererIds: [...excluded],
       });
       if (!candidate) {
@@ -720,6 +726,7 @@ export async function mountP2LRN(target, options = {}) {
     if (options.src) player.setAttribute('src', options.src);
     if (options.node) player.setAttribute('node', options.node);
     if (options.renderer) player.setAttribute('renderer', options.renderer);
+    if (options.representationRole) player.preferredRepresentationRole = options.representationRole;
     if (Object.prototype.hasOwnProperty.call(options, 'runtimeBaseUrl')) player.runtimeBaseUrl = options.runtimeBaseUrl;
     if (!existing) host.replaceChildren(player);
   } finally {
