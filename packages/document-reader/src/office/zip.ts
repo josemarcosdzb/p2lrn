@@ -17,7 +17,7 @@ const DEFAULTS:Required<ZipReadLimits>={
   maxPathDepth:32,
 };
 
-type JSZipEntry=JSZip.JSZipObject & {_data?:{uncompressedSize?:number;compressedSize?:number}};
+type JSZipEntry={name:string;dir:boolean;async(type:'uint8array'):Promise<Uint8Array>;_data?:{uncompressedSize?:number;compressedSize?:number}};
 
 function safeName(name:string,limits:Required<ZipReadLimits>):string{
   if(!name||Buffer.byteLength(name,'utf8')>limits.maxNameBytes)throw new Error('ZIP contains an invalid internal path.');
