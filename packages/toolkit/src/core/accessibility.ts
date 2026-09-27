@@ -49,6 +49,8 @@ function sufficient(value:unknown):readonly (readonly string[])[]|undefined{
 }
 export function createAccessibilityMetadata(input:AccessibilityMetadataInput):P2LRNAccessibilityMetadata{
   if(!input||typeof input!=='object'||Array.isArray(input))throw new TypeError('Accessibility metadata must be an object.');
+  const allowed=new Set(['accessMode','accessModeSufficient','accessibilityFeature','accessibilityHazard','accessibilityControl','accessibilityAPI','accessibilitySummary']);
+  for(const key of Object.keys(input as Record<string,unknown>))if(!allowed.has(key))throw new TypeError(`Unsupported accessibility metadata field: ${key}`);
   const result:P2LRNAccessibilityMetadata={version:ACCESSIBILITY_METADATA_VERSION};
   for(const key of ['accessMode','accessibilityFeature','accessibilityHazard','accessibilityControl','accessibilityAPI'] as const){
     const normalized=list(input[key],key);if(normalized)(result as any)[key]=normalized;
@@ -66,6 +68,8 @@ export function createAccessibilityMetadata(input:AccessibilityMetadataInput):P2
 export function validateAccessibilityMetadata(value:unknown):P2LRNAccessibilityMetadata{
   if(!value||typeof value!=='object'||Array.isArray(value))throw new TypeError('Accessibility metadata must be an object.');
   const input=value as Record<string,unknown>;
+  const allowed=new Set(['version','accessMode','accessModeSufficient','accessibilityFeature','accessibilityHazard','accessibilityControl','accessibilityAPI','accessibilitySummary']);
+  for(const key of Object.keys(input))if(!allowed.has(key))throw new TypeError(`Unsupported accessibility metadata field: ${key}`);
   if(input.version!==ACCESSIBILITY_METADATA_VERSION)throw new TypeError(`Accessibility metadata version must be ${ACCESSIBILITY_METADATA_VERSION}.`);
   return createAccessibilityMetadata({
     accessMode:input.accessMode as string[]|undefined,
