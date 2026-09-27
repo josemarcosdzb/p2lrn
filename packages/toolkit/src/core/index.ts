@@ -21,3 +21,4 @@ export * from './detached-signature.js';
 export * from './xml-lite.js';
 export * from './case.js';
 export * from './xapi.js';
+export * from './accessibility.js';
