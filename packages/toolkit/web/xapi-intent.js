@@ -59,7 +59,7 @@ function scoreResult(value){
 function resultFor(event,key){
   const payload=event.payload??{},result={};
   if(key==='answered'){
-    const response=responseString(payload.response);
+    const response=responseString(payload.response??payload.answer);
     if(response!==undefined)result.response=response;
     if(typeof payload.correct==='boolean')result.success=payload.correct;
   }else if(key==='scored'){
@@ -80,7 +80,7 @@ export function runtimeEventToXapiStatementIntent(event){
   const declaration=normalizeXapiActivityDeclaration(event.context?.xapi);
   if(!declaration)return null;
   const key=event.type==='p2lrn:activityready'?'initialized'
-    :event.type==='p2lrn:answer'?'answered'
+    :event.type==='p2lrn:answer'&&event.payload?.final===true?'answered'
     :event.type==='p2lrn:score'?'scored'
     :event.type==='p2lrn:complete'?'completed'
     :null;
@@ -94,6 +94,9 @@ export function runtimeEventToXapiStatementIntent(event){
     resourceId:event.context?.resourceId??undefined,
     representationId:event.context?.representationId??undefined,
     runtime:event.payload?.runtime??undefined,
+    questionId:event.payload?.questionId??undefined,
+    responseIdentifier:event.payload?.responseIdentifier??undefined,
+    itemIdentifier:event.payload?.itemIdentifier??undefined,
   });
   return Object.freeze(compact({
     schema:XAPI_INTENT_SCHEMA,
