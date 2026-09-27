@@ -42,14 +42,14 @@ jobs:
       - name: Build and test document reader
         run: npm test --workspace @p2lrn/document-reader
 
+      - name: Rebuild Player distribution from canonical runtime
+        run: node packages/toolkit/dist/tools/build-web-sdk.js --root packages/toolkit --output packages/player/dist
+
       - name: Validate Editor syntax and end-to-end authoring host
         run: |
           node --check apps/editor/server.mjs
           node --check apps/editor/public/editor.js
           npm test --workspace @p2lrn/editor
-
-      - name: Rebuild Player distribution from canonical runtime
-        run: node packages/toolkit/dist/tools/build-web-sdk.js --root packages/toolkit --output packages/player/dist
 
       - name: Test Player distribution
         working-directory: packages/player
