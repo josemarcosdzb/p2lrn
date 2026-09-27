@@ -59,7 +59,7 @@ export async function render({container,representation,entity,resource,eventTarg
     throw error;
   }
 
-  let destroyed=false,popup=null;
+  let destroyed=false;
   let completionTask=null;
   if(resolved.completion&&typeof resolved.completion.then==='function'){
     completionTask=Promise.resolve(resolved.completion).then(async(outcome)=>{
@@ -76,14 +76,9 @@ export async function render({container,representation,entity,resource,eventTarg
   const shell=document.createElement('section');shell.className='p2lrn-cmi5-runtime';
   if(resolved.launchMethod==='OwnWindow'){
     const message=document.createElement('p');message.textContent='Esta actividad cmi5 requiere abrirse en una ventana propia.';
-    const button=document.createElement('button');button.type='button';button.textContent='Abrir actividad';
-    button.addEventListener('click',()=>{
-      if(destroyed)return;
-      popup=window.open(resolved.url,'_blank','noopener,noreferrer');
-      if(!popup){emit(eventTarget,adapter,context,'p2lrn:error',{phase:'cmi5-popup',error:'The browser blocked the cmi5 OwnWindow launch.'});return;}
-      emit(eventTarget,adapter,context,'p2lrn:activityready',{launchMethod:'OwnWindow',sourceAuId:meta.auId??null,sessionId:resolved.sessionId??null});
-    });
-    shell.append(message,button);
+    const link=document.createElement('a');link.href=resolved.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Abrir actividad';link.className='p2lrn-cmi5-own-window';
+    link.addEventListener('click',()=>{if(!destroyed)emit(eventTarget,adapter,context,'p2lrn:activityready',{launchMethod:'OwnWindow',sourceAuId:meta.auId??null,sessionId:resolved.sessionId??null});});
+    shell.append(message,link);
   }else{
     const iframe=document.createElement('iframe');
     iframe.className='p2lrn-cmi5-frame';
