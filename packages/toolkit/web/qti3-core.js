@@ -14,9 +14,9 @@ function cleanText(node){return textContent(node).replace(/\s+/g,' ').trim();}
 function fail(code,message){const error=new Error(message);error.code=code;throw error;}
 function templateKind(value){
   const normalized=String(value??'').trim().replace(/[?#].*$/,'').replace(/\.xml$/i,'').replace(/\/$/,'');
-  if(normalized.endsWith('/match_correct'))return'match_correct';
-  if(normalized.endsWith('/map_response'))return'map_response';
-  if(normalized.endsWith('/map_response_point'))return'map_response_point';
+  if(normalized==='match_correct'||normalized.endsWith('/match_correct'))return'match_correct';
+  if(normalized==='map_response'||normalized.endsWith('/map_response'))return'map_response';
+  if(normalized==='map_response_point'||normalized.endsWith('/map_response_point'))return'map_response_point';
   return normalized?'custom':'none';
 }
 
@@ -93,7 +93,7 @@ export function parseQti3Item(xml){
   let root;try{root=parseXmlLite(String(xml??''));}catch(error){fail('P2LRN_QTI_INVALID_XML',`Invalid QTI XML: ${error?.message??error}`);}
   if(name(root)!=='assessmentItem')fail('P2LRN_QTI_ITEM_UNSUPPORTED',`QTI delivery currently requires qti-assessment-item; found ${root.localName}.`);
   const namespace=String(valueAttr(root,'xmlns')??'');
-  if(namespace&&!/imsqtiasi_v3p0/i.test(namespace))fail('P2LRN_QTI_VERSION_UNSUPPORTED',`QTI delivery currently supports QTI 3 assessment items; namespace is ${namespace}.`);
+  if(namespace&&!(/imsqti.*v3p0/i.test(namespace)||/v3p0.*imsqti/i.test(namespace)))fail('P2LRN_QTI_VERSION_UNSUPPORTED',`QTI delivery currently supports QTI 3 assessment items; namespace is ${namespace}.`);
   const identifier=String(valueAttr(root,'identifier')??'').trim();
   const title=String(valueAttr(root,'title')??identifier??'QTI item').trim()||'QTI item';
   if(!identifier)fail('P2LRN_QTI_ITEM_INVALID','QTI assessment item requires identifier.');
