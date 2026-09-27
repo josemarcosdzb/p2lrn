@@ -40,7 +40,6 @@ function absoluteHttpUrl(value:unknown,label:string):string{
   let url:URL;try{url=new URL(text);}catch{throw new TypeError(`${label} must be an absolute URL.`);}
   if(!['http:','https:'].includes(url.protocol))throw new TypeError(`${label} must use HTTP(S).`);
   if(url.username||url.password)throw new TypeError(`${label} must not contain embedded credentials.`);
-  url.hash='';
   return url.href;
 }
 function targetType(value:unknown):CaseAlignmentTargetType{
