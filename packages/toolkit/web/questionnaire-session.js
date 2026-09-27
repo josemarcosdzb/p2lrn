@@ -369,6 +369,10 @@ export class QuestionnaireSession {
       if (this.timerHandle !== null) clearInterval(this.timerHandle);
       this.timerHandle = null;
       this.save();
+      for(const question of this.payload.questions){
+        const answer=this.state.answers[String(question.id)]??this.state.answers[question.id];
+        if(answerIsMeaningful(question,answer))this.#emit('p2lrn:answer',{questionId:String(question.id),answer:clone(answer),final:true,reason,rendererId:this.rendererId,context:this.context});
+      }
       this.#emit('p2lrn:score', {...score, rendererId: this.rendererId, context: this.context});
       if (this.adapter?.reportScore) {
         try { await this.adapter.reportScore(score, this.context); }
