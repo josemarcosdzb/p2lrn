@@ -1,7 +1,7 @@
 import {existsSync, mkdirSync, readdirSync, rmSync} from 'node:fs';
 import {dirname, resolve} from 'node:path';
 import {ProjectError} from '../core/errors.js';
-import {FORMAT_VERSION} from '../core/constants.js';
+import {FORMAT_VERSION, canonicalIdentifier} from '../core/constants.js';
 import {buildProject, type BuildResult} from '../creator/builder.js';
 import {openPackageAsProject, type OpenPackageProjectOptions} from '../creator/import-project.js';
 import {
@@ -20,6 +20,7 @@ import {
   saveProject,
   upgradeProjectWorkspace,
   validateProject,
+  KEY_RE,
   type CreatorProject,
 } from '../creator/project.js';
 
@@ -40,10 +41,19 @@ export interface AuthoringWebContentOptions { sourceDirectory:string; entrypoint
 export interface AuthoringQuestionnaireOptions { source:string; key:string; title?:string; language?:string; parent?:string; copyFile?:boolean; renderer?:string; rendererVersion?:string; }
 export interface AuthoringComponentOptions { source:string; key:string; title?:string; language?:string; parent?:string; copyFile?:boolean; }
 export interface AuthoringCompositeOptions { key:string; title:string; children:string[]; language?:string; parent?:string; mode?:'sequence'|'free'; completion?:'all'|'any'; navigation?:'linear'|'open'; moveChildren?:boolean; }
+export interface AuthoringMoveOptions { key:string; parent:string; index?:number; }
+export interface AuthoringObjectiveOptions { key:string; title:string; language?:string; description?:string; alignments?:Record<string,unknown>[]; }
+export interface AuthoringRelationOptions { source:string; predicate:string; target:string; extensions?:Record<string,unknown>; }
+export interface AuthoringActivityOptions { activityType?:string; resource?:string|null; resources?:string[]|null; objectives?:string[]|null; }
+export interface AuthoringRendererOptions { renderer:string|null; rendererVersion?:string|null; required?:boolean; }
 export interface AuthoringUnitResult { unitKey:string; parentKey:string; }
 export interface AuthoringResourceActivityResult { resourceKey:string; activityKey:string; parentKey:string; }
 export interface AuthoringEntityTextResult { key:string; language:string; }
 export interface AuthoringChildrenResult { parentKey:string; children:string[]; }
+export interface AuthoringMoveResult { key:string; parentKey:string; index:number; }
+export interface AuthoringObjectiveResult { objectiveKey:string; }
+export interface AuthoringRelationResult { source:string; predicate:string; target:string; }
+export interface AuthoringActivityResult { activityKey:string; }
 
 export interface AuthoringWorkspaceSummary {
   apiVersion:typeof AUTHORING_API_VERSION;
@@ -64,6 +74,13 @@ function ensureReplaceableDirectory(root:string,force=false):void{
   rmSync(root,{recursive:true,force:true});mkdirSync(root,{recursive:true});
 }
 function normalizedLanguage(language:string|undefined,project:CreatorProject):string{return language?.trim()||project.course?.languages?.[0]||'es';}
+const RENDERER_HINT_EXTENSION='https://p2lrn.org/ext/renderer-preference/1';
+function entityExists(project:CreatorProject,key:string):boolean{try{entityByKey(project,key);return true;}catch{return false;}}
+function assertNewKey(project:CreatorProject,key:string):void{if(!KEY_RE.test(key))throw new ProjectError(`invalid key: ${JSON.stringify(key)}`);if(entityExists(project,key))throw new ProjectError(`project key already exists: ${key}`);}
+function hierarchyParents(project:CreatorProject):any[]{return[project.course,...project.units,...project.activities];}
+function removeChildReferences(project:CreatorProject,key:string):void{for(const parent of hierarchyParents(project)){if(!Array.isArray(parent.children))continue;parent.children=parent.children.filter((child:string)=>child!==key);}}
+function uniqueKeys(values:string[]|null|undefined,label:string):string[]|undefined{if(values==null)return undefined;const out=[...new Set(values.map(String))];if(out.length!==values.length)throw new ProjectError(`${label} must not contain duplicate keys`);return out;}
+
 function setLocalizedText(entity:any,options:AuthoringTextOptions,language:string):void{
   if(options.title!==undefined){const value=options.title.trim();if(!value)throw new ProjectError('title must not be empty');entity.title??={};entity.title[language]=value;}
   if(options.description!==undefined){entity.description??={};if(options.description===null||!options.description.trim())delete entity.description[language];else entity.description[language]=options.description.trim();if(Object.keys(entity.description).length===0)delete entity.description;}
@@ -127,6 +144,105 @@ export class P2LRNAuthoringWorkspace {
   }
   addComposite(options:AuthoringCompositeOptions):AuthoringResourceActivityResult{
     return this.#edit((draft)=>{const parent=options.parent??'course';const [resource,activity]=creatorAddComposite(this.root,draft,options.key,options.title,{language:options.language??'es',parent,mode:options.mode??'sequence',completion:options.completion??'all',navigation:options.navigation,children:options.children,moveChildren:options.moveChildren!==false});return{resourceKey:resource.key,activityKey:activity.key,parentKey:parent};});
+  }
+
+  moveEntity(options:AuthoringMoveOptions):AuthoringMoveResult{
+    return this.#edit((draft)=>{
+      const entity=entityByKey(draft,options.key);
+      if(entity===draft.course)throw new ProjectError('course cannot be moved');
+      if(draft.resources.includes(entity)||draft.objectives.includes(entity))throw new ProjectError('only units and activities can be placed in the course hierarchy');
+      entityByKey(draft,options.parent);
+      removeChildReferences(draft,options.key);
+      appendChild(draft,options.parent,options.key);
+      const parent=entityByKey(draft,options.parent),children=parent.children??[];
+      const current=children.indexOf(options.key);
+      if(current<0)throw new ProjectError('moved entity was not attached to target parent');
+      const requested=options.index??current;
+      if(!Number.isInteger(requested)||requested<0)throw new ProjectError('move index must be a non-negative integer');
+      children.splice(current,1);
+      const index=Math.min(requested,children.length);
+      children.splice(index,0,options.key);
+      parent.children=children;
+      return{key:options.key,parentKey:options.parent,index};
+    });
+  }
+
+  addObjective(options:AuthoringObjectiveOptions):AuthoringObjectiveResult{
+    return this.#edit((draft)=>{
+      assertNewKey(draft,options.key);
+      const language=normalizedLanguage(options.language,draft);
+      const objective:any={key:options.key,title:{[language]:options.title.trim()||options.key}};
+      if(options.description?.trim())objective.description={[language]:options.description.trim()};
+      if(options.alignments!==undefined)objective.alignments=clone(options.alignments);
+      draft.objectives.push(objective);
+      return{objectiveKey:options.key};
+    });
+  }
+
+  setObjective(key:string,options:Omit<AuthoringObjectiveOptions,'key'|'title'> & AuthoringTextOptions):AuthoringObjectiveResult{
+    return this.#edit((draft)=>{
+      const objective=entityByKey(draft,key);
+      if(!draft.objectives.includes(objective))throw new ProjectError(`entity is not an objective: ${key}`);
+      const language=normalizedLanguage(options.language,draft);
+      setLocalizedText(objective,options,language);
+      if(options.alignments!==undefined)objective.alignments=clone(options.alignments);
+      return{objectiveKey:key};
+    });
+  }
+
+  setActivity(key:string,options:AuthoringActivityOptions):AuthoringActivityResult{
+    return this.#edit((draft)=>{
+      const activity=entityByKey(draft,key);
+      if(!draft.activities.includes(activity))throw new ProjectError(`entity is not an activity: ${key}`);
+      if(options.activityType!==undefined)activity.activityType=canonicalIdentifier(options.activityType);
+      if(options.resource!==undefined){if(options.resource===null)delete activity.resource;else activity.resource=options.resource;}
+      if(options.resources!==undefined){const value=uniqueKeys(options.resources,'resources');if(value===undefined||value.length===0)delete activity.resources;else activity.resources=value;}
+      if(options.objectives!==undefined){const value=uniqueKeys(options.objectives,'objectives');if(value===undefined||value.length===0)delete activity.objectives;else activity.objectives=value;}
+      return{activityKey:key};
+    });
+  }
+
+  setRendererPreference(activityKey:string,options:AuthoringRendererOptions):AuthoringActivityResult{
+    return this.#edit((draft)=>{
+      const activity=entityByKey(draft,activityKey);
+      if(!draft.activities.includes(activity))throw new ProjectError(`entity is not an activity: ${activityKey}`);
+      activity.extensions??={};
+      if(options.renderer===null){
+        delete activity.extensions[RENDERER_HINT_EXTENSION];
+        if(Object.keys(activity.extensions).length===0)delete activity.extensions;
+        return{activityKey};
+      }
+      const renderer=canonicalIdentifier(options.renderer);
+      const hint:any={preferred:renderer,required:options.required===true};
+      if(options.rendererVersion!=null){
+        const version=String(options.rendererVersion).trim();
+        if(!version||version.length>64)throw new ProjectError('rendererVersion must be a non-empty value up to 64 characters');
+        hint.version=version;
+      }
+      activity.extensions[RENDERER_HINT_EXTENSION]=hint;
+      return{activityKey};
+    });
+  }
+
+  addRelation(options:AuthoringRelationOptions):AuthoringRelationResult{
+    return this.#edit((draft)=>{
+      entityByKey(draft,options.source);entityByKey(draft,options.target);
+      const predicate=canonicalIdentifier(options.predicate);
+      if(draft.relations.some((r:any)=>r.source===options.source&&canonicalIdentifier(r.predicate)===predicate&&r.target===options.target))throw new ProjectError('relation already exists');
+      const relation:any={source:options.source,predicate,target:options.target};
+      if(options.extensions)relation.extensions=clone(options.extensions);
+      draft.relations.push(relation);
+      return{source:options.source,predicate,target:options.target};
+    });
+  }
+
+  removeRelation(options:Pick<AuthoringRelationOptions,'source'|'predicate'|'target'>):AuthoringRelationResult{
+    return this.#edit((draft)=>{
+      const predicate=canonicalIdentifier(options.predicate),index=draft.relations.findIndex((r:any)=>r.source===options.source&&canonicalIdentifier(r.predicate)===predicate&&r.target===options.target);
+      if(index<0)throw new ProjectError('relation does not exist');
+      draft.relations.splice(index,1);
+      return{source:options.source,predicate,target:options.target};
+    });
   }
 
   save():void{saveProject(this.projectFile,this.#project);}
