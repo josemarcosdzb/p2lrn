@@ -1,7 +1,7 @@
 import type {
   EstrategiaExtraccionDocumento,
   TipoArchivoDetectado,
-} from './tipo-archivo-detectado.type';
+} from './tipo-archivo-detectado.type.js';
 
 export interface DocumentoInternoContenedorCanonico {
   nombreArchivo: string;

@@ -1,4 +1,4 @@
-import type { TipoArchivoDetectado } from './tipo-archivo-detectado.type';
+import type { TipoArchivoDetectado } from './tipo-archivo-detectado.type.js';
 
 export interface CeldaTablaDocumentoExtraida {
   texto: string;

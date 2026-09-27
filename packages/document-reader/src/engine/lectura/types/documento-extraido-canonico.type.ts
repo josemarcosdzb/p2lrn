@@ -1,16 +1,16 @@
-import type { BloqueDocumentoExtraido } from './bloque-documento-extraido.type';
-import type { ContenedorDocumentoExtraidoCanonico } from './contenedor-documento-extraido.type';
-import type { InventarioTrazabilidadDocumento } from './documento-canonico-v2.type';
-import type { DocumentoMultimodalCanonicoV2 } from './documento-multimodal-canonico-v2.type';
+import type { BloqueDocumentoExtraido } from './bloque-documento-extraido.type.js';
+import type { ContenedorDocumentoExtraidoCanonico } from './contenedor-documento-extraido.type.js';
+import type { InventarioTrazabilidadDocumento } from './documento-canonico-v2.type.js';
+import type { DocumentoMultimodalCanonicoV2 } from './documento-multimodal-canonico-v2.type.js';
 import type {
   ProcedenciaExtraccionDocumento,
   ProcedenciaExtraccionEnProceso,
-} from './procedencia-extraccion-documento.type';
-import type { TablaDocumentoExtraida } from './tabla-documento-extraida.type';
+} from './procedencia-extraccion-documento.type.js';
+import type { TablaDocumentoExtraida } from './tabla-documento-extraida.type.js';
 import type {
   EstrategiaExtraccionDocumento,
   TipoArchivoDetectado,
-} from './tipo-archivo-detectado.type';
+} from './tipo-archivo-detectado.type.js';
 
 interface DocumentoExtraidoBase {
   origen: {

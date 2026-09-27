@@ -1,5 +1,5 @@
-import type { TrazabilidadNodoDocumento } from './documento-canonico-v2.type';
-import type { TipoArchivoDetectado } from './tipo-archivo-detectado.type';
+import type { TrazabilidadNodoDocumento } from './documento-canonico-v2.type.js';
+import type { TipoArchivoDetectado } from './tipo-archivo-detectado.type.js';
 
 export type TipoBloqueDocumentoExtraido =
   | 'TITULO'
