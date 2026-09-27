@@ -95,7 +95,8 @@ export function resolveDocumentOutline(document:CanonicalDocument):DocumentOutli
       quizContext=false;
       const num=numbering(block.text);
       let role:StructuralRole|undefined;
-      if(num&&num.depth<=3)role=num.depth===1?'MODULE':num.depth===2?'LESSON':'CONTENT';
+      if(document.source.format==='PPTX'&&block.slide!=null&&(block.source?.raw?.placeholderTitle===true||block.source?.raw?.syntheticSlideTitle===true))role='LESSON';
+      if(!role&&num&&num.depth<=3)role=num.depth===1?'MODULE':num.depth===2?'LESSON':'CONTENT';
       if(!role&&block.level!=null)role=levelRole.get(block.level);
       role??='CONTENT';
 
