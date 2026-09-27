@@ -21,10 +21,14 @@ function iri(value:unknown,label:string):string{
   return text;
 }
 export function createXapiActivityDeclaration(input:XapiActivityDeclarationInput):P2LRNXapiActivityDeclaration{
-  if(!input||typeof input!=='object')throw new TypeError('xAPI activity declaration is required.');
+  if(!input||typeof input!=='object'||Array.isArray(input))throw new TypeError('xAPI activity declaration is required.');
+  const allowed=new Set(['activityId','profileId','verbs']);
+  for(const key of Object.keys(input as Record<string,unknown>))if(!allowed.has(key))throw new TypeError(`Unsupported xAPI activity declaration field: ${key}`);
   const result:P2LRNXapiActivityDeclaration={version:XAPI_VERSION,activityId:iri(input.activityId,'xAPI activityId')};
   if(input.profileId!=null)result.profileId=iri(input.profileId,'xAPI profileId');
   if(input.verbs){
+    const allowedVerbs=new Set(['initialized','answered','scored','completed']);
+    for(const key of Object.keys(input.verbs as Record<string,unknown>))if(!allowedVerbs.has(key))throw new TypeError(`Unsupported xAPI verb override key: ${key}`);
     const verbs:Record<string,string>={};
     for(const key of ['initialized','answered','scored','completed'] as const){
       const value=input.verbs[key];if(value!=null)verbs[key]=iri(value,`xAPI verb ${key}`);
@@ -36,6 +40,8 @@ export function createXapiActivityDeclaration(input:XapiActivityDeclarationInput
 export function validateXapiActivityDeclaration(value:unknown):P2LRNXapiActivityDeclaration{
   if(!value||typeof value!=='object'||Array.isArray(value))throw new TypeError('xAPI activity declaration must be an object.');
   const input=value as Record<string,unknown>;
+  const allowed=new Set(['version','activityId','profileId','verbs']);
+  for(const key of Object.keys(input))if(!allowed.has(key))throw new TypeError(`Unsupported xAPI activity declaration field: ${key}`);
   if(input.version!==XAPI_VERSION)throw new TypeError(`xAPI activity declaration version must be ${XAPI_VERSION}.`);
   return createXapiActivityDeclaration({
     activityId:String(input.activityId??''),
