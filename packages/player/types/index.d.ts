@@ -94,6 +94,7 @@ export interface P2LRNMountOptions {
   node?: string;
   renderer?: string;
   runtimeBaseUrl?: string | null;
+  representationRole?: string | null;
   adapter?: P2LRNHostAdapter | P2LRNHostAdapterImplementation | null;
 }
 
@@ -131,6 +132,7 @@ export class P2LRNPlayerElement extends HTMLElement {
   static readonly p2rlnVersion: "0.5.0-alpha.1";
   adapter: P2LRNHostAdapter | null;
   runtimeBaseUrl: string | null;
+  preferredRepresentationRole: string | null;
   reload(): Promise<void>;
 }
 
@@ -144,6 +146,7 @@ export function resolveH5pRuntimeUrl(value?: string | null, options?: {applicati
 export function mountP2LRN(target: string | Element, options?: P2LRNMountOptions): Promise<P2LRNPlayerElement>;
 export function openP2LRNPackageBytes(buffer: ArrayBuffer, limits?: Readonly<Record<string, number>>): Promise<unknown>;
 export function openP2LRNPackageURL(url: string, options?: Record<string, unknown>): Promise<unknown>;
+export function representationRoleRank(representation: {role?: string} | null | undefined, preferredRole?: string | null): number;
 export interface P2LRNServiceWorkerReady { readonly ok: true; readonly protocol: string; readonly scope?: string; }
 export function installP2LRNServiceWorker(options?: P2LRNServiceWorkerOptions): Promise<P2LRNServiceWorkerReady>;
 export function registerRenderer(descriptor: unknown): unknown;
