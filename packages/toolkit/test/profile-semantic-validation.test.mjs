@@ -85,3 +85,14 @@ test('Core semantic validation rejects secrets embedded in LTI representation in
   }};
   assert.throws(()=>validateGraphSemantics(f.graph,f.manifest),/credential field/i);
 });
+
+
+test('Core semantic validation rejects LRS deployment state hidden in xAPI extensions',()=>{
+  const f=fixture();
+  f.activity.extensions={[XAPI]:{
+    version:'2.0',
+    activityId:'https://learning.example.invalid/activity/1',
+    endpoint:'https://lrs.example.invalid/xapi/'
+  }};
+  assert.throws(()=>validateGraphSemantics(f.graph,f.manifest),/Unsupported xAPI activity declaration field: endpoint/i);
+});
