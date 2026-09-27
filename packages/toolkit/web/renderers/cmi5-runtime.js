@@ -53,7 +53,7 @@ export async function render({container,representation,entity,resource,eventTarg
     title:entity?.title??resource?.title??null,
   });
   let resolved;
-  try{resolved=validateCmi5Launch(await adapter.resolveRuntimeLaunch(request,Object.freeze({...context,runtime:'cmi5'})));}
+  try{const raw=await adapter.resolveRuntimeLaunch(request,Object.freeze({...context,runtime:'cmi5'}));resolved=validateCmi5Launch(raw?{...raw,launchMethod:raw.launchMethod??meta.launchMethod??'AnyWindow'}:raw);}
   catch(error){
     if(!error.code)error.code='P2LRN_CMI5_LAUNCH_FAILED';
     throw error;
@@ -99,7 +99,7 @@ export async function render({container,representation,entity,resource,eventTarg
   emit(eventTarget,adapter,context,'p2lrn:statechange',{state:{prepared:true,launchMethod:resolved.launchMethod,sessionId:resolved.sessionId??null},authoritative:false});
   return Object.freeze({
     kind:'cmi5',launchMethod:resolved.launchMethod,sessionId:resolved.sessionId??null,
-    flush:async()=>completionTask?Promise.race([completionTask,Promise.resolve()]):undefined,
+    flush:async()=>undefined,
     destroy(){destroyed=true;container.replaceChildren();},
   });
 }
