@@ -47,6 +47,17 @@ export interface P2LRNResolvedRuntimeLaunch {
   [key: string]: unknown;
 }
 
+export interface P2LRNXapiStatementIntent {
+  schema: "https://p2lrn.org/schema/xapi-statement-intent/1";
+  version: "1";
+  timestamp: string;
+  verb: {id: string; display?: Record<string,string>};
+  object: {objectType: "Activity"; id: string};
+  result?: Record<string,unknown>;
+  profileId?: string;
+  source?: Record<string,unknown>;
+}
+
 export interface P2LRNHostContext {
   packageId?: string | null;
   contentRoot?: string | null;
@@ -61,6 +72,7 @@ export interface P2LRNHostAdapterImplementation {
   saveState?(state: unknown, context: Readonly<P2LRNHostContext>): void | Promise<void>;
   reportScore?(score: unknown, context: Readonly<P2LRNHostContext>): void | Promise<void>;
   emitEvent?(event: unknown, context: Readonly<P2LRNHostContext>): void | Promise<void>;
+  emitXapiStatementIntent?(intent: Readonly<P2LRNXapiStatementIntent>, context: Readonly<P2LRNHostContext>): void | Promise<void>;
   resolveResourceUrl?(request: Readonly<P2LRNResourceUrlRequest>, context: Readonly<P2LRNHostContext>): P2LRNResolvedResourceUrl | null | Promise<P2LRNResolvedResourceUrl | null>;
   resolveRuntimeLaunch?(request: Readonly<P2LRNRuntimeLaunchRequest>, context: Readonly<P2LRNHostContext>): P2LRNResolvedRuntimeLaunch | null | Promise<P2LRNResolvedRuntimeLaunch | null>;
 }
