@@ -1,4 +1,4 @@
-const state={projectId:null,project:null,summary:null};
+const state={projectId:null,project:null,summary:null,pendingDocument:null};
 const $=(id)=>document.getElementById(id);
 async function api(path,options={}){const r=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||r.statusText);return data;}
 function escapeHtml(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -100,12 +100,26 @@ $('documentFile').addEventListener('change',async()=>{
     const r=await fetch('/api/documents/inspect?name='+encodeURIComponent(file.name),{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream'},body:file});
     const data=await r.json();if(!r.ok)throw new Error(data.error||r.statusText);
     const modules=data.outline.modules||[],lessonCount=modules.reduce((n,m)=>n+(m.lessons?.length||0),0),contentCount=modules.reduce((n,m)=>n+(m.lessons||[]).reduce((s,l)=>s+(l.content?.length||0),0),0);
-    $('documentResult').innerHTML=`<h2>${escapeHtml(file.name)}</h2><div class="metric-grid"><div><b>${modules.length}</b><span>módulos</span></div><div><b>${lessonCount}</b><span>lecciones</span></div><div><b>${contentCount}</b><span>elementos</span></div><div><b>${data.assetCount}</b><span>assets</span></div></div><div class="outline-preview">${modules.map(m=>`<section><h3>${escapeHtml(m.title)}</h3>${(m.lessons||[]).map(l=>`<div><b>${escapeHtml(l.title)}</b><small>${l.content?.length||0} elementos</small></div>`).join('')}</section>`).join('')}</div><p class="muted">Inspección sin modificar el curso. La confirmación de importación se habilitará cuando DOCX/PPTX/PDF alcancen paridad con el corpus del Reader.</p>`;
+    $('documentResult').innerHTML=`<h2>${escapeHtml(file.name)}</h2><div class="metric-grid"><div><b>${modules.length}</b><span>módulos</span></div><div><b>${lessonCount}</b><span>lecciones</span></div><div><b>${contentCount}</b><span>elementos</span></div><div><b>${data.assetCount}</b><span>assets</span></div></div><div class="outline-preview">${modules.map(m=>`<section><h3>${escapeHtml(m.title)}</h3>${(m.lessons||[]).map(l=>`<div><b>${escapeHtml(l.title)}</b><small>${l.content?.length||0} elementos</small></div>`).join('')}</section>`).join('')}</div><p class="muted">La importación crea módulos y lecciones P2LRN y conserva el contenido reproducible. El proceso es transaccional: si algo falla, el curso original no cambia.</p>`;
+    state.pendingDocument=file;$('confirmDocumentImport').disabled=!state.projectId;
     $('documentDialog').showModal();$('status').textContent='Documento leído sin modificar el curso.';
   }catch(error){$('status').textContent=error.message;}
   finally{$('documentFile').value='';}
 });
-$('closeDocument').onclick=()=>$('documentDialog').close();
+function closeDocumentDialog(){state.pendingDocument=null;$('confirmDocumentImport').disabled=true;$('documentDialog').close();}
+$('closeDocument').onclick=closeDocumentDialog;
+$('cancelDocumentImport').onclick=closeDocumentDialog;
+$('confirmDocumentImport').onclick=async()=>{
+  const file=state.pendingDocument;if(!file||!state.projectId)return;
+  $('confirmDocumentImport').disabled=true;$('status').textContent='Importando '+file.name+'…';
+  try{
+    const r=await fetch(`/api/projects/${encodeURIComponent(state.projectId)}/import-document?name=${encodeURIComponent(file.name)}`,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream'},body:file});
+    const data=await r.json();if(!r.ok)throw new Error(data.error||r.statusText);
+    state.project=data.project;state.summary=data.summary;
+    render();closeDocumentDialog();
+    $('status').textContent=`Importado: ${data.imported.created.modules} módulos, ${data.imported.created.lessons} lecciones.`;
+  }catch(error){$('status').textContent=error.message;$('confirmDocumentImport').disabled=false;}
+};
 $('build').onclick=async()=>{const data=await api(`/api/projects/${encodeURIComponent(state.projectId)}/build`,{method:'POST',body:'{}'});$('status').textContent='Paquete válido: '+data.result.contentRoot;};
 async function preview(){const data=await api(`/api/projects/${encodeURIComponent(state.projectId)}/build`,{method:'POST',body:'{}'});const player=$('player');player.setAttribute('src',data.packageUrl+'?v='+Date.now());$('previewDialog').showModal();await player.reload?.();}
 $('preview').onclick=preview;$('closePreview').onclick=()=>$('previewDialog').close();
