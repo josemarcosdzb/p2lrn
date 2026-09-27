@@ -60,6 +60,51 @@ function validatePackageMembers(graph:GraphDocument,archive:ZipArchive):void{con
 function nestedFiles(bytes:Uint8Array,label:string):{archive:ZipArchive;files:Map<string,Uint8Array>}{let archive:ZipArchive;try{archive=ZipArchive.open(bytes,{...DEFAULT_ZIP_LIMITS,entries:20000,compressionRatio:500});}catch(e){throw new ValidationError(`${label}: ${e instanceof Error?e.message:String(e)}`);}const files=new Map<string,Uint8Array>();for(const name of archive.names())files.set(name,archive.read(name));return{archive,files};}
 function relativeLaunchExists(files:Map<string,Uint8Array>,href:string,label:string):void{if(!href)return;const value=href.trim();if(!value)return;try{const u=new URL(value);if(u.protocol)return;}catch{}const path=value.split('#',1)[0]!.split('?',1)[0]!.replace(/^\/+/, '');if(path&&!files.has(path))throw new ValidationError(`${label}: relative launch target missing from preserved package: ${path}`);}
 function requireXml(files:Map<string,Uint8Array>,name:string,label:string){const data=files.get(name);if(!data)throw new ValidationError(`${label} profile payload requires root ${name}`);try{return parseXml(data);}catch(e){throw new ValidationError(`${label==='cmi5'?'cmi5.xml':label+' '+name} invalid XML: ${e instanceof Error?e.message:String(e)}`);}}
+function validateCommonCartridge(files:Map<string,Uint8Array>):void{
+  const root=requireXml(files,'imsmanifest.xml','Common Cartridge');
+  let schema='',version='';
+  for(const node of descendants(root)){
+    const ln=localName(node.name);
+    if(ln==='schema'&&textContent(node))schema=textContent(node);
+    if(ln==='schemaversion'&&textContent(node))version=textContent(node);
+  }
+  const ns=namespaceUri(root).toLowerCase();
+  if(!/common\s+cartridge/i.test(schema)&&!ns.includes('imscc'))throw new ValidationError('Common Cartridge profile payload does not identify a Common Cartridge manifest');
+  const resources=descendants(root).filter((node)=>localName(node.name)==='resource');
+  if(resources.length===0)throw new ValidationError('Common Cartridge manifest has no resources');
+  const ids=new Set<string>();
+  for(const resource of resources){
+    const id=attrLocal(resource,'identifier');
+    if(!id)throw new ValidationError('Common Cartridge resource is missing identifier');
+    if(ids.has(id))throw new ValidationError(`Common Cartridge has duplicate resource identifier: ${id}`);
+    ids.add(id);
+  }
+  for(const item of descendants(root)){
+    if(localName(item.name)!=='item')continue;
+    const ref=attrLocal(item,'identifierref');
+    if(ref&&!ids.has(ref))throw new ValidationError(`Common Cartridge item references unknown resource: ${ref}`);
+  }
+  for(const resource of resources){
+    const id=attrLocal(resource,'identifier')!;
+    const href=attrLocal(resource,'href');
+    if(href)relativeLaunchExists(files,href,`Common Cartridge resource ${id}`);
+    for(const child of descendants(resource)){
+      const ln=localName(child.name);
+      if(ln==='file'){
+        const fileHref=attrLocal(child,'href');
+        if(fileHref)relativeLaunchExists(files,fileHref,`Common Cartridge resource ${id}`);
+      }else if(ln==='dependency'){
+        const ref=attrLocal(child,'identifierref');
+        if(!ref)throw new ValidationError(`Common Cartridge resource ${id} has dependency without identifierref`);
+        if(!ids.has(ref))throw new ValidationError(`Common Cartridge resource ${id} depends on unknown resource: ${ref}`);
+      }
+    }
+  }
+  if(version&&version!=='unknown'&&!/^1\.[1-4](?:\.|$)/.test(version)&&!/^v?1\.[1-4]$/i.test(version)){
+    throw new ValidationError(`unsupported Common Cartridge source version: ${version}`);
+  }
+}
+
 function h5pDependencies(value:any,label:string):Array<[string,number,number]>{if(value==null)return[];if(!Array.isArray(value))throw new ValidationError(`H5P ${label} must be an array`);return value.map((dep:any,index:number)=>{if(!dep||typeof dep!=='object'||Array.isArray(dep)||typeof dep.machineName!=='string'||!dep.machineName)throw new ValidationError(`H5P ${label}[${index}] requires machineName`);const major=Number(dep.majorVersion),minor=Number(dep.minorVersion);if(!Number.isInteger(major)||!Number.isInteger(minor))throw new ValidationError(`H5P ${label}[${index}] requires integer majorVersion/minorVersion`);if(major<0||minor<0)throw new ValidationError(`H5P ${label}[${index}] has negative majorVersion/minorVersion`);return[dep.machineName,major,minor];});}
 function tupleKey(x:[string,number,number]):string{return`${x[0]}\0${x[1]}\0${x[2]}`;}
 function validateProfilePayloads(graph:GraphDocument,archive:ZipArchive):void{const checked=new Set<string>();for(const e of graph.entities){if(e.type!=='resource')continue;for(const rep of e.representations??[]){const rawProfile=rep.profile,profile=canonicalProfileId(rawProfile),l=(rep.location??{}) as any;
@@ -68,7 +113,7 @@ function validateProfilePayloads(graph:GraphDocument,archive:ZipArchive):void{co
     if(![PROFILE.h5p,PROFILE.scorm,PROFILE.cmi5,PROFILE.commonCartridge,PROFILE.qti,PROFILE.tincan].includes(profile as any)||l.type!=='embedded')continue;const key=`${profile}|${l.path}`;if(checked.has(key))continue;checked.add(key);const {files}=nestedFiles(archive.read(l.path),`${profile} ${l.path}`),names=new Set(files.keys());
     if(profile===PROFILE.h5p){if(!names.has('h5p.json')||!names.has('content/content.json'))throw new ValidationError('H5P profile payload requires h5p.json and content/content.json');const h5p=record(parseIJson(files.get('h5p.json')!,'nested h5p.json'),'nested h5p.json'),content=record(parseIJson(files.get('content/content.json')!,'nested H5P content/content.json'),'nested H5P content/content.json');void content;const mainLibrary=h5p.mainLibrary;if(typeof mainLibrary!=='string'||!mainLibrary.trim())throw new ValidationError('H5P h5p.json requires a non-empty mainLibrary');const requiredList=h5pDependencies(h5p.preloadedDependencies,'preloadedDependencies'),required=new Map(requiredList.map((x)=>[tupleKey(x),x]));if(!requiredList.some((x)=>x[0]===mainLibrary))throw new ValidationError('H5P mainLibrary must be declared in preloadedDependencies');const embedded=new Map<string,[string,number,number]>();for(const [name,data] of files){if((name.match(/\//g)?.length??0)!==1||!name.endsWith('/library.json'))continue;const library=record(parseIJson(data,`nested H5P ${name}`),`nested H5P ${name}`);if(typeof library.machineName!=='string'||!library.machineName)throw new ValidationError(`H5P ${name} requires machineName`);const major=Number(library.majorVersion),minor=Number(library.minorVersion);if(!Number.isInteger(major)||!Number.isInteger(minor))throw new ValidationError(`H5P ${name} requires integer majorVersion/minorVersion`);const tuple:[string,number,number]=[library.machineName,major,minor];embedded.set(tupleKey(tuple),tuple);h5pDependencies(library.preloadedDependencies,`${name} preloadedDependencies`);}const matched=[...required.keys()].filter((k)=>embedded.has(k)),missing=[...required.keys()].filter((k)=>!embedded.has(k)),actualMode=required.size&&missing.length===0?'bundled':matched.length?'mixed':'external',declared=profileExtension(rep,profile!) as any;if(declared&&typeof declared==='object'&&!Array.isArray(declared)){if(declared.mainLibrary!=null&&declared.mainLibrary!==mainLibrary)throw new ValidationError('H5P P2LRN metadata mainLibrary does not match preserved h5p.json');if(declared.dependencyMode!=null&&declared.dependencyMode!==actualMode)throw new ValidationError('H5P P2LRN metadata dependencyMode does not match preserved package');if(declared.embeddedLibraryCount!=null&&declared.embeddedLibraryCount!==embedded.size)throw new ValidationError('H5P P2LRN metadata embeddedLibraryCount does not match preserved package');}}
     else if(profile===PROFILE.scorm){const root=requireXml(files,'imsmanifest.xml','SCORM');for(const node of descendants(root))if(localName(node.name)==='resource'){const href=attrLocal(node,'href');if(href)relativeLaunchExists(files,href,'SCORM');}}
-    else if(profile===PROFILE.commonCartridge){requireXml(files,'imsmanifest.xml','Common Cartridge');}
+    else if(profile===PROFILE.commonCartridge){validateCommonCartridge(files);}
     else if(profile===PROFILE.qti){const root=requireXml(files,'imsmanifest.xml','QTI');let schema='',qtiResources=0;for(const node of descendants(root)){const ln=localName(node.name);if(ln==='schema'){const value=textContent(node);if(value)schema=value;}if(ln==='resource'){const rtype=(attrLocal(node,'type')??'').toLowerCase();if(rtype.includes('qti'))qtiResources++;const href=attrLocal(node,'href');if(href)relativeLaunchExists(files,href,'QTI');}}const ns=namespaceUri(root);if(!schema.includes('QTI Package')&&!ns.includes('qti/qtiv3p0')&&qtiResources===0)throw new ValidationError('QTI profile payload does not identify a QTI package');if(qtiResources===0)throw new ValidationError('QTI profile payload has no QTI resources');}
     else if(profile===PROFILE.cmi5){const root=requireXml(files,'cmi5.xml','cmi5');for(const node of descendants(root))if(localName(node.name)==='au'){const href=textContent(firstDirectChild(node,'url'));relativeLaunchExists(files,href,'cmi5');}}
     else if(profile===PROFILE.tincan){const root=requireXml(files,'tincan.xml','Legacy Tin Can');for(const node of descendants(root))if(localName(node.name).toLowerCase()==='launch')relativeLaunchExists(files,textContent(node),'Tin Can package');}
