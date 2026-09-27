@@ -21,7 +21,10 @@
   ],
   "rules": [
     "Accessible alternatives SHOULD be modeled as representations of the same Resource when they are semantically equivalent.",
+    "Structured accessibility metadata MUST live in the representation extension keyed by https://p2lrn.org/profile/accessibility; representation.accessibility is the quick accessibilityFeature vocabulary view.",
+    "The structured metadata uses schema.org-style accessMode, accessModeSufficient, accessibilityFeature, accessibilityHazard, accessibilityControl, accessibilityAPI and accessibilitySummary fields.",
     "P2LRN MUST preserve accessibility metadata supplied by an authoritative embedded profile such as QTI.",
-    "The target for native web content is WCAG 2.2 AA, but P2LRN packaging alone does not certify conformance."
+    "A consumer MAY prefer a representation role such as accessible for a user or deployment; Core does not force an accessible alternative globally.",
+    "The target for native web content is WCAG 2.2 AA, but metadata or P2LRN packaging alone does not certify conformance."
   ]
 }
