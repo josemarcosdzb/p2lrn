@@ -118,3 +118,22 @@ test('renderer registry selects QTI 3 runtime for QTI XML package-member represe
   assert.equal(candidate.descriptor.id,QTI3_RUNTIME_RENDERER);
   assert.equal(candidate.representation.id,'qti-rep');
 });
+
+
+test('QTI 3 accepts the standard relative match_correct template filename',()=>{
+  const xml=item({
+    processing:'match_correct.xml',
+    body:'<qti-choice-interaction max-choices="1" response-identifier="RESPONSE"><qti-simple-choice identifier="A">A</qti-simple-choice><qti-simple-choice identifier="B">B</qti-simple-choice></qti-choice-interaction>'
+  });
+  const model=parseQti3Item(xml);
+  assert.equal(model.processing.kind,'match_correct');
+  assert.equal(scoreQti3Response(model,['A']).correct,true);
+});
+
+test('QTI 3 namespace recognition tolerates equivalent imsqti v3p0 namespace naming',()=>{
+  const xml=item({
+    body:'<qti-choice-interaction max-choices="1" response-identifier="RESPONSE"><qti-simple-choice identifier="A">A</qti-simple-choice><qti-simple-choice identifier="B">B</qti-simple-choice></qti-choice-interaction>'
+  }).replace('http://www.imsglobal.org/xsd/imsqtiasi_v3p0','https://www.imsglobal.org/xsd/imsqti_itemv3p0');
+  const model=parseQti3Item(xml);
+  assert.equal(model.version,'3.0');
+});
