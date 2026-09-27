@@ -24,7 +24,7 @@ The old adapters, bridge specifications and their focused regression test were m
 - they are not CLI commands;
 - they are not runtime dependencies.
 
-Historical canonical package fixtures may remain in the general conformance corpus when they test a generic property such as reading/preserving an already-built P2LRN package.
+Historical package fixtures have been moved to `integration/aulap2p/legacy/examples/`. They may still be opened manually by the generic Reader for migration checks, but they are no longer listed as canonical/reference P2LRN examples.
 
 The modern AulaP2P Reader remains useful only as provenance for behaviors migrated into the neutral Reader, including format detection, source ordering, image/table placement, OCR reconciliation, multimodal reconstruction, question observations and regression fixtures.
 

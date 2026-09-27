@@ -15,7 +15,7 @@ import {openP2LRNPackageBytes} from '../web/p2lrn-player.js';
 const exampleCandidates=[resolve('../examples'),resolve('../../examples/legacy-alpha15')];
 const examples=exampleCandidates.find((p)=>existsSync(join(p,'creator-course.p2rln'))&&existsSync(join(p,'creator-project')))??exampleCandidates[0];
 const expected=[
-'advanced-interoperability.p2rln','aulap2p-reader/document-reader-course.p2rln','creator-course.p2rln','external/cmi5-catapult-pre-post.p2rln','external/h5p-crossword.p2rln','external/qti3-minimal.p2rln','external/scorm12-real.p2rln','minimal-course.p2rln','native-component-authoring-course.p2rln','native-component-course.p2rln','native-component-timeline-course.p2rln','native-composite-course.p2rln','native-questionnaire-course.p2rln','native-questionnaire-games-course.p2rln','static-seekable-media-course.p2rln','web-bundle-course.p2rln','web-course.p2rln'];
+'advanced-interoperability.p2rln','creator-course.p2rln','external/cmi5-catapult-pre-post.p2rln','external/h5p-crossword.p2rln','external/qti3-minimal.p2rln','external/scorm12-real.p2rln','minimal-course.p2rln','native-component-authoring-course.p2rln','native-component-course.p2rln','native-component-timeline-course.p2rln','native-composite-course.p2rln','native-questionnaire-course.p2rln','native-questionnaire-games-course.p2rln','static-seekable-media-course.p2rln','web-bundle-course.p2rln','web-course.p2rln'];
 
 test('all Alpha15 reference examples validate strictly including profile payloads',()=>{for(const rel of expected){const r=validatePackageFile(join(examples,rel),{strictProfiles:true,validateProfilePayloads:true});assert.equal(r.summary.packageId.startsWith('urn:uuid:'),true,rel);assert.match(r.summary.contentRoot,/^sha256:[0-9a-f]{64}$/);}});
 
