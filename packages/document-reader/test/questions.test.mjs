@@ -105,3 +105,52 @@ test('multiple explicit answer labels produce multiple-choice rather than collap
   assert.equal(native.question.type,'multiple-choice');
   assert.deepEqual(native.question.solution.choiceIds,['c1','c3']);
 });
+
+
+test('TXT keeps wrapped prose together but splits consecutive quiz lines without blank separators',async()=>{
+  const text=[
+    'Módulo 1: Hardware',
+    'Lección 1.1: CPU',
+    'Este texto está envuelto',
+    'en dos líneas del mismo párrafo.',
+    'Cuestionario',
+    '1. Explica qué componente ejecuta instrucciones',
+    'A) CPU',
+    'B) RAM',
+    'Respuesta: A',
+  ].join('\n');
+  const result=await reader.read({name:'curso.txt',bytes:new TextEncoder().encode(text)});
+  const outline=resolveDocumentOutline(result.document);
+  assert.equal(outline.modules[0].title,'Módulo 1: Hardware');
+  assert.equal(outline.modules[0].lessons[0].title,'Lección 1.1: CPU');
+  assert.ok(result.document.blocks.some(x=>x.text==='Este texto está envuelto en dos líneas del mismo párrafo.'));
+  const segments=splitLessonAuthoringSegments(result.document,outline.modules[0].lessons[0]);
+  const question=segments.find(x=>x.kind==='question')?.question;
+  assert.ok(question);
+  assert.equal(question.prompt,'Explica qué componente ejecuta instrucciones');
+  assert.deepEqual(question.options.map(x=>x.text),['CPU','RAM']);
+  assert.equal(question.solution,'A');
+});
+
+test('Markdown quiz lines stay distinct without blank separators while ordinary ordered lists remain lists',async()=>{
+  const text=[
+    '# 1 Fundamentos',
+    '## 1.1 Repaso',
+    '### Cuestionario',
+    '1. ¿Qué componente ejecuta instrucciones?',
+    'A) CPU',
+    'B) RAM',
+    'Respuesta: A',
+    '',
+    '1. Primer paso normal',
+    '2. Segundo paso normal',
+  ].join('\n');
+  const result=await reader.read({name:'curso.md',bytes:new TextEncoder().encode(text)});
+  const outline=resolveDocumentOutline(result.document);
+  const lesson=outline.modules[0].lessons[0];
+  const question=splitLessonAuthoringSegments(result.document,lesson).find(x=>x.kind==='question')?.question;
+  assert.ok(question);
+  assert.deepEqual(question.options.map(x=>x.text),['CPU','RAM']);
+  assert.equal(question.solution,'A');
+  assert.equal(result.document.blocks.filter(x=>x.type==='LIST').length,2);
+});
