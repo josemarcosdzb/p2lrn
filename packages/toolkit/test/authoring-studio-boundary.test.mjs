@@ -29,6 +29,7 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     const workspace=P2LRNAuthoringWorkspace.create(root,{title:'Curso Studio',language:'es'});
     workspace.setCourseMetadata({title:'Curso Studio tipado',description:'Editado por API pública',incrementRevision:true});
     workspace.addUnit({key:'unidad',title:'Unidad 1'});
+    workspace.addUnit({key:'unidad-2',title:'Unidad 2'});
     const url=workspace.addUrl({url:'https://example.com/recurso',key:'enlace',title:'Enlace',parent:'unidad'});
     assert.equal(url.activityKey,'act-enlace');
     workspace.setEntityText(url.activityKey,{title:'Enlace editado'});
@@ -47,16 +48,30 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     extractProfilePayload('native-component-course.p2lrn','https://p2lrn.org/profile/native-component',component);
     workspace.addComponent({source:component,key:'component',parent:'unidad'});
 
-    workspace.setChildren('unidad',['act-enlace','act-nota','act-web','act-quiz','act-component']);
+    workspace.addObjective({key:'objetivo-1',title:'Aplicar el concepto',description:'Objetivo editable desde Studio'});
+    workspace.setActivity('act-quiz',{objectives:['objetivo-1']});
+    workspace.setRendererPreference('act-quiz',{renderer:'https://p2lrn.org/renderer/questionnaire/rosco',rendererVersion:'1'});
+    workspace.addRelation({source:'act-quiz',predicate:'https://p2lrn.org/relation/assesses',target:'objetivo-1'});
+    workspace.setObjective('objetivo-1',{description:'Objetivo actualizado'});
+    workspace.moveEntity({key:'act-component',parent:'unidad-2',index:0});
+
+    workspace.setChildren('unidad',['act-enlace','act-nota','act-web','act-quiz']);
     workspace.addComposite({key:'secuencia',title:'Secuencia',children:['act-enlace','act-nota'],parent:'unidad',mode:'sequence',completion:'all'});
 
     const summary=workspace.summary();
-    assert.equal(summary.counts.units,1);
+    assert.equal(summary.counts.units,2);
     assert.equal(summary.counts.activities,6);
+    assert.equal(summary.counts.objectives,1);
+    assert.equal(summary.counts.relations,1);
     const saved=JSON.parse(readFileSync(workspace.projectFile,'utf8'));
     assert.equal(saved.course.title.es,'Curso Studio tipado');
     assert.equal(saved.course.revision,2);
     assert.equal(saved.activities.find((x)=>x.key==='act-enlace').title.es,'Enlace editado');
+    assert.deepEqual(saved.units.find((x)=>x.key==='unidad-2').children,['act-component']);
+    assert.deepEqual(saved.activities.find((x)=>x.key==='act-quiz').objectives,['objetivo-1']);
+    assert.equal(saved.activities.find((x)=>x.key==='act-quiz').extensions['https://p2lrn.org/ext/renderer-preference/1'].preferred,'https://p2lrn.org/renderer/questionnaire/rosco');
+    assert.equal(saved.objectives.find((x)=>x.key==='objetivo-1').description.es,'Objetivo actualizado');
+    assert.equal(saved.relations[0].predicate,'https://p2lrn.org/relation/assesses');
 
     workspace.build(out,{strictProfiles:true});
     const reader=new P2LRNReader(out,{strictProfiles:true,validateProfilePayloads:true});
