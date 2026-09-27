@@ -2,6 +2,7 @@ import {existsSync, mkdirSync, readdirSync, rmSync, writeFileSync} from 'node:fs
 import {dirname, join, resolve} from 'node:path';
 import {ProjectError} from '../core/errors.js';
 import {FORMAT_VERSION, canonicalIdentifier} from '../core/constants.js';
+import {createCaseAlignment, type CaseAlignmentInput} from '../core/case.js';
 import {buildProject, type BuildResult} from '../creator/builder.js';
 import {openPackageAsProject, type OpenPackageProjectOptions} from '../creator/import-project.js';
 import {
@@ -55,6 +56,7 @@ export interface AuthoringEntityTextResult { key:string; language:string; }
 export interface AuthoringChildrenResult { parentKey:string; children:string[]; }
 export interface AuthoringMoveResult { key:string; parentKey:string; index:number; }
 export interface AuthoringObjectiveResult { objectiveKey:string; }
+export interface AuthoringCaseAlignmentResult { objectiveKey:string; alignment:ReturnType<typeof createCaseAlignment>; }
 export interface AuthoringRelationResult { source:string; predicate:string; target:string; }
 export interface AuthoringActivityResult { activityKey:string; }
 export interface AuthoringDuplicateResult { sourceKey:string; newKey:string; kind:'unit'|'resource'|'activity'|'objective'; }
@@ -206,6 +208,20 @@ export class P2LRNAuthoringWorkspace {
       setLocalizedText(objective,options,language);
       if(options.alignments!==undefined)objective.alignments=clone(options.alignments);
       return{objectiveKey:key};
+    });
+  }
+
+  addCaseAlignment(objectiveKey:string,input:CaseAlignmentInput):AuthoringCaseAlignmentResult{
+    return this.#edit((draft)=>{
+      const objective=entityByKey(draft,objectiveKey);
+      if(!draft.objectives.includes(objective))throw new ProjectError(`entity is not an objective: ${objectiveKey}`);
+      const alignment=createCaseAlignment(input);
+      objective.alignments??=[];
+      if(objective.alignments.some((item:any)=>item?.type==='Alignment'&&item?.targetType===alignment.targetType&&item?.targetUrl===alignment.targetUrl)){
+        throw new ProjectError(`CASE alignment already exists on objective ${objectiveKey}: ${alignment.targetUrl}`);
+      }
+      objective.alignments.push(clone(alignment));
+      return{objectiveKey,alignment};
     });
   }
 
