@@ -115,13 +115,20 @@ Capabilities must therefore remain explicit; creation support does not automatic
 
 ## 9. Canonical document reader integration
 
-The reference Creator may consume a mature external document reader through an adapter. The first reference adapter consumes AulaP2P `aulap2p.documento.extraido.v1` and its optional `aulap2p.documento.multimodal.v2` sequence.
+The reference Editor owns a neutral source-document ingestion layer through `@p2lrn/document-reader`.
 
 ```text
-AulaP2P Reader -> canonical document -> P2LRN source adapter -> Builder
+source document
+ -> @p2lrn/document-reader
+ -> canonical document + assets
+ -> Editor mapping
+ -> @p2lrn/toolkit/authoring
+ -> Builder
 ```
 
-This is an implementation integration, not a Core dependency. Local database/storage identity is stripped at the adapter boundary. See `AULAP2P-CREATOR-BRIDGE.md`.
+The document reader is not part of P2LRN Core and an independent editor may use a different parser as long as the resulting package conforms to P2LRN. The reference reader must not depend on LMS database IDs, private URLs, authentication or any specific host platform.
+
+The initial implementation is being extracted from mature Reader work historically developed in AulaP2P. That provenance does not create a runtime or architectural dependency. See `DOCUMENT-INGESTION.md`.
 
 ## Native renderer preference (modular runtime alpha 2)
 
