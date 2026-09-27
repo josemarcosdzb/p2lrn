@@ -30,6 +30,7 @@ function questionText(text:string,quizContext:boolean):{text:string;confidence:n
   const numbered=value.match(NUMBERED_QUESTION);if(numbered)return{text:numbered[1]!.trim(),confidence:0.97};
   if(/^¿[\s\S]+\?$/.test(value))return{text:value,confidence:quizContext?0.98:0.92};
   if(quizContext&&/\?$/.test(value)&&value.length<=1000)return{text:value,confidence:0.93};
+  if(quizContext&&/^\d{1,3}\s*[.)]\s+\S+/.test(value)&&value.length<=1000)return{text:value.replace(/^\d{1,3}\s*[.)]\s+/,'').trim(),confidence:0.9};
   return null;
 }
 function optionText(text:string):{label:string;text:string}|null{
