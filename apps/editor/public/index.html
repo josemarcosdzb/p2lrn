@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>P2LRN Editor</title>
+  <link rel="stylesheet" href="/assets/editor.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>P2LRN Editor</strong>
+      <span id="status">Cargando…</span>
+    </div>
+    <div class="actions">
+      <button id="preview" disabled>Previsualizar</button>
+      <button id="build" class="primary" disabled>Validar y exportar</button>
+    </div>
+  </header>
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-title">Estructura</div>
+      <button id="newProject" class="wide">+ Nuevo curso</button>
+      <div id="projectList"></div>
+      <div id="tree"></div>
+    </aside>
+    <section class="canvas">
+      <div id="empty" class="empty">
+        <h1>Crea contenido, no manifiestos</h1>
+        <p>Empieza con un curso vacío. El Editor gestionará IDs portables, perfiles, integridad y empaquetado automáticamente.</p>
+        <button id="emptyNew" class="primary">Crear curso</button>
+      </div>
+      <div id="editor" hidden>
+        <input id="courseTitle" class="title-input" aria-label="Título del curso">
+        <textarea id="courseDescription" placeholder="Descripción del curso"></textarea>
+        <div class="toolbar"><button id="addModule">+ Módulo</button><button id="addLesson">+ Lección</button></div>
+        <div class="notice">El editor de bloques, preguntas, componentes e importación documental se conectará sobre esta misma frontera pública de autoría.</div>
+      </div>
+    </section>
+    <aside class="properties">
+      <div class="sidebar-title">Propiedades</div>
+      <div id="summary">Selecciona un curso.</div>
+      <details>
+        <summary>Diagnóstico avanzado</summary>
+        <pre id="diagnostics"></pre>
+      </details>
+    </aside>
+  </main>
+  <dialog id="newDialog">
+    <form method="dialog" id="newForm">
+      <h2>Nuevo curso</h2>
+      <label>Título <input name="title" required value="Curso nuevo"></label>
+      <label>Idioma <input name="language" value="es" maxlength="16"></label>
+      <label>Descripción <textarea name="description"></textarea></label>
+      <div class="dialog-actions"><button value="cancel">Cancelar</button><button class="primary" value="default">Crear</button></div>
+    </form>
+  </dialog>
+  <dialog id="previewDialog" class="preview-dialog">
+    <div class="preview-head"><strong>Vista previa real</strong><button id="closePreview">Cerrar</button></div>
+    <p2lrn-player id="player"></p2lrn-player>
+  </dialog>
+  <script type="module" src="/player/p2lrn.esm.js"></script>
+  <script type="module" src="/assets/editor.js"></script>
+</body>
+</html>
