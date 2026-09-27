@@ -57,6 +57,10 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
       targetName:'Aplicar el concepto'
     });
     workspace.setActivity('act-quiz',{objectives:['objetivo-1']});
+    workspace.setXapiActivity('act-quiz',{
+      activityId:'https://learning.example.invalid/activities/quiz-1',
+      profileId:'https://w3id.org/xapi/adl/v1.0'
+    });
     workspace.setRendererPreference('act-quiz',{renderer:'https://p2lrn.org/renderer/questionnaire/rosco',rendererVersion:'1'});
     workspace.addRelation({source:'act-quiz',predicate:'https://p2lrn.org/relation/assesses',target:'objetivo-1'});
     workspace.setObjective('objetivo-1',{description:'Objetivo actualizado'});
@@ -79,6 +83,7 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     assert.equal(saved.activities.find((x)=>x.key==='act-enlace').title.es,'Enlace editado');
     assert.deepEqual(saved.units.find((x)=>x.key==='unidad-2').children,['act-component']);
     assert.deepEqual(saved.activities.find((x)=>x.key==='act-quiz').objectives,['objetivo-1']);
+    assert.equal(saved.activities.find((x)=>x.key==='act-quiz').extensions['https://p2lrn.org/profile/xapi'].activityId,'https://learning.example.invalid/activities/quiz-1');
     assert.equal(saved.activities.find((x)=>x.key==='act-quiz').extensions['https://p2lrn.org/ext/renderer-preference/1'].preferred,'https://p2lrn.org/renderer/questionnaire/rosco');
     assert.equal(saved.objectives.find((x)=>x.key==='objetivo-1').description.es,'Objetivo actualizado');
     assert.equal(saved.objectives.find((x)=>x.key==='objetivo-1').alignments[0].targetUrl,'https://case.example.invalid/uri/item-1');
@@ -92,6 +97,6 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     const reader=new P2LRNReader(out,{strictProfiles:true,validateProfilePayloads:true});
     assert.equal(reader.package.manifest.format,'P2LRN');
     const profiles=new Set(reader.package.manifest.profiles.map((p)=>p.id));
-    for(const profile of ['https://p2lrn.org/profile/web-content','https://p2lrn.org/profile/native-questionnaire','https://p2lrn.org/profile/native-component','https://p2lrn.org/profile/native-composite'])assert.ok(profiles.has(profile),profile);
+    for(const profile of ['https://p2lrn.org/profile/web-content','https://p2lrn.org/profile/native-questionnaire','https://p2lrn.org/profile/native-component','https://p2lrn.org/profile/native-composite','https://p2lrn.org/profile/xapi'])assert.ok(profiles.has(profile),profile);
   }finally{rmSync(dir,{recursive:true,force:true});}
 });
