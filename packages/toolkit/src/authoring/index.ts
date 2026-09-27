@@ -4,6 +4,7 @@ import {ProjectError} from '../core/errors.js';
 import {FORMAT_VERSION, canonicalIdentifier} from '../core/constants.js';
 import {createCaseAlignment, type CaseAlignmentInput} from '../core/case.js';
 import {XAPI_PROFILE,createXapiActivityDeclaration,type XapiActivityDeclarationInput} from '../core/xapi.js';
+import {ACCESSIBILITY_PROFILE,ACCESSIBILITY_PROFILE_VERSION,createAccessibilityMetadata,type AccessibilityMetadataInput} from '../core/accessibility.js';
 import {buildProject, type BuildResult} from '../creator/builder.js';
 import {openPackageAsProject, type OpenPackageProjectOptions} from '../creator/import-project.js';
 import {
@@ -49,6 +50,7 @@ export interface AuthoringObjectiveOptions { key:string; title:string; language?
 export interface AuthoringRelationOptions { source:string; predicate:string; target:string; extensions?:Record<string,unknown>; }
 export interface AuthoringActivityOptions { activityType?:string; resource?:string|null; resources?:string[]|null; objectives?:string[]|null; }
 export interface AuthoringRendererOptions { renderer:string|null; rendererVersion?:string|null; required?:boolean; }
+export interface AuthoringAccessibilityOptions { metadata:AccessibilityMetadataInput|null; role?:string|null; }
 export interface AuthoringDuplicateOptions { key:string; newKey:string; parent?:string; title?:string; language?:string; }
 export interface AuthoringRemoveOptions { key:string; cascadeOwnedResource?:boolean; }
 export interface AuthoringUnitResult { unitKey:string; parentKey:string; }
@@ -61,6 +63,7 @@ export interface AuthoringCaseAlignmentResult { objectiveKey:string; alignment:R
 export interface AuthoringRelationResult { source:string; predicate:string; target:string; }
 export interface AuthoringActivityResult { activityKey:string; }
 export interface AuthoringXapiActivityResult { activityKey:string; declaration:ReturnType<typeof createXapiActivityDeclaration>; }
+export interface AuthoringAccessibilityResult { resourceKey:string; representationKey:string; metadata?:ReturnType<typeof createAccessibilityMetadata>; }
 export interface AuthoringDuplicateResult { sourceKey:string; newKey:string; kind:'unit'|'resource'|'activity'|'objective'; }
 export interface AuthoringRemoveResult { removed:string[]; }
 
@@ -252,6 +255,35 @@ export class P2LRNAuthoringWorkspace {
       const declaration=createXapiActivityDeclaration(input);
       activity.extensions[XAPI_PROFILE]=clone(declaration);
       return{activityKey,declaration};
+    });
+  }
+
+  setRepresentationAccessibility(resourceKey:string,representationKey:string,options:AuthoringAccessibilityOptions):AuthoringAccessibilityResult{
+    return this.#edit((draft)=>{
+      const resource=entityByKey(draft,resourceKey);
+      if(!draft.resources.includes(resource))throw new ProjectError(`entity is not a resource: ${resourceKey}`);
+      const representation=resource.representations?.find((item:any)=>item.key===representationKey);
+      if(!representation)throw new ProjectError(`representation does not exist on ${resourceKey}: ${representationKey}`);
+      representation.extensions??={};
+      if(options.metadata===null){
+        delete representation.extensions[ACCESSIBILITY_PROFILE];
+        delete representation.accessibility;
+        if(options.role===null||options.role==='')representation.role='primary';
+        else if(options.role!==undefined)representation.role=String(options.role);
+        if(Object.keys(representation.extensions).length===0)delete representation.extensions;
+        return{resourceKey,representationKey};
+      }
+      const metadata=createAccessibilityMetadata(options.metadata);
+      representation.extensions[ACCESSIBILITY_PROFILE]=clone(metadata);
+      representation.accessibility=[...(metadata.accessibilityFeature??[])];
+      if(options.role!==undefined){
+        if(options.role===null||!String(options.role).trim())throw new ProjectError('accessibility representation role must not be empty');
+        representation.role=String(options.role).trim();
+      }
+      if(!draft.profiles.some((profile:any)=>canonicalIdentifier(profile.id)===ACCESSIBILITY_PROFILE)){
+        draft.profiles.push({id:ACCESSIBILITY_PROFILE,version:ACCESSIBILITY_PROFILE_VERSION,requirement:'optional'});
+      }
+      return{resourceKey,representationKey,metadata};
     });
   }
 
