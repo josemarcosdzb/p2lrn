@@ -34,3 +34,5 @@ export function inferredHeadingLevel(value:string):number|undefined{
   if(depth<=3&&text.length<=180&&!QUESTION.test(text)&&!OPTION.test(text))return Math.min(3,depth);
   return undefined;
 }
+
+export function isNumberedSourceLine(value:string):boolean{return /^\d{1,3}\s*[.)]\s+\S+/.test(String(value??'').replace(/\s+/g,' ').trim());}
