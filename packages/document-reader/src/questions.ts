@@ -54,15 +54,21 @@ export function observeQuestionSemantics(document:CanonicalDocument):CanonicalDo
     if(!['PARAGRAPH','LIST','OPTION','QUESTION','SOLUTION'].includes(block.type))continue;
     const solution=solutionText(block.text);
     if(solution&&activeQuestion){
-      block.type='SOLUTION';block.text=solution;block.source={format:block.source?.format??next.source.format,raw:semanticRaw(block,'SOLUTION',0.99)};changed+=1;activeQuestion=false;continue;
+      block.type='SOLUTION';
+      block.source={format:block.source?.format??next.source.format,raw:semanticRaw(block,'SOLUTION',0.99,{semanticText:solution})};
+      changed+=1;activeQuestion=false;continue;
     }
     const option=optionText(block.text);
     if(option&&activeQuestion){
-      block.type='OPTION';block.text=option.text;block.source={format:block.source?.format??next.source.format,raw:semanticRaw(block,'OPTION',0.98,{optionLabel:option.label})};changed+=1;continue;
+      block.type='OPTION';
+      block.source={format:block.source?.format??next.source.format,raw:semanticRaw(block,'OPTION',0.98,{semanticText:option.text,optionLabel:option.label})};
+      changed+=1;continue;
     }
     const question=questionText(block.text,quizContext);
     if(question){
-      block.type='QUESTION';block.text=question.text;block.source={format:block.source?.format??next.source.format,raw:semanticRaw(block,'QUESTION',question.confidence)};changed+=1;activeQuestion=true;continue;
+      block.type='QUESTION';
+      block.source={format:block.source?.format??next.source.format,raw:semanticRaw(block,'QUESTION',question.confidence,{semanticText:question.text})};
+      changed+=1;activeQuestion=true;continue;
     }
     if(activeQuestion&&block.type!=='OPTION')activeQuestion=false;
   }
@@ -70,9 +76,9 @@ export function observeQuestionSemantics(document:CanonicalDocument):CanonicalDo
   const blockById=new Map(blocks.map(b=>[b.id,b]));
   next.sequence.nodes=next.sequence.nodes.map(node=>{
     const block=blockById.get(node.id);if(!block)return node;
-    if(block.type==='QUESTION')return{...node,type:'QUESTION',text:block.text,data:{...(node.data??{}),sourceBlockType:'QUESTION'}};
-    if(block.type==='SOLUTION')return{...node,type:'SOLUTION',text:block.text,data:{...(node.data??{}),sourceBlockType:'SOLUTION'}};
-    if(block.type==='OPTION')return{...node,type:'PARAGRAPH',text:block.text,data:{...(node.data??{}),sourceBlockType:'OPTION',optionLabel:block.source?.raw?.optionLabel}};
+    if(block.type==='QUESTION')return{...node,type:'QUESTION',data:{...(node.data??{}),sourceBlockType:'QUESTION',semanticText:block.source?.raw?.semanticText}};
+    if(block.type==='SOLUTION')return{...node,type:'SOLUTION',data:{...(node.data??{}),sourceBlockType:'SOLUTION',semanticText:block.source?.raw?.semanticText}};
+    if(block.type==='OPTION')return{...node,type:'PARAGRAPH',data:{...(node.data??{}),sourceBlockType:'OPTION',semanticText:block.source?.raw?.semanticText,optionLabel:block.source?.raw?.optionLabel}};
     return node;
   });
   next.warnings=[...next.warnings,{path:'semantics.questions',message:`Detected ${blocks.filter(b=>b.type==='QUESTION').length} explicit question block(s); option/solution evidence remains source-traceable.`,level:'INFO'}];
@@ -96,7 +102,7 @@ export function splitLessonAuthoringSegments(document:CanonicalDocument,lesson:O
     const questionBlock=item.sourceBlockId?blocks.get(item.sourceBlockId):undefined;
     const question:DetectedQuestion={
       id:`question-${item.sourceBlockId??item.id}`,
-      prompt:item.text||questionBlock?.text||item.title||'Pregunta',
+      prompt:String(questionBlock?.source?.raw?.semanticText??item.text??questionBlock?.text??item.title??'Pregunta'),
       sourceBlockId:item.sourceBlockId??item.id,
       sourceBlockIds:[item.sourceBlockId??item.id],
       options:[],
@@ -109,11 +115,11 @@ export function splitLessonAuthoringSegments(document:CanonicalDocument,lesson:O
       const block=candidate.sourceBlockId?blocks.get(candidate.sourceBlockId):undefined;
       const sourceType=block?.type;
       if(sourceType==='OPTION'){
-        question.options.push({label:typeof block.source?.raw?.optionLabel==='string'?block.source.raw.optionLabel:undefined,text:block.text,sourceBlockId:block.id});
+        question.options.push({label:typeof block.source?.raw?.optionLabel==='string'?block.source.raw.optionLabel:undefined,text:String(block.source?.raw?.semanticText??block.text),sourceBlockId:block.id});
         question.sourceBlockIds.push(block.id);continue;
       }
       if(candidate.kind==='SOLUTION'||sourceType==='SOLUTION'){
-        question.solution=candidate.text||block?.text;
+        question.solution=String(block?.source?.raw?.semanticText??candidate.text??block?.text??'')||undefined;
         question.solutionSourceBlockId=block?.id??candidate.sourceBlockId;
         if(question.solutionSourceBlockId)question.sourceBlockIds.push(question.solutionSourceBlockId);
         continue;
