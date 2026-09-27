@@ -81,9 +81,6 @@ export function main(argv = process.argv.slice(2)) {
             r = buildProject(req(p.positional[1], 'project'), req(p.positional[2], 'output'), flag(p, 'strict-profiles'));
         else if (cmd === 'convert')
             r = convertExternalPackage(req(p.positional[1], 'source'), req(p.positional[2], 'output'), opt(p, 'package-root'));
-                    r = ingestAulaP2PReader(req(p.positional[1], 'reader_json'), req(p.positional[2], 'output'), { sourceFile: opt(p, 'source-file'), assetRoot: opt(p, 'asset-root'), language: opt(p, 'language'), strictProfiles: flag(p, 'strict-profiles') });
-                    r = ingestAulaP2PCourse(req(p.positional[1], 'course_json'), req(p.positional[2], 'output'), { assetRoot: opt(p, 'asset-root'), language: opt(p, 'language', 'es'), strictProfiles: flag(p, 'strict-profiles') });
-                    r = extractAulaP2PCourse(req(p.positional[1], 'package'), req(p.positional[2], 'output_json'));
         else if (cmd === 'show') {
             const l = loadProject(req(p.positional[1], 'project')), pr = l.project;
             r = { project: l.path, projectId: pr.projectId, targetFormatVersion: pr.targetFormatVersion, course: pr.course, counts: { units: pr.units.length, resources: pr.resources.length, activities: pr.activities.length, objectives: pr.objectives.length, relations: pr.relations.length } };
@@ -100,3 +97,4 @@ export function main(argv = process.argv.slice(2)) {
 }
 if (isMain(import.meta.url))
     main();
+
