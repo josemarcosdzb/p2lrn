@@ -33,8 +33,14 @@
       <div id="editor" hidden>
         <input id="courseTitle" class="title-input" aria-label="Título del curso">
         <textarea id="courseDescription" placeholder="Descripción del curso"></textarea>
-        <div class="toolbar"><button id="addModule">+ Módulo</button><button id="addLesson">+ Lección</button></div>
-        <div class="notice">El editor de bloques, preguntas, componentes e importación documental se conectará sobre esta misma frontera pública de autoría.</div>
+        <div class="toolbar">
+          <button id="addModule">+ Módulo</button>
+          <button id="addLesson">+ Lección</button>
+          <button id="addQuiz">+ Cuestionario</button>
+          <button id="inspectDocument">Importar documento</button>
+          <input id="documentFile" type="file" hidden accept=".txt,.md,.markdown,.docx,.pptx,.pdf,.epub,.html,.htm,.odt,.rtf,.tex,.xml,.yaml,.yml,.json">
+        </div>
+        <div class="notice">Modo normal: estructura, contenido y actividades. IDs portables, manifests, hashes y profiles permanecen automáticos y sólo aparecen en diagnóstico avanzado.</div>
       </div>
     </section>
     <aside class="properties">
@@ -54,6 +60,47 @@
       <label>Descripción <textarea name="description"></textarea></label>
       <div class="dialog-actions"><button value="cancel">Cancelar</button><button class="primary" value="default">Crear</button></div>
     </form>
+  </dialog>
+  <dialog id="quizDialog" class="form-dialog">
+    <form method="dialog" id="quizForm">
+      <h2>Nuevo cuestionario</h2>
+      <label>Título <input name="title" value="Cuestionario" required></label>
+      <label>Tipo de pregunta
+        <select name="type" id="questionType">
+          <option value="single-choice">Elección única</option>
+          <option value="multiple-choice">Elección múltiple</option>
+          <option value="true-false">Verdadero / falso</option>
+          <option value="text">Respuesta de texto</option>
+          <option value="fill-blanks">Rellenar huecos</option>
+          <option value="ordering">Ordenar</option>
+          <option value="matching">Emparejar</option>
+        </select>
+      </label>
+      <label>Pregunta <textarea name="prompt" required>Pregunta de ejemplo</textarea></label>
+      <label>Opciones / respuestas <textarea name="items" id="questionItems">Opción A
+Opción B</textarea></label>
+      <label>Solución <input name="solution" id="questionSolution" value="1"></label>
+      <small id="questionHelp">Una opción por línea; indica el número correcto.</small>
+      <label>Presentación
+        <select name="renderer">
+          <option value="">Automática / estándar</option>
+          <option value="https://p2lrn.org/renderer/questionnaire/standard">Estándar</option>
+          <option value="https://p2lrn.org/renderer/questionnaire/memory">Memoria 2D</option>
+          <option value="https://p2lrn.org/renderer/questionnaire/matching">Emparejar 2D</option>
+          <option value="https://p2lrn.org/renderer/questionnaire/ordering">Ordenar 2D</option>
+          <option value="https://p2lrn.org/renderer/questionnaire/true-false">Verdadero/Falso 2D</option>
+          <option value="https://p2lrn.org/renderer/questionnaire/word-search">Sopa de letras 2D</option>
+          <option value="https://p2lrn.org/renderer/questionnaire/crossword">Crucigrama 2D</option>
+          <option value="https://p2lrn.org/renderer/questionnaire/rosco">Rosco 2D</option>
+          <option value="https://p2lrn.org/renderer/questionnaire/3d-order-match">3D WebGL2</option>
+        </select>
+      </label>
+      <div class="dialog-actions"><button value="cancel">Cancelar</button><button class="primary" value="default">Crear cuestionario</button></div>
+    </form>
+  </dialog>
+  <dialog id="documentDialog" class="document-dialog">
+    <div class="preview-head"><strong>Lectura del documento</strong><button id="closeDocument">Cerrar</button></div>
+    <div id="documentResult"></div>
   </dialog>
   <dialog id="previewDialog" class="preview-dialog">
     <div class="preview-head"><strong>Vista previa real</strong><button id="closePreview">Cerrar</button></div>
