@@ -49,6 +49,13 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     workspace.addComponent({source:component,key:'component',parent:'unidad'});
 
     workspace.addObjective({key:'objetivo-1',title:'Aplicar el concepto',description:'Objetivo editable desde Studio'});
+    workspace.addCaseAlignment('objetivo-1',{
+      targetUrl:'https://case.example.invalid/uri/item-1',
+      targetType:'CFItem',
+      targetCode:'item-1',
+      targetFramework:'Framework de prueba',
+      targetName:'Aplicar el concepto'
+    });
     workspace.setActivity('act-quiz',{objectives:['objetivo-1']});
     workspace.setRendererPreference('act-quiz',{renderer:'https://p2lrn.org/renderer/questionnaire/rosco',rendererVersion:'1'});
     workspace.addRelation({source:'act-quiz',predicate:'https://p2lrn.org/relation/assesses',target:'objetivo-1'});
@@ -74,6 +81,8 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     assert.deepEqual(saved.activities.find((x)=>x.key==='act-quiz').objectives,['objetivo-1']);
     assert.equal(saved.activities.find((x)=>x.key==='act-quiz').extensions['https://p2lrn.org/ext/renderer-preference/1'].preferred,'https://p2lrn.org/renderer/questionnaire/rosco');
     assert.equal(saved.objectives.find((x)=>x.key==='objetivo-1').description.es,'Objetivo actualizado');
+    assert.equal(saved.objectives.find((x)=>x.key==='objetivo-1').alignments[0].targetUrl,'https://case.example.invalid/uri/item-1');
+    assert.equal(saved.objectives.find((x)=>x.key==='objetivo-1').alignments[0].extensions['https://p2lrn.org/profile/case'].version,'1.1');
     assert.equal(saved.objectives.find((x)=>x.key==='objetivo-2').title.es,'Objetivo duplicado');
     assert.equal(saved.objectives.find((x)=>x.key==='objetivo-2').portableId,undefined);
     assert.equal(saved.activities.some((x)=>x.key==='act-enlace-copia'),false);
