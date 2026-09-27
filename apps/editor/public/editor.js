@@ -32,6 +32,80 @@ function scheduleCourseSave(){clearTimeout(saveTimer);saveTimer=setTimeout(async
 $('courseTitle').addEventListener('input',scheduleCourseSave);$('courseDescription').addEventListener('input',scheduleCourseSave);
 async function addUnit(role){if(!state.projectId)return;const title=role==='module'?'Nuevo módulo':'Nueva lección';const key=(role==='module'?'module-':'lesson-')+crypto.randomUUID().slice(0,8);const data=await api(`/api/projects/${encodeURIComponent(state.projectId)}/units`,{method:'POST',body:JSON.stringify({key,title,role,parent:'course'})});state.project=data.project;state.summary=data.summary;render();}
 $('addModule').onclick=()=>addUnit('module');$('addLesson').onclick=()=>addUnit('lesson');
+
+const questionHelp={
+  'single-choice':['Una opción por línea; indica el número correcto.','Opción A\nOpción B','1'],
+  'multiple-choice':['Una opción por línea; indica números correctos separados por comas.','Opción A\nOpción B\nOpción C','1,3'],
+  'true-false':['La solución debe ser true o false.','Verdadero\nFalso','true'],
+  'text':['Una respuesta aceptada por línea.','respuesta correcta\nalternativa',''],
+  'fill-blanks':['Una línea por hueco: id=respuesta|alternativa.','hueco1=respuesta|alternativa',''],
+  'ordering':['Un elemento por línea en el orden correcto.','Primero\nSegundo\nTercero',''],
+  'matching':['Una pareja por línea: izquierda => derecha.','Madrid => España\nParís => Francia','']
+};
+function refreshQuestionHelp(){const [help,items,solution]=questionHelp[$('questionType').value];$('questionHelp').textContent=help;$('questionItems').value=items;$('questionSolution').value=solution;}
+$('questionType').addEventListener('change',refreshQuestionHelp);
+$('addQuiz').onclick=()=>{refreshQuestionHelp();$('quizDialog').showModal();};
+function qtoken(prefix,index){return prefix+String(index+1);}
+function questionFromForm(fd){
+  const type=String(fd.get('type')),prompt=String(fd.get('prompt')||'').trim(),raw=String(fd.get('items')||'');
+  const lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),solution=String(fd.get('solution')||'').trim();
+  const base={id:'q1',type,prompt,points:1,scoring:'all-or-nothing',required:true};
+  if(type==='single-choice'||type==='multiple-choice'||type==='true-false'){
+    const labels=type==='true-false'?['Verdadero','Falso']:lines;
+    if(labels.length<2)throw new Error('La pregunta necesita al menos dos opciones.');
+    const choices=labels.map((text,i)=>({id:qtoken('c',i),text}));
+    let indexes;
+    if(type==='true-false')indexes=[/^(?:true|verdadero|1)$/i.test(solution)?0:1];
+    else indexes=solution.split(',').map(x=>Number(x.trim())-1).filter(x=>Number.isInteger(x)&&x>=0&&x<choices.length);
+    if(!indexes.length)throw new Error('Indica al menos una respuesta correcta.');
+    return{...base,choices,solution:{choiceIds:[...new Set(indexes.map(i=>choices[i].id))]}};
+  }
+  if(type==='text'){
+    if(!lines.length)throw new Error('Añade al menos una respuesta aceptada.');
+    return{...base,solution:{acceptedAnswers:lines}};
+  }
+  if(type==='fill-blanks'){
+    const answers={};const blanks=lines.map((line,i)=>{const [idRaw,valuesRaw]=line.split('=',2),id=(idRaw||qtoken('blank',i)).trim(),values=String(valuesRaw||'').split('|').map(x=>x.trim()).filter(Boolean);if(!values.length)throw new Error('Cada hueco necesita una respuesta.');answers[id]=values;return{id};});
+    if(!blanks.length)throw new Error('Añade al menos un hueco.');
+    return{...base,body:prompt,blanks,solution:{answers}};
+  }
+  if(type==='ordering'){
+    if(lines.length<2)throw new Error('Añade al menos dos elementos.');
+    const items=lines.map((text,i)=>({id:qtoken('item',i),text}));
+    return{...base,items,solution:{order:items.map(x=>x.id)}};
+  }
+  if(type==='matching'){
+    const pairs=lines.map((line,i)=>{const parts=line.split(/\s*=>\s*/,2);if(parts.length!==2||!parts[0]||!parts[1])throw new Error('Usa el formato izquierda => derecha.');return{left:{id:qtoken('l',i),text:parts[0]},right:{id:qtoken('r',i),text:parts[1]}};});
+    if(!pairs.length)throw new Error('Añade al menos una pareja.');
+    return{...base,left:pairs.map(x=>x.left),right:pairs.map(x=>x.right),solution:{pairs:pairs.map(x=>({left:x.left.id,right:x.right.id}))}};
+  }
+  throw new Error('Tipo de pregunta no soportado.');
+}
+$('quizForm').addEventListener('submit',async e=>{
+  if(e.submitter?.value==='cancel')return;e.preventDefault();
+  try{
+    const fd=new FormData(e.currentTarget),title=String(fd.get('title')||'Cuestionario').trim(),renderer=String(fd.get('renderer')||'');
+    const question=questionFromForm(fd);
+    const data={schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title,language:state.project?.course?.languages?.[0]||'es',grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',showFeedback:'after-submit'},questions:[question]};
+    const result=await api(`/api/projects/${encodeURIComponent(state.projectId)}/questionnaires`,{method:'POST',body:JSON.stringify({title,language:data.language,renderer:renderer||undefined,data})});
+    state.project=result.project;state.summary=result.summary;$('quizDialog').close();render();$('status').textContent='Cuestionario creado y validado.';
+  }catch(error){$('status').textContent=error.message;}
+});
+
+$('inspectDocument').onclick=()=>$('documentFile').click();
+$('documentFile').addEventListener('change',async()=>{
+  const file=$('documentFile').files?.[0];if(!file)return;
+  $('status').textContent='Leyendo '+file.name+'…';
+  try{
+    const r=await fetch('/api/documents/inspect?name='+encodeURIComponent(file.name),{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream'},body:file});
+    const data=await r.json();if(!r.ok)throw new Error(data.error||r.statusText);
+    const modules=data.outline.modules||[],lessonCount=modules.reduce((n,m)=>n+(m.lessons?.length||0),0),contentCount=modules.reduce((n,m)=>n+(m.lessons||[]).reduce((s,l)=>s+(l.content?.length||0),0),0);
+    $('documentResult').innerHTML=`<h2>${escapeHtml(file.name)}</h2><div class="metric-grid"><div><b>${modules.length}</b><span>módulos</span></div><div><b>${lessonCount}</b><span>lecciones</span></div><div><b>${contentCount}</b><span>elementos</span></div><div><b>${data.assetCount}</b><span>assets</span></div></div><div class="outline-preview">${modules.map(m=>`<section><h3>${escapeHtml(m.title)}</h3>${(m.lessons||[]).map(l=>`<div><b>${escapeHtml(l.title)}</b><small>${l.content?.length||0} elementos</small></div>`).join('')}</section>`).join('')}</div><p class="muted">Inspección sin modificar el curso. La confirmación de importación se habilitará cuando DOCX/PPTX/PDF alcancen paridad con el corpus del Reader.</p>`;
+    $('documentDialog').showModal();$('status').textContent='Documento leído sin modificar el curso.';
+  }catch(error){$('status').textContent=error.message;}
+  finally{$('documentFile').value='';}
+});
+$('closeDocument').onclick=()=>$('documentDialog').close();
 $('build').onclick=async()=>{const data=await api(`/api/projects/${encodeURIComponent(state.projectId)}/build`,{method:'POST',body:'{}'});$('status').textContent='Paquete válido: '+data.result.contentRoot;};
 async function preview(){const data=await api(`/api/projects/${encodeURIComponent(state.projectId)}/build`,{method:'POST',body:'{}'});const player=$('player');player.setAttribute('src',data.packageUrl+'?v='+Date.now());$('previewDialog').showModal();await player.reload?.();}
 $('preview').onclick=preview;$('closePreview').onclick=()=>$('previewDialog').close();
