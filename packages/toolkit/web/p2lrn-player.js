@@ -12,6 +12,7 @@ import {createStaticResourceBridge, installP2LRNServiceWorker} from './static-re
 import {representationPayload} from './package-member.js';
 import {configureRuntimeHost, getRuntimeHostConfig} from './runtime-host-config.js';
 import {canonicalIdentifier, canonicalizeIdentifiers, identifierIs} from './identifiers.js';
+import {XAPI_PROFILE,normalizeXapiActivityDeclaration} from './xapi-intent.js';
 
 export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.1';
 export const P2LRN_TOOLKIT_VERSION = '0.5.0-alpha.1';
@@ -568,6 +569,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       }
 
       const rep = candidate.representation;
+      const xapi = normalizeXapiActivityDeclaration(entity.extensions?.[XAPI_PROFILE] ?? null);
       const context = {
         packageId: this._package.manifest.packageId,
         contentRoot: this._package.manifest.integrity.contentRoot,
@@ -575,6 +577,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         resourceId: resource.id,
         representationId: rep.id,
         rendererId: candidate.descriptor.id,
+        ...(xapi ? {xapi} : {}),
       };
       try {
         const module = await defaultRendererRegistry.load(candidate, context);
