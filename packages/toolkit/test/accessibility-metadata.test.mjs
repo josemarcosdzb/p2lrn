@@ -26,6 +26,8 @@ test('accessibility metadata rejects empty values and control characters',()=>{
   assert.throws(()=>createAccessibilityMetadata({accessibilityFeature:['']}),/must not be empty/);
   assert.throws(()=>createAccessibilityMetadata({accessibilitySummary:'   '}),/must not be empty/);
   assert.throws(()=>createAccessibilityMetadata({accessMode:['textual\u0000']}),/control characters/);
+  assert.throws(()=>createAccessibilityMetadata({accessibilityFeatures:['alternativeText']}),/Unsupported accessibility metadata field: accessibilityFeatures/);
+  assert.throws(()=>validateAccessibilityMetadata({version:'1',accessibilityFeature:['alternativeText'],wcag:'AA'}),/Unsupported accessibility metadata field: wcag/);
 });
 
 test('accessModeSufficient groups are order-insensitive for duplicate elimination',()=>{
