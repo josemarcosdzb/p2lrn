@@ -34,7 +34,7 @@ function ratioOk(name:string,compressed:number,uncompressed:number,limit:number)
 }
 
 export async function readZipEntries(bytes:Uint8Array,options:ZipReadLimits={}):Promise<Map<string,Uint8Array>>{
-  const limits={...DEFAULTS,...options};
+  const limits={...DEFAULTS};for(const [key,value] of Object.entries(options))if(value!=null)(limits as Record<string,number>)[key]=Number(value);
   let zip:JSZip;
   try{zip=await JSZip.loadAsync(bytes,{checkCRC32:false});}catch{throw new Error('ZIP cannot be opened or is damaged.');}
   const entries=(Object.values(zip.files) as JSZipEntry[]).filter(e=>!e.dir&&!e.name.includes('__MACOSX/'));
