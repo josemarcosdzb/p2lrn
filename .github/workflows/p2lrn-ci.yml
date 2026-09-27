@@ -1,0 +1,58 @@
+name: P2LRN product CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'work/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Toolkit, Player and generated artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: packages/toolkit/package.json
+
+      - name: Install toolkit build dependencies
+        working-directory: packages/toolkit
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Verify generated Creator schema
+        working-directory: packages/toolkit
+        run: npm run check:creator-schema
+
+      - name: Build and test toolkit
+        working-directory: packages/toolkit
+        run: npm test
+
+      - name: Rebuild Player distribution from canonical runtime
+        run: node packages/toolkit/dist/tools/build-web-sdk.js --root packages/toolkit --output packages/player/dist
+
+      - name: Test Player distribution
+        working-directory: packages/player
+        env:
+          PATH: ${{ github.workspace }}/packages/toolkit/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        run: node --test test/*.test.mjs
+
+      - name: Verify generated files are committed and reproducible
+        run: git diff --exit-code -- packages/toolkit/src/core/creator-project-schema.ts packages/player/dist
