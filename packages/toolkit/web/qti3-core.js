@@ -95,7 +95,7 @@ export function parseQti3Item(xml){
   const namespace=String(valueAttr(root,'xmlns')??'');
   if(namespace&&!/imsqtiasi_v3p0/i.test(namespace))fail('P2LRN_QTI_VERSION_UNSUPPORTED',`QTI delivery currently supports QTI 3 assessment items; namespace is ${namespace}.`);
   const identifier=String(valueAttr(root,'identifier')??'').trim();
-  const title=String(valueAttr(root,'title')??identifier||'QTI item').trim();
+  const title=String(valueAttr(root,'title')??identifier??'QTI item').trim()||'QTI item';
   if(!identifier)fail('P2LRN_QTI_ITEM_INVALID','QTI assessment item requires identifier.');
   if(bool(valueAttr(root,'adaptive'),false))fail('P2LRN_QTI_ADAPTIVE_UNSUPPORTED','Adaptive QTI items are not yet supported by the P2LRN QTI 3 runtime.');
 
@@ -172,5 +172,7 @@ export function sanitizeQti3State(value,item){
   const response=item.interaction.type==='choice'
     ?(Array.isArray(raw.response)?raw.response.filter(v=>typeof v==='string'):[])
     :typeof raw.response==='string'?raw.response:'';
-  return{version:QTI3_STATE_VERSION,response,completed:Boolean(raw.completed),score:raw.score&&typeof raw.score==='object'?JSON.parse(JSON.stringify(raw.score)):null};
+  const choiceIds=new Set(item.interaction.type==='choice'?item.interaction.choices.map(x=>x.id):[]);
+  const choiceOrder=Array.isArray(raw.choiceOrder)&&raw.choiceOrder.length===choiceIds.size&&new Set(raw.choiceOrder).size===choiceIds.size&&raw.choiceOrder.every(id=>choiceIds.has(id))?[...raw.choiceOrder]:null;
+  return{version:QTI3_STATE_VERSION,response,choiceOrder,completed:Boolean(raw.completed),score:raw.score&&typeof raw.score==='object'?JSON.parse(JSON.stringify(raw.score)):null};
 }
