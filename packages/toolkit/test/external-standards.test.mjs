@@ -164,3 +164,41 @@ test('Common Cartridge rejects missing files, unknown item references and unknow
     assert.throws(()=>convertExternalPackage(src,out),pattern);
   }
 }));
+
+
+test('Common Cartridge Basic LTI keeps target Link URL and requires local LTI 1.3 rebind',()=>withTemp('p2lrn-cc-lti-',dir=>{
+  const {report,reader}=convert(dir,'tool.imscc',[
+    ['imsmanifest.xml',`<?xml version="1.0"?>
+<manifest identifier="cc-lti" xmlns="http://www.imsglobal.org/xsd/imsccv1p3/imscp_v1p1">
+  <metadata><schema>IMS Common Cartridge</schema><schemaversion>1.3.0</schemaversion></metadata>
+  <organizations default="org"><organization identifier="org"><title>Tools</title>
+    <item identifier="tool-item" identifierref="tool-resource"><title>External Tool</title></item>
+  </organization></organizations>
+  <resources>
+    <resource identifier="tool-resource" type="imsbasiclti_xmlv1p0">
+      <file href="lti/tool.xml"/>
+    </resource>
+  </resources>
+</manifest>`],
+    ['lti/tool.xml',`<cartridge_basiclti_link xmlns="http://www.imsglobal.org/xsd/imslticc_v1p0" xmlns:blti="http://www.imsglobal.org/xsd/imsbasiclti_v1p0">
+      <blti:title>Legacy Tool</blti:title>
+      <blti:description>Imported Basic LTI link</blti:description>
+      <blti:launch_url>https://tool.example.invalid/resource/42</blti:launch_url>
+    </cartridge_basiclti_link>`]
+  ]);
+  assert.equal(report.detectedFormat,'common-cartridge');
+  const resource=reader.package.graph.entities.find(x=>x.type==='resource'&&x.representations?.some(r=>r.profile==='https://p2lrn.org/profile/lti'));
+  assert.ok(resource);
+  const rep=resource.representations.find(r=>r.profile==='https://p2lrn.org/profile/lti');
+  assert.equal(rep.role,'primary');
+  assert.equal(rep.location.type,'remote');
+  assert.equal(rep.location.href,'https://tool.example.invalid/resource/42');
+  const meta=rep.extensions['https://p2lrn.org/profile/lti'];
+  assert.equal(meta.sourceStandard,'IMS Basic LTI');
+  assert.equal(meta.sourceVersion,'1.0');
+  assert.equal(meta.targetLinkUri,'https://tool.example.invalid/resource/42');
+  assert.equal(meta.rebindRequired,true);
+  assert.equal(meta.migrationTarget,'LTI 1.3');
+  assert.equal(JSON.stringify(meta).includes('secret'),false);
+  assert.equal(JSON.stringify(meta).includes('consumer_key'),false);
+}));
