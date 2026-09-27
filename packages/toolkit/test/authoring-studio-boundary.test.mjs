@@ -113,6 +113,6 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     const reader=new P2LRNReader(out,{strictProfiles:true,validateProfilePayloads:true});
     assert.equal(reader.package.manifest.format,'P2LRN');
     const profiles=new Set(reader.package.manifest.profiles.map((p)=>p.id));
-    for(const profile of ['https://p2lrn.org/profile/web-content','https://p2lrn.org/profile/native-questionnaire','https://p2lrn.org/profile/native-component','https://p2lrn.org/profile/native-composite','https://p2lrn.org/profile/xapi','https://p2lrn.org/profile/accessibility'])assert.ok(profiles.has(profile),profile);
+    for(const profile of ['https://p2lrn.org/profile/web-content','https://p2lrn.org/profile/native-questionnaire','https://p2lrn.org/profile/native-component','https://p2lrn.org/profile/native-composite','https://p2lrn.org/profile/xapi','https://p2lrn.org/profile/accessibility','https://p2lrn.org/profile/case'])assert.ok(profiles.has(profile),profile);
   }finally{rmSync(dir,{recursive:true,force:true});}
 });

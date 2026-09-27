@@ -29,7 +29,7 @@ export function createXapiActivityDeclaration(input:XapiActivityDeclarationInput
   if(input.verbs){
     const allowedVerbs=new Set(['initialized','answered','scored','completed']);
     for(const key of Object.keys(input.verbs as Record<string,unknown>))if(!allowedVerbs.has(key))throw new TypeError(`Unsupported xAPI verb override key: ${key}`);
-    const verbs:Record<string,string>={};
+    const verbs:NonNullable<P2LRNXapiActivityDeclaration['verbs']>={};
     for(const key of ['initialized','answered','scored','completed'] as const){
       const value=input.verbs[key];if(value!=null)verbs[key]=iri(value,`xAPI verb ${key}`);
     }
@@ -43,6 +43,7 @@ export function validateXapiActivityDeclaration(value:unknown):P2LRNXapiActivity
   const allowed=new Set(['version','activityId','profileId','verbs']);
   for(const key of Object.keys(input))if(!allowed.has(key))throw new TypeError(`Unsupported xAPI activity declaration field: ${key}`);
   if(input.version!==XAPI_VERSION)throw new TypeError(`xAPI activity declaration version must be ${XAPI_VERSION}.`);
+  if(input.verbs!==undefined&&(!input.verbs||typeof input.verbs!=='object'||Array.isArray(input.verbs)))throw new TypeError('xAPI verbs must be an object.');
   return createXapiActivityDeclaration({
     activityId:String(input.activityId??''),
     profileId:input.profileId==null?undefined:String(input.profileId),

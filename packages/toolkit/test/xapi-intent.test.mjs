@@ -28,6 +28,7 @@ test('xAPI declaration accepts absolute IRIs and rejects credentials/relative id
   assert.throws(()=>createXapiActivityDeclaration({activityId:'https://user:secret@example.invalid/a'}),/embedded credentials/);
   assert.throws(()=>createXapiActivityDeclaration({activityId:'https://learning.example/a',endpoint:'https://lrs.example/xapi/'}),/Unsupported xAPI activity declaration field: endpoint/);
   assert.throws(()=>validateXapiActivityDeclaration({version:'2.0',activityId:'https://learning.example/a',accessToken:'secret'}),/Unsupported xAPI activity declaration field: accessToken/);
+  assert.throws(()=>validateXapiActivityDeclaration({version:'2.0',activityId:'https://learning.example/a',verbs:'completed'}),/xAPI verbs must be an object/);
 });
 
 test('runtime initialized event maps to an actor-free xAPI statement intent',()=>{

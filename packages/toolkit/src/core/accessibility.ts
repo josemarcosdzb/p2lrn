@@ -43,7 +43,7 @@ function sufficient(value:unknown):readonly (readonly string[])[]|undefined{
     if(!normalized?.length)throw new TypeError(`accessModeSufficient[${index}] must not be empty.`);
     return normalized;
   });
-  const unique=[],seen=new Set<string>();
+  const unique:Array<readonly string[]>=[],seen=new Set<string>();
   for(const group of groups){const key=[...group].sort().join('|');if(!seen.has(key)){seen.add(key);unique.push(group);}}
   return unique.length?Object.freeze(unique):undefined;
 }
