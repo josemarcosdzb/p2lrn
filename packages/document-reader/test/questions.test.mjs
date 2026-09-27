@@ -34,8 +34,15 @@ test('explicit numbered question, options and answer become a native single-choi
   ].join('\n'));
   const blocks=result.document.blocks;
   assert.equal(blocks.find(x=>x.text.includes('Qué componente'))?.type,'QUESTION');
-  assert.deepEqual(blocks.filter(x=>x.type==='OPTION').map(x=>x.text),['CPU','RAM']);
-  assert.equal(blocks.find(x=>x.type==='SOLUTION')?.text,'A');
+  assert.deepEqual(blocks.filter(x=>x.type==='OPTION').map(x=>x.text),['A) CPU','B) RAM']);
+  assert.deepEqual(blocks.filter(x=>x.type==='OPTION').map(x=>x.source?.raw?.semanticText),['CPU','RAM']);
+  assert.equal(blocks.find(x=>x.type==='SOLUTION')?.text,'Respuesta: A');
+  assert.equal(blocks.find(x=>x.type==='SOLUTION')?.source?.raw?.semanticText,'A');
+  for(const block of blocks){
+    const inventory=result.document.inventory.nodes.find(x=>x.sourceBlockId===block.id);
+    if(!inventory)continue;
+    assert.match(inventory.contentHash,/^[0-9a-f]{64}$/);
+  }
 
   const lesson=outline.modules[0].lessons[0];
   const segments=splitLessonAuthoringSegments(result.document,lesson);
