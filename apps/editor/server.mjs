@@ -1,5 +1,5 @@
 import {createServer} from 'node:http';
-import {existsSync, mkdirSync, readFileSync, readdirSync, statSync} from 'node:fs';
+import {cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync} from 'node:fs';
 import {basename, extname, join, resolve, sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
@@ -74,6 +74,126 @@ function serveStatic(res,root,relative,cache='no-store'){
 }
 function errorResponse(res,error){json(res,400,{error:error instanceof Error?error.message:String(error)});}
 
+function htmlEscape(value){
+  return String(value??'').replace(/[&<>"']/g,(ch)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function safeAssetName(reference){
+  const raw=basename(String(reference?.name||reference?.id||'asset'));
+  const clean=raw.replace(/[^A-Za-z0-9._-]+/g,'-').replace(/^-+|-+$/g,'');
+  return clean||'asset';
+}
+function renderTable(table){
+  if(!table)return '';
+  const headers=(table.columns||[]).map(x=>'<th>'+htmlEscape(x)+'</th>').join('');
+  const rows=(table.rows||[]).map(row=>'<tr>'+(table.columns||[]).map(col=>'<td>'+htmlEscape(row?.[col]??'')+'</td>').join('')+'</tr>').join('');
+  return '<table><thead><tr>'+headers+'</tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function renderLessonHtml(document,lesson,assets,webRoot){
+  const blockById=new Map(document.blocks.map(b=>[b.id,b]));
+  const tableById=new Map(document.tables.map(t=>[t.id,t]));
+  const assetById=new Map(assets.map(a=>[a.reference.id,a]));
+  const copied=new Map();
+  const body=[];
+  let listOpen=false;
+  const closeList=()=>{if(listOpen){body.push('</ul>');listOpen=false;}};
+  for(const item of lesson.content||[]){
+    const block=item.sourceBlockId?blockById.get(item.sourceBlockId):null;
+    if(item.kind==='TABLE'){
+      closeList();
+      const tableId=item.sourceTableId||block?.source?.raw?.tableId;
+      body.push(renderTable(tableById.get(String(tableId||''))));
+      continue;
+    }
+    if(item.kind==='IMAGE'){
+      closeList();
+      const reference=block?.asset;
+      const materialized=reference?assetById.get(reference.id):null;
+      if(materialized){
+        let relative=copied.get(reference.id);
+        if(!relative){
+          const name=safeAssetName(reference),target=join(webRoot,'assets',name);
+          mkdirSync(join(webRoot,'assets'),{recursive:true});
+          writeFileSync(target,materialized.bytes);
+          relative='assets/'+name;copied.set(reference.id,relative);
+        }
+        const alt=htmlEscape(block?.text||reference.name||'');
+        body.push('<figure data-source-block-id="'+htmlEscape(block?.id||'')+'"><img src="'+htmlEscape(relative)+'" alt="'+alt+'"></figure>');
+      }
+      continue;
+    }
+    if(block?.type==='LIST'){
+      if(!listOpen){body.push('<ul>');listOpen=true;}
+      body.push('<li data-source-block-id="'+htmlEscape(block.id)+'">'+htmlEscape(block.text)+'</li>');
+      continue;
+    }
+    closeList();
+    if(item.kind==='QUESTION'){
+      body.push('<section class="p2lrn-question" data-p2lrn-kind="question" data-source-block-id="'+htmlEscape(block?.id||'')+'"><strong>Pregunta</strong><p>'+htmlEscape(item.text||block?.text||'')+'</p></section>');
+      continue;
+    }
+    if(item.kind==='SOLUTION'){
+      body.push('<section class="p2lrn-solution" data-p2lrn-kind="solution" data-source-block-id="'+htmlEscape(block?.id||'')+'"><strong>Solución</strong><p>'+htmlEscape(item.text||block?.text||'')+'</p></section>');
+      continue;
+    }
+    if(item.kind==='SEPARATOR'){body.push('<hr>');continue;}
+    if(item.title&&block?.type==='TITLE'){
+      const level=Math.min(6,Math.max(2,Number(block.level||3)));
+      body.push('<h'+level+' data-source-block-id="'+htmlEscape(block.id)+'">'+htmlEscape(item.title)+'</h'+level+'>');
+    }else{
+      body.push('<p data-source-block-id="'+htmlEscape(block?.id||'')+'">'+htmlEscape(item.text||block?.text||'')+'</p>');
+    }
+  }
+  closeList();
+  return '<!doctype html><html lang="'+htmlEscape(document.metadata.language||'es')+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+htmlEscape(lesson.title)+'</title><style>body{font:16px/1.6 system-ui,sans-serif;max-width:900px;margin:auto;padding:32px}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #bbb;padding:.5rem;text-align:left}.p2lrn-question,.p2lrn-solution{border-left:4px solid currentColor;padding:.75rem 1rem;margin:1rem 0;background:#f7f7f7}</style></head><body><h1>'+htmlEscape(lesson.title)+'</h1>'+body.join('\n')+'</body></html>';
+}
+function transactionalWorkspace(id,operation){
+  const root=projectRoot(id),stage=join(DATA_ROOT,'staging',id+'-'+randomUUID()),backup=root+'.backup-'+randomUUID();
+  mkdirSync(resolve(stage,'..'),{recursive:true});
+  cpSync(root,stage,{recursive:true,errorOnExist:true});
+  try{
+    const workspace=P2LRNAuthoringWorkspace.load(stage);
+    const result=operation(workspace,stage);
+    renameSync(root,backup);
+    try{renameSync(stage,root);}catch(error){renameSync(backup,root);throw error;}
+    rmSync(backup,{recursive:true,force:true});
+    return result;
+  }catch(error){
+    rmSync(stage,{recursive:true,force:true});
+    throw error;
+  }
+}
+function importDocumentIntoWorkspace(workspace,stageRoot,result,outline){
+  const hash=String(result.document.inventory.documentHash||'').replace(/^sha256:/,'');
+  const prefix='imp-'+hash.slice(0,10);
+  const language=result.document.metadata.language||workspace.project.course.languages?.[0]||'es';
+  const created={modules:0,lessons:0,activities:0,questions:0};
+  let moduleIndex=0;
+  for(const module of outline.modules){
+    moduleIndex+=1;
+    const moduleKey=(prefix+'-m'+moduleIndex).slice(0,120);
+    workspace.addUnit({key:moduleKey,title:module.title,language,role:'module',parent:'course'});created.modules+=1;
+    let lessonIndex=0;
+    for(const lesson of module.lessons){
+      lessonIndex+=1;
+      const lessonKey=(prefix+'-m'+moduleIndex+'-l'+lessonIndex).slice(0,120);
+      workspace.addUnit({key:lessonKey,title:lesson.title,language,role:'lesson',parent:moduleKey});created.lessons+=1;
+      const webKey=(prefix+'-w'+moduleIndex+'-'+lessonIndex).slice(0,120);
+      const webRoot=join(stageRoot,'.p2lrn-import-tmp',webKey);
+      mkdirSync(webRoot,{recursive:true});
+      writeFileSync(join(webRoot,'index.html'),renderLessonHtml(result.document,lesson,result.assets,webRoot));
+      workspace.addWebContent({sourceDirectory:webRoot,entrypoint:'index.html',key:webKey,title:lesson.title,language,parent:lessonKey,copyDirectory:true});
+      created.activities+=1;
+      created.questions+=(lesson.content||[]).filter(x=>x.kind==='QUESTION').length;
+      rmSync(webRoot,{recursive:true,force:true});
+    }
+  }
+  const tmpRoot=join(stageRoot,'.p2lrn-import-tmp');
+  if(existsSync(tmpRoot))rmSync(tmpRoot,{recursive:true,force:true});
+  workspace.setCourseMetadata({incrementRevision:true,language});
+  return{created,documentHash:result.document.inventory.documentHash,outlineWarnings:outline.warnings,readerWarnings:result.document.warnings};
+}
+
+
 const server=createServer(async(req,res)=>{
   try{
     const url=new URL(req.url||'/','http://editor.invalid'),path=url.pathname,method=String(req.method||'GET').toUpperCase();
@@ -117,6 +237,18 @@ const server=createServer(async(req,res)=>{
       if(cm&&method==='PUT'){
         const input=await bodyJson(req),w=load(id),children=Array.isArray(input.children)?input.children.map(String):[];
         const result=w.setChildren(decodeURIComponent(cm[1]),children);return json(res,200,{id,result,...projectView(w)});
+      }
+      if(tail==='import-document'&&method==='POST'){
+        const name=String(url.searchParams.get('name')||'').trim();
+        if(!name)throw new Error('Document name is required.');
+        const bytes=await bodyBytes(req,MAX_DOCUMENT_BYTES);
+        if(!bytes.length)throw new Error('Document is empty.');
+        const read=await documentReader.read({name,bytes:new Uint8Array(bytes),mediaType:String(req.headers['content-type']||'')||undefined});
+        const outline=resolveDocumentOutline(read.document);
+        if(!outline.modules.length)throw new Error('Reader did not resolve any importable module.');
+        const imported=transactionalWorkspace(id,(workspace,stageRoot)=>importDocumentIntoWorkspace(workspace,stageRoot,read,outline));
+        const w=load(id);
+        return json(res,201,{id,imported,...projectView(w)});
       }
       if(tail==='questionnaires'&&method==='POST'){
         const input=await bodyJson(req),w=load(id);
