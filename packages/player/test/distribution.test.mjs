@@ -124,7 +124,7 @@ test('public TypeScript declarations compile for canonical and legacy HTML eleme
     const source=join(tmp,'probe.ts');writeFileSync(source,`import P2LRN,{createHostAdapter,mountP2LRN,version} from '@p2lrn/player';
 const player=document.createElement('p2lrn-player');
 player.setAttribute('src','/course.p2lrn'); player.setAttribute('node','urn:uuid:11111111-1111-4111-8111-111111111111');
-player.adapter=createHostAdapter({saveState:async()=>{}});
+player.adapter=createHostAdapter({saveState:async()=>{},resolveRuntimeLaunch:async()=>({url:'https://content.example.invalid/?endpoint=https%3A%2F%2Flrs.example.invalid%2F&fetch=https%3A%2F%2Flms.example.invalid%2Ffetch&actor=%7B%22account%22%3A%7B%22homePage%22%3A%22https%3A%2F%2Flms.example.invalid%22%2C%22name%22%3A%22learner%22%7D%7D&registration=760e3480-ba55-4991-94b0-01820dbd23a2&activityId=https%3A%2F%2Fexample.invalid%2Fau',launchMethod:'AnyWindow'})});
 void mountP2LRN(player,{src:'/course.p2lrn'});
 const legacy=document.createElement('p2rln-player'); legacy.setAttribute('src','/legacy.p2rln');
 const v:'0.5.0-alpha.1'=version; void P2LRN; void v;
