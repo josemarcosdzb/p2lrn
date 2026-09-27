@@ -39,6 +39,18 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
 
     const web=join(dir,'web');mkdirSync(web,{recursive:true});writeFileSync(join(web,'index.html'),'<!doctype html><title>web</title>');
     workspace.addWebContent({sourceDirectory:web,key:'web',title:'Web',parent:'unidad'});
+    workspace.setRepresentationAccessibility('res-web','primary',{
+      metadata:{
+        accessMode:['textual','visual'],
+        accessModeSufficient:[['textual']],
+        accessibilityFeature:['alternativeText','structuralNavigation'],
+        accessibilityHazard:['noFlashingHazard'],
+        accessibilityControl:['fullKeyboardControl'],
+        accessibilityAPI:['ARIA'],
+        accessibilitySummary:'Contenido web estructurado con navegación por teclado.'
+      },
+      role:'accessible'
+    });
 
     const questionnaire=join(dir,'questionnaire.json');
     extractProfilePayload('native-questionnaire-course.p2lrn','https://p2lrn.org/profile/native-questionnaire',questionnaire);
@@ -84,6 +96,10 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     assert.deepEqual(saved.units.find((x)=>x.key==='unidad-2').children,['act-component']);
     assert.deepEqual(saved.activities.find((x)=>x.key==='act-quiz').objectives,['objetivo-1']);
     assert.equal(saved.activities.find((x)=>x.key==='act-quiz').extensions['https://p2lrn.org/profile/xapi'].activityId,'https://learning.example.invalid/activities/quiz-1');
+    const accessible=saved.resources.find((x)=>x.key==='res-web').representations.find((x)=>x.key==='primary');
+    assert.equal(accessible.role,'accessible');
+    assert.deepEqual(accessible.accessibility,['alternativeText','structuralNavigation']);
+    assert.equal(accessible.extensions['https://p2lrn.org/profile/accessibility'].accessibilityAPI[0],'ARIA');
     assert.equal(saved.activities.find((x)=>x.key==='act-quiz').extensions['https://p2lrn.org/ext/renderer-preference/1'].preferred,'https://p2lrn.org/renderer/questionnaire/rosco');
     assert.equal(saved.objectives.find((x)=>x.key==='objetivo-1').description.es,'Objetivo actualizado');
     assert.equal(saved.objectives.find((x)=>x.key==='objetivo-1').alignments[0].targetUrl,'https://case.example.invalid/uri/item-1');
@@ -97,6 +113,6 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     const reader=new P2LRNReader(out,{strictProfiles:true,validateProfilePayloads:true});
     assert.equal(reader.package.manifest.format,'P2LRN');
     const profiles=new Set(reader.package.manifest.profiles.map((p)=>p.id));
-    for(const profile of ['https://p2lrn.org/profile/web-content','https://p2lrn.org/profile/native-questionnaire','https://p2lrn.org/profile/native-component','https://p2lrn.org/profile/native-composite','https://p2lrn.org/profile/xapi'])assert.ok(profiles.has(profile),profile);
+    for(const profile of ['https://p2lrn.org/profile/web-content','https://p2lrn.org/profile/native-questionnaire','https://p2lrn.org/profile/native-component','https://p2lrn.org/profile/native-composite','https://p2lrn.org/profile/xapi','https://p2lrn.org/profile/accessibility'])assert.ok(profiles.has(profile),profile);
   }finally{rmSync(dir,{recursive:true,force:true});}
 });
