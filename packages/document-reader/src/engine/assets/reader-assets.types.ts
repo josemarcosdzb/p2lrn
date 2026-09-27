@@ -1,0 +1,3 @@
+export type IngestionAssetFormat='IMAGE'|'PDF_IMAGE'|'PDF_PAGE_RENDER'|'ZIP_IMAGE'|'DOCX_IMAGE'|'PPTX_IMAGE'|'XLSX_IMAGE'|'SCORM_IMAGE'|'IMSCC_IMAGE'|'UNKNOWN_IMAGE';
+export interface RawExtractedImageAsset{buffer:Buffer;mimeType:string;extension:string;originalName:string;source:{format:IngestionAssetFormat|string;path?:string;page?:number;slide?:number};}
+export interface StoredExtractedImageAsset{id:string;name:string;mimeType:string;size:number;ext:string;archivo:{id:number;url:string;nombre:string;mimeType:string;tamanoBytes:number|null};source:{format:IngestionAssetFormat|string;path?:string;page?:number;slide?:number};dataUrl?:string;ocr?:{texto:string;proveedor:string;confianza:number;idioma:string};}
