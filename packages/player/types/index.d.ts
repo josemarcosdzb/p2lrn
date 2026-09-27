@@ -43,6 +43,7 @@ export interface P2LRNResolvedRuntimeLaunch {
   launchMethod?: 'AnyWindow' | 'OwnWindow' | string;
   sessionId?: string;
   expiresAt?: string;
+  completion?: Promise<unknown>;
   [key: string]: unknown;
 }
 
