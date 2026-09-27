@@ -23,6 +23,7 @@ import {
 
 export const SCORM_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/scorm/runtime';
 export const H5P_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/h5p/runtime';
+export const QTI3_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/qti3/runtime';
 export const PASSIVE_MEDIA_RENDERER = 'https://p2lrn.org/renderer/passive/media';
 export const PASSIVE_TEXT_RENDERER = 'https://p2lrn.org/renderer/passive/text';
 
@@ -40,6 +41,13 @@ export function registerBuiltInRenderers(registry) {
     dependencies: [DOM_DEPENDENCY],
     supports: ({representation}) => representation?.location?.type === 'embedded',
     load: () => import('./renderers/h5p-runtime.js'),
+  });
+  registry.register({
+    id: QTI3_RUNTIME_RENDERER, version: '1', priority: 108, presentation: 'assessment-runtime',
+    profiles: ['https://p2lrn.org/profile/qti'], mediaTypes: ['application/xml', 'text/xml'],
+    dependencies: [DOM_DEPENDENCY],
+    supports: ({representation}) => ['embedded','package-member'].includes(representation?.location?.type),
+    load: () => import('./renderers/qti3-runtime.js'),
   });
   registry.register({
     id: SCORM_RUNTIME_RENDERER, version: '1', priority: 110, presentation: 'external-runtime',
