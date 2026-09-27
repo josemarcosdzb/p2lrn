@@ -145,6 +145,7 @@ export class P2LRNAuthoringWorkspace {
     return this.#edit((draft)=>{const parent=options.parent??'course';const [resource,activity]=creatorAddQuestionnaire(this.root,draft,options.source,options.key,options.title,{language:options.language??'es',parent,copyFile:options.copyFile!==false,renderer:options.renderer,rendererVersion:options.rendererVersion});return{resourceKey:resource.key,activityKey:activity.key,parentKey:parent};});
   }
   addQuestionnaireData(options:AuthoringQuestionnaireDataOptions):AuthoringResourceActivityResult{
+    if(!KEY_RE.test(options.key))throw new ProjectError(`invalid key: ${JSON.stringify(options.key)}`);
     const tempDir=join(this.root,'.p2lrn-authoring-tmp');
     const tempFile=join(tempDir,`${options.key}.questionnaire.json`);
     mkdirSync(tempDir,{recursive:true});
