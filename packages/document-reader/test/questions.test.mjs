@@ -4,6 +4,7 @@ import {
   DefaultP2LRNDocumentReader,
   detectedQuestionToNative,
   resolveDocumentOutline,
+  questionSemanticObservations,
   splitLessonAuthoringSegments,
 } from '../dist/index.js';
 
@@ -15,7 +16,7 @@ async function outlineFromTxt(text){
 }
 
 test('explicit numbered question, options and answer become a native single-choice candidate in source order',async()=>{
-  const {result,outline}=await outlineFromTxt([
+  const source=[
     '1 Módulo',
     '',
     '1.1 Lección',
@@ -31,18 +32,21 @@ test('explicit numbered question, options and answer become a native single-choi
     'Respuesta: A',
     '',
     'Contenido después.',
-  ].join('\n'));
-  const blocks=result.document.blocks;
-  assert.equal(blocks.find(x=>x.text.includes('Qué componente'))?.type,'QUESTION');
-  assert.deepEqual(blocks.filter(x=>x.type==='OPTION').map(x=>x.text),['A) CPU','B) RAM']);
-  assert.deepEqual(blocks.filter(x=>x.type==='OPTION').map(x=>x.source?.raw?.semanticText),['CPU','RAM']);
-  assert.equal(blocks.find(x=>x.type==='SOLUTION')?.text,'Respuesta: A');
-  assert.equal(blocks.find(x=>x.type==='SOLUTION')?.source?.raw?.semanticText,'A');
-  for(const block of blocks){
-    const inventory=result.document.inventory.nodes.find(x=>x.sourceBlockId===block.id);
-    if(!inventory)continue;
-    assert.match(inventory.contentHash,/^[0-9a-f]{64}$/);
-  }
+  ].join('\n');
+  const {result,outline}=await outlineFromTxt(source);
+  const withoutSemantics=await new DefaultP2LRNDocumentReader({postProcessors:[]}).read({name:'curso.txt',bytes:new TextEncoder().encode(source)});
+  assert.equal(result.document.inventory.documentHash,withoutSemantics.document.inventory.documentHash);
+  assert.deepEqual(result.document.blocks,withoutSemantics.document.blocks);
+  const observations=questionSemanticObservations(result.document);
+  const questionBlock=result.document.blocks.find(x=>x.text.includes('Qué componente'));
+  const optionBlocks=result.document.blocks.filter(x=>/^\s*[AB]\)/.test(x.text));
+  const solutionBlock=result.document.blocks.find(x=>x.text==='Respuesta: A');
+  assert.equal(questionBlock?.type,'PARAGRAPH');
+  assert.equal(observations[questionBlock.id].role,'QUESTION');
+  assert.deepEqual(optionBlocks.map(x=>x.text),['A) CPU','B) RAM']);
+  assert.deepEqual(optionBlocks.map(x=>observations[x.id].semanticText),['CPU','RAM']);
+  assert.equal(solutionBlock?.type,'PARAGRAPH');
+  assert.equal(observations[solutionBlock.id].semanticText,'A');
 
   const lesson=outline.modules[0].lessons[0];
   const segments=splitLessonAuthoringSegments(result.document,lesson);
