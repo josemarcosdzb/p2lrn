@@ -25,6 +25,27 @@ export interface P2LRNResolvedResourceUrl {
   seekable?: boolean;
 }
 
+export interface P2LRNRuntimeLaunchRequest {
+  runtime: string;
+  profile?: string;
+  source?: {type?: string; href?: string; package?: string; member?: string; path?: string; [key: string]: unknown};
+  sourceAuId?: string | null;
+  moveOn?: string | null;
+  masteryScore?: string | number | null;
+  launchMethod?: string | null;
+  launchParameters?: string | null;
+  entitlementKey?: string | null;
+  [key: string]: unknown;
+}
+
+export interface P2LRNResolvedRuntimeLaunch {
+  url: string;
+  launchMethod?: 'AnyWindow' | 'OwnWindow' | string;
+  sessionId?: string;
+  expiresAt?: string;
+  [key: string]: unknown;
+}
+
 export interface P2LRNHostContext {
   packageId?: string | null;
   contentRoot?: string | null;
@@ -40,6 +61,7 @@ export interface P2LRNHostAdapterImplementation {
   reportScore?(score: unknown, context: Readonly<P2LRNHostContext>): void | Promise<void>;
   emitEvent?(event: unknown, context: Readonly<P2LRNHostContext>): void | Promise<void>;
   resolveResourceUrl?(request: Readonly<P2LRNResourceUrlRequest>, context: Readonly<P2LRNHostContext>): P2LRNResolvedResourceUrl | null | Promise<P2LRNResolvedResourceUrl | null>;
+  resolveRuntimeLaunch?(request: Readonly<P2LRNRuntimeLaunchRequest>, context: Readonly<P2LRNHostContext>): P2LRNResolvedRuntimeLaunch | null | Promise<P2LRNResolvedRuntimeLaunch | null>;
 }
 
 export interface P2LRNHostAdapter extends P2LRNHostAdapterImplementation {
