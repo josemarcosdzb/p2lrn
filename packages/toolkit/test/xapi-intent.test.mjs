@@ -26,6 +26,8 @@ test('xAPI declaration accepts absolute IRIs and rejects credentials/relative id
   assert.deepEqual(validateXapiActivityDeclaration(declaration),declaration);
   assert.throws(()=>createXapiActivityDeclaration({activityId:'/relative'}),/absolute IRI/);
   assert.throws(()=>createXapiActivityDeclaration({activityId:'https://user:secret@example.invalid/a'}),/embedded credentials/);
+  assert.throws(()=>createXapiActivityDeclaration({activityId:'https://learning.example/a',endpoint:'https://lrs.example/xapi/'}),/Unsupported xAPI activity declaration field: endpoint/);
+  assert.throws(()=>validateXapiActivityDeclaration({version:'2.0',activityId:'https://learning.example/a',accessToken:'secret'}),/Unsupported xAPI activity declaration field: accessToken/);
 });
 
 test('runtime initialized event maps to an actor-free xAPI statement intent',()=>{
@@ -66,6 +68,7 @@ test('xAPI verb overrides are explicit per activity and validated as IRIs',()=>{
   const e=createRuntimeEvent('p2lrn:complete',{}, {xapi:custom},{clock:()=>0});
   assert.equal(runtimeEventToXapiStatementIntent(e).verb.id,'https://example.invalid/xapi/verbs/finished');
   assert.throws(()=>createXapiActivityDeclaration({activityId:'urn:example:a',verbs:{completed:'not-an-iri'}}),/absolute IRI/);
+  assert.throws(()=>createXapiActivityDeclaration({activityId:'urn:example:a',verbs:{completed:'https://example.invalid/done',launched:'https://example.invalid/launched'}}),/Unsupported xAPI verb override key: launched/);
 });
 
 test('cmi5 runtime events never generate generic xAPI intents and risk duplicate statements',()=>{
