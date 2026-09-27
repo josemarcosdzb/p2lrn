@@ -6,6 +6,7 @@ import {
   CANONICAL_DOCUMENT_VERSION,
   DefaultP2LRNDocumentReader,
   DocumentExtractorRegistry,
+  createDefaultDocumentExtractorRegistry,
   DOCUMENT_INVENTORY_SCHEMA,
   DOCUMENT_PROVENANCE_SCHEMA,
 } from '../dist/index.js';
@@ -50,4 +51,51 @@ test('reader dispatches through neutral extractor registry',async()=>{
 test('reader rejects formats without registered extractor',async()=>{
   const reader=new DefaultP2LRNDocumentReader();
   await assert.rejects(()=>reader.read({name:'curso.docx',bytes:new Uint8Array([1])}),/No document extractor registered for DOCX/);
+});
+
+
+test('plain text groups wrapped lines into paragraphs instead of one-line-per-block',async()=>{
+  const reader=new DefaultP2LRNDocumentReader({registry:createDefaultDocumentExtractorRegistry()});
+  const text='Primera línea del mismo párrafo\ncontinúa aquí.\n\nSegundo párrafo.\n';
+  const result=await reader.read({name:'curso.txt',bytes:new TextEncoder().encode(text)});
+  assert.equal(result.document.blocks.length,2);
+  assert.equal(result.document.blocks[0].text,'Primera línea del mismo párrafo continúa aquí.');
+  assert.equal(result.document.blocks[1].text,'Segundo párrafo.');
+  assert.equal(result.document.sequence.nodes.length,2);
+  assert.match(result.document.inventory.documentHash,/^[0-9a-f]{64}$/);
+});
+
+test('Markdown preserves hierarchy, lists, tables and code without inventing course semantics',async()=>{
+  const reader=new DefaultP2LRNDocumentReader({registry:createDefaultDocumentExtractorRegistry()});
+  const markdown=[
+    '# Módulo 1',
+    '',
+    'Texto que ocupa',
+    'dos líneas del mismo párrafo.',
+    '',
+    '## Lección 1.1',
+    '',
+    '- Elemento uno',
+    '- Elemento dos',
+    '',
+    '| Columna | Valor |',
+    '| --- | --- |',
+    '| A | 1 |',
+    '| B | 2 |',
+    '',
+    '~~~js',
+    'const answer = 42;',
+    '~~~',
+  ].join('\n');
+  const result=await reader.read({name:'curso.md',bytes:new TextEncoder().encode(markdown)});
+  const blocks=result.document.blocks;
+  assert.equal(blocks.find(x=>x.type==='TITLE'&&x.level===1)?.text,'Módulo 1');
+  assert.equal(blocks.find(x=>x.type==='TITLE'&&x.level===2)?.text,'Lección 1.1');
+  assert.ok(blocks.some(x=>x.type==='PARAGRAPH'&&x.text==='Texto que ocupa dos líneas del mismo párrafo.'));
+  assert.equal(blocks.filter(x=>x.type==='LIST').length,2);
+  assert.equal(result.document.tables.length,1);
+  assert.deepEqual(result.document.tables[0].columns,['Columna','Valor']);
+  assert.equal(result.document.tables[0].rows[1].Valor,'2');
+  assert.ok(blocks.some(x=>x.source?.raw?.role==='CODE_BLOCK'&&x.text==='const answer = 42;'));
+  assert.equal(result.document.metadata.title,'Módulo 1');
 });
