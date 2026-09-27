@@ -1,15 +1,10 @@
 import {DocumentExtractorRegistry} from './registry.js';
-import {docxExtractor} from './extractors/docx.js';
-import {pptxExtractor} from './extractors/pptx.js';
 import type {DocumentPostProcessor} from './contracts.js';
 
 export function createDefaultDocumentExtractorRegistry():DocumentExtractorRegistry{
-  const registry=new DocumentExtractorRegistry();
-  // Temporary fallbacks only until the matching mature canonical extractors
-  // are ported from the pinned source Reader.
-  registry.register(docxExtractor);
-  registry.register(pptxExtractor);
-  return registry;
+  // The mature copied canonical engine is the only default Reader authority.
+  // This registry remains as an explicit extension point for third-party/custom formats.
+  return new DocumentExtractorRegistry();
 }
 
 export function createDefaultDocumentPostProcessors():DocumentPostProcessor[]{return[];}

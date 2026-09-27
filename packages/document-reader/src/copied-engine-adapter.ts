@@ -10,12 +10,18 @@ import {ExtractorMarkdownService} from './engine/lectura/extractores/extractor-m
 import {ExtractorCsvService} from './engine/lectura/extractores/extractor-csv.service.js';
 import {ExtractorJsonService} from './engine/lectura/extractores/extractor-json.service.js';
 import {ExtractorTextoEstructuradoService} from './engine/lectura/extractores/extractor-texto-estructurado.service.js';
+import {ExtractorDocxService} from './engine/lectura/extractores/extractor-docx.service.js';
+import {ExtractorPptxService} from './engine/lectura/extractores/extractor-pptx.service.js';
+import {NormalizadorFidelidadDocxService} from './engine/lectura/normalizacion/normalizador-fidelidad-docx.service.js';
+import {NormalizadorFidelidadPptxService} from './engine/lectura/normalizacion/normalizador-fidelidad-pptx.service.js';
+import {DocumentAssetPlacementService} from './engine/lectura/placement/document-asset-placement.service.js';
+import {ReaderAssetCollector} from './engine/assets/reader-asset-collector.js';
 import {TrazadorDocumentoCanonicoService} from './engine/lectura/trazador-documento-canonico.service.js';
 import type {ArchivoImportacionSubido} from './engine/types/archivo-importacion-subido.type.js';
 import type {DocumentoExtraidoFinalCanonico} from './engine/lectura/types/documento-extraido-canonico.type.js';
 import type {TipoArchivoDetectado,EstrategiaExtraccionDocumento} from './engine/lectura/types/tipo-archivo-detectado.type.js';
 
-const COPIED_FORMATS=new Set<TipoArchivoDetectado>(['TXT','MARKDOWN','HTML','RTF','TEX','XML','YAML','ODT','EPUB','CSV','JSON']);
+const COPIED_FORMATS=new Set<TipoArchivoDetectado>(['TXT','MARKDOWN','HTML','RTF','TEX','XML','YAML','ODT','EPUB','CSV','JSON','DOCX','PPTX']);
 
 function sourceFile(input:SourceDocumentInput):ArchivoImportacionSubido{
   const buffer=Buffer.from(input.bytes.buffer,input.bytes.byteOffset,input.bytes.byteLength);
@@ -97,6 +103,12 @@ export class CopiedCanonicalSourceReader{
   readonly csv=new ExtractorCsvService();
   readonly json=new ExtractorJsonService();
   readonly structured=new ExtractorTextoEstructuradoService();
+  readonly assets=new ReaderAssetCollector();
+  readonly placement=new DocumentAssetPlacementService();
+  readonly docx=new ExtractorDocxService(this.assets,this.placement);
+  readonly pptx=new ExtractorPptxService(this.assets,this.placement);
+  readonly docxFidelity=new NormalizadorFidelidadDocxService();
+  readonly pptxFidelity=new NormalizadorFidelidadPptxService();
 
   detect(input:SourceDocumentInput){
     const detected=this.detector.detectar(sourceFile(input));
@@ -105,16 +117,25 @@ export class CopiedCanonicalSourceReader{
   supports(input:SourceDocumentInput){return COPIED_FORMATS.has(this.detect(input).tipo);}
   async read(input:SourceDocumentInput,_context:DocumentReadContext={}):Promise<DocumentReadResult>{
     const archivo=sourceFile(input),deteccion=this.detector.detectar(archivo);
+    this.assets.reset();
     let extracted;
     switch(deteccion.tipo){
       case'TXT':extracted=await this.txt.extraer({archivo,deteccion});break;
       case'MARKDOWN':extracted=await this.markdown.extraer({archivo,deteccion});break;
       case'CSV':extracted=await this.csv.extraer({archivo,deteccion});break;
       case'JSON':extracted=await this.json.extraer({archivo,deteccion});break;
+      case'DOCX':
+        extracted=await this.docx.extraer({archivo,deteccion,usuarioId:1});
+        extracted=await this.docxFidelity.normalizar(extracted,archivo);
+        break;
+      case'PPTX':
+        extracted=await this.pptx.extraer({archivo,deteccion,usuarioId:1});
+        extracted=await this.pptxFidelity.normalizar(extracted,archivo);
+        break;
       case'HTML':case'RTF':case'TEX':case'XML':case'YAML':case'ODT':case'EPUB':
         extracted=await this.structured.extraer({archivo,deteccion});break;
       default:throw new Error(`Copied canonical source Reader is not ported yet for ${deteccion.tipo}.`);
     }
-    return{document:toPublic(this.tracer.trazar(extracted),input),assets:[]};
+    return{document:toPublic(this.tracer.trazar(extracted),input),assets:this.assets.materialized()};
   }
 }

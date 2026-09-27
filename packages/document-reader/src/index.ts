@@ -7,8 +7,5 @@ export * from './defaults.js';
 export * from './extractors/plain-text.js';
 export * from './extractors/markdown.js';
 export * from './structure.js';
-export * from './office/zip.js';
-export * from './extractors/docx.js';
-export * from './extractors/pptx.js';
 export * from './questions.js';
 export * from './copied-engine-adapter.js';
