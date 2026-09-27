@@ -1,3 +1,4 @@
+import {runtimeEventToXapiStatementIntent} from './xapi-intent.js';
 export const RUNTIME_EVENT_SCHEMA = 'https://p2lrn.org/schema/runtime-event/1';
 export const RUNTIME_EVENT_VERSION = '1';
 export const LEGACY_RUNTIME_EVENT_PREFIX = 'p2rln:';
@@ -33,17 +34,36 @@ export function createRuntimeEvent(type, payload = {}, context = {}, {clock = ()
   });
 }
 
+function forwardFailure(target,event,phase,error) {
+  if (event.type === 'p2lrn:error') return;
+  dispatchRuntimeEvent(target, 'p2lrn:error', {
+    phase,
+    sourceEventType: event.type,
+    error: String(error?.message ?? error),
+  }, event.context, {forward: false});
+}
+
 function forwardToHost(target, event, explicitAdapter = null) {
   const adapter = explicitAdapter ?? target?.adapter;
-  if (!adapter || typeof adapter.emitEvent !== 'function' || typeof adapter !== 'object') return;
+  if (!adapter || typeof adapter !== 'object') return;
+  const hasEvent = typeof adapter.emitEvent === 'function';
+  const hasXapi = typeof adapter.emitXapiStatementIntent === 'function';
+  if (!hasEvent && !hasXapi) return;
   const previous = forwardQueues.get(adapter) ?? Promise.resolve();
-  const next = previous.catch(() => undefined).then(() => adapter.emitEvent(event, event.context)).catch((error) => {
-    if (event.type === 'p2lrn:error') return;
-    dispatchRuntimeEvent(target, 'p2lrn:error', {
-      phase: 'emitEvent',
-      sourceEventType: event.type,
-      error: String(error?.message ?? error),
-    }, event.context, {forward: false});
+  const next = previous.catch(() => undefined).then(async () => {
+    if (hasEvent) {
+      try { await adapter.emitEvent(event, event.context); }
+      catch (error) { forwardFailure(target,event,'emitEvent',error); }
+    }
+    if (hasXapi) {
+      let intent = null;
+      try { intent = runtimeEventToXapiStatementIntent(event); }
+      catch (error) { forwardFailure(target,event,'xapi-intent',error); return; }
+      if (intent) {
+        try { await adapter.emitXapiStatementIntent(intent, event.context); }
+        catch (error) { forwardFailure(target,event,'emitXapiStatementIntent',error); }
+      }
+    }
   });
   forwardQueues.set(adapter, next);
 }
