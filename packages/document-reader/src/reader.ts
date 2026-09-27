@@ -1,6 +1,7 @@
 import type {DocumentFormatDetector,DocumentPostProcessor,DocumentReadContext,P2LRNDocumentReader} from './contracts.js';
 import type {DocumentReadResult,SourceDocumentInput} from './types.js';
 import {BasicDocumentFormatDetector,DocumentExtractorRegistry} from './registry.js';
+import {createDefaultDocumentExtractorRegistry} from './defaults.js';
 
 export interface DocumentReaderOptions {
   detector?:DocumentFormatDetector;
@@ -15,7 +16,7 @@ export class DefaultP2LRNDocumentReader implements P2LRNDocumentReader {
 
   constructor(options:DocumentReaderOptions={}){
     this.detector=options.detector??new BasicDocumentFormatDetector();
-    this.registry=options.registry??new DocumentExtractorRegistry();
+    this.registry=options.registry??createDefaultDocumentExtractorRegistry();
     this.postProcessors=Object.freeze([...(options.postProcessors??[])]);
   }
 
