@@ -2,6 +2,7 @@ import type {CanonicalDocument, DocumentBlock, DocumentInput, ExtractedTable, Fi
 import {DocumentReaderError} from './types.js';
 import {decodeXmlEntities, nextId, normalizeText} from './utils.js';
 import {readZip} from './zip.js';
+import {docxAssets, pptxAssets, xlsxAssets} from './office-assets.js';
 
 function base(file:DocumentInput,detection:FileDetection,strategy:CanonicalDocument['origin']['extractionStrategy']){
   return {
@@ -51,20 +52,40 @@ export async function readDocx(file:DocumentInput,detection:FileDetection,option
   const documentXml=entries.get('word/document.xml')?.toString('utf8');
   if(!documentXml) throw new DocumentReaderError('DOCX has no word/document.xml.','P2LRN_READER_DOCX');
 
+  const assets=docxAssets(entries,options);
+  const assetsByParagraph=new Map<number,typeof assets>();
+  for(const asset of assets){
+    const index=asset.paragraphIndex??-1;
+    assetsByParagraph.set(index,[...(assetsByParagraph.get(index)??[]),asset]);
+  }
+
   const blocks:DocumentBlock[]=[];
+  let paragraphIndex=0;
   for(const match of documentXml.matchAll(/<w:p\b[\s\S]*?<\/w:p>/giu)){
     const paragraph=match[0];
     const text=normalizeText(extractWordRuns(paragraph));
-    if(!text) continue;
-    const kind=docxParagraphType(paragraph);
-    blocks.push({
-      id:nextId('docx'),
-      type:kind.type,
-      text,
-      order:blocks.length+1,
-      level:kind.level,
-      source:{type:'DOCX',raw:{style:/<w:pStyle[^>]*w:val=["']([^"']+)["']/iu.exec(paragraph)?.[1]??null}},
-    });
+    if(text){
+      const kind=docxParagraphType(paragraph);
+      blocks.push({
+        id:nextId('docx'),
+        type:kind.type,
+        text,
+        order:blocks.length+1,
+        level:kind.level,
+        source:{type:'DOCX',raw:{style:/<w:pStyle[^>]*w:val=["']([^"']+)["']/iu.exec(paragraph)?.[1]??null,paragraphIndex}},
+      });
+    }
+    for(const asset of assetsByParagraph.get(paragraphIndex)??[]){
+      blocks.push({
+        id:nextId('docx_image'),
+        type:'IMAGE_REFERENCE',
+        text:asset.path.split('/').at(-1)??asset.path,
+        order:blocks.length+1,
+        position:asset.position,
+        source:{type:'DOCX',raw:{assetId:asset.id,path:asset.path,sha256:asset.sha256,paragraphIndex}},
+      });
+    }
+    paragraphIndex+=1;
   }
 
   const tables:ExtractedTable[]=[];
@@ -92,6 +113,7 @@ export async function readDocx(file:DocumentInput,detection:FileDetection,option
     },
     blocks,
     tables,
+    assets,
     warnings:[],
   };
 }
@@ -106,6 +128,13 @@ export async function readPptx(file:DocumentInput,detection:FileDetection,option
     .filter(([name])=>/^ppt\/slides\/slide\d+\.xml$/iu.test(name))
     .sort(([a],[b])=>slideNumber(a)-slideNumber(b));
   if(!slides.length) throw new DocumentReaderError('PPTX contains no readable slides.','P2LRN_READER_PPTX');
+
+  const assets=pptxAssets(entries,options);
+  const assetsBySlide=new Map<number,typeof assets>();
+  for(const asset of assets){
+    const page=asset.page??0;
+    assetsBySlide.set(page,[...(assetsBySlide.get(page)??[]),asset]);
+  }
 
   const blocks:DocumentBlock[]=[];
   for(const [name,data] of slides){
@@ -127,6 +156,18 @@ export async function readPptx(file:DocumentInput,detection:FileDetection,option
         source:{type:'PPTX',raw:{slide,index}},
       });
     });
+    for(const asset of assetsBySlide.get(slide)??[]){
+      blocks.push({
+        id:nextId('pptx_image'),
+        type:'IMAGE_REFERENCE',
+        text:asset.path.split('/').at(-1)??asset.path,
+        order:blocks.length+1,
+        page:slide,
+        sheet:`Slide ${slide}`,
+        position:asset.position,
+        source:{type:'PPTX',raw:{assetId:asset.id,path:asset.path,sha256:asset.sha256}},
+      });
+    }
   }
   return {
     ...base(file,detection,'PPTX_SLIDES_XML'),
@@ -137,6 +178,7 @@ export async function readPptx(file:DocumentInput,detection:FileDetection,option
     },
     blocks,
     tables:[],
+    assets,
     warnings:[],
   };
 }
@@ -173,6 +215,7 @@ export async function readXlsx(file:DocumentInput,detection:FileDetection,option
     .sort(([a],[b])=>Number(/sheet(\d+)/u.exec(a)?.[1]??0)-Number(/sheet(\d+)/u.exec(b)?.[1]??0));
   if(!worksheets.length) throw new DocumentReaderError('XLSX contains no readable worksheets.','P2LRN_READER_XLSX');
 
+  const assets=xlsxAssets(entries,options);
   const blocks:DocumentBlock[]=[];
   const tables:ExtractedTable[]=[];
   for(const [name,data] of worksheets){
@@ -199,11 +242,24 @@ export async function readXlsx(file:DocumentInput,detection:FileDetection,option
     tableRows.forEach((row,i)=>blocks.push({id:nextId('xlsx_row'),type:'METADATA',text:JSON.stringify(row),order:blocks.length+1,sheet,source:{type:'XLSX',raw:{sheet,row:i+2}}}));
   }
 
+  for(const asset of assets){
+    blocks.push({
+      id:nextId('xlsx_image'),
+      type:'IMAGE_REFERENCE',
+      text:asset.path.split('/').at(-1)??asset.path,
+      order:blocks.length+1,
+      sheet:asset.sheet,
+      position:asset.position,
+      source:{type:'XLSX',raw:{assetId:asset.id,path:asset.path,sha256:asset.sha256,cell:asset.cell}},
+    });
+  }
+
   return {
     ...base(file,detection,'XLSX_TABLE'),
     metadata:{sheets:[...new Set(tables.map(x=>x.sheet).filter((x):x is string=>Boolean(x)))]},
     blocks,
     tables,
+    assets,
     warnings:[],
   };
 }
