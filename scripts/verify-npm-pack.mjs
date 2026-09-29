@@ -1,7 +1,7 @@
 import {execFile} from 'node:child_process';
 import {access, mkdir, readFile, rm, stat} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 import {promisify} from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -121,7 +121,8 @@ await run(node, [join(documentReaderRoot,'dist','cli.js')]).catch((error) => {
   const stderr = String(error?.stderr ?? '');
   if (!stderr.includes('Usage: p2lrn-document-reader')) throw error;
 });
-const readerSmoke = await run(node, ['--input-type=module','-e', `import {P2LRNDocumentReader} from ${JSON.stringify(new URL('file:///' + documentReaderRoot.replaceAll('\\\\','/') + '/dist/index.js').href)}; const r=await new P2LRNDocumentReader({pdf:false}).read({name:'smoke.txt',mimeType:'text/plain',buffer:Buffer.from('uno\\ndos')}); if(r.blocks.length!==2||r.origin.detectedType!=='TXT') process.exit(9);`]);
+const documentReaderEntry = pathToFileURL(join(documentReaderRoot,'dist','index.js')).href;
+await run(node, ['--input-type=module','-e', `import {P2LRNDocumentReader} from ${JSON.stringify(documentReaderEntry)}; const r=await new P2LRNDocumentReader({pdf:false}).read({name:'smoke.txt',mimeType:'text/plain',buffer:Buffer.from('uno\\ndos')}); if(r.blocks.length!==2||r.origin.detectedType!=='TXT') process.exit(9);`]);
 
 const copiedRuntime = join(work,'copied-runtime');
 await run(node, [join(playerRoot,'bin','p2lrn-copy-runtime.mjs'), copiedRuntime], {cwd:installRoot});
