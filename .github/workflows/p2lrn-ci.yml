@@ -7,6 +7,7 @@ on:
       - 'packages/toolkit/**'
       - 'packages/player/**'
       - 'packages/h5p-libraries/**'
+      - 'packages/document-reader/**'
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
       - 'scripts/verify-distribution-identity.mjs'
@@ -20,6 +21,7 @@ on:
       - 'packages/toolkit/**'
       - 'packages/player/**'
       - 'packages/h5p-libraries/**'
+      - 'packages/document-reader/**'
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
       - 'scripts/verify-distribution-identity.mjs'
@@ -51,6 +53,12 @@ jobs:
         working-directory: packages/toolkit
         run: |
           npm install --no-save --ignore-scripts --no-audit --no-fund typescript@5.6.3
+          npm test
+
+      - name: Compile and test standalone document Reader
+        working-directory: packages/document-reader
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
           npm test
 
       - name: Check browser module syntax
