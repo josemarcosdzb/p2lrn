@@ -236,7 +236,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   const course=params.get('course');
   const p=document.createElement('p2lrn-player');
   p.id='player';
-  p.src='/courses/'+course;
+  p.setAttribute('src','/courses/'+course);
   for(const name of ['p2lrn:ready','p2lrn:rendered','p2lrn:activityready','p2lrn:error']){
     p.addEventListener(name,e=>{
       let detail=e.detail;
@@ -320,7 +320,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
 
   const makePlayer=()=>{
     const p=document.createElement('p2lrn-player');
-    p.src='/courses/native-questionnaire-course.p2lrn';
+    p.setAttribute('src','/courses/native-questionnaire-course.p2lrn');
     p.adapter=adapter;
     attachEvents(p);
     return p;
