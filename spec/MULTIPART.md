@@ -49,6 +49,31 @@ The descriptor is inventoried in the outer manifest as
 `application/vnd.p2lrn.multipart+json` and conforms to
 `https://p2lrn.org/schema/multipart/1`.
 
+If the original package also exposed an internal launch/member representation,
+that representation points to the same embedded multipart descriptor and keeps
+its own semantic media type. Its multipart extension adds the member path:
+
+```json
+{
+  "mediaType": "text/html",
+  "location": {
+    "type": "embedded",
+    "path": "multipart/scorm.json"
+  },
+  "extensions": {
+    "https://p2lrn.org/profile/multipart": {
+      "version": "1",
+      "member": "index.html"
+    }
+  }
+}
+```
+
+After all parts are verified and concatenated, the Reader opens the logical ZIP
+and resolves `index.html` exactly as a normal `package-member` representation
+would. This applies to SCORM, cmi5, QTI, Common Cartridge and other packaged
+formats that expose internal launch/resources.
+
 Example descriptor:
 
 ```json
