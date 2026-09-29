@@ -76,8 +76,13 @@ Profile dependency graphs MUST be acyclic.
 - `https://p2lrn.org/profile/case`
 - `https://p2lrn.org/profile/xapi`
 - `https://p2lrn.org/profile/accessibility`
+- `https://p2lrn.org/profile/multipart`
 
 The real-world corpus drove the SCORM/cmi5/Common Cartridge/legacy Tin Can contracts and the H5P dependency modes. QTI now also has a direct packaged-QTI projection in addition to legacy QTI resources discovered inside Common Cartridge.
+
+### Multipart
+
+The multipart profile is transport-only. It allows a logical representation payload to be split into publisher-owned adjacent part files while preserving the semantic profile and media type. The shared P2LRN CDN supplies runtime code only; it does not become a course-content store. Each part and the reconstructed logical payload are SHA-256 verified before delivery. See `MULTIPART.md`.
 
 ### Native questionnaire
 

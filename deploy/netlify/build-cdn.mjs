@@ -1,4 +1,6 @@
 import {createHash} from 'node:crypto';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {cp, mkdir, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
 import {dirname, extname, join, relative, resolve} from 'node:path';
 
@@ -9,10 +11,12 @@ const sdkSource = join(root, 'packages', 'toolkit', 'web-sdk-src');
 const playerPackagePath = join(root, 'packages', 'player', 'package.json');
 const toolkitPackagePath = join(root, 'packages', 'toolkit', 'package.json');
 const compatibilityVersion = '0.5.0-alpha.1';
+const H5P_STANDALONE_VERSION = '3.8.2';
+const execFileAsync = promisify(execFile);
 
 const EXCLUDED_ROOT = new Set(['app.js', 'index.html', 'style.css']);
 const SDK_ENTRYPOINTS = ['p2lrn.js', 'p2lrn.esm.js', 'p2rln.js', 'p2rln.esm.js'];
-const LOCAL_REF = /(?:from\s+|import\()(['"])(\.{1,2}\/[^'"]+)\1|new URL\((['"])(\.{1,2}\/[^'"]+)\3/g;
+const LOCAL_REF = /(?:from\s+|import\()(['"])(\.{1,2}\/[^'"]+)\1|new URL\((['"])(\.{1,2}\/[^'"]+)\3\s*,\s*import\.meta\.url\)/g;
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
@@ -58,6 +62,54 @@ async function copyCanonicalRuntime(dist) {
   }
 }
 
+async function installH5pRuntimeAssets(dist) {
+  const vendorRoot = join(root, '.netlify-vendor', 'h5p-standalone');
+  await rm(vendorRoot, {recursive: true, force: true});
+  await mkdir(vendorRoot, {recursive: true});
+
+  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const {stdout = ''} = await execFileAsync(
+    npm,
+    ['pack', `h5p-standalone@${H5P_STANDALONE_VERSION}`, '--ignore-scripts', '--silent', '--pack-destination', vendorRoot],
+    {cwd: root, maxBuffer: 4 * 1024 * 1024},
+  );
+  let archiveName = String(stdout).trim().split(/\r?\n/u).filter(Boolean).at(-1);
+  if (!archiveName) {
+    archiveName = (await readdir(vendorRoot)).find((name) => name.endsWith('.tgz'));
+  }
+  if (!archiveName) throw new Error('npm pack did not produce an h5p-standalone archive.');
+
+  const archive = join(vendorRoot, archiveName);
+  await execFileAsync('tar', ['-xzf', archive, '-C', vendorRoot], {cwd: root, maxBuffer: 4 * 1024 * 1024});
+
+  const packageRoot = join(vendorRoot, 'package');
+  const assetsRoot = join(dist, 'runtime-host', 'assets');
+  await mkdir(join(assetsRoot, 'styles'), {recursive: true});
+
+  const required = [
+    ['dist/main.bundle.js', 'main.bundle.js'],
+    ['dist/frame.bundle.js', 'frame.bundle.js'],
+    ['dist/styles/h5p.css', 'styles/h5p.css'],
+  ];
+  for (const [sourceRel, targetRel] of required) {
+    const source = join(packageRoot, ...sourceRel.split('/'));
+    const target = join(assetsRoot, ...targetRel.split('/'));
+    const info = await stat(source);
+    if (!info.isFile() || info.size < 1) throw new Error(`Missing H5P runtime asset: ${sourceRel}`);
+    await mkdir(dirname(target), {recursive: true});
+    await cp(source, target);
+  }
+
+  const packageJson = await readJson(join(packageRoot, 'package.json'));
+  if (packageJson.version !== H5P_STANDALONE_VERSION) {
+    throw new Error(`Unexpected h5p-standalone version: ${packageJson.version}`);
+  }
+  await writeFile(
+    join(assetsRoot, 'h5p-standalone.json'),
+    JSON.stringify({name:'h5p-standalone', version:H5P_STANDALONE_VERSION}, null, 2) + '\n',
+  );
+}
+
 async function assertVersionAlignment(dist, version) {
   const player = await readFile(join(dist, 'p2lrn-player.js'), 'utf8');
   const loader = await readFile(join(dist, 'p2lrn.js'), 'utf8');
@@ -92,7 +144,7 @@ async function validateLocalReferences(dist) {
       }
       try {
         const info = await stat(target);
-        if (!info.isFile()) missing.push(`${relative(dist, source)} -> missing ${raw}`);
+        if (!info.isFile() && !(raw.endsWith('/') && info.isDirectory())) missing.push(`${relative(dist, source)} -> missing ${raw}`);
       } catch {
         missing.push(`${relative(dist, source)} -> missing ${raw}`);
       }
@@ -167,6 +219,7 @@ await rm(outputRoot, {recursive: true, force: true});
 
 const versionedDist = join(outputRoot, 'player', version, 'dist');
 await copyCanonicalRuntime(versionedDist);
+await installH5pRuntimeAssets(versionedDist);
 await assertVersionAlignment(versionedDist, version);
 await validateLocalReferences(versionedDist);
 const release = await writeRelease(versionedDist, {
@@ -284,4 +337,5 @@ console.log(JSON.stringify({
   compatibilityVersion,
   files: release.files.length,
   packagesCopied,
+  h5pStandaloneVersion: H5P_STANDALONE_VERSION,
 }, null, 2));

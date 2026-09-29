@@ -41,6 +41,7 @@
     "p2lrn-trust": "./dist/cli/trust.js",
     "p2lrn-inspect": "./dist/tools/inspect.js",
     "p2lrn-repack": "./dist/tools/repack.js",
+    "p2lrn-multipart": "./dist/tools/multipart.js",
     "p2lrn-extract-source": "./dist/tools/extract-source.js",
     "p2lrn-rebuild-examples": "./dist/tools/rebuild-examples.js",
     "p2lrn-build-web-sdk": "./dist/tools/build-web-sdk.js",

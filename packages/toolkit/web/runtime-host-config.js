@@ -1,5 +1,8 @@
+const DEFAULT_STATIC_BASE_URL = new URL('./runtime-host/', import.meta.url).href;
+
 const state = {
-  baseUrl: null,
+  baseUrl: DEFAULT_STATIC_BASE_URL,
+  mode: 'static',
 };
 
 function browserBaseUrl() {
@@ -31,47 +34,65 @@ export function normalizeRuntimeBaseUrl(value, {baseUrl = browserBaseUrl()} = {}
   return url.href;
 }
 
+function inferMode(baseUrl) {
+  if (!baseUrl) return null;
+  try {
+    const url = new URL(baseUrl);
+    return /\/runtime-host\/$/u.test(url.pathname) ? 'static' : 'server';
+  } catch {
+    return 'server';
+  }
+}
+
 export function configureRuntimeHost(options = {}) {
   if (!options || typeof options !== 'object' || Array.isArray(options)) {
     throw new TypeError('P2LRN runtime-host configuration must be an object.');
   }
   if (Object.prototype.hasOwnProperty.call(options, 'baseUrl')) {
     state.baseUrl = normalizeRuntimeBaseUrl(options.baseUrl);
+    state.mode = options.mode ?? inferMode(state.baseUrl);
+  } else if (Object.prototype.hasOwnProperty.call(options, 'mode')) {
+    state.mode = options.mode;
+  }
+  if (state.mode != null && !['static', 'server'].includes(state.mode)) {
+    throw new TypeError('P2LRN runtime-host mode must be "static" or "server".');
   }
   return getRuntimeHostConfig();
 }
 
 export function getRuntimeHostConfig() {
-  return Object.freeze({baseUrl: state.baseUrl});
+  return Object.freeze({baseUrl: state.baseUrl, mode: state.mode});
 }
 
-export function resolveScormRuntimeUrl(explicitBaseUrl = null, {applicationOrigin = globalThis.location?.origin ?? null} = {}) {
-  const baseUrl = normalizeRuntimeBaseUrl(explicitBaseUrl ?? state.baseUrl);
+function resolveRuntimeUrl(kind, explicitBaseUrl, {applicationOrigin = globalThis.location?.origin ?? null} = {}) {
+  const configured = explicitBaseUrl == null
+    ? {baseUrl: state.baseUrl, mode: state.mode}
+    : {baseUrl: normalizeRuntimeBaseUrl(explicitBaseUrl), mode: inferMode(normalizeRuntimeBaseUrl(explicitBaseUrl))};
+  const baseUrl = configured.baseUrl;
   if (!baseUrl) return null;
-  const runtime = new URL('scorm/', baseUrl);
+  const runtime = configured.mode === 'static'
+    ? new URL(`${kind}.html`, baseUrl)
+    : new URL(`${kind}/`, baseUrl);
   if (applicationOrigin && applicationOrigin !== 'null' && runtime.origin === applicationOrigin) {
+    const label = kind === 'h5p' ? 'H5P' : kind === 'scorm' ? 'SCORM' : 'External package';
     const error = new Error(
-      `SCORM runtime origin must be isolated from the embedding application. ` +
+      `${label} runtime origin must be isolated from the embedding application. ` +
       `Application origin and runtime origin are both ${runtime.origin}.`,
     );
-    error.code = 'P2LRN_SCORM_RUNTIME_ORIGIN_NOT_ISOLATED';
+    error.code = `P2LRN_${kind.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_RUNTIME_ORIGIN_NOT_ISOLATED`;
     throw error;
   }
   return runtime.href;
 }
 
+export function resolveScormRuntimeUrl(explicitBaseUrl = null, options = {}) {
+  return resolveRuntimeUrl('scorm', explicitBaseUrl, options);
+}
 
-export function resolveH5pRuntimeUrl(explicitBaseUrl = null, {applicationOrigin = globalThis.location?.origin ?? null} = {}) {
-  const baseUrl = normalizeRuntimeBaseUrl(explicitBaseUrl ?? state.baseUrl);
-  if (!baseUrl) return null;
-  const runtime = new URL('h5p/', baseUrl);
-  if (applicationOrigin && applicationOrigin !== 'null' && runtime.origin === applicationOrigin) {
-    const error = new Error(
-      `H5P runtime origin must be isolated from the embedding application. ` +
-      `Application origin and runtime origin are both ${runtime.origin}.`,
-    );
-    error.code = 'P2LRN_H5P_RUNTIME_ORIGIN_NOT_ISOLATED';
-    throw error;
-  }
-  return runtime.href;
+export function resolveH5pRuntimeUrl(explicitBaseUrl = null, options = {}) {
+  return resolveRuntimeUrl('h5p', explicitBaseUrl, options);
+}
+
+export function resolvePackageRuntimeUrl(explicitBaseUrl = null, options = {}) {
+  return resolveRuntimeUrl('package', explicitBaseUrl, options);
 }

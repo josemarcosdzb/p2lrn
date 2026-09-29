@@ -1,4 +1,5 @@
 import {BufferZipArchive, safeZipPath} from './zip-source.js';
+import {createMultipartPayload, isMultipartRepresentation} from './multipart.js';
 
 export const PACKAGE_MEMBER_PROTOCOL = 'p2lrn-package-member/1';
 export const LEGACY_PACKAGE_MEMBER_PROTOCOL = 'p2rln-package-member/1';
@@ -11,6 +12,7 @@ export const DEFAULT_NESTED_ZIP_LIMITS = Object.freeze({
 });
 
 const archivesByPackage = new WeakMap();
+const archivesByPayload = new WeakMap();
 
 function normalizeMemberPath(path) {
   const value = String(path ?? '').replace(/^\.\//, '');
@@ -48,6 +50,28 @@ export async function openNestedPackage(pkg, packagePath, limits = DEFAULT_NESTE
     })());
   }
   return cache.get(normalizedPackagePath);
+}
+
+
+export async function openPayloadPackage(payload, limits = DEFAULT_NESTED_ZIP_LIMITS) {
+  if (!payload || typeof payload.read !== 'function') throw new TypeError('P2LRN payload is required.');
+  if (!archivesByPayload.has(payload)) {
+    archivesByPayload.set(payload, (async () => {
+      const bytes = await payload.read();
+      const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      const archive = await BufferZipArchive.open(buffer, limits);
+      return Object.freeze({
+        protocol: PACKAGE_MEMBER_PROTOCOL,
+        packagePath: payload.path ?? null,
+        payload,
+        archive,
+        names: () => archive.names(),
+        has: (member) => archive.entries.has(normalizeMemberPath(member)),
+        read: (member) => archive.read(normalizeMemberPath(member)),
+      });
+    })());
+  }
+  return archivesByPayload.get(payload);
 }
 
 export async function createPackageMemberPayload(pkg, representation, limits = DEFAULT_NESTED_ZIP_LIMITS) {
@@ -92,6 +116,7 @@ export async function createPackageMemberPayload(pkg, representation, limits = D
 }
 
 export async function representationPayload(pkg, representation) {
+  if (isMultipartRepresentation(representation)) return createMultipartPayload(pkg, representation);
   const location = representation?.location;
   if (location?.type === 'embedded') return pkg.payload(location.path);
   if (location?.type === 'package-member') return createPackageMemberPayload(pkg, representation);

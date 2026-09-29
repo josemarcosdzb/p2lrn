@@ -48,3 +48,14 @@ p2lrn-create upgrade workspace
 ```
 
 Projects 0.1/0.2 are upgraded to 0.3 with validation before and after migration. The canonical project file is `p2lrn.project.json`; after it has been written and validated successfully, the historical `p2rln.project.json` alias is removed from that workspace so there is only one editable project authority. Legacy Alpha15 `.p2rln` packages can also be opened directly; the existing canonical repack authority is reused before authoring materialization.
+
+
+## Multipart transport
+
+Large embedded payloads can be split without uploading course content to the shared P2LRN CDN:
+
+```bash
+p2lrn-multipart course.p2lrn course-split.p2lrn --part-size 26214400
+```
+
+This writes `course-split.p2lrn` plus adjacent `course-split.part001`, `course-split.part002`, etc. The Player resolves the parts relative to the outer package URL and verifies per-part and final SHA-256 digests before handing the logical payload to its normal renderer.

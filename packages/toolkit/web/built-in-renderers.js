@@ -5,6 +5,7 @@ const NATIVE_QUESTIONNAIRE_MEDIA_TYPE = 'application/vnd.p2lrn.questionnaire+jso
 const NATIVE_COMPOSITE_MEDIA_TYPE = 'application/vnd.p2lrn.composite+json';
 const NATIVE_COMPONENT_MEDIA_TYPE = 'application/vnd.p2lrn.component+json';
 import {DOM_DEPENDENCY, WEBGL2_DEPENDENCY} from './dependency-registry.js';
+import {supportsPackageRuntime} from './renderers/package-runtime.js';
 import {
   COMPOSITE_RENDERER,
   COMPONENT_ROUTER_RENDERER,
@@ -23,6 +24,8 @@ import {
 
 export const SCORM_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/scorm/runtime';
 export const H5P_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/h5p/runtime';
+export const PACKAGE_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/package/runtime';
+export const QTI_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/qti/runtime';
 export const PASSIVE_MEDIA_RENDERER = 'https://p2lrn.org/renderer/passive/media';
 export const PASSIVE_TEXT_RENDERER = 'https://p2lrn.org/renderer/passive/text';
 
@@ -47,6 +50,28 @@ export function registerBuiltInRenderers(registry) {
     dependencies: [DOM_DEPENDENCY],
     supports: ({representation}) => ['embedded', 'package-member'].includes(representation?.location?.type),
     load: () => import('./renderers/scorm-runtime.js'),
+  });
+  registry.register({
+    id: PACKAGE_RUNTIME_RENDERER, version: '1', priority: 108, presentation: 'external-runtime',
+    profiles: [
+      'https://p2lrn.org/profile/cmi5',
+      'https://p2lrn.org/profile/tincan-package',
+      'https://p2lrn.org/profile/common-cartridge',
+      'https://p2lrn.org/profile/ims-content-package',
+      'https://p2lrn.org/profile/qti',
+    ],
+    mediaTypes: ['text/html', 'application/xhtml+xml', 'application/zip', 'application/octet-stream'],
+    dependencies: [DOM_DEPENDENCY],
+    supports: ({representation}) => supportsPackageRuntime(representation),
+    load: () => import('./renderers/package-runtime.js'),
+  });
+  registry.register({
+    id: QTI_RUNTIME_RENDERER, version: '1', priority: 111, presentation: 'assessment',
+    profiles: ['https://p2lrn.org/profile/qti'],
+    mediaTypes: ['application/xml', 'text/xml', 'application/qti+xml'],
+    dependencies: [DOM_DEPENDENCY],
+    supports: ({representation}) => ['embedded', 'package-member'].includes(representation?.location?.type),
+    load: () => import('./renderers/qti-runtime.js'),
   });
   registry.register({
     id: COMPOSITE_RENDERER, version: '1', priority: 120, presentation: 'composite',
