@@ -7,6 +7,7 @@ export type {
   DocumentBlockType,
   DocumentFileType,
   DocumentInput,
+  ExtractedAsset,
   ExtractedTable,
   ExtractionStrategy,
   FileDetection,
