@@ -7,14 +7,14 @@ Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeS
 - `packages/toolkit/`: Core, validación, ZIP/ZIP64, `contentRoot`, Creator, API estable de autoría para Studio, Reader, servidor local, conversión/preservación de paquetes externos, puentes AulaP2P, cuestionarios/componentes/composites, delta y firmas Ed25519.
 - `packages/player/`: Web SDK/browser runtime, renderers, Service Worker, hosts aislados SCORM/H5P/paquetes externos y tipos TypeScript. Su `npm pack` reconstruye `dist/` desde el runtime canónico e incluye `h5p-standalone` fijado.
 - `packages/h5p-libraries/`: corpus compartido de librerías H5P, separado del Player y fijado a un snapshot reproducible. Contiene runtime compartido, nunca cursos de usuarios.
-- `packages/toolkit/`: fuente del tarball `@p2lrn/toolkit`; `npm pack` se valida en CI junto con los otros dos paquetes.
+- `packages/document-reader/`: copia autónoma y ligera del Reader documental de AulaP2P. Lee documentos y paquetes educativos para extracción/importación sin depender de AulaP2P, NestJS, OCR, Docling, Docker ni workers externos. PDF es opcional mediante `pdfjs-dist`.
 - `schemas/`, `profiles/`, `spec/`, `integration/`: material canónico con namespace P2LRN.
 - `examples/canonical/`: 17 paquetes `.p2lrn` validados.
 - `examples/legacy-alpha15/`: los 17 paquetes `.p2rln` usados para comprobar retrocompatibilidad.
 
 ## Identidad P2LRN
 
-La distribución `0.5.0-alpha.10` alinea `@p2lrn/player`, `@p2lrn/toolkit` y `@p2lrn/h5p-libraries`.
+La distribución `0.5.0-alpha.10` alinea `@p2lrn/player`, `@p2lrn/toolkit`, `@p2lrn/h5p-libraries` y `@p2lrn/document-reader`.
 
 La salida nueva usa:
 
@@ -41,6 +41,9 @@ La integración específica de AulaP2P y el futuro Studio de escritorio son cons
 ```bash
 npm install @p2lrn/toolkit @p2lrn/player
 
+# Reader documental/importador autónomo, sólo cuando se necesite:
+npm install @p2lrn/document-reader
+
 # Sólo si se necesitan H5P cuyas librerías no viajan dentro del propio .h5p:
 npm install @p2lrn/h5p-libraries
 ```
@@ -53,6 +56,8 @@ p2lrn-copy-runtime ./public/p2lrn
 
 Si `@p2lrn/h5p-libraries` está instalado, el mismo comando copia el corpus a
 `runtime-host/h5p-libraries/`. El CDN oficial se genera con exactamente los mismos builders que usan estos tarballs.
+
+`@p2lrn/document-reader` no forma parte del Player ni del CDN del navegador. Es una herramienta de ingestión separada para Node: conserva la lógica ligera de lectura documental de AulaP2P (DOCX/PPTX/XLSX/ODT/EPUB, texto estructurado y paquetes LMS), pero no carga OCR, Docling, Docker ni servicios de AulaP2P. `pdfjs-dist` es un peer opcional y sólo se necesita para PDF.
 
 Comandos principales:
 
