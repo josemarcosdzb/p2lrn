@@ -102,6 +102,30 @@ export interface ExtractedTable {
   rows: Array<Record<string, string>>;
 }
 
+export interface ExtractedAsset {
+  id: string;
+  path: string;
+  mediaType: string;
+  size: number;
+  sha256: string;
+  page?: number;
+  sheet?: string;
+  paragraphIndex?: number;
+  runIndex?: number;
+  cell?: string;
+  position?: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+  };
+  /**
+   * Present only when ReaderOptions.includeAssetBytes is true.
+   */
+  buffer?: Buffer;
+  source?: Record<string, unknown>;
+}
+
 export interface ReaderWarning {
   path: string;
   message: string;
@@ -127,6 +151,7 @@ export interface CanonicalDocument {
   blocks: DocumentBlock[];
   tables: ExtractedTable[];
   raw?: unknown;
+  assets?: ExtractedAsset[];
   warnings: ReaderWarning[];
 }
 
@@ -152,6 +177,11 @@ export interface ReaderOptions {
    * Maximum nested documents processed from a generic ZIP.
    */
   maxNestedDocuments?: number;
+  /**
+   * Keep image/media bytes in the returned assets. Default false to keep
+   * the Reader memory footprint low; metadata, hash and placement remain.
+   */
+  includeAssetBytes?: boolean;
 }
 
 export class DocumentReaderError extends Error {
