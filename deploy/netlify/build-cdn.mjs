@@ -12,6 +12,7 @@ const playerPackagePath = join(root, 'packages', 'player', 'package.json');
 const toolkitPackagePath = join(root, 'packages', 'toolkit', 'package.json');
 const compatibilityVersion = '0.5.0-alpha.1';
 const H5P_STANDALONE_VERSION = '3.8.2';
+const LUMI_H5P_LIBRARY_COMMIT = '236912f8e3c07a6b5c7ece4930b98fec2b6d3f6a';
 const execFileAsync = promisify(execFile);
 
 const EXCLUDED_ROOT = new Set(['app.js', 'index.html', 'style.css']);
@@ -108,6 +109,98 @@ async function installH5pRuntimeAssets(dist) {
     join(assetsRoot, 'h5p-standalone.json'),
     JSON.stringify({name:'h5p-standalone', version:H5P_STANDALONE_VERSION}, null, 2) + '\n',
   );
+}
+
+
+async function installSharedH5pLibraries(dist) {
+  const vendorRoot = join(root, '.netlify-vendor', 'lumi-h5p-libraries');
+  await rm(vendorRoot, {recursive: true, force: true});
+  await mkdir(vendorRoot, {recursive: true});
+
+  const archive = join(vendorRoot, 'lumi-h5p-libraries.tar.gz');
+  const url = \`https://codeload.github.com/Lumieducation/Lumi/tar.gz/\${LUMI_H5P_LIBRARY_COMMIT}\`;
+  const response = await fetch(url, {redirect: 'follow'});
+  if (!response.ok) {
+    throw new Error(\`Unable to download pinned Lumi H5P library corpus (\${response.status}).\`);
+  }
+  await writeFile(archive, new Uint8Array(await response.arrayBuffer()));
+  await execFileAsync('tar', ['-xzf', archive, '-C', vendorRoot], {cwd: root, maxBuffer: 8 * 1024 * 1024});
+
+  const extracted = (await readdir(vendorRoot, {withFileTypes: true}))
+    .find((entry) => entry.isDirectory() && entry.name.startsWith('Lumi-'));
+  if (!extracted) throw new Error('Pinned Lumi archive did not contain an extracted repository directory.');
+
+  const sourceRoot = join(vendorRoot, extracted.name, 'assets', 'h5p', 'libraries');
+  const targetRoot = join(dist, 'runtime-host', 'h5p-libraries');
+  const sourceInfo = await stat(sourceRoot);
+  if (!sourceInfo.isDirectory()) throw new Error('Pinned Lumi archive does not contain assets/h5p/libraries.');
+
+  await cp(sourceRoot, targetRoot, {recursive: true, force: true});
+
+  const catalog = [];
+  for (const entry of (await readdir(targetRoot, {withFileTypes: true})).sort((a, b) => a.name.localeCompare(b.name))) {
+    if (!entry.isDirectory()) continue;
+    const libraryJsonPath = join(targetRoot, entry.name, 'library.json');
+    let metadata;
+    try {
+      metadata = await readJson(libraryJsonPath);
+    } catch {
+      continue;
+    }
+    const machineName = String(metadata.machineName ?? '').trim();
+    const majorVersion = Number(metadata.majorVersion);
+    const minorVersion = Number(metadata.minorVersion);
+    const patchVersion = Number(metadata.patchVersion ?? 0);
+    if (!machineName || !Number.isInteger(majorVersion) || !Number.isInteger(minorVersion)) continue;
+
+    const expectedFolder = \`\${machineName}-\${majorVersion}.\${minorVersion}\`;
+    if (entry.name !== expectedFolder) {
+      throw new Error(\`H5P library folder/version mismatch: \${entry.name} != \${expectedFolder}\`);
+    }
+
+    for (const asset of [
+      ...(Array.isArray(metadata.preloadedJs) ? metadata.preloadedJs : []),
+      ...(Array.isArray(metadata.preloadedCss) ? metadata.preloadedCss : []),
+    ]) {
+      const rel = String(asset?.path ?? '');
+      if (!rel || rel.startsWith('/') || rel.includes('..') || rel.includes('\\\\')) {
+        throw new Error(\`Unsafe H5P preloaded asset path in \${entry.name}: \${rel}\`);
+      }
+      const assetInfo = await stat(join(targetRoot, entry.name, ...rel.split('/')));
+      if (!assetInfo.isFile()) throw new Error(\`Missing H5P preloaded asset: \${entry.name}/\${rel}\`);
+    }
+
+    catalog.push({
+      folder: entry.name,
+      machineName,
+      majorVersion,
+      minorVersion,
+      patchVersion,
+      runnable: Number(metadata.runnable ?? 0) === 1,
+    });
+  }
+
+  if (catalog.length < 100) {
+    throw new Error(\`Pinned H5P library corpus is unexpectedly small (\${catalog.length} libraries).\`);
+  }
+  for (const required of ['H5P.Crossword-0.5', 'H5P.BranchingScenario-1.8', 'H5P.Question-1.5', 'H5P.JoubelUI-1.3', 'H5P.Image-1.1', 'FontAwesome-4.5']) {
+    if (!catalog.some((entry) => entry.folder === required)) {
+      throw new Error(\`Required shared H5P library is missing from the pinned corpus: \${required}\`);
+    }
+  }
+
+  await writeFile(
+    join(targetRoot, 'index.json'),
+    JSON.stringify({
+      schema: 'https://p2lrn.org/schema/h5p-library-catalog/1',
+      source: {
+        repository: 'Lumieducation/Lumi',
+        commit: LUMI_H5P_LIBRARY_COMMIT,
+      },
+      libraries: catalog,
+    }, null, 2) + '\n',
+  );
+  return catalog.length;
 }
 
 async function assertVersionAlignment(dist, version) {
@@ -220,6 +313,7 @@ await rm(outputRoot, {recursive: true, force: true});
 const versionedDist = join(outputRoot, 'player', version, 'dist');
 await copyCanonicalRuntime(versionedDist);
 await installH5pRuntimeAssets(versionedDist);
+const sharedH5pLibraryCount = await installSharedH5pLibraries(versionedDist);
 await assertVersionAlignment(versionedDist, version);
 await validateLocalReferences(versionedDist);
 const release = await writeRelease(versionedDist, {
@@ -310,6 +404,18 @@ if (version !== compatibilityVersion) {
   );
 }
 headers += [
+  \`/player/\${version}/dist/runtime-host/h5p.html\`,
+  "  Content-Security-Policy: default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'",
+  '',
+  '/player/current/dist/runtime-host/h5p.html',
+  "  Content-Security-Policy: default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'",
+  '',
+  \`/player/\${compatibilityVersion}/dist/runtime-host/h5p.html\`,
+  "  Content-Security-Policy: default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'",
+  '',
+].join('\n');
+
+headers += [
   '/packages/*',
   '  Access-Control-Allow-Origin: *',
   '  Access-Control-Expose-Headers: Accept-Ranges, Content-Length, Content-Range, ETag, Last-Modified',
@@ -338,4 +444,6 @@ console.log(JSON.stringify({
   files: release.files.length,
   packagesCopied,
   h5pStandaloneVersion: H5P_STANDALONE_VERSION,
+  sharedH5pLibraryCount,
+  sharedH5pLibrarySourceCommit: LUMI_H5P_LIBRARY_COMMIT,
 }, null, 2));
