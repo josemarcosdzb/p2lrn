@@ -16,7 +16,7 @@ const execFileAsync = promisify(execFile);
 
 const EXCLUDED_ROOT = new Set(['app.js', 'index.html', 'style.css']);
 const SDK_ENTRYPOINTS = ['p2lrn.js', 'p2lrn.esm.js', 'p2rln.js', 'p2rln.esm.js'];
-const LOCAL_REF = /(?:from\\s+|import\\()(['"])(\\.{1,2}\\/[^'"]+)\\1|new URL\\((['"])(\\.{1,2}\\/[^'"]+)\\3\\s*,\\s*import\\.meta\\.url\\)/g;
+const LOCAL_REF = /(?:from\s+|import\()(['"])(\.{1,2}\/[^'"]+)\1|new URL\((['"])(\.{1,2}\/[^'"]+)\3\s*,\s*import\.meta\.url\)/g;
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
