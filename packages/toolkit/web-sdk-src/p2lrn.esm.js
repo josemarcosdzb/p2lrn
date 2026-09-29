@@ -13,7 +13,7 @@ import {
 } from './p2lrn-player.js';
 import {createHostAdapter, HOST_ADAPTER_VERSION} from './host-adapter.js';
 import {installP2LRNServiceWorker} from './static-resource-bridge.js';
-import {configureRuntimeHost, getRuntimeHostConfig, normalizeRuntimeBaseUrl, resolveScormRuntimeUrl, resolveH5pRuntimeUrl} from './runtime-host-config.js';
+import {configureRuntimeHost, getRuntimeHostConfig, normalizeRuntimeBaseUrl, resolveScormRuntimeUrl, resolveH5pRuntimeUrl, resolvePackageRuntimeUrl} from './runtime-host-config.js';
 
 
 function ensureLegacyPlayerElement() {
@@ -51,6 +51,7 @@ export {
   normalizeRuntimeBaseUrl,
   resolveScormRuntimeUrl,
   resolveH5pRuntimeUrl,
+  resolvePackageRuntimeUrl,
 };
 
 export const registerRenderer = (descriptor) => defaultRendererRegistry.register(descriptor);
