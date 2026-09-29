@@ -236,7 +236,6 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   const course=params.get('course');
   const passiveExpectations={
     'common-cartridge.p2lrn':'Common Cartridge browser OK',
-    'ims-content-package.p2lrn':'IMS browser OK',
   };
   const p=document.createElement('p2lrn-player');
   p.id='player';
