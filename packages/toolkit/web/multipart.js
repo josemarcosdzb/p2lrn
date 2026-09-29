@@ -159,8 +159,8 @@ export async function createMultipartPayload(pkg, representation) {
     compressionMethod:null,
     descriptor,
     read,
-    stream:async () => new Blob([(await loadAll()).chunks], {type:descriptor.mediaType}).stream(),
-    blob:async (type = descriptor.mediaType) => new Blob([(await loadAll()).chunks], {type:type || descriptor.mediaType}),
+    stream:async () => new Blob((await loadAll()).chunks, {type:descriptor.mediaType}).stream(),
+    blob:async (type = descriptor.mediaType) => new Blob((await loadAll()).chunks, {type:type || descriptor.mediaType}),
     rangeIntegrity:async () => null,
     rangeDescriptor:async () => null,
   });
