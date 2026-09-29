@@ -4,6 +4,14 @@ import {BufferZipArchive, safeZipPath} from './zip-source.js';
 export const MULTIPART_PROFILE = 'https://p2lrn.org/profile/multipart';
 export const MULTIPART_MEDIA_TYPE = 'application/vnd.p2lrn.multipart+json';
 const decoder = new TextDecoder('utf-8', {fatal:true});
+const NESTED_ZIP_LIMITS = Object.freeze({
+  entries:5000,
+  entryBytes:16 * 1024 * 1024 * 1024,
+  bufferedEntryBytes:512 * 1024 * 1024,
+  totalUncompressedBytes:128 * 1024 * 1024 * 1024,
+  centralDirectoryBytes:64 * 1024 * 1024,
+  compressionRatio:250,
+});
 
 function fail(message, code = 'P2LRN_MULTIPART_INVALID') {
   const error = new Error(message);
@@ -155,7 +163,7 @@ export async function createMultipartPayload(pkg, representation) {
   if (member != null) {
     const packageBytes = await read();
     const buffer = packageBytes.buffer.slice(packageBytes.byteOffset, packageBytes.byteOffset + packageBytes.byteLength);
-    const archive = await BufferZipArchive.open(buffer);
+    const archive = await BufferZipArchive.open(buffer, NESTED_ZIP_LIMITS);
     const entry = archive.entries.get(member);
     if (!entry) throw fail(`Multipart package member not found: ${member}`, 'P2LRN_MULTIPART_MEMBER_NOT_FOUND');
     const nested = Object.freeze({
