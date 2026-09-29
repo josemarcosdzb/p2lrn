@@ -25,6 +25,7 @@ import {
 export const SCORM_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/scorm/runtime';
 export const H5P_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/h5p/runtime';
 export const PACKAGE_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/package/runtime';
+export const QTI_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/qti/runtime';
 export const PASSIVE_MEDIA_RENDERER = 'https://p2lrn.org/renderer/passive/media';
 export const PASSIVE_TEXT_RENDERER = 'https://p2lrn.org/renderer/passive/text';
 
@@ -62,6 +63,14 @@ export function registerBuiltInRenderers(registry) {
     dependencies: [DOM_DEPENDENCY],
     supports: ({representation}) => supportsPackageRuntime(representation),
     load: () => import('./renderers/package-runtime.js'),
+  });
+  registry.register({
+    id: QTI_RUNTIME_RENDERER, version: '1', priority: 111, presentation: 'assessment',
+    profiles: ['https://p2lrn.org/profile/qti'],
+    mediaTypes: ['application/xml', 'text/xml', 'application/qti+xml'],
+    dependencies: [DOM_DEPENDENCY],
+    supports: ({representation}) => ['embedded', 'package-member'].includes(representation?.location?.type),
+    load: () => import('./renderers/qti-runtime.js'),
   });
   registry.register({
     id: COMPOSITE_RENDERER, version: '1', priority: 120, presentation: 'composite',
