@@ -8,6 +8,7 @@ on:
       - 'packages/player/**'
       - 'packages/h5p-libraries/**'
       - 'scripts/verify-npm-pack.mjs'
+      - 'scripts/verify-browser-from-npm.mjs'
       - 'deploy/netlify/**'
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
@@ -18,6 +19,7 @@ on:
       - 'packages/player/**'
       - 'packages/h5p-libraries/**'
       - 'scripts/verify-npm-pack.mjs'
+      - 'scripts/verify-browser-from-npm.mjs'
       - 'deploy/netlify/**'
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
@@ -53,10 +55,14 @@ jobs:
           node --check packages/player/scripts/build-dist.mjs
           node --check packages/h5p-libraries/scripts/build.mjs
           node --check scripts/verify-npm-pack.mjs
+          node --check scripts/verify-browser-from-npm.mjs
           node --check deploy/netlify/build-cdn.mjs
 
       - name: Verify npm tarballs as installed packages
         run: node scripts/verify-npm-pack.mjs
+
+      - name: Browser smoke from installed npm tarballs
+        run: node scripts/verify-browser-from-npm.mjs
 
       - name: Build Netlify CDN
         run: node deploy/netlify/build-cdn.mjs
