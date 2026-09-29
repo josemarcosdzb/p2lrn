@@ -52,7 +52,7 @@ function chooseTarget(validated:any, representationId:string|undefined, partSize
     return found;
   }
   const large = candidates.filter(({file}:any) => Number(file.size) > partSize).sort((a:any,b:any) => b.file.size - a.file.size);
-  if (large.length) return large[0];
+  if (large.length) return large[0]!;
   const any = candidates.sort((a:any,b:any) => b.file.size - a.file.size)[0];
   if (!any) throw new Error('package has no embedded representation that can be split');
   return any;
