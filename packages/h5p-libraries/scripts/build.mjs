@@ -39,7 +39,6 @@ export async function buildH5pLibraries({output = join(packageRoot, 'dist')} = {
   await rm(work, {recursive:true, force:true});
   await rm(output, {recursive:true, force:true});
   await mkdir(work, {recursive:true});
-  await mkdir(output, {recursive:true});
 
   const archive = join(work, 'lumi.tar.gz');
   const url = `https://codeload.github.com/Lumieducation/Lumi/tar.gz/${LUMI_H5P_LIBRARY_COMMIT}`;
