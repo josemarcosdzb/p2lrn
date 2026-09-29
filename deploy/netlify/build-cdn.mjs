@@ -70,7 +70,7 @@ const versionedPlayerRoot = join(outputRoot, 'player', version);
 await mkdir(versionedPlayerRoot, { recursive: true });
 await cp(playerDist, join(versionedPlayerRoot, 'dist'), { recursive: true, force: true });
 
-// Optional public .p2lrn objects can be committed/staged here. The directory is
+// Optional public .p2lrn objects can be staged here. The directory is
 // intentionally separate from canonical examples and from the SDK runtime.
 const packagesCopied = await copyIfPresent(
   join(root, 'deploy', 'netlify', 'packages'),
@@ -91,6 +91,54 @@ const index = {
   packagesPath: packagesCopied ? '/packages/' : null,
 };
 
+const headers = `/player/*
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+  Cache-Control: public, max-age=31536000, immutable
+  Netlify-CDN-Cache-Control: public, s-maxage=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+/packages/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Expose-Headers: Accept-Ranges, Content-Length, Content-Range, ETag, Last-Modified
+  Cross-Origin-Resource-Policy: cross-origin
+  Cache-Control: public, max-age=31536000, immutable
+  Netlify-CDN-Cache-Control: public, s-maxage=31536000, immutable
+  Content-Type: application/vnd.p2lrn+zip
+  X-Content-Type-Options: nosniff
+
+/index.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=300, must-revalidate
+  X-Content-Type-Options: nosniff
+
+/health.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-store
+  X-Content-Type-Options: nosniff
+`;
+
+const landingPage = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>P2LRN CDN</title>
+  <meta name="robots" content="noindex">
+</head>
+<body>
+  <main>
+    <h1>P2LRN CDN</h1>
+    <p>Player version: ${version}</p>
+    <p><a href="/index.json">Distribution index</a></p>
+    <p><a href="/player/${version}/dist/release.json">Player release manifest</a></p>
+  </main>
+</body>
+</html>
+`;
+
+await writeFile(join(outputRoot, '_headers'), headers);
+await writeFile(join(outputRoot, 'index.html'), landingPage);
 await writeFile(join(outputRoot, 'index.json'), JSON.stringify(index, null, 2) + '\n');
 await writeFile(
   join(outputRoot, 'health.json'),
@@ -98,4 +146,4 @@ await writeFile(
 );
 
 console.log(`P2LRN CDN tree ready: player ${version}`);
-console.log(`Publish directory: ${outputRoot}`);
+console.log(`Drag this folder into Netlify Drop: ${outputRoot}`);
