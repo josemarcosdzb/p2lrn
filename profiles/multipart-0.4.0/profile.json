@@ -18,6 +18,7 @@
   "rules": [
     "Multipart is a transport profile and MUST NOT change the semantic profile or media type of the logical representation.",
     "A multipart representation MUST carry the https://p2lrn.org/profile/multipart extension and MUST point to an embedded application/vnd.p2lrn.multipart+json descriptor.",
+    "When a representation is a view of one member inside the reconstructed package, the multipart extension MAY declare a safe relative member path; this replaces package-member transport without changing the representation media type.",
     "Every part href MUST be a safe relative path resolved against the URL of the outer .p2lrn package; multipart MUST NOT require upload to the P2LRN CDN.",
     "Each part MUST declare its exact byte size and SHA-256 byte digest.",
     "The descriptor MUST declare the logical payload total size and SHA-256 digest, and the ordered part sizes MUST sum exactly to the total size.",
