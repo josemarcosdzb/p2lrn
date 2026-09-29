@@ -234,6 +234,10 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   try{await window.P2LRNReady;}catch(e){finish('FAIL',{phase:'loader',message:String(e?.message||e)});return;}
   const params=new URLSearchParams(location.search);
   const course=params.get('course');
+  const passiveExpectations={
+    'common-cartridge.p2lrn':'Common Cartridge browser OK',
+    'ims-content-package.p2lrn':'IMS browser OK',
+  };
   const p=document.createElement('p2lrn-player');
   p.id='player';
   p.setAttribute('src','/courses/'+course);
@@ -243,6 +247,16 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
       try{detail=JSON.parse(JSON.stringify(detail));}catch{detail=String(detail);}
       events.push({name,detail});
       if(name==='p2lrn:error')finish('FAIL',{phase:'p2lrn-error',detail});
+      if(name==='p2lrn:rendered'&&passiveExpectations[course]){
+        const frame=p.shadowRoot?.querySelector('iframe.p2lrn-html');
+        const srcdoc=frame?.getAttribute('srcdoc')||'';
+        const marker=passiveExpectations[course];
+        if(!frame||!srcdoc.includes(marker)){
+          finish('FAIL',{phase:'passive-render-contract',course,renderer:detail?.rendererId,marker,frame:!!frame});
+          return;
+        }
+        finish('PASS',{course,renderer:detail?.rendererId,passiveContentVerified:true});
+      }
       if(name==='p2lrn:activityready'){
         if(course.includes('h5p')){
           const frame=p.shadowRoot?.querySelector('iframe.p2lrn-h5p-frame');
