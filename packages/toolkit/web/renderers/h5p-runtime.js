@@ -1,4 +1,4 @@
-import {openNestedPackage} from '../package-member.js';
+import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 import {resolveH5pRuntimeUrl} from '../runtime-host-config.js';
 import {encodeH5PSession, inspectH5PPackage} from '../h5p-package.js';
@@ -18,6 +18,7 @@ function extensionFor(rep) {
 
 async function nestedH5P(pkg, representation, payload) {
   if (payload?.nested?.archive && payload.nested.names?.().includes('h5p.json')) return payload.nested;
+  if (payload?.multipart === true) return openPayloadPackage(payload);
   if (representation?.location?.type === 'embedded') return openNestedPackage(pkg, representation.location.path);
   const error = new Error('H5P runtime requires an embedded .h5p package.');
   error.code = 'P2LRN_H5P_PACKAGE_UNAVAILABLE';
