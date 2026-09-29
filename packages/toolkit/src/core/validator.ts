@@ -84,7 +84,9 @@ function validateMultipartDescriptors(graph:GraphDocument,manifest:Manifest,arch
       const descriptor=record(parseIJson(archive.read(path),`multipart descriptor ${path}`),`multipart descriptor ${path}`);
       if(descriptor.version!=='1')throw new ValidationError(`unsupported multipart descriptor version at ${path}: ${String(descriptor.version)}`);
       const mediaType=string(descriptor.mediaType,`multipart mediaType ${path}`);
-      if(baseMediaType(mediaType)!==baseMediaType(String(rep.mediaType??'')))throw new ValidationError(`multipart mediaType mismatch at ${path}: representation=${rep.mediaType}, descriptor=${mediaType}`);
+      const member=extRecord.member==null?null:string(extRecord.member,`multipart member ${rep.id}`);
+      if(member!=null)safeZipPath(member);
+      if(member==null&&baseMediaType(mediaType)!==baseMediaType(String(rep.mediaType??'')))throw new ValidationError(`multipart mediaType mismatch at ${path}: representation=${rep.mediaType}, descriptor=${mediaType}`);
       const size=integer(descriptor.size,`multipart size ${path}`);
       if(size<1)throw new ValidationError(`multipart size must be positive: ${path}`);
       const digest=string(descriptor.byteDigest,`multipart byteDigest ${path}`);
