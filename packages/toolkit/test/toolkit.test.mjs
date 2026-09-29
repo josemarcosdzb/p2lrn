@@ -118,7 +118,7 @@ test('canonical capability schema and shipped capability document use P2LRN name
   const capabilities=JSON.parse(readFileSync(resolve('config/capabilities.json'),'utf8'));
   assert.deepEqual(capabilities.p2lrnVersions,['0.4.0']);
   assert.equal(Object.prototype.hasOwnProperty.call(capabilities,'p2rlnVersions'),false);
-  assert.equal(capabilities.product.version,'0.5.0-alpha.9');
+  assert.equal(capabilities.product.version,'0.5.0-alpha.10');
 });
 
 test('canonical schema registry validates p2lrnVersions and rejects the historical key on the new schema',async()=>{
