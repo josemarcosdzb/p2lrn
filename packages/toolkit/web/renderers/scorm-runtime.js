@@ -1,4 +1,4 @@
-import {openNestedPackage} from '../package-member.js';
+import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {createScormApi, isScormRuntimeProtocol, normalizeScormVersion, SCORM_PROFILE, SCORM_RUNTIME_PROTOCOL} from '../scorm-runtime-core.js';
 import {createScorm2004Sequencer, parseScormManifest} from '../scorm2004-sequencing.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
@@ -33,6 +33,7 @@ function findLaunchMember(representation, payload) {
 
 async function resolveNestedArchive(pkg, representation, payload) {
   if (payload?.nested?.archive) return payload.nested;
+  if (payload?.multipart === true) return openPayloadPackage(payload);
   if (representation?.location?.type === 'embedded') return openNestedPackage(pkg, representation.location.path);
   const error = new Error('SCORM runtime requires an embedded ZIP or package-member representation.');
   error.code = 'P2LRN_SCORM_PACKAGE_UNAVAILABLE';
