@@ -9,6 +9,7 @@ const PROFILE_KEYS = [
   'https://p2lrn.org/profile/cmi5',
   'https://p2lrn.org/profile/tincan-package',
   'https://p2lrn.org/profile/common-cartridge',
+  'https://p2lrn.org/profile/ims-content-package',
   'https://p2lrn.org/profile/qti',
 ];
 
