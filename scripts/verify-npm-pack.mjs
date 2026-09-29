@@ -10,6 +10,7 @@ const work = join(root, '.npm-pack-gate');
 const packs = join(work, 'packs');
 const installRoot = join(work, 'install');
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmExecOptions = process.platform === 'win32' ? {shell:true} : {};
 const node = process.execPath;
 
 async function exists(path) {
@@ -37,6 +38,7 @@ async function run(command, args, options = {}) {
   const result = await execFileAsync(command, args, {
     cwd:options.cwd ?? root,
     maxBuffer:32*1024*1024,
+    ...npmExecOptions,
     env:{...process.env, ...(options.env ?? {})},
   });
   return result.stdout;
