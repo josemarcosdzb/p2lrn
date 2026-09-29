@@ -77,14 +77,6 @@ export function createMultipartPackage(
     return (location.type === 'embedded' && location.path === targetPath)
       || (location.type === 'package-member' && location.package === targetPath);
   });
-  const packageMemberRefs = refs.filter(({representation}) => representation.location.type === 'package-member');
-  if (packageMemberRefs.length) {
-    throw new Error(
-      `payload ${targetPath} is also referenced by package-member representations (${packageMemberRefs.map((x)=>x.representation.id).join(', ')}); ` +
-      'multipart conversion refuses to break those member references',
-    );
-  }
-
   const raw = before.archive.read(targetPath);
   if (raw.byteLength <= partSize) throw new Error(`payload is only ${raw.byteLength} bytes; choose a smaller --part-size to produce at least two parts`);
 
@@ -112,10 +104,13 @@ export function createMultipartPackage(
   const multipartDescriptor = descriptor(multipartPath, multipartBytes, MULTIPART_MEDIA);
 
   for (const {representation} of refs) {
+    const previousLocation = representation.location;
     representation.location = {type:'embedded', path:multipartPath};
     representation.extensions = {
       ...(representation.extensions ?? {}),
-      [PROFILE.multipart]:{version:'1'},
+      [PROFILE.multipart]: previousLocation.type === 'package-member'
+        ? {version:'1', member:String(previousLocation.member)}
+        : {version:'1'},
     };
   }
 
