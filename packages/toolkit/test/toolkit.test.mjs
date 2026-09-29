@@ -57,6 +57,57 @@ test('deep cmi5 validation does not dereference a remote AU',()=>{const dir=mkdt
 </courseStructure>`]]);const report=convertExternalPackage(src,out);assert.equal(report.detectedFormat,'cmi5');assert.equal(report.validation.summary.formatVersion,'0.4.0');}finally{rmSync(dir,{recursive:true,force:true});}});
 
 
+test('Common Cartridge is detected, preserved and projects local web content',()=>{const dir=mkdtempSync(join(tmpdir(),'p2lrn-cc-'));try{
+  const src=join(dir,'course.imscc'),out=join(dir,'course.p2lrn');
+  writeExternalFixture(src,[
+    ['imsmanifest.xml',`<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p3/imscp_v1p1" identifier="cc1">
+  <metadata><schema>IMS Common Cartridge</schema><schemaversion>1.3.0</schemaversion></metadata>
+  <organizations default="org1"><organization identifier="org1"><title>CC Course</title><item identifier="i1" identifierref="r1"><title>Page</title></item></organization></organizations>
+  <resources><resource identifier="r1" type="webcontent" href="index.html"><file href="index.html"/></resource></resources>
+</manifest>`],
+    ['index.html','<!doctype html><html><body>Common Cartridge OK</body></html>']
+  ]);
+  const report=convertExternalPackage(src,out);const reader=new P2LRNReader(out);
+  assert.equal(report.detectedFormat,'common-cartridge');
+  assert.ok(reader.package.manifest.profiles.some((p)=>p.id==='https://p2lrn.org/profile/common-cartridge'));
+  const reps=reader.package.graph.entities.filter((e)=>e.type==='resource').flatMap((e)=>e.representations??[]);
+  assert.ok(reps.some((rep)=>rep.location?.type==='package-member'&&rep.location.member==='index.html'));
+}finally{rmSync(dir,{recursive:true,force:true});}});
+
+test('generic IMS Content Package fallback is detected without mislabeling SCORM or Common Cartridge',()=>{const dir=mkdtempSync(join(tmpdir(),'p2lrn-ims-cp-'));try{
+  const src=join(dir,'ims.zip'),out=join(dir,'ims.p2lrn');
+  writeExternalFixture(src,[
+    ['imsmanifest.xml',`<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="http://www.imsglobal.org/xsd/imscp_v1p1" identifier="ims1">
+  <metadata><schema>IMS Content</schema><schemaversion>1.1.4</schemaversion></metadata>
+  <organizations default="org1"><organization identifier="org1"><title>IMS Course</title><item identifier="i1" identifierref="r1"><title>Lesson</title></item></organization></organizations>
+  <resources><resource identifier="r1" type="webcontent" href="lesson.html"><file href="lesson.html"/></resource></resources>
+</manifest>`],
+    ['lesson.html','<!doctype html><html><body>IMS Content Package OK</body></html>']
+  ]);
+  const report=convertExternalPackage(src,out);const reader=new P2LRNReader(out);
+  assert.equal(report.detectedFormat,'ims-content-package');
+  assert.ok(reader.package.manifest.profiles.some((p)=>p.id==='https://p2lrn.org/profile/ims-content-package'));
+  const reps=reader.package.graph.entities.filter((e)=>e.type==='resource').flatMap((e)=>e.representations??[]);
+  assert.ok(reps.some((rep)=>rep.location?.type==='package-member'&&rep.location.member==='lesson.html'));
+}finally{rmSync(dir,{recursive:true,force:true});}});
+
+test('legacy Tin Can package is detected and preserves a local launch target',()=>{const dir=mkdtempSync(join(tmpdir(),'p2lrn-tincan-'));try{
+  const src=join(dir,'tincan.zip'),out=join(dir,'tincan.p2lrn');
+  writeExternalFixture(src,[
+    ['tincan.xml',`<?xml version="1.0" encoding="UTF-8"?>
+<tincan><activities><activity id="https://example.invalid/tincan/activity"><name>Tin Can Demo</name><launch>index.html</launch></activity></activities></tincan>`],
+    ['index.html','<!doctype html><html><body>Tin Can launch OK</body></html>']
+  ]);
+  const report=convertExternalPackage(src,out);const reader=new P2LRNReader(out);
+  assert.equal(report.detectedFormat,'tincan-package');
+  assert.ok(reader.package.manifest.profiles.some((p)=>p.id==='https://p2lrn.org/profile/tincan-package'));
+  const rep=reader.package.graph.entities.find((e)=>e.type==='resource')?.representations?.[0];
+  assert.equal(rep?.extensions?.['https://p2lrn.org/profile/tincan-package']?.launch,'index.html');
+}finally{rmSync(dir,{recursive:true,force:true});}});
+
+
 function asArrayBuffer(buffer) { return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength); }
 
 test('browser SDK opens both legacy P2RLN and canonical P2LRN packages after integrity verification',async()=>{const dir=mkdtempSync(join(tmpdir(),'p2lrn-web-'));try{const canonicalPath=join(dir,'canonical.p2lrn');buildProject(join(examples,'creator-project'),canonicalPath,true);const legacy=await openP2LRNPackageBytes(asArrayBuffer(readFileSync(join(examples,'creator-course.p2rln'))));const canonical=await openP2LRNPackageBytes(asArrayBuffer(readFileSync(canonicalPath)));assert.equal(legacy.manifest.format,'P2RLN');assert.equal(canonical.manifest.format,'P2LRN');assert.ok(legacy.graph.entities.some((e)=>e.activityType==='https://p2lrn.org/type/resource'));assert.ok(canonical.graph.entities.some((e)=>e.activityType==='https://p2lrn.org/type/resource'));}finally{rmSync(dir,{recursive:true,force:true});}});
@@ -67,7 +118,7 @@ test('canonical capability schema and shipped capability document use P2LRN name
   const capabilities=JSON.parse(readFileSync(resolve('config/capabilities.json'),'utf8'));
   assert.deepEqual(capabilities.p2lrnVersions,['0.4.0']);
   assert.equal(Object.prototype.hasOwnProperty.call(capabilities,'p2rlnVersions'),false);
-  assert.equal(capabilities.product.version,'0.5.0-alpha.1');
+  assert.equal(capabilities.product.version,'0.5.0-alpha.9');
 });
 
 test('canonical schema registry validates p2lrnVersions and rejects the historical key on the new schema',async()=>{
