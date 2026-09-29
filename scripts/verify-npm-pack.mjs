@@ -24,7 +24,7 @@ async function pack(directory) {
   const {stdout} = await execFileAsync(
     npm,
     ['pack', '--json', '--pack-destination', packs],
-    {cwd:join(root, directory), maxBuffer:32*1024*1024},
+    {cwd:join(root, directory), maxBuffer:32*1024*1024, ...npmExecOptions},
   );
   const match = /\[\s*\{[\s\S]*\}\s*\]\s*$/u.exec(String(stdout));
   if (!match) throw new Error(`npm pack did not emit a JSON result for ${directory}:\n${stdout}`);
