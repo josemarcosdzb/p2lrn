@@ -17,6 +17,11 @@ export class FileTypeDetector {
       return this.result('PDF', extension, mimeType, fileName, .99, 'PDF binary signature.');
     }
 
+    const gzip = header.startsWith('1f8b');
+    if (extension === 'mbz' && gzip) {
+      return this.result('MOODLE_BACKUP', extension, mimeType, fileName, .98, 'Moodle backup GZIP/TAR container.');
+    }
+
     const zip = header.startsWith('504b0304') || header.startsWith('504b0506') || header.startsWith('504b0708');
     if (zip) {
       if (extension === 'docx') return this.result('DOCX', extension, mimeType, fileName, .97, 'Office Open XML DOCX.');
