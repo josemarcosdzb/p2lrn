@@ -1,0 +1,55 @@
+name: P2LRN runtime multipart gate
+
+on:
+  push:
+    branches:
+      - feat/universal-runtime-multipart
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-runtime-multipart-gate
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/universal-runtime-multipart
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Compile and test toolkit
+        working-directory: packages/toolkit
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund typescript@5.6.3
+          npm test
+
+      - name: Check browser module syntax
+        run: |
+          find packages/toolkit/web packages/toolkit/web-sdk-src -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check deploy/netlify/build-cdn.mjs
+
+      - name: Build Netlify CDN exactly as production
+        run: |
+          node deploy/netlify/build-cdn.mjs
+
+      - name: Verify generated runtime
+        run: |
+          test -f .netlify-cdn/player/0.5.0-alpha.4/dist/p2lrn.js
+          test -f .netlify-cdn/player/0.5.0-alpha.4/dist/runtime-host/h5p.html
+          test -f .netlify-cdn/player/0.5.0-alpha.4/dist/runtime-host/scorm.html
+          test -f .netlify-cdn/player/0.5.0-alpha.4/dist/runtime-host/package.html
+          test -s .netlify-cdn/player/0.5.0-alpha.4/dist/runtime-host/assets/main.bundle.js
+          test -s .netlify-cdn/player/0.5.0-alpha.4/dist/runtime-host/assets/frame.bundle.js
+          test -s .netlify-cdn/player/0.5.0-alpha.4/dist/runtime-host/assets/styles/h5p.css
+          grep -q '"webSdkVersion": "0.5.0-alpha.4"' .netlify-cdn/player/0.5.0-alpha.4/dist/release.json
+          grep -q 'runtime-host/assets/frame.bundle.js' .netlify-cdn/player/0.5.0-alpha.4/dist/release.json
+          grep -q '"version": "0.5.0-alpha.4"' .netlify-cdn/index.json
