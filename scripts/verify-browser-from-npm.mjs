@@ -245,7 +245,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
       if(name==='p2lrn:error')finish('FAIL',{phase:'p2lrn-error',detail});
       if(name==='p2lrn:activityready'){
         if(course.includes('h5p')){
-          const frame=p.shadowRoot?.querySelector('iframe.p2lrn-h5p-runtime');
+          const frame=p.shadowRoot?.querySelector('iframe.p2lrn-h5p-frame');
           const allow=frame?.getAttribute('allow')||'';
           if(!frame||!allow.toLowerCase().includes('fullscreen')){
             finish('FAIL',{phase:'fullscreen-contract',course,allow,frame:!!frame});
