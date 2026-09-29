@@ -354,6 +354,15 @@ const index = {
     serviceWorker: `/player/${version}/dist/${release.entrypoints.serviceWorker}`,
     release: `/player/${version}/dist/release.json`,
   },
+  h5p: {
+    standaloneVersion: H5P_STANDALONE_VERSION,
+    sharedLibraryCount: sharedH5pLibraryCount,
+    sourceRepository: 'Lumieducation/Lumi',
+    sourceCommit: LUMI_H5P_LIBRARY_COMMIT,
+    versionedBasePath: `/player/${version}/dist/runtime-host/h5p-libraries/`,
+    currentBasePath: '/player/current/dist/runtime-host/h5p-libraries/',
+    catalog: '/player/current/dist/runtime-host/h5p-libraries/index.json',
+  },
   packagesPath: packagesCopied ? '/packages/' : null,
 };
 
@@ -403,17 +412,16 @@ if (version !== compatibilityVersion) {
     'public, s-maxage=60, must-revalidate',
   );
 }
-headers += [
-  `/player/${version}/dist/runtime-host/h5p.html`,
-  "  Content-Security-Policy: default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'",
-  '',
-  '/player/current/dist/runtime-host/h5p.html',
-  "  Content-Security-Policy: default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'",
-  '',
-  `/player/${compatibilityVersion}/dist/runtime-host/h5p.html`,
-  "  Content-Security-Policy: default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'",
-  '',
-].join('\n');
+const runtimeCsp = "default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";
+for (const channel of [version, 'current', compatibilityVersion]) {
+  for (const host of ['h5p.html', 'scorm.html', 'package.html']) {
+    headers += [
+      `/player/${channel}/dist/runtime-host/${host}`,
+      `  Content-Security-Policy: ${runtimeCsp}`,
+      '',
+    ].join('\n');
+  }
+}
 
 headers += [
   '/packages/*',
