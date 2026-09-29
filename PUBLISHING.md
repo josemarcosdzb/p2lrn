@@ -6,7 +6,7 @@ The npm distribution is intentionally split into three aligned packages:
 - `@p2lrn/toolkit` — validator, Reader, Creator/authoring APIs, conversion tools and CLI.
 - `@p2lrn/h5p-libraries` — pinned reusable third-party H5P library corpus. It contains no user/course packages.
 
-All three packages currently use the same release version: `0.5.0-alpha.9`.
+All three packages currently use the same release version: `0.5.0-alpha.10`.
 
 ## Required gates
 
