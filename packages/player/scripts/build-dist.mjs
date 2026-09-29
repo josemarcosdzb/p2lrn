@@ -55,14 +55,16 @@ async function installH5pStandalone(dist) {
   await mkdir(work, {recursive:true});
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const npmExecOptions = process.platform === 'win32' ? {shell:true} : {};
-  const {stdout = ''} = await execFileAsync(
+  await execFileAsync(
     npm,
     ['pack', `h5p-standalone@${H5P_STANDALONE_VERSION}`, '--ignore-scripts', '--silent', '--pack-destination', work],
     {cwd:playerRoot, maxBuffer:4*1024*1024, ...npmExecOptions},
   );
-  let archiveName = String(stdout).trim().split(/\r?\n/u).filter(Boolean).at(-1);
-  if (!archiveName) archiveName = (await readdir(work)).find((name)=>name.endsWith('.tgz'));
-  if (!archiveName) throw new Error('npm pack did not produce h5p-standalone archive.');
+  const archives = (await readdir(work)).filter((name)=>name.endsWith('.tgz'));
+  if (archives.length !== 1) {
+    throw new Error(`npm pack produced ${archives.length} h5p-standalone archives; expected exactly one.`);
+  }
+  const [archiveName] = archives;
   await execFileAsync('tar', ['-xzf', join(work, archiveName), '-C', work], {maxBuffer:4*1024*1024});
   const sourceRoot = join(work, 'package');
   const metadata = JSON.parse(await readFile(join(sourceRoot, 'package.json'), 'utf8'));
