@@ -51,7 +51,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build:dist": "node ./scripts/build-dist.mjs",
-    "prepack": "npm run build:dist"
+    "prepack": "npm run build:dist",
+    "prepublishOnly": "node ../../scripts/check-publish-ready.mjs"
   },
   "peerDependencies": {
     "@p2lrn/h5p-libraries": "0.5.0-alpha.9"
