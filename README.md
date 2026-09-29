@@ -1,17 +1,20 @@
-# P2LRN Node.js / TypeScript 0.5.0-alpha.1
+# P2LRN Node.js / TypeScript 0.5.0-alpha.9
 
 Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeScript**. Python ya no es una dependencia del toolkit principal: se conserva únicamente en `reference-python-alpha15/` para comparación y conformidad con Alpha15. La auditoría final no encuentra archivos Python ejecutables ni comandos operativos Python fuera de esa carpeta.
 
 ## Autoridad actual
 
 - `packages/toolkit/`: Core, validación, ZIP/ZIP64, `contentRoot`, Creator, API estable de autoría para Studio, Reader, servidor local, conversión/preservación de paquetes externos, puentes AulaP2P, cuestionarios/componentes/composites, delta y firmas Ed25519.
-- `packages/player/`: Web SDK/browser runtime, renderers, Service Worker, hosts aislados SCORM/H5P y tipos TypeScript.
-- `npm/`: artefactos de distribución publicados. El toolkit autoritativo se instala desde `packages/toolkit/`; su tarball se regenera con `npm pack` al publicar una entrega.
+- `packages/player/`: Web SDK/browser runtime, renderers, Service Worker, hosts aislados SCORM/H5P/paquetes externos y tipos TypeScript. Su `npm pack` reconstruye `dist/` desde el runtime canónico e incluye `h5p-standalone` fijado.
+- `packages/h5p-libraries/`: corpus compartido de librerías H5P, separado del Player y fijado a un snapshot reproducible. Contiene runtime compartido, nunca cursos de usuarios.
+- `packages/toolkit/`: fuente del tarball `@p2lrn/toolkit`; `npm pack` se valida en CI junto con los otros dos paquetes.
 - `schemas/`, `profiles/`, `spec/`, `integration/`: material canónico con namespace P2LRN.
 - `examples/canonical/`: 17 paquetes `.p2lrn` validados.
 - `examples/legacy-alpha15/`: los 17 paquetes `.p2rln` usados para comprobar retrocompatibilidad.
 
 ## Identidad P2LRN
+
+La distribución `0.5.0-alpha.9` alinea `@p2lrn/player`, `@p2lrn/toolkit` y `@p2lrn/h5p-libraries`.
 
 La salida nueva usa:
 
@@ -29,16 +32,27 @@ Los paquetes Alpha15 anteriores (`P2RLN`, `p2rln.org`, `.p2rln`) se siguen leyen
 
 ## Runtime/Player independiente
 
-`@p2lrn/player` es el runtime web instalable y la etiqueta canónica es `<p2lrn-player>`. El Player depende del formato P2LRN, no de AulaP2P ni de un editor concreto. Las integraciones de producto se conectan desde código de host mediante Host Adapter v1 y, cuando corresponde, `runtimeBaseUrl` para runtimes aislados. Identidad de usuario, permisos, matrícula, credenciales, resolución de URLs protegidas y persistencia durable permanecen fuera del paquete y fuera del Core.
+`@p2lrn/player` es el runtime web instalable y la etiqueta canónica es `<p2lrn-player>`. El Player depende del formato P2LRN, no de AulaP2P ni de un editor concreto. La distribución incluye el runtime estático H5P/SCORM/IMS/cmi5/QTI/Common Cartridge/Tin Can y los assets de `h5p-standalone`. Las librerías H5P reutilizables se distribuyen en `@p2lrn/h5p-libraries`. Las integraciones de producto se conectan mediante Host Adapter v1; `runtimeBaseUrl` sólo es necesario para sustituir el runtime estático inferido por otro host aislado. Identidad de usuario, permisos, matrícula, credenciales, resolución de URLs protegidas y persistencia durable permanecen fuera del paquete y fuera del Core.
 
 La integración específica de AulaP2P y el futuro Studio de escritorio son consumidores separados de esta base; no forman parte del runtime genérico ni se implementan en este bloque.
 
 ## Instalación local
 
 ```bash
-npm install ./packages/toolkit \
-            ./npm/p2lrn-player-0.5.0-alpha.1.tgz
+npm install @p2lrn/toolkit @p2lrn/player
+
+# Sólo si se necesitan H5P cuyas librerías no viajan dentro del propio .h5p:
+npm install @p2lrn/h5p-libraries
 ```
+
+Para desplegar un runtime estático aislado desde npm:
+
+```bash
+p2lrn-copy-runtime ./public/p2lrn
+```
+
+Si `@p2lrn/h5p-libraries` está instalado, el mismo comando copia el corpus a
+`runtime-host/h5p-libraries/`. El CDN oficial se genera con exactamente los mismos builders que usan estos tarballs.
 
 Comandos principales:
 
@@ -48,6 +62,7 @@ p2lrn-reader
 p2lrn-create
 p2lrn-convert
 p2lrn-repack
+p2lrn-multipart
 p2lrn-inspect
 p2lrn-extract-source
 p2lrn-delta
