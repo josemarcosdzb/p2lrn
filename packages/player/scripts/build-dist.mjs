@@ -54,10 +54,11 @@ async function installH5pStandalone(dist) {
   await rm(work, {recursive:true, force:true});
   await mkdir(work, {recursive:true});
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmExecOptions = process.platform === 'win32' ? {shell:true} : {};
   const {stdout = ''} = await execFileAsync(
     npm,
     ['pack', `h5p-standalone@${H5P_STANDALONE_VERSION}`, '--ignore-scripts', '--silent', '--pack-destination', work],
-    {cwd:playerRoot, maxBuffer:4*1024*1024},
+    {cwd:playerRoot, maxBuffer:4*1024*1024, ...npmExecOptions},
   );
   let archiveName = String(stdout).trim().split(/\r?\n/u).filter(Boolean).at(-1);
   if (!archiveName) archiveName = (await readdir(work)).find((name)=>name.endsWith('.tgz'));
