@@ -381,7 +381,7 @@ headers += [
   '',
 ].join('\n');
 
-const h5pProxyTarget = `https://raw.githubusercontent.com/Lumieducation/Lumi/${LUMI_H5P_LIBRARY_COMMIT}/assets/h5p/libraries/:splat`;
+const h5pProxyTarget = `https://cdn.jsdelivr.net/gh/Lumieducation/Lumi@${LUMI_H5P_LIBRARY_COMMIT}/assets/h5p/libraries/:splat`;
 await writeFile(
   join(outputRoot, '_redirects'),
   [
