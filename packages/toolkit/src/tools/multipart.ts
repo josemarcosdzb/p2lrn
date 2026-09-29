@@ -31,7 +31,7 @@ function allRepresentations(graph:any):Array<{resource:any;representation:any}> 
   return out;
 }
 function partName(base:string, index:number):string {
-  return \`${base}.part${String(index + 1).padStart(3, '0')}\`;
+  return `${base}.part${String(index + 1).padStart(3, '0')}`;
 }
 function parsePartSize(value:unknown):number {
   const size = value == null ? 25 * 1024 * 1024 : Number(value);
@@ -48,7 +48,7 @@ function chooseTarget(validated:any, representationId:string|undefined, partSize
 
   if (representationId) {
     const found = candidates.find(({representation}) => representation.id === representationId);
-    if (!found) throw new Error(\`embedded representation not found: ${representationId}\`);
+    if (!found) throw new Error(`embedded representation not found: ${representationId}`);
     return found;
   }
   const large = candidates.filter(({file}:any) => Number(file.size) > partSize).sort((a:any,b:any) => b.file.size - a.file.size);
@@ -70,7 +70,7 @@ export function createMultipartPackage(
   const target = chooseTarget(before, options.representationId, partSize);
   const targetPath = String(target.representation.location.path);
   const targetDescriptor:any = before.manifest.files.find((file:any) => file.path === targetPath);
-  if (!targetDescriptor) throw new Error(\`target payload is not inventoried: ${targetPath}\`);
+  if (!targetDescriptor) throw new Error(`target payload is not inventoried: ${targetPath}`);
 
   const refs = allRepresentations(graph).filter(({representation}) => {
     const location = representation?.location ?? {};
@@ -80,13 +80,13 @@ export function createMultipartPackage(
   const packageMemberRefs = refs.filter(({representation}) => representation.location.type === 'package-member');
   if (packageMemberRefs.length) {
     throw new Error(
-      \`payload ${targetPath} is also referenced by package-member representations (${packageMemberRefs.map((x)=>x.representation.id).join(', ')}); \` +
+      `payload ${targetPath} is also referenced by package-member representations (${packageMemberRefs.map((x)=>x.representation.id).join(', ')}); ` +
       'multipart conversion refuses to break those member references',
     );
   }
 
   const raw = before.archive.read(targetPath);
-  if (raw.byteLength <= partSize) throw new Error(\`payload is only ${raw.byteLength} bytes; choose a smaller --part-size to produce at least two parts\`);
+  if (raw.byteLength <= partSize) throw new Error(`payload is only ${raw.byteLength} bytes; choose a smaller --part-size to produce at least two parts`);
 
   const outputDir = dirname(output);
   mkdirSync(outputDir, {recursive:true});
@@ -108,7 +108,7 @@ export function createMultipartPackage(
     parts,
   };
   const multipartBytes = jsonBytes(multipart);
-  const multipartPath = \`multipart/${multipart.byteDigest.slice(7)}.json\`;
+  const multipartPath = `multipart/${multipart.byteDigest.slice(7)}.json`;
   const multipartDescriptor = descriptor(multipartPath, multipartBytes, MULTIPART_MEDIA);
 
   for (const {representation} of refs) {
