@@ -5,6 +5,9 @@ packages/player/dist/
 packages/player/.build-h5p-standalone/
 packages/h5p-libraries/dist/
 packages/h5p-libraries/.build-h5p-libraries/
+packages/document-reader/dist/
+packages/document-reader/node_modules/
+packages/document-reader/package-lock.json
 
 # npm artifacts
 *.tgz
