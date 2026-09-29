@@ -118,10 +118,10 @@ async function installSharedH5pLibraries(dist) {
   await mkdir(vendorRoot, {recursive: true});
 
   const archive = join(vendorRoot, 'lumi-h5p-libraries.tar.gz');
-  const url = \`https://codeload.github.com/Lumieducation/Lumi/tar.gz/\${LUMI_H5P_LIBRARY_COMMIT}\`;
+  const url = `https://codeload.github.com/Lumieducation/Lumi/tar.gz/${LUMI_H5P_LIBRARY_COMMIT}`;
   const response = await fetch(url, {redirect: 'follow'});
   if (!response.ok) {
-    throw new Error(\`Unable to download pinned Lumi H5P library corpus (\${response.status}).\`);
+    throw new Error(`Unable to download pinned Lumi H5P library corpus (${response.status}).`);
   }
   await writeFile(archive, new Uint8Array(await response.arrayBuffer()));
   await execFileAsync('tar', ['-xzf', archive, '-C', vendorRoot], {cwd: root, maxBuffer: 8 * 1024 * 1024});
@@ -153,9 +153,9 @@ async function installSharedH5pLibraries(dist) {
     const patchVersion = Number(metadata.patchVersion ?? 0);
     if (!machineName || !Number.isInteger(majorVersion) || !Number.isInteger(minorVersion)) continue;
 
-    const expectedFolder = \`\${machineName}-\${majorVersion}.\${minorVersion}\`;
+    const expectedFolder = `${machineName}-${majorVersion}.${minorVersion}`;
     if (entry.name !== expectedFolder) {
-      throw new Error(\`H5P library folder/version mismatch: \${entry.name} != \${expectedFolder}\`);
+      throw new Error(`H5P library folder/version mismatch: ${entry.name} != ${expectedFolder}`);
     }
 
     for (const asset of [
@@ -164,10 +164,10 @@ async function installSharedH5pLibraries(dist) {
     ]) {
       const rel = String(asset?.path ?? '');
       if (!rel || rel.startsWith('/') || rel.includes('..') || rel.includes('\\\\')) {
-        throw new Error(\`Unsafe H5P preloaded asset path in \${entry.name}: \${rel}\`);
+        throw new Error(`Unsafe H5P preloaded asset path in ${entry.name}: ${rel}`);
       }
       const assetInfo = await stat(join(targetRoot, entry.name, ...rel.split('/')));
-      if (!assetInfo.isFile()) throw new Error(\`Missing H5P preloaded asset: \${entry.name}/\${rel}\`);
+      if (!assetInfo.isFile()) throw new Error(`Missing H5P preloaded asset: ${entry.name}/${rel}`);
     }
 
     catalog.push({
@@ -181,11 +181,11 @@ async function installSharedH5pLibraries(dist) {
   }
 
   if (catalog.length < 100) {
-    throw new Error(\`Pinned H5P library corpus is unexpectedly small (\${catalog.length} libraries).\`);
+    throw new Error(`Pinned H5P library corpus is unexpectedly small (${catalog.length} libraries).`);
   }
   for (const required of ['H5P.Crossword-0.5', 'H5P.BranchingScenario-1.8', 'H5P.Question-1.5', 'H5P.JoubelUI-1.3', 'H5P.Image-1.1', 'FontAwesome-4.5']) {
     if (!catalog.some((entry) => entry.folder === required)) {
-      throw new Error(\`Required shared H5P library is missing from the pinned corpus: \${required}\`);
+      throw new Error(`Required shared H5P library is missing from the pinned corpus: ${required}`);
     }
   }
 
@@ -404,13 +404,13 @@ if (version !== compatibilityVersion) {
   );
 }
 headers += [
-  \`/player/\${version}/dist/runtime-host/h5p.html\`,
+  `/player/${version}/dist/runtime-host/h5p.html`,
   "  Content-Security-Policy: default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'",
   '',
   '/player/current/dist/runtime-host/h5p.html',
   "  Content-Security-Policy: default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'",
   '',
-  \`/player/\${compatibilityVersion}/dist/runtime-host/h5p.html\`,
+  `/player/${compatibilityVersion}/dist/runtime-host/h5p.html`,
   "  Content-Security-Policy: default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'",
   '',
 ].join('\n');
