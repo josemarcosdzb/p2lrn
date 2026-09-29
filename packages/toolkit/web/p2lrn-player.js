@@ -5,7 +5,7 @@ import {createDefaultComponentRegistry} from './component-registry.js';
 import {dispatchRuntimeEvent} from './runtime-events.js';
 import {createHostAdapter, normalizeHostAdapter} from './host-adapter.js';
 import {BufferZipArchive, openRemoteZipArchive, safeZipPath} from './zip-source.js';
-import {verifiedBinaryBlob, verifiedBinaryStream} from './stream-integrity.js';
+import {Sha256State, verifiedBinaryBlob, verifiedBinaryStream} from './stream-integrity.js';
 import {WEB_CONTENT_PROFILE, webContentMapping} from './web-content-core.js';
 import {rangeIntegrityPointer, validateRangeIntegrityIndex, RANGE_INTEGRITY_MEDIA_TYPE} from './range-integrity-core.js';
 import {createStaticResourceBridge, installP2LRNServiceWorker} from './static-resource-bridge.js';
@@ -13,7 +13,7 @@ import {representationPayload} from './package-member.js';
 import {configureRuntimeHost, getRuntimeHostConfig} from './runtime-host-config.js';
 import {canonicalIdentifier, canonicalizeIdentifiers, identifierIs} from './identifiers.js';
 
-export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.1';
+export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.3';
 export const P2LRN_TOOLKIT_VERSION = '0.5.0-alpha.1';
 export const P2LRN_CORE_VERSION = '0.4.0';
 
@@ -66,8 +66,13 @@ function canonicalize(value) {
 }
 
 async function digest(bytes) {
-  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
-  return `sha256:${[...hash].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+  const input = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle && typeof subtle.digest === 'function') {
+    const hash = new Uint8Array(await subtle.digest('SHA-256', input));
+    return `sha256:${[...hash].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+  }
+  return new Sha256State().update(input).digestString();
 }
 
 async function contentDigest(bytes, mediaType, label) {
