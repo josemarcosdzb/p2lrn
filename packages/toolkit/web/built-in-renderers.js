@@ -57,6 +57,7 @@ export function registerBuiltInRenderers(registry) {
       'https://p2lrn.org/profile/cmi5',
       'https://p2lrn.org/profile/tincan-package',
       'https://p2lrn.org/profile/common-cartridge',
+      'https://p2lrn.org/profile/ims-content-package',
       'https://p2lrn.org/profile/qti',
     ],
     mediaTypes: ['text/html', 'application/xhtml+xml', 'application/zip', 'application/octet-stream'],
