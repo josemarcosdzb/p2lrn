@@ -21,6 +21,7 @@ const PROFILE_SUFFIX = Object.freeze({
   nativeQuestionnaire: 'native-questionnaire',
   nativeComposite: 'native-composite',
   nativeComponent: 'native-component',
+  multipart: 'multipart',
 });
 
 type ProfileKey = keyof typeof PROFILE_SUFFIX;
