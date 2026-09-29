@@ -341,14 +341,14 @@ headers += headerBlock(
 );
 headers += headerBlock(
   '/player/current/*',
-  'public, max-age=0, must-revalidate',
-  'public, s-maxage=60, must-revalidate',
+  'no-store',
+  'no-store',
 );
 if (version !== compatibilityVersion) {
   headers += headerBlock(
     `/player/${compatibilityVersion}/*`,
-    'public, max-age=0, must-revalidate',
-    'public, s-maxage=60, must-revalidate',
+    'no-store',
+    'no-store',
   );
 }
 const runtimeCsp = "default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";
