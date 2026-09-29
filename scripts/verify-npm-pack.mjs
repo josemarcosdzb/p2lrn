@@ -59,23 +59,26 @@ await mkdir(installRoot, {recursive:true});
 const toolkitPackage = JSON.parse(await readFile(join(root,'packages/toolkit/package.json'),'utf8'));
 const playerPackage = JSON.parse(await readFile(join(root,'packages/player/package.json'),'utf8'));
 const h5pPackage = JSON.parse(await readFile(join(root,'packages/h5p-libraries/package.json'),'utf8'));
-if (toolkitPackage.version !== playerPackage.version || h5pPackage.version !== playerPackage.version) {
-  throw new Error(`npm package versions differ: player=${playerPackage.version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}`);
+const documentReaderPackage = JSON.parse(await readFile(join(root,'packages/document-reader/package.json'),'utf8'));
+if (toolkitPackage.version !== playerPackage.version || h5pPackage.version !== playerPackage.version || documentReaderPackage.version !== playerPackage.version) {
+  throw new Error(`npm package versions differ: player=${playerPackage.version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}, documentReader=${documentReaderPackage.version}`);
 }
 
 const toolkitTgz = await pack('packages/toolkit');
 const h5pTgz = await pack('packages/h5p-libraries');
 const playerTgz = await pack('packages/player');
+const documentReaderTgz = await pack('packages/document-reader');
 
 await runNpm(['init','-y'], {cwd:installRoot});
 await runNpm(
-  ['install','--ignore-scripts','--no-audit','--no-fund', toolkitTgz, h5pTgz, playerTgz],
+  ['install','--ignore-scripts','--no-audit','--no-fund', toolkitTgz, h5pTgz, playerTgz, documentReaderTgz],
   {cwd:installRoot},
 );
 
 const toolkitRoot = join(installRoot,'node_modules','@p2lrn','toolkit');
 const playerRoot = join(installRoot,'node_modules','@p2lrn','player');
 const h5pRoot = join(installRoot,'node_modules','@p2lrn','h5p-libraries');
+const documentReaderRoot = join(installRoot,'node_modules','@p2lrn','document-reader');
 
 for (const path of [
   join(toolkitRoot,'dist','cli','main.js'),
@@ -93,6 +96,8 @@ for (const path of [
   join(h5pRoot,'dist','index.json'),
   join(h5pRoot,'dist','H5P.Crossword-0.5','library.json'),
   join(h5pRoot,'dist','H5P.BranchingScenario-1.8','library.json'),
+  join(documentReaderRoot,'dist','index.js'),
+  join(documentReaderRoot,'dist','cli.js'),
 ]) {
   await assertFile(path);
 }
@@ -112,6 +117,11 @@ await run(node, ['--check', join(playerRoot,'dist','p2lrn.js')]);
 await run(node, ['--check', join(playerRoot,'dist','runtime-host','h5p-host.js')]);
 await run(node, [join(toolkitRoot,'dist','cli','main.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','tools','multipart.js'),'--help']);
+await run(node, [join(documentReaderRoot,'dist','cli.js')]).catch((error) => {
+  const stderr = String(error?.stderr ?? '');
+  if (!stderr.includes('Usage: p2lrn-document-reader')) throw error;
+});
+const readerSmoke = await run(node, ['--input-type=module','-e', `import {P2LRNDocumentReader} from ${JSON.stringify(new URL('file:///' + documentReaderRoot.replaceAll('\\\\','/') + '/dist/index.js').href)}; const r=await new P2LRNDocumentReader({pdf:false}).read({name:'smoke.txt',mimeType:'text/plain',buffer:Buffer.from('uno\\ndos')}); if(r.blocks.length!==2||r.origin.detectedType!=='TXT') process.exit(9);`]);
 
 const copiedRuntime = join(work,'copied-runtime');
 await run(node, [join(playerRoot,'bin','p2lrn-copy-runtime.mjs'), copiedRuntime], {cwd:installRoot});
@@ -136,11 +146,13 @@ console.log(JSON.stringify({
     toolkit:toolkitTgz,
     player:playerTgz,
     h5pLibraries:h5pTgz,
+    documentReader:documentReaderTgz,
   },
   installed:{
     toolkit:true,
     player:true,
     h5pLibraries:true,
+    documentReader:true,
   },
   h5pLibraryCount:catalog.libraryCount,
   copiedRuntime,
