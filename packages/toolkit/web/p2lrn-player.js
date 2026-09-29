@@ -14,7 +14,7 @@ import {configureRuntimeHost, getRuntimeHostConfig} from './runtime-host-config.
 import {canonicalIdentifier, canonicalizeIdentifiers, identifierIs} from './identifiers.js';
 
 export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.9';
-export const P2LRN_TOOLKIT_VERSION = '0.5.0-alpha.1';
+export const P2LRN_TOOLKIT_VERSION = '0.5.0-alpha.9';
 export const P2LRN_CORE_VERSION = '0.4.0';
 
 export const DEFAULT_LIMITS = Object.freeze({
