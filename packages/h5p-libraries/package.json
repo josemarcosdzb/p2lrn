@@ -1,0 +1,43 @@
+{
+  "name": "@p2lrn/h5p-libraries",
+  "version": "0.5.0-alpha.9",
+  "description": "Pinned shared H5P library corpus for P2LRN runtimes",
+  "type": "module",
+  "license": "SEE LICENSE IN THIRD_PARTY_NOTICES.md",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": "./index.mjs",
+    "./catalog": "./dist/index.json",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "p2lrn-copy-h5p-libraries": "./bin/p2lrn-copy-h5p-libraries.mjs"
+  },
+  "files": [
+    "dist/",
+    "bin/",
+    "index.mjs",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs",
+    "prepack": "npm run build"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josemarcosfrodo/p2lrn.git",
+    "directory": "packages/h5p-libraries"
+  },
+  "keywords": [
+    "p2lrn",
+    "h5p",
+    "learning",
+    "runtime"
+  ]
+}
