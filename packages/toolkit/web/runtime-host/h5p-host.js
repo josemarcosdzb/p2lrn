@@ -154,7 +154,7 @@ async function sharedLibrary(dep, sharedBaseUrl) {
   for (const folder of candidates) {
     const url = new URL(`${encodeURIComponent(folder)}/library.json`, sharedBaseUrl);
     let response;
-    try { response = await fetch(url.href, {mode:'cors', credentials:'omit', cache:'force-cache'}); } catch { continue; }
+    try { response = await fetch(url.href, {mode:'cors', credentials:'omit', cache:'no-store'}); } catch { continue; }
     if (!response.ok) continue;
     let metadata;
     try { metadata = await response.json(); } catch { continue; }
