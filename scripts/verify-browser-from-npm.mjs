@@ -200,6 +200,7 @@ async function prepareCourses() {
     ['qti3-minimal.p2lrn','qti3-minimal.p2lrn'],
   ];
   for (const [from,to] of copies) await cp(join(canonical,from), join(coursesRoot,to));
+  await cp(join(root,'examples','canonical','native-questionnaire-course.p2lrn'), join(coursesRoot,'native-questionnaire-course.p2lrn'));
   await synthesizeExternalPackages();
 
   const {createMultipartPackage} = await importFile(join(toolkitRoot,'dist','tools','multipart.js'));
@@ -242,7 +243,17 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
       try{detail=JSON.parse(JSON.stringify(detail));}catch{detail=String(detail);}
       events.push({name,detail});
       if(name==='p2lrn:error')finish('FAIL',{phase:'p2lrn-error',detail});
-      if(name==='p2lrn:activityready')finish('PASS',{course,activity:detail});
+      if(name==='p2lrn:activityready'){
+        if(course.includes('h5p')){
+          const frame=p.shadowRoot?.querySelector('iframe.p2lrn-h5p-runtime');
+          const allow=frame?.getAttribute('allow')||'';
+          if(!frame||!allow.toLowerCase().includes('fullscreen')){
+            finish('FAIL',{phase:'fullscreen-contract',course,allow,frame:!!frame});
+            return;
+          }
+        }
+        finish('PASS',{course,activity:detail,fullscreenContract:course.includes('h5p')?true:null});
+      }
     });
   }
   document.body.append(p);
@@ -261,6 +272,158 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
 </script>
 </body></html>`;
   await writeFile(join(browserRoot,'index.html'),html);
+
+  const questionnaireHtml=`<!doctype html>
+<html><head><meta charset="utf-8"><title>P2LRN questionnaire npm gate</title></head>
+<body>
+<pre id="result" data-status="BOOT">BOOT</pre>
+<script>
+const result=document.getElementById('result');
+const events=[];
+let finished=false;
+let storedState=null;
+let saveCount=0;
+let loadCount=0;
+let reportedScore=null;
+const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+function clone(value){return value==null?value:JSON.parse(JSON.stringify(value));}
+function finish(status,detail){
+  if(finished)return;finished=true;
+  result.dataset.status=status;
+  result.textContent=JSON.stringify({status,detail,events,saveCount,loadCount,reportedScore,storedState},null,2);
+}
+addEventListener('error',e=>finish('FAIL',{phase:'window-error',message:e.message}));
+addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejection',message:String(e.reason?.message||e.reason)}));
+</script>
+<script src="${runtimeOrigin}/p2lrn.js"></script>
+<script>
+(async()=>{
+  let api;
+  try{api=await window.P2LRNReady;}catch(e){finish('FAIL',{phase:'loader',message:String(e?.message||e)});return;}
+  const adapter=api.createHostAdapter({
+    async loadState(){loadCount++;return clone(storedState);},
+    async saveState(state){saveCount++;storedState=clone(state);},
+    async reportScore(score){reportedScore=clone(score);},
+    async emitEvent(event){events.push({name:'adapter:'+String(event?.type||event?.name||'event'),detail:clone(event)});}
+  });
+
+  const attachEvents=(p)=>{
+    for(const name of ['p2lrn:ready','p2lrn:rendered','p2lrn:progress','p2lrn:statechange','p2lrn:score','p2lrn:complete','p2lrn:error']){
+      p.addEventListener(name,e=>{
+        let detail=e.detail;
+        try{detail=clone(detail);}catch{detail=String(detail);}
+        events.push({name,detail});
+        if(name==='p2lrn:error')finish('FAIL',{phase:'p2lrn-error',detail});
+      });
+    }
+  };
+
+  const makePlayer=()=>{
+    const p=document.createElement('p2lrn-player');
+    p.src='/courses/native-questionnaire-course.p2lrn';
+    p.adapter=adapter;
+    attachEvents(p);
+    return p;
+  };
+
+  const waitFor=async(check,timeout=8000)=>{
+    const started=Date.now();
+    while(Date.now()-started<timeout){
+      const value=check(); if(value)return value;
+      await sleep(40);
+    }
+    return null;
+  };
+
+  const setInput=(input,value,eventName)=>{
+    if(input.value!==undefined)input.value=value;
+    if('checked' in input && typeof value==='boolean')input.checked=value;
+    input.dispatchEvent(new Event(eventName,{bubbles:true}));
+  };
+
+  const answerVisible=async(p)=>{
+    const root=p.shadowRoot;
+    if(!root)return false;
+    let changed=false;
+
+    const radios=[...root.querySelectorAll('input[type="radio"]:not(:disabled)')];
+    const radioGroups=new Map();
+    for(const input of radios){
+      const name=input.name||'__radio__';
+      if(!radioGroups.has(name))radioGroups.set(name,[]);
+      radioGroups.get(name).push(input);
+    }
+    for(const group of radioGroups.values()){
+      if(!group.some(x=>x.checked)&&group[0]){setInput(group[0],true,'change');changed=true;}
+    }
+
+    for(const input of root.querySelectorAll('input[type="checkbox"]:not(:disabled)')){
+      if(!input.checked){setInput(input,true,'change');changed=true;break;}
+    }
+    for(const input of root.querySelectorAll('input[type="text"]:not(:disabled), textarea:not(:disabled)')){
+      if(!String(input.value||'').trim()){setInput(input,'respuesta','input');changed=true;}
+    }
+    for(const select of root.querySelectorAll('select:not(:disabled)')){
+      const option=[...select.options].find(o=>o.value);
+      if(option&&select.value!==option.value){setInput(select,option.value,'change');changed=true;}
+    }
+
+    const move=[...root.querySelectorAll('button[aria-label="Mover abajo"]:not(:disabled)')][0];
+    if(move){move.click();changed=true;await sleep(60);}
+    return changed;
+  };
+
+  const p=makePlayer();
+  document.body.append(p);
+  if(!await waitFor(()=>p.shadowRoot?.querySelector('.p2lrn-q-card'))){
+    finish('FAIL',{phase:'questionnaire-mount',text:p.shadowRoot?.textContent||''});return;
+  }
+
+  for(let step=0;step<30;step++){
+    await answerVisible(p);
+    await sleep(100);
+    const buttons=[...p.shadowRoot.querySelectorAll('button:not(:disabled)')];
+    const finishButton=buttons.find(b=>b.textContent.trim()==='Finalizar');
+    if(finishButton){finishButton.click();break;}
+    const next=buttons.find(b=>b.textContent.trim()==='Siguiente');
+    if(!next){finish('FAIL',{phase:'questionnaire-navigation',step,text:p.shadowRoot.textContent});return;}
+    next.click();
+    await sleep(100);
+  }
+
+  if(!await waitFor(()=>events.some(e=>e.name==='p2lrn:complete'),6000)){
+    finish('FAIL',{phase:'completion-timeout',text:p.shadowRoot?.textContent||''});return;
+  }
+  await sleep(250);
+
+  const requiredEvents=['p2lrn:progress','p2lrn:statechange','p2lrn:score','p2lrn:complete'];
+  const missing=requiredEvents.filter(name=>!events.some(e=>e.name===name));
+  if(missing.length){finish('FAIL',{phase:'events-missing',missing});return;}
+  if(!storedState||storedState.completed!==true||saveCount<1){finish('FAIL',{phase:'state-not-saved',saveCount,storedState});return;}
+  if(!reportedScore){finish('FAIL',{phase:'score-not-reported'});return;}
+
+  p.remove();
+  const resumed=makePlayer();
+  document.body.append(resumed);
+  if(!await waitFor(()=>resumed.shadowRoot?.textContent?.includes('Resultado')||resumed.shadowRoot?.textContent?.includes('Respuestas enviadas'),8000)){
+    finish('FAIL',{phase:'resume-failed',loadCount,text:resumed.shadowRoot?.textContent||''});return;
+  }
+  if(loadCount<2){finish('FAIL',{phase:'load-state-not-reused',loadCount});return;}
+
+  finish('PASS',{
+    progress:true,
+    statePersistence:true,
+    scoreReporting:true,
+    completion:true,
+    resume:true,
+    saveCount,
+    loadCount,
+    score:reportedScore
+  });
+})();
+</script>
+</body></html>`;
+  await writeFile(join(browserRoot,'questionnaire.html'),questionnaireHtml);
 }
 
 function decodeHtml(value) {
@@ -299,6 +462,24 @@ async function runCourse(chrome, appOrigin, course, index) {
   return {course,status,detail:detail.slice(0,1000)};
 }
 
+async function runQuestionnaire(chrome, appOrigin) {
+  const profile=join(gateRoot,'chrome-profile-questionnaire');
+  await rm(profile,{recursive:true,force:true});
+  const args=[
+    '--headless=new','--disable-gpu','--no-sandbox','--disable-dev-shm-usage',
+    '--no-first-run','--no-default-browser-check','--disable-cache',
+    `--user-data-dir=${profile}`,
+    '--virtual-time-budget=22000','--dump-dom',
+    `${appOrigin}/questionnaire.html`,
+  ];
+  const {stdout,stderr}=await execFileAsync(chrome,args,{timeout:45000,maxBuffer:64*1024*1024});
+  const match=/<pre id="result" data-status="([^"]+)">([\s\S]*?)<\/pre>/u.exec(stdout);
+  const status=match?.[1]??'MISSING';
+  const detail=decodeHtml(match?.[2]??'').trim();
+  if(status!=='PASS')throw new Error(`Questionnaire browser gate failed: status=${status}\n${detail}\nChrome stderr:\n${stderr.slice(-4000)}`);
+  return {course:'native-questionnaire-course.p2lrn',status,detail:detail.slice(0,2000)};
+}
+
 await stat(join(installRoot,'node_modules','@p2lrn','player','package.json'));
 await stat(join(copiedRuntime,'runtime-host','h5p-libraries','H5P.Crossword-0.5','library.json'));
 await prepareCourses();
@@ -326,6 +507,7 @@ const courses=[
 const results=[];
 try{
   for(let i=0;i<courses.length;i++) results.push(await runCourse(chrome,appOrigin,courses[i],i));
+  results.push(await runQuestionnaire(chrome,appOrigin));
 }finally{
   await new Promise((resolvePromise)=>runtimeServer.close(()=>resolvePromise()));
   await new Promise((resolvePromise)=>appServer.close(()=>resolvePromise()));
