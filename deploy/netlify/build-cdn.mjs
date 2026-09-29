@@ -13,6 +13,7 @@ const toolkitPackagePath = join(root, 'packages', 'toolkit', 'package.json');
 const compatibilityVersion = '0.5.0-alpha.1';
 const H5P_STANDALONE_VERSION = '3.8.2';
 const LUMI_H5P_LIBRARY_COMMIT = '236912f8e3c07a6b5c7ece4930b98fec2b6d3f6a';
+const LUMI_H5P_LIBRARY_COUNT = 144;
 const execFileAsync = promisify(execFile);
 
 const EXCLUDED_ROOT = new Set(['app.js', 'index.html', 'style.css']);
@@ -112,96 +113,33 @@ async function installH5pRuntimeAssets(dist) {
 }
 
 
-async function installSharedH5pLibraries(dist) {
-  const vendorRoot = join(root, '.netlify-vendor', 'lumi-h5p-libraries');
-  await rm(vendorRoot, {recursive: true, force: true});
-  await mkdir(vendorRoot, {recursive: true});
-
-  const archive = join(vendorRoot, 'lumi-h5p-libraries.tar.gz');
-  const url = `https://codeload.github.com/Lumieducation/Lumi/tar.gz/${LUMI_H5P_LIBRARY_COMMIT}`;
-  const response = await fetch(url, {redirect: 'follow'});
-  if (!response.ok) {
-    throw new Error(`Unable to download pinned Lumi H5P library corpus (${response.status}).`);
-  }
-  await writeFile(archive, new Uint8Array(await response.arrayBuffer()));
-  await execFileAsync('tar', ['-xzf', archive, '-C', vendorRoot], {cwd: root, maxBuffer: 8 * 1024 * 1024});
-
-  const extracted = (await readdir(vendorRoot, {withFileTypes: true}))
-    .find((entry) => entry.isDirectory() && entry.name.startsWith('Lumi-'));
-  if (!extracted) throw new Error('Pinned Lumi archive did not contain an extracted repository directory.');
-
-  const sourceRoot = join(vendorRoot, extracted.name, 'assets', 'h5p', 'libraries');
+async function installSharedH5pLibraryCatalog(dist) {
   const targetRoot = join(dist, 'runtime-host', 'h5p-libraries');
-  const sourceInfo = await stat(sourceRoot);
-  if (!sourceInfo.isDirectory()) throw new Error('Pinned Lumi archive does not contain assets/h5p/libraries.');
-
-  await cp(sourceRoot, targetRoot, {recursive: true, force: true});
-
-  const catalog = [];
-  for (const entry of (await readdir(targetRoot, {withFileTypes: true})).sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory()) continue;
-    const libraryJsonPath = join(targetRoot, entry.name, 'library.json');
-    let metadata;
-    try {
-      metadata = await readJson(libraryJsonPath);
-    } catch {
-      continue;
-    }
-    const machineName = String(metadata.machineName ?? '').trim();
-    const majorVersion = Number(metadata.majorVersion);
-    const minorVersion = Number(metadata.minorVersion);
-    const patchVersion = Number(metadata.patchVersion ?? 0);
-    if (!machineName || !Number.isInteger(majorVersion) || !Number.isInteger(minorVersion)) continue;
-
-    const expectedFolder = `${machineName}-${majorVersion}.${minorVersion}`;
-    if (entry.name !== expectedFolder) {
-      throw new Error(`H5P library folder/version mismatch: ${entry.name} != ${expectedFolder}`);
-    }
-
-    for (const asset of [
-      ...(Array.isArray(metadata.preloadedJs) ? metadata.preloadedJs : []),
-      ...(Array.isArray(metadata.preloadedCss) ? metadata.preloadedCss : []),
-    ]) {
-      const rel = String(asset?.path ?? '');
-      if (!rel || rel.startsWith('/') || rel.includes('..') || rel.includes('\\\\')) {
-        throw new Error(`Unsafe H5P preloaded asset path in ${entry.name}: ${rel}`);
-      }
-      const assetInfo = await stat(join(targetRoot, entry.name, ...rel.split('/')));
-      if (!assetInfo.isFile()) throw new Error(`Missing H5P preloaded asset: ${entry.name}/${rel}`);
-    }
-
-    catalog.push({
-      folder: entry.name,
-      machineName,
-      majorVersion,
-      minorVersion,
-      patchVersion,
-      runnable: Number(metadata.runnable ?? 0) === 1,
-    });
-  }
-
-  if (catalog.length < 100) {
-    throw new Error(`Pinned H5P library corpus is unexpectedly small (${catalog.length} libraries).`);
-  }
-  for (const required of ['H5P.Crossword-0.5', 'H5P.BranchingScenario-1.8', 'H5P.Question-1.5', 'H5P.JoubelUI-1.3', 'H5P.Image-1.1', 'FontAwesome-4.5']) {
-    if (!catalog.some((entry) => entry.folder === required)) {
-      throw new Error(`Required shared H5P library is missing from the pinned corpus: ${required}`);
-    }
-  }
-
+  await mkdir(targetRoot, {recursive: true});
   await writeFile(
     join(targetRoot, 'index.json'),
     JSON.stringify({
       schema: 'https://p2lrn.org/schema/h5p-library-catalog/1',
+      mode: 'netlify-pinned-proxy',
       source: {
         repository: 'Lumieducation/Lumi',
         commit: LUMI_H5P_LIBRARY_COMMIT,
+        basePath: 'assets/h5p/libraries',
       },
-      libraries: catalog,
+      libraryCount: LUMI_H5P_LIBRARY_COUNT,
+      requiredSmokeLibraries: [
+        'H5P.Crossword-0.5',
+        'H5P.BranchingScenario-1.8',
+        'H5P.Question-1.5',
+        'H5P.JoubelUI-1.3',
+        'H5P.Image-1.1',
+        'FontAwesome-4.5',
+      ],
     }, null, 2) + '\n',
   );
-  return catalog.length;
+  return LUMI_H5P_LIBRARY_COUNT;
 }
+
 
 async function assertVersionAlignment(dist, version) {
   const player = await readFile(join(dist, 'p2lrn-player.js'), 'utf8');
@@ -313,7 +251,7 @@ await rm(outputRoot, {recursive: true, force: true});
 const versionedDist = join(outputRoot, 'player', version, 'dist');
 await copyCanonicalRuntime(versionedDist);
 await installH5pRuntimeAssets(versionedDist);
-const sharedH5pLibraryCount = await installSharedH5pLibraries(versionedDist);
+const sharedH5pLibraryCount = await installSharedH5pLibraryCatalog(versionedDist);
 await assertVersionAlignment(versionedDist, version);
 await validateLocalReferences(versionedDist);
 const release = await writeRelease(versionedDist, {
@@ -357,6 +295,7 @@ const index = {
   h5p: {
     standaloneVersion: H5P_STANDALONE_VERSION,
     sharedLibraryCount: sharedH5pLibraryCount,
+    sharedLibraryMode: 'netlify-pinned-proxy',
     sourceRepository: 'Lumieducation/Lumi',
     sourceCommit: LUMI_H5P_LIBRARY_COMMIT,
     versionedBasePath: `/player/${version}/dist/runtime-host/h5p-libraries/`,
@@ -441,6 +380,17 @@ headers += [
   '  Cache-Control: no-store',
   '',
 ].join('\n');
+
+const h5pProxyTarget = `https://raw.githubusercontent.com/Lumieducation/Lumi/${LUMI_H5P_LIBRARY_COMMIT}/assets/h5p/libraries/:splat`;
+await writeFile(
+  join(outputRoot, '_redirects'),
+  [
+    `/player/${version}/dist/runtime-host/h5p-libraries/* ${h5pProxyTarget} 200`,
+    `/player/current/dist/runtime-host/h5p-libraries/* ${h5pProxyTarget} 200`,
+    `/player/${compatibilityVersion}/dist/runtime-host/h5p-libraries/* ${h5pProxyTarget} 200`,
+    '',
+  ].join('\n'),
+);
 
 await writeFile(join(outputRoot, '_headers'), headers);
 
