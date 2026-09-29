@@ -1,0 +1,13 @@
+# Generated distribution/build outputs
+.netlify-cdn/
+.npm-pack-gate/
+packages/player/dist/
+packages/player/.build-h5p-standalone/
+packages/h5p-libraries/dist/
+packages/h5p-libraries/.build-h5p-libraries/
+
+# npm artifacts
+*.tgz
+
+# Local test/browser artifacts
+.p2lrn-e2e/
