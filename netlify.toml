@@ -1,0 +1,6 @@
+[build]
+  command = "node deploy/netlify/build-cdn.mjs"
+  publish = ".netlify-cdn"
+
+[build.environment]
+  NODE_VERSION = "22"
