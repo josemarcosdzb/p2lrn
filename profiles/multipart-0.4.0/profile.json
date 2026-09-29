@@ -1,0 +1,29 @@
+{
+  "id": "https://p2lrn.org/profile/multipart",
+  "version": "0.4.0",
+  "title": "P2LRN Multipart Payload Profile",
+  "status": "experimental",
+  "description": "Allows a large logical representation payload to remain owned and hosted by the package publisher while being split into integrity-verified adjacent parts.",
+  "capabilities": [
+    "multipart.validate",
+    "multipart.read",
+    "multipart.write",
+    "multipart.preserve",
+    "multipart.deliver"
+  ],
+  "requires": [],
+  "optionalDependencies": [],
+  "preservation": "semantic-required",
+  "normativeReferences": [],
+  "rules": [
+    "Multipart is a transport profile and MUST NOT change the semantic profile or media type of the logical representation.",
+    "A multipart representation MUST carry the https://p2lrn.org/profile/multipart extension and MUST point to an embedded application/vnd.p2lrn.multipart+json descriptor.",
+    "Every part href MUST be a safe relative path resolved against the URL of the outer .p2lrn package; multipart MUST NOT require upload to the P2LRN CDN.",
+    "Each part MUST declare its exact byte size and SHA-256 byte digest.",
+    "The descriptor MUST declare the logical payload total size and SHA-256 digest, and the ordered part sizes MUST sum exactly to the total size.",
+    "A reader MUST verify each part before accepting it and MUST verify the concatenated logical payload before handing it to a renderer.",
+    "Multipart parts are operational files owned by the package publisher and are not entries inside the outer ZIP container.",
+    "A reader MUST fail closed when a part is missing, reordered, truncated, oversized or has a digest mismatch."
+  ],
+  "bindings": []
+}
