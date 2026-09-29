@@ -1,6 +1,14 @@
 name: P2LRN CI
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/toolkit/**'
+      - 'packages/player/**'
+      - 'deploy/netlify/**'
+      - 'netlify.toml'
+      - '.github/workflows/p2lrn-ci.yml'
   pull_request:
     branches: [main]
     paths:
