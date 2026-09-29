@@ -188,7 +188,7 @@ export async function readMoodle(file:DocumentInput,detection:FileDetection,opti
   const activities=entries.filter(entry=>/activities\/[^/]+\/module\.xml$/iu.test(entry.name));
   for(const entry of activities){
     const activityXml=entry.buffer.toString('utf8');
-    const name=xmlTagText(activityXml,'name')||xmlTagText(activityXml,'modulename')||entry.name.split('/').at(-2)??entry.name;
+    const name=xmlTagText(activityXml,'name')||xmlTagText(activityXml,'modulename')||(entry.name.split('/').at(-2)??entry.name);
     blocks.push({id:nextId('moodle_activity'),type:'PARAGRAPH',text:name,order:blocks.length+1,source:{type:'MOODLE_BACKUP',raw:{path:entry.name}}});
   }
   return {...base(file,detection,'MOODLE_MBZ_MANIFEST'),metadata:{detectedTitle:title},blocks,tables:[],raw:{entries:entries.length,sections:sectionFiles.length,activities:activities.length},warnings:[]};
