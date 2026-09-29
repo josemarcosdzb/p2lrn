@@ -20,7 +20,8 @@
     "bin/",
     "index.mjs",
     "README.md",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "scripts/"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",
