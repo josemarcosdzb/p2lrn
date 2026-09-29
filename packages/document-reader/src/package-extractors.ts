@@ -165,8 +165,9 @@ function xmlTagText(xml:string,tag:string){
 }
 
 function archiveEntries(file:DocumentInput,detection:FileDetection,options:ReaderOptions){
-  if(detection.extension==='tgz'||detection.extension==='tar.gz'){
-    return readTarGz(file.buffer,options);
+  const gzip=file.buffer.length>=2&&file.buffer[0]===0x1f&&file.buffer[1]===0x8b;
+  if(gzip||detection.extension==='tgz'||detection.extension==='tar.gz'){
+    return Promise.resolve(readTarGz(file.buffer,options));
   }
   return readZip(file.buffer,options).then(map=>[...map.entries()].map(([name,buffer])=>({name,buffer})));
 }
@@ -223,7 +224,7 @@ export async function readOpenEdx(file:DocumentInput,detection:FileDetection,opt
   let title=file.name;
   if(course){
     const raw=course.buffer.toString('utf8');
-    title=/<course\b[^>]*(?:display_name|name)=["']([^"']+)["']/iu.exec(raw)?.[1]??xmlTagText(raw,'display_name')||title;
+    title=(/<course\b[^>]*(?:display_name|name)=["']([^"']+)["']/iu.exec(raw)?.[1]??xmlTagText(raw,'display_name'))||title;
   }
   const blocks:DocumentBlock[]=[{id:nextId('olx_title'),type:'TITLE',text:decodeXmlEntities(title),order:1,source:{type:'OPEN_EDX_OLX'}}];
   for(const entry of xmlEntries){
