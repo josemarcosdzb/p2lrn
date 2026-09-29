@@ -22,7 +22,7 @@ async function assertFile(path) {
 async function pack(directory) {
   const {stdout} = await execFileAsync(
     npm,
-    ['pack', '--json', '--pack-destination', packs],
+    ['pack', '--silent', '--json', '--pack-destination', packs],
     {cwd:join(root, directory), maxBuffer:32*1024*1024},
   );
   const parsed = JSON.parse(stdout);
