@@ -13,6 +13,7 @@ const PROFILE_SUFFIX = Object.freeze({
   scorm: 'scorm',
   cmi5: 'cmi5',
   commonCartridge: 'common-cartridge',
+  imsContentPackage: 'ims-content-package',
   tincan: 'tincan-package',
   lti: 'lti',
   case: 'case',
