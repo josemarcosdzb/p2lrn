@@ -1,0 +1,54 @@
+name: P2LRN CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/toolkit/**'
+      - 'packages/player/**'
+      - 'deploy/netlify/**'
+      - 'netlify.toml'
+      - '.github/workflows/p2lrn-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  toolkit-and-cdn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Compile and test toolkit
+        working-directory: packages/toolkit
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund typescript@5.6.3
+          npm test
+
+      - name: Check browser module syntax
+        run: |
+          find packages/toolkit/web packages/toolkit/web-sdk-src -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check deploy/netlify/build-cdn.mjs
+
+      - name: Build Netlify CDN
+        run: node deploy/netlify/build-cdn.mjs
+
+      - name: Verify generated runtime
+        run: |
+          VERSION="$(node -p "require('./packages/player/package.json').version")"
+          test -f ".netlify-cdn/player/$VERSION/dist/p2lrn.js"
+          test -f ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p.html"
+          test -f ".netlify-cdn/player/$VERSION/dist/runtime-host/scorm.html"
+          test -s ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/frame.bundle.js"
+          test -s ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/styles/h5p.css"
+          grep -q "\"webSdkVersion\": \"$VERSION\"" ".netlify-cdn/player/$VERSION/dist/release.json"
