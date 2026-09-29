@@ -164,8 +164,36 @@ async function sharedLibrary(dep, sharedBaseUrl) {
   return null;
 }
 
-async function dependencyClosure(h5p, bundled, sharedBaseUrl) {
-  const direct = dependencyList(h5p.preloadedDependencies, 'preloadedDependencies');
+function contentLibraryDependencies(content) {
+  const found = new Map();
+  const stack = [content];
+  while (stack.length) {
+    const value = stack.pop();
+    if (Array.isArray(value)) {
+      for (const item of value) stack.push(item);
+      continue;
+    }
+    if (!value || typeof value !== 'object') continue;
+    for (const [key, child] of Object.entries(value)) {
+      if (key === 'library' && typeof child === 'string') {
+        const match = /^(.+?)\s+(\d+)\.(\d+)$/u.exec(child.trim());
+        if (match) {
+          const dep = {machineName:match[1], majorVersion:Number(match[2]), minorVersion:Number(match[3])};
+          found.set(dependencyKey(dep), dep);
+        }
+      }
+      stack.push(child);
+    }
+  }
+  return [...found.values()];
+}
+
+async function dependencyClosure(h5p, bundled, sharedBaseUrl, content = null) {
+  const declared = dependencyList(h5p.preloadedDependencies, 'preloadedDependencies');
+  const contentDeps = contentLibraryDependencies(content);
+  const directByKey = new Map();
+  for (const dep of [...declared, ...contentDeps]) directByKey.set(dependencyKey(dep), dep);
+  const direct = [...directByKey.values()];
   if (!direct.some((dep) => dep.machineName === h5p.mainLibrary)) throw new Error(`H5P mainLibrary ${h5p.mainLibrary} is not declared in preloadedDependencies.`);
   const resolved = new Map();
   const visiting = new Set();
@@ -252,7 +280,7 @@ async function initializeStatic(data) {
   const contentJson = parseJson(contentBytes, 'content/content.json');
   if (!h5p?.mainLibrary) throw new Error('H5P h5p.json must declare mainLibrary.');
   const bundled = bundledLibraries(files);
-  const closure = await dependencyClosure(h5p, bundled, data.sharedLibrariesUrl || null);
+  const closure = await dependencyClosure(h5p, bundled, data.sharedLibrariesUrl || null, contentJson);
 
   const objectUrls = new Map();
   // Non-CSS assets first so CSS rewriting can point at stable blob URLs.
