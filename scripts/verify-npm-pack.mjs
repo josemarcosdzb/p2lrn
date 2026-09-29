@@ -22,10 +22,12 @@ async function assertFile(path) {
 async function pack(directory) {
   const {stdout} = await execFileAsync(
     npm,
-    ['pack', '--silent', '--json', '--pack-destination', packs],
+    ['pack', '--json', '--pack-destination', packs],
     {cwd:join(root, directory), maxBuffer:32*1024*1024},
   );
-  const parsed = JSON.parse(stdout);
+  const match = /\[\s*\{[\s\S]*\}\s*\]\s*$/u.exec(String(stdout));
+  if (!match) throw new Error(`npm pack did not emit a JSON result for ${directory}:\n${stdout}`);
+  const parsed = JSON.parse(match[0]);
   if (!Array.isArray(parsed) || parsed.length !== 1 || !parsed[0]?.filename) {
     throw new Error(`Unexpected npm pack output for ${directory}`);
   }
