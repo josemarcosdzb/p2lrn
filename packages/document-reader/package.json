@@ -60,5 +60,9 @@
     "h5p",
     "moodle",
     "ims"
-  ]
+  ],
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "@types/node": "^22.10.0"
+  }
 }
