@@ -38,6 +38,14 @@ async function run(command, args, options = {}) {
   const result = await execFileAsync(command, args, {
     cwd:options.cwd ?? root,
     maxBuffer:32*1024*1024,
+    env:{...process.env, ...(options.env ?? {})},
+  });
+  return result.stdout;
+}
+async function runNpm(args, options = {}) {
+  const result = await execFileAsync(npm, args, {
+    cwd:options.cwd ?? root,
+    maxBuffer:32*1024*1024,
     ...npmExecOptions,
     env:{...process.env, ...(options.env ?? {})},
   });
@@ -59,9 +67,8 @@ const toolkitTgz = await pack('packages/toolkit');
 const h5pTgz = await pack('packages/h5p-libraries');
 const playerTgz = await pack('packages/player');
 
-await run(npm, ['init','-y'], {cwd:installRoot});
-await run(
-  npm,
+await runNpm(['init','-y'], {cwd:installRoot});
+await runNpm(
   ['install','--ignore-scripts','--no-audit','--no-fund', toolkitTgz, h5pTgz, playerTgz],
   {cwd:installRoot},
 );
