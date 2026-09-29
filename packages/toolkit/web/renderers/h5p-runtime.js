@@ -8,6 +8,8 @@ const H5P_PROFILE = 'https://p2lrn.org/profile/h5p';
 const PROTOCOL = 'p2lrn-h5p-runtime/1';
 const LEGACY_PROTOCOL = 'p2rln-h5p-runtime/1';
 const MAX_PREVIOUS_STATE_JSON_BYTES = 2 * 1024 * 1024;
+const MAX_STATIC_RUNTIME_FILES = 10000;
+const MAX_STATIC_RUNTIME_BYTES = 512 * 1024 * 1024;
 
 function extensionFor(rep) {
   const value = rep?.extensions?.[H5P_PROFILE];
@@ -38,6 +40,48 @@ function chooseEmbedType(embedTypes) {
   if (allowed.has('iframe')) return 'iframe';
   if (allowed.has('div')) return 'div';
   return 'iframe';
+}
+
+function isStaticRuntimeUrl(value) {
+  try { return new URL(value).pathname.endsWith('/h5p.html'); }
+  catch { return false; }
+}
+
+function mediaTypeForPath(path) {
+  const clean = String(path).split(/[?#]/, 1)[0].toLowerCase();
+  const ext = clean.includes('.') ? clean.slice(clean.lastIndexOf('.')) : '';
+  return ({
+    '.json':'application/json; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8',
+    '.css':'text/css; charset=utf-8','.html':'text/html; charset=utf-8','.htm':'text/html; charset=utf-8',
+    '.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.webp':'image/webp',
+    '.mp3':'audio/mpeg','.wav':'audio/wav','.ogg':'audio/ogg','.mp4':'video/mp4','.webm':'video/webm',
+    '.woff':'font/woff','.woff2':'font/woff2','.ttf':'font/ttf','.otf':'font/otf','.eot':'application/vnd.ms-fontobject',
+  })[ext] ?? 'application/octet-stream';
+}
+
+async function staticRuntimeFiles(nested, inspection) {
+  const names = inspection?.names ?? nested?.names?.() ?? [];
+  if (names.length > MAX_STATIC_RUNTIME_FILES) {
+    const error = new Error(`H5P package contains too many files (${names.length}).`);
+    error.code = 'P2LRN_H5P_RUNTIME_TOO_LARGE';
+    throw error;
+  }
+  const files = [];
+  const transfers = [];
+  let total = 0;
+  for (const path of names) {
+    const bytes = await nested.read(path);
+    total += bytes.byteLength;
+    if (total > MAX_STATIC_RUNTIME_BYTES) {
+      const error = new Error(`H5P runtime payload exceeds ${MAX_STATIC_RUNTIME_BYTES} bytes.`);
+      error.code = 'P2LRN_H5P_RUNTIME_TOO_LARGE';
+      throw error;
+    }
+    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    files.push({path, mediaType:mediaTypeForPath(path), buffer});
+    transfers.push(buffer);
+  }
+  return {files, transfers, totalBytes:total};
 }
 
 function scoreFromXapi(statement) {
@@ -79,39 +123,49 @@ export async function render({container, payload, representation, package:pkg, e
     throw error;
   }
   const runtimeOrigin = new URL(runtimeUrl).origin;
-  const sessionEndpoint = new URL('session', runtimeUrl).href;
-  const postSession = async (protocol) => {
-    const body = await encodeH5PSession(nested, inspection, {protocol});
-    const response = await fetch(sessionEndpoint, {
-      method:'POST',
-      mode:'cors',
-      credentials:'omit',
-      headers:{'Content-Type':body.type},
-      body,
+  const staticMode = isStaticRuntimeUrl(runtimeUrl);
+  let resolvedSession = null;
+  let staticSession = null;
+
+  if (staticMode) {
+    staticSession = await staticRuntimeFiles(nested, inspection);
+    resolvedSession = Object.freeze({
+      runtimeAssetsUrl:new URL('./assets/', runtimeUrl).href,
+      sharedLibrariesUrl:new URL('./h5p-libraries/', runtimeUrl).href,
     });
-    let session;
-    try { session = await response.json(); } catch { session = null; }
-    return {response, session};
-  };
-  let {response, session} = await postSession('p2lrn-h5p-session/1');
-  // Alpha15 isolated hosts only understand the historical P2RLN session envelope/MIME.
-  // Retry exactly once with that envelope if the canonical request is rejected at the protocol boundary.
-  if (!response.ok && (response.status === 400 || response.status === 415)) {
-    ({response, session} = await postSession('p2rln-h5p-session/1'));
+  } else {
+    const sessionEndpoint = new URL('session', runtimeUrl).href;
+    const postSession = async (protocol) => {
+      const body = await encodeH5PSession(nested, inspection, {protocol});
+      const response = await fetch(sessionEndpoint, {
+        method:'POST',
+        mode:'cors',
+        credentials:'omit',
+        headers:{'Content-Type':body.type},
+        body,
+      });
+      let session;
+      try { session = await response.json(); } catch { session = null; }
+      return {response, session};
+    };
+    let {response, session} = await postSession('p2lrn-h5p-session/1');
+    if (!response.ok && (response.status === 400 || response.status === 415)) {
+      ({response, session} = await postSession('p2rln-h5p-session/1'));
+    }
+    if (!response.ok || !session?.ok || typeof session.sessionUrl !== 'string') {
+      const missing = inspection.missing.map((dep) => `${dep.machineName} ${dep.majorVersion}.${dep.minorVersion}`).join(', ');
+      const error = new Error(session?.error || `H5P runtime session could not be created${missing ? `; missing libraries: ${missing}` : ''}.`);
+      error.code = session?.code || 'P2LRN_H5P_SESSION_FAILED';
+      error.details = session;
+      throw error;
+    }
+    resolvedSession = Object.freeze({
+      sessionUrl:new URL(session.sessionUrl, runtimeUrl).href,
+      contentUrl:new URL(session.contentUrl ?? 'content/', new URL(session.sessionUrl, runtimeUrl)).href,
+      librariesUrl:new URL(session.librariesUrl ?? session.sessionUrl, runtimeUrl).href,
+      runtimeAssetsUrl:new URL(session.runtimeAssetsUrl ?? 'assets/', runtimeUrl).href,
+    });
   }
-  if (!response.ok || !session?.ok || typeof session.sessionUrl !== 'string') {
-    const missing = inspection.missing.map((dep) => `${dep.machineName} ${dep.majorVersion}.${dep.minorVersion}`).join(', ');
-    const error = new Error(session?.error || `H5P runtime session could not be created${missing ? `; missing libraries: ${missing}` : ''}.`);
-    error.code = session?.code || 'P2LRN_H5P_SESSION_FAILED';
-    error.details = session;
-    throw error;
-  }
-  const resolvedSession = Object.freeze({
-    sessionUrl:new URL(session.sessionUrl, runtimeUrl).href,
-    contentUrl:new URL(session.contentUrl ?? 'content/', new URL(session.sessionUrl, runtimeUrl)).href,
-    librariesUrl:new URL(session.librariesUrl ?? session.sessionUrl, runtimeUrl).href,
-    runtimeAssetsUrl:new URL(session.runtimeAssetsUrl ?? 'assets/', runtimeUrl).href,
-  });
 
   let previousState = null;
   if (adapter?.loadState) previousState = boundedState(await adapter.loadState(Object.freeze({...context, runtime:'h5p'})));
@@ -183,14 +237,24 @@ export async function render({container, payload, representation, package:pkg, e
       const message = portEvent.data;
       if (!initialized && message?.protocol === runtimeProtocol && message?.action === 'connected') {
         initialized = true;
-        port.postMessage({
-          protocol:runtimeProtocol, action:'init', sessionUrl:resolvedSession.sessionUrl,
-          contentUrl:resolvedSession.contentUrl, librariesUrl:resolvedSession.librariesUrl,
+        const init = {
+          protocol:runtimeProtocol, action:'init',
           runtimeAssetsUrl:resolvedSession.runtimeAssetsUrl,
           title:inspection.title, mainLibrary:inspection.mainLibrary, embedType:chooseEmbedType(inspection.embedTypes),
           previousState:previousState ?? null,
           xAPIObjectIRI:`urn:p2lrn:${encodeURIComponent(String(context?.packageId ?? 'package'))}:${encodeURIComponent(String(context?.entityId ?? 'activity'))}`,
-        });
+        };
+        if (staticMode) {
+          init.files = staticSession.files;
+          init.sharedLibrariesUrl = resolvedSession.sharedLibrariesUrl;
+          port.postMessage(init, staticSession.transfers);
+          staticSession = null;
+        } else {
+          init.sessionUrl = resolvedSession.sessionUrl;
+          init.contentUrl = resolvedSession.contentUrl;
+          init.librariesUrl = resolvedSession.librariesUrl;
+          port.postMessage(init);
+        }
         return;
       }
       process(message);
@@ -210,7 +274,9 @@ export async function render({container, payload, representation, package:pkg, e
       window.removeEventListener('message', onMessage);
       try { port?.postMessage({protocol:runtimeProtocol, action:'flush'}); } catch {}
       try { port?.close?.(); } catch {}
-      try { fetch(resolvedSession.sessionUrl, {method:'DELETE', mode:'cors', credentials:'omit'}).catch(() => {}); } catch {}
+      if (!staticMode && resolvedSession?.sessionUrl) {
+        try { fetch(resolvedSession.sessionUrl, {method:'DELETE', mode:'cors', credentials:'omit'}).catch(() => {}); } catch {}
+      }
       iframe.remove();
     },
   });
