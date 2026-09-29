@@ -27,7 +27,8 @@
   },
   "bin": {
     "p2lrn-copy-sw": "./bin/p2lrn-copy-sw.mjs",
-    "p2rln-copy-sw": "./bin/p2rln-copy-sw.mjs"
+    "p2rln-copy-sw": "./bin/p2rln-copy-sw.mjs",
+    "p2lrn-copy-runtime": "./bin/p2lrn-copy-runtime.mjs"
   },
   "files": [
     "dist/",
@@ -35,7 +36,8 @@
     "schemas/",
     "bin/",
     "README.md",
-    "server/"
+    "server/",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "engines": {
     "node": ">=18"
@@ -46,5 +48,25 @@
     "web-component",
     "lms"
   ],
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "scripts": {
+    "build:dist": "node ./scripts/build-dist.mjs",
+    "prepack": "npm run build:dist"
+  },
+  "peerDependencies": {
+    "@p2lrn/h5p-libraries": "0.5.0-alpha.9"
+  },
+  "peerDependenciesMeta": {
+    "@p2lrn/h5p-libraries": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josemarcosfrodo/p2lrn.git",
+    "directory": "packages/player"
+  }
 }
