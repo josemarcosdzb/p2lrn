@@ -13,7 +13,7 @@ import {representationPayload} from './package-member.js';
 import {configureRuntimeHost, getRuntimeHostConfig} from './runtime-host-config.js';
 import {canonicalIdentifier, canonicalizeIdentifiers, identifierIs} from './identifiers.js';
 
-export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.4';
+export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.5';
 export const P2LRN_TOOLKIT_VERSION = '0.5.0-alpha.1';
 export const P2LRN_CORE_VERSION = '0.4.0';
 
