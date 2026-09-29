@@ -5,7 +5,7 @@ import {computeContentRoot, contentDigest, sha256} from '../core/integrity.js';
 import {PROFILE} from '../core/constants.js';
 import {validatePackageBytes, validatePackageFile} from '../core/validator.js';
 import {writeZip} from '../core/zip.js';
-import {parse, flag, printJson, req, fail, CliExit, isMain} from '../cli/util.js';
+import {parse, flag, opt, printJson, req, fail, CliExit, isMain} from '../cli/util.js';
 
 const enc = new TextEncoder();
 const MULTIPART_MEDIA = 'application/vnd.p2lrn.multipart+json';
@@ -177,8 +177,9 @@ export function main(argv=process.argv.slice(2)) {
       );
       return;
     }
-    const representationId = typeof p.options?.representation === 'string' ? p.options.representation : undefined;
-    const rawPartSize = typeof p.options?.['part-size'] === 'string' ? Number(p.options['part-size']) : undefined;
+    const representationId = opt(p,'representation');
+    const rawPartSizeValue = opt(p,'part-size');
+    const rawPartSize = rawPartSizeValue == null ? undefined : Number(rawPartSizeValue);
     printJson(createMultipartPackage(
       req(p.positional[0],'source'),
       req(p.positional[1],'output'),
