@@ -9,6 +9,7 @@ on:
       - 'packages/h5p-libraries/**'
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
+      - 'scripts/set-version.mjs'
       - 'deploy/netlify/**'
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
@@ -20,6 +21,7 @@ on:
       - 'packages/h5p-libraries/**'
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
+      - 'scripts/set-version.mjs'
       - 'deploy/netlify/**'
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
@@ -34,8 +36,8 @@ concurrency:
 
 jobs:
   toolkit-and-cdn:
-    runs-on: self-hosted
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +58,7 @@ jobs:
           node --check packages/h5p-libraries/scripts/build.mjs
           node --check scripts/verify-npm-pack.mjs
           node --check scripts/verify-browser-from-npm.mjs
+          node --check scripts/set-version.mjs
           node --check deploy/netlify/build-cdn.mjs
 
       - name: Verify npm tarballs as installed packages
