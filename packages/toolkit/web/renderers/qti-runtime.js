@@ -1,6 +1,6 @@
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 
-export const acceptsPayload = true;
+export const acceptsPayload = false;
 const decoder = new TextDecoder('utf-8', {fatal:false});
 
 function local(node) {
