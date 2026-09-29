@@ -37,7 +37,8 @@
     "bin/",
     "README.md",
     "server/",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "scripts/"
   ],
   "engines": {
     "node": ">=18"
