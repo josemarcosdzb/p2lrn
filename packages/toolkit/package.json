@@ -52,7 +52,8 @@
     "clean": "rm -rf dist",
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.mjs",
-    "check": "npm run build && npm test"
+    "check": "npm run build && npm test",
+    "prepublishOnly": "node ../../scripts/check-publish-ready.mjs"
   },
   "files": [
     "dist/",
