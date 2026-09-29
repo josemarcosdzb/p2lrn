@@ -26,7 +26,8 @@ function scormExtension(value) {
 }
 
 function findLaunchMember(representation, payload) {
-  if (representation?.location?.type === 'package-member') return String(representation.location.member ?? payload?.member ?? '');
+  if (payload?.member) return String(payload.member);
+  if (representation?.location?.type === 'package-member') return String(representation.location.member ?? '');
   const extension = scormExtension(representation);
   return String(extension.member ?? extension.href ?? '');
 }
