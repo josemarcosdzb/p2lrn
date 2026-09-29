@@ -1,4 +1,4 @@
-import {openNestedPackage} from '../package-member.js';
+import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 import {resolvePackageRuntimeUrl} from '../runtime-host-config.js';
 
@@ -43,6 +43,7 @@ function mediaTypeForPath(path) {
 }
 async function nestedPackage(pkg, representation, payload) {
   if (payload?.nested?.archive) return payload.nested;
+  if (payload?.multipart === true) return openPayloadPackage(payload);
   if (representation?.location?.type === 'embedded') return openNestedPackage(pkg, representation.location.path);
   const error = new Error('External package runtime requires an embedded package or package-member representation.');
   error.code = 'P2LRN_PACKAGE_RUNTIME_PAYLOAD_UNAVAILABLE';
