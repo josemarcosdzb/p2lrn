@@ -1,0 +1,37 @@
+{
+  "id": "https://p2lrn.org/profile/ims-content-package",
+  "version": "0.4.0",
+  "title": "P2LRN IMS Content Package Profile",
+  "status": "experimental",
+  "description": "Preserves generic IMS/1EdTech Content Packaging archives that are not identified as SCORM, Common Cartridge or QTI, while projecting organizations and local resources into the P2LRN graph.",
+  "capabilities": [
+    "ims-content-package.validate",
+    "ims-content-package.read",
+    "ims-content-package.write",
+    "ims-content-package.preserve",
+    "ims-content-package.deliver"
+  ],
+  "requires": [
+    "https://p2lrn.org/profile/course"
+  ],
+  "optionalDependencies": [],
+  "preservation": "opaque-allowed",
+  "normativeReferences": [
+    "https://www.1edtech.org/standards/content-packaging"
+  ],
+  "rules": [
+    "Specialized SCORM, Common Cartridge and QTI packages MUST be identified by their specialized P2LRN profiles instead of this generic fallback profile.",
+    "The original IMS package SHOULD be preserved byte-for-byte when available.",
+    "imsmanifest.xml remains authoritative for source organization and resource metadata.",
+    "Organization/item ordering SHOULD be projected into P2LRN children ordering.",
+    "Local resource launch members MAY be delivered through the isolated generic package runtime when their media type is supported.",
+    "Unrecognized resource types MUST be preserved even when the Reader cannot execute them."
+  ],
+  "bindings": [
+    {
+      "standard": "IMS/1EdTech Content Packaging",
+      "version": "1.x",
+      "reference": "https://www.1edtech.org/standards/content-packaging"
+    }
+  ]
+}
