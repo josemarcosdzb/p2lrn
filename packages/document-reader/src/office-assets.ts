@@ -19,8 +19,11 @@ function join(...parts:string[]){
 }
 function relsPath(path:string){const i=path.lastIndexOf('/');const dir=i>=0?path.slice(0,i):'';const base=i>=0?path.slice(i+1):path;return dir+'/_rels/'+base+'.rels';}
 function attr(attrs:string,name:string){
+  const escaped=name.replace(/[.*+?^$()|[\]\\]/g,'\\function attr(attrs:string,name:string){
   const escaped=name.replace(/[.*+?^$()|[\]\\]/g,'\\$&');
   return new RegExp('(?:^|\\s)'+escaped+'=["\\']([^"\\']*)["\\']','iu').exec(attrs)?.[1];
+}');
+  return new RegExp("(?:^|\\s)"+escaped+"=[\"']([^\"']*)[\"']","iu").exec(attrs)?.[1];
 }
 function numeric(attrs:string,name:string){const raw=attr(attrs,name);const n=raw===undefined?NaN:Number(raw);return Number.isFinite(n)?n:undefined;}
 function px(value?:number){return Number.isFinite(value)?Math.round((Number(value)/EMU_PER_PIXEL_96)*100)/100:undefined;}
