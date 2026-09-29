@@ -1,4 +1,5 @@
 import {Sha256State} from './stream-integrity.js';
+import {BufferZipArchive, safeZipPath} from './zip-source.js';
 
 export const MULTIPART_PROFILE = 'https://p2lrn.org/profile/multipart';
 export const MULTIPART_MEDIA_TYPE = 'application/vnd.p2lrn.multipart+json';
@@ -15,6 +16,10 @@ function baseMediaType(value) {
 function multipartExtension(representation) {
   const value = representation?.extensions?.[MULTIPART_PROFILE];
   return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+}
+function multipartMember(representation) {
+  const value = multipartExtension(representation)?.member;
+  return value == null ? null : safeZipPath(String(value));
 }
 export function isMultipartRepresentation(representation) {
   return Boolean(multipartExtension(representation));
@@ -33,7 +38,7 @@ function validateDescriptor(value, representation) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw fail('Multipart descriptor must be an object.');
   if (value.version !== '1') throw fail(`Unsupported multipart descriptor version: ${String(value.version)}`);
   if (typeof value.mediaType !== 'string' || !value.mediaType) throw fail('Multipart descriptor requires mediaType.');
-  if (baseMediaType(value.mediaType) !== baseMediaType(representation?.mediaType)) {
+  if (multipartMember(representation) == null && baseMediaType(value.mediaType) !== baseMediaType(representation?.mediaType)) {
     throw fail(`Multipart mediaType mismatch: representation=${representation?.mediaType}, descriptor=${value.mediaType}`);
   }
   if (!Number.isSafeInteger(value.size) || value.size < 1) throw fail('Multipart descriptor size must be a positive safe integer.');
@@ -144,6 +149,46 @@ export async function createMultipartPayload(pkg, representation) {
       offset += chunk.byteLength;
     }
     return out;
+  }
+
+  const member = multipartMember(representation);
+  if (member != null) {
+    const packageBytes = await read();
+    const buffer = packageBytes.buffer.slice(packageBytes.byteOffset, packageBytes.byteOffset + packageBytes.byteLength);
+    const archive = await BufferZipArchive.open(buffer);
+    const entry = archive.entries.get(member);
+    if (!entry) throw fail(`Multipart package member not found: ${member}`, 'P2LRN_MULTIPART_MEMBER_NOT_FOUND');
+    const nested = Object.freeze({
+      protocol:'p2lrn-package-member/1',
+      packagePath:String(representation.location.path),
+      multipart:true,
+      archive,
+      names:() => archive.names(),
+      has:(path) => archive.entries.has(safeZipPath(String(path))),
+      read:(path) => archive.read(safeZipPath(String(path))),
+    });
+    const mediaType = String(representation.mediaType || 'application/octet-stream');
+    return Object.freeze({
+      protocol:'p2lrn-multipart-member/1',
+      multipart:true,
+      locationType:'multipart-member',
+      path:`${String(representation.location.path)}#${member}`,
+      packagePath:String(representation.location.path),
+      member,
+      mediaType,
+      size:entry.uncompressedSize,
+      byteDigest:null,
+      contentDigest:null,
+      seekable:false,
+      compressionMethod:entry.method,
+      descriptor,
+      nested,
+      read:() => nested.read(member),
+      stream:async () => new Blob([await nested.read(member)], {type:mediaType}).stream(),
+      blob:async (type = mediaType) => new Blob([await nested.read(member)], {type:type || mediaType}),
+      rangeIntegrity:async () => null,
+      rangeDescriptor:async () => null,
+    });
   }
 
   return Object.freeze({
