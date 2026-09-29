@@ -153,9 +153,13 @@ export async function buildPlayerDistribution({output = join(playerRoot, 'dist')
   const playerSource = await readFile(join(output,'p2lrn-player.js'),'utf8');
   const loaderSource = await readFile(join(output,'p2lrn.js'),'utf8');
   const runtimeVersion = /P2LRN_WEB_SDK_VERSION\s*=\s*'([^']+)'/u.exec(playerSource)?.[1];
+  const runtimeToolkitVersion = /P2LRN_TOOLKIT_VERSION\s*=\s*'([^']+)'/u.exec(playerSource)?.[1];
   const loaderVersion = /const version\s*=\s*'([^']+)'/u.exec(loaderSource)?.[1];
   if (runtimeVersion !== playerPackage.version || loaderVersion !== playerPackage.version) {
     throw new Error(`Player version mismatch: package=${playerPackage.version}, runtime=${runtimeVersion}, loader=${loaderVersion}`);
+  }
+  if (runtimeToolkitVersion !== toolkitPackage.version) {
+    throw new Error(`Toolkit version mismatch: package=${toolkitPackage.version}, runtime=${runtimeToolkitVersion}`);
   }
 
   const release = await writeRelease(output, playerPackage.version, toolkitPackage.version);
