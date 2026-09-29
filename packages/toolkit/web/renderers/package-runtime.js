@@ -4,6 +4,7 @@ import {resolvePackageRuntimeUrl} from '../runtime-host-config.js';
 
 export const acceptsPayload = true;
 const PROTOCOL = 'p2lrn-package-runtime/1';
+const MULTIPART_PROFILE = 'https://p2lrn.org/profile/multipart';
 const PROFILE_KEYS = [
   'https://p2lrn.org/profile/cmi5',
   'https://p2lrn.org/profile/tincan-package',
@@ -21,6 +22,8 @@ function extensionFor(representation) {
 export function packageLaunchMember(representation) {
   const location = representation?.location;
   if (location?.type === 'package-member' && location.member) return String(location.member);
+  const multipartMember = representation?.extensions?.[MULTIPART_PROFILE]?.member;
+  if (typeof multipartMember === 'string' && multipartMember) return multipartMember;
   const {value} = extensionFor(representation);
   const candidate = value.member ?? value.href ?? value.url ?? value.launch ?? value.launchUrl;
   if (typeof candidate !== 'string' || !candidate.trim()) return null;
@@ -66,7 +69,7 @@ async function runtimeFiles(nested) {
 }
 
 export async function render({container, payload, representation, package:pkg, eventTarget, adapter, context, runtimeBaseUrl}) {
-  const launchMember = packageLaunchMember(representation);
+  const launchMember = payload?.member ?? packageLaunchMember(representation);
   if (!launchMember) {
     const error = new Error('External package has no local HTML launch member.');
     error.code = 'P2LRN_PACKAGE_RUNTIME_LAUNCH_MISSING';
