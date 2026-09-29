@@ -1,0 +1,168 @@
+import {execFile} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {cp, mkdir, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
+import {dirname, extname, join, relative, resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {promisify} from 'node:util';
+
+const execFileAsync = promisify(execFile);
+export const H5P_STANDALONE_VERSION = '3.8.2';
+const EXCLUDED = new Set(['app.js', 'index.html', 'style.css']);
+const LOCAL_REF = /(?:from\s+|import\()(['"])(\.{1,2}\/[^'"]+)\1|new URL\((['"])(\.{1,2}\/[^'"]+)\3\s*,\s*import\.meta\.url\)/g;
+
+const here = dirname(fileURLToPath(import.meta.url));
+const playerRoot = resolve(here, '..');
+const repoRoot = resolve(playerRoot, '..', '..');
+const toolkitRoot = join(repoRoot, 'packages', 'toolkit');
+
+async function walk(dir) {
+  const out = [];
+  for (const entry of await readdir(dir, {withFileTypes:true})) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...await walk(full));
+    else if (entry.isFile()) out.push(full);
+  }
+  return out;
+}
+
+function sha(data, algorithm, encoding) {
+  return createHash(algorithm).update(data).digest(encoding);
+}
+
+async function copyCanonicalRuntime(dist) {
+  const web = join(toolkitRoot, 'web');
+  const sdk = join(toolkitRoot, 'web-sdk-src');
+  for (const source of (await walk(web)).sort()) {
+    const rel = relative(web, source).replaceAll('\\','/');
+    const parts = rel.split('/');
+    const name = parts.at(-1);
+    if ((parts.length === 1 && EXCLUDED.has(name)) || EXCLUDED.has(parts[0])) continue;
+    const extension = extname(source);
+    const allowed = ['.js','.css'].includes(extension) || (parts[0] === 'runtime-host' && extension === '.html');
+    if (!allowed) continue;
+    const target = join(dist, ...rel.split('/'));
+    await mkdir(dirname(target), {recursive:true});
+    await cp(source, target);
+  }
+  for (const name of ['p2lrn.js','p2lrn.esm.js','p2rln.js','p2rln.esm.js']) {
+    await cp(join(sdk, name), join(dist, name));
+  }
+}
+
+async function installH5pStandalone(dist) {
+  const work = join(playerRoot, '.build-h5p-standalone');
+  await rm(work, {recursive:true, force:true});
+  await mkdir(work, {recursive:true});
+  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const {stdout = ''} = await execFileAsync(
+    npm,
+    ['pack', `h5p-standalone@${H5P_STANDALONE_VERSION}`, '--ignore-scripts', '--silent', '--pack-destination', work],
+    {cwd:playerRoot, maxBuffer:4*1024*1024},
+  );
+  let archiveName = String(stdout).trim().split(/\r?\n/u).filter(Boolean).at(-1);
+  if (!archiveName) archiveName = (await readdir(work)).find((name)=>name.endsWith('.tgz'));
+  if (!archiveName) throw new Error('npm pack did not produce h5p-standalone archive.');
+  await execFileAsync('tar', ['-xzf', join(work, archiveName), '-C', work], {maxBuffer:4*1024*1024});
+  const sourceRoot = join(work, 'package');
+  const metadata = JSON.parse(await readFile(join(sourceRoot, 'package.json'), 'utf8'));
+  if (metadata.version !== H5P_STANDALONE_VERSION) throw new Error(`Unexpected h5p-standalone version: ${metadata.version}`);
+
+  const assetsRoot = join(dist, 'runtime-host', 'assets');
+  await mkdir(join(assetsRoot, 'styles'), {recursive:true});
+  for (const [from,to] of [
+    ['dist/main.bundle.js','main.bundle.js'],
+    ['dist/frame.bundle.js','frame.bundle.js'],
+    ['dist/styles/h5p.css','styles/h5p.css'],
+  ]) {
+    const source = join(sourceRoot, ...from.split('/'));
+    if (!(await stat(source)).isFile()) throw new Error(`Missing h5p-standalone asset: ${from}`);
+    const target = join(assetsRoot, ...to.split('/'));
+    await mkdir(dirname(target), {recursive:true});
+    await cp(source, target);
+  }
+  await cp(join(sourceRoot, 'LICENSE'), join(assetsRoot, 'LICENSE.h5p-standalone.txt'));
+  await writeFile(
+    join(assetsRoot, 'h5p-standalone.json'),
+    JSON.stringify({name:'h5p-standalone',version:H5P_STANDALONE_VERSION,license:'MIT'}, null, 2) + '\n',
+  );
+  await rm(work, {recursive:true, force:true});
+}
+
+async function validateLocalReferences(dist) {
+  const missing = [];
+  for (const source of (await walk(dist)).filter((path)=>path.endsWith('.js')).sort()) {
+    const text = await readFile(source, 'utf8');
+    LOCAL_REF.lastIndex = 0;
+    let match;
+    while ((match = LOCAL_REF.exec(text))) {
+      const raw = match[2] || match[4];
+      if (!raw) continue;
+      const clean = raw.split('?',1)[0].split('#',1)[0];
+      const target = resolve(dirname(source), clean);
+      const rel = relative(resolve(dist), target);
+      if (rel.startsWith('..') || resolve(target) === resolve(dist)) {
+        missing.push(`${relative(dist,source)} -> unsafe ${raw}`);
+        continue;
+      }
+      try {
+        const info = await stat(target);
+        if (!info.isFile() && !(raw.endsWith('/') && info.isDirectory())) missing.push(`${relative(dist,source)} -> missing ${raw}`);
+      } catch {
+        missing.push(`${relative(dist,source)} -> missing ${raw}`);
+      }
+    }
+  }
+  if (missing.length) throw new Error('Player distribution has unresolved local references:\n' + missing.join('\n'));
+}
+
+async function writeRelease(dist, playerVersion, toolkitVersion) {
+  const files = [];
+  for (const path of (await walk(dist)).filter((path)=>!path.endsWith('release.json')).sort()) {
+    const data = await readFile(path);
+    files.push({
+      path:relative(dist,path).replaceAll('\\','/'),
+      bytes:data.byteLength,
+      sha256:'sha256:' + sha(data,'sha256','hex'),
+      sri:'sha384-' + sha(data,'sha384','base64'),
+    });
+  }
+  const release = {
+    schema:'https://p2lrn.org/schema/web-sdk-release/1',
+    version:'1',
+    webSdkVersion:playerVersion,
+    toolkitVersion,
+    coreVersion:'0.4.0',
+    h5pStandaloneVersion:H5P_STANDALONE_VERSION,
+    h5pLibrariesPackage:'@p2lrn/h5p-libraries',
+    entrypoints:{classic:'p2lrn.js',module:'p2lrn.esm.js',serviceWorker:'p2lrn-sw.js'},
+    files,
+  };
+  await writeFile(join(dist,'release.json'), JSON.stringify(release,null,2)+'\n');
+  return release;
+}
+
+export async function buildPlayerDistribution({output = join(playerRoot, 'dist')} = {}) {
+  const playerPackage = JSON.parse(await readFile(join(playerRoot,'package.json'),'utf8'));
+  const toolkitPackage = JSON.parse(await readFile(join(toolkitRoot,'package.json'),'utf8'));
+  await rm(output,{recursive:true,force:true});
+  await mkdir(output,{recursive:true});
+  await copyCanonicalRuntime(output);
+  await installH5pStandalone(output);
+  await validateLocalReferences(output);
+
+  const playerSource = await readFile(join(output,'p2lrn-player.js'),'utf8');
+  const loaderSource = await readFile(join(output,'p2lrn.js'),'utf8');
+  const runtimeVersion = /P2LRN_WEB_SDK_VERSION\s*=\s*'([^']+)'/u.exec(playerSource)?.[1];
+  const loaderVersion = /const version\s*=\s*'([^']+)'/u.exec(loaderSource)?.[1];
+  if (runtimeVersion !== playerPackage.version || loaderVersion !== playerPackage.version) {
+    throw new Error(`Player version mismatch: package=${playerPackage.version}, runtime=${runtimeVersion}, loader=${loaderVersion}`);
+  }
+
+  const release = await writeRelease(output, playerPackage.version, toolkitPackage.version);
+  return {output, release};
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const result = await buildPlayerDistribution();
+  console.log(JSON.stringify({output:result.output,version:result.release.webSdkVersion,files:result.release.files.length},null,2));
+}
