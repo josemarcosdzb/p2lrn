@@ -1,0 +1,287 @@
+import {createHash} from 'node:crypto';
+import {cp, mkdir, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
+import {dirname, extname, join, relative, resolve} from 'node:path';
+
+const root = resolve(process.cwd());
+const outputRoot = join(root, '.netlify-cdn');
+const toolkitWeb = join(root, 'packages', 'toolkit', 'web');
+const sdkSource = join(root, 'packages', 'toolkit', 'web-sdk-src');
+const playerPackagePath = join(root, 'packages', 'player', 'package.json');
+const toolkitPackagePath = join(root, 'packages', 'toolkit', 'package.json');
+const compatibilityVersion = '0.5.0-alpha.1';
+
+const EXCLUDED_ROOT = new Set(['app.js', 'index.html', 'style.css']);
+const SDK_ENTRYPOINTS = ['p2lrn.js', 'p2lrn.esm.js', 'p2rln.js', 'p2rln.esm.js'];
+const LOCAL_REF = /(?:from\s+|import\()(['"])(\.{1,2}\/[^'"]+)\1|new URL\((['"])(\.{1,2}\/[^'"]+)\3/g;
+
+async function readJson(path) {
+  return JSON.parse(await readFile(path, 'utf8'));
+}
+
+async function walk(dir) {
+  const out = [];
+  for (const entry of await readdir(dir, {withFileTypes: true})) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...await walk(path));
+    else if (entry.isFile()) out.push(path);
+  }
+  return out;
+}
+
+function sha(data, algorithm, encoding) {
+  return createHash(algorithm).update(data).digest(encoding);
+}
+
+async function copyCanonicalRuntime(dist) {
+  await mkdir(dist, {recursive: true});
+
+  for (const source of (await walk(toolkitWeb)).sort()) {
+    const rel = relative(toolkitWeb, source).split('\\').join('/');
+    const parts = rel.split('/');
+    const name = parts.at(-1);
+    if (parts.length === 1 && EXCLUDED_ROOT.has(name)) continue;
+
+    const extension = extname(source);
+    const allowed =
+      extension === '.js' ||
+      extension === '.css' ||
+      (parts[0] === 'runtime-host' && extension === '.html');
+    if (!allowed) continue;
+
+    const target = join(dist, rel);
+    await mkdir(dirname(target), {recursive: true});
+    await cp(source, target);
+  }
+
+  for (const name of SDK_ENTRYPOINTS) {
+    await cp(join(sdkSource, name), join(dist, name));
+  }
+}
+
+async function assertVersionAlignment(dist, version) {
+  const player = await readFile(join(dist, 'p2lrn-player.js'), 'utf8');
+  const loader = await readFile(join(dist, 'p2lrn.js'), 'utf8');
+
+  const runtimeVersion = player.match(/P2LRN_WEB_SDK_VERSION\s*=\s*['"]([^'"]+)['"]/u)?.[1];
+  const loaderVersion = loader.match(/const\s+version\s*=\s*['"]([^'"]+)['"]/u)?.[1];
+
+  if (runtimeVersion !== version) {
+    throw new Error(`Player version mismatch: package.json=${version}, runtime=${runtimeVersion ?? 'missing'}`);
+  }
+  if (loaderVersion !== version) {
+    throw new Error(`Loader version mismatch: package.json=${version}, loader=${loaderVersion ?? 'missing'}`);
+  }
+}
+
+async function validateLocalReferences(dist) {
+  const missing = [];
+
+  for (const source of (await walk(dist)).filter((path) => path.endsWith('.js')).sort()) {
+    const text = await readFile(source, 'utf8');
+    LOCAL_REF.lastIndex = 0;
+    let match;
+    while ((match = LOCAL_REF.exec(text))) {
+      const raw = match[2] || match[4];
+      if (!raw) continue;
+      const path = raw.split('?', 1)[0].split('#', 1)[0];
+      const target = resolve(dirname(source), path);
+      const rel = relative(resolve(dist), target);
+      if (rel.startsWith('..') || resolve(target) === resolve(dist)) {
+        missing.push(`${relative(dist, source)} -> unsafe ${raw}`);
+        continue;
+      }
+      try {
+        const info = await stat(target);
+        if (!info.isFile()) missing.push(`${relative(dist, source)} -> missing ${raw}`);
+      } catch {
+        missing.push(`${relative(dist, source)} -> missing ${raw}`);
+      }
+    }
+  }
+
+  if (missing.length) {
+    throw new Error('Generated Web SDK has unresolved local references:\n' + missing.join('\n'));
+  }
+}
+
+async function writeRelease(dist, {version, toolkitVersion}) {
+  const files = [];
+
+  for (const path of (await walk(dist)).filter((p) => !p.endsWith('release.json')).sort()) {
+    const data = await readFile(path);
+    files.push({
+      path: relative(dist, path).split('\\').join('/'),
+      bytes: data.byteLength,
+      sha256: 'sha256:' + sha(data, 'sha256', 'hex'),
+      sri: 'sha384-' + sha(data, 'sha384', 'base64'),
+    });
+  }
+
+  const release = {
+    schema: 'https://p2lrn.org/schema/web-sdk-release/1',
+    version: '1',
+    webSdkVersion: version,
+    toolkitVersion,
+    coreVersion: '0.4.0',
+    entrypoints: {
+      classic: 'p2lrn.js',
+      module: 'p2lrn.esm.js',
+      serviceWorker: 'p2lrn-sw.js',
+    },
+    files,
+  };
+
+  await writeFile(join(dist, 'release.json'), JSON.stringify(release, null, 2) + '\n');
+  return release;
+}
+
+async function copyIfPresent(from, to) {
+  try {
+    const info = await stat(from);
+    if (!info.isDirectory()) return false;
+  } catch {
+    return false;
+  }
+  await mkdir(dirname(to), {recursive: true});
+  await cp(from, to, {recursive: true, force: true});
+  return true;
+}
+
+function headerBlock(path, cacheControl, edgeCacheControl) {
+  return [
+    path,
+    '  Access-Control-Allow-Origin: *',
+    '  Cross-Origin-Resource-Policy: cross-origin',
+    `  Cache-Control: ${cacheControl}`,
+    `  Netlify-CDN-Cache-Control: ${edgeCacheControl}`,
+    '  X-Content-Type-Options: nosniff',
+    '',
+  ].join('\n');
+}
+
+const playerPackage = await readJson(playerPackagePath);
+const toolkitPackage = await readJson(toolkitPackagePath);
+const version = playerPackage.version;
+
+await rm(outputRoot, {recursive: true, force: true});
+
+const versionedDist = join(outputRoot, 'player', version, 'dist');
+await copyCanonicalRuntime(versionedDist);
+await assertVersionAlignment(versionedDist, version);
+await validateLocalReferences(versionedDist);
+const release = await writeRelease(versionedDist, {
+  version,
+  toolkitVersion: toolkitPackage.version,
+});
+
+// Stable development channel: always points at the runtime built from current main.
+await cp(versionedDist, join(outputRoot, 'player', 'current', 'dist'), {
+  recursive: true,
+  force: true,
+});
+
+// Backward-compatible URL already used by existing integrations.
+// This is deliberately mutable and therefore MUST NOT use immutable caching.
+if (version !== compatibilityVersion) {
+  await cp(versionedDist, join(outputRoot, 'player', compatibilityVersion, 'dist'), {
+    recursive: true,
+    force: true,
+  });
+}
+
+const packagesCopied = await copyIfPresent(
+  join(root, 'deploy', 'netlify', 'packages'),
+  join(outputRoot, 'packages'),
+);
+
+const index = {
+  schema: 'https://p2lrn.org/schema/cdn-index/1',
+  generatedFrom: 'packages/toolkit/web + packages/toolkit/web-sdk-src',
+  player: {
+    version,
+    versionedBasePath: `/player/${version}/dist/`,
+    currentBasePath: '/player/current/dist/',
+    compatibilityBasePath: `/player/${compatibilityVersion}/dist/`,
+    classic: `/player/${version}/dist/${release.entrypoints.classic}`,
+    module: `/player/${version}/dist/${release.entrypoints.module}`,
+    serviceWorker: `/player/${version}/dist/${release.entrypoints.serviceWorker}`,
+    release: `/player/${version}/dist/release.json`,
+  },
+  packagesPath: packagesCopied ? '/packages/' : null,
+};
+
+await writeFile(join(outputRoot, 'index.json'), JSON.stringify(index, null, 2) + '\n');
+await writeFile(
+  join(outputRoot, 'health.json'),
+  JSON.stringify({ok: true, playerVersion: version}, null, 2) + '\n',
+);
+
+await writeFile(
+  join(outputRoot, 'index.html'),
+  `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>P2LRN CDN</title>
+  <meta name="robots" content="noindex">
+</head>
+<body>
+  <main>
+    <h1>P2LRN CDN</h1>
+    <p>Player version: ${version}</p>
+    <p><a href="/player/${version}/dist/release.json">release.json</a></p>
+    <p><a href="/index.json">distribution index</a></p>
+  </main>
+</body>
+</html>
+`,
+);
+
+let headers = '';
+headers += headerBlock(
+  `/player/${version}/*`,
+  'public, max-age=31536000, immutable',
+  'public, s-maxage=31536000, immutable',
+);
+headers += headerBlock(
+  '/player/current/*',
+  'public, max-age=0, must-revalidate',
+  'public, s-maxage=60, must-revalidate',
+);
+if (version !== compatibilityVersion) {
+  headers += headerBlock(
+    `/player/${compatibilityVersion}/*`,
+    'public, max-age=0, must-revalidate',
+    'public, s-maxage=60, must-revalidate',
+  );
+}
+headers += [
+  '/packages/*',
+  '  Access-Control-Allow-Origin: *',
+  '  Access-Control-Expose-Headers: Accept-Ranges, Content-Length, Content-Range, ETag, Last-Modified',
+  '  Cross-Origin-Resource-Policy: cross-origin',
+  '  Cache-Control: public, max-age=31536000, immutable',
+  '  Netlify-CDN-Cache-Control: public, s-maxage=31536000, immutable',
+  '  X-Content-Type-Options: nosniff',
+  '',
+  '/index.json',
+  '  Access-Control-Allow-Origin: *',
+  '  Cache-Control: public, max-age=0, must-revalidate',
+  '',
+  '/health.json',
+  '  Access-Control-Allow-Origin: *',
+  '  Cache-Control: no-store',
+  '',
+].join('\n');
+
+await writeFile(join(outputRoot, '_headers'), headers);
+
+console.log(JSON.stringify({
+  ok: true,
+  output: outputRoot,
+  playerVersion: version,
+  compatibilityVersion,
+  files: release.files.length,
+  packagesCopied,
+}, null, 2));
