@@ -6,6 +6,8 @@ on:
     paths:
       - 'packages/toolkit/**'
       - 'packages/player/**'
+      - 'packages/h5p-libraries/**'
+      - 'scripts/verify-npm-pack.mjs'
       - 'deploy/netlify/**'
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
@@ -14,6 +16,8 @@ on:
     paths:
       - 'packages/toolkit/**'
       - 'packages/player/**'
+      - 'packages/h5p-libraries/**'
+      - 'scripts/verify-npm-pack.mjs'
       - 'deploy/netlify/**'
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
@@ -46,7 +50,13 @@ jobs:
       - name: Check browser module syntax
         run: |
           find packages/toolkit/web packages/toolkit/web-sdk-src -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check packages/player/scripts/build-dist.mjs
+          node --check packages/h5p-libraries/scripts/build.mjs
+          node --check scripts/verify-npm-pack.mjs
           node --check deploy/netlify/build-cdn.mjs
+
+      - name: Verify npm tarballs as installed packages
+        run: node scripts/verify-npm-pack.mjs
 
       - name: Build Netlify CDN
         run: node deploy/netlify/build-cdn.mjs
@@ -59,4 +69,7 @@ jobs:
           test -f ".netlify-cdn/player/$VERSION/dist/runtime-host/scorm.html"
           test -s ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/frame.bundle.js"
           test -s ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/styles/h5p.css"
+          test -f ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.Crossword-0.5/library.json"
+          test -f ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.BranchingScenario-1.8/library.json"
           grep -q "\"webSdkVersion\": \"$VERSION\"" ".netlify-cdn/player/$VERSION/dist/release.json"
+          grep -q "\"sharedLibraryMode\": \"bundled-npm-artifact\"" ".netlify-cdn/index.json"
