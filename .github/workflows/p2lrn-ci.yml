@@ -9,6 +9,7 @@ on:
       - 'packages/h5p-libraries/**'
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
+      - 'scripts/verify-distribution-identity.mjs'
       - 'scripts/set-version.mjs'
       - 'deploy/netlify/**'
       - 'netlify.toml'
@@ -21,6 +22,7 @@ on:
       - 'packages/h5p-libraries/**'
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
+      - 'scripts/verify-distribution-identity.mjs'
       - 'scripts/set-version.mjs'
       - 'deploy/netlify/**'
       - 'netlify.toml'
@@ -58,6 +60,7 @@ jobs:
           node --check packages/h5p-libraries/scripts/build.mjs
           node --check scripts/verify-npm-pack.mjs
           node --check scripts/verify-browser-from-npm.mjs
+          node --check scripts/verify-distribution-identity.mjs
           node --check scripts/set-version.mjs
           node --check deploy/netlify/build-cdn.mjs
 
@@ -69,6 +72,9 @@ jobs:
 
       - name: Build Netlify CDN
         run: node deploy/netlify/build-cdn.mjs
+
+      - name: Verify npm/CDN byte identity
+        run: node scripts/verify-distribution-identity.mjs
 
       - name: Verify generated runtime
         run: |
