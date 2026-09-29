@@ -331,7 +331,11 @@ class HttpRangeSource {
   constructor(url, {fetchImpl = globalThis.fetch, fetchOptions = {}, limits} = {}) {
     if (typeof fetchImpl !== 'function') throw new Error('fetch is unavailable for HTTP Range reading.');
     this.url = String(url);
-    this.fetchImpl = fetchImpl;
+    // Browser-native fetch is host-bound in some engines. Storing it directly on
+    // this instance and invoking it as this.fetchImpl(...) can change its receiver
+    // and trigger TypeError: Illegal invocation. Bind only the platform fetch;
+    // caller-provided fetch implementations keep their existing semantics.
+    this.fetchImpl = fetchImpl === globalThis.fetch ? fetchImpl.bind(globalThis) : fetchImpl;
     this.fetchOptions = fetchOptions;
     this.limits = limits;
     this.totalSize = null;
