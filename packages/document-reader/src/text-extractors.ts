@@ -95,7 +95,7 @@ export async function readJson(file:DocumentInput,detection:FileDetection):Promi
   const title=[course?.title,course?.titulo,obj?.title,obj?.titulo].find(v=>typeof v==='string'&&v.trim()) as string|undefined;
   const source=Array.isArray(obj?.content)?obj?.content:Array.isArray(obj?.contenido)?obj?.contenido:[];
   const lines=(source as unknown[]).flatMap(v=>typeof v==='string'?v.split(/\r?\n/u):[]).map(normalizeText).filter(Boolean);
-  const blocks=lines.length?lines.map((line,i):DocumentBlock=>({id:nextId('json'),type:'PARAGRAPH',text:line,order:i+1,source:{type:'JSON'}})):[{id:nextId('json_raw'),type:'METADATA',text,order:1,source:{type:'JSON',raw:obj??{}}}];
+  const blocks:DocumentBlock[]=lines.length?lines.map((line,i):DocumentBlock=>({id:nextId('json'),type:'PARAGRAPH',text:line,order:i+1,source:{type:'JSON'}})):[{id:nextId('json_raw'),type:'METADATA',text,order:1,source:{type:'JSON',raw:obj??{}}}];
   return {...base(file,detection,'JSON_CANONICAL'),metadata:{detectedTitle:title?.trim()},blocks,tables:[],raw,warnings:[]};
 }
 
