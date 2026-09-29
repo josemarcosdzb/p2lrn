@@ -1,0 +1,39 @@
+name: Build Netlify CDN ZIP
+
+on:
+  push:
+    branches:
+      - chore/netlify-cdn
+    paths:
+      - ".github/workflows/build-netlify-cdn-zip.yml"
+      - "deploy/netlify/**"
+      - "packages/player/**"
+      - "netlify.toml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build CDN folder
+        run: node deploy/netlify/build-cdn.mjs
+
+      - name: Archive manual Netlify upload
+        run: |
+          cd .netlify-cdn
+          zip -r ../p2lrn-netlify-cdn.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2lrn-netlify-cdn
+          path: p2lrn-netlify-cdn.zip
+          if-no-files-found: error
+          retention-days: 7
