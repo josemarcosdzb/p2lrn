@@ -52,13 +52,33 @@ Projects 0.1/0.2 are upgraded to 0.3 with validation before and after migration.
 
 ## Multipart transport
 
-Large embedded payloads can be split without uploading course content to the shared P2LRN CDN:
+Large embedded payloads can be split so the outer P2LRN package stays small instead of carrying one very large embedded file:
 
 ```bash
 p2lrn-multipart course.p2lrn course-split.p2lrn --part-size 26214400
 ```
 
-This writes `course-split.p2lrn` plus adjacent `course-split.part001`, `course-split.part002`, etc. The Player resolves the parts relative to the outer package URL and verifies per-part and final SHA-256 digests before handing the logical payload to its normal renderer.
+The default part size is 25 MiB and the minimum accepted size is 1 MiB. The command selects an oversized embedded representation automatically, or you can choose one explicitly:
+
+```bash
+p2lrn-multipart course.p2lrn course-split.p2lrn \
+  --representation urn:example:representation \
+  --part-size 26214400
+```
+
+Output is an outer package plus adjacent parts:
+
+```text
+course-split.p2lrn
+course-split.part001
+course-split.part002
+course-split.part003
+...
+```
+
+The outer package contains a small multipart descriptor with the logical media type, full byte size, full SHA-256 digest and the relative `href`, size and SHA-256 digest of every part. The Player resolves the parts relative to the outer package URL, verifies every part, reconstructs the logical payload and verifies the final SHA-256 before passing it to the normal renderer.
+
+Multipart also preserves package-member views used by SCORM/cmi5/IMS-style nested packages. The current command transforms one embedded representation per execution; use `--representation` when you need to target a particular large payload. Keep the outer package and all generated `.partNNN` files together when publishing.
 
 ## Lightweight document Reader
 
