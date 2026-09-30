@@ -81,13 +81,31 @@
     });
   }
 
-  window.P2LRNReady?.then?.(() => {
-    write('runtime', {status:'registered'});
-    if (state.textContent === 'LOADING') setState('PLAYER', 'Runtime registrado');
-  }).catch?.((error) => {
-    write('runtime-error', {message:error?.message || String(error)});
-    setState('ERROR', 'Error de runtime');
-  });
+  async function boot() {
+    try {
+      await window.P2LRNReady;
+      write('runtime', {status:'registered'});
+
+      if (globalThis.P2LRN?.installServiceWorker) {
+        setState('BRIDGE', 'Preparando recursos verificados');
+        const bridge = await globalThis.P2LRN.installServiceWorker({
+          url:'/p2lrn-sw.js',
+          scope:'/__p2lrn__/',
+        });
+        write('virtual-resource-bridge', {
+          status:'ready',
+          scope:bridge?.scope ?? '/__p2lrn__/',
+        });
+      }
+
+      load();
+    } catch (error) {
+      write('boot-error', {message:error?.message || String(error)});
+      setState('ERROR', 'Error preparando el visor');
+    }
+  }
+
+  void boot();
 
   copyButton?.addEventListener('click', async () => {
     const code = copyButton.closest('.codebox')?.querySelector('code')?.innerText || '';
