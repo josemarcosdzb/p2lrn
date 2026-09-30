@@ -78,6 +78,8 @@ export function validateRouteConfig(config, expectedOrigin = null) {
   if (!/^[a-f0-9]{32,64}$/.test(String(config.routeId ?? ''))) throw new Error('Invalid P2LRN static route id.');
   const source = new URL(config.sourceUrl);
   if (!['http:', 'https:'].includes(source.protocol)) throw new Error('P2LRN static bridge source must be HTTP(S).');
+  const localHttp = source.protocol === 'http:' && ['localhost','127.0.0.1','[::1]'].includes(source.hostname);
+  if (source.protocol === 'http:' && !localHttp) throw new Error('P2LRN static bridge requires HTTPS outside local development.');
   if (expectedOrigin && source.origin !== expectedOrigin) throw new Error('P2LRN static bridge only accepts same-origin package sources.');
   validateDigest(config.contentRoot, 'contentRoot');
   if (!config.resources || typeof config.resources !== 'object' || Array.isArray(config.resources) || !Object.keys(config.resources).length) throw new Error('P2LRN static route requires resources.');
