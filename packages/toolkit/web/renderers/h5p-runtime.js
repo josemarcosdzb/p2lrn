@@ -6,7 +6,6 @@ import {encodeH5PSession, inspectH5PPackage} from '../h5p-package.js';
 export const acceptsPayload = true;
 const H5P_PROFILE = 'https://p2lrn.org/profile/h5p';
 const PROTOCOL = 'p2lrn-h5p-runtime/1';
-const LEGACY_PROTOCOL = 'p2rln-h5p-runtime/1';
 const MAX_PREVIOUS_STATE_JSON_BYTES = 2 * 1024 * 1024;
 const MAX_STATIC_RUNTIME_FILES = 10000;
 const MAX_STATIC_RUNTIME_BYTES = 512 * 1024 * 1024;
@@ -173,7 +172,7 @@ export async function render({container, payload, representation, package:pkg, e
   const iframe = document.createElement('iframe');
   iframe.className = 'p2lrn-h5p-frame';
   iframe.title = inspection.title || 'H5P';
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups');
+  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals');
   iframe.setAttribute('allow', 'fullscreen');
   iframe.style.width = '100%';
   iframe.style.minHeight = '480px';
@@ -228,7 +227,7 @@ export async function render({container, payload, representation, package:pkg, e
   const onMessage = (event) => {
     if (destroyed || event.source !== iframe.contentWindow || event.origin !== runtimeOrigin) return;
     const data = event.data;
-    if (!data || ![PROTOCOL, LEGACY_PROTOCOL].includes(data.protocol) || data.action !== 'shell-ready' || didConnect) return;
+    if (!data || data.protocol !== PROTOCOL || data.action !== 'shell-ready' || didConnect) return;
     runtimeProtocol = data.protocol;
     didConnect = true;
     const channel = new MessageChannel();
