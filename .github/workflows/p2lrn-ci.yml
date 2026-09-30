@@ -14,19 +14,6 @@ on:
       - 'deploy/netlify/**'
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'packages/toolkit/**'
-      - 'packages/player/**'
-      - 'packages/h5p-libraries/**'
-      - 'scripts/verify-npm-pack.mjs'
-      - 'scripts/verify-browser-from-npm.mjs'
-      - 'scripts/verify-distribution-identity.mjs'
-      - 'scripts/set-version.mjs'
-      - 'deploy/netlify/**'
-      - 'netlify.toml'
-      - '.github/workflows/p2lrn-ci.yml'
   workflow_dispatch:
 
 permissions:
