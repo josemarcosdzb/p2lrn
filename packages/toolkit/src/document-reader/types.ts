@@ -80,6 +80,23 @@ export interface ExtractedDocument {
   raw?:unknown;
 }
 
+export interface DocumentReaderLimits {
+  inputBytes:number;
+  textBytes:number;
+  xmlEntryBytes:number;
+  archiveEntries:number;
+  archiveEntryBytes:number;
+  archiveTotalUncompressedBytes:number;
+  archiveCentralDirectoryBytes:number;
+  archiveCompressionRatio:number;
+  maxSlides:number;
+  maxEpubDocuments:number;
+  maxPdfPages:number;
+  maxBlocks:number;
+  maxTables:number;
+}
+
 export interface DocumentReaderOptions {
   pdfTextAdapter?:'auto'|'required'|'disabled';
+  limits?:Partial<DocumentReaderLimits>;
 }
