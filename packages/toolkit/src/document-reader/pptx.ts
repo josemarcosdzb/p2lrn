@@ -1,15 +1,16 @@
 import {ZipArchive} from '../core/zip.js';
-import type {DocumentBlock,DocumentReaderInput,DocumentTable,ExtractedDocument} from './types.js';
+import {documentZipLimits,readArchiveText} from './limits.js';
+import type {DocumentBlock,DocumentReaderInput,DocumentReaderLimits,DocumentTable,ExtractedDocument} from './types.js';
 import {decodeXml,mediaTypeForAsset,normalizeZipRelative,readerId,xmlAttributes} from './utils.js';
 
 function slideNumber(path:string):number{return Number(path.match(/slide(\d+)\.xml$/i)?.[1]??0);}
 
-function relMap(archive:ZipArchive,slidePath:string):Map<string,string>{
+function relMap(archive:ZipArchive,slidePath:string,limits:DocumentReaderLimits):Map<string,string>{
   const out=new Map<string,string>();
   const file=slidePath.split('/').at(-1)!;
   const relPath=`ppt/slides/_rels/${file}.rels`;
   if(!archive.entries.has(relPath)) return out;
-  const xml=new TextDecoder().decode(archive.read(relPath));
+  const xml=readArchiveText(archive,relPath,limits,'PPTX slide relationships');
   for(const match of xml.matchAll(/<Relationship\b[^>]*\/>/gi)){
     const attrs=xmlAttributes(match[0]);
     if(attrs.id&&attrs.target&&!/^[a-z]+:/i.test(attrs.target)){
@@ -47,20 +48,21 @@ function tableFromXml(xml:string,slide:number,index:number):DocumentTable|null{
   };
 }
 
-export function extractPptx(input:DocumentReaderInput):ExtractedDocument{
-  const archive=ZipArchive.open(input.data);
+export function extractPptx(input:DocumentReaderInput,limits:DocumentReaderLimits):ExtractedDocument{
+  const archive=ZipArchive.open(input.data,documentZipLimits(limits));
   const slides=archive.names()
     .filter(name=>/^ppt\/slides\/slide\d+\.xml$/i.test(name))
     .sort((a,b)=>slideNumber(a)-slideNumber(b));
   if(!slides.length) throw new Error('PPTX contains no readable slides.');
+  if(slides.length>limits.maxSlides) throw new Error(`PPTX exceeds lightweight reader slide limit (${slides.length} > ${limits.maxSlides}).`);
 
   const blocks:DocumentBlock[]=[];
   const tables:DocumentTable[]=[];
   for(const slidePath of slides){
     const slide=slideNumber(slidePath);
     const sheet=`Slide ${slide}`;
-    const xml=new TextDecoder().decode(archive.read(slidePath));
-    const rels=relMap(archive,slidePath);
+    const xml=readArchiveText(archive,slidePath,limits,`PPTX ${slidePath}`);
+    const rels=relMap(archive,slidePath,limits);
     const shapes=xml.match(/<p:(?:sp|pic|graphicFrame)\b[\s\S]*?<\/p:(?:sp|pic|graphicFrame)>/gi)??[];
     let textIndex=0;
     for(const shape of shapes){
