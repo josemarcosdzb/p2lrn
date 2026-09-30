@@ -70,6 +70,23 @@ export function validateProgressionGraph(graph, manifest) {
   let hasNavigationSemantics = false;
   const validStatus = new Set(PROGRESSION_REQUIREMENTS);
   for (const entity of graph?.entities ?? []) {
+    if (entity?.type === 'resource') {
+      if (extension(entity)) throw new Error(`Progression is not valid on resource entities: ${entity.id}`);
+      for (const rep of entity.representations ?? []) {
+        const extensions = record(rep?.extensions) ?? {};
+        if (Object.keys(extensions).some((key) => String(key).replace('https://p2rln.org/', 'https://p2lrn.org/') === PROGRESSION_PROFILE)) {
+          throw new Error(`Progression is not valid on representations: ${rep.id ?? entity.id}`);
+        }
+      }
+    }
+  }
+  for (const relation of graph?.relations ?? []) {
+    const extensions = record(relation?.extensions) ?? {};
+    if (Object.keys(extensions).some((key) => String(key).replace('https://p2rln.org/', 'https://p2lrn.org/') === PROGRESSION_PROFILE)) {
+      throw new Error('Progression is not valid on graph relations.');
+    }
+  }
+  for (const entity of graph?.entities ?? []) {
     const rule = extension(entity);
     if (!rule) continue;
     used = true;
