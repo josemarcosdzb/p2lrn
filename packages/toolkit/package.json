@@ -49,8 +49,8 @@
     "p2lrn-wrap-external": "./dist/cli/convert.js"
   },
   "scripts": {
-    "clean": "rm -rf dist",
-    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm run build && npm test",
     "prepublishOnly": "node ../../scripts/check-publish-ready.mjs",
