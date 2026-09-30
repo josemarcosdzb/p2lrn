@@ -1,242 +1,250 @@
 <!doctype html>
-<html lang="es" data-build="brutal-20260930-01">
+<html lang="es" data-build="simple-docs-20260930-01">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="P2LRN: formato portable de aprendizaje, Player web y Toolkit Node/TypeScript.">
-  <meta name="theme-color" content="#f2ff00">
-  <title>P2LRN // package + verify + render</title>
+  <meta name="theme-color" content="#f6f7f4">
+  <title>P2LRN — formato portable de aprendizaje</title>
   <link rel="stylesheet" href="/p2lrn.css">
   <script src="/p2lrn.js" defer></script>
 </head>
 <body>
-  <div class="progress" data-progress aria-hidden="true"></div>
-
-  <header class="bar">
-    <a class="logo" href="#top">P2LRN</a>
-    <div class="ticker" aria-hidden="true">
-      <div class="ticker-track">
-        <span>PACKAGE → VERIFY → RENDER → PORTABLE → NO PLATFORM LOCK-IN → </span>
-        <span>PACKAGE → VERIFY → RENDER → PORTABLE → NO PLATFORM LOCK-IN → </span>
-      </div>
+  <header class="site-header">
+    <a class="brand" href="#top">P2LRN</a>
+    <nav class="nav" id="nav" aria-label="Navegación principal">
+      <a href="#que-es">Qué es</a>
+      <a href="#como-funciona">Cómo funciona</a>
+      <a href="#player">Player</a>
+      <a href="#toolkit">Toolkit</a>
+      <a href="#documentacion">Documentación</a>
+    </nav>
+    <div class="header-meta">
+      <span class="status"><i></i><span data-health>CDN</span></span>
+      <span data-player-version>0.5.0-alpha.10</span>
     </div>
-    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">INDEX</button>
+    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
   </header>
-
-  <nav class="nav" id="nav" aria-label="Índice">
-    <a href="#what"><b>01</b><span>WHAT</span></a>
-    <a href="#player"><b>02</b><span>PLAYER</span></a>
-    <a href="#toolkit"><b>03</b><span>TOOLKIT</span></a>
-    <a href="#docs"><b>04</b><span>DOCS</span></a>
-    <a href="/index.json"><b>→</b><span>INDEX.JSON</span></a>
-  </nav>
 
   <main id="top">
     <section class="hero">
-      <div class="hero-meta">
-        <span>FORMAT / PLAYER / TOOLKIT</span>
-        <span>WEB DELIVERY / NODE TYPESCRIPT</span>
-        <span class="health"><i></i><em data-health>CDN</em></span>
-      </div>
-
-      <div class="hero-word" aria-label="P2LRN">
-        <span class="p2">P2</span>
-        <span class="slash">/</span>
-        <span class="lrn">LRN</span>
-      </div>
-
-      <div class="hero-bottom">
-        <p>Un curso debe poder moverse, verificarse y ejecutarse sin quedar atado a una única plataforma.</p>
-        <div class="hero-version">
-          <small>RELEASE</small>
-          <strong data-player-version>0.5.0-alpha.10</strong>
+      <div class="hero-main">
+        <p class="eyebrow">FORMATO PORTABLE DE APRENDIZAJE</p>
+        <h1>P2LRN</h1>
+        <p class="hero-lead">Un formato para empaquetar cursos, moverlos entre sistemas y reproducirlos sin depender de una única plataforma.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#que-es">Entender P2LRN</a>
+          <a class="button" href="#player">Integrar el Player</a>
         </div>
       </div>
 
-      <a class="jump" href="#what">↓ START</a>
+      <aside class="hero-note">
+        <span>EN UNA FRASE</span>
+        <p>El paquete contiene el curso. El Player lo ejecuta. El Toolkit lo crea, valida y transforma.</p>
+        <dl>
+          <div><dt>Extensión</dt><dd>.p2lrn</dd></div>
+          <div><dt>Player</dt><dd>&lt;p2lrn-player&gt;</dd></div>
+          <div><dt>Toolkit</dt><dd>@p2lrn/toolkit</dd></div>
+        </dl>
+      </aside>
     </section>
 
-    <section class="what" id="what">
-      <div class="stamp rotate-left">01 / WHAT</div>
-
-      <div class="what-title">
-        <span>ONE</span>
-        <span>PACKAGE.</span>
-        <span>SEVERAL</span>
-        <span>RUNTIMES.</span>
-      </div>
-
-      <div class="what-copy">
-        <p>P2LRN concentra estructura, activos, manifiestos y contenido de aprendizaje dentro de un paquete <code>.p2lrn</code>.</p>
-        <p>La plataforma anfitriona conserva lo que le pertenece: identidad, permisos, matrícula, persistencia y resolución de recursos protegidos.</p>
-      </div>
-
-      <div class="machine" aria-label="Flujo P2LRN">
-        <div class="machine-node">
-          <b>01</b>
-          <strong>PACKAGE</strong>
-          <code>.p2lrn</code>
-        </div>
-        <div class="machine-arrow">→</div>
-        <div class="machine-node black">
-          <b>02</b>
-          <strong>VERIFY</strong>
-          <code>manifest / digests / contentRoot</code>
-        </div>
-        <div class="machine-arrow">→</div>
-        <div class="machine-node blue">
-          <b>03</b>
-          <strong>RENDER</strong>
-          <code>player / h5p / scorm / …</code>
-        </div>
-      </div>
-
-      <div class="host-note">
-        <b>HOST ≠ PACKAGE</b>
-        <span>usuario · auth · matrícula · telemetría · persistencia</span>
-      </div>
-    </section>
-
-    <section class="player" id="player">
-      <div class="player-head">
-        <div class="stamp invert rotate-right">02 / PLAYER</div>
-        <h2>DROP IT<br>IN THE<br>BROWSER.</h2>
-        <p>El loader CDN registra <code>&lt;p2lrn-player&gt;</code>. Los renderers y runtimes especializados se resuelven cuando hacen falta.</p>
-      </div>
-
-      <div class="codebox">
-        <div class="codebox-top">
-          <span>HTML / CURRENT</span>
-          <button type="button" data-copy>复制 / COPIAR</button>
-        </div>
-        <pre><code>&lt;script
-  src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;
-&lt;/script&gt;
-
-&lt;p2lrn-player
-  src="/courses/course.p2lrn"&gt;
-&lt;/p2lrn-player&gt;</code></pre>
-        <div class="codebox-foot">
-          <a href="/player/current/dist/release.json">RELEASE.JSON ↗</a>
-          <a href="/health.json">HEALTH.JSON ↗</a>
-        </div>
-      </div>
-
-      <div class="contract">
-        <div class="contract-row required">
-          <span>src</span>
-          <p>URL del paquete P2LRN.</p>
-          <b>REQUIRED</b>
-        </div>
-        <div class="contract-row">
-          <span>node</span>
-          <p>Nodo concreto del grafo; sin él se usa el entrypoint principal.</p>
-          <b>OPTIONAL</b>
-        </div>
-        <div class="contract-row">
-          <span>renderer</span>
-          <p>Selección estricta de renderer cuando la integración lo necesita.</p>
-          <b>OPTIONAL</b>
-        </div>
-        <div class="contract-row">
-          <span>runtime-base-url</span>
-          <p>Origen alternativo para un runtime aislado de confianza.</p>
-          <b>OPTIONAL</b>
+    <section class="section intro" id="que-es">
+      <div class="section-label">01 · QUÉ ES</div>
+      <div class="section-body">
+        <h2>El curso viaja como un paquete verificable.</h2>
+        <p class="lead">P2LRN guarda en un mismo paquete la estructura del curso, sus activos, sus manifiestos y las referencias necesarias para poder abrirlo y reproducirlo después.</p>
+        <div class="explain-grid">
+          <article>
+            <h3>Portabilidad</h3>
+            <p>El contenido no queda ligado a una base de datos o a una interfaz concreta. El archivo <code>.p2lrn</code> puede moverse entre aplicaciones compatibles.</p>
+          </article>
+          <article>
+            <h3>Integridad</h3>
+            <p>Manifiestos, digests y <code>contentRoot</code> permiten comprobar que el contenido que se abre es el mismo que se empaquetó.</p>
+          </article>
+          <article>
+            <h3>Separación</h3>
+            <p>El paquete describe el curso. La plataforma conserva usuarios, permisos, matrícula, credenciales, telemetría y persistencia durable.</p>
+          </article>
         </div>
       </div>
     </section>
 
-    <section class="toolkit" id="toolkit">
-      <div class="toolkit-label">
-        <div class="stamp">03 / TOOLKIT</div>
-        <p>NODE / TYPESCRIPT / AUTHORING</p>
-      </div>
+    <section class="section workflow" id="como-funciona">
+      <div class="section-label">02 · CÓMO FUNCIONA</div>
+      <div class="section-body">
+        <h2>Tres pasos: empaquetar, verificar y reproducir.</h2>
+        <p class="lead">El flujo está pensado para que cada capa tenga una responsabilidad concreta.</p>
 
-      <h2>READ.<br>BUILD.<br>BREAK.<br>REBUILD.</h2>
+        <div class="steps">
+          <article>
+            <span class="step-no">1</span>
+            <div>
+              <h3>PACKAGE</h3>
+              <p>El Toolkit crea o abre un paquete <code>.p2lrn</code> con la estructura del curso, recursos y metadatos.</p>
+            </div>
+          </article>
+          <article>
+            <span class="step-no">2</span>
+            <div>
+              <h3>VERIFY</h3>
+              <p>Antes de usar el contenido se comprueban manifiestos, hashes y relaciones internas.</p>
+            </div>
+          </article>
+          <article>
+            <span class="step-no">3</span>
+            <div>
+              <h3>RENDER</h3>
+              <p>El Player negocia el renderer adecuado y, cuando hace falta, utiliza runtimes aislados para H5P, SCORM u otros formatos.</p>
+            </div>
+          </article>
+        </div>
 
-      <div class="install">
-        <span>$</span>
-        <code>npm install @p2lrn/toolkit @p2lrn/player</code>
-        <button type="button" data-copy-inline>COPY</button>
-      </div>
-
-      <div class="commands">
-        <code>p2lrn-validate</code>
-        <code>p2lrn-reader</code>
-        <code>p2lrn-document-reader</code>
-        <code>p2lrn-create</code>
-        <code>p2lrn-convert</code>
-        <code>p2lrn-repack</code>
-        <code>p2lrn-multipart</code>
-        <code>p2lrn-inspect</code>
-        <code>p2lrn-extract-source</code>
-        <code>p2lrn-delta</code>
-        <code>p2lrn-trust</code>
-      </div>
-
-      <div class="authoring-note">
-        <span>PUBLIC AUTHORING BOUNDARY</span>
-        <strong>@p2lrn/toolkit/authoring</strong>
-        <p>El editor trabaja contra una frontera tipada, no contra módulos internos de Creator.</p>
+        <div class="host-boundary">
+          <strong>Fuera del paquete</strong>
+          <span>usuarios · permisos · matrícula · autenticación · URLs protegidas · persistencia · telemetría</span>
+        </div>
       </div>
     </section>
 
-    <section class="docs" id="docs">
-      <div class="docs-intro">
-        <div class="stamp rotate-left">04 / DOCS</div>
-        <h2>THE<br>RAW<br>SPEC.</h2>
-        <p>Referencia técnica sin convertir la documentación en una landing comercial.</p>
+    <section class="section player-section" id="player">
+      <div class="section-label">03 · PLAYER</div>
+      <div class="section-body">
+        <h2>Reproducir un paquete en la web.</h2>
+        <p class="lead">El Player se distribuye como Web Component. La integración mínima sólo necesita cargar el runtime y apuntar al archivo del curso.</p>
+
+        <div class="codebox">
+          <div class="codebox-head">
+            <span>HTML</span>
+            <button type="button" data-copy>Copiar</button>
+          </div>
+          <pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+
+&lt;p2lrn-player src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre>
+        </div>
+
+        <h3 class="subheading">Propiedades principales</h3>
+        <div class="api-list">
+          <div>
+            <code>src</code>
+            <p>URL del paquete. Es la única propiedad obligatoria para iniciar la reproducción.</p>
+            <span>obligatoria</span>
+          </div>
+          <div>
+            <code>node</code>
+            <p>Permite abrir directamente un nodo concreto del grafo del curso.</p>
+            <span>opcional</span>
+          </div>
+          <div>
+            <code>renderer</code>
+            <p>Fija un renderer concreto cuando la integración necesita una elección estricta.</p>
+            <span>opcional</span>
+          </div>
+          <div>
+            <code>runtime-base-url</code>
+            <p>Permite utilizar otro origen de confianza para los hosts de runtime aislados.</p>
+            <span>opcional</span>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div class="docs-stack">
-        <article>
-          <header><span>4.1</span><h3>IDENTITY</h3></header>
-          <dl>
-            <div><dt>format</dt><dd>P2LRN</dd></div>
-            <div><dt>extension</dt><dd><code>.p2lrn</code></dd></div>
-            <div><dt>namespace</dt><dd><code>https://p2lrn.org/</code></dd></div>
-            <div><dt>authoring project</dt><dd><code>p2lrn.project.json</code></dd></div>
-            <div><dt>events</dt><dd><code>p2lrn:*</code></dd></div>
-            <div><dt>virtual SW</dt><dd><code>/__p2lrn__/v1/</code></dd></div>
-          </dl>
-        </article>
+    <section class="section toolkit-section" id="toolkit">
+      <div class="section-label">04 · TOOLKIT</div>
+      <div class="section-body">
+        <h2>Crear, leer, validar y transformar paquetes.</h2>
+        <p class="lead">El Toolkit es la parte de Node/TypeScript de P2LRN. Incluye APIs de autoría, Reader, Creator, validación, conversión y utilidades de línea de comandos.</p>
 
-        <article class="pink">
-          <header><span>4.2</span><h3>LEGACY</h3></header>
-          <p>P2RLN Alpha15, identificadores históricos, <code>p2rln.project.json</code>, <code>&lt;p2rln-player&gt;</code>, eventos y rutas antiguas continúan como entradas legacy.</p>
-          <p class="warning">PRESERVAR ≠ EJECUTAR. El formato distingue lectura, round-trip, preservación y <code>deliver</code>.</p>
-        </article>
+        <div class="install">
+          <span>$</span>
+          <code>npm install @p2lrn/toolkit @p2lrn/player</code>
+          <button type="button" data-copy-inline>Copiar</button>
+        </div>
 
-        <article class="black-panel">
-          <header><span>4.3</span><h3>RUNTIMES</h3></header>
-          <ul>
-            <li><b>H5P</b><span>runtime aislado + librerías compartidas</span></li>
-            <li><b>SCORM</b><span>host aislado de ejecución</span></li>
-            <li><b>cmi5 / QTI</b><span>capacidades y runtimes específicos</span></li>
-            <li><b>CC / IMS CP / Tin Can</b><span>preservación y capacidad según runtime</span></li>
-          </ul>
-        </article>
+        <div class="toolkit-grid">
+          <article>
+            <h3>Autoría</h3>
+            <p>La API pública está en <code>@p2lrn/toolkit/authoring</code>. Un editor puede trabajar contra esa frontera sin acoplarse a módulos internos.</p>
+          </article>
+          <article>
+            <h3>Reader</h3>
+            <p>Abre e inspecciona paquetes P2LRN. El Reader documental ligero cubre DOCX, PPTX, ODT, EPUB y texto estructurado.</p>
+          </article>
+          <article>
+            <h3>Conversión</h3>
+            <p>Incluye herramientas para convertir, repaquetar y preservar contenido externo manteniendo las reglas de integridad del formato.</p>
+          </article>
+        </div>
 
-        <article class="links-panel">
-          <header><span>4.4</span><h3>CDN</h3></header>
-          <p>El CDN sirve runtime genérico y librerías reutilizables; no almacena cursos ni datos de usuarios.</p>
-          <nav>
-            <a href="/index.json">DISTRIBUTION INDEX <b>↗</b></a>
-            <a href="/health.json">CDN HEALTH <b>↗</b></a>
-            <a href="/player/current/dist/release.json">PLAYER RELEASE <b>↗</b></a>
-            <a href="/player/current/dist/runtime-host/h5p-libraries/index.json">H5P CATALOG <b>↗</b></a>
-          </nav>
-        </article>
+        <details class="commands">
+          <summary>Ver comandos disponibles</summary>
+          <div>
+            <code>p2lrn-validate</code>
+            <code>p2lrn-reader</code>
+            <code>p2lrn-document-reader</code>
+            <code>p2lrn-create</code>
+            <code>p2lrn-convert</code>
+            <code>p2lrn-repack</code>
+            <code>p2lrn-multipart</code>
+            <code>p2lrn-inspect</code>
+            <code>p2lrn-extract-source</code>
+            <code>p2lrn-delta</code>
+            <code>p2lrn-trust</code>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="section docs-section" id="documentacion">
+      <div class="section-label">05 · DOCUMENTACIÓN</div>
+      <div class="section-body">
+        <h2>Qué define P2LRN y qué queda fuera.</h2>
+
+        <div class="docs-grid">
+          <article>
+            <h3>Identidad canónica</h3>
+            <dl class="definition-list">
+              <div><dt>Formato</dt><dd>P2LRN</dd></div>
+              <div><dt>Extensión</dt><dd><code>.p2lrn</code></dd></div>
+              <div><dt>Namespace</dt><dd><code>https://p2lrn.org/</code></dd></div>
+              <div><dt>Proyecto</dt><dd><code>p2lrn.project.json</code></dd></div>
+              <div><dt>Eventos</dt><dd><code>p2lrn:*</code></dd></div>
+            </dl>
+          </article>
+
+          <article>
+            <h3>Compatibilidad legacy</h3>
+            <p>P2RLN Alpha15 y sus identificadores históricos siguen siendo legibles para no romper paquetes anteriores. Esa compatibilidad no convierte esos nombres antiguos en la autoridad nueva.</p>
+          </article>
+
+          <article>
+            <h3>Runtimes externos</h3>
+            <p>H5P y SCORM disponen de hosts aislados. cmi5, QTI, Common Cartridge, IMS Content Package y Tin Can se tratan según las capacidades reales disponibles.</p>
+            <p class="note"><strong>Preservar no significa ejecutar.</strong> Un contenido externo no se declara reproducible si no existe un runtime real que lo soporte.</p>
+          </article>
+
+          <article>
+            <h3>Qué sirve este CDN</h3>
+            <p>El despliegue público sirve el Player, los hosts de runtime y librerías H5P reutilizables. No almacena cursos de usuario ni información personal.</p>
+            <nav class="resource-links" aria-label="Recursos técnicos">
+              <a href="/index.json">Índice de distribución <span>↗</span></a>
+              <a href="/health.json">Estado del CDN <span>↗</span></a>
+              <a href="/player/current/dist/release.json">Release del Player <span>↗</span></a>
+              <a href="/player/current/dist/runtime-host/h5p-libraries/index.json">Catálogo H5P <span>↗</span></a>
+            </nav>
+          </article>
+        </div>
       </div>
     </section>
   </main>
 
   <footer>
-    <div class="footer-repeat" aria-hidden="true">P2LRN P2LRN P2LRN P2LRN P2LRN</div>
-    <div class="footer-row">
-      <strong>P2LRN</strong>
+    <strong>P2LRN</strong>
+    <span>Formato portable · Player web · Toolkit Node/TypeScript</span>
+    <div>
       <span data-footer-version>0.5.0-alpha.10</span>
-      <a href="#top">TOP ↑</a>
+      <a href="#top">Arriba ↑</a>
     </div>
   </footer>
 </body>
