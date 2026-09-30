@@ -8,7 +8,6 @@ const outputRoot = join(root, '.netlify-cdn');
 const playerPackagePath = join(root, 'packages', 'player', 'package.json');
 const toolkitPackagePath = join(root, 'packages', 'toolkit', 'package.json');
 const h5pPackagePath = join(root, 'packages', 'h5p-libraries', 'package.json');
-const compatibilityVersion = '0.5.0-alpha.1';
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
@@ -22,6 +21,7 @@ function headerBlock(path, cacheControl, edgeCacheControl) {
     `  Cache-Control: ${cacheControl}`,
     `  Netlify-CDN-Cache-Control: ${edgeCacheControl}`,
     '  X-Content-Type-Options: nosniff',
+    '  Referrer-Policy: no-referrer',
     '',
   ].join('\n');
 }
@@ -56,14 +56,6 @@ await cp(versionedDist, join(outputRoot, 'player', 'current', 'dist'), {
   force:true,
 });
 
-// Historical compatibility alias used by early integrations.
-if (version !== compatibilityVersion) {
-  await cp(versionedDist, join(outputRoot, 'player', compatibilityVersion, 'dist'), {
-    recursive:true,
-    force:true,
-  });
-}
-
 const index = {
   schema:'https://p2lrn.org/schema/cdn-index/1',
   generatedFrom:{
@@ -78,7 +70,6 @@ const index = {
     version,
     versionedBasePath:`/player/${version}/dist/`,
     currentBasePath:'/player/current/dist/',
-    compatibilityBasePath:`/player/${compatibilityVersion}/dist/`,
     classic:`/player/${version}/dist/${playerBuild.release.entrypoints.classic}`,
     module:`/player/${version}/dist/${playerBuild.release.entrypoints.module}`,
     serviceWorker:`/player/${version}/dist/${playerBuild.release.entrypoints.serviceWorker}`,
@@ -138,12 +129,9 @@ headers += headerBlock(
   'public, s-maxage=31536000, immutable',
 );
 headers += headerBlock('/player/current/*', 'no-store', 'no-store');
-if (version !== compatibilityVersion) {
-  headers += headerBlock(`/player/${compatibilityVersion}/*`, 'no-store', 'no-store');
-}
 
 const runtimeCsp = "default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";
-for (const channel of [version, 'current', compatibilityVersion]) {
+for (const channel of [version, 'current']) {
   for (const host of ['h5p.html', 'scorm.html', 'package.html']) {
     headers += [
       `/player/${channel}/dist/runtime-host/${host}`,
@@ -157,10 +145,14 @@ headers += [
   '/index.json',
   '  Access-Control-Allow-Origin: *',
   '  Cache-Control: public, max-age=0, must-revalidate',
+  '  X-Content-Type-Options: nosniff',
+  '  Referrer-Policy: no-referrer',
   '',
   '/health.json',
   '  Access-Control-Allow-Origin: *',
   '  Cache-Control: no-store',
+  '  X-Content-Type-Options: nosniff',
+  '  Referrer-Policy: no-referrer',
   '',
 ].join('\n');
 
@@ -173,7 +165,6 @@ console.log(JSON.stringify({
   playerVersion:version,
   toolkitVersion:toolkitPackage.version,
   h5pLibrariesVersion:h5pPackage.version,
-  compatibilityVersion,
   playerFiles:playerBuild.release.files.length,
   sharedH5pLibraryCount:h5pManifest.libraryCount,
   h5pStandaloneVersion:H5P_STANDALONE_VERSION,
