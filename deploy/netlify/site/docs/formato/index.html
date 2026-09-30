@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <title>Formato P2LRN — P2LRN</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <script src="/p2lrn.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">P2LRN</a>
+    <nav class="nav" id="nav"><a href="/docs/formato/" aria-current="page">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/compatibilidad/">Compatibilidad</a></nav>
+    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
+    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
+  </header>
+  <main class="doc-main">
+    <aside class="doc-sidebar">
+      <span>DOCUMENTACIÓN</span>
+      <a href="/docs/formato/" aria-current="page">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/compatibilidad/">Compatibilidad</a>
+      <a href="/index.json">Índice CDN ↗</a>
+      <a href="/health.json">Estado ↗</a>
+    </aside>
+    <article class="doc-content">
+      <header class="doc-hero">
+        <p class="eyebrow">FORMATO</p>
+        <h1>Formato P2LRN</h1>
+        <p>La especificación del paquete portable: identidad, estructura, integridad, proyecto de autoría y límites entre contenido y plataforma.</p>
+      </header>
+      
+<section class="doc-section">
+  <h2>Qué define el formato</h2>
+  <p>P2LRN define una unidad portable de contenido formativo. Un paquete contiene la estructura del curso, activos, manifiestos y referencias necesarias para reconstruir y reproducir el contenido sin depender de la base de datos de una plataforma concreta.</p>
+  <div class="doc-terminal"><span>$ p2lrn-inspect course.p2lrn</span><pre><code>format          P2LRN
+extension       .p2lrn
+namespace       https://p2lrn.org/
+authoring       p2lrn.project.json
+events          p2lrn:*
+virtual-sw      /__p2lrn__/v1/</code></pre></div>
+</section>
+<section class="doc-section">
+  <h2>Integridad del paquete</h2>
+  <p>La integridad se basa en manifiestos, digests y <code>contentRoot</code>. El objetivo es poder comprobar que los recursos que se están abriendo corresponden al paquete que fue construido.</p>
+  <div class="doc-callout"><strong>Regla práctica</strong><p>Si un archivo o JSON cambia durante una reconstrucción, deben actualizarse los manifiestos y hashes asociados. Los payloads opacos externos que deben preservarse se mantienen byte a byte cuando el contrato lo exige.</p></div>
+</section>
+<section class="doc-section">
+  <h2>Proyecto de autoría</h2>
+  <p>El workspace editable utiliza <code>p2lrn.project.json</code>. Conserva IDs portables, orden del grafo, entrypoints, perfiles y payloads necesarios para poder abrir y volver a construir un paquete sin pérdida lógica.</p>
+</section>
+<section class="doc-section">
+  <h2>Qué no pertenece al paquete</h2>
+  <ul class="doc-list">
+    <li>Identidad y autenticación de usuarios.</li>
+    <li>Permisos, roles y matrícula.</li>
+    <li>Credenciales y secretos.</li>
+    <li>Persistencia durable de progreso de una plataforma concreta.</li>
+    <li>Telemetría, facturación o lógica comercial del host.</li>
+  </ul>
+</section>
+      
+<section class="doc-contact" id="contacto">
+  <h2>Contacto</h2>
+  <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
+  <form class="contact-form" data-contact-form>
+    <div class="form-grid">
+      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
+      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
+    </div>
+    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
+    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
+    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
+    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
+  </form>
+</section>
+    </article>
+  </main>
+  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
+</body>
+</html>
