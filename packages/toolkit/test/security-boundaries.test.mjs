@@ -41,6 +41,17 @@ test('static resource bridge rejects non-local HTTP package sources',()=>{
   assert.throws(()=>validateRouteConfig(route('http://example.com/course.p2lrn')),/requires HTTPS/i);
 });
 
+test('all isolated runtime shells bind MessageChannel handshakes to their direct parent',async()=>{
+  for(const relative of [
+    'packages/toolkit/web/runtime-host/h5p-host.js',
+    'packages/toolkit/web/runtime-host/scorm-host.js',
+    'packages/toolkit/web/runtime-host/package-host.js',
+  ]){
+    const content=await readFile(resolve(root,relative),'utf8');
+    assert.match(content,/event\.source\s*!==\s*parent/u,relative);
+  }
+});
+
 test('distribution source contains no sandbox escape token',async()=>{
   const files=[
     'packages/toolkit/web/renderers/h5p-runtime.js',
