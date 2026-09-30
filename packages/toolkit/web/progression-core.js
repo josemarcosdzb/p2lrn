@@ -190,7 +190,9 @@ function activitySatisfied(entity, state, {status = null, minScore = null} = {})
   else if (requirement === 'completed') ok = item.completed === true;
   else if (requirement === 'passed') {
     ok = item.passed === true;
-    if (item.passed == null && threshold != null && Number.isFinite(item.scorePercent)) ok = item.scorePercent >= threshold;
+    if (item.passed == null && threshold != null && item.completed === true && Number.isFinite(item.scorePercent)) {
+      ok = item.scorePercent >= threshold;
+    }
   }
   if (ok && threshold != null) ok = Number.isFinite(item.scorePercent) && item.scorePercent >= threshold;
   return ok;
