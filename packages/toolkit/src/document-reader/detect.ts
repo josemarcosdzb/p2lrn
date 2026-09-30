@@ -1,5 +1,6 @@
 import {ZipArchive} from '../core/zip.js';
-import type {DocumentReaderFileType,DocumentReaderInput} from './types.js';
+import type {DocumentReaderFileType,DocumentReaderInput,DocumentReaderLimits} from './types.js';
+import {documentZipLimits,normalizeDocumentReaderLimits} from './limits.js';
 import {extensionOf} from './utils.js';
 
 const EXTENSIONS:Record<string,DocumentReaderFileType>={
@@ -8,9 +9,9 @@ const EXTENSIONS:Record<string,DocumentReaderFileType>={
   odt:'ODT',epub:'EPUB',
 };
 
-function zipType(input:DocumentReaderInput):DocumentReaderFileType|undefined{
+function zipType(input:DocumentReaderInput,limits:DocumentReaderLimits):DocumentReaderFileType|undefined{
   try{
-    const archive=ZipArchive.open(input.data);
+    const archive=ZipArchive.open(input.data,documentZipLimits(limits));
     const names=new Set(archive.names());
     if(names.has('word/document.xml')) return 'DOCX';
     if([...names].some(name=>/^ppt\/slides\/slide\d+\.xml$/i.test(name))) return 'PPTX';
@@ -26,7 +27,8 @@ function zipType(input:DocumentReaderInput):DocumentReaderFileType|undefined{
   return undefined;
 }
 
-export function detectDocumentType(input:DocumentReaderInput):DocumentReaderFileType{
+export function detectDocumentType(input:DocumentReaderInput,limitsInput?:Partial<DocumentReaderLimits>):DocumentReaderFileType{
+  const limits=normalizeDocumentReaderLimits(limitsInput);
   const ext=extensionOf(input.name);
   const byExt=EXTENSIONS[ext];
   const magic=input.data;
@@ -37,7 +39,7 @@ export function detectDocumentType(input:DocumentReaderInput):DocumentReaderFile
   const isZip=magic.byteLength>=4&&magic[0]===0x50&&magic[1]===0x4b
     &&((magic[2]===0x03&&magic[3]===0x04)||(magic[2]===0x05&&magic[3]===0x06)||(magic[2]===0x07&&magic[3]===0x08));
   if(isZip){
-    const detected=zipType(input);
+    const detected=zipType(input,limits);
     if(detected) return detected;
   }
   if(byExt) return byExt;
