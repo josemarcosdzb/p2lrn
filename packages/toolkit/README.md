@@ -12,7 +12,7 @@ npm test
 node dist/cli/main.js --help
 ```
 
-Primary commands include `p2lrn-validate`, `p2lrn-reader`, `p2lrn-create`, `p2lrn-convert`, `p2lrn-delta`, `p2lrn-trust`, `p2lrn-inspect`, `p2lrn-repack`, `p2lrn-extract-source`, `p2lrn-rebuild-examples`, `p2lrn-build-web-sdk` and `p2lrn-build-advanced-example`.
+Primary commands include `p2lrn-validate`, `p2lrn-reader`, `p2lrn-document-reader`, `p2lrn-create`, `p2lrn-convert`, `p2lrn-delta`, `p2lrn-trust`, `p2lrn-inspect`, `p2lrn-repack`, `p2lrn-multipart`, `p2lrn-extract-source`, `p2lrn-rebuild-examples`, `p2lrn-build-web-sdk` and `p2lrn-build-advanced-example`.
 
 ## Stable authoring API
 
@@ -60,13 +60,37 @@ p2lrn-multipart course.p2lrn course-split.p2lrn --part-size 26214400
 
 This writes `course-split.p2lrn` plus adjacent `course-split.part001`, `course-split.part002`, etc. The Player resolves the parts relative to the outer package URL and verifies per-part and final SHA-256 digests before handing the logical payload to its normal renderer.
 
-## Standalone document Reader
+## Lightweight document Reader
 
-Document and LMS-ingestion parsing is provided by the separate `@p2lrn/document-reader` package. It is the autonomous lightweight copy adapted from the AulaP2P Reader and is not duplicated inside `@p2lrn/toolkit`.
+The lightweight document Reader is part of this package and is exported as
+`@p2lrn/toolkit/document-reader`. It is an autonomous adaptation of the useful
+deterministic parts of the AulaP2P Reader; P2LRN does not import or call AulaP2P
+at runtime.
 
 ```bash
-npm install @p2lrn/document-reader
-p2lrn-document-reader document.docx --json
+npm install @p2lrn/toolkit
+
+p2lrn-document-reader document.docx --pretty
 ```
 
-The standalone Reader supports DOCX, PPTX, XLSX, ODT/EPUB, structured text and learning-package exports. It contains no OCR, Docling, NestJS, AulaP2P services, Docker workers, LibreOffice or Pandoc. Native-text PDF support remains optional through `pdfjs-dist`.
+Programmatic API:
+
+```ts
+import {
+  LightweightDocumentReader,
+  readDocument,
+  detectDocumentType,
+} from '@p2lrn/toolkit/document-reader';
+```
+
+The lightweight paths support DOCX, PPTX, TXT, Markdown, HTML, RTF, TeX, XML,
+YAML, ODT and EPUB. DOCX and PPTX preserve structural order, tables and internal
+image references instead of moving all images to the start of the document.
+
+PDF is deliberately limited to embedded text through the optional
+`pdfjs-dist` peer dependency. There is **no OCR fallback**.
+
+The Reader intentionally contains no Docling, Tesseract/OCR, NestJS, AulaP2P
+services, database/storage adapters, Docker workers, LibreOffice, Pandoc or
+external conversion service. It is an extraction/normalization API; Creator can
+consume its canonical output in document-to-course workflows.
