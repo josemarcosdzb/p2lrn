@@ -54,12 +54,27 @@ async function installH5pStandalone(dist) {
   const work = join(playerRoot, '.build-h5p-standalone');
   await rm(work, {recursive:true, force:true});
   await mkdir(work, {recursive:true});
-  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const npmExecOptions = process.platform === 'win32' ? {shell:true} : {};
+  let npmCommand='npm';
+  let npmArgs=['pack', `h5p-standalone@${H5P_STANDALONE_VERSION}`, '--ignore-scripts', '--silent', '--pack-destination', work];
+  if (process.platform === 'win32') {
+    const candidates=[
+      process.env.npm_execpath,
+      join(dirname(process.execPath),'node_modules','npm','bin','npm-cli.js'),
+    ].filter(Boolean);
+    let npmCli=null;
+    for (const candidate of candidates) {
+      try {
+        if ((await stat(candidate)).isFile()) { npmCli=candidate; break; }
+      } catch {}
+    }
+    if (!npmCli) throw new Error('Unable to locate npm-cli.js for safe Windows execution.');
+    npmCommand=process.execPath;
+    npmArgs=[npmCli,...npmArgs];
+  }
   await execFileAsync(
-    npm,
-    ['pack', `h5p-standalone@${H5P_STANDALONE_VERSION}`, '--ignore-scripts', '--silent', '--pack-destination', work],
-    {cwd:playerRoot, maxBuffer:4*1024*1024, ...npmExecOptions},
+    npmCommand,
+    npmArgs,
+    {cwd:playerRoot, maxBuffer:4*1024*1024},
   );
   const archives = (await readdir(work)).filter((name)=>name.endsWith('.tgz'));
   if (archives.length !== 1) {
