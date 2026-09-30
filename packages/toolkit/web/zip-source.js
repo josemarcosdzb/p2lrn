@@ -305,8 +305,19 @@ function strongValidator(response) {
   return response.headers.get('last-modified') || null;
 }
 
-async function readResponseBounded(response, maxBytes) {
-  if (!response.body) return new Uint8Array(await response.arrayBuffer());
+export async function readResponseBounded(response, maxBytes, {exact = false, label = 'HTTP response'} = {}) {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new TypeError('maxBytes must be a non-negative safe integer.');
+  const declared = Number(response.headers?.get?.('content-length'));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    try { await response.body?.cancel?.(); } catch {}
+    throw new Error(`${label} Content-Length exceeds safe limit (${declared} > ${maxBytes} bytes).`);
+  }
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength > maxBytes) throw new Error(`${label} exceeds safe limit (${bytes.byteLength} > ${maxBytes} bytes).`);
+    if (exact && bytes.byteLength !== maxBytes) throw new Error(`${label} body length mismatch (${bytes.byteLength} != ${maxBytes}).`);
+    return bytes;
+  }
   const reader = response.body.getReader();
   const chunks = [];
   let total = 0;
@@ -317,14 +328,46 @@ async function readResponseBounded(response, maxBytes) {
     total += bytes.byteLength;
     if (total > maxBytes) {
       try { await reader.cancel(); } catch {}
-      throw new Error(`Full-buffer fallback exceeds safe limit (${maxBytes} bytes).`);
+      throw new Error(`${label} exceeds safe limit (${total} > ${maxBytes} bytes).`);
     }
     chunks.push(bytes);
   }
+  if (exact && total !== maxBytes) throw new Error(`${label} body length mismatch (${total} != ${maxBytes}).`);
   const out = new Uint8Array(total);
   let offset = 0;
   for (const chunk of chunks) { out.set(chunk, offset); offset += chunk.byteLength; }
   return out;
+}
+
+function exactLengthStream(body, expectedBytes, label = 'HTTP range stream') {
+  if (!body?.getReader) throw new Error(`${label} has no readable body.`);
+  const reader = body.getReader();
+  let total = 0;
+  return new ReadableStream({
+    async pull(controller) {
+      try {
+        const {done, value} = await reader.read();
+        if (done) {
+          if (total !== expectedBytes) controller.error(new Error(`${label} body length mismatch (${total} != ${expectedBytes}).`));
+          else controller.close();
+          return;
+        }
+        const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
+        total += bytes.byteLength;
+        if (total > expectedBytes) {
+          try { await reader.cancel(); } catch {}
+          controller.error(new Error(`${label} exceeded requested range (${total} > ${expectedBytes}).`));
+          return;
+        }
+        controller.enqueue(bytes);
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+    async cancel(reason) {
+      try { await reader.cancel(reason); } catch {}
+    },
+  });
 }
 
 class HttpRangeSource {
@@ -374,8 +417,7 @@ class HttpRangeSource {
         response.body?.cancel?.();
         throw new Error(`Remote P2LRN package exceeds streamed archive limit (${range.total} bytes).`);
       }
-      const byte = new Uint8Array(await response.arrayBuffer());
-      if (byte.byteLength !== 1) throw new Error('Range probe returned an unexpected body length.');
+      const byte = await readResponseBounded(response, 1, {exact:true, label:'HTTP Range probe'});
       this.totalSize = range.total;
       this.validator = strongValidator(response);
       return {rangeSupported: true, totalSize: range.total};
@@ -421,9 +463,7 @@ class HttpRangeSource {
       response.body?.cancel?.();
       throw new Error('HTTP Range response does not match the requested package bytes.');
     }
-    const body = new Uint8Array(await response.arrayBuffer());
-    if (body.byteLength !== end - start + 1) throw new Error('HTTP Range response body length mismatch.');
-    return body;
+    return readResponseBounded(response, end - start + 1, {exact:true, label:'HTTP Range response'});
   }
 
   async streamRange(start, end) {
@@ -446,7 +486,7 @@ class HttpRangeSource {
       response.body?.cancel?.();
       throw new Error('HTTP Range stream does not match the requested package bytes.');
     }
-    return response.body;
+    return exactLengthStream(response.body, end - start + 1, 'HTTP Range stream');
   }
 }
 
