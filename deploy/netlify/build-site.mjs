@@ -1,4 +1,4 @@
-import {cp} from 'node:fs/promises';
+import {cp, copyFile, mkdir} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 
 const root = resolve(process.cwd());
@@ -12,8 +12,27 @@ await cp(siteRoot, outputRoot, {
   force: true,
 });
 
+const examplesOutput = join(outputRoot, 'examples');
+await mkdir(examplesOutput, {recursive:true});
+
+for (const file of [
+  'creator-course.p2lrn',
+  'web-bundle-course.p2lrn',
+  'native-questionnaire-course.p2lrn',
+]) {
+  await copyFile(
+    join(root, 'examples', 'canonical', file),
+    join(examplesOutput, file),
+  );
+}
+
 console.log(JSON.stringify({
   ok:true,
   site:'P2LRN documentation portal',
   pages:'recursive',
+  viewerExamples:[
+    '/examples/creator-course.p2lrn',
+    '/examples/web-bundle-course.p2lrn',
+    '/examples/native-questionnaire-course.p2lrn',
+  ],
 }, null, 2));
