@@ -4,7 +4,7 @@ import {readFile, readdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import {normalizeRuntimeBaseUrl} from '../web/runtime-host-config.js';
+import {normalizeRuntimeBaseUrl, resolveH5pRuntimeUrl, resolvePackageRuntimeUrl, resolveScormRuntimeUrl} from '../web/runtime-host-config.js';
 import {extractVirtualTarget, MAX_ROUTE_RESOURCES, routeSourceMayPersist, trustedWorkerMessageSource, validateRouteConfig} from '../web/p2lrn-sw.js';
 import {readResponseBounded} from '../web/zip-source.js';
 
@@ -35,6 +35,23 @@ test('runtime hosts require HTTPS outside loopback development',()=>{
   assert.equal(normalizeRuntimeBaseUrl('http://localhost:8080/runtime/'),'http://localhost:8080/runtime/');
   assert.equal(normalizeRuntimeBaseUrl('http://127.0.0.1:8080/runtime/'),'http://127.0.0.1:8080/runtime/');
   assert.throws(()=>normalizeRuntimeBaseUrl('http://example.com/runtime/'),/requires HTTPS/i);
+});
+
+test('executable runtimes must be isolated from the application origin',()=>{
+  const options={applicationOrigin:'https://app.example.invalid'};
+  assert.throws(
+    ()=>resolveH5pRuntimeUrl('https://app.example.invalid/runtime-host/',options),
+    /must be isolated/i,
+  );
+  assert.throws(
+    ()=>resolveScormRuntimeUrl('https://app.example.invalid/runtime-host/',options),
+    /must be isolated/i,
+  );
+  assert.throws(
+    ()=>resolvePackageRuntimeUrl('https://app.example.invalid/runtime-host/',options),
+    /must be isolated/i,
+  );
+  assert.match(resolveH5pRuntimeUrl('https://runtime.example.invalid/runtime-host/',options),/^https:\/\/runtime\.example\.invalid\//u);
 });
 
 test('static resource bridge rejects non-local HTTP package sources',()=>{
