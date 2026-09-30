@@ -72,3 +72,31 @@ test('runtime host rejects unsupported methods under its route',async()=>{
     await host.close();
   }
 });
+
+
+test('runtime host applies defensive headers and frame-ancestor policy',async()=>{
+  const host=await startP2LRNRuntimeHost({
+    basePath:'/runtime',
+    allowedParentOrigins:['https://app.example.invalid'],
+  });
+  try{
+    const health=await fetch(host.baseUrl+'health');
+    assert.equal(health.headers.get('x-content-type-options'),'nosniff');
+    assert.equal(health.headers.get('referrer-policy'),'no-referrer');
+
+    const scorm=await fetch(host.baseUrl+'scorm/');
+    assert.equal(scorm.status,200);
+    assert.equal(scorm.headers.get('x-content-type-options'),'nosniff');
+    assert.equal(scorm.headers.get('referrer-policy'),'no-referrer');
+    const csp=scorm.headers.get('content-security-policy')||'';
+    assert.match(csp,/frame-ancestors https:\/\/app\.example\.invalid/u);
+    assert.match(csp,/connect-src 'none'/u);
+
+    const missing=await fetch(host.baseUrl+'does-not-exist');
+    assert.equal(missing.status,404);
+    assert.equal(missing.headers.get('x-content-type-options'),'nosniff');
+    assert.equal(missing.headers.get('referrer-policy'),'no-referrer');
+  }finally{
+    await host.close();
+  }
+});
