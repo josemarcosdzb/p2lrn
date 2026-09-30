@@ -1,115 +1,24 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="Diagnóstico rápido de los fallos más habituales al cargar paquetes, configurar CORS, resolver runtimes o escuchar eventos.">
-  <title>Solución de problemas — P2LRN</title>
-  <link rel="stylesheet" href="/p2lrn.css">
-  <script src="/p2lrn.js" defer></script>
-</head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="/">P2LRN</a>
-    <nav class="nav" id="nav">
-      <a href="/docs/">Docs</a>
-      <a href="/docs/formato/">Formato</a>
-      <a href="/docs/player/">Player</a>
-      <a href="/docs/toolkit/">Toolkit</a>
-      <a href="/docs/integracion/">Integración</a>
-    </nav>
-    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
-    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
-  </header>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Diagnóstico reproducible de fallos de Player, CORS, integridad, renderer, runtime, multipart y eventos."><title>Solución de problemas — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar"><span>REFERENCE</span><a href="/docs/eventos/">Eventos</a><a href="/docs/referencia/">Referencia</a><a href="/docs/troubleshooting/" aria-current="page">Troubleshooting</a><span>RESOURCES</span><a href="/demo/">Visor real ↗</a></aside>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">HELP / TROUBLESHOOTING</p><h1>Solución de problemas</h1><p>Empieza por la fase que falla y conserva el mensaje de <code>p2lrn:error</code>. No desactives integridad para ocultar un síntoma.</p></header>
+<section class="doc-section"><h2>Player no carga</h2><ol class="learning-path"><li><strong>1.</strong><span>Comprueba que <code>/player/current/dist/p2lrn.js</code> responde.</span></li><li><strong>2.</strong><span>Ejecuta <code>customElements.get('p2lrn-player')</code>.</span></li><li><strong>3.</strong><span>Comprueba <code>src</code> y Network.</span></li><li><strong>4.</strong><span>Escucha <code>p2lrn:error</code>.</span></li><li><strong>5.</strong><span>Si el paquete abre pero no renderiza, revisa renderer/runtime.</span></li></ol></section>
+<section class="doc-section"><h2>CORS</h2><p><strong>Síntoma:</strong> la petición al paquete o a una parte externa falla antes de que el Player pueda verificarla. Comprueba el origen de la aplicación, la respuesta OPTIONS cuando exista preflight y <code>Access-Control-Allow-Origin</code>. <code>*</code> sólo abre lectura cross-origin; no autoriza a un usuario.</p></section>
+<section class="doc-section"><h2>contentRoot / digest mismatch</h2><p>El paquete, graph o payload cambió después de calcular integridad o llegó corrupto. Vuelve a generar o recuperar el artefacto correcto. No edites manualmente el digest para que coincida.</p></section>
+<section class="doc-section"><h2>Renderer no disponible</h2><p>Consulta <code>P2LRN.renderers()</code>. Si fijaste <code>renderer</code>, verifica que su id exista y que acepte profile/mediaType/ubicación de la representación. El Player sólo hace fallback en categorías de incompatibilidad previstas.</p></section>
+<section class="doc-section"><h2>Multipart: falta una parte</h2><p>El descriptor usa href relativos al <code>.p2lrn</code>. Verifica que todas las <code>.partNNN</code> se publiquen junto al paquete y no se renombren. Si una parte existe pero cambia, su SHA-256 debe fallar.</p></section>
+<section class="doc-section"><h2>HTTP Range</h2><p>El Player puede abrir paquetes remotos por rangos. Si el servidor no soporta el patrón esperado, revisa respuestas 206, <code>Content-Range</code> y límites de proxy/CDN. El transporte actual puede cambiar a lectura completa cuando no dispone de range.</p></section>
+<section class="doc-section"><h2>H5P library missing</h2><p>Comprueba <code>runtime-base-url</code>, el catálogo de librerías compartidas y la versión solicitada por el contenido. No asumas que una librería existe sólo porque H5P se pueda abrir.</p></section>
+<section class="doc-section"><h2>SCORM / runtime externo no arranca</h2><p>Revisa entrypoint, host de runtime, CSP/CORS, permisos del iframe y que los recursos internos se resuelvan dentro del host aislado. Un paquete preservado no implica necesariamente ejecución completa.</p></section>
+<section class="doc-section"><h2>No llega completion</h2><p>El contrato actual del Player usa <code>p2lrn:complete</code>, no <code>p2lrn:completion</code>. Para estado usa <code>p2lrn:statechange</code>; para cambios de progresión usa <code>p2lrn:progressionchange</code>. Verifica además que el renderer concreto emita ese evento.</p></section>
+<section class="doc-section"><h2>Fallo al guardar progreso</h2><p>Si <code>Host Adapter.saveState()</code> falla, el Player emite <code>p2lrn:error</code> con fase <code>progression-save</code>. El estado de alumno pertenece al Host; no intentes escribirlo dentro del paquete.</p></section>
+<section class="doc-section"><h2>Diagnóstico rápido</h2><div class="codebox"><div class="codebox-head"><span>JavaScript</span><button type="button" data-copy>Copiar</button></div><pre><code>const player = document.querySelector('p2lrn-player');
 
-  <main class="doc-main">
-    <aside class="doc-sidebar">
-  <span>START</span>
-  <a href="/docs/">Overview</a>
-  <a href="/docs/empezar/">Quickstart</a>
-  <a href="/docs/conceptos/">Conceptos</a>
+player.addEventListener('p2lrn:error', (event) =&gt; {
+  console.error(event.detail);
+});
 
-  <span>BUILD</span>
-  <a href="/docs/formato/">Formato</a>
-  <a href="/docs/paquetes/">Crear paquetes</a>
-  <a href="/docs/paquetes/multipart/">Multipart / paquetes grandes</a>
-  <a href="/docs/player/">Player</a>
-  <a href="/docs/toolkit/">Toolkit</a>
-
-  <span>INTEGRATE</span>
-  <a href="/docs/integracion/">Integración real</a>
-  <a href="/docs/compatibilidad/">Compatibilidad</a>
-
-  <span>REFERENCE</span>
-  <a href="/docs/referencia/">Referencia</a>
-  <a href="/docs/troubleshooting/" aria-current="page">Troubleshooting</a>
-
-  <span>RESOURCES</span>
-  <a href="/demo/">Visor real ↗</a>
-  <a href="/index.json">Índice CDN ↗</a>
-  <a href="/health.json">Estado ↗</a></aside>
-    <article class="doc-content">
-      <header class="doc-hero">
-        <p class="eyebrow">HELP / TROUBLESHOOTING</p>
-        <h1>Solución de problemas</h1>
-        <p>Diagnóstico rápido de los fallos más habituales al cargar paquetes, configurar CORS, resolver runtimes o escuchar eventos.</p>
-      </header>
-      
-<section class="doc-section">
-  <h2>El Player no carga</h2>
-  <p>Comprueba que el script del Player responde, que <code>&lt;p2lrn-player&gt;</code> está registrado y que el atributo <code>src</code> apunta a una URL HTTP accesible desde el navegador.</p>
-</section>
-<section class="doc-section">
-  <h2>Error de CORS</h2>
-  <p>El origen que sirve el paquete debe permitir solicitudes desde la aplicación. Si el recurso es privado, evita <code>*</code> y usa una política de origen explícita o URLs autorizadas.</p>
-</section>
-<section class="doc-section">
-  <h2>Package integrity failed</h2>
-  <p>Algún recurso, manifiesto o digest no coincide. No ignores el error: reconstruye el paquete con Toolkit o vuelve a obtener el artefacto original.</p>
-</section>
-<section class="doc-section">
-  <h2>Renderer no disponible</h2>
-  <p>Si has fijado <code>renderer</code>, confirma que esa implementación existe y es compatible. Si no necesitas forzar uno, elimina el atributo para permitir la selección normal.</p>
-</section>
-<section class="doc-section">
-  <h2>H5P library missing</h2>
-  <p>El contenido H5P puede depender de librerías no embebidas. Verifica el catálogo compartido y que el runtime configurado pueda resolver la versión solicitada.</p>
-</section>
-<section class="doc-section">
-  <h2>SCORM no arranca</h2>
-  <p>Confirma que el paquete SCORM conserva su entrypoint, que el host aislado puede cargar sus recursos y que no hay bloqueos CSP/CORS incompatibles.</p>
-</section>
-<section class="doc-section">
-  <h2>HTTP Range / Service Worker</h2>
-  <p>Para recursos que requieran búsqueda por rangos, comprueba soporte 206/Range del servidor. Instala el Service Worker sólo cuando tu despliegue realmente lo necesita.</p>
-</section>
-<section class="doc-section">
-  <h2>No llega el evento esperado</h2>
-  <p>Registra los listeners antes de iniciar la interacción y comprueba primero <code>p2lrn:ready</code> y <code>p2lrn:error</code>. Después valida si el renderer concreto genera el evento de progreso/score que esperas.</p>
-</section>
-      <nav class="doc-pager">
-        <a class="prev" href="/docs/referencia/"><span>← Anterior</span><strong>Referencia</strong></a>
-        
-      </nav>
-      
-<section class="doc-contact" id="contacto">
-  <h2>Contacto</h2>
-  
-  <form class="contact-form" data-contact-form>
-    <div class="form-grid">
-      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
-      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
-    </div>
-    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
-    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
-    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
-    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
-  </form>
-</section>
-    </article>
-  </main>
-
-  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
-</body>
-</html>
+console.table(P2LRN.renderers());
+console.log(P2LRN.version, P2LRN.toolkitVersion);</code></pre></div></section>
+<nav class="doc-pager"><a class="prev" href="/docs/referencia/"><span>← Anterior</span><strong>Referencia</strong></a><a class="next" href="/demo/"><span>Siguiente →</span><strong>Visor real</strong></a></nav><section class="doc-contact compact-contact"><h2>¿Sigue fallando?</h2><p>Incluye URL del paquete, evento <code>p2lrn:error</code> y fase del fallo.</p><a class="button" href="/contacto/">Contactar</a></section></article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
