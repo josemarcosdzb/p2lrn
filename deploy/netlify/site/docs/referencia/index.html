@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="Índice rápido de APIs, comandos, atributos, eventos, identificadores y rutas útiles para una integración ya en marcha.">
+  <title>Referencia — P2LRN</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <script src="/p2lrn.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">P2LRN</a>
+    <nav class="nav" id="nav">
+      <a href="/docs/">Docs</a>
+      <a href="/docs/formato/">Formato</a>
+      <a href="/docs/player/">Player</a>
+      <a href="/docs/toolkit/">Toolkit</a>
+      <a href="/docs/integracion/">Integración</a>
+    </nav>
+    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
+    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
+  </header>
+
+  <main class="doc-main">
+    <aside class="doc-sidebar">
+  <span>START</span>
+  <a href="/docs/">Overview</a>
+  <a href="/docs/empezar/">Quickstart</a>
+  <a href="/docs/conceptos/">Conceptos</a>
+
+  <span>BUILD</span>
+  <a href="/docs/formato/">Formato</a>
+  <a href="/docs/player/">Player</a>
+  <a href="/docs/toolkit/">Toolkit</a>
+
+  <span>INTEGRATE</span>
+  <a href="/docs/integracion/">Integración real</a>
+  <a href="/docs/compatibilidad/">Compatibilidad</a>
+
+  <span>REFERENCE</span>
+  <a href="/docs/referencia/" aria-current="page">Referencia</a>
+  <a href="/docs/troubleshooting/">Troubleshooting</a>
+
+  <span>RESOURCES</span>
+  <a href="/index.json">Índice CDN ↗</a>
+  <a href="/health.json">Estado ↗</a></aside>
+    <article class="doc-content">
+      <header class="doc-hero">
+        <p class="eyebrow">REFERENCE</p>
+        <h1>Referencia</h1>
+        <p>Índice rápido de APIs, comandos, atributos, eventos, identificadores y rutas útiles para una integración ya en marcha.</p>
+      </header>
+      
+<section class="doc-section">
+  <h2>API TypeScript de autoría</h2>
+  <div class="reference-table">
+    <div><code>P2LRNAuthoringWorkspace.create()</code><p>Crea un workspace nuevo.</p></div>
+    <div><code>P2LRNAuthoringWorkspace.open()</code><p>Abre un .p2lrn como proyecto editable.</p></div>
+    <div><code>workspace.reader(path)</code><p>Lee y estructura un documento sin modificar el proyecto.</p></div>
+    <div><code>workspace.addUnit()</code><p>Añade una unidad al grafo de autoría.</p></div>
+    <div><code>workspace.addFile()</code><p>Añade un archivo como recurso/actividad.</p></div>
+    <div><code>workspace.build()</code><p>Reconstruye el paquete final.</p></div>
+  </div>
+</section>
+<section class="doc-section">
+  <h2>Web Component</h2>
+  <div class="reference-table">
+    <div><code>src</code><p>URL del paquete.</p></div>
+    <div><code>node</code><p>Nodo inicial opcional.</p></div>
+    <div><code>renderer</code><p>Renderer explícito opcional.</p></div>
+    <div><code>runtime-base-url</code><p>Base URL alternativa para runtimes.</p></div>
+  </div>
+</section>
+<section class="doc-section">
+  <h2>Eventos</h2>
+  <p>El namespace público es <code>p2lrn:*</code>. Entre los eventos de integración están <code>p2lrn:ready</code>, <code>p2lrn:rendered</code>, actividad, progreso, estado, score, completion y <code>p2lrn:error</code>.</p>
+</section>
+<section class="doc-section">
+  <h2>CLI</h2>
+  <div class="command-list"><code>p2lrn-validate</code><code>p2lrn-reader</code><code>p2lrn-document-reader</code><code>p2lrn-create</code><code>p2lrn-convert</code><code>p2lrn-repack</code><code>p2lrn-multipart</code><code>p2lrn-inspect</code><code>p2lrn-extract-source</code><code>p2lrn-delta</code><code>p2lrn-trust</code></div>
+</section>
+<section class="doc-section">
+  <h2>Identificadores</h2>
+  <div class="reference-table">
+    <div><code>.p2lrn</code><p>Extensión canónica.</p></div>
+    <div><code>https://p2lrn.org/</code><p>Namespace canónico.</p></div>
+    <div><code>p2lrn.project.json</code><p>Proyecto editable de autoría.</p></div>
+    <div><code>/__p2lrn__/v1/</code><p>Ruta virtual del Service Worker.</p></div>
+  </div>
+</section>
+<section class="doc-section">
+  <h2>Rutas CDN</h2>
+  <nav class="resource-links"><a href="/index.json">Índice de distribución <span>↗</span></a><a href="/health.json">Estado <span>↗</span></a><a href="/player/current/dist/release.json">Release actual <span>↗</span></a><a href="/player/current/dist/runtime-host/h5p-libraries/index.json">Catálogo H5P <span>↗</span></a></nav>
+</section>
+      <nav class="doc-pager">
+        <a class="prev" href="/docs/compatibilidad/"><span>← Anterior</span><strong>Compatibilidad</strong></a>
+        <a class="next" href="/docs/troubleshooting/"><span>Siguiente →</span><strong>Troubleshooting</strong></a>
+      </nav>
+      
+<section class="doc-contact" id="contacto">
+  <h2>Contacto</h2>
+  <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
+  <form class="contact-form" data-contact-form>
+    <div class="form-grid">
+      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
+      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
+    </div>
+    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
+    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
+    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
+    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
+  </form>
+</section>
+    </article>
+  </main>
+
+  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
+</body>
+</html>
