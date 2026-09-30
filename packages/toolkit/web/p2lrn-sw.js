@@ -96,7 +96,7 @@ function contentHeaders(resource, {length = resource.size, range = null, seekabl
     'Content-Type': resource.mediaType || 'application/octet-stream',
     'Content-Length': String(length),
     'ETag': virtualEtag(resource),
-    'Cache-Control': 'private, max-age=31536000, immutable',
+    'Cache-Control': 'private, no-store',
     'X-Content-Type-Options': 'nosniff',
   });
   if (seekable) headers.set('Accept-Ranges', 'bytes');
