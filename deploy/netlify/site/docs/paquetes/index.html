@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="Cómo crear paquetes P2LRN completos, estructurarlos, dividir payloads grandes con multipart y reproducir un ejemplo real.">
+  <meta name="description" content="Guía práctica para crear, editar, validar y reproducir paquetes P2LRN.">
   <title>Crear paquetes — P2LRN</title>
   <link rel="stylesheet" href="/p2lrn.css">
   <script src="/p2lrn.js" defer></script>
@@ -14,10 +14,10 @@
   <a class="brand" href="/">P2LRN</a>
   <nav class="nav" id="nav">
     <a href="/docs/">Docs</a>
-    <a href="/docs/formato/">Formato</a>
     <a href="/docs/paquetes/" aria-current="page">Paquetes</a>
     <a href="/docs/player/">Player</a>
     <a href="/docs/toolkit/">Toolkit</a>
+    <a href="/demo/">Visor</a>
   </nav>
   <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
   <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
@@ -33,6 +33,7 @@
     <span>BUILD</span>
     <a href="/docs/formato/">Formato</a>
     <a href="/docs/paquetes/" aria-current="page">Crear paquetes</a>
+    <a href="/docs/paquetes/multipart/">Multipart / paquetes grandes</a>
     <a href="/docs/player/">Player</a>
     <a href="/docs/toolkit/">Toolkit</a>
 
@@ -47,66 +48,63 @@
     <span>RESOURCES</span>
     <a href="/demo/">Visor real ↗</a>
     <a href="/index.json">Índice CDN ↗</a>
-    <a href="/health.json">Estado ↗</a>
-  </aside>
-
+    <a href="/health.json">Estado ↗</a></aside>
   <article class="doc-content">
     <header class="doc-hero">
       <p class="eyebrow">BUILD / PACKAGES</p>
-      <h1>Crear paquetes P2LRN</h1>
-      <p>Desde un workspace vacío hasta un <code>.p2lrn</code> validado, incluyendo estructura del paquete, recursos, progresión, documentos y división multipart para payloads grandes.</p>
+      <h1>Crear un paquete de principio a fin</h1>
+      <p>Esta página se centra en el flujo de autoría. La división de contenidos grandes está separada en la guía <a href="/docs/paquetes/multipart/">Multipart / paquetes grandes</a> para no repetir conceptos en varias páginas.</p>
     </header>
 
     <section class="doc-section">
-      <h2>Qué vas a conseguir</h2>
-      <p>Al terminar podrás crear un curso desde cero, abrir uno existente, añadir recursos, reconstruirlo, validar el resultado y separar un payload grande en partes sin convertir todo el curso en un único archivo pesado.</p>
+      <h2>Resultado final</h2>
       <div class="package-goals">
-        <div><span>1</span><strong>Crear</strong><p>Workspace + unidades + recursos.</p></div>
-        <div><span>2</span><strong>Construir</strong><p>Generar un <code>.p2lrn</code> verificable.</p></div>
-        <div><span>3</span><strong>Dividir</strong><p>Externalizar payloads grandes en <code>.partNNN</code>.</p></div>
-        <div><span>4</span><strong>Reproducir</strong><p>Abrir el paquete con el Player real.</p></div>
+        <div><span>1</span><strong>Workspace</strong><p>Proyecto editable con estructura y recursos.</p></div>
+        <div><span>2</span><strong>Build</strong><p>Un <code>.p2lrn</code> canónico y verificable.</p></div>
+        <div><span>3</span><strong>Validate</strong><p>Manifiesto, grafo, perfiles e integridad comprobados.</p></div>
+        <div><span>4</span><strong>Play</strong><p>El mismo paquete abierto con el Player real.</p></div>
       </div>
     </section>
 
     <section class="doc-section">
-      <h2>1. Entender qué hay dentro</h2>
-      <p>Un paquete P2LRN no es simplemente una carpeta comprimida. El manifiesto inventaría los archivos, el grafo describe la estructura educativa y la integridad permite verificar que el contenido sigue siendo el esperado.</p>
+      <h2>1. Qué hay dentro de un <code>.p2lrn</code></h2>
+      <p>El paquete final contiene el manifiesto, el grafo del curso y los recursos necesarios. El workspace de autoría es otra cosa: conserva <code>p2lrn.project.json</code> y los archivos fuente que necesitas para volver a editar y reconstruir.</p>
       <div class="package-tree">
         <div class="tree-head">course.p2lrn</div>
         <pre><code>course.p2lrn
-├─ META-INF/
-│  └─ manifest.json          # identidad, perfiles, archivos, digests, contentRoot
-├─ content/
-│  └─ graph.json             # curso, unidades, actividades, recursos y relaciones
-├─ assets/
-│  └─ ...                    # HTML, vídeo, audio, PDF, imágenes, JSON, etc.
-├─ packages/
-│  └─ ...                    # payloads externos preservados, si existen
-└─ multipart/
-   └─ ...                    # descriptores cuando un payload se divide en partes</code></pre>
+├─ META-INF/manifest.json   # identidad, perfiles, inventario e integridad
+├─ content/graph.json       # curso, unidades, actividades y relaciones
+├─ assets/...               # recursos embebidos
+├─ packages/...             # subpaquetes preservados, cuando existen
+└─ multipart/...            # descriptor sólo si hay payloads divididos</code></pre>
       </div>
-      <div class="doc-callout"><strong>Importante</strong><p>El archivo <code>p2lrn.project.json</code> pertenece al workspace de autoría. No tiene que viajar necesariamente como parte de la experiencia final del alumno.</p></div>
     </section>
 
     <section class="doc-section">
-      <h2>2. Crear un curso completo desde cero</h2>
-      <p>La API pública de autoría es <code>@p2lrn/toolkit/authoring</code>. Este ejemplo crea una unidad, dos recursos HTML, una URL externa, reglas de progresión y finalmente construye el paquete.</p>
+      <h2>2. Crear el workspace</h2>
       <div class="codebox">
-        <div class="codebox-head"><span>create-course.mjs</span><button type="button" data-copy>Copiar</button></div>
+        <div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div>
         <pre><code>import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
 
 const workspace = P2LRNAuthoringWorkspace.create('./workspace', {
-  title: 'Curso real de ejemplo P2LRN',
+  title: 'Curso de seguridad básica',
   language: 'es',
-  description: 'Curso creado con la API pública de autoría.',
-});
+  description: 'Curso P2LRN creado desde cero.',
+});</code></pre>
+      </div>
+    </section>
 
-workspace.addUnit({
+    <section class="doc-section">
+      <h2>3. Añadir estructura y recursos</h2>
+      <p><code>addFile()</code> crea el recurso y su actividad asociada. El resultado devuelve las claves reales para que puedas usarlas después en progresión u otras reglas.</p>
+      <div class="codebox">
+        <div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div>
+        <pre><code>workspace.addUnit({
   key: 'unidad-1',
   title: 'Unidad 1 · Fundamentos',
 });
 
-workspace.addFile({
+const intro = workspace.addFile({
   source: './material/intro.html',
   key: 'intro',
   title: 'Introducción',
@@ -114,7 +112,7 @@ workspace.addFile({
   mediaType: 'text/html',
 });
 
-workspace.addFile({
+const practica = workspace.addFile({
   source: './material/practica.html',
   key: 'practica',
   title: 'Práctica',
@@ -122,195 +120,81 @@ workspace.addFile({
   mediaType: 'text/html',
 });
 
-workspace.setProgression('act-intro', {
+workspace.setProgression(intro.activityKey, {
   required: true,
   gateFollowing: true,
   completionRequirement: 'viewed',
 });
 
-workspace.setProgression('act-practica', {
+workspace.setProgression(practica.activityKey, {
   required: true,
   completionRequirement: 'completed',
-});
-
-workspace.addUrl({
-  url: 'https://p2lrn.netlify.app/docs/',
-  key: 'documentacion',
-  title: 'Documentación P2LRN',
-  parent: 'unidad-1',
-});
-
-workspace.build('./curso-ejemplo.p2lrn', {
-  strictProfiles: true,
 });</code></pre>
       </div>
-      <p>El ejemplo ejecutable se publica junto a la documentación: <a href="/examples/developer-course/create-course.mjs">ver <code>create-course.mjs</code></a> y <a href="/examples/developer-course/README.md">ver instrucciones</a>.</p>
     </section>
 
     <section class="doc-section">
-      <h2>3. Leer un documento antes de incorporarlo</h2>
-      <p><code>workspace.reader()</code> analiza el documento pero no modifica el curso. Esto permite inspeccionar la estructura antes de decidir cómo convertirla en unidades, actividades o recursos.</p>
+      <h2>4. Leer un documento sin modificar todavía el curso</h2>
+      <p><code>workspace.reader()</code> utiliza el Reader documental del Toolkit. Devuelve la estructura extraída y deja que tu aplicación decida qué parte se convierte en contenido del curso.</p>
       <div class="codebox">
         <div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div>
-        <pre><code>const document = await workspace.reader(
-  './material/tema-1.docx'
-);
+        <pre><code>const document = await workspace.reader('./material/tema-1.docx');
 
 console.log(document.metadata);
 console.log(document.blocks);
 console.log(document.tables);
 console.log(document.warnings);</code></pre>
       </div>
-      <p>Después, tu flujo de autoría decide qué bloques se convierten en unidades, contenido web, cuestionarios o archivos. El Reader no introduce contenido silenciosamente en el grafo.</p>
     </section>
 
     <section class="doc-section">
-      <h2>4. Abrir y modificar un paquete existente</h2>
+      <h2>5. Construir y validar</h2>
       <div class="codebox">
-        <div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div>
-        <pre><code>const workspace = P2LRNAuthoringWorkspace.open(
-  './curso-ejemplo.p2lrn',
-  './workspace-editable'
-);
-
-workspace.setCourseMetadata({
-  title: 'Curso actualizado',
-  incrementRevision: true,
-});
-
-workspace.addUnit({
-  key: 'unidad-2',
-  title: 'Unidad 2',
-});
-
-workspace.build('./curso-ejemplo-v2.p2lrn', {
+        <div class="codebox-head"><span>TypeScript + CLI</span><button type="button" data-copy>Copiar</button></div>
+        <pre><code>workspace.build('./curso.p2lrn', {
   strictProfiles: true,
-});</code></pre>
+});
+
+# después del build
+p2lrn-validate curso.p2lrn
+p2lrn-inspect curso.p2lrn
+p2lrn-reader curso.p2lrn</code></pre>
       </div>
-      <p>El flujo <code>open → edit → build</code> conserva identidades portables y está cubierto por las pruebas de round-trip del Toolkit.</p>
     </section>
 
-    <section class="doc-section">
-      <h2>5. Validar antes de publicar</h2>
-      <div class="codebox">
-        <div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div>
-        <pre><code>p2lrn-validate curso-ejemplo.p2lrn
-p2lrn-inspect curso-ejemplo.p2lrn
-p2lrn-reader curso-ejemplo.p2lrn</code></pre>
-      </div>
-      <ul class="check-list">
-        <li><span>FORMAT</span>El manifiesto identifica P2LRN y una versión soportada.</li>
-        <li><span>GRAPH</span>El grafo y los entrypoints son coherentes.</li>
-        <li><span>FILES</span>Todos los recursos inventariados existen.</li>
-        <li><span>HASH</span>Los digests y <code>contentRoot</code> coinciden.</li>
-        <li><span>PROFILE</span>Los perfiles requeridos se validan.</li>
-      </ul>
-    </section>
-
-    <section class="doc-section">
-      <h2>6. Evitar un único paquete enorme: multipart</h2>
-      <p>P2LRN puede dejar el contenedor principal pequeño y sustituir un payload embebido grande por un descriptor multipart. Los bytes grandes se escriben como archivos adyacentes y el Player reconstruye el payload lógico antes de pasarlo al renderer.</p>
-
-      <div class="multipart-diagram">
-        <div class="multipart-before">
-          <span>ANTES</span>
-          <strong>curso.p2lrn</strong>
-          <small>manifest + graph + vídeo de 1,4 GB</small>
-        </div>
-        <b>→</b>
-        <div class="multipart-after">
-          <span>DESPUÉS</span>
-          <strong>curso-split.p2lrn</strong>
-          <small>manifest + graph + descriptor</small>
-          <code>curso-split.part001</code>
-          <code>curso-split.part002</code>
-          <code>curso-split.part003</code>
-          <code>…</code>
-        </div>
-      </div>
-
-      <div class="codebox">
-        <div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div>
-        <pre><code>p2lrn-multipart   curso.p2lrn   curso-split.p2lrn   --part-size 26214400</code></pre>
-      </div>
-
-      <div class="size-table">
-        <div><strong>Part size por defecto</strong><span>25 MiB · 26214400 bytes</span></div>
-        <div><strong>Mínimo admitido</strong><span>1 MiB · 1048576 bytes</span></div>
-        <div><strong>Selección automática</strong><span>payload embebido más grande que supera el part size</span></div>
-        <div><strong>Selección explícita</strong><span><code>--representation &lt;id&gt;</code></span></div>
+    <section class="doc-section split-callout">
+      <h2>6. ¿El curso pesa demasiado?</h2>
+      <p>No metas un vídeo de varios cientos de MB o GB dentro de un único ZIP si tu almacenamiento, despliegue o CDN no lo necesita. P2LRN dispone de transporte multipart para separar el payload grande manteniendo el paquete exterior y su integridad.</p>
+      <div class="doc-callout">
+        <strong>Guía separada</strong>
+        <p><a href="/docs/paquetes/multipart/">Abrir Multipart / paquetes grandes →</a></p>
       </div>
     </section>
 
     <section class="doc-section">
-      <h2>7. Qué contiene el descriptor multipart</h2>
-      <p>El <code>.p2lrn</code> mantiene dentro un JSON pequeño que describe el payload lógico completo y cada fragmento.</p>
-      <div class="codebox">
-        <div class="codebox-head"><span>multipart/*.json</span><button type="button" data-copy>Copiar</button></div>
-        <pre><code>{
-  "version": "1",
-  "mediaType": "video/mp4",
-  "size": 1503238553,
-  "byteDigest": "sha256:…",
-  "parts": [
-    {
-      "href": "curso-split.part001",
-      "size": 26214400,
-      "byteDigest": "sha256:…"
-    },
-    {
-      "href": "curso-split.part002",
-      "size": 26214400,
-      "byteDigest": "sha256:…"
-    }
-  ]
-}</code></pre>
-      </div>
-      <p>El Player resuelve cada <code>href</code> de forma relativa a la URL del paquete exterior, verifica el SHA-256 de cada parte y vuelve a verificar el digest del payload lógico completo.</p>
-    </section>
-
-    <section class="doc-section">
-      <h2>8. Cómo publicar un paquete dividido</h2>
-      <p>El contenedor y sus partes deben conservarse juntos en la misma ruta pública relativa.</p>
-      <div class="package-tree">
-        <div class="tree-head">/courses/curso/</div>
-        <pre><code>/courses/curso/
-├─ curso-split.p2lrn
-├─ curso-split.part001
-├─ curso-split.part002
-├─ curso-split.part003
-└─ curso-split.part004</code></pre>
-      </div>
-      <div class="doc-callout"><strong>No publiques sólo el .p2lrn exterior</strong><p>Si falta una parte, si cambia un byte o si una parte se sirve desde otra ruta sin conservar la relación relativa, la reconstrucción falla por integridad o por recurso ausente.</p></div>
-    </section>
-
-    <section class="doc-section">
-      <h2>9. Paquetes externos como SCORM</h2>
-      <p>Multipart también preserva vistas <code>package-member</code>. Si una representación apunta a <code>index.html</code> dentro de un ZIP SCORM grande, el descriptor conserva el miembro y el Player reconstruye primero el ZIP lógico antes de resolver ese archivo interno.</p>
-    </section>
-
-    <section class="doc-section">
-      <h2>10. Si hay varios payloads grandes</h2>
-      <p>El comando multipart actual transforma una representación embebida por ejecución. Puedes seleccionar exactamente cuál con <code>--representation</code>. Mantén bajo control todos los archivos <code>.partNNN</code> producidos y no los separes de su paquete exterior.</p>
-      <p>Para cursos con muchos vídeos grandes, una alternativa válida es mantener esos medios como recursos remotos autorizados en lugar de incrustarlos todos. La elección depende del contrato de almacenamiento, autorización y portabilidad de tu plataforma.</p>
-    </section>
-
-    <section class="doc-section example-real">
-      <h2>11. Ejemplo real y visor</h2>
-      <p>La distribución pública incluye paquetes canónicos reales del repositorio y un visor que usa exactamente el Player publicado, no una simulación de la interfaz.</p>
+      <h2>7. Ejemplo real</h2>
+      <p>El repositorio incluye un script ejecutable que crea un curso real con una unidad, dos recursos y progresión. La versión pública permite revisar el código sin salir de la documentación.</p>
       <div class="example-actions">
-        <a class="button primary" href="/demo/">Abrir el visor P2LRN</a>
-        <a class="button" href="/examples/creator-course.p2lrn">Abrir paquete de ejemplo</a>
-        <a class="button" href="/docs/player/">Documentación del Player</a>
+        <a class="button primary" href="/examples/developer-course/create-course.mjs">Ver create-course.mjs</a>
+        <a class="button" href="/examples/developer-course/README.md">Instrucciones</a>
+        <a class="button" href="/examples/creator-course.p2lrn">Paquete canónico</a>
       </div>
-      <p>En el visor puedes cambiar entre curso creado por Creator, contenido web y cuestionario nativo, además de introducir una URL propia de un paquete P2LRN.</p>
+    </section>
+
+    <section class="doc-section">
+      <h2>8. Abrirlo con el Player real</h2>
+      <p>El visor público utiliza el mismo Web Component que se distribuye por CDN. No es una maqueta: descarga, verifica y renderiza los paquetes canónicos.</p>
+      <div class="example-actions">
+        <a class="button primary" href="/demo/">Abrir visor P2LRN</a>
+        <a class="button" href="/docs/player/">Integrar el Player</a>
+      </div>
     </section>
 
     <nav class="doc-pager">
       <a class="prev" href="/docs/formato/"><span>← Anterior</span><strong>Formato</strong></a>
-      <a class="next" href="/docs/player/"><span>Siguiente →</span><strong>Player</strong></a>
+      <a class="next" href="/docs/paquetes/multipart/"><span>Siguiente →</span><strong>Multipart / paquetes grandes</strong></a>
     </nav>
-
+    
     <section class="doc-contact" id="contacto">
       <h2>Contacto</h2>
       <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
@@ -327,7 +211,6 @@ p2lrn-reader curso-ejemplo.p2lrn</code></pre>
     </section>
   </article>
 </main>
-
 <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
 </body>
 </html>
