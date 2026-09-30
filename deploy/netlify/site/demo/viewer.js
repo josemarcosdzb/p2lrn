@@ -94,13 +94,26 @@
 
       if (globalThis.P2LRN?.installServiceWorker) {
         setState('BRIDGE', 'Preparando recursos verificados');
+
+        // The demo explicitly controls its page with the P2LRN worker so
+        // sandboxed web bundles can request verified relative CSS/images.
+        // The worker ignores every URL outside the virtual P2LRN route.
+        const pageBridge = await globalThis.P2LRN.installServiceWorker({
+          url:'/p2lrn-sw.js',
+          scope:'/',
+        });
+
+        // Keep the canonical narrow registration used by StaticResourceBridge.
         const bridge = await globalThis.P2LRN.installServiceWorker({
           url:'/p2lrn-sw.js',
           scope:'/__p2lrn__/',
         });
+
         write('virtual-resource-bridge', {
           status:'ready',
-          scope:bridge?.scope ?? '/__p2lrn__/',
+          pageScope:pageBridge?.scope ?? '/',
+          resourceScope:bridge?.scope ?? '/__p2lrn__/',
+          controlled:Boolean(navigator.serviceWorker.controller),
         });
       }
 
