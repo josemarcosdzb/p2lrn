@@ -1,29 +1,36 @@
 (() => {
   const menu = document.querySelector('[data-menu]');
-  const mobileNav = document.getElementById('mobile-nav');
+  const nav = document.getElementById('nav');
+  const progress = document.querySelector('[data-progress]');
 
-  if (menu && mobileNav) {
+  if (menu && nav) {
     menu.addEventListener('click', () => {
-      const open = mobileNav.classList.toggle('is-open');
+      const open = nav.classList.toggle('is-open');
       menu.setAttribute('aria-expanded', String(open));
+      menu.textContent = open ? 'CLOSE' : 'INDEX';
     });
 
-    mobileNav.querySelectorAll('a').forEach((link) => {
+    nav.querySelectorAll('a').forEach((link) => {
       link.addEventListener('click', () => {
-        mobileNav.classList.remove('is-open');
+        nav.classList.remove('is-open');
         menu.setAttribute('aria-expanded', 'false');
+        menu.textContent = 'INDEX';
       });
     });
   }
 
+  const setCopied = (button) => {
+    const previous = button.textContent;
+    button.textContent = 'COPIED';
+    window.setTimeout(() => { button.textContent = previous; }, 1100);
+  };
+
   document.querySelectorAll('[data-copy]').forEach((button) => {
     button.addEventListener('click', async () => {
-      const code = button.closest('.terminal')?.querySelector('code')?.innerText || '';
+      const code = button.closest('.codebox')?.querySelector('code')?.innerText || '';
       try {
         await navigator.clipboard.writeText(code);
-        const label = button.textContent;
-        button.textContent = 'Copiado';
-        window.setTimeout(() => { button.textContent = label; }, 1200);
+        setCopied(button);
       } catch {}
     });
   });
@@ -33,19 +40,28 @@
       const code = button.parentElement?.querySelector('code')?.innerText || '';
       try {
         await navigator.clipboard.writeText(code);
-        const label = button.textContent;
-        button.textContent = 'Copiado';
-        window.setTimeout(() => { button.textContent = label; }, 1200);
+        setCopied(button);
       } catch {}
     });
   });
 
+  const updateProgress = () => {
+    if (!progress) return;
+    const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+    const ratio = scrollable > 0 ? window.scrollY / scrollable : 0;
+    progress.style.width = Math.max(0, Math.min(1, ratio)) * 100 + '%';
+  };
+
+  updateProgress();
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+
   Promise.all([
-    fetch('/health.json', {cache: 'no-store'}).then((response) => {
+    fetch('/health.json', {cache:'no-store'}).then((response) => {
       if (!response.ok) throw new Error('health');
       return response.json();
     }),
-    fetch('/index.json', {cache: 'no-store'}).then((response) => {
+    fetch('/index.json', {cache:'no-store'}).then((response) => {
       if (!response.ok) throw new Error('index');
       return response.json();
     }),
@@ -56,34 +72,11 @@
         node.textContent = version;
       });
     }
+
     const healthNode = document.querySelector('[data-health]');
-    if (healthNode) healthNode.textContent = health.ok ? 'CDN operativo' : 'CDN';
+    if (healthNode) healthNode.textContent = health.ok ? 'CDN ONLINE' : 'CDN';
   }).catch(() => {
     const healthNode = document.querySelector('[data-health]');
     if (healthNode) healthNode.textContent = 'CDN';
   });
-
-  const navLinks = [...document.querySelectorAll('.topnav a')];
-  const sectionMap = navLinks
-    .map((link) => {
-      const id = link.getAttribute('href');
-      if (!id?.startsWith('#')) return null;
-      const section = document.querySelector(id);
-      return section ? {link, section} : null;
-    })
-    .filter(Boolean);
-
-  if ('IntersectionObserver' in window && sectionMap.length) {
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (!visible) return;
-      navLinks.forEach((link) => link.removeAttribute('aria-current'));
-      const current = sectionMap.find(({section}) => section === visible.target);
-      current?.link.setAttribute('aria-current', 'page');
-    }, {rootMargin: '-20% 0px -65% 0px', threshold: [0.05, 0.2, 0.5]});
-
-    sectionMap.forEach(({section}) => observer.observe(section));
-  }
 })();
