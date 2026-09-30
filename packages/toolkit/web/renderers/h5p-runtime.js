@@ -173,7 +173,7 @@ export async function render({container, payload, representation, package:pkg, e
   const iframe = document.createElement('iframe');
   iframe.className = 'p2lrn-h5p-frame';
   iframe.title = inspection.title || 'H5P';
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox');
+  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups');
   iframe.setAttribute('allow', 'fullscreen');
   iframe.style.width = '100%';
   iframe.style.minHeight = '480px';
