@@ -110,11 +110,10 @@ function progressionScore(value:number|undefined,label:string):number|undefined{
 function syncProgressionProfile(project:CreatorProject):'required'|'optional'|null{
   const holders=[project.course,...project.units,...project.activities];
   const rules=holders.map((entity:any)=>entity.extensions?.[PROFILE.progression]).filter((value:any)=>value&&typeof value==='object'&&!Array.isArray(value));
-  const previous=(project.profiles??[]).find((profile:any)=>canonicalIdentifier(String(profile.id))===PROFILE.progression);
   project.profiles=(project.profiles??[]).filter((profile:any)=>canonicalIdentifier(String(profile.id))!==PROFILE.progression);
   if(!rules.length)return null;
   const gating=rules.some((rule:any)=>rule.gateFollowing===true||rule.unlockWhen!=null);
-  const resolved:'required'|'optional'=gating||previous?.requirement==='required'?'required':'optional';
+  const resolved:'required'|'optional'=gating?'required':'optional';
   project.profiles.push({id:PROFILE.progression,version:FORMAT_VERSION,requirement:resolved});
   return resolved;
 }
