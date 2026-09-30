@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="Diagnóstico rápido de los fallos más habituales al cargar paquetes, configurar CORS, resolver runtimes o escuchar eventos.">
+  <title>Solución de problemas — P2LRN</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <script src="/p2lrn.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">P2LRN</a>
+    <nav class="nav" id="nav">
+      <a href="/docs/">Docs</a>
+      <a href="/docs/formato/">Formato</a>
+      <a href="/docs/player/">Player</a>
+      <a href="/docs/toolkit/">Toolkit</a>
+      <a href="/docs/integracion/">Integración</a>
+    </nav>
+    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
+    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
+  </header>
+
+  <main class="doc-main">
+    <aside class="doc-sidebar">
+  <span>START</span>
+  <a href="/docs/">Overview</a>
+  <a href="/docs/empezar/">Quickstart</a>
+  <a href="/docs/conceptos/">Conceptos</a>
+
+  <span>BUILD</span>
+  <a href="/docs/formato/">Formato</a>
+  <a href="/docs/player/">Player</a>
+  <a href="/docs/toolkit/">Toolkit</a>
+
+  <span>INTEGRATE</span>
+  <a href="/docs/integracion/">Integración real</a>
+  <a href="/docs/compatibilidad/">Compatibilidad</a>
+
+  <span>REFERENCE</span>
+  <a href="/docs/referencia/">Referencia</a>
+  <a href="/docs/troubleshooting/" aria-current="page">Troubleshooting</a>
+
+  <span>RESOURCES</span>
+  <a href="/index.json">Índice CDN ↗</a>
+  <a href="/health.json">Estado ↗</a></aside>
+    <article class="doc-content">
+      <header class="doc-hero">
+        <p class="eyebrow">HELP / TROUBLESHOOTING</p>
+        <h1>Solución de problemas</h1>
+        <p>Diagnóstico rápido de los fallos más habituales al cargar paquetes, configurar CORS, resolver runtimes o escuchar eventos.</p>
+      </header>
+      
+<section class="doc-section">
+  <h2>El Player no carga</h2>
+  <p>Comprueba que el script del Player responde, que <code>&lt;p2lrn-player&gt;</code> está registrado y que el atributo <code>src</code> apunta a una URL HTTP accesible desde el navegador.</p>
+</section>
+<section class="doc-section">
+  <h2>Error de CORS</h2>
+  <p>El origen que sirve el paquete debe permitir solicitudes desde la aplicación. Si el recurso es privado, evita <code>*</code> y usa una política de origen explícita o URLs autorizadas.</p>
+</section>
+<section class="doc-section">
+  <h2>Package integrity failed</h2>
+  <p>Algún recurso, manifiesto o digest no coincide. No ignores el error: reconstruye el paquete con Toolkit o vuelve a obtener el artefacto original.</p>
+</section>
+<section class="doc-section">
+  <h2>Renderer no disponible</h2>
+  <p>Si has fijado <code>renderer</code>, confirma que esa implementación existe y es compatible. Si no necesitas forzar uno, elimina el atributo para permitir la selección normal.</p>
+</section>
+<section class="doc-section">
+  <h2>H5P library missing</h2>
+  <p>El contenido H5P puede depender de librerías no embebidas. Verifica el catálogo compartido y que el runtime configurado pueda resolver la versión solicitada.</p>
+</section>
+<section class="doc-section">
+  <h2>SCORM no arranca</h2>
+  <p>Confirma que el paquete SCORM conserva su entrypoint, que el host aislado puede cargar sus recursos y que no hay bloqueos CSP/CORS incompatibles.</p>
+</section>
+<section class="doc-section">
+  <h2>HTTP Range / Service Worker</h2>
+  <p>Para recursos que requieran búsqueda por rangos, comprueba soporte 206/Range del servidor. Instala el Service Worker sólo cuando tu despliegue realmente lo necesita.</p>
+</section>
+<section class="doc-section">
+  <h2>No llega el evento esperado</h2>
+  <p>Registra los listeners antes de iniciar la interacción y comprueba primero <code>p2lrn:ready</code> y <code>p2lrn:error</code>. Después valida si el renderer concreto genera el evento de progreso/score que esperas.</p>
+</section>
+      <nav class="doc-pager">
+        <a class="prev" href="/docs/referencia/"><span>← Anterior</span><strong>Referencia</strong></a>
+        
+      </nav>
+      
+<section class="doc-contact" id="contacto">
+  <h2>Contacto</h2>
+  <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
+  <form class="contact-form" data-contact-form>
+    <div class="form-grid">
+      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
+      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
+    </div>
+    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
+    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
+    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
+    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
+  </form>
+</section>
+    </article>
+  </main>
+
+  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
+</body>
+</html>
