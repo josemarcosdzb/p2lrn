@@ -11,7 +11,7 @@ Current versions:
 ## CDN / plain HTML
 
 ```html
-<script src="https://cdn.example/@p2lrn/player/0.5.0-alpha.10/dist/p2lrn.js"></script>
+<script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"></script>
 <p2lrn-player src="/courses/course.p2lrn"></p2lrn-player>
 ```
 
