@@ -26,6 +26,12 @@ for (const file of [
   );
 }
 
+await cp(
+  join(root, 'examples', 'developer-course'),
+  join(examplesOutput, 'developer-course'),
+  {recursive:true, force:true},
+);
+
 console.log(JSON.stringify({
   ok:true,
   site:'P2LRN documentation portal',
