@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <title>Compatibilidad y runtimes — P2LRN</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <script src="/p2lrn.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">P2LRN</a>
+    <nav class="nav" id="nav"><a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/compatibilidad/" aria-current="page">Compatibilidad</a></nav>
+    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
+    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
+  </header>
+  <main class="doc-main">
+    <aside class="doc-sidebar">
+      <span>DOCUMENTACIÓN</span>
+      <a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/compatibilidad/" aria-current="page">Compatibilidad</a>
+      <a href="/index.json">Índice CDN ↗</a>
+      <a href="/health.json">Estado ↗</a>
+    </aside>
+    <article class="doc-content">
+      <header class="doc-hero">
+        <p class="eyebrow">COMPATIBILIDAD</p>
+        <h1>Compatibilidad y runtimes</h1>
+        <p>Qué se mantiene por compatibilidad, qué puede preservarse y qué dispone realmente de un runtime de ejecución.</p>
+      </header>
+      
+<section class="doc-section">
+  <h2>P2RLN Alpha15</h2>
+  <p>Los nombres históricos <code>P2RLN</code>, <code>.p2rln</code>, <code>p2rln.project.json</code>, <code>&lt;p2rln-player&gt;</code>, eventos y rutas antiguas continúan como entrada legacy para no romper material anterior.</p>
+  <p>La escritura nueva utiliza siempre identidad P2LRN.</p>
+</section>
+<section class="doc-section">
+  <h2>H5P y SCORM</h2>
+  <p>El Player incluye hosts aislados para H5P y SCORM. Las librerías H5P reutilizables se distribuyen separadamente para no obligar a todas las instalaciones a descargar el corpus completo.</p>
+</section>
+<section class="doc-section">
+  <h2>cmi5, QTI, Common Cartridge, IMS CP y Tin Can</h2>
+  <p>Estos formatos se manejan según las capacidades reales declaradas por el runtime y las herramientas. El hecho de conservar un paquete externo no implica que exista ejecución completa.</p>
+  <div class="doc-callout"><strong>Preservar ≠ ejecutar</strong><p>P2LRN distingue lectura, autoría, round-trip, preservación y <code>deliver</code>. Sólo se declara ejecución cuando hay un runtime real que la soporta.</p></div>
+</section>
+<section class="doc-section">
+  <h2>CDN</h2>
+  <p>El CDN público distribuye el Player, hosts de runtime y librerías H5P compartidas. No almacena cursos de usuarios ni datos personales.</p>
+  <nav class="resource-links"><a href="/index.json">Índice de distribución <span>↗</span></a><a href="/health.json">Estado del CDN <span>↗</span></a><a href="/player/current/dist/release.json">Release del Player <span>↗</span></a></nav>
+</section>
+      
+<section class="doc-contact" id="contacto">
+  <h2>Contacto</h2>
+  <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
+  <form class="contact-form" data-contact-form>
+    <div class="form-grid">
+      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
+      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
+    </div>
+    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
+    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
+    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
+    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
+  </form>
+</section>
+    </article>
+  </main>
+  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
+</body>
+</html>
