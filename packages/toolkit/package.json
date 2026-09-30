@@ -29,10 +29,6 @@
     "./authoring": {
       "types": "./dist/authoring/index.d.ts",
       "import": "./dist/authoring/index.js"
-    },
-    "./document-reader": {
-      "types": "./dist/document-reader/index.d.ts",
-      "import": "./dist/document-reader/index.js"
     }
   },
   "bin": {
@@ -50,8 +46,7 @@
     "p2lrn-rebuild-examples": "./dist/tools/rebuild-examples.js",
     "p2lrn-build-web-sdk": "./dist/tools/build-web-sdk.js",
     "p2lrn-build-advanced-example": "./dist/tools/build-advanced-example.js",
-    "p2lrn-wrap-external": "./dist/cli/convert.js",
-    "p2lrn-document-reader": "./dist/cli/document-reader.js"
+    "p2lrn-wrap-external": "./dist/cli/convert.js"
   },
   "scripts": {
     "clean": "rm -rf dist",
@@ -76,13 +71,5 @@
     "type": "git",
     "url": "git+https://github.com/josemarcosfrodo/p2lrn.git",
     "directory": "packages/toolkit"
-  },
-  "peerDependencies": {
-    "pdfjs-dist": ">=4"
-  },
-  "peerDependenciesMeta": {
-    "pdfjs-dist": {
-      "optional": true
-    }
   }
 }
