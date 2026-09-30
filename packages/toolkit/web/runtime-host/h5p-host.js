@@ -485,7 +485,7 @@ function onPortMessage(event) {
 window.addEventListener('beforeunload', () => { emitState('unload'); clearObjectUrls(); });
 window.addEventListener('message', (event) => {
   const data = event.data;
-  if (!data || ![PROTOCOL, LEGACY_PROTOCOL].includes(data.protocol) || data.action !== 'connect' || !event.ports?.[0] || port) return;
+  if (event.source !== parent || !data || ![PROTOCOL, LEGACY_PROTOCOL].includes(data.protocol) || data.action !== 'connect' || !event.ports?.[0] || port) return;
   activeProtocol = data.protocol;
   port = event.ports[0];
   port.onmessage = onPortMessage;
