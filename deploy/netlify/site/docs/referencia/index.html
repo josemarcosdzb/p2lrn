@@ -1,124 +1,44 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="Índice rápido de APIs, comandos, atributos, eventos, identificadores y rutas útiles para una integración ya en marcha.">
-  <title>Referencia — P2LRN</title>
-  <link rel="stylesheet" href="/p2lrn.css">
-  <script src="/p2lrn.js" defer></script>
-</head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="/">P2LRN</a>
-    <nav class="nav" id="nav">
-      <a href="/docs/">Docs</a>
-      <a href="/docs/formato/">Formato</a>
-      <a href="/docs/player/">Player</a>
-      <a href="/docs/toolkit/">Toolkit</a>
-      <a href="/docs/integracion/">Integración</a>
-    </nav>
-    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
-    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
-  </header>
-
-  <main class="doc-main">
-    <aside class="doc-sidebar">
-  <span>START</span>
-  <a href="/docs/">Overview</a>
-  <a href="/docs/empezar/">Quickstart</a>
-  <a href="/docs/conceptos/">Conceptos</a>
-
-  <span>BUILD</span>
-  <a href="/docs/formato/">Formato</a>
-  <a href="/docs/paquetes/">Crear paquetes</a>
-  <a href="/docs/paquetes/multipart/">Multipart / paquetes grandes</a>
-  <a href="/docs/player/">Player</a>
-  <a href="/docs/toolkit/">Toolkit</a>
-
-  <span>INTEGRATE</span>
-  <a href="/docs/integracion/">Integración real</a>
-  <a href="/docs/compatibilidad/">Compatibilidad</a>
-
-  <span>REFERENCE</span>
-  <a href="/docs/referencia/" aria-current="page">Referencia</a>
-  <a href="/docs/troubleshooting/">Troubleshooting</a>
-
-  <span>RESOURCES</span>
-  <a href="/demo/">Visor real ↗</a>
-  <a href="/index.json">Índice CDN ↗</a>
-  <a href="/health.json">Estado ↗</a></aside>
-    <article class="doc-content">
-      <header class="doc-hero">
-        <p class="eyebrow">REFERENCE</p>
-        <h1>Referencia</h1>
-        <p>Índice rápido de APIs, comandos, atributos, eventos, identificadores y rutas útiles para una integración ya en marcha.</p>
-      </header>
-      
-<section class="doc-section">
-  <h2>API TypeScript de autoría</h2>
-  <div class="reference-table">
-    <div><code>P2LRNAuthoringWorkspace.create()</code><p>Crea un workspace nuevo.</p></div>
-    <div><code>P2LRNAuthoringWorkspace.open()</code><p>Abre un .p2lrn como proyecto editable.</p></div>
-    <div><code>workspace.reader(path)</code><p>Lee y estructura un documento sin modificar el proyecto.</p></div>
-    <div><code>workspace.addUnit()</code><p>Añade una unidad al grafo de autoría.</p></div>
-    <div><code>workspace.addFile()</code><p>Añade un archivo como recurso/actividad.</p></div>
-    <div><code>workspace.build()</code><p>Reconstruye el paquete final.</p></div>
-  </div>
-</section>
-<section class="doc-section">
-  <h2>Web Component</h2>
-  <div class="reference-table">
-    <div><code>src</code><p>URL del paquete.</p></div>
-    <div><code>node</code><p>Nodo inicial opcional.</p></div>
-    <div><code>renderer</code><p>Renderer explícito opcional.</p></div>
-    <div><code>runtime-base-url</code><p>Base URL alternativa para runtimes.</p></div>
-  </div>
-</section>
-<section class="doc-section">
-  <h2>Eventos</h2>
-  <p>El namespace público es <code>p2lrn:*</code>. Entre los eventos de integración están <code>p2lrn:ready</code>, <code>p2lrn:rendered</code>, actividad, progreso, estado, score, completion y <code>p2lrn:error</code>.</p>
-</section>
-<section class="doc-section">
-  <h2>CLI</h2>
-  <div class="command-list"><code>p2lrn-validate</code><code>p2lrn-reader</code><code>p2lrn-document-reader</code><code>p2lrn-create</code><code>p2lrn-convert</code><code>p2lrn-repack</code><code>p2lrn-multipart</code><code>p2lrn-inspect</code><code>p2lrn-extract-source</code><code>p2lrn-delta</code><code>p2lrn-trust</code></div>
-</section>
-<section class="doc-section">
-  <h2>Identificadores</h2>
-  <div class="reference-table">
-    <div><code>.p2lrn</code><p>Extensión canónica.</p></div>
-    <div><code>https://p2lrn.org/</code><p>Namespace canónico.</p></div>
-    <div><code>p2lrn.project.json</code><p>Proyecto editable de autoría.</p></div>
-    <div><code>/__p2lrn__/v1/</code><p>Ruta virtual del Service Worker.</p></div>
-  </div>
-</section>
-<section class="doc-section">
-  <h2>Rutas CDN</h2>
-  <nav class="resource-links"><a href="/index.json">Índice de distribución <span>↗</span></a><a href="/health.json">Estado <span>↗</span></a><a href="/player/current/dist/release.json">Release actual <span>↗</span></a><a href="/player/current/dist/runtime-host/h5p-libraries/index.json">Catálogo H5P <span>↗</span></a></nav>
-</section>
-      <nav class="doc-pager">
-        <a class="prev" href="/docs/compatibilidad/"><span>← Anterior</span><strong>Compatibilidad</strong></a>
-        <a class="next" href="/docs/troubleshooting/"><span>Siguiente →</span><strong>Troubleshooting</strong></a>
-      </nav>
-      
-<section class="doc-contact" id="contacto">
-  <h2>Contacto</h2>
-  
-  <form class="contact-form" data-contact-form>
-    <div class="form-grid">
-      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
-      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
-    </div>
-    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
-    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
-    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
-    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
-  </form>
-</section>
-    </article>
-  </main>
-
-  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
-</body>
-</html>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Referencia técnica P2LRN: Authoring API, Player, Host Adapter, eventos y CLI."><title>Referencia — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar"><span>START</span><a href="/docs/">Overview</a><a href="/docs/empezar/">Quickstart</a><a href="/docs/que-usar/">¿Qué uso?</a><span>BUILD</span><a href="/docs/formato/">Formato</a><a href="/docs/paquetes/">Crear paquetes</a><a href="/docs/progresion/">Progresión</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><span>INTEGRATE</span><a href="/docs/integracion/">Integración real</a><a href="/docs/eventos/">Eventos</a><a href="/docs/compatibilidad/">Compatibilidad</a><span>REFERENCE</span><a href="/docs/recetas/">Recipes</a><a href="/docs/glosario/">Glosario</a><a href="/docs/referencia/" aria-current="page">Referencia</a><a href="/docs/troubleshooting/">Troubleshooting</a></aside>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">REFERENCE</p><h1>Referencia técnica</h1><p>Índice del contrato público actual. Las firmas de autoría se corresponden con <code>P2LRNAuthoringWorkspace</code>; Player y Host Adapter con la distribución web actual.</p></header>
+<section class="doc-section"><h2>Authoring API</h2><div class="reference-table">
+<div><code>P2LRNAuthoringWorkspace.create(root, options)</code><p>Crea un workspace. Requiere <code>title</code>; admite language, description y force.</p></div>
+<div><code>P2LRNAuthoringWorkspace.open(packagePath, root, options)</code><p>Abre un paquete como proyecto editable.</p></div>
+<div><code>P2LRNAuthoringWorkspace.load(root)</code><p>Carga un workspace existente.</p></div>
+<div><code>workspace.summary()</code><p>Devuelve versiones, projectId, rutas y contadores.</p></div>
+<div><code>workspace.reload()</code><p>Recarga el proyecto desde disco.</p></div>
+<div><code>workspace.upgrade()</code><p>Actualiza el workspace a la versión editable actual.</p></div>
+<div><code>workspace.setCourseMetadata(options)</code><p>Edita título, descripción, idioma y revisión del curso.</p></div>
+<div><code>workspace.setEntityText(key, options)</code><p>Edita texto localizado de una entidad.</p></div>
+<div><code>workspace.setChildren(parentKey, children)</code><p>Reordena hijos y rechaza claves duplicadas.</p></div>
+<div><code>workspace.setProgression(key, options|null)</code><p>Aplica o elimina progression sobre course, unit o activity.</p></div>
+<div><code>workspace.addUnit(options)</code><p>Añade una unidad.</p></div>
+<div><code>workspace.addFile(options)</code><p>Añade archivo + actividad y devuelve resourceKey/activityKey.</p></div>
+<div><code>workspace.addUrl(options)</code><p>Añade una URL como recurso/actividad.</p></div>
+<div><code>workspace.addWebContent(options)</code><p>Añade un directorio web con entrypoint.</p></div>
+<div><code>workspace.addQuestionnaire(options)</code><p>Añade questionnaire nativo y permite solicitar renderer/version.</p></div>
+<div><code>workspace.addComponent(options)</code><p>Añade un componente nativo.</p></div>
+<div><code>workspace.addComposite(options)</code><p>Añade composite sequence/free con completion all/any.</p></div>
+<div><code>await workspace.reader(source, options)</code><p>Extrae un documento sin mutar el proyecto.</p></div>
+<div><code>workspace.save()</code><p>Persiste el workspace actual.</p></div>
+<div><code>workspace.build(output, options)</code><p>Construye el <code>.p2lrn</code>; admite <code>strictProfiles</code>.</p></div>
+</div></section>
+<section class="doc-section"><h2>Progression</h2><div class="reference-table"><div><code>required</code><p>boolean</p></div><div><code>gateFollowing</code><p>boolean; inválido en course raíz.</p></div><div><code>completionRequirement</code><p><code>viewed | completed | passed</code>.</p></div><div><code>minScore</code><p>0..100; sólo activity.</p></div><div><code>unlockWhen</code><p>Un único bloque <code>all</code> o <code>any</code>.</p></div></div><p><a href="/docs/progresion/">Ver guía completa de progresión →</a></p></section>
+<section class="doc-section"><h2>Player API</h2><div class="reference-table"><div><code>P2LRN.mount(target, options)</code><p>Monta o reutiliza <code>&lt;p2lrn-player&gt;</code>.</p></div><div><code>P2LRN.openPackageURL(url, options)</code><p>Abre y verifica un paquete remoto; usa HTTP Range cuando el transporte lo permite.</p></div><div><code>P2LRN.openPackageBytes(buffer, limits)</code><p>Abre bytes completos dentro del límite de buffer.</p></div><div><code>P2LRN.renderers()</code><p>Lista los renderers registrados.</p></div><div><code>P2LRN.components()</code><p>Lista componentes registrados.</p></div><div><code>P2LRN.dependencies()</code><p>Lista dependencias del runtime.</p></div><div><code>P2LRN.createHostAdapter(implementation)</code><p>Normaliza y valida el Adapter versión 1.</p></div><div><code>P2LRN.configureRuntimeHost(options)</code><p>Configura base URL para runtimes.</p></div><div><code>P2LRN.installServiceWorker(options)</code><p>Instala el bridge de recursos estáticos cuando el despliegue lo necesita.</p></div></div></section>
+<section class="doc-section"><h2>Web Component</h2><div class="reference-table"><div><code>src</code><p>URL del paquete.</p></div><div><code>node</code><p>Entidad inicial opcional.</p></div><div><code>renderer</code><p>Renderer explícito.</p></div><div><code>runtime-base-url</code><p>Base URL de runtimes.</p></div><div><code>player.adapter</code><p>Host Adapter o null.</p></div><div><code>player.runtimeBaseUrl</code><p>Propiedad equivalente a runtime-base-url.</p></div><div><code>await player.reload()</code><p>Recarga el paquete actual.</p></div></div></section>
+<section class="doc-section"><h2>Host Adapter v1</h2><div class="reference-table"><div><code>loadState(context)</code><p>Carga estado persistido.</p></div><div><code>saveState(state, context)</code><p>Guarda estado.</p></div><div><code>reportScore(score, context)</code><p>Recibe score cuando el runtime lo reporta.</p></div><div><code>emitEvent(event, context)</code><p>Recibe eventos normalizados.</p></div><div><code>resolveResourceUrl(request, context)</code><p>Devuelve <code>{url, verified:true, seekable?}</code> o null.</p></div></div></section>
+<section class="doc-section"><h2>Eventos</h2><p>Eventos generales confirmados: <code>p2lrn:ready</code>, <code>p2lrn:rendered</code>, <code>p2lrn:score</code>, <code>p2lrn:statechange</code>, <code>p2lrn:complete</code>, <code>p2lrn:progressionchange</code> y <code>p2lrn:error</code>. Consulta la página específica para el contrato y el contexto.</p><p><a href="/docs/eventos/">Referencia de eventos →</a></p></section>
+<section class="doc-section"><h2>CLI publicada por @p2lrn/toolkit</h2><div class="command-list"><code>p2lrn</code><code>p2lrn-validate</code><code>p2lrn-reader</code><code>p2lrn-document-reader</code><code>p2lrn-create</code><code>p2lrn-convert</code><code>p2lrn-repack</code><code>p2lrn-multipart</code><code>p2lrn-inspect</code><code>p2lrn-extract-source</code><code>p2lrn-delta</code><code>p2lrn-trust</code></div>
+<h3 class="subheading">Creator</h3><div class="codebox"><div class="codebox-head"><span>Comandos reales</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-create init|open|upgrade|add-unit|add-file|add-web-content|add-questionnaire|add-component|add-composite|add-url|build|convert|ingest-aulap2p|ingest-aulap2p-course|extract-aulap2p-course|component-catalog|validate-component-authoring|show</code></pre></div>
+<h3 class="subheading">Delta</h3><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-delta create &lt;base&gt; &lt;target&gt; &lt;output&gt;
+p2lrn-delta apply &lt;base&gt; &lt;delta&gt; &lt;output&gt;
+p2lrn-delta inspect &lt;delta&gt;</code></pre></div>
+<h3 class="subheading">Trust / Ed25519</h3><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-trust keygen private.pem public.pem
+p2lrn-trust sign course.p2lrn private.pem
+p2lrn-trust verify course.p2lrn course.p2lrn.sig --trust-key public.pem --require-trusted
+p2lrn-trust inspect course.p2lrn.sig</code></pre></div><div class="doc-callout"><strong>Integridad y confianza son distintas.</strong><p>SHA-256 detecta cambios. La firma Ed25519 comprueba que el contenido fue firmado por una clave; <code>--require-trusted</code> además exige que esa clave esté en el conjunto suministrado.</p></div></section>
+<section class="doc-section"><h2>Multipart</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-multipart &lt;source.p2lrn&gt; &lt;output.p2lrn&gt; [--representation &lt;id&gt;] [--part-size &lt;bytes&gt;]</code></pre></div><p>Parte por defecto: 25 MiB. Mínimo admitido por la implementación: 1 MiB.</p></section>
+<section class="doc-section"><h2>Rutas CDN</h2><nav class="resource-links"><a href="/index.json">Índice de distribución <span>↗</span></a><a href="/health.json">Build status <span>↗</span></a><a href="/player/current/dist/release.json">Release actual <span>↗</span></a><a href="/player/current/dist/runtime-host/h5p-libraries/index.json">Catálogo H5P <span>↗</span></a></nav></section>
+<nav class="doc-pager"><a class="prev" href="/docs/compatibilidad/"><span>← Anterior</span><strong>Compatibilidad</strong></a><a class="next" href="/docs/troubleshooting/"><span>Siguiente →</span><strong>Troubleshooting</strong></a></nav></article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
