@@ -1,5 +1,5 @@
 [build]
-  command = "node deploy/netlify/build-cdn.mjs"
+  command = "node deploy/netlify/build-site.mjs"
   publish = ".netlify-cdn"
 
 [build.environment]
