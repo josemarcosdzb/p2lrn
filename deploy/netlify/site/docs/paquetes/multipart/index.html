@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="Cómo dividir payloads grandes de un paquete P2LRN con multipart y publicarlos correctamente.">
+  <title>Multipart y paquetes grandes — P2LRN</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <script src="/p2lrn.js" defer></script>
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="/">P2LRN</a>
+  <nav class="nav" id="nav">
+    <a href="/docs/">Docs</a>
+    <a href="/docs/paquetes/">Paquetes</a>
+    <a href="/docs/paquetes/multipart/" aria-current="page">Multipart</a>
+    <a href="/docs/player/">Player</a>
+    <a href="/demo/">Visor</a>
+  </nav>
+  <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
+  <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
+</header>
+
+<main class="doc-main">
+  <aside class="doc-sidebar">
+    <span>START</span>
+    <a href="/docs/">Overview</a>
+    <a href="/docs/empezar/">Quickstart</a>
+    <a href="/docs/conceptos/">Conceptos</a>
+
+    <span>BUILD</span>
+    <a href="/docs/formato/">Formato</a>
+    <a href="/docs/paquetes/">Crear paquetes</a>
+    <a href="/docs/paquetes/multipart/" aria-current="page">Multipart / paquetes grandes</a>
+    <a href="/docs/player/">Player</a>
+    <a href="/docs/toolkit/">Toolkit</a>
+
+    <span>INTEGRATE</span>
+    <a href="/docs/integracion/">Integración real</a>
+    <a href="/docs/compatibilidad/">Compatibilidad</a>
+
+    <span>REFERENCE</span>
+    <a href="/docs/referencia/">Referencia</a>
+    <a href="/docs/troubleshooting/">Troubleshooting</a>
+
+    <span>RESOURCES</span>
+    <a href="/demo/">Visor real ↗</a>
+    <a href="/index.json">Índice CDN ↗</a>
+    <a href="/health.json">Estado ↗</a></aside>
+  <article class="doc-content">
+    <header class="doc-hero">
+      <p class="eyebrow">BUILD / MULTIPART</p>
+      <h1>Dividir paquetes grandes</h1>
+      <p>Multipart separa un payload embebido grande en archivos adyacentes sin perder el manifiesto, el grafo ni la verificación SHA-256 del contenido lógico.</p>
+    </header>
+
+    <section class="doc-section">
+      <h2>Cuándo usarlo</h2>
+      <p>Úsalo cuando el curso contiene un payload grande —por ejemplo un vídeo, un ZIP SCORM o un binario— y no quieres que ese contenido viaje dentro del único archivo exterior <code>.p2lrn</code>.</p>
+      <div class="multipart-diagram">
+        <div class="multipart-before">
+          <span>ANTES</span>
+          <strong>curso.p2lrn</strong>
+          <small>manifest + graph + payload grande</small>
+        </div>
+        <b>→</b>
+        <div class="multipart-after">
+          <span>DESPUÉS</span>
+          <strong>curso-split.p2lrn</strong>
+          <small>manifest + graph + descriptor</small>
+          <code>curso-split.part001</code>
+          <code>curso-split.part002</code>
+          <code>curso-split.part003</code>
+        </div>
+      </div>
+    </section>
+
+    <section class="doc-section">
+      <h2>Comando básico</h2>
+      <div class="codebox">
+        <div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div>
+        <pre><code>p2lrn-multipart   curso.p2lrn   curso-split.p2lrn   --part-size 26214400</code></pre>
+      </div>
+      <div class="size-table">
+        <div><strong>Tamaño por defecto</strong><span>25 MiB · 26214400 bytes</span></div>
+        <div><strong>Mínimo permitido</strong><span>1 MiB · 1048576 bytes</span></div>
+        <div><strong>Selección automática</strong><span>la representación embebida más grande que supera el límite</span></div>
+        <div><strong>Selección explícita</strong><span><code>--representation &lt;representation-id&gt;</code></span></div>
+      </div>
+    </section>
+
+    <section class="doc-section">
+      <h2>Qué cambia dentro del paquete</h2>
+      <p>La representación deja de apuntar directamente al payload grande y pasa a apuntar a un descriptor <code>multipart/*.json</code>. El perfil multipart se declara como requerido.</p>
+      <div class="codebox">
+        <div class="codebox-head"><span>Descriptor conceptual</span><button type="button" data-copy>Copiar</button></div>
+        <pre><code>{
+  "version": "1",
+  "mediaType": "video/mp4",
+  "size": 1503238553,
+  "byteDigest": "sha256:…",
+  "parts": [
+    {
+      "href": "curso-split.part001",
+      "size": 26214400,
+      "byteDigest": "sha256:…"
+    },
+    {
+      "href": "curso-split.part002",
+      "size": 26214400,
+      "byteDigest": "sha256:…"
+    }
+  ]
+}</code></pre>
+      </div>
+    </section>
+
+    <section class="doc-section">
+      <h2>Cómo lo reconstruye el Player</h2>
+      <ol class="learning-path">
+        <li><strong>1. Descriptor.</strong><span>El Player abre el descriptor multipart del paquete exterior.</span></li>
+        <li><strong>2. Resolución.</strong><span>Cada <code>href</code> se resuelve de forma relativa a la URL del <code>.p2lrn</code>.</span></li>
+        <li><strong>3. Verificación.</strong><span>Cada <code>.partNNN</code> se valida con su SHA-256.</span></li>
+        <li><strong>4. Reconstrucción.</strong><span>Las partes se concatenan en el orden declarado.</span></li>
+        <li><strong>5. Digest final.</strong><span>Se verifica el SHA-256 del payload lógico completo.</span></li>
+        <li><strong>6. Renderer.</strong><span>Sólo entonces se entrega al renderer normal.</span></li>
+      </ol>
+    </section>
+
+    <section class="doc-section">
+      <h2>Publicación correcta</h2>
+      <p>El archivo exterior y todas las partes deben quedar accesibles en la misma ruta relativa.</p>
+      <div class="package-tree">
+        <div class="tree-head">https://content.example.com/courses/curso/</div>
+        <pre><code>/courses/curso/
+├─ curso-split.p2lrn
+├─ curso-split.part001
+├─ curso-split.part002
+├─ curso-split.part003
+└─ curso-split.part004</code></pre>
+      </div>
+      <div class="doc-callout"><strong>No muevas las partes por separado</strong><p>Los <code>href</code> son relativos al paquete exterior. Si una parte falta o cambia, la verificación falla.</p></div>
+    </section>
+
+    <section class="doc-section">
+      <h2>SCORM y otros subpaquetes</h2>
+      <p>Cuando una actividad usa una vista <code>package-member</code>, por ejemplo <code>index.html</code> dentro de un ZIP SCORM, multipart conserva el nombre del miembro. El Player reconstruye primero el ZIP lógico y después abre el miembro interno solicitado.</p>
+    </section>
+
+    <section class="doc-section">
+      <h2>Varios payloads grandes</h2>
+      <p>La implementación actual transforma una representación por ejecución. Si necesitas elegir una concreta, usa <code>--representation</code>. Si repites el proceso sobre un paquete que ya contiene multipart, conserva en el mismo directorio las partes generadas anteriormente y las nuevas.</p>
+      <div class="codebox">
+        <div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div>
+        <pre><code>p2lrn-multipart curso.p2lrn curso-stage1.p2lrn   --representation urn:uuid:video-principal   --part-size 26214400
+
+p2lrn-multipart curso-stage1.p2lrn curso-final.p2lrn   --representation urn:uuid:scorm-grande   --part-size 26214400</code></pre>
+      </div>
+      <p>Para muchos recursos pesados, valora también representar algunos como recursos remotos autorizados en lugar de convertir todo el curso en un conjunto enorme de fragmentos.</p>
+    </section>
+
+    <section class="doc-section">
+      <h2>Comprobación antes de publicar</h2>
+      <div class="codebox">
+        <div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div>
+        <pre><code>p2lrn-validate curso-final.p2lrn
+p2lrn-inspect curso-final.p2lrn</code></pre>
+      </div>
+      <ul class="check-list">
+        <li><span>OUTER</span>El paquete exterior valida.</li>
+        <li><span>PARTS</span>Todas las partes existen en la misma ruta pública.</li>
+        <li><span>HASH</span>Ninguna parte ha cambiado después de generarse.</li>
+        <li><span>PLAYER</span>El Player puede reconstruir el payload y renderizarlo.</li>
+      </ul>
+    </section>
+
+    <nav class="doc-pager">
+      <a class="prev" href="/docs/paquetes/"><span>← Anterior</span><strong>Crear paquetes</strong></a>
+      <a class="next" href="/demo/"><span>Siguiente →</span><strong>Probar el visor real</strong></a>
+    </nav>
+    
+    <section class="doc-contact" id="contacto">
+      <h2>Contacto</h2>
+      <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
+      <form class="contact-form" data-contact-form>
+        <div class="form-grid">
+          <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
+          <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
+        </div>
+        <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre paquetes P2LRN" required></label>
+        <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
+        <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
+        <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
+      </form>
+    </section>
+  </article>
+</main>
+
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
+</body>
+</html>
