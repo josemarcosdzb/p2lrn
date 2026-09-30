@@ -13,6 +13,8 @@ export const LEGACY_VIRTUAL_MARKER = '/__p2rln__/v1/';
 export const REGISTRY_CACHE = 'p2lrn-static-bridge-registry-v1';
 export const LEGACY_REGISTRY_CACHE = 'p2rln-static-bridge-registry-v1';
 export const MAX_BUFFERED_RESOURCE = 64 * 1024 * 1024;
+export const MAX_ROUTE_RESOURCES = 4096;
+export const MAX_ROUTE_CHUNK_DIGESTS = 262144;
 
 const LOCAL_SIGNATURE = 0x04034b50;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
@@ -73,6 +75,19 @@ function validateDigest(value, label) {
   if (!DIGEST_RE.test(String(value ?? ''))) throw new Error(`${label} must be sha256:<64 lowercase hex>.`);
 }
 
+function safeVirtualPath(value, label) {
+  const path = String(value ?? '');
+  if (!path || path.includes('\0') || path.includes('\\') || path.startsWith('/')) {
+    throw new Error(`Invalid ${label}: ${path}`);
+  }
+  const parts = path.split('/');
+  if (parts.length > 32 || parts.some((part) => !part || part === '.' || part === '..')) {
+    throw new Error(`Invalid ${label}: ${path}`);
+  }
+  if (/^[A-Za-z]:/u.test(parts[0] ?? '')) throw new Error(`Invalid ${label}: ${path}`);
+  return path;
+}
+
 export function validateRouteConfig(config, expectedOrigin = null) {
   if (!config || typeof config !== 'object' || Array.isArray(config) || config.version !== '1') throw new Error('Invalid P2LRN static route config.');
   if (!/^[a-f0-9]{32,64}$/.test(String(config.routeId ?? ''))) throw new Error('Invalid P2LRN static route id.');
@@ -83,13 +98,16 @@ export function validateRouteConfig(config, expectedOrigin = null) {
   if (expectedOrigin && source.origin !== expectedOrigin) throw new Error('P2LRN static bridge only accepts same-origin package sources.');
   validateDigest(config.contentRoot, 'contentRoot');
   if (!config.resources || typeof config.resources !== 'object' || Array.isArray(config.resources) || !Object.keys(config.resources).length) throw new Error('P2LRN static route requires resources.');
+  const resourceEntries = Object.entries(config.resources);
+  if (resourceEntries.length > MAX_ROUTE_RESOURCES) throw new Error(`P2LRN static route has too many resources (${resourceEntries.length} > ${MAX_ROUTE_RESOURCES}).`);
   const resources = {};
-  for (const [logical, raw] of Object.entries(config.resources)) {
-    if (!logical || logical.includes('\0') || logical.startsWith('/')) throw new Error(`Invalid P2LRN virtual logical path: ${logical}`);
+  let totalChunkDigests = 0;
+  for (const [logical, raw] of resourceEntries) {
+    safeVirtualPath(logical, 'P2LRN virtual logical path');
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error(`Invalid P2LRN virtual resource: ${logical}`);
     validateDigest(raw.byteDigest, `byteDigest ${logical}`);
     if (!Number.isSafeInteger(raw.size) || raw.size < 0) throw new Error(`Invalid P2LRN virtual size: ${logical}`);
-    if (typeof raw.embeddedPath !== 'string' || !raw.embeddedPath) throw new Error(`Invalid embedded path: ${logical}`);
+    const embeddedPath = safeVirtualPath(raw.embeddedPath, `embedded path ${logical}`);
     const entry = raw.archiveEntry;
     if (!entry || !Number.isSafeInteger(entry.localOffset) || entry.localOffset < 0 || ![0, 8].includes(entry.method) || !Number.isSafeInteger(entry.compressedSize) || entry.compressedSize < 0 || entry.uncompressedSize !== raw.size) throw new Error(`Invalid ZIP entry metadata: ${logical}`);
     let rangeIntegrity = null;
@@ -98,12 +116,14 @@ export function validateRouteConfig(config, expectedOrigin = null) {
       if (!ri || !Number.isSafeInteger(ri.chunkSize) || ri.chunkSize < 65536 || ri.chunkSize > 8388608 || ri.size !== raw.size || ri.byteDigest !== raw.byteDigest || !Array.isArray(ri.chunks)) throw new Error(`Invalid range-integrity metadata: ${logical}`);
       const expected = raw.size ? Math.ceil(raw.size / ri.chunkSize) : 0;
       if (ri.chunks.length !== expected) throw new Error(`Invalid range-integrity chunk count: ${logical}`);
+      totalChunkDigests += ri.chunks.length;
+      if (totalChunkDigests > MAX_ROUTE_CHUNK_DIGESTS) throw new Error(`P2LRN static route has too many range-integrity chunk digests (> ${MAX_ROUTE_CHUNK_DIGESTS}).`);
       for (const chunk of ri.chunks) validateDigest(chunk, `chunk digest ${logical}`);
       if (entry.method !== 0) throw new Error(`Chunk-ranged resource must be ZIP_STORED: ${logical}`);
       rangeIntegrity = {chunkSize: ri.chunkSize, size: ri.size, byteDigest: ri.byteDigest, chunks: [...ri.chunks]};
     }
     resources[logical] = {
-      embeddedPath: raw.embeddedPath,
+      embeddedPath,
       mediaType: raw.mediaType || 'application/octet-stream',
       size: raw.size,
       byteDigest: raw.byteDigest,
