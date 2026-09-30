@@ -1,5 +1,4 @@
 const PROTOCOL = 'p2lrn-h5p-runtime/1';
-const LEGACY_PROTOCOL = 'p2rln-h5p-runtime/1';
 const stage = document.getElementById('h5p-stage');
 const errorBox = document.getElementById('h5p-error');
 let port = null;
@@ -369,7 +368,7 @@ async function initializeStatic(data) {
   const outer = document.createElement('iframe');
   outer.className = 'p2lrn-h5p-inner';
   outer.title = String(data.title ?? h5p.title ?? 'H5P');
-  outer.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups');
+  outer.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals');
   outer.setAttribute('allow', 'fullscreen');
   outer.style.cssText = 'display:block;width:100%;min-height:480px;border:0;background:#fff';
   stage.replaceChildren(outer);
@@ -485,7 +484,7 @@ function onPortMessage(event) {
 window.addEventListener('beforeunload', () => { emitState('unload'); clearObjectUrls(); });
 window.addEventListener('message', (event) => {
   const data = event.data;
-  if (event.source !== parent || !data || ![PROTOCOL, LEGACY_PROTOCOL].includes(data.protocol) || data.action !== 'connect' || !event.ports?.[0] || port) return;
+  if (event.source !== parent || !data || data.protocol !== PROTOCOL || data.action !== 'connect' || !event.ports?.[0] || port) return;
   activeProtocol = data.protocol;
   port = event.ports[0];
   port.onmessage = onPortMessage;
@@ -493,4 +492,3 @@ window.addEventListener('message', (event) => {
   send('connected');
 });
 parent.postMessage({protocol:PROTOCOL, action:'shell-ready'}, '*');
-parent.postMessage({protocol:LEGACY_PROTOCOL, action:'shell-ready'}, '*');
