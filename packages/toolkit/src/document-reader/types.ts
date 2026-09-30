@@ -92,6 +92,7 @@ export interface DocumentReaderLimits {
   maxSlides:number;
   maxEpubDocuments:number;
   maxPdfPages:number;
+  maxPdfTextItems:number;
   maxBlocks:number;
   maxTables:number;
 }
