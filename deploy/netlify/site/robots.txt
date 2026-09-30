@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://p2lrn.netlify.app/sitemap.xml
