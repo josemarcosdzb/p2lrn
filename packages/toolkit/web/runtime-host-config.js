@@ -25,6 +25,12 @@ export function normalizeRuntimeBaseUrl(value, {baseUrl = browserBaseUrl()} = {}
     error.code = 'P2LRN_RUNTIME_URL_INVALID';
     throw error;
   }
+  const localHttp = url.protocol === 'http:' && ['localhost','127.0.0.1','[::1]'].includes(url.hostname);
+  if (url.protocol === 'http:' && !localHttp) {
+    const error = new TypeError('P2LRN runtime host requires HTTPS outside local development.');
+    error.code = 'P2LRN_RUNTIME_INSECURE_TRANSPORT';
+    throw error;
+  }
   if (url.username || url.password || url.search || url.hash) {
     const error = new TypeError('P2LRN runtime base URL must not contain credentials, query parameters or a fragment.');
     error.code = 'P2LRN_RUNTIME_URL_INVALID';
