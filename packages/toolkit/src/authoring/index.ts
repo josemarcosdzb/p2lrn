@@ -1,10 +1,12 @@
 import {existsSync, mkdirSync, readdirSync, rmSync} from 'node:fs';
-import {dirname, resolve} from 'node:path';
+import {readFile} from 'node:fs/promises';
+import {basename, dirname, resolve} from 'node:path';
 import {ProjectError} from '../core/errors.js';
 import {FORMAT_VERSION, PROFILE, canonicalIdentifier} from '../core/constants.js';
 import {portableUrn, uuidNamespace} from '../core/uuid.js';
 import {buildProject, type BuildResult} from '../creator/builder.js';
 import {openPackageAsProject, type OpenPackageProjectOptions} from '../creator/import-project.js';
+import {readDocument, type DocumentReaderOptions, type ExtractedDocument} from '../document-reader/index.js';
 import {
   addComponent as creatorAddComponent,
   addComposite as creatorAddComposite,
@@ -228,6 +230,22 @@ export class P2LRNAuthoringWorkspace {
   }
   addComposite(options:AuthoringCompositeOptions):AuthoringResourceActivityResult{
     return this.#edit((draft)=>{const parent=options.parent??'course';const [resource,activity]=creatorAddComposite(this.root,draft,options.key,options.title,{language:options.language??'es',parent,mode:options.mode??'sequence',completion:options.completion??'all',navigation:options.navigation,children:options.children,moveChildren:options.moveChildren!==false});return{resourceKey:resource.key,activityKey:activity.key,parentKey:parent};});
+  }
+
+  /** Read and structurally extract a source document without mutating the authoring project.
+   * Relative paths are resolved from the workspace root; absolute paths are accepted unchanged.
+   */
+  async reader(source:string,options:DocumentReaderOptions={}):Promise<ExtractedDocument>{
+    if(typeof source!=='string'||!source.trim())throw new ProjectError('document reader source path must not be empty');
+    const sourcePath=resolve(this.root,source);
+    let data:Uint8Array;
+    try{
+      data=new Uint8Array(await readFile(sourcePath));
+    }catch(error){
+      const message=error instanceof Error?error.message:String(error);
+      throw new ProjectError(`unable to read document source: ${sourcePath}: ${message}`);
+    }
+    return readDocument({name:basename(sourcePath),data},options);
   }
 
   save():void{saveProject(this.projectFile,this.#project);}
