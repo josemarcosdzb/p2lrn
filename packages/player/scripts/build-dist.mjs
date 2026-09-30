@@ -7,6 +7,7 @@ import {promisify} from 'node:util';
 
 const execFileAsync = promisify(execFile);
 export const H5P_STANDALONE_VERSION = '3.8.2';
+export const H5P_STANDALONE_INTEGRITY = 'sha512-r7eQtTzBk/dbaQZ+tA9XD5FeSmyMxlypRZXudiheCnC8zAT0/zNgUvO4MZtZaznwfYVo98o7do5uxLTUQrxxwg==';
 const EXCLUDED = new Set(['app.js', 'index.html', 'style.css']);
 const LOCAL_REF = /(?:from\s+|import\()(['"])(\.{1,2}\/[^'"]+)\1|new URL\((['"])(\.{1,2}\/[^'"]+)\3\s*,\s*import\.meta\.url\)/g;
 
@@ -65,7 +66,13 @@ const npmExecOptions = process.platform === 'win32' ? {shell:true} : {};
     throw new Error(`npm pack produced ${archives.length} h5p-standalone archives; expected exactly one.`);
   }
   const [archiveName] = archives;
-  await execFileAsync('tar', ['-xzf', join(work, archiveName), '-C', work], {maxBuffer:4*1024*1024});
+  const archivePath = join(work, archiveName);
+  const archiveBytes = await readFile(archivePath);
+  const actualIntegrity = 'sha512-' + createHash('sha512').update(archiveBytes).digest('base64');
+  if (actualIntegrity !== H5P_STANDALONE_INTEGRITY) {
+    throw new Error(`h5p-standalone tarball integrity mismatch: expected ${H5P_STANDALONE_INTEGRITY}, got ${actualIntegrity}`);
+  }
+  await execFileAsync('tar', ['-xzf', archivePath, '-C', work], {maxBuffer:4*1024*1024});
   const sourceRoot = join(work, 'package');
   const metadata = JSON.parse(await readFile(join(sourceRoot, 'package.json'), 'utf8'));
   if (metadata.version !== H5P_STANDALONE_VERSION) throw new Error(`Unexpected h5p-standalone version: ${metadata.version}`);
