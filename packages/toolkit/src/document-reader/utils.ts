@@ -66,7 +66,7 @@ export function mediaTypeFromPath(path:string):string {
 }
 
 export function stableId(prefix:string,index:number):string {
-  return `{prefix}_`{String(index).padStart(4,'0')};
+  return prefix + '_' + String(index).padStart(4,'0');
 }
 
 export function compactPosition(value:DocumentPosition|undefined):DocumentPosition|undefined {
@@ -90,7 +90,7 @@ export function finalizeTables(tables:DocumentTable[]):DocumentTable[] {
 export function ensureLimits(input:DocumentReaderInput, maxInputBytes:number):void {
   if (!input?.bytes?.byteLength) throw new Error('Document reader received an empty file.');
   if (input.bytes.byteLength > maxInputBytes) {
-    throw new Error(`Document exceeds lightweight reader input limit (`{input.bytes.byteLength} > `{maxInputBytes} bytes).`);
+    throw new Error('Document exceeds lightweight reader input limit (' + input.bytes.byteLength + ' > ' + maxInputBytes + ' bytes).');
   }
 }
 
