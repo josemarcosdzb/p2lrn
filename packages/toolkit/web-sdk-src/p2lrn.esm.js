@@ -14,6 +14,7 @@ import {
 import {createHostAdapter, HOST_ADAPTER_VERSION} from './host-adapter.js';
 import {installP2LRNServiceWorker} from './static-resource-bridge.js';
 import {configureRuntimeHost, getRuntimeHostConfig, normalizeRuntimeBaseUrl, resolveScormRuntimeUrl, resolveH5pRuntimeUrl, resolvePackageRuntimeUrl} from './runtime-host-config.js';
+import {PROGRESSION_PROFILE, normalizeProgressionState} from './progression-core.js';
 
 
 function ensureLegacyPlayerElement() {
@@ -52,6 +53,8 @@ export {
   resolveScormRuntimeUrl,
   resolveH5pRuntimeUrl,
   resolvePackageRuntimeUrl,
+  PROGRESSION_PROFILE,
+  normalizeProgressionState,
 };
 
 export const registerRenderer = (descriptor) => defaultRendererRegistry.register(descriptor);
