@@ -93,6 +93,8 @@ export function validateRouteConfig(config, expectedOrigin = null) {
   if (!/^[a-f0-9]{32,64}$/.test(String(config.routeId ?? ''))) throw new Error('Invalid P2LRN static route id.');
   const source = new URL(config.sourceUrl);
   if (!['http:', 'https:'].includes(source.protocol)) throw new Error('P2LRN static bridge source must be HTTP(S).');
+  if (source.username || source.password) throw new Error('P2LRN static bridge source URL must not contain credentials.');
+  if (source.hash) throw new Error('P2LRN static bridge source URL must not contain a fragment.');
   const localHttp = source.protocol === 'http:' && ['localhost','127.0.0.1','[::1]'].includes(source.hostname);
   if (source.protocol === 'http:' && !localHttp) throw new Error('P2LRN static bridge requires HTTPS outside local development.');
   if (expectedOrigin && source.origin !== expectedOrigin) throw new Error('P2LRN static bridge only accepts same-origin package sources.');
@@ -142,10 +144,15 @@ function legacyRegistryKey(routeId, origin = globalThis.location?.origin ?? 'htt
 }
 
 
+export function routeSourceMayPersist(sourceUrl) {
+  const source = new URL(sourceUrl);
+  return source.search === '' && source.username === '' && source.password === '' && source.hash === '';
+}
+
 export async function persistRouteConfig(config) {
   const normalized = validateRouteConfig(config, globalThis.location?.origin ?? null);
   memoryRoutes.set(normalized.routeId, normalized);
-  if (globalThis.caches) {
+  if (globalThis.caches && routeSourceMayPersist(normalized.sourceUrl)) {
     const cache = await caches.open(REGISTRY_CACHE);
     await cache.put(registryKey(normalized.routeId), new Response(JSON.stringify(normalized), {headers: {'Content-Type': 'application/json'}}));
   }
@@ -163,6 +170,10 @@ export async function loadRouteConfig(routeId) {
   }
   if (!response) return null;
   const normalized = validateRouteConfig(await response.json(), globalThis.location?.origin ?? null);
+  if (!routeSourceMayPersist(normalized.sourceUrl)) {
+    try { await cache.delete(registryKey(routeId)); } catch {}
+    return null;
+  }
   memoryRoutes.set(routeId, normalized);
   return normalized;
 }
@@ -312,11 +323,18 @@ async function handleServiceWorkerFetch(request) {
   catch (error) { return new Response(`P2LRN virtual resource error: ${error?.message ?? error}`, {status: 502}); }
 }
 
+export function trustedWorkerMessageSource(source, expectedOrigin = globalThis.location?.origin ?? null) {
+  if (!source || typeof source.url !== 'string' || !expectedOrigin) return false;
+  try { return new URL(source.url).origin === expectedOrigin; }
+  catch { return false; }
+}
+
 const sw = globalThis.self;
 if (sw?.addEventListener && sw?.registration) {
   sw.addEventListener('install', (event) => event.waitUntil(sw.skipWaiting()));
   sw.addEventListener('activate', (event) => event.waitUntil(sw.clients.claim()));
   sw.addEventListener('message', (event) => {
+    if (!trustedWorkerMessageSource(event.source, sw.location?.origin ?? null)) return;
     const data = event.data || {};
     if (data.type === 'P2LRN_PING_V1') {
       event.ports?.[0]?.postMessage({ok: true, protocol: P2LRN_SW_PROTOCOL, scope: sw.registration.scope});
