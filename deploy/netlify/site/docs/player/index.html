@@ -1,61 +1,32 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Desde la primera línea HTML hasta eventos, CORS, Host Adapter, runtimes aislados y Service Worker."><title>Player web — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/paquetes/">Paquetes</a><a href="/docs/paquetes/multipart/">Multipart</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main"><aside class="doc-sidebar">
-  <span>START</span>
-  <a href="/docs/">Overview</a>
-  <a href="/docs/empezar/">Quickstart</a>
-  <a href="/docs/conceptos/">Conceptos</a>
-  <span>BUILD</span>
-  <a href="/docs/formato/">Formato</a>
-  <a href="/docs/player/" aria-current="page">Player</a>
-  <a href="/docs/toolkit/">Toolkit</a>
-  <span>INTEGRATE</span>
-  <a href="/docs/integracion/">Integración real</a>
-  <a href="/docs/compatibilidad/">Compatibilidad</a>
-  <span>REFERENCE</span>
-  <a href="/docs/referencia/">Referencia</a>
-  <a href="/docs/troubleshooting/">Troubleshooting</a>
-  <span>RESOURCES</span>
-  <a href="/demo/">Visor real ↗</a>
-  <a href="/index.json">Índice CDN ↗</a>
-  <a href="/health.json">Estado ↗</a></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">BUILD / PLAYER</p><h1>Player web</h1><p>Desde la primera línea HTML hasta eventos, CORS, Host Adapter, runtimes aislados y Service Worker.</p></header>
-<section class="doc-section"><h2>Qué vas a conseguir</h2><p>Montar <code>&lt;p2lrn-player&gt;</code>, cargar un paquete real y entender qué debe hacer tu aplicación alrededor del Player.</p></section>
-<section class="doc-section"><h2>CDN o npm</h2><p>Usa CDN para una integración directa sin build. Usa npm cuando quieras empaquetar el Player con tu aplicación.</p><div class="codebox"><div class="codebox-head"><span>CDN</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
-&lt;p2lrn-player src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre></div><div class="codebox"><div class="codebox-head"><span>npm</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/player
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Player web P2LRN: Web Component, API pública, eventos, runtimes, Host Adapter, CORS y Service Worker."><title>Player web — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/player/" aria-current="page">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar"><span>START</span><a href="/docs/">Overview</a><a href="/docs/empezar/">Quickstart</a><a href="/docs/que-usar/">¿Qué uso?</a><span>BUILD</span><a href="/docs/formato/">Formato</a><a href="/docs/paquetes/">Crear paquetes</a><a href="/docs/progresion/">Progresión</a><a href="/docs/paquetes/multipart/">Multipart</a><a href="/docs/player/" aria-current="page">Player</a><a href="/docs/toolkit/">Toolkit</a><span>INTEGRATE</span><a href="/docs/integracion/">Integración real</a><a href="/docs/eventos/">Eventos</a><a href="/docs/compatibilidad/">Compatibilidad</a><span>REFERENCE</span><a href="/docs/referencia/">Referencia</a><a href="/docs/troubleshooting/">Troubleshooting</a></aside>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">BUILD / PLAYER</p><h1>Player web</h1><p>El Player abre un <code>.p2lrn</code>, verifica manifest y graph, selecciona un renderer compatible y conecta el runtime con la aplicación host.</p></header>
+<section class="doc-section"><h2>Integración mínima</h2><div class="codebox"><div class="codebox-head"><span>CDN</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+&lt;p2lrn-player id="course" src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre></div><div class="codebox"><div class="codebox-head"><span>npm</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/player@0.5.0-alpha.10
 
 import '@p2lrn/player';</code></pre></div></section>
-<section class="doc-section"><h2>Contrato del Web Component</h2><div class="api-list"><div><code>src</code><p>URL del paquete.</p><span>required</span></div><div><code>node</code><p>Nodo inicial opcional.</p><span>optional</span></div><div><code>renderer</code><p>Renderer explícito.</p><span>optional</span></div><div><code>runtime-base-url</code><p>Origen alternativo de runtime.</p><span>optional</span></div></div></section>
-<section class="doc-section"><h2>Eventos</h2><div class="codebox"><div class="codebox-head"><span>JavaScript</span><button type="button" data-copy>Copiar</button></div><pre><code>const player = document.querySelector('p2lrn-player');
+<section class="doc-section"><h2>Web Component</h2><div class="reference-table"><div><code>src</code><p>URL del paquete. Es el atributo que inicia la carga.</p></div><div><code>node</code><p>ID de entidad inicial opcional.</p></div><div><code>renderer</code><p>Renderer solicitado explícitamente; si no es obligatorio se permite fallback ante incompatibilidad.</p></div><div><code>runtime-base-url</code><p>Origen base alternativo para hosts de runtime.</p></div><div><code>player.adapter</code><p>Host Adapter versión 1.</p></div><div><code>await player.reload()</code><p>Vuelve a abrir y renderizar el paquete.</p></div></div></section>
+<section class="doc-section"><h2>API pública</h2><div class="reference-table"><div><code>P2LRN.mount(target, options)</code><p>Monta el Player y aplica src, node, renderer, runtimeBaseUrl y adapter.</p></div><div><code>P2LRN.openPackageURL(url, options)</code><p>Abre un paquete remoto. Usa transporte por rangos cuando el servidor lo permite.</p></div><div><code>P2LRN.openPackageBytes(buffer, limits)</code><p>Abre un paquete completo en memoria.</p></div><div><code>P2LRN.renderers()</code><p>Lista el registro actual de renderers.</p></div><div><code>P2LRN.installServiceWorker(options)</code><p>Instala el bridge de recursos verificados cuando la integración lo necesita.</p></div></div></section>
+<section class="doc-section"><h2>Integridad y transporte</h2><p>El Player valida <code>contentRoot</code>, manifest, graph y cada payload cuando se consume. La apertura remota puede ser eager o lazy según el transporte. Con HTTP Range, manifest y graph se verifican primero y el payload se verifica bajo demanda.</p><div class="doc-callout"><strong>Límites por defecto</strong><p>Buffer completo: 256 MiB. Paquete remoto: hasta 64 GiB. Entradas: 5000. Estos límites son controles del runtime, no una recomendación de tamaño de curso.</p></div></section>
+<section class="doc-section"><h2>Eventos reales</h2><div class="codebox"><div class="codebox-head"><span>JavaScript</span><button type="button" data-copy>Copiar</button></div><pre><code>const player = document.querySelector('p2lrn-player');
 
-player.addEventListener('p2lrn:ready', () =&gt; {
-  console.log('ready');
-});
-
-player.addEventListener('p2lrn:rendered', (event) =&gt; {
-  console.log('rendered', event.detail);
-});
-
-player.addEventListener('p2lrn:error', (event) =&gt; {
-  console.error(event.detail);
-});</code></pre></div><p>El runtime también puede emitir actividad, progreso, estado, score y completion según las capacidades del renderer.</p></section>
-<section class="doc-section"><h2>Host Adapter</h2><p>La integración con identidad, autorización, matrícula, persistencia y URLs protegidas pertenece al host. El Adapter es el punto de integración; el paquete no debe contener credenciales del usuario.</p></section>
-<section class="doc-section"><h2>CORS</h2><p>Si <code>src</code> apunta a otro origen, ese servidor debe permitir las solicitudes del navegador. Para contenido privado, restringe orígenes o usa URLs autorizadas; no conviertas <code>*</code> en el mecanismo de autorización.</p></section>
-<section class="doc-section"><h2>H5P y SCORM</h2><p>El Player dispone de hosts aislados para estos runtimes. H5P puede resolver librerías compartidas fuera del paquete cuando la integración las distribuye como corpus reusable.</p></section>
-<section class="doc-section"><h2>Runtime Node y runtime estático</h2><p>Una instalación puede servir los hosts estáticos junto al frontend o exponerlos desde un host Node controlado. <code>runtime-base-url</code> permite cambiar el origen utilizado por el Player.</p></section>
-<section class="doc-section"><h2>Service Worker</h2><p>No es obligatorio para la reproducción normal. Se instala cuando la aplicación necesita acceso verificable a media seekable o una ruta virtual controlada.</p></section>
-<section class="doc-section"><h2>Probar el Player real</h2><p>El <a href="/demo/">visor público P2LRN</a> carga los paquetes canónicos publicados y muestra los eventos del runtime para que puedas comprobar el comportamiento antes de integrarlo.</p></section><section class="doc-section"><h2>Errores habituales</h2><p>Empieza por <code>p2lrn:error</code>, red/CORS, integridad del paquete y disponibilidad del renderer/runtime. La guía completa está en <a href="/docs/troubleshooting/">Troubleshooting</a>.</p></section><nav class="doc-pager"><a class="prev" href="/docs/formato/"><span>← Anterior</span><strong>Formato</strong></a><a class="next" href="/docs/toolkit/"><span>Siguiente →</span><strong>Toolkit</strong></a></nav>
-<section class="doc-contact" id="contacto">
-  <h2>Contacto</h2>
-  
-  <form class="contact-form" data-contact-form>
-    <div class="form-grid">
-      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
-      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
-    </div>
-    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
-    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
-    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
-    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
-  </form>
-</section></article></main>
-<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer></body></html>
+for (const type of [
+  'p2lrn:ready',
+  'p2lrn:rendered',
+  'p2lrn:score',
+  'p2lrn:statechange',
+  'p2lrn:complete',
+  'p2lrn:progressionchange',
+  'p2lrn:error',
+]) {
+  player.addEventListener(type, (event) =&gt; {
+    console.log(type, event.detail);
+  });
+}</code></pre></div><p>Consulta <a href="/docs/eventos/">Eventos</a> para el contrato común de <code>event.detail</code>.</p></section>
+<section class="doc-section"><h2>Host Adapter</h2><p>El Adapter expone <code>loadState</code>, <code>saveState</code>, <code>reportScore</code>, <code>emitEvent</code> y <code>resolveResourceUrl</code>. El Player exige que una URL resuelta por el host declare <code>verified:true</code>; de lo contrario rechaza el recurso.</p><p><a href="/docs/integracion/">Ver integración Host completa →</a></p></section>
+<section class="doc-section"><h2>Renderers incorporados</h2><p>El runtime actual registra renderers para contenido web/texto, media, questionnaire estándar, juegos 2D, juego 3D WebGL2, componentes, composites, H5P, SCORM, QTI y un runtime genérico de paquete. La presencia de un renderer no equivale por sí sola a soporte de autoría o round-trip.</p></section>
+<section class="doc-section"><h2>Service Worker</h2><p>Se usa para exponer recursos verificados mediante la ruta virtual del Player. No lo presentes como requisito universal: sólo instálalo cuando el renderer o la estrategia de entrega necesiten una URL navegable para contenido ya verificado.</p></section>
+<section class="doc-section"><h2>Probar antes de integrar</h2><p><a href="/demo/">El visor público</a> usa <code>P2LRN.openPackageURL()</code> y el mismo Web Component publicado. Muestra format, versión, contentRoot, perfiles, transporte, renderer y eventos.</p></section>
+<nav class="doc-pager"><a class="prev" href="/docs/paquetes/multipart/"><span>← Anterior</span><strong>Multipart</strong></a><a class="next" href="/docs/toolkit/"><span>Siguiente →</span><strong>Toolkit</strong></a></nav><section class="doc-contact compact-contact"><h2>¿Problema de integración?</h2><p>Consulta primero Troubleshooting; para un caso específico utiliza el formulario separado.</p><a class="button" href="/contacto/">Contactar</a></section></article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
