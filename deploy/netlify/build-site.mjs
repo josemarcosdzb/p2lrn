@@ -12,6 +12,13 @@ await cp(siteRoot, outputRoot, {
   force: true,
 });
 
+// The static virtual-resource bridge expects its Service Worker at the
+// application origin with the canonical /__p2lrn__/ scope.
+await copyFile(
+  join(outputRoot, 'player', 'current', 'dist', 'p2lrn-sw.js'),
+  join(outputRoot, 'p2lrn-sw.js'),
+);
+
 const examplesOutput = join(outputRoot, 'examples');
 await mkdir(examplesOutput, {recursive:true});
 
