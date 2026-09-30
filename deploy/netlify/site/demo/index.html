@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="Visor P2LRN real con paquetes canónicos del proyecto.">
+  <title>Visor P2LRN</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <script src="/player/current/dist/p2lrn.js" defer></script>
+  <script src="/demo/viewer.js" defer></script>
+</head>
+<body class="viewer-page">
+<header class="site-header">
+  <a class="brand" href="/">P2LRN</a>
+  <nav class="nav" id="nav">
+    <a href="/docs/">Documentación</a>
+    <a href="/docs/paquetes/">Crear paquetes</a>
+    <a href="/docs/player/">Player</a>
+  </nav>
+  <div class="header-meta"><span class="status"><i></i><span data-viewer-status>Preparando Player</span></span></div>
+  <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
+</header>
+
+<main class="viewer-main">
+  <section class="viewer-intro">
+    <p class="eyebrow">REAL PLAYER / REAL PACKAGES</p>
+    <h1>Visor P2LRN</h1>
+    <p>Este visor monta el Web Component publicado en el CDN y abre paquetes canónicos reales del repositorio. También puedes introducir la URL de tu propio <code>.p2lrn</code>.</p>
+  </section>
+
+  <section class="viewer-controls" aria-label="Controles del visor">
+    <label>
+      Ejemplo
+      <select data-sample>
+        <option value="/examples/creator-course.p2lrn">Curso creado con Creator</option>
+        <option value="/examples/web-bundle-course.p2lrn">Contenido web empaquetado</option>
+        <option value="/examples/native-questionnaire-course.p2lrn">Cuestionario nativo</option>
+      </select>
+    </label>
+    <label class="viewer-url">
+      URL del paquete
+      <input data-package-url type="url" value="/examples/creator-course.p2lrn" spellcheck="false">
+    </label>
+    <div class="viewer-buttons">
+      <button class="button primary" type="button" data-load>Carregar paquete</button>
+      <button class="button" type="button" data-reload>Recargar</button>
+    </div>
+  </section>
+
+  <section class="viewer-workbench">
+    <div class="viewer-stage">
+      <div class="viewer-stage-head">
+        <div>
+          <span>PLAYER</span>
+          <strong data-package-label>creator-course.p2lrn</strong>
+        </div>
+        <span class="viewer-badge" data-runtime-state>LOADING</span>
+      </div>
+      <div class="viewer-player-shell">
+        <p2lrn-player id="demo-player" src="/examples/creator-course.p2lrn"></p2lrn-player>
+      </div>
+    </div>
+
+    <aside class="viewer-console">
+      <div class="viewer-console-head">
+        <span>EVENT LOG</span>
+        <button type="button" data-clear-log>Limpiar</button>
+      </div>
+      <pre data-event-log><code>[viewer] esperando al Player…</code></pre>
+    </aside>
+  </section>
+
+  <section class="viewer-help">
+    <div>
+      <h2>Qué estás viendo</h2>
+      <p>El visor no interpreta el paquete por su cuenta. El elemento <code>&lt;p2lrn-player&gt;</code> descarga y verifica el <code>.p2lrn</code>, selecciona el renderer apropiado y emite eventos de runtime.</p>
+    </div>
+    <div>
+      <h2>Usarlo en tu web</h2>
+      <div class="codebox">
+        <div class="codebox-head"><span>HTML</span><button type="button" data-copy-demo>Copiar</button></div>
+        <pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+&lt;p2lrn-player src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="viewer-links">
+    <a href="/docs/paquetes/"><span>Crear y dividir paquetes</span><b>→</b></a>
+    <a href="/docs/player/"><span>Integrar el Player</span><b>→</b></a>
+    <a href="/docs/toolkit/"><span>Usar el Toolkit</span><b>→</b></a>
+  </section>
+</main>
+
+<footer><strong>P2LRN</strong><span>Visor de paquetes canónicos</span><div><a href="/docs/">Documentación</a></div></footer>
+</body>
+</html>
