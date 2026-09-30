@@ -1,5 +1,5 @@
 import {execFile} from 'node:child_process';
-import {access, mkdir, readFile, rm, stat} from 'node:fs/promises';
+import {access, mkdir, readFile, rm, stat, writeFile} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {promisify} from 'node:util';
@@ -86,6 +86,8 @@ const documentReaderRoot = join(installRoot,'node_modules','@p2lrn','document-re
 for (const path of [
   join(toolkitRoot,'dist','cli','main.js'),
   join(toolkitRoot,'dist','tools','multipart.js'),
+  join(toolkitRoot,'dist','document-reader','index.js'),
+  join(toolkitRoot,'dist','cli','document-reader.js'),
   join(playerRoot,'dist','p2lrn.js'),
   join(playerRoot,'dist','p2lrn.esm.js'),
   join(playerRoot,'dist','runtime-host','h5p.html'),
@@ -123,6 +125,18 @@ await run(node, ['--check', join(playerRoot,'dist','p2lrn.js')]);
 await run(node, ['--check', join(playerRoot,'dist','runtime-host','h5p-host.js')]);
 await run(node, [join(toolkitRoot,'dist','cli','main.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','tools','multipart.js'),'--help']);
+await run(node, [join(toolkitRoot,'dist','cli','document-reader.js'),'--help']);
+
+const documentReaderSmoke = join(work,'reader-smoke.md');
+await writeFile(documentReaderSmoke, '# Reader npm smoke\n\nTexto desde tarball npm.\n');
+const readerOutput = await run(node, [join(toolkitRoot,'dist','cli','document-reader.js'), documentReaderSmoke, '--pretty']);
+const readerJson = JSON.parse(readerOutput);
+if (readerJson?.source?.detectedType !== 'MARKDOWN') {
+  throw new Error('Installed p2lrn-document-reader did not detect Markdown correctly.');
+}
+if (!Array.isArray(readerJson?.blocks) || !readerJson.blocks.some((block) => block?.text === 'Reader npm smoke')) {
+  throw new Error('Installed p2lrn-document-reader did not emit the expected Markdown title block.');
+}
 await run(node, [join(documentReaderRoot,'dist','cli.js')]).catch((error) => {
   const stderr = String(error?.stderr ?? '');
   if (!stderr.includes('Usage: p2lrn-document-reader')) throw error;
