@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="Del repositorio a un paquete reproducido en navegador, con una comprobación mínima de que el Player está funcionando.">
+  <title>Quickstart — P2LRN</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <script src="/p2lrn.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">P2LRN</a>
+    <nav class="nav" id="nav">
+      <a href="/docs/">Docs</a>
+      <a href="/docs/formato/">Formato</a>
+      <a href="/docs/player/">Player</a>
+      <a href="/docs/toolkit/">Toolkit</a>
+      <a href="/docs/integracion/">Integración</a>
+    </nav>
+    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
+    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
+  </header>
+
+  <main class="doc-main">
+    <aside class="doc-sidebar">
+  <span>START</span>
+  <a href="/docs/">Overview</a>
+  <a href="/docs/empezar/" aria-current="page">Quickstart</a>
+  <a href="/docs/conceptos/">Conceptos</a>
+
+  <span>BUILD</span>
+  <a href="/docs/formato/">Formato</a>
+  <a href="/docs/player/">Player</a>
+  <a href="/docs/toolkit/">Toolkit</a>
+
+  <span>INTEGRATE</span>
+  <a href="/docs/integracion/">Integración real</a>
+  <a href="/docs/compatibilidad/">Compatibilidad</a>
+
+  <span>REFERENCE</span>
+  <a href="/docs/referencia/">Referencia</a>
+  <a href="/docs/troubleshooting/">Troubleshooting</a>
+
+  <span>RESOURCES</span>
+  <a href="/index.json">Índice CDN ↗</a>
+  <a href="/health.json">Estado ↗</a></aside>
+    <article class="doc-content">
+      <header class="doc-hero">
+        <p class="eyebrow">START / 5 MIN</p>
+        <h1>Quickstart</h1>
+        <p>Del repositorio a un paquete reproducido en navegador, con una comprobación mínima de que el Player está funcionando.</p>
+      </header>
+      
+<section class="doc-section">
+  <h2>Qué vas a conseguir</h2>
+  <p>Al terminar tendrás un <code>.p2lrn</code> servido por HTTP, un <code>&lt;p2lrn-player&gt;</code> montado y dos listeners para saber si el runtime está listo o ha fallado.</p>
+</section>
+<section class="doc-section">
+  <h2>Prerrequisitos</h2>
+  <ul class="doc-list">
+    <li>Node.js 22 o superior si vas a usar npm/Toolkit.</li>
+    <li>Un paquete <code>.p2lrn</code> accesible mediante HTTP.</li>
+    <li>Un servidor web local o una aplicación que pueda servir HTML y el paquete.</li>
+  </ul>
+</section>
+<section class="doc-section">
+  <h2>1. Carga el Player</h2>
+  <div class="codebox"><div class="codebox-head"><span>HTML</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+
+&lt;p2lrn-player id="course" src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre></div>
+</section>
+<section class="doc-section">
+  <h2>2. Comprueba eventos</h2>
+  <div class="codebox"><div class="codebox-head"><span>JavaScript</span><button type="button" data-copy>Copiar</button></div><pre><code>const player = document.querySelector('#course');
+
+player.addEventListener('p2lrn:ready', () =&gt; {
+  console.log('P2LRN ready');
+});
+
+player.addEventListener('p2lrn:error', (event) =&gt; {
+  console.error(event.detail);
+});</code></pre></div>
+</section>
+<section class="doc-section">
+  <h2>3. Si el paquete está en otro dominio</h2>
+  <p>El servidor que entrega el <code>.p2lrn</code> debe permitir CORS para el origen de tu aplicación. Si usas media seekable o lecturas por rangos, el servidor también debe responder correctamente a las peticiones HTTP necesarias.</p>
+</section>
+<section class="doc-section">
+  <h2>Cómo comprobar que funciona</h2>
+  <ul class="check-list">
+    <li><span>READY</span>Se dispara <code>p2lrn:ready</code>.</li>
+    <li><span>NETWORK</span>El paquete responde 200/206 según el recurso solicitado.</li>
+    <li><span>NO ERROR</span>No aparece <code>p2lrn:error</code> en la integración mínima.</li>
+  </ul>
+</section>
+      <nav class="doc-pager">
+        <a class="prev" href="/docs/"><span>← Anterior</span><strong>Overview</strong></a>
+        <a class="next" href="/docs/conceptos/"><span>Siguiente →</span><strong>Conceptos</strong></a>
+      </nav>
+      
+<section class="doc-contact" id="contacto">
+  <h2>Contacto</h2>
+  <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
+  <form class="contact-form" data-contact-form>
+    <div class="form-grid">
+      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
+      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
+    </div>
+    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
+    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
+    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
+    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
+  </form>
+</section>
+    </article>
+  </main>
+
+  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
+</body>
+</html>
