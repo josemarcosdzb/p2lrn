@@ -4,10 +4,10 @@ import {basename, extname, join, resolve, sep} from 'node:path';
 
 const MAGIC = 0x50324835;
 const DEFAULT_MAX_FILES = 10000;
-const DEFAULT_MAX_BYTES = 512 * 1024 * 1024;
+const DEFAULT_MAX_BYTES = 256 * 1024 * 1024;
 const DEFAULT_TTL_MS = 60 * 60 * 1000;
-const DEFAULT_MAX_SESSIONS = 32;
-const DEFAULT_MAX_SESSION_BYTES_TOTAL = 1024 * 1024 * 1024;
+const DEFAULT_MAX_SESSIONS = 16;
+const DEFAULT_MAX_SESSION_BYTES_TOTAL = 512 * 1024 * 1024;
 
 function safePath(value) {
   const text = String(value ?? '').replace(/\\/g, '/');
