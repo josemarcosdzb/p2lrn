@@ -55,6 +55,9 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund --include=dev
           npm test
 
+      - name: Build Player runtime for security tests
+        run: node packages/player/scripts/build-dist.mjs
+
       - name: Verify runtime host security
         run: node --test packages/player/test/runtime-security.test.mjs
 
