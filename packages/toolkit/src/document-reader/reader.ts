@@ -10,13 +10,13 @@ export class LightweightDocumentReader {
   constructor(private readonly options:DocumentReaderOptions={}){}
 
   detect(input:DocumentReaderInput){
-    return detectDocumentType(input);
+    return detectDocumentType(input,this.options.limits);
   }
 
   async read(input:DocumentReaderInput):Promise<ExtractedDocument>{
     const limits=normalizeDocumentReaderLimits(this.options.limits);
     assertDocumentInput(input,limits);
-    const type=this.detect(input);
+    const type=detectDocumentType(input,limits);
     let result:ExtractedDocument;
     switch(type){
       case 'DOCX': result=extractDocx(input,limits); break;
