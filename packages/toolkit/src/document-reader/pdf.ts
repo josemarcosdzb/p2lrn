@@ -1,4 +1,4 @@
-import type {DocumentBlock,DocumentReaderInput,ExtractedDocument} from './types.js';
+import type {DocumentBlock,DocumentReaderInput,DocumentReaderLimits,ExtractedDocument} from './types.js';
 import {readerId} from './utils.js';
 
 type PdfTextItem={str?:string;transform?:number[];width?:number;height?:number;fontName?:string};
@@ -40,9 +40,13 @@ function groupLines(items:PdfTextItem[]):Array<{text:string;y:number;fontSize:nu
   }).filter(row=>row.text);
 }
 
-export async function extractPdfText(input:DocumentReaderInput):Promise<ExtractedDocument>{
+export async function extractPdfText(input:DocumentReaderInput,limits:DocumentReaderLimits):Promise<ExtractedDocument>{
   const pdfjs=await loadPdfJs();
   const document=await pdfjs.getDocument({data:new Uint8Array(input.data),disableWorker:true}).promise;
+  if(document.numPages>limits.maxPdfPages){
+    await document.destroy?.();
+    throw new Error(`PDF exceeds lightweight reader page limit (${document.numPages} > ${limits.maxPdfPages}).`);
+  }
   const blocks:DocumentBlock[]=[];
   let detectedTitle:string|undefined;
   let author:string|undefined;
