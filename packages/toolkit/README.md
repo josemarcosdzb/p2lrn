@@ -59,3 +59,37 @@ p2lrn-multipart course.p2lrn course-split.p2lrn --part-size 26214400
 ```
 
 This writes `course-split.p2lrn` plus adjacent `course-split.part001`, `course-split.part002`, etc. The Player resolves the parts relative to the outer package URL and verifies per-part and final SHA-256 digests before handing the logical payload to its normal renderer.
+
+
+## Lightweight document reader
+
+P2LRN includes an autonomous document reader adapted from the AulaP2P ingestion Reader, but it has **no runtime dependency on AulaP2P**.
+
+Import it with:
+
+```ts
+import {readDocument, readDocumentFile} from '@p2lrn/toolkit/document-reader';
+```
+
+or use:
+
+```bash
+p2lrn-document-reader document.docx
+```
+
+The lightweight Reader currently handles:
+
+- DOCX, preserving paragraph/table/image order and embedded images in memory;
+- PPTX, ordering text/tables/images by slide coordinates and keeping embedded images in memory;
+- TXT, Markdown, HTML, RTF, TeX, XML, YAML, JSON and CSV;
+- PDF native text through the optional `pdfjs-dist` peer dependency.
+
+It intentionally does **not** include OCR, Docling, NestJS, AulaP2P services, database storage or asset-upload services. Scanned PDFs that have no native text are reported as unsupported by this lightweight mode instead of silently invoking OCR.
+
+`pdfjs-dist` is optional. Install it only when native-text PDF reading is required:
+
+```bash
+npm install pdfjs-dist
+```
+
+The public document model is `p2lrn.document-reader.v1`; embedded images are returned as in-memory `Uint8Array` assets rather than database/file-service references.
