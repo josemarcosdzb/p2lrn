@@ -7,6 +7,7 @@ import {promisify} from 'node:util';
 
 const execFileAsync = promisify(execFile);
 export const LUMI_H5P_LIBRARY_COMMIT = '236912f8e3c07a6b5c7ece4930b98fec2b6d3f6a';
+export const LUMI_H5P_ARCHIVE_SHA256 = '388ca78e78cf26fe428a973f008a2a4583052e3732cc5c92ae990e4edf57f9b5';
 export const EXPECTED_LIBRARY_COUNT = 144;
 const REQUIRED = [
   'H5P.Crossword-0.5',
@@ -44,7 +45,12 @@ export async function buildH5pLibraries({output = join(packageRoot, 'dist')} = {
   const url = `https://codeload.github.com/Lumieducation/Lumi/tar.gz/${LUMI_H5P_LIBRARY_COMMIT}`;
   const response = await fetch(url, {redirect:'follow'});
   if (!response.ok) throw new Error(`Unable to download pinned H5P corpus: HTTP ${response.status}`);
-  await writeFile(archive, new Uint8Array(await response.arrayBuffer()));
+  const archiveBytes = new Uint8Array(await response.arrayBuffer());
+  const actualArchiveSha256 = sha256(archiveBytes);
+  if (actualArchiveSha256 !== LUMI_H5P_ARCHIVE_SHA256) {
+    throw new Error(`Pinned Lumi archive SHA-256 mismatch: expected ${LUMI_H5P_ARCHIVE_SHA256}, got ${actualArchiveSha256}`);
+  }
+  await writeFile(archive, archiveBytes);
   await execFileAsync('tar', ['-xzf', archive, '-C', work], {maxBuffer:8*1024*1024});
 
   const extracted = (await readdir(work, {withFileTypes:true}))
