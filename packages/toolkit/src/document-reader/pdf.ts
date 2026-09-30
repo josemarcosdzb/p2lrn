@@ -48,6 +48,7 @@ export async function extractPdfText(input:DocumentReaderInput,limits:DocumentRe
     throw new Error(`PDF exceeds lightweight reader page limit (${document.numPages} > ${limits.maxPdfPages}).`);
   }
   const blocks:DocumentBlock[]=[];
+  let totalTextItems=0;
   let detectedTitle:string|undefined;
   let author:string|undefined;
   try{
@@ -60,7 +61,13 @@ export async function extractPdfText(input:DocumentReaderInput,limits:DocumentRe
   for(let pageNumber=1;pageNumber<=document.numPages;pageNumber++){
     const page=await document.getPage(pageNumber);
     const content=await page.getTextContent();
-    const rows=groupLines(content.items as PdfTextItem[]);
+    const items=content.items as PdfTextItem[];
+    totalTextItems+=items.length;
+    if(totalTextItems>limits.maxPdfTextItems){
+      await document.destroy?.();
+      throw new Error(`PDF exceeds lightweight reader text-item limit (${totalTextItems} > ${limits.maxPdfTextItems}).`);
+    }
+    const rows=groupLines(items);
     const maxFont=Math.max(0,...rows.map(row=>row.fontSize));
     for(const row of rows){
       const title=(row.bold&&row.fontSize>=Math.max(12,maxFont*0.85))||row.fontSize>=15;
