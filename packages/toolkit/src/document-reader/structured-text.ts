@@ -1,6 +1,7 @@
 import path from 'node:path';
 import {ZipArchive} from '../core/zip.js';
-import type {DocumentBlock,DocumentReaderFileType,DocumentReaderInput,DocumentReaderStrategy,ExtractedDocument} from './types.js';
+import {decodeTextInput,documentZipLimits,readArchiveText} from './limits.js';
+import type {DocumentBlock,DocumentReaderFileType,DocumentReaderInput,DocumentReaderLimits,DocumentReaderStrategy,ExtractedDocument} from './types.js';
 import {cleanText,decodeXml,readerId,xmlAttributes} from './utils.js';
 
 function lines(value:string):string[]{
@@ -81,12 +82,12 @@ function basicBlocks(text:string,type:DocumentReaderFileType):DocumentBlock[]{
   });
 }
 
-function epubDocuments(archive:ZipArchive):string[]{
+function epubDocuments(archive:ZipArchive,limits:DocumentReaderLimits):string[]{
   const names=archive.names();
   const opfName=names.find(name=>/\.opf$/i.test(name));
   if(opfName){
     const base=path.posix.dirname(opfName);
-    const opf=new TextDecoder().decode(archive.read(opfName));
+    const opf=readArchiveText(archive,opfName,limits,'EPUB package document');
     const manifest=new Map<string,{href:string;properties:string;mediaType:string}>();
     for(const match of opf.matchAll(/<item\b[^>]*>/gi)){
       const a=xmlAttributes(match[0]);
@@ -102,14 +103,19 @@ function epubDocuments(archive:ZipArchive):string[]{
       const resolved=path.posix.normalize(path.posix.join(base,item.href)).replace(/^\/+/, '');
       if(archive.entries.has(resolved)&&!ordered.includes(resolved)) ordered.push(resolved);
     }
-    if(ordered.length) return ordered;
+    if(ordered.length){
+      if(ordered.length>limits.maxEpubDocuments) throw new Error(`EPUB exceeds lightweight reader document limit (${ordered.length} > ${limits.maxEpubDocuments}).`);
+      return ordered;
+    }
   }
-  return names.filter(name=>/\.(?:xhtml|html|htm)$/i.test(name)&&!/(^|\/)(?:nav|toc|landmarks|cover|title_page)\.(?:xhtml|html|htm)$/i.test(name))
+  const fallback=names.filter(name=>/\.(?:xhtml|html|htm)$/i.test(name)&&!/(^|\/)(?:nav|toc|landmarks|cover|title_page)\.(?:xhtml|html|htm)$/i.test(name))
     .sort((a,b)=>a.localeCompare(b,'en',{numeric:true,sensitivity:'base'}));
+  if(fallback.length>limits.maxEpubDocuments) throw new Error(`EPUB exceeds lightweight reader document limit (${fallback.length} > ${limits.maxEpubDocuments}).`);
+  return fallback;
 }
 
-function extractText(input:DocumentReaderInput,type:DocumentReaderFileType):{text:string;strategy:DocumentReaderStrategy}{
-  const text=new TextDecoder('utf-8',{fatal:false}).decode(input.data);
+function extractText(input:DocumentReaderInput,type:DocumentReaderFileType,limits:DocumentReaderLimits):{text:string;strategy:DocumentReaderStrategy}{
+  const text=decodeTextInput(input,limits,type);
   switch(type){
     case 'TXT': return {text,strategy:'TXT_LINES'};
     case 'MARKDOWN': return {text,strategy:'MARKDOWN_LINES'};
@@ -119,22 +125,22 @@ function extractText(input:DocumentReaderInput,type:DocumentReaderFileType):{tex
     case 'XML': return {text:xmlToText(text),strategy:'XML_TEXT'};
     case 'YAML': return {text:yamlText(text),strategy:'YAML_TEXT'};
     case 'ODT': {
-      const archive=ZipArchive.open(input.data);
+      const archive=ZipArchive.open(input.data,documentZipLimits(limits));
       if(!archive.entries.has('content.xml')) throw new Error('ODT does not contain content.xml.');
-      return {text:xmlToText(new TextDecoder().decode(archive.read('content.xml'))),strategy:'ODT_XML'};
+      return {text:xmlToText(readArchiveText(archive,'content.xml',limits,'ODT content.xml')),strategy:'ODT_XML'};
     }
     case 'EPUB': {
       const archive=ZipArchive.open(input.data);
-      const docs=epubDocuments(archive);
+      const docs=epubDocuments(archive,limits);
       if(!docs.length) throw new Error('EPUB contains no readable XHTML/HTML documents.');
-      return {text:docs.map(name=>htmlText(new TextDecoder().decode(archive.read(name)))).join('\n'),strategy:'EPUB_XHTML'};
+      return {text:docs.map(name=>htmlText(readArchiveText(archive,name,limits,`EPUB ${name}`))).join('\n'),strategy:'EPUB_XHTML'};
     }
     default: throw new Error(`Structured text extractor does not support ${type}.`);
   }
 }
 
-export function extractStructuredText(input:DocumentReaderInput,type:Exclude<DocumentReaderFileType,'PDF'|'DOCX'|'PPTX'>):ExtractedDocument{
-  const extracted=extractText(input,type);
+export function extractStructuredText(input:DocumentReaderInput,type:Exclude<DocumentReaderFileType,'PDF'|'DOCX'|'PPTX'>,limits:DocumentReaderLimits):ExtractedDocument{
+  const extracted=extractText(input,type,limits);
   const blocks=type==='MARKDOWN'?markdownBlocks(extracted.text,type):basicBlocks(extracted.text,type);
   if(!blocks.length) throw new Error(`${type} contains no readable text.`);
   return {
