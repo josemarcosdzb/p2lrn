@@ -614,6 +614,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const entrypoint = requested ? {id: requested} : (pkg.manifest.entrypoints.find((item) => item.role === 'primary') ?? pkg.manifest.entrypoints[0]);
     const root = pkg.entities.get(entrypoint.id);
     if (!root) throw new Error(`No existe el nodo solicitado: ${entrypoint.id}`);
+    await this.#prepareProgression(root);
 
     const shell = this.#base();
     const head = document.createElement('div'); head.className = 'p2lrn-head';
@@ -628,6 +629,10 @@ export class P2LRNPlayerElement extends HTMLElementBase {
 
     if (root.type === 'activity' || root.type === 'resource') {
       const stage = document.createElement('main'); stage.className = 'p2lrn-stage'; shell.append(stage);
+      if (root.type === 'activity' && this._progressionModel?.isLocked(root.id, this._progressionState)) {
+        this.#stageMessage(stage, this.#progressionLockMessage(root.id));
+        return;
+      }
       await this.#renderEntity(root, stage);
       return;
     }
@@ -644,9 +649,15 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       if (entity.type === 'activity') activities.push(entity);
       if (entity.type !== 'course') {
         const button = document.createElement('button');
-        button.type = 'button'; button.className = `depth-${Math.min(depth, 3)}`; button.textContent = titleOf(entity);
+        const baseTitle = titleOf(entity);
+        button.type = 'button'; button.className = `depth-${Math.min(depth, 3)}`; button.textContent = baseTitle;
         button.disabled = entity.type !== 'activity';
+        this._progressionButtons.set(entity.id, {button, entity, baseTitle});
         if (entity.type === 'activity') button.addEventListener('click', async () => {
+          if (this._progressionModel?.isLocked(entity.id, this._progressionState)) {
+            this.#stageMessage(stage, this.#progressionLockMessage(entity.id));
+            return;
+          }
           nav.querySelectorAll('[aria-current="true"]').forEach((item) => item.removeAttribute('aria-current'));
           button.setAttribute('aria-current', 'true');
           await this.#renderEntity(entity, stage);
@@ -658,10 +669,15 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       }
     };
     walk(root, 0);
+    this.#refreshProgressionNav();
     if (activities.length) {
-      const firstButton = [...nav.querySelectorAll('button')].find((button) => !button.disabled);
-      firstButton?.setAttribute('aria-current', 'true');
-      await this.#renderEntity(activities[0], stage);
+      const firstActivity = activities.find((activity) => !this._progressionModel?.isLocked(activity.id, this._progressionState));
+      if (firstActivity) {
+        this._progressionButtons.get(firstActivity.id)?.button?.setAttribute('aria-current', 'true');
+        await this.#renderEntity(firstActivity, stage);
+      } else {
+        this.#stageMessage(stage, this.#progressionLockMessage(activities[0].id));
+      }
     } else {
       const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = 'Este nodo no contiene actividades reproducibles.'; stage.append(message);
     }
@@ -670,6 +686,10 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   async #renderEntity(entity, stage, {requestedRenderer = undefined} = {}) {
     this.#cleanupRuntime(stage);
     stage.replaceChildren();
+    if (entity?.type === 'activity' && this._progressionModel?.isLocked(entity.id, this._progressionState)) {
+      this.#stageMessage(stage, this.#progressionLockMessage(entity.id));
+      return null;
+    }
     let resource = entity;
     if (entity.type === 'activity') {
       if (!entity.resource) { this.#stageMessage(stage, 'La actividad no tiene un recurso directo.'); return null; }
