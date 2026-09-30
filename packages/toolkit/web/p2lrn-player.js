@@ -28,6 +28,13 @@ export const DEFAULT_LIMITS = Object.freeze({
   compressionRatio: 250,
 });
 const ROLE_SCORE = {primary: 40, rendered: 35, accessible: 34, fallback: 20, source: 10, 'original-package': 5};
+const MAX_MANIFEST_BYTES = 8 * 1024 * 1024;
+const MAX_GRAPH_BYTES = 32 * 1024 * 1024;
+const MAX_ENTRYPOINTS = 1024;
+const MAX_PROFILES = 256;
+const MAX_MANIFEST_FILES = 5000;
+const MAX_GRAPH_ENTITIES = 50000;
+const MAX_GRAPH_RELATIONS = 100000;
 const textDecoder = new TextDecoder('utf-8', {fatal: true});
 const textEncoder = new TextEncoder();
 
@@ -104,12 +111,17 @@ function ensureManifestShape(manifest) {
   if (!['P2LRN', 'P2RLN'].includes(manifest.format) || manifest.formatVersion !== '0.4.0') throw new Error('Only P2LRN Core 0.4.0 packages (including legacy P2RLN Alpha15) are supported by this player.');
   if (manifest.graph?.path !== 'content/graph.json') throw new Error('Core 0.4.0 requires content/graph.json.');
   if (!Array.isArray(manifest.entrypoints) || manifest.entrypoints.length < 1) throw new Error('Manifest has no entrypoint.');
+  if (manifest.entrypoints.length > MAX_ENTRYPOINTS) throw new Error(`Manifest has too many entrypoints (${manifest.entrypoints.length} > ${MAX_ENTRYPOINTS}).`);
   if (!Array.isArray(manifest.profiles) || !Array.isArray(manifest.files)) throw new Error('Manifest profile/file inventory is invalid.');
+  if (manifest.profiles.length > MAX_PROFILES) throw new Error(`Manifest has too many profiles (${manifest.profiles.length} > ${MAX_PROFILES}).`);
+  if (manifest.files.length > MAX_MANIFEST_FILES) throw new Error(`Manifest has too many files (${manifest.files.length} > ${MAX_MANIFEST_FILES}).`);
   if (!manifest.integrity?.contentRoot?.startsWith('sha256:')) throw new Error('Manifest has no valid contentRoot.');
 }
 
 function ensureGraphShape(graph, manifest) {
   if (!graph || graph.graphVersion !== '0.4.0' || !Array.isArray(graph.entities) || !Array.isArray(graph.relations)) throw new Error('Invalid P2LRN graph structure.');
+  if (graph.entities.length > MAX_GRAPH_ENTITIES) throw new Error(`P2LRN graph has too many entities (${graph.entities.length} > ${MAX_GRAPH_ENTITIES}).`);
+  if (graph.relations.length > MAX_GRAPH_RELATIONS) throw new Error(`P2LRN graph has too many relations (${graph.relations.length} > ${MAX_GRAPH_RELATIONS}).`);
   const ids = new Map();
   for (const entity of graph.entities) {
     if (!entity?.id || !entity?.type || ids.has(entity.id)) throw new Error(`Invalid or duplicate graph entity id: ${entity?.id}`);
@@ -181,6 +193,8 @@ function isCanonicalJson(mediaType) {
 
 async function openP2LRNArchive(rawZip, {eagerPayloadVerification = false, sourceUrl = null} = {}) {
   if (!rawZip.entries.has('META-INF/manifest.json')) throw new Error('P2LRN manifest is missing.');
+  const manifestEntry = rawZip.entries.get('META-INF/manifest.json');
+  if (manifestEntry.uncompressedSize > MAX_MANIFEST_BYTES) throw new Error(`P2LRN manifest exceeds safety limit (${manifestEntry.uncompressedSize} > ${MAX_MANIFEST_BYTES} bytes).`);
   const manifestBytes = await rawZip.read('META-INF/manifest.json');
   const manifest = decodeJson(manifestBytes, 'manifest');
   ensureManifestShape(manifest);
@@ -214,7 +228,9 @@ async function openP2LRNArchive(rawZip, {eagerPayloadVerification = false, sourc
     return bytes;
   };
 
+  if (Number(manifest.graph?.size) > MAX_GRAPH_BYTES) throw new Error(`P2LRN graph exceeds safety limit (${manifest.graph.size} > ${MAX_GRAPH_BYTES} bytes).`);
   const graphBytes = await readVerified(manifest.graph.path);
+  if (graphBytes.byteLength > MAX_GRAPH_BYTES) throw new Error(`P2LRN graph exceeds safety limit (${graphBytes.byteLength} > ${MAX_GRAPH_BYTES} bytes).`);
   const graph = canonicalizeIdentifiers(decodeJson(graphBytes, 'graph'));
   const entities = ensureGraphShape(graph, manifest);
   const declaredProfiles = new Set(manifest.profiles.map((profile) => canonicalIdentifier(profile.id)));
