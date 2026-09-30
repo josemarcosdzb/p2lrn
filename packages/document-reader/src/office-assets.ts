@@ -74,7 +74,10 @@ export function docxAssets(entries:Map<string,Buffer>,options:ReaderOptions={}):
   const documentXml=entries.get('word/document.xml')?.toString('utf8')??'';
   const rels=relationMap(entries.get('word/_rels/document.xml.rels')?.toString('utf8')??'','word/document.xml','word');
   const out:ExtractedAsset[]=[];
-  const paragraphs=documentXml.match(/<w:p\b[\s\S]*?<\/w:p>/giu)??[];
+  const body=/<w:body\b[^>]*>([\s\S]*?)<\/w:body>/iu.exec(documentXml)?.[1]??documentXml;
+  const paragraphs=[...body.matchAll(/<w:(p|tbl)\b[\s\S]*?<\/w:\1>/giu)]
+    .filter(match=>(match[1]??'').toLowerCase()==='p')
+    .map(match=>match[0]);
   paragraphs.forEach((paragraph,paragraphIndex)=>{
     const runs=paragraph.match(/<w:r\b[\s\S]*?<\/w:r>/giu)??[paragraph];
     runs.forEach((run,runIndex)=>{
