@@ -20,6 +20,34 @@ async function assertFile(path) {
   const info = await stat(path);
   if (!info.isFile() || info.size < 1) throw new Error(`Expected non-empty file: ${path}`);
 }
+
+const FORBIDDEN_INSTALL_SCRIPTS = ['preinstall','install','postinstall'];
+const SENSITIVE_TARBALL_PATH = /(^|\/)(?:\.env(?:\.|$)|\.npmrc$|\.git(?:\/|$)|node_modules(?:\/|$)|id_rsa$|id_ed25519$|[^/]+\.(?:pem|p12|pfx|key|crt))$/iu;
+
+function assertManifestInstallSafety(pkg, label) {
+  for (const name of FORBIDDEN_INSTALL_SCRIPTS) {
+    if (pkg.scripts?.[name]) throw new Error(`${label} must not execute ${name} during consumer installation.`);
+  }
+  for (const [group, entries] of Object.entries({
+    dependencies:pkg.dependencies ?? {},
+    optionalDependencies:pkg.optionalDependencies ?? {},
+  })) {
+    for (const [name, spec] of Object.entries(entries)) {
+      const value=String(spec);
+      if (/^(?:https?:|git(?:\+|:)|file:|link:|github:|\*|latest$)/iu.test(value)) {
+        throw new Error(`${label} has unsafe/unpinned ${group} entry ${name}=${value}`);
+      }
+    }
+  }
+}
+
+function assertPackedFileSafety(packResult, label) {
+  for (const file of packResult.files ?? []) {
+    const path=String(file.path ?? '').replaceAll('\\','/');
+    if (SENSITIVE_TARBALL_PATH.test(path)) throw new Error(`${label} tarball contains sensitive path: ${path}`);
+  }
+}
+
 async function pack(directory) {
   const {stdout} = await execFileAsync(
     npm,
@@ -32,6 +60,7 @@ async function pack(directory) {
   if (!Array.isArray(parsed) || parsed.length !== 1 || !parsed[0]?.filename) {
     throw new Error(`Unexpected npm pack output for ${directory}`);
   }
+  assertPackedFileSafety(parsed[0], directory);
   return join(packs, parsed[0].filename);
 }
 async function run(command, args, options = {}) {
@@ -62,6 +91,9 @@ const h5pPackage = JSON.parse(await readFile(join(root,'packages/h5p-libraries/p
 if (toolkitPackage.version !== playerPackage.version || h5pPackage.version !== playerPackage.version) {
   throw new Error(`npm package versions differ: player=${playerPackage.version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}`);
 }
+assertManifestInstallSafety(toolkitPackage,'@p2lrn/toolkit');
+assertManifestInstallSafety(playerPackage,'@p2lrn/player');
+assertManifestInstallSafety(h5pPackage,'@p2lrn/h5p-libraries');
 
 await runNpm(['install','--ignore-scripts','--no-audit','--no-fund'], {cwd:join(root,'packages/toolkit')});
 
@@ -74,6 +106,7 @@ await runNpm(
   ['install','--ignore-scripts','--no-audit','--no-fund', toolkitTgz, h5pTgz, playerTgz],
   {cwd:installRoot},
 );
+await runNpm(['audit','--omit=dev','--audit-level=high'], {cwd:installRoot});
 
 const toolkitRoot = join(installRoot,'node_modules','@p2lrn','toolkit');
 const playerRoot = join(installRoot,'node_modules','@p2lrn','player');
