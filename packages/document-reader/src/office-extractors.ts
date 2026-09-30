@@ -169,8 +169,17 @@ function pptxElementPosition(fragment:string){
   const off=/<a:off\b([^>]*)\/>/iu.exec(xfrm)?.[1]??'';
   const ext=/<a:ext\b([^>]*)\/>/iu.exec(xfrm)?.[1]??'';
   const num=(attrs:string,name:string)=>{
-    const raw=new RegExp("(?:^|\\\\s)"+name+"=[\\\"'](-?\\\\d+(?:\\\\.\\\\d+)?)[\\\"']","iu").exec(attrs)?.[1];
-    const n=raw===undefined?NaN:Number(raw);return Number.isFinite(n)?n:undefined;
+    for(const quote of ['"', "'"]){
+      const marker=name+'='+quote;
+      const start=attrs.indexOf(marker);
+      if(start<0)continue;
+      const from=start+marker.length;
+      const to=attrs.indexOf(quote,from);
+      if(to<0)continue;
+      const n=Number(attrs.slice(from,to));
+      if(Number.isFinite(n))return n;
+    }
+    return undefined;
   };
   return {x:emuPx(num(off,'x')),y:emuPx(num(off,'y')),width:emuPx(num(ext,'cx')),height:emuPx(num(ext,'cy'))};
 }
