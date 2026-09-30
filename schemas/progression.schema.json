@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/schema/progression/1",
+  "title": "P2LRN Progression Extension",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "required": {"type": "boolean"},
+    "gateFollowing": {"type": "boolean"},
+    "completionRequirement": {"enum": ["viewed", "completed", "passed"]},
+    "minScore": {"type": "number", "minimum": 0, "maximum": 100},
+    "unlockWhen": {
+      "type": "object",
+      "additionalProperties": false,
+      "oneOf": [
+        {"required": ["all"], "not": {"required": ["any"]}},
+        {"required": ["any"], "not": {"required": ["all"]}}
+      ],
+      "properties": {
+        "all": {"$ref": "#/$defs/conditions"},
+        "any": {"$ref": "#/$defs/conditions"}
+      }
+    }
+  },
+  "$defs": {
+    "conditions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entity"],
+        "properties": {
+          "entity": {"type": "string", "format": "uri"},
+          "status": {"enum": ["viewed", "completed", "passed"]},
+          "minScore": {"type": "number", "minimum": 0, "maximum": 100}
+        }
+      }
+    }
+  }
+}
