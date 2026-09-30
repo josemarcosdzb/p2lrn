@@ -1,102 +1,26 @@
 <!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="Recorrido completo desde entender P2LRN hasta reproducir, editar e integrar un paquete real.">
-  <title>P2LRN Documentation — P2LRN</title>
-  <link rel="stylesheet" href="/p2lrn.css">
-  <script src="/p2lrn.js" defer></script>
-</head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="/">P2LRN</a>
-    <nav class="nav" id="nav">
-      <a href="/docs/">Docs</a>
-      <a href="/docs/formato/">Formato</a>
-      <a href="/docs/player/">Player</a>
-      <a href="/docs/toolkit/">Toolkit</a>
-      <a href="/docs/integracion/">Integración</a>
-    </nav>
-    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
-    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
-  </header>
-
-  <main class="doc-main">
-    <aside class="doc-sidebar">
-  <span>START</span>
-  <a href="/docs/" aria-current="page">Overview</a>
-  <a href="/docs/empezar/">Quickstart</a>
-  <a href="/docs/conceptos/">Conceptos</a>
-
-  <span>BUILD</span>
-  <a href="/docs/formato/">Formato</a>
-  <a href="/docs/paquetes/">Crear paquetes</a>
-  <a href="/docs/paquetes/multipart/">Multipart / paquetes grandes</a>
-  <a href="/docs/player/">Player</a>
-  <a href="/docs/toolkit/">Toolkit</a>
-
-  <span>INTEGRATE</span>
-  <a href="/docs/integracion/">Integración real</a>
-  <a href="/docs/compatibilidad/">Compatibilidad</a>
-
-  <span>REFERENCE</span>
-  <a href="/docs/referencia/">Referencia</a>
-  <a href="/docs/troubleshooting/">Troubleshooting</a>
-
-  <span>RESOURCES</span>
-  <a href="/demo/">Visor real ↗</a>
-  <a href="/index.json">Índice CDN ↗</a>
-  <a href="/health.json">Estado ↗</a></aside>
-    <article class="doc-content">
-      <header class="doc-hero">
-        <p class="eyebrow">START HERE</p>
-        <h1>P2LRN Documentation</h1>
-        <p>Recorrido completo desde entender P2LRN hasta reproducir, editar e integrar un paquete real.</p>
-      </header>
-      
-<section class="doc-section">
-  <h2>Elige por objetivo</h2>
-  <div class="docs-path-grid">
-    <a href="/docs/empezar/"><span>01</span><h3>Ejecutar mi primer curso</h3><p>Sirve un paquete, monta el Player y comprueba sus primeros eventos.</p></a>
-    <a href="/docs/paquetes/"><span>02</span><h3>Crear o editar un paquete</h3><p>Construye un curso real desde un workspace y valida el resultado.</p></a>
-    <a href="/docs/paquetes/multipart/"><span>03</span><h3>Dividir un paquete grande</h3><p>Separa vídeos, ZIP u otros payloads grandes en partes verificadas.</p></a>
-    <a href="/docs/integracion/"><span>04</span><h3>Integrarlo en mi plataforma</h3><p>Conecta Player, Host Adapter, progreso, CORS y runtimes externos.</p></a>
-    <a href="/demo/"><span>05</span><h3>Probar el visor real</h3><p>Abre paquetes canónicos con el Player publicado y observa el runtime.</p></a>
-  </div>
-</section>
-<section class="doc-section">
-  <h2>Mapa de responsabilidades</h2>
-  <div class="responsibility-grid">
-    <div><strong>PACKAGE</strong><p>Estructura, contenido, manifiestos, perfiles y recursos portables.</p></div>
-    <div><strong>PLAYER</strong><p>Lectura, renderizado, eventos y runtimes aislados del navegador.</p></div>
-    <div><strong>TOOLKIT</strong><p>Autoría, Reader, validación, conversión, repack y herramientas CLI.</p></div>
-    <div><strong>HOST</strong><p>Usuarios, permisos, matrícula, progreso durable, secretos y telemetría.</p></div>
-  </div>
-</section>
-      <nav class="doc-pager">
-        <span></span>
-        <a class="next" href="/docs/empezar/"><span>Siguiente →</span><strong>Quickstart</strong></a>
-      </nav>
-      
-<section class="doc-contact" id="contacto">
-  <h2>Contacto</h2>
-  
-  <form class="contact-form" data-contact-form>
-    <div class="form-grid">
-      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
-      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
-    </div>
-    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
-    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
-    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
-    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
-  </form>
-</section>
-    </article>
-  </main>
-
-  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
-</body>
-</html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Documentación técnica P2LRN: crear, validar, reproducir e integrar paquetes reales."><title>P2LRN Documentation — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/" aria-current="page">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar">
+<span>START</span><a href="/docs/" aria-current="page">Overview</a><a href="/docs/empezar/">Quickstart</a><a href="/docs/que-usar/">¿Qué uso?</a><a href="/docs/conceptos/">Conceptos</a>
+<span>BUILD</span><a href="/docs/formato/">Formato</a><a href="/docs/paquetes/">Crear paquetes</a><a href="/docs/progresion/">Progresión</a><a href="/docs/paquetes/multipart/">Multipart</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a>
+<span>INTEGRATE</span><a href="/docs/integracion/">Integración real</a><a href="/docs/eventos/">Eventos</a><a href="/docs/compatibilidad/">Compatibilidad</a>
+<span>REFERENCE</span><a href="/docs/recetas/">Recipes</a><a href="/docs/glosario/">Glosario</a><a href="/docs/referencia/">Referencia</a><a href="/docs/troubleshooting/">Troubleshooting</a>
+<span>RESOURCES</span><a href="/demo/">Visor real ↗</a><a href="/index.json">Índice CDN ↗</a><a href="/health.json">Build status ↗</a></aside>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">START HERE</p><h1>P2LRN Documentation</h1><p>Guía de desarrollador para crear un paquete real, entender su estructura, dividir payloads grandes, reproducirlo con el Player e integrarlo con una aplicación host.</p></header>
+<section class="doc-section"><h2>Empieza por tu objetivo</h2><div class="docs-path-grid">
+<a href="/docs/empezar/"><span>01</span><h3>Primer curso en 5 minutos</h3><p>Crea un paquete desde cero, valida, sirve por HTTP y comprueba <code>ready</code> y <code>rendered</code>.</p></a>
+<a href="/docs/que-usar/"><span>02</span><h3>Elegir la pieza correcta</h3><p>Player, Toolkit, Reader, Host Adapter, Multipart o Visor según lo que necesitas.</p></a>
+<a href="/docs/paquetes/"><span>03</span><h3>Crear o editar</h3><p>Workspace editable, recursos, cuestionarios, componentes, build e inspección.</p></a>
+<a href="/docs/progresion/"><span>04</span><h3>Definir progresión</h3><p>Obligatoriedad, bloqueos, requisitos, puntuación y prerrequisitos reales.</p></a>
+<a href="/docs/paquetes/multipart/"><span>05</span><h3>Trabajar con cursos grandes</h3><p>Descriptor, partes, SHA-256, publicación y reconstrucción.</p></a>
+<a href="/docs/integracion/"><span>06</span><h3>Integrar con tu plataforma</h3><p>Host Adapter, estado, recursos verificados, CORS y runtimes.</p></a>
+<a href="/docs/eventos/"><span>07</span><h3>Escuchar eventos</h3><p>Contrato actual del Player y nombres reales del runtime.</p></a>
+<a href="/demo/"><span>08</span><h3>Probar el visor real</h3><p>Abre paquetes canónicos y observa metadata, renderer y eventos.</p></a>
+</div></section>
+<section class="doc-section"><h2>Mapa de responsabilidades</h2><div class="responsibility-grid"><div><strong>PACKAGE</strong><p>Estructura, contenido, manifiesto, perfiles y recursos portables.</p></div><div><strong>PLAYER</strong><p>Lectura, integridad, renderizado, progresión y eventos.</p></div><div><strong>TOOLKIT</strong><p>Autoría, Reader, validación, conversión, multipart, delta y trust.</p></div><div><strong>HOST</strong><p>Usuarios, autorización, matrícula, persistencia durable, secretos y telemetría.</p></div></div></section>
+<section class="doc-section"><h2>Ruta recomendada</h2><ol class="learning-path"><li><strong>1. Quickstart.</strong><span>Comprueba el flujo mínimo de principio a fin.</span></li><li><strong>2. Formato.</strong><span>Entiende manifest, graph, perfiles y representaciones.</span></li><li><strong>3. Autoría.</strong><span>Construye un curso desde un workspace editable.</span></li><li><strong>4. Player.</strong><span>Reproduce el artefacto y observa los eventos.</span></li><li><strong>5. Integración.</strong><span>Conecta estado y recursos con tu Host.</span></li><li><strong>6. Referencia.</strong><span>Consulta firmas exactas, CLI y contratos.</span></li></ol></section>
+<section class="doc-section"><div class="doc-callout"><strong>Estado del proyecto: alpha</strong><p>La documentación evita presentar preservación, lectura, autoría y ejecución como equivalentes. Consulta <a href="/docs/compatibilidad/">Compatibilidad</a> para ver las capacidades declaradas por el registro actual.</p></div></section>
+<nav class="doc-pager"><span></span><a class="next" href="/docs/empezar/"><span>Siguiente →</span><strong>Quickstart</strong></a></nav>
+<section class="doc-contact compact-contact"><h2>¿Necesitas ayuda con una integración?</h2><p>El formulario completo está separado de los artículos técnicos para no repetirlo en cada página.</p><a class="button" href="/contacto/">Contactar</a></section>
+</article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
