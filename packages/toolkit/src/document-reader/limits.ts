@@ -16,6 +16,7 @@ export const DEFAULT_DOCUMENT_READER_LIMITS:DocumentReaderLimits=Object.freeze({
   maxSlides:2000,
   maxEpubDocuments:2000,
   maxPdfPages:2000,
+  maxPdfTextItems:1000000,
   maxBlocks:200000,
   maxTables:20000,
 });
@@ -40,6 +41,7 @@ export function normalizeDocumentReaderLimits(overrides:Partial<DocumentReaderLi
     maxSlides:positiveSafe(source.maxSlides,'document reader maxSlides'),
     maxEpubDocuments:positiveSafe(source.maxEpubDocuments,'document reader maxEpubDocuments'),
     maxPdfPages:positiveSafe(source.maxPdfPages,'document reader maxPdfPages'),
+    maxPdfTextItems:positiveSafe(source.maxPdfTextItems,'document reader maxPdfTextItems'),
     maxBlocks:positiveSafe(source.maxBlocks,'document reader maxBlocks'),
     maxTables:positiveSafe(source.maxTables,'document reader maxTables'),
   });
