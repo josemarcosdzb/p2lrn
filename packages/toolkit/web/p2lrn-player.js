@@ -460,6 +460,104 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
+  async #prepareProgression(root) {
+    const enabled = progressionEnabled(this._package?.manifest);
+    this._progressionEnabled = enabled;
+    this._progressionButtons.clear();
+    if (!enabled) {
+      this._progressionState = normalizeProgressionState(null);
+      this._progressionModel = null;
+      this._progressionRootId = null;
+      this._progressionContextValue = null;
+      this._progressionLoadedKey = null;
+      return;
+    }
+    this._progressionRootId = root.id;
+    this._progressionModel = createProgressionModel(root.id, this._package.entities);
+    this._progressionContextValue = progressionContext(this._package, root.id);
+    const key = `${this._package.manifest.integrity.contentRoot}|${root.id}`;
+    if (this._progressionLoadedKey === key) return;
+    this._progressionLoadedKey = key;
+    this._progressionState = normalizeProgressionState(null);
+    if (this._adapter?.loadState) {
+      try {
+        const stored = await this._adapter.loadState(this._progressionContextValue);
+        this._progressionState = normalizeProgressionState(stored);
+      } catch (error) {
+        dispatchRuntimeEvent(this, 'p2lrn:error', {
+          phase:'progression-load',
+          error:String(error?.message ?? error),
+        }, this._progressionContextValue, {adapter:this._adapter});
+      }
+    }
+  }
+
+  #progressionRequirementText(status, minScore = null) {
+    if (status === 'viewed') return 'ver';
+    if (status === 'passed') return minScore == null ? 'aprobar' : `aprobar con al menos un ${minScore}%`;
+    return minScore == null ? 'completar' : `completar con al menos un ${minScore}%`;
+  }
+
+  #progressionLockMessage(entityId) {
+    const reasons = this._progressionModel?.lockReasons(entityId, this._progressionState) ?? [];
+    const reason = reasons[0];
+    if (!reason) return 'Este contenido está bloqueado por una regla de progresión.';
+    if (reason.kind === 'gateFollowing') {
+      const source = this._package.entities.get(reason.entityId);
+      const title = source ? titleOf(source) : reason.entityId;
+      return `Debes ${this.#progressionRequirementText(reason.status, reason.minScore)} “${title}” antes de continuar.`;
+    }
+    const conditions = reason.conditions ?? [];
+    const names = conditions.slice(0, 3).map((condition) => {
+      const source = this._package.entities.get(condition.entity);
+      const title = source ? titleOf(source) : condition.entity;
+      const status = condition.status ?? 'completed';
+      return `${this.#progressionRequirementText(status, condition.minScore ?? null)} “${title}”`;
+    });
+    const joiner = reason.mode === 'any' ? ' o ' : ' y ';
+    return names.length ? `Para acceder debes ${names.join(joiner)}.` : 'Completa los requisitos previos para continuar.';
+  }
+
+  #refreshProgressionNav() {
+    if (!this._progressionEnabled || !this._progressionModel) return;
+    for (const [entityId, item] of this._progressionButtons.entries()) {
+      const {button, entity, baseTitle} = item;
+      const locked = entity.type === 'activity' && this._progressionModel.isLocked(entityId, this._progressionState);
+      const required = this._progressionModel.isRequired(entityId);
+      button.classList.toggle('p2lrn-locked', locked);
+      button.classList.toggle('p2lrn-required', required);
+      if (entity.type === 'activity') button.setAttribute('aria-disabled', locked ? 'true' : 'false');
+      const requiredLabel = required ? ' · Obligatorio' : '';
+      button.textContent = `${locked ? '🔒 ' : ''}${baseTitle}${requiredLabel}`;
+      button.title = locked ? this.#progressionLockMessage(entityId) : (required ? 'Contenido obligatorio' : '');
+    }
+  }
+
+  async #handleProgressionRuntimeEvent(event) {
+    if (!this._progressionEnabled || !this._progressionModel || !this._progressionContextValue) return;
+    const update = updateProgressionState(this._progressionState, event);
+    if (!update.changed) return;
+    this._progressionState = update.state;
+    this.#refreshProgressionNav();
+    if (this._adapter?.saveState) {
+      const snapshot = normalizeProgressionState(this._progressionState);
+      const context = this._progressionContextValue;
+      this._progressionSaveQueue = this._progressionSaveQueue
+        .catch(() => undefined)
+        .then(() => this._adapter.saveState(snapshot, context))
+        .catch((error) => {
+          dispatchRuntimeEvent(this, 'p2lrn:error', {
+            phase:'progression-save',
+            error:String(error?.message ?? error),
+          }, context, {adapter:this._adapter});
+        });
+    }
+    dispatchRuntimeEvent(this, 'p2lrn:progressionchange', {
+      entityId:update.entityId,
+      state:this._progressionState.entities[update.entityId] ?? null,
+    }, this._progressionContextValue, {adapter:this._adapter});
+  }
+
   #base() {
     this.shadowRoot.replaceChildren();
     this._rendererStyleLinks = [];
