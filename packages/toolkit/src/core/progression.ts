@@ -90,9 +90,10 @@ export function validateProgression(graph:GraphDocument,manifest:Manifest):void{
   for(const parent of graph.entities){
     const children=parent.children??[];
     for(let i=0;i<children.length;i++){
-      const source=ids.get(children[i]);
+      const sourceId=children[i]!;
+      const source=ids.get(sourceId);
       if(extension(source as GraphEntity)?.gateFollowing!==true)continue;
-      for(let j=i+1;j<children.length;j++)addDependency(children[j],children[i]);
+      for(let j=i+1;j<children.length;j++)addDependency(children[j]!,sourceId);
     }
   }
 
