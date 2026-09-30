@@ -64,6 +64,9 @@ if (toolkitPackage.version !== playerPackage.version || h5pPackage.version !== p
   throw new Error(`npm package versions differ: player=${playerPackage.version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}, documentReader=${documentReaderPackage.version}`);
 }
 
+await runNpm(['install','--ignore-scripts','--no-audit','--no-fund'], {cwd:join(root,'packages/toolkit')});
+await runNpm(['install','--ignore-scripts','--no-audit','--no-fund'], {cwd:join(root,'packages/document-reader')});
+
 const toolkitTgz = await pack('packages/toolkit');
 const h5pTgz = await pack('packages/h5p-libraries');
 const playerTgz = await pack('packages/player');
@@ -82,12 +85,6 @@ const documentReaderRoot = join(installRoot,'node_modules','@p2lrn','document-re
 
 for (const path of [
   join(toolkitRoot,'dist','cli','main.js'),
-  join(toolkitRoot,'dist','cli','document-reader.js'),
-  join(toolkitRoot,'dist','document-reader','index.js'),
-  join(toolkitRoot,'dist','document-reader','reader.js'),
-  join(toolkitRoot,'dist','document-reader','docx.js'),
-  join(toolkitRoot,'dist','document-reader','pptx.js'),
-  join(toolkitRoot,'dist','document-reader','pdf.js'),
   join(toolkitRoot,'dist','tools','multipart.js'),
   join(playerRoot,'dist','p2lrn.js'),
   join(playerRoot,'dist','p2lrn.esm.js'),
@@ -103,6 +100,9 @@ for (const path of [
   join(h5pRoot,'dist','H5P.Crossword-0.5','library.json'),
   join(h5pRoot,'dist','H5P.BranchingScenario-1.8','library.json'),
   join(documentReaderRoot,'dist','index.js'),
+  join(documentReaderRoot,'dist','reader.js'),
+  join(documentReaderRoot,'dist','office-extractors.js'),
+  join(documentReaderRoot,'dist','package-extractors.js'),
   join(documentReaderRoot,'dist','cli.js'),
 ]) {
   await assertFile(path);
@@ -122,7 +122,6 @@ if (catalog.packageVersion !== h5pPackage.version || catalog.libraryCount !== 14
 await run(node, ['--check', join(playerRoot,'dist','p2lrn.js')]);
 await run(node, ['--check', join(playerRoot,'dist','runtime-host','h5p-host.js')]);
 await run(node, [join(toolkitRoot,'dist','cli','main.js'),'--help']);
-await run(node, [join(toolkitRoot,'dist','cli','document-reader.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','tools','multipart.js'),'--help']);
 await run(node, [join(documentReaderRoot,'dist','cli.js')]).catch((error) => {
   const stderr = String(error?.stderr ?? '');
