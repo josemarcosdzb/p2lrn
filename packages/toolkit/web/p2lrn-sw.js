@@ -54,6 +54,39 @@ async function sha256(data) {
   return `sha256:${Array.from(hash, (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
 }
 
+async function readExactResponseBody(response, expectedBytes, label) {
+  if (!Number.isSafeInteger(expectedBytes) || expectedBytes < 0) throw new TypeError('expectedBytes must be a non-negative safe integer.');
+  const declared = Number(response.headers?.get?.('content-length'));
+  if (Number.isFinite(declared) && declared !== expectedBytes) {
+    try { await response.body?.cancel?.(); } catch {}
+    throw new Error(`${label} Content-Length mismatch (${declared} != ${expectedBytes}).`);
+  }
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.byteLength !== expectedBytes) throw new Error(`${label} body length mismatch (${bytes.byteLength} != ${expectedBytes}).`);
+    return bytes;
+  }
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
+    total += bytes.byteLength;
+    if (total > expectedBytes) {
+      try { await reader.cancel(); } catch {}
+      throw new Error(`${label} exceeded requested range (${total} > ${expectedBytes}).`);
+    }
+    chunks.push(bytes);
+  }
+  if (total !== expectedBytes) throw new Error(`${label} body length mismatch (${total} != ${expectedBytes}).`);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { out.set(chunk, offset); offset += chunk.byteLength; }
+  return out;
+}
+
 function virtualEtag(resource) {
   return `"p2lrn-${String(resource.byteDigest).slice('sha256:'.length)}"`;
 }
@@ -163,15 +196,19 @@ export async function loadRouteConfig(routeId) {
   if (memoryRoutes.has(routeId)) return memoryRoutes.get(routeId);
   if (!globalThis.caches) return null;
   const cache = await caches.open(REGISTRY_CACHE);
-  let response = await cache.match(registryKey(routeId));
+  let matchedCache = cache;
+  let matchedKey = registryKey(routeId);
+  let response = await cache.match(matchedKey);
   if (!response) {
     const legacyCache = await caches.open(LEGACY_REGISTRY_CACHE);
-    response = await legacyCache.match(legacyRegistryKey(routeId));
+    matchedCache = legacyCache;
+    matchedKey = legacyRegistryKey(routeId);
+    response = await legacyCache.match(matchedKey);
   }
   if (!response) return null;
   const normalized = validateRouteConfig(await response.json(), globalThis.location?.origin ?? null);
   if (!routeSourceMayPersist(normalized.sourceUrl)) {
-    try { await cache.delete(registryKey(routeId)); } catch {}
+    try { await matchedCache.delete(matchedKey); } catch {}
     return null;
   }
   memoryRoutes.set(routeId, normalized);
@@ -188,9 +225,7 @@ async function fetchExactRange(url, start, end, fetchImpl = fetch) {
   if (response.status !== 206) throw new Error(`Outer package stopped honoring HTTP Range (${response.status}).`);
   const contentRange = /^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/.exec(response.headers.get('Content-Range') ?? '');
   if (!contentRange || Number(contentRange[1]) !== start || Number(contentRange[2]) !== end) throw new Error('Outer package returned an inconsistent Content-Range.');
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength !== end - start + 1) throw new Error('Outer package returned a truncated byte range.');
-  return bytes;
+  return readExactResponseBody(response, end - start + 1, 'Outer package HTTP Range response');
 }
 
 async function resolveDataStart(route, logical, resource, fetchImpl) {
