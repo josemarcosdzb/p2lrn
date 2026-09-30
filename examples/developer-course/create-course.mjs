@@ -43,7 +43,7 @@ workspace.addUnit({
   title:'Unidad 1 · Fundamentos',
 });
 
-workspace.addFile({
+const intro = workspace.addFile({
   source:introFile,
   key:'intro',
   title:'Introducción',
@@ -51,7 +51,7 @@ workspace.addFile({
   mediaType:'text/html',
 });
 
-workspace.addFile({
+const practice = workspace.addFile({
   source:practiceFile,
   key:'practica',
   title:'Práctica',
@@ -59,13 +59,13 @@ workspace.addFile({
   mediaType:'text/html',
 });
 
-workspace.setProgression('act-intro', {
+workspace.setProgression(intro.activityKey, {
   required:true,
   gateFollowing:true,
   completionRequirement:'viewed',
 });
 
-workspace.setProgression('act-practica', {
+workspace.setProgression(practice.activityKey, {
   required:true,
   completionRequirement:'completed',
 });
