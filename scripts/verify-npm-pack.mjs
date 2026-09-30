@@ -139,7 +139,20 @@ await run(
 );
 
 const copiedRuntime = join(work,'copied-runtime');
+await mkdir(copiedRuntime,{recursive:true});
+const runtimeSentinel = join(copiedRuntime,'user-owned-sentinel.txt');
+await writeFile(runtimeSentinel,'must survive p2lrn-copy-runtime\n');
 await run(node, [join(playerRoot,'bin','p2lrn-copy-runtime.mjs'), copiedRuntime], {cwd:installRoot});
+await assertFile(runtimeSentinel);
+
+const copiedH5p = join(work,'copied-h5p-libraries');
+await mkdir(copiedH5p,{recursive:true});
+const h5pSentinel = join(copiedH5p,'user-owned-sentinel.txt');
+await writeFile(h5pSentinel,'must survive p2lrn-copy-h5p-libraries\n');
+await run(node, [join(h5pRoot,'bin','p2lrn-copy-h5p-libraries.mjs'), copiedH5p], {cwd:installRoot});
+await assertFile(h5pSentinel);
+await assertFile(join(copiedH5p,'H5P.Crossword-0.5','library.json'));
+
 for (const path of [
   join(copiedRuntime,'p2lrn.js'),
   join(copiedRuntime,'runtime-host','h5p.html'),
@@ -170,4 +183,6 @@ console.log(JSON.stringify({
   },
   h5pLibraryCount:catalog.libraryCount,
   copiedRuntime,
+  copiedH5p,
+  nonDestructiveCopyGate:true,
 }, null, 2));
