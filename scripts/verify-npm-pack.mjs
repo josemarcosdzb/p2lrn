@@ -82,6 +82,12 @@ const documentReaderRoot = join(installRoot,'node_modules','@p2lrn','document-re
 
 for (const path of [
   join(toolkitRoot,'dist','cli','main.js'),
+  join(toolkitRoot,'dist','cli','document-reader.js'),
+  join(toolkitRoot,'dist','document-reader','index.js'),
+  join(toolkitRoot,'dist','document-reader','reader.js'),
+  join(toolkitRoot,'dist','document-reader','docx.js'),
+  join(toolkitRoot,'dist','document-reader','pptx.js'),
+  join(toolkitRoot,'dist','document-reader','pdf.js'),
   join(toolkitRoot,'dist','tools','multipart.js'),
   join(playerRoot,'dist','p2lrn.js'),
   join(playerRoot,'dist','p2lrn.esm.js'),
@@ -116,6 +122,7 @@ if (catalog.packageVersion !== h5pPackage.version || catalog.libraryCount !== 14
 await run(node, ['--check', join(playerRoot,'dist','p2lrn.js')]);
 await run(node, ['--check', join(playerRoot,'dist','runtime-host','h5p-host.js')]);
 await run(node, [join(toolkitRoot,'dist','cli','main.js'),'--help']);
+await run(node, [join(toolkitRoot,'dist','cli','document-reader.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','tools','multipart.js'),'--help']);
 await run(node, [join(documentReaderRoot,'dist','cli.js')]).catch((error) => {
   const stderr = String(error?.stderr ?? '');
