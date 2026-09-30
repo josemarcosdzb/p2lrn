@@ -56,6 +56,79 @@ export function normalizeProgressionState(value) {
 export function progressionRule(entity) {
   return extension(entity);
 }
+export function validateProgressionGraph(graph, manifest) {
+  const declaration = manifest?.profiles?.find((profile) =>
+    String(profile?.id ?? '').replace('https://p2rln.org/', 'https://p2lrn.org/') === PROGRESSION_PROFILE
+  );
+  const entities = new Map((graph?.entities ?? []).map((entity) => [entity.id, entity]));
+  const dependencies = new Map();
+  const addDependency = (from, to) => {
+    if (!dependencies.has(from)) dependencies.set(from, new Set());
+    dependencies.get(from).add(to);
+  };
+  let used = false;
+  let hasNavigationSemantics = false;
+  const validStatus = new Set(PROGRESSION_REQUIREMENTS);
+  for (const entity of graph?.entities ?? []) {
+    const rule = extension(entity);
+    if (!rule) continue;
+    used = true;
+    if (!['course','unit','activity'].includes(entity.type)) throw new Error(`Progression is only valid on course, unit or activity entities: ${entity.id}`);
+    for (const key of Object.keys(rule)) {
+      if (!['required','gateFollowing','completionRequirement','minScore','unlockWhen'].includes(key)) throw new Error(`Unsupported progression property on ${entity.id}: ${key}`);
+    }
+    if (rule.required !== undefined && typeof rule.required !== 'boolean') throw new Error(`progression.required must be boolean: ${entity.id}`);
+    if (rule.gateFollowing !== undefined && typeof rule.gateFollowing !== 'boolean') throw new Error(`progression.gateFollowing must be boolean: ${entity.id}`);
+    if (rule.completionRequirement !== undefined && !validStatus.has(rule.completionRequirement)) throw new Error(`Invalid progression completionRequirement: ${entity.id}`);
+    if (rule.minScore !== undefined) {
+      if (entity.type !== 'activity') throw new Error(`progression.minScore is only valid on activities: ${entity.id}`);
+      if (typeof rule.minScore !== 'number' || !Number.isFinite(rule.minScore) || rule.minScore < 0 || rule.minScore > 100) throw new Error(`progression.minScore must be 0..100: ${entity.id}`);
+    }
+    if (entity.type === 'course' && rule.gateFollowing === true) throw new Error('progression.gateFollowing is not valid on the root course entity');
+    if (rule.unlockWhen !== undefined) {
+      hasNavigationSemantics = true;
+      const unlock = record(rule.unlockWhen);
+      if (!unlock) throw new Error(`progression.unlockWhen must be an object: ${entity.id}`);
+      const keys = Object.keys(unlock);
+      if (keys.some((key) => !['all','any'].includes(key))) throw new Error(`Unsupported progression.unlockWhen property: ${entity.id}`);
+      const hasAll = Array.isArray(unlock.all), hasAny = Array.isArray(unlock.any);
+      if (hasAll === hasAny) throw new Error(`progression.unlockWhen must contain exactly one of all or any: ${entity.id}`);
+      const list = hasAll ? unlock.all : unlock.any;
+      if (!list.length) throw new Error(`progression.unlockWhen must not be empty: ${entity.id}`);
+      for (const condition of list) {
+        const item = record(condition);
+        if (!item || typeof item.entity !== 'string') throw new Error(`Invalid progression prerequisite: ${entity.id}`);
+        const target = entities.get(item.entity);
+        if (!target || !['activity','unit'].includes(target.type)) throw new Error(`Progression prerequisite does not resolve to activity/unit: ${item.entity}`);
+        if (item.status !== undefined && !validStatus.has(item.status)) throw new Error(`Invalid progression prerequisite status: ${entity.id}`);
+        if (item.minScore !== undefined && (typeof item.minScore !== 'number' || !Number.isFinite(item.minScore) || item.minScore < 0 || item.minScore > 100)) throw new Error(`Invalid progression prerequisite minScore: ${entity.id}`);
+        addDependency(entity.id, item.entity);
+      }
+    }
+    if (rule.gateFollowing === true) hasNavigationSemantics = true;
+  }
+  if (used && !declaration) throw new Error('Progression extensions require the progression profile declaration.');
+  if (hasNavigationSemantics && declaration?.requirement === 'optional') throw new Error('Navigation-gating progression rules require manifest requirement "required".');
+  for (const parent of graph?.entities ?? []) {
+    const children = parent.children ?? [];
+    for (let i = 0; i < children.length; i += 1) {
+      const source = entities.get(children[i]);
+      if (extension(source)?.gateFollowing !== true) continue;
+      for (let j = i + 1; j < children.length; j += 1) addDependency(children[j], children[i]);
+    }
+  }
+  const state = new Map();
+  const visit = (id, trail) => {
+    const current = state.get(id) ?? 0;
+    if (current === 1) throw new Error(`Progression dependency cycle: ${[...trail, id].join(' -> ')}`);
+    if (current === 2) return;
+    state.set(id, 1);
+    for (const dependency of dependencies.get(id) ?? []) visit(dependency, [...trail, id]);
+    state.set(id, 2);
+  };
+  for (const id of dependencies.keys()) visit(id, []);
+  return true;
+}
 export function progressionEnabled(manifest) {
   return Boolean(manifest?.profiles?.some((profile) =>
     String(profile?.id ?? '').replace('https://p2rln.org/', 'https://p2lrn.org/') === PROGRESSION_PROFILE
