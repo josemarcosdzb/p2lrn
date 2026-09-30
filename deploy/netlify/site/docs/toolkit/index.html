@@ -1,73 +1,12 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="API Node/TypeScript y CLI para validar, inspeccionar, abrir, leer documentos, editar, convertir y reconstruir paquetes P2LRN."><title>Toolkit — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/paquetes/">Paquetes</a><a href="/docs/paquetes/multipart/">Multipart</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main"><aside class="doc-sidebar">
-  <span>START</span>
-  <a href="/docs/">Overview</a>
-  <a href="/docs/empezar/">Quickstart</a>
-  <a href="/docs/conceptos/">Conceptos</a>
-  <span>BUILD</span>
-  <a href="/docs/formato/">Formato</a>
-  <a href="/docs/paquetes/">Crear paquetes</a>
-  <a href="/docs/paquetes/multipart/">Multipart / paquetes grandes</a>
-  <a href="/docs/player/">Player</a>
-  <a href="/docs/toolkit/" aria-current="page">Toolkit</a>
-  <span>INTEGRATE</span>
-  <a href="/docs/integracion/">Integración real</a>
-  <a href="/docs/compatibilidad/">Compatibilidad</a>
-  <span>REFERENCE</span>
-  <a href="/docs/referencia/">Referencia</a>
-  <a href="/docs/troubleshooting/">Troubleshooting</a>
-  <span>RESOURCES</span>
-  <a href="/demo/">Visor real ↗</a>
-  <a href="/index.json">Índice CDN ↗</a>
-  <a href="/health.json">Estado ↗</a></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">BUILD / TOOLKIT</p><h1>Toolkit</h1><p>API Node/TypeScript y CLI para validar, inspeccionar, abrir, leer documentos, editar, convertir y reconstruir paquetes P2LRN.</p></header>
-<section class="doc-section"><h2>Instalación</h2><div class="install"><span>$</span><code>npm install @p2lrn/toolkit @p2lrn/player</code><button type="button" data-copy-inline>Copiar</button></div></section>
-<section class="doc-section"><h2>Flujo completo de autoría</h2><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
-
-const workspace = P2LRNAuthoringWorkspace.open(
-  'course.p2lrn',
-  './workspace'
-);
-
-const document = await workspace.reader('./material/tema-1.docx');
-
-console.log(document.metadata);
-console.log(document.blocks);
-console.log(document.tables);
-
-workspace.setCourseMetadata({
-  title: 'Curso actualizado',
-  incrementRevision: true,
-});
-
-workspace.addUnit({
-  key: 'unidad-1',
-  title: 'Unidad 1',
-});
-
-workspace.build('course-updated.p2lrn', {
-  strictProfiles: true,
-});</code></pre></div></section>
-<section class="doc-section"><h2><code>workspace.reader(path)</code></h2><p>Lee un documento utilizando el Reader documental ya existente. No crea un segundo lector y no modifica el proyecto. Las rutas relativas se resuelven desde la raíz del workspace; las absolutas se aceptan directamente.</p><div class="reference-table"><div><code>DOCX / PPTX</code><p>Extracción estructurada desde XML interno.</p></div><div><code>PDF</code><p>Texto embebido mediante <code>pdfjs-dist</code> opcional.</p></div><div><code>ODT / EPUB</code><p>Extracción estructurada del contenedor.</p></div><div><code>TXT / Markdown / HTML / RTF / TEX / XML / YAML</code><p>Lectura estructurada ligera.</p></div></div><div class="doc-callout"><strong>Importante</strong><p><code>reader()</code> analiza y devuelve <code>metadata</code>, <code>blocks</code>, <code>tables</code> y <code>warnings</code>. No altera silenciosamente el curso.</p></div></section>
-<section class="doc-section"><h2>Crear o abrir</h2><div class="reference-table"><div><code>P2LRNAuthoringWorkspace.create(root, options)</code><p>Crea un proyecto nuevo.</p></div><div><code>P2LRNAuthoringWorkspace.open(packagePath, root)</code><p>Abre un paquete como workspace editable.</p></div><div><code>P2LRNAuthoringWorkspace.load(root)</code><p>Carga un workspace ya existente.</p></div></div></section>
-<section class="doc-section"><h2>Edición tipada</h2><p>La API incluye métodos como <code>setCourseMetadata</code>, <code>setEntityText</code>, <code>setChildren</code>, <code>setProgression</code>, <code>addUnit</code>, <code>addFile</code>, <code>addUrl</code>, <code>addWebContent</code>, <code>addQuestionnaire</code>, <code>addComponent</code> y <code>addComposite</code>.</p></section>
-<section class="doc-section"><h2>Validar e inspeccionar</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-validate course.p2lrn
-p2lrn-inspect course.p2lrn
-p2lrn-reader course.p2lrn</code></pre></div></section>
-<section class="doc-section"><h2>Conversión y empaquetado avanzado</h2><p>El Toolkit también incluye conversión, repack, multipart, delta y trust. La explicación de cómo crear un curso está en <a href="/docs/paquetes/">Crear paquetes</a>; la división de contenidos pesados se documenta sólo en <a href="/docs/paquetes/multipart/">Multipart / paquetes grandes</a> para evitar duplicar la misma explicación aquí.</p></section>
-<section class="doc-section"><h2>CLI completa</h2><div class="command-list"><code>p2lrn-validate</code><code>p2lrn-reader</code><code>p2lrn-document-reader</code><code>p2lrn-create</code><code>p2lrn-convert</code><code>p2lrn-repack</code><code>p2lrn-multipart</code><code>p2lrn-inspect</code><code>p2lrn-extract-source</code><code>p2lrn-delta</code><code>p2lrn-trust</code></div></section><nav class="doc-pager"><a class="prev" href="/docs/player/"><span>← Anterior</span><strong>Player</strong></a><a class="next" href="/docs/integracion/"><span>Siguiente →</span><strong>Integración real</strong></a></nav>
-<section class="doc-contact" id="contacto">
-  <h2>Contacto</h2>
-  
-  <form class="contact-form" data-contact-form>
-    <div class="form-grid">
-      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
-      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
-    </div>
-    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
-    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
-    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
-    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
-  </form>
-</section></article></main>
-<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer></body></html>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Toolkit P2LRN: AuthoringWorkspace, Reader, Creator, CLI, multipart, delta y trust."><title>Toolkit — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/paquetes/">Paquetes</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/" aria-current="page">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar"><span>START</span><a href="/docs/">Overview</a><a href="/docs/empezar/">Quickstart</a><a href="/docs/que-usar/">¿Qué uso?</a><span>BUILD</span><a href="/docs/paquetes/">Crear paquetes</a><a href="/docs/progresion/">Progresión</a><a href="/docs/paquetes/multipart/">Multipart</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/" aria-current="page">Toolkit</a><span>INTEGRATE</span><a href="/docs/integracion/">Integración real</a><a href="/docs/eventos/">Eventos</a><a href="/docs/compatibilidad/">Compatibilidad</a><span>REFERENCE</span><a href="/docs/referencia/">Referencia</a><a href="/docs/troubleshooting/">Troubleshooting</a></aside>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">BUILD / TOOLKIT</p><h1>Toolkit</h1><p>La API Node/TypeScript de P2LRN concentra autoría, lectura estructural, validación, conversión y herramientas de empaquetado.</p></header>
+<section class="doc-section"><h2>Instalación</h2><div class="install"><span>$</span><code>npm install @p2lrn/toolkit@0.5.0-alpha.10</code><button type="button" data-copy-inline>Copiar</button></div></section>
+<section class="doc-section"><h2>AuthoringWorkspace</h2><p>La clase pública estable es <code>P2LRNAuthoringWorkspace</code>. Guarda el proyecto después de cada edición tipada y valida el draft antes de persistirlo.</p><div class="reference-table"><div><code>create / open / load</code><p>Crear, abrir paquete como proyecto o cargar workspace.</p></div><div><code>setCourseMetadata / setEntityText</code><p>Metadatos y texto localizado.</p></div><div><code>setChildren</code><p>Orden explícito de hijos sin duplicados.</p></div><div><code>setProgression</code><p>required, gateFollowing, completionRequirement, minScore y unlockWhen.</p></div><div><code>addUnit / addFile / addUrl / addWebContent</code><p>Estructura y recursos.</p></div><div><code>addQuestionnaire / addComponent / addComposite</code><p>Contenido nativo avanzado.</p></div><div><code>reader</code><p>Extracción documental sin mutar el curso.</p></div><div><code>build</code><p>Construcción del paquete final.</p></div></div><p><a href="/docs/referencia/">Ver firmas y contratos exactos →</a></p></section>
+<section class="doc-section" id="reader"><h2>Reader documental</h2><div class="integration-chain"><span>DOCUMENTO</span><b>→</b><span>reader()</span><b>→</b><span>estructura extraída</span><b>→</b><span>decisión del autor/host</span><b>→</b><span>contenido P2LRN</span></div><p><code>reader()</code> no convierte mágicamente un documento en un curso correcto. Devuelve estructura para que la aplicación o el autor decida qué conservar, transformar o descartar.</p><div class="reference-table"><div><code>DOCX / PPTX</code><p>Extracción estructurada del contenido interno.</p></div><div><code>PDF</code><p>Lectura de texto con <code>pdfjs-dist</code> opcional.</p></div><div><code>ODT / EPUB</code><p>Extracción desde contenedor.</p></div><div><code>TXT / Markdown / HTML / RTF / TEX / XML / YAML</code><p>Lectura estructural ligera.</p></div></div></section>
+<section class="doc-section"><h2>CLI</h2><p>La referencia enumera los binarios publicados y los subcomandos reales de Creator, Delta y Trust. No se documentan comandos inventados.</p><div class="command-list"><code>p2lrn-validate</code><code>p2lrn-reader</code><code>p2lrn-document-reader</code><code>p2lrn-create</code><code>p2lrn-convert</code><code>p2lrn-repack</code><code>p2lrn-multipart</code><code>p2lrn-inspect</code><code>p2lrn-extract-source</code><code>p2lrn-delta</code><code>p2lrn-trust</code></div></section>
+<section class="doc-section"><h2>Multipart</h2><p><code>p2lrn-multipart</code> transforma una representación embebida por ejecución, genera descriptor y partes adyacentes, recalcula graph/manifest/contentRoot y valida el paquete resultante.</p><p><a href="/docs/paquetes/multipart/">Recorrido Multipart end-to-end →</a></p></section>
+<section class="doc-section"><h2>Delta y Trust</h2><p><code>p2lrn-delta</code> soporta <code>create</code>, <code>apply</code> e <code>inspect</code>. <code>p2lrn-trust</code> soporta generación de claves Ed25519, firma, verificación e inspección de firma separada. Integridad y confianza se documentan como conceptos distintos.</p></section>
+<nav class="doc-pager"><a class="prev" href="/docs/player/"><span>← Anterior</span><strong>Player</strong></a><a class="next" href="/docs/integracion/"><span>Siguiente →</span><strong>Integración real</strong></a></nav><section class="doc-contact compact-contact"><h2>¿Necesitas un caso de uso?</h2><p>Las recetas enlazan a los flujos principales sin duplicar la referencia.</p><a class="button" href="/docs/recetas/">Abrir Recipes</a></section></article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
