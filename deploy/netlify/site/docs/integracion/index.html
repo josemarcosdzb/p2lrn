@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="Cómo pasar de un archivo .p2lrn aislado a una integración completa con frontend, backend, eventos, progreso, CORS y runtimes externos.">
+  <title>Integración real — P2LRN</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <script src="/p2lrn.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">P2LRN</a>
+    <nav class="nav" id="nav">
+      <a href="/docs/">Docs</a>
+      <a href="/docs/formato/">Formato</a>
+      <a href="/docs/player/">Player</a>
+      <a href="/docs/toolkit/">Toolkit</a>
+      <a href="/docs/integracion/">Integración</a>
+    </nav>
+    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
+    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
+  </header>
+
+  <main class="doc-main">
+    <aside class="doc-sidebar">
+  <span>START</span>
+  <a href="/docs/">Overview</a>
+  <a href="/docs/empezar/">Quickstart</a>
+  <a href="/docs/conceptos/">Conceptos</a>
+
+  <span>BUILD</span>
+  <a href="/docs/formato/">Formato</a>
+  <a href="/docs/player/">Player</a>
+  <a href="/docs/toolkit/">Toolkit</a>
+
+  <span>INTEGRATE</span>
+  <a href="/docs/integracion/" aria-current="page">Integración real</a>
+  <a href="/docs/compatibilidad/">Compatibilidad</a>
+
+  <span>REFERENCE</span>
+  <a href="/docs/referencia/">Referencia</a>
+  <a href="/docs/troubleshooting/">Troubleshooting</a>
+
+  <span>RESOURCES</span>
+  <a href="/index.json">Índice CDN ↗</a>
+  <a href="/health.json">Estado ↗</a></aside>
+    <article class="doc-content">
+      <header class="doc-hero">
+        <p class="eyebrow">INTEGRATE</p>
+        <h1>Integración real</h1>
+        <p>Cómo pasar de un archivo .p2lrn aislado a una integración completa con frontend, backend, eventos, progreso, CORS y runtimes externos.</p>
+      </header>
+      
+<section class="doc-section">
+  <h2>Arquitectura de referencia</h2>
+  <div class="integration-chain"><span>.p2lrn</span><b>→</b><span>servidor/CDN</span><b>→</b><span>aplicación</span><b>→</b><span>Player</span><b>→</b><span>eventos</span><b>→</b><span>persistencia host</span></div>
+</section>
+<section class="doc-section">
+  <h2>Opción A · HTML estático + CDN</h2>
+  <p>Úsala cuando sólo necesitas reproducir un paquete público y no quieres añadir dependencias npm.</p>
+  <div class="codebox"><div class="codebox-head"><span>HTML</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+&lt;p2lrn-player src="https://content.example.com/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre></div>
+</section>
+<section class="doc-section">
+  <h2>Opción B · npm + bundler</h2>
+  <div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/player</code></pre></div>
+  <div class="codebox"><div class="codebox-head"><span>JavaScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import '@p2lrn/player';</code></pre></div>
+</section>
+<section class="doc-section">
+  <h2>Backend y Host Adapter</h2>
+  <p>El host debe encargarse de autenticación, permisos, matrícula, persistencia durable y resolución de URLs protegidas. El Player comunica actividad mediante su contrato de eventos/adapter, pero no sustituye esa lógica.</p>
+</section>
+<section class="doc-section">
+  <h2>Contenido en otro origen</h2>
+  <p>Configura CORS en el servidor de contenido. No abras CORS de forma indiscriminada si el material es privado: genera URLs autorizadas desde el backend y limita el origen cuando corresponda.</p>
+</section>
+<section class="doc-section">
+  <h2>H5P y SCORM</h2>
+  <p>Cuando el paquete referencia contenido que requiere ejecución especializada, el Player usa hosts de runtime aislados. Las librerías H5P compartidas pueden distribuirse aparte para reducir duplicación.</p>
+</section>
+<section class="doc-section">
+  <h2>Criterio de salida</h2>
+  <ul class="check-list">
+    <li><span>PACKAGE</span>El paquete abre y verifica.</li>
+    <li><span>PLAYER</span>El Player emite ready/rendered sin errores.</li>
+    <li><span>EVENTS</span>La aplicación recibe progreso/estado cuando corresponde.</li>
+    <li><span>HOST</span>La persistencia y autorización funcionan fuera del paquete.</li>
+    <li><span>RUNTIME</span>H5P/SCORM sólo se anuncian como ejecutables si el runtime responde.</li>
+  </ul>
+</section>
+      <nav class="doc-pager">
+        <a class="prev" href="/docs/toolkit/"><span>← Anterior</span><strong>Toolkit</strong></a>
+        <a class="next" href="/docs/compatibilidad/"><span>Siguiente →</span><strong>Compatibilidad</strong></a>
+      </nav>
+      
+<section class="doc-contact" id="contacto">
+  <h2>Contacto</h2>
+  <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
+  <form class="contact-form" data-contact-form>
+    <div class="form-grid">
+      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
+      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
+    </div>
+    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
+    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
+    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
+    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
+  </form>
+</section>
+    </article>
+  </main>
+
+  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
+</body>
+</html>
