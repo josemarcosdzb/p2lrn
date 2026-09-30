@@ -143,13 +143,17 @@ test('runtime events emit P2LRN and normalize legacy P2RLN event names',async()=
   assert.equal(legacy.schema,'https://p2lrn.org/schema/runtime-event/1');
 });
 
-test('static bridge generates P2LRN routes and still parses Alpha15 P2RLN routes',async()=>{
-  const {VIRTUAL_MARKER,LEGACY_VIRTUAL_MARKER,extractVirtualTarget}=await import('../web/p2lrn-sw.js');
+test('static bridge exposes only canonical capability-protected P2LRN routes',async()=>{
+  const {VIRTUAL_MARKER,extractVirtualTarget}=await import('../web/p2lrn-sw.js');
   const route='a'.repeat(48);
+  const capability='b'.repeat(32);
   assert.equal(VIRTUAL_MARKER,'/__p2lrn__/v1/');
-  assert.equal(LEGACY_VIRTUAL_MARKER,'/__p2rln__/v1/');
-  assert.deepEqual(extractVirtualTarget(`https://example.invalid${VIRTUAL_MARKER}${route}/video/file.mp4`),{routeId:route,logical:'video/file.mp4'});
-  assert.deepEqual(extractVirtualTarget(`https://example.invalid${LEGACY_VIRTUAL_MARKER}${route}/video/file.mp4`),{routeId:route,logical:'video/file.mp4'});
+  assert.deepEqual(
+    extractVirtualTarget(`https://example.invalid${VIRTUAL_MARKER}${route}/${capability}/video/file.mp4`),
+    {routeId:route,capability,logical:'video/file.mp4'},
+  );
+  assert.equal(extractVirtualTarget(`https://example.invalid/__p2rln__/v1/${route}/${capability}/video/file.mp4`),null);
+  assert.equal(extractVirtualTarget(`https://example.invalid${VIRTUAL_MARKER}${route}/video/file.mp4`),null);
 });
 
 test('H5P binary session encoder supports canonical and Alpha15 envelopes',async()=>{
