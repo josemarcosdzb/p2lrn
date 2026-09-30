@@ -5,15 +5,16 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {normalizeRuntimeBaseUrl} from '../web/runtime-host-config.js';
-import {MAX_ROUTE_RESOURCES, routeSourceMayPersist, trustedWorkerMessageSource, validateRouteConfig} from '../web/p2lrn-sw.js';
+import {extractVirtualTarget, MAX_ROUTE_RESOURCES, routeSourceMayPersist, trustedWorkerMessageSource, validateRouteConfig} from '../web/p2lrn-sw.js';
 import {readResponseBounded} from '../web/zip-source.js';
 
 const root=resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
 function route(sourceUrl='https://example.invalid/course.p2lrn'){
   return {
-    version:'1',
+    version:'2',
     routeId:'a'.repeat(32),
+    capability:'d'.repeat(32),
     sourceUrl,
     contentRoot:'sha256:'+'b'.repeat(64),
     resources:{
@@ -74,6 +75,38 @@ test('only the canonical P2LRN CI workflow remains',async()=>{
   assert.deepEqual(names,['p2lrn-ci.yml']);
 });
 
+
+
+test('virtual Service Worker routes require an unguessable capability token',()=>{
+  const valid=route();
+  assert.equal(validateRouteConfig(valid).capability,'d'.repeat(32));
+  const missing={...valid};
+  delete missing.capability;
+  assert.throws(()=>validateRouteConfig(missing),/capability/i);
+  const weak={...valid,capability:'abcd'};
+  assert.throws(()=>validateRouteConfig(weak),/capability/i);
+
+  const target=extractVirtualTarget(`https://example.invalid/__p2lrn__/v1/${valid.routeId}/${valid.capability}/video.mp4`);
+  assert.deepEqual(target,{routeId:valid.routeId,capability:valid.capability,logical:'video.mp4'});
+  assert.equal(extractVirtualTarget(`https://example.invalid/__p2lrn__/v1/${valid.routeId}/video.mp4`),null);
+});
+
+test('static bridge no longer falls back to a root Service Worker controller',async()=>{
+  const content=await readFile(resolve(root,'packages/toolkit/web/static-resource-bridge.js'),'utf8');
+  assert.equal(content.includes('container.controller'),false);
+  assert.match(content,/DEFAULT_SERVICE_WORKER_SCOPE\s*=\s*'\/__p2lrn__\/'/u);
+});
+
+test('H5P runtime exposes only the canonical protocol and blocks popup capability',async()=>{
+  for(const relative of [
+    'packages/toolkit/web/runtime-host/h5p-host.js',
+    'packages/toolkit/web/renderers/h5p-runtime.js',
+  ]){
+    const content=await readFile(resolve(root,relative),'utf8');
+    assert.equal(content.includes('p2rln-h5p-runtime/1'),false,relative);
+    assert.equal(content.includes('allow-popups'),false,relative);
+  }
+});
 
 test('static resource bridge rejects traversal and oversized route registries',()=>{
   const traversal=route();
