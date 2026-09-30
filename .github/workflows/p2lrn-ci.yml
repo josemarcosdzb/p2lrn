@@ -52,7 +52,7 @@ jobs:
       - name: Compile and test toolkit
         working-directory: packages/toolkit
         run: |
-          npm install --no-save --ignore-scripts --no-audit --no-fund typescript@5.6.3
+          npm install --ignore-scripts --no-audit --no-fund --include=dev
           npm test
 
       - name: Verify runtime host security
