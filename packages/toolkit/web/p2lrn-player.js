@@ -407,6 +407,18 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     this._rendererStyles = new Set();
     this._suppressAutoReload = false;
     this._staticResourceBridge = null;
+    this._progressionEnabled = false;
+    this._progressionState = normalizeProgressionState(null);
+    this._progressionModel = null;
+    this._progressionRootId = null;
+    this._progressionContextValue = null;
+    this._progressionLoadedKey = null;
+    this._progressionButtons = new Map();
+    this._progressionSaveQueue = Promise.resolve();
+    this._onProgressionRuntimeEvent = (event) => { void this.#handleProgressionRuntimeEvent(event); };
+    for (const type of ['p2lrn:rendered','p2lrn:score','p2lrn:statechange','p2lrn:complete']) {
+      this.addEventListener(type, this._onProgressionRuntimeEvent);
+    }
   }
 
   connectedCallback() { if (!this._suppressAutoReload) void this.reload(); }
