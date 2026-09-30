@@ -614,7 +614,10 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const entrypoint = requested ? {id: requested} : (pkg.manifest.entrypoints.find((item) => item.role === 'primary') ?? pkg.manifest.entrypoints[0]);
     const root = pkg.entities.get(entrypoint.id);
     if (!root) throw new Error(`No existe el nodo solicitado: ${entrypoint.id}`);
-    await this.#prepareProgression(root);
+    const primaryCourseEntrypoint = pkg.manifest.entrypoints.find((item) => item.role === 'primary' && item.type === 'course')
+      ?? pkg.manifest.entrypoints.find((item) => item.type === 'course');
+    const progressionRoot = primaryCourseEntrypoint ? pkg.entities.get(primaryCourseEntrypoint.id) : root;
+    await this.#prepareProgression(progressionRoot ?? root);
 
     const shell = this.#base();
     const head = document.createElement('div'); head.className = 'p2lrn-head';
