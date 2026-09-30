@@ -23,6 +23,7 @@ const PROFILE_SUFFIX = Object.freeze({
   nativeComposite: 'native-composite',
   nativeComponent: 'native-component',
   multipart: 'multipart',
+  progression: 'progression',
 });
 
 type ProfileKey = keyof typeof PROFILE_SUFFIX;
