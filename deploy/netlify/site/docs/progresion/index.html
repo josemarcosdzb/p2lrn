@@ -1,0 +1,23 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Progresión P2LRN: required, gateFollowing, completionRequirement, minScore y unlockWhen."><title>Progresión — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/paquetes/">Paquetes</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar"><span>START</span><a href="/docs/">Overview</a><a href="/docs/empezar/">Quickstart</a><a href="/docs/que-usar/">¿Qué uso?</a><span>BUILD</span><a href="/docs/paquetes/">Crear paquetes</a><a href="/docs/progresion/" aria-current="page">Progresión</a><a href="/docs/paquetes/multipart/">Multipart</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><span>INTEGRATE</span><a href="/docs/integracion/">Integración real</a><a href="/docs/eventos/">Eventos</a><span>REFERENCE</span><a href="/docs/referencia/">Referencia</a></aside>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">BUILD / PROGRESSION</p><h1>Progresión</h1><p>Reglas reales del perfil <code>https://p2lrn.org/profile/progression</code>: obligatoriedad, bloqueo secuencial, requisitos de finalización, puntuación y prerrequisitos.</p></header>
+<section class="doc-section"><h2>Propiedades admitidas</h2><div class="reference-table"><div><code>required: boolean</code><p>Marca la entidad como obligatoria para evaluar la finalización agregada.</p></div><div><code>gateFollowing: boolean</code><p>Bloquea hermanos posteriores hasta satisfacer esta entidad. No es válido en el curso raíz.</p></div><div><code>completionRequirement</code><p><code>viewed</code>, <code>completed</code> o <code>passed</code>.</p></div><div><code>minScore</code><p>Porcentaje 0–100 y sólo válido en actividades.</p></div><div><code>unlockWhen</code><p>Exactamente uno de <code>all</code> o <code>any</code>, con condiciones sobre unidades o actividades.</p></div></div></section>
+<section class="doc-section"><h2>Ejemplo de autoría</h2><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.setProgression(intro.activityKey, {
+  required: true,
+  gateFollowing: true,
+  completionRequirement: 'viewed',
+});
+
+workspace.setProgression(test.activityKey, {
+  required: true,
+  completionRequirement: 'passed',
+  minScore: 80,
+  unlockWhen: {
+    all: [{entityKey: intro.activityKey, status: 'viewed'}],
+  },
+});</code></pre></div></section>
+<section class="doc-section"><h2>Qué hace el Player</h2><ol class="learning-path"><li><strong>Renderizado.</strong><span><code>p2lrn:rendered</code> marca la actividad como vista.</span></li><li><strong>Score / complete.</strong><span>Los eventos del renderer actualizan estado, puntuación y aprobado.</span></li><li><strong>Bloqueos.</strong><span>El Player recalcula <code>gateFollowing</code> y <code>unlockWhen</code>.</span></li><li><strong>Persistencia.</strong><span>Si existe Host Adapter, usa <code>loadState</code> y <code>saveState</code>.</span></li><li><strong>Cambio.</strong><span>Emite <code>p2lrn:progressionchange</code> cuando cambia el estado.</span></li></ol></section>
+<section class="doc-section"><h2>Qué no guarda el paquete</h2><p>El paquete define las reglas. El estado de un alumno no se escribe dentro del <code>.p2lrn</code>; debe persistirlo el Host mediante el Adapter u otra capa de aplicación.</p></section>
+<nav class="doc-pager"><a class="prev" href="/docs/paquetes/"><span>← Anterior</span><strong>Crear paquetes</strong></a><a class="next" href="/docs/paquetes/multipart/"><span>Siguiente →</span><strong>Multipart</strong></a></nav></article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span></div></footer></body></html>
