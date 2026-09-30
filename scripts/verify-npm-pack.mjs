@@ -1,6 +1,6 @@
 import {execFile} from 'node:child_process';
 import {access, mkdir, readFile, rm, stat, writeFile} from 'node:fs/promises';
-import {join, resolve} from 'node:path';
+import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
 
@@ -9,9 +9,22 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const work = join(root, '.npm-pack-gate');
 const packs = join(work, 'packs');
 const installRoot = join(work, 'install');
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const npmExecOptions = process.platform === 'win32' ? {shell:true} : {};
 const node = process.execPath;
+
+async function resolveNpmInvocation(args) {
+  if (process.platform !== 'win32') return {command:'npm', args};
+  const candidates=[
+    process.env.npm_execpath,
+    join(dirname(process.execPath),'node_modules','npm','bin','npm-cli.js'),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    try {
+      const info=await stat(candidate);
+      if (info.isFile()) return {command:process.execPath, args:[candidate,...args]};
+    } catch {}
+  }
+  throw new Error('Unable to locate npm-cli.js for safe Windows execution.');
+}
 
 async function exists(path) {
   try { await access(path); return true; } catch { return false; }
@@ -49,10 +62,11 @@ function assertPackedFileSafety(packResult, label) {
 }
 
 async function pack(directory) {
+  const invocation=await resolveNpmInvocation(['pack','--json','--pack-destination',packs]);
   const {stdout} = await execFileAsync(
-    npm,
-    ['pack', '--json', '--pack-destination', packs],
-    {cwd:join(root, directory), maxBuffer:32*1024*1024, ...npmExecOptions},
+    invocation.command,
+    invocation.args,
+    {cwd:join(root, directory), maxBuffer:32*1024*1024},
   );
   const match = /\[\s*\{[\s\S]*\}\s*\]\s*$/u.exec(String(stdout));
   if (!match) throw new Error(`npm pack did not emit a JSON result for ${directory}:\n${stdout}`);
@@ -72,10 +86,10 @@ async function run(command, args, options = {}) {
   return result.stdout;
 }
 async function runNpm(args, options = {}) {
-  const result = await execFileAsync(npm, args, {
+  const invocation=await resolveNpmInvocation(args);
+  const result = await execFileAsync(invocation.command, invocation.args, {
     cwd:options.cwd ?? root,
     maxBuffer:32*1024*1024,
-    ...npmExecOptions,
     env:{...process.env, ...(options.env ?? {})},
   });
   return result.stdout;
