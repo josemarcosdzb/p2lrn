@@ -87,6 +87,8 @@ test('explicit unlockWhen supports pass and score thresholds',()=>{
   ({state}=updateProgressionState(state,{type:'p2lrn:score',detail:{normalized:.79,context:{entityId:a}}}));
   assert.equal(model.isLocked(b,state),true);
   ({state}=updateProgressionState(state,{type:'p2lrn:score',detail:{normalized:.82,context:{entityId:a}}}));
+  assert.equal(model.isLocked(b,state),true);
+  ({state}=updateProgressionState(state,{type:'p2lrn:complete',detail:{score:{normalized:.82},context:{entityId:a}}}));
   assert.equal(model.isLocked(b,state),false);
 });
 
