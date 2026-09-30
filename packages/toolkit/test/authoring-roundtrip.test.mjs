@@ -36,3 +36,37 @@ test('legacy workspace upgrades to 0.3 without changing contentRoot',()=>{const 
 test('all 17 Alpha15 P2RLN packages open and rebuild as P2LRN',()=>{for(const rel of expected){const dir=mkdtempSync(join(tmpdir(),'p2lrn-open-legacy-'));try{const source=join(examples,rel),root=join(dir,'workspace'),out=join(dir,rel.replace(/\.p2rln$/,'.p2lrn'));assert.equal(openPackageAsProject(source,root).canonicalMigration,true,rel);assert.equal(validatePackageFile((buildProject(root,out,false),out),{strictProfiles:true,validateProfilePayloads:true}).manifest.format,'P2LRN',rel);}finally{rmSync(dir,{recursive:true,force:true});}}});
 
 test('legacy SCORM authoring migration preserves nested source',()=>{const dir=mkdtempSync(join(tmpdir(),'p2lrn-legacy-source-'));try{const source=join(examples,'external/scorm12-real.p2rln'),root=join(dir,'workspace'),out=join(dir,'scorm.p2lrn'),before=join(dir,'before.zip'),after=join(dir,'after.zip');extractPreservedSource(source,before);openPackageAsProject(source,root);buildProject(root,out,true);extractPreservedSource(out,after);assert.deepEqual(readFileSync(after),readFileSync(before));}finally{rmSync(dir,{recursive:true,force:true});}});
+
+
+test('typed authoring progression is opt-in and distinguishes required from blocking',async()=>{
+  const {P2LRNAuthoringWorkspace}=await import('../dist/authoring/index.js');
+  const dir=mkdtempSync(join(tmpdir(),'p2lrn-authoring-progression-'));
+  try{
+    const root=join(dir,'workspace'),out1=join(dir,'gated.p2lrn'),out2=join(dir,'required-only.p2lrn'),out3=join(dir,'free.p2lrn');
+    const workspace=P2LRNAuthoringWorkspace.create(root,{title:'Progression',language:'es'});
+    workspace.addUrl({url:'https://example.invalid/lesson-1',key:'lesson-1',title:'Lección 1'});
+    workspace.addUrl({url:'https://example.invalid/lesson-2',key:'lesson-2',title:'Lección 2'});
+
+    const gated=workspace.setProgression('act-lesson-1',{required:true,gateFollowing:true,completionRequirement:'viewed'});
+    assert.equal(gated.profileRequirement,'required');
+    workspace.build(out1,{strictProfiles:true});
+    let reader=new P2LRNReader(out1);
+    let profile=reader.package.manifest.profiles.find((item)=>item.id==='https://p2lrn.org/profile/progression');
+    assert.equal(profile?.requirement,'required');
+    let entity=[...reader.entities.values()].find((item)=>item.title?.es==='Lección 1'&&item.type==='activity');
+    assert.deepEqual(entity?.extensions?.['https://p2lrn.org/profile/progression'],{required:true,gateFollowing:true,completionRequirement:'viewed'});
+
+    const requiredOnly=workspace.setProgression('act-lesson-1',{required:true,completionRequirement:'viewed'});
+    assert.equal(requiredOnly.profileRequirement,'optional');
+    workspace.build(out2,{strictProfiles:true});
+    reader=new P2LRNReader(out2);
+    profile=reader.package.manifest.profiles.find((item)=>item.id==='https://p2lrn.org/profile/progression');
+    assert.equal(profile?.requirement,'optional');
+
+    const cleared=workspace.setProgression('act-lesson-1',null);
+    assert.equal(cleared.profileRequirement,null);
+    workspace.build(out3,{strictProfiles:true});
+    reader=new P2LRNReader(out3);
+    assert.equal(reader.package.manifest.profiles.some((item)=>item.id==='https://p2lrn.org/profile/progression'),false);
+  }finally{rmSync(dir,{recursive:true,force:true});}
+});
