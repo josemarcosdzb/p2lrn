@@ -3,7 +3,7 @@ import {readerId} from './utils.js';
 
 type PdfTextItem={str?:string;transform?:number[];width?:number;height?:number;fontName?:string};
 
-const dynamicImport = new Function('specifier','return import(specifier)') as (specifier:string)=>Promise<any>;
+const dynamicImport = (specifier:string):Promise<any> => import(specifier);
 
 async function loadPdfJs():Promise<any>{
   for(const specifier of ['pdfjs-dist/legacy/build/pdf.mjs','pdfjs-dist/build/pdf.mjs']){
