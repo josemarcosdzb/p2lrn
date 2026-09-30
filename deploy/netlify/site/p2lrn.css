@@ -480,3 +480,64 @@ footer a:hover{color:var(--blue)}
   .form-actions{align-items:flex-start;flex-direction:column}
   .command-list{grid-template-columns:1fr}
 }
+
+
+/* Documentation information architecture */
+.doc-sidebar{gap:0}
+.doc-sidebar>span{margin:18px 0 6px;font-family:var(--mono);font-size:.62rem;letter-spacing:.09em;color:#8b949e}
+.doc-sidebar>span:first-child{margin-top:0}
+.doc-sidebar a[aria-current="page"]{position:relative;color:var(--ink);font-weight:750}
+.doc-sidebar a[aria-current="page"]::before{content:"";position:absolute;left:-12px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--blue)}
+
+.docs-path-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:26px}
+.docs-path-grid a{display:block;padding:22px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-decoration:none}
+.docs-path-grid a:hover{border-color:#98a2b3;transform:translateY(-1px)}
+.docs-path-grid span{font-family:var(--mono);font-size:.66rem;color:var(--blue)}
+.docs-path-grid h3{margin:8px 0 6px;font-size:1.08rem}
+.docs-path-grid p{margin:0;color:var(--muted)}
+
+.learning-path{list-style:none;padding:0;margin:24px 0 0;border-top:1px solid var(--line)}
+.learning-path li{display:grid;grid-template-columns:170px 1fr;gap:18px;padding:15px 0;border-bottom:1px solid var(--line)}
+.learning-path strong{font-family:var(--mono);font-size:.78rem}
+.learning-path span{color:var(--muted)}
+
+.responsibility-grid,.concept-flow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:24px}
+.responsibility-grid>div,.concept-flow>div{padding:18px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+.responsibility-grid strong,.concept-flow strong{font-family:var(--mono);font-size:.77rem;color:var(--blue)}
+.responsibility-grid p,.concept-flow p{margin:7px 0 0;color:var(--muted)}
+
+.check-list{list-style:none;padding:0;margin:24px 0 0;border-top:1px solid var(--line)}
+.check-list li{display:grid;grid-template-columns:100px 1fr;gap:16px;padding:13px 0;border-bottom:1px solid var(--line);color:var(--muted)}
+.check-list span{font-family:var(--mono);font-size:.66rem;color:var(--green);font-weight:700}
+
+.integration-chain{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--panel);font-family:var(--mono);font-size:.76rem}
+.integration-chain span{padding:6px 9px;border-radius:5px;background:#eef2f7}
+.integration-chain b{color:var(--blue)}
+
+.reference-table{border-top:1px solid var(--ink);margin-top:22px}
+.reference-table>div{display:grid;grid-template-columns:minmax(180px,.42fr) minmax(0,1fr);gap:20px;padding:14px 0;border-bottom:1px solid var(--line)}
+.reference-table p{margin:0;color:var(--muted)}
+.reference-table code{overflow-wrap:anywhere}
+
+.capability-matrix{margin-top:22px;border-top:1px solid var(--ink);font-size:.84rem;overflow-x:auto}
+.capability-matrix>div{display:grid;grid-template-columns:minmax(150px,1.2fr) 80px 90px 100px minmax(220px,1.6fr);gap:12px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line);min-width:720px}
+.capability-matrix .head{font-family:var(--mono);font-size:.66rem;color:var(--muted);text-transform:uppercase}
+.capability-matrix p{margin:0;color:var(--muted)}
+
+.doc-pager{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:34px 0;border-bottom:1px solid var(--line)}
+.doc-pager a{display:grid;gap:3px;padding:15px 16px;border:1px solid var(--line);border-radius:8px;text-decoration:none;background:var(--panel)}
+.doc-pager a:hover{border-color:#98a2b3}
+.doc-pager .next{text-align:right}
+.doc-pager span{font-size:.72rem;color:var(--muted)}
+.doc-pager strong{font-size:.92rem}
+
+.doc-section a{color:#214ecf;text-underline-offset:3px}
+
+@media(max-width:760px){
+  .docs-path-grid,.responsibility-grid,.concept-flow{grid-template-columns:1fr}
+  .learning-path li{grid-template-columns:1fr;gap:4px}
+  .reference-table>div{grid-template-columns:1fr;gap:5px}
+  .doc-pager{grid-template-columns:1fr}
+  .doc-pager .next{text-align:left}
+  .integration-chain{align-items:flex-start}
+}
