@@ -1,5 +1,5 @@
-import {cp, mkdir, readFile, rm, stat, writeFile} from 'node:fs/promises';
-import {dirname, join, resolve} from 'node:path';
+import {cp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
+import {join, resolve} from 'node:path';
 import {buildPlayerDistribution, H5P_STANDALONE_VERSION} from '../../packages/player/scripts/build-dist.mjs';
 import {buildH5pLibraries, LUMI_H5P_LIBRARY_COMMIT} from '../../packages/h5p-libraries/scripts/build.mjs';
 
@@ -12,18 +12,6 @@ const compatibilityVersion = '0.5.0-alpha.1';
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
-}
-
-async function copyIfPresent(from, to) {
-  try {
-    const info = await stat(from);
-    if (!info.isDirectory()) return false;
-  } catch {
-    return false;
-  }
-  await mkdir(dirname(to), {recursive:true});
-  await cp(from, to, {recursive:true, force:true});
-  return true;
 }
 
 function headerBlock(path, cacheControl, edgeCacheControl) {
@@ -76,11 +64,6 @@ if (version !== compatibilityVersion) {
   });
 }
 
-const packagesCopied = await copyIfPresent(
-  join(root, 'deploy', 'netlify', 'packages'),
-  join(outputRoot, 'packages'),
-);
-
 const index = {
   schema:'https://p2lrn.org/schema/cdn-index/1',
   generatedFrom:{
@@ -113,7 +96,6 @@ const index = {
     currentBasePath:'/player/current/dist/runtime-host/h5p-libraries/',
     catalog:'/player/current/dist/runtime-host/h5p-libraries/index.json',
   },
-  packagesPath:packagesCopied ? '/packages/' : null,
 };
 
 await writeFile(join(outputRoot, 'index.json'), JSON.stringify(index, null, 2) + '\n');
@@ -172,14 +154,6 @@ for (const channel of [version, 'current', compatibilityVersion]) {
 }
 
 headers += [
-  '/packages/*',
-  '  Access-Control-Allow-Origin: *',
-  '  Access-Control-Expose-Headers: Accept-Ranges, Content-Length, Content-Range, ETag, Last-Modified',
-  '  Cross-Origin-Resource-Policy: cross-origin',
-  '  Cache-Control: public, max-age=31536000, immutable',
-  '  Netlify-CDN-Cache-Control: public, s-maxage=31536000, immutable',
-  '  X-Content-Type-Options: nosniff',
-  '',
   '/index.json',
   '  Access-Control-Allow-Origin: *',
   '  Cache-Control: public, max-age=0, must-revalidate',
@@ -203,5 +177,4 @@ console.log(JSON.stringify({
   playerFiles:playerBuild.release.files.length,
   sharedH5pLibraryCount:h5pManifest.libraryCount,
   h5pStandaloneVersion:H5P_STANDALONE_VERSION,
-  packagesCopied,
 }, null, 2));
