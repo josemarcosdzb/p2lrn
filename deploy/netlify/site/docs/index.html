@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="Recorrido completo desde entender P2LRN hasta reproducir, editar e integrar un paquete real.">
+  <title>P2LRN Documentation — P2LRN</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <script src="/p2lrn.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">P2LRN</a>
+    <nav class="nav" id="nav">
+      <a href="/docs/">Docs</a>
+      <a href="/docs/formato/">Formato</a>
+      <a href="/docs/player/">Player</a>
+      <a href="/docs/toolkit/">Toolkit</a>
+      <a href="/docs/integracion/">Integración</a>
+    </nav>
+    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
+    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
+  </header>
+
+  <main class="doc-main">
+    <aside class="doc-sidebar">
+  <span>START</span>
+  <a href="/docs/" aria-current="page">Overview</a>
+  <a href="/docs/empezar/">Quickstart</a>
+  <a href="/docs/conceptos/">Conceptos</a>
+
+  <span>BUILD</span>
+  <a href="/docs/formato/">Formato</a>
+  <a href="/docs/player/">Player</a>
+  <a href="/docs/toolkit/">Toolkit</a>
+
+  <span>INTEGRATE</span>
+  <a href="/docs/integracion/">Integración real</a>
+  <a href="/docs/compatibilidad/">Compatibilidad</a>
+
+  <span>REFERENCE</span>
+  <a href="/docs/referencia/">Referencia</a>
+  <a href="/docs/troubleshooting/">Troubleshooting</a>
+
+  <span>RESOURCES</span>
+  <a href="/index.json">Índice CDN ↗</a>
+  <a href="/health.json">Estado ↗</a></aside>
+    <article class="doc-content">
+      <header class="doc-hero">
+        <p class="eyebrow">START HERE</p>
+        <h1>P2LRN Documentation</h1>
+        <p>Recorrido completo desde entender P2LRN hasta reproducir, editar e integrar un paquete real.</p>
+      </header>
+      
+<section class="doc-section">
+  <h2>Elige por objetivo</h2>
+  <div class="docs-path-grid">
+    <a href="/docs/empezar/"><span>01</span><h3>Ejecutar mi primer curso</h3><p>Instala lo mínimo, sirve un paquete y escucha los primeros eventos del Player.</p></a>
+    <a href="/docs/toolkit/"><span>02</span><h3>Crear o editar un paquete</h3><p>Abre un workspace, lee documentos, modifica el curso y reconstruye el .p2lrn.</p></a>
+    <a href="/docs/integracion/"><span>03</span><h3>Integrarlo en mi plataforma</h3><p>Conecta Player, eventos, Host Adapter, progreso, CORS y runtimes externos.</p></a>
+    <a href="/docs/referencia/"><span>04</span><h3>Consultar una referencia</h3><p>API TypeScript, CLI, atributos, eventos, rutas CDN, namespaces y versiones.</p></a>
+  </div>
+</section>
+<section class="doc-section">
+  <h2>Recorrido recomendado</h2>
+  <ol class="learning-path">
+    <li><strong>Entender.</strong><span>Qué es un paquete P2LRN y qué problema resuelve.</span></li>
+    <li><strong>Reproducir.</strong><span>Cargar <code>&lt;p2lrn-player&gt;</code> y abrir un archivo real.</span></li>
+    <li><strong>Inspeccionar.</strong><span>Comprender manifiesto, grafo, entrypoints, recursos e integridad.</span></li>
+    <li><strong>Editar.</strong><span>Abrir un workspace con Toolkit y reconstruir el paquete.</span></li>
+    <li><strong>Integrar.</strong><span>Conectar eventos, persistencia y runtimes con tu aplicación.</span></li>
+    <li><strong>Desplegar.</strong><span>Elegir CDN/npm, configurar CORS y verificar el comportamiento final.</span></li>
+  </ol>
+</section>
+<section class="doc-section">
+  <h2>Mapa de responsabilidades</h2>
+  <div class="responsibility-grid">
+    <div><strong>PACKAGE</strong><p>Estructura, contenido, manifiestos, perfiles y recursos portables.</p></div>
+    <div><strong>PLAYER</strong><p>Lectura, renderizado, eventos y runtimes aislados del navegador.</p></div>
+    <div><strong>TOOLKIT</strong><p>Autoría, Reader, validación, conversión, repack y herramientas CLI.</p></div>
+    <div><strong>HOST</strong><p>Usuarios, permisos, matrícula, progreso durable, secretos y telemetría.</p></div>
+  </div>
+</section>
+      <nav class="doc-pager">
+        <span></span>
+        <a class="next" href="/docs/empezar/"><span>Siguiente →</span><strong>Quickstart</strong></a>
+      </nav>
+      
+<section class="doc-contact" id="contacto">
+  <h2>Contacto</h2>
+  <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
+  <form class="contact-form" data-contact-form>
+    <div class="form-grid">
+      <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
+      <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
+    </div>
+    <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
+    <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required></textarea></label>
+    <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
+    <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
+  </form>
+</section>
+    </article>
+  </main>
+
+  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
+</body>
+</html>
