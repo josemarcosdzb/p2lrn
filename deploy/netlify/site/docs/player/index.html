@@ -1,60 +1,48 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0d1117">
-  <title>Player web — P2LRN</title>
-  <link rel="stylesheet" href="/p2lrn.css">
-  <script src="/p2lrn.js" defer></script>
-</head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="/">P2LRN</a>
-    <nav class="nav" id="nav"><a href="/docs/formato/">Formato</a><a href="/docs/player/" aria-current="page">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/compatibilidad/">Compatibilidad</a></nav>
-    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
-    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
-  </header>
-  <main class="doc-main">
-    <aside class="doc-sidebar">
-      <span>DOCUMENTACIÓN</span>
-      <a href="/docs/formato/">Formato</a><a href="/docs/player/" aria-current="page">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/compatibilidad/">Compatibilidad</a>
-      <a href="/index.json">Índice CDN ↗</a>
-      <a href="/health.json">Estado ↗</a>
-    </aside>
-    <article class="doc-content">
-      <header class="doc-hero">
-        <p class="eyebrow">PLAYER</p>
-        <h1>Player web</h1>
-        <p>Cómo cargar un paquete P2LRN en navegador, configurar el Web Component, usar el CDN y entender los runtimes aislados.</p>
-      </header>
-      
-<section class="doc-section">
-  <h2>Integración mínima</h2>
-  <p>El Player se distribuye como Web Component. Al cargar el script se registra <code>&lt;p2lrn-player&gt;</code>.</p>
-  <div class="codebox"><div class="codebox-head"><span>HTML</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Desde la primera línea HTML hasta eventos, CORS, Host Adapter, runtimes aislados y Service Worker."><title>Player web — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar">
+  <span>START</span>
+  <a href="/docs/">Overview</a>
+  <a href="/docs/empezar/">Quickstart</a>
+  <a href="/docs/conceptos/">Conceptos</a>
+  <span>BUILD</span>
+  <a href="/docs/formato/">Formato</a>
+  <a href="/docs/player/" aria-current="page">Player</a>
+  <a href="/docs/toolkit/">Toolkit</a>
+  <span>INTEGRATE</span>
+  <a href="/docs/integracion/">Integración real</a>
+  <a href="/docs/compatibilidad/">Compatibilidad</a>
+  <span>REFERENCE</span>
+  <a href="/docs/referencia/">Referencia</a>
+  <a href="/docs/troubleshooting/">Troubleshooting</a>
+  <span>RESOURCES</span>
+  <a href="/index.json">Índice CDN ↗</a>
+  <a href="/health.json">Estado ↗</a></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">BUILD / PLAYER</p><h1>Player web</h1><p>Desde la primera línea HTML hasta eventos, CORS, Host Adapter, runtimes aislados y Service Worker.</p></header>
+<section class="doc-section"><h2>Qué vas a conseguir</h2><p>Montar <code>&lt;p2lrn-player&gt;</code>, cargar un paquete real y entender qué debe hacer tu aplicación alrededor del Player.</p></section>
+<section class="doc-section"><h2>CDN o npm</h2><p>Usa CDN para una integración directa sin build. Usa npm cuando quieras empaquetar el Player con tu aplicación.</p><div class="codebox"><div class="codebox-head"><span>CDN</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+&lt;p2lrn-player src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre></div><div class="codebox"><div class="codebox-head"><span>npm</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/player
 
-&lt;p2lrn-player src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre></div>
-</section>
-<section class="doc-section">
-  <h2>Contrato HTML</h2>
-  <div class="api-list">
-    <div><code>src</code><p>URL del paquete. Requerida para la reproducción.</p><span>obligatoria</span></div>
-    <div><code>node</code><p>Selecciona un nodo concreto del grafo. Sin él se usa el entrypoint principal.</p><span>opcional</span></div>
-    <div><code>renderer</code><p>Solicita un renderer específico de forma estricta.</p><span>opcional</span></div>
-    <div><code>runtime-base-url</code><p>Sustituye el runtime estático inferido por otro origen de confianza.</p><span>opcional</span></div>
-  </div>
-</section>
-<section class="doc-section">
-  <h2>Eventos</h2>
-  <p>El Player publica eventos DOM bajo el namespace <code>p2lrn:*</code>, incluidos <code>p2lrn:ready</code>, <code>p2lrn:rendered</code>, progreso, estado, puntuación, finalización y errores.</p>
-</section>
-<section class="doc-section">
-  <h2>Runtimes aislados</h2>
-  <p>H5P y SCORM se ejecutan en hosts aislados. Esto separa el contenido ejecutable del documento que integra el Player y reduce el acoplamiento con la aplicación anfitriona.</p>
-  <p>El Service Worker es opcional y se utiliza cuando una instalación necesita acceso verificable a recursos con búsqueda o rangos HTTP.</p>
-</section>
-      
+import '@p2lrn/player';</code></pre></div></section>
+<section class="doc-section"><h2>Contrato del Web Component</h2><div class="api-list"><div><code>src</code><p>URL del paquete.</p><span>required</span></div><div><code>node</code><p>Nodo inicial opcional.</p><span>optional</span></div><div><code>renderer</code><p>Renderer explícito.</p><span>optional</span></div><div><code>runtime-base-url</code><p>Origen alternativo de runtime.</p><span>optional</span></div></div></section>
+<section class="doc-section"><h2>Eventos</h2><div class="codebox"><div class="codebox-head"><span>JavaScript</span><button type="button" data-copy>Copiar</button></div><pre><code>const player = document.querySelector('p2lrn-player');
+
+player.addEventListener('p2lrn:ready', () =&gt; {
+  console.log('ready');
+});
+
+player.addEventListener('p2lrn:rendered', (event) =&gt; {
+  console.log('rendered', event.detail);
+});
+
+player.addEventListener('p2lrn:error', (event) =&gt; {
+  console.error(event.detail);
+});</code></pre></div><p>El runtime también puede emitir actividad, progreso, estado, score y completion según las capacidades del renderer.</p></section>
+<section class="doc-section"><h2>Host Adapter</h2><p>La integración con identidad, autorización, matrícula, persistencia y URLs protegidas pertenece al host. El Adapter es el punto de integración; el paquete no debe contener credenciales del usuario.</p></section>
+<section class="doc-section"><h2>CORS</h2><p>Si <code>src</code> apunta a otro origen, ese servidor debe permitir las solicitudes del navegador. Para contenido privado, restringe orígenes o usa URLs autorizadas; no conviertas <code>*</code> en el mecanismo de autorización.</p></section>
+<section class="doc-section"><h2>H5P y SCORM</h2><p>El Player dispone de hosts aislados para estos runtimes. H5P puede resolver librerías compartidas fuera del paquete cuando la integración las distribuye como corpus reusable.</p></section>
+<section class="doc-section"><h2>Runtime Node y runtime estático</h2><p>Una instalación puede servir los hosts estáticos junto al frontend o exponerlos desde un host Node controlado. <code>runtime-base-url</code> permite cambiar el origen utilizado por el Player.</p></section>
+<section class="doc-section"><h2>Service Worker</h2><p>No es obligatorio para la reproducción normal. Se instala cuando la aplicación necesita acceso verificable a media seekable o una ruta virtual controlada.</p></section>
+<section class="doc-section"><h2>Errores habituales</h2><p>Empieza por <code>p2lrn:error</code>, red/CORS, integridad del paquete y disponibilidad del renderer/runtime. La guía completa está en <a href="/docs/troubleshooting/">Troubleshooting</a>.</p></section><nav class="doc-pager"><a class="prev" href="/docs/formato/"><span>← Anterior</span><strong>Formato</strong></a><a class="next" href="/docs/toolkit/"><span>Siguiente →</span><strong>Toolkit</strong></a></nav>
 <section class="doc-contact" id="contacto">
   <h2>Contacto</h2>
   <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
@@ -68,9 +56,5 @@
     <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
     <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
   </form>
-</section>
-    </article>
-  </main>
-  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
-</body>
-</html>
+</section></article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer></body></html>
