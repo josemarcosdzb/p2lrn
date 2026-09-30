@@ -5,7 +5,8 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {normalizeRuntimeBaseUrl} from '../web/runtime-host-config.js';
-import {MAX_ROUTE_RESOURCES, validateRouteConfig} from '../web/p2lrn-sw.js';
+import {MAX_ROUTE_RESOURCES, routeSourceMayPersist, trustedWorkerMessageSource, validateRouteConfig} from '../web/p2lrn-sw.js';
+import {readResponseBounded} from '../web/zip-source.js';
 
 const root=resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
@@ -96,4 +97,38 @@ test('static resource bridge rejects traversal and oversized route registries',(
     };
   }
   assert.throws(()=>validateRouteConfig(many),/too many resources/i);
+});
+
+
+test('Service Worker source URL policy rejects credentials and avoids persisting signed URLs',()=>{
+  assert.throws(()=>validateRouteConfig(route('https://user:pass@example.invalid/course.p2lrn')),/must not contain credentials/i);
+  assert.throws(()=>validateRouteConfig(route('https://example.invalid/course.p2lrn#secret')),/must not contain a fragment/i);
+  const signed=validateRouteConfig(route('https://example.invalid/course.p2lrn?token=secret'));
+  assert.equal(signed.sourceUrl,'https://example.invalid/course.p2lrn?token=secret');
+  assert.equal(routeSourceMayPersist(signed.sourceUrl),false);
+  assert.equal(routeSourceMayPersist('https://example.invalid/course.p2lrn'),true);
+});
+
+test('Service Worker only accepts messages from the expected origin',()=>{
+  assert.equal(trustedWorkerMessageSource({url:'https://example.invalid/page'},'https://example.invalid'),true);
+  assert.equal(trustedWorkerMessageSource({url:'https://attacker.invalid/page'},'https://example.invalid'),false);
+  assert.equal(trustedWorkerMessageSource(null,'https://example.invalid'),false);
+});
+
+test('bounded HTTP reader cancels oversized bodies before full buffering',async()=>{
+  const oversized=new Response(new ReadableStream({
+    start(controller){controller.enqueue(new Uint8Array([1,2]));controller.close();}
+  }));
+  await assert.rejects(
+    ()=>readResponseBounded(oversized,1,{exact:true,label:'test response'}),
+    /exceeds safe limit/i,
+  );
+
+  const truncated=new Response(new ReadableStream({
+    start(controller){controller.enqueue(new Uint8Array([1]));controller.close();}
+  }));
+  await assert.rejects(
+    ()=>readResponseBounded(truncated,2,{exact:true,label:'test response'}),
+    /body length mismatch/i,
+  );
 });
