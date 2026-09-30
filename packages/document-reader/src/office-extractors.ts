@@ -169,7 +169,7 @@ function pptxElementPosition(fragment:string){
   const off=/<a:off\b([^>]*)\/>/iu.exec(xfrm)?.[1]??'';
   const ext=/<a:ext\b([^>]*)\/>/iu.exec(xfrm)?.[1]??'';
   const num=(attrs:string,name:string)=>{
-    const raw=new RegExp('(?:^|\\s)'+name+'=["\\'](-?\\d+(?:\\.\\d+)?)["\\']','iu').exec(attrs)?.[1];
+    const raw=new RegExp("(?:^|\\\\s)"+name+"=[\\\"'](-?\\\\d+(?:\\\\.\\\\d+)?)[\\\"']","iu").exec(attrs)?.[1];
     const n=raw===undefined?NaN:Number(raw);return Number.isFinite(n)?n:undefined;
   };
   return {x:emuPx(num(off,'x')),y:emuPx(num(off,'y')),width:emuPx(num(ext,'cx')),height:emuPx(num(ext,'cy'))};
