@@ -1,5 +1,5 @@
 import {Sha256State} from './stream-integrity.js';
-import {BufferZipArchive, safeZipPath} from './zip-source.js';
+import {BufferZipArchive, readResponseBounded, safeZipPath} from './zip-source.js';
 
 export const MULTIPART_PROFILE = 'https://p2lrn.org/profile/multipart';
 export const MULTIPART_MEDIA_TYPE = 'application/vnd.p2lrn.multipart+json';
@@ -136,9 +136,11 @@ export async function createMultipartPayload(pkg, representation) {
         if (Number.isFinite(declaredLength) && declaredLength > part.size) {
           throw fail(`Multipart part Content-Length exceeds declared size for ${part.href}`, 'P2LRN_MULTIPART_INTEGRITY_FAILED');
         }
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        if (bytes.byteLength !== part.size) {
-          throw fail(`Multipart part size mismatch for ${part.href}: expected ${part.size}, got ${bytes.byteLength}`, 'P2LRN_MULTIPART_INTEGRITY_FAILED');
+        let bytes;
+        try {
+          bytes = await readResponseBounded(response, part.size, {exact:true, label:`Multipart part ${part.href}`});
+        } catch (error) {
+          throw fail(String(error?.message ?? error), 'P2LRN_MULTIPART_INTEGRITY_FAILED');
         }
         const actual = digest(bytes);
         if (actual !== part.byteDigest) {
