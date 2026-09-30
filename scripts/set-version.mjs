@@ -30,7 +30,6 @@ await updateJson('packages/player/package.json', (pkg) => {
 });
 await updateJson('packages/toolkit/package.json', (pkg) => { pkg.version = version; });
 await updateJson('packages/h5p-libraries/package.json', (pkg) => { pkg.version = version; });
-await updateJson('packages/document-reader/package.json', (pkg) => { pkg.version = version; });
 await updateJson('packages/toolkit/config/capabilities.json', (value) => { value.product.version = version; });
 
 await replace(
@@ -76,7 +75,7 @@ await replace(
   'capabilities test version',
 );
 
-for (const relative of ['README.md','packages/player/README.md','packages/document-reader/README.md','PUBLISHING.md']) {
+for (const relative of ['README.md','packages/player/README.md','packages/toolkit/README.md','PUBLISHING.md']) {
   const path = resolve(root, relative);
   const before = await readFile(path, 'utf8');
   const after = before.replaceAll(/0\.5\.0-alpha\.\d+/gu, version);
@@ -90,7 +89,6 @@ console.log(JSON.stringify({
     '@p2lrn/player',
     '@p2lrn/toolkit',
     '@p2lrn/h5p-libraries',
-    '@p2lrn/document-reader',
     'browser runtime',
     'CDN loader',
     'release metadata',
