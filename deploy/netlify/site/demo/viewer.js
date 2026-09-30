@@ -12,6 +12,12 @@
   const copyButton = document.querySelector('[data-copy-demo]');
   const menu = document.querySelector('[data-menu]');
   const nav = document.getElementById('nav');
+  const params = new URLSearchParams(location.search);
+  const initialSrc = params.get('src');
+  if (initialSrc && urlInput) {
+    urlInput.value = initialSrc;
+    if (sample) sample.value = initialSrc;
+  }
 
   const write = (name, detail) => {
     const time = new Date().toLocaleTimeString();
