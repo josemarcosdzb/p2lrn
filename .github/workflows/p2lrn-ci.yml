@@ -55,8 +55,11 @@ jobs:
           npm install --no-save --ignore-scripts --no-audit --no-fund typescript@5.6.3
           npm test
 
+      - name: Verify runtime host security
+        run: node --test packages/player/test/runtime-security.test.mjs
+
       - name: Check browser module syntax
-        shell: pwsh
+        shell: powershell
         run: |
           Get-ChildItem packages/toolkit/web,packages/toolkit/web-sdk-src -Recurse -Filter *.js | ForEach-Object {
             node --check $_.FullName
@@ -90,7 +93,7 @@ jobs:
         run: node scripts/verify-distribution-identity.mjs
 
       - name: Verify generated runtime
-        shell: pwsh
+        shell: powershell
         run: |
           $VERSION = node -p "require('./packages/player/package.json').version"
           $required = @(
