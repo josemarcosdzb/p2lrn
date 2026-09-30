@@ -5,7 +5,7 @@ export function readerId(prefix:string):string {
 }
 
 export function extensionOf(name:string):string {
-  const clean=String(name||'').split(/[?#]/,1)[0];
+  const clean=String(name||'').split(/[?#]/,1)[0]??'';
   const i=clean.lastIndexOf('.');
   return i>=0?clean.slice(i+1).toLowerCase():'';
 }
