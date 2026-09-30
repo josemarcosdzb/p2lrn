@@ -9,9 +9,7 @@
 
 export const P2LRN_SW_PROTOCOL = 'p2lrn-static-bridge/1';
 export const VIRTUAL_MARKER = '/__p2lrn__/v1/';
-export const LEGACY_VIRTUAL_MARKER = '/__p2rln__/v1/';
-export const REGISTRY_CACHE = 'p2lrn-static-bridge-registry-v1';
-export const LEGACY_REGISTRY_CACHE = 'p2rln-static-bridge-registry-v1';
+export const REGISTRY_CACHE = 'p2lrn-static-bridge-registry-v2';
 export const MAX_BUFFERED_RESOURCE = 64 * 1024 * 1024;
 export const MAX_ROUTE_RESOURCES = 4096;
 export const MAX_ROUTE_CHUNK_DIGESTS = 262144;
@@ -98,6 +96,7 @@ function contentHeaders(resource, {length = resource.size, range = null, seekabl
     'ETag': virtualEtag(resource),
     'Cache-Control': 'private, no-store',
     'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
   });
   if (seekable) headers.set('Accept-Ranges', 'bytes');
   if (range) headers.set('Content-Range', `bytes ${range.start}-${range.end}/${resource.size}`);
@@ -122,8 +121,9 @@ function safeVirtualPath(value, label) {
 }
 
 export function validateRouteConfig(config, expectedOrigin = null) {
-  if (!config || typeof config !== 'object' || Array.isArray(config) || config.version !== '1') throw new Error('Invalid P2LRN static route config.');
+  if (!config || typeof config !== 'object' || Array.isArray(config) || config.version !== '2') throw new Error('Invalid P2LRN static route config.');
   if (!/^[a-f0-9]{32,64}$/.test(String(config.routeId ?? ''))) throw new Error('Invalid P2LRN static route id.');
+  if (!/^[a-f0-9]{32}$/.test(String(config.capability ?? ''))) throw new Error('Invalid P2LRN static route capability.');
   const source = new URL(config.sourceUrl);
   if (!['http:', 'https:'].includes(source.protocol)) throw new Error('P2LRN static bridge source must be HTTP(S).');
   if (source.username || source.password) throw new Error('P2LRN static bridge source URL must not contain credentials.');
@@ -166,17 +166,12 @@ export function validateRouteConfig(config, expectedOrigin = null) {
       rangeIntegrity,
     };
   }
-  return {version: '1', routeId: config.routeId, sourceUrl: source.href, contentRoot: config.contentRoot, resources};
+  return {version: '2', routeId: config.routeId, capability: config.capability, sourceUrl: source.href, contentRoot: config.contentRoot, resources};
 }
 
 function registryKey(routeId, origin = globalThis.location?.origin ?? 'https://p2lrn.invalid') {
   return `${origin}/__p2lrn_registry__/v1/${routeId}`;
 }
-function legacyRegistryKey(routeId, origin = globalThis.location?.origin ?? 'https://p2rln.invalid') {
-  return `${origin}/__p2rln_registry__/v1/${routeId}`;
-}
-
-
 export function routeSourceMayPersist(sourceUrl) {
   const source = new URL(sourceUrl);
   return source.search === '' && source.username === '' && source.password === '' && source.hash === '';
@@ -196,19 +191,12 @@ export async function loadRouteConfig(routeId) {
   if (memoryRoutes.has(routeId)) return memoryRoutes.get(routeId);
   if (!globalThis.caches) return null;
   const cache = await caches.open(REGISTRY_CACHE);
-  let matchedCache = cache;
-  let matchedKey = registryKey(routeId);
-  let response = await cache.match(matchedKey);
-  if (!response) {
-    const legacyCache = await caches.open(LEGACY_REGISTRY_CACHE);
-    matchedCache = legacyCache;
-    matchedKey = legacyRegistryKey(routeId);
-    response = await legacyCache.match(matchedKey);
-  }
+  const matchedKey = registryKey(routeId);
+  const response = await cache.match(matchedKey);
   if (!response) return null;
   const normalized = validateRouteConfig(await response.json(), globalThis.location?.origin ?? null);
   if (!routeSourceMayPersist(normalized.sourceUrl)) {
-    try { await matchedCache.delete(matchedKey); } catch {}
+    try { await cache.delete(matchedKey); } catch {}
     return null;
   }
   memoryRoutes.set(routeId, normalized);
@@ -335,25 +323,24 @@ export async function serveVirtualResource(routeInput, logical, request, {fetchI
 
 export function extractVirtualTarget(url) {
   const parsed = new URL(url);
-  let marker = VIRTUAL_MARKER;
-  let index = parsed.pathname.indexOf(marker);
-  if (index < 0) { marker = LEGACY_VIRTUAL_MARKER; index = parsed.pathname.indexOf(marker); }
+  const index = parsed.pathname.indexOf(VIRTUAL_MARKER);
   if (index < 0) return null;
-  const tail = parsed.pathname.slice(index + marker.length);
+  const tail = parsed.pathname.slice(index + VIRTUAL_MARKER.length);
   const parts = tail.split('/');
   const routeId = parts.shift() || '';
-  if (!/^[a-f0-9]{32,64}$/.test(routeId) || !parts.length) return null;
+  const capability = parts.shift() || '';
+  if (!/^[a-f0-9]{32,64}$/.test(routeId) || !/^[a-f0-9]{32}$/.test(capability) || !parts.length) return null;
   let logical;
   try { logical = parts.map((part) => decodeURIComponent(part)).join('/'); }
   catch { return null; }
-  return {routeId, logical};
+  return {routeId, capability, logical};
 }
 
 async function handleServiceWorkerFetch(request) {
   const target = extractVirtualTarget(request.url);
   if (!target) return null;
   const route = await loadRouteConfig(target.routeId);
-  if (!route) return new Response('P2LRN virtual route expired', {status: 404});
+  if (!route || route.capability !== target.capability) return new Response('P2LRN virtual route expired', {status: 404});
   try { return await serveVirtualResource(route, target.logical, request); }
   catch (error) { return new Response(`P2LRN virtual resource error: ${error?.message ?? error}`, {status: 502}); }
 }
@@ -367,7 +354,14 @@ export function trustedWorkerMessageSource(source, expectedOrigin = globalThis.l
 const sw = globalThis.self;
 if (sw?.addEventListener && sw?.registration) {
   sw.addEventListener('install', (event) => event.waitUntil(sw.skipWaiting()));
-  sw.addEventListener('activate', (event) => event.waitUntil(sw.clients.claim()));
+  sw.addEventListener('activate', (event) => event.waitUntil((async () => {
+    if (globalThis.caches) {
+      for (const stale of ['p2lrn-static-bridge-registry-v1', 'p2rln-static-bridge-registry-v1']) {
+        try { await caches.delete(stale); } catch {}
+      }
+    }
+    await sw.clients.claim();
+  })()));
   sw.addEventListener('message', (event) => {
     if (!trustedWorkerMessageSource(event.source, sw.location?.origin ?? null)) return;
     const data = event.data || {};
@@ -379,7 +373,7 @@ if (sw?.addEventListener && sw?.registration) {
       event.waitUntil((async () => {
         try {
           const route = await persistRouteConfig(data.config);
-          event.ports?.[0]?.postMessage({ok: true, protocol: P2LRN_SW_PROTOCOL, routeId: route.routeId, scope: sw.registration.scope});
+          event.ports?.[0]?.postMessage({ok: true, protocol: P2LRN_SW_PROTOCOL, routeId: route.routeId, capability: route.capability, scope: sw.registration.scope});
         } catch (error) {
           event.ports?.[0]?.postMessage({ok: false, error: error?.message ?? String(error)});
         }
