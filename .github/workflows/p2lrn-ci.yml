@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   toolkit-and-cdn:
-    runs-on: self-hosted
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -56,15 +56,26 @@ jobs:
           npm test
 
       - name: Check browser module syntax
+        shell: pwsh
         run: |
-          find packages/toolkit/web packages/toolkit/web-sdk-src -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          Get-ChildItem packages/toolkit/web,packages/toolkit/web-sdk-src -Recurse -Filter *.js | ForEach-Object {
+            node --check $_.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
           node --check packages/player/scripts/build-dist.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check packages/h5p-libraries/scripts/build.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-npm-pack.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-browser-from-npm.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-distribution-identity.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/set-version.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check deploy/netlify/build-cdn.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify npm tarballs as installed packages
         run: node scripts/verify-npm-pack.mjs
@@ -79,14 +90,28 @@ jobs:
         run: node scripts/verify-distribution-identity.mjs
 
       - name: Verify generated runtime
+        shell: pwsh
         run: |
-          VERSION="$(node -p "require('./packages/player/package.json').version")"
-          test -f ".netlify-cdn/player/$VERSION/dist/p2lrn.js"
-          test -f ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p.html"
-          test -f ".netlify-cdn/player/$VERSION/dist/runtime-host/scorm.html"
-          test -s ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/frame.bundle.js"
-          test -s ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/styles/h5p.css"
-          test -f ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.Crossword-0.5/library.json"
-          test -f ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.BranchingScenario-1.8/library.json"
-          grep -q "\"webSdkVersion\": \"$VERSION\"" ".netlify-cdn/player/$VERSION/dist/release.json"
-          grep -q "\"sharedLibraryMode\": \"bundled-npm-artifact\"" ".netlify-cdn/index.json"
+          $VERSION = node -p "require('./packages/player/package.json').version"
+          $required = @(
+            ".netlify-cdn/player/$VERSION/dist/p2lrn.js",
+            ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p.html",
+            ".netlify-cdn/player/$VERSION/dist/runtime-host/scorm.html",
+            ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.Crossword-0.5/library.json",
+            ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.BranchingScenario-1.8/library.json"
+          )
+          foreach ($path in $required) {
+            if (!(Test-Path $path -PathType Leaf)) { throw "Missing generated runtime file: $path" }
+          }
+          foreach ($path in @(
+            ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/frame.bundle.js",
+            ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/styles/h5p.css"
+          )) {
+            if (!(Test-Path $path -PathType Leaf) -or (Get-Item $path).Length -le 0) {
+              throw "Missing or empty generated runtime asset: $path"
+            }
+          }
+          $release = Get-Content ".netlify-cdn/player/$VERSION/dist/release.json" -Raw | ConvertFrom-Json
+          if ($release.webSdkVersion -ne $VERSION) { throw "release.json webSdkVersion mismatch" }
+          $index = Get-Content ".netlify-cdn/index.json" -Raw | ConvertFrom-Json
+          if ($index.h5p.sharedLibraryMode -ne "bundled-npm-artifact") { throw "CDN sharedLibraryMode mismatch" }
