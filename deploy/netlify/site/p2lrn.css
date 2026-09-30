@@ -621,3 +621,56 @@ footer a:hover{color:var(--blue)}
   .viewer-player-shell{padding:8px;min-height:440px}
   .viewer-player-shell p2lrn-player{min-height:420px}
 }
+
+
+/* Documentation maturity pass */
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.docs-search{display:grid;gap:7px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.docs-search label{font-family:var(--mono);font-size:.64rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.docs-search input{width:100%;min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);font:inherit;font-size:.8rem}
+.docs-search-results{display:grid;margin-top:4px;border:1px solid var(--line);border-radius:7px;background:var(--panel);overflow:hidden;box-shadow:0 12px 28px rgba(17,19,24,.08)}
+.docs-search-results a{display:grid!important;gap:2px;padding:9px 10px!important;border-bottom:1px solid var(--line);background:var(--panel);font-weight:400!important}
+.docs-search-results a:last-child{border-bottom:0}
+.docs-search-results strong{font-size:.78rem;color:var(--ink)}
+.docs-search-results span{font-size:.68rem;color:var(--muted);line-height:1.35}
+
+.decision-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.decision-grid>a{display:block;padding:22px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-decoration:none;color:var(--ink)}
+.decision-grid>a:hover{border-color:#9aa4b2;transform:translateY(-1px)}
+.decision-grid span{font-family:var(--mono);font-size:.63rem;letter-spacing:.05em;color:var(--blue)}
+.decision-grid h2{margin:7px 0!important;font-size:1.5rem!important;letter-spacing:-.025em!important}
+.decision-grid p{margin:0;color:var(--muted)}
+
+.capability-table-wrap{overflow-x:auto;margin-top:22px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.capability-table{width:100%;min-width:780px;border-collapse:collapse;font-size:.8rem}
+.capability-table th,.capability-table td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.capability-table th{position:sticky;top:0;background:#f8f9fb;font-family:var(--mono);font-size:.64rem;text-transform:uppercase;color:var(--muted)}
+.capability-table td:first-child{font-weight:700}
+.capability-table tbody tr:last-child td{border-bottom:0}
+
+.compact-contact{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.compact-contact h2{flex-basis:100%}
+.compact-contact p{margin:0;flex:1 1 440px}
+
+.viewer-controls small{font-weight:400;color:var(--muted);line-height:1.35}
+.viewer-inspector,.viewer-context{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1px;margin-top:18px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--line)}
+.viewer-inspector>div,.viewer-context>div{display:grid;gap:4px;min-width:0;padding:12px 14px;background:var(--panel)}
+.viewer-inspector .wide{grid-column:span 6}
+.viewer-inspector span,.viewer-context span{font-family:var(--mono);font-size:.6rem;color:var(--muted);letter-spacing:.05em}
+.viewer-inspector strong,.viewer-context strong{font-family:var(--mono);font-size:.72rem;overflow-wrap:anywhere}
+.viewer-context{grid-template-columns:repeat(3,minmax(0,1fr))}
+.viewer-console-head>div{display:flex;gap:8px;align-items:center}
+
+@media(max-width:900px){
+  .doc-sidebar{position:static;top:auto}
+  .docs-search{grid-column:1/-1}
+  .viewer-inspector{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .viewer-inspector .wide{grid-column:span 3}
+}
+@media(max-width:650px){
+  .decision-grid{grid-template-columns:1fr}
+  .viewer-inspector,.viewer-context{grid-template-columns:1fr}
+  .viewer-inspector .wide{grid-column:span 1}
+  .viewer-stage-head,.viewer-console-head{align-items:flex-start;padding-top:10px;padding-bottom:10px}
+  .viewer-console-head{flex-direction:column}
+}
