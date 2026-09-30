@@ -1,0 +1,31 @@
+{
+  "id": "https://p2lrn.org/profile/progression",
+  "version": "0.4.0",
+  "title": "P2LRN Progression Profile",
+  "status": "experimental",
+  "description": "Optional portable progression rules for marking course content as required and, when explicitly requested, gating later content until completion conditions are met.",
+  "capabilities": [
+    "progression.validate",
+    "progression.read",
+    "progression.write",
+    "progression.preserve",
+    "progression.deliver"
+  ],
+  "requires": [
+    "https://p2lrn.org/profile/course"
+  ],
+  "optionalDependencies": [],
+  "preservation": "semantic-required",
+  "rules": [
+    "Packages that do not declare this profile MUST retain ordinary free navigation behavior.",
+    "required=true marks an entity as required for progression/completion semantics but MUST NOT by itself block navigation.",
+    "gateFollowing=true blocks later siblings at the same hierarchy level until the gated entity is satisfied.",
+    "unlockWhen applies only to the entity carrying it and can express all/any prerequisite conditions.",
+    "completionRequirement defaults to completed and MAY be viewed, completed or passed.",
+    "minScore is a percentage from 0 to 100 and is only valid on activity entities.",
+    "Navigation-affecting rules (gateFollowing or unlockWhen) MUST declare this profile with manifest requirement required.",
+    "A unit gate is satisfied by all descendant activities marked required; when none are explicitly required, all descendant activities participate.",
+    "Learner state is operational state and MUST remain outside the portable package."
+  ],
+  "bindings": []
+}
