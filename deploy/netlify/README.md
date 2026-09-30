@@ -46,34 +46,36 @@ The CDN stores reusable runtime libraries only. It does not become a store for u
 
 ## Published paths
 
-For the current Player version:
-
-```text
-/player/<version>/dist/...
-```
-
-The exact version path is immutable.
-
-Two mutable compatibility channels are also published:
-
-```text
-/player/current/dist/...
-/player/0.5.0-alpha.1/dist/...
-```
-
-Both mutable channels are served with `no-store` so failed development lookups or previous runtime bytes are not retained by the browser.
-
-For development:
+The canonical integration URL is stable and does not change on every alpha/minor
+release:
 
 ```html
 <script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"></script>
 ```
 
-For a production release pin the actual version:
+Applications should normally keep that exact URL. The Player, runtime hosts and
+shared H5P libraries move together behind the `current` channel.
 
-```html
-<script src="https://p2lrn.netlify.app/player/<version>/dist/p2lrn.js"></script>
+Exact numbered paths are still emitted internally:
+
+```text
+/player/<version>/dist/...
 ```
+
+Those numbered paths are immutable release snapshots for reproducibility,
+debugging and rollback. They are not the normal integration contract and users
+should not be required to edit their HTML for every `alpha.x` or minor release.
+
+A numbered integration path should only become part of the public contract when
+P2LRN introduces a deliberately incompatible major runtime line. Until then,
+`/player/current/dist/p2lrn.js` remains the stable public loader.
+
+The historical `/player/0.5.0-alpha.1/dist/...` alias is retained only for
+backward compatibility with early integrations and must not be used in new
+documentation.
+
+The mutable aliases are served with `no-store` so failed development lookups
+or previous runtime bytes are not retained by the browser.
 
 ## Build gates
 
