@@ -1,12 +1,13 @@
 import {ZipArchive} from '../core/zip.js';
-import type {DocumentBlock,DocumentReaderInput,DocumentTable,ExtractedDocument} from './types.js';
+import {documentZipLimits,readArchiveText} from './limits.js';
+import type {DocumentBlock,DocumentReaderInput,DocumentReaderLimits,DocumentTable,ExtractedDocument} from './types.js';
 import {decodeXml,mediaTypeForAsset,normalizeZipRelative,readerId,xmlAttributes,xmlText} from './utils.js';
 
-function relMap(archive:ZipArchive):Map<string,string>{
+function relMap(archive:ZipArchive,limits:DocumentReaderLimits):Map<string,string>{
   const out=new Map<string,string>();
   const name='word/_rels/document.xml.rels';
   if(!archive.entries.has(name)) return out;
-  const xml=new TextDecoder().decode(archive.read(name));
+  const xml=readArchiveText(archive,name,limits,'DOCX relationships');
   for(const match of xml.matchAll(/<Relationship\b[^>]*\/>/gi)){
     const attrs=xmlAttributes(match[0]);
     const id=attrs.id;
@@ -116,12 +117,12 @@ function tableFromXml(xml:string,index:number):DocumentTable|null{
   };
 }
 
-export function extractDocx(input:DocumentReaderInput):ExtractedDocument{
-  const archive=ZipArchive.open(input.data);
+export function extractDocx(input:DocumentReaderInput,limits:DocumentReaderLimits):ExtractedDocument{
+  const archive=ZipArchive.open(input.data,documentZipLimits(limits));
   const documentPath='word/document.xml';
   if(!archive.entries.has(documentPath)) throw new Error('DOCX does not contain word/document.xml.');
-  const xml=new TextDecoder().decode(archive.read(documentPath));
-  const rels=relMap(archive);
+  const xml=readArchiveText(archive,documentPath,limits,'DOCX document.xml');
+  const rels=relMap(archive,limits);
   const body=xml.match(/<w:body\b[\s\S]*?<\/w:body>/i)?.[0]??xml;
   const top=body.match(/<w:p\b[\s\S]*?<\/w:p>|<w:tbl\b[\s\S]*?<\/w:tbl>/gi)??[];
   const blocks:DocumentBlock[]=[];
