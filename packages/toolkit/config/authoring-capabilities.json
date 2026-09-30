@@ -259,6 +259,21 @@
         "preserve": true,
         "deliver": true
       }
+    },
+    {
+      "id": "https://p2lrn.org/profile/progression",
+      "native": true,
+      "creator": {
+        "author": true,
+        "openRebuild": true,
+        "transformExternal": false
+      },
+      "reader": {
+        "validate": true,
+        "read": true,
+        "preserve": true,
+        "deliver": true
+      }
     }
   ]
 }
