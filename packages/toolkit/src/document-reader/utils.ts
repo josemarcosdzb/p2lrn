@@ -53,7 +53,10 @@ export function normalizeZipRelative(base:string,target:string):string {
   const out=[...root];
   for(const part of String(target).replace(/\\/g,'/').split('/')){
     if(!part||part==='.') continue;
-    if(part==='..') out.pop(); else out.push(part);
+    if(part==='..'){
+      if(!out.length) throw new Error(`archive relationship escapes root: ${target}`);
+      out.pop();
+    }else out.push(part);
   }
   return out.join('/');
 }

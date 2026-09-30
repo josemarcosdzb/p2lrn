@@ -86,3 +86,28 @@ test('lightweight document reader handles Markdown and never silently invokes OC
     /PDF extraction is disabled/,
   );
 });
+
+
+test('lightweight document reader fails closed on ZIPs that exceed configured detection limits',()=>{
+  const data=zip([
+    ['word/document.xml','<w:document/>','application/xml'],
+    ['word/a.xml','<a/>','application/xml'],
+    ['word/b.xml','<b/>','application/xml'],
+  ]);
+  assert.throws(
+    ()=>detectDocumentType({name:'oversized.docx',data},{archiveEntries:2}),
+    /more than 2 entries/i,
+  );
+});
+
+test('lightweight document reader rejects archive relationships that traverse above the archive root',async()=>{
+  const data=zip([
+    ['ppt/slides/slide1.xml',`<p:sld xmlns:p="p" xmlns:a="a" xmlns:r="r"><p:cSld><p:pic><p:blipFill><a:blip r:embed="rId1"/></p:blipFill></p:pic></p:cSld></p:sld>`,'application/xml'],
+    ['ppt/slides/_rels/slide1.xml.rels','<Relationships><Relationship Id="rId1" Target="../../../outside.png"/></Relationships>','application/xml'],
+    ['outside.png',new Uint8Array([1]),'image/png'],
+  ]);
+  await assert.rejects(
+    ()=>new LightweightDocumentReader().read({name:'escape.pptx',data}),
+    /archive relationship escapes root/i,
+  );
+});

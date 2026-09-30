@@ -5,7 +5,7 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 import {normalizeRuntimeBaseUrl} from '../web/runtime-host-config.js';
-import {validateRouteConfig} from '../web/p2lrn-sw.js';
+import {MAX_ROUTE_RESOURCES, validateRouteConfig} from '../web/p2lrn-sw.js';
 
 const root=resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
@@ -71,4 +71,29 @@ test('only the canonical P2LRN CI workflow remains',async()=>{
   const dir=resolve(root,'.github/workflows');
   const names=(await readdir(dir)).filter(name=>/\.ya?ml$/i.test(name)).sort();
   assert.deepEqual(names,['p2lrn-ci.yml']);
+});
+
+
+test('static resource bridge rejects traversal and oversized route registries',()=>{
+  const traversal=route();
+  traversal.resources={'../asset.bin':traversal.resources['video.mp4']};
+  assert.throws(()=>validateRouteConfig(traversal),/Invalid P2LRN virtual logical path/);
+
+  const embedded=route();
+  embedded.resources['video.mp4']={...embedded.resources['video.mp4'],embeddedPath:'../payload.bin'};
+  assert.throws(()=>validateRouteConfig(embedded),/Invalid embedded path/i);
+
+  const many=route();
+  many.resources={};
+  for(let i=0;i<MAX_ROUTE_RESOURCES+1;i++){
+    many.resources[`asset-${i}.bin`]={
+      embeddedPath:`payload/asset-${i}.bin`,
+      mediaType:'application/octet-stream',
+      size:1,
+      byteDigest:'sha256:'+'c'.repeat(64),
+      archiveEntry:{localOffset:0,method:0,compressedSize:1,uncompressedSize:1},
+      rangeIntegrity:null,
+    };
+  }
+  assert.throws(()=>validateRouteConfig(many),/too many resources/i);
 });

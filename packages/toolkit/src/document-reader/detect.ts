@@ -10,20 +10,18 @@ const EXTENSIONS:Record<string,DocumentReaderFileType>={
 };
 
 function zipType(input:DocumentReaderInput,limits:DocumentReaderLimits):DocumentReaderFileType|undefined{
-  try{
-    const archive=ZipArchive.open(input.data,documentZipLimits(limits));
-    const names=new Set(archive.names());
-    if(names.has('word/document.xml')) return 'DOCX';
-    if([...names].some(name=>/^ppt\/slides\/slide\d+\.xml$/i.test(name))) return 'PPTX';
-    if(names.has('content.xml')&&names.has('mimetype')){
-      try{
-        const mime=new TextDecoder().decode(archive.read('mimetype')).trim();
-        if(mime==='application/vnd.oasis.opendocument.text') return 'ODT';
-        if(mime==='application/epub+zip') return 'EPUB';
-      }catch{}
-    }
-    if(names.has('META-INF/container.xml')) return 'EPUB';
-  }catch{}
+  const archive=ZipArchive.open(input.data,documentZipLimits(limits));
+  const names=new Set(archive.names());
+  if(names.has('word/document.xml')) return 'DOCX';
+  if([...names].some(name=>/^ppt\/slides\/slide\d+\.xml$/i.test(name))) return 'PPTX';
+  if(names.has('content.xml')&&names.has('mimetype')){
+    try{
+      const mime=new TextDecoder().decode(archive.read('mimetype')).trim();
+      if(mime==='application/vnd.oasis.opendocument.text') return 'ODT';
+      if(mime==='application/epub+zip') return 'EPUB';
+    }catch{}
+  }
+  if(names.has('META-INF/container.xml')) return 'EPUB';
   return undefined;
 }
 
