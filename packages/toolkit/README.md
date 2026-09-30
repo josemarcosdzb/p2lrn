@@ -94,3 +94,26 @@ The Reader intentionally contains no Docling, Tesseract/OCR, NestJS, AulaP2P
 services, database/storage adapters, Docker workers, LibreOffice, Pandoc or
 external conversion service. It is an extraction/normalization API; Creator can
 consume its canonical output in document-to-course workflows.
+
+## Authoring workspace document reader
+
+The authoring workspace can read a source document directly from a path while keeping reading separate from course mutation:
+
+```js
+import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
+
+const workspace=P2LRNAuthoringWorkspace.open('course.p2lrn','./workspace');
+
+const document=await workspace.reader('./material/tema-1.docx');
+
+console.log(document.metadata);
+console.log(document.blocks);
+console.log(document.tables);
+
+workspace.setCourseMetadata({title:'Curso actualizado',incrementRevision:true});
+workspace.addUnit({key:'unidad-1',title:'Unidad 1'});
+workspace.build('course-updated.p2lrn',{strictProfiles:true});
+```
+
+Relative paths passed to `workspace.reader()` are resolved from the workspace root. Absolute paths are also accepted. The method delegates to the existing lightweight document reader and therefore supports the same detected formats and safety limits. Reading a document never mutates the authoring project.
+
