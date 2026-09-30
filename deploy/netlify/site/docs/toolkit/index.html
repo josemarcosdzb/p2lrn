@@ -1,58 +1,58 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0d1117">
-  <title>Toolkit — P2LRN</title>
-  <link rel="stylesheet" href="/p2lrn.css">
-  <script src="/p2lrn.js" defer></script>
-</head>
-<body>
-  <header class="site-header">
-    <a class="brand" href="/">P2LRN</a>
-    <nav class="nav" id="nav"><a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/" aria-current="page">Toolkit</a><a href="/docs/compatibilidad/">Compatibilidad</a></nav>
-    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
-    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
-  </header>
-  <main class="doc-main">
-    <aside class="doc-sidebar">
-      <span>DOCUMENTACIÓN</span>
-      <a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/" aria-current="page">Toolkit</a><a href="/docs/compatibilidad/">Compatibilidad</a>
-      <a href="/index.json">Índice CDN ↗</a>
-      <a href="/health.json">Estado ↗</a>
-    </aside>
-    <article class="doc-content">
-      <header class="doc-hero">
-        <p class="eyebrow">TOOLKIT</p>
-        <h1>Toolkit</h1>
-        <p>Herramientas Node/TypeScript para leer, validar, crear, convertir, migrar y reconstruir paquetes P2LRN.</p>
-      </header>
-      
-<section class="doc-section">
-  <h2>Instalación</h2>
-  <div class="install"><span>$</span><code>npm install @p2lrn/toolkit @p2lrn/player</code><button type="button" data-copy-inline>Copiar</button></div>
-</section>
-<section class="doc-section">
-  <h2>Autoría</h2>
-  <p>La frontera pública para editores y Studio es <code>@p2lrn/toolkit/authoring</code>. La intención es que las aplicaciones trabajen contra operaciones tipadas y no contra módulos internos de Creator.</p>
-  <div class="codebox"><div class="codebox-head"><span>JavaScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="API Node/TypeScript y CLI para validar, inspeccionar, abrir, leer documentos, editar, convertir y reconstruir paquetes P2LRN."><title>Toolkit — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar">
+  <span>START</span>
+  <a href="/docs/">Overview</a>
+  <a href="/docs/empezar/">Quickstart</a>
+  <a href="/docs/conceptos/">Conceptos</a>
+  <span>BUILD</span>
+  <a href="/docs/formato/">Formato</a>
+  <a href="/docs/player/">Player</a>
+  <a href="/docs/toolkit/" aria-current="page">Toolkit</a>
+  <span>INTEGRATE</span>
+  <a href="/docs/integracion/">Integración real</a>
+  <a href="/docs/compatibilidad/">Compatibilidad</a>
+  <span>REFERENCE</span>
+  <a href="/docs/referencia/">Referencia</a>
+  <a href="/docs/troubleshooting/">Troubleshooting</a>
+  <span>RESOURCES</span>
+  <a href="/index.json">Índice CDN ↗</a>
+  <a href="/health.json">Estado ↗</a></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">BUILD / TOOLKIT</p><h1>Toolkit</h1><p>API Node/TypeScript y CLI para validar, inspeccionar, abrir, leer documentos, editar, convertir y reconstruir paquetes P2LRN.</p></header>
+<section class="doc-section"><h2>Instalación</h2><div class="install"><span>$</span><code>npm install @p2lrn/toolkit @p2lrn/player</code><button type="button" data-copy-inline>Copiar</button></div></section>
+<section class="doc-section"><h2>Flujo completo de autoría</h2><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
 
-const workspace = P2LRNAuthoringWorkspace.open('course.p2lrn', './workspace');
-workspace.setCourseMetadata({ title: 'Curso actualizado', incrementRevision: true });
-workspace.addUnit({ key: 'unidad-1', title: 'Unidad 1' });
-workspace.build('course-updated.p2lrn', { strictProfiles: true });</code></pre></div>
-</section>
-<section class="doc-section">
-  <h2>Reader documental</h2>
-  <p>El Reader documental ligero está incluido en el Toolkit. Lee DOCX, PPTX, ODT, EPUB y texto estructurado. PDF queda limitado a texto embebido mediante <code>pdfjs-dist</code> opcional.</p>
-  <div class="doc-callout"><strong>Límite deliberado</strong><p>No incorpora OCR, Docling, Docker, LibreOffice, Pandoc ni dependencias de una plataforma LMS concreta.</p></div>
-</section>
-<section class="doc-section">
-  <h2>CLI</h2>
-  <div class="command-list"><code>p2lrn-validate</code><code>p2lrn-reader</code><code>p2lrn-document-reader</code><code>p2lrn-create</code><code>p2lrn-convert</code><code>p2lrn-repack</code><code>p2lrn-multipart</code><code>p2lrn-inspect</code><code>p2lrn-delta</code><code>p2lrn-trust</code></div>
-</section>
-      
+const workspace = P2LRNAuthoringWorkspace.open(
+  'course.p2lrn',
+  './workspace'
+);
+
+const document = await workspace.reader('./material/tema-1.docx');
+
+console.log(document.metadata);
+console.log(document.blocks);
+console.log(document.tables);
+
+workspace.setCourseMetadata({
+  title: 'Curso actualizado',
+  incrementRevision: true,
+});
+
+workspace.addUnit({
+  key: 'unidad-1',
+  title: 'Unidad 1',
+});
+
+workspace.build('course-updated.p2lrn', {
+  strictProfiles: true,
+});</code></pre></div></section>
+<section class="doc-section"><h2><code>workspace.reader(path)</code></h2><p>Lee un documento utilizando el Reader documental ya existente. No crea un segundo lector y no modifica el proyecto. Las rutas relativas se resuelven desde la raíz del workspace; las absolutas se aceptan directamente.</p><div class="reference-table"><div><code>DOCX / PPTX</code><p>Extracción estructurada desde XML interno.</p></div><div><code>PDF</code><p>Texto embebido mediante <code>pdfjs-dist</code> opcional.</p></div><div><code>ODT / EPUB</code><p>Extracción estructurada del contenedor.</p></div><div><code>TXT / Markdown / HTML / RTF / TEX / XML / YAML</code><p>Lectura estructurada ligera.</p></div></div><div class="doc-callout"><strong>Importante</strong><p><code>reader()</code> analiza y devuelve <code>metadata</code>, <code>blocks</code>, <code>tables</code> y <code>warnings</code>. No altera silenciosamente el curso.</p></div></section>
+<section class="doc-section"><h2>Crear o abrir</h2><div class="reference-table"><div><code>P2LRNAuthoringWorkspace.create(root, options)</code><p>Crea un proyecto nuevo.</p></div><div><code>P2LRNAuthoringWorkspace.open(packagePath, root)</code><p>Abre un paquete como workspace editable.</p></div><div><code>P2LRNAuthoringWorkspace.load(root)</code><p>Carga un workspace ya existente.</p></div></div></section>
+<section class="doc-section"><h2>Edición tipada</h2><p>La API incluye métodos como <code>setCourseMetadata</code>, <code>setEntityText</code>, <code>setChildren</code>, <code>setProgression</code>, <code>addUnit</code>, <code>addFile</code>, <code>addUrl</code>, <code>addWebContent</code>, <code>addQuestionnaire</code>, <code>addComponent</code> y <code>addComposite</code>.</p></section>
+<section class="doc-section"><h2>Validar e inspeccionar</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-validate course.p2lrn
+p2lrn-inspect course.p2lrn
+p2lrn-reader course.p2lrn</code></pre></div></section>
+<section class="doc-section"><h2>Conversión, repack y multipart</h2><p>Usa las herramientas de conversión para envolver/migrar contenido compatible, <code>p2lrn-repack</code> para reconstrucciones canónicas y <code>p2lrn-multipart</code> cuando el flujo necesita artefactos partidos.</p></section>
+<section class="doc-section"><h2>CLI completa</h2><div class="command-list"><code>p2lrn-validate</code><code>p2lrn-reader</code><code>p2lrn-document-reader</code><code>p2lrn-create</code><code>p2lrn-convert</code><code>p2lrn-repack</code><code>p2lrn-multipart</code><code>p2lrn-inspect</code><code>p2lrn-extract-source</code><code>p2lrn-delta</code><code>p2lrn-trust</code></div></section><nav class="doc-pager"><a class="prev" href="/docs/player/"><span>← Anterior</span><strong>Player</strong></a><a class="next" href="/docs/integracion/"><span>Siguiente →</span><strong>Integración real</strong></a></nav>
 <section class="doc-contact" id="contacto">
   <h2>Contacto</h2>
   <p>Si quieres integrar P2LRN, informar de un problema o proponer una mejora, puedes escribir desde aquí.</p>
@@ -66,9 +66,5 @@ workspace.build('course-updated.p2lrn', { strictProfiles: true });</code></pre><
     <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
     <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
   </form>
-</section>
-    </article>
-  </main>
-  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
-</body>
-</html>
+</section></article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer></body></html>
