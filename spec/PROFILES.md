@@ -77,8 +77,13 @@ Profile dependency graphs MUST be acyclic.
 - `https://p2lrn.org/profile/xapi`
 - `https://p2lrn.org/profile/accessibility`
 - `https://p2lrn.org/profile/multipart`
+- `https://p2lrn.org/profile/progression`
 
 The real-world corpus drove the SCORM/cmi5/Common Cartridge/legacy Tin Can contracts and the H5P dependency modes. QTI now also has a direct packaged-QTI projection in addition to legacy QTI resources discovered inside Common Cartridge.
+
+### Progression
+
+The progression profile is opt-in. It separates “required” from “blocking” semantics: `required: true` marks required content without forcing linear navigation, while `gateFollowing: true` or `unlockWhen` explicitly gate access. See `PROGRESSION.md`.
 
 ### Multipart
 
