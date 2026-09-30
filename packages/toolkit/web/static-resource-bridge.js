@@ -13,6 +13,12 @@ async function sha256Hex(text) {
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function randomCapability() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 function messageWorker(worker, message, timeoutMs = 2000) {
   return new Promise((resolve, reject) => {
     if (!worker) { resolve(null); return; }
@@ -76,10 +82,7 @@ export async function pingP2LRNServiceWorker({scope = DEFAULT_SERVICE_WORKER_SCO
   if (!container || !globalThis.location) return null;
   const scopeHref = normalizeScopeHref(scope);
   const registration = await exactRegistration(container, scopeHref);
-  let worker = registration?.active ?? null;
-
-  // Compatibility with older installations that registered P2LRN at "/".
-  if (!worker && container.controller) worker = container.controller;
+  const worker = registration?.active ?? null;
   if (!worker) return null;
 
   const reply = await messageWorker(worker, {type: 'P2LRN_PING_V1'});
@@ -160,7 +163,11 @@ function findRepresentation(pkg, representationId) {
 }
 
 export class StaticResourceBridge {
-  constructor(pkg) { this.pkg = pkg; this.ping = null; }
+  constructor(pkg) {
+    this.pkg = pkg;
+    this.ping = null;
+    this.routeCapabilities = new Map();
+  }
 
   async available() {
     if (!this.pkg?.sourceUrl || !globalThis.location) return false;
@@ -174,13 +181,18 @@ export class StaticResourceBridge {
     if (!this.ping && !(await this.available())) return null;
     const sourceUrl = new URL(this.pkg.sourceUrl, location.href).href;
     const routeId = (await sha256Hex(`${sourceUrl}\n${this.pkg.manifest.integrity.contentRoot}\n${label}`)).slice(0, 48);
-    const config = {version: '1', routeId, sourceUrl, contentRoot: this.pkg.manifest.integrity.contentRoot, resources};
+    let capability = this.routeCapabilities.get(routeId);
+    if (!capability) {
+      capability = randomCapability();
+      this.routeCapabilities.set(routeId, capability);
+    }
+    const config = {version: '2', routeId, capability, sourceUrl, contentRoot: this.pkg.manifest.integrity.contentRoot, resources};
     const worker = this.ping?.worker ?? null;
     if (!worker) return null;
     const reply = await messageWorker(worker, {type: 'P2LRN_REGISTER_V1', config});
-    if (!reply?.ok || reply.protocol !== STATIC_BRIDGE_PROTOCOL || reply.routeId !== routeId) return null;
+    if (!reply?.ok || reply.protocol !== STATIC_BRIDGE_PROTOCOL || reply.routeId !== routeId || reply.capability !== capability) return null;
     this.ping = withWorker(reply, worker);
-    return {routeId, scope: reply.scope};
+    return {routeId, capability, scope: reply.scope};
   }
 
   async resolve(request, context = {}) {
@@ -193,7 +205,7 @@ export class StaticResourceBridge {
       const route = await this.registerRoute(`embedded:${request.path}`, {asset: resource});
       if (!route) return null;
       const root = virtualResourceRoot(route.scope);
-      return {url: new URL(`${route.routeId}/asset`, root).href, verified: true, seekable};
+      return {url: new URL(`${route.routeId}/${route.capability}/asset`, root).href, verified: true, seekable};
     }
     if (request.kind === 'web-base') {
       const rep = findRepresentation(this.pkg, context.representationId ?? request.representationId);
@@ -211,7 +223,7 @@ export class StaticResourceBridge {
       const directory = request.logicalDirectory ?? webEntrypointDirectory(mapping);
       const suffix = encodeLogical(directory);
       const root = virtualResourceRoot(route.scope);
-      const base = new URL(`${route.routeId}/${suffix}`, root).href;
+      const base = new URL(`${route.routeId}/${route.capability}/${suffix}`, root).href;
       return {url: base.endsWith('/') ? base : `${base}/`, verified: true, seekable: false};
     }
     return null;
