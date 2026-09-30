@@ -3,6 +3,9 @@ import {BufferZipArchive, safeZipPath} from './zip-source.js';
 
 export const MULTIPART_PROFILE = 'https://p2lrn.org/profile/multipart';
 export const MULTIPART_MEDIA_TYPE = 'application/vnd.p2lrn.multipart+json';
+const MAX_MULTIPART_LOGICAL_BYTES = 256 * 1024 * 1024;
+const MAX_MULTIPART_PART_BYTES = 64 * 1024 * 1024;
+const MAX_MULTIPART_PARTS = 512;
 const decoder = new TextDecoder('utf-8', {fatal:true});
 const NESTED_ZIP_LIMITS = Object.freeze({
   entries:5000,
@@ -50,8 +53,9 @@ function validateDescriptor(value, representation) {
     throw fail(`Multipart mediaType mismatch: representation=${representation?.mediaType}, descriptor=${value.mediaType}`);
   }
   if (!Number.isSafeInteger(value.size) || value.size < 1) throw fail('Multipart descriptor size must be a positive safe integer.');
+  if (value.size > MAX_MULTIPART_LOGICAL_BYTES) throw fail(`Multipart payload exceeds browser safety limit (${value.size} > ${MAX_MULTIPART_LOGICAL_BYTES} bytes).`, 'P2LRN_MULTIPART_TOO_LARGE');
   if (!/^sha256:[0-9a-f]{64}$/u.test(String(value.byteDigest ?? ''))) throw fail('Multipart descriptor requires a SHA-256 byteDigest.');
-  if (!Array.isArray(value.parts) || value.parts.length < 2 || value.parts.length > 10000) throw fail('Multipart descriptor requires 2..10000 parts.');
+  if (!Array.isArray(value.parts) || value.parts.length < 2 || value.parts.length > MAX_MULTIPART_PARTS) throw fail(`Multipart descriptor requires 2..${MAX_MULTIPART_PARTS} parts.`);
   let sum = 0;
   const seen = new Set();
   const parts = value.parts.map((part, index) => {
@@ -62,6 +66,7 @@ function validateDescriptor(value, representation) {
     seen.add(href);
     const size = Number(part.size);
     if (!Number.isSafeInteger(size) || size < 1) throw fail(`Multipart part ${href} has invalid size.`);
+    if (size > MAX_MULTIPART_PART_BYTES) throw fail(`Multipart part ${href} exceeds browser safety limit (${size} > ${MAX_MULTIPART_PART_BYTES} bytes).`, 'P2LRN_MULTIPART_TOO_LARGE');
     const byteDigest = String(part.byteDigest ?? '');
     if (!/^sha256:[0-9a-f]{64}$/u.test(byteDigest)) throw fail(`Multipart part ${href} has invalid SHA-256 digest.`);
     sum += size;
@@ -122,11 +127,15 @@ export async function createMultipartPayload(pkg, representation) {
         if (url.origin !== base.origin) throw fail(`Multipart part escaped package origin: ${part.href}`, 'P2LRN_MULTIPART_CROSS_ORIGIN');
         let response;
         try {
-          response = await globalThis.fetch(url.href, {credentials:'same-origin'});
+          response = await globalThis.fetch(url.href, {credentials:'same-origin', cache:'no-store', redirect:'error'});
         } catch (error) {
           throw fail(`Multipart part fetch failed: ${part.href}: ${error?.message ?? String(error)}`, 'P2LRN_MULTIPART_FETCH_FAILED');
         }
         if (!response.ok) throw fail(`Multipart part fetch failed (${response.status}): ${part.href}`, 'P2LRN_MULTIPART_FETCH_FAILED');
+        const declaredLength = Number(response.headers.get('content-length'));
+        if (Number.isFinite(declaredLength) && declaredLength > part.size) {
+          throw fail(`Multipart part Content-Length exceeds declared size for ${part.href}`, 'P2LRN_MULTIPART_INTEGRITY_FAILED');
+        }
         const bytes = new Uint8Array(await response.arrayBuffer());
         if (bytes.byteLength !== part.size) {
           throw fail(`Multipart part size mismatch for ${part.href}: expected ${part.size}, got ${bytes.byteLength}`, 'P2LRN_MULTIPART_INTEGRITY_FAILED');
