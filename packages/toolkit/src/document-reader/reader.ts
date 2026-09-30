@@ -1,4 +1,4 @@
-import {readFile} from 'node:fs/promises';
+import {readFileSync} from 'node:fs';
 import {extname} from 'node:path';
 import {detectDocumentType} from './detect.js';
 import {readDocx} from './docx.js';
@@ -70,6 +70,6 @@ export async function readDocumentFile(
   path:string,
   options:DocumentReaderOptions={},
 ):Promise<LightweightExtractedDocument> {
-  const bytes=new Uint8Array(await readFile(path));
+  const bytes=new Uint8Array(readFileSync(path));
   return readDocument({name:path,mediaType:inferredMediaType(path),bytes},options);
 }
