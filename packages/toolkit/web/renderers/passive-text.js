@@ -24,6 +24,14 @@ function prepareHtml(text, baseUrl = null) {
   return '<!doctype html>\n' + doc.documentElement.outerHTML;
 }
 
+export function webEntrypointUrl(baseUrl, entrypoint) {
+  const name = String(entrypoint ?? '').split('/').filter(Boolean).at(-1);
+  if (!name) throw new Error('Web-content entrypoint has no file name.');
+  const base = new URL(String(baseUrl));
+  if (!base.pathname.endsWith('/')) base.pathname += '/';
+  return new URL(encodeURIComponent(name), base).href;
+}
+
 export async function render({container, bytes, representation, resolveResourceUrl}) {
   const media = String(representation.mediaType ?? '').split(';', 1)[0].trim().toLowerCase();
   const text = decoder.decode(bytes);
@@ -34,7 +42,7 @@ export async function render({container, bytes, representation, resolveResourceU
     return {destroy() { container.replaceChildren(); }};
   }
   if (media === 'text/html') {
-    let baseUrl = null;
+    let verifiedEntrypointUrl = null;
     if (representation.profile === WEB_CONTENT_PROFILE) {
       const mapping = webContentMapping(representation);
       if (mapping) {
@@ -54,16 +62,33 @@ export async function render({container, bytes, representation, resolveResourceU
           error.code = 'P2LRN_VIRTUAL_RESOURCE_UNAVAILABLE';
           throw error;
         }
-        baseUrl = resolved.url;
+        verifiedEntrypointUrl = webEntrypointUrl(resolved.url, mapping.entrypoint);
       }
     }
+
     const iframe = document.createElement('iframe');
     iframe.className = 'p2lrn-html';
     iframe.setAttribute('sandbox', '');
     iframe.referrerPolicy = 'no-referrer';
-    iframe.srcdoc = prepareHtml(text, baseUrl);
+
+    if (verifiedEntrypointUrl) {
+      // Navigate the sandboxed iframe inside the Service Worker scope instead of
+      // using srcdoc + <base>. This lets the verified virtual-resource Service
+      // Worker serve the HTML, CSS, images and other relative assets as one
+      // coherent web bundle.
+      iframe.src = verifiedEntrypointUrl;
+    } else {
+      iframe.srcdoc = prepareHtml(text);
+    }
+
     container.append(iframe);
-    return {destroy() { iframe.srcdoc = ''; container.replaceChildren(); }};
+    return {
+      destroy() {
+        iframe.removeAttribute('src');
+        iframe.srcdoc = '';
+        container.replaceChildren();
+      },
+    };
   }
   throw new Error(`Representación textual no soportada: ${representation.mediaType}`);
 }
