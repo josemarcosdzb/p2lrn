@@ -12,6 +12,7 @@ import {createStaticResourceBridge, installP2LRNServiceWorker} from './static-re
 import {representationPayload} from './package-member.js';
 import {configureRuntimeHost, getRuntimeHostConfig} from './runtime-host-config.js';
 import {canonicalIdentifier, canonicalizeIdentifiers, identifierIs} from './identifiers.js';
+import {PROGRESSION_PROFILE, createProgressionModel, normalizeProgressionState, progressionContext, progressionEnabled, progressionRule, updateProgressionState, validateProgressionGraph} from './progression-core.js';
 
 export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.10';
 export const P2LRN_TOOLKIT_VERSION = '0.5.0-alpha.10';
@@ -172,6 +173,7 @@ function ensureGraphShape(graph, manifest) {
   for (const id of ids.keys()) walk(id);
 
   for (const ep of manifest.entrypoints) if (ids.get(ep.id)?.type !== ep.type) throw new Error(`Broken entrypoint: ${ep.id}`);
+  validateProgressionGraph(graph, manifest);
   return ids;
 }
 
