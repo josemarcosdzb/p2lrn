@@ -1,4 +1,3 @@
-import {posix} from 'node:path';
 import type {DocumentPosition} from './types.js';
 import {decodeXml} from './utils.js';
 
@@ -34,7 +33,13 @@ function px(emu:number|undefined):number|undefined {
 }
 
 function normalize(path:string):string {
-  return posix.normalize(String(path).replace(/\\/gu,'/').replace(/^\/+/, ''));
+  const parts:string[]=[];
+  for(const raw of String(path).replace(/\\/gu,'/').replace(/^\/+/, '').split('/')){
+    if(!raw||raw==='.')continue;
+    if(raw==='..'){if(parts.length)parts.pop();continue;}
+    parts.push(raw);
+  }
+  return parts.join('/');
 }
 
 function dirname(path:string):string {
@@ -43,7 +48,7 @@ function dirname(path:string):string {
 }
 
 function join(base:string,target:string):string {
-  return normalize(posix.join(base,target));
+  return normalize((base?base+'/':'')+target);
 }
 
 export function parseRelationships(xml:string, sourcePath:string):Map<string,string> {
