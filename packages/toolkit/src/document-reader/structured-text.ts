@@ -115,22 +115,42 @@ function epubDocuments(archive:ZipArchive,limits:DocumentReaderLimits):string[]{
 }
 
 function extractText(input:DocumentReaderInput,type:DocumentReaderFileType,limits:DocumentReaderLimits):{text:string;strategy:DocumentReaderStrategy}{
-  const text=decodeTextInput(input,limits,type);
   switch(type){
-    case 'TXT': return {text,strategy:'TXT_LINES'};
-    case 'MARKDOWN': return {text,strategy:'MARKDOWN_LINES'};
-    case 'HTML': return {text:htmlText(text),strategy:'HTML_TEXT'};
-    case 'RTF': return {text:rtfText(text),strategy:'RTF_TEXT'};
-    case 'TEX': return {text:texText(text),strategy:'TEX_TEXT'};
-    case 'XML': return {text:xmlToText(text),strategy:'XML_TEXT'};
-    case 'YAML': return {text:yamlText(text),strategy:'YAML_TEXT'};
+    case 'TXT': {
+      const text=decodeTextInput(input,limits,type);
+      return {text,strategy:'TXT_LINES'};
+    }
+    case 'MARKDOWN': {
+      const text=decodeTextInput(input,limits,type);
+      return {text,strategy:'MARKDOWN_LINES'};
+    }
+    case 'HTML': {
+      const text=decodeTextInput(input,limits,type);
+      return {text:htmlText(text),strategy:'HTML_TEXT'};
+    }
+    case 'RTF': {
+      const text=decodeTextInput(input,limits,type);
+      return {text:rtfText(text),strategy:'RTF_TEXT'};
+    }
+    case 'TEX': {
+      const text=decodeTextInput(input,limits,type);
+      return {text:texText(text),strategy:'TEX_TEXT'};
+    }
+    case 'XML': {
+      const text=decodeTextInput(input,limits,type);
+      return {text:xmlToText(text),strategy:'XML_TEXT'};
+    }
+    case 'YAML': {
+      const text=decodeTextInput(input,limits,type);
+      return {text:yamlText(text),strategy:'YAML_TEXT'};
+    }
     case 'ODT': {
       const archive=ZipArchive.open(input.data,documentZipLimits(limits));
       if(!archive.entries.has('content.xml')) throw new Error('ODT does not contain content.xml.');
       return {text:xmlToText(readArchiveText(archive,'content.xml',limits,'ODT content.xml')),strategy:'ODT_XML'};
     }
     case 'EPUB': {
-      const archive=ZipArchive.open(input.data);
+      const archive=ZipArchive.open(input.data,documentZipLimits(limits));
       const docs=epubDocuments(archive,limits);
       if(!docs.length) throw new Error('EPUB contains no readable XHTML/HTML documents.');
       return {text:docs.map(name=>htmlText(readArchiveText(archive,name,limits,`EPUB ${name}`))).join('\n'),strategy:'EPUB_XHTML'};
