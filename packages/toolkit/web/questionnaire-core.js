@@ -11,6 +11,7 @@ const QUESTION_TYPES = new Set([
   'fill-blanks',
   'ordering',
   'matching',
+  'classification',
 ]);
 const SCORING_MODES = new Set(['all-or-nothing', 'partial-per-item', 'partial-with-penalty']);
 const QUESTION_MODES = new Set(['one-at-a-time', 'all']);
@@ -127,6 +128,22 @@ function validateQuestionSemantics(question) {
     }
     return;
   }
+  if (question.type === 'classification') {
+    invariant(Array.isArray(question.items) && question.items.length >= 2, `${question.id}: classification items are required`);
+    invariant(Array.isArray(question.categories) && question.categories.length >= 2, `${question.id}: classification categories are required`);
+    const items = uniqueIds(question.items, `${question.id} classification item`);
+    const categories = uniqueIds(question.categories, `${question.id} classification category`);
+    if (solution) {
+      invariant(Array.isArray(solution.assignments) && solution.assignments.length === items.size, `${question.id}: solution.assignments is incomplete`);
+      const seen = new Set();
+      for (const assignment of solution.assignments) {
+        invariant(items.has(assignment.item) && categories.has(assignment.category), `${question.id}: classification solution references unknown item or category`);
+        invariant(!seen.has(assignment.item), `${question.id}: classification solution repeats item ${assignment.item}`);
+        seen.add(assignment.item);
+      }
+    }
+    return;
+  }
   if (question.type === 'matching') {
     invariant(Array.isArray(question.left) && question.left.length > 0, `${question.id}: left items are required`);
     invariant(Array.isArray(question.right) && question.right.length > 0, `${question.id}: right items are required`);
@@ -207,6 +224,14 @@ export function scoreQuestion(question, answer) {
     total = expected.length;
     hits = expected.reduce((count, item, index) => count + (order[index] === item ? 1 : 0), 0);
     errors = total - hits;
+  } else if (question.type === 'classification') {
+    const classifications = supplied.classifications && typeof supplied.classifications === 'object' && !Array.isArray(supplied.classifications) ? supplied.classifications : {};
+    const expected = new Map(question.solution.assignments.map((assignment) => [String(assignment.item), String(assignment.category)]));
+    total = expected.size;
+    for (const [item, category] of expected.entries()) {
+      if (String(classifications[item] ?? '') === category) hits += 1;
+      else errors += 1;
+    }
   } else if (question.type === 'matching') {
     const pairs = supplied.pairs && typeof supplied.pairs === 'object' && !Array.isArray(supplied.pairs) ? supplied.pairs : {};
     const expected = new Map(question.solution.pairs.map((pair) => [String(pair.left), String(pair.right)]));
