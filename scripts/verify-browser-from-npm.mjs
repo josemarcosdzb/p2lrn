@@ -280,7 +280,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
         html:shadow?.innerHTML?.slice(0,3000)||'',
       });
     }
-  },20000);
+  },12000);
 })();
 </script>
 </body></html>`;
@@ -448,8 +448,8 @@ function decodeHtml(value) {
     .replaceAll('&amp;','&');
 }
 
-async function runCourse(chrome, appOrigin, course, index, attempt = 0) {
-  const profile = join(gateRoot,`chrome-profile-${index}-${attempt}`);
+async function runCourse(chrome, appOrigin, course, index) {
+  const profile = join(gateRoot,`chrome-profile-${index}`);
   await rm(profile,{recursive:true,force:true});
   const url=`${appOrigin}/?course=${encodeURIComponent(course)}`;
   const args=[
@@ -461,17 +461,15 @@ async function runCourse(chrome, appOrigin, course, index, attempt = 0) {
     '--no-default-browser-check',
     '--disable-cache',
     `--user-data-dir=${profile}`,
-    `--virtual-time-budget=${attempt === 0 ? 26000 : 34000}`,
+    '--virtual-time-budget=18000',
     '--dump-dom',
     url,
   ];
-  const {stdout,stderr} = await execFileAsync(chrome,args,{timeout:attempt === 0 ? 45000 : 55000,maxBuffer:64*1024*1024});
+  const {stdout,stderr} = await execFileAsync(chrome,args,{timeout:35000,maxBuffer:64*1024*1024});
   const match=/<pre id="result" data-status="([^"]+)">([\s\S]*?)<\/pre>/u.exec(stdout);
   const status=match?.[1] ?? 'MISSING';
   const detail=decodeHtml(match?.[2] ?? '').trim();
   if(status!=='PASS'){
-    const transientTimeout = status === 'FAIL' && /"phase"\s*:\s*"timeout"/u.test(detail);
-    if (transientTimeout && attempt === 0) return runCourse(chrome, appOrigin, course, index, 1);
     throw new Error(`Browser gate failed for ${course}: status=${status}\n${detail}\nChrome stderr:\n${stderr.slice(-4000)}`);
   }
   return {course,status,detail:detail.slice(0,1000)};
