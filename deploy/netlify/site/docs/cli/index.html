@@ -13,7 +13,7 @@ p2lrn validate &lt;package&gt; [--profile-payloads]</code></pre></div><div class
   [--transformation] [--import-plan]
   [--capabilities FILE] [--mode MODE]
   [--validate-profile-payloads]</code></pre></div><p>Sin selector imprime summary, tree y plan. El modo por defecto del plan es <code>deliver</code>.</p></section>
-<section class="doc-section"><h2>create</h2><div class="reference-table">
+<section class="doc-section"><h2>create</h2><p>Binario directo: <code>p2lrn-create</code>. También disponible como <code>p2lrn create</code>.</p><div class="reference-table">
 <div><code>init &lt;dir&gt; --title T [--language es] [--description D] [--force]</code><p>Crea el proyecto.</p></div>
 <div><code>open &lt;package&gt; &lt;project_dir&gt; [--force]</code><p>Abre un paquete como workspace.</p></div>
 <div><code>upgrade &lt;project&gt;</code><p>Actualiza el workspace editable.</p></div>
@@ -33,7 +33,7 @@ p2lrn validate &lt;package&gt; [--profile-payloads]</code></pre></div><div class
 <div><code>extract-aulap2p-course &lt;package&gt; &lt;output_json&gt;</code><p>Extrae el contrato de curso compatible.</p></div>
 <div><code>show &lt;project&gt;</code><p>Resumen del workspace.</p></div>
 </div></section>
-<section class="doc-section"><h2>convert</h2><div class="codebox"><div class="codebox-head"><span>Sintaxis</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-convert &lt;source&gt; &lt;output.p2lrn&gt; [--package-root DIR] [--report FILE]
+<section class="doc-section"><h2>convert</h2><p>Binarios directos: <code>p2lrn-convert</code> y el alias <code>p2lrn-wrap-external</code>.</p><div class="codebox"><div class="codebox-head"><span>Sintaxis</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-convert &lt;source&gt; &lt;output.p2lrn&gt; [--package-root DIR] [--report FILE]
 p2lrn wrap-external &lt;source&gt; &lt;output.p2lrn&gt; [--package-root DIR]</code></pre></div></section>
 <section class="doc-section"><h2>repack</h2><div class="codebox"><div class="codebox-head"><span>Sintaxis</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-repack &lt;source&gt; &lt;output&gt;
   [--new-package-id]
