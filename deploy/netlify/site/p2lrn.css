@@ -682,3 +682,11 @@ footer a:hover{color:var(--blue)}
 .doc-content .example-actions .button{color:inherit;text-decoration:none}
 @media(max-width:1100px){.viewer-controls{grid-template-columns:1fr 1fr}.viewer-url{grid-column:1/-1}.viewer-buttons{grid-column:1/-1}}
 @media(max-width:650px){.viewer-controls{grid-template-columns:1fr}.viewer-url,.viewer-buttons{grid-column:1}}
+
+/* Playback viewport: prioritize course content; diagnostics stay below it. */
+.viewer-page .viewer-main{max-width:1560px}
+.viewer-page .viewer-workbench{grid-template-columns:minmax(0,1fr)}
+.viewer-page .viewer-player-shell{padding:12px;min-width:0}
+.viewer-page .viewer-stage,.viewer-page .viewer-console{min-width:0}
+.viewer-page .viewer-console pre{min-height:220px;max-height:340px}
+.viewer-page .viewer-player-shell p2lrn-player{min-width:0;width:100%}
