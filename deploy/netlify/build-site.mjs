@@ -62,6 +62,11 @@ for (const name of ['developer-course','developer-game-3d']) {
   } catch {}
 }
 
+const canonicalDisplayTitles = Object.freeze({
+  'external/scorm12-real.p2lrn':'SCORM 1.2 · fixture ADL preservada (contenido fuente incompleto)',
+  'external/qti3-minimal.p2lrn':'QTI 3 · fixture mínima preservada (sin itemBody)',
+  'external/cmi5-catapult-pre-post.p2lrn':'cmi5 Catapult · Introduction to Geology',
+});
 const canonicalEntries = [];
 for (const path of (await walk(canonicalSource)).filter((item)=>item.endsWith('.p2lrn')).sort()) {
   const rel = relative(canonicalSource,path).replaceAll('\\','/');
@@ -70,7 +75,7 @@ for (const path of (await walk(canonicalSource)).filter((item)=>item.endsWith('.
   if (!sourceBytes.equals(publishedBytes)) throw new Error(`Published canonical example differs byte-for-byte from source: ${rel}`);
   const inspected = await inspectPackage(publishedPath);
   canonicalEntries.push({
-    title:inspected.title,
+    title:canonicalDisplayTitles[rel] ?? inspected.title,
     category:rel.startsWith('external/') ? 'canonical-external' : rel.startsWith('aulap2p-reader/') ? 'canonical-reader' : 'canonical',
     url:'/examples/canonical/' + rel,
     source:'examples/canonical/' + rel,
@@ -84,6 +89,12 @@ for (const path of (await walk(canonicalSource)).filter((item)=>item.endsWith('.
 }
 
 const generatedEntries = await buildDocExamples({outputRoot:examplesOutput});
+const requiredExecutableExamples = ['scorm12-browser-demo.p2lrn','qti3-interactive-demo.p2lrn'];
+for (const name of requiredExecutableExamples) {
+  const demoPath = join(examplesOutput,'generated',name);
+  if (!(await exists(demoPath))) throw new Error('Executable documentation example is missing: ' + name);
+  await inspectPackage(demoPath);
+}
 const catalog = {
   schema:'https://p2lrn.org/schema/docs-example-catalog/1',
   version:'1',
