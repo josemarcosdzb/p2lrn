@@ -270,17 +270,10 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
     });
   }
   document.body.append(p);
-  setTimeout(()=>{
-    if(!finished){
-      const shadow=p.shadowRoot;
-      finish('FAIL',{
-        phase:'timeout',
-        course,
-        text:shadow?.textContent?.trim().slice(0,1200)||'',
-        html:shadow?.innerHTML?.slice(0,3000)||'',
-      });
-    }
-  },12000);
+  // This page is executed with Chrome virtual time. An in-page timeout can
+  // expire while network/runtime IPC is still progressing and produce a false
+  // failure. The outer Chrome timeout and virtual-time budget are the deadline;
+  // runCourse still fails unless the page explicitly reaches PASS.
 })();
 </script>
 </body></html>`;
