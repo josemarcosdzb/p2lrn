@@ -48,7 +48,12 @@ await cp(canonicalSource,canonicalOutput,{recursive:true,force:true});
 // Preserve the old short URLs while publishing the complete canonical corpus.
 for (const entry of await readdir(canonicalSource,{withFileTypes:true})) {
   if (entry.isFile() && entry.name.endsWith('.p2lrn')) {
-    await copyFile(join(canonicalSource,entry.name),join(examplesOutput,entry.name));
+    const source = join(canonicalSource,entry.name);
+    const destination = join(examplesOutput,entry.name);
+    await copyFile(source,destination);
+    const [sourceBytes,publishedBytes] = await Promise.all([readFile(source),readFile(destination)]);
+    if (!sourceBytes.equals(publishedBytes)) throw new Error(`Published short example differs from canonical bytes: ${entry.name}`);
+    await inspectPackage(destination);
   }
 }
 for (const name of ['developer-course','developer-game-3d']) {
@@ -60,7 +65,10 @@ for (const name of ['developer-course','developer-game-3d']) {
 const canonicalEntries = [];
 for (const path of (await walk(canonicalSource)).filter((item)=>item.endsWith('.p2lrn')).sort()) {
   const rel = relative(canonicalSource,path).replaceAll('\\','/');
-  const inspected = await inspectPackage(path);
+  const publishedPath = join(canonicalOutput,...rel.split('/'));
+  const [sourceBytes,publishedBytes] = await Promise.all([readFile(path),readFile(publishedPath)]);
+  if (!sourceBytes.equals(publishedBytes)) throw new Error(`Published canonical example differs byte-for-byte from source: ${rel}`);
+  const inspected = await inspectPackage(publishedPath);
   canonicalEntries.push({
     title:inspected.title,
     category:rel.startsWith('external/') ? 'canonical-external' : rel.startsWith('aulap2p-reader/') ? 'canonical-reader' : 'canonical',
