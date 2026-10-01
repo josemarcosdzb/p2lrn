@@ -56,26 +56,21 @@ It intentionally contains no OCR, Docling, NestJS, AulaP2P runtime dependency, D
 
 ## License gate
 
-Do not publish the first-party packages while their `license` field is `UNLICENSED`.
+The P2LRN first-party implementation is licensed under **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)**.
 
-The repository deliberately runs:
+This is a custom source-available, non-commercial license, so the first-party npm packages declare:
 
-```bash
-node scripts/check-publish-ready.mjs
+```json
+"license": "SEE LICENSE IN LICENSE"
 ```
 
-from `prepublishOnly`. It blocks `npm publish` until the owner selects the P2LRN first-party license and adds the corresponding root `LICENSE` file.
+The root `LICENSE` and `NOTICE.md` are the authorities. Byte-identical copies must be shipped at the top level of both `@p2lrn/player` and `@p2lrn/toolkit`.
 
-Do **not** copy the Lumi or h5p-standalone license onto first-party P2LRN source code. Third-party runtime/library licensing is documented separately in each package.
+`node scripts/check-publish-ready.mjs` verifies the declaration, the package-local license/notice copies, their byte identity and their presence in the npm `files` lists.
 
-Once the first-party license is selected, update both:
+P2LRN-NCSL 1.0 permits non-commercial use, study, modification and redistribution subject to its conditions. Modified distributions must provide their complete Corresponding Source. Modified versions exposed to third parties through remote network interaction must also offer the Corresponding Source. Commercial use requires a separate commercial license.
 
-```text
-packages/player/package.json
-packages/toolkit/package.json
-```
-
-to the same SPDX license identifier (or a valid `SEE LICENSE IN ...` declaration), add the root license text, run all gates, then publish the three packages with the same version.
+Do not apply P2LRN-NCSL 1.0 to third-party code. `@p2lrn/h5p-libraries` remains governed by its third-party notices, and bundled Player dependencies retain their upstream licenses.
 
 ## Publishing order
 

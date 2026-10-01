@@ -1,5 +1,5 @@
 import {access, readFile} from 'node:fs/promises';
-import {resolve} from 'node:path';
+import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -14,27 +14,41 @@ for (const item of packages) {
   const pkg = JSON.parse(await readFile(resolve(root,item.path),'utf8'));
   loaded.push({...item,pkg});
 }
+
 const versions = new Set(loaded.map((item)=>item.pkg.version));
 if (versions.size !== 1) {
   throw new Error('P2LRN packages must publish with one aligned version: ' + loaded.map((x)=>`${x.name}=${x.pkg.version}`).join(', '));
 }
 
+const rootLicense = await readFile(resolve(root,'LICENSE'),'utf8');
+const rootNotice = await readFile(resolve(root,'NOTICE.md'),'utf8');
+
 for (const item of loaded.filter((x)=>x.firstParty)) {
   const license = String(item.pkg.license ?? '').trim();
-  if (!license || license === 'UNLICENSED') {
-    throw new Error(
-      `${item.name} is still UNLICENSED. Choose the P2LRN first-party license before npm publish. ` +
-      'Update packages/player/package.json and packages/toolkit/package.json consistently and add the corresponding root LICENSE file. ' +
-      'Do not copy the Lumi/third-party license onto P2LRN source code.'
-    );
+  if (license !== 'SEE LICENSE IN LICENSE') {
+    throw new Error(`${item.name} must declare "SEE LICENSE IN LICENSE"; found: ${license || '<empty>'}`);
   }
-  if (license.startsWith('SEE LICENSE IN ')) {
-    const relative = license.slice('SEE LICENSE IN '.length).trim();
-    await access(resolve(root, relative));
-  } else {
-    // For SPDX identifiers we still require a root LICENSE file so the tarballs
-    // have a human-readable license authority in the repository.
-    await access(resolve(root,'LICENSE'));
+
+  const packageDir = resolve(root, dirname(item.path));
+  const localLicensePath = resolve(packageDir,'LICENSE');
+  const localNoticePath = resolve(packageDir,'NOTICE.md');
+
+  await access(localLicensePath);
+  await access(localNoticePath);
+
+  const localLicense = await readFile(localLicensePath,'utf8');
+  const localNotice = await readFile(localNoticePath,'utf8');
+
+  if (localLicense !== rootLicense) {
+    throw new Error(`${item.name} LICENSE must be byte-identical to the root LICENSE authority.`);
+  }
+  if (localNotice !== rootNotice) {
+    throw new Error(`${item.name} NOTICE.md must be byte-identical to the root NOTICE.md authority.`);
+  }
+
+  const files = Array.isArray(item.pkg.files) ? item.pkg.files : [];
+  if (!files.includes('LICENSE') || !files.includes('NOTICE.md')) {
+    throw new Error(`${item.name} must include LICENSE and NOTICE.md in its npm files list.`);
   }
 }
 
@@ -47,5 +61,6 @@ await access(resolve(root,'packages/h5p-libraries/THIRD_PARTY_NOTICES.md'));
 console.log(JSON.stringify({
   ok:true,
   version:[...versions][0],
+  firstPartyLicense:'P2LRN-NCSL-1.0',
   packages:loaded.map((x)=>({name:x.name,license:x.pkg.license})),
 },null,2));

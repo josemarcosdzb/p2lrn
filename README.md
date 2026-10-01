@@ -128,3 +128,12 @@ La migración escribe `p2lrn.project.json` 0.3.0 y, sólo después de escribirlo
 La migración de lenguaje no convierte automáticamente los runtimes externos en conformidad total. SCORM y H5P conservan sus gates experimentales/especializados; cmi5, QTI y LTI siguen negociándose mediante sus capacidades/runtimes correspondientes. El Reader no declara `deliver` donde no existe una ejecución real soportada.
 
 Véanse `MIGRATION-NODE.md`, `TEST-RESULTS.md` y `COMPATIBILITY.md`.
+
+
+## Licencia
+
+Los componentes first-party de P2LRN se distribuyen bajo **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)**. Es una licencia **source-available no comercial**, no una licencia Open Source aprobada por OSI.
+
+Permite estudiar, usar, modificar y redistribuir P2LRN para finalidades no comerciales bajo sus condiciones. El uso comercial requiere una licencia comercial independiente. Si se distribuye una version modificada, debe identificarse como modificada y proporcionarse su Codigo Fuente Correspondiente completo. Las versiones modificadas que se ofrezcan a terceros mediante interaccion remota por red tambien deben ofrecer su fuente correspondiente.
+
+El texto juridico completo y prevalente esta en [LICENSE](./LICENSE). [NOTICE.md](./NOTICE.md) resume el alcance y la separacion de componentes de terceros.

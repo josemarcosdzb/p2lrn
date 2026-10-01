@@ -38,7 +38,9 @@
     "README.md",
     "server/",
     "THIRD_PARTY_NOTICES.md",
-    "scripts/"
+    "scripts/",
+    "LICENSE",
+    "NOTICE.md"
   ],
   "engines": {
     "node": ">=18"
@@ -49,7 +51,7 @@
     "web-component",
     "lms"
   ],
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "build:dist": "node ./scripts/build-dist.mjs",
     "prepack": "npm run build:dist",
