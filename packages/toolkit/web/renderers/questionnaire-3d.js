@@ -1,13 +1,389 @@
 import {THREE_D_RENDERER} from '../renderer-registry.js';
+import {
+  appendUniqueConnection,
+  classificationIsCorrect,
+  connectionKey,
+  orderingIsCorrect,
+  validateConnection,
+} from '../game-3d-mechanics.js';
+import {createThreeGameScene} from '../game-3d/three-runtime.js';
 import {el, finishPanel, setupGame, statusNode, stylesheets} from './game-common.js';
+
 export {stylesheets};
 
-function createShader(gl,type,source){const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw new Error(`WebGL shader: ${gl.getShaderInfoLog(shader)}`);return shader;}
-function createScene(canvas){const gl=canvas.getContext('webgl2',{antialias:true,failIfMajorPerformanceCaveat:true});if(!gl)throw new Error('WebGL2 no está disponible.');const vs=createShader(gl,gl.VERTEX_SHADER,`#version 300 es\nin vec3 p;uniform float a;uniform float ox;out float shade;void main(){float c=cos(a),s=sin(a);vec3 q=vec3(c*p.x+s*p.z,p.y,-s*p.x+c*p.z);float d=3.6+q.z;gl_Position=vec4((q.x+ox)/d,q.y*1.7/d,(d-3.0)/3.0,1.0);shade=0.45+0.4*(q.z+0.5);}`);const fs=createShader(gl,gl.FRAGMENT_SHADER,`#version 300 es\nprecision mediump float;in float shade;out vec4 color;void main(){color=vec4(shade,0.72*shade,1.0-shade*0.25,1.0);}`);const program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(`WebGL program: ${gl.getProgramInfoLog(program)}`);const vertices=new Float32Array([-.5,-.5,.5,.5,-.5,.5,.5,.5,.5,-.5,-.5,.5,.5,.5,.5,-.5,.5,.5,.5,-.5,-.5,-.5,-.5,-.5,-.5,.5,-.5,.5,-.5,-.5,-.5,.5,-.5,.5,.5,-.5,-.5,-.5,-.5,-.5,-.5,.5,-.5,.5,.5,-.5,-.5,-.5,-.5,.5,.5,-.5,.5,-.5,.5,-.5,.5,.5,-.5,-.5,.5,.5,-.5,.5,-.5,.5,.5,.5,-.5,.5,.5,.5,-.5,.5,.5,.5,.5,.5,.5,.5,-.5,-.5,.5,.5,.5,.5,-.5,-.5,.5,-.5,-.5,-.5,-.5,.5,-.5,-.5,.5,-.5,.5,-.5,-.5,-.5,.5,-.5,.5,-.5,-.5,.5]);const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);const loc=gl.getAttribLocation(program,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);gl.enable(gl.DEPTH_TEST);const angle=gl.getUniformLocation(program,'a');const offset=gl.getUniformLocation(program,'ox');let raf=0,count=3,alive=true;const frame=(time)=>{if(!alive)return;gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.06,.08,.12,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.useProgram(program);for(let i=0;i<count;i+=1){gl.uniform1f(angle,time/1800+i*.33);gl.uniform1f(offset,(i-(count-1)/2)*1.15);gl.drawArrays(gl.TRIANGLES,0,36);}raf=requestAnimationFrame(frame);};raf=requestAnimationFrame(frame);return{setCount(value){count=Math.max(1,Math.min(7,Number(value)||1));},destroy(){alive=false;cancelAnimationFrame(raf);gl.deleteBuffer(buffer);gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);}};}
+function gridPosition(index,total,{z=3.4,spread=3.1,y=0.72}={}) {
+  const columns=Math.min(4,Math.max(2,Math.ceil(Math.sqrt(Math.max(1,total)))));
+  const row=Math.floor(index/columns);
+  const column=index%columns;
+  const itemsInRow=Math.min(columns,total-row*columns);
+  return [(column-(itemsInRow-1)/2)*spread,y,z+row*2.6];
+}
 
-export async function render(options){const {game,runtime,shell}=await setupGame({...options,rendererId:THREE_D_RENDERER});const layout=el('div',{class:'p2lrn-3d-layout'});const canvas=el('canvas',{class:'p2lrn-3d-canvas',width:'720',height:'360','aria-label':'Escena 3D del ejercicio'});const scene=createScene(canvas);const controls=el('div',{class:'p2lrn-3d-controls'});const status=statusNode('Resuelve cada prueba usando los controles accesibles.');let trialIndex=0;
-  const renderTrial=()=>{controls.replaceChildren();const trial=game.data.trials[trialIndex];scene.setCount(trial.type==='ordering-3d'?trial.objects.length:Math.max(trial.left.length,trial.right.length));controls.append(el('p',{},`Prueba ${trialIndex+1} de ${game.data.trials.length}`),el('h3',{},trial.prompt));
-    if(trial.type==='ordering-3d'){let current=[...trial.objects];const list=el('div');const redraw=()=>{list.replaceChildren();current.forEach((item,index)=>{const row=el('div',{class:'p2lrn-order-row'});row.append(el('span',{},item.text));const group=el('div',{class:'p2lrn-order-controls'});const up=el('button',{type:'button',class:'p2lrn-game-button',disabled:index===0},'↑');const down=el('button',{type:'button',class:'p2lrn-game-button',disabled:index===current.length-1},'↓');up.addEventListener('click',()=>{[current[index-1],current[index]]=[current[index],current[index-1]];runtime.replaceAnswer(trial.questionId,{order:current.map((x)=>x.id)});redraw();});down.addEventListener('click',()=>{[current[index+1],current[index]]=[current[index],current[index+1]];runtime.replaceAnswer(trial.questionId,{order:current.map((x)=>x.id)});redraw();});group.append(up,down);row.append(group);list.append(row);});};runtime.replaceAnswer(trial.questionId,{order:current.map((x)=>x.id)});redraw();controls.append(list);
-    }else{let selected=null;const solved=new Set();const board=el('div',{class:'p2lrn-match-grid'});const left=el('div',{class:'p2lrn-match-column'}),right=el('div',{class:'p2lrn-match-column'});const correct=new Set(trial.connections.map((c)=>`${c.leftId}\0${c.rightId}`));const lnodes=new Map();for(const item of trial.left){const b=el('button',{type:'button',class:'p2lrn-game-card'},item.text);b.addEventListener('click',()=>{lnodes.forEach((n)=>n.classList.remove('is-selected'));selected=item.id;b.classList.add('is-selected');});lnodes.set(item.id,b);left.append(b);}for(const item of trial.right){const b=el('button',{type:'button',class:'p2lrn-game-card'},item.text);b.addEventListener('click',()=>{if(!selected){status.textContent='Selecciona primero un objeto de la izquierda.';return;}const k=`${selected}\0${item.id}`;if(!correct.has(k)){status.textContent='Esa conexión no es correcta.';return;}solved.add(k);runtime.applyPatch(trial.questionId,{kind:'pair-set',leftId:selected,rightId:item.id});lnodes.get(selected)?.classList.add('is-solved');b.classList.add('is-solved');status.textContent='Conexión correcta.';selected=null;lnodes.forEach((n)=>n.classList.remove('is-selected'));});right.append(b);}board.append(left,right);controls.append(board);}
-    const nav=el('div',{class:'p2lrn-game-actions'});const prev=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},'Anterior');const next=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===game.data.trials.length-1},'Siguiente');prev.addEventListener('click',()=>{trialIndex-=1;renderTrial();});next.addEventListener('click',()=>{trialIndex+=1;renderTrial();});nav.append(prev,next);controls.append(nav);};
-  renderTrial();layout.append(canvas,controls);shell.append(layout);finishPanel(runtime,shell);shell.append(status);const originalDestroy=runtime.destroy.bind(runtime);runtime.destroy=()=>{scene.destroy();originalDestroy();};return runtime;}
+function orderingSlotPosition(index,total) {
+  const width=Math.min(5,total);
+  const row=Math.floor(index/width);
+  const column=index%width;
+  const rowCount=Math.min(width,total-row*width);
+  return [(column-(rowCount-1)/2)*2.7,0.18,-3.8-row*2.6];
+}
+
+function classificationZonePosition(index,total) {
+  const columns=Math.min(3,total);
+  const row=Math.floor(index/columns);
+  const column=index%columns;
+  const itemsInRow=Math.min(columns,total-row*columns);
+  return [(column-(itemsInRow-1)/2)*5.1,0.14,-4.5-row*3.4];
+}
+
+function matchingNodePosition(side,index,total) {
+  const offset=(index-(total-1)/2)*2.7;
+  return [side==='left'?-5.6:5.6,1,offset];
+}
+
+function setText(node,value) {
+  node.textContent=String(value);
+}
+
+function buildOrderingControls({trial,runtime,scene,status}) {
+  const placed=Array(trial.objects.length).fill(null);
+  const staging=new Map(trial.objects.map((item,index)=>[item.id,gridPosition(index,trial.objects.length)]));
+  let selected=null;
+
+  trial.objects.forEach((item,index)=>{
+    scene.addBox({
+      id:`order:${item.id}`,
+      text:item.text,
+      position:staging.get(item.id),
+      interaction:{kind:'ordering-object',id:item.id},
+    });
+  });
+  placed.forEach((_,index)=>{
+    const p=orderingSlotPosition(index,placed.length);
+    scene.addZone({
+      id:`order-slot:${index}`,
+      text:`Posición ${index+1}`,
+      position:p,
+      size:[2.35,0.22,1.85],
+      color:'#1d4ed8',
+      interaction:{kind:'ordering-slot',index},
+    });
+  });
+
+  const panel=el('div',{class:'p2lrn-3d-accessible'});
+  const title=el('p',{class:'p2lrn-game-description'},'Selecciona un objeto y después una posición. También puedes usar los selectores accesibles.');
+  const rows=el('div',{class:'p2lrn-q-fields'});
+  const selects=new Map();
+
+  function currentOrder() {
+    return placed.every(Boolean)?placed.map(String):null;
+  }
+
+  function syncObject(itemId) {
+    const slot=placed.findIndex((id)=>id===itemId);
+    const position=slot>=0
+      ? [...orderingSlotPosition(slot,placed.length).slice(0,2),orderingSlotPosition(slot,placed.length)[2]]
+      : staging.get(itemId);
+    if (slot>=0) position[1]=0.78;
+    scene.setTranslation(`order:${itemId}`,position);
+  }
+
+  function refreshSelects() {
+    for(const [itemId,select] of selects){
+      const slot=placed.findIndex((id)=>id===itemId);
+      select.value=slot>=0?String(slot):'';
+    }
+  }
+
+  function place(itemId,slotIndex) {
+    if (!itemId) { setText(status,'Selecciona primero un objeto.'); return false; }
+    const current=placed.indexOf(itemId);
+    const occupied=placed[slotIndex];
+    if (occupied && occupied!==itemId) {
+      setText(status,`La posición ${slotIndex+1} ya está ocupada.`);
+      return false;
+    }
+    if (current>=0) placed[current]=null;
+    placed[slotIndex]=itemId;
+    syncObject(itemId);
+    refreshSelects();
+    const order=currentOrder();
+    if (order) {
+      runtime.replaceAnswer(trial.questionId,{order});
+      setText(status,orderingIsCorrect(order,trial.correctOrder)?'Orden correcto.':'Orden completo; puedes seguir ajustándolo.');
+    } else {
+      setText(status,`Objeto colocado en la posición ${slotIndex+1}.`);
+    }
+    return true;
+  }
+
+  trial.objects.forEach((item)=>{
+    const row=el('label',{class:'p2lrn-q-field'});
+    row.append(el('span',{},item.text));
+    const select=el('select');
+    select.append(el('option',{value:''},'Sin colocar'));
+    placed.forEach((_,index)=>select.append(el('option',{value:String(index)},`Posición ${index+1}`)));
+    select.addEventListener('change',()=>{
+      if(select.value===''){
+        const current=placed.indexOf(item.id);
+        if(current>=0) placed[current]=null;
+        syncObject(item.id);
+        refreshSelects();
+        setText(status,'Objeto devuelto a la zona de salida.');
+        return;
+      }
+      place(item.id,Number(select.value));
+    });
+    selects.set(item.id,select);
+    row.append(select);
+    rows.append(row);
+  });
+
+  panel.append(title,rows);
+  return {
+    panel,
+    interact(meta) {
+      if(meta.kind==='ordering-object'){
+        if(selected) scene.highlight(`order:${selected}`,false);
+        selected=meta.id;
+        scene.highlight(`order:${selected}`,true);
+        setText(status,'Objeto seleccionado. Elige una posición.');
+        return true;
+      }
+      if(meta.kind==='ordering-slot'){
+        const placedOk=place(selected,meta.index);
+        if(placedOk && selected){
+          scene.highlight(`order:${selected}`,false);
+          selected=null;
+        }
+        return true;
+      }
+      return false;
+    },
+  };
+}
+
+function buildMatchingControls({trial,runtime,scene,status}) {
+  const expected=new Set(trial.connections.map((item)=>connectionKey(item.leftId,item.rightId)));
+  const solved=new Set();
+  let connections=[];
+  let selected=null;
+
+  trial.left.forEach((item,index)=>scene.addNode({
+    id:`left:${item.id}`,
+    text:item.text,
+    position:matchingNodePosition('left',index,trial.left.length),
+    color:'#2563eb',
+    interaction:{kind:'matching-left',id:item.id},
+  }));
+  trial.right.forEach((item,index)=>scene.addNode({
+    id:`right:${item.id}`,
+    text:item.text,
+    position:matchingNodePosition('right',index,trial.right.length),
+    color:'#7c3aed',
+    interaction:{kind:'matching-right',id:item.id},
+  }));
+
+  const panel=el('div',{class:'p2lrn-match-grid'});
+  const leftColumn=el('div',{class:'p2lrn-match-column'});
+  const rightColumn=el('div',{class:'p2lrn-match-column'});
+  const leftButtons=new Map();
+
+  function chooseLeft(id) {
+    if(selected) scene.highlight(`left:${selected}`,false);
+    selected=id;
+    scene.highlight(`left:${selected}`,true);
+    leftButtons.forEach((button,key)=>button.classList.toggle('is-selected',key===id));
+    setText(status,'Origen seleccionado. Elige su pareja.');
+  }
+
+  function chooseRight(id) {
+    if(!selected){setText(status,'Selecciona primero un elemento de la izquierda.');return false;}
+    const validation=validateConnection(selected,id,expected,solved);
+    if(!validation.ok){setText(status,'Esa relación no es correcta.');return false;}
+    const key=connectionKey(selected,id);
+    if(!validation.alreadyExists){
+      solved.add(key);
+      connections=appendUniqueConnection(connections,{leftId:selected,rightId:id});
+      runtime.applyPatch(trial.questionId,{kind:'pair-set',leftId:selected,rightId:id});
+      scene.connect(`left:${selected}`,`right:${id}`);
+    }
+    leftButtons.get(selected)?.classList.add('is-solved');
+    scene.highlight(`left:${selected}`,false);
+    selected=null;
+    leftButtons.forEach((button)=>button.classList.remove('is-selected'));
+    setText(status,`Conexión correcta · ${connections.length}/${trial.connections.length}`);
+    return true;
+  }
+
+  trial.left.forEach((item)=>{
+    const button=el('button',{type:'button',class:'p2lrn-game-card'},item.text);
+    button.addEventListener('click',()=>chooseLeft(item.id));
+    leftButtons.set(item.id,button);
+    leftColumn.append(button);
+  });
+  trial.right.forEach((item)=>{
+    const button=el('button',{type:'button',class:'p2lrn-game-card'},item.text);
+    button.addEventListener('click',()=>chooseRight(item.id));
+    rightColumn.append(button);
+  });
+  panel.append(leftColumn,rightColumn);
+
+  return {
+    panel,
+    interact(meta) {
+      if(meta.kind==='matching-left'){chooseLeft(meta.id);return true;}
+      if(meta.kind==='matching-right'){chooseRight(meta.id);return true;}
+      return false;
+    },
+  };
+}
+
+function buildClassificationControls({trial,runtime,scene,status}) {
+  const expected=new Map(trial.assignments.map((item)=>[item.itemId,item.categoryId]));
+  const values={};
+  const staging=new Map(trial.objects.map((item,index)=>[item.id,gridPosition(index,trial.objects.length,{z:3.8})]));
+  let selected=null;
+
+  trial.categories.forEach((category,index)=>{
+    scene.addZone({
+      id:`category:${category.id}`,
+      text:category.text,
+      position:classificationZonePosition(index,trial.categories.length),
+      size:[4.1,0.24,2.5],
+      color:['#0369a1','#6d28d9','#047857','#b45309'][index%4],
+      interaction:{kind:'classification-category',id:category.id},
+    });
+  });
+  trial.objects.forEach((item,index)=>{
+    scene.addBox({
+      id:`classify:${item.id}`,
+      text:item.text,
+      position:staging.get(item.id),
+      interaction:{kind:'classification-object',id:item.id},
+    });
+  });
+
+  const panel=el('div',{class:'p2lrn-q-fields'});
+  const selects=new Map();
+
+  function moveToCategory(itemId,categoryId) {
+    const expectedCategory=expected.get(itemId);
+    if(expectedCategory!==categoryId){
+      setText(status,'Esa categoría no es correcta.');
+      return false;
+    }
+    values[itemId]=categoryId;
+    runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId});
+    const categoryIndex=trial.categories.findIndex((item)=>item.id===categoryId);
+    const base=classificationZonePosition(categoryIndex,trial.categories.length);
+    const siblings=Object.entries(values).filter(([,value])=>value===categoryId).map(([id])=>id);
+    const offset=siblings.indexOf(itemId);
+    scene.setTranslation(`classify:${itemId}`,[base[0]+((offset%3)-1)*0.9,0.72,base[2]+1.25+Math.floor(offset/3)*0.95]);
+    selects.get(itemId).value=categoryId;
+    setText(status,classificationIsCorrect(values,expected)?'Clasificación completada correctamente.':'Objeto clasificado correctamente.');
+    return true;
+  }
+
+  trial.objects.forEach((item)=>{
+    const row=el('label',{class:'p2lrn-q-field'});
+    row.append(el('span',{},item.text));
+    const select=el('select');
+    select.append(el('option',{value:''},'Selecciona categoría…'));
+    trial.categories.forEach((category)=>select.append(el('option',{value:category.id},category.text)));
+    select.addEventListener('change',()=>{
+      if(!select.value){select.value=values[item.id]??'';return;}
+      if(!moveToCategory(item.id,select.value)) select.value=values[item.id]??'';
+    });
+    selects.set(item.id,select);
+    row.append(select);
+    panel.append(row);
+  });
+
+  return {
+    panel,
+    interact(meta) {
+      if(meta.kind==='classification-object'){
+        if(selected) scene.highlight(`classify:${selected}`,false);
+        selected=meta.id;
+        scene.highlight(`classify:${selected}`,true);
+        setText(status,'Objeto seleccionado. Elige una categoría.');
+        return true;
+      }
+      if(meta.kind==='classification-category'){
+        if(!selected){setText(status,'Selecciona primero un objeto.');return true;}
+        const ok=moveToCategory(selected,meta.id);
+        if(ok){
+          scene.highlight(`classify:${selected}`,false);
+          selected=null;
+        }
+        return true;
+      }
+      return false;
+    },
+  };
+}
+
+export async function render(options) {
+  const {game,runtime,shell}=await setupGame({...options,rendererId:THREE_D_RENDERER});
+  const layout=el('div',{class:'p2lrn-3d-layout'});
+  const canvas=el('canvas',{
+    class:'p2lrn-3d-canvas',
+    width:'960',
+    height:'540',
+    'aria-label':'Escena 3D interactiva del ejercicio',
+  });
+  const controls=el('div',{class:'p2lrn-3d-controls'});
+  const status=statusNode('Preparando escena 3D…');
+  let trialIndex=0;
+  let currentInteraction=()=>false;
+
+  const scene=await createThreeGameScene(canvas,{
+    onInteraction:(meta)=>currentInteraction(meta),
+  });
+
+  const technology=el('p',{class:'p2lrn-3d-runtime'},`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`);
+  controls.append(technology);
+
+  const renderTrial=()=>{
+    scene.reset();
+    controls.querySelectorAll('.p2lrn-3d-trial').forEach((node)=>node.remove());
+    const trial=game.data.trials[trialIndex];
+    const wrap=el('div',{class:'p2lrn-3d-trial'});
+    wrap.append(
+      el('p',{class:'p2lrn-game-description'},`Prueba ${trialIndex+1} de ${game.data.trials.length}`),
+      el('h3',{},trial.prompt),
+    );
+
+    let controller;
+    if(trial.type==='ordering-3d') controller=buildOrderingControls({trial,runtime,scene,status});
+    else if(trial.type==='matching-3d') controller=buildMatchingControls({trial,runtime,scene,status});
+    else if(trial.type==='classification-3d') controller=buildClassificationControls({trial,runtime,scene,status});
+    else throw new Error(`Unsupported P2LRN 3D trial: ${trial.type}`);
+
+    currentInteraction=controller.interact;
+    wrap.append(controller.panel);
+
+    const nav=el('div',{class:'p2lrn-game-actions'});
+    const previous=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},'Anterior');
+    const next=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===game.data.trials.length-1},'Siguiente');
+    previous.addEventListener('click',()=>{trialIndex-=1;renderTrial();});
+    next.addEventListener('click',()=>{trialIndex+=1;renderTrial();});
+    nav.append(previous,next);
+    wrap.append(nav);
+    controls.append(wrap);
+    setText(status,'Selecciona elementos en la escena o utiliza los controles accesibles.');
+  };
+
+  renderTrial();
+  layout.append(canvas,controls);
+  shell.append(layout);
+  finishPanel(runtime,shell);
+  shell.append(status);
+
+  const originalDestroy=runtime.destroy.bind(runtime);
+  runtime.destroy=()=>{
+    scene.destroy();
+    originalDestroy();
+  };
+  return runtime;
+}
