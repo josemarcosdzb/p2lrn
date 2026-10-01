@@ -38,6 +38,11 @@ function resolve(base, ref) {
 function text(path) {
   return new TextDecoder('utf-8', {fatal:false}).decode(files.get(path).buffer);
 }
+function stripSourceMapDirectives(source) {
+  return String(source)
+    .replace(/\/\/[#@]\s*sourceMappingURL=.*$/gmu, '')
+    .replace(/\/\*[#@]\s*sourceMappingURL=[\s\S]*?\*\//gmu, '');
+}
 function rewriteCss(css, base, stack = new Set()) {
   return String(css)
     .replace(/@import\s+(?:url\()?\s*(['"]?)([^'")\s;]+)\1\s*\)?\s*;/giu, (all, _q, ref) => {
@@ -57,6 +62,16 @@ function rewriteHtml(path) {
   const csp = doc.createElement('meta');
   csp.httpEquiv = 'Content-Security-Policy';
   csp.content = "default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none';";
+  if (!doc.querySelector('meta[name="viewport"]')) {
+    const viewport = doc.createElement('meta');
+    viewport.name = 'viewport';
+    viewport.content = 'width=device-width,initial-scale=1';
+    doc.head?.append(viewport);
+  }
+  const fit = doc.createElement('style');
+  fit.setAttribute('data-p2lrn-runtime-fit', '1');
+  fit.textContent = 'img,video,canvas,svg{max-width:100%;height:auto}iframe,object,embed{max-width:100%}';
+  doc.head?.append(fit);
   doc.head?.prepend(csp);
   const attrs = ['src','href','poster','data','background'];
   for (const el of doc.querySelectorAll('*')) {
@@ -121,7 +136,7 @@ function wireDocument(doc, path) {
 function makeUrls() {
   for (const [path, file] of files) {
     if (file.mediaType.includes('html') || file.mediaType.includes('xhtml') || file.mediaType.includes('css')) continue;
-    urls.set(path, URL.createObjectURL(new Blob([file.buffer], {type:file.mediaType || 'application/octet-stream'})));
+    urls.set(path, URL.createObjectURL(new Blob([file.mediaType.includes('javascript') ? stripSourceMapDirectives(text(path)) : file.buffer], {type:file.mediaType || 'application/octet-stream'})));
   }
   for (const [path, file] of files) {
     if (!file.mediaType.includes('css')) continue;
