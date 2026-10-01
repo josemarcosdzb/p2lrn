@@ -82,7 +82,7 @@ function rewriteHtml(path) {
   doc.querySelectorAll('base').forEach((node) => node.remove());
   const csp = doc.createElement('meta');
   csp.httpEquiv = 'Content-Security-Policy';
-  csp.content = "default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none';";
+  csp.content = "default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none';";
   if (!doc.querySelector('meta[name="viewport"]')) {
     const viewport = doc.createElement('meta');
     viewport.name = 'viewport';
@@ -91,9 +91,12 @@ function rewriteHtml(path) {
   }
   const fit = doc.createElement('style');
   fit.setAttribute('data-p2lrn-runtime-fit', '1');
-  fit.textContent = 'img,video,canvas,svg{max-width:100%;height:auto}iframe,object,embed{max-width:100%}';
+  fit.textContent = 'html,body{max-width:100%;min-width:0;overflow-x:auto}*,*::before,*::after{box-sizing:border-box}img,video,canvas,svg{max-width:100%;height:auto}iframe,object,embed,table,pre{max-width:100%}';
   doc.head?.append(fit);
   doc.head?.prepend(csp);
+  for (const script of doc.querySelectorAll('script:not([src])')) {
+    script.textContent = stripSourceMapDirectives(script.textContent || '');
+  }
   const attrs = ['src','href','poster','data','background'];
   for (const el of doc.querySelectorAll('*')) {
     for (const attr of attrs) {
@@ -164,8 +167,15 @@ function makeUrls() {
     urls.set(path, URL.createObjectURL(new Blob([rewriteCss(text(path), path, new Set([path]))], {type:'text/css'})));
   }
 }
-async function navigate(path) {
-  const normalized = normalize(path);
+function splitReference(value) {
+  const raw = String(value || '').trim();
+  const match = /^([^?#]*)(\?[^#]*)?(#.*)?$/u.exec(raw);
+  return {path:normalize(match?.[1] || ''), suffix:String(match?.[2] || '') + String(match?.[3] || '')};
+}
+async function navigate(path, suffix = '') {
+  const parsed = splitReference(path);
+  const normalized = parsed.path;
+  const launchSuffix = suffix || parsed.suffix;
   if (!normalized || !files.has(normalized)) throw new Error(`Package launch member not found: ${path}`);
   const media = files.get(normalized).mediaType || '';
   if (!media.includes('html') && !media.includes('xhtml')) throw new Error(`Package launch member is not HTML/XHTML: ${normalized}`);
@@ -177,9 +187,10 @@ async function navigate(path) {
   iframe.addEventListener('load', () => {
     try { wireDocument(iframe.contentDocument, normalized); } catch {}
     observeContentFrame(iframe);
-    reply('ready', {member:normalized});
+    reply('ready', {member:normalized, suffix:launchSuffix});
   }, {once:true});
   iframe.srcdoc = rewriteHtml(normalized);
+  if (launchSuffix) iframe.dataset.p2lrnLaunchSuffix = launchSuffix;
   stage.replaceChildren(iframe);
 }
 async function initialize(data) {
@@ -195,8 +206,8 @@ async function initialize(data) {
     files.set(path, {mediaType:String(file.mediaType || 'application/octet-stream'), buffer:file.buffer});
   }
   makeUrls();
-  await navigate(String(data.launchMember || ''));
-  reply('initialized', {files:files.size, profile:data.profile ?? null});
+  await navigate(String(data.launchMember || ''), String(data.launchSuffix || ''));
+  reply('initialized', {files:files.size, profile:data.profile ?? null, member:String(data.launchMember || ''), suffix:String(data.launchSuffix || '')});
 }
 function onMessage(event) {
   const data = event.data;

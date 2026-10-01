@@ -36,6 +36,13 @@ export function supportsPackageRuntime(representation) {
   if (!launch || !/\.(?:html?|xhtml)(?:[?#].*)?$/iu.test(launch)) return false;
   return ['embedded', 'package-member'].includes(representation?.location?.type);
 }
+export function splitPackageMemberReference(value) {
+  const raw = String(value ?? '').trim().replace(/^\.\//u, '');
+  const match = /^([^?#]*)(\?[^#]*)?(#.*)?$/u.exec(raw);
+  const path = String(match?.[1] ?? '').replace(/^\//u, '');
+  const suffix = String(match?.[2] ?? '') + String(match?.[3] ?? '');
+  return {path, suffix, reference:path + suffix};
+}
 function mediaTypeForPath(path) {
   const ext = String(path).toLowerCase().split(/[?#]/, 1)[0].split('.').pop();
   return ({
@@ -70,15 +77,15 @@ async function runtimeFiles(nested) {
 }
 
 export async function render({container, payload, representation, package:pkg, eventTarget, adapter, context, runtimeBaseUrl}) {
-  const launchMember = payload?.member ?? packageLaunchMember(representation);
-  if (!launchMember) {
+  const launch = splitPackageMemberReference(payload?.member ?? packageLaunchMember(representation));
+  if (!launch.path) {
     const error = new Error('External package has no local HTML launch member.');
     error.code = 'P2LRN_PACKAGE_RUNTIME_LAUNCH_MISSING';
     throw error;
   }
   const nested = await nestedPackage(pkg, representation, payload);
-  if (!nested.names().includes(launchMember)) {
-    const error = new Error(`External package launch member is missing: ${launchMember}`);
+  if (!nested.names().includes(launch.path)) {
+    const error = new Error(`External package launch member is missing: ${launch.reference || launch.path}`);
     error.code = 'P2LRN_PACKAGE_RUNTIME_LAUNCH_MISSING';
     throw error;
   }
@@ -117,7 +124,8 @@ export async function render({container, payload, representation, package:pkg, e
         port.postMessage({
           protocol:PROTOCOL,
           action:'init',
-          launchMember,
+          launchMember:launch.path,
+          launchSuffix:launch.suffix,
           profile:representation.profile ?? null,
           files:transferred.files,
         }, transferred.transfers);
@@ -132,7 +140,7 @@ export async function render({container, payload, representation, package:pkg, e
         dispatchRuntimeEvent(eventTarget, 'p2lrn:activityready', {
           runtime:'external-package',
           profile:representation.profile ?? null,
-          launchMember:message.member ?? launchMember,
+          launchMember:(message.member ?? launch.path) + (message.suffix ?? launch.suffix),
         }, context, {adapter});
       } else if (message.action === 'blocked-navigation') {
         dispatchRuntimeEvent(eventTarget, 'p2lrn:navigation', {
@@ -153,7 +161,7 @@ export async function render({container, payload, representation, package:pkg, e
 
   return Object.freeze({
     kind:'external-package',
-    launchMember,
+    launchMember:launch.reference,
     destroy() {
       destroyed = true;
       window.removeEventListener('message', onMessage);

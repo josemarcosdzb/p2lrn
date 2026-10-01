@@ -571,7 +571,7 @@ footer a:hover{color:var(--blue)}
 
 /* Real viewer */
 .viewer-page{background:#f4f6f8}
-.viewer-main{max-width:1380px}
+.viewer-main{width:min(1600px,calc(100% - 32px));max-width:1600px}
 .viewer-intro{padding:66px 0 34px}
 .viewer-intro h1{margin:6px 0 12px;font-size:clamp(3.6rem,8vw,7rem);line-height:.9;letter-spacing:-.06em}
 .viewer-intro>p:last-child{max-width:820px;color:var(--muted);font-size:1.08rem}
@@ -581,7 +581,7 @@ footer a:hover{color:var(--blue)}
 .viewer-controls select,.viewer-controls input{width:100%;min-height:42px;padding:0 11px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font:inherit}
 .viewer-buttons{display:flex;gap:8px}
 
-.viewer-workbench{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;margin-top:18px;align-items:start}
+.viewer-workbench{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,320px);gap:14px;margin-top:18px;align-items:start}
 .viewer-stage,.viewer-console{border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
 .viewer-stage-head,.viewer-console-head{min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 14px;border-bottom:1px solid var(--line);background:#f8f9fb}
 .viewer-stage-head>div{display:grid;gap:2px}
@@ -726,4 +726,13 @@ footer a:hover{color:var(--blue)}
 }
 @media(max-width:440px){
   .legal-toc{grid-template-columns:1fr}
+}
+
+@media(max-width:1280px){
+  .viewer-workbench{grid-template-columns:1fr}
+  .viewer-console pre{min-height:240px;max-height:360px}
+}
+@media(max-width:900px){
+  .viewer-main{width:min(100% - 20px,1600px)}
+  .viewer-player-shell{padding:8px}
 }

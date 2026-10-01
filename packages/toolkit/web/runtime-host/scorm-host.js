@@ -107,7 +107,7 @@ function rewriteHtml(path) {
 
   const csp = doc.createElement('meta');
   csp.httpEquiv = 'Content-Security-Policy';
-  csp.content = "default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none';";
+  csp.content = "default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none';";
   if (!doc.querySelector('meta[name="viewport"]')) {
     const viewport = doc.createElement('meta');
     viewport.name = 'viewport';
@@ -116,13 +116,16 @@ function rewriteHtml(path) {
   }
   const fit = doc.createElement('style');
   fit.setAttribute('data-p2lrn-runtime-fit', '1');
-  fit.textContent = 'img,video,canvas,svg{max-width:100%;height:auto}iframe,object,embed{max-width:100%}';
+  fit.textContent = 'html,body{max-width:100%;min-width:0;overflow-x:auto}*,*::before,*::after{box-sizing:border-box}img,video,canvas,svg{max-width:100%;height:auto}iframe,object,embed,table,pre{max-width:100%}';
   doc.head?.append(fit);
   doc.head?.prepend(csp);
 
   const bridge = doc.createElement('script');
   bridge.textContent = apiBridgeBootstrap();
   csp.after(bridge);
+  for (const script of doc.querySelectorAll('script:not([src])')) {
+    script.textContent = stripSourceMapDirectives(script.textContent || '');
+  }
 
   const attrs = ['src', 'href', 'poster', 'data', 'background'];
   for (const el of doc.querySelectorAll('*')) {
@@ -224,7 +227,15 @@ function installApi(initialState, learnerId, learnerName, launchData, version, n
   }
 }
 
-async function navigate(path) {
+function splitReference(value) {
+  const raw = String(value || '').trim();
+  const match = /^([^?#]*)(\?[^#]*)?(#.*)?$/u.exec(raw);
+  return {path:normalize(match?.[1] || ''), suffix:String(match?.[2] || '') + String(match?.[3] || '')};
+}
+async function navigate(path, suffix = '') {
+  const parsed = splitReference(path);
+  path = parsed.path;
+  const launchSuffix = suffix || parsed.suffix;
   if (!files.has(path)) throw new Error(`SCORM launch member not found: ${path}`);
   const mediaType = files.get(path).mediaType || '';
   if (!mediaType.includes('html') && !mediaType.includes('xhtml')) throw new Error(`SCORM launch member is not HTML/XHTML: ${path}`);
@@ -238,9 +249,10 @@ async function navigate(path) {
   next.addEventListener('load', () => {
     try { wireDocument(next.contentDocument, path); } catch {}
     observeContentFrame(next);
-    reply('ready', {member: path});
+    reply('ready', {member:path, suffix:launchSuffix});
   }, {once: true});
   next.srcdoc = rewriteHtml(path);
+  if (launchSuffix) next.dataset.p2lrnLaunchSuffix = launchSuffix;
   content = next;
   stage.replaceChildren(next);
 }
@@ -255,8 +267,8 @@ async function initialize(data) {
   }
   makeUrls();
   installApi(data.initialState || {}, String(data.learnerId || ''), String(data.learnerName || ''), String(data.launchData || ''), version, data.navigationState || null);
-  await navigate(String(data.launchMember || ''));
-  reply('initialized', {version, files: files.size, topology: 'isolated-parent-api'});
+  await navigate(String(data.launchMember || ''), String(data.launchSuffix || ''));
+  reply('initialized', {version, files: files.size, topology: 'isolated-parent-api', member:String(data.launchMember || ''), suffix:String(data.launchSuffix || '')});
 }
 
 function onChannelMessage(event) {

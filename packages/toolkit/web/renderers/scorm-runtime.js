@@ -31,6 +31,14 @@ function findLaunchMember(representation, payload) {
   const extension = scormExtension(representation);
   return String(extension.member ?? extension.href ?? '');
 }
+function splitLaunchReference(value) {
+  const raw = String(value ?? '').trim().replace(/^\.\//u, '');
+  const match = /^([^?#]*)(\?[^#]*)?(#.*)?$/u.exec(raw);
+  return {
+    path:String(match?.[1] ?? '').replace(/^\//u, ''),
+    suffix:String(match?.[2] ?? '') + String(match?.[3] ?? ''),
+  };
+}
 
 async function resolveNestedArchive(pkg, representation, payload) {
   if (payload?.nested?.archive) return payload.nested;
@@ -148,7 +156,8 @@ async function loadInitialState(adapter, context, eventTarget) {
 
 export async function render({container, payload, representation, package: pkg, adapter, eventTarget, context, runtimeBaseUrl = null}) {
   const nested = await resolveNestedArchive(pkg, representation, payload);
-  const launchMember = findLaunchMember(representation, payload);
+  const launchReference = splitLaunchReference(findLaunchMember(representation, payload));
+  const launchMember = launchReference.path;
   if (!launchMember || !nested.archive.entries.has(launchMember)) {
     const error = new Error(`SCORM launch member is missing from preserved package: ${launchMember || '(empty)'}`);
     error.code = 'P2LRN_SCORM_LAUNCH_MISSING';
@@ -281,7 +290,7 @@ export async function render({container, payload, representation, package: pkg, 
 
   const initPayload = () => ({
     protocol: runtimeProtocol, action:'init', version,
-    launchMember, files, initialState,
+    launchMember, launchSuffix:launchReference.suffix, files, initialState,
     learnerId: String(context?.learnerId ?? ''), learnerName: String(context?.learnerName ?? ''),
     launchData: String(extension.launchData ?? ''), navigationState:sequencer?.state() ?? null,
   });
