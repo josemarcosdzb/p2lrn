@@ -76,8 +76,15 @@ jobs:
           node --check deploy/netlify/build-doc-examples.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Build Netlify site and CDN
-        run: node deploy/netlify/build-site.mjs
+      - name: Prepare local viewer fixture
+        shell: powershell
+        run: |
+          node deploy/netlify/build-cdn.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item -Recurse -Force deploy/netlify/site/* .netlify-cdn/
+          New-Item -ItemType Directory -Force .netlify-cdn/examples/canonical | Out-Null
+          Copy-Item -Recurse -Force examples/canonical/* .netlify-cdn/examples/canonical/
+          Copy-Item -Force .netlify-cdn/player/current/dist/p2lrn-sw.js .netlify-cdn/p2lrn-sw.js
 
       - name: Verify local viewer and isolated runtimes
         run: node scripts/verify-local-viewer.mjs
@@ -87,6 +94,9 @@ jobs:
 
       - name: Browser smoke from installed npm tarballs
         run: node scripts/verify-browser-from-npm.mjs
+
+      - name: Build production Netlify site locally
+        run: node deploy/netlify/build-site.mjs
 
       - name: Verify npm/CDN byte identity
         run: node scripts/verify-distribution-identity.mjs
