@@ -140,11 +140,13 @@ headers += headerBlock(
 headers += headerBlock('/player/current/*', 'no-store', 'no-store');
 
 const runtimeCsp = "default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";
+const executablePackageCsp = "default-src 'none'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";
 for (const channel of [version, 'current']) {
   for (const host of ['h5p.html', 'scorm.html', 'package.html']) {
+    const csp = host === 'h5p.html' ? runtimeCsp : executablePackageCsp;
     headers += [
       `/player/${channel}/dist/runtime-host/${host}`,
-      `  Content-Security-Policy: ${runtimeCsp}`,
+      `  Content-Security-Policy: ${csp}`,
       '',
     ].join('\n');
   }
