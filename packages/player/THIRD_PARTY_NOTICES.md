@@ -1,6 +1,6 @@
 # Third-party notices
 
-`@p2lrn/player` bundles runtime assets from:
+`@p2lrn/player` bundles runtime assets from third parties. Those components keep their upstream licenses; P2LRN-NCSL 1.0 does not relicense them.
 
 ## Three.js
 
@@ -31,8 +31,8 @@ The upstream Apache-2.0 license text is included in the generated distribution a
 The upstream MIT license text is included in the generated distribution at
 `dist/runtime-host/assets/LICENSE.h5p-standalone.txt`.
 
-Shared H5P libraries are intentionally distributed separately through
-`@p2lrn/h5p-libraries` and retain their own third-party license terms.
+Shared H5P libraries are distributed separately through `@p2lrn/h5p-libraries` and retain their own third-party license terms.
 
-The P2LRN first-party source code remains under the license declared by this
-package. A public first-party license has not yet been selected.
+## P2LRN first-party code
+
+P2LRN first-party code in this package is distributed under **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)** as declared by `package.json` and the package-level `LICENSE`. This notice does not modify the MIT, Apache-2.0 or other valid third-party licenses listed above.

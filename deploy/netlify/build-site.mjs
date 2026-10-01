@@ -167,6 +167,27 @@ if (legalProblems.length) {
   throw new Error('Legal publication gate failed:\\n' + legalProblems.join('\\n'));
 }
 
+const [repositoryLicense,publishedLicense,publishedNotice,licensePageHtml] = await Promise.all([
+  readFile(join(root,'LICENSE'),'utf8'),
+  readFile(join(outputRoot,'LICENSE'),'utf8'),
+  readFile(join(outputRoot,'NOTICE.md'),'utf8'),
+  readFile(join(outputRoot,'licencia','index.html'),'utf8'),
+]);
+if (repositoryLicense !== publishedLicense) {
+  throw new Error('Published /LICENSE is not byte-identical to the repository LICENSE authority.');
+}
+if (!publishedNotice.includes('P2LRN-NCSL 1.0')) {
+  throw new Error('Published NOTICE.md does not identify P2LRN-NCSL 1.0.');
+}
+for (const required of ['P2LRN-NCSL 1.0','versión 1.0','href="/LICENSE"','/player/current/source/']) {
+  if (!licensePageHtml.includes(required)) {
+    throw new Error('License page is missing required authority/source marker: ' + required);
+  }
+}
+if (/github\.com\/josemarcosfrodo\/p2lrn\/blob\/main\/LICENSE/i.test(licensePageHtml)) {
+  throw new Error('License page must not depend on a private GitHub URL for the legal authority.');
+}
+
 // Documentation regression gates. These keep the portal aligned with the real
 // package surface instead of relying on a second hand-maintained checklist.
 const repeatedForms = [];

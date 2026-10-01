@@ -40,7 +40,8 @@
     "THIRD_PARTY_NOTICES.md",
     "scripts/",
     "LICENSE",
-    "NOTICE.md"
+    "NOTICE.md",
+    "source/"
   ],
   "engines": {
     "node": ">=18"
@@ -54,8 +55,9 @@
   "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "build:dist": "node ./scripts/build-dist.mjs",
-    "prepack": "npm run build:dist",
-    "prepublishOnly": "node ../../scripts/check-publish-ready.mjs"
+    "prepack": "node ./scripts/prepare-source-snapshot.mjs && npm run build:dist",
+    "prepublishOnly": "node ../../scripts/check-publish-ready.mjs",
+    "postpack": "node ./scripts/prepare-source-snapshot.mjs --clean"
   },
   "peerDependencies": {
     "@p2lrn/h5p-libraries": "0.5.0-alpha.10"

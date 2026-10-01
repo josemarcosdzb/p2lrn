@@ -13,6 +13,9 @@ All three packages currently use the same release version: `0.5.0-alpha.10`.
 Before publication:
 
 ```bash
+node scripts/check-publish-ready.mjs
+node scripts/verify-license-integration.mjs
+
 cd packages/toolkit
 npm install --no-audit --no-fund
 npm test
@@ -96,3 +99,16 @@ The document Reader is already included with the Toolkit:
 npm install @p2lrn/toolkit
 p2lrn-document-reader documento.docx --pretty
 ```
+
+
+## Corresponding Source distribution
+
+Public distribution must not depend on the GitHub repository being public.
+
+- `@p2lrn/toolkit` ships its TypeScript `src/` tree and `tsconfig.json` inside the npm package.
+- `@p2lrn/player` generates and ships a `source/` snapshot containing the first-party Player build sources and the canonical Toolkit browser/runtime sources used to generate `dist/`.
+- The CDN build publishes the same source snapshot at `/player/<version>/source/` and `/player/current/source/`.
+- `SOURCE-MANIFEST.json` records package versions, the source revision when available, the P2LRN-NCSL license identifier and the reconstruction command.
+- `/LICENSE` and `/NOTICE.md` are published directly by the static build, so the public license page does not rely on access to a private repository.
+
+A private development repository is therefore compatible with public binary/CDN distribution only when these source artifacts are published with the corresponding release.

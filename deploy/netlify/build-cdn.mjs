@@ -1,6 +1,7 @@
 import {cp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {buildPlayerDistribution, H5P_STANDALONE_VERSION, THREE_VERSION, RAPIER3D_VERSION} from '../../packages/player/scripts/build-dist.mjs';
+import {cleanPlayerSourceSnapshot, preparePlayerSourceSnapshot} from '../../packages/player/scripts/prepare-source-snapshot.mjs';
 import {buildH5pLibraries, LUMI_H5P_LIBRARY_COMMIT} from '../../packages/h5p-libraries/scripts/build.mjs';
 
 const root = resolve(process.cwd());
@@ -40,7 +41,12 @@ if (toolkitPackage.version !== version || h5pPackage.version !== version) {
 await rm(outputRoot, {recursive:true, force:true});
 
 const versionedDist = join(outputRoot, 'player', version, 'dist');
+const versionedSource = join(outputRoot, 'player', version, 'source');
+const preparedSource = await preparePlayerSourceSnapshot();
 const playerBuild = await buildPlayerDistribution({output:versionedDist});
+await cp(preparedSource.output, versionedSource, {recursive:true, force:true});
+await cp(join(root,'LICENSE'), join(outputRoot,'LICENSE'), {force:true});
+await cp(join(root,'NOTICE.md'), join(outputRoot,'NOTICE.md'), {force:true});
 
 const h5pPackageDist = join(root, 'packages', 'h5p-libraries', 'dist');
 const h5pManifest = await buildH5pLibraries({output:h5pPackageDist});
@@ -55,6 +61,10 @@ await cp(versionedDist, join(outputRoot, 'player', 'current', 'dist'), {
   recursive:true,
   force:true,
 });
+await cp(versionedSource, join(outputRoot, 'player', 'current', 'source'), {
+  recursive:true,
+  force:true,
+});
 
 const index = {
   schema:'https://p2lrn.org/schema/cdn-index/1',
@@ -65,6 +75,18 @@ const index = {
     toolkitVersion:toolkitPackage.version,
     h5pLibrariesPackage:'@p2lrn/h5p-libraries',
     h5pLibrariesVersion:h5pPackage.version,
+  },
+  license:{
+    id:'P2LRN-NCSL-1.0',
+    name:'P2LRN Non-Commercial Source License 1.0',
+    url:'/LICENSE',
+    notice:'/NOTICE.md',
+  },
+  source:{
+    sourceRef:preparedSource.manifest.sourceRef,
+    versionedBasePath:`/player/${version}/source/`,
+    currentBasePath:'/player/current/source/',
+    manifest:`/player/${version}/source/SOURCE-MANIFEST.json`,
   },
   player:{
     version,
@@ -97,6 +119,7 @@ const index = {
 };
 
 await writeFile(join(outputRoot, 'index.json'), JSON.stringify(index, null, 2) + '\n');
+await cleanPlayerSourceSnapshot();
 await writeFile(
   join(outputRoot, 'health.json'),
   JSON.stringify({

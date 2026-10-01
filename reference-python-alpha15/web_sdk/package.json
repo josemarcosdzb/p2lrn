@@ -1,7 +1,8 @@
 {
   "name": "@p2rln/player",
   "version": "0.4.0-alpha.15",
-  "description": "Embeddable Web Component runtime for P2RLN learning packages",
+  "description": "Historical reference-only Web Component runtime for the P2RLN Alpha15 learning-package format",
+  "private": true,
   "type": "module",
   "sideEffects": true,
   "main": "./dist/p2rln.esm.js",
@@ -43,7 +44,8 @@
     "p2rln",
     "learning",
     "web-component",
-    "lms"
+    "lms",
+    "reference-only"
   ],
   "license": "UNLICENSED"
 }

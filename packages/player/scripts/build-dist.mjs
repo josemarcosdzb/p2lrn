@@ -19,6 +19,18 @@ const here = dirname(fileURLToPath(import.meta.url));
 const playerRoot = resolve(here, '..');
 const repoRoot = resolve(playerRoot, '..', '..');
 const toolkitRoot = join(repoRoot, 'packages', 'toolkit');
+const packagedToolkitRoot = join(playerRoot, 'source', 'packages', 'toolkit');
+
+async function directoryExists(path) {
+  try { return (await stat(path)).isDirectory(); }
+  catch { return false; }
+}
+
+async function resolveToolkitSourceRoot() {
+  if (await directoryExists(join(toolkitRoot,'web'))) return toolkitRoot;
+  if (await directoryExists(join(packagedToolkitRoot,'web'))) return packagedToolkitRoot;
+  throw new Error('P2LRN Player source snapshot is missing toolkit/web and toolkit/web-sdk-src.');
+}
 
 async function walk(dir) {
   const out = [];
@@ -35,8 +47,9 @@ function sha(data, algorithm, encoding) {
 }
 
 async function copyCanonicalRuntime(dist) {
-  const web = join(toolkitRoot, 'web');
-  const sdk = join(toolkitRoot, 'web-sdk-src');
+  const canonicalToolkitRoot = await resolveToolkitSourceRoot();
+  const web = join(canonicalToolkitRoot, 'web');
+  const sdk = join(canonicalToolkitRoot, 'web-sdk-src');
   for (const source of (await walk(web)).sort()) {
     const rel = relative(web, source).replaceAll('\\','/');
     const parts = rel.split('/');
@@ -208,9 +221,25 @@ async function writeRelease(dist, playerVersion, toolkitVersion) {
       sri:'sha384-' + sha(data,'sha384','base64'),
     });
   }
+  let sourceManifest = null;
+  try {
+    sourceManifest = JSON.parse(await readFile(join(playerRoot,'source','SOURCE-MANIFEST.json'),'utf8'));
+  } catch {}
+  const sourceRef = sourceManifest?.sourceRef ?? process.env.GITHUB_SHA ?? process.env.COMMIT_REF ?? null;
   const release = {
     schema:'https://p2lrn.org/schema/web-sdk-release/1',
     version:'1',
+    license:{
+      id:'P2LRN-NCSL-1.0',
+      name:'P2LRN Non-Commercial Source License 1.0',
+      file:'LICENSE',
+      notice:'NOTICE.md',
+    },
+    source:{
+      correspondingSource:'../source/',
+      manifest:'../source/SOURCE-MANIFEST.json',
+      sourceRef,
+    },
     webSdkVersion:playerVersion,
     toolkitVersion,
     coreVersion:'0.4.0',
@@ -233,6 +262,8 @@ export async function buildPlayerDistribution({output = join(playerRoot, 'dist')
   await copyCanonicalRuntime(output);
   await installH5pStandalone(output);
   await installGame3dRuntime(output);
+  await cp(join(playerRoot,'LICENSE'),join(output,'LICENSE'));
+  await cp(join(playerRoot,'NOTICE.md'),join(output,'NOTICE.md'));
   await validateLocalReferences(output);
 
   const playerSource = await readFile(join(output,'p2lrn-player.js'),'utf8');

@@ -69,7 +69,9 @@
     "examples/",
     "README.md",
     "LICENSE",
-    "NOTICE.md"
+    "NOTICE.md",
+    "src/",
+    "tsconfig.json"
   ],
   "publishConfig": {
     "access": "public"

@@ -5,10 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "p2rln-toolkit"
 version = "0.4.0a15"
-description = "Reference creator, reader and validator toolkit for the P2RLN learning-package format"
+description = "Historical reference-only creator, reader and validator toolkit for the P2RLN Alpha15 learning-package format"
 readme = "README.md"
 requires-python = ">=3.11"
+license = {text = "UNLICENSED - reference-only; no distribution license is granted by P2LRN-NCSL 1.0"}
 dependencies = ["jsonschema>=4.18"]
+keywords = ["p2rln", "reference-only", "do-not-publish"]
 
 [project.optional-dependencies]
 trust = ["cryptography>=42"]
@@ -28,3 +30,8 @@ packages = ["p2rln_reader", "p2rln_ref", "p2rln_creator"]
 p2rln_reader = ["web/*.html", "web/*.js", "web/*.css", "web/renderers/*.js", "web/runtime-host/*.html", "web/runtime-host/*.js", "capabilities.json", "component-capabilities.json"]
 p2rln_ref = ["schemas/*.json", "component-catalog.json"]
 p2rln_creator = ["schemas/*.json"]
+
+[tool.p2lrn-reference]
+status = "historical-reference-only"
+publish = false
+notice = "../NOTICE.md"

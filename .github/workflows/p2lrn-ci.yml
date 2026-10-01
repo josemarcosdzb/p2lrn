@@ -7,6 +7,14 @@ on:
       - 'packages/toolkit/**'
       - 'packages/player/**'
       - 'packages/h5p-libraries/**'
+      - 'LICENSE'
+      - 'NOTICE.md'
+      - 'CONTRIBUTING.md'
+      - 'PUBLISHING.md'
+      - '.github/pull_request_template.md'
+      - 'reference-python-alpha15/**'
+      - 'scripts/check-publish-ready.mjs'
+      - 'scripts/verify-license-integration.mjs'
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
       - 'scripts/verify-distribution-identity.mjs'
@@ -17,6 +25,12 @@ on:
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
   workflow_dispatch:
+    inputs:
+      license_only:
+        description: 'Run only P2LRN license/source integration checks'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -26,7 +40,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  license-integrity:
+    if: ${{ contains(github.event.head_commit.message, '[license verify]') || (github.event_name == 'workflow_dispatch' && inputs.license_only) }}
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Check license scripts syntax
+        run: |
+          node --check scripts/check-publish-ready.mjs
+          node --check scripts/verify-license-integration.mjs
+          node --check packages/player/scripts/prepare-source-snapshot.mjs
+          node --check packages/player/scripts/build-dist.mjs
+          node --check deploy/netlify/build-cdn.mjs
+          node --check deploy/netlify/build-site.mjs
+
+      - name: Verify license publication gate
+        run: node scripts/check-publish-ready.mjs
+
+      - name: Verify P2LRN-NCSL integration
+        run: node scripts/verify-license-integration.mjs
+
   toolkit-and-cdn:
+    if: ${{ !contains(github.event.head_commit.message, '[license verify]') && !(github.event_name == 'workflow_dispatch' && inputs.license_only) }}
     if: ${{ !contains(github.event.head_commit.message, '[focused local]') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45

@@ -11,4 +11,4 @@ Source snapshot:
 
 Individual H5P libraries may declare additional or different licenses in their own metadata and upstream source. Those terms remain applicable to those files. This package does not relicense third-party H5P code.
 
-The P2LRN first-party source code is not licensed by this notice. Its project license must be selected separately before public publication.
+P2LRN first-party code is distributed separately under **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)**. That first-party license does **not** apply to the third-party H5P corpus contained in this package.

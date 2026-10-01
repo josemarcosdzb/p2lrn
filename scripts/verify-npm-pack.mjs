@@ -126,6 +126,22 @@ const toolkitRoot = join(installRoot,'node_modules','@p2lrn','toolkit');
 const playerRoot = join(installRoot,'node_modules','@p2lrn','player');
 const h5pRoot = join(installRoot,'node_modules','@p2lrn','h5p-libraries');
 
+for (const path of [
+  join(playerRoot,'source','SOURCE-MANIFEST.json'),
+  join(playerRoot,'source','packages','player','scripts','build-dist.mjs'),
+  join(playerRoot,'source','packages','toolkit','web','p2lrn-player.js'),
+  join(playerRoot,'source','packages','toolkit','web-sdk-src','p2lrn.js'),
+  join(toolkitRoot,'src','index.ts'),
+  join(toolkitRoot,'tsconfig.json'),
+  join(h5pRoot,'THIRD_PARTY_NOTICES.md'),
+]) {
+  await assertFile(path);
+}
+const packedSourceManifest = JSON.parse(await readFile(join(playerRoot,'source','SOURCE-MANIFEST.json'),'utf8'));
+if (packedSourceManifest?.license?.id !== 'P2LRN-NCSL-1.0') {
+  throw new Error('Packed Player source snapshot does not declare P2LRN-NCSL-1.0.');
+}
+
 const rootLicenseText = await readFile(join(root,'LICENSE'),'utf8');
 const rootNoticeText = await readFile(join(root,'NOTICE.md'),'utf8');
 

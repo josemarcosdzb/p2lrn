@@ -26,3 +26,8 @@ No se aceptará material cuya licencia sea incompatible con su incorporación al
 ## No obligación de aceptar
 
 El envío de una contribución no obliga al proyecto a incorporarla. Los mantenedores pueden rechazar o solicitar cambios por motivos técnicos, de seguridad, de procedencia o de licencia.
+
+
+## Confirmación en pull requests
+
+Toda pull request externa debe marcar expresamente la casilla **Contributor Grant** de `.github/pull_request_template.md`. La casilla no sustituye la revisión de procedencia: si existen varios autores, derechos de empresa, material de terceros o una autorización separada, los mantenedores pueden exigir evidencia adicional antes de fusionar.
