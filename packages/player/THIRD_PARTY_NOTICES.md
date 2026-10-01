@@ -2,6 +2,25 @@
 
 `@p2lrn/player` bundles runtime assets from:
 
+## Three.js
+
+- Version: 0.186.1
+- Repository: https://github.com/mrdoob/three.js
+- License: MIT
+
+The upstream MIT license text is included in the generated distribution at
+`dist/vendor/LICENSE.three.txt`.
+
+## Rapier 3D (compat)
+
+- Package: `@dimforge/rapier3d-compat`
+- Version: 0.21.0
+- Repository: https://github.com/dimforge/rapier
+- License: Apache-2.0
+
+The upstream Apache-2.0 license text is included in the generated distribution at
+`dist/vendor/LICENSE.rapier3d.txt`.
+
 ## h5p-standalone
 
 - Version: 3.8.2
