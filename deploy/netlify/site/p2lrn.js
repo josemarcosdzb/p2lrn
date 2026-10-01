@@ -95,6 +95,28 @@
     });
   }
 
+
+  // P2LRN_EXTRA_DOC_LINKS: connect older articles to the expanded reference set.
+  if (sidebar) {
+    const extras = [
+      ['/docs/questionnaires/','Questionnaires y juegos'],
+      ['/docs/ejemplos/','Ejemplos'],
+      ['/docs/cli/','CLI detallada'],
+    ];
+    const missing = extras.filter(([href]) => !sidebar.querySelector('a[href="' + href + '"]'));
+    if (missing.length) {
+      const label = document.createElement('span');
+      label.textContent = 'MORE';
+      sidebar.append(label);
+      for (const [href,textValue] of missing) {
+        const a=document.createElement('a');
+        a.href=href;
+        a.textContent=textValue;
+        sidebar.append(a);
+      }
+    }
+  }
+
   document.querySelectorAll('[data-contact-form]').forEach((form) => {
     const status = form.querySelector('[data-form-status]');
     form.addEventListener('submit', async (event) => {
