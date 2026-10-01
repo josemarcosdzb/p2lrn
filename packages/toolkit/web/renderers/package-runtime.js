@@ -123,6 +123,11 @@ export async function render({container, payload, representation, package:pkg, e
         }, transferred.transfers);
         return;
       }
+      if (message.action === 'resize') {
+        const height = Number(message.height);
+        if (Number.isFinite(height)) iframe.style.height = `${Math.max(420, Math.min(760, Math.ceil(height)))}px`;
+        return;
+      }
       if (message.action === 'ready' || message.action === 'initialized') {
         dispatchRuntimeEvent(eventTarget, 'p2lrn:activityready', {
           runtime:'external-package',
