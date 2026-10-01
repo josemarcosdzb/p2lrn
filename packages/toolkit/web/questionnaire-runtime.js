@@ -20,6 +20,7 @@ function isRecord(value) {
 function defaultAnswer(question) {
   if (question.type === 'ordering') return {order: [...question.items].reverse().map((item) => item.id)};
   if (question.type === 'matching') return {pairs: {}};
+  if (question.type === 'classification') return {classifications: {}};
   if (question.type === 'fill-blanks') return {blanks: {}};
   if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) return {choiceIds: []};
   if (question.type === 'text') return {text: ''};
@@ -244,6 +245,27 @@ export class QuestionnaireRuntime {
         list.append(item);
       });
       return list;
+    }
+
+    if (question.type === 'classification') {
+      const fields = el('div', {class: 'p2lrn-q-fields'});
+      const classifications = isRecord(answer.classifications) ? answer.classifications : {};
+      question.items.forEach((item) => {
+        const row = el('label', {class: 'p2lrn-q-field'});
+        row.append(el('span', {}, item.text));
+        const select = el('select');
+        select.append(el('option', {value: ''}, 'Selecciona categoría…'));
+        question.categories.forEach((category) => select.append(el('option', {value: category.id}, category.text)));
+        select.value = classifications[item.id] ?? '';
+        select.addEventListener('change', () => {
+          const current = this.getAnswer(question);
+          const currentClassifications = isRecord(current.classifications) ? current.classifications : {};
+          this.setAnswer(question, {classifications: {...currentClassifications, [item.id]: select.value}});
+        });
+        row.append(select);
+        fields.append(row);
+      });
+      return fields;
     }
 
     if (question.type === 'matching') {
