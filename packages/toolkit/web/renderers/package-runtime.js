@@ -5,6 +5,7 @@ import {resolvePackageRuntimeUrl} from '../runtime-host-config.js';
 export const acceptsPayload = true;
 const PROTOCOL = 'p2lrn-package-runtime/1';
 const MULTIPART_PROFILE = 'https://p2lrn.org/profile/multipart';
+const CMI5_PROFILE = 'https://p2lrn.org/profile/cmi5';
 const PROFILE_KEYS = [
   'https://p2lrn.org/profile/cmi5',
   'https://p2lrn.org/profile/tincan-package',
@@ -43,6 +44,74 @@ export function splitPackageMemberReference(value) {
   const suffix = String(match?.[2] ?? '') + String(match?.[3] ?? '');
   return {path, suffix, reference:path + suffix};
 }
+function runtimeUuid() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  globalThis.crypto?.getRandomValues?.(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((value) => value.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+function cmi5RuntimeConfig(representation, context) {
+  const {profile, value} = extensionFor(representation);
+  if (profile !== CMI5_PROFILE && representation?.profile !== CMI5_PROFILE) return null;
+  const registration = runtimeUuid();
+  const sessionId = runtimeUuid();
+  const endpoint = 'https://p2lrn.invalid/cmi5/xapi';
+  const fetchUrl = 'https://p2lrn.invalid/cmi5/fetch';
+  const activityId = String(value.auId ?? context?.entityId ?? `urn:p2lrn:activity:${registration}`);
+  const actor = {
+    objectType:'Agent',
+    account:{homePage:'https://p2lrn.org/runtime-preview', name:'p2lrn-preview-learner'},
+    name:'P2LRN Preview Learner',
+  };
+  const launchUrl = new URL('https://p2lrn.invalid/cmi5/launch');
+  launchUrl.searchParams.set('endpoint', endpoint);
+  launchUrl.searchParams.set('fetch', fetchUrl);
+  launchUrl.searchParams.set('actor', JSON.stringify(actor));
+  launchUrl.searchParams.set('registration', registration);
+  launchUrl.searchParams.set('activityId', activityId);
+  const launchData = {
+    launchMode:'Normal',
+    moveOn:String(value.moveOn ?? 'NotApplicable'),
+    contextTemplate:{
+      contextActivities:{grouping:[{id:String(context?.packageId ?? 'https://p2lrn.org/runtime-preview')}]},
+      extensions:{'https://w3id.org/xapi/cmi5/context/extensions/sessionid':sessionId},
+    },
+  };
+  const masteryScore = Number(value.masteryScore);
+  if (Number.isFinite(masteryScore)) launchData.masteryScore = masteryScore;
+  if (typeof value.launchParameters === 'string' && value.launchParameters) launchData.launchParameters = value.launchParameters;
+  return Object.freeze({
+    protocol:'p2lrn-cmi5-preview/1',
+    syntheticOrigin:'https://p2lrn.invalid',
+    endpoint,
+    fetchUrl,
+    launchUrl:launchUrl.href,
+    activityId,
+    registration,
+    actor,
+    launchData,
+  });
+}
+function scoreFromCmi5Statement(statement) {
+  const result = statement?.result;
+  const score = result?.score;
+  if (!score && result?.success == null && result?.completion == null) return null;
+  const raw = Number(score?.raw);
+  const max = Number(score?.max);
+  const scaled = Number(score?.scaled);
+  return {
+    graded:Boolean(score || result?.success != null),
+    raw:Number.isFinite(raw) ? raw : null,
+    max:Number.isFinite(max) ? max : null,
+    normalized:Number.isFinite(scaled) ? Math.max(-1, Math.min(1, scaled)) : null,
+    passed:typeof result?.success === 'boolean' ? result.success : null,
+    completed:typeof result?.completion === 'boolean' ? result.completion : null,
+  };
+}
+
 function mediaTypeForPath(path) {
   const ext = String(path).toLowerCase().split(/[?#]/, 1)[0].split('.').pop();
   return ({
@@ -97,6 +166,7 @@ export async function render({container, payload, representation, package:pkg, e
   }
   const runtimeOrigin = new URL(runtimeUrl).origin;
   const transferred = await runtimeFiles(nested);
+  const cmi5 = cmi5RuntimeConfig(representation, context);
   const iframe = document.createElement('iframe');
   iframe.className = 'p2lrn-package-runtime';
   iframe.title = 'External package';
@@ -127,6 +197,7 @@ export async function render({container, payload, representation, package:pkg, e
           launchMember:launch.path,
           launchSuffix:launch.suffix,
           profile:representation.profile ?? null,
+          cmi5,
           files:transferred.files,
         }, transferred.transfers);
         return;
@@ -134,6 +205,26 @@ export async function render({container, payload, representation, package:pkg, e
       if (message.action === 'resize') {
         const height = Number(message.height);
         if (Number.isFinite(height)) iframe.style.height = `${Math.max(420, Math.min(760, Math.ceil(height)))}px`;
+        return;
+      }
+      if (message.action === 'cmi5-statement') {
+        const statements = Array.isArray(message.statements) ? message.statements : [message.statement].filter(Boolean);
+        for (const statement of statements) {
+          dispatchRuntimeEvent(eventTarget, 'p2lrn:xapi', {
+            runtime:'cmi5', statement, authoritative:false, source:'portable-preview-runtime',
+          }, context, {adapter});
+          const score = scoreFromCmi5Statement(statement);
+          if (score) {
+            dispatchRuntimeEvent(eventTarget, 'p2lrn:score', {...score, runtime:'cmi5', authoritative:false}, context, {adapter});
+            if (adapter?.reportScore) Promise.resolve(adapter.reportScore({...score, runtime:'cmi5', authoritative:false}, context)).catch((error) => {
+              dispatchRuntimeEvent(eventTarget, 'p2lrn:error', {phase:'cmi5-report-score', error:String(error?.message ?? error)}, context, {adapter});
+            });
+          }
+          const verb = String(statement?.verb?.id ?? '');
+          if (verb.endsWith('/completed') || verb.endsWith('/passed') || verb.endsWith('/failed')) {
+            dispatchRuntimeEvent(eventTarget, 'p2lrn:complete', {runtime:'cmi5', statement, score, authoritative:false}, context, {adapter});
+          }
+        }
         return;
       }
       if (message.action === 'ready' || message.action === 'initialized') {

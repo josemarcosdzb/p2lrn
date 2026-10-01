@@ -10,7 +10,9 @@ on:
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
       - 'scripts/verify-distribution-identity.mjs'
+      - 'scripts/verify-local-viewer.mjs'
       - 'scripts/set-version.mjs'
+      - 'examples/canonical/external/**'
       - 'deploy/netlify/**'
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
@@ -25,6 +27,7 @@ concurrency:
 
 jobs:
   toolkit-and-cdn:
+    if: ${{ !contains(github.event.head_commit.message, '[focused local]') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
@@ -87,32 +90,22 @@ jobs:
           Copy-Item -Force .netlify-cdn/player/current/dist/p2lrn-sw.js .netlify-cdn/p2lrn-sw.js
 
       - name: Verify local viewer and isolated runtimes
-        continue-on-error: true
         run: node scripts/verify-local-viewer.mjs
 
-      - name: Emit interactive canonical replacement candidates
-        if: ${{ contains(github.event.head_commit.message, '[emit canonical]') }}
-        shell: powershell
-        run: |
-          node --input-type=module -e "import {buildDocExamples} from './deploy/netlify/build-doc-examples.mjs'; import {readFile} from 'node:fs/promises'; await buildDocExamples({outputRoot:'.runtime-demo-output'}); for (const [key,name] of [['SCORM','scorm12-browser-demo.p2lrn'],['QTI','qti3-interactive-demo.p2lrn']]) { const bytes=await readFile('.runtime-demo-output/generated/'+name); console.log('P2LRN_CANONICAL_'+key+'_BASE64='+bytes.toString('base64')); }"
 
       - name: Verify npm tarballs as installed packages
         run: node scripts/verify-npm-pack.mjs
 
       - name: Browser smoke from installed npm tarballs
-        continue-on-error: true
         run: node scripts/verify-browser-from-npm.mjs
 
       - name: Build production Netlify site locally
-        if: ${{ !contains(github.event.head_commit.message, '[local verify]') }}
         run: node deploy/netlify/build-site.mjs
 
       - name: Verify npm/CDN byte identity
-        if: ${{ !contains(github.event.head_commit.message, '[local verify]') }}
         run: node scripts/verify-distribution-identity.mjs
 
       - name: Verify generated runtime
-        if: ${{ !contains(github.event.head_commit.message, '[local verify]') }}
         shell: powershell
         run: |
           $VERSION = node -p "require('./packages/player/package.json').version"

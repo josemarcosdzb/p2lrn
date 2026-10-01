@@ -1,10 +1,13 @@
 const PROTOCOL = 'p2lrn-package-runtime/1';
+const CMI5_PROTOCOL = 'p2lrn-cmi5-preview/1';
 const stage = document.getElementById('stage');
 const files = new Map();
 const urls = new Map();
 let channel = null;
 let active = false;
 let resizeObserver = null;
+let runtimeProfile = null;
+let cmi5Config = null;
 
 function reply(action, payload = {}) {
   channel?.postMessage({protocol:PROTOCOL, action, ...payload});
@@ -59,6 +62,64 @@ function resolve(base, ref) {
 function text(path) {
   return new TextDecoder('utf-8', {fatal:false}).decode(files.get(path).buffer);
 }
+
+function cmi5BridgeSource(config) {
+  const encoded = JSON.stringify(config).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+  return \`(()=>{'use strict';
+const cfg=\${encoded};
+const nativeFetch=globalThis.fetch.bind(globalThis);
+const states=new Map();
+const emit=(action,payload={})=>parent.postMessage({protocol:'p2lrn-cmi5-preview/1',action,...payload},'*');
+const json=(value,status=200,headers={})=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json',...headers}});
+const empty=(status=204,headers={})=>new Response(null,{status,headers});
+const inputUrl=(input)=>{try{return new URL(typeof input==='string'?input:input.url,location.href);}catch{return null;}};
+const requestMethod=(input,init)=>String(init?.method||(typeof Request!=='undefined'&&input instanceof Request?input.method:'GET')||'GET').toUpperCase();
+const requestBody=async(input,init)=>{if(init&&Object.prototype.hasOwnProperty.call(init,'body'))return init.body==null?'':String(init.body);if(typeof Request!=='undefined'&&input instanceof Request){try{return await input.clone().text();}catch{return '';}}return '';};
+globalThis.fetch=async(input,init={})=>{
+  const url=inputUrl(input);
+  if(!url||url.origin!==cfg.syntheticOrigin)return nativeFetch(input,init);
+  const method=requestMethod(input,init);
+  if(url.href.startsWith(cfg.fetchUrl)&&method==='POST')return json({'auth-token':'p2lrn-preview'});
+  if(!url.href.startsWith(cfg.endpoint))return empty(404);
+  const resource=url.pathname.slice(new URL(cfg.endpoint).pathname.length).replace(/^\\/+/, '');
+  if(resource==='activities/state'){
+    const stateId=url.searchParams.get('stateId')||'';
+    if(method==='GET'){
+      if(stateId==='LMS.LaunchData')return json(cfg.launchData);
+      return states.has(stateId)?json(states.get(stateId)):empty(404);
+    }
+    if(method==='PUT'||method==='POST'){
+      const raw=await requestBody(input,init);let value=raw;
+      try{value=raw?JSON.parse(raw):null;}catch{}
+      states.set(stateId,value);emit('state',{stateId,value});return empty(204);
+    }
+    if(method==='DELETE'){states.delete(stateId);emit('state',{stateId,value:null});return empty(204);}
+  }
+  if(resource==='agents/profile'){
+    if(method==='GET')return empty(404);
+    if(method==='PUT'||method==='POST')return empty(204,{'ETag':'"p2lrn-preview"'});
+  }
+  if(resource==='statements'){
+    const raw=await requestBody(input,init);let parsed=null;
+    try{parsed=raw?JSON.parse(raw):null;}catch{}
+    if(Array.isArray(parsed))emit('statement',{statements:parsed});
+    else if(parsed)emit('statement',{statement:parsed});
+    return empty(204);
+  }
+  return empty(404);
+};
+let ctor=null;
+const wrap=(Native)=>{
+  if(typeof Native!=='function')return Native;
+  function P2LRNCmi5(...args){return Reflect.construct(Native,[cfg.launchUrl,...args.slice(1)],Native);}
+  try{Object.setPrototypeOf(P2LRNCmi5,Native);}catch{}
+  P2LRNCmi5.prototype=Native.prototype;
+  return P2LRNCmi5;
+};
+Object.defineProperty(globalThis,'Cmi5',{configurable:true,enumerable:true,get(){return ctor;},set(value){ctor=wrap(value);}});
+})();\`;
+}
+
 function stripSourceMapDirectives(source) {
   return String(source)
     .replace(/\/\/[#@]\s*sourceMappingURL=.*$/gmu, '')
@@ -94,6 +155,12 @@ function rewriteHtml(path) {
   fit.textContent = 'html,body{max-width:100%;min-width:0;overflow-x:auto}*,*::before,*::after{box-sizing:border-box}img,video,canvas,svg{max-width:100%;height:auto}iframe,object,embed,table,pre{max-width:100%}';
   doc.head?.append(fit);
   doc.head?.prepend(csp);
+  if (runtimeProfile === 'https://p2lrn.org/profile/cmi5' && cmi5Config) {
+    const bridge = doc.createElement('script');
+    bridge.setAttribute('data-p2lrn-cmi5-bridge', '1');
+    bridge.textContent = cmi5BridgeSource(cmi5Config);
+    csp.after(bridge);
+  }
   for (const script of doc.querySelectorAll('script:not([src])')) {
     script.textContent = stripSourceMapDirectives(script.textContent || '');
   }
@@ -196,6 +263,8 @@ async function navigate(path, suffix = '') {
 async function initialize(data) {
   if (active) return;
   active = true;
+  runtimeProfile = typeof data.profile === 'string' ? data.profile : null;
+  cmi5Config = data.cmi5 && typeof data.cmi5 === 'object' ? data.cmi5 : null;
   let total = 0;
   for (const file of data.files || []) {
     if (!file || typeof file.path !== 'string' || !(file.buffer instanceof ArrayBuffer)) continue;
@@ -217,6 +286,12 @@ function onMessage(event) {
 }
 window.addEventListener('message', (event) => {
   const data = event.data;
+  const content = stage.querySelector('#content');
+  if (content && event.source === content.contentWindow && data?.protocol === CMI5_PROTOCOL) {
+    if (data.action === 'statement') reply('cmi5-statement', {statement:data.statement ?? null, statements:Array.isArray(data.statements) ? data.statements : null});
+    else if (data.action === 'state') reply('cmi5-state', {stateId:data.stateId ?? null, value:data.value ?? null});
+    return;
+  }
   const p = event.ports?.[0] ?? null;
   if (channel || event.source !== parent || !data || data.protocol !== PROTOCOL || data.action !== 'connect' || !p) return;
   channel = p;
