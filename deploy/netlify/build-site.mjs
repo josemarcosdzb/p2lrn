@@ -26,6 +26,7 @@ for (const file of [
   'creator-course.p2lrn',
   'web-bundle-course.p2lrn',
   'native-questionnaire-course.p2lrn',
+  'quest-3d-course.p2lrn',
 ]) {
   await copyFile(
     join(root, 'examples', 'canonical', file),
@@ -36,6 +37,11 @@ for (const file of [
 await cp(
   join(root, 'examples', 'developer-course'),
   join(examplesOutput, 'developer-course'),
+  {recursive:true, force:true},
+);
+await cp(
+  join(root, 'examples', 'developer-game-3d'),
+  join(examplesOutput, 'developer-game-3d'),
   {recursive:true, force:true},
 );
 
@@ -130,5 +136,6 @@ console.log(JSON.stringify({
     '/examples/creator-course.p2lrn',
     '/examples/web-bundle-course.p2lrn',
     '/examples/native-questionnaire-course.p2lrn',
+    '/examples/quest-3d-course.p2lrn',
   ],
 }, null, 2));
