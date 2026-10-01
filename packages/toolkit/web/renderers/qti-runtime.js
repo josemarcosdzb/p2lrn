@@ -5,7 +5,8 @@ const decoder = new TextDecoder('utf-8', {fatal:false});
 
 function local(node) {
   const value = String(node?.localName ?? node?.nodeName ?? '').toLowerCase();
-  return value.startsWith('qti-') ? value.slice(4) : value;
+  const localName = value.startsWith('qti-') ? value.slice(4) : value;
+  return localName.replaceAll('-', '');
 }
 function elementChildren(node) {
   return [...(node?.childNodes ?? [])].filter((child) => child.nodeType === 1);
