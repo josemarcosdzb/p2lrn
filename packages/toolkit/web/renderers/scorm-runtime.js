@@ -172,7 +172,7 @@ export async function render({container, payload, representation, package: pkg, 
   iframe.className = 'p2lrn-scorm-runtime';
   iframe.setAttribute('title', 'SCORM');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
-  iframe.style.cssText = 'display:block;width:100%;min-height:70vh;border:0;background:#fff';
+  iframe.style.cssText = 'display:block;width:100%;height:clamp(520px,68vh,760px);min-height:420px;max-width:100%;border:0;background:#fff';
 
   const topology = isolatedRuntimeUrl ? 'isolated-parent-api' : 'opaque-current-window-api';
   if (isolatedRuntimeUrl) {
