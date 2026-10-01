@@ -8,6 +8,10 @@ import {promisify} from 'node:util';
 const execFileAsync = promisify(execFile);
 export const H5P_STANDALONE_VERSION = '3.8.2';
 export const H5P_STANDALONE_INTEGRITY = 'sha512-r7eQtTzBk/dbaQZ+tA9XD5FeSmyMxlypRZXudiheCnC8zAT0/zNgUvO4MZtZaznwfYVo98o7do5uxLTUQrxxwg==';
+export const THREE_VERSION = '0.186.1';
+export const THREE_INTEGRITY = 'sha512-blFeqb49wRCSGUGj7gtpfnSGHy2lwDk94RhUmS1c/hTby70kvChbWpkJ4Pm1390LqzzvTmzgXKHPEafJwCb8jA==';
+export const RAPIER3D_VERSION = '0.21.0';
+export const RAPIER3D_INTEGRITY = 'sha512-tCl1HPGwOhn5aCQbgqWbOH+Nx/5fnr3IPAnzQuR7zIhC/raqi2yxC6LhvZqjdI2El5hQgY5RDAwDrAjAi2FdPA==';
 const EXCLUDED = new Set(['app.js', 'index.html', 'style.css']);
 const LOCAL_REF = /(?:from\s+|import\()(['"])(\.{1,2}\/[^'"]+)\1|new URL\((['"])(\.{1,2}\/[^'"]+)\3\s*,\s*import\.meta\.url\)/g;
 
@@ -113,6 +117,58 @@ async function installH5pStandalone(dist) {
   await rm(work, {recursive:true, force:true});
 }
 
+async function npmPackExact(spec, work, expectedIntegrity) {
+  await mkdir(work, {recursive:true});
+  let npmCommand='npm';
+  let npmArgs=['pack', spec, '--ignore-scripts', '--silent', '--pack-destination', work];
+  if (process.platform === 'win32') {
+    const candidates=[
+      process.env.npm_execpath,
+      join(dirname(process.execPath),'node_modules','npm','bin','npm-cli.js'),
+    ].filter(Boolean);
+    let npmCli=null;
+    for (const candidate of candidates) {
+      try {
+        if ((await stat(candidate)).isFile()) { npmCli=candidate; break; }
+      } catch {}
+    }
+    if (!npmCli) throw new Error('Unable to locate npm-cli.js for safe Windows execution.');
+    npmCommand=process.execPath;
+    npmArgs=[npmCli,...npmArgs];
+  }
+  await execFileAsync(npmCommand,npmArgs,{cwd:playerRoot,maxBuffer:4*1024*1024});
+  const archives=(await readdir(work)).filter((name)=>name.endsWith('.tgz'));
+  if (archives.length !== 1) throw new Error(`npm pack produced ${archives.length} archives for ${spec}; expected exactly one.`);
+  const archivePath=join(work,archives[0]);
+  const bytes=await readFile(archivePath);
+  const actual='sha512-'+createHash('sha512').update(bytes).digest('base64');
+  if (actual !== expectedIntegrity) throw new Error(`${spec} tarball integrity mismatch: expected ${expectedIntegrity}, got ${actual}`);
+  await execFileAsync('tar',['-xzf',archivePath,'-C',work],{maxBuffer:4*1024*1024});
+  return join(work,'package');
+}
+
+async function installGame3dRuntime(dist) {
+  const work=join(playerRoot,'.build-game3d-runtime');
+  await rm(work,{recursive:true,force:true});
+  await mkdir(work,{recursive:true});
+  const threeRoot=await npmPackExact(`three@${THREE_VERSION}`,join(work,'three'),THREE_INTEGRITY);
+  const rapierRoot=await npmPackExact(`@dimforge/rapier3d-compat@${RAPIER3D_VERSION}`,join(work,'rapier'),RAPIER3D_INTEGRITY);
+  const vendor=join(dist,'vendor');
+  await mkdir(vendor,{recursive:true});
+  await cp(join(threeRoot,'build','three.module.js'),join(vendor,'three.module.js'));
+  await cp(join(threeRoot,'LICENSE'),join(vendor,'LICENSE.three.txt'));
+  await cp(join(rapierRoot,'dist','rapier.mjs'),join(vendor,'rapier3d.mjs'));
+  await cp(join(rapierRoot,'LICENSE'),join(vendor,'LICENSE.rapier3d.txt'));
+  await writeFile(
+    join(vendor,'game-3d-runtime.json'),
+    JSON.stringify({
+      three:{name:'three',version:THREE_VERSION,license:'MIT'},
+      physics:{name:'@dimforge/rapier3d-compat',version:RAPIER3D_VERSION,license:'Apache-2.0'},
+    },null,2)+'\n',
+  );
+  await rm(work,{recursive:true,force:true});
+}
+
 async function validateLocalReferences(dist) {
   const missing = [];
   for (const source of (await walk(dist)).filter((path)=>path.endsWith('.js')).sort()) {
@@ -158,6 +214,8 @@ async function writeRelease(dist, playerVersion, toolkitVersion) {
     toolkitVersion,
     coreVersion:'0.4.0',
     h5pStandaloneVersion:H5P_STANDALONE_VERSION,
+    threeVersion:THREE_VERSION,
+    rapier3dVersion:RAPIER3D_VERSION,
     h5pLibrariesPackage:'@p2lrn/h5p-libraries',
     entrypoints:{classic:'p2lrn.js',module:'p2lrn.esm.js',serviceWorker:'p2lrn-sw.js'},
     files,
@@ -173,6 +231,7 @@ export async function buildPlayerDistribution({output = join(playerRoot, 'dist')
   await mkdir(output,{recursive:true});
   await copyCanonicalRuntime(output);
   await installH5pStandalone(output);
+  await installGame3dRuntime(output);
   await validateLocalReferences(output);
 
   const playerSource = await readFile(join(output,'p2lrn-player.js'),'utf8');
