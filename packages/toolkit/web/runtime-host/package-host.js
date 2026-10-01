@@ -4,6 +4,7 @@ const files = new Map();
 const urls = new Map();
 let channel = null;
 let active = false;
+let resizeObserver = null;
 
 function reply(action, payload = {}) {
   channel?.postMessage({protocol:PROTOCOL, action, ...payload});
@@ -13,6 +14,26 @@ function fatal(message) {
   pre.className = 'error';
   pre.textContent = String(message);
   stage.replaceChildren(pre);
+}
+function observeContentFrame(frame) {
+  try { resizeObserver?.disconnect?.(); } catch {}
+  resizeObserver = null;
+  const doc = frame?.contentDocument;
+  if (!doc) return;
+  const report = () => {
+    const height = Math.max(
+      doc.documentElement?.scrollHeight ?? 0,
+      doc.body?.scrollHeight ?? 0,
+      420,
+    );
+    reply('resize', {height});
+  };
+  report();
+  if (globalThis.ResizeObserver) {
+    resizeObserver = new ResizeObserver(report);
+    if (doc.documentElement) resizeObserver.observe(doc.documentElement);
+    if (doc.body) resizeObserver.observe(doc.body);
+  }
 }
 function normalize(path) {
   const out = [];
@@ -155,6 +176,7 @@ async function navigate(path) {
   iframe.setAttribute('referrerpolicy', 'no-referrer');
   iframe.addEventListener('load', () => {
     try { wireDocument(iframe.contentDocument, normalized); } catch {}
+    observeContentFrame(iframe);
     reply('ready', {member:normalized});
   }, {once:true});
   iframe.srcdoc = rewriteHtml(normalized);
@@ -191,5 +213,5 @@ window.addEventListener('message', (event) => {
   channel.start?.();
   reply('connected');
 });
-window.addEventListener('unload', () => { try { channel?.close?.(); } catch {} for (const url of urls.values()) try { URL.revokeObjectURL(url); } catch {} });
+window.addEventListener('unload', () => { try { resizeObserver?.disconnect?.(); } catch {} try { channel?.close?.(); } catch {} for (const url of urls.values()) try { URL.revokeObjectURL(url); } catch {} });
 parent.postMessage({protocol:PROTOCOL, action:'shell-ready'}, '*');
