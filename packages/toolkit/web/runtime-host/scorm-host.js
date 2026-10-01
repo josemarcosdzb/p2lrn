@@ -13,6 +13,7 @@ let initialized = false;
 let channel = null;
 let channelSend = null;
 let activeProtocol = SCORM_RUNTIME_PROTOCOL;
+let resizeObserver = null;
 
 function fatal(message) {
   const pre = document.createElement('pre');
@@ -26,6 +27,26 @@ function reply(action, payload = {}) {
   channelSend({protocol: activeProtocol, action, ...payload});
 }
 
+function observeContentFrame(frame) {
+  try { resizeObserver?.disconnect?.(); } catch {}
+  resizeObserver = null;
+  const doc = frame?.contentDocument;
+  if (!doc) return;
+  const report = () => {
+    const height = Math.max(
+      doc.documentElement?.scrollHeight ?? 0,
+      doc.body?.scrollHeight ?? 0,
+      420,
+    );
+    reply('resize', {height});
+  };
+  report();
+  if (globalThis.ResizeObserver) {
+    resizeObserver = new ResizeObserver(report);
+    if (doc.documentElement) resizeObserver.observe(doc.documentElement);
+    if (doc.body) resizeObserver.observe(doc.body);
+  }
+}
 function normalize(path) {
   const out = [];
   for (const part of String(path || '').replace(/\\/g, '/').split('/')) {
@@ -216,6 +237,7 @@ async function navigate(path) {
   next.setAttribute('referrerpolicy', 'no-referrer');
   next.addEventListener('load', () => {
     try { wireDocument(next.contentDocument, path); } catch {}
+    observeContentFrame(next);
     reply('ready', {member: path});
   }, {once: true});
   next.srcdoc = rewriteHtml(path);
