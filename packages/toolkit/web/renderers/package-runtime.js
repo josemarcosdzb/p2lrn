@@ -96,7 +96,7 @@ export async function render({container, payload, representation, package:pkg, e
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-downloads');
   iframe.setAttribute('allow', 'fullscreen');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
-  iframe.style.cssText = 'display:block;width:100%;min-height:70vh;border:0;background:#fff';
+  iframe.style.cssText = 'display:block;width:100%;height:clamp(520px,68vh,760px);min-height:420px;max-width:100%;border:0;background:#fff';
 
   let destroyed = false;
   let port = null;
