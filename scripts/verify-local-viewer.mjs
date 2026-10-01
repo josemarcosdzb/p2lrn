@@ -184,7 +184,7 @@ async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[]}={}){
     if(state?.error||state?.activityReady)break;
   }
   const texts=await runtimeTexts(cdp);
-  invariant(state?.activityReady,`${name}: activityready not reached. ${JSON.stringify(state)}`);
+  invariant(state?.activityReady,`${name}: activityready not reached. state=${JSON.stringify(state)} runtimeText=${JSON.stringify(texts)} exceptions=${JSON.stringify(cdp.exceptions.slice(exceptionStart))} security=${JSON.stringify(cdp.security)}`);
   invariant(!state.error,`${name}: p2lrn:error was emitted. ${state.tail}`);
   invariant(state.runtimeBase.startsWith(RUNTIME_ORIGIN),`${name}: runtime origin is not isolated locally: ${state.runtimeBase}`);
   invariant(state.pageOverflow<=2,`${name}: page overflows horizontally by ${state.pageOverflow}px`);
