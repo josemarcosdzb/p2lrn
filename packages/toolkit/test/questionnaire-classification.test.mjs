@@ -6,7 +6,7 @@ import {
   scoreQuestion as scoreBrowserQuestion,
 } from '../web/questionnaire-core.js';
 import {buildQuestionnaireGame, mergeAnswerPatch} from '../web/questionnaire-games-core.js';
-import {THREE_D_RENDERER} from '../web/renderer-registry.js';
+import {CLASSIFICATION_RENDERER, THREE_D_RENDERER} from '../web/renderer-registry.js';
 import {
   appendUniqueConnection,
   assignClassification,
@@ -60,6 +60,15 @@ test('native questionnaire accepts and scores classification in Node and browser
   const answer={classifications:{perro:'animal',gato:'animal',roble:'planta'}};
   assert.equal(scoreNodeQuestion(payload.questions[0],answer).pointsAwarded,3);
   assert.equal(scoreBrowserQuestion(payload.questions[0],answer).pointsAwarded,3);
+});
+
+test('2D classification game compiler keeps every object and category',()=>{
+  const game=buildQuestionnaireGame(payload,CLASSIFICATION_RENDERER,{seedSource:'test'});
+  assert.equal(game.compatible,true);
+  assert.equal(game.data.trials.length,1);
+  assert.equal(game.data.trials[0].objects.length,3);
+  assert.equal(game.data.trials[0].categories.length,2);
+  assert.equal(game.data.trials[0].assignments.length,3);
 });
 
 test('3D game compiler converts classification without AulaP2P dependencies',()=>{
