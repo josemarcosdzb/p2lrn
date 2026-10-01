@@ -1,13 +1,16 @@
 import {ORDERING_RENDERER} from '../renderer-registry.js';
-import {hashText, shuffleDeterministic} from '../questionnaire-games-core.js';
+
 import {el, finishPanel, setupGame, statusNode, stylesheets} from './game-common.js';
 export {stylesheets};
 
-function shuffled(items,seed){
-  if(items.length<2)return [...items];
-  let result=shuffleDeterministic(items,seed);
-  const same=result.every((item,index)=>item.id===items[index].id);
-  if(same)result=[...result.slice(1),result[0]];
+function mixed(items,variant=0){
+  if(items.length<=1)return [...items];
+  if(items.length===2)return [...items].reverse();
+  const perTurn=items.length-1;
+  const offset=1+(Math.abs(variant)%perTurn);
+  let result=[...items.slice(offset),...items.slice(0,offset)];
+  if(Math.floor(Math.abs(variant)/perTurn)%2===0)result=result.reverse();
+  if(result.every((item,index)=>item.id===items[index].id))[result[0],result[1]]=[result[1],result[0]];
   return result;
 }
 function move(items,from,to){
@@ -21,7 +24,8 @@ export async function render(options){
   const {game,runtime,shell}=await setupGame({...options,rendererId:ORDERING_RENDERER});
   const sequences=game.data.sequences;
   let index=0;
-  let current=shuffled(sequences[0]?.items??[],hashText(`${options.context?.contentRoot??''}|order|0`));
+  let mixVariant=0;
+  let current=mixed(sequences[0]?.items??[],0);
   let dragging=null;
   let pointerStart=null;
   const board=el('div',{class:'p2lrn-game-board'});
@@ -32,7 +36,8 @@ export async function render(options){
   const sequence=()=>sequences[index];
   const sync=()=>runtime.replaceAnswer(sequence().questionId,{order:current.map((item)=>item.id)});
   const resetForIndex=()=>{
-    current=shuffled(sequence().items,hashText(`${options.context?.contentRoot??''}|order|${index}`));
+    mixVariant=0;
+    current=mixed(sequence().items,0);
     dragging=null;pointerStart=null;sync();redraw();
     status.textContent='Arrastra y suelta los elementos hasta reconstruir el orden correcto.';
   };
@@ -45,7 +50,7 @@ export async function render(options){
   const redrawTabs=()=>{
     tabs.replaceChildren();
     sequences.forEach((item,itemIndex)=>{
-      const button=el('button',{type:'button',class:'p2lrn-game-button',role:'tab','aria-selected':itemIndex===index},`Secuencia ${itemIndex+1}`);
+      const button=el('button',{type:'button',class:'p2lrn-game-button',role:'tab','aria-selected':itemIndex===index},`Reto ${itemIndex+1}`);
       if(itemIndex===index)button.classList.add('is-selected');
       button.addEventListener('click',()=>{index=itemIndex;resetForIndex();redrawTabs();});
       tabs.append(button);
@@ -64,7 +69,17 @@ export async function render(options){
       row.addEventListener('dragstart',(event)=>{dragging=item.id;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',item.id);});
       row.addEventListener('dragover',(event)=>{event.preventDefault();event.dataTransfer.dropEffect='move';});
       row.addEventListener('drop',(event)=>{event.preventDefault();const id=event.dataTransfer.getData('text/plain')||dragging;performMove(current.findIndex((entry)=>entry.id===id),itemIndex);dragging=null;});
-      handle.addEventListener('pointerdown',(event)=>{if(event.pointerType==='mouse')return;pointerStart={id:item.id,y:event.clientY};handle.setPointerCapture?.(event.pointerId);});
+      handle.addEventListener('keydown',(event)=>{
+        const from=current.findIndex((entry)=>entry.id===item.id);
+        if(event.altKey&&event.key==='ArrowUp'&&from>0){event.preventDefault();performMove(from,from-1);}
+        if(event.altKey&&event.key==='ArrowDown'&&from<current.length-1){event.preventDefault();performMove(from,from+1);}
+      });
+      handle.addEventListener('pointerdown',(event)=>{
+        if(event.pointerType==='mouse'&&event.button!==0)return;
+        pointerStart={id:item.id,y:event.clientY};
+        handle.setPointerCapture?.(event.pointerId);
+        status.textContent='Arrastrando. Suelta el elemento en la posición deseada.';
+      });
       handle.addEventListener('pointermove',(event)=>{
         if(!pointerStart||event.pointerType==='mouse')return;
         const root=list.getRootNode();
@@ -86,8 +101,14 @@ export async function render(options){
     if(correct&&sequences.length===1)void runtime.finish().then((score)=>{if(score)status.textContent=`Orden correcto: ${score.pointsEarned}/${score.pointsPossible} puntos.`;});
   });
   reshuffle.addEventListener('click',()=>{
-    const seed=hashText(`${Date.now()}|${sequence().questionId}|${current.map((x)=>x.id).join('|')}`);
-    current=shuffled(sequence().items,seed);dragging=null;pointerStart=null;sync();redraw();
+    let next=current;
+    const maxAttempts=Math.max(2,sequence().items.length*2);
+    for(let attempt=0;attempt<maxAttempts;attempt+=1){
+      mixVariant+=1;
+      const candidate=mixed(sequence().items,mixVariant);
+      if(!candidate.every((item,pos)=>item.id===current[pos]?.id)){next=candidate;break;}
+    }
+    current=next;dragging=null;pointerStart=null;sync();redraw();
     status.textContent='Elementos mezclados de nuevo. Arrástralos para ordenar.';
   });
   actions.append(check,reshuffle);

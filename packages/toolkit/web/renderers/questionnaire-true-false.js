@@ -38,12 +38,11 @@ export async function render(options){
       actions.querySelectorAll('button').forEach((button)=>button.disabled=true);
       if(index>=items.length-1){
         finished=true;
-        schedule(()=>{
-          redraw();
-          void runtime.finish().then((score)=>{if(score)status.textContent=`Ronda completada: ${correctCount}/${items.length} aciertos · ${score.pointsEarned}/${score.pointsPossible} puntos.`;});
-        },650);
+        redraw();
+        status.textContent=`${item.correct===value?'Correcto.':`Incorrecto: era ${item.correct?'verdadero':'falso'}.`} Ronda terminada: ${correctCount} aciertos de ${items.length}.`;
+        void runtime.finish();
       }else{
-        schedule(()=>{index+=1;locked=false;status.textContent='Elige verdadero o falso.';redraw();},650);
+        schedule(()=>{index+=1;locked=false;status.textContent='Elige verdadero o falso.';redraw();},350);
       }
     };
     const yes=el('button',{type:'button',class:'p2lrn-game-choice'},'Verdadero');
