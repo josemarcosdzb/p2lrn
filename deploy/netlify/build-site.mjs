@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 import {cp, copyFile, mkdir, readFile, readdir, stat, writeFile} from 'node:fs/promises';
 import {dirname, join, relative, resolve} from 'node:path';
 import {openP2LRNPackageBytes} from '../../packages/toolkit/web/p2lrn-player.js';
@@ -117,7 +118,12 @@ function pageUrl(path) {
   if (rel.endsWith('/index.html')) return '/' + rel.slice(0,-'index.html'.length);
   return '/' + rel;
 }
-const htmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
+function isCorrespondingSourcePath(path) {
+  const rel = relative(outputRoot,path).replaceAll('\\','/');
+  return /^player\/(?:current|[^/]+)\/source\//u.test(rel);
+}
+const allHtmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
+const htmlFiles = allHtmlFiles.filter((path)=>!isCorrespondingSourcePath(path));
 
 // Central legal footer: injected into the built HTML so every public route has
 // the same compact legal navigation without duplicating it in every source page.
@@ -186,6 +192,33 @@ for (const required of ['P2LRN-NCSL 1.0','versión 1.0','href="/LICENSE"','/play
 }
 if (/github\.com\/josemarcosfrodo\/p2lrn\/blob\/main\/LICENSE/i.test(licensePageHtml)) {
   throw new Error('License page must not depend on a private GitHub URL for the legal authority.');
+}
+
+const publicationIndex = JSON.parse(await readFile(join(outputRoot,'index.json'),'utf8'));
+for (const channel of [String(publicationIndex?.player?.version ?? ''), 'current']) {
+  const sourceRoot = join(outputRoot,'player',channel,'source');
+  const sourceManifestPath = join(sourceRoot,'SOURCE-MANIFEST.json');
+  if (!(await exists(sourceManifestPath))) {
+    throw new Error('Corresponding Source manifest is missing: ' + sourceManifestPath);
+  }
+  const sourceManifest = JSON.parse(await readFile(sourceManifestPath,'utf8'));
+  if (sourceManifest?.license?.id !== 'P2LRN-NCSL-1.0') {
+    throw new Error('Corresponding Source manifest has the wrong license id: ' + channel);
+  }
+  if (!Array.isArray(sourceManifest?.files) || sourceManifest.files.length < 1) {
+    throw new Error('Corresponding Source manifest has no file inventory: ' + channel);
+  }
+  for (const entry of sourceManifest.files) {
+    const target = join(sourceRoot,...String(entry.path).split('/'));
+    const bytes = await readFile(target);
+    const digest = 'sha256:' + createHash('sha256').update(bytes).digest('hex');
+    if (digest !== entry.sha256 || bytes.byteLength !== Number(entry.bytes)) {
+      throw new Error('Corresponding Source integrity mismatch: ' + channel + '/' + entry.path);
+    }
+  }
+  if (!(await exists(join(sourceRoot,'index.html')))) {
+    throw new Error('Corresponding Source browser index is missing: ' + channel);
+  }
 }
 
 // Documentation regression gates. These keep the portal aligned with the real
