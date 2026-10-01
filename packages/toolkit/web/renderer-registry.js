@@ -8,6 +8,7 @@ export const STANDARD_QUESTIONNAIRE_RENDERER = 'https://p2lrn.org/renderer/quest
 export const MEMORY_RENDERER = 'https://p2lrn.org/renderer/questionnaire/memory';
 export const MATCHING_RENDERER = 'https://p2lrn.org/renderer/questionnaire/matching';
 export const ORDERING_RENDERER = 'https://p2lrn.org/renderer/questionnaire/ordering';
+export const CLASSIFICATION_RENDERER = 'https://p2lrn.org/renderer/questionnaire/classification';
 export const TRUE_FALSE_RENDERER = 'https://p2lrn.org/renderer/questionnaire/true-false';
 export const WORD_SEARCH_RENDERER = 'https://p2lrn.org/renderer/questionnaire/word-search';
 export const CROSSWORD_RENDERER = 'https://p2lrn.org/renderer/questionnaire/crossword';
