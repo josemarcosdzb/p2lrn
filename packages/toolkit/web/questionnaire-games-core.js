@@ -416,7 +416,7 @@ function shuffledOrderNotSolved(items, correct, seed){let out=shuffleDeterminist
 function rightWithoutFacing(left,right,connections,seed){if(right.length<2)return[...right];const byLeft=new Map();const useRight=new Map();for(const c of connections){byLeft.set(c.leftId,[...(byLeft.get(c.leftId)??[]),c.rightId]);useRight.set(c.rightId,(useRight.get(c.rightId)??0)+1);}const oneToOne=left.length===right.length&&left.every((item)=>(byLeft.get(item.id)??[]).length===1)&&right.every((item)=>useRight.get(item.id)===1);if(oneToOne){const map=new Map(right.map((item)=>[item.id,item]));const solved=left.map((item)=>map.get(byLeft.get(item.id)[0]));if(solved.every(Boolean))return rotate(solved,1+(seed%Math.max(1,right.length-1)));}const base=shuffleDeterministic(right,seed);const set=new Set(connections.map((c)=>`${c.leftId}\0${c.rightId}`));let best=base,bestHits=Infinity;for(let off=0;off<base.length;off+=1){let hits=0;for(let i=0;i<left.length;i+=1){const dest=base[(i+off)%base.length];if(dest&&set.has(`${left[i].id}\0${dest.id}`)){hits+=1;if(hits>=bestHits)break;}}if(hits<bestHits){best=rotate(base,off);bestHits=hits;if(!hits)break;}}return best;}
 
 function build3D(payload, seedSource) {
-  if(!requireEmbeddedKey(payload))return result(THREE_D_RENDERER,'3D ordenar/relacionar',false,null,['Necesita soluciones embebidas.']);
+  if(!requireEmbeddedKey(payload))return result(THREE_D_RENDERER,'3D ordenar/relacionar/clasificar',false,null,['Necesita soluciones embebidas.']);
   const trials=[]; const reasons=[];
   for(const question of payload.questions){
     if(question.type==='ordering'){
@@ -432,10 +432,20 @@ function build3D(payload, seedSource) {
       const lset=new Set(left.map((item)=>item.id)),rset=new Set(right.map((item)=>item.id));if(connections.some((c)=>!lset.has(c.leftId)||!rset.has(c.rightId))){reasons.push(`${question.id}: relación 3D apunta a elemento inexistente.`);continue;}
       trials.push({type:'matching-3d',questionId:question.id,prompt:question.prompt,left,right:rightWithoutFacing(left,right,connections,seedFor(payload,`3d:${question.id}`,seedSource)),connections});continue;
     }
-    reasons.push(`${question.id}: la primera representación 3D sólo admite ordenar y relacionar.`);
+    if(question.type==='classification'){
+      const objects=(question.items??[]).map((item)=>({id:String(item.id),text:String(item.text)}));
+      const categories=(question.categories??[]).map((item)=>({id:String(item.id),text:String(item.text)}));
+      const assignments=(question.solution?.assignments??[]).map((item)=>({itemId:String(item.item),categoryId:String(item.category)}));
+      if(objects.length<2||categories.length<2||assignments.length!==objects.length){reasons.push(`${question.id}: clasificar 3D necesita objetos, categorías y una asignación completa.`);continue;}
+      if(new Set(objects.map((item)=>normalizeText(item.text))).size!==objects.length||new Set(categories.map((item)=>normalizeText(item.text))).size!==categories.length){reasons.push(`${question.id}: clasificar 3D necesita textos distinguibles.`);continue;}
+      const itemIds=new Set(objects.map((item)=>item.id)),categoryIds=new Set(categories.map((item)=>item.id)),seen=new Set();
+      if(assignments.some((assignment)=>!itemIds.has(assignment.itemId)||!categoryIds.has(assignment.categoryId)||seen.has(assignment.itemId)||(seen.add(assignment.itemId),false))){reasons.push(`${question.id}: asignación 3D inválida o duplicada.`);continue;}
+      trials.push({type:'classification-3d',questionId:question.id,prompt:question.prompt,objects:shuffleDeterministic(objects,seedFor(payload,`3d-classification:${question.id}`,seedSource)),categories,assignments});continue;
+    }
+    reasons.push(`${question.id}: la representación 3D admite ordenar, relacionar y clasificar.`);
   }
-  if(reasons.length||trials.length!==payload.questions.length)return result(THREE_D_RENDERER,'3D ordenar/relacionar',false,null,reasons);
-  return result(THREE_D_RENDERER,'3D ordenar/relacionar',true,{trials});
+  if(reasons.length||trials.length!==payload.questions.length)return result(THREE_D_RENDERER,'3D ordenar/relacionar/clasificar',false,null,reasons);
+  return result(THREE_D_RENDERER,'3D ordenar/relacionar/clasificar',true,{trials});
 }
 
 export function buildQuestionnaireGame(payload, rendererId, {seedSource = ''} = {}) {
@@ -461,6 +471,7 @@ export function mergeAnswerPatch(current, patch) {
     case 'text': answer.text=String(patch.text); break;
     case 'blank-set': answer.blanks={...(answer.blanks&&typeof answer.blanks==='object'&&!Array.isArray(answer.blanks)?answer.blanks:{}),[String(patch.blankId)]:String(patch.value)}; break;
     case 'pair-set': answer.pairs={...(answer.pairs&&typeof answer.pairs==='object'&&!Array.isArray(answer.pairs)?answer.pairs:{}),[String(patch.leftId)]:String(patch.rightId)}; break;
+    case 'classification-set': answer.classifications={...(answer.classifications&&typeof answer.classifications==='object'&&!Array.isArray(answer.classifications)?answer.classifications:{}),[String(patch.itemId)]:String(patch.categoryId)}; break;
     case 'order': answer.order=patch.order.map(String); break;
     default: break;
   }
