@@ -559,8 +559,18 @@ async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
     });
     let sequence=0;
     const pending=new Map();
+    const browserLogs=[];
+    const runtimeExceptions=[];
     socket.addEventListener('message',(event)=>{
       const message=JSON.parse(event.data);
+      if(message.method==='Log.entryAdded'){
+        const entry=message.params?.entry;
+        if(entry)browserLogs.push({level:entry.level,source:entry.source,text:entry.text,url:entry.url||null});
+      }
+      if(message.method==='Runtime.exceptionThrown'){
+        const details=message.params?.exceptionDetails;
+        runtimeExceptions.push({text:details?.text||'exception',url:details?.url||null,lineNumber:details?.lineNumber??null});
+      }
       const wait=pending.get(message.id);
       if(!wait)return;
       pending.delete(message.id);
@@ -573,6 +583,7 @@ async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
       return new Promise((resolvePromise,reject)=>pending.set(id,{resolve:resolvePromise,reject}));
     };
     await send('Runtime.enable');
+    await send('Log.enable');
 
     const deadline=Date.now()+timeoutMs;
     let snapshot={status:'BOOT',detail:'BOOT',readyState:'loading'};
@@ -582,10 +593,10 @@ async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
         returnByValue:true,
       });
       snapshot=evaluated.result?.value??snapshot;
-      if(snapshot.status!=='BOOT'&&snapshot.status!=='MISSING')return {...snapshot,stderr};
+      if(snapshot.status!=='BOOT'&&snapshot.status!=='MISSING')return {...snapshot,stderr,browserLogs,runtimeExceptions};
       await sleep(100);
     }
-    return {...snapshot,stderr,timeout:true};
+    return {...snapshot,stderr,browserLogs,runtimeExceptions,timeout:true};
   } finally {
     try{socket?.close();}catch{}
     if(child.exitCode===null){
@@ -606,7 +617,7 @@ async function runCourse(chrome, appOrigin, course, index) {
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
   if(status!=='PASS'){
-    throw new Error(`Browser gate failed for ${course}: status=${status}\n${detail}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
+    throw new Error(`Browser gate failed for ${course}: status=${status}\n${detail}\nBrowser logs:\n${JSON.stringify(result.browserLogs??[],null,2)}\nRuntime exceptions:\n${JSON.stringify(result.runtimeExceptions??[],null,2)}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
   }
   return {course,status,detail:detail.slice(0,1000)};
 }
@@ -616,7 +627,7 @@ async function runQuestionnaire(chrome, appOrigin) {
   const result=await runChromePageGate(chrome,`${appOrigin}/questionnaire.html`,profile,{timeoutMs:45000});
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
-  if(status!=='PASS')throw new Error(`Questionnaire browser gate failed: status=${status}\n${detail}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
+  if(status!=='PASS')throw new Error(`Questionnaire browser gate failed: status=${status}\n${detail}\nBrowser logs:\n${JSON.stringify(result.browserLogs??[],null,2)}\nRuntime exceptions:\n${JSON.stringify(result.runtimeExceptions??[],null,2)}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
   return {course:'native-questionnaire-course.p2lrn',status,detail:detail.slice(0,2000)};
 }
 
