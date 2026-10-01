@@ -51,3 +51,27 @@
 .p2lrn-3d-trial, .p2lrn-3d-accessible { display: grid; gap: .7rem; }
 .p2lrn-3d-trial h3 { margin: 0; }
 .p2lrn-3d-canvas { min-height: 28rem; touch-action: manipulation; }
+
+
+/* Quest parity: interactions copied into the standalone P2LRN runtime. */
+.p2lrn-match-board { position: relative; min-width: 0; }
+.p2lrn-match-connections { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
+.p2lrn-match-grid { position: relative; z-index: 1; }
+.p2lrn-match-line { stroke: currentColor; stroke-width: 2.5; opacity: .78; }
+.p2lrn-match-dot { fill: currentColor; }
+.p2lrn-classification-board { display: grid; gap: .9rem; position: relative; }
+.p2lrn-classification-prompt { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: baseline; }
+.p2lrn-classification-pool { min-height: 4.1rem; display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; padding: .8rem; border: 1px dashed #94a3b8; border-radius: .7rem; }
+.p2lrn-classification-item { touch-action: none; cursor: grab; }
+.p2lrn-classification-item:active { cursor: grabbing; }
+.p2lrn-classification-categories { display: grid; grid-template-columns: repeat(auto-fit,minmax(12rem,1fr)); gap: .75rem; }
+.p2lrn-classification-box { min-height: 7rem; border: 2px solid #94a3b8; border-radius: .75rem; padding: .8rem; display: grid; align-content: start; gap: .65rem; background: #fff; cursor: pointer; transition: border-color .12s ease, transform .12s ease; }
+.p2lrn-classification-box:focus-visible, .p2lrn-classification-box.is-over { outline: 2px solid currentColor; outline-offset: 2px; transform: translateY(-1px); }
+.p2lrn-classification-box-title { display: block; }
+.p2lrn-classification-box-items { display: flex; flex-wrap: wrap; gap: .4rem; }
+.p2lrn-classification-box-items span { border: 1px solid #cbd5e1; border-radius: .5rem; padding: .4rem .55rem; background: #f8fafc; }
+.p2lrn-classification-drag-preview { position: fixed; z-index: 999999; transform: translate(-50%,-115%); pointer-events: none; border: 1px solid #64748b; border-radius: .55rem; background: #fff; padding: .5rem .7rem; box-shadow: 0 .5rem 1.4rem rgba(15,23,42,.18); }
+.p2lrn-word-grid { touch-action: none; user-select: none; }
+.p2lrn-word-grid .p2lrn-game-cell.is-preview { outline: 2px solid currentColor; outline-offset: -2px; position: relative; z-index: 1; }
+.p2lrn-word-clue label { display: grid; gap: .35rem; }
+.p2lrn-word-answer.is-solved { font-weight: 700; }

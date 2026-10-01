@@ -6,71 +6,194 @@ export {stylesheets};
 
 export async function render(options) {
   const {game,runtime,shell}=await setupGame({...options,rendererId:CLASSIFICATION_RENDERER});
-  const board=el('div',{class:'p2lrn-game-board'});
-  const status=statusNode('Selecciona un elemento y después su categoría.');
+  const board=el('div',{class:'p2lrn-classification-board'});
+  const status=statusNode('Arrastra cada ficha a su categoría. También puedes seleccionar una ficha y pulsar una categoría.');
   let trialIndex=0;
+  let dragGhost=null;
 
   function renderTrial() {
     board.replaceChildren();
+    dragGhost?.remove();
+    dragGhost=null;
     const trial=game.data.trials[trialIndex];
     const expected=new Map(trial.assignments.map((item)=>[item.itemId,item.categoryId]));
     const values={...runtime.answer(trial.questionId).classifications};
-    const selected=new Set();
+    let selected=null;
+    let busy=false;
+    const itemButtons=new Map();
+    const categoryBoxes=new Map();
 
-    board.append(
-      el('p',{class:'p2lrn-game-description'},`Prueba ${trialIndex+1} de ${game.data.trials.length}`),
-      el('h3',{},trial.prompt),
+    const header=el('div',{class:'p2lrn-classification-prompt'});
+    header.append(
+      el('strong',{},trial.prompt),
+      el('span',{},`Prueba ${trialIndex+1} de ${game.data.trials.length}`),
     );
+    const pool=el('div',{class:'p2lrn-classification-pool',role:'group','aria-label':'Fichas pendientes'});
+    const categories=el('div',{class:'p2lrn-classification-categories'});
 
-    const objectWrap=el('div',{class:'p2lrn-memory-grid'});
-    const categoryWrap=el('div',{class:'p2lrn-game-actions'});
-    const objectButtons=new Map();
-
-    function refresh() {
-      for(const [itemId,button] of objectButtons){
-        button.classList.toggle('is-selected',selected.has(itemId));
-        button.classList.toggle('is-solved',Boolean(values[itemId]));
-        button.disabled=Boolean(values[itemId]);
+    const refresh=()=>{
+      const solvedCount=Object.keys(values).length;
+      for(const item of trial.objects){
+        const button=itemButtons.get(item.id);
+        if(!button) continue;
+        const solved=Boolean(values[item.id]);
+        button.hidden=solved;
+        button.classList.toggle('is-selected',selected===item.id);
       }
-    }
+      for(const category of trial.categories){
+        const box=categoryBoxes.get(category.id);
+        if(!box) continue;
+        const body=box.querySelector('.p2lrn-classification-box-items');
+        body.replaceChildren();
+        trial.objects.filter((item)=>values[item.id]===category.id).forEach((item)=>{
+          body.append(el('span',{'data-p2lrn-placed':item.id},item.text));
+        });
+      }
+      if(solvedCount===trial.objects.length){
+        status.textContent='Todos los conceptos están en su categoría correcta.';
+      }
+    };
+
+    const place=(itemId,categoryId)=>{
+      if(busy || values[itemId]) return false;
+      if(expected.get(itemId)!==categoryId){
+        status.textContent='Esa categoría no es correcta. Prueba otra.';
+        selected=itemId;
+        refresh();
+        return false;
+      }
+      busy=true;
+      values[itemId]=categoryId;
+      runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId});
+      selected=null;
+      busy=false;
+      refresh();
+      status.textContent=classificationIsCorrect(values,expected)
+        ? 'Clasificación completada correctamente.'
+        : 'Ficha colocada correctamente.';
+      return true;
+    };
+
+    const hitCategory=(x,y)=>{
+      const root=board.getRootNode();
+      const node=typeof root.elementFromPoint==='function'
+        ? root.elementFromPoint(x,y)
+        : document.elementFromPoint(x,y);
+      const box=node?.closest?.('[data-p2lrn-category]');
+      return box && board.contains(box) ? box.dataset.p2lrnCategory : null;
+    };
 
     for(const item of trial.objects){
-      const button=el('button',{type:'button',class:'p2lrn-game-card'},item.text);
+      const button=el('button',{
+        type:'button',
+        class:'p2lrn-game-card p2lrn-classification-item',
+        draggable:'true',
+        'data-p2lrn-item':item.id,
+      },item.text);
+      let pointerStart=null;
       button.addEventListener('click',()=>{
-        selected.clear();
-        selected.add(item.id);
+        if(values[item.id]) return;
+        selected=selected===item.id?null:item.id;
         refresh();
-        status.textContent='Elemento seleccionado. Elige una categoría.';
       });
-      objectButtons.set(item.id,button);
-      objectWrap.append(button);
+      button.addEventListener('dragstart',(event)=>{
+        if(values[item.id]){event.preventDefault();return;}
+        event.dataTransfer.effectAllowed='move';
+        event.dataTransfer.setData('text/plain',item.id);
+        selected=item.id;
+        refresh();
+      });
+      button.addEventListener('dragend',()=>{selected=null;refresh();});
+      button.addEventListener('pointerdown',(event)=>{
+        if(event.pointerType==='mouse'||values[item.id]) return;
+        pointerStart={id:item.id,x:event.clientX,y:event.clientY,moved:false};
+      });
+      button.addEventListener('pointermove',(event)=>{
+        if(!pointerStart||event.pointerType==='mouse') return;
+        if(!pointerStart.moved&&Math.hypot(event.clientX-pointerStart.x,event.clientY-pointerStart.y)<8) return;
+        pointerStart.moved=true;
+        selected=item.id;
+        if(!dragGhost){
+          dragGhost=el('span',{class:'p2lrn-classification-drag-preview','aria-hidden':'true'},item.text);
+          board.append(dragGhost);
+        }
+        dragGhost.style.left=`${event.clientX}px`;
+        dragGhost.style.top=`${event.clientY}px`;
+        const over=hitCategory(event.clientX,event.clientY);
+        categoryBoxes.forEach((box,id)=>box.classList.toggle('is-over',id===over));
+      });
+      button.addEventListener('pointerup',(event)=>{
+        if(pointerStart?.moved){
+          const categoryId=hitCategory(event.clientX,event.clientY);
+          if(categoryId) place(item.id,categoryId);
+        }
+        pointerStart=null;
+        dragGhost?.remove();
+        dragGhost=null;
+        categoryBoxes.forEach((box)=>box.classList.remove('is-over'));
+      });
+      button.addEventListener('pointercancel',()=>{
+        pointerStart=null;
+        dragGhost?.remove();
+        dragGhost=null;
+        categoryBoxes.forEach((box)=>box.classList.remove('is-over'));
+      });
+      itemButtons.set(item.id,button);
+      pool.append(button);
     }
 
     for(const category of trial.categories){
-      const button=el('button',{type:'button',class:'p2lrn-game-choice'},category.text);
-      button.addEventListener('click',()=>{
-        const itemId=[...selected][0];
-        if(!itemId){status.textContent='Selecciona primero un elemento.';return;}
-        if(expected.get(itemId)!==category.id){status.textContent='Esa categoría no es correcta.';return;}
-        values[itemId]=category.id;
-        runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId:category.id});
-        selected.clear();
-        refresh();
-        status.textContent=classificationIsCorrect(values,expected)
-          ? 'Clasificación completada correctamente.'
-          : 'Correcto. Continúa con el siguiente elemento.';
+      const box=el('div',{
+        class:'p2lrn-classification-box',
+        role:'button',
+        tabindex:'0',
+        'aria-label':`Categoría ${category.text}`,
+        'data-p2lrn-category':category.id,
       });
-      categoryWrap.append(button);
+      box.append(
+        el('strong',{class:'p2lrn-classification-box-title'},category.text),
+        el('div',{class:'p2lrn-classification-box-items'}),
+      );
+      box.addEventListener('click',()=>{if(selected) place(selected,category.id);});
+      box.addEventListener('keydown',(event)=>{
+        if((event.key==='Enter'||event.key===' ')&&selected){
+          event.preventDefault();
+          place(selected,category.id);
+        }
+      });
+      box.addEventListener('dragover',(event)=>{
+        event.preventDefault();
+        event.dataTransfer.dropEffect='move';
+        box.classList.add('is-over');
+      });
+      box.addEventListener('dragleave',(event)=>{
+        if(!box.contains(event.relatedTarget)) box.classList.remove('is-over');
+      });
+      box.addEventListener('drop',(event)=>{
+        event.preventDefault();
+        box.classList.remove('is-over');
+        const itemId=event.dataTransfer.getData('text/plain');
+        if(itemId) place(itemId,category.id);
+      });
+      categoryBoxes.set(category.id,box);
+      categories.append(box);
     }
 
     const nav=el('div',{class:'p2lrn-game-actions'});
     const previous=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},'Anterior');
     const next=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===game.data.trials.length-1},'Siguiente');
+    const restart=el('button',{type:'button',class:'p2lrn-game-button'},'Reiniciar clasificación');
     previous.addEventListener('click',()=>{trialIndex-=1;renderTrial();});
     next.addEventListener('click',()=>{trialIndex+=1;renderTrial();});
-    nav.append(previous,next);
+    restart.addEventListener('click',()=>{
+      for(const key of Object.keys(values)) delete values[key];
+      selected=null;
+      refresh();
+      status.textContent='Clasificación reiniciada.';
+    });
+    nav.append(previous,next,restart);
 
-    board.append(objectWrap,categoryWrap,nav);
+    board.append(header,pool,categories,nav);
     refresh();
   }
 

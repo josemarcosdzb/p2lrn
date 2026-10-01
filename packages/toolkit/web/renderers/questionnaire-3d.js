@@ -11,12 +11,42 @@ import {el, finishPanel, setupGame, statusNode, stylesheets} from './game-common
 
 export {stylesheets};
 
-function gridPosition(index,total,{z=3.4,spread=3.1,y=0.72}={}) {
-  const columns=Math.min(4,Math.max(2,Math.ceil(Math.sqrt(Math.max(1,total)))));
-  const row=Math.floor(index/columns);
-  const column=index%columns;
-  const itemsInRow=Math.min(columns,total-row*columns);
-  return [(column-(itemsInRow-1)/2)*spread,y,z+row*2.6];
+function seedText(value){
+  let hash=2166136261;
+  for(let i=0;i<String(value).length;i+=1){hash^=String(value).charCodeAt(i);hash=Math.imul(hash,16777619);}
+  return hash>>>0;
+}
+
+function deterministicRandom(seed){
+  let state=seed||0x9e3779b9;
+  return ()=>{state+=0x6d2b79f5;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};
+}
+
+function randomRoomPositions(total,seed,{xMin=-7.8,xMax=7.8,zMin=2.4,zMax=9.8,y=0.72,separation=2.15}={}){
+  const random=deterministicRandom(seed);
+  const result=[];
+  for(let index=0;index<total;index+=1){
+    let chosen=null;
+    for(let attempt=0;attempt<180;attempt+=1){
+      const x=xMin+random()*(xMax-xMin);
+      const z=zMin+random()*(zMax-zMin);
+      if(result.some(([px,,pz])=>Math.hypot(px-x,pz-z)<separation)) continue;
+      chosen=[x,y,z];
+      break;
+    }
+    if(!chosen){
+      const columns=Math.max(2,Math.ceil(Math.sqrt(total)));
+      const row=Math.floor(index/columns),column=index%columns;
+      const rows=Math.max(2,Math.ceil(total/columns));
+      chosen=[
+        xMin+column*((xMax-xMin)/Math.max(1,columns-1)),
+        y,
+        zMin+row*((zMax-zMin)/Math.max(1,rows-1)),
+      ];
+    }
+    result.push(chosen);
+  }
+  return result;
 }
 
 function orderingSlotPosition(index,total) {
@@ -35,9 +65,15 @@ function classificationZonePosition(index,total) {
   return [(column-(itemsInRow-1)/2)*5.1,0.14,-4.5-row*3.4];
 }
 
-function matchingNodePosition(side,index,total) {
-  const offset=(index-(total-1)/2)*2.7;
-  return [side==='left'?-5.6:5.6,1,offset];
+function matchingPositions(side,total,seed){
+  return randomRoomPositions(total,seed,{
+    xMin:side==='left'?-8.6:1.65,
+    xMax:side==='left'?-1.65:8.6,
+    zMin:-1.2,
+    zMax:Math.max(9.8,2.4+total*1.15),
+    y:0.7,
+    separation:2.1,
+  });
 }
 
 function setText(node,value) {
@@ -46,7 +82,8 @@ function setText(node,value) {
 
 function buildOrderingControls({trial,runtime,scene,status}) {
   const placed=Array(trial.objects.length).fill(null);
-  const staging=new Map(trial.objects.map((item,index)=>[item.id,gridPosition(index,trial.objects.length)]));
+  const randomPositions=randomRoomPositions(trial.objects.length,seedText(`order:${trial.questionId}:${trial.prompt}`));
+  const staging=new Map(trial.objects.map((item,index)=>[item.id,randomPositions[index]]));
   let selected=null;
 
   trial.objects.forEach((item,index)=>{
@@ -168,17 +205,19 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   let connections=[];
   let selected=null;
 
+  const leftPositions=matchingPositions('left',trial.left.length,seedText(`left:${trial.questionId}:${trial.prompt}`));
+  const rightPositions=matchingPositions('right',trial.right.length,seedText(`right:${trial.questionId}:${trial.prompt}`));
   trial.left.forEach((item,index)=>scene.addNode({
     id:`left:${item.id}`,
     text:item.text,
-    position:matchingNodePosition('left',index,trial.left.length),
+    position:leftPositions[index],
     color:'#2563eb',
     interaction:{kind:'matching-left',id:item.id},
   }));
   trial.right.forEach((item,index)=>scene.addNode({
     id:`right:${item.id}`,
     text:item.text,
-    position:matchingNodePosition('right',index,trial.right.length),
+    position:rightPositions[index],
     color:'#7c3aed',
     interaction:{kind:'matching-right',id:item.id},
   }));
@@ -241,7 +280,8 @@ function buildMatchingControls({trial,runtime,scene,status}) {
 function buildClassificationControls({trial,runtime,scene,status}) {
   const expected=new Map(trial.assignments.map((item)=>[item.itemId,item.categoryId]));
   const values={};
-  const staging=new Map(trial.objects.map((item,index)=>[item.id,gridPosition(index,trial.objects.length,{z:3.8})]));
+  const randomPositions=randomRoomPositions(trial.objects.length,seedText(`classify:${trial.questionId}:${trial.prompt}`),{zMin:2.5,zMax:9.2});
+  const staging=new Map(trial.objects.map((item,index)=>[item.id,randomPositions[index]]));
   let selected=null;
 
   trial.categories.forEach((category,index)=>{
