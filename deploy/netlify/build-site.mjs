@@ -101,7 +101,12 @@ const broken = [];
 const refPattern = /\b(?:href|src)=["']([^"']+)["']/gi;
 for (const path of htmlFiles) {
   const html = await readFile(path, 'utf8');
-  for (const match of html.matchAll(refPattern)) {
+  // Code examples intentionally contain href/src values that are not site
+  // navigation. Exclude pre/code blocks from the local-link integrity scan.
+  const navigableHtml = html
+    .replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/gi, '')
+    .replace(/<code\b[^>]*>[\s\S]*?<\/code>/gi, '');
+  for (const match of navigableHtml.matchAll(refPattern)) {
     const raw = match[1];
     if (!raw || raw.startsWith('#') || /^(?:https?:|mailto:|tel:|data:|blob:|javascript:)/i.test(raw)) continue;
     const clean = raw.split('#',1)[0].split('?',1)[0];
