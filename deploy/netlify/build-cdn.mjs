@@ -1,6 +1,6 @@
 import {cp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
-import {buildPlayerDistribution, H5P_STANDALONE_VERSION} from '../../packages/player/scripts/build-dist.mjs';
+import {buildPlayerDistribution, H5P_STANDALONE_VERSION, THREE_VERSION, RAPIER3D_VERSION} from '../../packages/player/scripts/build-dist.mjs';
 import {buildH5pLibraries, LUMI_H5P_LIBRARY_COMMIT} from '../../packages/h5p-libraries/scripts/build.mjs';
 
 const root = resolve(process.cwd());
@@ -75,6 +75,13 @@ const index = {
     serviceWorker:`/player/${version}/dist/${playerBuild.release.entrypoints.serviceWorker}`,
     release:`/player/${version}/dist/release.json`,
   },
+  game3d:{
+    renderer:'three',
+    threeVersion:THREE_VERSION,
+    physics:'rapier3d',
+    rapier3dVersion:RAPIER3D_VERSION,
+    vendorBasePath:`/player/${version}/dist/vendor/`,
+  },
   h5p:{
     standaloneVersion:H5P_STANDALONE_VERSION,
     sharedLibraryPackage:'@p2lrn/h5p-libraries',
@@ -97,6 +104,8 @@ await writeFile(
     playerVersion:version,
     toolkitVersion:toolkitPackage.version,
     h5pLibrariesVersion:h5pPackage.version,
+    threeVersion:THREE_VERSION,
+    rapier3dVersion:RAPIER3D_VERSION,
   }, null, 2) + '\n',
 );
 await writeFile(
