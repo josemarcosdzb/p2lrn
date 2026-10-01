@@ -7,6 +7,7 @@ on:
       - 'packages/toolkit/web/renderers/package-runtime.js'
       - 'packages/toolkit/web/runtime-host/package-host.js'
       - 'scripts/verify-local-viewer.mjs'
+      - 'deploy/netlify/site/demo/viewer.js'
       - 'examples/canonical/external/**'
       - '.github/workflows/p2lrn-focused-local.yml'
 

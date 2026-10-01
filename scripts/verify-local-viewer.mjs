@@ -158,7 +158,7 @@ async function evalTop(cdp,expression){
   return result.result?.value;
 }
 
-const stateExpression=String.raw`(()=>{const p=document.getElementById('demo-player'),r=p?.shadowRoot,log=document.querySelector('[data-event-log]')?.textContent||'',rect=(el)=>{if(!el)return null;const b=el.getBoundingClientRect();return {left:b.left,top:b.top,right:b.right,bottom:b.bottom,width:b.width,height:b.height}};const iframe=r?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-runtime,.p2lrn-h5p-frame');const stage=r?.querySelector('.p2lrn-stage');const shell=document.querySelector('.viewer-player-shell');const consoleEl=document.querySelector('.viewer-console');const workbench=document.querySelector('.viewer-workbench');return {state:document.querySelector('[data-runtime-state]')?.textContent||'',status:document.querySelector('[data-viewer-status]')?.textContent||'',renderer:document.querySelector('[data-inspect-renderer]')?.textContent||'',runtimeBase:p?.runtimeBaseUrl||'',activityReady:log.includes('p2lrn:activityready'),error:log.includes('p2lrn:error'),ready:log.includes('p2lrn:ready'),rendered:log.includes('p2lrn:rendered'),tail:log.slice(-2200),shadowText:r?.textContent?.slice(0,5000)||'',pageOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,innerWidth:innerWidth,grid:workbench?getComputedStyle(workbench).gridTemplateColumns:'',iframe:rect(iframe),stage:rect(stage),shell:rect(shell),console:rect(consoleEl)}})()`;
+const stateExpression=String.raw`(()=>{const p=document.getElementById('demo-player'),r=p?.shadowRoot,log=document.querySelector('[data-event-log]')?.textContent||'',rect=(el)=>{if(!el)return null;const b=el.getBoundingClientRect();return {left:b.left,top:b.top,right:b.right,bottom:b.bottom,width:b.width,height:b.height}};const iframe=r?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-runtime,.p2lrn-h5p-frame');const stage=r?.querySelector('.p2lrn-stage');const shell=document.querySelector('.viewer-player-shell');const consoleEl=document.querySelector('.viewer-console');const workbench=document.querySelector('.viewer-workbench');return {state:document.querySelector('[data-runtime-state]')?.textContent||'',status:document.querySelector('[data-viewer-status]')?.textContent||'',renderer:document.querySelector('[data-inspect-renderer]')?.textContent||'',runtimeBase:p?.runtimeBaseUrl||'',activityReady:log.includes('p2lrn:activityready'),xapi:log.includes('p2lrn:xapi'),error:log.includes('p2lrn:error'),ready:log.includes('p2lrn:ready'),rendered:log.includes('p2lrn:rendered'),tail:log.slice(-2200),shadowText:r?.textContent?.slice(0,5000)||'',pageOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,innerWidth:innerWidth,grid:workbench?getComputedStyle(workbench).gridTemplateColumns:'',iframe:rect(iframe),stage:rect(stage),shell:rect(shell),console:rect(consoleEl)}})()`;
 
 async function runtimeTexts(cdp){
   const out=[];
@@ -173,7 +173,7 @@ async function runtimeTexts(cdp){
   return out;
 }
 
-async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[]}={}){
+async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXapi=false}={}){
   const exceptionStart=cdp.exceptions.length;
   await cdp.send('Page.navigate',{url:`${APP_ORIGIN}/demo/?src=${encodeURIComponent(src)}`});
   let state=null;
@@ -183,9 +183,17 @@ async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[]}={}){
     state=await evalTop(cdp,stateExpression);
     if(state?.error||state?.activityReady)break;
   }
+  if(requireXapi && state?.activityReady && !state?.xapi){
+    const xapiDeadline=Date.now()+5000;
+    while(Date.now()<xapiDeadline&&!state?.xapi){
+      await sleep(200);
+      state=await evalTop(cdp,stateExpression);
+    }
+  }
   const texts=await runtimeTexts(cdp);
   invariant(state?.activityReady,`${name}: activityready not reached. state=${JSON.stringify(state)} runtimeText=${JSON.stringify(texts)} exceptions=${JSON.stringify(cdp.exceptions.slice(exceptionStart))} security=${JSON.stringify(cdp.security)}`);
   invariant(!state.error,`${name}: p2lrn:error was emitted. ${state.tail}`);
+  if(requireXapi) invariant(state.xapi,`${name}: cmi5 initialized without forwarding an xAPI statement. ${state.tail}`);
   invariant(state.runtimeBase.startsWith(RUNTIME_ORIGIN),`${name}: runtime origin is not isolated locally: ${state.runtimeBase}`);
   invariant(state.pageOverflow<=2,`${name}: page overflows horizontally by ${state.pageOverflow}px`);
   if(expectIframe){
@@ -234,7 +242,7 @@ try{
     try{cases.push(await waitCase(cdp,name,src,options));}
     catch(error){failures.push({name,message:String(error?.message||error)});}
   };
-  await audit('cmi5','/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',{rejectText:['Not implemented yet']});
+  await audit('cmi5','/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',{rejectText:['Not implemented yet'],requireXapi:true});
   await audit('h5p','/examples/canonical/external/h5p-crossword.p2lrn');
   await audit('scorm','/examples/canonical/external/scorm12-real.p2lrn',{rejectText:['Not implemented yet']});
   await audit('qti','/examples/canonical/external/qti3-minimal.p2lrn',{expectIframe:false,rejectText:['This QTI item has no itemBody.']});
