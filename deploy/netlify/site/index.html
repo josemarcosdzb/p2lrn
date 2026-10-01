@@ -81,17 +81,11 @@ player        <span data-player-version>0.5.0-alpha.10</span>
       <div class="section-label">03 · CONTACTO</div>
       <div class="section-body">
         <h2>¿Quieres preguntar, proponer o integrar P2LRN?</h2>
-        <p class="lead">Envía un mensaje. El formulario guarda la consulta en Supabase y no expone credenciales privadas.</p>
-        <form class="contact-form" data-contact-form>
-          <div class="form-grid">
-            <label>Nombre<input name="name" type="text" minlength="2" maxlength="120" required autocomplete="name"></label>
-            <label>Email<input name="email" type="email" maxlength="254" required autocomplete="email"></label>
-          </div>
-          <label>Asunto<input name="subject" type="text" minlength="2" maxlength="160" value="Consulta sobre P2LRN" required></label>
-          <label>Mensaje<textarea name="message" minlength="10" maxlength="5000" rows="7" required placeholder="Cuéntanos qué necesitas o qué quieres comentar."></textarea></label>
-          <label class="honeypot" aria-hidden="true">Empresa<input name="company" type="text" tabindex="-1" autocomplete="off"></label>
-          <div class="form-actions"><button type="submit" class="button primary">Enviar mensaje</button><p data-form-status aria-live="polite"></p></div>
-        </form>
+        <p class="lead">El formulario de contacto está centralizado en una única ruta para evitar flujos duplicados y explicar antes del envío cómo se tratan los datos.</p>
+        <div class="example-actions">
+          <a class="button primary" href="/contacto/">Abrir contacto</a>
+          <a class="button" href="/privacidad/">Privacidad</a>
+        </div>
       </div>
     </section>
   </main>

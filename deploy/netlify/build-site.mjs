@@ -119,13 +119,61 @@ function pageUrl(path) {
 }
 const htmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
 
+// Central legal footer: injected into the built HTML so every public route has
+// the same compact legal navigation without duplicating it in every source page.
+const footerLinks = [
+  ['/docs/','Documentación'],
+  ['/licencia/','Licencia'],
+  ['/terminos/','Términos'],
+  ['/aviso-legal/','Aviso legal'],
+  ['/cookies/','Cookies'],
+  ['/privacidad/','Privacidad'],
+  ['/cookies/#configuracion','Configurar cookies'],
+  ['/contacto/','Contacto'],
+];
+for (const htmlPath of htmlFiles) {
+  let html = await readFile(htmlPath,'utf8');
+  if (!/<footer\b/i.test(html) || html.includes('data-legal-links')) continue;
+  const links = footerLinks
+    .filter(([href]) => !html.includes('href="' + href + '"'))
+    .map(([href,label]) => '<a href="' + href + '">' + label + '</a>')
+    .join('');
+  if (!links) continue;
+  html = html.replace(/<\/footer>/i,'<nav class="footer-legal" data-legal-links aria-label="Información legal">' + links + '</nav></footer>');
+  await writeFile(htmlPath,html);
+}
+
+const requiredLegalRoutes = [
+  ['aviso-legal','Aviso legal | P2LRN'],
+  ['terminos','Términos y condiciones | P2LRN'],
+  ['cookies','Política de cookies | P2LRN'],
+  ['privacidad','Política de privacidad | P2LRN'],
+  ['licencia','Licencia | P2LRN'],
+];
+const legalProblems = [];
+const forbiddenLegalPlaceholders = /(?:\[PENDIENTE|\bTODO\b|\bFIXME\b|YOUR COMPANY|COMPANY NAME|example@example\.com)/i;
+for (const [slug,expectedTitle] of requiredLegalRoutes) {
+  const path = join(outputRoot,slug,'index.html');
+  if (!(await exists(path))) { legalProblems.push('/' + slug + '/ missing'); continue; }
+  const html = await readFile(path,'utf8');
+  if (!html.includes('<title>' + expectedTitle + '</title>')) legalProblems.push('/' + slug + '/ title');
+  if (!/<meta\s+name="description"\s+content="[^"]+"/i.test(html)) legalProblems.push('/' + slug + '/ description');
+  if (!html.includes('<link rel="canonical" href="https://p2lrn.netlify.app/' + slug + '/">')) legalProblems.push('/' + slug + '/ canonical');
+  if (!/<meta\s+name="robots"\s+content="index,follow"/i.test(html)) legalProblems.push('/' + slug + '/ robots');
+  if (!html.includes('property="og:title"') || !html.includes('property="og:description"')) legalProblems.push('/' + slug + '/ OpenGraph');
+  if (forbiddenLegalPlaceholders.test(html)) legalProblems.push('/' + slug + '/ placeholder');
+}
+if (legalProblems.length) {
+  throw new Error('Legal publication gate failed:\\n' + legalProblems.join('\\n'));
+}
+
 // Documentation regression gates. These keep the portal aligned with the real
 // package surface instead of relying on a second hand-maintained checklist.
 const repeatedForms = [];
 for (const htmlPath of htmlFiles) {
   const rel = relative(outputRoot,htmlPath).replaceAll('\\','/');
   const html = await readFile(htmlPath,'utf8');
-  if (/<form\\b/i.test(html) && rel !== 'contacto/index.html') repeatedForms.push(rel);
+  if (/<form\b/i.test(html) && rel !== 'contacto/index.html') repeatedForms.push(rel);
 }
 if (repeatedForms.length) {
   throw new Error('Documentation forms must be centralized in /contacto/:\\n' + repeatedForms.join('\\n'));
