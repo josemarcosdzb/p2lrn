@@ -65,6 +65,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-distribution-identity.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/verify-local-viewer.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/set-version.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check deploy/netlify/build-cdn.mjs
@@ -82,6 +84,9 @@ jobs:
 
       - name: Build Netlify site and CDN
         run: node deploy/netlify/build-site.mjs
+
+      - name: Verify local viewer and isolated runtimes
+        run: node scripts/verify-local-viewer.mjs
 
       - name: Verify npm/CDN byte identity
         run: node scripts/verify-distribution-identity.mjs
