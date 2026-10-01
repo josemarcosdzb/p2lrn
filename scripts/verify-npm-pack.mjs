@@ -126,6 +126,24 @@ const toolkitRoot = join(installRoot,'node_modules','@p2lrn','toolkit');
 const playerRoot = join(installRoot,'node_modules','@p2lrn','player');
 const h5pRoot = join(installRoot,'node_modules','@p2lrn','h5p-libraries');
 
+const rootLicenseText = await readFile(join(root,'LICENSE'),'utf8');
+const rootNoticeText = await readFile(join(root,'NOTICE.md'),'utf8');
+
+for (const packageRoot of [toolkitRoot, playerRoot]) {
+  await assertFile(join(packageRoot,'LICENSE'));
+  await assertFile(join(packageRoot,'NOTICE.md'));
+
+  const packedLicense = await readFile(join(packageRoot,'LICENSE'),'utf8');
+  const packedNotice = await readFile(join(packageRoot,'NOTICE.md'),'utf8');
+
+  if (packedLicense !== rootLicenseText) {
+    throw new Error(`Packed first-party LICENSE differs from root LICENSE: ${packageRoot}`);
+  }
+  if (packedNotice !== rootNoticeText) {
+    throw new Error(`Packed first-party NOTICE.md differs from root NOTICE.md: ${packageRoot}`);
+  }
+}
+
 for (const path of [
   join(toolkitRoot,'dist','cli','main.js'),
   join(toolkitRoot,'dist','tools','multipart.js'),

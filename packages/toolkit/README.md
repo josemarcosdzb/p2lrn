@@ -137,3 +137,9 @@ workspace.build('course-updated.p2lrn',{strictProfiles:true});
 
 Relative paths passed to `workspace.reader()` are resolved from the workspace root. Absolute paths are also accepted. The method delegates to the existing lightweight document reader and therefore supports the same detected formats and safety limits. Reading a document never mutates the authoring project.
 
+
+## License
+
+This first-party package is distributed under **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)**.
+
+Commercial use is not granted. See [LICENSE](./LICENSE) for the complete terms and [NOTICE.md](./NOTICE.md) for scope and third-party exceptions.

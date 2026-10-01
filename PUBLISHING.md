@@ -68,9 +68,11 @@ The root `LICENSE` and `NOTICE.md` are the authorities. Byte-identical copies mu
 
 `node scripts/check-publish-ready.mjs` verifies the declaration, the package-local license/notice copies, their byte identity and their presence in the npm `files` lists.
 
-P2LRN-NCSL 1.0 permits non-commercial use, study, modification and redistribution subject to its conditions. Modified distributions must provide their complete Corresponding Source. Modified versions exposed to third parties through remote network interaction must also offer the Corresponding Source. Commercial use requires a separate commercial license.
+P2LRN-NCSL 1.0 permits non-commercial use, study, modification and redistribution subject to its conditions. Any non-source distribution must provide its Corresponding Source; modified distributions must provide the complete Corresponding Source of the modified version. Modified versions exposed to third parties through remote network interaction must also offer that source. Commercial use, including internal use by a for-profit entity, requires a separate commercial license.
 
 Do not apply P2LRN-NCSL 1.0 to third-party code. `@p2lrn/h5p-libraries` remains governed by its third-party notices, and bundled Player dependencies retain their upstream licenses.
+
+External contributions must follow `CONTRIBUTING.md` so that accepting a contribution does not unintentionally prevent separate commercial licensing.
 
 ## Publishing order
 

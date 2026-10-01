@@ -130,10 +130,13 @@ La migración de lenguaje no convierte automáticamente los runtimes externos en
 Véanse `MIGRATION-NODE.md`, `TEST-RESULTS.md` y `COMPATIBILITY.md`.
 
 
+
 ## Licencia
 
 Los componentes first-party de P2LRN se distribuyen bajo **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)**. Es una licencia **source-available no comercial**, no una licencia Open Source aprobada por OSI.
 
-Permite estudiar, usar, modificar y redistribuir P2LRN para finalidades no comerciales bajo sus condiciones. El uso comercial requiere una licencia comercial independiente. Si se distribuye una version modificada, debe identificarse como modificada y proporcionarse su Codigo Fuente Correspondiente completo. Las versiones modificadas que se ofrezcan a terceros mediante interaccion remota por red tambien deben ofrecer su fuente correspondiente.
+Permite estudiar, usar, modificar y redistribuir P2LRN para Finalidades No Comerciales bajo sus condiciones. El uso por una entidad con ánimo de lucro o por cuenta de ella se considera comercial, incluso cuando P2LRN se utilice únicamente de forma interna.
 
-El texto juridico completo y prevalente esta en [LICENSE](./LICENSE). [NOTICE.md](./NOTICE.md) resume el alcance y la separacion de componentes de terceros.
+Toda distribución en Forma No Fuente debe proporcionar el Código Fuente Correspondiente. Las Versiones Modificadas distribuidas deben identificarse como modificadas, mantener la licencia sobre la parte derivada cubierta y proporcionar su fuente completa. Las Versiones Modificadas ofrecidas a terceros mediante Interacción Remota por Red también deben ofrecer el Código Fuente Correspondiente.
+
+El texto jurídico completo y prevalente está en [LICENSE](./LICENSE). [NOTICE.md](./NOTICE.md) delimita el alcance first-party y las exclusiones de terceros. Las contribuciones externas se rigen además por [CONTRIBUTING.md](./CONTRIBUTING.md).

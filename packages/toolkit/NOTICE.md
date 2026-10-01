@@ -2,45 +2,78 @@
 
 Copyright (c) 2026 Jose Marcos Diaz Blanes.
 
-Los componentes originales de P2LRN cuyos derechos correspondan a Jose Marcos Diaz Blanes se distribuyen bajo **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)**, salvo que un archivo o componente indique expresamente otro regimen.
+Los componentes originales first-party de P2LRN cuyos derechos correspondan a Jose Marcos Diaz Blanes se distribuyen bajo **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)**, salvo que un archivo o componente indique expresamente otro régimen.
 
 P2LRN-NCSL 1.0 es una licencia **source-available no comercial**. No es una licencia Open Source aprobada por OSI porque restringe el uso comercial.
 
-## Modificaciones y fuente
+## Alcance first-party
 
-Las modificaciones privadas para finalidades permitidas no tienen que publicarse mientras no se distribuyan ni se pongan a disposicion de terceros mediante una version modificada con interaccion remota.
+Salvo aviso específico en contrario, P2LRN-NCSL 1.0 se aplica al material original first-party de P2LRN contenido en:
 
-Cuando una Version Modificada se distribuya o se ofrezca a terceros mediante interaccion remota por red, se aplican las obligaciones de fuente del archivo LICENSE.
+- `packages/player/`, excluyendo los componentes de terceros identificados en sus avisos;
+- `packages/toolkit/`;
+- scripts y herramientas first-party del repositorio;
+- código de construcción y publicación first-party;
+- documentación, integración, esquemas, perfiles, especificación y ejemplos first-party en la medida en que sean originales de P2LRN y no incorporen material de terceros con otra licencia.
 
-No se exige un archivo MODIFICATIONS.md separado. Las versiones modificadas deben identificarse claramente como modificadas, incluir una fecha relevante y proporcionar su Codigo Fuente Correspondiente completo.
+## Exclusiones y material mixto
 
-## Paquetes first-party
+P2LRN-NCSL 1.0 no pretende relicenciar:
+
+- `packages/h5p-libraries/`, cuyo corpus y régimen se documentan en `packages/h5p-libraries/THIRD_PARTY_NOTICES.md`;
+- los archivos y assets de terceros documentados en `packages/player/THIRD_PARTY_NOTICES.md`;
+- cualquier dependencia, biblioteca, estándar, ejemplo, paquete educativo o recurso que contenga su propio copyright o licencia;
+- `reference-python-alpha15/`, que se conserva como material histórico/de referencia y no queda incluido en la concesión first-party de P2LRN-NCSL 1.0 salvo que un archivo concreto lo indique expresamente;
+- contenido perteneciente a usuarios.
+
+Cuando un archivo o componente tenga un aviso de licencia propio, dicho aviso prevalece respecto de ese material.
+
+## Modificaciones y Código Fuente Correspondiente
+
+Las modificaciones estrictamente privadas para Finalidades No Comerciales no tienen que publicarse mientras no se distribuyan ni se ofrezcan a terceros mediante una Versión Modificada con Interacción Remota por Red.
+
+No se exige un archivo `MODIFICATIONS.md` separado.
+
+Cuando se distribuya una Versión Modificada:
+
+- debe identificarse claramente como modificada;
+- debe indicarse una fecha relevante de modificación;
+- debe mantenerse P2LRN-NCSL 1.0 sobre la obra derivada cubierta; y
+- debe proporcionarse su Código Fuente Correspondiente completo.
+
+Cuando se distribuya cualquier Forma No Fuente del Software Cubierto, modificada o no, también se aplican las obligaciones de Código Fuente Correspondiente de LICENSE.
+
+Las Versiones Modificadas ofrecidas a terceros mediante Interacción Remota por Red deben ofrecer asimismo su Código Fuente Correspondiente.
+
+## Paquetes npm first-party
 
 Los paquetes first-party principales son:
 
-- `packages/player/`
-- `packages/toolkit/`
+- `@p2lrn/player`;
+- `@p2lrn/toolkit`.
 
-Sus paquetes npm deben incluir copias byte-identicas del LICENSE y de este NOTICE.
+Ambos declaran:
+
+```json
+"license": "SEE LICENSE IN LICENSE"
+```
+
+y deben incluir copias byte-idénticas de `LICENSE` y `NOTICE.md` en el nivel superior del paquete publicado.
 
 ## Terceros
 
-Los componentes de terceros conservan siempre sus licencias y avisos propios.
+Todo componente de terceros conserva sus licencias, copyrights y avisos propios.
 
-- `packages/player/THIRD_PARTY_NOTICES.md` documenta componentes de terceros incluidos en el Player.
-- `packages/h5p-libraries/` es un corpus de terceros y no se relicencia bajo P2LRN-NCSL 1.0.
-- cualquier archivo con una licencia o aviso propio queda sujeto a dicho aviso respecto de ese componente.
-
-La inclusion de software, formatos, nombres o marcas de terceros no implica titularidad, patrocinio ni asociacion.
+La inclusión de software, formatos, nombres o marcas de terceros no implica titularidad, patrocinio ni asociación.
 
 ## Marca
 
-P2LRN y sus signos distintivos no se licencian como marca por recibir una licencia sobre el codigo.
+La licencia del código no concede derechos de marca sobre P2LRN ni sus signos distintivos.
 
-Una version modificada puede describirse como derivada o compatible con P2LRN, pero no puede presentarse como version oficial sin autorizacion.
+Una versión modificada puede describirse de forma veraz como derivada o compatible con P2LRN, pero no puede presentarse como versión oficial sin autorización.
 
 ## Contenido de usuarios
 
-Los cursos, documentos, datos y otros contenidos originales de los usuarios no pasan a ser propiedad de P2LRN por haber sido creados, convertidos, empaquetados o reproducidos mediante las herramientas P2LRN.
+Los cursos, documentos, datos y demás contenido original de los usuarios no pasan a ser propiedad de P2LRN por haber sido creados, convertidos, empaquetados, validados o reproducidos mediante herramientas P2LRN.
 
-Consulte LICENSE para los terminos completos.
+Consulte LICENSE para los términos completos.
