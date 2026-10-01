@@ -70,8 +70,14 @@ export function createDefaultDependencyRegistry() {
     id: WEBGL2_DEPENDENCY,
     detect: () => {
       if (typeof document === 'undefined') return false;
-      const canvas = document.createElement('canvas');
-      return Boolean(canvas.getContext?.('webgl2', {failIfMajorPerformanceCaveat: true}));
+      const strictCanvas = document.createElement('canvas');
+      if (strictCanvas.getContext?.('webgl2', {failIfMajorPerformanceCaveat: true})) return true;
+      // Software/WebGL implementations are still valid for correctness and
+      // accessibility fallbacks. Do not silently replace an explicitly
+      // requested 3D activity with the standard renderer only because the
+      // browser reports a performance caveat.
+      const fallbackCanvas = document.createElement('canvas');
+      return Boolean(fallbackCanvas.getContext?.('webgl2'));
     },
   });
   return registry;
