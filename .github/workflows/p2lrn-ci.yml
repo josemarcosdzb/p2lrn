@@ -90,6 +90,10 @@ jobs:
             ".netlify-cdn/player/$VERSION/dist/p2lrn.js",
             ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p.html",
             ".netlify-cdn/player/$VERSION/dist/runtime-host/scorm.html",
+            ".netlify-cdn/player/$VERSION/dist/vendor/three.module.js",
+            ".netlify-cdn/player/$VERSION/dist/vendor/three.core.js",
+            ".netlify-cdn/player/$VERSION/dist/vendor/rapier3d.mjs",
+            ".netlify-cdn/player/$VERSION/dist/vendor/game-3d-runtime.json",
             ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.Crossword-0.5/library.json",
             ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.BranchingScenario-1.8/library.json"
           )
@@ -98,7 +102,9 @@ jobs:
           }
           foreach ($path in @(
             ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/frame.bundle.js",
-            ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/styles/h5p.css"
+            ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/styles/h5p.css",
+            ".netlify-cdn/player/$VERSION/dist/vendor/three.module.js",
+            ".netlify-cdn/player/$VERSION/dist/vendor/rapier3d.mjs"
           )) {
             if (!(Test-Path $path -PathType Leaf) -or (Get-Item $path).Length -le 0) {
               throw "Missing or empty generated runtime asset: $path"
