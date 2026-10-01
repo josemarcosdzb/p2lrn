@@ -142,7 +142,8 @@
             "text",
             "fill-blanks",
             "ordering",
-            "matching"
+            "matching",
+            "classification"
           ]
         },
         "prompt": {
@@ -458,9 +459,75 @@
           "$ref": "#/$defs/orderingQuestion"
         },
         {
+          "$ref": "#/$defs/classificationQuestion"
+        },
+        {
           "$ref": "#/$defs/matchingQuestion"
         }
       ]
+    },
+    "classificationQuestion": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "items",
+            "categories"
+          ],
+          "properties": {
+            "type": {
+              "const": "classification"
+            },
+            "items": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "$ref": "#/$defs/item"
+              }
+            },
+            "categories": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "$ref": "#/$defs/item"
+              }
+            },
+            "solution": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "assignments"
+              ],
+              "properties": {
+                "assignments": {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "item",
+                      "category"
+                    ],
+                    "properties": {
+                      "item": {
+                        "$ref": "#/$defs/token"
+                      },
+                      "category": {
+                        "$ref": "#/$defs/token"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
     }
   }
 }
