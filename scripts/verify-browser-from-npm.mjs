@@ -179,6 +179,32 @@ async function synthesizeExternalPackages() {
         ['index.html','<!doctype html><html><body><h1 id="tincan-ok">Tin Can browser OK</h1></body></html>'],
       ],
     },
+    {
+      name:'qti3-interactive.p2lrn',
+      source:'qti3-interactive.zip',
+      entries:[
+        ['imsmanifest.xml',`<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="http://www.imsglobal.org/xsd/imscp_v1p1" identifier="qti-browser">
+  <metadata><schema>QTI Package</schema><schemaversion>3.0</schemaversion></metadata>
+  <organizations/>
+  <resources><resource identifier="ITEM1" type="imsqti_item_xmlv3p0" href="item.xml"><file href="item.xml"/></resource></resources>
+</manifest>`],
+        ['item.xml',`<?xml version="1.0" encoding="UTF-8"?>
+<qti-assessment-item xmlns="http://www.imsglobal.org/xsd/imsqtiasi_v3p0" identifier="item-1" title="QTI Browser">
+  <qti-response-declaration identifier="RESPONSE" cardinality="single" base-type="identifier">
+    <qti-correct-response><qti-value>A</qti-value></qti-correct-response>
+  </qti-response-declaration>
+  <qti-item-body>
+    <p>Which planet is red?</p>
+    <qti-choice-interaction response-identifier="RESPONSE" max-choices="1">
+      <qti-prompt>Select one</qti-prompt>
+      <qti-simple-choice identifier="A">Mars</qti-simple-choice>
+      <qti-simple-choice identifier="B">Venus</qti-simple-choice>
+    </qti-choice-interaction>
+  </qti-item-body>
+</qti-assessment-item>`],
+      ],
+    },
   ];
 
   for (const fixture of fixtures) {
@@ -197,7 +223,6 @@ async function prepareCourses() {
     ['h5p-crossword.p2lrn','h5p-crossword.p2lrn'],
     ['scorm12-real.p2lrn','scorm12-real.p2lrn'],
     ['cmi5-catapult-pre-post.p2lrn','cmi5-catapult-pre-post.p2lrn'],
-    ['qti3-minimal.p2lrn','qti3-minimal.p2lrn'],
   ];
   for (const [from,to] of copies) await cp(join(canonical,from), join(coursesRoot,to));
   await cp(join(root,'examples','canonical','native-questionnaire-course.p2lrn'), join(coursesRoot,'native-questionnaire-course.p2lrn'));
@@ -262,6 +287,13 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
           const allow=frame?.getAttribute('allow')||'';
           if(!frame||!allow.toLowerCase().includes('fullscreen')){
             finish('FAIL',{phase:'fullscreen-contract',course,allow,frame:!!frame});
+            return;
+          }
+        }
+        if(course==='qti3-interactive.p2lrn'){
+          const text=p.shadowRoot?.textContent||'';
+          if(!text.includes('Mars')||!text.includes('Select one')){
+            finish('FAIL',{phase:'qti3-render-contract',course,text:text.slice(0,1600)});
             return;
           }
         }
@@ -577,7 +609,7 @@ const courses=[
   'h5p-crossword.p2lrn',
   'scorm12-real.p2lrn',
   'cmi5-catapult-pre-post.p2lrn',
-  'qti3-minimal.p2lrn',
+  'qti3-interactive.p2lrn',
   'common-cartridge.p2lrn',
   'ims-content-package.p2lrn',
   'tincan-package.p2lrn',
