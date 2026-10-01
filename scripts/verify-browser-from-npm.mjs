@@ -1,4 +1,4 @@
-import {execFile} from 'node:child_process';
+import {execFile, spawn} from 'node:child_process';
 import {cp, mkdir, mkdtemp, readFile, rm, stat, writeFile} from 'node:fs/promises';
 import {createReadStream, existsSync} from 'node:fs';
 import http from 'node:http';
@@ -432,19 +432,10 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   await writeFile(join(browserRoot,'questionnaire.html'),questionnaireHtml);
 }
 
-function decodeHtml(value) {
-  return value
-    .replaceAll('&quot;','"')
-    .replaceAll('&#39;',"'")
-    .replaceAll('&lt;','<')
-    .replaceAll('&gt;','>')
-    .replaceAll('&amp;','&');
-}
+const sleep = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 
-async function runCourse(chrome, appOrigin, course, index) {
-  const profile = join(gateRoot,`chrome-profile-${index}`);
+async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
   await rm(profile,{recursive:true,force:true});
-  const url=`${appOrigin}/?course=${encodeURIComponent(course)}`;
   const args=[
     '--headless=new',
     '--disable-gpu',
@@ -454,35 +445,118 @@ async function runCourse(chrome, appOrigin, course, index) {
     '--no-default-browser-check',
     '--disable-cache',
     `--user-data-dir=${profile}`,
-    '--virtual-time-budget=18000',
-    '--dump-dom',
+    '--remote-debugging-port=0',
     url,
   ];
-  const {stdout,stderr} = await execFileAsync(chrome,args,{timeout:35000,maxBuffer:64*1024*1024});
-  const match=/<pre id="result" data-status="([^"]+)">([\s\S]*?)<\/pre>/u.exec(stdout);
-  const status=match?.[1] ?? 'MISSING';
-  const detail=decodeHtml(match?.[2] ?? '').trim();
+  const child=spawn(chrome,args,{stdio:['ignore','ignore','pipe'],windowsHide:true});
+  let stderr='';
+  let settled=false;
+  let devtoolsReject;
+  const devtools=new Promise((resolvePromise,reject)=>{
+    devtoolsReject=reject;
+    const timer=setTimeout(()=>reject(new Error('Chrome DevTools endpoint did not start in time.')),10000);
+    child.stderr?.on('data',(chunk)=>{
+      stderr=(stderr+String(chunk)).slice(-64000);
+      const match=/DevTools listening on (ws:\/\/[^\s]+)/u.exec(stderr);
+      if(match&&!settled){
+        settled=true;
+        clearTimeout(timer);
+        resolvePromise(match[1]);
+      }
+    });
+    child.once('error',(error)=>{clearTimeout(timer);reject(error);});
+    child.once('exit',(code)=>{
+      if(!settled){
+        clearTimeout(timer);
+        reject(new Error(`Chrome exited before DevTools was ready (code=${code}).\n${stderr.slice(-4000)}`));
+      }
+    });
+  });
+
+  let socket=null;
+  try{
+    const browserWs=await devtools;
+    const endpoint=new URL(browserWs);
+    const jsonOrigin=`http://${endpoint.hostname}:${endpoint.port}`;
+    let target=null;
+    const targetDeadline=Date.now()+10000;
+    while(Date.now()<targetDeadline&&!target){
+      try{
+        const targets=await (await fetch(jsonOrigin+'/json/list')).json();
+        target=targets.find((item)=>item.type==='page'&&item.url===url)
+          ?? targets.find((item)=>item.type==='page'&&!item.url.startsWith('devtools://'))
+          ?? null;
+      }catch{}
+      if(!target)await sleep(100);
+    }
+    if(!target?.webSocketDebuggerUrl)throw new Error('Chrome page target was not available.');
+
+    socket=new WebSocket(target.webSocketDebuggerUrl);
+    await new Promise((resolvePromise,reject)=>{
+      const timer=setTimeout(()=>reject(new Error('Chrome page DevTools socket did not open in time.')),5000);
+      socket.addEventListener('open',()=>{clearTimeout(timer);resolvePromise();},{once:true});
+      socket.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('Chrome page DevTools socket failed.'));},{once:true});
+    });
+    let sequence=0;
+    const pending=new Map();
+    socket.addEventListener('message',(event)=>{
+      const message=JSON.parse(event.data);
+      const wait=pending.get(message.id);
+      if(!wait)return;
+      pending.delete(message.id);
+      if(message.error)wait.reject(new Error(JSON.stringify(message.error)));
+      else wait.resolve(message.result);
+    });
+    const send=(method,params={})=>{
+      const id=++sequence;
+      socket.send(JSON.stringify({id,method,params}));
+      return new Promise((resolvePromise,reject)=>pending.set(id,{resolve:resolvePromise,reject}));
+    };
+    await send('Runtime.enable');
+
+    const deadline=Date.now()+timeoutMs;
+    let snapshot={status:'BOOT',detail:'BOOT',readyState:'loading'};
+    while(Date.now()<deadline){
+      const evaluated=await send('Runtime.evaluate',{
+        expression:`(()=>{const e=document.getElementById('result');return {status:e?.dataset?.status??'MISSING',detail:e?.textContent??'',readyState:document.readyState};})()`,
+        returnByValue:true,
+      });
+      snapshot=evaluated.result?.value??snapshot;
+      if(snapshot.status!=='BOOT'&&snapshot.status!=='MISSING')return {...snapshot,stderr};
+      await sleep(100);
+    }
+    return {...snapshot,stderr,timeout:true};
+  } finally {
+    try{socket?.close();}catch{}
+    if(child.exitCode===null){
+      child.kill();
+      await Promise.race([
+        new Promise((resolvePromise)=>child.once('exit',()=>resolvePromise())),
+        sleep(2000),
+      ]);
+    }
+    void devtoolsReject;
+  }
+}
+
+async function runCourse(chrome, appOrigin, course, index) {
+  const profile=join(gateRoot,`chrome-profile-${index}`);
+  const url=`${appOrigin}/?course=${encodeURIComponent(course)}`;
+  const result=await runChromePageGate(chrome,url,profile,{timeoutMs:35000});
+  const status=result.status??'MISSING';
+  const detail=String(result.detail??'').trim();
   if(status!=='PASS'){
-    throw new Error(`Browser gate failed for ${course}: status=${status}\n${detail}\nChrome stderr:\n${stderr.slice(-4000)}`);
+    throw new Error(`Browser gate failed for ${course}: status=${status}\n${detail}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
   }
   return {course,status,detail:detail.slice(0,1000)};
 }
 
 async function runQuestionnaire(chrome, appOrigin) {
   const profile=join(gateRoot,'chrome-profile-questionnaire');
-  await rm(profile,{recursive:true,force:true});
-  const args=[
-    '--headless=new','--disable-gpu','--no-sandbox','--disable-dev-shm-usage',
-    '--no-first-run','--no-default-browser-check','--disable-cache',
-    `--user-data-dir=${profile}`,
-    '--virtual-time-budget=22000','--dump-dom',
-    `${appOrigin}/questionnaire.html`,
-  ];
-  const {stdout,stderr}=await execFileAsync(chrome,args,{timeout:45000,maxBuffer:64*1024*1024});
-  const match=/<pre id="result" data-status="([^"]+)">([\s\S]*?)<\/pre>/u.exec(stdout);
-  const status=match?.[1]??'MISSING';
-  const detail=decodeHtml(match?.[2]??'').trim();
-  if(status!=='PASS')throw new Error(`Questionnaire browser gate failed: status=${status}\n${detail}\nChrome stderr:\n${stderr.slice(-4000)}`);
+  const result=await runChromePageGate(chrome,`${appOrigin}/questionnaire.html`,profile,{timeoutMs:45000});
+  const status=result.status??'MISSING';
+  const detail=String(result.detail??'').trim();
+  if(status!=='PASS')throw new Error(`Questionnaire browser gate failed: status=${status}\n${detail}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
   return {course:'native-questionnaire-course.p2lrn',status,detail:detail.slice(0,2000)};
 }
 
