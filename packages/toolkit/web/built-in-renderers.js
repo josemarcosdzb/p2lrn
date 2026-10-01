@@ -15,6 +15,7 @@ import {
   MEMORY_RENDERER,
   MATCHING_RENDERER,
   ORDERING_RENDERER,
+  CLASSIFICATION_RENDERER,
   TRUE_FALSE_RENDERER,
   WORD_SEARCH_RENDERER,
   CROSSWORD_RENDERER,
@@ -102,6 +103,7 @@ export function registerBuiltInRenderers(registry) {
   registry.register({id: MEMORY_RENDERER, version: '1', priority: 20, presentation: 'game-2d', ...questionnaire, load: () => import('./renderers/questionnaire-memory.js')});
   registry.register({id: MATCHING_RENDERER, version: '1', priority: 20, presentation: 'game-2d', ...questionnaire, load: () => import('./renderers/questionnaire-matching.js')});
   registry.register({id: ORDERING_RENDERER, version: '1', priority: 20, presentation: 'game-2d', ...questionnaire, load: () => import('./renderers/questionnaire-ordering.js')});
+  registry.register({id: CLASSIFICATION_RENDERER, version: '1', priority: 20, presentation: 'game-2d', ...questionnaire, load: () => import('./renderers/questionnaire-classification.js')});
   registry.register({id: TRUE_FALSE_RENDERER, version: '1', priority: 20, presentation: 'game-2d', ...questionnaire, load: () => import('./renderers/questionnaire-true-false.js')});
   registry.register({id: WORD_SEARCH_RENDERER, version: '1', priority: 20, presentation: 'game-2d', ...questionnaire, load: () => import('./renderers/questionnaire-word-search.js')});
   registry.register({id: CROSSWORD_RENDERER, version: '1', priority: 20, presentation: 'game-2d', ...questionnaire, load: () => import('./renderers/questionnaire-crossword.js')});
