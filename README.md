@@ -8,7 +8,7 @@ Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeS
 - `packages/player/`: Web SDK/browser runtime, renderers, Service Worker, hosts aislados SCORM/H5P/paquetes externos y tipos TypeScript. Su `npm pack` reconstruye `dist/` desde el runtime canónico e incluye `h5p-standalone` fijado.
 - `packages/h5p-libraries/`: corpus compartido de librerías H5P, separado del Player y fijado a un snapshot reproducible. Contiene runtime compartido, nunca cursos de usuarios.
 - `schemas/`, `profiles/`, `spec/`, `integration/`: material canónico con namespace P2LRN.
-- `examples/canonical/`: 17 paquetes `.p2lrn` validados.
+- `examples/canonical/`: 18 paquetes `.p2lrn` validados.
 - `examples/legacy-alpha15/`: los 17 paquetes `.p2rln` usados para comprobar retrocompatibilidad.
 
 ## Identidad P2LRN
@@ -31,7 +31,7 @@ Los paquetes Alpha15 anteriores (`P2RLN`, `p2rln.org`, `.p2rln`) se siguen leyen
 
 ## Runtime/Player independiente
 
-`@p2lrn/player` es el runtime web instalable y la etiqueta canónica es `<p2lrn-player>`. El Player depende del formato P2LRN, no de AulaP2P ni de un editor concreto. La distribución incluye el runtime estático H5P/SCORM/IMS/cmi5/QTI/Common Cartridge/Tin Can y los assets de `h5p-standalone`. Las librerías H5P reutilizables se distribuyen en `@p2lrn/h5p-libraries`. Las integraciones de producto se conectan mediante Host Adapter v1; `runtimeBaseUrl` sólo es necesario para sustituir el runtime estático inferido por otro host aislado. Identidad de usuario, permisos, matrícula, credenciales, resolución de URLs protegidas y persistencia durable permanecen fuera del paquete y fuera del Core.
+`@p2lrn/player` es el runtime web instalable y la etiqueta canónica es `<p2lrn-player>`. El Player depende del formato P2LRN, no de AulaP2P ni de un editor concreto. La distribución incluye el runtime estático H5P/SCORM/IMS/cmi5/QTI/Common Cartridge/Tin Can y los assets de `h5p-standalone`. Las librerías H5P reutilizables se distribuyen en `@p2lrn/h5p-libraries`. Las integraciones de producto se conectan mediante Host Adapter v1; `runtimeBaseUrl` se usa para sustituir el runtime estático inferido y es obligatorio cuando ese runtime quedaría en el mismo origen que la aplicación host; otra ruta del mismo dominio no constituye aislamiento. Identidad de usuario, permisos, matrícula, credenciales, resolución de URLs protegidas y persistencia durable permanecen fuera del paquete y fuera del Core.
 
 La integración específica de AulaP2P y el futuro Studio de escritorio son consumidores separados de esta base; no forman parte del runtime genérico ni se implementan en este bloque.
 
@@ -95,7 +95,7 @@ p2lrn-create open curso.p2lrn ./workspace
 p2lrn-create build ./workspace curso-reconstruido.p2lrn --strict-profiles
 ```
 
-El contrato de proyecto actual es `0.3.0`. Conserva IDs portables importados, orden del grafo, entrypoints, declaraciones de perfiles y payloads opacos. El gate de regresión abre los **17/17 paquetes canónicos** y exige que un rebuild sin cambios conserve exactamente el mismo `contentRoot`.
+El contrato de proyecto actual es `0.3.0`. Conserva IDs portables importados, orden del grafo, entrypoints, declaraciones de perfiles y payloads opacos. El gate de regresión abre los **18/18 paquetes canónicos** y exige que un rebuild sin cambios conserve exactamente el mismo `contentRoot`.
 
 Studio y otros hosts no deben enlazarse a los módulos internos de Creator. La frontera pública es `@p2lrn/toolkit/authoring`:
 

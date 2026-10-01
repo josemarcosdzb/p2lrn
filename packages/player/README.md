@@ -44,7 +44,7 @@ The canonical declarative surface is deliberately small:
 - `src` is required for playback and identifies the `.p2lrn` package URL.
 - `node` is optional; when omitted the primary package entrypoint is used.
 - `renderer` is optional and is a strict renderer request. When omitted the trusted runtime negotiates a compatible renderer.
-- `runtime-base-url` is optional. When omitted, the browser distribution automatically uses the isolated static runtime host shipped beside the Player. Set it only to override that default with another trusted runtime origin.
+- `runtime-base-url` is optional only when the runtime shipped beside the Player is already on a different origin from the embedding application. The default host is resolved beside the Player distribution; if the application itself is served from that same origin, configure `runtime-base-url` to a separate trusted origin (different scheme/host/port). A different path on the same origin is **not** isolation.
 
 The same values are reflected by the runtime API. Host-specific persistence, telemetry and verified virtual-resource delivery use Host Adapter v1. Identity, authorization and enrolment are deliberately outside this HTML contract; a protected host must resolve `src` according to its own deployment contract rather than serialize long-lived credentials into package markup.
 
@@ -61,7 +61,7 @@ npm install @p2lrn/player @p2lrn/h5p-libraries
 p2lrn-copy-runtime ./public/p2lrn
 ```
 
-The copy command places the installed H5P library corpus under `runtime-host/h5p-libraries/` automatically when `@p2lrn/h5p-libraries` is installed. Serve that runtime from an origin isolated from the embedding application, then optionally point the Player at it with `runtime-base-url`.
+The copy command places the installed H5P library corpus under `runtime-host/h5p-libraries/` automatically when `@p2lrn/h5p-libraries` is installed. Serve that runtime from an origin isolated from the embedding application. Point the Player at it with `runtime-base-url` whenever the inferred runtime would share the application origin.
 
 The public P2LRN CDN is built from these same npm distribution builders. It does not store user/course packages; it serves the generic Player/runtime and reusable shared H5P libraries.
 

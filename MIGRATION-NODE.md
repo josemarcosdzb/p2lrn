@@ -15,7 +15,7 @@ Node.js/TypeScript es la implementación principal. Python Alpha15 queda sólo c
 
 ## Autoría editable
 
-`p2lrn-create open` y `@p2lrn/toolkit/authoring` abren los 17 paquetes canónicos como proyectos editables; un rebuild sin cambios conserva `contentRoot` 17/17. El contrato 0.3 conserva IDs portables, orden/entrypoints, perfiles, extensiones y miembros opacos. Los workspaces 0.1/0.2 migran explícitamente a 0.3 y los 17 paquetes P2RLN Alpha15 entran por la canonización P2LRN existente antes de materializarse como workspace.
+`p2lrn-create open` y `@p2lrn/toolkit/authoring` abren los 18 paquetes canónicos actuales como proyectos editables; un rebuild sin cambios conserva `contentRoot` 18/18. El contrato 0.3 conserva IDs portables, orden/entrypoints, perfiles, extensiones y miembros opacos. Los workspaces 0.1/0.2 migran explícitamente a 0.3 y los 17 paquetes P2RLN Alpha15 entran por la canonización P2LRN existente antes de materializarse como workspace.
 
 La matriz Creator/Reader está en `packages/toolkit/config/authoring-capabilities.json`. El ZIP SCORM anidado se conserva byte a byte durante el flujo legacy -> autoría -> P2LRN.
 

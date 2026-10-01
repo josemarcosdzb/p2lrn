@@ -7,7 +7,7 @@ The Netlify production site is connected to this repository and builds from `mai
 Netlify runs:
 
 ```text
-node deploy/netlify/build-cdn.mjs
+node deploy/netlify/build-site.mjs
 ```
 
 and publishes:
@@ -16,7 +16,7 @@ and publishes:
 .netlify-cdn/
 ```
 
-The CDN does **not** maintain a second Player implementation. The build calls the same distribution builders used by npm:
+`build-site.mjs` invokes `build-cdn.mjs` first, then adds the documentation portal, canonical/generated examples and deployment regression gates. The CDN does **not** maintain a second Player implementation. The build calls the same distribution builders used by npm:
 
 ```text
 packages/player/scripts/build-dist.mjs
@@ -55,6 +55,8 @@ release:
 
 Applications should normally keep that exact URL. The Player, runtime hosts and
 shared H5P libraries move together behind the `current` channel.
+
+The executable H5P/SCORM/cmi5/package runtime must still be hosted on an origin different from the embedding application. The public viewer runs on `https://p2lrn.netlify.app` and uses `https://main--p2lrn.netlify.app/player/current/dist/runtime-host/` as its isolated runtime origin; the viewer verifies `/health.json` and the Player version before playback.
 
 Exact numbered paths are still emitted internally:
 

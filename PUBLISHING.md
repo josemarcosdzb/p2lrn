@@ -20,7 +20,7 @@ cd ../..
 
 node scripts/verify-npm-pack.mjs
 node scripts/verify-browser-from-npm.mjs
-node deploy/netlify/build-cdn.mjs
+node deploy/netlify/build-site.mjs
 node scripts/verify-distribution-identity.mjs
 ```
 

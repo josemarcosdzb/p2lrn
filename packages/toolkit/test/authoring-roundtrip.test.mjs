@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cpSync,existsSync,mkdtempSync,readFileSync,rmSync,unlinkSync} from 'node:fs';
+import {cpSync,existsSync,mkdtempSync,readFileSync,readdirSync,rmSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {validatePackageFile} from '../dist/core/validator.js';
@@ -13,11 +13,20 @@ const exampleCandidates=[resolve('../examples'),resolve('../../examples/legacy-a
 const examples=exampleCandidates.find((p)=>existsSync(join(p,'creator-course.p2rln'))&&existsSync(join(p,'creator-project')))??exampleCandidates[0];
 const expected=['advanced-interoperability.p2rln','aulap2p-reader/document-reader-course.p2rln','creator-course.p2rln','external/cmi5-catapult-pre-post.p2rln','external/h5p-crossword.p2rln','external/qti3-minimal.p2rln','external/scorm12-real.p2rln','minimal-course.p2rln','native-component-authoring-course.p2rln','native-component-course.p2rln','native-component-timeline-course.p2rln','native-composite-course.p2rln','native-questionnaire-course.p2rln','native-questionnaire-games-course.p2rln','static-seekable-media-course.p2rln','web-bundle-course.p2rln','web-course.p2rln'];
 const canonicalExamples=resolve('../../examples/canonical');
-const canonicalExpected=expected.map((x)=>x.replace(/\.p2rln$/,'.p2lrn'));
+function listCanonicalPackages(root,prefix=''){
+  const out=[];
+  for(const entry of readdirSync(root,{withFileTypes:true})){
+    const rel=prefix ? prefix+'/'+entry.name : entry.name;
+    if(entry.isDirectory())out.push(...listCanonicalPackages(join(root,entry.name),rel));
+    else if(entry.isFile()&&entry.name.endsWith('.p2lrn'))out.push(rel);
+  }
+  return out.sort();
+}
+const canonicalExpected=listCanonicalPackages(canonicalExamples);
 
 test('Creator authoring contract 0.3 is default while legacy projects remain valid',()=>{const fresh=newProject('Contrato Studio','es');assert.equal(fresh.projectVersion,'0.3.0');assert.doesNotThrow(()=>validateProject(fresh));const legacy=JSON.parse(readFileSync(join(examples,'creator-project/p2rln.project.json'),'utf8'));assert.doesNotThrow(()=>validateProject(legacy));});
 
-test('all canonical P2LRN packages open and rebuild with identical contentRoot',()=>{for(const rel of canonicalExpected){const dir=mkdtempSync(join(tmpdir(),'p2lrn-open-'));try{const source=join(canonicalExamples,rel),projectDir=join(dir,'project'),out=join(dir,'rebuilt.p2lrn');const before=new P2LRNReader(source,{strictProfiles:false}).package.manifest.integrity.contentRoot;const opened=openPackageAsProject(source,projectDir);assert.equal(opened.sourceContentRoot,before,rel);assert.equal(buildProject(projectDir,out,false).contentRoot,before,rel);validatePackageFile(out,{strictProfiles:true,validateProfilePayloads:true});}finally{rmSync(dir,{recursive:true,force:true});}}});
+test('all canonical P2LRN packages open and rebuild with identical contentRoot',()=>{for(const rel of canonicalExpected){const dir=mkdtempSync(join(tmpdir(),'p2lrn-open-'));try{const source=join(canonicalExamples,rel),projectDir=join(dir,'project'),out=join(dir,'rebuilt.p2lrn');validatePackageFile(source,{strictProfiles:true,validateProfilePayloads:true});const before=new P2LRNReader(source,{strictProfiles:false}).package.manifest.integrity.contentRoot;const opened=openPackageAsProject(source,projectDir);assert.equal(opened.sourceContentRoot,before,rel);assert.equal(buildProject(projectDir,out,false).contentRoot,before,rel);validatePackageFile(out,{strictProfiles:true,validateProfilePayloads:true});}finally{rmSync(dir,{recursive:true,force:true});}}});
 
 test('editing opened project preserves portable identities',()=>{const dir=mkdtempSync(join(tmpdir(),'p2lrn-edit-'));try{const source=join(canonicalExamples,'native-questionnaire-course.p2lrn'),projectDir=join(dir,'project'),out=join(dir,'edited.p2lrn');const original=new P2LRNReader(source),ids=[...original.entities.keys()].sort();openPackageAsProject(source,projectDir);const loaded=loadProject(projectDir);loaded.project.course.title={es:'Curso editado desde Studio'};loaded.project.course.revision+=1;saveProject(loaded.path,loaded.project);buildProject(projectDir,out,true);assert.deepEqual([...new P2LRNReader(out).entities.keys()].sort(),ids);}finally{rmSync(dir,{recursive:true,force:true});}});
 
