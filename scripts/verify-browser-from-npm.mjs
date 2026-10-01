@@ -315,7 +315,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
         }
         if(course==='scorm12-interactive.p2lrn'){
           setTimeout(()=>{
-            const stateEvent=events.find((item)=>item.name==='p2lrn:statechange');
+            const stateEvent=[...events].reverse().find((item)=>item.name==='p2lrn:statechange');
             const lessonStatus=stateEvent?.detail?.state?.values?.['cmi.core.lesson_status'];
             if(!stateEvent||lessonStatus!=='incomplete'){
               finish('FAIL',{phase:'scorm-inline-script-contract',course,lessonStatus,events});
