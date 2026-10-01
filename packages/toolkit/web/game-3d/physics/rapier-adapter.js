@@ -44,6 +44,13 @@ export async function createRapierPhysicsWorld({gravity = [0,-9.81,0]} = {}) {
       if (!body) return null;
       return {translation:body.translation(),rotation:body.rotation()};
     },
+    applyImpulse(id, impulse, torqueY = 0) {
+      const body=bodies.get(String(id));
+      if (!body || !body.isDynamic?.()) return false;
+      body.applyImpulse({x:Number(impulse[0])||0,y:Number(impulse[1])||0,z:Number(impulse[2])||0},true);
+      if (torqueY) body.applyTorqueImpulse({x:0,y:Number(torqueY)||0,z:0},true);
+      return true;
+    },
     step(delta=1/60) {
       world.timestep=Math.max(1/240,Math.min(1/20,Number(delta)||1/60));
       world.step();

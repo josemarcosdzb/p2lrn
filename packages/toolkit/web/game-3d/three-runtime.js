@@ -221,6 +221,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     player.position.z=clamp(player.position.z,-7.8,11.8);
   }
   function updatePlayer(delta){
+    const previous=player.position.clone();
     const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
     const velocity=new THREE.Vector3();
@@ -234,6 +235,23 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
       player.position.x=clamp(player.position.x,-10.2,10.2);
       player.position.z=clamp(player.position.z,-7.8,11.8);
       player.rotation.y=Math.atan2(-velocity.x,-velocity.z);
+    }
+    const playerDelta=player.position.clone().sub(previous);
+    const playerSpeed=delta>0?playerDelta.length()/delta:0;
+    if(playerSpeed>0.01){
+      for(const id of bodies){
+        const mesh=meshes.get(String(id));
+        if(!mesh)continue;
+        const dx=mesh.position.x-player.position.x;
+        const dz=mesh.position.z-player.position.z;
+        const distance=Math.hypot(dx,dz);
+        if(distance>=1.12)continue;
+        const inv=distance>0.0001?1/distance:1;
+        const nx=distance>0.0001?dx*inv:1;
+        const nz=distance>0.0001?dz*inv:0;
+        const impulse=Math.min(7.2,0.9+playerSpeed*0.78+(1.12-distance)*4.5);
+        physicsWorld.applyImpulse?.(id,[nx*impulse,0,nz*impulse],(playerDelta.x*nz-playerDelta.z*nx)*0.09);
+      }
     }
     const forwardLook=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     const height=5.4+Math.sin(Math.abs(cameraPitch))*2.6;
@@ -326,6 +344,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     stage.add(mesh);
     meshes.set(String(id),mesh);
     if (interaction) interactables.push(mesh);
+    physicsWorld.createBox?.({id:String(id),position:normalizePosition(position),halfExtents:[size[0]/2,size[1]/2,size[2]/2],dynamic:true});
+    bodies.add(String(id));
     return mesh;
   }
 

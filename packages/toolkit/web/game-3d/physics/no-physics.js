@@ -15,6 +15,16 @@ export async function createNoPhysicsWorld() {
       return true;
     },
     transform(id) { return bodies.get(String(id)) ?? null; },
+    applyImpulse(id, impulse) {
+      const state=bodies.get(String(id));
+      if (!state) return false;
+      state.translation={
+        x:state.translation.x+(Number(impulse[0])||0)*0.08,
+        y:Math.max(0.45,state.translation.y+(Number(impulse[1])||0)*0.08),
+        z:state.translation.z+(Number(impulse[2])||0)*0.08,
+      };
+      return true;
+    },
     step(){},
     remove(id){ bodies.delete(String(id)); },
     destroy(){ bodies.clear(); },
