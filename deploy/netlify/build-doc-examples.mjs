@@ -1,6 +1,7 @@
-import {mkdir, rm, writeFile} from 'node:fs/promises';
+import {mkdir, readFile, rm, writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {writeZip} from '../../packages/toolkit/dist/core/zip.js';
+import {convertExternalPackage} from '../../packages/toolkit/dist/creator/external.js';
 import {computeContentRoot, contentDigest, sha256} from '../../packages/toolkit/dist/core/integrity.js';
 import {openP2LRNPackageBytes} from '../../packages/toolkit/web/p2lrn-player.js';
 import {createMultipartPayload, MULTIPART_MEDIA_TYPE, MULTIPART_PROFILE} from '../../packages/toolkit/web/multipart.js';
@@ -355,12 +356,55 @@ async function buildMultipartExample(outputRoot) {
   };
 }
 
+
+async function buildExternalRuntimeDemos(dir) {
+  const fixtureRoot = join(process.cwd(),'deploy','netlify','fixtures');
+
+  async function buildOne({slug,title,fixture,files}) {
+    const source = join(dir,slug + '.zip');
+    const output = join(dir,slug + '.p2lrn');
+    const zipEntries = [];
+    for (const [name,mediaType] of files) {
+      const data = new Uint8Array(await readFile(join(fixtureRoot,fixture,name)));
+      zipEntries.push({path:name,data,mediaType,method:8});
+    }
+    await writeFile(source,writeZip(zipEntries));
+    const report = convertExternalPackage(source,output);
+    await rm(source,{force:true});
+    await verifyOuter(new Uint8Array(await readFile(output)));
+    return {
+      title,
+      category:'generated-external',
+      url:'/examples/generated/' + slug + '.p2lrn',
+      source:'deploy/netlify/fixtures/' + fixture,
+      rendererId:null,
+      profiles:[COURSE_PROFILE,report.profile],
+    };
+  }
+
+  return [
+    await buildOne({
+      slug:'scorm12-browser-demo',
+      title:'SCORM 1.2 · demo interactiva',
+      fixture:'scorm12-demo',
+      files:[['imsmanifest.xml','application/xml'],['index.html','text/html']],
+    }),
+    await buildOne({
+      slug:'qti3-interactive-demo',
+      title:'QTI 3 · demo interactiva',
+      fixture:'qti3-demo',
+      files:[['imsmanifest.xml','application/xml'],['item.xml','application/xml']],
+    }),
+  ];
+}
+
 export async function buildDocExamples({outputRoot}) {
   const generated = join(outputRoot,'generated');
   await rm(generated,{recursive:true,force:true});
   await mkdir(generated,{recursive:true});
   const entries = [];
   for (const spec of specs) entries.push(await buildQuestionnairePackage(generated,spec));
+  entries.push(...await buildExternalRuntimeDemos(generated));
   entries.push(await buildMultipartExample(outputRoot));
   return entries;
 }
