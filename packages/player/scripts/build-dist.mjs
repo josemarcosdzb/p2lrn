@@ -156,6 +156,7 @@ async function installGame3dRuntime(dist) {
   const vendor=join(dist,'vendor');
   await mkdir(vendor,{recursive:true});
   await cp(join(threeRoot,'build','three.module.js'),join(vendor,'three.module.js'));
+  await cp(join(threeRoot,'build','three.core.js'),join(vendor,'three.core.js'));
   await cp(join(threeRoot,'LICENSE'),join(vendor,'LICENSE.three.txt'));
   await cp(join(rapierRoot,'dist','rapier.mjs'),join(vendor,'rapier3d.mjs'));
   await cp(join(rapierRoot,'LICENSE'),join(vendor,'LICENSE.rapier3d.txt'));
