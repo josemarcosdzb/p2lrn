@@ -180,6 +180,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     panel,
     interact(meta) {
       if(meta.kind==='ordering-object'){
+        if(scene.playerDistanceTo(`order:${meta.id}`)>3.15){setText(status,'Acércate al bloque para cogerlo.');return true;}
         if(selected) scene.highlight(`order:${selected}`,false);
         selected=meta.id;
         scene.highlight(`order:${selected}`,true);
@@ -187,6 +188,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
         return true;
       }
       if(meta.kind==='ordering-slot'){
+        if(scene.playerDistanceTo(`order-slot:${meta.index}`)>3.15){setText(status,'Acércate al pedestal para colocar el bloque.');return true;}
         const placedOk=place(selected,meta.index);
         if(placedOk && selected){
           scene.highlight(`order:${selected}`,false);
@@ -270,8 +272,14 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   return {
     panel,
     interact(meta) {
-      if(meta.kind==='matching-left'){chooseLeft(meta.id);return true;}
-      if(meta.kind==='matching-right'){chooseRight(meta.id);return true;}
+      if(meta.kind==='matching-left'){
+        if(scene.playerDistanceTo(`left:${meta.id}`)>3.15){setText(status,'Acércate al bloque de origen para coger la cuerda.');return true;}
+        chooseLeft(meta.id);return true;
+      }
+      if(meta.kind==='matching-right'){
+        if(scene.playerDistanceTo(`right:${meta.id}`)>3.15){setText(status,'Acércate al bloque de destino para enganchar la cuerda.');return true;}
+        chooseRight(meta.id);return true;
+      }
       return false;
     },
   };
@@ -343,6 +351,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
     panel,
     interact(meta) {
       if(meta.kind==='classification-object'){
+        if(scene.playerDistanceTo(`classify:${meta.id}`)>3.15){setText(status,'Acércate al bloque para cogerlo.');return true;}
         if(selected) scene.highlight(`classify:${selected}`,false);
         selected=meta.id;
         scene.highlight(`classify:${selected}`,true);
@@ -350,6 +359,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
         return true;
       }
       if(meta.kind==='classification-category'){
+        if(scene.playerDistanceTo(`category:${meta.id}`)>3.25){setText(status,'Acércate a la categoría para colocar el bloque.');return true;}
         if(!selected){setText(status,'Selecciona primero un objeto.');return true;}
         const ok=moveToCategory(selected,meta.id);
         if(ok){
@@ -382,7 +392,16 @@ export async function render(options) {
   });
 
   const technology=el('p',{class:'p2lrn-3d-runtime'},`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`);
-  controls.append(technology);
+  const help=el('p',{class:'p2lrn-game-description'},'Muévete con WASD/flechas. Arrastra sobre la escena para girar la cámara. Acércate a los bloques para interactuar.');
+  const movePad=el('div',{class:'p2lrn-3d-move-pad','aria-label':'Controles de movimiento'});
+  for(const [label,direction] of [['▲','forward'],['◀','left'],['▼','back'],['▶','right']]){
+    const button=el('button',{type:'button',class:'p2lrn-game-button','aria-label':direction},label);
+    button.addEventListener('click',()=>scene.nudgePlayer(direction));
+    movePad.append(button);
+  }
+  const resetView=el('button',{type:'button',class:'p2lrn-game-button'},'Recentrar jugador');
+  resetView.addEventListener('click',()=>scene.resetPlayer());
+  controls.append(technology,help,movePad,resetView);
 
   const renderTrial=()=>{
     scene.reset();

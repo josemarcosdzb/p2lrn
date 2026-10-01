@@ -75,3 +75,7 @@
 .p2lrn-word-grid .p2lrn-game-cell.is-preview { outline: 2px solid currentColor; outline-offset: -2px; position: relative; z-index: 1; }
 .p2lrn-word-clue label { display: grid; gap: .35rem; }
 .p2lrn-word-answer.is-solved { font-weight: 700; }
+
+
+.p2lrn-3d-move-pad { display: grid; grid-template-columns: repeat(4,minmax(2.5rem,auto)); gap: .4rem; max-width: 18rem; }
+.p2lrn-3d-canvas:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }

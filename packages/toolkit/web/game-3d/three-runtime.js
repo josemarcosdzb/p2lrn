@@ -163,6 +163,29 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
 
   const stage=new THREE.Group();
   scene.add(stage);
+
+  const player=new THREE.Group();
+  const playerBody=new THREE.Mesh(
+    new THREE.CylinderGeometry(0.42,0.52,1.15,18),
+    new THREE.MeshStandardMaterial({color:'#e2e8f0',roughness:0.7,metalness:0.05}),
+  );
+  playerBody.position.y=0.78;
+  playerBody.castShadow=true;
+  const playerHead=new THREE.Mesh(
+    new THREE.SphereGeometry(0.3,18,14),
+    new THREE.MeshStandardMaterial({color:'#38bdf8',roughness:0.58,metalness:0.12}),
+  );
+  playerHead.position.y=1.55;
+  playerHead.castShadow=true;
+  player.add(playerBody,playerHead);
+  player.position.set(0,0,6.5);
+  scene.add(player);
+
+  const movement={forward:false,back:false,left:false,right:false};
+  let cameraYaw=0;
+  let cameraPitch=-0.05;
+  let cameraDrag=null;
+
   const meshes=new Map();
   const bodies=new Set();
   const interactables=[];
@@ -172,6 +195,54 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
   let alive=true;
   let raf=0;
   let last=performance.now();
+
+  const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
+  function playerDistanceTo(id){
+    const mesh=meshes.get(String(id));
+    if(!mesh)return Infinity;
+    return Math.hypot(mesh.position.x-player.position.x,mesh.position.z-player.position.z);
+  }
+  function resetPlayer(){
+    player.position.set(0,0,6.5);
+    cameraYaw=0;
+    cameraPitch=-0.05;
+  }
+  function nudgePlayer(direction,amount=0.85){
+    const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
+    const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
+    const delta=new THREE.Vector3();
+    if(direction==='forward')delta.add(forward);
+    if(direction==='back')delta.sub(forward);
+    if(direction==='left')delta.sub(right);
+    if(direction==='right')delta.add(right);
+    if(delta.lengthSq()>0)delta.normalize().multiplyScalar(amount);
+    player.position.add(delta);
+    player.position.x=clamp(player.position.x,-10.2,10.2);
+    player.position.z=clamp(player.position.z,-7.8,11.8);
+  }
+  function updatePlayer(delta){
+    const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
+    const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
+    const velocity=new THREE.Vector3();
+    if(movement.forward)velocity.add(forward);
+    if(movement.back)velocity.sub(forward);
+    if(movement.left)velocity.sub(right);
+    if(movement.right)velocity.add(right);
+    if(velocity.lengthSq()>0){
+      velocity.normalize().multiplyScalar(4.3*delta);
+      player.position.add(velocity);
+      player.position.x=clamp(player.position.x,-10.2,10.2);
+      player.position.z=clamp(player.position.z,-7.8,11.8);
+      player.rotation.y=Math.atan2(-velocity.x,-velocity.z);
+    }
+    const forwardLook=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
+    const height=5.4+Math.sin(Math.abs(cameraPitch))*2.6;
+    const distance=9.8-Math.sin(Math.abs(cameraPitch))*1.8;
+    const targetCamera=player.position.clone().add(new THREE.Vector3(0,height,0)).add(forwardLook.clone().multiplyScalar(-distance));
+    camera.position.lerp(targetCamera,1-Math.exp(-delta*7.5));
+    const lookAt=player.position.clone().add(forwardLook.multiplyScalar(4.2)).add(new THREE.Vector3(0,1.2+cameraPitch*1.8,0));
+    camera.lookAt(lookAt);
+  }
 
   function resize() {
     const width=Math.max(320,canvas.clientWidth||720);
@@ -318,6 +389,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     resize();
     const delta=Math.min(0.05,Math.max(1/240,(now-last)/1000));
     last=now;
+    updatePlayer(delta);
     physicsWorld.step?.(delta);
     syncPhysics();
     syncConnectors(delta);
@@ -325,7 +397,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     raf=requestAnimationFrame(frame);
   }
 
-  function onPointer(event) {
+  function raycastInteraction(event) {
     const rect=canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
@@ -336,13 +408,59 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
       let node=hit.object;
       while (node && !node.userData?.p2lrnInteraction) node=node.parent;
       if (node?.userData?.p2lrnInteraction) {
-        onInteraction(node.userData.p2lrnInteraction,{point:hit.point,event});
+        onInteraction(node.userData.p2lrnInteraction,{point:hit.point,event,playerDistance:player.position.distanceTo(hit.point)});
         break;
       }
     }
   }
+  function onPointerDown(event){
+    cameraDrag={pointerId:event.pointerId,x:event.clientX,y:event.clientY,moved:false};
+    canvas.setPointerCapture?.(event.pointerId);
+  }
+  function onPointerMove(event){
+    const drag=cameraDrag;
+    if(!drag||drag.pointerId!==event.pointerId)return;
+    const dx=event.clientX-drag.x;
+    const dy=event.clientY-drag.y;
+    if(Math.abs(dx)+Math.abs(dy)>2)drag.moved=true;
+    if(drag.moved){
+      cameraYaw-=dx*0.006;
+      cameraPitch=clamp(cameraPitch-dy*0.004,-0.58,0.24);
+    }
+    drag.x=event.clientX;drag.y=event.clientY;
+  }
+  function onPointerUp(event){
+    const drag=cameraDrag;
+    if(!drag||drag.pointerId!==event.pointerId)return;
+    if(!drag.moved)raycastInteraction(event);
+    cameraDrag=null;
+    try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
+  }
+  function onPointerCancel(){cameraDrag=null;}
+  function onKeyDown(event){
+    const code=event.code;
+    if(!['KeyW','KeyS','KeyA','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(code))return;
+    event.preventDefault();
+    if(code==='KeyW'||code==='ArrowUp')movement.forward=true;
+    if(code==='KeyS'||code==='ArrowDown')movement.back=true;
+    if(code==='KeyA'||code==='ArrowLeft')movement.left=true;
+    if(code==='KeyD'||code==='ArrowRight')movement.right=true;
+  }
+  function onKeyUp(event){
+    const code=event.code;
+    if(code==='KeyW'||code==='ArrowUp')movement.forward=false;
+    if(code==='KeyS'||code==='ArrowDown')movement.back=false;
+    if(code==='KeyA'||code==='ArrowLeft')movement.left=false;
+    if(code==='KeyD'||code==='ArrowRight')movement.right=false;
+  }
 
-  canvas.addEventListener('pointerdown',onPointer);
+  canvas.tabIndex=0;
+  canvas.addEventListener('pointerdown',onPointerDown);
+  canvas.addEventListener('pointermove',onPointerMove);
+  canvas.addEventListener('pointerup',onPointerUp);
+  canvas.addEventListener('pointercancel',onPointerCancel);
+  canvas.addEventListener('keydown',onKeyDown);
+  canvas.addEventListener('keyup',onKeyUp);
   raf=requestAnimationFrame(frame);
 
   return {
@@ -356,14 +474,24 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     connect,
     setTranslation,
     highlight,
+    playerDistanceTo,
+    playerPosition:()=>[player.position.x,player.position.y,player.position.z],
+    resetPlayer,
+    nudgePlayer,
     destroy() {
       alive=false;
       cancelAnimationFrame(raf);
-      canvas.removeEventListener('pointerdown',onPointer);
+      canvas.removeEventListener('pointerdown',onPointerDown);
+      canvas.removeEventListener('pointermove',onPointerMove);
+      canvas.removeEventListener('pointerup',onPointerUp);
+      canvas.removeEventListener('pointercancel',onPointerCancel);
+      canvas.removeEventListener('keydown',onKeyDown);
+      canvas.removeEventListener('keyup',onKeyUp);
       clearStage();
       physicsWorld.destroy?.();
       renderer.dispose();
       disposeObject(ground);
+      disposeObject(player);
     },
   };
 }
