@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SCORM 1.2 P2LRN</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font:16px/1.5 system-ui,sans-serif;background:#f7f8fa;color:#171717}
+    main{max-width:760px;margin:0 auto;padding:clamp(24px,6vw,64px)}
+    .card{background:#fff;border:1px solid #d9dde3;border-radius:12px;padding:28px}
+    small{color:#667085}.status{margin:20px 0;padding:12px 14px;border-radius:8px;background:#eef6ff}
+    button{border:0;border-radius:8px;padding:11px 16px;background:#111827;color:#fff;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.55;cursor:default}
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <small>SCORM 1.2 / P2LRN runtime</small>
+      <h1>Lección SCORM interactiva</h1>
+      <p>Este ejemplo comprueba ejecución real de JavaScript y comunicación con la API SCORM dentro del runtime aislado.</p>
+      <div class="status" id="status">Inicializando SCORM…</div>
+      <button id="complete" type="button">Completar lección</button>
+    </section>
+  </main>
+  <script>
+    (function(){
+      var api=null;
+      try{api=window.API||(window.parent&&window.parent.API)||null;}catch(_e){}
+      var status=document.getElementById('status');
+      var button=document.getElementById('complete');
+      if(!api){status.textContent='API SCORM no disponible';button.disabled=true;return;}
+      var ok=api.LMSInitialize('')==='true';
+      status.textContent=ok?'Runtime SCORM conectado. Estado: en curso.':'No se pudo inicializar SCORM.';
+      if(ok){api.LMSSetValue('cmi.core.lesson_status','incomplete');api.LMSCommit('');}
+      button.addEventListener('click',function(){
+        api.LMSSetValue('cmi.core.score.raw','100');
+        api.LMSSetValue('cmi.core.score.max','100');
+        api.LMSSetValue('cmi.core.lesson_status','passed');
+        api.LMSCommit('');
+        status.textContent='Lección completada · puntuación 100/100';
+        button.disabled=true;
+      });
+      addEventListener('beforeunload',function(){try{api.LMSFinish('');}catch(_e){}});
+    })();
+  </script>
+</body>
+</html>
