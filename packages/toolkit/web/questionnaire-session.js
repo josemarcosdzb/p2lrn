@@ -66,6 +66,7 @@ export function answerIsMeaningful(question, answer) {
   if (question.type === 'fill-blanks') return isRecord(answer.blanks) && Object.values(answer.blanks).some((value) => String(value ?? '').trim());
   if (question.type === 'ordering') return Array.isArray(answer.order) && answer.order.length === question.items.length;
   if (question.type === 'matching') return isRecord(answer.pairs) && Object.values(answer.pairs).filter(Boolean).length === question.left.length;
+  if (question.type === 'classification') return isRecord(answer.classifications) && Object.values(answer.classifications).filter(Boolean).length === question.items.length;
   return false;
 }
 
