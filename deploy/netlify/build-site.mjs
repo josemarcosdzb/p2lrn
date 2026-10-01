@@ -99,6 +99,56 @@ function pageUrl(path) {
   return '/' + rel;
 }
 const htmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
+
+// Documentation regression gates. These keep the portal aligned with the real
+// package surface instead of relying on a second hand-maintained checklist.
+const repeatedForms = [];
+for (const htmlPath of htmlFiles) {
+  const rel = relative(outputRoot,htmlPath).replaceAll('\\','/');
+  const html = await readFile(htmlPath,'utf8');
+  if (/<form\\b/i.test(html) && rel !== 'contacto/index.html') repeatedForms.push(rel);
+}
+if (repeatedForms.length) {
+  throw new Error('Documentation forms must be centralized in /contacto/:\\n' + repeatedForms.join('\\n'));
+}
+
+const questionnaireSlugs = [
+  'standard','memory','matching','ordering','classification',
+  'true-false','word-search','crossword','rosco','3d',
+];
+const missingQuestionnaireArtifacts = [];
+for (const slug of questionnaireSlugs) {
+  const doc = join(outputRoot,'docs','questionnaires',slug,'index.html');
+  const pkg = join(outputRoot,'examples','generated','questionnaire-' + slug + '.p2lrn');
+  if (!(await exists(doc))) missingQuestionnaireArtifacts.push('/docs/questionnaires/' + slug + '/');
+  if (!(await exists(pkg))) missingQuestionnaireArtifacts.push('/examples/generated/questionnaire-' + slug + '.p2lrn');
+}
+if (missingQuestionnaireArtifacts.length) {
+  throw new Error('Questionnaire documentation/example gate failed:\\n' + missingQuestionnaireArtifacts.join('\\n'));
+}
+
+const cliHtmlPath = join(outputRoot,'docs','cli','index.html');
+const cliHtml = await readFile(cliHtmlPath,'utf8');
+const toolkitPackage = JSON.parse(await readFile(join(root,'packages','toolkit','package.json'),'utf8'));
+const undocumentedBins = Object.keys(toolkitPackage.bin ?? {}).filter((name)=>!cliHtml.includes(name));
+if (undocumentedBins.length) {
+  throw new Error('CLI reference is missing published bins: ' + undocumentedBins.join(', '));
+}
+
+const multipartMetadataPath = join(outputRoot,'examples','multipart-demo','metadata.json');
+const multipartMetadata = JSON.parse(await readFile(multipartMetadataPath,'utf8'));
+if (!Array.isArray(multipartMetadata.parts) || multipartMetadata.parts.length < 2) {
+  throw new Error('Multipart documentation fixture must publish at least two parts.');
+}
+for (const part of multipartMetadata.parts) {
+  const partPath = join(outputRoot,'examples','multipart-demo',String(part.href));
+  if (!(await exists(partPath))) throw new Error('Multipart documentation part is missing: ' + part.href);
+  const info = await stat(partPath);
+  if (info.size !== Number(part.size)) {
+    throw new Error('Multipart documentation part size mismatch: ' + part.href);
+  }
+}
+
 const docsFiles = htmlFiles.filter((path)=>relative(outputRoot,path).replaceAll('\\','/').startsWith('docs/'));
 const searchIndex = [];
 for (const path of docsFiles) {
@@ -154,4 +204,8 @@ console.log(JSON.stringify({
   canonicalExamples:canonicalEntries.length,
   generatedExamples:generatedEntries.length,
   exampleCatalog:'/examples/catalog.json',
+  questionnaireDocs:questionnaireSlugs.length,
+  contactFormsCentralized:true,
+  cliBinsDocumented:Object.keys(toolkitPackage.bin ?? {}).length,
+  multipartParts:multipartMetadata.parts.length,
 },null,2));
