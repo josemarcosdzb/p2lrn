@@ -225,6 +225,11 @@ export async function render({container, payload, representation, package: pkg, 
 
   const processRuntimeData = (data) => {
     if (!data || data.protocol !== runtimeProtocol) return;
+    if (data.action === 'resize') {
+      const height = Number(data.height);
+      if (Number.isFinite(height)) iframe.style.height = `${Math.max(420, Math.min(760, Math.ceil(height)))}px`;
+      return;
+    }
     if (data.action === 'state' && data.state) {
       saveState(data.state, data.meta?.reason ?? 'state');
     } else if (data.action === 'ready') {
