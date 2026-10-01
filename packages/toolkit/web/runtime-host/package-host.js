@@ -65,8 +65,8 @@ function text(path) {
 
 function cmi5BridgeSource(config) {
   const encoded = JSON.stringify(config).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
-  return \`(()=>{'use strict';
-const cfg=\${encoded};
+  return `(()=>{'use strict';
+const cfg=${encoded};
 const nativeFetch=globalThis.fetch.bind(globalThis);
 const states=new Map();
 const emit=(action,payload={})=>parent.postMessage({protocol:'p2lrn-cmi5-preview/1',action,...payload},'*');
@@ -117,7 +117,7 @@ const wrap=(Native)=>{
   return P2LRNCmi5;
 };
 Object.defineProperty(globalThis,'Cmi5',{configurable:true,enumerable:true,get(){return ctor;},set(value){ctor=wrap(value);}});
-})();\`;
+})();`;
 }
 
 function stripSourceMapDirectives(source) {
