@@ -1,0 +1,36 @@
+name: P2LRN Local Viewer Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/p2lrn-local-viewer.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-local-viewer:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Install and build toolkit
+        working-directory: packages/toolkit
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund --include=dev
+          npm test
+
+      - name: Build site locally only
+        run: node deploy/netlify/build-site.mjs
+
+      - name: Verify viewer and isolated runtimes locally
+        run: node scripts/verify-local-viewer.mjs
