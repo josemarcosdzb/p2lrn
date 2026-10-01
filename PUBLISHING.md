@@ -27,6 +27,8 @@ node deploy/netlify/build-site.mjs
 node scripts/verify-distribution-identity.mjs
 ```
 
+These readiness commands do not publish packages and do not deploy the Netlify site. Actual publication begins only with the explicit `npm publish` commands in the Publishing order section.
+
 The Toolkit test suite includes the lightweight document Reader and verifies DOCX/PPTX structure, ODT/EPUB, Markdown and the explicit absence of OCR fallback.
 
 The npm pack gate:
@@ -108,7 +110,8 @@ Public distribution must not depend on the GitHub repository being public.
 - `@p2lrn/toolkit` ships its TypeScript `src/` tree and `tsconfig.json` inside the npm package.
 - `@p2lrn/player` generates and ships a `source/` snapshot containing the first-party Player build sources and the canonical Toolkit browser/runtime sources used to generate `dist/`.
 - The CDN build publishes the same source snapshot at `/player/<version>/source/` and `/player/current/source/`.
-- `SOURCE-MANIFEST.json` records package versions, the source revision when available, the P2LRN-NCSL license identifier and the reconstruction command.
+- `SOURCE-MANIFEST.json` records package versions, the source revision when available, the P2LRN-NCSL license identifier, the reconstruction command and a SHA-256 inventory of the source files.
+- Each published source snapshot contains an `index.html` that makes the Corresponding Source browsable over ordinary static HTTP hosting.
 - `/LICENSE` and `/NOTICE.md` are published directly by the static build, so the public license page does not rely on access to a private repository.
 
 A private development repository is therefore compatible with public binary/CDN distribution only when these source artifacts are published with the corresponding release.

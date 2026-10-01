@@ -141,6 +141,19 @@ const packedSourceManifest = JSON.parse(await readFile(join(playerRoot,'source',
 if (packedSourceManifest?.license?.id !== 'P2LRN-NCSL-1.0') {
   throw new Error('Packed Player source snapshot does not declare P2LRN-NCSL-1.0.');
 }
+if (!Array.isArray(packedSourceManifest?.files) || packedSourceManifest.files.length < 1) {
+  throw new Error('Packed Player source snapshot does not enumerate Corresponding Source files.');
+}
+for (const requiredSource of [
+  'packages/player/scripts/build-dist.mjs',
+  'packages/toolkit/web/p2lrn-player.js',
+  'packages/toolkit/web-sdk-src/p2lrn.js',
+]) {
+  if (!packedSourceManifest.files.some((item)=>item?.path === requiredSource && typeof item?.sha256 === 'string')) {
+    throw new Error('Packed Player source manifest is missing required source entry: ' + requiredSource);
+  }
+}
+await assertFile(join(playerRoot,'source','index.html'));
 
 const rootLicenseText = await readFile(join(root,'LICENSE'),'utf8');
 const rootNoticeText = await readFile(join(root,'NOTICE.md'),'utf8');

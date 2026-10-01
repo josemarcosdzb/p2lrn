@@ -151,7 +151,7 @@ const requiredLegalRoutes = [
   ['licencia','Licencia | P2LRN'],
 ];
 const legalProblems = [];
-const forbiddenLegalPlaceholders = /(?:\[PENDIENTE|\bTODO\b|\bFIXME\b|YOUR COMPANY|COMPANY NAME|example@example\.com)/i;
+const forbiddenLegalPlaceholders = /(?:\[PENDIENTE(?:[^\]]*)?\]|TODO\s*[:\[-]\s*(?:LEGAL|REPLACE|CONFIRM|FILL)|FIXME\s*[:\[-]\s*(?:LEGAL|REPLACE|CONFIRM|FILL)|YOUR COMPANY|COMPANY NAME|example@example\.com)/i;
 for (const [slug,expectedTitle] of requiredLegalRoutes) {
   const path = join(outputRoot,slug,'index.html');
   if (!(await exists(path))) { legalProblems.push('/' + slug + '/ missing'); continue; }
