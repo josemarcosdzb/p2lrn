@@ -3,6 +3,7 @@ import {
   MEMORY_RENDERER,
   MATCHING_RENDERER,
   ORDERING_RENDERER,
+  CLASSIFICATION_RENDERER,
   TRUE_FALSE_RENDERER,
   WORD_SEARCH_RENDERER,
   CROSSWORD_RENDERER,
@@ -406,6 +407,27 @@ function buildOrdering(payload, seedSource) {
   return result(ORDERING_RENDERER,'Ordenar',true,{sequences:shuffleDeterministic(sequences,seedFor(payload,'ordering',seedSource))});
 }
 
+function buildClassification(payload, seedSource) {
+  if(!requireEmbeddedKey(payload))return result(CLASSIFICATION_RENDERER,'Clasificar',false,null,['Necesita soluciones embebidas.']);
+  const trials=[]; const reasons=[];
+  for(const question of payload.questions){
+    if(question.type!=='classification'){reasons.push(`${question.id}: el modo Clasificar exige preguntas classification.`);continue;}
+    const objects=(question.items??[]).map((item)=>({id:String(item.id),text:String(item.text)}));
+    const categories=(question.categories??[]).map((item)=>({id:String(item.id),text:String(item.text)}));
+    const assignments=(question.solution?.assignments??[]).map((item)=>({itemId:String(item.item),categoryId:String(item.category)}));
+    if(objects.length<2||categories.length<2||assignments.length!==objects.length){reasons.push(`${question.id}: necesita objetos, categorías y una solución completa.`);continue;}
+    trials.push({
+      questionId:question.id,
+      prompt:question.prompt,
+      objects:shuffleDeterministic(objects,seedFor(payload,`classification:${question.id}`,seedSource)),
+      categories,
+      assignments,
+    });
+  }
+  if(reasons.length||trials.length!==payload.questions.length)return result(CLASSIFICATION_RENDERER,'Clasificar',false,null,reasons);
+  return result(CLASSIFICATION_RENDERER,'Clasificar',true,{trials});
+}
+
 function buildTrueFalse(payload) {
   if(!requireEmbeddedKey(payload))return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',false,null,['Necesita soluciones embebidas.']);
   const questions=[]; const reasons=[]; for(const question of payload.questions){const item=trueFalseForQuestion(question);if(!item)reasons.push(`${question.id}: debe ser verdadero/falso con exactamente dos opciones inequívocas.`);else questions.push(item);} if(reasons.length)return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',false,null,reasons); if(questions.length<2)return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',false,null,['Necesita al menos 2 preguntas.']); return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',true,{questions});
@@ -457,6 +479,7 @@ export function buildQuestionnaireGame(payload, rendererId, {seedSource = ''} = 
     case MEMORY_RENDERER:return buildPairs(payload,rendererId,'Memoria',seedSource);
     case MATCHING_RENDERER:return buildPairs(payload,rendererId,'Emparejar',seedSource);
     case ORDERING_RENDERER:return buildOrdering(payload,seedSource);
+    case CLASSIFICATION_RENDERER:return buildClassification(payload,seedSource);
     case TRUE_FALSE_RENDERER:return buildTrueFalse(payload);
     case THREE_D_RENDERER:return build3D(payload,seedSource);
     default:throw new Error(`Unknown questionnaire game renderer: ${rendererId}`);
