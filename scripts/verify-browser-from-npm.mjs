@@ -205,6 +205,23 @@ async function synthesizeExternalPackages() {
 </qti-assessment-item>`],
       ],
     },
+    {
+      name:'scorm12-interactive.p2lrn',
+      source:'scorm12-interactive.zip',
+      entries:[
+        ['imsmanifest.xml',`<?xml version="1.0" encoding="UTF-8"?>
+<manifest identifier="scorm-browser" version="1"
+ xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2"
+ xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2">
+  <metadata><schema>ADL SCORM</schema><schemaversion>1.2</schemaversion></metadata>
+  <organizations default="ORG1"><organization identifier="ORG1"><title>SCORM Browser</title><item identifier="ITEM1" identifierref="RES1"><title>Lesson</title></item></organization></organizations>
+  <resources><resource identifier="RES1" type="webcontent" adlcp:scormtype="sco" href="index.html"><file href="index.html"/></resource></resources>
+</manifest>`],
+        ['index.html',`<!doctype html><html><body><h1>SCORM browser OK</h1><script>
+(function(){var api=null;try{api=window.API||(window.parent&&window.parent.API)||null;}catch(e){}if(!api)throw new Error('SCORM API missing');if(api.LMSInitialize('')!=='true')throw new Error('SCORM init failed');api.LMSSetValue('cmi.core.lesson_status','incomplete');api.LMSCommit('');})();
+<\/script></body></html>`],
+      ],
+    },
   ];
 
   for (const fixture of fixtures) {
@@ -221,7 +238,6 @@ async function prepareCourses() {
   const canonical = join(root,'examples','canonical','external');
   const copies = [
     ['h5p-crossword.p2lrn','h5p-crossword.p2lrn'],
-    ['scorm12-real.p2lrn','scorm12-real.p2lrn'],
     ['cmi5-catapult-pre-post.p2lrn','cmi5-catapult-pre-post.p2lrn'],
   ];
   for (const [from,to] of copies) await cp(join(canonical,from), join(coursesRoot,to));
@@ -265,7 +281,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   const p=document.createElement('p2lrn-player');
   p.id='player';
   p.setAttribute('src','/courses/'+course);
-  for(const name of ['p2lrn:ready','p2lrn:rendered','p2lrn:activityready','p2lrn:error']){
+  for(const name of ['p2lrn:ready','p2lrn:rendered','p2lrn:activityready','p2lrn:statechange','p2lrn:error']){
     p.addEventListener(name,e=>{
       let detail=e.detail;
       try{detail=JSON.parse(JSON.stringify(detail));}catch{detail=String(detail);}
@@ -296,6 +312,18 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
             finish('FAIL',{phase:'qti3-render-contract',course,text:text.slice(0,1600)});
             return;
           }
+        }
+        if(course==='scorm12-interactive.p2lrn'){
+          setTimeout(()=>{
+            const stateEvent=events.find((item)=>item.name==='p2lrn:statechange');
+            const lessonStatus=stateEvent?.detail?.state?.values?.['cmi.core.lesson_status'];
+            if(!stateEvent||lessonStatus!=='incomplete'){
+              finish('FAIL',{phase:'scorm-inline-script-contract',course,lessonStatus,events});
+              return;
+            }
+            finish('PASS',{course,activity:detail,inlineScriptExecuted:true,lessonStatus});
+          },100);
+          return;
         }
         finish('PASS',{course,activity:detail,fullscreenContract:course.includes('h5p')?true:null});
       }
@@ -607,7 +635,7 @@ await writeHarness(runtimeOrigin);
 const chrome=await findChrome();
 const courses=[
   'h5p-crossword.p2lrn',
-  'scorm12-real.p2lrn',
+  'scorm12-interactive.p2lrn',
   'cmi5-catapult-pre-post.p2lrn',
   'qti3-interactive.p2lrn',
   'common-cartridge.p2lrn',
