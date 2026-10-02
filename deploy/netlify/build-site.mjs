@@ -102,8 +102,7 @@ const catalog = {
   version:'1',
   examples:[...canonicalEntries,...generatedEntries],
 };
-await writeFile(join(examplesOutput,'catalog.json'),JSON.stringify(catalog,null,2)+'
-');
+await writeFile(join(examplesOutput,'catalog.json'),JSON.stringify(catalog,null,2)+'\n');
 
 function stripTags(value) {
   return String(value ?? '')
@@ -172,9 +171,7 @@ for (const [slug,expectedTitle] of requiredLegalRoutes) {
   if (forbiddenLegalPlaceholders.test(html)) legalProblems.push('/' + slug + '/ placeholder');
 }
 if (legalProblems.length) {
-  throw new Error('Legal publication gate failed:\
-' + legalProblems.join('\
-'));
+  throw new Error('Legal publication gate failed:\\n' + legalProblems.join('\\n'));
 }
 
 const [repositoryLicense,publishedLicense,publishedNotice,licensePageHtml] = await Promise.all([
@@ -234,9 +231,7 @@ for (const htmlPath of htmlFiles) {
   if (/<form\b/i.test(html) && rel !== 'contacto/index.html') repeatedForms.push(rel);
 }
 if (repeatedForms.length) {
-  throw new Error('Documentation forms must be centralized in /contacto/:\
-' + repeatedForms.join('\
-'));
+  throw new Error('Documentation forms must be centralized in /contacto/:\\n' + repeatedForms.join('\\n'));
 }
 
 const questionnaireSlugs = [
@@ -251,9 +246,7 @@ for (const slug of questionnaireSlugs) {
   if (!(await exists(pkg))) missingQuestionnaireArtifacts.push('/examples/generated/questionnaire-' + slug + '.p2lrn');
 }
 if (missingQuestionnaireArtifacts.length) {
-  throw new Error('Questionnaire documentation/example gate failed:\
-' + missingQuestionnaireArtifacts.join('\
-'));
+  throw new Error('Questionnaire documentation/example gate failed:\\n' + missingQuestionnaireArtifacts.join('\\n'));
 }
 
 const cliHtmlPath = join(outputRoot,'docs','cli','index.html');
@@ -295,8 +288,7 @@ for (const path of docsFiles) {
   });
 }
 searchIndex.sort((a,b)=>a.title.localeCompare(b.title,'es'));
-await writeFile(join(outputRoot,'search-index.json'),JSON.stringify(searchIndex,null,2)+'
-');
+await writeFile(join(outputRoot,'search-index.json'),JSON.stringify(searchIndex,null,2)+'\n');
 
 async function exists(path) {
   try { return (await stat(path)).isFile(); }
@@ -323,9 +315,7 @@ for (const path of htmlFiles) {
     if (!(await exists(target))) broken.push(relative(outputRoot,path).replaceAll('\\','/') + ' -> ' + raw);
   }
 }
-if (broken.length) throw new Error('Documentation contains broken local links/assets:
-' + broken.slice(0,100).join('
-'));
+if (broken.length) throw new Error('Documentation contains broken local links/assets:\n' + broken.slice(0,100).join('\n'));
 
 console.log(JSON.stringify({
   ok:true,
