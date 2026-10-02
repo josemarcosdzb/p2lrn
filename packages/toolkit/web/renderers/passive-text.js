@@ -32,9 +32,9 @@ export function webEntrypointUrl(baseUrl, entrypoint) {
   return new URL(encodeURIComponent(name), base).href;
 }
 
-export async function render({container, bytes, representation, resolveResourceUrl, editable=false, commitEdit=null}) {
+export async function render({container, bytes, representation, resolveResourceUrl, editable=false, editOverride=null, commitEdit=null}) {
   const media = String(representation.mediaType ?? '').split(';', 1)[0].trim().toLowerCase();
-  const text = decoder.decode(bytes);
+  const text = typeof editOverride?.value === 'string' ? editOverride.value : decoder.decode(bytes);
   if (media === 'text/plain') {
     const pre = document.createElement('pre');
     pre.textContent = text;

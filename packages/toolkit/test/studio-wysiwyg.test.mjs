@@ -13,11 +13,14 @@ test('viewer Studio reuses the Player as an inline WYSIWYG editor',async()=>{
   ]);
   assert.match(player,/['"]editable['"]/);
   assert.match(player,/applyEditCommand/);
+  assert.match(player,/setEditDraft/);
+  assert.match(player,/shadowRoot\?\.activeElement/);
   assert.match(player,/p2lrn:edit/);
   assert.match(passive,/p2lrn-wysiwyg-surface/);
   assert.match(passive,/contentEditable='true'/);
   assert.match(viewer,/data-edit-command/);
   assert.match(viewer,/localStorage\.setItem/);
+  assert.match(viewer,/localStorage\.getItem/);
   assert.match(html,/data-studio-toolbar/);
   assert.doesNotMatch(viewer,/aulap2p/i);
 });

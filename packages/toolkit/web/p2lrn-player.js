@@ -415,6 +415,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     this._progressionLoadedKey = null;
     this._progressionButtons = new Map();
     this._progressionSaveQueue = Promise.resolve();
+    this._editDraft = new Map();
     this._onProgressionRuntimeEvent = (event) => { void this.#handleProgressionRuntimeEvent(event); };
     for (const type of ['p2lrn:rendered','p2lrn:score','p2lrn:statechange','p2lrn:complete']) {
       this.addEventListener(type, this._onProgressionRuntimeEvent);
@@ -445,7 +446,8 @@ export class P2LRNPlayerElement extends HTMLElementBase {
 
   applyEditCommand(command,value=null) {
     if (!this.editable) return false;
-    const editable=this.shadowRoot?.querySelector('[contenteditable="true"]');
+    const active=this.shadowRoot?.activeElement;
+    const editable=active?.matches?.('[contenteditable="true"]')?active:this.shadowRoot?.querySelector('.p2lrn-wysiwyg-surface[contenteditable="true"]');
     if (!editable) return false;
     editable.focus();
     try {
@@ -455,8 +457,25 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
+  setEditDraft(edits=[]) {
+    this._editDraft.clear();
+    for (const edit of Array.isArray(edits)?edits:[]) {
+      if (!edit?.kind) continue;
+      const key=[edit.kind,edit.entityId??'',edit.representationId??'',edit.path??''].join('|');
+      this._editDraft.set(key,{...edit});
+    }
+    if (this.isConnected && this._package) void this.#renderPackage();
+  }
+
+  #draftEdit(kind,{entityId='',representationId='',path=''}={}) {
+    return this._editDraft.get([kind,entityId,representationId,path].join('|')) ?? null;
+  }
+
   #emitEdit(detail) {
-    this.dispatchEvent(new CustomEvent('p2lrn:edit',{detail:Object.freeze({...detail}),bubbles:true,composed:true}));
+    const frozen=Object.freeze({...detail});
+    const key=[frozen.kind,frozen.entityId??'',frozen.representationId??'',frozen.path??''].join('|');
+    this._editDraft.set(key,{...frozen});
+    this.dispatchEvent(new CustomEvent('p2lrn:edit',{detail:frozen,bubbles:true,composed:true}));
   }
 
   async reload() {
@@ -639,7 +658,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
 
     const shell = this.#base();
     const head = document.createElement('div'); head.className = 'p2lrn-head';
-    const strong = document.createElement('strong'); strong.textContent = titleOf(root);
+    const strong = document.createElement('strong'); strong.textContent = this.#draftEdit('entity-title',{entityId:root.id})?.value ?? titleOf(root);
     if (this.editable) {
       strong.contentEditable='true';
       strong.spellcheck=true;
@@ -680,7 +699,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         const baseTitle = titleOf(entity);
         button.type = 'button'; button.className = `depth-${Math.min(depth, 3)}`;
         const titleSpan=document.createElement('span');
-        titleSpan.textContent=baseTitle;
+        titleSpan.textContent=this.#draftEdit('entity-title',{entityId:entity.id})?.value ?? baseTitle;
         if (this.editable) {
           titleSpan.contentEditable='true';
           titleSpan.spellcheck=true;
@@ -789,6 +808,8 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           context,
           runtimeBaseUrl: this.runtimeBaseUrl,
           editable: this.editable,
+          editOverride: this.#draftEdit('payload-html',{entityId:entity.id,representationId:rep.id,path:rep.location?.path??''})
+            ?? this.#draftEdit('payload-text',{entityId:entity.id,representationId:rep.id,path:rep.location?.path??''}),
           commitEdit: (edit) => this.#emitEdit({...edit,entityId:entity.id,resourceId:resource.id,representationId:rep.id}),
           resolveResourceUrl: (request) => this.#resolveResourceUrl({...request, representationId: rep.id}, context),
           renderActivity: async (childId, childStage) => {
