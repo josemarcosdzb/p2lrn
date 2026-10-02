@@ -6,6 +6,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const packages = [
   {name:'@p2lrn/player', path:'packages/player/package.json', firstParty:true},
   {name:'@p2lrn/toolkit', path:'packages/toolkit/package.json', firstParty:true},
+  {name:'@p2lrn/studio', path:'packages/studio/package.json', firstParty:true},
   {name:'@p2lrn/h5p-libraries', path:'packages/h5p-libraries/package.json', firstParty:false},
 ];
 

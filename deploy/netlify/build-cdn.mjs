@@ -1,14 +1,18 @@
+import {execFile} from 'node:child_process';
 import {cp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
+import {promisify} from 'node:util';
 import {join, resolve} from 'node:path';
 import {buildPlayerDistribution, H5P_STANDALONE_VERSION, THREE_VERSION, RAPIER3D_VERSION} from '../../packages/player/scripts/build-dist.mjs';
 import {cleanPlayerSourceSnapshot, preparePlayerSourceSnapshot} from '../../packages/player/scripts/prepare-source-snapshot.mjs';
 import {buildH5pLibraries, LUMI_H5P_LIBRARY_COMMIT} from '../../packages/h5p-libraries/scripts/build.mjs';
 
+const execFileAsync=promisify(execFile);
 const root = resolve(process.cwd());
 const outputRoot = join(root, '.netlify-cdn');
 const playerPackagePath = join(root, 'packages', 'player', 'package.json');
 const toolkitPackagePath = join(root, 'packages', 'toolkit', 'package.json');
 const h5pPackagePath = join(root, 'packages', 'h5p-libraries', 'package.json');
+const studioPackagePath = join(root, 'packages', 'studio', 'package.json');
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
@@ -30,11 +34,12 @@ function headerBlock(path, cacheControl, edgeCacheControl) {
 const playerPackage = await readJson(playerPackagePath);
 const toolkitPackage = await readJson(toolkitPackagePath);
 const h5pPackage = await readJson(h5pPackagePath);
+const studioPackage = await readJson(studioPackagePath);
 const version = playerPackage.version;
 
-if (toolkitPackage.version !== version || h5pPackage.version !== version) {
+if (toolkitPackage.version !== version || h5pPackage.version !== version || studioPackage.version !== version) {
   throw new Error(
-    `P2LRN npm versions must align before CDN build: player=${version}, toolkit=${toolkitPackage.version}, h5p-libraries=${h5pPackage.version}`,
+    `P2LRN npm versions must align before CDN build: player=${version}, toolkit=${toolkitPackage.version}, h5p-libraries=${h5pPackage.version}, studio=${studioPackage.version}`,
   );
 }
 
@@ -47,6 +52,11 @@ const playerBuild = await buildPlayerDistribution({output:versionedDist});
 await cp(preparedSource.output, versionedSource, {recursive:true, force:true});
 await cp(join(root,'LICENSE'), join(outputRoot,'LICENSE'), {force:true});
 await cp(join(root,'NOTICE.md'), join(outputRoot,'NOTICE.md'), {force:true});
+
+await execFileAsync(process.execPath,[join(root,'packages','studio','scripts','build-dist.mjs')],{cwd:root,maxBuffer:4*1024*1024});
+const studioPackageDist=join(root,'packages','studio','dist');
+await cp(studioPackageDist,join(outputRoot,'studio',version,'dist'),{recursive:true,force:true});
+await cp(studioPackageDist,join(outputRoot,'studio','current','dist'),{recursive:true,force:true});
 
 const h5pPackageDist = join(root, 'packages', 'h5p-libraries', 'dist');
 const h5pManifest = await buildH5pLibraries({output:h5pPackageDist});
@@ -75,6 +85,10 @@ const index = {
     toolkitVersion:toolkitPackage.version,
     h5pLibrariesPackage:'@p2lrn/h5p-libraries',
     h5pLibrariesVersion:h5pPackage.version,
+  studioVersion:studioPackage.version,
+    studioVersion:studioPackage.version,
+    studioPackage:'@p2lrn/studio',
+    studioVersion:studioPackage.version,
   },
   license:{
     id:'P2LRN-NCSL-1.0',
@@ -96,6 +110,15 @@ const index = {
     module:`/player/${version}/dist/${playerBuild.release.entrypoints.module}`,
     serviceWorker:`/player/${version}/dist/${playerBuild.release.entrypoints.serviceWorker}`,
     release:`/player/${version}/dist/release.json`,
+  },
+  studio:{
+    version,
+    versionedBasePath:`/studio/${version}/dist/`,
+    currentBasePath:'/studio/current/dist/',
+    classic:`/studio/${version}/dist/p2lrn-studio.js`,
+    module:`/studio/${version}/dist/p2lrn-studio.esm.js`,
+    npmPackage:'@p2lrn/studio',
+    defaultCoursePath:'course',
   },
   game3d:{
     renderer:'three',
@@ -161,6 +184,8 @@ headers += headerBlock(
   'public, s-maxage=31536000, immutable',
 );
 headers += headerBlock('/player/current/*', 'no-store', 'no-store');
+headers += headerBlock(`/studio/${version}/*`,'public, max-age=31536000, immutable','public, s-maxage=31536000, immutable');
+headers += headerBlock('/studio/current/*','no-store','no-store');
 
 const runtimeCsp = "default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";
 const executablePackageCsp = "default-src 'none'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";

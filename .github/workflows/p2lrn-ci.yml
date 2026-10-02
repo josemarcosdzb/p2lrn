@@ -64,6 +64,8 @@ jobs:
           node --check scripts/verify-license-integration.mjs
           node --check packages/player/scripts/prepare-source-snapshot.mjs
           node --check packages/player/scripts/build-dist.mjs
+          node --check packages/studio/scripts/build-dist.mjs
+          node --check packages/studio/server/index.mjs
           node --check deploy/netlify/build-cdn.mjs
           node --check deploy/netlify/build-site.mjs
 
@@ -199,6 +201,8 @@ jobs:
             ".netlify-cdn/player/$VERSION/dist/vendor/three.core.js",
             ".netlify-cdn/player/$VERSION/dist/vendor/rapier3d.mjs",
             ".netlify-cdn/player/$VERSION/dist/vendor/game-3d-runtime.json",
+            ".netlify-cdn/studio/$VERSION/dist/p2lrn-studio.js",
+            ".netlify-cdn/studio/$VERSION/dist/p2lrn-studio.esm.js",
             ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.Crossword-0.5/library.json",
             ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.BranchingScenario-1.8/library.json"
           )

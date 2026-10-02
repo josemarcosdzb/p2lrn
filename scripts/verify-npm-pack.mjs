@@ -102,22 +102,25 @@ await mkdir(installRoot, {recursive:true});
 const toolkitPackage = JSON.parse(await readFile(join(root,'packages/toolkit/package.json'),'utf8'));
 const playerPackage = JSON.parse(await readFile(join(root,'packages/player/package.json'),'utf8'));
 const h5pPackage = JSON.parse(await readFile(join(root,'packages/h5p-libraries/package.json'),'utf8'));
-if (toolkitPackage.version !== playerPackage.version || h5pPackage.version !== playerPackage.version) {
-  throw new Error(`npm package versions differ: player=${playerPackage.version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}`);
+const studioPackage = JSON.parse(await readFile(join(root,'packages/studio/package.json'),'utf8'));
+if (toolkitPackage.version !== playerPackage.version || h5pPackage.version !== playerPackage.version || studioPackage.version !== playerPackage.version) {
+  throw new Error(`npm package versions differ: player=${playerPackage.version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}, studio=${studioPackage.version}`);
 }
 assertManifestInstallSafety(toolkitPackage,'@p2lrn/toolkit');
 assertManifestInstallSafety(playerPackage,'@p2lrn/player');
 assertManifestInstallSafety(h5pPackage,'@p2lrn/h5p-libraries');
+assertManifestInstallSafety(studioPackage,'@p2lrn/studio');
 
 await runNpm(['install','--ignore-scripts','--no-audit','--no-fund'], {cwd:join(root,'packages/toolkit')});
 
 const toolkitTgz = await pack('packages/toolkit');
 const h5pTgz = await pack('packages/h5p-libraries');
 const playerTgz = await pack('packages/player');
+const studioTgz = await pack('packages/studio');
 
 await runNpm(['init','-y'], {cwd:installRoot});
 await runNpm(
-  ['install','--ignore-scripts','--no-audit','--no-fund', toolkitTgz, h5pTgz, playerTgz],
+  ['install','--ignore-scripts','--no-audit','--no-fund', toolkitTgz, h5pTgz, playerTgz, studioTgz],
   {cwd:installRoot},
 );
 await runNpm(['audit','--omit=dev','--audit-level=high'], {cwd:installRoot});
@@ -125,6 +128,7 @@ await runNpm(['audit','--omit=dev','--audit-level=high'], {cwd:installRoot});
 const toolkitRoot = join(installRoot,'node_modules','@p2lrn','toolkit');
 const playerRoot = join(installRoot,'node_modules','@p2lrn','player');
 const h5pRoot = join(installRoot,'node_modules','@p2lrn','h5p-libraries');
+const studioRoot = join(installRoot,'node_modules','@p2lrn','studio');
 
 for (const path of [
   join(playerRoot,'source','SOURCE-MANIFEST.json'),
@@ -158,7 +162,7 @@ await assertFile(join(playerRoot,'source','index.html'));
 const rootLicenseText = await readFile(join(root,'LICENSE'),'utf8');
 const rootNoticeText = await readFile(join(root,'NOTICE.md'),'utf8');
 
-for (const packageRoot of [toolkitRoot, playerRoot]) {
+for (const packageRoot of [toolkitRoot, playerRoot, studioRoot]) {
   await assertFile(join(packageRoot,'LICENSE'));
   await assertFile(join(packageRoot,'NOTICE.md'));
 
@@ -191,6 +195,11 @@ for (const path of [
   join(h5pRoot,'dist','index.json'),
   join(h5pRoot,'dist','H5P.Crossword-0.5','library.json'),
   join(h5pRoot,'dist','H5P.BranchingScenario-1.8','library.json'),
+  join(studioRoot,'dist','p2lrn-studio.js'),
+  join(studioRoot,'dist','p2lrn-studio.esm.js'),
+  join(studioRoot,'dist','runtime','authoring-document.js'),
+  join(studioRoot,'dist','runtime','package-export.js'),
+  join(studioRoot,'server','index.mjs'),
 ]) {
   await assertFile(path);
 }
@@ -208,6 +217,8 @@ if (catalog.packageVersion !== h5pPackage.version || catalog.libraryCount !== 14
 
 await run(node, ['--check', join(playerRoot,'dist','p2lrn.js')]);
 await run(node, ['--check', join(playerRoot,'dist','runtime-host','h5p-host.js')]);
+await run(node, ['--check', join(studioRoot,'dist','p2lrn-studio.esm.js')]);
+await run(node, ['--check', join(studioRoot,'server','index.mjs')]);
 await run(node, [join(toolkitRoot,'dist','cli','main.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','tools','multipart.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','cli','document-reader.js'),'--help']);
@@ -268,11 +279,13 @@ console.log(JSON.stringify({
     toolkit:toolkitTgz,
     player:playerTgz,
     h5pLibraries:h5pTgz,
+    studio:studioTgz,
   },
   installed:{
     toolkit:true,
     player:true,
     h5pLibraries:true,
+    studio:true,
     documentReaderSubpath:'@p2lrn/toolkit/document-reader',
   },
   h5pLibraryCount:catalog.libraryCount,
