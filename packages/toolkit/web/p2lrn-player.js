@@ -394,7 +394,7 @@ const HTMLElementBase = globalThis.HTMLElement ?? class {};
 export class P2LRNPlayerElement extends HTMLElementBase {
   static get p2lrnVersion() { return P2LRN_WEB_SDK_VERSION; }
   static get p2rlnVersion() { return P2LRN_WEB_SDK_VERSION; }
-  static get observedAttributes() { return ['src', 'node', 'renderer', 'runtime-base-url']; }
+  static get observedAttributes() { return ['src', 'node', 'renderer', 'runtime-base-url', 'editable']; }
 
   constructor() {
     super();
@@ -440,6 +440,24 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     else this.setAttribute('runtime-base-url', String(value));
   }
   get runtimeBaseUrl() { return this.getAttribute('runtime-base-url') || getRuntimeHostConfig().baseUrl; }
+  set editable(value) { if (value) this.setAttribute('editable',''); else this.removeAttribute('editable'); }
+  get editable() { return this.hasAttribute('editable'); }
+
+  applyEditCommand(command,value=null) {
+    if (!this.editable) return false;
+    const editable=this.shadowRoot?.querySelector('[contenteditable="true"]');
+    if (!editable) return false;
+    editable.focus();
+    try {
+      return document.execCommand(String(command),false,value==null?null:String(value));
+    } catch {
+      return false;
+    }
+  }
+
+  #emitEdit(detail) {
+    this.dispatchEvent(new CustomEvent('p2lrn:edit',{detail:Object.freeze({...detail}),bubbles:true,composed:true}));
+  }
 
   async reload() {
     const src = this.getAttribute('src');
@@ -622,6 +640,13 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const shell = this.#base();
     const head = document.createElement('div'); head.className = 'p2lrn-head';
     const strong = document.createElement('strong'); strong.textContent = titleOf(root);
+    if (this.editable) {
+      strong.contentEditable='true';
+      strong.spellcheck=true;
+      strong.dataset.p2lrnEditableTitle=root.id;
+      strong.setAttribute('aria-label','Editar título');
+      strong.addEventListener('input',()=>this.#emitEdit({kind:'entity-title',entityId:root.id,language:'es',value:strong.textContent??''}));
+    }
     const status = document.createElement('span');
     status.className = 'p2lrn-status';
     const integrityLabel = pkg.verification?.mode === 'lazy' ? 'Manifest/grafo verificados · payload bajo demanda' : 'Integridad válida';
@@ -653,8 +678,19 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       if (entity.type !== 'course') {
         const button = document.createElement('button');
         const baseTitle = titleOf(entity);
-        button.type = 'button'; button.className = `depth-${Math.min(depth, 3)}`; button.textContent = baseTitle;
-        button.disabled = entity.type !== 'activity';
+        button.type = 'button'; button.className = `depth-${Math.min(depth, 3)}`;
+        const titleSpan=document.createElement('span');
+        titleSpan.textContent=baseTitle;
+        if (this.editable) {
+          titleSpan.contentEditable='true';
+          titleSpan.spellcheck=true;
+          titleSpan.dataset.p2lrnEditableTitle=entity.id;
+          titleSpan.addEventListener('pointerdown',(event)=>event.stopPropagation());
+          titleSpan.addEventListener('click',(event)=>event.stopPropagation());
+          titleSpan.addEventListener('input',()=>this.#emitEdit({kind:'entity-title',entityId:entity.id,language:'es',value:titleSpan.textContent??''}));
+        }
+        button.append(titleSpan);
+        button.disabled = !this.editable && entity.type !== 'activity';
         this._progressionButtons.set(entity.id, {button, entity, baseTitle});
         if (entity.type === 'activity') button.addEventListener('click', async () => {
           if (this._progressionModel?.isLocked(entity.id, this._progressionState)) {
@@ -752,6 +788,8 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           rendererRegistry: defaultRendererRegistry,
           context,
           runtimeBaseUrl: this.runtimeBaseUrl,
+          editable: this.editable,
+          commitEdit: (edit) => this.#emitEdit({...edit,entityId:entity.id,resourceId:resource.id,representationId:rep.id}),
           resolveResourceUrl: (request) => this.#resolveResourceUrl({...request, representationId: rep.id}, context),
           renderActivity: async (childId, childStage) => {
             const child = this._package.entities.get(String(childId));

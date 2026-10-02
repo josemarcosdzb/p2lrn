@@ -32,12 +32,19 @@ export function webEntrypointUrl(baseUrl, entrypoint) {
   return new URL(encodeURIComponent(name), base).href;
 }
 
-export async function render({container, bytes, representation, resolveResourceUrl}) {
+export async function render({container, bytes, representation, resolveResourceUrl, editable=false, commitEdit=null}) {
   const media = String(representation.mediaType ?? '').split(';', 1)[0].trim().toLowerCase();
   const text = decoder.decode(bytes);
   if (media === 'text/plain') {
     const pre = document.createElement('pre');
     pre.textContent = text;
+    if (editable) {
+      pre.contentEditable='true';
+      pre.spellcheck=true;
+      pre.classList.add('p2lrn-wysiwyg-surface');
+      pre.setAttribute('aria-label','Editar contenido de texto');
+      pre.addEventListener('input',()=>commitEdit?.({kind:'payload-text',path:representation.location?.path??null,mediaType:media,value:pre.textContent??''}));
+    }
     container.append(pre);
     return {destroy() { container.replaceChildren(); }};
   }
@@ -64,6 +71,36 @@ export async function render({container, bytes, representation, resolveResourceU
         }
         verifiedEntrypointUrl = webEntrypointUrl(resolved.url, mapping.entrypoint);
       }
+    }
+
+    if (editable && !verifiedEntrypointUrl) {
+      const parser=new DOMParser();
+      const source=parser.parseFromString(text,'text/html');
+      source.querySelectorAll('script,iframe,object,embed,form,meta[http-equiv],base').forEach((node)=>node.remove());
+      source.querySelectorAll('*').forEach((node)=>{
+        for(const attribute of [...node.attributes]){
+          const name=attribute.name.toLowerCase();
+          const value=attribute.value.trim().toLowerCase();
+          if(name.startsWith('on')||((name==='href'||name==='src')&&value.startsWith('javascript:')))node.removeAttribute(attribute.name);
+        }
+      });
+      const surface=document.createElement('article');
+      surface.className='p2lrn-wysiwyg-surface';
+      surface.contentEditable='true';
+      surface.spellcheck=true;
+      surface.setAttribute('aria-label','Editar contenido HTML');
+      surface.innerHTML=source.body.innerHTML;
+      surface.addEventListener('input',()=>{
+        source.body.innerHTML=surface.innerHTML;
+        commitEdit?.({
+          kind:'payload-html',
+          path:representation.location?.path??null,
+          mediaType:media,
+          value:'<!doctype html>\n'+source.documentElement.outerHTML,
+        });
+      });
+      container.append(surface);
+      return {destroy(){container.replaceChildren();}};
     }
 
     const iframe = document.createElement('iframe');

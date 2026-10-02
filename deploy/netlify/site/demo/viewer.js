@@ -14,6 +14,18 @@
   const label=document.querySelector('[data-package-label]');
   const menu=document.querySelector('[data-menu]');
   const nav=document.getElementById('nav');
+  const editModeButton=document.querySelector('[data-edit-mode]');
+  const studioToolbar=document.querySelector('[data-studio-toolbar]');
+  const studioState=document.querySelector('[data-studio-state]');
+  const formatBlock=document.querySelector('[data-format-block]');
+  const foreColor=document.querySelector('[data-fore-color]');
+  const backColor=document.querySelector('[data-back-color]');
+  const saveDraft=document.querySelector('[data-save-draft]');
+  const clearDraft=document.querySelector('[data-clear-draft]');
+  const pendingEdits=new Map();
+  let editing=false;
+  let currentPackageKey='';
+
   const fields={package:document.querySelector('[data-inspect-package]'),format:document.querySelector('[data-inspect-format]'),version:document.querySelector('[data-inspect-version]'),integrity:document.querySelector('[data-inspect-integrity]'),transport:document.querySelector('[data-inspect-transport]'),entrypoints:document.querySelector('[data-inspect-entrypoints]'),profiles:document.querySelector('[data-inspect-profiles]'),renderer:document.querySelector('[data-inspect-renderer]'),entity:document.querySelector('[data-inspect-entity]'),representation:document.querySelector('[data-inspect-representation]')};
   const params=new URLSearchParams(location.search);
   const initialSrc=params.get('src');
@@ -59,7 +71,26 @@
   function populateCatalog(data){catalog=Array.isArray(data?.examples)?data.examples:[];sample.replaceChildren();const groups=new Map();for(const item of catalog){const key=categoryLabel(item.category);if(!groups.has(key)){const group=document.createElement('optgroup');group.label=key;groups.set(key,group);sample.append(group);}const option=document.createElement('option');option.value=item.url;option.textContent=item.title||item.url;option.dataset.renderer=item.rendererId||'';groups.get(key).append(option);}}
   function selectCatalogEntry(src){let normalized;try{normalized=normalizeSource(src);}catch{return null;}const item=catalog.find((entry)=>{try{return normalizeSource(entry.url)===normalized;}catch{return false;}});if(item){sample.value=item.url;if(!rendererSelect.value&&item.rendererId)rendererSelect.value=item.rendererId;}return item;}
 
-  async function inspect(src){setField('integrity','verificando…');const api=await window.P2LRNReady;const pkg=await api.openPackageURL(src);const manifest=pkg.manifest||{};setField('package',manifest.packageId||new URL(src).pathname.split('/').filter(Boolean).at(-1));setField('format',manifest.format||'—');setField('version',manifest.formatVersion||'—');setField('integrity',manifest.integrity?.contentRoot?'verificada':'sin contentRoot');setField('transport',pkg.verification?.transport||'—');setField('entrypoints',Array.isArray(manifest.entrypoints)?manifest.entrypoints.length:0);setField('profiles',Array.isArray(manifest.profiles)?manifest.profiles.map((profile)=>profile.id).join(' · '):'—');write('inspect',{packageId:manifest.packageId,format:manifest.format,formatVersion:manifest.formatVersion,contentRoot:manifest.integrity?.contentRoot,transport:pkg.verification?.transport,profiles:manifest.profiles?.map((profile)=>profile.id)});}
+  const draftStorageKey=()=>currentPackageKey?`p2lrn-studio:${currentPackageKey}`:null;
+  const updateStudioState=()=>{
+    if(!studioState)return;
+    studioState.textContent=pendingEdits.size?`${pendingEdits.size} cambio${pendingEdits.size===1?'':'s'} sin exportar`:'Sin cambios';
+  };
+  const setEditing=(value)=>{
+    editing=Boolean(value);
+    player.toggleAttribute('editable',editing);
+    editModeButton?.setAttribute('aria-pressed',String(editing));
+    if(editModeButton)editModeButton.textContent=editing?'Vista alumno':'Editar';
+    if(studioToolbar)studioToolbar.hidden=!editing;
+    write('studio-mode',{editing});
+  };
+  const applyCommand=(command,value=null)=>{
+    if(!editing)return;
+    const ok=player.applyEditCommand?.(command,value);
+    if(!ok)write('studio-command-unavailable',{command});
+  };
+
+  async function inspect(src){setField('integrity','verificando…');const api=await window.P2LRNReady;const pkg=await api.openPackageURL(src);const manifest=pkg.manifest||{};setField('package',manifest.packageId||new URL(src).pathname.split('/').filter(Boolean).at(-1));setField('format',manifest.format||'—');setField('version',manifest.formatVersion||'—');setField('integrity',manifest.integrity?.contentRoot?'verificada':'sin contentRoot');setField('transport',pkg.verification?.transport||'—');setField('entrypoints',Array.isArray(manifest.entrypoints)?manifest.entrypoints.length:0);setField('profiles',Array.isArray(manifest.profiles)?manifest.profiles.map((profile)=>profile.id).join(' · '):'—');currentPackageKey=manifest.integrity?.contentRoot||manifest.packageId||src;pendingEdits.clear();updateStudioState();write('inspect',{packageId:manifest.packageId,format:manifest.format,formatVersion:manifest.formatVersion,contentRoot:manifest.integrity?.contentRoot,transport:pkg.verification?.transport,profiles:manifest.profiles?.map((profile)=>profile.id)});}
   async function load(){let src;try{src=normalizeSource(urlInput.value);}catch(error){setState('ERROR',error.message);write('url-error',{message:error.message});return;}urlInput.value=src;const renderer=rendererSelect.value.trim();if(renderer)player.setAttribute('renderer',renderer);else player.removeAttribute('renderer');setState('LOADING','Cargando paquete');label.textContent=new URL(src).pathname.split('/').filter(Boolean).at(-1)||src;setField('renderer',renderer||'automático');setField('entity','—');setField('representation','—');write('load',{src,renderer:renderer||null});try{await inspect(src);player.setAttribute('src',src);const next=new URL(location.href);next.searchParams.set('src',src);if(renderer)next.searchParams.set('renderer',renderer);else next.searchParams.delete('renderer');history.replaceState(null,'',next);selectCatalogEntry(src);}catch(error){setState('ERROR','No se pudo abrir o verificar el paquete');write('load-error',{message:error?.message||String(error)});}}
 
   sample?.addEventListener('change',()=>{const option=sample.selectedOptions[0];urlInput.value=new URL(sample.value,location.href).href;rendererSelect.value=option?.dataset.renderer||'';void load();});
@@ -70,6 +101,34 @@
   clearButton?.addEventListener('click',()=>{records=[];renderLog();});
   pauseButton?.addEventListener('click',()=>{paused=!paused;pauseButton.textContent=paused?'Reanudar':'Pausar';});
   copyLogButton?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(log.textContent||'');const before=copyLogButton.textContent;copyLogButton.textContent='Copiado';setTimeout(()=>{copyLogButton.textContent=before;},1200);}catch{}});
+
+  editModeButton?.addEventListener('click',()=>setEditing(!editing));
+  document.querySelectorAll('[data-edit-command]').forEach((button)=>button.addEventListener('click',()=>applyCommand(button.dataset.editCommand)));
+  formatBlock?.addEventListener('change',()=>applyCommand('formatBlock',formatBlock.value));
+  foreColor?.addEventListener('input',()=>applyCommand('foreColor',foreColor.value));
+  backColor?.addEventListener('input',()=>applyCommand('hiliteColor',backColor.value));
+  player.addEventListener('p2lrn:edit',(event)=>{
+    const detail=event.detail??{};
+    const key=[detail.kind,detail.entityId??'',detail.representationId??'',detail.path??''].join('|');
+    pendingEdits.set(key,{...detail,updatedAt:new Date().toISOString()});
+    updateStudioState();
+    write('p2lrn:edit',{kind:detail.kind,entityId:detail.entityId,path:detail.path});
+  });
+  saveDraft?.addEventListener('click',()=>{
+    const key=draftStorageKey();
+    if(!key)return;
+    localStorage.setItem(key,JSON.stringify({version:1,packageKey:currentPackageKey,edits:[...pendingEdits.values()],savedAt:new Date().toISOString()}));
+    studioState.textContent=pendingEdits.size?`${pendingEdits.size} cambio${pendingEdits.size===1?'':'s'} guardado${pendingEdits.size===1?'':'s'} en este navegador`:'Sin cambios';
+    write('studio-draft-saved',{changes:pendingEdits.size});
+  });
+  clearDraft?.addEventListener('click',()=>{
+    const key=draftStorageKey();
+    if(key)localStorage.removeItem(key);
+    pendingEdits.clear();
+    updateStudioState();
+    void player.reload?.();
+    write('studio-draft-cleared');
+  });
 
   for(const name of ['p2lrn:ready','p2lrn:rendered','p2lrn:activityready','p2lrn:xapi','p2lrn:score','p2lrn:statechange','p2lrn:complete','p2lrn:progressionchange','p2lrn:error']){player.addEventListener(name,(event)=>{write(name,event.detail);if(name==='p2lrn:ready')setState('READY','Player preparado');if(name==='p2lrn:rendered'){setState('RENDERED','Contenido renderizado');setField('renderer',event.detail?.rendererId);setField('entity',event.detail?.entityId||event.detail?.context?.entityId);setField('representation',event.detail?.representationId);}if(name==='p2lrn:error')setState('ERROR','Error de reproducción');});}
 
