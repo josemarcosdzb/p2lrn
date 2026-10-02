@@ -143,6 +143,8 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
           node --check packages/player/scripts/build-dist.mjs
+          node --check packages/studio/scripts/build-dist.mjs
+          node --check packages/studio/server/index.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check packages/h5p-libraries/scripts/build.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
