@@ -10,7 +10,8 @@ await import('./build-cdn.mjs');
 const siteRoot = join(root,'deploy','netlify','site');
 const outputRoot = join(root,'.netlify-cdn');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
-await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));\nawait cp(join(root,'packages','toolkit','web','studio'),join(outputRoot,'studio','runtime'),{recursive:true,force:true});
+await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));
+await cp(join(root,'packages','toolkit','web','studio'),join(outputRoot,'studio','runtime'),{recursive:true,force:true});
 
 async function walk(dir) {
   const out = [];
@@ -101,7 +102,8 @@ const catalog = {
   version:'1',
   examples:[...canonicalEntries,...generatedEntries],
 };
-await writeFile(join(examplesOutput,'catalog.json'),JSON.stringify(catalog,null,2)+'\n');
+await writeFile(join(examplesOutput,'catalog.json'),JSON.stringify(catalog,null,2)+'
+');
 
 function stripTags(value) {
   return String(value ?? '')
@@ -170,7 +172,9 @@ for (const [slug,expectedTitle] of requiredLegalRoutes) {
   if (forbiddenLegalPlaceholders.test(html)) legalProblems.push('/' + slug + '/ placeholder');
 }
 if (legalProblems.length) {
-  throw new Error('Legal publication gate failed:\\n' + legalProblems.join('\\n'));
+  throw new Error('Legal publication gate failed:\
+' + legalProblems.join('\
+'));
 }
 
 const [repositoryLicense,publishedLicense,publishedNotice,licensePageHtml] = await Promise.all([
@@ -230,7 +234,9 @@ for (const htmlPath of htmlFiles) {
   if (/<form\b/i.test(html) && rel !== 'contacto/index.html') repeatedForms.push(rel);
 }
 if (repeatedForms.length) {
-  throw new Error('Documentation forms must be centralized in /contacto/:\\n' + repeatedForms.join('\\n'));
+  throw new Error('Documentation forms must be centralized in /contacto/:\
+' + repeatedForms.join('\
+'));
 }
 
 const questionnaireSlugs = [
@@ -245,7 +251,9 @@ for (const slug of questionnaireSlugs) {
   if (!(await exists(pkg))) missingQuestionnaireArtifacts.push('/examples/generated/questionnaire-' + slug + '.p2lrn');
 }
 if (missingQuestionnaireArtifacts.length) {
-  throw new Error('Questionnaire documentation/example gate failed:\\n' + missingQuestionnaireArtifacts.join('\\n'));
+  throw new Error('Questionnaire documentation/example gate failed:\
+' + missingQuestionnaireArtifacts.join('\
+'));
 }
 
 const cliHtmlPath = join(outputRoot,'docs','cli','index.html');
@@ -287,7 +295,8 @@ for (const path of docsFiles) {
   });
 }
 searchIndex.sort((a,b)=>a.title.localeCompare(b.title,'es'));
-await writeFile(join(outputRoot,'search-index.json'),JSON.stringify(searchIndex,null,2)+'\n');
+await writeFile(join(outputRoot,'search-index.json'),JSON.stringify(searchIndex,null,2)+'
+');
 
 async function exists(path) {
   try { return (await stat(path)).isFile(); }
@@ -314,7 +323,9 @@ for (const path of htmlFiles) {
     if (!(await exists(target))) broken.push(relative(outputRoot,path).replaceAll('\\','/') + ' -> ' + raw);
   }
 }
-if (broken.length) throw new Error('Documentation contains broken local links/assets:\n' + broken.slice(0,100).join('\n'));
+if (broken.length) throw new Error('Documentation contains broken local links/assets:
+' + broken.slice(0,100).join('
+'));
 
 console.log(JSON.stringify({
   ok:true,
