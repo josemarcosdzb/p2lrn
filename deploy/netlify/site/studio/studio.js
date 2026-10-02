@@ -1,5 +1,6 @@
 import {P2LRNStudioDocument} from './runtime/authoring-document.js';
 import {exportP2LRNPackage} from './runtime/package-export.js';
+import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
 
 const fileInput=document.querySelector('[data-file]');
 const urlInput=document.querySelector('[data-url]');
@@ -19,6 +20,8 @@ const exportButton=document.querySelector('[data-export]');
 const blockSelect=document.querySelector('[data-block]');
 const foreColor=document.querySelector('[data-fore-color]');
 const backColor=document.querySelector('[data-back-color]');
+const recoverDraftButton=document.querySelector('[data-recover-draft]');
+const clearDraftButton=document.querySelector('[data-clear-draft]');
 
 let studio=null;
 let selectedId=null;
@@ -26,10 +29,30 @@ let sourceObjectUrl=null;
 let previewObjectUrl=null;
 let activeEditable=null;
 let mode='edit';
+let autosaveTimer=null;
+let draftMetadata=null;
 
 const titleOf=(entity)=>studio?.title(entity.id)??entity.id;
 const setStatus=(value)=>{status.textContent=value;};
 const updateChanges=()=>{if(!studio){changeCount.textContent='Sin cambios';return;}changeCount.textContent=studio.changeCount?`${studio.changeCount} cambio${studio.changeCount===1?'':'s'}`:'Sin cambios';};
+function scheduleAutosave(){
+  if(!studio)return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer=setTimeout(()=>{void persistDraft().catch((error)=>setStatus('No se pudo guardar el borrador local: '+error.message));},1200);
+}
+async function persistDraft(){
+  if(!studio)return;
+  const exported=await exportP2LRNPackage(studio);
+  draftMetadata=await saveLatestDraft({
+    name:exported.filename,
+    bytes:exported.bytes,
+    selectedId,
+    contentRoot:exported.manifest.integrity?.contentRoot??null,
+  });
+  if(recoverDraftButton){recoverDraftButton.hidden=false;recoverDraftButton.textContent='Recuperar borrador local';}
+  if(clearDraftButton)clearDraftButton.hidden=false;
+  setStatus('Borrador guardado en este navegador');
+}
 
 function revokeUrls(){
   if(sourceObjectUrl){URL.revokeObjectURL(sourceObjectUrl);sourceObjectUrl=null;}
@@ -54,7 +77,7 @@ function markActive(node){
 function bindEditable(node,onInput){
   node.contentEditable='true';node.spellcheck=true;
   node.addEventListener('focus',()=>markActive(node));
-  node.addEventListener('input',()=>{onInput();updateChanges();});
+  node.addEventListener('input',()=>{onInput();updateChanges();scheduleAutosave();});
 }
 
 function renderTree(){
@@ -146,9 +169,9 @@ async function setMode(next){
   editButton.classList.toggle('primary',!preview);previewButton.classList.toggle('primary',preview);
   if(preview)await refreshPreview();else setStatus('Editando copia local');
 }
-async function openPackage(pkg,{name,url}){
+async function openPackage(pkg,{name,url,recoveredSelectedId=null}){
   studio=new P2LRNStudioDocument(pkg,{sourceName:name,sourceUrl:url});
-  selectedId=studio.rootId;
+  selectedId=recoveredSelectedId&&studio.entity(recoveredSelectedId)?recoveredSelectedId:studio.rootId;
   packageName.textContent=name;
   toolbar.hidden=false;workspace.hidden=false;
   renderTree();await renderEditor();updateChanges();await setMode('edit');
@@ -177,6 +200,36 @@ function command(name,value=null){
   document.execCommand(name,false,value);
   activeEditable.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'format'+name}));
 }
+async function recoverLatestDraft(){
+  const record=await loadLatestDraft();
+  if(!record?.bytes)return;
+  revokeUrls();
+  const bytes=record.bytes instanceof ArrayBuffer?record.bytes:record.bytes.buffer;
+  const api=await window.P2LRNReady;
+  const pkg=await api.openPackageBytes(bytes);
+  sourceObjectUrl=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.p2lrn+zip'}));
+  draftMetadata=record;
+  await openPackage(pkg,{name:record.name||'borrador.p2lrn',url:sourceObjectUrl,recoveredSelectedId:record.selectedId});
+  setStatus('Borrador local recuperado');
+}
+async function refreshDraftAvailability(){
+  try{
+    const record=await loadLatestDraft();
+    draftMetadata=record;
+    if(recoverDraftButton){recoverDraftButton.hidden=!record;recoverDraftButton.textContent=record?'Recuperar borrador local':'Recuperar borrador local';}
+    if(clearDraftButton)clearDraftButton.hidden=!record;
+  }catch{
+    if(recoverDraftButton)recoverDraftButton.hidden=true;
+    if(clearDraftButton)clearDraftButton.hidden=true;
+  }
+}
+async function discardLocalDraft(){
+  await clearLatestDraft();
+  draftMetadata=null;
+  if(recoverDraftButton)recoverDraftButton.hidden=true;
+  if(clearDraftButton)clearDraftButton.hidden=true;
+  setStatus('Borrador local eliminado');
+}
 async function exportPackage(){
   if(!studio)return;
   setStatus('Construyendo paquete…');
@@ -197,4 +250,7 @@ blockSelect.addEventListener('change',()=>command('formatBlock',blockSelect.valu
 foreColor.addEventListener('input',()=>command('foreColor',foreColor.value));
 backColor.addEventListener('input',()=>command('hiliteColor',backColor.value));
 exportButton.addEventListener('click',()=>void exportPackage().catch((error)=>setStatus(error.message)));
+recoverDraftButton?.addEventListener('click',()=>void recoverLatestDraft().catch((error)=>setStatus(error.message)));
+clearDraftButton?.addEventListener('click',()=>void discardLocalDraft().catch((error)=>setStatus(error.message)));
+void refreshDraftAvailability();
 window.addEventListener('beforeunload',revokeUrls);
