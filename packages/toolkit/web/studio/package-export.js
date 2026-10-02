@@ -51,7 +51,7 @@ async function descriptor(path,bytes,mediaType,schema){
   return out;
 }
 function normalizedIntegrityInput(manifest){
-  const compare=(a,b)=>String(a??'').localeCompare(String(b??''),'en');
+  const compare=(a,b)=>{const x=String(a??''),y=String(b??'');return x<y?-1:x>y?1:0;};
   const tuple=(a,b,keys)=>{for(const key of keys){const value=compare(a[key],b[key]);if(value)return value;}return 0;};
   return {
     format:manifest.format,
@@ -109,7 +109,7 @@ export async function exportP2LRNPackage(document){
     payloads.set(original.path,bytes);
     files.push(await descriptor(original.path,bytes,original.mediaType,original.schema));
   }
-  files.sort((a,b)=>a.path.localeCompare(b.path,'en'));
+  files.sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);
   manifest.files=files;
   manifest.integrity={algorithm:'sha256',contentRoot:await sha256(encoder.encode(canonicalize(normalizedIntegrityInput(manifest))))};
   manifest.packageId='urn:uuid:'+crypto.randomUUID();
