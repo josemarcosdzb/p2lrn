@@ -1,0 +1,56 @@
+{
+  "name": "@p2lrn/studio",
+  "version": "0.5.0-alpha.10",
+  "description": "Embeddable P2LRN visual authoring Studio for browser and server-backed course persistence",
+  "type": "module",
+  "sideEffects": true,
+  "main": "./dist/p2lrn-studio.esm.js",
+  "module": "./dist/p2lrn-studio.esm.js",
+  "browser": "./dist/p2lrn-studio.esm.js",
+  "unpkg": "./dist/p2lrn-studio.js",
+  "jsdelivr": "./dist/p2lrn-studio.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/p2lrn-studio.esm.js",
+      "default": "./dist/p2lrn-studio.esm.js"
+    },
+    "./loader": "./dist/p2lrn-studio.js",
+    "./server": {
+      "types": "./types/server.d.ts",
+      "import": "./server/index.mjs",
+      "default": "./server/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/",
+    "server/",
+    "types/",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md",
+    "scripts/",
+    "src/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "@p2lrn/player": "0.5.0-alpha.10"
+  },
+  "scripts": {
+    "build:dist": "node ./scripts/build-dist.mjs",
+    "prepack": "npm run build:dist",
+    "prepublishOnly": "node ../../scripts/check-publish-ready.mjs"
+  },
+  "keywords": ["p2lrn","studio","authoring","wysiwyg","web-component"],
+  "license": "SEE LICENSE IN LICENSE",
+  "publishConfig": {"access":"public"},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josemarcosfrodo/p2lrn.git",
+    "directory": "packages/studio"
+  }
+}
