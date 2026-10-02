@@ -1,4 +1,11 @@
-import {openP2LRNPackageBytes,openP2LRNPackageURL} from '@p2lrn/player';
+async function playerApi(){
+  if(globalThis.P2LRNReady)return globalThis.P2LRNReady;
+  const mod=await import('@p2lrn/player');
+  return {
+    openPackageBytes:mod.openP2LRNPackageBytes,
+    openPackageURL:mod.openP2LRNPackageURL,
+  };
+}
 import {P2LRNStudioDocument} from './runtime/authoring-document.js';
 import {exportP2LRNPackage} from './runtime/package-export.js';
 
@@ -100,14 +107,14 @@ export class P2LRNStudioElement extends HTMLElement{
   async openFile(file){
     this.#revoke();
     const bytes=await file.arrayBuffer();
-    const pkg=await openP2LRNPackageBytes(bytes);
+    const pkg=await (await playerApi()).openPackageBytes(bytes);
     this.#sourceObjectUrl=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.p2lrn+zip'}));
     await this.#open(pkg,{name:file.name||'course.p2lrn',url:this.#sourceObjectUrl});
   }
   async openUrl(url){
     this.#revoke();
     const resolved=new URL(url,document.baseURI).href;
-    const pkg=await openP2LRNPackageURL(resolved);
+    const pkg=await (await playerApi()).openPackageURL(resolved);
     await this.#open(pkg,{name:filenameFromUrl(resolved),url:resolved});
   }
   async #open(pkg,{name,url}){
