@@ -6,29 +6,7 @@
 <label>Ejemplo<select data-sample><option value="/examples/canonical/creator-course.p2lrn">Cargando catálogo…</option></select></label>
 <label>Renderer<select data-renderer><option value="">Automático</option><option value="https://p2lrn.org/renderer/questionnaire/standard">Questionnaire estándar</option><option value="https://p2lrn.org/renderer/questionnaire/memory">Memoria</option><option value="https://p2lrn.org/renderer/questionnaire/matching">Emparejar</option><option value="https://p2lrn.org/renderer/questionnaire/ordering">Ordenar</option><option value="https://p2lrn.org/renderer/questionnaire/classification">Clasificar</option><option value="https://p2lrn.org/renderer/questionnaire/true-false">Verdadero/Falso</option><option value="https://p2lrn.org/renderer/questionnaire/word-search">Sopa de letras</option><option value="https://p2lrn.org/renderer/questionnaire/crossword">Crucigrama</option><option value="https://p2lrn.org/renderer/questionnaire/rosco">Rosco</option><option value="https://p2lrn.org/renderer/questionnaire/3d-order-match">3D</option></select></label>
 <label class="viewer-url">URL del paquete<input data-package-url type="url" value="/examples/canonical/creator-course.p2lrn" spellcheck="false" aria-describedby="viewer-url-help"><small id="viewer-url-help">Rutas relativas o http/https. Para otro origen, CORS debe permitir la lectura.</small></label>
-<div class="viewer-buttons"><button class="button primary" type="button" data-load>Cargar paquete</button><button class="button" type="button" data-reload>Recargar</button><button class="button" type="button" data-edit-mode aria-pressed="false">Editar</button></div>
-</section>
-<section class="viewer-studio-toolbar" data-studio-toolbar hidden aria-label="Herramientas de edición">
-  <div class="viewer-studio-mode"><strong>Studio</strong><span data-studio-state>Sin cambios</span></div>
-  <label>Bloque
-    <select data-format-block>
-      <option value="p">Párrafo</option><option value="h1">Título 1</option><option value="h2">Título 2</option><option value="h3">Título 3</option>
-    </select>
-  </label>
-  <div class="viewer-studio-actions" role="toolbar" aria-label="Formato">
-    <button type="button" data-edit-command="bold"><strong>B</strong></button>
-    <button type="button" data-edit-command="italic"><em>I</em></button>
-    <button type="button" data-edit-command="underline"><u>U</u></button>
-    <button type="button" data-edit-command="justifyLeft">Izq.</button>
-    <button type="button" data-edit-command="justifyCenter">Centro</button>
-    <button type="button" data-edit-command="justifyRight">Der.</button>
-  </div>
-  <label>Texto <input type="color" value="#111827" data-fore-color></label>
-  <label>Fondo <input type="color" value="#ffffff" data-back-color></label>
-  <div class="viewer-studio-actions">
-    <button type="button" data-save-draft>Guardar borrador</button>
-    <button type="button" data-clear-draft>Descartar</button>
-  </div>
+<div class="viewer-buttons"><button class="button primary" type="button" data-load>Cargar paquete</button><button class="button" type="button" data-reload>Recargar</button></div>
 </section>
 <section class="viewer-inspector" aria-label="Inspección del paquete"><div><span>PACKAGE</span><strong data-inspect-package>—</strong></div><div><span>FORMAT</span><strong data-inspect-format>—</strong></div><div><span>VERSION</span><strong data-inspect-version>—</strong></div><div><span>INTEGRITY</span><strong data-inspect-integrity>—</strong></div><div><span>TRANSPORT</span><strong data-inspect-transport>—</strong></div><div><span>ENTRYPOINTS</span><strong data-inspect-entrypoints>—</strong></div><div class="wide"><span>PROFILES</span><strong data-inspect-profiles>—</strong></div></section>
 <section class="viewer-workbench"><div class="viewer-stage"><div class="viewer-stage-head"><div><span>PLAYER</span><strong data-package-label>—</strong></div><span class="viewer-badge" data-runtime-state>BOOT</span></div><div class="viewer-player-shell"><p2lrn-player id="demo-player"></p2lrn-player></div></div><aside class="viewer-console"><div class="viewer-console-head"><span>EVENT LOG</span><div><button type="button" data-pause-log>Pausar</button><button type="button" data-copy-log>Copiar</button><button type="button" data-clear-log>Limpiar</button></div></div><pre data-event-log><code>[viewer] esperando al Player…</code></pre></aside></section>
