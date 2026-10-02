@@ -20,8 +20,12 @@ const exportButton=document.querySelector('[data-export]');
 const blockSelect=document.querySelector('[data-block]');
 const foreColor=document.querySelector('[data-fore-color]');
 const backColor=document.querySelector('[data-back-color]');
+const saveDraftButton=document.querySelector('[data-save-draft]');
 const recoverDraftButton=document.querySelector('[data-recover-draft]');
 const clearDraftButton=document.querySelector('[data-clear-draft]');
+const draftMenu=document.querySelector('[data-draft-menu]');
+const saveState=document.querySelector('[data-save-state]');
+const unsavedWarning=document.querySelector('[data-unsaved-warning]');
 
 let studio=null;
 let selectedId=null;
@@ -29,19 +33,33 @@ let sourceObjectUrl=null;
 let previewObjectUrl=null;
 let activeEditable=null;
 let mode='edit';
-let autosaveTimer=null;
 let draftMetadata=null;
+let savedRevision=0;
+let exportedRevision=0;
 
 const titleOf=(entity)=>studio?.title(entity.id)??entity.id;
 const setStatus=(value)=>{status.textContent=value;};
-const updateChanges=()=>{if(!studio){changeCount.textContent='Sin cambios';return;}changeCount.textContent=studio.changeCount?`${studio.changeCount} cambio${studio.changeCount===1?'':'s'}`:'Sin cambios';};
-function scheduleAutosave(){
-  if(!studio)return;
-  clearTimeout(autosaveTimer);
-  autosaveTimer=setTimeout(()=>{void persistDraft().catch((error)=>setStatus('No se pudo guardar el borrador local: '+error.message));},1200);
-}
+const hasUnsavedChanges=()=>Boolean(studio&&studio.changeCount>savedRevision&&studio.changeCount>exportedRevision);
+const updateChanges=()=>{
+  if(!studio){
+    changeCount.textContent='Sin cambios';
+    saveState.textContent='No guardado';
+    if(unsavedWarning)unsavedWarning.hidden=true;
+    return;
+  }
+  changeCount.textContent=studio.changeCount?`${studio.changeCount} cambio${studio.changeCount===1?'':'s'}`:'Sin cambios';
+  const unsaved=hasUnsavedChanges();
+  if(saveState){
+    if(unsaved)saveState.textContent='No guardado';
+    else if(studio.changeCount&&exportedRevision>=studio.changeCount)saveState.textContent='Exportado';
+    else if(studio.changeCount&&savedRevision>=studio.changeCount)saveState.textContent='Guardado en este navegador';
+    else saveState.textContent='Sin cambios';
+  }
+  if(unsavedWarning)unsavedWarning.hidden=!unsaved;
+};
 async function persistDraft(){
   if(!studio)return;
+  setStatus('Guardando borrador local…');
   const exported=await exportP2LRNPackage(studio);
   draftMetadata=await saveLatestDraft({
     name:exported.filename,
@@ -49,9 +67,10 @@ async function persistDraft(){
     selectedId,
     contentRoot:exported.manifest.integrity?.contentRoot??null,
   });
-  if(recoverDraftButton){recoverDraftButton.hidden=false;recoverDraftButton.textContent='Recuperar borrador local';}
-  if(clearDraftButton)clearDraftButton.hidden=false;
-  setStatus('Borrador guardado en este navegador');
+  savedRevision=studio.changeCount;
+  if(draftMenu)draftMenu.hidden=false;
+  updateChanges();
+  setStatus('Borrador guardado sólo en este navegador');
 }
 
 function revokeUrls(){
@@ -77,7 +96,7 @@ function markActive(node){
 function bindEditable(node,onInput){
   node.contentEditable='true';node.spellcheck=true;
   node.addEventListener('focus',()=>markActive(node));
-  node.addEventListener('input',()=>{onInput();updateChanges();scheduleAutosave();});
+  node.addEventListener('input',()=>{onInput();updateChanges();});
 }
 
 function renderTree(){
@@ -172,6 +191,8 @@ async function setMode(next){
 async function openPackage(pkg,{name,url,recoveredSelectedId=null}){
   studio=new P2LRNStudioDocument(pkg,{sourceName:name,sourceUrl:url});
   selectedId=recoveredSelectedId&&studio.entity(recoveredSelectedId)?recoveredSelectedId:studio.rootId;
+  savedRevision=0;
+  exportedRevision=0;
   packageName.textContent=name;
   toolbar.hidden=false;workspace.hidden=false;
   renderTree();await renderEditor();updateChanges();await setMode('edit');
@@ -210,24 +231,24 @@ async function recoverLatestDraft(){
   sourceObjectUrl=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.p2lrn+zip'}));
   draftMetadata=record;
   await openPackage(pkg,{name:record.name||'borrador.p2lrn',url:sourceObjectUrl,recoveredSelectedId:record.selectedId});
+  savedRevision=studio.changeCount;
+  updateChanges();
   setStatus('Borrador local recuperado');
 }
 async function refreshDraftAvailability(){
   try{
     const record=await loadLatestDraft();
     draftMetadata=record;
-    if(recoverDraftButton){recoverDraftButton.hidden=!record;recoverDraftButton.textContent=record?'Recuperar borrador local':'Recuperar borrador local';}
-    if(clearDraftButton)clearDraftButton.hidden=!record;
+    if(draftMenu)draftMenu.hidden=!record;
   }catch{
-    if(recoverDraftButton)recoverDraftButton.hidden=true;
-    if(clearDraftButton)clearDraftButton.hidden=true;
+    if(draftMenu)draftMenu.hidden=true;
   }
 }
 async function discardLocalDraft(){
+  if(!confirm('¿Eliminar el borrador guardado en este navegador? Esta acción no se puede deshacer.'))return;
   await clearLatestDraft();
   draftMetadata=null;
-  if(recoverDraftButton)recoverDraftButton.hidden=true;
-  if(clearDraftButton)clearDraftButton.hidden=true;
+  if(draftMenu)draftMenu.hidden=true;
   setStatus('Borrador local eliminado');
 }
 async function exportPackage(){
@@ -237,6 +258,8 @@ async function exportPackage(){
   const url=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
   const anchor=document.createElement('a');anchor.href=url;anchor.download=exported.filename;document.body.append(anchor);anchor.click();anchor.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1500);
+  exportedRevision=studio.changeCount;
+  updateChanges();
   setStatus('Paquete exportado y verificado');
 }
 
@@ -250,7 +273,14 @@ blockSelect.addEventListener('change',()=>command('formatBlock',blockSelect.valu
 foreColor.addEventListener('input',()=>command('foreColor',foreColor.value));
 backColor.addEventListener('input',()=>command('hiliteColor',backColor.value));
 exportButton.addEventListener('click',()=>void exportPackage().catch((error)=>setStatus(error.message)));
+saveDraftButton?.addEventListener('click',()=>void persistDraft().catch((error)=>setStatus('No se pudo guardar el borrador local: '+error.message)));
 recoverDraftButton?.addEventListener('click',()=>void recoverLatestDraft().catch((error)=>setStatus(error.message)));
 clearDraftButton?.addEventListener('click',()=>void discardLocalDraft().catch((error)=>setStatus(error.message)));
 void refreshDraftAvailability();
-window.addEventListener('beforeunload',revokeUrls);
+window.addEventListener('beforeunload',(event)=>{
+  revokeUrls();
+  if(hasUnsavedChanges()){
+    event.preventDefault();
+    event.returnValue='';
+  }
+});

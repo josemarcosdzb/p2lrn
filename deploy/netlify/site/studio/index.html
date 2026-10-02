@@ -28,8 +28,6 @@
       <label class="button">Abrir archivo<input data-file type="file" accept=".p2lrn,application/vnd.p2lrn+zip" hidden></label>
       <label class="studio-url">URL<input data-url type="url" placeholder="https://…/curso.p2lrn"></label>
       <button class="button" type="button" data-open-url>Abrir URL</button>
-      <button class="button" type="button" data-recover-draft hidden>Recuperar borrador local</button>
-      <button class="button" type="button" data-clear-draft hidden>Borrar borrador local</button>
     </div>
   </section>
 
@@ -50,10 +48,27 @@
       <label>Fondo<input data-back-color type="color" value="#ffffff"></label>
     </div>
     <div class="studio-save">
-      <span data-change-count>Sin cambios</span>
+      <div class="studio-save-state">
+        <strong data-save-state>No guardado</strong>
+        <span data-change-count>Sin cambios</span>
+      </div>
+      <button class="button" type="button" data-save-draft>Guardar borrador</button>
+      <details class="studio-draft-menu" data-draft-menu hidden>
+        <summary class="button">Borrador local</summary>
+        <div class="studio-draft-popover">
+          <p>Este borrador está guardado sólo en este navegador y dispositivo.</p>
+          <button class="button" type="button" data-recover-draft>Recuperar borrador</button>
+          <button class="button danger" type="button" data-clear-draft>Eliminar borrador…</button>
+        </div>
+      </details>
       <button class="button primary" type="button" data-export>Exportar .p2lrn</button>
     </div>
   </section>
+
+  <div class="studio-warning" data-unsaved-warning hidden role="status">
+    <strong>Cambios sin guardar.</strong>
+    <span>Studio trabaja en memoria. Si cierras o recargas esta página antes de guardar un borrador o exportar el <code>.p2lrn</code>, perderás esos cambios.</span>
+  </div>
 
   <section class="studio-workspace" data-workspace hidden>
     <aside class="studio-outline">
