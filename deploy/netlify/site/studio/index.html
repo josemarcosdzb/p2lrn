@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="P2LRN Studio: edición visual WYSIWYG de una copia local de un paquete P2LRN.">
+  <title>P2LRN Studio</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <link rel="stylesheet" href="/studio/studio.css">
+  <script src="/player/current/dist/p2lrn.js" defer></script>
+  <script type="module" src="/studio/studio.js"></script>
+</head>
+<body class="studio-page">
+<header class="site-header">
+  <a class="brand" href="/">P2LRN</a>
+  <nav class="nav"><a href="/demo/">Visor</a><a href="/docs/">Documentación</a><a href="/docs/toolkit/">Toolkit</a></nav>
+  <div class="header-meta"><span class="status"><i></i><span data-studio-status>Sin paquete</span></span></div>
+</header>
+<main class="studio-main">
+  <section class="studio-topbar">
+    <div>
+      <p class="eyebrow">AUTHORING / LOCAL WORKING COPY</p>
+      <h1>Studio</h1>
+      <p>Abre una copia del paquete, edítala visualmente y exporta un nuevo <code>.p2lrn</code>. El paquete publicado y el Player nunca se modifican.</p>
+    </div>
+    <div class="studio-open">
+      <label class="button">Abrir archivo<input data-file type="file" accept=".p2lrn,application/vnd.p2lrn+zip" hidden></label>
+      <label class="studio-url">URL<input data-url type="url" placeholder="https://…/curso.p2lrn"></label>
+      <button class="button" type="button" data-open-url>Abrir URL</button>
+    </div>
+  </section>
+
+  <section class="studio-toolbar" data-toolbar hidden>
+    <div class="studio-mode">
+      <button type="button" class="button primary" data-mode-edit aria-pressed="true">Editar</button>
+      <button type="button" class="button" data-mode-preview aria-pressed="false">Vista alumno</button>
+    </div>
+    <div class="studio-format" role="toolbar" aria-label="Formato de texto">
+      <select data-block aria-label="Tipo de bloque"><option value="p">Párrafo</option><option value="h1">Título 1</option><option value="h2">Título 2</option><option value="h3">Título 3</option></select>
+      <button type="button" data-command="bold"><strong>B</strong></button>
+      <button type="button" data-command="italic"><em>I</em></button>
+      <button type="button" data-command="underline"><u>U</u></button>
+      <button type="button" data-command="justifyLeft">Izq.</button>
+      <button type="button" data-command="justifyCenter">Centro</button>
+      <button type="button" data-command="justifyRight">Der.</button>
+      <label>Texto<input data-fore-color type="color" value="#111827"></label>
+      <label>Fondo<input data-back-color type="color" value="#ffffff"></label>
+    </div>
+    <div class="studio-save">
+      <span data-change-count>Sin cambios</span>
+      <button class="button primary" type="button" data-export>Exportar .p2lrn</button>
+    </div>
+  </section>
+
+  <section class="studio-workspace" data-workspace hidden>
+    <aside class="studio-outline">
+      <div class="studio-outline-head"><span>CURSO</span><strong data-package-name>—</strong></div>
+      <nav data-tree aria-label="Estructura del curso"></nav>
+    </aside>
+    <section class="studio-canvas">
+      <div data-editor-stage class="studio-editor-stage"></div>
+      <div data-preview-stage class="studio-preview-stage" hidden>
+        <p2lrn-player data-player></p2lrn-player>
+      </div>
+    </section>
+  </section>
+</main>
+<footer><strong>P2LRN Studio</strong><span>La autoría trabaja sobre una copia; Player permanece sólo lectura.</span><div><a href="/demo/">Abrir visor</a></div></footer>
+</body>
+</html>

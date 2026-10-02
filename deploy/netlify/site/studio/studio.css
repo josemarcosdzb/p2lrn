@@ -1,0 +1,45 @@
+.studio-page{background:#f4f6f8}
+.studio-main{width:min(1600px,calc(100% - 32px));margin:0 auto;padding:34px 0 70px}
+.studio-topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:end;padding:26px 0}
+.studio-topbar h1{margin:4px 0 10px;font-size:clamp(2.7rem,6vw,5.4rem);letter-spacing:-.055em}
+.studio-topbar p:last-child{max-width:760px;color:var(--muted)}
+.studio-open{display:flex;gap:8px;align-items:end;flex-wrap:wrap;justify-content:flex-end}
+.studio-url{display:grid;gap:5px;font-size:.68rem;font-weight:700;color:var(--muted)}
+.studio-url input{width:min(420px,48vw);min-height:42px;padding:0 11px;border:1px solid var(--line);border-radius:7px;background:#fff;font:inherit}
+.studio-toolbar{position:sticky;top:64px;z-index:20;display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.97);box-shadow:0 8px 24px rgba(17,24,39,.08);backdrop-filter:blur(10px)}
+.studio-toolbar[hidden],.studio-workspace[hidden]{display:none}
+.studio-mode,.studio-format,.studio-save{display:flex;gap:6px;align-items:center}
+.studio-format{flex:1 1 500px}
+.studio-format select,.studio-format button{min-height:34px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:0 9px;font:600 .72rem/1 var(--mono);cursor:pointer}
+.studio-format label{display:flex;align-items:center;gap:5px;font:600 .65rem/1 var(--mono);color:var(--muted)}
+.studio-format input[type=color]{width:38px;height:34px;border:1px solid var(--line);border-radius:6px;padding:2px;background:#fff}
+.studio-save{margin-left:auto}
+.studio-save span{font:500 .68rem/1.2 var(--mono);color:var(--muted)}
+.studio-workspace{display:grid;grid-template-columns:280px minmax(0,1fr);gap:12px;margin-top:14px;min-height:680px}
+.studio-outline,.studio-canvas{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+.studio-outline-head{display:grid;gap:3px;padding:13px;border-bottom:1px solid var(--line);background:#f8f9fb}
+.studio-outline-head span{font:600 .62rem/1 var(--mono);color:var(--muted)}
+.studio-outline-head strong{font-size:.8rem;overflow-wrap:anywhere}
+.studio-outline nav{padding:8px}
+.studio-tree-node{display:grid}
+.studio-tree-node button{width:100%;border:0;background:transparent;text-align:left;padding:9px 10px;border-radius:6px;color:var(--ink);cursor:pointer}
+.studio-tree-node button:hover,.studio-tree-node button[aria-current=true]{background:#eef2f7}
+.studio-tree-node .type{display:block;font:600 .58rem/1.1 var(--mono);color:var(--muted);text-transform:uppercase}
+.studio-tree-node .title{display:block;margin-top:2px;font-size:.82rem}
+.studio-tree-children{padding-left:14px;border-left:1px solid var(--line);margin-left:11px}
+.studio-canvas{min-width:0}
+.studio-editor-stage{min-height:680px;padding:22px;background:#eef1f4}
+.studio-sheet{max-width:1080px;min-height:600px;margin:0 auto;padding:28px;background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(17,24,39,.06)}
+.studio-sheet-head{display:grid;gap:6px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.studio-entity-type{font:600 .62rem/1 var(--mono);color:var(--muted);text-transform:uppercase}
+.studio-title{margin:0;font-size:clamp(1.7rem,3vw,2.6rem);letter-spacing:-.035em;outline:0}
+.studio-title[contenteditable=true]:focus,.studio-description[contenteditable=true]:focus,.studio-wysiwyg:focus{box-shadow:0 0 0 2px rgba(71,85,105,.15)}
+.studio-description{margin:0;color:var(--muted);outline:0;min-height:1.5em}
+.studio-content{padding-top:20px}
+.studio-wysiwyg{min-height:360px;padding:18px;border:1px dashed #94a3b8;border-radius:7px;outline:0;line-height:1.65}
+.studio-wysiwyg img,.studio-wysiwyg video{max-width:100%;height:auto}
+.studio-readonly{padding:18px;border:1px solid var(--line);border-radius:7px;background:#f8fafc;color:var(--muted)}
+.studio-inline-player{display:block;min-height:520px;margin-top:12px}
+.studio-preview-stage{min-height:680px;padding:12px;background:#eef1f4}
+.studio-preview-stage p2lrn-player{display:block;min-height:650px;background:#fff;border-radius:8px;overflow:hidden}
+@media(max-width:900px){.studio-topbar{grid-template-columns:1fr}.studio-open{justify-content:flex-start}.studio-url input{width:min(100%,560px)}.studio-workspace{grid-template-columns:1fr}.studio-outline{max-height:300px;overflow:auto}.studio-toolbar{position:static}}
