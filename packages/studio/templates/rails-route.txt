@@ -1,0 +1,2 @@
+Add to config/routes.rb:
+post '__ENDPOINT__', to: 'p2lrn_studio#save'
