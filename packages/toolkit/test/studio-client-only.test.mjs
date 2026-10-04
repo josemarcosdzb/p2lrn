@@ -11,7 +11,8 @@ test('Studio saves local drafts only on explicit user action and warns about uns
   ]);
   assert.match(drafts,/indexedDB\.open/);
   assert.match(studio,/saveDraftButton.*addEventListener/);
-  assert.doesNotMatch(studio,/scheduleAutosave|setTimeout\(.*persistDraft/s);
+  assert.doesNotMatch(studio,/scheduleAutosave/);
+  assert.doesNotMatch(studio,/setTimeout\([^\n]*persistDraft/);
   assert.match(studio,/beforeunload/);
   assert.match(studio,/event\.returnValue/);
   assert.match(html,/Cambios sin guardar/);

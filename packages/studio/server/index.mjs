@@ -28,7 +28,7 @@ export async function saveP2LRNStudioPackage(bytes,{root=process.cwd(),coursePat
   return {ok:true,path:target.file,coursePath:safeSegment(coursePath||'course','course path'),filename:safeFilename(filename),bytes:body.byteLength};
 }
 
-export async function handleP2LRNStudioSave(request,{root=process.cwd(),maxBytes=DEFAULT_MAX_BYTES}={}){
+export async function handleP2LRNStudioSave(request,{root=process.cwd(),coursePath='course',allowClientPath=false,maxBytes=DEFAULT_MAX_BYTES}={}){
   if(request.method!=='POST')return new Response('Method Not Allowed',{status:405,headers:{Allow:'POST'}});
   const length=Number(request.headers.get('content-length')||0);
   if(length>maxBytes)return new Response('Package too large',{status:413});
@@ -36,7 +36,7 @@ export async function handleP2LRNStudioSave(request,{root=process.cwd(),maxBytes
   if(body.byteLength>maxBytes)return new Response('Package too large',{status:413});
   const result=await saveP2LRNStudioPackage(body,{
     root,
-    coursePath:request.headers.get('x-p2lrn-path')||'course',
+    coursePath:allowClientPath?(request.headers.get('x-p2lrn-path')||coursePath):coursePath,
     filename:request.headers.get('x-p2lrn-filename')||'course.p2lrn',
   });
   return Response.json({ok:true,coursePath:result.coursePath,filename:result.filename,bytes:result.bytes});
