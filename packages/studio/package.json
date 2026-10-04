@@ -32,7 +32,10 @@
     "LICENSE",
     "NOTICE.md",
     "scripts/",
-    "src/"
+    "src/",
+    "bin/",
+    "templates/",
+    "test/"
   ],
   "engines": {
     "node": ">=18"
@@ -45,12 +48,23 @@
     "prepack": "npm run build:dist",
     "prepublishOnly": "node ../../scripts/check-publish-ready.mjs"
   },
-  "keywords": ["p2lrn","studio","authoring","wysiwyg","web-component"],
+  "keywords": [
+    "p2lrn",
+    "studio",
+    "authoring",
+    "wysiwyg",
+    "web-component"
+  ],
   "license": "SEE LICENSE IN LICENSE",
-  "publishConfig": {"access":"public"},
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/josemarcosfrodo/p2lrn.git",
     "directory": "packages/studio"
+  },
+  "bin": {
+    "p2lrn-studio": "./bin/p2lrn-studio.mjs"
   }
 }
