@@ -52,6 +52,14 @@ async function detect(cwd){
   if(await exists(join(cwd,'artisan')))return'laravel';
   if(await exists(join(cwd,'bin','console')))return'symfony';
   if(await exists(join(cwd,'manage.py')))return'django';
+  const pyParts=[];
+  for(const name of ['requirements.txt','pyproject.toml','Pipfile']){
+    const p=join(cwd,name);
+    if(await exists(p))pyParts.push(await readFile(p,'utf8'));
+  }
+  const py=pyParts.join('\n');
+  if(/fastapi/i.test(py))return'fastapi';
+  if(/flask/i.test(py))return'flask';
   if(await exists(join(cwd,'Gemfile'))){
     const g=await readFile(join(cwd,'Gemfile'),'utf8');
     if(/rails/i.test(g))return'rails';
