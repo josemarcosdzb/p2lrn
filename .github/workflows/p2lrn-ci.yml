@@ -6,6 +6,7 @@ on:
     paths:
       - 'packages/toolkit/**'
       - 'packages/player/**'
+      - 'packages/studio/**'
       - 'packages/h5p-libraries/**'
       - 'LICENSE'
       - 'NOTICE.md'
@@ -66,6 +67,7 @@ jobs:
           node --check packages/player/scripts/build-dist.mjs
           node --check packages/studio/scripts/build-dist.mjs
           node --check packages/studio/server/index.mjs
+          node --check packages/studio/bin/p2lrn-studio.mjs
           node --check deploy/netlify/build-cdn.mjs
           node --check deploy/netlify/build-site.mjs
 
@@ -129,6 +131,9 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund --include=dev
           npm test
 
+      - name: Verify Studio setup CLI
+        run: node --test packages/studio/test/*.test.mjs
+
       - name: Build Player runtime for security tests
         run: node packages/player/scripts/build-dist.mjs
 
@@ -145,6 +150,8 @@ jobs:
           node --check packages/player/scripts/build-dist.mjs
           node --check packages/studio/scripts/build-dist.mjs
           node --check packages/studio/server/index.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/studio/bin/p2lrn-studio.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check packages/h5p-libraries/scripts/build.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

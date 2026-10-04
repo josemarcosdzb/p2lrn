@@ -200,6 +200,9 @@ for (const path of [
   join(studioRoot,'dist','runtime','authoring-document.js'),
   join(studioRoot,'dist','runtime','package-export.js'),
   join(studioRoot,'server','index.mjs'),
+  join(studioRoot,'bin','p2lrn-studio.mjs'),
+  join(studioRoot,'templates','next-route.ts'),
+  join(studioRoot,'templates','generic-contract.md'),
 ]) {
   await assertFile(path);
 }
@@ -219,9 +222,18 @@ await run(node, ['--check', join(playerRoot,'dist','p2lrn.js')]);
 await run(node, ['--check', join(playerRoot,'dist','runtime-host','h5p-host.js')]);
 await run(node, ['--check', join(studioRoot,'dist','p2lrn-studio.esm.js')]);
 await run(node, ['--check', join(studioRoot,'server','index.mjs')]);
+await run(node, ['--check', join(studioRoot,'bin','p2lrn-studio.mjs')]);
 await run(node, [join(toolkitRoot,'dist','cli','main.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','tools','multipart.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','cli','document-reader.js'),'--help']);
+
+const studioCliSmoke=join(work,'p2lrn-studio-cli-smoke');
+await mkdir(studioCliSmoke,{recursive:true});
+const studioCliOutput=await run(node,[join(studioRoot,'bin','p2lrn-studio.mjs'),'setup','next','--cwd',studioCliSmoke]);
+const studioCliJson=JSON.parse(studioCliOutput);
+if(studioCliJson.target!=='next')throw new Error('Installed @p2lrn/studio CLI did not run setup next.');
+await assertFile(join(studioCliSmoke,'app','api','p2lrn','studio','save','route.ts'));
+await stat(join(studioCliSmoke,'course'));
 
 const documentReaderSmoke = join(work,'reader-smoke.md');
 await writeFile(documentReaderSmoke, '# Reader npm smoke\n\nTexto desde tarball npm.\n');
