@@ -1,5 +1,4 @@
 class P2lrnStudioController < ApplicationController
-  skip_forgery_protection only: :save
   def save
     dir=Rails.root.join('__COURSE_PATH__'); FileUtils.mkdir_p(dir)
     name=File.basename(request.headers['X-P2LRN-Filename'] || 'course.p2lrn')

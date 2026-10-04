@@ -77,3 +77,10 @@ Los frameworks con enrutado por archivos reciben directamente el archivo de ruta
 Los frameworks con registro centralizado reciben el handler, controlador o plugin ya generado y una instrucción mínima de registro: Express, Fastify, Hono, NestJS, Laravel, Django, FastAPI, Flask, Rails, ASP.NET Core, Spring Boot, Go y Rust/Axum.
 
 `setup generic` cubre cualquier backend no reconocido. El contrato es siempre el mismo: un POST que recibe el paquete P2LRN binario, sanea nombre/ruta, crea la carpeta configurada y guarda el archivo. De esta forma el componente del navegador no depende del framework del servidor.
+
+
+### Seguridad de la ruta de guardado
+
+El instalador genera la integración técnica, pero la autorización pertenece a la aplicación anfitriona. La ruta de guardado debe quedar detrás de la autenticación y permisos de profesor/administrador de esa aplicación. P2LRN Studio no debe convertir por sí solo una ruta de escritura en un endpoint público anónimo.
+
+El helper npm fija la carpeta configurada del servidor por defecto. El header `X-P2LRN-Path` enviado por el navegador se ignora salvo que el integrador active expresamente `allowClientPath: true`.
