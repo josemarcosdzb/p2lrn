@@ -227,6 +227,19 @@ export async function render({container, payload, representation, package:pkg, e
         }
         return;
       }
+      if (message.action === 'cmi5-exit') {
+        dispatchRuntimeEvent(eventTarget, 'p2lrn:navigation', {
+          runtime:'cmi5', exit:true, reason:message.reason ?? 'course-request', returnURL:message.returnURL ?? null,
+        }, context, {adapter});
+        try { port?.close?.(); } catch {}
+        port = null;
+        iframe.remove();
+        const closed = document.createElement('div');
+        closed.className = 'p2lrn-message';
+        closed.textContent = 'Actividad cerrada.';
+        container.replaceChildren(closed);
+        return;
+      }
       if (message.action === 'ready' || message.action === 'initialized') {
         dispatchRuntimeEvent(eventTarget, 'p2lrn:activityready', {
           runtime:'external-package',

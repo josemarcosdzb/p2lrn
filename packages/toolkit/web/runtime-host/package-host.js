@@ -68,6 +68,17 @@ function cmi5BridgeSource(config) {
   return `(()=>{'use strict';
 const cfg=${encoded};
 const nativeFetch=globalThis.fetch.bind(globalThis);
+const EXIT_HASH='#p2lrn-cmi5-exit';
+let exitSent=false;
+const localReturnURL=()=>String(location.href||'about:srcdoc').replace(/#.*$/,'')+EXIT_HASH;
+const requestExit=(reason,returnURL=null)=>{
+  if(exitSent)return;
+  exitSent=true;
+  emit('exit',{reason,returnURL:returnURL||null});
+};
+const checkExitNavigation=()=>{if(location.hash===EXIT_HASH)requestExit('return-url',location.href);};
+addEventListener('hashchange',checkExitNavigation);
+try{Object.defineProperty(globalThis,'close',{configurable:true,writable:true,value:()=>requestExit('window.close')});}catch{}
 const states=new Map();
 const emit=(action,payload={})=>parent.postMessage({protocol:'p2lrn-cmi5-preview/1',action,...payload},'*');
 const json=(value,status=200,headers={})=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json',...headers}});
@@ -85,7 +96,7 @@ globalThis.fetch=async(input,init={})=>{
   if(resource==='activities/state'){
     const stateId=url.searchParams.get('stateId')||'';
     if(method==='GET'){
-      if(stateId==='LMS.LaunchData')return json(cfg.launchData);
+      if(stateId==='LMS.LaunchData')return json({...cfg.launchData,returnURL:localReturnURL()});
       return states.has(stateId)?json(states.get(stateId)):empty(404);
     }
     if(method==='PUT'||method==='POST'){
@@ -138,34 +149,10 @@ function rewriteCss(css, base, stack = new Set()) {
       return resolved && urls.has(resolved.path) ? `url("${urls.get(resolved.path)}${resolved.suffix}")` : all;
     });
 }
-function rewriteHtml(path) {
-  const doc = new DOMParser().parseFromString(text(path), 'text/html');
-  doc.querySelectorAll('base').forEach((node) => node.remove());
-  const csp = doc.createElement('meta');
-  csp.httpEquiv = 'Content-Security-Policy';
-  csp.content = "default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none';";
-  if (!doc.querySelector('meta[name="viewport"]')) {
-    const viewport = doc.createElement('meta');
-    viewport.name = 'viewport';
-    viewport.content = 'width=device-width,initial-scale=1';
-    doc.head?.append(viewport);
-  }
-  const fit = doc.createElement('style');
-  fit.setAttribute('data-p2lrn-runtime-fit', '1');
-  fit.textContent = 'html,body{max-width:100%;min-width:0;overflow-x:auto}*,*::before,*::after{box-sizing:border-box}img,video,canvas,svg{max-width:100%;height:auto}iframe,object,embed,table,pre{max-width:100%}';
-  doc.head?.append(fit);
-  doc.head?.prepend(csp);
-  if (runtimeProfile === 'https://p2lrn.org/profile/cmi5' && cmi5Config) {
-    const bridge = doc.createElement('script');
-    bridge.setAttribute('data-p2lrn-cmi5-bridge', '1');
-    bridge.textContent = cmi5BridgeSource(cmi5Config);
-    csp.after(bridge);
-  }
-  for (const script of doc.querySelectorAll('script:not([src])')) {
-    script.textContent = stripSourceMapDirectives(script.textContent || '');
-  }
+function rewriteElementTree(root, path) {
   const attrs = ['src','href','poster','data','background'];
-  for (const el of doc.querySelectorAll('*')) {
+  const elements = root?.querySelectorAll ? [...root.querySelectorAll('*')] : [];
+  for (const el of elements) {
     for (const attr of attrs) {
       if (!el.hasAttribute(attr)) continue;
       const raw = el.getAttribute(attr);
@@ -195,7 +182,50 @@ function rewriteHtml(path) {
       }).join(', '));
     }
   }
-  for (const style of doc.querySelectorAll('style')) style.textContent = rewriteCss(style.textContent || '', path);
+  for (const style of root?.querySelectorAll?.('style') ?? []) style.textContent = rewriteCss(style.textContent || '', path);
+  for (const template of root?.querySelectorAll?.('template') ?? []) rewriteElementTree(template.content, path);
+}
+function rewriteDeferredMarkup(doc, path) {
+  const templateTypes = new Set(['text/template','text/x-template','text/html','application/x-template']);
+  for (const script of doc.querySelectorAll('script:not([src])')) {
+    const type = String(script.getAttribute('type') || '').trim().toLowerCase();
+    if (!templateTypes.has(type)) continue;
+    const holder = doc.createElement('template');
+    holder.innerHTML = script.textContent || '';
+    rewriteElementTree(holder.content, path);
+    script.textContent = holder.innerHTML;
+  }
+}
+function rewriteHtml(path) {
+  const doc = new DOMParser().parseFromString(text(path), 'text/html');
+  doc.querySelectorAll('base').forEach((node) => node.remove());
+  const csp = doc.createElement('meta');
+  csp.httpEquiv = 'Content-Security-Policy';
+  csp.content = "default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'self' blob:; form-action 'none'; base-uri 'none'; object-src 'none';";
+  if (!doc.querySelector('meta[name="viewport"]')) {
+    const viewport = doc.createElement('meta');
+    viewport.name = 'viewport';
+    viewport.content = 'width=device-width,initial-scale=1';
+    doc.head?.append(viewport);
+  }
+  const fit = doc.createElement('style');
+  fit.setAttribute('data-p2lrn-runtime-fit', '1');
+  fit.textContent = 'html,body{max-width:100%;min-width:0;overflow-x:auto}*,*::before,*::after{box-sizing:border-box}img,video,canvas,svg{max-width:100%;height:auto}iframe,object,embed,table,pre{max-width:100%}';
+  doc.head?.append(fit);
+  doc.head?.prepend(csp);
+  if (runtimeProfile === 'https://p2lrn.org/profile/cmi5' && cmi5Config) {
+    const bridge = doc.createElement('script');
+    bridge.setAttribute('data-p2lrn-cmi5-bridge', '1');
+    bridge.textContent = cmi5BridgeSource(cmi5Config);
+    csp.after(bridge);
+  }
+  for (const script of doc.querySelectorAll('script:not([src])')) {
+    const type = String(script.getAttribute('type') || '').trim().toLowerCase();
+    if (['text/template','text/x-template','text/html','application/x-template'].includes(type)) continue;
+    script.textContent = stripSourceMapDirectives(script.textContent || '');
+  }
+  rewriteElementTree(doc, path);
+  rewriteDeferredMarkup(doc, path);
   return '<!doctype html>' + doc.documentElement.outerHTML;
 }
 function wireDocument(doc, path) {
@@ -290,6 +320,7 @@ window.addEventListener('message', (event) => {
   if (content && event.source === content.contentWindow && data?.protocol === CMI5_PROTOCOL) {
     if (data.action === 'statement') reply('cmi5-statement', {statement:data.statement ?? null, statements:Array.isArray(data.statements) ? data.statements : null});
     else if (data.action === 'state') reply('cmi5-state', {stateId:data.stateId ?? null, value:data.value ?? null});
+    else if (data.action === 'exit') reply('cmi5-exit', {reason:data.reason ?? 'course-request', returnURL:data.returnURL ?? null});
     return;
   }
   const p = event.ports?.[0] ?? null;
