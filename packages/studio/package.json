@@ -34,8 +34,7 @@
     "scripts/",
     "src/",
     "bin/",
-    "templates/",
-    "test/"
+    "templates/"
   ],
   "engines": {
     "node": ">=18"

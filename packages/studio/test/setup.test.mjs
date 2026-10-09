@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,readFile,rm,stat,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {join,relative,resolve} from 'node:path';
 import {execFile} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
@@ -62,4 +62,32 @@ test('generic target provides a backend-neutral contract',async()=>{
     assert.match(text,/POST \/api\/p2lrn\/studio\/save/);
     assert.match(text,/reject path traversal/i);
   }finally{await rm(root,{recursive:true,force:true})}
+});
+
+
+test('every supported setup target materializes safely with no unresolved placeholders',async()=>{
+  const targets=[
+    'next','sveltekit','nuxt','astro','remix','react-router',
+    'express','fastify','hono','nest','node',
+    'php','laravel','symfony','django','fastapi','flask','rails',
+    'aspnet','spring','go','rust','generic',
+  ];
+  for(const target of targets){
+    const root=await mkdtemp(join(tmpdir(),'p2lrn-all-'+target.replace(/[^a-z0-9]+/gi,'-')+'-'));
+    try{
+      const {stdout}=await exec(process.execPath,[cli,'setup',target,'--cwd',root,'--course-path','courses/custom']);
+      const out=JSON.parse(stdout);
+      assert.equal(out.ok,true,target);
+      assert.equal(out.target,target);
+      assert.equal((await stat(join(root,'courses','custom'))).isDirectory(),true);
+      for(const rel of out.files){
+        const full=resolve(root,rel);
+        assert.equal(relative(root,full).startsWith('..'),false,target+' wrote outside project: '+rel);
+        const body=await readFile(full,'utf8');
+        assert.doesNotMatch(body,/__(?:COURSE_PATH|ENDPOINT)__/u,target+' left unresolved placeholder in '+rel);
+      }
+    }finally{
+      await rm(root,{recursive:true,force:true});
+    }
+  }
 });
