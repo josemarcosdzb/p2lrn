@@ -8,6 +8,7 @@ async function playerApi(){
 }
 import {P2LRNStudioDocument} from './runtime/authoring-document.js';
 import {exportP2LRNPackage} from './runtime/package-export.js';
+import {createP2LRNStudioDocument} from './runtime/new-document.js';
 
 export const P2LRN_STUDIO_VERSION='0.5.0-alpha.10';
 
@@ -25,6 +26,7 @@ nav{padding:8px;border-right:1px solid #d9dee7;background:#fff;overflow:auto}
 nav button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px;border-radius:6px}
 nav button[aria-current=true]{background:#eef2f7}
 nav small{display:block;color:#667085;text-transform:uppercase;font:600 10px ui-monospace,monospace}
+.tree-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 0 8px;margin-bottom:6px;border-bottom:1px solid #e5e7eb}.tree-actions button{border:1px solid #d9dee7;background:#f8fafc;text-align:center;padding:6px;font-size:11px}
 .stage{padding:18px;min-width:0}
 .sheet{max-width:980px;min-height:520px;margin:auto;background:#fff;border-radius:8px;padding:26px}
 .title,.description,.surface{outline:0}
@@ -66,6 +68,7 @@ export class P2LRNStudioElement extends HTMLElement{
     this.shadowRoot.innerHTML=`<style>${css}</style>
       <div class="shell">
         <div class="toolbar">
+          <button type="button" data-create class="primary">New course</button>
           <label><button type="button" data-open>Open .p2lrn</button><input data-file type="file" accept=".p2lrn,application/vnd.p2lrn+zip" hidden></label>
           <button type="button" data-edit class="primary">Edit</button>
           <button type="button" data-preview>Student view</button>
@@ -82,6 +85,7 @@ export class P2LRNStudioElement extends HTMLElement{
   }
   connectedCallback(){
     const q=(s)=>this.shadowRoot.querySelector(s);
+    q('[data-create]').addEventListener('click',()=>this.createCourse().catch((e)=>this.#status(e.message)));
     q('[data-open]').addEventListener('click',()=>q('[data-file]').click());
     q('[data-file]').addEventListener('change',()=>{const f=q('[data-file]').files?.[0];if(f)this.openFile(f);});
     q('[data-edit]').addEventListener('click',()=>this.setMode('edit'));
@@ -104,6 +108,15 @@ export class P2LRNStudioElement extends HTMLElement{
   get coursePath(){return (this.getAttribute('course-path')||'course').replace(/^\/+|\/+$/g,'')||'course'}
   set coursePath(v){this.setAttribute('course-path',v||'course')}
 
+  async createCourse(options={}){
+    this.#revoke();
+    this.#studio=createP2LRNStudioDocument(options);
+    this.#sourceUrl=null;this.#selected=this.#studio.rootId;
+    this.shadowRoot.querySelector('[data-body]').hidden=false;
+    this.#renderTree();await this.#renderEditor();this.#updateState();
+    this.dispatchEvent(new CustomEvent('p2lrn-studio-create',{detail:{name:this.#studio.sourceName,packageId:this.#studio.manifest.packageId},bubbles:true,composed:true}));
+    return this.#studio;
+  }
   async openFile(file){
     this.#revoke();
     const bytes=await file.arrayBuffer();
@@ -126,6 +139,10 @@ export class P2LRNStudioElement extends HTMLElement{
   }
   #renderTree(){
     const nav=this.shadowRoot.querySelector('[data-tree]');nav.replaceChildren();
+    const actions=document.createElement('div');actions.className='tree-actions';
+    const unit=document.createElement('button');unit.type='button';unit.textContent='+ Unit';unit.onclick=()=>this.addUnit();
+    const lesson=document.createElement('button');lesson.type='button';lesson.textContent='+ Lesson';lesson.onclick=()=>this.addLesson();
+    actions.append(unit,lesson);nav.append(actions);
     const seen=new Set();
     const walk=(entity,depth=0)=>{
       if(!entity||seen.has(entity.id))return;seen.add(entity.id);
@@ -136,6 +153,21 @@ export class P2LRNStudioElement extends HTMLElement{
       (entity.children||[]).forEach((id)=>walk(this.#studio.entity(id),depth+1));
     };
     walk(this.#studio.entity(this.#studio.rootId));
+  }
+  #insertionParent(){
+    const current=this.#studio?.entity(this.#selected);if(!current)return this.#studio?.rootId??null;
+    if(['course','unit'].includes(current.type))return current.id;
+    return this.#studio.parentId(current.id)??this.#studio.rootId;
+  }
+  async addUnit(options={}){
+    if(!this.#studio)throw new Error('No P2LRN course is open.');
+    const created=this.#studio.addUnit(this.#insertionParent(),options);this.#selected=created.id;
+    this.#renderTree();await this.#renderEditor();this.#updateState();return created;
+  }
+  async addLesson(options={}){
+    if(!this.#studio)throw new Error('No P2LRN course is open.');
+    const created=this.#studio.addLesson(this.#insertionParent(),options);this.#selected=created.id;
+    this.#renderTree();await this.#renderEditor();this.#updateState();return created;
   }
   async #renderEditor(){
     const stage=this.shadowRoot.querySelector('[data-stage]');stage.replaceChildren();

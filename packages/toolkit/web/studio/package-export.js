@@ -124,6 +124,6 @@ export async function exportP2LRNPackage(document){
     bytes:writeStoredZip(entries),
     manifest,
     graph,
-    filename:String(document.sourceName||'curso.p2lrn').replace(/\.p2lrn$/i,'')+'-editado.p2lrn',
+    filename:String(document.sourceName||'curso.p2lrn').replace(/\.p2lrn$/i,'')+(document.createdFromScratch?'':'-editado')+'.p2lrn',
   };
 }

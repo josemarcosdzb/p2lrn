@@ -13,4 +13,5 @@ await writeFile(join(out,'p2lrn-studio.esm.js'),source);
 await cp(join(root,'src','p2lrn-studio.loader.js'),join(out,'p2lrn-studio.js'));
 await cp(join(repo,'packages','toolkit','web','studio','authoring-document.js'),join(out,'runtime','authoring-document.js'));
 await cp(join(repo,'packages','toolkit','web','studio','package-export.js'),join(out,'runtime','package-export.js'));
+await cp(join(repo,'packages','toolkit','web','studio','new-document.js'),join(out,'runtime','new-document.js'));
 console.log(JSON.stringify({ok:true,output:out},null,2));

@@ -1,7 +1,11 @@
 import {P2LRNStudioDocument} from './runtime/authoring-document.js';
 import {exportP2LRNPackage} from './runtime/package-export.js';
+import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
 
+const createCourseButton=document.querySelector('[data-create-course]');
+const addUnitButton=document.querySelector('[data-add-unit]');
+const addLessonButton=document.querySelector('[data-add-lesson]');
 const fileInput=document.querySelector('[data-file]');
 const urlInput=document.querySelector('[data-url]');
 const openUrlButton=document.querySelector('[data-open-url]');
@@ -188,14 +192,37 @@ async function setMode(next){
   editButton.classList.toggle('primary',!preview);previewButton.classList.toggle('primary',preview);
   if(preview)await refreshPreview();else setStatus('Editando copia local');
 }
-async function openPackage(pkg,{name,url,recoveredSelectedId=null}){
-  studio=new P2LRNStudioDocument(pkg,{sourceName:name,sourceUrl:url});
+async function activateStudio(document,{name,recoveredSelectedId=null}={}){
+  studio=document;
   selectedId=recoveredSelectedId&&studio.entity(recoveredSelectedId)?recoveredSelectedId:studio.rootId;
-  savedRevision=0;
-  exportedRevision=0;
-  packageName.textContent=name;
+  savedRevision=0;exportedRevision=0;
+  packageName.textContent=name||studio.sourceName||'curso.p2lrn';
   toolbar.hidden=false;workspace.hidden=false;
   renderTree();await renderEditor();updateChanges();await setMode('edit');
+}
+async function openPackage(pkg,{name,url,recoveredSelectedId=null}){
+  return activateStudio(new P2LRNStudioDocument(pkg,{sourceName:name,sourceUrl:url}),{name,recoveredSelectedId});
+}
+async function createNewCourse(){
+  revokeUrls();
+  const document=createP2LRNStudioDocument({title:'Curso nuevo',language:'es'});
+  await activateStudio(document,{name:document.sourceName});
+  setStatus('Curso nuevo listo para editar');
+}
+function structureParent(){
+  const current=studio?.entity(selectedId);if(!current)return studio?.rootId??null;
+  if(['course','unit'].includes(current.type))return current.id;
+  return studio.parentId(current.id)??studio.rootId;
+}
+async function addUnit(){
+  if(!studio)return;
+  const created=studio.addUnit(structureParent(),{title:'Nueva unidad',language:'es'});selectedId=created.id;
+  renderTree();await renderEditor();updateChanges();setStatus('Unidad añadida');
+}
+async function addLesson(){
+  if(!studio)return;
+  const created=studio.addLesson(structureParent(),{title:'Nueva lección',language:'es'});selectedId=created.id;
+  renderTree();await renderEditor();updateChanges();setStatus('Lección añadida');
 }
 async function openLocal(file){
   revokeUrls();
@@ -263,6 +290,9 @@ async function exportPackage(){
   setStatus('Paquete exportado y verificado');
 }
 
+createCourseButton?.addEventListener('click',()=>void createNewCourse().catch((error)=>setStatus(error.message)));
+addUnitButton?.addEventListener('click',()=>void addUnit().catch((error)=>setStatus(error.message)));
+addLessonButton?.addEventListener('click',()=>void addLesson().catch((error)=>setStatus(error.message)));
 fileInput.addEventListener('change',()=>{const file=fileInput.files?.[0];if(file)void openLocal(file).catch((error)=>setStatus(error.message));});
 openUrlButton.addEventListener('click',()=>void openRemote().catch((error)=>setStatus(error.message)));
 urlInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();void openRemote().catch((error)=>setStatus(error.message));}});
