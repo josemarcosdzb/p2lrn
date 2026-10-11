@@ -20,6 +20,7 @@ on:
       - 'scripts/verify-browser-from-npm.mjs'
       - 'scripts/verify-distribution-identity.mjs'
       - 'scripts/verify-local-viewer.mjs'
+      - 'scripts/verify-doc-navigation.mjs'
       - 'scripts/set-version.mjs'
       - 'examples/canonical/external/**'
       - 'deploy/netlify/**'
