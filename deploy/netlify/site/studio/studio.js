@@ -10,6 +10,7 @@ const addContentButton=document.querySelector('[data-add-content]');
 const addDialog=document.querySelector('[data-add-dialog]');
 const resourceFileInput=document.querySelector('[data-resource-file]');
 const readerFileInput=document.querySelector('[data-reader-file]');
+const externalFileInput=document.querySelector('[data-external-file]');
 const fileInput=document.querySelector('[data-file]');
 const urlInput=document.querySelector('[data-url]');
 const openUrlButton=document.querySelector('[data-open-url]');
@@ -67,7 +68,7 @@ const updateChanges=()=>{
 };
 async function persistDraft(){
   if(!studio)return;
-  setStatus('Guardando borrador local…');
+  setStatus('Guardando borrador localâ€¦');
   const exported=await exportP2LRNPackage(studio);
   draftMetadata=await saveLatestDraft({
     name:exported.filename,
@@ -78,7 +79,7 @@ async function persistDraft(){
   savedRevision=studio.changeCount;
   if(draftMenu)draftMenu.hidden=false;
   updateChanges();
-  setStatus('Borrador guardado sólo en este navegador');
+  setStatus('Borrador guardado sÃ³lo en este navegador');
 }
 
 function revokeUrls(){
@@ -139,14 +140,14 @@ async function renderEditor(){
   const title=document.createElement('h1');title.className='studio-title';title.textContent=titleOf(entity);
   bindEditable(title,()=>{try{studio.setTitle(entity.id,title.textContent||'');renderTree();}catch(error){setStatus(error.message);}});
   const description=document.createElement('p');description.className='studio-description';description.textContent=entity.description?.es??entity.description?.en??'';
-  description.dataset.placeholder='Descripción';
+  description.dataset.placeholder='DescripciÃ³n';
   bindEditable(description,()=>studio.setDescription(entity.id,description.textContent||''));
   head.append(type,title,description);sheet.append(head);
   const content=document.createElement('div');content.className='studio-content';sheet.append(content);
   editorStage.append(sheet);
 
   if(entity.type!=='activity'){
-    content.append(Object.assign(document.createElement('div'),{className:'studio-readonly',textContent:'Selecciona una actividad para editar su contenido. El título y la descripción de este nodo sí son editables.'}));
+    content.append(Object.assign(document.createElement('div'),{className:'studio-readonly',textContent:'Selecciona una actividad para editar su contenido. El tÃ­tulo y la descripciÃ³n de este nodo sÃ­ son editables.'}));
     return;
   }
   const questionnaire=await studio.readQuestionnaire(entity.id);
@@ -155,7 +156,7 @@ async function renderEditor(){
     const label=document.createElement('strong');label.textContent='Editor de cuestionario / juego';
     const note=document.createElement('span');note.textContent='Edita el modelo portable; la vista alumno usa el renderer elegido.';tools.append(label,note);
     const area=document.createElement('textarea');area.className='studio-questionnaire-json';area.value=JSON.stringify(questionnaire.payload,null,2);
-    area.addEventListener('input',()=>{try{const payload=JSON.parse(area.value);studio.setQuestionnaire(entity.id,payload);area.removeAttribute('aria-invalid');setStatus('Cuestionario actualizado');updateChanges();}catch(error){area.setAttribute('aria-invalid','true');setStatus('JSON de cuestionario no válido: '+error.message);}});
+    area.addEventListener('input',()=>{try{const payload=JSON.parse(area.value);studio.setQuestionnaire(entity.id,payload);area.removeAttribute('aria-invalid');setStatus('Cuestionario actualizado');updateChanges();}catch(error){area.setAttribute('aria-invalid','true');setStatus('JSON de cuestionario no vÃ¡lido: '+error.message);}});
     content.append(tools,area);return;
   }
   const editable=await studio.readEditableText(entity.id);
@@ -188,7 +189,7 @@ async function buildVerifiedPreview(){
 }
 async function refreshPreview(){
   if(!studio||!selectedId)return;
-  setStatus('Generando vista alumno…');
+  setStatus('Generando vista alumnoâ€¦');
   const exported=await buildVerifiedPreview();
   if(previewObjectUrl)URL.revokeObjectURL(previewObjectUrl);
   previewObjectUrl=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
@@ -230,16 +231,16 @@ function structureParent(){
 async function addUnit(){
   if(!studio)return;
   const created=studio.addUnit(structureParent(),{title:'Nueva unidad',language:'es'});selectedId=created.id;
-  renderTree();await renderEditor();updateChanges();setStatus('Unidad añadida');
+  renderTree();await renderEditor();updateChanges();setStatus('Unidad aÃ±adida');
 }
 async function addLesson(){
   if(!studio)return;
-  const created=studio.addLesson(structureParent(),{title:'Nueva lección',language:'es'});selectedId=created.id;
-  renderTree();await renderEditor();updateChanges();setStatus('Lección añadida');
+  const created=studio.addLesson(structureParent(),{title:'Nueva lecciÃ³n',language:'es'});selectedId=created.id;
+  renderTree();await renderEditor();updateChanges();setStatus('LecciÃ³n aÃ±adida');
 }
 async function openLocal(file){
   revokeUrls();
-  setStatus('Verificando paquete…');
+  setStatus('Verificando paqueteâ€¦');
   const bytes=await file.arrayBuffer();
   const api=await window.P2LRNReady;
   const pkg=await api.openPackageBytes(bytes);
@@ -248,9 +249,9 @@ async function openLocal(file){
 }
 async function openRemote(){
   const raw=urlInput.value.trim();if(!raw)return;
-  setStatus('Verificando paquete…');
+  setStatus('Verificando paqueteâ€¦');
   const url=new URL(raw,location.href).href;
-  if(!['http:','https:'].includes(new URL(url).protocol))throw new Error('Studio sólo abre URLs http/https.');
+  if(!['http:','https:'].includes(new URL(url).protocol))throw new Error('Studio sÃ³lo abre URLs http/https.');
   const api=await window.P2LRNReady;
   const pkg=await api.openPackageURL(url);
   await openPackage(pkg,{name:new URL(url).pathname.split('/').filter(Boolean).at(-1)||'curso.p2lrn',url});
@@ -262,8 +263,17 @@ function insertionParent(){
 }
 async function selectCreated(activity,statusText){selectedId=activity.id;renderTree();await renderEditor();updateChanges();setStatus(statusText);addDialog?.close();}
 function mediaTypeForFile(file){return file.type||({'md':'text/markdown','markdown':'text/markdown','txt':'text/plain','html':'text/html','htm':'text/html','json':'application/json','mp4':'video/mp4','webm':'video/webm','mp3':'audio/mpeg','wav':'audio/wav','png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','gif':'image/gif','webp':'image/webp','svg':'image/svg+xml'}[file.name.split('.').pop().toLowerCase()]||'application/octet-stream');}
-async function addResourceFile(file){const activity=studio.addEmbeddedResource(insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:mediaTypeForFile(file),bytes:new Uint8Array(await file.arrayBuffer())});await selectCreated(activity,'Archivo añadido');}
+async function addResourceFile(file){const activity=studio.addEmbeddedResource(insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:mediaTypeForFile(file),bytes:new Uint8Array(await file.arrayBuffer())});await selectCreated(activity,'Archivo aÃ±adido');}
 function extractedDocumentHtml(result){const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');return '<!doctype html><html><head><meta charset="utf-8"></head><body>'+result.blocks.map((b)=>b.type==='TITLE'?'<h2>'+esc(b.text)+'</h2>':b.type==='LIST'?'<li>'+esc(b.text)+'</li>':b.type==='SEPARATOR'?'<hr>':'<p>'+esc(b.text)+'</p>').join('')+'</body></html>';}
+async function importExternalFile(file){
+  const endpoint=document.body.dataset.importEndpoint||'/api/p2lrn/studio/import';
+  const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':file.type||'application/zip','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
+  if(!response.ok){let detail='';try{detail=(await response.json())?.error||''}catch{}throw new Error('No se pudo importar el paquete educativo'+(detail?': '+detail:' (HTTP '+response.status+')'));}
+  const bytes=new Uint8Array(await response.arrayBuffer());
+  const api=await window.P2LRNReady;const pkg=await api.openPackageBytes(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
+  const root=(pkg.manifest.entrypoints.find((x)=>x.type==='course')??pkg.manifest.entrypoints[0])?.id;const titles=pkg.entities.get(root)?.title??{};const importedTitle=titles.es??titles.en??titles.und??Object.values(titles)[0]??file.name;const wrapper=await studio.importPackage(pkg,insertionParent(),{title:importedTitle});
+  selectedId=wrapper.id;renderTree();await renderEditor();updateChanges();setStatus('Paquete educativo importado');addDialog?.close();
+}
 async function addReaderFile(file){
   let result;
   const endpoint=document.body.dataset.readerEndpoint||'/api/p2lrn/studio/read';
@@ -275,15 +285,16 @@ async function addReaderFile(file){
 }
 async function addContentKind(kind){
   if(!studio)throw new Error('Crea o abre un curso primero.');
-  if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:'Nueva lección',language:'es'});return selectCreated(a,'Lección añadida');}
-  if(kind==='unit'){const u=studio.addUnit(insertionParent(),{title:'Nueva unidad',language:'es'});selectedId=u.id;renderTree();await renderEditor();updateChanges();setStatus('Unidad añadida');addDialog?.close();return;}
+  if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:'Nueva lecciÃ³n',language:'es'});return selectCreated(a,'LecciÃ³n aÃ±adida');}
+  if(kind==='unit'){const u=studio.addUnit(insertionParent(),{title:'Nueva unidad',language:'es'});selectedId=u.id;renderTree();await renderEditor();updateChanges();setStatus('Unidad aÃ±adida');addDialog?.close();return;}
   if(kind==='file'){resourceFileInput.click();return;}
   if(kind==='reader'){readerFileInput.click();return;}
-  if(kind==='url'){const url=prompt('URL del recurso');if(!url)return;const title=prompt('Título','Recurso web')||'Recurso web';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL añadida');}
-  if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:'Cuestionario',language:'es'});return selectCreated(a,'Cuestionario añadido');}
-  if(['memory','matching','ordering','classification','true-false','word-search','crossword','rosco','3d'].includes(kind)){const names={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'es'});return selectCreated(a,names[kind]+' añadido');}
-  if(kind==='component'){const payload={schema:'https://p2lrn.org/schema/native-component/0.1',version:'0.1',component:{id:'https://p2lrn.org/component/callout',componentVersion:'1',dataVersion:'2',runtimeContractVersion:'1'},data:{tone:'info',body:'Edita este componente'},title:'Componente'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Componente',filename:'component.json',mediaType:'application/vnd.p2lrn.component+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-component'});return selectCreated(a,'Componente añadido');}
-  if(kind==='composite'){const payload={schema:'https://p2lrn.org/schema/native-composite/0.1',version:'0.1',mode:'sequence',completion:'all',navigation:'open',title:'Compuesto'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Compuesto',filename:'composite.json',mediaType:'application/vnd.p2lrn.composite+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-composite'});return selectCreated(a,'Compuesto añadido');}
+  if(kind==='external'){externalFileInput.click();return;}
+  if(kind==='url'){const url=prompt('URL del recurso');if(!url)return;const title=prompt('TÃ­tulo','Recurso web')||'Recurso web';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL aÃ±adida');}
+  if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:'Cuestionario',language:'es'});return selectCreated(a,'Cuestionario aÃ±adido');}
+  if(['memory','matching','ordering','classification','true-false','word-search','crossword','rosco','3d'].includes(kind)){const names={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'es'});return selectCreated(a,names[kind]+' aÃ±adido');}
+  if(kind==='component'){const payload={schema:'https://p2lrn.org/schema/native-component/0.1',version:'0.1',component:{id:'https://p2lrn.org/component/callout',componentVersion:'1',dataVersion:'2',runtimeContractVersion:'1'},data:{tone:'info',body:'Edita este componente'},title:'Componente'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Componente',filename:'component.json',mediaType:'application/vnd.p2lrn.component+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-component'});return selectCreated(a,'Componente aÃ±adido');}
+  if(kind==='composite'){const payload={schema:'https://p2lrn.org/schema/native-composite/0.1',version:'0.1',mode:'sequence',completion:'all',navigation:'open',title:'Compuesto'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Compuesto',filename:'composite.json',mediaType:'application/vnd.p2lrn.composite+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-composite'});return selectCreated(a,'Compuesto aÃ±adido');}
 }
 function command(name,value=null){
   if(!activeEditable||!activeEditable.isContentEditable)return;
@@ -315,7 +326,7 @@ async function refreshDraftAvailability(){
   }
 }
 async function discardLocalDraft(){
-  if(!confirm('¿Eliminar el borrador guardado en este navegador? Esta acción no se puede deshacer.'))return;
+  if(!confirm('Â¿Eliminar el borrador guardado en este navegador? Esta acciÃ³n no se puede deshacer.'))return;
   await clearLatestDraft();
   draftMetadata=null;
   if(draftMenu)draftMenu.hidden=true;
@@ -323,7 +334,7 @@ async function discardLocalDraft(){
 }
 async function exportPackage(){
   if(!studio)return;
-  setStatus('Construyendo paquete…');
+  setStatus('Construyendo paqueteâ€¦');
   const exported=await buildVerifiedPreview();
   const url=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
   const anchor=document.createElement('a');anchor.href=url;anchor.download=exported.filename;document.body.append(anchor);anchor.click();anchor.remove();
@@ -341,6 +352,7 @@ addDialog?.querySelector('[data-add-close]')?.addEventListener('click',()=>addDi
 addDialog?.querySelectorAll('[data-add-kind]').forEach((button)=>button.addEventListener('click',()=>void addContentKind(button.dataset.addKind).catch((error)=>setStatus(error.message))));
 resourceFileInput?.addEventListener('change',()=>{const file=resourceFileInput.files?.[0];if(file)void addResourceFile(file).catch((error)=>setStatus(error.message));resourceFileInput.value='';});
 readerFileInput?.addEventListener('change',()=>{const file=readerFileInput.files?.[0];if(file)void addReaderFile(file).catch((error)=>setStatus(error.message));readerFileInput.value='';});
+externalFileInput?.addEventListener('change',()=>{const file=externalFileInput.files?.[0];if(file)void importExternalFile(file).catch((error)=>setStatus(error.message));externalFileInput.value='';});
 fileInput.addEventListener('change',()=>{const file=fileInput.files?.[0];if(file)void openLocal(file).catch((error)=>setStatus(error.message));});
 openUrlButton.addEventListener('click',()=>void openRemote().catch((error)=>setStatus(error.message)));
 urlInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();void openRemote().catch((error)=>setStatus(error.message));}});

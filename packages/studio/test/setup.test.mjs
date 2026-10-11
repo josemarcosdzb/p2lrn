@@ -20,7 +20,9 @@ test('setup auto detects Next.js, creates route and course directory',async()=>{
     assert.equal((await stat(join(root,'course'))).isDirectory(),true);
     assert.match(await readFile(join(root,'app','api','p2lrn','studio','save','route.ts'),'utf8'),/handleP2LRNStudioSave/);
     assert.match(await readFile(join(root,'app','api','p2lrn','studio','read','route.ts'),'utf8'),/handleP2LRNStudioReader/);
+    assert.match(await readFile(join(root,'app','api','p2lrn','studio','import','route.ts'),'utf8'),/handleP2LRNStudioExternalImport/);
     assert.equal(out.readerEndpoint,'/api/p2lrn/studio/read');
+    assert.equal(out.importEndpoint,'/api/p2lrn/studio/import');
   }finally{await rm(root,{recursive:true,force:true})}
 });
 

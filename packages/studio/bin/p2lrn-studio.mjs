@@ -8,9 +8,10 @@ const here=dirname(fileURLToPath(import.meta.url));
 const templateRoot=resolve(here,'..','templates');
 const endpoint='/api/p2lrn/studio/save';
 const readerEndpoint='/api/p2lrn/studio/read';
+const importEndpoint='/api/p2lrn/studio/import';
 
 const specs={
-  next:[['next-route.ts','app/api/p2lrn/studio/save/route.ts'],['next-reader-route.ts','app/api/p2lrn/studio/read/route.ts']],
+  next:[['next-route.ts','app/api/p2lrn/studio/save/route.ts'],['next-reader-route.ts','app/api/p2lrn/studio/read/route.ts'],['next-import-route.ts','app/api/p2lrn/studio/import/route.ts']],
   sveltekit:[['sveltekit-route.ts','src/routes/api/p2lrn/studio/save/+server.ts']],
   nuxt:[['nuxt-route.ts','server/api/p2lrn/studio/save.post.ts']],
   astro:[['astro-route.ts','src/pages/api/p2lrn/studio/save.ts']],
@@ -109,7 +110,7 @@ async function materialize(target,cwd,coursePath,force,dryRun){
   if(!dryRun)await mkdir(resolve(cwd,...coursePath.split('/')),{recursive:true});
   const readme=resolve(cwd,'p2lrn-setup','README.md');
   if(!(await exists(readme))||force){
-    const body=['# P2LRN Studio setup','','Target: '+target,'Save endpoint: '+endpoint,'Reader endpoint: '+readerEndpoint,'Course directory: '+coursePath+'/','','Embed:','','<p2lrn-studio src="/'+coursePath+'/curso.p2lrn" save-endpoint="'+endpoint+'" reader-endpoint="'+readerEndpoint+'" course-path="'+coursePath+'"></p2lrn-studio>',''].join('\n');
+    const body=['# P2LRN Studio setup','','Target: '+target,'Save endpoint: '+endpoint,'Reader endpoint: '+readerEndpoint,'Import endpoint: '+importEndpoint,'Course directory: '+coursePath+'/','','Embed:','','<p2lrn-studio src="/'+coursePath+'/curso.p2lrn" save-endpoint="'+endpoint+'" reader-endpoint="'+readerEndpoint+'" import-endpoint="'+importEndpoint+'" course-path="'+coursePath+'"></p2lrn-studio>',''].join('\n');
     if(!dryRun){await mkdir(dirname(readme),{recursive:true});await writeFile(readme,body)}
     made.push('p2lrn-setup/README.md');
   }
@@ -123,4 +124,4 @@ if(o.help){
 const cwd=resolve(o.cwd),coursePath=safePath(o.coursePath);
 const target=o.target==='auto'?await detect(cwd):o.target;
 const files=await materialize(target,cwd,coursePath,o.force,o.dryRun);
-console.log(JSON.stringify({ok:true,target,endpoint,readerEndpoint,coursePath,files,dryRun:o.dryRun},null,2));
+console.log(JSON.stringify({ok:true,target,endpoint,readerEndpoint,importEndpoint,coursePath,files,dryRun:o.dryRun},null,2));

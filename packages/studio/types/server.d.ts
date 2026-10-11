@@ -9,3 +9,5 @@ export function saveP2LRNStudioPackage(bytes:Uint8Array|ArrayBuffer,options?:Stu
 export function handleP2LRNStudioSave(request:Request,options?:StudioRequestSaveOptions):Promise<Response>;
 export function readP2LRNStudioDocument(bytes:Uint8Array|ArrayBuffer,options?:{filename?:string;mediaType?:string}):Promise<unknown>;
 export function handleP2LRNStudioReader(request:Request,options?:{maxBytes?:number}):Promise<Response>;
+export function convertP2LRNStudioExternalPackage(bytes:Uint8Array|ArrayBuffer,options?:{filename?:string}):Promise<{bytes:Uint8Array;report:unknown}>;
+export function handleP2LRNStudioExternalImport(request:Request,options?:{maxBytes?:number}):Promise<Response>;

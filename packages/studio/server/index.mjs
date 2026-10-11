@@ -1,5 +1,6 @@
-import {mkdir,writeFile} from 'node:fs/promises';
-import {basename,resolve,sep} from 'node:path';
+import {mkdir,mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
+import {basename,join,resolve,sep} from 'node:path';
+import {tmpdir} from 'node:os';
 
 const DEFAULT_MAX_BYTES=512*1024*1024;
 
@@ -61,6 +62,38 @@ export async function handleP2LRNStudioReader(request,{maxBytes=128*1024*1024}={
   try{
     const result=await readP2LRNStudioDocument(body,{filename,mediaType:request.headers.get('content-type')||undefined});
     return Response.json(result);
+  }catch(error){
+    return Response.json({ok:false,error:error instanceof Error?error.message:String(error)},{status:422});
+  }
+}
+
+
+export async function convertP2LRNStudioExternalPackage(bytes,{filename='package.zip'}={}){
+  const body=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+  const work=await mkdtemp(join(tmpdir(),'p2lrn-studio-import-'));
+  const source=join(work,basename(String(filename||'package.zip')).replace(/[^A-Za-z0-9._-]+/g,'-')||'package.zip');
+  const output=join(work,'converted.p2lrn');
+  try{
+    await writeFile(source,body);
+    const {convertExternalPackage}=await import('@p2lrn/toolkit/creator');
+    const report=convertExternalPackage(source,output);
+    return {bytes:new Uint8Array(await readFile(output)),report};
+  }finally{
+    await rm(work,{recursive:true,force:true}).catch(()=>{});
+  }
+}
+
+export async function handleP2LRNStudioExternalImport(request,{maxBytes=512*1024*1024}={}){
+  if(request.method!=='POST')return new Response('Method Not Allowed',{status:405,headers:{Allow:'POST'}});
+  const length=Number(request.headers.get('content-length')||0);
+  if(length>maxBytes)return new Response('Package too large',{status:413});
+  const body=new Uint8Array(await request.arrayBuffer());
+  if(body.byteLength>maxBytes)return new Response('Package too large',{status:413});
+  let filename='package.zip';const raw=request.headers.get('x-p2lrn-filename');if(raw){try{filename=decodeURIComponent(raw);}catch{filename=raw;}}
+  try{
+    const result=await convertP2LRNStudioExternalPackage(body,{filename});
+    const kind=String(result.report?.detectedFormat??'external');
+    return new Response(result.bytes,{status:200,headers:{'Content-Type':'application/vnd.p2lrn+zip','X-P2LRN-External-Kind':encodeURIComponent(kind)}});
   }catch(error){
     return Response.json({ok:false,error:error instanceof Error?error.message:String(error)},{status:422});
   }

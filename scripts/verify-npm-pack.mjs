@@ -203,6 +203,7 @@ for (const path of [
   join(studioRoot,'bin','p2lrn-studio.mjs'),
   join(studioRoot,'templates','next-route.ts'),
   join(studioRoot,'templates','next-reader-route.ts'),
+  join(studioRoot,'templates','next-import-route.ts'),
   join(studioRoot,'templates','generic-contract.md'),
 ]) {
   await assertFile(path);
@@ -235,6 +236,7 @@ const studioCliJson=JSON.parse(studioCliOutput);
 if(studioCliJson.target!=='next')throw new Error('Installed @p2lrn/studio CLI did not run setup next.');
 await assertFile(join(studioCliSmoke,'app','api','p2lrn','studio','save','route.ts'));
 await assertFile(join(studioCliSmoke,'app','api','p2lrn','studio','read','route.ts'));
+await assertFile(join(studioCliSmoke,'app','api','p2lrn','studio','import','route.ts'));
 await stat(join(studioCliSmoke,'course'));
 
 const studioReaderSmoke=join(installRoot,'studio-reader-smoke.mjs');
@@ -247,6 +249,27 @@ await writeFile(studioReaderSmoke,[
   '',
 ].join('\n'));
 await run(node,[studioReaderSmoke],{cwd:installRoot});
+
+const studioExternalSmoke=join(installRoot,'studio-external-smoke.mjs');
+const canonicalH5p=join(root,'examples','canonical','external','h5p-crossword.p2lrn');
+await writeFile(studioExternalSmoke,[
+  "import {readFile} from 'node:fs/promises';",
+  "import {ZipArchive} from '@p2lrn/toolkit/core';",
+  "import {convertP2LRNStudioExternalPackage} from '@p2lrn/studio/server';",
+  `const wrapper=new Uint8Array(await readFile(${JSON.stringify(canonicalH5p)}));`,
+  "const zip=ZipArchive.open(wrapper);",
+  "const manifest=JSON.parse(new TextDecoder().decode(zip.read('META-INF/manifest.json')));",
+  "const graph=JSON.parse(new TextDecoder().decode(zip.read(manifest.graph.path)));",
+  "const resource=graph.entities.find((e)=>e.type==='resource'&&e.representations?.some((r)=>r.profile==='https://p2lrn.org/profile/h5p'));",
+  "const rep=resource?.representations?.find((r)=>r.profile==='https://p2lrn.org/profile/h5p'&&r.location?.type==='embedded');",
+  "if(!rep)throw new Error('Canonical H5P wrapper has no embedded H5P representation');",
+  "const raw=zip.read(rep.location.path);",
+  "const result=await convertP2LRNStudioExternalPackage(raw,{filename:'smoke.h5p'});",
+  "if(result.report?.detectedFormat!=='h5p'||result.bytes.byteLength<1)throw new Error('Studio external H5P conversion failed');",
+  "console.log(JSON.stringify({ok:true,format:result.report.detectedFormat,bytes:result.bytes.byteLength}));",
+  '',
+].join('\n'));
+await run(node,[studioExternalSmoke],{cwd:installRoot});
 
 const documentReaderSmoke = join(work,'reader-smoke.md');
 await writeFile(documentReaderSmoke, '# Reader npm smoke\n\nTexto desde tarball npm.\n');

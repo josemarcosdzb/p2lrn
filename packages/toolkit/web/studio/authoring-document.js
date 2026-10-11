@@ -110,7 +110,9 @@ export class P2LRNStudioDocument{
   #ensureProfile(id,version='0.4.0',requirement='optional'){
     if(!id)return;
     this.manifest.profiles??=[];
-    if(!this.manifest.profiles.some((profile)=>profile.id===id))this.manifest.profiles.push({id,version,requirement});
+    const existing=this.manifest.profiles.find((profile)=>profile.id===id);
+    if(!existing){this.manifest.profiles.push({id,version,requirement});return;}
+    if(requirement==='required')existing.requirement='required';
   }
 
   addEmbeddedResource(parentId=this.rootId,{title='Recurso',language='es',filename='resource.bin',mediaType='application/octet-stream',bytes=new Uint8Array(),profile=null,activityType='https://p2lrn.org/type/resource',renderer=null}={}){
@@ -185,6 +187,65 @@ export class P2LRNStudioDocument{
     const activity={id:activityId,type:'activity',activityType:'https://p2lrn.org/type/resource',title:{[language]:safe},resource:resourceId};
     this.graph.entities.push(resource,activity);this.entities.set(resource.id,resource);this.entities.set(activity.id,activity);parent.children??=[];parent.children.push(activity.id);
     const zero='sha256:'+'0'.repeat(64);this.manifest.files.push({path,mediaType:'text/html',size:0,byteDigest:zero,contentDigest:zero});this.payloadOverrides.set(path,encoder.encode(html));this.changeCount+=1;return activity;
+  }
+
+  async importPackage(pkg,parentId=this.rootId,{title=null,language='es'}={}){
+    const parent=this.entity(parentId);
+    if(!parent||!['course','unit'].includes(parent.type))throw new Error('El paquete importado sólo se puede añadir dentro de un curso o unidad.');
+    if(!pkg?.manifest||!pkg?.graph||!pkg?.entities||!pkg?.zip)throw new TypeError('El paquete importado no es P2LRN.');
+    const sourceRoot=(pkg.manifest.entrypoints?.find((item)=>item.role==='primary'&&item.type==='course')??pkg.manifest.entrypoints?.find((item)=>item.type==='course')??pkg.manifest.entrypoints?.[0])?.id;
+    const sourceCourse=sourceRoot?pkg.entities.get(sourceRoot):null;
+    if(!sourceCourse)throw new Error('El paquete importado no tiene un curso raíz.');
+
+    const importedEntities=(pkg.graph.entities??[]).filter((entity)=>entity.id!==sourceRoot);
+    const wrapperId='urn:uuid:'+crypto.randomUUID();
+    const usedIds=new Set();
+    for(const entity of this.graph.entities??[]){
+      if(entity?.id)usedIds.add(String(entity.id));
+      for(const representation of entity?.representations??[])if(representation?.id)usedIds.add(String(representation.id));
+    }
+    for(const relation of this.graph.relations??[])if(relation?.id)usedIds.add(String(relation.id));
+    usedIds.add(wrapperId);
+    const idMap=new Map([[String(sourceRoot),wrapperId]]);
+    const registerId=(value)=>{
+      if(value==null)return;
+      const sourceId=String(value);if(!sourceId||idMap.has(sourceId))return;
+      const target=usedIds.has(sourceId)?'urn:uuid:'+crypto.randomUUID():sourceId;
+      idMap.set(sourceId,target);usedIds.add(target);
+    };
+    for(const entity of importedEntities){
+      registerId(entity.id);
+      for(const representation of entity.representations??[])registerId(representation.id);
+    }
+    for(const relation of pkg.graph.relations??[])registerId(relation?.id);
+    const importToken=crypto.randomUUID();
+    const currentFiles=new Map((this.manifest.files??[]).map((file)=>[file.path,file]));
+    const pathMap=new Map();
+    for(const file of pkg.manifest.files??[]){
+      const sourcePath=String(file.path);let targetPath=sourcePath;const existing=currentFiles.get(sourcePath);
+      if(existing&&existing.byteDigest!==file.byteDigest){const base=sourcePath.split('/').at(-1)||'payload.bin';targetPath='content/imports/'+importToken+'/'+base;}
+      pathMap.set(sourcePath,targetPath);
+      if(!currentFiles.has(targetPath)){
+        const bytes=await pkg.payload(sourcePath).read();
+        this.manifest.files.push({...clone(file),path:targetPath});this.payloadOverrides.set(targetPath,new Uint8Array(bytes));currentFiles.set(targetPath,this.manifest.files.at(-1));
+      }
+    }
+    const rewrite=(value,key='')=>{
+      if(typeof value==='string'){
+        if(idMap.has(value))return idMap.get(value);
+        if(pathMap.has(value)&&['path','package'].includes(key))return pathMap.get(value);
+        return value;
+      }
+      if(Array.isArray(value))return value.map((item)=>rewrite(item,key));
+      if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,rewrite(v,k)]));
+      return value;
+    };
+    for(const source of importedEntities){const entity=rewrite(clone(source));entity.id=idMap.get(String(source.id));this.graph.entities.push(entity);this.entities.set(entity.id,entity);}
+    for(const relation of pkg.graph.relations??[])this.graph.relations.push(rewrite(clone(relation)));
+    for(const profile of pkg.manifest.profiles??[])if(profile.id!=='https://p2lrn.org/profile/course')this.#ensureProfile(profile.id,profile.version??'0.4.0',profile.requirement??'optional');
+
+    const wrapper={id:wrapperId,type:'unit',role:'module',title:{[language]:String(title||localized(sourceCourse,language)||'Paquete importado')},children:(sourceCourse.children??[]).map((id)=>idMap.get(String(id))??String(id))};
+    this.graph.entities.push(wrapper);this.entities.set(wrapper.id,wrapper);parent.children??=[];parent.children.push(wrapper.id);this.changeCount+=1;return wrapper;
   }
 
   exportState(){

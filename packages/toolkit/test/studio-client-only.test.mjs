@@ -21,9 +21,11 @@ test('Studio saves local drafts only on explicit user action and warns about uns
   assert.match(studio,/confirm\(/);
   assert.doesNotMatch(studio+drafts,/method\s*:\s*['"](?:PUT|PATCH|DELETE)['"]/i);
   const posts=[...(studio.matchAll(/method\s*:\s*['"]POST['"]/gi))];
-  assert.equal(posts.length,1);
+  assert.equal(posts.length,2);
   assert.match(studio,/async function addReaderFile[\s\S]*method\s*:\s*['"]POST['"]/i);
+  assert.match(studio,/async function importExternalFile[\s\S]*method\s*:\s*['"]POST['"]/i);
   assert.match(studio,/readerEndpoint|studio\/read/);
+  assert.match(studio,/importEndpoint|studio\/import/);
 
   assert.doesNotMatch(studio+drafts,/navigator\.sendBeacon/i);
   assert.match(studio,/anchor\.download/);

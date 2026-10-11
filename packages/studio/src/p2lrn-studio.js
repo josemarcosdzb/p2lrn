@@ -59,7 +59,7 @@ function filenameFromUrl(value){
 
 export class P2LRNStudioElement extends HTMLElement{
   static p2lrnStudioVersion=P2LRN_STUDIO_VERSION;
-  static get observedAttributes(){return['src','save-endpoint','reader-endpoint','course-path'];}
+  static get observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path'];}
   #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;
 
   constructor(){
@@ -71,8 +71,8 @@ export class P2LRNStudioElement extends HTMLElement{
           <button type="button" data-create class="primary">New course</button>
           <label><button type="button" data-open>Open .p2lrn</button><input data-file type="file" accept=".p2lrn,application/vnd.p2lrn+zip" hidden></label>
           <details class="add-menu" data-add-menu><summary><span role="button">Add content</span></summary><div class="add-pop"><div class="add-grid">
-            <button type="button" data-add-kind="lesson">Lesson</button><button type="button" data-add-kind="file">File / media</button><button type="button" data-add-kind="url">URL</button><button type="button" data-add-kind="reader">Reader / document</button><button type="button" data-add-kind="questionnaire">Questionnaire</button><button type="button" data-add-kind="memory">Memory</button><button type="button" data-add-kind="matching">Matching</button><button type="button" data-add-kind="ordering">Ordering</button><button type="button" data-add-kind="classification">Classification</button><button type="button" data-add-kind="true-false">True / False</button><button type="button" data-add-kind="word-search">Word search</button><button type="button" data-add-kind="crossword">Crossword</button><button type="button" data-add-kind="rosco">Rosco</button><button type="button" data-add-kind="3d">3D game</button><button type="button" data-add-kind="unit">Unit</button><button type="button" data-add-kind="component">Component</button><button type="button" data-add-kind="composite">Composite</button>
-          </div></div></details><input data-resource-file type="file" hidden><input data-reader-file type="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.html,.htm,.rtf,.tex,.xml,.yaml,.yml,.odt,.epub" hidden>
+            <button type="button" data-add-kind="lesson">Lesson</button><button type="button" data-add-kind="file">File / media</button><button type="button" data-add-kind="url">URL</button><button type="button" data-add-kind="reader">Reader / document</button><button type="button" data-add-kind="external">Educational package</button><button type="button" data-add-kind="questionnaire">Questionnaire</button><button type="button" data-add-kind="memory">Memory</button><button type="button" data-add-kind="matching">Matching</button><button type="button" data-add-kind="ordering">Ordering</button><button type="button" data-add-kind="classification">Classification</button><button type="button" data-add-kind="true-false">True / False</button><button type="button" data-add-kind="word-search">Word search</button><button type="button" data-add-kind="crossword">Crossword</button><button type="button" data-add-kind="rosco">Rosco</button><button type="button" data-add-kind="3d">3D game</button><button type="button" data-add-kind="unit">Unit</button><button type="button" data-add-kind="component">Component</button><button type="button" data-add-kind="composite">Composite</button>
+          </div></div></details><input data-resource-file type="file" hidden><input data-reader-file type="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.html,.htm,.rtf,.tex,.xml,.yaml,.yml,.odt,.epub" hidden><input data-external-file type="file" accept=".zip,.h5p,application/zip,application/vnd.h5p" hidden>
           <button type="button" data-edit class="primary">Edit</button>
           <button type="button" data-preview>Student view</button>
           <button type="button" data-download>Download .p2lrn</button>
@@ -94,6 +94,7 @@ export class P2LRNStudioElement extends HTMLElement{
     q('[data-add-menu]').querySelectorAll('[data-add-kind]').forEach((button)=>button.addEventListener('click',()=>this.addContent(button.dataset.addKind).catch((e)=>this.#status(e.message))));
     q('[data-resource-file]').addEventListener('change',()=>{const f=q('[data-resource-file]').files?.[0];if(f)this.addResourceFile(f).catch((e)=>this.#status(e.message));q('[data-resource-file]').value='';});
     q('[data-reader-file]').addEventListener('change',()=>{const f=q('[data-reader-file]').files?.[0];if(f)this.importDocument(f).catch((e)=>this.#status(e.message));q('[data-reader-file]').value='';});
+    q('[data-external-file]').addEventListener('change',()=>{const f=q('[data-external-file]').files?.[0];if(f)this.importExternalPackage(f).catch((e)=>this.#status(e.message));q('[data-external-file]').value='';});
     q('[data-edit]').addEventListener('click',()=>this.setMode('edit'));
     q('[data-preview]').addEventListener('click',()=>this.setMode('preview'));
     q('[data-download]').addEventListener('click',()=>this.download());
@@ -111,6 +112,8 @@ export class P2LRNStudioElement extends HTMLElement{
   set src(v){v?this.setAttribute('src',v):this.removeAttribute('src')}
   get saveEndpoint(){return this.getAttribute('save-endpoint')||''}
   get readerEndpoint(){return this.getAttribute('reader-endpoint')||''}
+  get importEndpoint(){return this.getAttribute('import-endpoint')||''}
+  set importEndpoint(v){v?this.setAttribute('import-endpoint',v):this.removeAttribute('import-endpoint')}
   set readerEndpoint(v){v?this.setAttribute('reader-endpoint',v):this.removeAttribute('reader-endpoint')}
   set saveEndpoint(v){v?this.setAttribute('save-endpoint',v):this.removeAttribute('save-endpoint')}
   get coursePath(){return (this.getAttribute('course-path')||'course').replace(/^\/+|\/+$/g,'')||'course'}
@@ -184,6 +187,7 @@ export class P2LRNStudioElement extends HTMLElement{
     if(kind==='unit'){const unit=this.#studio.addUnit(this.#insertionParent(),{title:'New unit',language:'en'});return this.#selectCreated(unit);}
     if(kind==='file'){this.shadowRoot.querySelector('[data-resource-file]').click();return null;}
     if(kind==='reader'){this.shadowRoot.querySelector('[data-reader-file]').click();return null;}
+    if(kind==='external'){this.shadowRoot.querySelector('[data-external-file]').click();return null;}
     if(kind==='url'){const url=prompt('Resource URL');if(!url)return null;return this.#selectCreated(this.#studio.addRemoteResource(this.#insertionParent(),{title:'Web resource',url}));}
     if(kind==='questionnaire')return this.#selectCreated(this.#studio.addQuestionnaire(this.#insertionParent(),{title:'Questionnaire',language:'en'}));
     if(['memory','matching','ordering','classification','true-false','word-search','crossword','rosco','3d'].includes(kind))return this.#selectCreated(this.#studio.addGame(this.#insertionParent(),{kind,title:kind,language:'en'}));
@@ -192,6 +196,12 @@ export class P2LRNStudioElement extends HTMLElement{
     return null;
   }
   async addResourceFile(file){const bytes=new Uint8Array(await file.arrayBuffer());const entity=this.#studio.addEmbeddedResource(this.#insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:file.type||'application/octet-stream',bytes});return this.#selectCreated(entity);}
+  async importExternalPackage(file){
+    if(!this.importEndpoint)throw new Error('import-endpoint is required for educational package import.');
+    const response=await fetch(new URL(this.importEndpoint,document.baseURI).href,{method:'POST',headers:{'Content-Type':file.type||'application/zip','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
+    if(!response.ok){let detail='';try{detail=(await response.json())?.error||''}catch{}throw new Error('Studio external package import failed'+(detail?': '+detail:' (HTTP '+response.status+')'));}
+    const bytes=await response.arrayBuffer();const pkg=await (await playerApi()).openPackageBytes(bytes);const root=(pkg.manifest.entrypoints.find((x)=>x.type==='course')??pkg.manifest.entrypoints[0])?.id;const title=pkg.entities.get(root)?.title?.en??pkg.entities.get(root)?.title?.es??file.name;const wrapper=await this.#studio.importPackage(pkg,this.#insertionParent(),{title,language:'en'});return this.#selectCreated(wrapper);
+  }
   async importDocument(file){
     if(!this.readerEndpoint)throw new Error('reader-endpoint is required for Reader document import.');
     const response=await fetch(new URL(this.readerEndpoint,document.baseURI).href,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});

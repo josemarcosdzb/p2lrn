@@ -4,6 +4,7 @@ export class P2LRNStudioElement extends HTMLElement {
   src:string;
   saveEndpoint:string;
   readerEndpoint:string;
+  importEndpoint:string;
   coursePath:string;
   createCourse(options?:{title?:string;language?:string;description?:string}):Promise<unknown>;
   openFile(file:File):Promise<void>;
@@ -14,6 +15,7 @@ export class P2LRNStudioElement extends HTMLElement {
   addContent(kind:string):Promise<unknown>;
   addResourceFile(file:File):Promise<unknown>;
   importDocument(file:File):Promise<unknown>;
+  importExternalPackage(file:File):Promise<unknown>;
   exportPackage():Promise<{bytes:Uint8Array;filename:string;manifest:unknown;graph:unknown}>;
   download():Promise<void>;
   saveCourse():Promise<unknown>;
