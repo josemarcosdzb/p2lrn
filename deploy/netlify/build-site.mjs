@@ -126,6 +126,37 @@ function isCorrespondingSourcePath(path) {
 const allHtmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
 const htmlFiles = allHtmlFiles.filter((path)=>!isCorrespondingSourcePath(path));
 
+// Normalize every documentation sidebar in the generated site. Source articles
+// may contain historical fallback links, but published HTML must have one empty
+// placeholder so p2lrn.js is the sole navigation authority.
+const docsHtmlFilesForSidebar = htmlFiles.filter((path)=>relative(outputRoot,path).replaceAll('\\','/').startsWith('docs/'));
+const sidebarProblems = [];
+for (const htmlPath of docsHtmlFilesForSidebar) {
+  let html = await readFile(htmlPath,'utf8');
+  const matches = [...html.matchAll(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/gi)];
+  if (matches.length !== 1) {
+    sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': expected exactly one .doc-sidebar');
+    continue;
+  }
+  html = html.replace(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/i,'<aside class="doc-sidebar"></aside>');
+  await writeFile(htmlPath,html);
+}
+for (const htmlPath of docsHtmlFilesForSidebar) {
+  const html = await readFile(htmlPath,'utf8');
+  const sidebar = /<aside\s+class=["']doc-sidebar["'][^>]*>([\s\S]*?)<\/aside>/i.exec(html);
+  if (!sidebar) {
+    sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': sidebar missing after normalization');
+  } else if (/<a\b|<span\b|P2LRN_EXTRA_DOC_LINKS/i.test(sidebar[1])) {
+    sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': legacy sidebar content survived normalization');
+  }
+  if (!/<script[^>]+src=["']\/p2lrn\.js["']/i.test(html)) {
+    sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': shared /p2lrn.js missing');
+  }
+}
+if (sidebarProblems.length) {
+  throw new Error('Documentation sidebar normalization failed:\n' + sidebarProblems.join('\n'));
+}
+
 // Central legal footer: injected into the built HTML so every public route has
 // the same compact legal navigation without duplicating it in every source page.
 const footerLinks = [
