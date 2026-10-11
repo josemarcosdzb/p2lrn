@@ -2,6 +2,157 @@
   const SUPABASE_URL = 'https://yurtnmtesugykrqtujdx.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_cmC0leUeJtwzXrZb7nUn1Q_xdYoAKfH';
 
+  const GLOBAL_NAV = [
+    {
+      label: 'Documentación',
+      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
+      items: [
+        ['/docs/','Inicio de documentación'],
+        ['/docs/empezar/','Quickstart'],
+        ['/docs/que-usar/','¿Qué pieza uso?'],
+        ['/docs/conceptos/','Conceptos'],
+        ['/docs/recetas/','Recetas'],
+        ['/docs/glosario/','Glosario'],
+        ['/docs/referencia/','Referencia'],
+        ['/docs/troubleshooting/','Troubleshooting'],
+      ],
+    },
+    {
+      label: 'Formato',
+      active: ['/docs/formato/','/docs/paquetes/*','/docs/progresion/'],
+      items: [
+        ['/docs/formato/','Formato P2LRN'],
+        ['/docs/paquetes/','Crear paquetes'],
+        ['/docs/progresion/','Progresión'],
+        ['/docs/paquetes/multipart/','Multipart'],
+      ],
+    },
+    {
+      label: 'Player',
+      active: ['/docs/player/','/demo/','/docs/ejemplos/'],
+      items: [
+        ['/docs/player/','Player web'],
+        ['/demo/','Visor real'],
+        ['/docs/ejemplos/','Ejemplos'],
+      ],
+    },
+    {label:'Studio',href:'/studio/',active:['/studio/']},
+    {
+      label: 'Toolkit',
+      active: ['/docs/toolkit/','/docs/cli/'],
+      items: [
+        ['/docs/toolkit/','Toolkit'],
+        ['/docs/cli/','CLI'],
+      ],
+    },
+    {
+      label: 'Juegos',
+      active: ['/docs/questionnaires/*','/docs/juegos-3d/'],
+      wide: true,
+      items: [
+        ['/docs/questionnaires/','Cuestionarios y juegos'],
+        ['/docs/questionnaires/standard/','Cuestionario estándar'],
+        ['/docs/questionnaires/memory/','Memoria'],
+        ['/docs/questionnaires/matching/','Relacionar'],
+        ['/docs/questionnaires/ordering/','Ordenar'],
+        ['/docs/questionnaires/classification/','Clasificar'],
+        ['/docs/questionnaires/true-false/','Verdadero / Falso'],
+        ['/docs/questionnaires/word-search/','Sopa de letras'],
+        ['/docs/questionnaires/crossword/','Crucigrama'],
+        ['/docs/questionnaires/rosco/','Rosco'],
+        ['/docs/questionnaires/3d/','Juego 3D'],
+        ['/docs/juegos-3d/','Arquitectura 3D'],
+      ],
+    },
+    {
+      label: 'Integración',
+      active: ['/docs/integracion/','/docs/eventos/','/docs/compatibilidad/'],
+      items: [
+        ['/docs/integracion/','Integración real'],
+        ['/docs/eventos/','Eventos'],
+        ['/docs/compatibilidad/','Compatibilidad'],
+      ],
+    },
+  ];
+
+  const normalizePath = (value) => {
+    const pathname = String(value || '/').split(/[?#]/, 1)[0].replace(/\/index\.html$/u, '/');
+    return pathname.endsWith('/') ? pathname : pathname + '/';
+  };
+
+  const renderGlobalNavigation = () => {
+    const header = document.querySelector('.site-header');
+    if (!header) return;
+    let nav = header.querySelector('.nav');
+    if (!nav) {
+      nav = document.createElement('nav');
+      nav.className = 'nav';
+      header.querySelector('.brand')?.after(nav);
+    }
+    nav.id = 'nav';
+    nav.setAttribute('aria-label','Navegación principal');
+    const current = normalizePath(window.location.pathname);
+    const fragment = document.createDocumentFragment();
+
+    for (const entry of GLOBAL_NAV) {
+      const active = (entry.active || []).some((path) => path.endsWith('*') ? current.startsWith(normalizePath(path.slice(0,-1))) : current === normalizePath(path));
+      if (entry.href) {
+        const link = document.createElement('a');
+        link.className = 'nav-direct';
+        link.href = entry.href;
+        link.textContent = entry.label;
+        if (active) link.setAttribute('aria-current','page');
+        fragment.append(link);
+        continue;
+      }
+      const group = document.createElement('details');
+      group.className = 'nav-group' + (entry.wide ? ' nav-group-wide' : '');
+      if (active) group.classList.add('is-active');
+      const summary = document.createElement('summary');
+      summary.innerHTML = '<span></span><i aria-hidden="true">⌄</i>';
+      summary.querySelector('span').textContent = entry.label;
+      summary.setAttribute('aria-label',entry.label);
+      const dropdown = document.createElement('div');
+      dropdown.className = 'nav-dropdown';
+      for (const [href,label] of entry.items) {
+        const link = document.createElement('a');
+        link.href = href;
+        link.textContent = label;
+        if (current === normalizePath(href)) link.setAttribute('aria-current','page');
+        dropdown.append(link);
+      }
+      group.append(summary,dropdown);
+      fragment.append(group);
+    }
+    nav.replaceChildren(fragment);
+
+    let menuButton = header.querySelector('[data-menu]');
+    if (!menuButton) {
+      menuButton = document.createElement('button');
+      menuButton.className = 'menu';
+      menuButton.type = 'button';
+      menuButton.dataset.menu = '';
+      menuButton.textContent = 'Menú';
+      header.append(menuButton);
+    }
+    menuButton.setAttribute('aria-controls','nav');
+    menuButton.setAttribute('aria-expanded','false');
+
+    const hoverCapable = window.matchMedia?.('(hover:hover) and (pointer:fine)').matches;
+    nav.querySelectorAll('.nav-group').forEach((group) => {
+      if (hoverCapable) {
+        group.addEventListener('pointerenter',()=>{group.open=true;});
+        group.addEventListener('pointerleave',()=>{group.open=false;});
+      }
+    });
+    document.addEventListener('click',(event)=>{
+      if (event.target.closest('.nav-group')) return;
+      nav.querySelectorAll('.nav-group[open]').forEach((group)=>{group.open=false;});
+    });
+  };
+
+  renderGlobalNavigation();
+
   const menu = document.querySelector('[data-menu]');
   const nav = document.getElementById('nav');
 
@@ -23,6 +174,7 @@
     });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
+        nav.querySelectorAll('.nav-group[open]').forEach((group)=>{group.open=false;});
         closeMenu();
         menu.focus();
       }
