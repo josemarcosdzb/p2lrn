@@ -1,24 +1,6 @@
 <!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Identidad, anatomía del paquete, grafo, entrypoints, recursos, perfiles, integridad y proyecto de autoría."><title>Formato P2LRN — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
 <header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/paquetes/">Paquetes</a><a href="/docs/paquetes/multipart/">Multipart</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main"><aside class="doc-sidebar">
-  <span>START</span>
-  <a href="/docs/">Overview</a>
-  <a href="/docs/empezar/">Quickstart</a>
-  <a href="/docs/conceptos/">Conceptos</a>
-  <span>BUILD</span>
-  <a href="/docs/formato/" aria-current="page">Formato</a>
-  <a href="/docs/player/">Player</a>
-  <a href="/docs/toolkit/">Toolkit</a>
-  <span>INTEGRATE</span>
-  <a href="/docs/integracion/">Integración real</a>
-  <a href="/docs/compatibilidad/">Compatibilidad</a>
-  <span>REFERENCE</span>
-  <a href="/docs/referencia/">Referencia</a>
-  <a href="/docs/troubleshooting/">Troubleshooting</a>
-  <span>RESOURCES</span>
-  <a href="/demo/">Visor real ↗</a>
-  <a href="/index.json">Índice CDN ↗</a>
-  <a href="/health.json">Estado ↗</a></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">BUILD / FORMAT</p><h1>Formato P2LRN</h1><p>Identidad, anatomía del paquete, grafo, entrypoints, recursos, perfiles, integridad y proyecto de autoría.</p></header>
+<main class="doc-main"><aside class="doc-sidebar"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">BUILD / FORMAT</p><h1>Formato P2LRN</h1><p>Identidad, anatomía del paquete, grafo, entrypoints, recursos, perfiles, integridad y proyecto de autoría.</p></header>
 <section class="doc-section"><h2>Qué vas a conseguir</h2><p>Entender qué hay dentro de un <code>.p2lrn</code>, qué partes son canónicas y qué información debe seguir viviendo fuera del paquete.</p></section>
 <section class="doc-section"><h2>Identidad canónica</h2><div class="reference-table"><div><code>P2LRN</code><p>Nombre actual del formato.</p></div><div><code>.p2lrn</code><p>Extensión de paquete.</p></div><div><code>https://p2lrn.org/</code><p>Namespace canónico.</p></div><div><code>p2lrn.project.json</code><p>Proyecto editable de autoría.</p></div><div><code>p2lrn:*</code><p>Namespace de eventos públicos.</p></div></div></section>
 <section class="doc-section"><h2>Anatomía práctica</h2><p>Un paquete final reúne manifiesto, entidades del grafo, representaciones y recursos. El proyecto editable añade la información necesaria para round-trip y reconstrucción.</p><div class="doc-terminal"><span>conceptual package map</span><pre><code>course.p2lrn
