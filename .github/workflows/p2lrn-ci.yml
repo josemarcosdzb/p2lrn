@@ -134,6 +134,9 @@ jobs:
       - name: Verify Studio setup CLI
         run: node --test packages/studio/test/*.test.mjs
 
+      - name: Verify global docs navigation
+        run: node scripts/verify-doc-navigation.mjs
+
       - name: Build Player runtime for security tests
         run: node packages/player/scripts/build-dist.mjs
 
