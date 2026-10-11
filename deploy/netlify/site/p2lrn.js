@@ -263,7 +263,7 @@
         const a=document.createElement('a');
         a.href=href;
         a.textContent=textValue;
-        if (current===normalizePath(href)) a.setAttribute('aria-current','page');
+        if (current===normalizePath(href) || (href==='/docs/questionnaires/' && current.startsWith(normalizePath(href)))) a.setAttribute('aria-current','page');
         fragment.append(a);
       }
     }
