@@ -48,5 +48,30 @@ for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(']){
   if(js.includes(forbidden)) failures.push('p2lrn.js: legacy logic remains: '+forbidden);
 }
 
+const expectedSections=['EMPEZAR','CREAR','REPRODUCIR','INTEGRAR','REFERENCIA','RECURSOS'];
+const sidebarBlock=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1] ?? '';
+const sectionNames=[...sidebarBlock.matchAll(/\['([^']+)', \[/g)].map((match)=>match[1]);
+if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections)){
+  failures.push('p2lrn.js: sidebar sections/order mismatch: '+JSON.stringify(sectionNames));
+}
+const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
+if(sidebarLinks.length!==26) failures.push('p2lrn.js: expected 26 global sidebar links, found '+sidebarLinks.length);
+const hrefs=sidebarLinks.map((item)=>item.href);
+const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
+if(duplicates.length) failures.push('p2lrn.js: duplicate sidebar hrefs: '+[...new Set(duplicates)].join(', '));
+if(!js.includes("href==='/docs/questionnaires/' && current.startsWith(normalizePath(href))")){
+  failures.push('p2lrn.js: questionnaire child routes do not keep the parent section active');
+}
+
+const docRoutes=pages.map((path)=>{
+  const rel=relative(docsRoot,path).replaceAll('\\','/');
+  return rel==='index.html' ? '/docs/' : '/docs/'+rel.slice(0,-'index.html'.length);
+});
+for(const route of docRoutes){
+  const exact=hrefs.includes(route);
+  const questionnaireChild=route.startsWith('/docs/questionnaires/') && route!=='/docs/questionnaires/';
+  if(!exact && !questionnaireChild) failures.push('sidebar does not cover documentation route: '+route);
+}
+
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:['EMPEZAR','CREAR','REPRODUCIR','INTEGRAR','REFERENCIA','RECURSOS']},null,2));
+console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true},null,2));
