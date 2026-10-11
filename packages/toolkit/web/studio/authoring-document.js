@@ -159,18 +159,37 @@ export class P2LRNStudioDocument{
     this.payloadOverrides.set(target.path,encoder.encode(JSON.stringify(payload,null,2)+'\n'));this.changeCount+=1;return payload;
   }
 
+  structuredJsonForActivity(activityId){
+    const resolved=this.representationForActivity(activityId);if(!resolved)return null;
+    const rep=resolved.representation,mediaType=baseMedia(rep.mediaType);
+    if(!['application/vnd.p2lrn.component+json','application/vnd.p2lrn.composite+json'].includes(mediaType)||rep.location?.type!=='embedded')return null;
+    return {...resolved,path:rep.location.path,mediaType};
+  }
+
+  async readStructuredJson(activityId){
+    const target=this.structuredJsonForActivity(activityId);if(!target)return null;
+    const bytes=this.payloadOverrides.has(target.path)?this.payloadOverrides.get(target.path):await this.package.payload(target.path).read();
+    return {...target,payload:JSON.parse(decoder.decode(bytes))};
+  }
+
+  setStructuredJson(activityId,payload){
+    const target=this.structuredJsonForActivity(activityId);if(!target)throw new Error('La actividad no es contenido estructurado editable.');
+    this.payloadOverrides.set(target.path,encoder.encode(JSON.stringify(payload,null,2)+'\n'));this.changeCount+=1;return payload;
+  }
+
   addQuestionnaire(parentId=this.rootId,{title='Cuestionario',language='es',renderer='https://p2lrn.org/renderer/questionnaire/standard',payload=null}={}){
     const data=payload??{schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Cuestionario'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'after-submit'},questions:[{id:'q1',type:'single-choice',prompt:'Escribe aquí la pregunta',points:1,choices:[{id:'a',text:'Respuesta correcta'},{id:'b',text:'Otra respuesta'}],solution:{choiceIds:['a']}}]};
     return this.addEmbeddedResource(parentId,{title,language,filename:'questionnaire.json',mediaType:'application/vnd.p2lrn.questionnaire+json',bytes:encoder.encode(JSON.stringify(data,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-questionnaire',activityType:'https://p2lrn.org/type/assessment',renderer});
   }
 
   addGame(parentId=this.rootId,{kind='memory',title='Juego',language='es'}={}){
-    const renderers={memory:'https://p2lrn.org/renderer/questionnaire/memory',matching:'https://p2lrn.org/renderer/questionnaire/matching',ordering:'https://p2lrn.org/renderer/questionnaire/ordering',classification:'https://p2lrn.org/renderer/questionnaire/classification','true-false':'https://p2lrn.org/renderer/questionnaire/true-false','word-search':'https://p2lrn.org/renderer/questionnaire/word-search',crossword:'https://p2lrn.org/renderer/questionnaire/crossword',rosco:'https://p2lrn.org/renderer/questionnaire/rosco','3d':'https://p2lrn.org/renderer/questionnaire/3d-order-match',standard:'https://p2lrn.org/renderer/questionnaire/standard'};
+    const renderers={memory:'https://p2lrn.org/renderer/questionnaire/memory',matching:'https://p2lrn.org/renderer/questionnaire/matching',ordering:'https://p2lrn.org/renderer/questionnaire/ordering',classification:'https://p2lrn.org/renderer/questionnaire/classification','true-false':'https://p2lrn.org/renderer/questionnaire/true-false','fill-blanks':'https://p2lrn.org/renderer/questionnaire/fill-blanks','word-search':'https://p2lrn.org/renderer/questionnaire/word-search',crossword:'https://p2lrn.org/renderer/questionnaire/crossword',rosco:'https://p2lrn.org/renderer/questionnaire/rosco','3d':'https://p2lrn.org/renderer/questionnaire/3d-order-match',standard:'https://p2lrn.org/renderer/questionnaire/standard'};
     const common={schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Juego'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'after-submit'}};
     let questions;
     if(kind==='ordering'||kind==='3d')questions=[{id:'q1',type:'ordering',prompt:'Ordena los elementos',points:1,items:[{id:'i1',text:'Primero'},{id:'i2',text:'Segundo'},{id:'i3',text:'Tercero'}],solution:{order:['i1','i2','i3']}}];
     else if(kind==='classification')questions=[{id:'q1',type:'classification',prompt:'Clasifica los elementos',points:1,items:[{id:'i1',text:'Elemento A'},{id:'i2',text:'Elemento B'}],categories:[{id:'c1',text:'Grupo 1'},{id:'c2',text:'Grupo 2'}],solution:{assignments:[{item:'i1',category:'c1'},{item:'i2',category:'c2'}]}}];
     else if(kind==='true-false')questions=[{id:'q1',type:'true-false',prompt:'La Tierra gira alrededor del Sol',points:1,choices:[{id:'t1',text:'Verdadero'},{id:'f1',text:'Falso'}],solution:{choiceIds:['t1']}},{id:'q2',type:'true-false',prompt:'El agua hierve a 20 °C al nivel del mar',points:1,choices:[{id:'t2',text:'Verdadero'},{id:'f2',text:'Falso'}],solution:{choiceIds:['f2']}}];
+    else if(kind==='fill-blanks')questions=[{id:'q1',type:'fill-blanks',prompt:'Completa los huecos',points:1,blanks:[{id:'b1',label:'Hueco 1'}],solution:{answers:{b1:['Respuesta']}}}];
     else if(kind==='matching'||kind==='memory')questions=[{id:'q1',type:'matching',prompt:'Relaciona cada elemento',points:1,left:[{id:'l1',text:'España'},{id:'l2',text:'Francia'},{id:'l3',text:'Italia'}],right:[{id:'r1',text:'Madrid'},{id:'r2',text:'París'},{id:'r3',text:'Roma'}],solution:{pairs:[{left:'l1',right:'r1'},{left:'l2',right:'r2'},{left:'l3',right:'r3'}]}}];
     else questions=[{id:'q1',type:'text',prompt:'Empieza por A',points:1,solution:{acceptedAnswers:['Arbol']}},{id:'q2',type:'text',prompt:'Empieza por B',points:1,solution:{acceptedAnswers:['Barco']}},{id:'q3',type:'text',prompt:'Empieza por C',points:1,solution:{acceptedAnswers:['Casa']}},{id:'q4',type:'text',prompt:'Empieza por D',points:1,solution:{acceptedAnswers:['Dado']}}];
     return this.addQuestionnaire(parentId,{title,language,renderer:renderers[kind]??renderers.standard,payload:{...common,questions}});

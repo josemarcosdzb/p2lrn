@@ -5,6 +5,7 @@ import {
   ORDERING_RENDERER,
   CLASSIFICATION_RENDERER,
   TRUE_FALSE_RENDERER,
+  FILL_BLANKS_RENDERER,
   WORD_SEARCH_RENDERER,
   CROSSWORD_RENDERER,
   ROSCO_RENDERER,
@@ -407,6 +408,16 @@ function buildOrdering(payload, seedSource) {
   return result(ORDERING_RENDERER,'Ordenar',true,{sequences:shuffleDeterministic(sequences,seedFor(payload,'ordering',seedSource))});
 }
 
+function buildFillBlanks(payload) {
+  if(!requireEmbeddedKey(payload))return result(FILL_BLANKS_RENDERER,'Rellenar huecos',false,null,['Necesita soluciones embebidas.']);
+  const reasons=[];
+  for(const question of payload.questions){
+    if(question.type!=='fill-blanks')reasons.push(`${question.id}: Rellenar huecos exige preguntas fill-blanks.`);
+    else if(!question.blanks?.length||!question.solution?.answers)reasons.push(`${question.id}: necesita huecos y respuestas.`);
+  }
+  return reasons.length?result(FILL_BLANKS_RENDERER,'Rellenar huecos',false,null,reasons):result(FILL_BLANKS_RENDERER,'Rellenar huecos',true,{questions:payload.questions.map((q)=>q.id)});
+}
+
 function buildClassification(payload, seedSource) {
   if(!requireEmbeddedKey(payload))return result(CLASSIFICATION_RENDERER,'Clasificar',false,null,['Necesita soluciones embebidas.']);
   const trials=[]; const reasons=[];
@@ -481,6 +492,7 @@ export function buildQuestionnaireGame(payload, rendererId, {seedSource = ''} = 
     case ORDERING_RENDERER:return buildOrdering(payload,seedSource);
     case CLASSIFICATION_RENDERER:return buildClassification(payload,seedSource);
     case TRUE_FALSE_RENDERER:return buildTrueFalse(payload);
+    case FILL_BLANKS_RENDERER:return buildFillBlanks(payload);
     case THREE_D_RENDERER:return build3D(payload,seedSource);
     default:throw new Error(`Unknown questionnaire game renderer: ${rendererId}`);
   }

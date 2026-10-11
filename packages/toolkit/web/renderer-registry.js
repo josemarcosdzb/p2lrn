@@ -10,6 +10,7 @@ export const MATCHING_RENDERER = 'https://p2lrn.org/renderer/questionnaire/match
 export const ORDERING_RENDERER = 'https://p2lrn.org/renderer/questionnaire/ordering';
 export const CLASSIFICATION_RENDERER = 'https://p2lrn.org/renderer/questionnaire/classification';
 export const TRUE_FALSE_RENDERER = 'https://p2lrn.org/renderer/questionnaire/true-false';
+export const FILL_BLANKS_RENDERER = 'https://p2lrn.org/renderer/questionnaire/fill-blanks';
 export const WORD_SEARCH_RENDERER = 'https://p2lrn.org/renderer/questionnaire/word-search';
 export const CROSSWORD_RENDERER = 'https://p2lrn.org/renderer/questionnaire/crossword';
 export const ROSCO_RENDERER = 'https://p2lrn.org/renderer/questionnaire/rosco';

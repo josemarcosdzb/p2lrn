@@ -9,7 +9,7 @@ import {validateQuestionnaire} from '../web/questionnaire-core.js';
 const toArrayBuffer=(bytes)=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
 const HINT='https://p2lrn.org/ext/renderer-preference/1';
 
-for(const kind of ['memory','matching','ordering','classification','true-false','word-search','crossword','rosco','3d']){
+for(const kind of ['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d']){
   test(`Studio creates a fully compatible ${kind} game`,async()=>{
     const doc=createP2LRNStudioDocument({title:'Juegos Studio',language:'es'});
     const activity=doc.addGame(doc.rootId,{kind,title:'Juego '+kind,language:'es'});
