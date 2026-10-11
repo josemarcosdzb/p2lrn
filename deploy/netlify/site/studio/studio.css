@@ -80,5 +80,16 @@
 .studio-add-grid button[data-help]:focus-visible{outline:2px solid #667085;outline-offset:2px}
 .studio-add-tooltip{position:fixed;z-index:1000;width:min(330px,calc(100vw - 24px));padding:10px 12px;border:1px solid #344054;border-radius:8px;background:#101828;color:#fff;box-shadow:0 12px 34px rgba(16,24,40,.24);font:600 .72rem/1.45 var(--sans);pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease}
 .studio-add-tooltip[data-visible=true]{opacity:1;transform:translateY(0)}
-.studio-add-tooltip::before{content:'Qué hace';display:block;margin-bottom:3px;color:#d0d5dd;font:700 .58rem/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.studio-add-tooltip::before{content:'QuÃ© hace';display:block;margin-bottom:3px;color:#d0d5dd;font:700 .58rem/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase}
 @media(max-width:640px){.studio-add-advanced{padding:10px}.studio-add-tooltip{font-size:.7rem}}
+/* Assessment authoring controls */
+.q-settings{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important}
+.q-basic-grid{grid-template-columns:minmax(240px,2fr) minmax(145px,1fr) minmax(100px,.65fr) minmax(78px,.5fr) minmax(105px,.6fr) minmax(100px,.65fr)!important}
+.q-field input[type=checkbox]{width:18px!important;max-width:18px!important;min-width:18px!important;height:18px;margin-top:8px}
+.q-field input:disabled,.q-field select:disabled{background:#f2f4f7;color:#98a2b3;cursor:not-allowed}
+@media(max-width:1180px){.q-basic-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.q-basic-grid>.q-field:first-child{grid-column:span 2}}
+@media(max-width:760px){.q-basic-grid{grid-template-columns:1fr!important}.q-basic-grid>.q-field:first-child{grid-column:auto}}
+
+/* Stable question metadata layout inside the actual Studio canvas width. */
+.q-basic-grid{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,.72fr)!important}
+@media(max-width:760px){.q-basic-grid{grid-template-columns:1fr!important}}

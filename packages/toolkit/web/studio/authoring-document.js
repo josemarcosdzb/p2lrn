@@ -159,6 +159,29 @@ export class P2LRNStudioDocument{
     this.payloadOverrides.set(target.path,encoder.encode(JSON.stringify(payload,null,2)+'\n'));this.changeCount+=1;return payload;
   }
 
+  progressionForActivity(activityId){
+    const activity=this.entity(activityId);
+    if(!activity||activity.type!=='activity')return null;
+    return activity.extensions?.['https://p2lrn.org/profile/progression']??null;
+  }
+
+  setActivityProgression(activityId,{mode='none',minScore=80}={}){
+    const activity=this.entity(activityId);
+    if(!activity||activity.type!=='activity')throw new Error('La progresión sólo se puede configurar en actividades.');
+    activity.extensions??={};
+    const key='https://p2lrn.org/profile/progression';
+    if(mode==='none'){
+      delete activity.extensions[key];
+      if(Object.keys(activity.extensions).length===0)delete activity.extensions;
+      this.changeCount+=1;return null;
+    }
+    const rule={required:true,gateFollowing:true,completionRequirement:mode==='passed'?'passed':'completed'};
+    if(mode==='passed')rule.minScore=Math.max(0,Math.min(100,Number(minScore)||0));
+    activity.extensions[key]=rule;
+    this.#ensureProfile(key,'0.4.0','required');
+    this.changeCount+=1;return rule;
+  }
+
   structuredJsonForActivity(activityId){
     const resolved=this.representationForActivity(activityId);if(!resolved)return null;
     const rep=resolved.representation,mediaType=baseMedia(rep.mediaType);

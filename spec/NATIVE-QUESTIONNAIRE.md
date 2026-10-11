@@ -62,7 +62,7 @@ Each question may use:
 
 Default behavior mirrors the source questionnaire semantics used for the initial implementation: single-choice, true/false and text default to all-or-nothing; multi-answer and structured interactions default to partial per item.
 
-Scores are bounded to `[0, points]` and rounded to two decimal places by the reference implementation. Questionnaire normalized score is `raw / max` only when the questionnaire is authoritatively graded.
+Question scores normally stay within `[0, points]`. When `partial-with-penalty` is enabled, an incorrect response may contribute a negative value down to `-points`, so errors can subtract from points earned elsewhere. The final questionnaire score is clamped to `[0, max]` and rounded to two decimals. Questionnaire normalized score is `raw / max` only when the questionnaire is authoritatively graded.
 
 ## 5. Stable internal identifiers
 

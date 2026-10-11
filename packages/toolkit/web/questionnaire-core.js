@@ -184,7 +184,8 @@ function boundedScore(question, hits, errors, total) {
     raw = hits * (points / total);
     if (mode === 'partial-with-penalty') raw -= errors * Number(question.penalty ?? 0);
   }
-  return round2(Math.min(points, Math.max(0, raw)));
+  const floor = mode === 'partial-with-penalty' ? -points : 0;
+  return round2(Math.min(points, Math.max(floor, raw)));
 }
 
 export function scoreQuestion(question, answer) {
@@ -263,7 +264,8 @@ export function scoreQuestionnaire(payload, answers = {}) {
   }
   const questions = payload.questions.map((question) => scoreQuestion(question, answers?.[question.id]));
   const max = round2(questions.reduce((sum, item) => sum + item.pointsPossible, 0));
-  const raw = round2(questions.reduce((sum, item) => sum + item.pointsAwarded, 0));
+  const summed = round2(questions.reduce((sum, item) => sum + item.pointsAwarded, 0));
+  const raw = round2(Math.max(0, Math.min(max, summed)));
   const graded = questions.every((item) => item.graded);
   const normalized = !graded || max <= 0 ? null : Math.round((raw / max) * 1_000_000) / 1_000_000;
   return {graded, raw, max, normalized, questions};

@@ -22,6 +22,7 @@ export function el(tag, attrs = {}, text = null) {
 export async function setupGame({container, bytes, decodeJson, rendererId, eventTarget, adapter, context}) {
   const payload = decodeJson(bytes, 'native questionnaire');
   validateQuestionnaire(payload);
+  if(payload.questions.some((question)=>Number.isInteger(question.timeLimitSeconds))){const error=new Error('El renderer de juego no implementa tiempo por pregunta; se requiere el renderer estándar.');error.code='P2LRN_TIMING_UNSUPPORTED';throw error;}
   const game = buildQuestionnaireGame(payload, rendererId, {seedSource: context?.contentRoot ?? ''});
   if (!game.compatible) { const error = new Error(`${game.name} no puede representar fielmente este cuestionario completo. ${game.reasons.join(' ')}`); error.code = 'P2LRN_RENDERER_INCOMPATIBLE'; throw error; }
   const runtime = await createQuestionnaireGameRuntime(container, payload, {rendererId, eventTarget, adapter, context});
