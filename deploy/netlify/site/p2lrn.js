@@ -210,7 +210,65 @@
     });
   });
 
+  const GLOBAL_SIDEBAR = [
+    ['EMPEZAR', [
+      ['/docs/','Overview'],
+      ['/docs/empezar/','Quickstart'],
+      ['/docs/que-usar/','¿Qué uso?'],
+      ['/docs/conceptos/','Conceptos'],
+    ]],
+    ['CREAR', [
+      ['/docs/formato/','Formato'],
+      ['/docs/paquetes/','Crear paquetes'],
+      ['/docs/progresion/','Progresión'],
+      ['/docs/paquetes/multipart/','Multipart'],
+      ['/docs/toolkit/','Toolkit'],
+      ['/docs/cli/','CLI'],
+    ]],
+    ['REPRODUCIR', [
+      ['/docs/player/','Player'],
+      ['/docs/questionnaires/','Cuestionarios y juegos'],
+      ['/docs/juegos-3d/','Juegos 3D'],
+      ['/docs/ejemplos/','Ejemplos'],
+    ]],
+    ['INTEGRAR', [
+      ['/docs/integracion/','Integración real'],
+      ['/docs/eventos/','Eventos'],
+      ['/docs/compatibilidad/','Compatibilidad'],
+    ]],
+    ['REFERENCIA', [
+      ['/docs/recetas/','Recetas'],
+      ['/docs/glosario/','Glosario'],
+      ['/docs/referencia/','Referencia'],
+      ['/docs/troubleshooting/','Troubleshooting'],
+    ]],
+    ['RECURSOS', [
+      ['/studio/','Studio ↗'],
+      ['/demo/','Visor real ↗'],
+      ['/examples/catalog.json','Catálogo de ejemplos ↗'],
+      ['/index.json','Índice CDN ↗'],
+      ['/health.json','Estado del build ↗'],
+    ]],
+  ];
+
   const sidebar = document.querySelector('.doc-sidebar');
+  if (sidebar) {
+    const current = normalizePath(window.location.pathname);
+    const fragment = document.createDocumentFragment();
+    for (const [section,items] of GLOBAL_SIDEBAR) {
+      const label=document.createElement('span');
+      label.textContent=section;
+      fragment.append(label);
+      for (const [href,textValue] of items) {
+        const a=document.createElement('a');
+        a.href=href;
+        a.textContent=textValue;
+        if (current===normalizePath(href)) a.setAttribute('aria-current','page');
+        fragment.append(a);
+      }
+    }
+    sidebar.replaceChildren(fragment);
+  }
   if (sidebar) {
     const search = document.createElement('div');
     search.className = 'docs-search';
@@ -247,27 +305,6 @@
     });
   }
 
-
-  // P2LRN_EXTRA_DOC_LINKS: connect older articles to the expanded reference set.
-  if (sidebar) {
-    const extras = [
-      ['/docs/questionnaires/','Questionnaires y juegos'],
-      ['/docs/ejemplos/','Ejemplos'],
-      ['/docs/cli/','CLI detallada'],
-    ];
-    const missing = extras.filter(([href]) => !sidebar.querySelector('a[href="' + href + '"]'));
-    if (missing.length) {
-      const label = document.createElement('span');
-      label.textContent = 'MORE';
-      sidebar.append(label);
-      for (const [href,textValue] of missing) {
-        const a=document.createElement('a');
-        a.href=href;
-        a.textContent=textValue;
-        sidebar.append(a);
-      }
-    }
-  }
 
   document.querySelectorAll('[data-contact-form]').forEach((form) => {
     const status = form.querySelector('[data-form-status]');
