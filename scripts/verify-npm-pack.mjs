@@ -95,7 +95,7 @@ async function runNpm(args, options = {}) {
   return result.stdout;
 }
 
-await rm(work, {recursive:true, force:true});
+await rm(work, {recursive:true, force:true, maxRetries:5, retryDelay:250});
 await mkdir(packs, {recursive:true});
 await mkdir(installRoot, {recursive:true});
 
@@ -202,6 +202,7 @@ for (const path of [
   join(studioRoot,'server','index.mjs'),
   join(studioRoot,'bin','p2lrn-studio.mjs'),
   join(studioRoot,'templates','next-route.ts'),
+  join(studioRoot,'templates','next-reader-route.ts'),
   join(studioRoot,'templates','generic-contract.md'),
 ]) {
   await assertFile(path);
@@ -233,7 +234,19 @@ const studioCliOutput=await run(node,[join(studioRoot,'bin','p2lrn-studio.mjs'),
 const studioCliJson=JSON.parse(studioCliOutput);
 if(studioCliJson.target!=='next')throw new Error('Installed @p2lrn/studio CLI did not run setup next.');
 await assertFile(join(studioCliSmoke,'app','api','p2lrn','studio','save','route.ts'));
+await assertFile(join(studioCliSmoke,'app','api','p2lrn','studio','read','route.ts'));
 await stat(join(studioCliSmoke,'course'));
+
+const studioReaderSmoke=join(installRoot,'studio-reader-smoke.mjs');
+await writeFile(studioReaderSmoke,[
+  "import {readP2LRNStudioDocument} from '@p2lrn/studio/server';",
+  "const data=new TextEncoder().encode('Documento de prueba\\nContenido importado');",
+  "const result=await readP2LRNStudioDocument(data,{filename:'prueba.txt',mediaType:'text/plain'});",
+  "if(result.source?.detectedType!=='TXT'||!result.blocks?.length)throw new Error('Studio Reader helper failed');",
+  "console.log(JSON.stringify({ok:true,type:result.source.detectedType,blocks:result.blocks.length}));",
+  '',
+].join('\n'));
+await run(node,[studioReaderSmoke],{cwd:installRoot});
 
 const documentReaderSmoke = join(work,'reader-smoke.md');
 await writeFile(documentReaderSmoke, '# Reader npm smoke\n\nTexto desde tarball npm.\n');

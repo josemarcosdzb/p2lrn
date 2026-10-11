@@ -7,9 +7,10 @@ import process from 'node:process';
 const here=dirname(fileURLToPath(import.meta.url));
 const templateRoot=resolve(here,'..','templates');
 const endpoint='/api/p2lrn/studio/save';
+const readerEndpoint='/api/p2lrn/studio/read';
 
 const specs={
-  next:[['next-route.ts','app/api/p2lrn/studio/save/route.ts']],
+  next:[['next-route.ts','app/api/p2lrn/studio/save/route.ts'],['next-reader-route.ts','app/api/p2lrn/studio/read/route.ts']],
   sveltekit:[['sveltekit-route.ts','src/routes/api/p2lrn/studio/save/+server.ts']],
   nuxt:[['nuxt-route.ts','server/api/p2lrn/studio/save.post.ts']],
   astro:[['astro-route.ts','src/pages/api/p2lrn/studio/save.ts']],
@@ -101,14 +102,14 @@ async function materialize(target,cwd,coursePath,force,dryRun){
     if(!dest.startsWith(resolve(cwd)))throw new Error('Unsafe output path: '+rel);
     if(await exists(dest)&&!force)throw new Error('File already exists: '+rel+'; use --force to replace it');
     let body=await readFile(join(templateRoot,src),'utf8');
-    body=body.replaceAll('__COURSE_PATH__',coursePath).replaceAll('__ENDPOINT__',endpoint);
+    body=body.replaceAll('__COURSE_PATH__',coursePath).replaceAll('__ENDPOINT__',endpoint).replaceAll('__READER_ENDPOINT__',readerEndpoint);
     if(!dryRun){await mkdir(dirname(dest),{recursive:true});await writeFile(dest,body)}
     made.push(rel);
   }
   if(!dryRun)await mkdir(resolve(cwd,...coursePath.split('/')),{recursive:true});
   const readme=resolve(cwd,'p2lrn-setup','README.md');
   if(!(await exists(readme))||force){
-    const body=['# P2LRN Studio setup','','Target: '+target,'Save endpoint: '+endpoint,'Course directory: '+coursePath+'/','','Embed:','','<p2lrn-studio src="/'+coursePath+'/curso.p2lrn" save-endpoint="'+endpoint+'" course-path="'+coursePath+'"></p2lrn-studio>',''].join('\n');
+    const body=['# P2LRN Studio setup','','Target: '+target,'Save endpoint: '+endpoint,'Reader endpoint: '+readerEndpoint,'Course directory: '+coursePath+'/','','Embed:','','<p2lrn-studio src="/'+coursePath+'/curso.p2lrn" save-endpoint="'+endpoint+'" reader-endpoint="'+readerEndpoint+'" course-path="'+coursePath+'"></p2lrn-studio>',''].join('\n');
     if(!dryRun){await mkdir(dirname(readme),{recursive:true});await writeFile(readme,body)}
     made.push('p2lrn-setup/README.md');
   }
@@ -122,4 +123,4 @@ if(o.help){
 const cwd=resolve(o.cwd),coursePath=safePath(o.coursePath);
 const target=o.target==='auto'?await detect(cwd):o.target;
 const files=await materialize(target,cwd,coursePath,o.force,o.dryRun);
-console.log(JSON.stringify({ok:true,target,endpoint,coursePath,files,dryRun:o.dryRun},null,2));
+console.log(JSON.stringify({ok:true,target,endpoint,readerEndpoint,coursePath,files,dryRun:o.dryRun},null,2));

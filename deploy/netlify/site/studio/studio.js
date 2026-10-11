@@ -6,6 +6,10 @@ import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browse
 const createCourseButton=document.querySelector('[data-create-course]');
 const addUnitButton=document.querySelector('[data-add-unit]');
 const addLessonButton=document.querySelector('[data-add-lesson]');
+const addContentButton=document.querySelector('[data-add-content]');
+const addDialog=document.querySelector('[data-add-dialog]');
+const resourceFileInput=document.querySelector('[data-resource-file]');
+const readerFileInput=document.querySelector('[data-reader-file]');
 const fileInput=document.querySelector('[data-file]');
 const urlInput=document.querySelector('[data-url]');
 const openUrlButton=document.querySelector('[data-open-url]');
@@ -145,6 +149,15 @@ async function renderEditor(){
     content.append(Object.assign(document.createElement('div'),{className:'studio-readonly',textContent:'Selecciona una actividad para editar su contenido. El título y la descripción de este nodo sí son editables.'}));
     return;
   }
+  const questionnaire=await studio.readQuestionnaire(entity.id);
+  if(questionnaire){
+    const tools=document.createElement('div');tools.className='studio-questionnaire-tools';
+    const label=document.createElement('strong');label.textContent='Editor de cuestionario / juego';
+    const note=document.createElement('span');note.textContent='Edita el modelo portable; la vista alumno usa el renderer elegido.';tools.append(label,note);
+    const area=document.createElement('textarea');area.className='studio-questionnaire-json';area.value=JSON.stringify(questionnaire.payload,null,2);
+    area.addEventListener('input',()=>{try{const payload=JSON.parse(area.value);studio.setQuestionnaire(entity.id,payload);area.removeAttribute('aria-invalid');setStatus('Cuestionario actualizado');updateChanges();}catch(error){area.setAttribute('aria-invalid','true');setStatus('JSON de cuestionario no válido: '+error.message);}});
+    content.append(tools,area);return;
+  }
   const editable=await studio.readEditableText(entity.id);
   if(!editable){
     const message=document.createElement('div');message.className='studio-readonly';
@@ -242,6 +255,36 @@ async function openRemote(){
   const pkg=await api.openPackageURL(url);
   await openPackage(pkg,{name:new URL(url).pathname.split('/').filter(Boolean).at(-1)||'curso.p2lrn',url});
 }
+function insertionParent(){
+  const current=studio?.entity(selectedId);if(!current)return studio?.rootId??null;
+  if(['course','unit'].includes(current.type))return current.id;
+  return studio.parentId(current.id)??studio.rootId;
+}
+async function selectCreated(activity,statusText){selectedId=activity.id;renderTree();await renderEditor();updateChanges();setStatus(statusText);addDialog?.close();}
+function mediaTypeForFile(file){return file.type||({'md':'text/markdown','markdown':'text/markdown','txt':'text/plain','html':'text/html','htm':'text/html','json':'application/json','mp4':'video/mp4','webm':'video/webm','mp3':'audio/mpeg','wav':'audio/wav','png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','gif':'image/gif','webp':'image/webp','svg':'image/svg+xml'}[file.name.split('.').pop().toLowerCase()]||'application/octet-stream');}
+async function addResourceFile(file){const activity=studio.addEmbeddedResource(insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:mediaTypeForFile(file),bytes:new Uint8Array(await file.arrayBuffer())});await selectCreated(activity,'Archivo añadido');}
+function extractedDocumentHtml(result){const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');return '<!doctype html><html><head><meta charset="utf-8"></head><body>'+result.blocks.map((b)=>b.type==='TITLE'?'<h2>'+esc(b.text)+'</h2>':b.type==='LIST'?'<li>'+esc(b.text)+'</li>':b.type==='SEPARATOR'?'<hr>':'<p>'+esc(b.text)+'</p>').join('')+'</body></html>';}
+async function addReaderFile(file){
+  let result;
+  const endpoint=document.body.dataset.readerEndpoint||'/api/p2lrn/studio/read';
+  const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
+  if(!response.ok)throw new Error('Reader no disponible: HTTP '+response.status+'. Configura el endpoint de @p2lrn/toolkit/document-reader.');
+  result=await response.json();
+  const title=result.metadata?.detectedTitle||file.name.replace(/\.[^.]+$/,'');
+  const activity=studio.addEmbeddedResource(insertionParent(),{title,filename:'reader.html',mediaType:'text/html',bytes:new TextEncoder().encode(extractedDocumentHtml(result))});await selectCreated(activity,'Documento importado con Reader');
+}
+async function addContentKind(kind){
+  if(!studio)throw new Error('Crea o abre un curso primero.');
+  if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:'Nueva lección',language:'es'});return selectCreated(a,'Lección añadida');}
+  if(kind==='unit'){const u=studio.addUnit(insertionParent(),{title:'Nueva unidad',language:'es'});selectedId=u.id;renderTree();await renderEditor();updateChanges();setStatus('Unidad añadida');addDialog?.close();return;}
+  if(kind==='file'){resourceFileInput.click();return;}
+  if(kind==='reader'){readerFileInput.click();return;}
+  if(kind==='url'){const url=prompt('URL del recurso');if(!url)return;const title=prompt('Título','Recurso web')||'Recurso web';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL añadida');}
+  if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:'Cuestionario',language:'es'});return selectCreated(a,'Cuestionario añadido');}
+  if(['memory','matching','ordering','classification','true-false','word-search','crossword','rosco','3d'].includes(kind)){const names={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'es'});return selectCreated(a,names[kind]+' añadido');}
+  if(kind==='component'){const payload={schema:'https://p2lrn.org/schema/native-component/0.1',version:'0.1',component:{id:'https://p2lrn.org/component/callout',componentVersion:'1',dataVersion:'2',runtimeContractVersion:'1'},data:{tone:'info',body:'Edita este componente'},title:'Componente'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Componente',filename:'component.json',mediaType:'application/vnd.p2lrn.component+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-component'});return selectCreated(a,'Componente añadido');}
+  if(kind==='composite'){const payload={schema:'https://p2lrn.org/schema/native-composite/0.1',version:'0.1',mode:'sequence',completion:'all',navigation:'open',title:'Compuesto'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Compuesto',filename:'composite.json',mediaType:'application/vnd.p2lrn.composite+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-composite'});return selectCreated(a,'Compuesto añadido');}
+}
 function command(name,value=null){
   if(!activeEditable||!activeEditable.isContentEditable)return;
   activeEditable.focus();
@@ -293,6 +336,11 @@ async function exportPackage(){
 createCourseButton?.addEventListener('click',()=>void createNewCourse().catch((error)=>setStatus(error.message)));
 addUnitButton?.addEventListener('click',()=>void addUnit().catch((error)=>setStatus(error.message)));
 addLessonButton?.addEventListener('click',()=>void addLesson().catch((error)=>setStatus(error.message)));
+addContentButton?.addEventListener('click',()=>{if(!studio){setStatus('Crea o abre un curso primero');return;}addDialog?.showModal();});
+addDialog?.querySelector('[data-add-close]')?.addEventListener('click',()=>addDialog.close());
+addDialog?.querySelectorAll('[data-add-kind]').forEach((button)=>button.addEventListener('click',()=>void addContentKind(button.dataset.addKind).catch((error)=>setStatus(error.message))));
+resourceFileInput?.addEventListener('change',()=>{const file=resourceFileInput.files?.[0];if(file)void addResourceFile(file).catch((error)=>setStatus(error.message));resourceFileInput.value='';});
+readerFileInput?.addEventListener('change',()=>{const file=readerFileInput.files?.[0];if(file)void addReaderFile(file).catch((error)=>setStatus(error.message));readerFileInput.value='';});
 fileInput.addEventListener('change',()=>{const file=fileInput.files?.[0];if(file)void openLocal(file).catch((error)=>setStatus(error.message));});
 openUrlButton.addEventListener('click',()=>void openRemote().catch((error)=>setStatus(error.message)));
 urlInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();void openRemote().catch((error)=>setStatus(error.message));}});

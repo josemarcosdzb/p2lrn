@@ -35,7 +35,7 @@ nav small{display:block;color:#667085;text-transform:uppercase;font:600 10px ui-
 .surface{min-height:340px;border:1px dashed #98a2b3;border-radius:7px;padding:16px;line-height:1.6}
 .notice{padding:14px;border:1px solid #d9dee7;border-radius:7px;background:#f8fafc;color:#667085}
 .preview{display:block;min-height:520px;background:#fff;border-radius:8px}
-.warn{padding:8px 10px;background:#fff8e6;border-bottom:1px solid #e7cb84;font-size:12px;color:#614b16}
+.add-menu{position:relative}.add-menu>summary{list-style:none}.add-menu>summary::-webkit-details-marker{display:none}.add-pop{position:absolute;z-index:20;top:42px;left:0;width:430px;max-width:calc(100vw - 40px);padding:10px;border:1px solid #d9dee7;border-radius:8px;background:#fff;box-shadow:0 16px 40px rgba(15,23,42,.16)}.add-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.add-grid button{text-align:left;font-size:12px}.questionnaire-json{width:100%;min-height:320px;border:1px solid #cfd5de;border-radius:7px;padding:12px;font:12px/1.5 ui-monospace,monospace}.warn{padding:8px 10px;background:#fff8e6;border-bottom:1px solid #e7cb84;font-size:12px;color:#614b16}
 [hidden]{display:none!important}
 @media(max-width:760px){.body{grid-template-columns:1fr}nav{max-height:220px;border-right:0;border-bottom:1px solid #d9dee7}.meta{width:100%;margin-left:0}}
 `;
@@ -59,7 +59,7 @@ function filenameFromUrl(value){
 
 export class P2LRNStudioElement extends HTMLElement{
   static p2lrnStudioVersion=P2LRN_STUDIO_VERSION;
-  static get observedAttributes(){return['src','save-endpoint','course-path'];}
+  static get observedAttributes(){return['src','save-endpoint','reader-endpoint','course-path'];}
   #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;
 
   constructor(){
@@ -70,6 +70,9 @@ export class P2LRNStudioElement extends HTMLElement{
         <div class="toolbar">
           <button type="button" data-create class="primary">New course</button>
           <label><button type="button" data-open>Open .p2lrn</button><input data-file type="file" accept=".p2lrn,application/vnd.p2lrn+zip" hidden></label>
+          <details class="add-menu" data-add-menu><summary><span role="button">Add content</span></summary><div class="add-pop"><div class="add-grid">
+            <button type="button" data-add-kind="lesson">Lesson</button><button type="button" data-add-kind="file">File / media</button><button type="button" data-add-kind="url">URL</button><button type="button" data-add-kind="reader">Reader / document</button><button type="button" data-add-kind="questionnaire">Questionnaire</button><button type="button" data-add-kind="memory">Memory</button><button type="button" data-add-kind="matching">Matching</button><button type="button" data-add-kind="ordering">Ordering</button><button type="button" data-add-kind="classification">Classification</button><button type="button" data-add-kind="true-false">True / False</button><button type="button" data-add-kind="word-search">Word search</button><button type="button" data-add-kind="crossword">Crossword</button><button type="button" data-add-kind="rosco">Rosco</button><button type="button" data-add-kind="3d">3D game</button><button type="button" data-add-kind="unit">Unit</button><button type="button" data-add-kind="component">Component</button><button type="button" data-add-kind="composite">Composite</button>
+          </div></div></details><input data-resource-file type="file" hidden><input data-reader-file type="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.html,.htm,.rtf,.tex,.xml,.yaml,.yml,.odt,.epub" hidden>
           <button type="button" data-edit class="primary">Edit</button>
           <button type="button" data-preview>Student view</button>
           <button type="button" data-download>Download .p2lrn</button>
@@ -88,6 +91,9 @@ export class P2LRNStudioElement extends HTMLElement{
     q('[data-create]').addEventListener('click',()=>this.createCourse().catch((e)=>this.#status(e.message)));
     q('[data-open]').addEventListener('click',()=>q('[data-file]').click());
     q('[data-file]').addEventListener('change',()=>{const f=q('[data-file]').files?.[0];if(f)this.openFile(f);});
+    q('[data-add-menu]').querySelectorAll('[data-add-kind]').forEach((button)=>button.addEventListener('click',()=>this.addContent(button.dataset.addKind).catch((e)=>this.#status(e.message))));
+    q('[data-resource-file]').addEventListener('change',()=>{const f=q('[data-resource-file]').files?.[0];if(f)this.addResourceFile(f).catch((e)=>this.#status(e.message));q('[data-resource-file]').value='';});
+    q('[data-reader-file]').addEventListener('change',()=>{const f=q('[data-reader-file]').files?.[0];if(f)this.importDocument(f).catch((e)=>this.#status(e.message));q('[data-reader-file]').value='';});
     q('[data-edit]').addEventListener('click',()=>this.setMode('edit'));
     q('[data-preview]').addEventListener('click',()=>this.setMode('preview'));
     q('[data-download]').addEventListener('click',()=>this.download());
@@ -104,6 +110,8 @@ export class P2LRNStudioElement extends HTMLElement{
   get src(){return this.getAttribute('src')||''}
   set src(v){v?this.setAttribute('src',v):this.removeAttribute('src')}
   get saveEndpoint(){return this.getAttribute('save-endpoint')||''}
+  get readerEndpoint(){return this.getAttribute('reader-endpoint')||''}
+  set readerEndpoint(v){v?this.setAttribute('reader-endpoint',v):this.removeAttribute('reader-endpoint')}
   set saveEndpoint(v){v?this.setAttribute('save-endpoint',v):this.removeAttribute('save-endpoint')}
   get coursePath(){return (this.getAttribute('course-path')||'course').replace(/^\/+|\/+$/g,'')||'course'}
   set coursePath(v){this.setAttribute('course-path',v||'course')}
@@ -169,6 +177,26 @@ export class P2LRNStudioElement extends HTMLElement{
     const created=this.#studio.addLesson(this.#insertionParent(),options);this.#selected=created.id;
     this.#renderTree();await this.#renderEditor();this.#updateState();return created;
   }
+  async #selectCreated(entity){this.#selected=entity.id;this.#renderTree();await this.#renderEditor();this.#updateState();const menu=this.shadowRoot.querySelector('[data-add-menu]');if(menu)menu.open=false;return entity;}
+  async addContent(kind){
+    if(!this.#studio)throw new Error('Create or open a course first.');
+    if(kind==='lesson')return this.#selectCreated(this.#studio.addLesson(this.#insertionParent(),{title:'New lesson',language:'en'}));
+    if(kind==='unit'){const unit=this.#studio.addUnit(this.#insertionParent(),{title:'New unit',language:'en'});return this.#selectCreated(unit);}
+    if(kind==='file'){this.shadowRoot.querySelector('[data-resource-file]').click();return null;}
+    if(kind==='reader'){this.shadowRoot.querySelector('[data-reader-file]').click();return null;}
+    if(kind==='url'){const url=prompt('Resource URL');if(!url)return null;return this.#selectCreated(this.#studio.addRemoteResource(this.#insertionParent(),{title:'Web resource',url}));}
+    if(kind==='questionnaire')return this.#selectCreated(this.#studio.addQuestionnaire(this.#insertionParent(),{title:'Questionnaire',language:'en'}));
+    if(['memory','matching','ordering','classification','true-false','word-search','crossword','rosco','3d'].includes(kind))return this.#selectCreated(this.#studio.addGame(this.#insertionParent(),{kind,title:kind,language:'en'}));
+    if(kind==='component'){const payload={schema:'https://p2lrn.org/schema/native-component/0.1',version:'0.1',component:{id:'https://p2lrn.org/component/callout',componentVersion:'1',dataVersion:'2',runtimeContractVersion:'1'},data:{tone:'info',body:'Edit this component'},title:'Component'};return this.#selectCreated(this.#studio.addEmbeddedResource(this.#insertionParent(),{title:'Component',filename:'component.json',mediaType:'application/vnd.p2lrn.component+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-component'}));}
+    if(kind==='composite'){const payload={schema:'https://p2lrn.org/schema/native-composite/0.1',version:'0.1',mode:'sequence',completion:'all',navigation:'open',title:'Composite'};return this.#selectCreated(this.#studio.addEmbeddedResource(this.#insertionParent(),{title:'Composite',filename:'composite.json',mediaType:'application/vnd.p2lrn.composite+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-composite'}));}
+    return null;
+  }
+  async addResourceFile(file){const bytes=new Uint8Array(await file.arrayBuffer());const entity=this.#studio.addEmbeddedResource(this.#insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:file.type||'application/octet-stream',bytes});return this.#selectCreated(entity);}
+  async importDocument(file){
+    if(!this.readerEndpoint)throw new Error('reader-endpoint is required for Reader document import.');
+    const response=await fetch(new URL(this.readerEndpoint,document.baseURI).href,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
+    if(!response.ok)throw new Error('Studio Reader failed: HTTP '+response.status);const result=await response.json();const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');const html='<!doctype html><html><head><meta charset="utf-8"></head><body>'+result.blocks.map((b)=>b.type==='TITLE'?'<h2>'+esc(b.text)+'</h2>':b.type==='LIST'?'<li>'+esc(b.text)+'</li>':'<p>'+esc(b.text)+'</p>').join('')+'</body></html>';const title=result.metadata?.detectedTitle||file.name.replace(/\.[^.]+$/,'');return this.#selectCreated(this.#studio.addEmbeddedResource(this.#insertionParent(),{title,filename:'reader.html',mediaType:'text/html',bytes:new TextEncoder().encode(html)}));
+  }
   async #renderEditor(){
     const stage=this.shadowRoot.querySelector('[data-stage]');stage.replaceChildren();
     const entity=this.#studio?.entity(this.#selected);if(!entity)return;
@@ -180,6 +208,12 @@ export class P2LRNStudioElement extends HTMLElement{
     desc.oninput=()=>{this.#studio.setDescription(entity.id,desc.textContent||'');this.#updateState();};
     sheet.append(title,desc);
     if(entity.type==='activity'){
+      const questionnaire=await this.#studio.readQuestionnaire(entity.id);
+      if(questionnaire){
+        const label=document.createElement('div');label.className='notice';label.textContent='Portable questionnaire / game model';sheet.append(label);
+        const area=document.createElement('textarea');area.className='questionnaire-json';area.value=JSON.stringify(questionnaire.payload,null,2);
+        area.oninput=()=>{try{this.#studio.setQuestionnaire(entity.id,JSON.parse(area.value));area.removeAttribute('aria-invalid');this.#updateState();}catch(error){area.setAttribute('aria-invalid','true');this.#status(error.message);}};sheet.append(area);stage.append(sheet);return;
+      }
       const editable=await this.#studio.readEditableText(entity.id);
       if(editable){
         const surface=document.createElement(editable.mediaType==='text/plain'?'pre':'article');surface.className='surface';surface.contentEditable='true';

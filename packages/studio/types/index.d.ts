@@ -1,8 +1,9 @@
-﻿export interface P2LRNStudioSaveDetail { filename:string; coursePath:string; result:unknown; }
+export interface P2LRNStudioSaveDetail { filename:string; coursePath:string; result:unknown; }
 export class P2LRNStudioElement extends HTMLElement {
   static readonly p2lrnStudioVersion:string;
   src:string;
   saveEndpoint:string;
+  readerEndpoint:string;
   coursePath:string;
   createCourse(options?:{title?:string;language?:string;description?:string}):Promise<unknown>;
   openFile(file:File):Promise<void>;
@@ -10,6 +11,9 @@ export class P2LRNStudioElement extends HTMLElement {
   setMode(mode:'edit'|'preview'):Promise<void>;
   addUnit(options?:{title?:string;language?:string}):Promise<unknown>;
   addLesson(options?:{title?:string;language?:string}):Promise<unknown>;
+  addContent(kind:string):Promise<unknown>;
+  addResourceFile(file:File):Promise<unknown>;
+  importDocument(file:File):Promise<unknown>;
   exportPackage():Promise<{bytes:Uint8Array;filename:string;manifest:unknown;graph:unknown}>;
   download():Promise<void>;
   saveCourse():Promise<unknown>;

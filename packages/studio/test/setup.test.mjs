@@ -19,6 +19,8 @@ test('setup auto detects Next.js, creates route and course directory',async()=>{
     assert.equal(out.target,'next');
     assert.equal((await stat(join(root,'course'))).isDirectory(),true);
     assert.match(await readFile(join(root,'app','api','p2lrn','studio','save','route.ts'),'utf8'),/handleP2LRNStudioSave/);
+    assert.match(await readFile(join(root,'app','api','p2lrn','studio','read','route.ts'),'utf8'),/handleP2LRNStudioReader/);
+    assert.equal(out.readerEndpoint,'/api/p2lrn/studio/read');
   }finally{await rm(root,{recursive:true,force:true})}
 });
 
@@ -84,7 +86,7 @@ test('every supported setup target materializes safely with no unresolved placeh
         const full=resolve(root,rel);
         assert.equal(relative(root,full).startsWith('..'),false,target+' wrote outside project: '+rel);
         const body=await readFile(full,'utf8');
-        assert.doesNotMatch(body,/__(?:COURSE_PATH|ENDPOINT)__/u,target+' left unresolved placeholder in '+rel);
+        assert.doesNotMatch(body,/__(?:COURSE_PATH|ENDPOINT|READER_ENDPOINT)__/u,target+' left unresolved placeholder in '+rel);
       }
     }finally{
       await rm(root,{recursive:true,force:true});

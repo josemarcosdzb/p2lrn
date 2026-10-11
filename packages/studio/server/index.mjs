@@ -41,3 +41,27 @@ export async function handleP2LRNStudioSave(request,{root=process.cwd(),coursePa
   });
   return Response.json({ok:true,coursePath:result.coursePath,filename:result.filename,bytes:result.bytes});
 }
+
+
+export async function readP2LRNStudioDocument(bytes,{filename='document.bin',mediaType}={}){
+  const body=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+  const {readDocument}=await import('@p2lrn/toolkit/document-reader');
+  return readDocument({name:String(filename||'document.bin'),data:body,mediaType:mediaType?String(mediaType):undefined});
+}
+
+export async function handleP2LRNStudioReader(request,{maxBytes=128*1024*1024}={}){
+  if(request.method!=='POST')return new Response('Method Not Allowed',{status:405,headers:{Allow:'POST'}});
+  const length=Number(request.headers.get('content-length')||0);
+  if(length>maxBytes)return new Response('Document too large',{status:413});
+  const body=new Uint8Array(await request.arrayBuffer());
+  if(body.byteLength>maxBytes)return new Response('Document too large',{status:413});
+  let filename='document.bin';
+  const raw=request.headers.get('x-p2lrn-filename');
+  if(raw){try{filename=decodeURIComponent(raw);}catch{filename=raw;}}
+  try{
+    const result=await readP2LRNStudioDocument(body,{filename,mediaType:request.headers.get('content-type')||undefined});
+    return Response.json(result);
+  }catch(error){
+    return Response.json({ok:false,error:error instanceof Error?error.message:String(error)},{status:422});
+  }
+}

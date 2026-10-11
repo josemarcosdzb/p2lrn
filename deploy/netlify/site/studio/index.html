@@ -38,6 +38,7 @@
       <button type="button" class="button" data-mode-preview aria-pressed="false">Vista alumno</button>
     </div>
     <div class="studio-structure" aria-label="Estructura del curso">
+      <button type="button" class="button primary" data-add-content>Añadir contenido</button>
       <button type="button" class="button" data-add-unit>+ Nueva unidad</button>
       <button type="button" class="button" data-add-lesson>+ Nueva lección</button>
     </div>
@@ -87,6 +88,23 @@
       </div>
     </section>
   </section>
+  <dialog class="studio-add-dialog" data-add-dialog>
+    <div class="studio-add-panel">
+      <header><div><p class="eyebrow">AÑADIR CONTENIDO</p><h2>¿Qué quieres crear?</h2></div><button class="button" type="button" data-add-close>Cerrar</button></header>
+      <section><h3>Contenido</h3><div class="studio-add-grid">
+        <button type="button" data-add-kind="lesson">Lección</button><button type="button" data-add-kind="file">Archivo / multimedia</button><button type="button" data-add-kind="url">URL</button><button type="button" data-add-kind="reader">Reader / documento</button>
+      </div></section>
+      <section><h3>Evaluación</h3><div class="studio-add-grid">
+        <button type="button" data-add-kind="questionnaire">Cuestionario</button>
+      </div></section>
+      <section><h3>Juegos</h3><div class="studio-add-grid">
+        <button type="button" data-add-kind="memory">Memoria</button><button type="button" data-add-kind="matching">Relacionar</button><button type="button" data-add-kind="ordering">Ordenar</button><button type="button" data-add-kind="classification">Clasificar</button><button type="button" data-add-kind="true-false">Verdadero / Falso</button><button type="button" data-add-kind="word-search">Sopa de letras</button><button type="button" data-add-kind="crossword">Crucigrama</button><button type="button" data-add-kind="rosco">Rosco</button><button type="button" data-add-kind="3d">Juego 3D</button>
+      </div></section>
+      <section><h3>Composición</h3><div class="studio-add-grid"><button type="button" data-add-kind="unit">Unidad</button><button type="button" data-add-kind="component">Componente</button><button type="button" data-add-kind="composite">Compuesto</button></div></section>
+    </form>
+  </dialog>
+  <input data-resource-file type="file" hidden>
+  <input data-reader-file type="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.html,.htm,.rtf,.tex,.xml,.yaml,.yml,.odt,.epub" hidden>
 </main>
 <footer><strong>P2LRN Studio</strong><span>La autoría trabaja sobre una copia; Player permanece sólo lectura.</span><div><a href="/demo/">Abrir visor</a></div></footer>
 </body>
