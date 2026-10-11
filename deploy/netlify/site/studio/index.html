@@ -90,18 +90,35 @@
   </section>
   <dialog class="studio-add-dialog" data-add-dialog>
     <div class="studio-add-panel">
-      <header><div><p class="eyebrow">AÑADIR CONTENIDO</p><h2>¿Qué quieres crear?</h2></div><button class="button" type="button" data-add-close>Cerrar</button></header>
+      <header><div><p class="eyebrow">AÑADIR CONTENIDO</p><h2>¿Qué quieres crear?</h2><p class="studio-add-intro">Elige el tipo de contenido. Pasa el cursor por una opción para ver qué crea y cuándo conviene usarla.</p></div><button class="button" type="button" data-add-close>Cerrar</button></header>
       <section><h3>Contenido</h3><div class="studio-add-grid">
-        <button type="button" data-add-kind="lesson">Lección</button><button type="button" data-add-kind="file">Archivo / multimedia</button><button type="button" data-add-kind="url">URL</button><button type="button" data-add-kind="reader">Reader / documento</button><button type="button" data-add-kind="external">Paquete educativo</button>
+        <button type="button" data-add-kind="lesson" data-help="Crea una lección editable para escribir y dar formato al contenido directamente en Studio.">Lección</button>
+        <button type="button" data-add-kind="file" data-help="Añade una imagen, vídeo, audio u otro archivo como recurso dentro del curso.">Archivo / multimedia</button>
+        <button type="button" data-add-kind="url" data-help="Enlaza una página o recurso web externo mediante su URL, sin copiar el contenido al paquete.">URL</button>
+        <button type="button" data-add-kind="reader" data-help="Importa documentos como PDF, DOCX, PPTX, EPUB, TXT o Markdown y los convierte en contenido utilizable en el curso.">Reader / documento</button>
+        <button type="button" data-add-kind="external" data-help="Importa un paquete educativo ya creado, por ejemplo SCORM, H5P, cmi5, QTI, Common Cartridge o IMS Content Package.">Paquete educativo</button>
       </div></section>
       <section><h3>Evaluación</h3><div class="studio-add-grid">
-        <button type="button" data-add-kind="questionnaire">Cuestionario</button>
+        <button type="button" data-add-kind="questionnaire" data-help="Crea una evaluación flexible donde puedes combinar elección única, múltiple, verdadero/falso, texto, huecos, ordenar, relacionar y clasificar.">Cuestionario</button>
       </div></section>
       <section><h3>Juegos</h3><div class="studio-add-grid">
-        <button type="button" data-add-kind="memory">Memoria</button><button type="button" data-add-kind="matching">Relacionar</button><button type="button" data-add-kind="ordering">Ordenar</button><button type="button" data-add-kind="classification">Clasificar</button><button type="button" data-add-kind="true-false">Verdadero / Falso</button><button type="button" data-add-kind="fill-blanks">Rellenar huecos</button><button type="button" data-add-kind="word-search">Sopa de letras</button><button type="button" data-add-kind="crossword">Crucigrama</button><button type="button" data-add-kind="rosco">Rosco</button><button type="button" data-add-kind="3d">Juego 3D</button>
+        <button type="button" data-add-kind="memory" data-help="Juego de memoria basado en parejas. El alumno descubre cartas y debe encontrar las correspondencias.">Memoria</button>
+        <button type="button" data-add-kind="matching" data-help="Juego para relacionar elementos de dos columnas, por ejemplo países con capitales o conceptos con definiciones.">Relacionar</button>
+        <button type="button" data-add-kind="ordering" data-help="Juego para colocar elementos en el orden correcto, como pasos, fechas o fases de un proceso.">Ordenar</button>
+        <button type="button" data-add-kind="classification" data-help="Juego para arrastrar o asignar elementos a la categoría correcta.">Clasificar</button>
+        <button type="button" data-add-kind="true-false" data-help="Juego de afirmaciones que el alumno debe marcar como verdaderas o falsas.">Verdadero / Falso</button>
+        <button type="button" data-add-kind="fill-blanks" data-help="Juego para completar uno o varios huecos con las respuestas correctas.">Rellenar huecos</button>
+        <button type="button" data-add-kind="word-search" data-help="Genera una sopa de letras a partir de respuestas de texto que el alumno debe localizar.">Sopa de letras</button>
+        <button type="button" data-add-kind="crossword" data-help="Genera un crucigrama usando pistas y respuestas de texto.">Crucigrama</button>
+        <button type="button" data-add-kind="rosco" data-help="Juego tipo rosco: una serie de pistas con respuestas de texto, normalmente asociadas a letras.">Rosco</button>
+        <button type="button" data-add-kind="3d" data-help="Crea una actividad 3D de ordenación o relación utilizando el runtime Quest del Player.">Juego 3D</button>
       </div></section>
-      <section><h3>Composición</h3><div class="studio-add-grid"><button type="button" data-add-kind="unit">Unidad</button><button type="button" data-add-kind="component">Componente</button><button type="button" data-add-kind="composite">Compuesto</button></div></section>
-    </form>
+      <section class="studio-add-advanced"><h3>Estructura avanzada</h3><p class="studio-add-section-help">Para casos donde necesitas construir bloques reutilizables o agrupar varios elementos. Para organizar el curso en secciones usa <strong>+ Nueva unidad</strong> en la barra superior.</p><div class="studio-add-grid">
+        <button type="button" data-add-kind="component" data-help="Crea un bloque nativo reutilizable, como un aviso o callout, con configuración propia y portable entre Player y Studio."><span>Bloque reutilizable</span><small>Componente nativo</small></button>
+        <button type="button" data-add-kind="composite" data-help="Crea un contenedor avanzado que agrupa varios elementos y define cómo se recorren o completan como una sola experiencia."><span>Grupo compuesto</span><small>Agrupa contenido</small></button>
+      </div></section>
+    </div>
+    <div class="studio-add-tooltip" data-add-help role="tooltip" hidden></div>
   </dialog>
   <input data-resource-file type="file" hidden>
   <input data-reader-file type="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.html,.htm,.rtf,.tex,.xml,.yaml,.yml,.odt,.epub" hidden>

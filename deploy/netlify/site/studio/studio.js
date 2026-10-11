@@ -10,6 +10,7 @@ const addUnitButton=document.querySelector('[data-add-unit]');
 const addLessonButton=document.querySelector('[data-add-lesson]');
 const addContentButton=document.querySelector('[data-add-content]');
 const addDialog=document.querySelector('[data-add-dialog]');
+const addHelp=document.querySelector('[data-add-help]');
 const resourceFileInput=document.querySelector('[data-resource-file]');
 const readerFileInput=document.querySelector('[data-reader-file]');
 const externalFileInput=document.querySelector('[data-external-file]');
@@ -348,6 +349,37 @@ async function exportPackage(){
   setStatus('Paquete exportado y verificado');
 }
 
+function hideAddHelp(){
+  if(!addHelp)return;
+  addHelp.dataset.visible='false';
+  addHelp.hidden=true;
+}
+function showAddHelp(button){
+  if(!addHelp||!button?.dataset.help)return;
+  addHelp.textContent=button.dataset.help;
+  addHelp.hidden=false;
+  addHelp.dataset.visible='true';
+  requestAnimationFrame(()=>{
+    const rect=button.getBoundingClientRect(),tip=addHelp.getBoundingClientRect(),pad=12,gap=9;
+    let left=rect.left+rect.width/2-tip.width/2;
+    left=Math.max(pad,Math.min(left,window.innerWidth-tip.width-pad));
+    let top=rect.bottom+gap;
+    if(top+tip.height>window.innerHeight-pad)top=rect.top-tip.height-gap;
+    top=Math.max(pad,top);
+    addHelp.style.left=Math.round(left)+'px';
+    addHelp.style.top=Math.round(top)+'px';
+  });
+}
+addDialog?.querySelectorAll('[data-add-kind][data-help]').forEach((button)=>{
+  button.setAttribute('aria-describedby','studio-add-tooltip');
+  button.addEventListener('pointerenter',()=>showAddHelp(button));
+  button.addEventListener('pointerleave',hideAddHelp);
+  button.addEventListener('focus',()=>showAddHelp(button));
+  button.addEventListener('blur',hideAddHelp);
+});
+addHelp?.setAttribute('id','studio-add-tooltip');
+addDialog?.addEventListener('close',hideAddHelp);
+addDialog?.addEventListener('scroll',hideAddHelp,{passive:true});
 createCourseButton?.addEventListener('click',()=>void createNewCourse().catch((error)=>setStatus(error.message)));
 addUnitButton?.addEventListener('click',()=>void addUnit().catch((error)=>setStatus(error.message)));
 addLessonButton?.addEventListener('click',()=>void addLesson().catch((error)=>setStatus(error.message)));
