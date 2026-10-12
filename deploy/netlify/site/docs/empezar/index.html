@@ -3,56 +3,29 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0d1117">
-<meta name="description" content="Quickstart de P2LRN separado por canal: NPM, CDN y Studio visual, sin mezclar métodos de instalación y autoría.">
-<title>Quickstart — P2LRN</title>
+<meta name="description" content="Inicio de P2LRN: separar autoría, Player y canal de distribución antes de integrar.">
+<title>Empezar — P2LRN</title>
 <link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script>
 </head>
 <body>
 <header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main">
-<aside class="doc-sidebar"></aside>
-<article class="doc-content">
-<header class="doc-hero"><p class="eyebrow">START / CHOOSE A PATH</p><h1>Empieza sin mezclar NPM, CDN y Studio</h1><p>Antes de copiar código hay que separar dos decisiones distintas: <strong>cómo cargas P2LRN en tu aplicación</strong> y <strong>cómo creas el curso</strong>. NPM y CDN son canales alternativos de distribución. Studio y Toolkit son formas de autoría.</p></header>
-
-<section class="doc-section">
-<h2>1. Elige cómo cargar el Player</h2>
-<div class="decision-grid">
-<a href="/docs/npm/"><span>PROYECTO CON BUILD</span><h2>NPM</h2><p>Instalas <code>@p2lrn/player</code> en tu proyecto y lo importas desde JavaScript/TypeScript. En esta ruta no se usa el script del CDN.</p></a>
-<a href="/docs/cdn/"><span>HTML DIRECTO</span><h2>CDN</h2><p>Cargas el Player con una etiqueta <code>&lt;script&gt;</code>. En esta ruta no necesitas <code>npm install @p2lrn/player</code>.</p></a>
-</div>
-<div class="doc-callout"><strong>NPM y CDN no son pasos consecutivos.</strong><p>Son dos formas alternativas de cargar el mismo Player. Si eliges NPM, importa el paquete. Si eliges CDN, usa la URL del CDN. No hagas ambas cosas en el mismo ejemplo.</p></div>
-</section>
-
-<section class="doc-section">
-<h2>2. Elige cómo crear el curso</h2>
-<div class="decision-grid">
-<a href="/docs/studio/"><span>SIN PROGRAMAR</span><h2>Studio visual</h2><p>Crea o abre un curso, añade unidades, lecciones, archivos, documentos, cuestionarios y juegos desde el editor visual; después previsualiza y exporta el <code>.p2lrn</code>.</p></a>
-<a href="/docs/paquetes/"><span>POR CÓDIGO</span><h2>Toolkit / CLI</h2><p>Crea y transforma paquetes desde Node/TypeScript o comandos. Es la ruta adecuada para automatización, pipelines y generación programática.</p></a>
-</div>
-</section>
-
-<section class="doc-section">
-<h2>3. Qué combinación corresponde a cada caso</h2>
-<div class="reference-table">
-<div><code>Studio + CDN</code><p>Creas visualmente un <code>.p2lrn</code> y lo reproduces en una página sin instalar el Player por NPM.</p></div>
-<div><code>Studio + NPM</code><p>Creas visualmente el paquete y lo reproduces dentro de una aplicación que integra <code>@p2lrn/player</code> por NPM.</p></div>
-<div><code>Toolkit + NPM</code><p>Generas o validas cursos por código y usas el Player como dependencia de tu aplicación.</p></div>
-<div><code>Toolkit + CDN</code><p>Generas el paquete con herramientas Node, pero la página que lo reproduce carga el Player directamente desde CDN.</p></div>
-</div>
-<p>La creación del paquete y la forma de cargar el Player son decisiones independientes. Lo que se evita es mezclar <strong>NPM y CDN para cargar el Player</strong> dentro del mismo camino.</p>
-</section>
-
-<section class="doc-section">
-<h2>4. Empieza por una guía completa</h2>
-<div class="docs-path-grid">
-<a href="/docs/npm/"><span>NPM</span><h3>Integración por NPM</h3><p>Instalación, import del Player y paquetes opcionales de Toolkit y Studio.</p></a>
-<a href="/docs/cdn/"><span>CDN</span><h3>Integración sin NPM</h3><p>HTML mínimo con Player desde CDN y paquete servido por HTTP.</p></a>
-<a href="/docs/studio/"><span>UI</span><h3>Crear con Studio</h3><p>Recorrido del editor visual desde “Crear curso” hasta “Exportar .p2lrn”.</p></a>
-<a href="/docs/paquetes/"><span>CODE</span><h3>Crear con Toolkit</h3><p>Autoría programática, build, validación e inspección.</p></a>
-</div>
-</section>
-
+<main class="doc-main"><aside class="doc-sidebar"></aside><article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">START / CHOOSE A PATH</p><h1>Primero decide qué quieres hacer</h1><p>P2LRN tiene dos decisiones independientes: <strong>cómo creas el curso</strong> y <strong>cómo cargas las herramientas en tu aplicación</strong>. Separarlas evita mezclar NPM y CDN en un mismo ejemplo.</p></header>
+<section class="doc-section"><h2>1. Crear un curso</h2><div class="decision-grid">
+<a href="/docs/studio/"><span>EDITOR VISUAL</span><h2>Studio</h2><p>Crea, edita, previsualiza y exporta cursos sin escribir manifest o graph a mano.</p></a>
+<a href="/docs/paquetes/"><span>POR CÓDIGO</span><h2>Toolkit / CLI</h2><p>Autoría programática y automatización desde Node/TypeScript.</p></a>
+</div></section>
+<section class="doc-section"><h2>2. Integrar en una aplicación</h2><div class="decision-grid">
+<a href="/docs/npm/"><span>PROYECTO CON DEPENDENCIAS</span><h2>NPM</h2><p>Instala Player o Studio como paquetes de tu proyecto y usa imports JavaScript.</p></a>
+<a href="/docs/cdn/"><span>HTML DIRECTO</span><h2>CDN</h2><p>Carga Player o Studio mediante sus loaders publicados, sin instalar esos paquetes en el frontend.</p></a>
+</div></section>
+<section class="doc-section"><h2>3. Combinaciones válidas</h2><div class="reference-table">
+<div><code>Studio + NPM</code><p>Editor visual integrado como dependencia de tu aplicación.</p></div>
+<div><code>Studio + CDN</code><p>Editor visual cargado desde el loader publicado.</p></div>
+<div><code>Toolkit + Player NPM</code><p>Generación por código y reproducción dentro de una aplicación con dependencias.</p></div>
+<div><code>Toolkit + Player CDN</code><p>Generación por código y reproducción desde HTML directo.</p></div>
+</div></section>
+<section class="doc-section"><h2>4. Regla que evita la contradicción anterior</h2><div class="doc-callout"><strong>NPM y CDN son alternativas para cargar una misma pieza en el navegador.</strong><p>No instales el Player por NPM y después cambies a su loader CDN dentro del mismo recorrido. Si Studio llega por CDN, utiliza su loader; ese loader carga automáticamente el Player de su mismo canal.</p></div></section>
+<section class="doc-section"><h2>5. Persistencia e importadores</h2><p>Crear, editar, previsualizar y descargar con Studio puede hacerse sin backend. Guardar en servidor, usar Reader o importar paquetes educativos sí requiere endpoints del Host. Consulta <a href="/docs/studio/">Studio</a> para la matriz exacta.</p></section>
 <nav class="doc-pager"><a class="prev" href="/docs/"><span>← Anterior</span><strong>Overview</strong></a><a class="next" href="/docs/npm/"><span>Siguiente →</span><strong>NPM</strong></a></nav>
-</article></main>
-<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer>
-</body></html>
+</article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
