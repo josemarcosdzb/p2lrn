@@ -23,6 +23,10 @@ test('setup auto detects Next.js, creates route and course directory',async()=>{
     assert.match(await readFile(join(root,'app','api','p2lrn','studio','import','route.ts'),'utf8'),/handleP2LRNStudioExternalImport/);
     assert.equal(out.readerEndpoint,'/api/p2lrn/studio/read');
     assert.equal(out.importEndpoint,'/api/p2lrn/studio/import');
+    assert.deepEqual(out.generatedEndpoints,{save:true,reader:true,import:true});
+    const setupReadme=await readFile(join(root,'p2lrn-setup','README.md'),'utf8');
+    assert.match(setupReadme,/reader-endpoint="\/api\/p2lrn\/studio\/read"/);
+    assert.match(setupReadme,/import-endpoint="\/api\/p2lrn\/studio\/import"/);
   }finally{await rm(root,{recursive:true,force:true})}
 });
 
@@ -33,7 +37,13 @@ test('setup auto detects FastAPI from requirements',async()=>{
     const {stdout}=await exec(process.execPath,[cli,'setup','--cwd',root]);
     const out=JSON.parse(stdout);
     assert.equal(out.target,'fastapi');
+    assert.deepEqual(out.generatedEndpoints,{save:true,reader:false,import:false});
     assert.match(await readFile(join(root,'p2lrn_studio.py'),'utf8'),/APIRouter/);
+    const setupReadme=await readFile(join(root,'p2lrn-setup','README.md'),'utf8');
+    assert.doesNotMatch(setupReadme,/reader-endpoint=/);
+    assert.doesNotMatch(setupReadme,/import-endpoint=/);
+    assert.match(setupReadme,/Reader endpoint: not generated/);
+    assert.match(setupReadme,/Import endpoint: not generated/);
   }finally{await rm(root,{recursive:true,force:true})}
 });
 
