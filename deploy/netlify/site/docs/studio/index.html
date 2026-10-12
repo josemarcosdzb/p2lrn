@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0d1117">
-<meta name="description" content="P2LRN Studio: uso visual e integración real por NPM o CDN, contrastada con el Web Component y backend actuales.">
+<meta name="description" content="P2LRN Studio: uso visual e integración real por NPM o CDN, contrastada con el componente web y el servidor actuales.">
 <title>Studio visual — P2LRN</title>
 <link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script>
 </head>
-<body>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main"><aside class="doc-sidebar"></aside><article class="doc-content">
-<header class="doc-hero"><p class="eyebrow">AUTHOR / VISUAL</p><h1>P2LRN Studio</h1><p>Studio es el editor visual de P2LRN. Puedes usar la instancia pública, incrustarlo desde NPM o cargarlo desde CDN. Las tres opciones usan el mismo Web Component <code>&lt;p2lrn-studio&gt;</code>.</p></header>
+<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">AUTORÍA / VISUAL</p><h1>P2LRN Studio</h1><p>Studio es el editor visual de P2LRN. Puedes usar la instancia pública, incrustarlo desde NPM o cargarlo desde CDN. Las tres opciones usan el mismo componente web <code>&lt;p2lrn-studio&gt;</code>.</p></header>
 
 <section class="doc-section"><h2>1. Usarlo directamente</h2>
 <div class="example-actions"><a class="button primary" href="/studio/">Abrir P2LRN Studio</a></div>
@@ -39,9 +39,9 @@
 <div class="codebox"><div class="codebox-head"><span>HTML mínimo</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/studio/current/dist/p2lrn-studio.js"&gt;&lt;/script&gt;
 
 &lt;p2lrn-studio&gt;&lt;/p2lrn-studio&gt;</code></pre></div>
-<p>El loader detecta su canal, carga el Player correspondiente y después importa <code>p2lrn-studio.esm.js</code>. Para fijar versión sustituye <code>current</code> por <code>0.5.0-alpha.10</code>:</p>
+<p>El cargador detecta su canal, carga el Player correspondiente y después importa <code>p2lrn-studio.esm.js</code>. Para fijar versión sustituye <code>current</code> por <code>0.5.0-alpha.10</code>:</p>
 <div class="codebox"><div class="codebox-head"><span>CDN versionado</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/studio/0.5.0-alpha.10/dist/p2lrn-studio.js"&gt;&lt;/script&gt;</code></pre></div>
-<div class="doc-callout"><strong>Usa el loader <code>p2lrn-studio.js</code> en HTML puro.</strong><p>No uses directamente el ESM sin resolver antes <code>@p2lrn/player</code>.</p></div>
+<div class="doc-callout"><strong>Usa el cargador <code>p2lrn-studio.js</code> en HTML puro.</strong><p>No uses directamente el ESM sin resolver antes <code>@p2lrn/player</code>.</p></div>
 </section>
 
 <section class="doc-section"><h2>5. Atributos reales del componente</h2>
@@ -53,7 +53,7 @@
 <div><code>course-path</code><p>Ruta lógica de guardado; valor por defecto <code>course</code>.</p></div>
 </div></section>
 
-<section class="doc-section"><h2>6. Ejemplo completo con Host</h2>
+<section class="doc-section"><h2>6. Ejemplo completo con servidor</h2>
 <div class="codebox"><div class="codebox-head"><span>HTML</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;p2lrn-studio
   src="/course/curso.p2lrn"
   save-endpoint="/api/p2lrn/studio/save"
@@ -65,21 +65,21 @@
 </section>
 
 <section class="doc-section"><h2>7. Qué necesita servidor</h2>
-<div class="capability-table-wrap"><table class="capability-table"><thead><tr><th>Función</th><th>Sin backend</th><th>Endpoint</th></tr></thead><tbody>
+<div class="capability-table-wrap"><table class="capability-table"><thead><tr><th>Función</th><th>Sin servidor</th><th>Endpoint</th></tr></thead><tbody>
 <tr><td>Crear curso</td><td>Sí</td><td>—</td></tr>
 <tr><td>Abrir archivo local</td><td>Sí</td><td>—</td></tr>
 <tr><td>Abrir URL accesible</td><td>Sí</td><td>—</td></tr>
 <tr><td>Editar y previsualizar</td><td>Sí</td><td>—</td></tr>
 <tr><td>Descargar <code>.p2lrn</code></td><td>Sí</td><td>—</td></tr>
-<tr><td>Guardar en Host</td><td>No</td><td><code>save-endpoint</code></td></tr>
+<tr><td>Guardar en servidor</td><td>No</td><td><code>save-endpoint</code></td></tr>
 <tr><td>Reader de documentos</td><td>No</td><td><code>reader-endpoint</code></td></tr>
 <tr><td>Importar SCORM/H5P/cmi5/QTI/etc.</td><td>No</td><td><code>import-endpoint</code></td></tr>
 </tbody></table></div>
 </section>
 
-<section class="doc-section"><h2>8. Setup NPM del backend</h2>
+<section class="doc-section"><h2>8. Configurar el servidor con NPM</h2>
 <div class="codebox"><div class="codebox-head"><span>Automático</span><button type="button" data-copy>Copiar</button></div><pre><code>npx p2lrn-studio setup</code></pre></div>
-<p>Actualmente Next.js es el target cuyo setup genera save + Reader + import. Los demás targets generan el guardado; añade las otras dos rutas en el Host si las necesitas.</p>
+<p>Actualmente Next.js es el target cuyo comando <code>setup</code> genera guardado + Reader + importación. Los demás targets generan el guardado; añade las otras dos rutas en el Host si las necesitas.</p>
 <div class="codebox"><div class="codebox-head"><span>Next.js completo</span><button type="button" data-copy>Copiar</button></div><pre><code>npx p2lrn-studio setup next --course-path data/courses</code></pre></div>
 </section>
 
@@ -99,7 +99,7 @@
 <div><code>p2lrn-studio-create</code><p>Curso nuevo creado.</p></div>
 <div><code>p2lrn-studio-open</code><p>Paquete abierto.</p></div>
 <div><code>p2lrn-studio-download</code><p>Paquete descargado.</p></div>
-<div><code>p2lrn-studio-save</code><p>Guardado en Host completado.</p></div>
+<div><code>p2lrn-studio-save</code><p>Guardado en servidor completado.</p></div>
 </div></section>
 
 <section class="doc-section"><h2>11. Seguridad</h2>

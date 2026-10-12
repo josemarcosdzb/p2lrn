@@ -9,25 +9,19 @@
   <link rel="stylesheet" href="/p2lrn.css">
   <script src="/p2lrn.js" defer></script>
 </head>
-<body>
+<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
   <header class="site-header">
     <a class="brand" href="/">P2LRN</a>
-    <nav class="nav" id="nav">
-      <a href="/docs/">Docs</a>
-      <a href="/docs/formato/">Formato</a>
-      <a href="/docs/player/">Player</a>
-      <a href="/docs/toolkit/">Toolkit</a>
-      <a href="/docs/integracion/">Integración</a>
-    </nav>
+    <nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav>
     <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
     <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
   </header>
 
-  <main class="doc-main">
-    <aside class="doc-sidebar"></aside>
+  <main class="doc-main" id="contenido">
+    <aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
     <article class="doc-content">
       <header class="doc-hero">
-        <p class="eyebrow">START / ARCHITECTURE</p>
+        <p class="eyebrow">INICIO / ARQUITECTURA</p>
         <h1>Conceptos fundamentales</h1>
         <p>Las ideas que conviene entender antes de tocar la API: paquete, grafo, entrypoints, host, integridad, autoría y runtime.</p>
       </header>

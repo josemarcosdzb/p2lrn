@@ -16,7 +16,7 @@
         ['/docs/recetas/','Recetas'],
         ['/docs/glosario/','Glosario'],
         ['/docs/referencia/','Referencia'],
-        ['/docs/troubleshooting/','Troubleshooting'],
+        ['/docs/troubleshooting/','Solución de problemas'],
       ],
     },
     {
@@ -221,7 +221,7 @@
 
   const GLOBAL_SIDEBAR = [
     ['EMPEZAR', [
-      ['/docs/','Overview'],
+      ['/docs/','Documentación'],
       ['/docs/empezar/','Elegir ruta'],
       ['/docs/npm/','NPM'],
       ['/docs/cdn/','CDN'],
@@ -252,7 +252,7 @@
       ['/docs/recetas/','Recetas'],
       ['/docs/glosario/','Glosario'],
       ['/docs/referencia/','Referencia'],
-      ['/docs/troubleshooting/','Troubleshooting'],
+      ['/docs/troubleshooting/','Solución de problemas'],
     ]],
     ['RECURSOS', [
       ['/studio/','Abrir Studio ↗'],
@@ -374,6 +374,6 @@
     const version = release.webSdkVersion || health.playerVersion || index?.player?.version;
     if (version) document.querySelectorAll('[data-player-version],[data-footer-version]').forEach((n) => n.textContent = version);
     const node = document.querySelector('[data-health]');
-    if (node) node.textContent = health.ok && release.webSdkVersion === version ? 'Build CDN verificado' : 'Build CDN';
+    if (node) node.textContent = health.ok && release.webSdkVersion === version ? 'CDN verificada' : 'CDN';
   }).catch(() => {});
 })();

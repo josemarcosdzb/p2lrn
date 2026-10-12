@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0d1117">
-<meta name="description" content="P2LRN por CDN: Player y Studio desde loaders de navegador, sin instalar esos paquetes en el frontend.">
+<meta name="description" content="P2LRN por CDN: Player y Studio mediante cargadores de navegador, sin instalar esos paquetes en la aplicación cliente.">
 <title>CDN — P2LRN</title>
 <link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script>
 </head>
-<body>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main"><aside class="doc-sidebar"></aside><article class="doc-content">
-<header class="doc-hero"><p class="eyebrow">INSTALL / CDN</p><h1>P2LRN por CDN</h1><p>Esta ruta carga el frontend de P2LRN desde los builds publicados. Player y Studio tienen loaders distintos. No necesitas instalar esos paquetes mediante NPM en el navegador.</p></header>
+<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">INSTALACIÓN / CDN</p><h1>P2LRN por CDN</h1><p>Esta ruta carga el código de P2LRN en el navegador desde los builds publicados. Player y Studio tienen cargadores distintos. No necesitas instalar esos paquetes mediante NPM en el navegador.</p></header>
 
 <section class="doc-section"><h2>1. Player por CDN</h2>
 <div class="codebox"><div class="codebox-head"><span>HTML</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
@@ -21,18 +21,18 @@
 </section>
 
 <section class="doc-section"><h2>2. Studio visual por CDN</h2>
-<p>El punto de entrada correcto para HTML sin bundler es el loader clásico:</p>
+<p>El punto de entrada correcto para HTML sin bundler es el cargador clásico:</p>
 <div class="codebox"><div class="codebox-head"><span>HTML mínimo</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/studio/current/dist/p2lrn-studio.js"&gt;&lt;/script&gt;
 
 &lt;p2lrn-studio&gt;&lt;/p2lrn-studio&gt;</code></pre></div>
-<div class="doc-callout"><strong>El loader de Studio carga automáticamente el Player del mismo canal.</strong><p><code>/studio/current/dist/p2lrn-studio.js</code> carga <code>/player/current/dist/p2lrn.js</code> y después el módulo de Studio. No añadas un segundo loader del Player.</p></div>
+<div class="doc-callout"><strong>El cargador de Studio carga automáticamente el Player del mismo canal.</strong><p><code>/studio/current/dist/p2lrn-studio.js</code> carga <code>/player/current/dist/p2lrn.js</code> y después el módulo de Studio. No añadas un segundo cargador del Player.</p></div>
 <p>Versión fija:</p>
 <div class="codebox"><div class="codebox-head"><span>Studio versionado</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/studio/0.5.0-alpha.10/dist/p2lrn-studio.js"&gt;&lt;/script&gt;
 
 &lt;p2lrn-studio&gt;&lt;/p2lrn-studio&gt;</code></pre></div>
 </section>
 
-<section class="doc-section"><h2>3. No uses el ESM directo como sustituto del loader</h2>
+<section class="doc-section"><h2>3. No uses el ESM directo como sustituto del cargador</h2>
 <p><code>p2lrn-studio.esm.js</code> contiene un fallback que importa <code>@p2lrn/player</code> como specifier de paquete. Un HTML puro sin import map no resuelve ese nombre. Por eso la integración CDN documentada usa <strong><code>p2lrn-studio.js</code></strong>, que prepara primero el Player.</p>
 </section>
 
@@ -40,10 +40,10 @@
 <div class="codebox"><div class="codebox-head"><span>HTML</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/studio/current/dist/p2lrn-studio.js"&gt;&lt;/script&gt;
 
 &lt;p2lrn-studio src="/course/curso.p2lrn"&gt;&lt;/p2lrn-studio&gt;</code></pre></div>
-<p>Sin backend puedes editar y descargar el nuevo <code>.p2lrn</code>.</p>
+<p>Sin servidor puedes editar y descargar el nuevo <code>.p2lrn</code>.</p>
 </section>
 
-<section class="doc-section"><h2>5. Studio CDN con backend del Host</h2>
+<section class="doc-section"><h2>5. Studio CDN con servidor de la aplicación anfitriona</h2>
 <div class="codebox"><div class="codebox-head"><span>HTML</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/studio/current/dist/p2lrn-studio.js"&gt;&lt;/script&gt;
 
 &lt;p2lrn-studio
@@ -53,8 +53,8 @@
   import-endpoint="/api/p2lrn/studio/import"
   course-path="course"&gt;
 &lt;/p2lrn-studio&gt;</code></pre></div>
-<p>CDN resuelve el código del navegador. Los endpoints pertenecen a tu servidor. Si el backend es Node puedes implementar esas rutas con <code>@p2lrn/studio/server</code>; en otro stack implementa el mismo contrato HTTP.</p>
-<div class="doc-callout"><strong>Esto no mezcla dos canales de frontend.</strong><p>Studio sigue cargándose por CDN. Utilizar un helper NPM sólo en el servidor es independiente de cómo llega el JavaScript al navegador.</p></div>
+<p>CDN resuelve el código del navegador. Los endpoints pertenecen a tu servidor. Si el servidor usa Node puedes implementar esas rutas con <code>@p2lrn/studio/server</code>; en otro stack implementa el mismo contrato HTTP.</p>
+<div class="doc-callout"><strong>Esto no mezcla dos formas de cargar el código en el navegador.</strong><p>Studio sigue cargándose por CDN. Utilizar un helper NPM sólo en el servidor es independiente de cómo llega el JavaScript al navegador.</p></div>
 </section>
 
 <section class="doc-section"><h2>6. Qué hace cada endpoint</h2>

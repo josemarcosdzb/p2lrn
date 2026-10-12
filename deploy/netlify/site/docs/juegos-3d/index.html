@@ -9,26 +9,20 @@
   <link rel="stylesheet" href="/p2lrn.css">
   <script src="/p2lrn.js" defer></script>
 </head>
-<body>
+<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
 <header class="site-header">
   <a class="brand" href="/">P2LRN</a>
-  <nav class="nav" id="nav">
-    <a href="/docs/">Docs</a>
-    <a href="/docs/paquetes/">Paquetes</a>
-    <a href="/docs/player/">Player</a>
-    <a href="/docs/juegos-3d/" aria-current="page">Juegos 3D</a>
-    <a href="/docs/toolkit/">Toolkit</a>
-  </nav>
-  <div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
+  <nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav>
+  <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
   <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
 </header>
 
-<main class="doc-main">
-  <aside class="doc-sidebar"></aside>
+<main class="doc-main" id="contenido">
+  <aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
 
   <article class="doc-content">
     <header class="doc-hero">
-      <p class="eyebrow">BUILD / GAME 3D</p>
+      <p class="eyebrow">JUEGOS / 3D</p>
       <h1>Juegos 3D portables</h1>
       <p>El runtime 3D pertenece a P2LRN. No importa React, Next.js ni código de AulaP2P. La escena usa Three.js y las físicas usan Rapier mediante un adaptador propio del Player.</p>
     </header>

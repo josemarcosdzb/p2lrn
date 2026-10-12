@@ -9,25 +9,19 @@
   <link rel="stylesheet" href="/p2lrn.css">
   <script src="/p2lrn.js" defer></script>
 </head>
-<body>
+<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
 <header class="site-header">
   <a class="brand" href="/">P2LRN</a>
-  <nav class="nav" id="nav">
-    <a href="/docs/">Docs</a>
-    <a href="/docs/paquetes/">Paquetes</a>
-    <a href="/docs/paquetes/multipart/" aria-current="page">Multipart</a>
-    <a href="/docs/player/">Player</a>
-    <a href="/demo/">Visor</a>
-  </nav>
+  <nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav>
   <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
   <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
 </header>
 
-<main class="doc-main">
-  <aside class="doc-sidebar"></aside>
+<main class="doc-main" id="contenido">
+  <aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
   <article class="doc-content">
     <header class="doc-hero">
-      <p class="eyebrow">BUILD / MULTIPART</p>
+      <p class="eyebrow">PAQUETES / MULTIPART</p>
       <h1>Dividir paquetes grandes</h1>
       <p>Multipart separa un payload embebido grande en archivos adyacentes sin perder el manifiesto, el grafo ni la verificación SHA-256 del contenido lógico.</p>
     </header>
@@ -157,7 +151,7 @@ course.part001
 course.part002
 course.part003
 course.part004
-metadata.json</code></pre></div><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/multipart-demo/course.p2lrn">Abrir en el visor</a><a class="button" href="/examples/multipart-demo/metadata.json">Ver metadata y digests</a></div><div class="doc-callout"><strong>Gate del deploy</strong><p>Si el paquete exterior no abre o el runtime Multipart no reconstruye exactamente los bytes y el SHA-256 esperados, <code>build-site.mjs</code> falla y Netlify no publica esa versión.</p></div></section><nav class="doc-pager">
+metadata.json</code></pre></div><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/multipart-demo/course.p2lrn">Abrir en el visor</a><a class="button" href="/examples/multipart-demo/metadata.json">Ver metadatos y hashes</a></div><div class="doc-callout"><strong>Gate del deploy</strong><p>Si el paquete exterior no abre o el runtime Multipart no reconstruye exactamente los bytes y el SHA-256 esperados, <code>build-site.mjs</code> falla y Netlify no publica esa versión.</p></div></section><nav class="doc-pager">
       <a class="prev" href="/docs/paquetes/"><span>← Anterior</span><strong>Crear paquetes</strong></a>
       <a class="next" href="/demo/"><span>Siguiente →</span><strong>Probar el visor real</strong></a>
     </nav>

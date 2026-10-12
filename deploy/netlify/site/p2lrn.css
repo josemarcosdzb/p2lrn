@@ -530,6 +530,8 @@ footer a:hover{color:var(--blue)}
 .doc-pager a{display:grid;gap:3px;min-width:0;padding:15px 16px;border:1px solid var(--line);border-radius:8px;text-decoration:none;background:var(--panel);overflow-wrap:anywhere}
 .doc-pager a:hover{border-color:#98a2b3}
 .doc-pager .next{text-align:right}
+.doc-pager.is-single{grid-template-columns:1fr}
+.doc-pager.is-single .next{justify-self:end;width:min(100%,430px)}
 .doc-pager span{font-size:.72rem;color:var(--muted)}
 .doc-pager strong{font-size:.92rem}
 
@@ -626,6 +628,7 @@ footer a:hover{color:var(--blue)}
 
 
 /* Documentation maturity pass */
+.skip-link{position:fixed;z-index:3000;left:16px;top:12px;padding:10px 14px;border-radius:7px;background:#0d1117;color:#fff;text-decoration:none;font-weight:700;transform:translateY(-180%);transition:transform .15s ease}.skip-link:focus{transform:translateY(0)}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 .docs-search{display:grid;gap:7px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--line)}
 .docs-search label{font-family:var(--mono);font-size:.64rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -640,7 +643,7 @@ footer a:hover{color:var(--blue)}
 .decision-grid>a{display:block;padding:22px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-decoration:none;color:var(--ink)}
 .decision-grid>a:hover{border-color:#9aa4b2;transform:translateY(-1px)}
 .decision-grid span{font-family:var(--mono);font-size:.63rem;letter-spacing:.05em;color:var(--blue)}
-.decision-grid h2{margin:7px 0!important;font-size:1.5rem!important;letter-spacing:-.025em!important}
+.decision-grid h3{margin:7px 0!important;font-size:1.5rem!important;letter-spacing:-.025em!important}
 .decision-grid p{margin:0;color:var(--muted)}
 
 .capability-table-wrap{overflow-x:auto;margin-top:22px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}

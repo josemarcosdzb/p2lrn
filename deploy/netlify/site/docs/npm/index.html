@@ -7,10 +7,10 @@
 <title>NPM — P2LRN</title>
 <link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script>
 </head>
-<body>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main"><aside class="doc-sidebar"></aside><article class="doc-content">
-<header class="doc-hero"><p class="eyebrow">INSTALL / NPM</p><h1>P2LRN por NPM</h1><p>Usa esta ruta cuando tu aplicación gestiona dependencias con NPM. Player, Studio y Toolkit son paquetes distintos: instala únicamente los que necesites.</p></header>
+<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">INSTALACIÓN / NPM</p><h1>P2LRN por NPM</h1><p>Usa esta ruta cuando tu aplicación gestiona dependencias con NPM. Player, Studio y Toolkit son paquetes distintos: instala únicamente los que necesites.</p></header>
 
 <section class="doc-section"><h2>1. Qué paquete corresponde a cada función</h2>
 <div class="reference-table">
@@ -23,7 +23,7 @@
 <div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/player@0.5.0-alpha.10</code></pre></div>
 <div class="codebox"><div class="codebox-head"><span>JavaScript / TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import '@p2lrn/player';</code></pre></div>
 <div class="codebox"><div class="codebox-head"><span>HTML</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;p2lrn-player src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre></div>
-<div class="doc-callout"><strong>No añadas además el loader CDN del Player.</strong><p>En esta ruta el Web Component queda registrado por el import del paquete NPM.</p></div>
+<div class="doc-callout"><strong>No añadas además el cargador CDN del Player.</strong><p>En esta ruta el componente web queda registrado por la importación del paquete NPM.</p></div>
 </section>
 
 <section class="doc-section"><h2>3. Studio visual por NPM</h2>
@@ -31,7 +31,7 @@
 <div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/studio@0.5.0-alpha.10 @p2lrn/player@0.5.0-alpha.10</code></pre></div>
 <div class="codebox"><div class="codebox-head"><span>JavaScript / TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import '@p2lrn/studio';</code></pre></div>
 <div class="codebox"><div class="codebox-head"><span>HTML mínimo</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;p2lrn-studio&gt;&lt;/p2lrn-studio&gt;</code></pre></div>
-<p>Sin endpoints de servidor, Studio puede crear cursos, abrir archivos o URLs, editar, previsualizar y descargar un <code>.p2lrn</code>. El guardado en Host permanece oculto mientras no exista <code>save-endpoint</code>.</p>
+<p>Sin endpoints de servidor, Studio puede crear cursos, abrir archivos o URLs, editar, previsualizar y descargar un <code>.p2lrn</code>. El guardado en la aplicación anfitriona permanece oculto mientras no exista <code>save-endpoint</code>.</p>
 </section>
 
 <section class="doc-section"><h2>4. Studio con guardado, Reader e importación externa</h2>
@@ -50,13 +50,13 @@
 <div><code>src</code><p>Paquete inicial opcional. Si lo omites puedes crear un curso nuevo.</p></div>
 </div></section>
 
-<section class="doc-section"><h2>5. Configurar backend con el CLI</h2>
+<section class="doc-section"><h2>5. Configurar el servidor con el CLI</h2>
 <div class="codebox"><div class="codebox-head"><span>Detección automática</span><button type="button" data-copy>Copiar</button></div><pre><code>npx p2lrn-studio setup</code></pre></div>
 <div class="codebox"><div class="codebox-head"><span>Next.js y ruta de cursos</span><button type="button" data-copy>Copiar</button></div><pre><code>npx p2lrn-studio setup next --course-path data/courses</code></pre></div>
 <div class="doc-callout"><strong>Estado real del generador.</strong><p>Actualmente el target <code>next</code> genera <strong>save + Reader + import</strong>. Los demás targets soportados generan la integración de <strong>save</strong>; Reader e importación externa requieren endpoints equivalentes del Host si se necesitan.</p></div>
 </section>
 
-<section class="doc-section"><h2>6. Helpers de servidor disponibles</h2>
+<section class="doc-section"><h2>6. Funciones auxiliares del servidor</h2>
 <div class="codebox"><div class="codebox-head"><span>Servidor JavaScript / Web Request</span><button type="button" data-copy>Copiar</button></div><pre><code>import {
   handleP2LRNStudioSave,
   handleP2LRNStudioReader,
@@ -72,7 +72,7 @@
 </section>
 
 <section class="doc-section"><h2>8. Si no quieres NPM en el navegador</h2>
-<p>Usa <a href="/docs/cdn/">CDN</a>. Player y Studio tienen loaders publicados. El backend sigue siendo responsabilidad del Host y no depende del canal usado en el navegador.</p>
+<p>Usa <a href="/docs/cdn/">CDN</a>. Player y Studio tienen cargadores publicados. El servidor sigue siendo responsabilidad de la aplicación anfitriona y no depende del canal usado en el navegador.</p>
 </section>
 
 <nav class="doc-pager"><a class="prev" href="/docs/empezar/"><span>← Anterior</span><strong>Elegir ruta</strong></a><a class="next" href="/docs/cdn/"><span>Siguiente →</span><strong>CDN</strong></a></nav>
