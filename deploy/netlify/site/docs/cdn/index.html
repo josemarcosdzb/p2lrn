@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1117">
+<meta name="description" content="Uso de P2LRN Player por CDN, sin instalar el Player mediante NPM.">
+<title>CDN — P2LRN</title>
+<link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script>
+</head>
+<body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar"></aside><article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">INSTALL / CDN</p><h1>Usar el Player desde CDN</h1><p>Esta ruta carga el Player directamente desde una URL pública. <strong>No requiere instalar <code>@p2lrn/player</code> por NPM.</strong></p></header>
+
+<section class="doc-section"><h2>1. HTML mínimo</h2>
+<div class="codebox"><div class="codebox-head"><span>index.html</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;!doctype html&gt;
+&lt;html lang="es"&gt;
+&lt;meta charset="utf-8"&gt;
+&lt;meta name="viewport" content="width=device-width,initial-scale=1"&gt;
+&lt;title&gt;Curso P2LRN&lt;/title&gt;
+
+&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+
+&lt;p2lrn-player id="course" src="./course.p2lrn"&gt;&lt;/p2lrn-player&gt;
+
+&lt;script&gt;
+  const player = document.querySelector('#course');
+  player.addEventListener('p2lrn:ready', (event) =&gt; {
+    console.log('READY', event.detail);
+  });
+  player.addEventListener('p2lrn:error', (event) =&gt; {
+    console.error('P2LRN ERROR', event.detail);
+  });
+&lt;/script&gt;
+&lt;/html&gt;</code></pre></div>
+<div class="doc-callout"><strong>En esta ruta no ejecutes <code>npm install @p2lrn/player</code>.</strong><p>El Player se registra mediante la etiqueta <code>&lt;script src="…"&gt;</code>.</p></div>
+</section>
+
+<section class="doc-section"><h2>2. “current” frente a versión fija</h2>
+<p><code>/player/current/</code> apunta al build publicado como actual. Si necesitas reproducibilidad exacta, fija la versión:</p>
+<div class="codebox"><div class="codebox-head"><span>CDN versionado</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;script src="https://p2lrn.netlify.app/player/0.5.0-alpha.10/dist/p2lrn.js"&gt;&lt;/script&gt;</code></pre></div>
+</section>
+
+<section class="doc-section"><h2>3. El paquete <code>.p2lrn</code> se crea aparte</h2>
+<p>El CDN sólo resuelve cómo se carga el Player. El curso puede venir de cualquiera de estas rutas:</p>
+<div class="decision-grid">
+<a href="/docs/studio/"><span>VISUAL</span><h2>Studio</h2><p>Crea y exporta el paquete con el editor visual.</p></a>
+<a href="/docs/paquetes/"><span>CÓDIGO</span><h2>Toolkit / CLI</h2><p>Genera y valida el paquete desde Node/TypeScript o comandos.</p></a>
+</div>
+</section>
+
+<section class="doc-section"><h2>4. Sirve HTML y paquete por HTTP</h2>
+<p>No abras el ejemplo mediante <code>file://</code>. Publica <code>index.html</code> y <code>course.p2lrn</code> desde tu servidor web, alojamiento estático o entorno de desarrollo.</p>
+<div class="package-tree"><div class="tree-head">public/</div><pre><code>public/
+├─ index.html
+└─ course.p2lrn</code></pre></div>
+</section>
+
+<section class="doc-section"><h2>5. Cuándo usar esta ruta</h2>
+<ul class="doc-list"><li>Quieres probar el Player con una página HTML sin preparar un proyecto NPM.</li><li>No necesitas que tu bundler gestione el paquete <code>@p2lrn/player</code>.</li><li>Prefieres cargar un build publicado directamente desde el navegador.</li></ul>
+<p>Si tu aplicación ya usa dependencias y módulos, consulta la <a href="/docs/npm/">ruta NPM</a>.</p>
+</section>
+
+<nav class="doc-pager"><a class="prev" href="/docs/npm/"><span>← Anterior</span><strong>NPM</strong></a><a class="next" href="/docs/studio/"><span>Siguiente →</span><strong>Studio visual</strong></a></nav>
+</article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer>
+</body></html>

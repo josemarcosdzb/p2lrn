@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1117">
+<meta name="description" content="Guía del editor visual P2LRN Studio: crear cursos, añadir contenido, editar, previsualizar, guardar borradores y exportar .p2lrn.">
+<title>Studio visual — P2LRN</title>
+<link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script>
+</head>
+<body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar"></aside><article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">AUTHOR / VISUAL</p><h1>Crear un curso con Studio</h1><p>Studio es la ruta de autoría visual. Para crear un curso desde la interfaz no necesitas escribir los comandos del Toolkit. Puedes crear un curso nuevo, abrir un <code>.p2lrn</code>, editarlo, probar la vista del alumno y exportar un paquete nuevo.</p></header>
+
+<section class="doc-section"><h2>1. Abre el editor visual</h2>
+<div class="example-actions"><a class="button primary" href="/studio/">Abrir P2LRN Studio</a></div>
+<p>En la pantalla inicial puedes usar <strong>Crear curso</strong>, <strong>Abrir archivo</strong> o <strong>Abrir URL</strong>.</p>
+</section>
+
+<section class="doc-section"><h2>2. Crea la estructura del curso</h2>
+<ol class="learning-path">
+<li><strong>Crear curso.</strong><span>Inicia un paquete nuevo para editarlo en Studio.</span></li>
+<li><strong>+ Nueva unidad.</strong><span>Crea secciones para organizar las lecciones y actividades.</span></li>
+<li><strong>Añadir contenido.</strong><span>Abre el selector completo de tipos de contenido.</span></li>
+<li><strong>+ Nueva lección.</strong><span>Crea directamente una lección editable.</span></li>
+</ol>
+</section>
+
+<section class="doc-section"><h2>3. Qué puedes añadir visualmente</h2>
+<div class="reference-table">
+<div><code>Lección</code><p>Contenido editable directamente en Studio.</p></div>
+<div><code>Archivo / multimedia</code><p>Imagen, vídeo, audio u otro archivo incluido como recurso.</p></div>
+<div><code>URL</code><p>Recurso web externo sin copiarlo al paquete.</p></div>
+<div><code>Reader / documento</code><p>Importa PDF, DOCX, PPTX, EPUB, TXT, Markdown y otros documentos admitidos.</p></div>
+<div><code>Paquete educativo</code><p>Importa contenido externo como SCORM, H5P, cmi5, QTI, Common Cartridge o IMS Content Package.</p></div>
+<div><code>Cuestionario</code><p>Combina preguntas de elección, verdadero/falso, texto, huecos, ordenar, relacionar y clasificar.</p></div>
+<div><code>Juegos</code><p>Memoria, relacionar, ordenar, clasificar, verdadero/falso, rellenar huecos, sopa de letras, crucigrama, rosco y juego 3D.</p></div>
+<div><code>Bloque reutilizable / grupo compuesto</code><p>Estructuras avanzadas para componentes portables y agrupaciones.</p></div>
+</div>
+</section>
+
+<section class="doc-section"><h2>4. Edita el contenido en el lienzo</h2>
+<p>En modo <strong>Editar</strong>, Studio muestra el árbol del curso a la izquierda y el contenido seleccionado en el lienzo. La barra de formato actual permite cambiar el tipo de bloque, aplicar negrita, cursiva y subrayado, alinear el texto y ajustar color de texto y fondo.</p>
+<p>La estructura se modifica desde el árbol y los controles de creación; no necesitas editar <code>manifest.json</code> ni <code>graph.json</code> a mano.</p>
+</section>
+
+<section class="doc-section"><h2>5. Comprueba la vista del alumno</h2>
+<p>Pulsa <strong>Vista alumno</strong>. Studio utiliza el Player para previsualizar el curso sin convertir el editor en el runtime del alumno. Vuelve a <strong>Editar</strong> para continuar autorando.</p>
+</section>
+
+<section class="doc-section"><h2>6. Guarda o exporta</h2>
+<div class="reference-table">
+<div><code>Guardar borrador</code><p>Guarda manualmente un borrador en ese navegador y dispositivo. Studio no debe considerarse autoguardado permanente.</p></div>
+<div><code>Exportar .p2lrn</code><p>Genera el paquete portable que puedes almacenar, publicar o abrir con el Player.</p></div>
+<div><code>save-endpoint</code><p>Cuando Studio se integra dentro de una aplicación, el host puede ofrecer un endpoint de guardado controlado por sus permisos.</p></div>
+</div>
+<div class="doc-callout"><strong>No cierres la página con cambios sólo en memoria.</strong><p>Antes de salir, guarda un borrador o exporta el <code>.p2lrn</code>.</p></div>
+</section>
+
+<section class="doc-section"><h2>7. Studio público frente a Studio integrado</h2>
+<div class="decision-grid">
+<a href="/studio/"><span>USAR EL EDITOR</span><h2>Studio público</h2><p>Abres el editor y trabajas visualmente. No hace falta instalar el Player por NPM para crear el curso desde esta interfaz.</p></a>
+<a href="/docs/npm/"><span>INTEGRAR EN TU APP</span><h2>Studio por NPM</h2><p>Instalas <code>@p2lrn/studio</code> y <code>@p2lrn/player</code> si quieres incrustar el editor en tu propia aplicación y conectar un backend de guardado.</p></a>
+</div>
+</section>
+
+<section class="doc-section"><h2>8. Si prefieres crear por código</h2>
+<p>La alternativa técnica es <a href="/docs/paquetes/">Toolkit / CLI</a>. Esa guía sí utiliza comandos y API TypeScript porque está destinada a automatización y autoría programática.</p>
+</section>
+
+<nav class="doc-pager"><a class="prev" href="/docs/cdn/"><span>← Anterior</span><strong>CDN</strong></a><a class="next" href="/docs/paquetes/"><span>Siguiente →</span><strong>Crear paquetes</strong></a></nav>
+</article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer>
+</body></html>

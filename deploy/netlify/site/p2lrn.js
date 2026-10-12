@@ -5,10 +5,12 @@
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
-      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
+      active: ['/docs/','/docs/empezar/','/docs/npm/','/docs/cdn/','/docs/que-usar/','/docs/conceptos/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
       items: [
         ['/docs/','Inicio de documentación'],
-        ['/docs/empezar/','Quickstart'],
+        ['/docs/empezar/','Elegir ruta'],
+        ['/docs/npm/','NPM'],
+        ['/docs/cdn/','CDN'],
         ['/docs/que-usar/','¿Qué pieza uso?'],
         ['/docs/conceptos/','Conceptos'],
         ['/docs/recetas/','Recetas'],
@@ -36,7 +38,14 @@
         ['/docs/ejemplos/','Ejemplos'],
       ],
     },
-    {label:'Studio',href:'/studio/',active:['/studio/']},
+    {
+      label: 'Studio',
+      active: ['/studio/','/docs/studio/'],
+      items: [
+        ['/studio/','Abrir editor visual'],
+        ['/docs/studio/','Guía de Studio'],
+      ],
+    },
     {
       label: 'Toolkit',
       active: ['/docs/toolkit/','/docs/cli/'],
@@ -213,11 +222,14 @@
   const GLOBAL_SIDEBAR = [
     ['EMPEZAR', [
       ['/docs/','Overview'],
-      ['/docs/empezar/','Quickstart'],
+      ['/docs/empezar/','Elegir ruta'],
+      ['/docs/npm/','NPM'],
+      ['/docs/cdn/','CDN'],
       ['/docs/que-usar/','¿Qué uso?'],
       ['/docs/conceptos/','Conceptos'],
     ]],
     ['CREAR', [
+      ['/docs/studio/','Studio visual'],
       ['/docs/formato/','Formato'],
       ['/docs/paquetes/','Crear paquetes'],
       ['/docs/progresion/','Progresión'],
@@ -243,7 +255,7 @@
       ['/docs/troubleshooting/','Troubleshooting'],
     ]],
     ['RECURSOS', [
-      ['/studio/','Studio ↗'],
+      ['/studio/','Abrir Studio ↗'],
       ['/demo/','Visor real ↗'],
       ['/examples/catalog.json','Catálogo de ejemplos ↗'],
       ['/index.json','Índice CDN ↗'],
@@ -272,7 +284,7 @@
   if (sidebar) {
     const search = document.createElement('div');
     search.className = 'docs-search';
-    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" placeholder="multipart, addQuestionnaire…" autocomplete="off"><div class="docs-search-results" hidden></div>';
+    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" placeholder="NPM, CDN, Studio, multipart…" autocomplete="off"><div class="docs-search-results" hidden></div>';
     sidebar.prepend(search);
     const input = search.querySelector('input');
     const results = search.querySelector('.docs-search-results');

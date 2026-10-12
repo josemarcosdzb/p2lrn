@@ -55,7 +55,7 @@ if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections)){
   failures.push('p2lrn.js: sidebar sections/order mismatch: '+JSON.stringify(sectionNames));
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==26) failures.push('p2lrn.js: expected 26 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==29) failures.push('p2lrn.js: expected 29 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
 const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
 if(duplicates.length) failures.push('p2lrn.js: duplicate sidebar hrefs: '+[...new Set(duplicates)].join(', '));

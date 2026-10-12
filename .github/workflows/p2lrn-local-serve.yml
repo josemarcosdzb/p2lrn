@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/p2lrn-local-serve.yml'
+      - 'deploy/netlify/site/docs/**'
+      - 'deploy/netlify/site/p2lrn.js'
+      - 'scripts/verify-doc-navigation.mjs'
 
 permissions:
   contents: read

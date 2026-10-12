@@ -3,72 +3,56 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0d1117">
-<meta name="description" content="Quickstart ejecutable de P2LRN: crear un paquete, servirlo por HTTP, cargar el Player y verificar eventos reales.">
+<meta name="description" content="Quickstart de P2LRN separado por canal: NPM, CDN y Studio visual, sin mezclar métodos de instalación y autoría.">
 <title>Quickstart — P2LRN</title>
 <link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script>
 </head>
 <body>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
 <main class="doc-main">
 <aside class="doc-sidebar"></aside>
 <article class="doc-content">
-<header class="doc-hero"><p class="eyebrow">START / 5 MIN</p><h1>Quickstart desde cero</h1><p>Este recorrido no presupone que ya tengas un paquete. Usa el Toolkit real para crear un curso mínimo, lo valida, lo sirve por HTTP y lo abre con el Player publicado.</p></header>
-<section class="doc-section"><h2>0. Requisitos</h2><ul class="doc-list"><li>Node.js 22 o superior para <code>@p2lrn/toolkit</code>.</li><li>Un directorio vacío para el ejemplo.</li><li>Un navegador moderno.</li></ul><div class="doc-callout"><strong>Versiones</strong><p>El repositorio alinea Toolkit, Player y H5P libraries en <code>0.5.0-alpha.10</code>. P2LRN sigue siendo alpha.</p></div></section>
-<section class="doc-section"><h2>1. Instala el Toolkit</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>mkdir p2lrn-quickstart
-cd p2lrn-quickstart
-npm init -y
-npm install @p2lrn/toolkit@0.5.0-alpha.10</code></pre></div></section>
-<section class="doc-section"><h2>2. Crea un proyecto real</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npx p2lrn-create init ./workspace --title "Curso mínimo" --language es
-npx p2lrn-create add-unit ./workspace --key unidad-1 --title "Unidad 1"</code></pre></div><p>Crea ahora <code>contenido.html</code> junto al proyecto:</p><div class="codebox"><div class="codebox-head"><span>contenido.html</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;!doctype html&gt;
-&lt;html lang="es"&gt;
-&lt;meta charset="utf-8"&gt;
-&lt;title&gt;Hola P2LRN&lt;/title&gt;
-&lt;body&gt;
-  &lt;h1&gt;Hola P2LRN&lt;/h1&gt;
-  &lt;p&gt;Este contenido forma parte del paquete del Quickstart.&lt;/p&gt;
-&lt;/body&gt;
-&lt;/html&gt;</code></pre></div><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npx p2lrn-create add-file ./workspace ./contenido.html --key introduccion --title "Introducción" --parent unidad-1 --media-type text/html
-npx p2lrn-create build ./workspace ./course.p2lrn --strict-profiles
-npx p2lrn-validate ./course.p2lrn
-npx p2lrn-inspect ./course.p2lrn</code></pre></div></section>
-<section class="doc-section"><h2>3. Monta el Player</h2><p>Crea <code>index.html</code> en el mismo directorio que <code>course.p2lrn</code>.</p><div class="codebox"><div class="codebox-head"><span>index.html</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;!doctype html&gt;
-&lt;html lang="es"&gt;
-&lt;meta charset="utf-8"&gt;
-&lt;meta name="viewport" content="width=device-width,initial-scale=1"&gt;
-&lt;title&gt;P2LRN Quickstart&lt;/title&gt;
+<header class="doc-hero"><p class="eyebrow">START / CHOOSE A PATH</p><h1>Empieza sin mezclar NPM, CDN y Studio</h1><p>Antes de copiar código hay que separar dos decisiones distintas: <strong>cómo cargas P2LRN en tu aplicación</strong> y <strong>cómo creas el curso</strong>. NPM y CDN son canales alternativos de distribución. Studio y Toolkit son formas de autoría.</p></header>
 
-&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+<section class="doc-section">
+<h2>1. Elige cómo cargar el Player</h2>
+<div class="decision-grid">
+<a href="/docs/npm/"><span>PROYECTO CON BUILD</span><h2>NPM</h2><p>Instalas <code>@p2lrn/player</code> en tu proyecto y lo importas desde JavaScript/TypeScript. En esta ruta no se usa el script del CDN.</p></a>
+<a href="/docs/cdn/"><span>HTML DIRECTO</span><h2>CDN</h2><p>Cargas el Player con una etiqueta <code>&lt;script&gt;</code>. En esta ruta no necesitas <code>npm install @p2lrn/player</code>.</p></a>
+</div>
+<div class="doc-callout"><strong>NPM y CDN no son pasos consecutivos.</strong><p>Son dos formas alternativas de cargar el mismo Player. Si eliges NPM, importa el paquete. Si eliges CDN, usa la URL del CDN. No hagas ambas cosas en el mismo ejemplo.</p></div>
+</section>
 
-&lt;p2lrn-player id="course" src="./course.p2lrn"&gt;&lt;/p2lrn-player&gt;
+<section class="doc-section">
+<h2>2. Elige cómo crear el curso</h2>
+<div class="decision-grid">
+<a href="/docs/studio/"><span>SIN PROGRAMAR</span><h2>Studio visual</h2><p>Crea o abre un curso, añade unidades, lecciones, archivos, documentos, cuestionarios y juegos desde el editor visual; después previsualiza y exporta el <code>.p2lrn</code>.</p></a>
+<a href="/docs/paquetes/"><span>POR CÓDIGO</span><h2>Toolkit / CLI</h2><p>Crea y transforma paquetes desde Node/TypeScript o comandos. Es la ruta adecuada para automatización, pipelines y generación programática.</p></a>
+</div>
+</section>
 
-&lt;script&gt;
-  const player = document.querySelector('#course');
+<section class="doc-section">
+<h2>3. Qué combinación corresponde a cada caso</h2>
+<div class="reference-table">
+<div><code>Studio + CDN</code><p>Creas visualmente un <code>.p2lrn</code> y lo reproduces en una página sin instalar el Player por NPM.</p></div>
+<div><code>Studio + NPM</code><p>Creas visualmente el paquete y lo reproduces dentro de una aplicación que integra <code>@p2lrn/player</code> por NPM.</p></div>
+<div><code>Toolkit + NPM</code><p>Generas o validas cursos por código y usas el Player como dependencia de tu aplicación.</p></div>
+<div><code>Toolkit + CDN</code><p>Generas el paquete con herramientas Node, pero la página que lo reproduce carga el Player directamente desde CDN.</p></div>
+</div>
+<p>La creación del paquete y la forma de cargar el Player son decisiones independientes. Lo que se evita es mezclar <strong>NPM y CDN para cargar el Player</strong> dentro del mismo camino.</p>
+</section>
 
-  player.addEventListener('p2lrn:ready', (event) =&gt; {
-    console.log('READY', event.detail);
-  });
+<section class="doc-section">
+<h2>4. Empieza por una guía completa</h2>
+<div class="docs-path-grid">
+<a href="/docs/npm/"><span>NPM</span><h3>Integración por NPM</h3><p>Instalación, import del Player y paquetes opcionales de Toolkit y Studio.</p></a>
+<a href="/docs/cdn/"><span>CDN</span><h3>Integración sin NPM</h3><p>HTML mínimo con Player desde CDN y paquete servido por HTTP.</p></a>
+<a href="/docs/studio/"><span>UI</span><h3>Crear con Studio</h3><p>Recorrido del editor visual desde “Crear curso” hasta “Exportar .p2lrn”.</p></a>
+<a href="/docs/paquetes/"><span>CODE</span><h3>Crear con Toolkit</h3><p>Autoría programática, build, validación e inspección.</p></a>
+</div>
+</section>
 
-  player.addEventListener('p2lrn:rendered', (event) =&gt; {
-    console.log('RENDERED', event.detail);
-  });
-
-  player.addEventListener('p2lrn:error', (event) =&gt; {
-    console.error('P2LRN ERROR', event.detail);
-  });
-&lt;/script&gt;
-&lt;/html&gt;</code></pre></div></section>
-<section class="doc-section"><h2>4. Sírvelo por HTTP</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npx --yes serve .</code></pre></div><p>Abre la URL local que muestre <code>serve</code>. No abras <code>index.html</code> mediante <code>file://</code>.</p></section>
-<section class="doc-section"><h2>5. Criterio de éxito</h2><ul class="check-list"><li><span>BUILD</span><code>p2lrn-create build</code> genera <code>course.p2lrn</code>.</li><li><span>VALIDATE</span><code>p2lrn-validate</code> termina sin error.</li><li><span>READY</span>Se recibe <code>p2lrn:ready</code>.</li><li><span>RENDER</span>Se recibe <code>p2lrn:rendered</code>.</li><li><span>ERROR</span>No aparece <code>p2lrn:error</code>.</li></ul></section>
-<section class="doc-section"><h2>6. Qué has construido</h2><div class="package-tree"><div class="tree-head">p2lrn-quickstart/</div><pre><code>p2lrn-quickstart/
-├─ workspace/
-│  ├─ p2lrn.project.json
-│  └─ ...
-├─ contenido.html
-├─ course.p2lrn
-├─ index.html
-├─ package.json
-└─ node_modules/</code></pre></div><p>El <strong>workspace</strong> es editable; <code>course.p2lrn</code> es el artefacto portable. Continúa con <a href="/docs/paquetes/">Crear paquetes</a> para autoría más completa.</p></section>
-<nav class="doc-pager"><a class="prev" href="/docs/"><span>← Anterior</span><strong>Overview</strong></a><a class="next" href="/docs/que-usar/"><span>Siguiente →</span><strong>¿Qué uso?</strong></a></nav>
+<nav class="doc-pager"><a class="prev" href="/docs/"><span>← Anterior</span><strong>Overview</strong></a><a class="next" href="/docs/npm/"><span>Siguiente →</span><strong>NPM</strong></a></nav>
 </article></main>
 <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer>
 </body></html>

@@ -1,14 +1,20 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Qué pieza de P2LRN usar según el objetivo: Player, Toolkit, Reader, Host Adapter, Multipart o Visor."><title>¿Qué uso? — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"><a href="/docs/">Docs</a><a href="/docs/formato/">Formato</a><a href="/docs/player/">Player</a><a href="/docs/toolkit/">Toolkit</a><a href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Qué pieza de P2LRN usar según el objetivo: Studio, Toolkit, Player por NPM o CDN, Reader, Host Adapter, Multipart o Visor."><title>¿Qué uso? — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
 <main class="doc-main"><aside class="doc-sidebar"></aside>
-<article class="doc-content"><header class="doc-hero"><p class="eyebrow">START / DECISION</p><h1>¿Qué uso?</h1><p>P2LRN separa formato, autoría, reproducción e integración. Esta página te lleva directamente a la pieza correcta.</p></header>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">START / DECISION</p><h1>¿Qué uso?</h1><p>P2LRN separa autoría, reproducción, distribución e integración. Elige primero tu objetivo para no mezclar herramientas que resuelven problemas distintos.</p></header>
 <section class="doc-section"><div class="decision-grid">
-<a href="/docs/player/"><span>QUIERO REPRODUCIR</span><h2>Player</h2><p>Abre un <code>.p2lrn</code>, verifica integridad, selecciona renderer y emite eventos.</p></a>
-<a href="/docs/toolkit/"><span>QUIERO CREAR O EDITAR</span><h2>Toolkit</h2><p>Crea workspaces, añade contenido, reconstruye paquetes y valida el resultado.</p></a>
-<a href="/docs/toolkit/#reader"><span>QUIERO LEER DOCUMENTOS</span><h2>Reader</h2><p>Extrae estructura de documentos sin convertirlos automáticamente en un curso.</p></a>
+<a href="/docs/studio/"><span>QUIERO CREAR VISUALMENTE</span><h2>Studio</h2><p>Editor visual para crear y editar cursos, añadir contenido, previsualizar y exportar <code>.p2lrn</code>.</p></a>
+<a href="/docs/paquetes/"><span>QUIERO CREAR POR CÓDIGO</span><h2>Toolkit / CLI</h2><p>Autoría programática, validación, conversión y automatización desde Node/TypeScript.</p></a>
+<a href="/docs/npm/"><span>MI APP USA DEPENDENCIAS</span><h2>Player por NPM</h2><p>Instala e importa <code>@p2lrn/player</code>. No necesitas el script del CDN.</p></a>
+<a href="/docs/cdn/"><span>QUIERO HTML DIRECTO</span><h2>Player por CDN</h2><p>Carga el Player con <code>&lt;script src="…" &gt;</code>. No necesitas instalar <code>@p2lrn/player</code>.</p></a>
+<a href="/docs/toolkit/#reader"><span>QUIERO LEER DOCUMENTOS</span><h2>Reader</h2><p>Extrae estructura de documentos para que tu aplicación decida qué convertir en contenido.</p></a>
 <a href="/docs/integracion/"><span>QUIERO GUARDAR PROGRESO</span><h2>Host Adapter</h2><p>Conecta estado, score, eventos y resolución de recursos con tu aplicación.</p></a>
-<a href="/docs/paquetes/multipart/"><span>TENGO CURSOS GRANDES</span><h2>Multipart</h2><p>Separa un payload grande en partes verificadas manteniendo el paquete exterior.</p></a>
+<a href="/docs/paquetes/multipart/"><span>TENGO CURSOS GRANDES</span><h2>Multipart</h2><p>Separa payloads grandes en partes verificadas manteniendo la integridad.</p></a>
 <a href="/demo/"><span>QUIERO PROBAR</span><h2>Visor</h2><p>Abre paquetes canónicos con el Player real y observa los eventos.</p></a>
+</div></section>
+<section class="doc-section"><h2>Dos decisiones que no son lo mismo</h2><div class="reference-table">
+<div><code>Autoría</code><p>Studio visual o Toolkit / CLI.</p></div>
+<div><code>Carga del Player</code><p>NPM o CDN. Son alternativas entre sí.</p></div>
 </div></section>
 <section class="doc-section"><h2>La frontera importante</h2><div class="doc-callout"><strong>El paquete no es tu plataforma.</strong><p>Usuarios, permisos, matrícula, secretos y persistencia durable pertenecen al Host. El paquete conserva estructura, contenido y metadatos portables.</p></div></section>
 <nav class="doc-pager"><a class="prev" href="/docs/empezar/"><span>← Anterior</span><strong>Quickstart</strong></a><a class="next" href="/docs/conceptos/"><span>Siguiente →</span><strong>Conceptos</strong></a></nav></article></main>

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1117">
+<meta name="description" content="Instalación de P2LRN por NPM: Player, Toolkit y Studio sin mezclar el runtime con el CDN.">
+<title>NPM — P2LRN</title>
+<link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script>
+</head>
+<body>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav"></nav><div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main"><aside class="doc-sidebar"></aside><article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">INSTALL / NPM</p><h1>Usar P2LRN por NPM</h1><p>Esta ruta es para proyectos JavaScript/TypeScript que gestionan dependencias con NPM y un bundler o framework. <strong>No carga el Player desde CDN.</strong></p></header>
+
+<section class="doc-section"><h2>1. Instala sólo lo que necesitas</h2>
+<div class="reference-table">
+<div><code>@p2lrn/player</code><p>Reproducir paquetes <code>.p2lrn</code> dentro de tu aplicación.</p></div>
+<div><code>@p2lrn/toolkit</code><p>Crear, validar, leer, convertir o empaquetar cursos desde Node/TypeScript. Requiere Node.js 22 o superior.</p></div>
+<div><code>@p2lrn/studio</code><p>Integrar el editor visual dentro de tu propia aplicación. Usa <code>@p2lrn/player</code> como peer dependency.</p></div>
+</div></section>
+
+<section class="doc-section"><h2>2. Player por NPM</h2>
+<div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/player@0.5.0-alpha.10</code></pre></div>
+<div class="codebox"><div class="codebox-head"><span>JavaScript / TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import '@p2lrn/player';
+
+const player = document.querySelector('p2lrn-player');
+player.addEventListener('p2lrn:ready', (event) =&gt; {
+  console.log('READY', event.detail);
+});</code></pre></div>
+<div class="codebox"><div class="codebox-head"><span>HTML de tu aplicación</span><button type="button" data-copy>Copiar</button></div><pre><code>&lt;p2lrn-player src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre></div>
+<div class="doc-callout"><strong>En esta ruta no añadas el script del CDN.</strong><p>El registro del Web Component llega desde <code>import '@p2lrn/player'</code>.</p></div>
+</section>
+
+<section class="doc-section"><h2>3. Autoría por código: Toolkit</h2>
+<p>El Toolkit es opcional. No necesitas instalarlo para reproducir un paquete ya creado.</p>
+<div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/toolkit@0.5.0-alpha.10</code></pre></div>
+<div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
+
+const workspace = P2LRNAuthoringWorkspace.create('./workspace', {
+  title: 'Mi curso',
+  language: 'es',
+});</code></pre></div>
+<p>Continúa en <a href="/docs/paquetes/">Crear paquetes con Toolkit / CLI</a>.</p>
+</section>
+
+<section class="doc-section"><h2>4. Integrar Studio visual por NPM</h2>
+<p>Si quieres que el editor visual forme parte de tu propia aplicación, instala Studio y Player juntos. Esto es distinto de abrir el Studio público.</p>
+<div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/studio@0.5.0-alpha.10 @p2lrn/player@0.5.0-alpha.10
+npx p2lrn-studio setup</code></pre></div>
+<p>Para aprender a usar el editor como autor, consulta <a href="/docs/studio/">Studio visual</a>.</p>
+</section>
+
+<section class="doc-section"><h2>5. Cuándo usar esta ruta</h2>
+<ul class="doc-list"><li>Tu aplicación ya usa NPM, Vite, Next.js, React, Vue, Svelte u otro sistema de módulos.</li><li>Quieres fijar la versión de P2LRN en <code>package.json</code>.</li><li>Quieres importar el Player, Toolkit o Studio como dependencias del proyecto.</li></ul>
+<p>Si sólo quieres añadir el Player a una página HTML sin dependencias, usa la <a href="/docs/cdn/">ruta CDN</a>.</p>
+</section>
+
+<nav class="doc-pager"><a class="prev" href="/docs/empezar/"><span>← Anterior</span><strong>Quickstart</strong></a><a class="next" href="/docs/cdn/"><span>Siguiente →</span><strong>CDN</strong></a></nav>
+</article></main>
+<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer>
+</body></html>
