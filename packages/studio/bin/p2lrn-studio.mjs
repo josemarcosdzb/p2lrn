@@ -109,12 +109,32 @@ async function materialize(target,cwd,coursePath,force,dryRun){
   }
   if(!dryRun)await mkdir(resolve(cwd,...coursePath.split('/')),{recursive:true});
   const readme=resolve(cwd,'p2lrn-setup','README.md');
+  const generatedReader=list.some(([,rel])=>/studio[\\/]+read|reader-route/i.test(rel));
+  const generatedImport=list.some(([,rel])=>/studio[\\/]+import|import-route/i.test(rel));
   if(!(await exists(readme))||force){
-    const body=['# P2LRN Studio setup','','Target: '+target,'Save endpoint: '+endpoint,'Reader endpoint: '+readerEndpoint,'Import endpoint: '+importEndpoint,'Course directory: '+coursePath+'/','','Embed:','','<p2lrn-studio src="/'+coursePath+'/curso.p2lrn" save-endpoint="'+endpoint+'" reader-endpoint="'+readerEndpoint+'" import-endpoint="'+importEndpoint+'" course-path="'+coursePath+'"></p2lrn-studio>',''].join('\n');
+    const attrs=[
+      '<p2lrn-studio',
+      '  src="/'+coursePath+'/curso.p2lrn"',
+      '  save-endpoint="'+endpoint+'"',
+      ...(generatedReader?['  reader-endpoint="'+readerEndpoint+'"']:[]),
+      ...(generatedImport?['  import-endpoint="'+importEndpoint+'"']:[]),
+      '  course-path="'+coursePath+'">',
+      '</p2lrn-studio>',
+    ];
+    const body=[
+      '# P2LRN Studio setup','',
+      'Target: '+target,
+      'Save endpoint: '+endpoint+' (generated)',
+      'Reader endpoint: '+(generatedReader?readerEndpoint+' (generated)':'not generated for this target'),
+      'Import endpoint: '+(generatedImport?importEndpoint+' (generated)':'not generated for this target'),
+      'Course directory: '+coursePath+'/','',
+      'Embed:','',...attrs,'',
+      ...(generatedReader&&generatedImport?[]:['Reader/import attributes must only be added after equivalent Host endpoints are implemented.','']),
+    ].join('\n');
     if(!dryRun){await mkdir(dirname(readme),{recursive:true});await writeFile(readme,body)}
     made.push('p2lrn-setup/README.md');
   }
-  return made;
+  return {made,generatedReader,generatedImport};
 }
 const o=args(process.argv.slice(2));
 if(o.help){
@@ -123,5 +143,15 @@ if(o.help){
 }
 const cwd=resolve(o.cwd),coursePath=safePath(o.coursePath);
 const target=o.target==='auto'?await detect(cwd):o.target;
-const files=await materialize(target,cwd,coursePath,o.force,o.dryRun);
-console.log(JSON.stringify({ok:true,target,endpoint,readerEndpoint,importEndpoint,coursePath,files,dryRun:o.dryRun},null,2));
+const materialized=await materialize(target,cwd,coursePath,o.force,o.dryRun);
+console.log(JSON.stringify({
+  ok:true,
+  target,
+  endpoint,
+  readerEndpoint,
+  importEndpoint,
+  generatedEndpoints:{save:true,reader:materialized.generatedReader,import:materialized.generatedImport},
+  coursePath,
+  files:materialized.made,
+  dryRun:o.dryRun,
+},null,2));
