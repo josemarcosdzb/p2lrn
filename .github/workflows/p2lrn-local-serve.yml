@@ -1,0 +1,99 @@
+name: P2LRN Local Serve
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/p2lrn-local-serve.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  serve-local:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Publish local test site and start persistent server
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $port = 4183
+          $target = Join-Path $env:USERPROFILE 'P2LRN-local-4183'
+          $site = Join-Path $target 'site'
+
+          $listeners = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
+          foreach ($listener in $listeners) {
+            Stop-Process -Id $listener.OwningProcess -Force -ErrorAction SilentlyContinue
+          }
+
+          if (Test-Path $target) {
+            Remove-Item $target -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force $site | Out-Null
+          Copy-Item -Path 'deploy/netlify/site/*' -Destination $site -Recurse -Force
+
+          $server = @'
+          const http = require('http');
+          const fs = require('fs');
+          const path = require('path');
+          const root = path.resolve(__dirname, 'site');
+          const mime = {
+            '.html':'text/html; charset=utf-8',
+            '.js':'text/javascript; charset=utf-8',
+            '.mjs':'text/javascript; charset=utf-8',
+            '.css':'text/css; charset=utf-8',
+            '.json':'application/json; charset=utf-8',
+            '.svg':'image/svg+xml',
+            '.png':'image/png',
+            '.jpg':'image/jpeg',
+            '.jpeg':'image/jpeg',
+            '.webp':'image/webp',
+            '.ico':'image/x-icon',
+            '.txt':'text/plain; charset=utf-8',
+            '.xml':'application/xml; charset=utf-8',
+            '.wasm':'application/wasm'
+          };
+          http.createServer((req,res) => {
+            try {
+              const url = new URL(req.url, 'http://127.0.0.1');
+              const rel = decodeURIComponent(url.pathname).replace(/^\/+/, '');
+              let file = path.resolve(root, rel || 'index.html');
+              if (!file.startsWith(root + path.sep) && file !== path.join(root,'index.html')) {
+                res.writeHead(403); return res.end('Forbidden');
+              }
+              if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file,'index.html');
+              if (!fs.existsSync(file)) {
+                res.writeHead(404, {'content-type':'text/plain; charset=utf-8'});
+                return res.end('Not found');
+              }
+              res.writeHead(200, {'content-type': mime[path.extname(file).toLowerCase()] || 'application/octet-stream'});
+              fs.createReadStream(file).pipe(res);
+            } catch (error) {
+              res.writeHead(500, {'content-type':'text/plain; charset=utf-8'});
+              res.end(String(error));
+            }
+          }).listen(4183, '127.0.0.1', () => console.log('P2LRN local server listening on http://127.0.0.1:4183'));
+          '@
+          Set-Content -Path (Join-Path $target 'server.cjs') -Value $server -Encoding UTF8
+
+          $node = (Get-Command node).Source
+          Remove-Item Env:RUNNER_TRACKING_ID -ErrorAction SilentlyContinue
+          $proc = Start-Process -FilePath $node -ArgumentList 'server.cjs' -WorkingDirectory $target -WindowStyle Hidden -PassThru
+          Start-Sleep -Seconds 3
+
+          $listener = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction Stop | Select-Object -First 1
+          if ($listener.OwningProcess -ne $proc.Id) {
+            Write-Host "Listener PID $($listener.OwningProcess), launched PID $($proc.Id)"
+          }
+
+          $response = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:4183/docs/' -TimeoutSec 10
+          if ([int]$response.StatusCode -ne 200) { throw "HTTP status $($response.StatusCode)" }
+          if ($response.Content -notmatch '/p2lrn\.js') { throw 'p2lrn.js reference missing' }
+          if ($response.Content -notmatch 'doc-sidebar') { throw 'doc-sidebar missing' }
+
+          Write-Host "P2LRN_LOCAL_READY=http://localhost:4183/"
+          Write-Host "P2LRN_DOCS_READY=http://localhost:4183/docs/"
+          Write-Host "PID=$($listener.OwningProcess)"
