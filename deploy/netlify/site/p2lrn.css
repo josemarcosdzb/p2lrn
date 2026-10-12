@@ -449,7 +449,7 @@ footer a:hover{color:var(--blue)}
 .doc-sidebar>span{font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-bottom:10px}
 .doc-sidebar a{padding:7px 0;text-decoration:none;color:var(--muted);font-size:.84rem}
 .doc-sidebar a:hover,.doc-sidebar a[aria-current="page"]{color:var(--ink);font-weight:700}
-.doc-content{min-width:0;max-width:900px}
+.doc-content{min-width:0;width:100%;max-width:900px}
 .doc-hero{padding:28px 0 46px;border-bottom:1px solid var(--line)}
 .doc-hero h1{margin:8px 0 18px;font-size:clamp(3rem,6vw,5.6rem);line-height:.95;letter-spacing:-.055em}
 .doc-hero>p:last-child{max-width:760px;font-size:1.12rem;color:var(--muted)}
@@ -474,6 +474,8 @@ footer a:hover{color:var(--blue)}
   .doc-main{grid-template-columns:1fr}
   .doc-sidebar{position:static;display:flex;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--line);padding-bottom:18px}
   .doc-sidebar>span{width:100%}
+  .doc-pager{grid-template-columns:1fr}
+  .doc-pager .next{text-align:left}
 }
 @media(max-width:650px){
   .form-grid{grid-template-columns:1fr}
@@ -524,8 +526,8 @@ footer a:hover{color:var(--blue)}
 .capability-matrix .head{font-family:var(--mono);font-size:.66rem;color:var(--muted);text-transform:uppercase}
 .capability-matrix p{margin:0;color:var(--muted)}
 
-.doc-pager{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:34px 0;border-bottom:1px solid var(--line)}
-.doc-pager a{display:grid;gap:3px;padding:15px 16px;border:1px solid var(--line);border-radius:8px;text-decoration:none;background:var(--panel)}
+.doc-pager{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;min-width:0;padding:34px 0;border-bottom:1px solid var(--line)}
+.doc-pager a{display:grid;gap:3px;min-width:0;padding:15px 16px;border:1px solid var(--line);border-radius:8px;text-decoration:none;background:var(--panel);overflow-wrap:anywhere}
 .doc-pager a:hover{border-color:#98a2b3}
 .doc-pager .next{text-align:right}
 .doc-pager span{font-size:.72rem;color:var(--muted)}
@@ -679,7 +681,8 @@ footer a:hover{color:var(--blue)}
 /* Pending documentation blocks */
 .viewer-controls{grid-template-columns:230px 220px minmax(300px,1fr) auto}
 .capability-table code{font-size:.72rem}
-.doc-content .example-actions .button{color:inherit;text-decoration:none}
+.doc-content .example-actions .button{color:var(--ink);text-decoration:none}
+.doc-content .example-actions .button.primary{color:#fff}
 @media(max-width:1100px){.viewer-controls{grid-template-columns:1fr 1fr}.viewer-url{grid-column:1/-1}.viewer-buttons{grid-column:1/-1}}
 @media(max-width:650px){.viewer-controls{grid-template-columns:1fr}.viewer-url,.viewer-buttons{grid-column:1}}
 
