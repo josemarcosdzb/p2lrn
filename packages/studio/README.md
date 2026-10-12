@@ -2,40 +2,91 @@
 
 Embeddable visual authoring surface for P2LRN.
 
-Browser:
+## Browser integration: NPM
+
+Install Studio and its Player peer dependency:
+
+```bash
+npm install @p2lrn/studio@0.5.0-alpha.10 @p2lrn/player@0.5.0-alpha.10
+```
+
+Import Studio from your application code:
+
+```js
+import '@p2lrn/studio';
+```
+
+Minimal editor with no server dependency:
+
+```html
+<p2lrn-studio></p2lrn-studio>
+```
+
+Without server endpoints Studio can create/open courses, edit them, preview them with the Player and download a new `.p2lrn`.
+
+## Browser integration: CDN
+
+For a plain browser page use the classic Studio loader:
+
+```html
+<script src="https://p2lrn.netlify.app/studio/current/dist/p2lrn-studio.js"></script>
+<p2lrn-studio></p2lrn-studio>
+```
+
+The classic loader derives its channel from its own URL, loads the matching Player first and then imports `p2lrn-studio.esm.js`. A versioned loader such as `/studio/0.5.0-alpha.10/dist/p2lrn-studio.js` therefore loads the matching Player `0.5.0-alpha.10`.
+
+Do not use the ESM file directly in plain HTML unless your environment resolves the bare `@p2lrn/player` specifier. The documented CDN entrypoint is `p2lrn-studio.js`.
+
+## Server-backed features
+
+The browser component exposes these attributes:
 
 ```html
 <p2lrn-studio
-  src="/course/course.p2lrn"
+  src="/course/curso.p2lrn"
   save-endpoint="/api/p2lrn/studio/save"
+  reader-endpoint="/api/p2lrn/studio/read"
+  import-endpoint="/api/p2lrn/studio/import"
   course-path="course">
 </p2lrn-studio>
 ```
 
-`course-path` defaults to `course`.
+- `src`: optional initial package URL.
+- `save-endpoint`: required only to save the exported package to the Host.
+- `reader-endpoint`: required only for Reader document import.
+- `import-endpoint`: required only for external educational-package import.
+- `course-path`: logical save path, default `course`.
 
-A browser cannot create or write an arbitrary server folder by itself. `save-endpoint` is therefore the host-owned write boundary. The npm server helper creates the requested directory when it does not exist and defaults to `course/`.
+A browser cannot write an arbitrary server folder by itself. `save-endpoint` is the Host-owned write boundary. The npm helper creates the configured directory and defaults to `course/`.
 
-Next.js / Web Request compatible route:
+The Web Request compatible helpers are:
+
+```js
+import {
+  handleP2LRNStudioSave,
+  handleP2LRNStudioReader,
+  handleP2LRNStudioExternalImport,
+} from '@p2lrn/studio/server';
+```
+
+For example, a save route can delegate to:
 
 ```js
 import {handleP2LRNStudioSave} from '@p2lrn/studio/server';
 export const POST = (request) => handleP2LRNStudioSave(request);
 ```
 
-Use `Download .p2lrn` when no server save endpoint is desired.
-
+Use `download()` or the Download action when no server save endpoint is desired.
 
 ## Setup automático
 
-Después de instalar:
+After installing:
 
 ```bash
-npm install @p2lrn/studio @p2lrn/player
 npx p2lrn-studio setup
 ```
 
-Sin argumentos, `setup` intenta detectar el stack. También se puede forzar:
+Without a target, setup tries to detect the stack. It can also be forced:
 
 ```bash
 npx p2lrn-studio setup next
@@ -62,25 +113,22 @@ npx p2lrn-studio setup rust
 npx p2lrn-studio setup generic
 ```
 
-La carpeta de cursos por defecto es `course/` y se crea si no existe. Para otra ruta:
+The default course directory is `course/`. To use another path:
 
 ```bash
 npx p2lrn-studio setup next --course-path data/courses
 ```
 
-El instalador no sobrescribe archivos existentes salvo que se use `--force`.
+The installer does not overwrite an existing generated file unless `--force` is used.
 
-### Compatibilidad
+### What setup currently generates
 
-Los frameworks con enrutado por archivos reciben directamente el archivo de ruta en la ubicación esperada: Next.js App Router, SvelteKit, Nuxt/Nitro, Astro y Remix.
+The current `next` target generates all three routes: save, Reader and external import.
 
-Los frameworks con registro centralizado reciben el handler, controlador o plugin ya generado y una instrucción mínima de registro: Express, Fastify, Hono, NestJS, Laravel, Django, FastAPI, Flask, Rails, ASP.NET Core, Spring Boot, Go y Rust/Axum.
+The other setup targets currently materialize their save integration. Reader and external-import endpoints are not generated for those targets yet; add equivalent Host routes if those features are needed. The generated setup README lists only endpoint attributes that were actually materialized.
 
-`setup generic` cubre cualquier backend no reconocido. El contrato es siempre el mismo: un POST que recibe el paquete P2LRN binario, sanea nombre/ruta, crea la carpeta configurada y guarda el archivo. De esta forma el componente del navegador no depende del framework del servidor.
+### Security
 
+The installer generates technical integration, not application authorization. Save, Reader and external-import routes must be protected by the Host's authentication and teacher/admin permissions.
 
-### Seguridad de la ruta de guardado
-
-El instalador genera la integración técnica, pero la autorización pertenece a la aplicación anfitriona. La ruta de guardado debe quedar detrás de la autenticación y permisos de profesor/administrador de esa aplicación. P2LRN Studio no debe convertir por sí solo una ruta de escritura en un endpoint público anónimo.
-
-El helper npm fija la carpeta configurada del servidor por defecto. El header `X-P2LRN-Path` enviado por el navegador se ignora salvo que el integrador active expresamente `allowClientPath: true`.
+The npm save helper fixes the configured server directory by default. The browser's `X-P2LRN-Path` header is ignored unless the integrator explicitly enables `allowClientPath: true`.
