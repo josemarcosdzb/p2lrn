@@ -21,6 +21,7 @@ on:
       - 'scripts/verify-distribution-identity.mjs'
       - 'scripts/verify-local-viewer.mjs'
       - 'scripts/verify-doc-navigation.mjs'
+      - 'scripts/verify-doc-installation-paths.mjs'
       - 'scripts/set-version.mjs'
       - 'examples/canonical/external/**'
       - 'deploy/netlify/**'
@@ -137,6 +138,9 @@ jobs:
 
       - name: Verify global docs navigation
         run: node scripts/verify-doc-navigation.mjs
+
+      - name: Verify documentation installation paths
+        run: node scripts/verify-doc-installation-paths.mjs
 
       - name: Build Player runtime for security tests
         run: node packages/player/scripts/build-dist.mjs
