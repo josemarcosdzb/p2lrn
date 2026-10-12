@@ -27,11 +27,14 @@ const version=studioPackage.version;
 
 if(playerPackage.version!==version)failures.push('player/studio version mismatch');
 
-for(const [label,text] of [['npm docs',npmDoc],['studio docs',studioDoc],['studio README',studioReadme]]){
+for(const [label,text] of [['npm docs',npmDoc],['studio docs',studioDoc]]){
   must(label,text,'npm install @p2lrn/studio@'+version+' @p2lrn/player@'+version);
   must(label,text,"import '@p2lrn/studio'");
-  must(label,text,'<p2lrn-studio');
+  must(label,text,'&lt;p2lrn-studio');
 }
+must('studio README',studioReadme,'npm install @p2lrn/studio@'+version+' @p2lrn/player@'+version);
+must('studio README',studioReadme,"import '@p2lrn/studio'");
+must('studio README',studioReadme,'<p2lrn-studio');
 for(const [label,text] of [['cdn docs',cdnDoc],['studio docs',studioDoc],['studio README',studioReadme]]){
   must(label,text,'/studio/current/dist/p2lrn-studio.js');
   must(label,text,'/studio/'+version+'/dist/p2lrn-studio.js');
