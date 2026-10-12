@@ -7,7 +7,9 @@ on:
       - '.github/workflows/p2lrn-local-serve.yml'
       - 'deploy/netlify/site/docs/**'
       - 'deploy/netlify/site/p2lrn.js'
+      - 'deploy/netlify/site/p2lrn.css'
       - 'scripts/verify-doc-navigation.mjs'
+      - 'scripts/verify-doc-installation-paths.mjs'
 
 permissions:
   contents: read
