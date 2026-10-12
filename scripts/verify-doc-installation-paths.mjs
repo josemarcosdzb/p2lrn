@@ -21,6 +21,10 @@ const [studioPackage,playerPackage,studioSource,studioLoader,studioCli,css,npmDo
 ]);
 
 const failures=[];
+try{
+  await stat(join(root,'.github','workflows','p2lrn-local-serve.yml'));
+  failures.push('repository must not contain the retired p2lrn-local-serve.yml workflow');
+}catch{}
 const must=(label,text,needle)=>{if(!text.includes(needle))failures.push(label+': missing '+needle)};
 const forbid=(label,text,needle)=>{if(text.includes(needle))failures.push(label+': forbidden '+needle)};
 const version=studioPackage.version;
