@@ -25,10 +25,10 @@ const intro = workspace.addFile({
   mediaType: 'text/html',
 });</code></pre></div><p>Para documentos que primero deben analizarse, consulta <a href="/docs/toolkit/">Reader documental</a>.</p></section>
 <section class="doc-section"><h2>5. Añadir reglas opcionales</h2><p>Si el curso necesita obligatoriedad, bloqueo o prerrequisitos, define esas reglas antes del build. La guía <a href="/docs/progresion/">Progresión</a> explica la diferencia entre completar una actividad y bloquear la navegación posterior.</p></section>
-<section class="doc-section"><h2>6. Construir el paquete</h2><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.build('./curso.p2lrn', {
+<section class="doc-section"><h2>6. Construir el paquete</h2><p>Cuando la estructura y los recursos estén listos, construye el archivo portable que consumirá el Player.</p><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.build('./curso.p2lrn', {
   strictProfiles: true,
 });</code></pre></div><p>El build convierte el proyecto editable en el paquete portable que debe consumir el Player.</p></section>
-<section class="doc-section"><h2>7. Validar e inspeccionar antes de publicar</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-validate curso.p2lrn
+<section class="doc-section"><h2>7. Validar e inspeccionar antes de publicar</h2><p>Antes de entregar el curso, valida el paquete y revisa su estructura. No publiques un paquete que falle la validación.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-validate curso.p2lrn
 p2lrn-inspect curso.p2lrn
 p2lrn-reader curso.p2lrn</code></pre></div><p><code>validate</code> comprueba el contrato del paquete. <code>inspect</code> muestra su estructura. <code>reader</code> permite revisar el contenido desde las herramientas del Toolkit. Corrige cualquier error de validación antes de entregar el paquete.</p></section>
 <section class="doc-section"><h2>8. Recursos grandes</h2><p>Si un recurso grande no debe viajar dentro del archivo principal, utiliza <a href="/docs/paquetes/multipart/">Multipart</a>. El descriptor mantiene los hashes y permite que el Player verifique las partes que necesita.</p></section>

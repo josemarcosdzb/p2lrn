@@ -12,7 +12,7 @@
 <section class="doc-section"><h2>SCORM / entorno de ejecución externo no arranca</h2><p>Revisa entrypoint, servidor del entorno de ejecución, CSP/CORS, permisos del iframe y que los recursos internos se resuelvan dentro del origen aislado. Un paquete preservado no implica necesariamente ejecución completa.</p></section>
 <section class="doc-section"><h2>No llega el evento de finalización</h2><p>El contrato actual del Player usa <code>p2lrn:complete</code>, no <code>p2lrn:completion</code>. Para estado usa <code>p2lrn:statechange</code>; para cambios de progresión usa <code>p2lrn:progressionchange</code>. Verifica además que el renderizador concreto emita ese evento.</p></section>
 <section class="doc-section"><h2>Fallo al guardar progreso</h2><p>Si <code>Host Adapter.saveState()</code> falla, el Player emite <code>p2lrn:error</code> con fase <code>progression-save</code>. El estado de alumno pertenece al Host; no intentes escribirlo dentro del paquete.</p></section>
-<section class="doc-section"><h2>Diagnóstico rápido</h2><div class="codebox"><div class="codebox-head"><span>JavaScript</span><button type="button" data-copy>Copiar</button></div><pre><code>const player = document.querySelector('p2lrn-player');
+<section class="doc-section"><h2>Diagnóstico rápido</h2><p>Ejecuta estas comprobaciones en la consola cuando necesites distinguir rápidamente entre un problema de carga, montaje del Player o disponibilidad de la API.</p><div class="codebox"><div class="codebox-head"><span>JavaScript</span><button type="button" data-copy>Copiar</button></div><pre><code>const player = document.querySelector('p2lrn-player');
 
 player.addEventListener('p2lrn:error', (event) =&gt; {
   console.error(event.detail);

@@ -10,7 +10,7 @@
     ],
   },
 });</code></pre></div></section>
-<section class="doc-section"><h2>5. Ejemplo de una actividad obligatoria</h2><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.setProgression('quiz-final', {
+<section class="doc-section"><h2>5. Ejemplo de una actividad obligatoria</h2><p>Este ejemplo exige aprobar la actividad con una nota mínima y mantiene bloqueados los elementos posteriores hasta cumplir la condición.</p><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.setProgression('quiz-final', {
   required: true,
   gateFollowing: true,
   completionRequirement: 'passed',

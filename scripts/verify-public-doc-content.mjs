@@ -49,6 +49,12 @@ for(const file of files){
     }
   }
   const rel=relative(root,file).replaceAll('\\','/');
+  for(const section of html.matchAll(/<section class="doc-section"[^>]*>([\s\S]*?)<\/section>/gi)){
+    const body=section[1].replace(/^\s*<h2[^>]*>[\s\S]*?<\/h2>/i,'').trim();
+    if(body.startsWith('<div class="codebox"')||body.startsWith('<div class="install"')){
+      failures.push(rel+': unexplained code block appears before user-facing context');
+    }
+  }
   for(const [pattern,label] of forbidden)if(pattern.test(html))failures.push(rel+': '+label);
 }
 const strict=[
@@ -81,4 +87,4 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true},null,2));
