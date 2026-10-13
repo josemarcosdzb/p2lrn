@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="Juegos 3D P2LRN independientes de AulaP2P: Three.js, Rapier, ordenar, relacionar y clasificar.">
+  <meta name="description" content="Juegos 3D de P2LRN con Three.js, Rapier y mecánicas de ordenar, relacionar y clasificar.">
   <title>Juegos 3D — P2LRN</title>
   <link rel="stylesheet" href="/p2lrn.css">
   <script src="/p2lrn.js" defer></script>
@@ -24,7 +24,7 @@
     <header class="doc-hero">
       <p class="eyebrow">JUEGOS / 3D</p>
       <h1>Juegos 3D portables</h1>
-      <p>El runtime 3D pertenece a P2LRN. No importa React, Next.js ni código de AulaP2P. La escena usa Three.js y las físicas usan Rapier mediante un adaptador propio del Player.</p>
+      <p>El entorno 3D de P2LRN utiliza Three.js para la escena y Rapier para las físicas, con una capa de integración propia del Player.</p>
     </header>
 
     <section class="doc-section">
@@ -45,7 +45,7 @@
       <div class="reference-table">
         <div><code>ordering-3d</code><p>Objetos físicos que se colocan en posiciones ordenadas.</p></div>
         <div><code>matching-3d</code><p>Nodos de izquierda y derecha que se conectan sin alterar el modelo de respuesta.</p></div>
-        <div><code>classification-3d</code><p>Objetos que se depositan en categorías. Es un tipo nativo del cuestionario P2LRN, no una extensión de AulaP2P.</p></div>
+        <div><code>classification-3d</code><p>Objetos que se depositan en categorías. Es un tipo nativo del cuestionario P2LRN.</p></div>
       </div>
     </section>
 
@@ -134,7 +134,7 @@ score / progress / complete</code></pre>
     </section>
 
     <section class="doc-section">
-      <h2>Accesibilidad y fallback</h2>
+      <h2>Accesibilidad y alternativa</h2>
       <p>La escena 3D no es el único control. Ordenar, relacionar y clasificar mantienen controles HTML equivalentes junto al canvas. El alumno puede completar la misma actividad sin depender exclusivamente de precisión gráfica o puntero 3D.</p>
     </section>
 
@@ -149,7 +149,7 @@ score / progress / complete</code></pre>
     </section>
 
     <section class="doc-section">
-      <h2>Qué no hace todavía</h2>
+      <h2>Limitaciones</h2>
       <p>Este runtime no declara todavía WebXR/Meta Quest ni sincronización multijugador como capacidad P2LRN. La arquitectura deja separadas entrada, físicas y mecánicas para poder añadirlas después sin ligar el formato a un LMS concreto.</p>
     </section>
 
