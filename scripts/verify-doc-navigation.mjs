@@ -48,16 +48,16 @@ for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(']){
   if(js.includes(forbidden)) failures.push('p2lrn.js: legacy logic remains: '+forbidden);
 }
 
-const expectedSections=['EMPEZAR','CREAR','INSTALAR','REPRODUCIR','INTEGRAR','REFERENCIA','RECURSOS'];
+const expectedSections=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','REFERENCIA','RECURSOS'];
 const sidebarBlock=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1] ?? '';
 const sectionNames=[...sidebarBlock.matchAll(/\['([^']+)', \[/g)].map((match)=>match[1]);
 if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections)){
   failures.push('p2lrn.js: sidebar sections/order mismatch: '+JSON.stringify(sectionNames));
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==31) failures.push('p2lrn.js: expected 31 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==32) failures.push('p2lrn.js: expected 32 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
-for(const required of ['/docs/npm/studio/','/docs/cdn/studio/']){
+for(const required of ['/docs/instalar/','/docs/npm/studio/','/docs/cdn/studio/']){
   if(!hrefs.includes(required)) failures.push('p2lrn.js: missing split Studio route '+required);
 }
 const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
