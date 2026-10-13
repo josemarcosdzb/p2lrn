@@ -16,6 +16,9 @@ async function walk(dir){
 const article=(html)=>/<article class="doc-content">([\s\S]*?)<\/article>/i.exec(html)?.[1]??html;
 const files=await walk(docsRoot);
 const forbidden=[
+  [/p2lrn-build-web-sdk/iu,'maintenance CLI leaked into end-user docs'],
+  [/p2lrn-rebuild-examples/iu,'maintenance CLI leaked into end-user docs'],
+  [/p2lrn-build-advanced-example/iu,'maintenance CLI leaked into end-user docs'],
   [/p2lrn\.org\/renderizador\//iu,'translated renderer identifier'],
   [/--renderizador\b/iu,'translated CLI flag'],
   [/Modelo mínimo/iu,'vague minimum-example heading'],
