@@ -1,7 +1,68 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Documentación del renderizador Memoria para native-questionnaire P2LRN."><title>Memoria — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">CUESTIONARIOS / PRESENTACIÓN</p><h1>Memoria</h1><p>Convierte el cuestionario completo en parejas de pista y respuesta presentadas como cartas de memoria.</p></header><section class="doc-section"><h2>Qué ve el alumno</h2><p>El alumno abre cartas ocultas de dos en dos y debe localizar las parejas derivadas del cuestionario. Las cartas resueltas permanecen visibles hasta completar el tablero.</p></section><section class="doc-section"><h2>Cuándo utilizar esta presentación</h2><p>Úsalo cuando el contenido puede expresarse como parejas inequívocas y quieres practicar asociación y reconocimiento mediante una mecánica de memoria.</p></section><section class="doc-section"><h2>Renderizador</h2><div class="reference-table"><div><code>https://p2lrn.org/renderizador/questionnaire/memory</code><p>Versión: 1.</p></div><div><code>profile</code><p>https://p2lrn.org/profile/native-questionnaire</p></div><div><code>media type</code><p>application/vnd.p2lrn.questionnaire+json</p></div></div></section><section class="doc-section"><h2>Cuándo es compatible</h2><ul class="doc-list"><li>Requiere grading.mode=embedded-key y soluciones embebidas.</li><li>Cada pregunta debe poder expresarse como una o más parejas inequívocas; no se genera una versión parcial.</li><li>Se necesitan al menos 3 parejas.</li><li>Pistas o respuestas repetidas que hagan ambiguo el emparejamiento invalidan esta presentación.</li></ul></section><section class="doc-section"><h2>Modelo mínimo</h2><div class="codebox"><div class="codebox-head"><span>JSON</span><button type="button" data-copy>Copiar</button></div><pre><code>// Usa preguntas con respuestas textuales inequívocas.
-// Ejemplo: tres single-choice con una única respuesta correcta distinta.</code></pre></div></section><section class="doc-section"><h2>Autoría</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Guía de Memoria en P2LRN: creación visual, requisitos, ejemplo válido, CLI, accesibilidad y puntuación."><title>Memoria — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">CUESTIONARIOS / PRESENTACIÓN</p><h1>Memoria</h1><p>Convierte relaciones inequívocas en cartas ocultas. El alumno descubre dos cartas cada vez y busca las parejas correctas hasta completar el tablero.</p></header>
+<section class="doc-section"><h2>1. Qué hace y qué ve el alumno</h2><p>Convierte relaciones inequívocas en cartas ocultas. El alumno descubre dos cartas cada vez y busca las parejas correctas hasta completar el tablero.</p><p>Úsalo para vocabulario, conceptos y definiciones o relaciones uno a uno que se benefician de repetición y reconocimiento.</p></section>
+<section class="doc-section"><h2>2. Crear en Studio</h2><p>Éste es el recorrido normal si estás creando el curso visualmente. No necesitas escribir JSON ni ejecutar comandos.</p><ol class="learning-path"><li><strong>Abre Studio.</strong><span>Usa <a href="/studio/">el editor alojado</a> o el Studio que hayas <a href="/docs/instalar/">integrado en tu proyecto</a>.</span></li><li><strong>Añade la actividad.</strong><span>En <strong>Añadir contenido</strong>, abre <strong>Juegos</strong> y elige <strong>Memoria</strong>.</span></li><li><strong>Edita visualmente.</strong><span>Cambia enunciados, respuestas y opciones con los controles del editor. El JSON queda como vista avanzada, no como requisito de uso.</span></li><li><strong>Comprueba la Vista alumno.</strong><span>Reproduce la actividad antes de descargar o guardar el curso.</span></li></ol></section><section class="doc-section"><h2>3. Requisitos del contenido</h2><ul class="doc-list"><li>En Studio, el preset de Memoria se edita como una pregunta de tipo <strong>Relacionar</strong>.</li><li>La actividad necesita soluciones embebidas y al menos tres parejas.</li><li>Las pistas y las respuestas no deben repetirse de forma que una pareja resulte ambigua.</li></ul><div class="doc-callout"><strong>Runtime más flexible.</strong><p>El Player también puede convertir otros tipos de pregunta en parejas cuando todas las relaciones se pueden deducir de forma inequívoca. Studio utiliza Relacionar porque es el formato visual más claro para crear este juego.</p></div></section><section class="doc-section"><h2>4. Ejemplo de datos válido</h2><p>Este bloque muestra un cuestionario completo y válido para esta presentación. Sirve para entender el formato o para el recorrido por CLI; si utilizas Studio, el editor genera esta estructura por ti.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy>Copiar</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "Relacionar países y capitales",
+  "language": "es",
+  "grading": {
+    "mode": "embedded-key"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "matching",
+      "prompt": "Relaciona cada país con su capital",
+      "points": 3,
+      "left": [
+        {
+          "id": "l1",
+          "text": "España"
+        },
+        {
+          "id": "l2",
+          "text": "Francia"
+        },
+        {
+          "id": "l3",
+          "text": "Italia"
+        }
+      ],
+      "right": [
+        {
+          "id": "r1",
+          "text": "Madrid"
+        },
+        {
+          "id": "r2",
+          "text": "París"
+        },
+        {
+          "id": "r3",
+          "text": "Roma"
+        }
+      ],
+      "solution": {
+        "pairs": [
+          {
+            "left": "l1",
+            "right": "r1"
+          },
+          {
+            "left": "l2",
+            "right": "r2"
+          },
+          {
+            "left": "l3",
+            "right": "r3"
+          }
+        ]
+      }
+    }
+  ]
+}</code></pre></div></section><section class="doc-section"><h2>5. Cómo leer el ejemplo</h2><p>El ejemplo usa una pregunta <code>matching</code> con tres elementos a cada lado. <code>solution.pairs</code> declara las tres relaciones y permite construir las seis cartas.</p></section><section class="doc-section"><h2>6. Crear por CLI — alternativa avanzada</h2><p>Utiliza este recorrido sólo si estás generando el curso por código. Requiere Toolkit instalado mediante NPM. El archivo <code>quiz.json</code> debe contener un cuestionario válido como el ejemplo anterior.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
   --key quiz \
   --title "Memoria" \
-  --renderizador "https://p2lrn.org/renderizador/questionnaire/memory"
+  --renderer "https://p2lrn.org/renderer/questionnaire/memory"
 
-p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderizador</code> añade una preferencia de presentación; las preguntas siguen siendo native-questionnaire.</p></section><section class="doc-section"><h2>Ejecución y eventos</h2><p>Las respuestas se mantienen en el mismo estado de questionnaire. Los renderizadores que finalizan la actividad reportan puntuación/finalización mediante el contrato común; consulta <a href="/docs/eventos/">Eventos</a>.</p></section><section class="doc-section"><h2>Interacción y accesibilidad</h2><p>Cada carta es un botón. Antes de abrirla se anuncia como carta oculta y, al revelarla, el control expone su texto. La actividad puede completarse sin gestos de arrastre.</p></section><section class="doc-section"><h2>Finalización y puntuación</h2><p>Cuando todas las parejas están resueltas, el runtime aplica las respuestas correspondientes y finaliza la actividad, comunicando la puntuación obtenida.</p><p>Para integrar los resultados con una plataforma, consulta <a href="/docs/eventos/">Eventos</a> y <a href="/docs/integracion/">Host Adapter</a>.</p></section><section class="doc-section"><h2>Probar este renderizador</h2><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/generated/questionnaire-memory.p2lrn&amp;renderizador=https%3A%2F%2Fp2lrn.org%2Frenderer%2Fquestionnaire%2Fmemory">Abrir ejemplo ejecutable</a><a class="button" href="/examples/generated/questionnaire-memory.p2lrn">Abrir paquete</a></div></section><nav class="doc-pager"><a class="prev" href="/docs/questionnaires/standard/"><span>← Anterior</span><strong>Cuestionario estándar</strong></a><a class="next" href="/docs/questionnaires/matching/"><span>Siguiente →</span><strong>Emparejar</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> selecciona la presentación preferida. No crea una segunda copia de las preguntas: el contenido sigue siendo el cuestionario nativo.</p></section><section class="doc-section"><h2>7. Identificador técnico de la presentación</h2><p>Normalmente Studio lo configura por ti. Sólo necesitas este identificador cuando seleccionas la presentación desde código, CLI o el visor.</p><div class="reference-table"><div><strong>Renderer</strong><p><code>https://p2lrn.org/renderer/questionnaire/memory</code></p></div><div><strong>Perfil</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Tipo de contenido</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><section class="doc-section"><h2>8. Interacción y accesibilidad</h2><p>Cada carta es un botón. La actividad se puede completar con teclado; el estado visual de las cartas no es el único indicador de selección.</p></section><section class="doc-section"><h2>9. Finalización y puntuación</h2><p>Cuando todas las parejas quedan resueltas, la actividad finaliza y el Player comunica la puntuación.</p><p>Para guardar el resultado en tu plataforma, consulta <a href="/docs/eventos/">Eventos</a> y <a href="/docs/integracion/">Host Adapter</a>.</p></section><section class="doc-section"><h2>10. Probar el ejemplo</h2><p>Abre el paquete de demostración en el visor real y comprueba la interacción antes de integrarlo.</p><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/generated/questionnaire-memory.p2lrn&amp;renderer=https%3A%2F%2Fp2lrn.org%2Frenderer%2Fquestionnaire%2Fmemory">Abrir en el visor</a><a class="button" href="/examples/generated/questionnaire-memory.p2lrn">Abrir paquete</a></div></section><nav class="doc-pager"><a class="prev" href="/docs/questionnaires/standard/"><span>← Anterior</span><strong>Cuestionario estándar</strong></a><a class="next" href="/docs/questionnaires/matching/"><span>Siguiente →</span><strong>Relacionar</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>

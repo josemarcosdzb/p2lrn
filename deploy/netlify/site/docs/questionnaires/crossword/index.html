@@ -1,7 +1,62 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Documentación del renderizador Crucigrama para native-questionnaire P2LRN."><title>Crucigrama — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">CUESTIONARIOS / PRESENTACIÓN</p><h1>Crucigrama</h1><p>Construye un único crucigrama conectado a partir de pistas y respuestas inequívocas.</p></header><section class="doc-section"><h2>Qué ve el alumno</h2><p>El alumno completa un crucigrama conectado a partir de las pistas del cuestionario, escribiendo una letra en cada casilla.</p></section><section class="doc-section"><h2>Cuándo utilizar esta presentación</h2><p>Úsalo cuando las respuestas son palabras breves, las pistas son claras y el conjunto puede formar un único tablero conectado.</p></section><section class="doc-section"><h2>Renderizador</h2><div class="reference-table"><div><code>https://p2lrn.org/renderizador/questionnaire/crossword</code><p>Versión: 1.</p></div><div><code>profile</code><p>https://p2lrn.org/profile/native-questionnaire</p></div><div><code>media type</code><p>application/vnd.p2lrn.questionnaire+json</p></div></div></section><section class="doc-section"><h2>Cuándo es compatible</h2><ul class="doc-list"><li>Requiere soluciones embebidas y pistas no vacías.</li><li>Cada respuesta normalizada debe tener entre 3 y 17 caracteres.</li><li>Mínimo 4 y máximo 80 respuestas.</li><li>Las palabras deben formar un único tablero conectado y todas deben poder colocarse.</li></ul></section><section class="doc-section"><h2>Modelo mínimo</h2><div class="codebox"><div class="codebox-head"><span>JSON / guía</span><button type="button" data-copy>Copiar</button></div><pre><code>// El runtime rechaza una disposición parcial.
-// Pistas repetidas o respuestas ambiguas invalidan la presentación.</code></pre></div></section><section class="doc-section"><h2>Autoría</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Guía de Crucigrama en P2LRN: creación visual, requisitos, ejemplo válido, CLI, accesibilidad y puntuación."><title>Crucigrama — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">CUESTIONARIOS / PRESENTACIÓN</p><h1>Crucigrama</h1><p>Construye un crucigrama conectado a partir de pistas y respuestas textuales.</p></header>
+<section class="doc-section"><h2>1. Qué hace y qué ve el alumno</h2><p>Construye un crucigrama conectado a partir de pistas y respuestas textuales.</p><p>Úsalo cuando las respuestas sean palabras breves, las pistas sean claras y el conjunto comparta letras suficientes para formar un tablero único.</p></section>
+<section class="doc-section"><h2>2. Crear en Studio</h2><p>Éste es el recorrido normal si estás creando el curso visualmente. No necesitas escribir JSON ni ejecutar comandos.</p><ol class="learning-path"><li><strong>Abre Studio.</strong><span>Usa <a href="/studio/">el editor alojado</a> o el Studio que hayas <a href="/docs/instalar/">integrado en tu proyecto</a>.</span></li><li><strong>Añade la actividad.</strong><span>En <strong>Añadir contenido</strong>, abre <strong>Juegos</strong> y elige <strong>Crucigrama</strong>.</span></li><li><strong>Edita visualmente.</strong><span>Cambia enunciados, respuestas y opciones con los controles del editor. El JSON queda como vista avanzada, no como requisito de uso.</span></li><li><strong>Comprueba la Vista alumno.</strong><span>Reproduce la actividad antes de descargar o guardar el curso.</span></li></ol></section><section class="doc-section"><h2>3. Requisitos del contenido</h2><ul class="doc-list"><li>En Studio se edita con preguntas de tipo <strong>Respuesta de texto</strong>.</li><li>Necesita entre 4 y 80 respuestas.</li><li>Cada respuesta normalizada debe tener entre 3 y 17 caracteres y una pista no vacía.</li><li>Todas las palabras deben formar un único crucigrama conectado. Si no existe una disposición completa, la presentación se rechaza.</li></ul></section><section class="doc-section"><h2>4. Ejemplo de datos válido</h2><p>Este bloque muestra un cuestionario completo y válido para esta presentación. Sirve para entender el formato o para el recorrido por CLI; si utilizas Studio, el editor genera esta estructura por ti.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy>Copiar</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "Crucigrama",
+  "language": "es",
+  "grading": {
+    "mode": "embedded-key"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "text",
+      "prompt": "Lugar donde se vive",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "CASA"
+        ]
+      }
+    },
+    {
+      "id": "q2",
+      "type": "text",
+      "prompt": "Anfibio que salta",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "SAPO"
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "type": "text",
+      "prompt": "Ave acuática",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "PATO"
+        ]
+      }
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "prompt": "Recipiente con asa",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "TAZA"
+        ]
+      }
+    }
+  ]
+}</code></pre></div></section><section class="doc-section"><h2>5. Cómo leer el ejemplo</h2><p>Las cuatro preguntas aportan las pistas y las palabras CASA, SAPO, PATO y TAZA. Son respuestas compatibles con la construcción del tablero conectado.</p></section><section class="doc-section"><h2>6. Crear por CLI — alternativa avanzada</h2><p>Utiliza este recorrido sólo si estás generando el curso por código. Requiere Toolkit instalado mediante NPM. El archivo <code>quiz.json</code> debe contener un cuestionario válido como el ejemplo anterior.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
   --key quiz \
   --title "Crucigrama" \
-  --renderizador "https://p2lrn.org/renderizador/questionnaire/crossword"
+  --renderer "https://p2lrn.org/renderer/questionnaire/crossword"
 
-p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p>La preferencia de renderizador no duplica el contenido: el fuente principal sigue siendo native-questionnaire.</p></section><section class="doc-section"><h2>Interacción y accesibilidad</h2><p>Cada casilla editable es un campo de texto de un carácter con una etiqueta que indica fila y columna. La actividad incluye acciones explícitas para comprobar y reiniciar.</p></section><section class="doc-section"><h2>Finalización y puntuación</h2><p>Al comprobar, el runtime contrasta todas las letras con la solución. Cuando el tablero está completo y correcto aplica las respuestas y finaliza la actividad con su puntuación.</p><p>Para integrar los resultados con una plataforma, consulta <a href="/docs/eventos/">Eventos</a> y <a href="/docs/integracion/">Host Adapter</a>.</p></section><section class="doc-section"><h2>Probar este renderizador</h2><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/generated/questionnaire-crossword.p2lrn&amp;renderizador=https%3A%2F%2Fp2lrn.org%2Frenderer%2Fquestionnaire%2Fcrossword">Abrir ejemplo ejecutable</a><a class="button" href="/examples/generated/questionnaire-crossword.p2lrn">Abrir paquete</a></div></section><nav class="doc-pager"><a class="prev" href="/docs/questionnaires/word-search/"><span>← Anterior</span><strong>Sopa de letras</strong></a><a class="next" href="/docs/questionnaires/rosco/"><span>Siguiente →</span><strong>Rosco</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> selecciona la presentación preferida. No crea una segunda copia de las preguntas: el contenido sigue siendo el cuestionario nativo.</p></section><section class="doc-section"><h2>7. Identificador técnico de la presentación</h2><p>Normalmente Studio lo configura por ti. Sólo necesitas este identificador cuando seleccionas la presentación desde código, CLI o el visor.</p><div class="reference-table"><div><strong>Renderer</strong><p><code>https://p2lrn.org/renderer/questionnaire/crossword</code></p></div><div><strong>Perfil</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Tipo de contenido</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><section class="doc-section"><h2>8. Interacción y accesibilidad</h2><p>Cada casilla editable es un campo de un carácter con posición identificable. La actividad incluye acciones explícitas de comprobación.</p></section><section class="doc-section"><h2>9. Finalización y puntuación</h2><p>Al comprobar, el Player compara todas las letras con la solución; cuando el tablero está completo puede finalizar y puntuar.</p><p>Para guardar el resultado en tu plataforma, consulta <a href="/docs/eventos/">Eventos</a> y <a href="/docs/integracion/">Host Adapter</a>.</p></section><section class="doc-section"><h2>10. Probar el ejemplo</h2><p>Abre el paquete de demostración en el visor real y comprueba la interacción antes de integrarlo.</p><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/generated/questionnaire-crossword.p2lrn&amp;renderer=https%3A%2F%2Fp2lrn.org%2Frenderer%2Fquestionnaire%2Fcrossword">Abrir en el visor</a><a class="button" href="/examples/generated/questionnaire-crossword.p2lrn">Abrir paquete</a></div></section><nav class="doc-pager"><a class="prev" href="/docs/questionnaires/word-search/"><span>← Anterior</span><strong>Sopa de letras</strong></a><a class="next" href="/docs/questionnaires/rosco/"><span>Siguiente →</span><strong>Rosco</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
