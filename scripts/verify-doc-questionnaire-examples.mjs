@@ -32,7 +32,7 @@ for(const [name,rendererId] of Object.entries(renderers)){
   const html=await readFile(resolve(docs,name,'index.html'),'utf8');
   const headings=[...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)].map((m)=>m[1].replace(/<[^>]+>/g,'').trim());
   const required=['Qué hace y qué ve el alumno','Crear en Studio','Requisitos del contenido','Ejemplo de datos válido','Crear por CLI — alternativa avanzada','Identificador técnico de la presentación','Interacción y accesibilidad','Finalización y puntuación','Probar el ejemplo'];
-  for(const heading of required)if(!headings.includes(heading))failures.push(name+': missing section '+heading);
+  for(const heading of required)if(!headings.some((value)=>value===heading||value.endsWith('. '+heading)))failures.push(name+': missing section '+heading);
   const studioIndex=html.indexOf('Crear en Studio');
   const dataIndex=html.indexOf('Ejemplo de datos válido');
   const cliIndex=html.indexOf('Crear por CLI');
@@ -51,7 +51,7 @@ for(const [name,rendererId] of Object.entries(renderers)){
       if(!built.compatible)failures.push(name+': documented example is not compatible: '+(built.reasons??[]).join('; '));
     }catch(error){failures.push(name+': compatibility check failed: '+error.message);}
   }
-  if(!html.includes('--renderer &quot;'+rendererId+'&quot;'))failures.push(name+': CLI example does not use the exact renderer id');
+  if(!html.includes('--renderer "'+rendererId+'"'))failures.push(name+': CLI example does not use the exact renderer id');
   if(html.includes('--renderizador')||html.includes('/renderizador/'))failures.push(name+': translated technical identifier remains');
   if(html.includes('Modelo mínimo'))failures.push(name+': vague minimum-example heading remains');
 }
