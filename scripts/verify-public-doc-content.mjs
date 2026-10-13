@@ -16,6 +16,10 @@ async function walk(dir){
 const article=(html)=>/<article class="doc-content">([\s\S]*?)<\/article>/i.exec(html)?.[1]??html;
 const files=await walk(docsRoot);
 const forbidden=[
+  [/p2lrn\.org\/renderizador\//iu,'translated renderer identifier'],
+  [/--renderizador\b/iu,'translated CLI flag'],
+  [/Modelo mínimo/iu,'vague minimum-example heading'],
+  [/JSON \/ guía/iu,'unclear JSON guide label'],
   [/aulap2p/iu,'AulaP2P reference'],
   [/\bdeploy\b/iu,'deployment-process wording'],
   [/\bfixtures?\b/iu,'test-fixture wording'],
@@ -46,6 +50,10 @@ for(const [rel,patterns] of strict){
   const html=await readFile(join(root,rel),'utf8');
   const body=article(html);
   for(const pattern of patterns)if(pattern.test(body))failures.push(rel+': mixed installation channel '+pattern);
+}
+const demoPage=await readFile(join(root,'deploy/netlify/site/demo/index.html'),'utf8');
+for(const pattern of [/REAL PLAYER/iu,/REAL PACKAGES/iu,/generado durante el deploy/iu,/\bfixtures?\b/iu,/\bcanónicos?\b/iu]){
+  if(pattern.test(demoPage))failures.push('deploy/netlify/site/demo/index.html: internal development copy '+pattern);
 }
 const studioPage=await readFile(join(root,'deploy/netlify/site/studio/index.html'),'utf8');
 for(const pattern of [/AUTHORING \/ LOCAL WORKING COPY/u,/copia local de un paquete/iu,/AulaP2P/iu]){
