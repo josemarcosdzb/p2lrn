@@ -121,7 +121,7 @@
 
     <section class="doc-section">
       <h2>Varios payloads grandes</h2>
-      <p>La implementación actual transforma una representación por ejecución. Si necesitas elegir una concreta, usa <code>--representation</code>. Si repites el proceso sobre un paquete que ya contiene multipart, conserva en el mismo directorio las partes generadas anteriormente y las nuevas.</p>
+      <p>El comando transforma una representación por ejecución. Si necesitas elegir una concreta, usa <code>--representation</code>. Si repites el proceso sobre un paquete que ya contiene multipart, conserva en el mismo directorio las partes generadas anteriormente y las nuevas.</p>
       <div class="codebox">
         <div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div>
         <pre><code>p2lrn-multipart curso.p2lrn curso-stage1.p2lrn   --representation urn:uuid:video-principal   --part-size 26214400
@@ -146,12 +146,7 @@ p2lrn-inspect curso-final.p2lrn</code></pre>
       </ul>
     </section>
 
-    <section class="doc-section"><h2>Ejemplo publicado y ejecutable</h2><p>El deploy genera un payload determinista de <strong>3 MiB + 123 bytes</strong>, lo divide en partes de <strong>1 MiB</strong>, crea el descriptor Multipart y usa el runtime web actual para reconstruir y comprobar el SHA-256 lógico antes de publicar.</p><div class="package-tree"><div class="tree-head">/examples/multipart-demo/</div><pre><code>course.p2lrn
-course.part001
-course.part002
-course.part003
-course.part004
-metadata.json</code></pre></div><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/multipart-demo/course.p2lrn">Abrir en el visor</a><a class="button" href="/examples/multipart-demo/metadata.json">Ver metadatos y hashes</a></div><div class="doc-callout"><strong>Gate del deploy</strong><p>Si el paquete exterior no abre o el runtime Multipart no reconstruye exactamente los bytes y el SHA-256 esperados, <code>build-site.mjs</code> falla y Netlify no publica esa versión.</p></div></section><nav class="doc-pager">
+    <section class="doc-section"><h2>Ejemplo Multipart</h2><p>El ejemplo incluido divide un recurso de prueba en varias partes y permite abrir el paquete resultante en el visor para comprobar su reconstrucción.</p><div class="package-tree"><div class="tree-head">/examples/multipart-demo/</div><pre><code>course.p2lrn\ncourse.part001\ncourse.part002\ncourse.part003\ncourse.part004\nmetadata.json</code></pre></div><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/multipart-demo/course.p2lrn">Abrir en el visor</a><a class="button" href="/examples/multipart-demo/metadata.json">Ver metadatos y hashes</a></div></section><nav class="doc-pager">
       <a class="prev" href="/docs/paquetes/"><span>← Anterior</span><strong>Crear paquetes</strong></a>
       <a class="next" href="/demo/"><span>Siguiente →</span><strong>Probar el visor real</strong></a>
     </nav>
