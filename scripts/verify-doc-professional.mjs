@@ -4,7 +4,7 @@ import {join,relative,resolve} from 'node:path';
 const root=resolve(process.cwd());
 const docsRoot=join(root,'deploy','netlify','site','docs');
 const failures=[];
-const expectedNav='<nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav>';
+const expectedNav='<nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/instalar/">Instalar</a><a class="nav-direct" href="/docs/studio/">Crear</a><a class="nav-direct" href="/docs/player/">Reproducir</a><a class="nav-direct" href="/docs/integracion/">Integrar</a><a class="nav-direct" href="/docs/referencia/">Referencia</a></nav>';
 const forbiddenEditorial=[
   'START HERE','START /','INSTALL /','AUTHOR /','BUILD /','REFERENCE /','HELP /','INTEGRATE /',
   '<h1>P2LRN Documentation</h1>','<h1>Recipes</h1>','Questionnaires y juegos','<span data-health>Build CDN</span>',
