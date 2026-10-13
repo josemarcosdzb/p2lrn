@@ -9,12 +9,12 @@
       items: [
         ['/docs/','Inicio de documentación'],
         ['/docs/empezar/','Elegir ruta'],
-        ['/docs/npm/','NPM'],
-      ['/docs/npm/studio/','Studio con NPM'],
-        ['/docs/cdn/','CDN'],
-      ['/docs/cdn/studio/','Studio mediante CDN'],
-        ['/docs/que-usar/','¿Qué pieza uso?'],
+        ['/docs/que-usar/','Mapa de componentes'],
         ['/docs/conceptos/','Conceptos'],
+        ['/docs/npm/','NPM'],
+        ['/docs/npm/studio/','Studio con NPM'],
+        ['/docs/cdn/','CDN'],
+        ['/docs/cdn/studio/','Studio mediante CDN'],
         ['/docs/recetas/','Recetas'],
         ['/docs/glosario/','Glosario'],
         ['/docs/referencia/','Referencia'],
@@ -225,21 +225,23 @@
     ['EMPEZAR', [
       ['/docs/','Documentación'],
       ['/docs/empezar/','Elegir ruta'],
-      ['/docs/npm/','NPM'],
-      ['/docs/npm/studio/','Studio con NPM'],
-      ['/docs/cdn/','CDN'],
-      ['/docs/cdn/studio/','Studio mediante CDN'],
-      ['/docs/que-usar/','¿Qué uso?'],
+      ['/docs/que-usar/','Mapa de componentes'],
       ['/docs/conceptos/','Conceptos'],
     ]],
     ['CREAR', [
       ['/docs/studio/','Studio visual'],
-      ['/docs/formato/','Formato'],
       ['/docs/paquetes/','Crear paquetes'],
+      ['/docs/formato/','Formato'],
       ['/docs/progresion/','Progresión'],
       ['/docs/paquetes/multipart/','Multipart'],
       ['/docs/toolkit/','Toolkit'],
       ['/docs/cli/','CLI'],
+    ]],
+    ['INSTALAR', [
+      ['/docs/npm/','NPM'],
+      ['/docs/npm/studio/','Studio con NPM'],
+      ['/docs/cdn/','CDN'],
+      ['/docs/cdn/studio/','Studio mediante CDN'],
     ]],
     ['REPRODUCIR', [
       ['/docs/player/','Player'],
@@ -248,19 +250,19 @@
       ['/docs/ejemplos/','Ejemplos'],
     ]],
     ['INTEGRAR', [
-      ['/docs/integracion/','Integración real'],
+      ['/docs/integracion/','Integración'],
       ['/docs/eventos/','Eventos'],
       ['/docs/compatibilidad/','Compatibilidad'],
     ]],
     ['REFERENCIA', [
       ['/docs/recetas/','Recetas'],
       ['/docs/glosario/','Glosario'],
-      ['/docs/referencia/','Referencia'],
+      ['/docs/referencia/','Referencia técnica'],
       ['/docs/troubleshooting/','Solución de problemas'],
     ]],
     ['RECURSOS', [
       ['/studio/','Abrir Studio ↗'],
-      ['/demo/','Visor real ↗'],
+      ['/demo/','Visor ↗'],
       ['/examples/catalog.json','Catálogo de ejemplos ↗'],
       ['/index.json','Índice CDN ↗'],
       ['/health.json','Estado del CDN ↗'],
@@ -321,6 +323,62 @@
     });
   }
 
+
+  if (sidebar) {
+    sidebar.id = 'docs-sidebar';
+    const main = sidebar.closest('.doc-main');
+    const currentLink = sidebar.querySelector('a[aria-current="page"]');
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'docs-sidebar-toggle';
+    toggle.setAttribute('aria-controls','docs-sidebar');
+    toggle.setAttribute('aria-expanded','false');
+    toggle.innerHTML = '<span>Índice de documentación</span><strong></strong>';
+    toggle.querySelector('strong').textContent = currentLink?.textContent || 'Abrir';
+    main?.insertBefore(toggle, sidebar);
+    const setOpen = (open) => {
+      sidebar.classList.toggle('is-open',open);
+      toggle.setAttribute('aria-expanded',String(open));
+      toggle.querySelector('span').textContent = open ? 'Cerrar índice' : 'Índice de documentación';
+    };
+    toggle.addEventListener('click',()=>setOpen(!sidebar.classList.contains('is-open')));
+    const media = window.matchMedia('(min-width: 901px)');
+    const syncSidebar = () => {
+      if (media.matches) {
+        sidebar.classList.remove('is-open');
+        toggle.setAttribute('aria-expanded','false');
+      } else {
+        setOpen(false);
+      }
+    };
+    media.addEventListener?.('change',syncSidebar);
+    syncSidebar();
+  }
+
+  const docArticle = document.querySelector('.doc-content');
+  if (docArticle) {
+    const headings = [...docArticle.querySelectorAll('.doc-section > h2')];
+    const slugify = (value) => String(value || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    const used = new Set();
+    headings.forEach((heading,index) => {
+      if (heading.id) { used.add(heading.id); return; }
+      const base = slugify(heading.textContent) || 'seccion-'+(index+1);
+      let id=base,n=2; while(used.has(id))id=base+'-'+n++;
+      used.add(id); heading.id=id;
+    });
+    if (headings.length >= 5 && !docArticle.querySelector('.doc-toc')) {
+      const toc=document.createElement('nav');
+      toc.className='doc-toc';
+      toc.setAttribute('aria-label','En esta página');
+      const title=document.createElement('strong'); title.textContent='En esta página'; toc.append(title);
+      const list=document.createElement('ol');
+      headings.forEach((heading)=>{const li=document.createElement('li');const a=document.createElement('a');a.href='#'+heading.id;a.textContent=heading.textContent;li.append(a);list.append(li);});
+      toc.append(list);
+      docArticle.querySelector('.doc-hero')?.after(toc);
+    }
+  }
 
   document.querySelectorAll('[data-contact-form]').forEach((form) => {
     const status = form.querySelector('[data-form-status]');

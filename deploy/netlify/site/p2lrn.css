@@ -770,3 +770,35 @@ footer a:hover{color:var(--blue)}
   .site-header .header-meta{display:none}
   .site-header .menu{display:inline-flex}
 }
+
+/* Documentation UX: mobile index and in-page navigation */
+.docs-sidebar-toggle{display:none}
+.doc-toc{margin:24px 0 0;padding:18px 20px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.doc-toc>strong{display:block;margin-bottom:10px;font-size:.8rem;letter-spacing:.02em}
+.doc-toc ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 20px;margin:0;padding-left:20px}
+.doc-toc a{font-size:.84rem;color:var(--muted);text-decoration:none}
+.doc-toc a:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.doc-section>h2{scroll-margin-top:90px}
+@media(max-width:900px){
+  .doc-main{padding-top:20px;gap:18px}
+  .docs-sidebar-toggle{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit;text-align:left}
+  .docs-sidebar-toggle span{font-weight:750}
+  .docs-sidebar-toggle strong{font-size:.75rem;color:var(--muted);font-weight:600}
+  .doc-sidebar{display:none!important;position:static;grid-template-columns:1fr!important;gap:0!important;padding:8px 14px 18px!important;border:1px solid var(--line)!important;border-top:0!important;border-radius:0 0 8px 8px;background:var(--panel)}
+  .doc-sidebar.is-open{display:grid!important}
+  .doc-sidebar>span{width:auto!important;margin:16px 0 5px!important}
+  .doc-sidebar a{padding:7px 0!important}
+  .docs-search{grid-column:auto!important;margin:8px 0 4px}
+  .doc-hero{padding-top:14px}
+  .doc-hero h1{font-size:clamp(2.45rem,12vw,4rem)}
+  .doc-toc{margin-top:18px}
+}
+@media(max-width:650px){
+  .doc-toc ol{grid-template-columns:1fr}
+  .doc-section{padding:36px 0}
+}
+
+.doc-details{margin-top:18px;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.doc-details summary{cursor:pointer;padding:13px 15px;font-weight:750}
+.doc-details[open] summary{border-bottom:1px solid var(--line)}
+.doc-details p{margin:0;padding:14px 15px;color:var(--muted)}

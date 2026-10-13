@@ -209,7 +209,7 @@ async function setMode(next){
   editorStage.hidden=preview;previewStage.hidden=!preview;
   editButton.setAttribute('aria-pressed',String(!preview));previewButton.setAttribute('aria-pressed',String(preview));
   editButton.classList.toggle('primary',!preview);previewButton.classList.toggle('primary',preview);
-  if(preview)await refreshPreview();else setStatus('Editando copia local');
+  if(preview)await refreshPreview();else setStatus('Editando curso');
 }
 async function activateStudio(document,{name,recoveredSelectedId=null}={}){
   studio=document;

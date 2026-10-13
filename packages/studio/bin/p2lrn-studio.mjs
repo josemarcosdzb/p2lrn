@@ -39,6 +39,26 @@ const specs={
 const exists=async p=>{try{await access(p);return true}catch{return false}};
 const json=async p=>{try{return JSON.parse(await readFile(p,'utf8'))}catch{return null}};
 
+async function hasProjectMarker(cwd){
+  if(await exists(join(cwd,'package.json')))return true;
+  for(const marker of ['artisan','manage.py','Gemfile','pom.xml','build.gradle','build.gradle.kts','go.mod','Cargo.toml','requirements.txt','pyproject.toml','Pipfile']){
+    if(await exists(join(cwd,...marker.split('/'))))return true;
+  }
+  if(await exists(join(cwd,'bin','console')))return true;
+  const files=await readdir(cwd).catch(()=>[]);
+  return files.some(x=>x.endsWith('.csproj')||x.endsWith('.sln'));
+}
+async function findProjectRoot(start){
+  const original=resolve(start);
+  let current=original;
+  for(;;){
+    if(await hasProjectMarker(current))return current;
+    const parent=dirname(current);
+    if(parent===current)return original;
+    current=parent;
+  }
+}
+
 async function detect(cwd){
   const p=await json(join(cwd,'package.json'));
   const d={...(p?.dependencies||{}),...(p?.devDependencies||{})};
@@ -77,13 +97,13 @@ async function detect(cwd){
 }
 
 function args(argv){
-  const out={target:'auto',cwd:process.cwd(),coursePath:'course',force:false,dryRun:false};
+  const out={target:'auto',cwd:process.cwd(),cwdExplicit:false,coursePath:'course',force:false,dryRun:false};
   const a=[...argv]; if(a[0]==='setup')a.shift();
   if(a[0]&&!a[0].startsWith('-'))out.target=a.shift().toLowerCase();
   for(let i=0;i<a.length;i++){
     if(a[i]==='--force')out.force=true;
     else if(a[i]==='--dry-run')out.dryRun=true;
-    else if(a[i]==='--cwd')out.cwd=resolve(a[++i]);
+    else if(a[i]==='--cwd'){out.cwd=resolve(a[++i]);out.cwdExplicit=true;}
     else if(a[i]==='--course-path')out.coursePath=a[++i]||'course';
     else if(a[i]==='--help'||a[i]==='-h')out.help=true;
     else throw new Error('Unknown option: '+a[i]);
@@ -141,11 +161,14 @@ if(o.help){
   console.log('Usage: npx p2lrn-studio setup [auto|next|express|nest|fastify|hono|sveltekit|nuxt|astro|remix|react-router|node|php|laravel|symfony|django|fastapi|flask|rails|aspnet|spring|go|rust|generic] [--course-path course] [--force] [--dry-run]');
   process.exit(0);
 }
-const cwd=resolve(o.cwd),coursePath=safePath(o.coursePath);
+const startCwd=resolve(o.cwd);
+const cwd=o.cwdExplicit?startCwd:await findProjectRoot(startCwd);
+const coursePath=safePath(o.coursePath);
 const target=o.target==='auto'?await detect(cwd):o.target;
 const materialized=await materialize(target,cwd,coursePath,o.force,o.dryRun);
 console.log(JSON.stringify({
   ok:true,
+  projectRoot:cwd,
   target,
   endpoint,
   readerEndpoint,

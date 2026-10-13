@@ -86,7 +86,7 @@ After installing:
 npx p2lrn-studio setup
 ```
 
-Without a target, setup tries to detect the stack. It can also be forced:
+Without a target, setup searches upward from the current directory for the nearest project root and then detects the stack. The normal command can therefore be run from a nested directory inside the project. It can also be forced:
 
 ```bash
 npx p2lrn-studio setup next
