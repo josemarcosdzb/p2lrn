@@ -48,7 +48,7 @@ for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(']){
   if(js.includes(forbidden)) failures.push('p2lrn.js: legacy logic remains: '+forbidden);
 }
 
-const expectedSections=['EMPEZAR','CREAR','REPRODUCIR','INTEGRAR','REFERENCIA','RECURSOS'];
+const expectedSections=['EMPEZAR','CREAR','INSTALAR','REPRODUCIR','INTEGRAR','REFERENCIA','RECURSOS'];
 const sidebarBlock=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1] ?? '';
 const sectionNames=[...sidebarBlock.matchAll(/\['([^']+)', \[/g)].map((match)=>match[1]);
 if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections)){

@@ -797,3 +797,8 @@ footer a:hover{color:var(--blue)}
   .doc-toc ol{grid-template-columns:1fr}
   .doc-section{padding:36px 0}
 }
+
+.doc-details{margin-top:18px;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.doc-details summary{cursor:pointer;padding:13px 15px;font-weight:750}
+.doc-details[open] summary{border-bottom:1px solid var(--line)}
+.doc-details p{margin:0;padding:14px 15px;color:var(--muted)}
