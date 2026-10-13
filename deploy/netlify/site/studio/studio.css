@@ -93,3 +93,12 @@
 /* Stable question metadata layout inside the actual Studio canvas width. */
 .q-basic-grid{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,.72fr)!important}
 @media(max-width:760px){.q-basic-grid{grid-template-columns:1fr!important}}
+
+/* Studio mobile toolbar containment */
+@media(max-width:900px){
+  .studio-toolbar{min-width:0;align-items:flex-start}
+  .studio-mode,.studio-structure,.studio-format,.studio-save{min-width:0;max-width:100%;flex-wrap:wrap}
+  .studio-format{flex:1 1 100%;width:100%}
+  .studio-save{margin-left:0;width:100%}
+  .studio-save-state{min-width:0}
+}
