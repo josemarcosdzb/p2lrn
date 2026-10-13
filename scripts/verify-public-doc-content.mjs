@@ -47,9 +47,18 @@ for(const [rel,patterns] of strict){
   const body=article(html);
   for(const pattern of patterns)if(pattern.test(body))failures.push(rel+': mixed installation channel '+pattern);
 }
+const studioPage=await readFile(join(root,'deploy/netlify/site/studio/index.html'),'utf8');
+for(const pattern of [/AUTHORING \/ LOCAL WORKING COPY/u,/copia local de un paquete/iu,/AulaP2P/iu]){
+  if(pattern.test(studioPage))failures.push('deploy/netlify/site/studio/index.html: internal or non-product copy '+pattern);
+}
+const studioElement=await readFile(join(root,'packages/studio/src/p2lrn-studio.js'),'utf8');
+for(const token of ['New course','Open .p2lrn','Add content','Advanced structure','Student view','Download .p2lrn','Save course','+ Unit','+ Lesson']){
+  if(studioElement.includes(token))failures.push('packages/studio/src/p2lrn-studio.js: untranslated visible Studio token '+token);
+}
+
 for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/site/docs/integracion/index.html']){
   const html=article(await readFile(join(root,rel),'utf8'));
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es'},null,2));
