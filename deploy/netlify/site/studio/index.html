@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="P2LRN Studio: edición visual WYSIWYG de una copia local de un paquete P2LRN.">
+  <meta name="description" content="P2LRN Studio: editor visual para crear, revisar y exportar cursos P2LRN.">
   <title>P2LRN Studio</title>
   <link rel="stylesheet" href="/p2lrn.css">
   <link rel="stylesheet" href="/studio/studio.css">
@@ -20,9 +20,9 @@
 <main class="studio-main">
   <section class="studio-topbar">
     <div>
-      <p class="eyebrow">AUTHORING / LOCAL WORKING COPY</p>
+      <p class="eyebrow">AUTORÍA / EDITOR VISUAL</p>
       <h1>Studio</h1>
-      <p>Abre una copia del paquete, edítala visualmente y exporta un nuevo <code>.p2lrn</code>. El paquete publicado y el Player nunca se modifican.</p>
+      <p>Crea un curso o abre un <code>.p2lrn</code>, edítalo visualmente, comprueba la Vista alumno y exporta el resultado cuando esté listo.</p>
     </div>
     <div class="studio-open">
       <button class="button primary" type="button" data-create-course>Crear curso</button>
@@ -111,7 +111,7 @@
         <button type="button" data-add-kind="word-search" data-help="Genera una sopa de letras a partir de respuestas de texto que el alumno debe localizar.">Sopa de letras</button>
         <button type="button" data-add-kind="crossword" data-help="Genera un crucigrama usando pistas y respuestas de texto.">Crucigrama</button>
         <button type="button" data-add-kind="rosco" data-help="Juego tipo rosco: una serie de pistas con respuestas de texto, normalmente asociadas a letras.">Rosco</button>
-        <button type="button" data-add-kind="3d" data-help="Crea una actividad 3D de ordenación o relación utilizando el runtime Quest del Player.">Juego 3D</button>
+        <button type="button" data-add-kind="3d" data-help="Crea una actividad 3D de ordenar, relacionar o clasificar utilizando el entorno 3D del Player.">Juego 3D</button>
       </div></section>
       <section class="studio-add-advanced"><h3>Estructura avanzada</h3><p class="studio-add-section-help">Para casos donde necesitas construir bloques reutilizables o agrupar varios elementos. Para organizar el curso en secciones usa <strong>+ Nueva unidad</strong> en la barra superior.</p><div class="studio-add-grid">
         <button type="button" data-add-kind="component" data-help="Crea un bloque nativo reutilizable, como un aviso o callout, con configuración propia y portable entre Player y Studio."><span>Bloque reutilizable</span><small>Componente nativo</small></button>
@@ -124,6 +124,6 @@
   <input data-reader-file type="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.html,.htm,.rtf,.tex,.xml,.yaml,.yml,.odt,.epub" hidden>
   <input data-external-file type="file" accept=".zip,.h5p,application/zip,application/vnd.h5p" hidden>
 </main>
-<footer><strong>P2LRN Studio</strong><span>La autoría trabaja sobre una copia; Player permanece sólo lectura.</span><div><a href="/demo/">Abrir visor</a></div></footer>
+<footer><strong>P2LRN Studio</strong><span>Crea, prueba y exporta cursos P2LRN desde el navegador.</span><div><a href="/demo/">Abrir visor</a></div></footer>
 </body>
 </html>
