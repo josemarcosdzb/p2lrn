@@ -39,6 +39,15 @@ const forbidden=[
 ];
 for(const file of files){
   const html=await readFile(file,'utf8');
+  for(const match of html.matchAll(/<pre><code>([\s\S]*?)<\/code><\/pre>/gi)){
+    const raw=match[1]
+      .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/<[^>]+>/g,'').trim();
+    const lines=raw.split(/\r?\n/).map((line)=>line.trim()).filter(Boolean);
+    if(lines.length&&lines.every((line)=>line.startsWith('//')||line.startsWith('#')||line.startsWith('/*')||line.startsWith('*'))){
+      failures.push(relative(root,file).replaceAll('\\','/')+': comment-only code block');
+    }
+  }
   const rel=relative(root,file).replaceAll('\\','/');
   for(const [pattern,label] of forbidden)if(pattern.test(html))failures.push(rel+': '+label);
 }
@@ -72,4 +81,4 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es'},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true},null,2));
