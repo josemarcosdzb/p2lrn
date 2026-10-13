@@ -1,0 +1,55 @@
+import {readFile,readdir} from 'node:fs/promises';
+import {join,relative,resolve} from 'node:path';
+
+const root=resolve(process.cwd());
+const docsRoot=join(root,'deploy','netlify','site','docs');
+const failures=[];
+async function walk(dir){
+  const out=[];
+  for(const entry of await readdir(dir,{withFileTypes:true})){
+    const full=join(dir,entry.name);
+    if(entry.isDirectory())out.push(...await walk(full));
+    else if(entry.isFile()&&entry.name==='index.html')out.push(full);
+  }
+  return out;
+}
+const article=(html)=>/<article class="doc-content">([\s\S]*?)<\/article>/i.exec(html)?.[1]??html;
+const files=await walk(docsRoot);
+const forbidden=[
+  [/aulap2p/iu,'AulaP2P reference'],
+  [/\bdeploy\b/iu,'deployment-process wording'],
+  [/\bfixtures?\b/iu,'test-fixture wording'],
+  [/Gate del/iu,'internal gate wording'],
+  [/build-site\.mjs/iu,'internal build script'],
+  [/rama principal/iu,'branch implementation detail'],
+  [/Paquetes del repositorio/iu,'repository implementation detail'],
+  [/Ejemplo fuente adicional del repositorio/iu,'repository implementation detail'],
+  [/Estado real del generador/iu,'development-status wording'],
+  [/API pública comprobada/iu,'validation wording'],
+  [/Eventos públicos comprobados/iu,'validation wording'],
+  [/contrastad[oa] con/iu,'validation wording'],
+  [/Versión instalada actualmente/iu,'development-status wording'],
+];
+for(const file of files){
+  const html=await readFile(file,'utf8');
+  const rel=relative(root,file).replaceAll('\\','/');
+  for(const [pattern,label] of forbidden)if(pattern.test(html))failures.push(rel+': '+label);
+}
+const strict=[
+  ['deploy/netlify/site/docs/npm/index.html',[/\bCDN\b/u,/p2lrn\.netlify\.app/u]],
+  ['deploy/netlify/site/docs/npm/studio/index.html',[/\bCDN\b/u,/p2lrn\.netlify\.app/u]],
+  ['deploy/netlify/site/docs/cdn/index.html',[/\bNPM\b/u,/npm install/u,/\bnpx\b/u,/@p2lrn\//u]],
+  ['deploy/netlify/site/docs/cdn/studio/index.html',[/\bNPM\b/u,/npm install/u,/\bnpx\b/u,/@p2lrn\//u]],
+  ['deploy/netlify/site/docs/studio/index.html',[/\bNPM\b/u,/\bCDN\b/u,/npm install/u,/p2lrn\.netlify\.app/u]],
+];
+for(const [rel,patterns] of strict){
+  const html=await readFile(join(root,rel),'utf8');
+  const body=article(html);
+  for(const pattern of patterns)if(pattern.test(body))failures.push(rel+': mixed installation channel '+pattern);
+}
+for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/site/docs/integracion/index.html']){
+  const html=article(await readFile(join(root,rel),'utf8'));
+  for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
+}
+if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true},null,2));

@@ -23,6 +23,7 @@ on:
       - 'scripts/verify-doc-navigation.mjs'
       - 'scripts/verify-doc-installation-paths.mjs'
       - 'scripts/verify-doc-professional.mjs'
+      - 'scripts/verify-public-doc-content.mjs'
       - 'scripts/verify-built-doc-links.mjs'
       - 'scripts/set-version.mjs'
       - 'examples/canonical/external/**'
@@ -147,6 +148,9 @@ jobs:
       - name: Verify professional documentation quality
         run: node scripts/verify-doc-professional.mjs
 
+      - name: Verify public documentation content
+        run: node scripts/verify-public-doc-content.mjs
+
       - name: Build Player runtime for security tests
         run: node packages/player/scripts/build-dist.mjs
 
@@ -179,6 +183,8 @@ jobs:
           node --check scripts/verify-doc-professional.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-built-doc-links.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/verify-public-doc-content.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/set-version.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

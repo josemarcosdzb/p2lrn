@@ -5,12 +5,14 @@
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
-      active: ['/docs/','/docs/empezar/','/docs/npm/','/docs/cdn/','/docs/que-usar/','/docs/conceptos/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
+      active: ['/docs/','/docs/empezar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*','/docs/que-usar/','/docs/conceptos/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
       items: [
         ['/docs/','Inicio de documentación'],
         ['/docs/empezar/','Elegir ruta'],
         ['/docs/npm/','NPM'],
+      ['/docs/npm/studio/','Studio con NPM'],
         ['/docs/cdn/','CDN'],
+      ['/docs/cdn/studio/','Studio mediante CDN'],
         ['/docs/que-usar/','¿Qué pieza uso?'],
         ['/docs/conceptos/','Conceptos'],
         ['/docs/recetas/','Recetas'],
@@ -224,7 +226,9 @@
       ['/docs/','Documentación'],
       ['/docs/empezar/','Elegir ruta'],
       ['/docs/npm/','NPM'],
+      ['/docs/npm/studio/','Studio con NPM'],
       ['/docs/cdn/','CDN'],
+      ['/docs/cdn/studio/','Studio mediante CDN'],
       ['/docs/que-usar/','¿Qué uso?'],
       ['/docs/conceptos/','Conceptos'],
     ]],
@@ -259,7 +263,7 @@
       ['/demo/','Visor real ↗'],
       ['/examples/catalog.json','Catálogo de ejemplos ↗'],
       ['/index.json','Índice CDN ↗'],
-      ['/health.json','Estado del build ↗'],
+      ['/health.json','Estado del CDN ↗'],
     ]],
   ];
 
@@ -374,6 +378,6 @@
     const version = release.webSdkVersion || health.playerVersion || index?.player?.version;
     if (version) document.querySelectorAll('[data-player-version],[data-footer-version]').forEach((n) => n.textContent = version);
     const node = document.querySelector('[data-health]');
-    if (node) node.textContent = health.ok && release.webSdkVersion === version ? 'CDN verificada' : 'CDN';
+    if (node) node.textContent = health.ok && release.webSdkVersion === version ? 'CDN disponible' : 'CDN';
   }).catch(() => {});
 })();
