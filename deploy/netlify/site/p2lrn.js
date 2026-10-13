@@ -5,10 +5,11 @@
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
-      active: ['/docs/','/docs/empezar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*','/docs/que-usar/','/docs/conceptos/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
+      active: ['/docs/','/docs/empezar/','/docs/instalar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*','/docs/que-usar/','/docs/conceptos/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
       items: [
         ['/docs/','Inicio de documentación'],
-        ['/docs/empezar/','Elegir ruta'],
+        ['/docs/empezar/','Antes de empezar'],
+        ['/docs/instalar/','Instalar'],
         ['/docs/que-usar/','Mapa de componentes'],
         ['/docs/conceptos/','Conceptos'],
         ['/docs/npm/','NPM'],
@@ -224,11 +225,18 @@
   const GLOBAL_SIDEBAR = [
     ['EMPEZAR', [
       ['/docs/','Documentación'],
-      ['/docs/empezar/','Elegir ruta'],
-      ['/docs/que-usar/','Mapa de componentes'],
-      ['/docs/conceptos/','Conceptos'],
+      ['/docs/empezar/','Antes de empezar'],
+    ]],
+    ['INSTALAR', [
+      ['/docs/instalar/','Elegir instalación'],
+      ['/docs/npm/','NPM'],
+      ['/docs/npm/studio/','Studio con NPM'],
+      ['/docs/cdn/','CDN'],
+      ['/docs/cdn/studio/','Studio mediante CDN'],
     ]],
     ['CREAR', [
+      ['/docs/que-usar/','Mapa de componentes'],
+      ['/docs/conceptos/','Conceptos'],
       ['/docs/studio/','Studio visual'],
       ['/docs/paquetes/','Crear paquetes'],
       ['/docs/formato/','Formato'],
@@ -236,12 +244,6 @@
       ['/docs/paquetes/multipart/','Multipart'],
       ['/docs/toolkit/','Toolkit'],
       ['/docs/cli/','CLI'],
-    ]],
-    ['INSTALAR', [
-      ['/docs/npm/','NPM'],
-      ['/docs/npm/studio/','Studio con NPM'],
-      ['/docs/cdn/','CDN'],
-      ['/docs/cdn/studio/','Studio mediante CDN'],
     ]],
     ['REPRODUCIR', [
       ['/docs/player/','Player'],
