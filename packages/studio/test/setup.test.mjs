@@ -30,6 +30,21 @@ test('setup auto detects Next.js, creates route and course directory',async()=>{
   }finally{await rm(root,{recursive:true,force:true})}
 });
 
+test('setup discovers project root from a nested directory',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'p2lrn-root-'));
+  try{
+    await writeFile(join(root,'package.json'),JSON.stringify({dependencies:{next:'16.0.0'}}));
+    const nested=join(root,'src','features','authoring');
+    await import('node:fs/promises').then(({mkdir})=>mkdir(nested,{recursive:true}));
+    const {stdout}=await exec(process.execPath,[cli,'setup'],{cwd:nested});
+    const out=JSON.parse(stdout);
+    assert.equal(resolve(out.projectRoot),resolve(root));
+    assert.equal(out.target,'next');
+    assert.equal((await stat(join(root,'course'))).isDirectory(),true);
+    assert.equal(await stat(join(root,'app','api','p2lrn','studio','save','route.ts')).then(()=>true),true);
+  }finally{await rm(root,{recursive:true,force:true})}
+});
+
 test('setup auto detects FastAPI from requirements',async()=>{
   const root=await mkdtemp(join(tmpdir(),'p2lrn-fastapi-'));
   try{
