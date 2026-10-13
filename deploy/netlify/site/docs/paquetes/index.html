@@ -1,86 +1,18 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="Crear paquetes P2LRN con Studio visual o con Toolkit/CLI, validarlos y reproducirlos.">
-  <title>Crear paquetes — P2LRN</title>
-  <link rel="stylesheet" href="/p2lrn.css">
-  <script src="/p2lrn.js" defer></script>
-</head>
-<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main" id="contenido">
-  <aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
-  <article class="doc-content">
-    <header class="doc-hero">
-      <p class="eyebrow">AUTORÍA / PAQUETES</p>
-      <h1>Crear un paquete: editor visual o código</h1>
-      <p>P2LRN admite dos rutas de autoría. <strong>Studio</strong> permite crear el curso visualmente. <strong>Toolkit / CLI</strong> permite construirlo por código y automatizar procesos. Ambas terminan en un paquete <code>.p2lrn</code>.</p>
-    </header>
-
-    <section class="doc-section">
-      <h2>1. Elige la forma de crear</h2>
-      <div class="decision-grid">
-        <a href="/docs/studio/"><span>EDITOR VISUAL</span><h3>Studio</h3><p>Crear curso, unidades, lecciones, archivos, documentos, cuestionarios y juegos desde una interfaz gráfica.</p></a>
-        <a href="#toolkit-code"><span>AUTOMATIZACIÓN</span><h3>Toolkit / CLI</h3><p>Crear workspaces y paquetes desde TypeScript o comandos reproducibles.</p></a>
-      </div>
-    </section>
-
-    <section class="doc-section">
-      <h2>2. Crear con Studio visual</h2>
-      <ol class="learning-path">
-        <li><strong>Abre Studio.</strong><span>Entra en <a href="/studio/">/studio/</a> y pulsa <strong>Crear curso</strong>, o abre un archivo/URL existente.</span></li>
-        <li><strong>Organiza el curso.</strong><span>Usa <strong>+ Nueva unidad</strong>, <strong>+ Nueva lección</strong> y <strong>Añadir contenido</strong>.</span></li>
-        <li><strong>Añade actividades.</strong><span>Lecciones, multimedia, URL, Reader/documento, paquetes educativos, cuestionarios, juegos y bloques avanzados.</span></li>
-        <li><strong>Edita visualmente.</strong><span>Selecciona el contenido en el lienzo y utiliza la barra de formato.</span></li>
-        <li><strong>Prueba el resultado.</strong><span>Cambia a <strong>Vista alumno</strong> para reproducir el curso con el Player.</span></li>
-        <li><strong>Exporta.</strong><span>Usa <strong>Exportar .p2lrn</strong> cuando quieras obtener el paquete portable.</span></li>
-      </ol>
-      <div class="example-actions"><a class="button primary" href="/docs/studio/">Guía completa de Studio</a><a class="button" href="/studio/">Abrir editor visual</a></div>
-    </section>
-
-    <section class="doc-section">
-      <h2>3. Qué hay dentro de un <code>.p2lrn</code></h2>
-      <p>El paquete final contiene el manifiesto, el grafo del curso y los recursos necesarios. El workspace de autoría del Toolkit es otra cosa: conserva <code>p2lrn.project.json</code> y los archivos fuente para reconstruir el paquete.</p>
-      <div class="package-tree">
-        <div class="tree-head">course.p2lrn</div>
-        <pre><code>course.p2lrn
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Del contenido al paquete P2LRN: autoría visual o por código, estructura, recursos, build, validación e inspección."><title>Crear paquetes — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">AUTORÍA / PAQUETES</p><h1>Del contenido al paquete .p2lrn</h1><p>Un curso puede crearse visualmente con Studio o programáticamente con Toolkit. Esta guía se centra en el resultado común: cómo se organiza el paquete, cómo se construye y qué conviene comprobar antes de entregarlo al Player.</p></header>
+<section class="doc-section"><h2>1. Dos caminos, un mismo resultado</h2><div class="decision-grid"><a href="/docs/studio/"><span>EDITOR VISUAL</span><h3>Studio</h3><p>Trabaja con unidades, lecciones y actividades desde una interfaz. Al terminar, descarga o guarda el archivo <code>.p2lrn</code>.</p></a><a href="/docs/toolkit/"><span>NODE.JS / TYPESCRIPT</span><h3>Toolkit</h3><p>Construye el mismo tipo de paquete desde un workspace mediante API o CLI.</p></a></div><p>No es necesario repetir ambos recorridos. Elige la forma de autoría que corresponda a tu caso y utiliza las siguientes secciones para entender el paquete resultante.</p></section>
+<section class="doc-section"><h2>2. Qué contiene un paquete</h2><div class="package-tree"><div class="tree-head">course.p2lrn</div><pre><code>course.p2lrn
 ├─ META-INF/manifest.json
 ├─ content/graph.json
 ├─ assets/...
 ├─ packages/...
-└─ multipart/...</code></pre>
-      </div>
-    </section>
-
-    <section class="doc-section" id="toolkit-code">
-      <h2>4. Crear por código: instala el Toolkit</h2>
-      <p>Esta parte pertenece a la ruta técnica de autoría. Si estás usando Studio visual, no necesitas ejecutar estos comandos para crear el curso.</p>
-      <div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/toolkit@0.5.0-alpha.10</code></pre></div>
-    </section>
-
-    <section class="doc-section">
-      <h2>5. Crear el workspace por TypeScript</h2>
-      <div class="codebox">
-        <div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div>
-        <pre><code>import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
+└─ multipart/...</code></pre></div><div class="reference-table"><div><strong>Manifest</strong><p>Identifica el paquete, declara perfiles y entrypoints y contiene la información de integridad.</p></div><div><strong>Graph</strong><p>Describe la estructura de curso, unidades, actividades, recursos y relaciones.</p></div><div><strong>assets / packages</strong><p>Contienen los recursos que viajan dentro del paquete cuando corresponde.</p></div><div><strong>multipart</strong><p>Describe recursos grandes distribuidos en partes externas verificadas.</p></div></div></section>
+<section class="doc-section"><h2>3. Workspace de autoría</h2><p>Cuando creas por código, el workspace es el proyecto editable y el <code>.p2lrn</code> es el artefacto que publicas. Conserva el workspace si quieres reconstruir o modificar el curso más adelante.</p><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
 
 const workspace = P2LRNAuthoringWorkspace.create('./workspace', {
   title: 'Curso de seguridad básica',
   language: 'es',
-  description: 'Curso P2LRN creado desde cero.',
-});</code></pre>
-      </div>
-    </section>
-
-    <section class="doc-section">
-      <h2>6. Añadir estructura y recursos</h2>
-      <p><code>addFile()</code> crea el recurso y su actividad asociada. El resultado devuelve las claves reales para usarlas después en progresión u otras reglas.</p>
-      <div class="codebox">
-        <div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div>
-        <pre><code>workspace.addUnit({
+});</code></pre></div></section>
+<section class="doc-section"><h2>4. Añadir estructura y recursos</h2><p>Las unidades organizan el curso y los recursos proporcionan el contenido que utilizan las actividades. Las claves devueltas por las funciones de autoría sirven para relacionar después progresión u otras reglas con las entidades reales.</p><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.addUnit({
   key: 'unidad-1',
   title: 'Unidad 1 · Fundamentos',
 });
@@ -91,54 +23,14 @@ const intro = workspace.addFile({
   title: 'Introducción',
   parent: 'unidad-1',
   mediaType: 'text/html',
-});
-
-workspace.setProgression(intro.activityKey, {
-  required: true,
-  gateFollowing: true,
-  completionRequirement: 'viewed',
-});</code></pre>
-      </div>
-    </section>
-
-    <section class="doc-section">
-      <h2>7. Leer un documento antes de añadirlo</h2>
-      <p><code>workspace.reader()</code> utiliza el Reader documental del Toolkit. Devuelve la estructura extraída y deja que tu aplicación decida qué parte se convierte en contenido del curso.</p>
-      <div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>const document = await workspace.reader('./material/tema-1.docx');
-
-console.log(document.metadata);
-console.log(document.blocks);
-console.log(document.tables);
-console.log(document.warnings);</code></pre></div>
-    </section>
-
-    <section class="doc-section">
-      <h2>8. Construir y validar</h2>
-      <div class="codebox"><div class="codebox-head"><span>TypeScript + CLI</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.build('./curso.p2lrn', {
+});</code></pre></div><p>Para documentos que primero deben analizarse, consulta <a href="/docs/toolkit/">Reader documental</a>.</p></section>
+<section class="doc-section"><h2>5. Añadir reglas opcionales</h2><p>Si el curso necesita obligatoriedad, bloqueo o prerrequisitos, define esas reglas antes del build. La guía <a href="/docs/progresion/">Progresión</a> explica la diferencia entre completar una actividad y bloquear la navegación posterior.</p></section>
+<section class="doc-section"><h2>6. Construir el paquete</h2><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.build('./curso.p2lrn', {
   strictProfiles: true,
-});
-
-# después del build
-p2lrn-validate curso.p2lrn
+});</code></pre></div><p>El build convierte el proyecto editable en el paquete portable que debe consumir el Player.</p></section>
+<section class="doc-section"><h2>7. Validar e inspeccionar antes de publicar</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-validate curso.p2lrn
 p2lrn-inspect curso.p2lrn
-p2lrn-reader curso.p2lrn</code></pre></div>
-    </section>
-
-    <section class="doc-section split-callout">
-      <h2>9. ¿El curso pesa demasiado?</h2>
-      <p>P2LRN dispone de transporte multipart para separar payloads grandes manteniendo el paquete exterior y su integridad.</p>
-      <div class="doc-callout"><strong>Guía separada</strong><p><a href="/docs/paquetes/multipart/">Abrir Multipart / paquetes grandes →</a></p></div>
-    </section>
-
-    <section class="doc-section">
-      <h2>10. Abrirlo con el Player</h2>
-      <p>Cuando ya tienes el <code>.p2lrn</code>, elige cómo cargar el Player: <a href="/docs/npm/">NPM</a> o <a href="/docs/cdn/">CDN</a>. Esas dos rutas son alternativas de distribución del Player.</p>
-      <div class="example-actions"><a class="button primary" href="/demo/">Abrir visor P2LRN</a><a class="button" href="/docs/player/">API del Player</a></div>
-    </section>
-
-    <nav class="doc-pager"><a class="prev" href="/docs/studio/"><span>← Anterior</span><strong>Studio visual</strong></a><a class="next" href="/docs/formato/"><span>Siguiente →</span><strong>Formato</strong></a></nav>
-  </article>
-</main>
-<footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer>
-</body>
-</html>
+p2lrn-reader curso.p2lrn</code></pre></div><p><code>validate</code> comprueba el contrato del paquete. <code>inspect</code> muestra su estructura. <code>reader</code> permite revisar el contenido desde las herramientas del Toolkit. Corrige cualquier error de validación antes de entregar el paquete.</p></section>
+<section class="doc-section"><h2>8. Recursos grandes</h2><p>Si un recurso grande no debe viajar dentro del archivo principal, utiliza <a href="/docs/paquetes/multipart/">Multipart</a>. El descriptor mantiene los hashes y permite que el Player verifique las partes que necesita.</p></section>
+<section class="doc-section"><h2>9. Siguiente paso</h2><p>Continúa con <a href="/docs/formato/">Formato P2LRN</a> para entender con más detalle manifest, graph, perfiles e integridad. Después puedes añadir <a href="/docs/progresion/">Progresión</a> y probar el resultado con el <a href="/docs/player/">Player</a>.</p></section>
+<nav class="doc-pager"><a class="prev" href="/docs/studio/"><span>← Anterior</span><strong>Studio visual</strong></a><a class="next" href="/docs/formato/"><span>Siguiente →</span><strong>Formato</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
