@@ -1,60 +1,11 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="Las ideas que conviene entender antes de tocar la API: paquete, grafo, entrypoints, host, integridad, autoría y runtime.">
-  <title>Conceptos fundamentales — P2LRN</title>
-  <link rel="stylesheet" href="/p2lrn.css">
-  <script src="/p2lrn.js" defer></script>
-</head>
-<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
-  <header class="site-header">
-    <a class="brand" href="/">P2LRN</a>
-    <nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav>
-    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
-    <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
-  </header>
-
-  <main class="doc-main" id="contenido">
-    <aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
-    <article class="doc-content">
-      <header class="doc-hero">
-        <p class="eyebrow">INICIO / ARQUITECTURA</p>
-        <h1>Conceptos fundamentales</h1>
-        <p>Las ideas que conviene entender antes de tocar la API: paquete, grafo, entrypoints, host, integridad, autoría y runtime.</p>
-      </header>
-      
-<section class="doc-section">
-  <h2>Package → Verify → Render</h2>
-  <div class="concept-flow">
-    <div><strong>PACKAGE</strong><p>Un contenedor portable con curso, recursos y metadatos.</p></div>
-    <div><strong>VERIFY</strong><p>Comprobación de manifiestos, digests, relaciones y contentRoot.</p></div>
-    <div><strong>RENDER</strong><p>Selección del renderer y, si procede, del runtime aislado adecuado.</p></div>
-  </div>
-</section>
-<section class="doc-section">
-  <h2>Grafo y entrypoints</h2>
-  <p>El curso no se interpreta como una carpeta de archivos sin estructura. Las entidades y relaciones forman un grafo. Los entrypoints indican por dónde debe comenzar la experiencia cuando no se solicita explícitamente otro nodo.</p>
-</section>
-<section class="doc-section">
-  <h2>Formato frente a runtime</h2>
-  <p>Que P2LRN pueda conservar un recurso no significa que pueda ejecutarlo. La ejecución depende de que exista un renderer o runtime real. Esta separación evita declarar capacidades que no existen.</p>
-</section>
-<section class="doc-section">
-  <h2>Autoría frente a reproducción</h2>
-  <p>El Toolkit modifica el proyecto editable y reconstruye el paquete. El Player consume el paquete final. La plataforma anfitriona no debería modificar directamente los módulos internos de Creator ni depender de detalles privados del archivo.</p>
-</section>
-      <nav class="doc-pager">
-        <a class="prev" href="/docs/empezar/"><span>← Anterior</span><strong>Quickstart</strong></a>
-        <a class="next" href="/docs/formato/"><span>Siguiente →</span><strong>Formato</strong></a>
-      </nav>
-      
-<section class="doc-contact compact-contact"><h2>¿Necesitas ayuda con este punto?</h2><p>El formulario completo está centralizado para no repetirlo en cada artículo técnico.</p><a class="button" href="/contacto/">Contactar</a></section>
-    </article>
-  </main>
-
-  <footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/">Inicio</a></div></footer>
-</body>
-</html>
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Conceptos fundamentales de P2LRN: paquete, workspace, manifiesto, grafo, representaciones, perfiles, Player y Host."><title>Conceptos — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">INICIO / CONCEPTOS</p><h1>Conceptos fundamentales</h1><p>Estas son las ideas que aparecen en el resto de la documentación. Entenderlas primero hace que las páginas de formato, autoría, Player e integración resulten mucho más directas.</p></header>
+<section class="doc-section"><h2>1. Workspace y paquete no son lo mismo</h2><p>Un <strong>workspace</strong> es el proyecto editable de autoría: puede contener archivos fuente, configuración y datos intermedios. Un <strong>paquete <code>.p2lrn</code></strong> es el artefacto portable que se entrega al Player. Puedes conservar el workspace para seguir editando y publicar sólo el paquete generado.</p></section>
+<section class="doc-section"><h2>2. Manifest: identidad, capacidades e integridad</h2><p>El manifiesto identifica el paquete, declara perfiles y entrypoints y describe la integridad del contenido. Es la primera capa que el Player necesita para saber qué contiene el curso y qué capacidades debe comprender antes de reproducirlo.</p></section>
+<section class="doc-section"><h2>3. Graph: la estructura navegable</h2><p>El grafo describe cursos, unidades, actividades, recursos y relaciones. Las unidades organizan; las actividades representan pasos que el alumno puede completar; los recursos apuntan al contenido que una actividad necesita. Los <strong>entrypoints</strong> indican desde qué entidad puede empezar una reproducción.</p></section>
+<section class="doc-section"><h2>4. Recurso y representación</h2><p>Un recurso puede tener una o más <strong>representaciones</strong>. La representación explica cómo está disponible ese contenido: como miembro del paquete, contenido embebido, recurso externo compatible u otra forma declarada por el formato. Player no debe adivinar cómo abrirlo; el contrato de la representación lo indica.</p></section>
+<section class="doc-section"><h2>5. Profile: semántica adicional</h2><p>Un perfil añade reglas que no forman parte del núcleo mínimo. Progresión y cuestionarios son ejemplos claros: el manifiesto declara el perfil y las entidades usan sus extensiones. Si una regla cambia la navegación —por ejemplo, bloqueos de progresión— el perfil debe declararse con el nivel de requisito adecuado para que un Player incompatible no pueda ignorarlo silenciosamente.</p></section>
+<section class="doc-section"><h2>6. Renderizador y entorno de ejecución</h2><p>El <strong>renderizador</strong> convierte una representación en una interfaz para el alumno. Algunos contenidos además necesitan un <strong>entorno de ejecución</strong> aislado, por ejemplo para ejecutar paquetes web externos. Elegir una presentación no modifica el contenido original: sólo cambia la forma de entregarlo cuando la representación es compatible.</p></section>
+<section class="doc-section"><h2>7. Player y plataforma</h2><p>Player se ocupa de abrir, verificar y reproducir. La aplicación que lo integra —el <strong>Host</strong>— se ocupa de usuarios, autorización y persistencia. <strong>Host Adapter</strong> define la comunicación entre ambos para cargar y guardar estado, reportar puntuación, enviar eventos y resolver recursos protegidos.</p></section>
+<section class="doc-section"><h2>8. Integridad: confiar en lo que se reproduce</h2><p>P2LRN utiliza hashes y una raíz de contenido para detectar modificaciones inesperadas. El objetivo no es sólo comprobar el archivo inicial: los recursos que el Player consume también deben respetar el contrato de integridad. Multipart mantiene esa propiedad cuando un recurso se distribuye en partes externas.</p></section>
+<section class="doc-section"><h2>9. Modelo mental rápido</h2><div class="concept-flow"><div><strong>AUTORÍA</strong><p>Studio o Toolkit producen el curso.</p></div><div><strong>PAQUETE</strong><p>Manifest + graph + recursos + perfiles.</p></div><div><strong>REPRODUCCIÓN</strong><p>Player verifica y renderiza.</p></div><div><strong>PLATAFORMA</strong><p>Host conserva identidad y estado.</p></div></div></section>
+<nav class="doc-pager"><a class="prev" href="/docs/que-usar/"><span>← Anterior</span><strong>Mapa de componentes</strong></a><a class="next" href="/docs/studio/"><span>Siguiente →</span><strong>Studio visual</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
