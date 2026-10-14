@@ -102,9 +102,20 @@ for(const token of ['New course','Open .p2lrn','Add content','Advanced structure
   if(studioElement.includes(token))failures.push('packages/studio/src/p2lrn-studio.js: untranslated visible Studio token '+token);
 }
 
+const integrationRuntimeDocs=article(await readFile(join(root,'deploy/netlify/site/docs/integracion/index.html'),'utf8'));
+if(!integrationRuntimeDocs.includes('<code>runtime-base-url</code> no es obligatorio para SCORM ni H5P.')){
+  failures.push('deploy/netlify/site/docs/integracion/index.html: automatic SCORM/H5P runtime is not explained');
+}
+if(!integrationRuntimeDocs.includes('iframe sandbox con origen opaco')){
+  failures.push('deploy/netlify/site/docs/integracion/index.html: opaque sandbox behavior is not explained');
+}
+const playerRuntimeDocs=article(await readFile(join(root,'deploy/netlify/site/docs/player/index.html'),'utf8'));
+if(!playerRuntimeDocs.includes('crea automáticamente un iframe sandbox de origen opaco')){
+  failures.push('deploy/netlify/site/docs/player/index.html: automatic embedded runtime flow is missing');
+}
 for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/site/docs/integracion/index.html']){
   const html=article(await readFile(join(root,rel),'utf8'));
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true},null,2));
