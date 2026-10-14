@@ -10,30 +10,31 @@ const endpoint='/api/p2lrn/studio/save';
 const readerEndpoint='/api/p2lrn/studio/read';
 const importEndpoint='/api/p2lrn/studio/import';
 
+const bridge=['studio-bridge.mjs','p2lrn-setup/p2lrn-studio-bridge.mjs'];
 const specs={
   next:[['next-route.ts','app/api/p2lrn/studio/save/route.ts'],['next-reader-route.ts','app/api/p2lrn/studio/read/route.ts'],['next-import-route.ts','app/api/p2lrn/studio/import/route.ts']],
-  sveltekit:[['sveltekit-route.ts','src/routes/api/p2lrn/studio/save/+server.ts']],
-  nuxt:[['nuxt-route.ts','server/api/p2lrn/studio/save.post.ts']],
-  astro:[['astro-route.ts','src/pages/api/p2lrn/studio/save.ts']],
-  remix:[['remix-route.ts','app/routes/api.p2lrn.studio.save.ts']],
-  'react-router':[['react-router-route.ts','app/routes/api.p2lrn.studio.save.ts']],
+  sveltekit:[['sveltekit-route.ts','src/routes/api/p2lrn/studio/save/+server.ts'],['sveltekit-reader-route.ts','src/routes/api/p2lrn/studio/read/+server.ts'],['sveltekit-import-route.ts','src/routes/api/p2lrn/studio/import/+server.ts']],
+  nuxt:[['nuxt-route.ts','server/api/p2lrn/studio/save.post.ts'],['nuxt-reader-route.ts','server/api/p2lrn/studio/read.post.ts'],['nuxt-import-route.ts','server/api/p2lrn/studio/import.post.ts']],
+  astro:[['astro-route.ts','src/pages/api/p2lrn/studio/save.ts'],['astro-reader-route.ts','src/pages/api/p2lrn/studio/read.ts'],['astro-import-route.ts','src/pages/api/p2lrn/studio/import.ts']],
+  remix:[['remix-route.ts','app/routes/api.p2lrn.studio.save.ts'],['remix-reader-route.ts','app/routes/api.p2lrn.studio.read.ts'],['remix-import-route.ts','app/routes/api.p2lrn.studio.import.ts']],
+  'react-router':[['react-router-route.ts','app/routes/api.p2lrn.studio.save.ts'],['react-router-reader-route.ts','app/routes/api.p2lrn.studio.read.ts'],['react-router-import-route.ts','app/routes/api.p2lrn.studio.import.ts']],
   express:[['express-route.mjs','p2lrn-setup/express-route.mjs']],
   fastify:[['fastify-route.mjs','p2lrn-setup/fastify-route.mjs']],
   hono:[['hono-route.mjs','p2lrn-setup/hono-route.mjs']],
   nest:[['nest-controller.ts','src/p2lrn-studio.controller.ts']],
   node:[['node-handler.mjs','p2lrn-studio.server.mjs']],
-  php:[['php-save.php','p2lrn-studio-save.php']],
-  laravel:[['laravel-controller.php','app/Http/Controllers/P2LRNStudioController.php'],['laravel-route.txt','p2lrn-setup/laravel-route.txt']],
-  symfony:[['symfony-controller.php','src/Controller/P2LRNStudioController.php']],
-  django:[['django-views.py','p2lrn_studio/views.py'],['django-urls.py','p2lrn_studio/urls.py']],
-  fastapi:[['fastapi-router.py','p2lrn_studio.py']],
-  flask:[['flask-blueprint.py','p2lrn_studio.py']],
-  rails:[['rails-controller.rb','app/controllers/p2lrn_studio_controller.rb'],['rails-route.txt','p2lrn-setup/rails-route.txt']],
-  aspnet:[['aspnet-endpoint.cs','P2LRNStudioEndpoint.cs']],
-  spring:[['spring-controller.java','p2lrn-setup/P2LRNStudioController.java']],
-  go:[['go-handler.go','p2lrn-setup/p2lrn_studio.go']],
-  rust:[['rust-axum.rs','p2lrn-setup/p2lrn_studio_axum.rs']],
-  generic:[['generic-contract.md','p2lrn-setup/GENERIC.md']]
+  php:[['php-save.php','p2lrn-studio-save.php'],['php-reader.php','p2lrn-studio-read.php'],['php-import.php','p2lrn-studio-import.php'],bridge],
+  laravel:[['laravel-controller.php','app/Http/Controllers/P2LRNStudioController.php'],['laravel-route.txt','p2lrn-setup/laravel-route.txt'],bridge],
+  symfony:[['symfony-controller.php','src/Controller/P2LRNStudioController.php'],bridge],
+  django:[['django-views.py','p2lrn_studio/views.py'],['django-urls.py','p2lrn_studio/urls.py'],bridge],
+  fastapi:[['fastapi-router.py','p2lrn_studio.py'],bridge],
+  flask:[['flask-blueprint.py','p2lrn_studio.py'],bridge],
+  rails:[['rails-controller.rb','app/controllers/p2lrn_studio_controller.rb'],['rails-route.txt','p2lrn-setup/rails-route.txt'],bridge],
+  aspnet:[['aspnet-endpoint.cs','P2LRNStudioEndpoint.cs'],bridge],
+  spring:[['spring-controller.java','p2lrn-setup/P2LRNStudioController.java'],bridge],
+  go:[['go-handler.go','p2lrn-setup/p2lrn_studio.go'],bridge],
+  rust:[['rust-axum.rs','p2lrn-setup/p2lrn_studio_axum.rs'],bridge],
+  generic:[['generic-contract.md','p2lrn-setup/GENERIC.md'],bridge]
 };
 
 const exists=async p=>{try{await access(p);return true}catch{return false}};
@@ -123,14 +124,14 @@ async function materialize(target,cwd,coursePath,force,dryRun){
     if(!dest.startsWith(resolve(cwd)))throw new Error('Unsafe output path: '+rel);
     if(await exists(dest)&&!force)throw new Error('File already exists: '+rel+'; use --force to replace it');
     let body=await readFile(join(templateRoot,src),'utf8');
-    body=body.replaceAll('__COURSE_PATH__',coursePath).replaceAll('__ENDPOINT__',endpoint).replaceAll('__READER_ENDPOINT__',readerEndpoint);
+    body=body.replaceAll('__COURSE_PATH__',coursePath).replaceAll('__ENDPOINT__',endpoint).replaceAll('__READER_ENDPOINT__',readerEndpoint).replaceAll('__IMPORT_ENDPOINT__',importEndpoint);
     if(!dryRun){await mkdir(dirname(dest),{recursive:true});await writeFile(dest,body)}
     made.push(rel);
   }
   if(!dryRun)await mkdir(resolve(cwd,...coursePath.split('/')),{recursive:true});
   const readme=resolve(cwd,'p2lrn-setup','README.md');
-  const generatedReader=list.some(([,rel])=>/studio[\\/]+read|reader-route/i.test(rel));
-  const generatedImport=list.some(([,rel])=>/studio[\\/]+import|import-route/i.test(rel));
+  const generatedReader=true;
+  const generatedImport=true;
   if(!(await exists(readme))||force){
     const attrs=[
       '<p2lrn-studio',
@@ -149,7 +150,7 @@ async function materialize(target,cwd,coursePath,force,dryRun){
       'Import endpoint: '+(generatedImport?importEndpoint+' (generated)':'not generated for this target'),
       'Course directory: '+coursePath+'/','',
       'Embed:','',...attrs,'',
-      ...(generatedReader&&generatedImport?[]:['Reader/import attributes must only be added after equivalent Host endpoints are implemented.','']),
+      'All three endpoints are generated by setup for this target. Override the attributes only when your application uses different routes.','',
     ].join('\n');
     if(!dryRun){await mkdir(dirname(readme),{recursive:true});await writeFile(readme,body)}
     made.push('p2lrn-setup/README.md');
