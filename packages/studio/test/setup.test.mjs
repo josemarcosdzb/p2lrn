@@ -52,13 +52,15 @@ test('setup auto detects FastAPI from requirements',async()=>{
     const {stdout}=await exec(process.execPath,[cli,'setup','--cwd',root]);
     const out=JSON.parse(stdout);
     assert.equal(out.target,'fastapi');
-    assert.deepEqual(out.generatedEndpoints,{save:true,reader:false,import:false});
-    assert.match(await readFile(join(root,'p2lrn_studio.py'),'utf8'),/APIRouter/);
+    assert.deepEqual(out.generatedEndpoints,{save:true,reader:true,import:true});
+    const generated=await readFile(join(root,'p2lrn_studio.py'),'utf8');
+    assert.match(generated,/APIRouter/);
+    assert.match(generated,/api\/p2lrn\/studio\/read/);
+    assert.match(generated,/api\/p2lrn\/studio\/import/);
+    assert.equal((await stat(join(root,'p2lrn-setup','p2lrn-studio-bridge.mjs'))).isFile(),true);
     const setupReadme=await readFile(join(root,'p2lrn-setup','README.md'),'utf8');
-    assert.doesNotMatch(setupReadme,/reader-endpoint=/);
-    assert.doesNotMatch(setupReadme,/import-endpoint=/);
-    assert.match(setupReadme,/Reader endpoint: not generated/);
-    assert.match(setupReadme,/Import endpoint: not generated/);
+    assert.match(setupReadme,/reader-endpoint="\/api\/p2lrn\/studio\/read"/);
+    assert.match(setupReadme,/import-endpoint="\/api\/p2lrn\/studio\/import"/);
   }finally{await rm(root,{recursive:true,force:true})}
 });
 
@@ -89,7 +91,9 @@ test('generic target provides a backend-neutral contract',async()=>{
     await exec(process.execPath,[cli,'setup','generic','--cwd',root]);
     const text=await readFile(join(root,'p2lrn-setup','GENERIC.md'),'utf8');
     assert.match(text,/POST \/api\/p2lrn\/studio\/save/);
-    assert.match(text,/reject path traversal/i);
+    assert.match(text,/POST \/api\/p2lrn\/studio\/read/);
+    assert.match(text,/POST \/api\/p2lrn\/studio\/import/);
+    assert.match(text,/authentication and authorization/i);
   }finally{await rm(root,{recursive:true,force:true})}
 });
 
@@ -108,13 +112,23 @@ test('every supported setup target materializes safely with no unresolved placeh
       const out=JSON.parse(stdout);
       assert.equal(out.ok,true,target);
       assert.equal(out.target,target);
+      assert.deepEqual(out.generatedEndpoints,{save:true,reader:true,import:true},target);
       assert.equal((await stat(join(root,'courses','custom'))).isDirectory(),true);
+      const bodies=[];
       for(const rel of out.files){
         const full=resolve(root,rel);
         assert.equal(relative(root,full).startsWith('..'),false,target+' wrote outside project: '+rel);
         const body=await readFile(full,'utf8');
-        assert.doesNotMatch(body,/__(?:COURSE_PATH|ENDPOINT|READER_ENDPOINT)__/u,target+' left unresolved placeholder in '+rel);
+        bodies.push(rel+'\n'+body);
+        assert.doesNotMatch(body,/__(?:COURSE_PATH|ENDPOINT|READER_ENDPOINT|IMPORT_ENDPOINT)__/u,target+' left unresolved placeholder in '+rel);
       }
+      const joined=bodies.join('\n');
+      assert.match(joined,/\/api\/p2lrn\/studio\/save/u,target+' missing save route');
+      assert.match(joined,/\/api\/p2lrn\/studio\/read/u,target+' missing Reader route');
+      assert.match(joined,/\/api\/p2lrn\/studio\/import/u,target+' missing import route');
+      const setupReadme=await readFile(join(root,'p2lrn-setup','README.md'),'utf8');
+      assert.match(setupReadme,/Reader endpoint: \/api\/p2lrn\/studio\/read \(generated\)/u,target);
+      assert.match(setupReadme,/Import endpoint: \/api\/p2lrn\/studio\/import \(generated\)/u,target);
     }finally{
       await rm(root,{recursive:true,force:true});
     }

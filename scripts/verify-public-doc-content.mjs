@@ -16,6 +16,13 @@ async function walk(dir){
 const article=(html)=>/<article class="doc-content">([\s\S]*?)<\/article>/i.exec(html)?.[1]??html;
 const files=await walk(docsRoot);
 const forbidden=[
+  [/p2lrn-build-web-sdk/iu,'maintenance CLI leaked into end-user docs'],
+  [/p2lrn-rebuild-examples/iu,'maintenance CLI leaked into end-user docs'],
+  [/p2lrn-build-advanced-example/iu,'maintenance CLI leaked into end-user docs'],
+  [/p2lrn\.org\/renderizador\//iu,'translated renderer identifier'],
+  [/--renderizador\b/iu,'translated CLI flag'],
+  [/Modelo mínimo/iu,'vague minimum-example heading'],
+  [/JSON \/ guía/iu,'unclear JSON guide label'],
   [/aulap2p/iu,'AulaP2P reference'],
   [/\bdeploy\b/iu,'deployment-process wording'],
   [/\bfixtures?\b/iu,'test-fixture wording'],
@@ -32,7 +39,22 @@ const forbidden=[
 ];
 for(const file of files){
   const html=await readFile(file,'utf8');
+  for(const match of html.matchAll(/<pre><code>([\s\S]*?)<\/code><\/pre>/gi)){
+    const raw=match[1]
+      .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&')
+      .replace(/<[^>]+>/g,'').trim();
+    const lines=raw.split(/\r?\n/).map((line)=>line.trim()).filter(Boolean);
+    if(lines.length&&lines.every((line)=>line.startsWith('//')||line.startsWith('#')||line.startsWith('/*')||line.startsWith('*'))){
+      failures.push(relative(root,file).replaceAll('\\','/')+': comment-only code block');
+    }
+  }
   const rel=relative(root,file).replaceAll('\\','/');
+  for(const section of html.matchAll(/<section class="doc-section"[^>]*>([\s\S]*?)<\/section>/gi)){
+    const body=section[1].replace(/^\s*<h2[^>]*>[\s\S]*?<\/h2>/i,'').trim();
+    if(body.startsWith('<div class="codebox"')||body.startsWith('<div class="install"')){
+      failures.push(rel+': unexplained code block appears before user-facing context');
+    }
+  }
   for(const [pattern,label] of forbidden)if(pattern.test(html))failures.push(rel+': '+label);
 }
 const strict=[
@@ -46,6 +68,10 @@ for(const [rel,patterns] of strict){
   const html=await readFile(join(root,rel),'utf8');
   const body=article(html);
   for(const pattern of patterns)if(pattern.test(body))failures.push(rel+': mixed installation channel '+pattern);
+}
+const demoPage=await readFile(join(root,'deploy/netlify/site/demo/index.html'),'utf8');
+for(const pattern of [/REAL PLAYER/iu,/REAL PACKAGES/iu,/generado durante el deploy/iu,/\bfixtures?\b/iu,/\bcanónicos?\b/iu]){
+  if(pattern.test(demoPage))failures.push('deploy/netlify/site/demo/index.html: internal development copy '+pattern);
 }
 const studioPage=await readFile(join(root,'deploy/netlify/site/studio/index.html'),'utf8');
 for(const pattern of [/AUTHORING \/ LOCAL WORKING COPY/u,/copia local de un paquete/iu,/AulaP2P/iu]){
@@ -61,4 +87,4 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es'},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true},null,2));

@@ -5,62 +5,46 @@
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
-      active: ['/docs/','/docs/empezar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*','/docs/que-usar/','/docs/conceptos/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
+      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/'],
       items: [
-        ['/docs/','Inicio de documentación'],
-        ['/docs/empezar/','Elegir ruta'],
+        ['/docs/','Inicio'],
+        ['/docs/empezar/','Antes de empezar'],
         ['/docs/que-usar/','Mapa de componentes'],
         ['/docs/conceptos/','Conceptos'],
+      ],
+    },
+    {
+      label: 'Instalar',
+      active: ['/docs/instalar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*'],
+      items: [
+        ['/docs/instalar/','Elegir instalación'],
         ['/docs/npm/','NPM'],
         ['/docs/npm/studio/','Studio con NPM'],
         ['/docs/cdn/','CDN'],
         ['/docs/cdn/studio/','Studio mediante CDN'],
-        ['/docs/recetas/','Recetas'],
-        ['/docs/glosario/','Glosario'],
-        ['/docs/referencia/','Referencia'],
-        ['/docs/troubleshooting/','Solución de problemas'],
       ],
     },
     {
-      label: 'Formato',
-      active: ['/docs/formato/','/docs/paquetes/*','/docs/progresion/'],
+      label: 'Crear',
+      active: ['/studio/','/docs/studio/','/docs/formato/','/docs/paquetes/*','/docs/progresion/','/docs/toolkit/','/docs/cli/'],
       items: [
-        ['/docs/formato/','Formato P2LRN'],
+        ['/studio/','Abrir Studio'],
+        ['/docs/studio/','Guía de Studio'],
+        ['/docs/toolkit/','Toolkit'],
         ['/docs/paquetes/','Crear paquetes'],
+        ['/docs/formato/','Formato P2LRN'],
         ['/docs/progresion/','Progresión'],
         ['/docs/paquetes/multipart/','Multipart'],
-      ],
-    },
-    {
-      label: 'Player',
-      active: ['/docs/player/','/demo/','/docs/ejemplos/'],
-      items: [
-        ['/docs/player/','Player web'],
-        ['/demo/','Visor real'],
-        ['/docs/ejemplos/','Ejemplos'],
-      ],
-    },
-    {
-      label: 'Studio',
-      active: ['/studio/','/docs/studio/'],
-      items: [
-        ['/studio/','Abrir editor visual'],
-        ['/docs/studio/','Guía de Studio'],
-      ],
-    },
-    {
-      label: 'Toolkit',
-      active: ['/docs/toolkit/','/docs/cli/'],
-      items: [
-        ['/docs/toolkit/','Toolkit'],
         ['/docs/cli/','CLI'],
       ],
     },
     {
-      label: 'Juegos',
-      active: ['/docs/questionnaires/*','/docs/juegos-3d/'],
+      label: 'Reproducir',
+      active: ['/docs/player/','/demo/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],
       wide: true,
       items: [
+        ['/docs/player/','Player'],
+        ['/demo/','Visor'],
         ['/docs/questionnaires/','Cuestionarios y juegos'],
         ['/docs/questionnaires/standard/','Cuestionario estándar'],
         ['/docs/questionnaires/memory/','Memoria'],
@@ -73,15 +57,26 @@
         ['/docs/questionnaires/rosco/','Rosco'],
         ['/docs/questionnaires/3d/','Juego 3D'],
         ['/docs/juegos-3d/','Arquitectura 3D'],
+        ['/docs/ejemplos/','Ejemplos'],
       ],
     },
     {
-      label: 'Integración',
+      label: 'Integrar',
       active: ['/docs/integracion/','/docs/eventos/','/docs/compatibilidad/'],
       items: [
-        ['/docs/integracion/','Integración real'],
+        ['/docs/integracion/','Integración'],
         ['/docs/eventos/','Eventos'],
         ['/docs/compatibilidad/','Compatibilidad'],
+      ],
+    },
+    {
+      label: 'Referencia',
+      active: ['/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
+      items: [
+        ['/docs/recetas/','Recetas'],
+        ['/docs/glosario/','Glosario'],
+        ['/docs/referencia/','Referencia técnica'],
+        ['/docs/troubleshooting/','Solución de problemas'],
       ],
     },
   ];
@@ -224,11 +219,18 @@
   const GLOBAL_SIDEBAR = [
     ['EMPEZAR', [
       ['/docs/','Documentación'],
-      ['/docs/empezar/','Elegir ruta'],
-      ['/docs/que-usar/','Mapa de componentes'],
-      ['/docs/conceptos/','Conceptos'],
+      ['/docs/empezar/','Antes de empezar'],
+    ]],
+    ['INSTALAR', [
+      ['/docs/instalar/','Elegir instalación'],
+      ['/docs/npm/','NPM'],
+      ['/docs/npm/studio/','Studio con NPM'],
+      ['/docs/cdn/','CDN'],
+      ['/docs/cdn/studio/','Studio mediante CDN'],
     ]],
     ['CREAR', [
+      ['/docs/que-usar/','Mapa de componentes'],
+      ['/docs/conceptos/','Conceptos'],
       ['/docs/studio/','Studio visual'],
       ['/docs/paquetes/','Crear paquetes'],
       ['/docs/formato/','Formato'],
@@ -236,12 +238,6 @@
       ['/docs/paquetes/multipart/','Multipart'],
       ['/docs/toolkit/','Toolkit'],
       ['/docs/cli/','CLI'],
-    ]],
-    ['INSTALAR', [
-      ['/docs/npm/','NPM'],
-      ['/docs/npm/studio/','Studio con NPM'],
-      ['/docs/cdn/','CDN'],
-      ['/docs/cdn/studio/','Studio mediante CDN'],
     ]],
     ['REPRODUCIR', [
       ['/docs/player/','Player'],

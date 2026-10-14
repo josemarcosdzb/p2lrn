@@ -1,2 +1,4 @@
 Add to config/routes.rb:
 post '__ENDPOINT__', to: 'p2lrn_studio#save'
+post '__READER_ENDPOINT__', to: 'p2lrn_studio#read'
+post '__IMPORT_ENDPOINT__', to: 'p2lrn_studio#import_package'

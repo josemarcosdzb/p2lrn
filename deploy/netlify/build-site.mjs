@@ -283,7 +283,12 @@ if (missingQuestionnaireArtifacts.length) {
 const cliHtmlPath = join(outputRoot,'docs','cli','index.html');
 const cliHtml = await readFile(cliHtmlPath,'utf8');
 const toolkitPackage = JSON.parse(await readFile(join(root,'packages','toolkit','package.json'),'utf8'));
-const undocumentedBins = Object.keys(toolkitPackage.bin ?? {}).filter((name)=>!cliHtml.includes(name));
+const nonEndUserBins = new Set([
+  'p2lrn-rebuild-examples',
+  'p2lrn-build-web-sdk',
+  'p2lrn-build-advanced-example',
+]);
+const undocumentedBins = Object.keys(toolkitPackage.bin ?? {}).filter((name)=>!nonEndUserBins.has(name) && !cliHtml.includes(name));
 if (undocumentedBins.length) {
   throw new Error('CLI reference is missing published bins: ' + undocumentedBins.join(', '));
 }

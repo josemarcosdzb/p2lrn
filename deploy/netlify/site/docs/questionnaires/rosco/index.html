@@ -1,7 +1,62 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Documentación del renderizador Rosco para native-questionnaire P2LRN."><title>Rosco — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">CUESTIONARIOS / PRESENTACIÓN</p><h1>Rosco</h1><p>Asigna una letra distinta a cada reto usando únicamente letras presentes en su propia respuesta.</p></header><section class="doc-section"><h2>Qué ve el alumno</h2><p>El alumno recorre un conjunto de letras. Para cada letra lee una pista, escribe una respuesta o decide pasar temporalmente a otra.</p></section><section class="doc-section"><h2>Cuándo utilizar esta presentación</h2><p>Úsalo para repasar vocabulario o conceptos mediante respuestas textuales cuando cada reto pueda asociarse de forma inequívoca a una letra disponible.</p></section><section class="doc-section"><h2>Renderizador</h2><div class="reference-table"><div><code>https://p2lrn.org/renderizador/questionnaire/rosco</code><p>Versión: 1.</p></div><div><code>profile</code><p>https://p2lrn.org/profile/native-questionnaire</p></div><div><code>media type</code><p>application/vnd.p2lrn.questionnaire+json</p></div></div></section><section class="doc-section"><h2>Cuándo es compatible</h2><ul class="doc-list"><li>Requiere soluciones embebidas y exactamente un reto textual por pregunta.</li><li>Cada respuesta debe tener al menos 2 caracteres normalizados.</li><li>No puede haber más retos que letras disponibles en el alfabeto español usado por el runtime.</li><li>La asignación letra↔pregunta es 1:1; se prefiere una letra inicial cuando es posible.</li></ul></section><section class="doc-section"><h2>Modelo mínimo</h2><div class="codebox"><div class="codebox-head"><span>JSON / guía</span><button type="button" data-copy>Copiar</button></div><pre><code>// CASA, PERRO, MESA y LUNA pueden usar C, P, M y L.
-// El runtime no inventa respuestas ni elimina preguntas.</code></pre></div></section><section class="doc-section"><h2>Autoría</h2><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Guía de Rosco en P2LRN: creación visual, requisitos, ejemplo válido, CLI, accesibilidad y puntuación."><title>Rosco — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/instalar/">Instalar</a><a class="nav-direct" href="/docs/studio/">Crear</a><a class="nav-direct" href="/docs/player/">Reproducir</a><a class="nav-direct" href="/docs/integracion/">Integrar</a><a class="nav-direct" href="/docs/referencia/">Referencia</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">CUESTIONARIOS / PRESENTACIÓN</p><h1>Rosco</h1><p>Asigna una letra distinta a cada pregunta textual. El alumno recorre el rosco, responde o pasa temporalmente a la siguiente letra.</p></header>
+<section class="doc-section"><h2>1. Qué hace y qué ve el alumno</h2><p>Asigna una letra distinta a cada pregunta textual. El alumno recorre el rosco, responde o pasa temporalmente a la siguiente letra.</p><p>Úsalo para vocabulario y conceptos con respuestas textuales claras que puedan asociarse a letras diferentes.</p></section>
+<section class="doc-section"><h2>2. Crear en Studio</h2><p>Éste es el recorrido normal si estás creando el curso visualmente. No necesitas escribir JSON ni ejecutar comandos.</p><ol class="learning-path"><li><strong>Abre Studio.</strong><span>Usa <a href="/studio/">el editor alojado</a> o el Studio que hayas <a href="/docs/instalar/">integrado en tu proyecto</a>.</span></li><li><strong>Añade la actividad.</strong><span>En <strong>Añadir contenido</strong>, abre <strong>Juegos</strong> y elige <strong>Rosco</strong>.</span></li><li><strong>Edita visualmente.</strong><span>Cambia enunciados, respuestas y opciones con los controles del editor. El JSON queda como vista avanzada, no como requisito de uso.</span></li><li><strong>Comprueba la Vista alumno.</strong><span>Reproduce la actividad antes de descargar o guardar el curso.</span></li></ol></section><section class="doc-section"><h2>3. Requisitos del contenido</h2><ul class="doc-list"><li>En Studio se edita con preguntas de tipo <strong>Respuesta de texto</strong>.</li><li>Cada pregunta necesita exactamente una respuesta textual utilizable.</li><li>La respuesta debe tener al menos dos caracteres normalizados.</li><li>Cada reto necesita una letra distinta que esté presente en su propia respuesta. P2LRN no inventa respuestas ni elimina preguntas.</li></ul></section><section class="doc-section"><h2>4. Ejemplo de datos válido</h2><p>Este bloque muestra un cuestionario completo y válido para esta presentación. Sirve para entender el formato o para el recorrido por CLI; si utilizas Studio, el editor genera esta estructura por ti.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy>Copiar</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "Rosco de vocabulario",
+  "language": "es",
+  "grading": {
+    "mode": "embedded-key"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "text",
+      "prompt": "Vivienda",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "CASA"
+        ]
+      }
+    },
+    {
+      "id": "q2",
+      "type": "text",
+      "prompt": "Animal doméstico que ladra",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "PERRO"
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "type": "text",
+      "prompt": "Mueble para comer o trabajar",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "MESA"
+        ]
+      }
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "prompt": "Satélite natural de la Tierra",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "LUNA"
+        ]
+      }
+    }
+  ]
+}</code></pre></div></section><section class="doc-section"><h2>5. Cómo leer el ejemplo</h2><p>CASA, PERRO, MESA y LUNA permiten asignar, por ejemplo, C, P, M y L. El Player calcula esa asociación a partir de las respuestas reales; este bloque sí es un cuestionario válido, no una lista de comentarios.</p></section><section class="doc-section"><h2>6. Crear por CLI — alternativa avanzada</h2><p>Utiliza este recorrido sólo si estás generando el curso por código. Requiere Toolkit instalado mediante NPM. El archivo <code>quiz.json</code> debe contener un cuestionario válido como el ejemplo anterior.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
   --key quiz \
   --title "Rosco" \
-  --renderizador "https://p2lrn.org/renderizador/questionnaire/rosco"
+  --renderer "https://p2lrn.org/renderer/questionnaire/rosco"
 
-p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p>La preferencia de renderizador no duplica el contenido: el fuente principal sigue siendo native-questionnaire.</p></section><section class="doc-section"><h2>Interacción y accesibilidad</h2><p>Las letras son botones y la respuesta se introduce en un campo de texto. Enter ejecuta la comprobación y existe una acción Pasar para continuar sin bloquear la ronda.</p></section><section class="doc-section"><h2>Finalización y puntuación</h2><p>Cada respuesta correcta actualiza la pregunta correspondiente. Al resolver el conjunto, el runtime finaliza la actividad y comunica la puntuación total.</p><p>Para integrar los resultados con una plataforma, consulta <a href="/docs/eventos/">Eventos</a> y <a href="/docs/integracion/">Host Adapter</a>.</p></section><section class="doc-section"><h2>Probar este renderizador</h2><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/generated/questionnaire-rosco.p2lrn&amp;renderizador=https%3A%2F%2Fp2lrn.org%2Frenderer%2Fquestionnaire%2Frosco">Abrir ejemplo ejecutable</a><a class="button" href="/examples/generated/questionnaire-rosco.p2lrn">Abrir paquete</a></div></section><nav class="doc-pager"><a class="prev" href="/docs/questionnaires/crossword/"><span>← Anterior</span><strong>Crucigrama</strong></a><a class="next" href="/docs/questionnaires/3d/"><span>Siguiente →</span><strong>Juego 3D</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> selecciona la presentación preferida. No crea una segunda copia de las preguntas: el contenido sigue siendo el cuestionario nativo.</p></section><section class="doc-section"><h2>7. Identificador técnico de la presentación</h2><p>Normalmente Studio lo configura por ti. Sólo necesitas este identificador cuando seleccionas la presentación desde código, CLI o el visor.</p><div class="reference-table"><div><strong>Identificador técnico</strong><p><code>https://p2lrn.org/renderer/questionnaire/rosco</code></p></div><div><strong>Perfil</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Tipo de contenido</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><section class="doc-section"><h2>8. Interacción y accesibilidad</h2><p>Las letras son botones, la respuesta se escribe en un campo de texto y existe una acción para pasar a otra letra.</p></section><section class="doc-section"><h2>9. Finalización y puntuación</h2><p>Cada acierto actualiza la pregunta correspondiente. Al resolver el conjunto se comunica la puntuación.</p><p>Para guardar el resultado en tu plataforma, consulta <a href="/docs/eventos/">Eventos</a> y <a href="/docs/integracion/">Host Adapter</a>.</p></section><section class="doc-section"><h2>10. Probar el ejemplo</h2><p>Abre el paquete de demostración en el visor real y comprueba la interacción antes de integrarlo.</p><div class="example-actions"><a class="button primary" href="/demo/?src=/examples/generated/questionnaire-rosco.p2lrn&amp;renderer=https%3A%2F%2Fp2lrn.org%2Frenderer%2Fquestionnaire%2Frosco">Abrir en el visor</a><a class="button" href="/examples/generated/questionnaire-rosco.p2lrn">Abrir paquete</a></div></section><nav class="doc-pager"><a class="prev" href="/docs/questionnaires/crossword/"><span>← Anterior</span><strong>Crucigrama</strong></a><a class="next" href="/docs/questionnaires/3d/"><span>Siguiente →</span><strong>Juego 3D</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/contacto/">Contacto</a></div></footer></body></html>

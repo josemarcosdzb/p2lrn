@@ -1,10 +1,16 @@
-# Generic P2LRN Studio save contract
+# Generic P2LRN Studio endpoint contract
 
-Expose POST __ENDPOINT__.
-Accept the raw body as application/vnd.p2lrn+zip.
-Read X-P2LRN-Filename and X-P2LRN-Path.
-Save under __COURSE_PATH__/ by default and create it if missing.
-Sanitize filenames and reject path traversal such as ../.
-Return JSON with ok and filename.
+Setup generates the same three Studio routes for every supported backend:
 
-Security requirement: protect the endpoint with the host application's authentication and authorization. Only trusted author/admin roles should be allowed to save courses. Do not expose this write endpoint anonymously.
+- POST __ENDPOINT__ saves a raw application/vnd.p2lrn+zip body under __COURSE_PATH__/.
+- POST __READER_ENDPOINT__ accepts a document body and returns Reader JSON.
+- POST __IMPORT_ENDPOINT__ accepts an external educational package and returns application/vnd.p2lrn+zip.
+
+The generated p2lrn-studio-bridge.mjs uses @p2lrn/studio/server and @p2lrn/toolkit for Reader and external-package conversion. A custom backend can invoke it as:
+
+node p2lrn-setup/p2lrn-studio-bridge.mjs read <filename> <content-type>
+node p2lrn-setup/p2lrn-studio-bridge.mjs import <filename> <content-type>
+
+Write the request body to stdin and return stdout unchanged. The read action returns JSON; the import action returns P2LRN binary bytes.
+
+Security requirement: protect all three routes with the host application's authentication and authorization. Only trusted author/admin roles should be allowed to save, read/import authoring source files or convert external packages. Enforce request-size limits and do not permit path traversal.

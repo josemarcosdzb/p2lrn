@@ -12,7 +12,7 @@
 <body><a class="skip-link" href="#contenido">Saltar al contenido</a>
 <header class="site-header">
   <a class="brand" href="/">P2LRN</a>
-  <nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/studio/">Studio</a><a class="nav-direct" href="/docs/player/">Player</a><a class="nav-direct" href="/docs/toolkit/">Toolkit</a><a class="nav-direct" href="/docs/integracion/">Integración</a></nav>
+  <nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/instalar/">Instalar</a><a class="nav-direct" href="/docs/studio/">Crear</a><a class="nav-direct" href="/docs/player/">Reproducir</a><a class="nav-direct" href="/docs/integracion/">Integrar</a><a class="nav-direct" href="/docs/referencia/">Referencia</a></nav>
   <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.10</span></div>
   <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
 </header>
@@ -48,7 +48,7 @@
     </section>
 
     <section class="doc-section">
-      <h2>Comando básico</h2>
+      <h2>Comando básico</h2><p>Parte de un paquete ya válido. El comando crea un nuevo paquete con el descriptor Multipart y escribe las partes junto al archivo de salida.</p>
       <div class="codebox">
         <div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div>
         <pre><code>p2lrn-multipart   curso.p2lrn   curso-split.p2lrn   --part-size 26214400</code></pre>
@@ -132,7 +132,7 @@ p2lrn-multipart curso-stage1.p2lrn curso-final.p2lrn   --representation urn:uuid
     </section>
 
     <section class="doc-section">
-      <h2>Comprobación antes de publicar</h2>
+      <h2>Comprobación antes de publicar</h2><p>Valida el paquete resultante y conserva juntas todas las partes generadas antes de subirlo al servidor.</p>
       <div class="codebox">
         <div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div>
         <pre><code>p2lrn-validate curso-final.p2lrn
