@@ -1,4 +1,5 @@
 from pathlib import Path
+import asyncio
 import subprocess
 from urllib.parse import unquote
 from fastapi import APIRouter,Request
@@ -11,7 +12,7 @@ async def _bridge(action: str,request: Request,fallback: str):
     body=await request.body()
     name=unquote(request.headers.get('x-p2lrn-filename',fallback))
     media=request.headers.get('content-type','application/octet-stream')
-    result=subprocess.run(['node',str(BRIDGE),action,name,media],input=body,capture_output=True)
+    result=await asyncio.to_thread(subprocess.run,['node',str(BRIDGE),action,name,media],input=body,capture_output=True)
     if result.returncode!=0:
         raise RuntimeError(result.stderr.decode('utf-8','replace').strip() or 'P2LRN Studio bridge failed')
     return result.stdout
