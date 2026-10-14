@@ -12,13 +12,13 @@ The corpus is built reproducibly from the pinned Lumi source commit documented i
 npm install @p2lrn/player @p2lrn/h5p-libraries
 ```
 
-## Copy to a static isolated runtime host
+## Copy beside the Player runtime assets
 
 ```bash
 p2lrn-copy-h5p-libraries ./public/p2lrn-runtime/h5p-libraries
 ```
 
-The target should sit beside the Player runtime host:
+The target should sit beside the Player runtime assets. It does not need a different origin for automatic SCORM/H5P playback:
 
 ```text
 p2lrn-runtime/
@@ -31,7 +31,9 @@ p2lrn-runtime/
     └── ...
 ```
 
-P2LRN packages remain owned and hosted by the publisher. This package contains only shared runtime libraries.
+`dist/index.json` includes the file manifest for every library. When an H5P package omits reusable dependencies, the Player can fetch only the required library files from this corpus in the application context and transfer them into its opaque sandbox.
+
+P2LRN packages remain owned and hosted by the publisher. This package contains only shared runtime libraries; it never contains user/course state.
 
 ## Third-party licensing
 
