@@ -1,3 +1,5 @@
 Add to routes/api.php:
 use App\Http\Controllers\P2LRNStudioController;
 Route::post('/p2lrn/studio/save',[P2LRNStudioController::class,'save']);
+Route::post('/p2lrn/studio/read',[P2LRNStudioController::class,'read']);
+Route::post('/p2lrn/studio/import',[P2LRNStudioController::class,'importPackage']);
