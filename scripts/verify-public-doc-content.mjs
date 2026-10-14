@@ -69,6 +69,26 @@ for(const [rel,patterns] of strict){
   const body=article(html);
   for(const pattern of patterns)if(pattern.test(body))failures.push(rel+': mixed installation channel '+pattern);
 }
+const examplesPage=await readFile(join(root,'deploy/netlify/site/docs/ejemplos/index.html'),'utf8');
+const executableSection=/<section class="doc-section"><h2>Ejemplos ejecutables<\/h2>([\s\S]*?)<\/section>/i.exec(examplesPage)?.[1]??'';
+for(const href of [
+  '/examples/generated/questionnaire-standard.p2lrn',
+  '/examples/generated/questionnaire-memory.p2lrn',
+  '/examples/generated/questionnaire-matching.p2lrn',
+  '/examples/generated/questionnaire-ordering.p2lrn',
+  '/examples/generated/questionnaire-classification.p2lrn',
+  '/examples/generated/questionnaire-true-false.p2lrn',
+  '/examples/generated/questionnaire-word-search.p2lrn',
+  '/examples/generated/questionnaire-crossword.p2lrn',
+  '/examples/generated/questionnaire-rosco.p2lrn',
+  '/examples/generated/questionnaire-3d.p2lrn',
+  '/examples/multipart-demo/course.p2lrn',
+]){
+  const needle='<a href="'+href+'" download>Paquete</a>';
+  if(!executableSection.includes(needle)){
+    failures.push('deploy/netlify/site/docs/ejemplos/index.html: executable examples missing downloadable package '+href);
+  }
+}
 const demoPage=await readFile(join(root,'deploy/netlify/site/demo/index.html'),'utf8');
 for(const pattern of [/REAL PLAYER/iu,/REAL PACKAGES/iu,/generado durante el deploy/iu,/\bfixtures?\b/iu,/\bcanónicos?\b/iu]){
   if(pattern.test(demoPage))failures.push('deploy/netlify/site/demo/index.html: internal development copy '+pattern);
@@ -87,4 +107,4 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true},null,2));
