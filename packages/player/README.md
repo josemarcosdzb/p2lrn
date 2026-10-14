@@ -36,15 +36,14 @@ The canonical declarative surface is deliberately small:
 <p2lrn-player
   src="/courses/course.p2lrn"
   node="urn:uuid:optional-graph-node"
-  renderer="https://p2lrn.org/renderer/optional-strict-choice"
-  runtime-base-url="https://runtime.example.com/runtime/">
+  renderer="https://p2lrn.org/renderer/optional-strict-choice">
 </p2lrn-player>
 ```
 
 - `src` is required for playback and identifies the `.p2lrn` package URL.
 - `node` is optional; when omitted the primary package entrypoint is used.
 - `renderer` is optional and is a strict renderer request. When omitted the trusted runtime negotiates a compatible renderer.
-- `runtime-base-url` is optional only when the runtime shipped beside the Player is already on a different origin from the embedding application. The default host is resolved beside the Player distribution; if the application itself is served from that same origin, configure `runtime-base-url` to a separate trusted origin (different scheme/host/port). A different path on the same origin is **not** isolation.
+- `runtime-base-url` is an optional override for a separately managed runtime service. SCORM and H5P do not require it for normal playback: when the default runtime assets share the application origin, the Player creates an opaque sandbox automatically and transfers the verified package/runtime files into it. Generic external-package runtimes may still require a separate origin.
 
 The same values are reflected by the runtime API. Host-specific persistence, telemetry and verified virtual-resource delivery use Host Adapter v1. Identity, authorization and enrolment are deliberately outside this HTML contract; a protected host must resolve `src` according to its own deployment contract rather than serialize long-lived credentials into package markup.
 
@@ -52,18 +51,22 @@ Changing `src` reloads and verifies the package. Changing `node`, `renderer` or 
 
 Runtime events are DOM `CustomEvent` values using the canonical `p2lrn:*` namespace, including `p2lrn:ready`, `p2lrn:rendered`, activity/progress/state/score/completion events and `p2lrn:error`. Host-specific persistence or telemetry belongs in Host Adapter v1, not in the package.
 
-## Static isolated runtime
+## Automatic SCORM and H5P isolation
 
-The browser/npm distribution includes the H5P/SCORM/generic package runtime host and the pinned `h5p-standalone` core assets. Shared H5P libraries are distributed separately so installations that do not need them are not forced to download the full corpus.
+The browser/npm distribution includes the SCORM/H5P runtime assets and the pinned `h5p-standalone` core. When SCORM or H5P is embedded inside the `.p2lrn` package, the Player keeps the original content inside the package, prepares the required files in memory and executes them in an ephemeral sandbox.
+
+If the runtime assets are served from the same origin as the embedding application, SCORM and H5P automatically use an opaque iframe sandbox without `allow-same-origin`. No extra runtime domain is required for this normal path. The control channel remains bound to the direct parent through `postMessage`/`MessageChannel`.
+
+H5P packages that omit reusable libraries can resolve them from the colocated shared-library corpus. Install and copy that corpus when those packages must be supported:
 
 ```bash
 npm install @p2lrn/player @p2lrn/h5p-libraries
 p2lrn-copy-runtime ./public/p2lrn
 ```
 
-The copy command places the installed H5P library corpus under `runtime-host/h5p-libraries/` automatically when `@p2lrn/h5p-libraries` is installed. Serve that runtime from an origin isolated from the embedding application. Point the Player at it with `runtime-base-url` whenever the inferred runtime would share the application origin.
+The copy command places the H5P library corpus under `runtime-host/h5p-libraries/`. The catalog includes the file manifest needed by the Player to fetch the required dependencies in the application context and transfer them into the opaque sandbox.
 
-The public P2LRN CDN is built from these same npm distribution builders. It does not store user/course packages; it serves the generic Player/runtime and reusable shared H5P libraries.
+The public P2LRN CDN is built from these same distribution builders. It does not store user/course packages; it serves the generic Player/runtime and reusable shared H5P libraries.
 
 ## Optional Node runtime host
 
@@ -78,7 +81,7 @@ app.use(createP2LRNRuntimeHandler({
 }));
 ```
 
-The Node host is optional. Use it when server-created H5P sessions, server-managed shared libraries or a controlled runtime service are preferred. Static browser delivery does not require Node. In both modes SCORM/H5P execute on an isolated runtime origin and the control channel uses `MessageChannel`.
+The Node host is optional. Use it when server-created H5P sessions, server-managed shared libraries or a controlled runtime service are preferred. Static browser delivery does not require Node. Automatic browser playback isolates SCORM/H5P in an opaque sandbox; the Node host provides an explicit separately managed runtime origin. Both modes use a message-based control channel.
 
 Configure the runtime globally:
 
