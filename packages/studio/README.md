@@ -121,11 +121,17 @@ npx p2lrn-studio setup next --course-path data/courses
 
 The installer does not overwrite an existing generated file unless `--force` is used.
 
-### What setup currently generates
+### What setup generates
 
-The current `next` target generates all three routes: save, Reader and external import.
+Every supported setup target now materializes the three Studio operations together:
 
-The other setup targets currently materialize their save integration. Reader and external-import endpoints are not generated for those targets yet; add equivalent Host routes if those features are needed. The generated setup README lists only endpoint attributes that were actually materialized.
+- `/api/p2lrn/studio/save`
+- `/api/p2lrn/studio/read`
+- `/api/p2lrn/studio/import`
+
+JavaScript/TypeScript targets call `@p2lrn/studio/server` directly. Backends implemented in PHP, Python, Ruby, .NET, Java, Go or Rust receive their normal framework route/controller plus a generated local `p2lrn-studio-bridge.mjs`. The bridge invokes the installed Studio/Toolkit code for Reader and external-package conversion; it is not a second HTTP server.
+
+The generated `p2lrn-setup/README.md` always contains the three endpoint attributes. Override them only when the application deliberately exposes different URLs.
 
 ### Security
 

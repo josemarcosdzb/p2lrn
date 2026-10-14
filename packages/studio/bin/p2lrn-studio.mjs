@@ -23,7 +23,7 @@ const specs={
   hono:[['hono-route.mjs','p2lrn-setup/hono-route.mjs']],
   nest:[['nest-controller.ts','src/p2lrn-studio.controller.ts']],
   node:[['node-handler.mjs','p2lrn-studio.server.mjs']],
-  php:[['php-save.php','p2lrn-studio-save.php'],['php-reader.php','p2lrn-studio-read.php'],['php-import.php','p2lrn-studio-import.php'],bridge],
+  php:[['php-save.php','api/p2lrn/studio/save/index.php'],['php-reader.php','api/p2lrn/studio/read/index.php'],['php-import.php','api/p2lrn/studio/import/index.php'],bridge],
   laravel:[['laravel-controller.php','app/Http/Controllers/P2LRNStudioController.php'],['laravel-route.txt','p2lrn-setup/laravel-route.txt'],bridge],
   symfony:[['symfony-controller.php','src/Controller/P2LRNStudioController.php'],bridge],
   django:[['django-views.py','p2lrn_studio/views.py'],['django-urls.py','p2lrn_studio/urls.py'],bridge],
