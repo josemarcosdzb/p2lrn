@@ -77,6 +77,9 @@ export async function buildH5pLibraries({output = join(packageRoot, 'dist')} = {
     if (!machineName || !Number.isInteger(majorVersion) || !Number.isInteger(minorVersion)) continue;
     const folder = `${machineName}-${majorVersion}.${minorVersion}`;
     if (folder !== entry.name) throw new Error(`H5P folder/version mismatch: ${entry.name} != ${folder}`);
+    const libraryFiles=(await walk(join(output,entry.name)))
+      .map((file)=>file.relative)
+      .sort((a,b)=>a.localeCompare(b));
     catalog.push({
       folder,
       machineName,
@@ -85,6 +88,7 @@ export async function buildH5pLibraries({output = join(packageRoot, 'dist')} = {
       patchVersion,
       runnable:Number(metadata.runnable ?? 0) === 1,
       license:metadata.license ?? null,
+      files:libraryFiles,
     });
   }
 

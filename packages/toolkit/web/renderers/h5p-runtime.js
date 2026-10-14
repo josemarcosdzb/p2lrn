@@ -2,6 +2,7 @@ import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 import {resolveH5pRuntimeUrl} from '../runtime-host-config.js';
 import {encodeH5PSession, inspectH5PPackage} from '../h5p-package.js';
+import {createOpaqueH5PRuntimeDocument, getAutomaticH5PRuntimeResources, hydrateH5PRuntimeCore, hydrateH5PStaticSession} from '../h5p-auto-runtime.js';
 
 export const acceptsPayload = true;
 const H5P_PROFILE = 'https://p2lrn.org/profile/h5p';
@@ -116,18 +117,35 @@ export async function render({container, payload, representation, package:pkg, e
     throw error;
   }
 
-  const runtimeUrl = resolveH5pRuntimeUrl(runtimeBaseUrl, {applicationOrigin:globalThis.location?.origin ?? null});
-  if (!runtimeUrl) {
-    const error = new Error('H5P playback requires an isolated P2LRN runtime host.');
-    error.code = 'P2LRN_H5P_RUNTIME_HOST_REQUIRED';
-    throw error;
+  let runtimeUrl = null;
+  let opaqueMode = false;
+  try {
+    runtimeUrl = resolveH5pRuntimeUrl(runtimeBaseUrl, {applicationOrigin:globalThis.location?.origin ?? null});
+  } catch (error) {
+    if (error?.code !== 'P2LRN_H5P_RUNTIME_ORIGIN_NOT_ISOLATED') throw error;
+    opaqueMode = true;
   }
-  const runtimeOrigin = new URL(runtimeUrl).origin;
-  const staticMode = isStaticRuntimeUrl(runtimeUrl);
+  if (!runtimeUrl) opaqueMode = true;
+  const runtimeOrigin = opaqueMode ? 'null' : new URL(runtimeUrl).origin;
+  const staticMode = opaqueMode || isStaticRuntimeUrl(runtimeUrl);
   let resolvedSession = null;
   let staticSession = null;
 
-  if (staticMode) {
+  if (opaqueMode) {
+    const resources = getAutomaticH5PRuntimeResources(runtimeBaseUrl);
+    staticSession = await staticRuntimeFiles(nested, inspection);
+    staticSession = await hydrateH5PStaticSession({
+      session:staticSession, nested, inspection, sharedLibrariesUrl:resources.sharedLibrariesUrl,
+    });
+    staticSession = await hydrateH5PRuntimeCore({
+      session:staticSession, runtimeAssetsUrl:resources.runtimeAssetsUrl,
+    });
+    resolvedSession = Object.freeze({
+      runtimeAssetsUrl:resources.runtimeAssetsUrl,
+      sharedLibrariesUrl:null,
+      hostScriptUrl:resources.hostScriptUrl,
+    });
+  } else if (staticMode) {
     staticSession = await staticRuntimeFiles(nested, inspection);
     resolvedSession = Object.freeze({
       runtimeAssetsUrl:new URL('./assets/', runtimeUrl).href,
@@ -172,7 +190,9 @@ export async function render({container, payload, representation, package:pkg, e
   const iframe = document.createElement('iframe');
   iframe.className = 'p2lrn-h5p-frame';
   iframe.title = inspection.title || 'H5P';
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals');
+  iframe.setAttribute('sandbox', opaqueMode
+    ? 'allow-scripts allow-forms allow-modals'
+    : 'allow-scripts allow-same-origin allow-forms allow-modals');
   iframe.setAttribute('allow', 'fullscreen');
   iframe.style.width = '100%';
   iframe.style.minHeight = '480px';
@@ -188,7 +208,7 @@ export async function render({container, payload, representation, package:pkg, e
     if (message.action === 'ready') {
       dispatchRuntimeEvent(eventTarget, 'p2lrn:activityready', {
         runtime:'h5p', mainLibrary:inspection.mainLibrary, dependencyMode:inspection.dependencyMode,
-        libraryCount:inspection.libraryCount,
+        libraryCount:inspection.libraryCount, topology:opaqueMode ? 'opaque-inline' : 'isolated-origin',
       }, context, {adapter});
       return;
     }
@@ -242,6 +262,7 @@ export async function render({container, payload, representation, package:pkg, e
           runtimeAssetsUrl:resolvedSession.runtimeAssetsUrl,
           title:inspection.title, mainLibrary:inspection.mainLibrary, embedType:chooseEmbedType(inspection.embedTypes),
           previousState:previousState ?? null,
+          opaqueRuntime:opaqueMode,
           xAPIObjectIRI:`urn:p2lrn:${encodeURIComponent(String(context?.packageId ?? 'package'))}:${encodeURIComponent(String(context?.entityId ?? 'activity'))}`,
         };
         if (staticMode) {
@@ -260,10 +281,11 @@ export async function render({container, payload, representation, package:pkg, e
       process(message);
     };
     port.start?.();
-    iframe.contentWindow.postMessage({protocol:runtimeProtocol, action:'connect'}, runtimeOrigin, [channel.port2]);
+    iframe.contentWindow.postMessage({protocol:runtimeProtocol, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  iframe.src = runtimeUrl;
+  if (opaqueMode) iframe.srcdoc = createOpaqueH5PRuntimeDocument({hostScriptUrl:resolvedSession.hostScriptUrl});
+  else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 
   return Object.freeze({

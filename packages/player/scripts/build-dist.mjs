@@ -122,6 +122,7 @@ async function installH5pStandalone(dist) {
     await mkdir(dirname(target), {recursive:true});
     await cp(source, target);
   }
+  await cp(join(sourceRoot, 'dist', 'fonts'), join(assetsRoot, 'fonts'), {recursive:true, force:true});
   await cp(join(sourceRoot, 'LICENSE'), join(assetsRoot, 'LICENSE.h5p-standalone.txt'));
   await writeFile(
     join(assetsRoot, 'h5p-standalone.json'),

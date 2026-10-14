@@ -106,6 +106,22 @@ function clearObjectUrls() {
   for (const url of activeObjectUrls) { try { URL.revokeObjectURL(url); } catch {} }
   activeObjectUrls = [];
 }
+function ephemeralStorage() {
+  const values = new Map();
+  return Object.freeze({
+    get length(){ return values.size; },
+    key(index){ return [...values.keys()][Number(index)] ?? null; },
+    getItem(key){ key=String(key); return values.has(key) ? values.get(key) : null; },
+    setItem(key,value){ values.set(String(key),String(value)); },
+    removeItem(key){ values.delete(String(key)); },
+    clear(){ values.clear(); },
+  });
+}
+function installOpaqueStorage() {
+  for (const name of ['localStorage','sessionStorage']) {
+    try { Object.defineProperty(globalThis,name,{configurable:true,value:ephemeralStorage()}); } catch {}
+  }
+}
 
 function staticFiles(data) {
   if (!Array.isArray(data.files) || data.files.length > MAX_STATIC_FILES) {
@@ -222,7 +238,7 @@ function rewriteCss(text, cssPath, files, objectUrls, stack = new Set()) {
     const resolved = normalizeRef(cssPath, raw.replace(/^['"]|['"]$/g, ''));
     if (!resolved) return raw;
     const url = objectUrls.get(resolved.path);
-    return url ? `"${url}${resolved.suffix}"` : raw;
+    return url ? `"${url}"` : raw;
   };
   let out = String(text);
   out = out.replace(/@import\s+(?:url\()?\s*(['"]?)([^'")\s;]+)\1\s*\)?\s*;/giu, (all, _quote, ref) => {
@@ -271,6 +287,7 @@ function loadStylesheet(doc, href) {
 
 async function initializeStatic(data) {
   clearObjectUrls();
+  if (data.opaqueRuntime) installOpaqueStorage();
   const files = staticFiles(data);
   const h5pBytes = files.get('h5p.json');
   const contentBytes = files.get('content/content.json');
@@ -343,8 +360,8 @@ async function initializeStatic(data) {
         url:String(data.xAPIObjectIRI || location.href),
         contentUrl:location.href,
         jsonContent:JSON.stringify(contentJson),
-        styles,
-        scripts,
+        styles:data.opaqueRuntime ? [] : styles,
+        scripts:data.opaqueRuntime ? [] : scripts,
         fullScreen:true,
         exportUrl:undefined,
         embedCode:'',
@@ -355,8 +372,8 @@ async function initializeStatic(data) {
       },
     },
     core:{
-      styles:[new URL('styles/h5p.css', data.runtimeAssetsUrl).href],
-      scripts:[new URL('frame.bundle.js', data.runtimeAssetsUrl).href],
+      styles:[objectUrls.get('__p2lrn_runtime__/styles/h5p.css') ?? new URL('styles/h5p.css', data.runtimeAssetsUrl).href],
+      scripts:[objectUrls.get('__p2lrn_runtime__/frame.bundle.js') ?? new URL('frame.bundle.js', data.runtimeAssetsUrl).href],
     },
     saveFreq:false,
     postUserStatistics:false,
@@ -365,19 +382,29 @@ async function initializeStatic(data) {
     l10n:defaultIntegrationL10n(),
   };
 
-  const outer = document.createElement('iframe');
-  outer.className = 'p2lrn-h5p-inner';
-  outer.title = String(data.title ?? h5p.title ?? 'H5P');
-  outer.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals');
-  outer.setAttribute('allow', 'fullscreen');
-  outer.style.cssText = 'display:block;width:100%;min-height:480px;border:0;background:#fff';
-  stage.replaceChildren(outer);
-
-  const doc = outer.contentDocument;
-  const win = outer.contentWindow;
-  doc.open();
-  doc.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div class="h5p-content" data-content-id="p2lrn-h5p"></div></body></html>');
-  doc.close();
+  let outer = null;
+  let doc = document;
+  let win = globalThis;
+  if (data.opaqueRuntime) {
+    const contentRoot = document.createElement('div');
+    contentRoot.className = 'h5p-content';
+    contentRoot.dataset.contentId = 'p2lrn-h5p';
+    stage.replaceChildren(contentRoot);
+  } else {
+    outer = document.createElement('iframe');
+    outer.className = 'p2lrn-h5p-inner';
+    outer.title = String(data.title ?? h5p.title ?? 'H5P');
+    outer.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals');
+    outer.setAttribute('allow', 'fullscreen');
+    outer.style.cssText = 'display:block;width:100%;min-height:480px;border:0;background:#fff';
+    stage.replaceChildren(outer);
+    doc = outer.contentDocument;
+    win = outer.contentWindow;
+    if (!doc || !win) throw new Error('H5P isolated frame could not be initialized.');
+    doc.open();
+    doc.write('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div class="h5p-content" data-content-id="p2lrn-h5p"></div></body></html>');
+    doc.close();
+  }
 
   win.H5PIntegration = integration;
   win.H5P = {preventInit:true};
@@ -404,7 +431,10 @@ async function initializeStatic(data) {
 
   H5P.preventInit = false;
   H5P.init();
-  player = {destroy(){ try { outer.src = 'about:blank'; } catch {} outer.remove(); }};
+  player = {destroy(){
+    if (outer) { try { outer.src = 'about:blank'; } catch {} outer.remove(); }
+    else stage.replaceChildren();
+  }};
   h5pWindow = win;
 
   const dispatcher = win.H5P?.externalDispatcher;
@@ -423,7 +453,7 @@ async function initializeStatic(data) {
   const ro = globalThis.ResizeObserver ? new ResizeObserver(() => {
     try {
       const height = Math.max(doc.documentElement?.scrollHeight ?? 0, doc.body?.scrollHeight ?? 0, 480);
-      outer.style.height = `${Math.ceil(height)}px`;
+      if (outer) outer.style.height = `${Math.ceil(height)}px`;
       send('resize', {height});
     } catch {}
   }) : null;

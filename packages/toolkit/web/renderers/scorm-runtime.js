@@ -175,7 +175,12 @@ export async function render({container, payload, representation, package: pkg, 
     }, context, {adapter});
   }
   const {files, transfers, total} = await collectRuntimeFiles(nested);
-  const isolatedRuntimeUrl = resolveScormRuntimeUrl(runtimeBaseUrl);
+  let isolatedRuntimeUrl = null;
+  try {
+    isolatedRuntimeUrl = resolveScormRuntimeUrl(runtimeBaseUrl);
+  } catch (error) {
+    if (error?.code !== 'P2LRN_SCORM_RUNTIME_ORIGIN_NOT_ISOLATED') throw error;
+  }
   const fallbackToken = isolatedRuntimeUrl ? null : (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
   const iframe = document.createElement('iframe');
   iframe.className = 'p2lrn-scorm-runtime';
