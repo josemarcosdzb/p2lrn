@@ -73,6 +73,11 @@ for(let i=0;i<sectionNames.length;i++){
   const end=i+1<sectionNames.length ? sidebarBlock.indexOf("['"+sectionNames[i+1]+"', [",start+1) : sidebarBlock.length;
   sectionChunks.set(sectionNames[i],sidebarBlock.slice(start,end));
 }
+const installChunk=sectionChunks.get('INSTALAR')??'';
+const installOrder=['/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/'].map((href)=>installChunk.indexOf("['"+href+"'"));
+for(let i=0;i<installOrder.length;i++)if(installOrder[i]<0)failures.push('p2lrn.js: missing install route in expected flow');
+for(let i=1;i<installOrder.length;i++)if(installOrder[i]<=installOrder[i-1])failures.push('p2lrn.js: install routes must be ordered Installation -> CDN -> Studio CDN -> NPM -> Studio NPM');
+if(!sectionChunks.get('EMPEZAR')?.includes("['/docs/empezar-facil/','Empezar fácil']")) failures.push('p2lrn.js: Empezar fácil must appear before installation');
 for(const href of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/']){
   if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: before-start child must not remain flat under EMPEZAR: '+href);
 }
@@ -81,9 +86,9 @@ for(const href of ['/docs/progresion/','/docs/metricas/']){
   if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: advanced tracking route must not be under EMPEZAR: '+href);
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==30) failures.push('p2lrn.js: expected 30 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==31) failures.push('p2lrn.js: expected 31 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
-for(const required of ['/docs/instalar/','/docs/npm/studio/','/docs/cdn/studio/','/docs/progresion/','/docs/metricas/','/docs/compatibilidad/']){
+for(const required of ['/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/','/docs/progresion/','/docs/metricas/','/docs/compatibilidad/']){
   if(!hrefs.includes(required)) failures.push('p2lrn.js: missing global sidebar route '+required);
 }
 const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
@@ -117,4 +122,4 @@ for(const route of docRoutes){
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,beforeStartChildrenUseParent:true,trackingGroupedLater:true,childPageSubmenu:true,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true,advancedTrackingAfterIntegration:true},null,2));
+console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,beforeStartChildrenUseParent:true,trackingGroupedLater:true,childPageSubmenu:true,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true,advancedTrackingAfterIntegration:true,easyStartBeforeInstall:true,cdnBeforeNpm:true},null,2));

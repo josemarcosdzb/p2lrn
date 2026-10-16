@@ -227,13 +227,14 @@
     ['EMPEZAR', [
       ['/docs/','Documentación'],
       ['/docs/empezar/','Antes de empezar'],
+      ['/docs/empezar-facil/','Empezar fácil'],
     ]],
     ['INSTALAR', [
-      ['/docs/instalar/','Elegir instalación'],
-      ['/docs/npm/','NPM'],
-      ['/docs/npm/studio/','Studio con NPM'],
+      ['/docs/instalar/','Instalación'],
       ['/docs/cdn/','CDN'],
       ['/docs/cdn/studio/','Studio mediante CDN'],
+      ['/docs/npm/','NPM'],
+      ['/docs/npm/studio/','Studio con NPM'],
     ]],
     ['CREAR', [
       ['/docs/studio/','Studio visual'],

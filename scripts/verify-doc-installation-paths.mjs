@@ -7,7 +7,7 @@ const docs=join(site,'docs');
 const read=(path)=>readFile(join(root,path),'utf8');
 const [
   studioPackage,playerPackage,studioSource,studioLoader,studioCli,css,
-  npmDoc,npmStudioDoc,cdnDoc,cdnStudioDoc,studioDoc,startDoc,studioReadme
+  npmDoc,npmStudioDoc,cdnDoc,cdnStudioDoc,studioDoc,startDoc,easyStartDoc,studioReadme
 ]=await Promise.all([
   read('packages/studio/package.json').then(JSON.parse),
   read('packages/player/package.json').then(JSON.parse),
@@ -21,6 +21,7 @@ const [
   read('deploy/netlify/site/docs/cdn/studio/index.html'),
   read('deploy/netlify/site/docs/studio/index.html'),
   read('deploy/netlify/site/docs/empezar/index.html'),
+  read('deploy/netlify/site/docs/empezar-facil/index.html'),
   read('packages/studio/README.md'),
 ]);
 
@@ -68,7 +69,10 @@ must('studio loader',studioLoader,'import(moduleUrl)');
 must('studio source',studioSource,"observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path']");
 must('studio cli',studioCli,'generatedEndpoints:{save:true,reader:materialized.generatedReader,import:materialized.generatedImport}');
 must('studio README',studioReadme,'npm install @p2lrn/studio@'+version+' @p2lrn/player@'+version);
-if(startDoc.includes('npm install')||startDoc.includes('p2lrn.netlify.app'))failures.push('start docs must choose routes without embedding installation code');
+if(startDoc.includes('npm install')||startDoc.includes('p2lrn.netlify.app'))failures.push('start docs must orient without embedding installation code');
+must('easy-start docs',easyStartDoc,'/player/current/dist/p2lrn.js');
+must('easy-start docs',easyStartDoc,'questionnaire-standard.p2lrn');
+for(const token of ['npm install','npx ','@p2lrn/'])forbid('easy-start article',article(easyStartDoc),token);
 
 forbid('css',css,'.doc-content .example-actions .button{color:inherit;text-decoration:none}');
 must('css',css,'.doc-content .example-actions .button.primary{color:#fff}');
@@ -98,4 +102,4 @@ for(const file of htmlFiles){
   }
 }
 if(failures.length)throw new Error('Documentation installation audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,version,docsPages:htmlFiles.length,studioGuides:{visual:'/docs/studio/',npm:'/docs/npm/studio/',cdn:'/docs/cdn/studio/'},strictChannelSeparation:true,buttonLabels:true},null,2));
+console.log(JSON.stringify({ok:true,version,docsPages:htmlFiles.length,studioGuides:{visual:'/docs/studio/',npm:'/docs/npm/studio/',cdn:'/docs/cdn/studio/'},strictChannelSeparation:true,easyStartUsesCdn:true,cdnFirst:true,buttonLabels:true},null,2));
