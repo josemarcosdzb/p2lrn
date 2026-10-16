@@ -1,6 +1,7 @@
-// Do not let bundlers turn this runtime folder URL into a compile-time module import.
-const moduleHref = import.meta.url;
-const DEFAULT_STATIC_BASE_URL = new URL('./runtime-host/', moduleHref).href;
+// A computed asset path preserves the colocated runtime URL without making
+// Turbopack resolve a directory as a module when this package is bundled.
+const runtimePath = ['.', 'runtime-host', ''].join('/');
+const DEFAULT_STATIC_BASE_URL = new URL(runtimePath, import.meta.url).href;
 
 const state = {
   baseUrl: DEFAULT_STATIC_BASE_URL,

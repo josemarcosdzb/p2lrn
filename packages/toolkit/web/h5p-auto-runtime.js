@@ -1,9 +1,9 @@
 const MAX_FILES = 10000;
 const MAX_BYTES = 512 * 1024 * 1024;
-// Resolve relative to the distributed module at runtime. A literal new URL(path, import.meta.url)
-// makes Next.js/Turbopack incorrectly require the runtime-host directory as a module.
-const moduleHref = import.meta.url;
-const DEFAULT_BASE_URL = new URL('./runtime-host/', moduleHref).href;
+// Use a computed runtime asset path: Next.js/Turbopack resolves literal directory URLs
+// as build-time imports even when the second argument is an intermediate variable.
+const runtimePath = ['.', 'runtime-host', ''].join('/');
+const DEFAULT_BASE_URL = new URL(runtimePath, import.meta.url).href;
 const decoder = new TextDecoder('utf-8', {fatal:false});
 
 function dependencyKey(dep) {
