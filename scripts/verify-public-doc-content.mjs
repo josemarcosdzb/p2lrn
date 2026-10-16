@@ -71,6 +71,15 @@ for(const [rel,patterns] of strict){
   const body=channelArticle(html);
   for(const pattern of patterns)if(pattern.test(body))failures.push(rel+': mixed installation channel '+pattern);
 }
+for(const rel of ['deploy/netlify/site/docs/empezar-facil/index.html','deploy/netlify/site/docs/cdn/index.html']){
+  const html=article(await readFile(join(root,rel),'utf8'));
+  if(!html.includes('Visual Studio Code')||!html.includes('Live Server')){
+    failures.push(rel+': local HTTP instructions must use Visual Studio Code + Live Server');
+  }
+  if(/python\s+-m\s+http\.server/iu.test(html)){
+    failures.push(rel+': Python local-server example must not appear in public docs');
+  }
+}
 const examplesPage=await readFile(join(root,'deploy/netlify/site/docs/ejemplos/index.html'),'utf8');
 const executableSection=/<section class="doc-section"><h2>Ejemplos ejecutables<\/h2>([\s\S]*?)<\/section>/i.exec(examplesPage)?.[1]??'';
 for(const href of [
@@ -155,4 +164,4 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true,trackingInformationArchitecture:true},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true,trackingInformationArchitecture:true,visualStudioCodeLocalServer:true},null,2));
