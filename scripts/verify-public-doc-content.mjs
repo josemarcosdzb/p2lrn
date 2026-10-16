@@ -89,6 +89,19 @@ for(const href of [
     failures.push('deploy/netlify/site/docs/ejemplos/index.html: executable examples missing downloadable package '+href);
   }
 }
+const metricsDocs=article(await readFile(join(root,'deploy/netlify/site/docs/metricas/index.html'),'utf8'));
+for(const token of [
+  'Host Adapter completo para estado, notas y eventos',
+  'p2lrn:xapi',
+  'score.questions',
+  'cmi.core.lesson_status',
+  'cmi.completion_status',
+  'p2lrn-progression-state/1',
+  '<code>p2lrn:progress</code> no es progreso global del curso',
+  'authoritative:false',
+]){
+  if(!metricsDocs.includes(token)) failures.push('deploy/netlify/site/docs/metricas/index.html: missing detailed metrics contract '+token);
+}
 const demoPage=await readFile(join(root,'deploy/netlify/site/demo/index.html'),'utf8');
 for(const pattern of [/REAL PLAYER/iu,/REAL PACKAGES/iu,/generado durante el deploy/iu,/\bfixtures?\b/iu,/\bcanónicos?\b/iu]){
   if(pattern.test(demoPage))failures.push('deploy/netlify/site/demo/index.html: internal development copy '+pattern);
@@ -118,4 +131,4 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true},null,2));

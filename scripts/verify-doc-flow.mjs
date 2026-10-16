@@ -15,7 +15,7 @@ const pager=(html)=>{
 };
 
 const primary=[
-  '/docs/','/docs/empezar/','/docs/instalar/','/docs/que-usar/','/docs/conceptos/','/docs/studio/','/docs/paquetes/','/docs/formato/','/docs/progresion/','/docs/paquetes/multipart/','/docs/toolkit/','/docs/cli/','/docs/player/','/docs/questionnaires/','/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/ordering/','/docs/questionnaires/classification/','/docs/questionnaires/true-false/','/docs/questionnaires/word-search/','/docs/questionnaires/crossword/','/docs/questionnaires/rosco/','/docs/questionnaires/3d/','/docs/juegos-3d/','/docs/ejemplos/','/docs/integracion/','/docs/eventos/','/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'
+  '/docs/','/docs/empezar/','/docs/instalar/','/docs/que-usar/','/docs/conceptos/','/docs/studio/','/docs/paquetes/','/docs/formato/','/docs/progresion/','/docs/paquetes/multipart/','/docs/toolkit/','/docs/cli/','/docs/player/','/docs/questionnaires/','/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/ordering/','/docs/questionnaires/classification/','/docs/questionnaires/true-false/','/docs/questionnaires/word-search/','/docs/questionnaires/crossword/','/docs/questionnaires/rosco/','/docs/questionnaires/3d/','/docs/juegos-3d/','/docs/ejemplos/','/docs/integracion/','/docs/eventos/','/docs/metricas/','/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'
 ];
 for(let i=0;i<primary.length;i++){
   const route=primary[i];
@@ -50,7 +50,7 @@ if(/\bCDN\b|p2lrn\.netlify\.app/u.test(npm))failures.push('NPM article leaks CDN
 if(/\bNPM\b|npm install|\bnpx\b|@p2lrn\//u.test(cdn))failures.push('CDN article leaks NPM instructions');
 
 const richMinimum=new Map([
-  ['/docs/conceptos/',8],['/docs/studio/',7],['/docs/progresion/',7],['/docs/eventos/',6],['/docs/recetas/',4],['/docs/glosario/',5],['/docs/questionnaires/',5]
+  ['/docs/conceptos/',8],['/docs/studio/',7],['/docs/progresion/',8],['/docs/eventos/',9],['/docs/metricas/',12],['/docs/recetas/',4],['/docs/glosario/',5],['/docs/questionnaires/',5]
 ]);
 for(const [route,min] of richMinimum){
   const html=await readFile(routeFile(route),'utf8');

@@ -62,10 +62,11 @@
     },
     {
       label: 'Integrar',
-      active: ['/docs/integracion/','/docs/eventos/','/docs/compatibilidad/'],
+      active: ['/docs/integracion/','/docs/eventos/','/docs/metricas/','/docs/compatibilidad/'],
       items: [
         ['/docs/integracion/','Integración'],
         ['/docs/eventos/','Eventos'],
+        ['/docs/metricas/','Métricas y analítica'],
         ['/docs/compatibilidad/','Compatibilidad'],
       ],
     },
@@ -248,6 +249,7 @@
     ['INTEGRAR', [
       ['/docs/integracion/','Integración'],
       ['/docs/eventos/','Eventos'],
+      ['/docs/metricas/','Métricas y analítica'],
       ['/docs/compatibilidad/','Compatibilidad'],
     ]],
     ['REFERENCIA', [

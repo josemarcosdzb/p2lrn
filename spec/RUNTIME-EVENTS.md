@@ -32,7 +32,7 @@ The DOM CustomEvent name remains the event `type`. For compatibility, the refere
 
 ## 2. Event families
 
-Reference events currently include `p2lrn:ready`, `p2lrn:activityready`, `p2lrn:answer`, `p2lrn:progress`, `p2lrn:statechange`, `p2lrn:timeupdate`, `p2lrn:timeout`, `p2lrn:score`, `p2lrn:complete`, `p2lrn:rendered` and `p2lrn:error`.
+Reference events currently include `p2lrn:ready`, `p2lrn:activityready`, `p2lrn:rendered`, `p2lrn:answer`, `p2lrn:progress`, `p2lrn:statechange`, `p2lrn:timeupdate`, `p2lrn:timeout`, `p2lrn:score`, `p2lrn:complete`, `p2lrn:progressionchange`, `p2lrn:xapi`, `p2lrn:navigation` and `p2lrn:error`. Not every renderer emits every family.
 
 The envelope is deliberately not xAPI or Caliper. A host may map the same event to xAPI, Caliper, local analytics or no persistent event log at all.
 
@@ -64,3 +64,23 @@ User identity, enrolment, attempt ownership, credentials and durable event histo
 ## 5. Nested activities
 
 Composite activities and their children use the same event envelope. `context.entityId` identifies the activity that emitted an event. A composite only accepts events from its direct children and sequence mode accepts completion/score only from its current child, preventing out-of-order child events from advancing a linear block.
+
+
+## 6. Metrics extraction boundary
+
+The host should treat state, score and event history as separate concerns:
+
+- `loadState` / `saveState` are the resume snapshot for one activity/progression surface;
+- `reportScore` is a normalized score channel and may be invoked multiple times by runtimes that commit repeatedly;
+- `emitEvent` is the ordered event stream suitable for analytics/audit;
+- progression state is stored separately as `p2lrn-progression-state/1`.
+
+Portable `context` identifies package/content/entity/representation/renderer. Learner identity, enrolment and attempt ownership remain host data. A durable host key should combine its learner/attempt identifiers with the relevant P2LRN context, normally including `contentRoot` so state is not restored silently onto another content revision.
+
+Native questionnaire scores expose `graded`, `raw`, `max`, `normalized` and per-question entries containing `questionId`, `graded`, `correct`, `hits`, `errors`, `pointsAwarded` and `pointsPossible`. Questionnaire `p2lrn:progress` is activity-local progress, not course progression.
+
+SCORM state preserves the CMI key/value model. Score forwarding is derived from the available CMI score/status fields. SCORM interactions/objectives remain available through the saved CMI state when the SCO writes them.
+
+H5P `p2lrn:xapi` payloads remain content-generated input and are marked `authoritative:false`. A host forwarding statements to an LRS must rebuild actor, authority, registration/attempt and other platform-owned fields server-side.
+
+The event timestamp is runtime time. Hosts that need audit-grade ingestion time should additionally stamp events on receipt. The runtime-event envelope does not define a durable database event id; retry/idempotency policy belongs to the host.
