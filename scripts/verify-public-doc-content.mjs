@@ -73,8 +73,11 @@ for(const [rel,patterns] of strict){
 }
 for(const rel of ['deploy/netlify/site/docs/empezar-facil/index.html','deploy/netlify/site/docs/cdn/index.html']){
   const html=article(await readFile(join(root,rel),'utf8'));
-  if(!html.includes('Visual Studio Code')||!html.includes('Live Server')){
-    failures.push(rel+': local HTTP instructions must use Visual Studio Code + Live Server');
+  if(!html.includes('editor de texto o código')||!html.includes('servidor HTTP local')){
+    failures.push(rel+': local HTTP instructions must be editor-neutral and explain the local HTTP requirement');
+  }
+  for(const pattern of [/Visual Studio Code/iu,/Live Server/iu,/Open with Live Server/iu]){
+    if(pattern.test(html))failures.push(rel+': local HTTP instructions must not require a specific editor or extension '+pattern);
   }
   if(/python\s+-m\s+http\.server/iu.test(html)){
     failures.push(rel+': Python local-server example must not appear in public docs');
@@ -164,4 +167,4 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true,trackingInformationArchitecture:true,visualStudioCodeLocalServer:true},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true,trackingInformationArchitecture:true,editorNeutralLocalServer:true},null,2));
