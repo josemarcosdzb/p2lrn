@@ -104,16 +104,25 @@ if(/EMPEZAR\s*\/\s*MÉTRICAS/iu.test(metricsDocs)){
   failures.push('deploy/netlify/site/docs/metricas/index.html: stale Empezar metrics label');
 }
 for(const token of [
-  'Host Adapter completo para estado, notas y eventos',
+  'Integración mediante Host Adapter',
   'p2lrn:xapi',
   'score.questions',
   'cmi.core.lesson_status',
   'cmi.completion_status',
   'p2lrn-progression-state/1',
-  '<code>p2lrn:progress</code> no es progreso global del curso',
+  'El progreso global del curso se obtiene',
   'authoritative:false',
 ]){
   if(!metricsDocs.includes(token)) failures.push('deploy/netlify/site/docs/metricas/index.html: missing detailed metrics contract '+token);
+}
+for(const pattern of [
+  /sacar las métricas/iu,
+  /<strong>Quiero\s/iu,
+  /No leas métricas/iu,
+  /Qué conviene persistir/iu,
+  /Recetas rápidas/iu,
+]){
+  if(pattern.test(metricsDocs)) failures.push('deploy/netlify/site/docs/metricas/index.html: informal or conversational metrics copy '+pattern);
 }
 const demoPage=await readFile(join(root,'deploy/netlify/site/demo/index.html'),'utf8');
 for(const pattern of [/REAL PLAYER/iu,/REAL PACKAGES/iu,/generado durante el deploy/iu,/\bfixtures?\b/iu,/\bcanónicos?\b/iu]){
