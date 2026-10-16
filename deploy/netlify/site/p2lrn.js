@@ -267,6 +267,31 @@
     ]],
   ];
 
+  const DOC_SECTION_LABELS = Object.freeze({
+    EMPEZAR:'Empezar',
+    INSTALAR:'Instalar',
+    CREAR:'Crear',
+    REPRODUCIR:'Reproducir',
+    INTEGRAR:'Integrar',
+    REFERENCIA:'Referencia',
+  });
+  const DOC_BREADCRUMB_PARENTS = new Map([
+    ['/docs/npm/studio/',['/docs/npm/','NPM']],
+    ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
+    ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
+  ]);
+  const sidebarLocation = (current) => {
+    for (const [section,items] of GLOBAL_SIDEBAR) {
+      for (const [href,label] of items) {
+        const normalized=normalizePath(href);
+        if (current===normalized || (href==='/docs/questionnaires/' && current.startsWith(normalized))) {
+          return {section,href,label};
+        }
+      }
+    }
+    return null;
+  };
+
   const sidebar = document.querySelector('.doc-sidebar');
   if (sidebar) {
     const current = normalizePath(window.location.pathname);
@@ -334,13 +359,29 @@
     toggle.innerHTML = '<span>Índice de documentación</span><strong></strong>';
     toggle.querySelector('strong').textContent = currentLink?.textContent || 'Abrir';
     main?.insertBefore(toggle, sidebar);
+    const media = window.matchMedia('(min-width: 901px)');
+    const revealCurrent = () => {
+      const target=sidebar.querySelector('a[aria-current="location"]') || sidebar.querySelector('a[aria-current="page"]');
+      if (!target) return;
+      const targetTop=target.offsetTop;
+      sidebar.scrollTop=Math.max(0,targetTop-Math.max(70,sidebar.clientHeight*.28));
+    };
     const setOpen = (open) => {
       sidebar.classList.toggle('is-open',open);
       toggle.setAttribute('aria-expanded',String(open));
       toggle.querySelector('span').textContent = open ? 'Cerrar índice' : 'Índice de documentación';
+      if (open && !media.matches) requestAnimationFrame(revealCurrent);
     };
     toggle.addEventListener('click',()=>setOpen(!sidebar.classList.contains('is-open')));
-    const media = window.matchMedia('(min-width: 901px)');
+    sidebar.addEventListener('click',(event)=>{
+      if (!media.matches && event.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown',(event)=>{
+      if (event.key==='Escape' && !media.matches && sidebar.classList.contains('is-open')) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
     const syncSidebar = () => {
       if (media.matches) {
         sidebar.classList.remove('is-open');
@@ -368,6 +409,34 @@
     });
 
     const pageTitle = docArticle.querySelector('.doc-hero h1')?.textContent?.trim() || document.title.split('—')[0].trim() || 'Esta página';
+    const currentPath=normalizePath(window.location.pathname);
+    if (currentPath!=='/docs/' && !docArticle.querySelector('.doc-breadcrumbs')) {
+      const location=sidebarLocation(currentPath);
+      const breadcrumb=document.createElement('nav');
+      breadcrumb.className='doc-breadcrumbs';
+      breadcrumb.setAttribute('aria-label','Migas de pan');
+      const list=document.createElement('ol');
+      const addLink=(href,label)=>{
+        const li=document.createElement('li');
+        const a=document.createElement('a');
+        a.href=href;a.textContent=label;li.append(a);list.append(li);
+      };
+      const addText=(label,current=false)=>{
+        const li=document.createElement('li');
+        const span=document.createElement('span');
+        span.textContent=label;
+        if (current) span.setAttribute('aria-current','page');
+        li.append(span);list.append(li);
+      };
+      addLink('/docs/','Documentación');
+      if (location?.section && DOC_SECTION_LABELS[location.section]) addText(DOC_SECTION_LABELS[location.section]);
+      const explicitParent=DOC_BREADCRUMB_PARENTS.get(currentPath);
+      if (explicitParent) addLink(explicitParent[0],explicitParent[1]);
+      else if (location?.href==='/docs/questionnaires/' && currentPath!==normalizePath(location.href)) addLink(location.href,location.label);
+      addText(pageTitle,true);
+      breadcrumb.append(list);
+      docArticle.querySelector('.doc-hero')?.before(breadcrumb);
+    }
     const sidebarPageLink = sidebar?.querySelector('a[aria-current="page"]');
     if (sidebar && sidebarPageLink && headings.length) {
       const pageNav = document.createElement('nav');
@@ -405,7 +474,13 @@
           else link.removeAttribute('aria-current');
         }
         const activeLink=sectionLinks.get(id);
-        if (window.matchMedia('(min-width: 901px)').matches && activeLink) {
+        const wide=window.matchMedia('(min-width: 901px)').matches;
+        if (toggleCurrent && activeLink) {
+          const compactLabel=pageTitle+' · '+activeLink.textContent;
+          toggleCurrent.textContent=wide ? pageTitle : compactLabel;
+          toggleCurrent.title=compactLabel;
+        }
+        if (wide && activeLink) {
           const linkTop=activeLink.offsetTop;
           const linkBottom=linkTop+activeLink.offsetHeight;
           const visibleTop=sidebar.scrollTop+20;
