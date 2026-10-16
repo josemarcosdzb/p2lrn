@@ -335,7 +335,7 @@
         else if (currentChild) a.setAttribute('aria-current','location');
         fragment.append(a);
 
-        if (currentChild) {
+        if (current===normalized || currentChild) {
           const childNav=document.createElement('nav');
           childNav.className='doc-child-subnav';
           childNav.setAttribute('aria-label',textValue);
