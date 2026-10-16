@@ -143,3 +143,14 @@ test('runtime host export starts and serves restrictive SCORM shell',async()=>{
 });
 
 test('all distributed JavaScript passes Node syntax check',()=>{const failures=[];for(const file of walk(DIST).filter((p)=>p.endsWith('.js'))){const r=run(process.execPath,['--check',file]);if(r.status)failures.push(relative(ROOT,file)+': '+r.stderr);}assert.deepEqual(failures,[]);});
+
+test('automatic runtime default is URL-resolved without a compile-time directory import', async()=>{
+  for(const name of ['h5p-auto-runtime.js','runtime-host-config.js']){
+    const content=readFileSync(join(DIST,name),'utf8');
+    assert.doesNotMatch(content,/new\\s+URL\\(\\s*['\"]\\.\\/runtime-host\\/['\"]\\s*,\\s*import\\.meta\\.url\\s*\\)/u);
+    assert.match(content,/new\\s+URL\\(\\s*['\"]\\.\\/runtime-host\\/['\"]\\s*,\\s*moduleHref\\s*\\)/u);
+  }
+  const base=pathToFileURL(join(DIST,'runtime-host-config.js')).href;
+  const config=await import(base+'?turbopack-path-contract=1');
+  assert.equal(config.getRuntimeHostConfig().baseUrl,new URL('./runtime-host/',base).href);
+});

@@ -1,4 +1,6 @@
-const DEFAULT_STATIC_BASE_URL = new URL('./runtime-host/', import.meta.url).href;
+// Do not let bundlers turn this runtime folder URL into a compile-time module import.
+const moduleHref = import.meta.url;
+const DEFAULT_STATIC_BASE_URL = new URL('./runtime-host/', moduleHref).href;
 
 const state = {
   baseUrl: DEFAULT_STATIC_BASE_URL,
