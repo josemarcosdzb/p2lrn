@@ -157,6 +157,22 @@ if (sidebarProblems.length) {
   throw new Error('Documentation sidebar normalization failed:\n' + sidebarProblems.join('\n'));
 }
 
+// Cache-bust the shared UI assets in generated HTML. The source pages keep
+// stable URLs, while every build publishes a content-derived revision so an
+// already-open browser cannot keep an older navigation model after an update.
+const sharedUiRevision = {};
+for (const asset of ['p2lrn.js','p2lrn.css']) {
+  const bytes = await readFile(join(outputRoot,asset));
+  sharedUiRevision[asset] = createHash('sha256').update(bytes).digest('hex').slice(0,12);
+}
+for (const htmlPath of htmlFiles) {
+  let html = await readFile(htmlPath,'utf8');
+  html = html
+    .replace(/src=["']\/p2lrn\.js(?:\?[^"']*)?["']/gi,'src="/p2lrn.js?v=' + sharedUiRevision['p2lrn.js'] + '"')
+    .replace(/href=["']\/p2lrn\.css(?:\?[^"']*)?["']/gi,'href="/p2lrn.css?v=' + sharedUiRevision['p2lrn.css'] + '"');
+  await writeFile(htmlPath,html);
+}
+
 // Central legal footer: injected into the built HTML so every public route has
 // the same compact legal navigation without duplicating it in every source page.
 const footerLinks = [

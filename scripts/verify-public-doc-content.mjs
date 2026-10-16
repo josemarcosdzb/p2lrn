@@ -89,7 +89,20 @@ for(const href of [
     failures.push('deploy/netlify/site/docs/ejemplos/index.html: executable examples missing downloadable package '+href);
   }
 }
+const progressionDocs=article(await readFile(join(root,'deploy/netlify/site/docs/progresion/index.html'),'utf8'));
+if(!progressionDocs.includes('<p class="eyebrow">SEGUIMIENTO / PROGRESIÓN</p>')){
+  failures.push('deploy/netlify/site/docs/progresion/index.html: progression must belong to Seguimiento, not Empezar');
+}
+if(/EMPEZAR\s*\/\s*PROGRESIÓN/iu.test(progressionDocs)){
+  failures.push('deploy/netlify/site/docs/progresion/index.html: stale Empezar progression label');
+}
 const metricsDocs=article(await readFile(join(root,'deploy/netlify/site/docs/metricas/index.html'),'utf8'));
+if(!metricsDocs.includes('<p class="eyebrow">SEGUIMIENTO / MÉTRICAS</p>')){
+  failures.push('deploy/netlify/site/docs/metricas/index.html: metrics must belong to Seguimiento, not Empezar');
+}
+if(/EMPEZAR\s*\/\s*MÉTRICAS/iu.test(metricsDocs)){
+  failures.push('deploy/netlify/site/docs/metricas/index.html: stale Empezar metrics label');
+}
 for(const token of [
   'Host Adapter completo para estado, notas y eventos',
   'p2lrn:xapi',
@@ -131,4 +144,4 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true,trackingInformationArchitecture:true},null,2));
