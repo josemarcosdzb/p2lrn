@@ -5,12 +5,15 @@
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
-      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/'],
+      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/'],
       items: [
         ['/docs/','Inicio'],
         ['/docs/empezar/','Antes de empezar'],
         ['/docs/que-usar/','Mapa de componentes'],
         ['/docs/conceptos/','Conceptos'],
+        ['/docs/formato/','Formato P2LRN'],
+        ['/docs/progresion/','Progresión'],
+        ['/docs/metricas/','Métricas y analítica'],
       ],
     },
     {
@@ -26,15 +29,13 @@
     },
     {
       label: 'Crear',
-      active: ['/studio/','/docs/studio/','/docs/formato/','/docs/paquetes/*','/docs/progresion/','/docs/toolkit/','/docs/cli/'],
+      active: ['/studio/','/docs/studio/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
       items: [
         ['/studio/','Abrir Studio'],
         ['/docs/studio/','Guía de Studio'],
-        ['/docs/toolkit/','Toolkit'],
         ['/docs/paquetes/','Crear paquetes'],
-        ['/docs/formato/','Formato P2LRN'],
-        ['/docs/progresion/','Progresión'],
         ['/docs/paquetes/multipart/','Multipart'],
+        ['/docs/toolkit/','Toolkit'],
         ['/docs/cli/','CLI'],
       ],
     },
@@ -62,11 +63,10 @@
     },
     {
       label: 'Integrar',
-      active: ['/docs/integracion/','/docs/eventos/','/docs/metricas/','/docs/compatibilidad/'],
+      active: ['/docs/integracion/','/docs/eventos/','/docs/compatibilidad/'],
       items: [
         ['/docs/integracion/','Integración'],
         ['/docs/eventos/','Eventos'],
-        ['/docs/metricas/','Métricas y analítica'],
         ['/docs/compatibilidad/','Compatibilidad'],
       ],
     },
@@ -221,6 +221,11 @@
     ['EMPEZAR', [
       ['/docs/','Documentación'],
       ['/docs/empezar/','Antes de empezar'],
+      ['/docs/que-usar/','Mapa de componentes'],
+      ['/docs/conceptos/','Conceptos'],
+      ['/docs/formato/','Formato P2LRN'],
+      ['/docs/progresion/','Progresión'],
+      ['/docs/metricas/','Métricas y analítica'],
     ]],
     ['INSTALAR', [
       ['/docs/instalar/','Elegir instalación'],
@@ -230,12 +235,8 @@
       ['/docs/cdn/studio/','Studio mediante CDN'],
     ]],
     ['CREAR', [
-      ['/docs/que-usar/','Mapa de componentes'],
-      ['/docs/conceptos/','Conceptos'],
       ['/docs/studio/','Studio visual'],
       ['/docs/paquetes/','Crear paquetes'],
-      ['/docs/formato/','Formato'],
-      ['/docs/progresion/','Progresión'],
       ['/docs/paquetes/multipart/','Multipart'],
       ['/docs/toolkit/','Toolkit'],
       ['/docs/cli/','CLI'],
@@ -249,7 +250,6 @@
     ['INTEGRAR', [
       ['/docs/integracion/','Integración'],
       ['/docs/eventos/','Eventos'],
-      ['/docs/metricas/','Métricas y analítica'],
       ['/docs/compatibilidad/','Compatibilidad'],
     ]],
     ['REFERENCIA', [
