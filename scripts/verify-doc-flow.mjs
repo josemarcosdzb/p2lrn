@@ -41,8 +41,8 @@ const css=await read('deploy/netlify/site/p2lrn.css');
 for(const token of ["['EMPEZAR'","['CREAR'","['INSTALAR'","['REPRODUCIR'","['INTEGRAR'","['REFERENCIA'"])if(!js.includes(token))failures.push('p2lrn.js missing sidebar group '+token);
 const order=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','REFERENCIA'].map(x=>js.indexOf("['"+x+"'"));
 for(let i=1;i<order.length;i++)if(order[i]<=order[i-1])failures.push('sidebar groups are not in product-flow order');
-for(const token of ['docs-sidebar-toggle','doc-toc','Índice de documentación'])if(!js.includes(token))failures.push('p2lrn.js missing documentation UX hook '+token);
-for(const token of ['.doc-sidebar.is-open','.docs-sidebar-toggle{display:flex','.doc-toc ol'])if(!css.includes(token))failures.push('p2lrn.css missing documentation UX rule '+token);
+for(const token of ['docs-sidebar-toggle','doc-toc','doc-page-subnav','aria-current\',\'location','Índice de documentación'])if(!js.includes(token))failures.push('p2lrn.js missing documentation UX hook '+token);
+for(const token of ['.doc-sidebar.is-open','.docs-sidebar-toggle{display:flex','.doc-toc ol','.doc-page-subnav{','.doc-page-subnav a[aria-current="location"]','max-height:calc(100vh - 124px)'])if(!css.includes(token))failures.push('p2lrn.css missing documentation UX rule '+token);
 
 const npm=article(await read('deploy/netlify/site/docs/npm/index.html'));
 const cdn=article(await read('deploy/netlify/site/docs/cdn/index.html'));

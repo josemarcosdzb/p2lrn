@@ -366,6 +366,90 @@
       let id=base,n=2; while(used.has(id))id=base+'-'+n++;
       used.add(id); heading.id=id;
     });
+
+    const pageTitle = docArticle.querySelector('.doc-hero h1')?.textContent?.trim() || document.title.split('—')[0].trim() || 'Esta página';
+    const sidebarPageLink = sidebar?.querySelector('a[aria-current="page"]');
+    if (sidebar && sidebarPageLink && headings.length) {
+      const pageNav = document.createElement('nav');
+      pageNav.className = 'doc-page-subnav';
+      pageNav.setAttribute('aria-label','Secciones de '+pageTitle);
+
+      const label = document.createElement('span');
+      label.className = 'doc-page-subnav-label';
+      label.textContent = 'EN ESTA PÁGINA';
+      const title = document.createElement('strong');
+      title.className = 'doc-page-subnav-title';
+      title.textContent = pageTitle;
+      pageNav.append(label,title);
+
+      const sectionLinks = new Map();
+      headings.forEach((heading) => {
+        const a=document.createElement('a');
+        a.href='#'+heading.id;
+        a.textContent=heading.textContent;
+        a.dataset.docSection=heading.id;
+        sectionLinks.set(heading.id,a);
+        pageNav.append(a);
+      });
+      sidebarPageLink.after(pageNav);
+
+      const toggleCurrent = document.querySelector('.docs-sidebar-toggle strong');
+      if (toggleCurrent) toggleCurrent.textContent = pageTitle;
+
+      let activeId = '';
+      const setActiveSection = (id) => {
+        if (!id || id===activeId || !sectionLinks.has(id)) return;
+        activeId=id;
+        for (const [sectionId,link] of sectionLinks) {
+          if (sectionId===id) link.setAttribute('aria-current','location');
+          else link.removeAttribute('aria-current');
+        }
+        const activeLink=sectionLinks.get(id);
+        if (window.matchMedia('(min-width: 901px)').matches && activeLink) {
+          const linkTop=activeLink.offsetTop;
+          const linkBottom=linkTop+activeLink.offsetHeight;
+          const visibleTop=sidebar.scrollTop+20;
+          const visibleBottom=sidebar.scrollTop+sidebar.clientHeight-20;
+          if (linkTop<visibleTop) sidebar.scrollTop=Math.max(0,linkTop-70);
+          else if (linkBottom>visibleBottom) sidebar.scrollTop=Math.max(0,linkBottom-sidebar.clientHeight+70);
+        }
+      };
+
+      const sectionAtViewport = () => {
+        const anchor = 116;
+        let currentHeading=headings[0];
+        for (const heading of headings) {
+          if (heading.getBoundingClientRect().top<=anchor) currentHeading=heading;
+          else break;
+        }
+        if (window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4) currentHeading=headings.at(-1);
+        setActiveSection(currentHeading.id);
+      };
+      let sectionFrame=0;
+      const scheduleSectionSync = () => {
+        if (sectionFrame) return;
+        sectionFrame=requestAnimationFrame(()=>{
+          sectionFrame=0;
+          sectionAtViewport();
+        });
+      };
+      window.addEventListener('scroll',scheduleSectionSync,{passive:true});
+      window.addEventListener('resize',scheduleSectionSync,{passive:true});
+      window.addEventListener('hashchange',()=>{
+        const hash=decodeURIComponent(window.location.hash.slice(1));
+        if (sectionLinks.has(hash)) setActiveSection(hash);
+        else scheduleSectionSync();
+      });
+      pageNav.addEventListener('click',(event)=>{
+        const link=event.target.closest('a[data-doc-section]');
+        if (link) setActiveSection(link.dataset.docSection);
+      });
+
+      const initialHash=decodeURIComponent(window.location.hash.slice(1));
+      if (sectionLinks.has(initialHash)) setActiveSection(initialHash);
+      else sectionAtViewport();
+    }
+
     if (headings.length >= 5 && !docArticle.querySelector('.doc-toc')) {
       const toc=document.createElement('nav');
       toc.className='doc-toc';

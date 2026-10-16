@@ -41,6 +41,9 @@ for(const marker of [
   "['REFERENCIA', [",
   "['RECURSOS', [",
   'sidebar.replaceChildren(fragment)',
+  "pageNav.className = 'doc-page-subnav'",
+  "link.setAttribute('aria-current','location')",
+  "const pageTitle = docArticle.querySelector('.doc-hero h1')",
 ]){
   if(!js.includes(marker)) failures.push('p2lrn.js: missing '+marker);
 }
@@ -77,4 +80,4 @@ for(const route of docRoutes){
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true},null,2));
+console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,pageSectionSubmenu:true,scrollSectionTracking:true},null,2));
