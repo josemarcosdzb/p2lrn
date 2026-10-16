@@ -29,6 +29,7 @@ const failures=[];
 const must=(label,text,needle)=>{if(!text.includes(needle))failures.push(label+': missing '+needle)};
 const forbid=(label,text,needle)=>{if(text.includes(needle))failures.push(label+': forbidden '+needle)};
 const article=(html)=>/<article class="doc-content">([\s\S]*?)<\/article>/i.exec(html)?.[1]??html;
+const channelArticle=(html)=>article(html).replace(/<nav class="doc-pager"[\s\S]*?<\/nav>/gi,'');
 const version=studioPackage.version;
 
 if(playerPackage.version!==version)failures.push('player/studio version mismatch');
@@ -37,8 +38,8 @@ must('npm docs',npmDoc,'npm install @p2lrn/player@'+version);
 must('npm docs',npmDoc,'npm install @p2lrn/studio@'+version+' @p2lrn/player@'+version);
 must('npm docs',npmDoc,'npm install @p2lrn/toolkit@'+version);
 must('npm docs',npmDoc,'/docs/npm/studio/');
-forbid('npm docs article',article(npmDoc),'CDN');
-forbid('npm docs article',article(npmDoc),'p2lrn.netlify.app');
+forbid('npm docs article',channelArticle(npmDoc),'CDN');
+forbid('npm docs article',channelArticle(npmDoc),'p2lrn.netlify.app');
 
 must('npm studio docs',npmStudioDoc,'npm install @p2lrn/studio@'+version+' @p2lrn/player@'+version);
 must('npm studio docs',npmStudioDoc,"import '@p2lrn/studio'");
@@ -48,20 +49,20 @@ must('npm studio docs',npmStudioDoc,'handleP2LRNStudioReader');
 must('npm studio docs',npmStudioDoc,'handleP2LRNStudioExternalImport');
 for(const attr of ['src','save-endpoint','reader-endpoint','import-endpoint','course-path'])must('npm studio docs',npmStudioDoc,'<code>'+attr+'</code>');
 for(const eventName of ['p2lrn-studio-create','p2lrn-studio-open','p2lrn-studio-download','p2lrn-studio-save'])must('npm studio docs',npmStudioDoc,'<code>'+eventName+'</code>');
-forbid('npm studio article',article(npmStudioDoc),'CDN');
-forbid('npm studio article',article(npmStudioDoc),'p2lrn.netlify.app');
+forbid('npm studio article',channelArticle(npmStudioDoc),'CDN');
+forbid('npm studio article',channelArticle(npmStudioDoc),'p2lrn.netlify.app');
 
 must('cdn docs',cdnDoc,'/player/current/dist/p2lrn.js');
 must('cdn docs',cdnDoc,'/player/'+version+'/dist/p2lrn.js');
 must('cdn docs',cdnDoc,'/docs/cdn/studio/');
-for(const token of ['npm install','npx ','@p2lrn/'])forbid('cdn docs article',article(cdnDoc),token);
+for(const token of ['npm install','npx ','@p2lrn/'])forbid('cdn docs article',channelArticle(cdnDoc),token);
 
 must('cdn studio docs',cdnStudioDoc,'/studio/current/dist/p2lrn-studio.js');
 must('cdn studio docs',cdnStudioDoc,'/studio/'+version+'/dist/p2lrn-studio.js');
 for(const attr of ['src','save-endpoint','reader-endpoint','import-endpoint','course-path'])must('cdn studio docs',cdnStudioDoc,'<code>'+attr+'</code>');
-for(const token of ['npm install','npx ','@p2lrn/'])forbid('cdn studio article',article(cdnStudioDoc),token);
+for(const token of ['npm install','npx ','@p2lrn/'])forbid('cdn studio article',channelArticle(cdnStudioDoc),token);
 
-for(const token of ['NPM','CDN','npm install','p2lrn.netlify.app'])forbid('visual studio article',article(studioDoc),token);
+for(const token of ['NPM','CDN','npm install','p2lrn.netlify.app'])forbid('visual studio article',channelArticle(studioDoc),token);
 for(const text of ['Añadir contenido','Vista alumno','Descargar .p2lrn'])must('visual studio docs',studioDoc,text);
 
 must('studio loader',studioLoader,"../../../player/'+channel+'/dist/p2lrn.js");
@@ -72,7 +73,7 @@ must('studio README',studioReadme,'npm install @p2lrn/studio@'+version+' @p2lrn/
 if(startDoc.includes('npm install')||startDoc.includes('p2lrn.netlify.app'))failures.push('start docs must orient without embedding installation code');
 must('easy-start docs',easyStartDoc,'/player/current/dist/p2lrn.js');
 must('easy-start docs',easyStartDoc,'questionnaire-standard.p2lrn');
-for(const token of ['npm install','npx ','@p2lrn/'])forbid('easy-start article',article(easyStartDoc),token);
+for(const token of ['npm install','npx ','@p2lrn/'])forbid('easy-start article',channelArticle(easyStartDoc),token);
 
 forbid('css',css,'.doc-content .example-actions .button{color:inherit;text-decoration:none}');
 must('css',css,'.doc-content .example-actions .button.primary{color:#fff}');

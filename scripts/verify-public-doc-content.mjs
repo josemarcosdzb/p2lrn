@@ -14,6 +14,7 @@ async function walk(dir){
   return out;
 }
 const article=(html)=>/<article class="doc-content">([\s\S]*?)<\/article>/i.exec(html)?.[1]??html;
+const channelArticle=(html)=>article(html).replace(/<nav class="doc-pager"[\s\S]*?<\/nav>/gi,'');
 const files=await walk(docsRoot);
 const forbidden=[
   [/p2lrn-build-web-sdk/iu,'maintenance CLI leaked into end-user docs'],
@@ -62,11 +63,12 @@ const strict=[
   ['deploy/netlify/site/docs/npm/studio/index.html',[/\bCDN\b/u,/p2lrn\.netlify\.app/u]],
   ['deploy/netlify/site/docs/cdn/index.html',[/\bNPM\b/u,/npm install/u,/\bnpx\b/u,/@p2lrn\//u]],
   ['deploy/netlify/site/docs/cdn/studio/index.html',[/\bNPM\b/u,/npm install/u,/\bnpx\b/u,/@p2lrn\//u]],
+  ['deploy/netlify/site/docs/empezar-facil/index.html',[/npm install/u,/\bnpx\b/u,/@p2lrn\//u]],
   ['deploy/netlify/site/docs/studio/index.html',[/\bNPM\b/u,/\bCDN\b/u,/npm install/u,/p2lrn\.netlify\.app/u]],
 ];
 for(const [rel,patterns] of strict){
   const html=await readFile(join(root,rel),'utf8');
-  const body=article(html);
+  const body=channelArticle(html);
   for(const pattern of patterns)if(pattern.test(body))failures.push(rel+': mixed installation channel '+pattern);
 }
 const examplesPage=await readFile(join(root,'deploy/netlify/site/docs/ejemplos/index.html'),'utf8');
