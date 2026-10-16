@@ -93,6 +93,10 @@ if(questionnaireChildren.length!==10) failures.push('p2lrn.js: expected 10 quest
 for(const required of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/','/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/3d/']){
   if(!childLinks.some((item)=>item.href===required)) failures.push('p2lrn.js: missing child submenu route '+required);
 }
+for(const required of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/']){
+  const breadcrumbNeedle="['"+required+"',['/docs/empezar/','Antes de empezar']]";
+  if(!js.includes(breadcrumbNeedle)) failures.push('p2lrn.js: foundational breadcrumb must pass through Antes de empezar: '+required);
+}
 
 const docRoutes=pages.map((path)=>{
   const rel=relative(docsRoot,path).replaceAll('\\','/');
