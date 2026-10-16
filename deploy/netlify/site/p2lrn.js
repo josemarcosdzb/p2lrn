@@ -395,6 +395,9 @@
     toggle.querySelector('strong').textContent = currentLink?.textContent || 'Abrir';
     main?.insertBefore(toggle, sidebar);
     const media = window.matchMedia('(min-width: 901px)');
+    const syncToggleHeight = () => {
+      main?.style.setProperty('--docs-index-toggle-height',toggle.offsetHeight+'px');
+    };
     const revealCurrent = () => {
       const target=sidebar.querySelector('a[aria-current="page"]') || sidebar.querySelector('a[aria-current="location"]');
       if (!target) return;
@@ -402,6 +405,7 @@
       sidebar.scrollTop=Math.max(0,targetTop-Math.max(70,sidebar.clientHeight*.28));
     };
     const setOpen = (open) => {
+      syncToggleHeight();
       sidebar.classList.toggle('is-open',open);
       toggle.setAttribute('aria-expanded',String(open));
       toggle.querySelector('span').textContent = open ? 'Cerrar índice' : 'Índice de documentación';
@@ -426,6 +430,9 @@
       }
     };
     media.addEventListener?.('change',syncSidebar);
+    window.addEventListener('resize',()=>{
+      if (!media.matches && sidebar.classList.contains('is-open')) syncToggleHeight();
+    },{passive:true});
     syncSidebar();
   }
 
@@ -444,6 +451,11 @@
     });
 
     const pageTitle = docArticle.querySelector('.doc-hero h1')?.textContent?.trim() || document.title.split('—')[0].trim() || 'Esta página';
+    const mobileIndexCurrent=document.querySelector('.docs-sidebar-toggle strong');
+    if (mobileIndexCurrent) {
+      mobileIndexCurrent.textContent=pageTitle;
+      mobileIndexCurrent.title=pageTitle;
+    }
     const currentPath=normalizePath(window.location.pathname);
     if (currentPath!=='/docs/' && !docArticle.querySelector('.doc-breadcrumbs')) {
       const location=sidebarLocation(currentPath);
