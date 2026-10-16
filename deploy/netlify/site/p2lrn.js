@@ -221,11 +221,6 @@
     ['EMPEZAR', [
       ['/docs/','Documentación'],
       ['/docs/empezar/','Antes de empezar'],
-      ['/docs/que-usar/','Mapa de componentes'],
-      ['/docs/conceptos/','Conceptos'],
-      ['/docs/formato/','Formato P2LRN'],
-      ['/docs/progresion/','Progresión'],
-      ['/docs/metricas/','Métricas y analítica'],
     ]],
     ['INSTALAR', [
       ['/docs/instalar/','Elegir instalación'],
@@ -268,6 +263,13 @@
   ];
 
   const DOC_SIDEBAR_CHILDREN = new Map([
+    ['/docs/empezar/',[
+      ['/docs/que-usar/','Mapa de componentes'],
+      ['/docs/conceptos/','Conceptos fundamentales'],
+      ['/docs/formato/','Formato P2LRN'],
+      ['/docs/progresion/','Progresión'],
+      ['/docs/metricas/','Métricas y analítica'],
+    ]],
     ['/docs/questionnaires/',[
       ['/docs/questionnaires/standard/','Cuestionario estándar'],
       ['/docs/questionnaires/memory/','Memoria'],
@@ -291,6 +293,11 @@
     REFERENCIA:'Referencia',
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
+    ['/docs/que-usar/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/conceptos/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/formato/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/progresion/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/metricas/',['/docs/empezar/','Antes de empezar']],
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],

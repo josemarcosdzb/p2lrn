@@ -41,11 +41,13 @@ const css=await read('deploy/netlify/site/p2lrn.css');
 for(const token of ["['EMPEZAR'","['CREAR'","['INSTALAR'","['REPRODUCIR'","['INTEGRAR'","['REFERENCIA'"])if(!js.includes(token))failures.push('p2lrn.js missing sidebar group '+token);
 const order=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','REFERENCIA'].map(x=>js.indexOf("['"+x+"'"));
 for(let i=1;i<order.length;i++)if(order[i]<=order[i-1])failures.push('sidebar groups are not in product-flow order');
-const foundationalOrder=['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/'].map(route=>js.indexOf("['"+route+"'"));
-for(let i=0;i<foundationalOrder.length;i++)if(foundationalOrder[i]<0)failures.push('missing foundational route before installation');
-for(let i=1;i<foundationalOrder.length;i++)if(foundationalOrder[i]<=foundationalOrder[i-1])failures.push('foundational docs are not in mental-model order');
-const installIndex=js.indexOf("['/docs/instalar/'");
-if(foundationalOrder.some(index=>index>installIndex))failures.push('foundational documentation must appear before installation');
+const childBlock=/const DOC_SIDEBAR_CHILDREN = new Map\(\[([\s\S]*?)\n  \]\);/.exec(js)?.[1] ?? '';
+const foundationalRoutes=['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/'];
+const foundationalOrder=foundationalRoutes.map(route=>childBlock.indexOf("['"+route+"'"));
+for(let i=0;i<foundationalOrder.length;i++)if(foundationalOrder[i]<0)failures.push('missing foundational route under Antes de empezar');
+for(let i=1;i<foundationalOrder.length;i++)if(foundationalOrder[i]<=foundationalOrder[i-1])failures.push('Antes de empezar children are not in mental-model order');
+const flatSidebar=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1] ?? '';
+for(const route of foundationalRoutes)if(flatSidebar.includes("['"+route+"'"))failures.push('foundational route is flat instead of nested under Antes de empezar: '+route);
 for(const token of ['docs-sidebar-toggle','doc-toc','doc-child-subnav','DOC_SIDEBAR_CHILDREN','doc-breadcrumbs','Migas de pan','requestAnimationFrame(revealCurrent)','syncToggleHeight','mobileIndexCurrent.textContent=pageTitle','aria-current\',\'location','Índice de documentación'])if(!js.includes(token))failures.push('p2lrn.js missing documentation UX hook '+token);
 for(const token of ['.doc-sidebar.is-open','.docs-sidebar-toggle{display:flex','.docs-sidebar-toggle{position:sticky;top:64px','.doc-sidebar.is-open{position:sticky!important;top:calc(64px + var(--docs-index-toggle-height,52px))!important','.doc-breadcrumbs{','.doc-toc ol','.doc-child-subnav{','.doc-child-subnav a[aria-current="page"]','max-height:calc(100vh - 124px)'])if(!css.includes(token))failures.push('p2lrn.css missing documentation UX rule '+token);
 
@@ -69,4 +71,4 @@ for(const route of primary.filter(x=>x.startsWith('/docs/questionnaires/')&&x!==
 
 for(const route of primary){const body=article(await readFile(routeFile(route),'utf8'));if(body.includes('Modelo mínimo'))failures.push(route+': vague Modelo mínimo section remains');if(body.includes('p2lrn.org/renderizador/'))failures.push(route+': translated renderer identifier remains');if(body.includes('--renderizador'))failures.push(route+': translated CLI flag remains');}
 if(failures.length)throw new Error('Documentation flow audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,childPageSubmenu:true,samePageSectionsInSidebar:false,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,longPageToc:true,questionnaireExperienceGuides:10,noVagueMinimumExamples:true},null,2));
+console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,childPageSubmenu:true,samePageSectionsInSidebar:false,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,beforeStartOwnsFoundationalDocs:true,longPageToc:true,questionnaireExperienceGuides:10,noVagueMinimumExamples:true},null,2));

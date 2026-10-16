@@ -73,22 +73,25 @@ for(let i=0;i<sectionNames.length;i++){
   sectionChunks.set(sectionNames[i],sidebarBlock.slice(start,end));
 }
 for(const href of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/']){
-  if(!sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: foundational route must live under EMPEZAR: '+href);
+  if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: foundational child must not remain flat under EMPEZAR: '+href);
   if(sectionChunks.get('CREAR')?.includes("['"+href+"'")||sectionChunks.get('INTEGRAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: foundational route duplicated in later workflow section: '+href);
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==33) failures.push('p2lrn.js: expected 33 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==28) failures.push('p2lrn.js: expected 28 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
-for(const required of ['/docs/instalar/','/docs/npm/studio/','/docs/cdn/studio/','/docs/metricas/']){
-  if(!hrefs.includes(required)) failures.push('p2lrn.js: missing split Studio route '+required);
+for(const required of ['/docs/instalar/','/docs/npm/studio/','/docs/cdn/studio/']){
+  if(!hrefs.includes(required)) failures.push('p2lrn.js: missing global sidebar route '+required);
 }
 const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
 if(duplicates.length) failures.push('p2lrn.js: duplicate sidebar hrefs: '+[...new Set(duplicates)].join(', '));
 const childBlock=/const DOC_SIDEBAR_CHILDREN = new Map\(\[([\s\S]*?)\n  \]\);/.exec(js)?.[1] ?? '';
-const childLinks=[...childBlock.matchAll(/\['(\/docs\/questionnaires\/[^']+\/)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(childLinks.length!==10) failures.push('p2lrn.js: expected 10 questionnaire child links, found '+childLinks.length);
-for(const required of ['/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/3d/']){
-  if(!childLinks.some((item)=>item.href===required)) failures.push('p2lrn.js: missing questionnaire child submenu route '+required);
+const childLinks=[...childBlock.matchAll(/\['(\/docs\/[^']+\/)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
+const foundationChildren=childLinks.filter((item)=>['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/'].includes(item.href));
+if(foundationChildren.length!==5) failures.push('p2lrn.js: expected 5 Antes de empezar child links, found '+foundationChildren.length);
+const questionnaireChildren=childLinks.filter((item)=>item.href.startsWith('/docs/questionnaires/')&&item.href!=='/docs/questionnaires/');
+if(questionnaireChildren.length!==10) failures.push('p2lrn.js: expected 10 questionnaire child links, found '+questionnaireChildren.length);
+for(const required of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/','/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/3d/']){
+  if(!childLinks.some((item)=>item.href===required)) failures.push('p2lrn.js: missing child submenu route '+required);
 }
 
 const docRoutes=pages.map((path)=>{
@@ -102,4 +105,4 @@ for(const route of docRoutes){
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,childPageSubmenu:true,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true},null,2));
+console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,beforeStartChildrenUseParent:true,childPageSubmenu:true,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true},null,2));
