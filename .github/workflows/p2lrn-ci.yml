@@ -165,6 +165,9 @@ jobs:
       - name: Verify runtime host security
         run: node --test packages/player/test/runtime-security.test.mjs
 
+      - name: Verify bundled runtime URL contract
+        run: node --test --test-name-pattern="automatic runtime default is URL-resolved" packages/player/test/distribution.test.mjs
+
       - name: Check browser module syntax
         shell: powershell
         run: |
