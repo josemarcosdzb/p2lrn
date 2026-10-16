@@ -5,15 +5,13 @@
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
-      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/'],
+      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/'],
       items: [
         ['/docs/','Inicio'],
         ['/docs/empezar/','Antes de empezar'],
         ['/docs/que-usar/','Mapa de componentes'],
         ['/docs/conceptos/','Conceptos'],
         ['/docs/formato/','Formato P2LRN'],
-        ['/docs/progresion/','Progresión'],
-        ['/docs/metricas/','Métricas y analítica'],
       ],
     },
     {
@@ -63,17 +61,25 @@
     },
     {
       label: 'Integrar',
-      active: ['/docs/integracion/','/docs/eventos/','/docs/compatibilidad/'],
+      active: ['/docs/integracion/','/docs/eventos/'],
       items: [
         ['/docs/integracion/','Integración'],
         ['/docs/eventos/','Eventos'],
-        ['/docs/compatibilidad/','Compatibilidad'],
+      ],
+    },
+    {
+      label: 'Seguimiento',
+      active: ['/docs/progresion/','/docs/metricas/'],
+      items: [
+        ['/docs/progresion/','Progresión'],
+        ['/docs/metricas/','Métricas y analítica'],
       ],
     },
     {
       label: 'Referencia',
-      active: ['/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
+      active: ['/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
       items: [
+        ['/docs/compatibilidad/','Compatibilidad'],
         ['/docs/recetas/','Recetas'],
         ['/docs/glosario/','Glosario'],
         ['/docs/referencia/','Referencia técnica'],
@@ -245,9 +251,13 @@
     ['INTEGRAR', [
       ['/docs/integracion/','Integración'],
       ['/docs/eventos/','Eventos'],
-      ['/docs/compatibilidad/','Compatibilidad'],
+    ]],
+    ['SEGUIMIENTO', [
+      ['/docs/progresion/','Progresión'],
+      ['/docs/metricas/','Métricas y analítica'],
     ]],
     ['REFERENCIA', [
+      ['/docs/compatibilidad/','Compatibilidad'],
       ['/docs/recetas/','Recetas'],
       ['/docs/glosario/','Glosario'],
       ['/docs/referencia/','Referencia técnica'],
@@ -267,8 +277,6 @@
       ['/docs/que-usar/','Mapa de componentes'],
       ['/docs/conceptos/','Conceptos fundamentales'],
       ['/docs/formato/','Formato P2LRN'],
-      ['/docs/progresion/','Progresión'],
-      ['/docs/metricas/','Métricas y analítica'],
     ]],
     ['/docs/questionnaires/',[
       ['/docs/questionnaires/standard/','Cuestionario estándar'],
@@ -290,14 +298,13 @@
     CREAR:'Crear',
     REPRODUCIR:'Reproducir',
     INTEGRAR:'Integrar',
+    SEGUIMIENTO:'Seguimiento',
     REFERENCIA:'Referencia',
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
     ['/docs/que-usar/',['/docs/empezar/','Antes de empezar']],
     ['/docs/conceptos/',['/docs/empezar/','Antes de empezar']],
     ['/docs/formato/',['/docs/empezar/','Antes de empezar']],
-    ['/docs/progresion/',['/docs/empezar/','Antes de empezar']],
-    ['/docs/metricas/',['/docs/empezar/','Antes de empezar']],
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],

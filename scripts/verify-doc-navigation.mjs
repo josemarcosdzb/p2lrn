@@ -38,6 +38,7 @@ for(const marker of [
   "['CREAR', [",
   "['REPRODUCIR', [",
   "['INTEGRAR', [",
+  "['SEGUIMIENTO', [",
   "['REFERENCIA', [",
   "['RECURSOS', [",
   'sidebar.replaceChildren(fragment)',
@@ -60,7 +61,7 @@ for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(','doc-page-subn
   if(js.includes(forbidden)) failures.push('p2lrn.js: legacy logic remains: '+forbidden);
 }
 
-const expectedSections=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','REFERENCIA','RECURSOS'];
+const expectedSections=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','SEGUIMIENTO','REFERENCIA','RECURSOS'];
 const sidebarBlock=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1] ?? '';
 const sectionNames=[...sidebarBlock.matchAll(/\['([^']+)', \[/g)].map((match)=>match[1]);
 if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections)){
@@ -72,30 +73,37 @@ for(let i=0;i<sectionNames.length;i++){
   const end=i+1<sectionNames.length ? sidebarBlock.indexOf("['"+sectionNames[i+1]+"', [",start+1) : sidebarBlock.length;
   sectionChunks.set(sectionNames[i],sidebarBlock.slice(start,end));
 }
-for(const href of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/']){
-  if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: foundational child must not remain flat under EMPEZAR: '+href);
-  if(sectionChunks.get('CREAR')?.includes("['"+href+"'")||sectionChunks.get('INTEGRAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: foundational route duplicated in later workflow section: '+href);
+for(const href of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/']){
+  if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: before-start child must not remain flat under EMPEZAR: '+href);
+}
+for(const href of ['/docs/progresion/','/docs/metricas/']){
+  if(!sectionChunks.get('SEGUIMIENTO')?.includes("['"+href+"'")) failures.push('p2lrn.js: tracking route must be grouped under SEGUIMIENTO: '+href);
+  if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: advanced tracking route must not be under EMPEZAR: '+href);
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==28) failures.push('p2lrn.js: expected 28 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==30) failures.push('p2lrn.js: expected 30 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
-for(const required of ['/docs/instalar/','/docs/npm/studio/','/docs/cdn/studio/']){
+for(const required of ['/docs/instalar/','/docs/npm/studio/','/docs/cdn/studio/','/docs/progresion/','/docs/metricas/','/docs/compatibilidad/']){
   if(!hrefs.includes(required)) failures.push('p2lrn.js: missing global sidebar route '+required);
 }
 const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
 if(duplicates.length) failures.push('p2lrn.js: duplicate sidebar hrefs: '+[...new Set(duplicates)].join(', '));
 const childBlock=/const DOC_SIDEBAR_CHILDREN = new Map\(\[([\s\S]*?)\n  \]\);/.exec(js)?.[1] ?? '';
 const childLinks=[...childBlock.matchAll(/\['(\/docs\/[^']+\/)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-const foundationChildren=childLinks.filter((item)=>['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/'].includes(item.href));
-if(foundationChildren.length!==5) failures.push('p2lrn.js: expected 5 Antes de empezar child links, found '+foundationChildren.length);
+const foundationChildren=childLinks.filter((item)=>['/docs/que-usar/','/docs/conceptos/','/docs/formato/'].includes(item.href));
+if(foundationChildren.length!==3) failures.push('p2lrn.js: expected 3 Antes de empezar child links, found '+foundationChildren.length);
+for(const advanced of ['/docs/progresion/','/docs/metricas/'])if(childLinks.some((item)=>item.href===advanced)) failures.push('p2lrn.js: advanced tracking route must not be nested under Antes de empezar: '+advanced);
 const questionnaireChildren=childLinks.filter((item)=>item.href.startsWith('/docs/questionnaires/')&&item.href!=='/docs/questionnaires/');
 if(questionnaireChildren.length!==10) failures.push('p2lrn.js: expected 10 questionnaire child links, found '+questionnaireChildren.length);
-for(const required of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/','/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/3d/']){
+for(const required of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/3d/']){
   if(!childLinks.some((item)=>item.href===required)) failures.push('p2lrn.js: missing child submenu route '+required);
 }
-for(const required of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/']){
+for(const required of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/']){
   const breadcrumbNeedle="['"+required+"',['/docs/empezar/','Antes de empezar']]";
-  if(!js.includes(breadcrumbNeedle)) failures.push('p2lrn.js: foundational breadcrumb must pass through Antes de empezar: '+required);
+  if(!js.includes(breadcrumbNeedle)) failures.push('p2lrn.js: before-start breadcrumb must pass through Antes de empezar: '+required);
+}
+for(const advanced of ['/docs/progresion/','/docs/metricas/']){
+  if(js.includes("['"+advanced+"',['/docs/empezar/','Antes de empezar']]")) failures.push('p2lrn.js: tracking breadcrumb must not pass through Antes de empezar: '+advanced);
 }
 
 const docRoutes=pages.map((path)=>{
@@ -109,4 +117,4 @@ for(const route of docRoutes){
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,beforeStartChildrenUseParent:true,childPageSubmenu:true,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true},null,2));
+console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,beforeStartChildrenUseParent:true,trackingGroupedLater:true,childPageSubmenu:true,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true,advancedTrackingAfterIntegration:true},null,2));
