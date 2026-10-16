@@ -33,9 +33,9 @@
       items: [
         ['/studio/','Abrir Studio'],
         ['/docs/studio/','Guía de Studio'],
-        ['/docs/toolkit/','Toolkit'],
         ['/docs/paquetes/','Crear paquetes'],
         ['/docs/paquetes/multipart/','Multipart'],
+        ['/docs/toolkit/','Toolkit'],
         ['/docs/cli/','CLI'],
       ],
     },
