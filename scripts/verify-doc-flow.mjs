@@ -41,8 +41,8 @@ const css=await read('deploy/netlify/site/p2lrn.css');
 for(const token of ["['EMPEZAR'","['CREAR'","['INSTALAR'","['REPRODUCIR'","['INTEGRAR'","['REFERENCIA'"])if(!js.includes(token))failures.push('p2lrn.js missing sidebar group '+token);
 const order=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','REFERENCIA'].map(x=>js.indexOf("['"+x+"'"));
 for(let i=1;i<order.length;i++)if(order[i]<=order[i-1])failures.push('sidebar groups are not in product-flow order');
-for(const token of ['docs-sidebar-toggle','doc-toc','doc-page-subnav','doc-breadcrumbs','Migas de pan','requestAnimationFrame(revealCurrent)','aria-current\',\'location','Índice de documentación'])if(!js.includes(token))failures.push('p2lrn.js missing documentation UX hook '+token);
-for(const token of ['.doc-sidebar.is-open','.docs-sidebar-toggle{display:flex','.docs-sidebar-toggle{position:sticky;top:64px','.doc-sidebar.is-open{position:sticky!important;top:116px!important','.doc-breadcrumbs{','.doc-toc ol','.doc-page-subnav{','.doc-page-subnav a[aria-current="location"]','max-height:calc(100vh - 124px)'])if(!css.includes(token))failures.push('p2lrn.css missing documentation UX rule '+token);
+for(const token of ['docs-sidebar-toggle','doc-toc','doc-child-subnav','DOC_SIDEBAR_CHILDREN','doc-breadcrumbs','Migas de pan','requestAnimationFrame(revealCurrent)','aria-current\',\'location','Índice de documentación'])if(!js.includes(token))failures.push('p2lrn.js missing documentation UX hook '+token);
+for(const token of ['.doc-sidebar.is-open','.docs-sidebar-toggle{display:flex','.docs-sidebar-toggle{position:sticky;top:64px','.doc-sidebar.is-open{position:sticky!important;top:116px!important','.doc-breadcrumbs{','.doc-toc ol','.doc-child-subnav{','.doc-child-subnav a[aria-current="page"]','max-height:calc(100vh - 124px)'])if(!css.includes(token))failures.push('p2lrn.css missing documentation UX rule '+token);
 
 const npm=article(await read('deploy/netlify/site/docs/npm/index.html'));
 const cdn=article(await read('deploy/netlify/site/docs/cdn/index.html'));
@@ -64,4 +64,4 @@ for(const route of primary.filter(x=>x.startsWith('/docs/questionnaires/')&&x!==
 
 for(const route of primary){const body=article(await readFile(routeFile(route),'utf8'));if(body.includes('Modelo mínimo'))failures.push(route+': vague Modelo mínimo section remains');if(body.includes('p2lrn.org/renderizador/'))failures.push(route+': translated renderer identifier remains');if(body.includes('--renderizador'))failures.push(route+': translated CLI flag remains');}
 if(failures.length)throw new Error('Documentation flow audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,mobileIndexTracksSection:true,longPageToc:true,questionnaireExperienceGuides:10,noVagueMinimumExamples:true},null,2));
+console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,childPageSubmenu:true,samePageSectionsInSidebar:false,mobileIndexRevealsCurrentPage:true,longPageToc:true,questionnaireExperienceGuides:10,noVagueMinimumExamples:true},null,2));

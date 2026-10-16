@@ -41,8 +41,10 @@ for(const marker of [
   "['REFERENCIA', [",
   "['RECURSOS', [",
   'sidebar.replaceChildren(fragment)',
-  "pageNav.className = 'doc-page-subnav'",
-  "link.setAttribute('aria-current','location')",
+  "const DOC_SIDEBAR_CHILDREN = new Map([",
+  "childNav.className='doc-child-subnav'",
+  "currentChild) a.setAttribute('aria-current','location')",
+  "childLink.setAttribute('aria-current','page')",
   "const pageTitle = docArticle.querySelector('.doc-hero h1')",
   "breadcrumb.className='doc-breadcrumbs'",
   "breadcrumb.setAttribute('aria-label','Migas de pan')",
@@ -52,7 +54,7 @@ for(const marker of [
 ]){
   if(!js.includes(marker)) failures.push('p2lrn.js: missing '+marker);
 }
-for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(']){
+for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(','doc-page-subnav','data-doc-section']){
   if(js.includes(forbidden)) failures.push('p2lrn.js: legacy logic remains: '+forbidden);
 }
 
@@ -70,8 +72,11 @@ for(const required of ['/docs/instalar/','/docs/npm/studio/','/docs/cdn/studio/'
 }
 const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
 if(duplicates.length) failures.push('p2lrn.js: duplicate sidebar hrefs: '+[...new Set(duplicates)].join(', '));
-if(!js.includes("href==='/docs/questionnaires/' && current.startsWith(normalizePath(href))")){
-  failures.push('p2lrn.js: questionnaire child routes do not keep the parent section active');
+const childBlock=/const DOC_SIDEBAR_CHILDREN = new Map\(\[([\s\S]*?)\n  \]\);/.exec(js)?.[1] ?? '';
+const childLinks=[...childBlock.matchAll(/\['(\/docs\/questionnaires\/[^']+\/)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
+if(childLinks.length!==10) failures.push('p2lrn.js: expected 10 questionnaire child links, found '+childLinks.length);
+for(const required of ['/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/3d/']){
+  if(!childLinks.some((item)=>item.href===required)) failures.push('p2lrn.js: missing questionnaire child submenu route '+required);
 }
 
 const docRoutes=pages.map((path)=>{
@@ -80,9 +85,9 @@ const docRoutes=pages.map((path)=>{
 });
 for(const route of docRoutes){
   const exact=hrefs.includes(route);
-  const questionnaireChild=route.startsWith('/docs/questionnaires/') && route!=='/docs/questionnaires/';
-  if(!exact && !questionnaireChild) failures.push('sidebar does not cover documentation route: '+route);
+  const child=childLinks.some((item)=>item.href===route);
+  if(!exact && !child) failures.push('sidebar does not cover documentation route: '+route);
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,pageSectionSubmenu:true,scrollSectionTracking:true,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrent:true},null,2));
+console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,childPageSubmenu:true,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true},null,2));

@@ -267,6 +267,21 @@
     ]],
   ];
 
+  const DOC_SIDEBAR_CHILDREN = new Map([
+    ['/docs/questionnaires/',[
+      ['/docs/questionnaires/standard/','Cuestionario estándar'],
+      ['/docs/questionnaires/memory/','Memoria'],
+      ['/docs/questionnaires/matching/','Relacionar'],
+      ['/docs/questionnaires/ordering/','Ordenar'],
+      ['/docs/questionnaires/classification/','Clasificar'],
+      ['/docs/questionnaires/true-false/','Verdadero / Falso'],
+      ['/docs/questionnaires/word-search/','Sopa de letras'],
+      ['/docs/questionnaires/crossword/','Crucigrama'],
+      ['/docs/questionnaires/rosco/','Rosco'],
+      ['/docs/questionnaires/3d/','Juego 3D'],
+    ]],
+  ]);
+
   const DOC_SECTION_LABELS = Object.freeze({
     EMPEZAR:'Empezar',
     INSTALAR:'Instalar',
@@ -284,8 +299,10 @@
     for (const [section,items] of GLOBAL_SIDEBAR) {
       for (const [href,label] of items) {
         const normalized=normalizePath(href);
-        if (current===normalized || (href==='/docs/questionnaires/' && current.startsWith(normalized))) {
-          return {section,href,label};
+        if (current===normalized) return {section,href,label};
+        const children=DOC_SIDEBAR_CHILDREN.get(href) || [];
+        if (children.some(([childHref])=>current===normalizePath(childHref))) {
+          return {section,href,label,child:true};
         }
       }
     }
@@ -301,11 +318,29 @@
       label.textContent=section;
       fragment.append(label);
       for (const [href,textValue] of items) {
+        const normalized=normalizePath(href);
+        const children=DOC_SIDEBAR_CHILDREN.get(href) || [];
+        const currentChild=children.find(([childHref])=>current===normalizePath(childHref));
         const a=document.createElement('a');
         a.href=href;
         a.textContent=textValue;
-        if (current===normalizePath(href) || (href==='/docs/questionnaires/' && current.startsWith(normalizePath(href)))) a.setAttribute('aria-current','page');
+        if (current===normalized) a.setAttribute('aria-current','page');
+        else if (currentChild) a.setAttribute('aria-current','location');
         fragment.append(a);
+
+        if (currentChild) {
+          const childNav=document.createElement('nav');
+          childNav.className='doc-child-subnav';
+          childNav.setAttribute('aria-label',textValue);
+          for (const [childHref,childLabel] of children) {
+            const childLink=document.createElement('a');
+            childLink.href=childHref;
+            childLink.textContent=childLabel;
+            if (current===normalizePath(childHref)) childLink.setAttribute('aria-current','page');
+            childNav.append(childLink);
+          }
+          fragment.append(childNav);
+        }
       }
     }
     sidebar.replaceChildren(fragment);
@@ -361,7 +396,7 @@
     main?.insertBefore(toggle, sidebar);
     const media = window.matchMedia('(min-width: 901px)');
     const revealCurrent = () => {
-      const target=sidebar.querySelector('a[aria-current="location"]') || sidebar.querySelector('a[aria-current="page"]');
+      const target=sidebar.querySelector('a[aria-current="page"]') || sidebar.querySelector('a[aria-current="location"]');
       if (!target) return;
       const targetTop=target.offsetTop;
       sidebar.scrollTop=Math.max(0,targetTop-Math.max(70,sidebar.clientHeight*.28));
@@ -437,94 +472,6 @@
       breadcrumb.append(list);
       docArticle.querySelector('.doc-hero')?.before(breadcrumb);
     }
-    const sidebarPageLink = sidebar?.querySelector('a[aria-current="page"]');
-    if (sidebar && sidebarPageLink && headings.length) {
-      const pageNav = document.createElement('nav');
-      pageNav.className = 'doc-page-subnav';
-      pageNav.setAttribute('aria-label','Secciones de '+pageTitle);
-
-      const label = document.createElement('span');
-      label.className = 'doc-page-subnav-label';
-      label.textContent = 'EN ESTA PÁGINA';
-      const title = document.createElement('strong');
-      title.className = 'doc-page-subnav-title';
-      title.textContent = pageTitle;
-      pageNav.append(label,title);
-
-      const sectionLinks = new Map();
-      headings.forEach((heading) => {
-        const a=document.createElement('a');
-        a.href='#'+heading.id;
-        a.textContent=heading.textContent;
-        a.dataset.docSection=heading.id;
-        sectionLinks.set(heading.id,a);
-        pageNav.append(a);
-      });
-      sidebarPageLink.after(pageNav);
-
-      const toggleCurrent = document.querySelector('.docs-sidebar-toggle strong');
-      if (toggleCurrent) toggleCurrent.textContent = pageTitle;
-
-      let activeId = '';
-      const setActiveSection = (id) => {
-        if (!id || id===activeId || !sectionLinks.has(id)) return;
-        activeId=id;
-        for (const [sectionId,link] of sectionLinks) {
-          if (sectionId===id) link.setAttribute('aria-current','location');
-          else link.removeAttribute('aria-current');
-        }
-        const activeLink=sectionLinks.get(id);
-        const wide=window.matchMedia('(min-width: 901px)').matches;
-        if (toggleCurrent && activeLink) {
-          const compactLabel=pageTitle+' · '+activeLink.textContent;
-          toggleCurrent.textContent=wide ? pageTitle : compactLabel;
-          toggleCurrent.title=compactLabel;
-        }
-        if (wide && activeLink) {
-          const linkTop=activeLink.offsetTop;
-          const linkBottom=linkTop+activeLink.offsetHeight;
-          const visibleTop=sidebar.scrollTop+20;
-          const visibleBottom=sidebar.scrollTop+sidebar.clientHeight-20;
-          if (linkTop<visibleTop) sidebar.scrollTop=Math.max(0,linkTop-70);
-          else if (linkBottom>visibleBottom) sidebar.scrollTop=Math.max(0,linkBottom-sidebar.clientHeight+70);
-        }
-      };
-
-      const sectionAtViewport = () => {
-        const anchor = 116;
-        let currentHeading=headings[0];
-        for (const heading of headings) {
-          if (heading.getBoundingClientRect().top<=anchor) currentHeading=heading;
-          else break;
-        }
-        if (window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4) currentHeading=headings.at(-1);
-        setActiveSection(currentHeading.id);
-      };
-      let sectionFrame=0;
-      const scheduleSectionSync = () => {
-        if (sectionFrame) return;
-        sectionFrame=requestAnimationFrame(()=>{
-          sectionFrame=0;
-          sectionAtViewport();
-        });
-      };
-      window.addEventListener('scroll',scheduleSectionSync,{passive:true});
-      window.addEventListener('resize',scheduleSectionSync,{passive:true});
-      window.addEventListener('hashchange',()=>{
-        const hash=decodeURIComponent(window.location.hash.slice(1));
-        if (sectionLinks.has(hash)) setActiveSection(hash);
-        else scheduleSectionSync();
-      });
-      pageNav.addEventListener('click',(event)=>{
-        const link=event.target.closest('a[data-doc-section]');
-        if (link) setActiveSection(link.dataset.docSection);
-      });
-
-      const initialHash=decodeURIComponent(window.location.hash.slice(1));
-      if (sectionLinks.has(initialHash)) setActiveSection(initialHash);
-      else sectionAtViewport();
-    }
-
     if (headings.length >= 5 && !docArticle.querySelector('.doc-toc')) {
       const toc=document.createElement('nav');
       toc.className='doc-toc';
