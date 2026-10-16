@@ -66,6 +66,16 @@ const sectionNames=[...sidebarBlock.matchAll(/\['([^']+)', \[/g)].map((match)=>m
 if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections)){
   failures.push('p2lrn.js: sidebar sections/order mismatch: '+JSON.stringify(sectionNames));
 }
+const sectionChunks=new Map();
+for(let i=0;i<sectionNames.length;i++){
+  const start=sidebarBlock.indexOf("['"+sectionNames[i]+"', [");
+  const end=i+1<sectionNames.length ? sidebarBlock.indexOf("['"+sectionNames[i+1]+"', [",start+1) : sidebarBlock.length;
+  sectionChunks.set(sectionNames[i],sidebarBlock.slice(start,end));
+}
+for(const href of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/progresion/','/docs/metricas/']){
+  if(!sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: foundational route must live under EMPEZAR: '+href);
+  if(sectionChunks.get('CREAR')?.includes("['"+href+"'")||sectionChunks.get('INTEGRAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: foundational route duplicated in later workflow section: '+href);
+}
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
 if(sidebarLinks.length!==33) failures.push('p2lrn.js: expected 33 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
@@ -92,4 +102,4 @@ for(const route of docRoutes){
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,childPageSubmenu:true,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true},null,2));
+console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,questionnaireChildrenUseParent:true,childPageSubmenu:true,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true},null,2));
