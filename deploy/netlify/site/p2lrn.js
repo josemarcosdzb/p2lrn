@@ -152,10 +152,53 @@
     menuButton.setAttribute('aria-expanded','false');
 
     const hoverCapable = window.matchMedia?.('(hover:hover) and (pointer:fine)').matches;
+    const hoverOpenTimers = new WeakMap();
+    const hoverCloseTimers = new WeakMap();
+    const clearHoverOpen = (group) => {
+      const timer=hoverOpenTimers.get(group);
+      if (timer) window.clearTimeout(timer);
+      hoverOpenTimers.delete(group);
+    };
+    const clearHoverClose = (group) => {
+      const timer=hoverCloseTimers.get(group);
+      if (timer) window.clearTimeout(timer);
+      hoverCloseTimers.delete(group);
+    };
+    const openHoverGroup = (currentGroup) => {
+      nav.querySelectorAll('.nav-group[open]').forEach((group)=>{
+        if (group!==currentGroup) {
+          clearHoverOpen(group);
+          clearHoverClose(group);
+          group.open=false;
+        }
+      });
+      currentGroup.open=true;
+    };
     nav.querySelectorAll('.nav-group').forEach((group) => {
       if (hoverCapable) {
-        group.addEventListener('pointerenter',()=>{group.open=true;});
-        group.addEventListener('pointerleave',()=>{group.open=false;});
+        group.addEventListener('pointerenter',()=>{
+          clearHoverOpen(group);
+          clearHoverClose(group);
+          if (group.open) return;
+          const anotherOpen=[...nav.querySelectorAll('.nav-group[open]')].some((item)=>item!==group);
+          if (!anotherOpen) {
+            openHoverGroup(group);
+            return;
+          }
+          hoverOpenTimers.set(group,window.setTimeout(()=>{
+            hoverOpenTimers.delete(group);
+            openHoverGroup(group);
+          },140));
+        });
+        group.addEventListener('pointerleave',()=>{
+          clearHoverOpen(group);
+          if (!group.open) return;
+          clearHoverClose(group);
+          hoverCloseTimers.set(group,window.setTimeout(()=>{
+            hoverCloseTimers.delete(group);
+            group.open=false;
+          },240));
+        });
       }
     });
     document.addEventListener('click',(event)=>{
