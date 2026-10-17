@@ -1,6 +1,6 @@
 import {execFile} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {cp, mkdir, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
+import {mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile} from 'node:fs/promises';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
@@ -36,89 +36,129 @@ async function walk(dir, base = dir) {
 }
 
 export async function buildH5pLibraries({output = join(packageRoot, 'dist')} = {}) {
-  const work = join(packageRoot, '.build-h5p-libraries');
-  await rm(work, {recursive:true, force:true});
-  await rm(output, {recursive:true, force:true});
-  await mkdir(work, {recursive:true});
-
-  const archive = join(work, 'lumi.tar.gz');
-  const url = `https://codeload.github.com/Lumieducation/Lumi/tar.gz/${LUMI_H5P_LIBRARY_COMMIT}`;
-  const response = await fetch(url, {redirect:'follow'});
-  if (!response.ok) throw new Error(`Unable to download pinned H5P corpus: HTTP ${response.status}`);
-  const archiveBytes = new Uint8Array(await response.arrayBuffer());
-  const actualArchiveSha256 = sha256(archiveBytes);
-  if (actualArchiveSha256 !== LUMI_H5P_ARCHIVE_SHA256) {
-    throw new Error(`Pinned Lumi archive SHA-256 mismatch: expected ${LUMI_H5P_ARCHIVE_SHA256}, got ${actualArchiveSha256}`);
-  }
-  await writeFile(archive, archiveBytes);
-  await execFileAsync('tar', ['-xzf', archive, '-C', work], {maxBuffer:8*1024*1024});
-
-  const extracted = (await readdir(work, {withFileTypes:true}))
-    .find((entry) => entry.isDirectory() && entry.name.startsWith('Lumi-'));
-  if (!extracted) throw new Error('Pinned Lumi archive did not extract as expected.');
-
-  const source = join(work, extracted.name, 'assets', 'h5p', 'libraries');
-  if (!(await stat(source)).isDirectory()) throw new Error('Pinned source has no assets/h5p/libraries directory.');
-  await cp(source, output, {recursive:true, force:true});
-
-  const catalog = [];
-  for (const entry of (await readdir(output, {withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory()) continue;
-    let metadata;
-    try {
-      metadata = JSON.parse(await readFile(join(output, entry.name, 'library.json'), 'utf8'));
-    } catch {
-      continue;
+  // A complete, verified catalog is assembled on the output volume before
+  // promotion. Windows can reject thousands of individual recursive copyFile()
+  // calls under antivirus/file-indexer load. Move the extracted library directory
+  // instead, preserving the previously published dist if anything fails.
+  const destination = resolve(output);
+  await mkdir(dirname(destination), {recursive:true});
+  const work = await mkdtemp(join(dirname(destination), '.p2lrn-h5p-build-'));
+  const previous = join(work, 'previous-dist');
+  let previousMoved = false;
+  try {
+    const archive = join(work, 'lumi.tar.gz');
+    const url = `https://codeload.github.com/Lumieducation/Lumi/tar.gz/${LUMI_H5P_LIBRARY_COMMIT}`;
+    const response = await fetch(url, {redirect:'follow'});
+    if (!response.ok) throw new Error(`Unable to download pinned H5P corpus: HTTP ${response.status}`);
+    const archiveBytes = new Uint8Array(await response.arrayBuffer());
+    const actualArchiveSha256 = sha256(archiveBytes);
+    if (actualArchiveSha256 !== LUMI_H5P_ARCHIVE_SHA256) {
+      throw new Error(`Pinned Lumi archive SHA-256 mismatch: expected ${LUMI_H5P_ARCHIVE_SHA256}, got ${actualArchiveSha256}`);
     }
-    const machineName = String(metadata.machineName ?? '').trim();
-    const majorVersion = Number(metadata.majorVersion);
-    const minorVersion = Number(metadata.minorVersion);
-    const patchVersion = Number(metadata.patchVersion ?? 0);
-    if (!machineName || !Number.isInteger(majorVersion) || !Number.isInteger(minorVersion)) continue;
-    const folder = `${machineName}-${majorVersion}.${minorVersion}`;
-    if (folder !== entry.name) throw new Error(`H5P folder/version mismatch: ${entry.name} != ${folder}`);
-    const libraryFiles=(await walk(join(output,entry.name)))
-      .map((file)=>file.relative)
-      .sort((a,b)=>a.localeCompare(b));
-    catalog.push({
-      folder,
-      machineName,
-      majorVersion,
-      minorVersion,
-      patchVersion,
-      runnable:Number(metadata.runnable ?? 0) === 1,
-      license:metadata.license ?? null,
-      files:libraryFiles,
-    });
-  }
+    await writeFile(archive, archiveBytes);
+    await execFileAsync('tar', ['-xzf', archive, '-C', work], {maxBuffer:8*1024*1024});
 
-  if (catalog.length !== EXPECTED_LIBRARY_COUNT) {
-    throw new Error(`Pinned H5P corpus changed: expected ${EXPECTED_LIBRARY_COUNT}, got ${catalog.length}`);
-  }
-  for (const required of REQUIRED) {
-    if (!catalog.some((entry) => entry.folder === required)) throw new Error(`Required H5P library missing: ${required}`);
-  }
+    const extracted = (await readdir(work, {withFileTypes:true}))
+      .find((entry) => entry.isDirectory() && entry.name.startsWith('Lumi-'));
+    if (!extracted) throw new Error('Pinned Lumi archive did not extract as expected.');
 
-  const files = await walk(output);
-  let bytes = 0;
-  for (const file of files) bytes += (await stat(file.path)).size;
-  const manifest = {
-    schema:'https://p2lrn.org/schema/h5p-library-catalog/1',
-    packageVersion:'0.5.0-alpha.10',
-    source:{
-      repository:'Lumieducation/Lumi',
-      commit:LUMI_H5P_LIBRARY_COMMIT,
-      basePath:'assets/h5p/libraries',
-    },
-    libraryCount:catalog.length,
-    fileCount:files.length,
-    bytes,
-    catalogSha256:'sha256:' + sha256(Buffer.from(JSON.stringify(catalog))),
-    libraries:catalog,
-  };
-  await writeFile(join(output, 'index.json'), JSON.stringify(manifest, null, 2) + '\n');
-  await rm(work, {recursive:true, force:true});
-  return manifest;
+    const source = join(work, extracted.name, 'assets', 'h5p', 'libraries');
+    if (!(await stat(source)).isDirectory()) throw new Error('Pinned source has no assets/h5p/libraries directory.');
+
+    const catalog = [];
+    for (const entry of (await readdir(source, {withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))) {
+      if (!entry.isDirectory()) continue;
+      let metadata;
+      try {
+        metadata = JSON.parse(await readFile(join(source, entry.name, 'library.json'), 'utf8'));
+      } catch {
+        continue;
+      }
+      const machineName = String(metadata.machineName ?? '').trim();
+      const majorVersion = Number(metadata.majorVersion);
+      const minorVersion = Number(metadata.minorVersion);
+      const patchVersion = Number(metadata.patchVersion ?? 0);
+      if (!machineName || !Number.isInteger(majorVersion) || !Number.isInteger(minorVersion)) continue;
+      const folder = `${machineName}-${majorVersion}.${minorVersion}`;
+      if (folder !== entry.name) throw new Error(`H5P folder/version mismatch: ${entry.name} != ${folder}`);
+      const libraryFiles = (await walk(join(source,entry.name)))
+        .map((file)=>file.relative)
+        .sort((a,b)=>a.localeCompare(b));
+      catalog.push({
+        folder,
+        machineName,
+        majorVersion,
+        minorVersion,
+        patchVersion,
+        runnable:Number(metadata.runnable ?? 0) === 1,
+        license:metadata.license ?? null,
+        files:libraryFiles,
+      });
+    }
+
+    if (catalog.length !== EXPECTED_LIBRARY_COUNT) {
+      throw new Error(`Pinned H5P corpus changed: expected ${EXPECTED_LIBRARY_COUNT}, got ${catalog.length}`);
+    }
+    for (const required of REQUIRED) {
+      if (!catalog.some((entry) => entry.folder === required)) throw new Error(`Required H5P library missing: ${required}`);
+    }
+
+    const files = await walk(source);
+    let bytes = 0;
+    for (const file of files) bytes += (await stat(file.path)).size;
+    const manifest = {
+      schema:'https://p2lrn.org/schema/h5p-library-catalog/1',
+      packageVersion:'0.5.0-alpha.10',
+      source:{
+        repository:'Lumieducation/Lumi',
+        commit:LUMI_H5P_LIBRARY_COMMIT,
+        basePath:'assets/h5p/libraries',
+      },
+      libraryCount:catalog.length,
+      fileCount:files.length,
+      bytes,
+      catalogSha256:'sha256:' + sha256(Buffer.from(JSON.stringify(catalog))),
+      libraries:catalog,
+    };
+    await writeFile(join(source, 'index.json'), JSON.stringify(manifest, null, 2) + '\n');
+
+    // On the same volume, a rename moves the entire verified tree without
+    // per-file copying; a failed promotion restores the original catalog.
+    let oldStat;
+    try { oldStat = await stat(destination); }
+    catch (error) { if (error?.code !== 'ENOENT') throw error; }
+    if (oldStat && !oldStat.isDirectory()) throw new Error('H5P output path exists and is not a directory.');
+    if (oldStat) {
+      await rename(destination, previous);
+      previousMoved = true;
+    }
+    try {
+      await rename(source, destination);
+    } catch (error) {
+      if (previousMoved) {
+        try {
+          await rename(previous, destination);
+          previousMoved = false;
+        } catch (rollbackError) {
+          throw new AggregateError([error, rollbackError],
+            `H5P catalog promotion failed; previous catalog is retained at ${previous}`);
+        }
+      }
+      throw error;
+    }
+    if (previousMoved) {
+      await rm(previous, {recursive:true,force:true,maxRetries:5,retryDelay:250});
+      previousMoved = false;
+    }
+    return manifest;
+  } finally {
+    if (!previousMoved) {
+      try { await rm(work, {recursive:true,force:true,maxRetries:5,retryDelay:250}); }
+      catch (cleanupError) { console.warn('H5P build scratch cleanup deferred:', cleanupError.message); }
+    } else {
+      console.error('H5P previous catalog preserved for manual recovery at:', previous);
+    }
+  }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
