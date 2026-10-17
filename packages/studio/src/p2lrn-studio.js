@@ -1,5 +1,7 @@
 async function playerApi(){
-  if(globalThis.P2LRNListo)return globalThis.P2LRNListo;
+  const browserReady=globalThis.P2LRNReady ?? globalThis.P2LRNListo;
+  if(browserReady)return browserReady;
+  if(globalThis.P2LRN?.openPackageBytes)return globalThis.P2LRN;
   const mod=await import('@p2lrn/player');
   return {
     openPackageBytes:mod.openP2LRNPackageBytes,
