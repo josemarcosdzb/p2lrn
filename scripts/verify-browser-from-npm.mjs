@@ -561,19 +561,23 @@ try{
   q('.title').dispatchEvent(new Event('input',{bubbles:true}));
   q('.surface').textContent='Este contenido fue editado a través del editor instalado con npm.';
   q('.surface').dispatchEvent(new Event('input',{bubbles:true}));
-  const treeButtons=()=>[...q('[data-tree]').querySelectorAll('button')];
+  // The tree is fully recreated on every selection. Identify a newly added
+  // activity from the real outline children, not from stale DOM node identity
+  // (which would mistakenly match action buttons such as "+ Unidad").
+  const treeButtons=()=>[...q('[data-tree]').querySelectorAll(':scope > button')];
+  const selectedTreeNode=()=>q('[data-tree] > button[aria-current="true"]');
   const treeLabel=(button)=>String(button?.querySelector('span')?.textContent??button?.textContent??'').trim();
   const added=[];
   for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','component','composite']){
-    const prior=treeButtons();
+    const priorCount=treeButtons().length;
     q('[data-add-menu]').open=true;
     click('[data-add-kind="'+kind+'"]');
-    const created=await wait(()=>treeButtons().find(button=>!prior.includes(button)),'npm add '+kind);
+    const created=await wait(()=>treeButtons().length>priorCount&&selectedTreeNode(),'npm add '+kind);
     const title=treeLabel(created);
     if(!title)throw new Error('Studio created an untitled tree node for '+kind);
     added.push({kind,title});
   }
-  let prior=treeButtons();
+  let priorCount=treeButtons().length;
   q('[data-add-menu]').open=true;
   click('[data-add-kind="external"]');
   const scormResponse=await fetch('/scorm12-interactive.zip',{cache:'no-store'});
@@ -582,18 +586,18 @@ try{
   const scormTransfer=new DataTransfer();scormTransfer.items.add(scormFile);
   q('[data-external-file]').files=scormTransfer.files;
   q('[data-external-file]').dispatchEvent(new Event('change',{bubbles:true}));
-  const scormNode=await wait(()=>treeButtons().find(button=>!prior.includes(button)),'npm import real SCORM via UI',25000);
+  const scormNode=await wait(()=>treeButtons().length>priorCount&&selectedTreeNode(),'npm import real SCORM via UI',25000);
   const scormTitle=treeLabel(scormNode);
   if(!scormTitle)throw new Error('Imported SCORM tree node has no title');
   if(q('[data-meta]').textContent.includes('failed'))throw new Error(q('[data-meta]').textContent);
-  prior=treeButtons();
+  priorCount=treeButtons().length;
   q('[data-add-menu]').open=true;
   click('[data-add-kind="reader"]');
   const markdownFile=new File(['# Reader de Studio npm\n\nDocumento importado desde la interfaz.'],'learning-note.md',{type:'text/markdown'});
   const readerTransfer=new DataTransfer();readerTransfer.items.add(markdownFile);
   q('[data-reader-file]').files=readerTransfer.files;
   q('[data-reader-file]').dispatchEvent(new Event('change',{bubbles:true}));
-  const readerNode=await wait(()=>treeButtons().find(button=>!prior.includes(button)),'npm Reader import',25000);
+  const readerNode=await wait(()=>treeButtons().length>priorCount&&selectedTreeNode(),'npm Reader import',25000);
   const readerTitle=treeLabel(readerNode);
   if(!readerTitle)throw new Error('Reader-imported tree node has no title');
   const exported=await studio.exportPackage();
@@ -605,11 +609,11 @@ try{
   const authoredLesson=entities.find(e=>e.type==='activity'&&e.title?.es==='Lección creada con Studio npm');
   if(!authoredLesson?.id)throw new Error('Exported graph is missing the authored lesson');
   const titleText=(entity)=>Object.values(entity?.title??{}).map(value=>String(value)).join(' | ');
-  const exportedActivities=entities.filter(entity=>entity.type==='activity');
+  const authoredEntities=entities.filter(entity=>['course','unit','activity','resource'].includes(entity.type));
   const expectedExportedTitles=['Lección creada con Studio npm',...added.map(item=>item.title),scormTitle,readerTitle];
-  const exportedTitles=exportedActivities.map(titleText);
+  const exportedTitles=authoredEntities.map(titleText);
   for(const title of expectedExportedTitles){
-    if(!exportedTitles.includes(title))throw new Error('Studio export lost activity: '+title);
+    if(!exportedTitles.includes(title))throw new Error('Studio export lost authored node: '+title);
   }
   const entityCounts={};
   for(const entity of entities)entityCounts[entity.type]=(entityCounts[entity.type]??0)+1;
