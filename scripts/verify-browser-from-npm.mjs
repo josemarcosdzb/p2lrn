@@ -302,6 +302,8 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   const params=new URLSearchParams(location.search);
   const course=params.get('course');
   const authoredCourse=params.get('authored')==='1';
+  const importedScorm=params.get('importedScorm')==='1';
+  const importedReader=params.get('importedReader')==='1';
   const passiveExpectations={
     'common-cartridge.p2lrn':'Common Cartridge browser OK',
   };
@@ -315,10 +317,11 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
       try{detail=JSON.parse(JSON.stringify(detail));}catch{detail=String(detail);}
       events.push({name,detail});
       if(name==='p2lrn:error')finish('FAIL',{phase:'p2lrn-error',detail});
-      if(name==='p2lrn:rendered'&&(passiveExpectations[course]||authoredCourse)){
+      if(name==='p2lrn:rendered'&&(passiveExpectations[course]||authoredCourse||importedReader)){
         const frame=p.shadowRoot?.querySelector('iframe.p2lrn-html');
         const srcdoc=frame?.getAttribute('srcdoc')||'';
-        const marker=authoredCourse?'Este contenido fue editado a través del editor instalado con npm.':passiveExpectations[course];
+        const marker=authoredCourse?'Este contenido fue editado a través del editor instalado con npm.':
+          importedReader?'Documento importado desde la interfaz.':passiveExpectations[course];
         if(!frame||!srcdoc.includes(marker)){
           finish('FAIL',{phase:'passive-render-contract',course,renderer:detail?.rendererId,marker,frame:!!frame});
           return;
@@ -326,6 +329,14 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
         finish('PASS',{course,renderer:detail?.rendererId,passiveContentVerified:true});
       }
       if(name==='p2lrn:activityready'){
+        if(importedScorm){
+          if(detail?.runtime!=='scorm'||detail?.scormVersion!=='1.2'){
+            finish('FAIL',{phase:'studio-imported-scorm-not-replayed',course,detail});
+            return;
+          }
+          finish('PASS',{course,importedFromStudio:true,runtime:detail.runtime,version:detail.scormVersion});
+          return;
+        }
         if(course.includes('h5p')){
           const frame=p.shadowRoot?.querySelector('iframe.p2lrn-h5p-frame');
           const allow=frame?.getAttribute('allow')||'';
@@ -619,6 +630,10 @@ try{
   const authoredLesson=entities.find(e=>e.type==='activity'&&e.title?.es==='Lección creada con Studio npm');
   if(!authoredLesson?.id)throw new Error('Exported graph is missing the authored lesson');
   const titleText=(entity)=>Object.values(entity?.title??{}).map(value=>String(value)).join(' | ');
+  const importedScormActivity=entities.find(entity=>entity.type==='activity'&&titleText(entity)===scormTitle);
+  const importedReaderActivity=entities.find(entity=>entity.type==='activity'&&titleText(entity)===readerTitle);
+  if(!importedScormActivity?.id||!importedReaderActivity?.id)
+    throw new Error('Studio export is missing imported SCORM/Reader activity nodes');
   const authoredEntities=entities.filter(entity=>['course','unit','activity','resource'].includes(entity.type));
   const expectedExportedTitles=['Lección creada con Studio npm',...added.map(item=>item.title),scormTitle,readerTitle];
   const exportedTitles=authoredEntities.map(titleText);
@@ -694,6 +709,8 @@ try{
     verifiedByPlayer:true,
     reopenedFromFile:true,
     lessonId:authoredLesson.id,
+    scormActivityId:importedScormActivity.id,
+    readerActivityId:importedReaderActivity.id,
   });
 }catch(error){finish('FAIL',{message:String(error?.stack||error)});}
 })();
@@ -892,9 +909,9 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
   }
 }
 
-async function runCourse(chrome, appOrigin, course, index, {authored=false,node=null}={}) {
+async function runCourse(chrome, appOrigin, course, index, {authored=false,node=null,importedScorm=false,importedReader=false}={}) {
   const profile=join(gateRoot,`chrome-profile-${index}`);
-  const url=`${appOrigin}/?course=${encodeURIComponent(course)}${authored?'&authored=1':''}${node?'&node='+encodeURIComponent(node):''}`;
+  const url=`${appOrigin}/?course=${encodeURIComponent(course)}${authored?'&authored=1':''}${node?'&node='+encodeURIComponent(node):''}${importedScorm?'&importedScorm=1':''}${importedReader?'&importedReader=1':''}`;
   const result=await runChromePageGate(chrome,url,profile,{timeoutMs:35000,screenshotName:'npm-player-'+course.replace(/[^a-z0-9-]+/giu,'-')});
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
@@ -947,6 +964,12 @@ try{
   const studioResult=await runStudioFromNpm(chrome,appOrigin);
   results.push(studioResult);
   results.push(await runCourse(chrome,appOrigin,studioResult.filename,courses.length,{authored:true,node:studioResult.lessonId}));
+  // Test the real SCORM and Reader resources imported through Studio, rather
+  // than only verifying that their names survive ZIP export/reimport.
+  results.push(await runCourse(chrome,appOrigin,studioResult.filename,courses.length+1,
+    {node:studioResult.scormActivityId,importedScorm:true}));
+  results.push(await runCourse(chrome,appOrigin,studioResult.filename,courses.length+2,
+    {node:studioResult.readerActivityId,importedReader:true}));
 }finally{
   await new Promise((resolvePromise)=>runtimeServer.close(()=>resolvePromise()));
   await new Promise((resolvePromise)=>appServer.close(()=>resolvePromise()));
