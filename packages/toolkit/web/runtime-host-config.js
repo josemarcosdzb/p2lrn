@@ -69,6 +69,19 @@ export function configureRuntimeHost(options = {}) {
   return getRuntimeHostConfig();
 }
 
+export function getAutomaticRuntimeHostResources(baseUrl = DEFAULT_STATIC_BASE_URL) {
+  let configured;
+  try { configured = new URL(String(baseUrl || DEFAULT_STATIC_BASE_URL), globalThis.location?.href ?? DEFAULT_STATIC_BASE_URL); }
+  catch { configured = new URL(DEFAULT_STATIC_BASE_URL); }
+  if (!configured.pathname.endsWith('/')) configured.pathname += '/';
+  const base = /\/runtime-host\/$/u.test(configured.pathname)
+    ? configured : new URL(DEFAULT_STATIC_BASE_URL);
+  return Object.freeze({
+    baseUrl:base.href,
+    packageHostScriptUrl:new URL('package-host.js', base).href,
+  });
+}
+
 export function getRuntimeHostConfig() {
   return Object.freeze({baseUrl: state.baseUrl, mode: state.mode});
 }
