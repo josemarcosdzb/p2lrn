@@ -62,9 +62,9 @@ test('static resource bridge rejects non-local HTTP package sources',()=>{
 
 test('all isolated runtime shells bind MessageChannel handshakes to their direct parent',async()=>{
   for(const relative of [
-    'packages/toolkit/web/runtime-host/h5p-host.js',
+    'packages/toolkit/web/h5p-runtime-shell.js',
     'packages/toolkit/web/runtime-host/scorm-host.js',
-    'packages/toolkit/web/runtime-host/package-host.js',
+    'packages/toolkit/web/package-runtime-shell.js',
   ]){
     const content=await readFile(resolve(root,relative),'utf8');
     assert.match(content,/event\.source\s*!==\s*parent/u,relative);
@@ -76,9 +76,9 @@ test('distribution source contains no sandbox escape token',async()=>{
     'packages/toolkit/web/renderers/h5p-runtime.js',
     'packages/toolkit/web/renderers/scorm-runtime.js',
     'packages/toolkit/web/renderers/package-runtime.js',
-    'packages/toolkit/web/runtime-host/h5p-host.js',
+    'packages/toolkit/web/h5p-runtime-shell.js',
     'packages/toolkit/web/runtime-host/scorm-host.js',
-    'packages/toolkit/web/runtime-host/package-host.js',
+    'packages/toolkit/web/package-runtime-shell.js',
   ];
   for(const relative of files){
     const content=await readFile(resolve(root,relative),'utf8');
@@ -116,7 +116,7 @@ test('static bridge no longer falls back to a root Service Worker controller',as
 
 test('H5P runtime exposes only the canonical protocol and blocks popup capability',async()=>{
   for(const relative of [
-    'packages/toolkit/web/runtime-host/h5p-host.js',
+    'packages/toolkit/web/h5p-runtime-shell.js',
     'packages/toolkit/web/renderers/h5p-runtime.js',
   ]){
     const content=await readFile(resolve(root,relative),'utf8');
@@ -182,3 +182,4 @@ test('bounded HTTP reader cancels oversized bodies before full buffering',async(
     /body length mismatch/i,
   );
 });
+

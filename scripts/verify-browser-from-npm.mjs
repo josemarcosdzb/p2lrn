@@ -107,7 +107,7 @@ function listen(server) {
   });
 }
 
-async function findChrome() {
+export async function findChrome() {
   const candidates = [
     process.env.CHROME_BIN,
     process.env.CHROMIUM_BIN,
@@ -494,7 +494,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
 
 const sleep = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 
-async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
+export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, exerciseExpression=null} = {}) {
   await rm(profile,{recursive:true,force:true});
   const args=[
     '--headless=new',
@@ -561,8 +561,11 @@ async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
     const pending=new Map();
     const browserLogs=[];
     const runtimeExceptions=[];
+    const contexts=new Set();
     socket.addEventListener('message',(event)=>{
       const message=JSON.parse(event.data);
+      if(message.method==='Runtime.executionContextCreated' && message.params?.context?.auxData?.isDefault) contexts.add(message.params.context.id);
+      if(message.method==='Runtime.executionContextDestroyed') contexts.delete(message.params.executionContextId);
       if(message.method==='Log.entryAdded'){
         const entry=message.params?.entry;
         if(entry)browserLogs.push({level:entry.level,source:entry.source,text:entry.text,url:entry.url||null});
@@ -588,6 +591,9 @@ async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
     const deadline=Date.now()+timeoutMs;
     let snapshot={status:'BOOT',detail:'BOOT',readyState:'loading'};
     while(Date.now()<deadline){
+      if(exerciseExpression) for(const contextId of contexts) {
+        try { await send('Runtime.evaluate',{expression:exerciseExpression,contextId,returnByValue:true}); } catch {}
+      }
       const evaluated=await send('Runtime.evaluate',{
         expression:`(()=>{const e=document.getElementById('result');return {status:e?.dataset?.status??'MISSING',detail:e?.textContent??'',readyState:document.readyState};})()`,
         returnByValue:true,
@@ -631,6 +637,7 @@ async function runQuestionnaire(chrome, appOrigin) {
   return {course:'native-questionnaire-course.p2lrn',status,detail:detail.slice(0,2000)};
 }
 
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 await stat(join(installRoot,'node_modules','@p2lrn','player','package.json'));
 await stat(join(copiedRuntime,'runtime-host','h5p-libraries','H5P.Crossword-0.5','library.json'));
 await prepareCourses();
@@ -665,3 +672,6 @@ try{
 }
 
 console.log(JSON.stringify({ok:true,chrome,runtimeOrigin,appOrigin,results},null,2));
+
+
+}

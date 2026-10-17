@@ -188,12 +188,12 @@ export async function render({container, payload, representation, package:pkg, e
   let previousState = null;
   if (adapter?.loadState) previousState = boundedState(await adapter.loadState(Object.freeze({...context, runtime:'h5p'})));
   const iframe = document.createElement('iframe');
+  iframe.setAttribute('allow', "camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; usb 'none'; clipboard-read 'none'; clipboard-write 'none'; fullscreen");
   iframe.className = 'p2lrn-h5p-frame';
   iframe.title = inspection.title || 'H5P';
   iframe.setAttribute('sandbox', opaqueMode
-    ? 'allow-scripts allow-forms allow-modals'
+    ? 'allow-scripts'
     : 'allow-scripts allow-same-origin allow-forms allow-modals');
-  iframe.setAttribute('allow', 'fullscreen');
   iframe.style.width = '100%';
   iframe.style.minHeight = '480px';
   iframe.style.border = '0';
@@ -303,3 +303,4 @@ export async function render({container, payload, representation, package:pkg, e
     },
   });
 }
+

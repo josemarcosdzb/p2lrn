@@ -203,11 +203,16 @@ export function createScormApi(options = {}) {
   for (const [key, value] of Object.entries(incomingValues)) {
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') values[String(key)] = String(value);
   }
+  // Session identity is supplied by the caller, not restored from activity state.
   if (is2004) {
+    values['cmi.learner_id'] = learnerId;
+    values['cmi.learner_name'] = learnerName;
     if (values['cmi.exit'] === 'suspend') values['cmi.entry'] = 'resume';
     values['cmi.exit'] = '';
     values['cmi.session_time'] = '';
   } else {
+    values['cmi.core.student_id'] = learnerId;
+    values['cmi.core.student_name'] = learnerName;
     if (values['cmi.core.exit'] === 'suspend') values['cmi.core.entry'] = 'resume';
     values['cmi.core.exit'] = '';
     values['cmi.core.session_time'] = '';
@@ -371,3 +376,4 @@ export function createScormApi(options = {}) {
   });
   return Object.freeze({version, api:is2004 ? api2004 : api12, snapshot, get lifecycle() { return lifecycle; }});
 }
+

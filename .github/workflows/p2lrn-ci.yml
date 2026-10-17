@@ -1,6 +1,13 @@
 name: P2LRN CI
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/toolkit/**'
+      - 'packages/player/**'
+      - 'scripts/**'
+      - '.github/workflows/p2lrn-ci.yml'
   push:
     branches: [main]
     paths:
@@ -53,6 +60,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  automatic-runtime:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Build canonical browser runtime and pinned H5P libraries
+        run: |
+          node packages/player/scripts/build-dist.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node packages/h5p-libraries/scripts/build.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify real playback and hostile-content isolation
+        run: node scripts/verify-automatic-runtimes.mjs
+
   license-integrity:
     if: ${{ contains(github.event.head_commit.message, '[license verify]') || (github.event_name == 'workflow_dispatch' && inputs.license_only) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
@@ -273,3 +300,4 @@ jobs:
           if ($release.webSdkVersion -ne $VERSION) { throw "release.json webSdkVersion mismatch" }
           $index = Get-Content ".netlify-cdn/index.json" -Raw | ConvertFrom-Json
           if ($index.h5p.sharedLibraryMode -ne "bundled-npm-artifact") { throw "CDN sharedLibraryMode mismatch" }
+

@@ -1,3 +1,4 @@
+import {startPackageRuntime} from '../package-runtime-shell.js';
 import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 import {resolvePackageRuntimeUrl} from '../runtime-host-config.js';
@@ -112,6 +113,12 @@ function scoreFromCmi5Statement(statement) {
   };
 }
 
+function boundedPreviewState(value) {
+  const json = JSON.stringify(value ?? null);
+  if (new TextEncoder().encode(json).byteLength > 2 * 1024 * 1024) throw new Error('cmi5 preview state exceeds 2 MiB.');
+  return JSON.parse(json);
+}
+
 function mediaTypeForPath(path) {
   const ext = String(path).toLowerCase().split(/[?#]/, 1)[0].split('.').pop();
   return ({
@@ -158,20 +165,27 @@ export async function render({container, payload, representation, package:pkg, e
     error.code = 'P2LRN_PACKAGE_RUNTIME_LAUNCH_MISSING';
     throw error;
   }
-  const runtimeUrl = resolvePackageRuntimeUrl(runtimeBaseUrl, {applicationOrigin:globalThis.location?.origin ?? null});
-  if (!runtimeUrl || !new URL(runtimeUrl).pathname.endsWith('/package.html')) {
+  let runtimeUrl = null;
+  try { runtimeUrl = resolvePackageRuntimeUrl(runtimeBaseUrl); }
+  catch (error) { if (error?.code !== 'P2LRN_PACKAGE_RUNTIME_ORIGIN_NOT_ISOLATED') throw error; }
+  const opaqueMode = !runtimeUrl;
+  if (runtimeUrl && !new URL(runtimeUrl).pathname.endsWith('/package.html')) {
     const error = new Error('This package renderer requires the static isolated P2LRN CDN runtime.');
     error.code = 'P2LRN_PACKAGE_RUNTIME_HOST_REQUIRED';
     throw error;
   }
-  const runtimeOrigin = new URL(runtimeUrl).origin;
+  const runtimeOrigin = opaqueMode ? 'null' : new URL(runtimeUrl).origin;
   const transferred = await runtimeFiles(nested);
   const cmi5 = cmi5RuntimeConfig(representation, context);
+  const stateContext = Object.freeze({...context, runtime:'cmi5'});
+  const previous = cmi5 && adapter?.loadState ? boundedPreviewState(await adapter.loadState(stateContext)) : null;
+  const states = new Map(previous?.protocol === 'p2lrn-cmi5-preview-state/1' ? Object.entries(previous.states ?? {}) : []);
+  let saveQueue = Promise.resolve();
   const iframe = document.createElement('iframe');
+  iframe.setAttribute('allow', "camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; usb 'none'; clipboard-read 'none'; clipboard-write 'none'; fullscreen");
   iframe.className = 'p2lrn-package-runtime';
   iframe.title = 'External package';
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-downloads');
-  iframe.setAttribute('allow', 'fullscreen');
+  iframe.setAttribute('sandbox', opaqueMode ? 'allow-scripts' : 'allow-scripts allow-same-origin');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
   iframe.style.cssText = 'display:block;width:100%;height:clamp(520px,68vh,760px);min-height:420px;max-width:100%;border:0;background:#fff';
 
@@ -197,7 +211,7 @@ export async function render({container, payload, representation, package:pkg, e
           launchMember:launch.path,
           launchSuffix:launch.suffix,
           profile:representation.profile ?? null,
-          cmi5,
+          cmi5:cmi5 ? {...cmi5, initialStates:Object.fromEntries(states)} : null,
           files:transferred.files,
         }, transferred.transfers);
         return;
@@ -205,6 +219,25 @@ export async function render({container, payload, representation, package:pkg, e
       if (message.action === 'resize') {
         const height = Number(message.height);
         if (Number.isFinite(height)) iframe.style.height = `${Math.max(420, Math.min(760, Math.ceil(height)))}px`;
+        return;
+      }
+      if (message.action === 'cmi5-state' && cmi5) {
+        try {
+          const key = String(message.stateId ?? '');
+          if (!key || key.length > 1024 || key === 'LMS.LaunchData') return;
+          const candidate = new Map(states);
+          if (message.value == null) candidate.delete(key);
+          else candidate.set(key, boundedPreviewState(message.value));
+          const snapshot = boundedPreviewState({protocol:'p2lrn-cmi5-preview-state/1',states:Object.fromEntries(candidate)});
+          states.clear();
+          for (const [name, value] of candidate) states.set(name, value);
+          saveQueue = saveQueue.then(() => adapter?.saveState?.(snapshot, stateContext)).catch(error => {
+            dispatchRuntimeEvent(eventTarget, 'p2lrn:error', {phase:'cmi5-save-state',error:String(error?.message ?? error)}, context, {adapter});
+          });
+          dispatchRuntimeEvent(eventTarget, 'p2lrn:statechange', {runtime:'cmi5',state:snapshot,authoritative:false}, context, {adapter});
+        } catch (error) {
+          dispatchRuntimeEvent(eventTarget, 'p2lrn:error', {phase:'cmi5-state',error:String(error?.message ?? error)}, context, {adapter});
+        }
         return;
       }
       if (message.action === 'cmi5-statement') {
@@ -257,14 +290,16 @@ export async function render({container, payload, representation, package:pkg, e
       }
     };
     port.start?.();
-    iframe.contentWindow.postMessage({protocol:PROTOCOL, action:'connect'}, runtimeOrigin, [channel.port2]);
+    iframe.contentWindow.postMessage({protocol:PROTOCOL, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  iframe.src = runtimeUrl;
+  if (opaqueMode) iframe.srcdoc = createOpaquePackageRuntimeDocument();
+  else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 
   return Object.freeze({
     kind:'external-package',
+    flush:() => saveQueue,
     launchMember:launch.reference,
     destroy() {
       destroyed = true;
@@ -273,4 +308,10 @@ export async function render({container, payload, representation, package:pkg, e
       iframe.remove();
     },
   });
+}
+
+
+export function createOpaquePackageRuntimeDocument() {
+  const bootstrap = `(${startPackageRuntime.toString()})({opaqueRuntime:true});`.replace(/<\/script/giu, '<\\/script');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src about: blob: data:; connect-src blob:; form-action 'none'; base-uri 'none'; object-src 'none'"></head><body><div id="stage"></div><script>${bootstrap}</script></body></html>`;
 }

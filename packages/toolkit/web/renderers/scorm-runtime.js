@@ -107,14 +107,15 @@ function scoreFromState(state) {
 export function createScormSandboxShell(token, version) {
   const apiFactory = createScormApi.toString();
   const protocol = JSON.stringify(SCORM_RUNTIME_PROTOCOL);
-  const tokenLiteral = JSON.stringify(token);
   const versionLiteral = JSON.stringify(version);
   return String.raw`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none';"><style>html,body,#stage{width:100%;height:100%;margin:0;overflow:auto}#content{width:100%;height:100%;border:0;display:block}.error{font:14px system-ui,sans-serif;padding:16px;color:#7a1f1f;white-space:pre-wrap}</style></head><body><div id="stage"></div><script>
+(()=>{
 'use strict';
-const PROTOCOL=${protocol}; const TOKEN=${tokenLiteral}; const SCORM_VERSION=${versionLiteral};
+let privatePort=null;let privateSend=null;let initialized=false;
+const PROTOCOL=${protocol}; const SCORM_VERSION=${versionLiteral};
 const createScormApi=${apiFactory};
 const stage=document.getElementById('stage'); const files=new Map(); const urls=new Map(); let content=null; let runtime=null; let currentPath=''; let identity={learnerId:'',learnerName:'',launchData:''};
-function reply(action,payload={}){ parent.postMessage({protocol:PROTOCOL,token:TOKEN,action,...payload},'*'); }
+function reply(action,payload={}){ privateSend?.({protocol:PROTOCOL,action,...payload}); }
 function normalize(path){ const out=[]; for(const part of String(path||'').replace(/\\/g,'/').split('/')){ if(!part||part==='.')continue; if(part==='..'){if(!out.length)return null;out.pop();}else out.push(part);} return out.join('/'); }
 function resolve(base,ref){ const raw=String(ref||'').trim(); if(!raw||raw[0]==='#'||/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(raw))return null; const match=/^([^?#]*)(\?[^#]*)?(#.*)?$/.exec(raw); const target=match?.[1]||''; const root=target.startsWith('/'); const baseDir=base.includes('/')?base.slice(0,base.lastIndexOf('/')+1):''; const path=normalize(root?target.slice(1):baseDir+target); return path&&files.has(path)?{path,suffix:(match?.[2]||'')+(match?.[3]||'')}:null; }
 function text(path){ return new TextDecoder('utf-8',{fatal:false}).decode(files.get(path).buffer); }
@@ -137,9 +138,11 @@ function makeUrls(){ for(const [path,file] of files){ if(file.mediaType.includes
   for(const [path,file] of files){ if(!file.mediaType.includes('css'))continue; const compiled=rewriteCss(text(path),path,new Set([path])); urls.set(path,URL.createObjectURL(new Blob([compiled],{type:'text/css'}))); }
 }
 function installApi(initialState,learnerId,learnerName,launchData,navigationState){ identity={learnerId,learnerName,launchData}; runtime=createScormApi({version:SCORM_VERSION,initialState,learnerId,learnerName,launchData,requestValid:navigationState?.requestValid||{},onChange:(state,meta)=>reply('state',{state,meta}),onNavigationRequest:(request,state)=>reply('navigation-request',{request,state})}); if(SCORM_VERSION==='2004')window.API_1484_11=runtime.api; else window.API=runtime.api; }
-window.addEventListener('message',async(event)=>{ const data=event.data;if(!data||data.protocol!==PROTOCOL||data.token!==TOKEN)return; try{ if(data.action==='init'){for(const file of data.files||[])files.set(file.path,{mediaType:file.mediaType,buffer:file.buffer});makeUrls();installApi(data.initialState||{},data.learnerId||'',data.learnerName||'',data.launchData||'',data.navigationState||null);await navigate(data.launchMember);reply('initialized',{version:SCORM_VERSION,files:files.size});return;}if(data.action==='navigate'){installApi(data.initialState||{},identity.learnerId,identity.learnerName,identity.launchData,data.navigationState||null);await navigate(data.launchMember);reply('navigated',{member:data.launchMember,itemIdentifier:data.itemIdentifier||null});}}catch(error){showError(String(error?.message||error));} });
+async function onPortMessage(event){ const data=event.data;if(!data||data.protocol!==PROTOCOL)return; try{ if(data.action==='init'&&!initialized){initialized=true;for(const file of data.files||[])files.set(file.path,{mediaType:file.mediaType,buffer:file.buffer});makeUrls();installApi(data.initialState||{},data.learnerId||'',data.learnerName||'',data.launchData||'',data.navigationState||null);await navigate(data.launchMember);reply('initialized',{version:SCORM_VERSION,files:files.size});return;}if(data.action==='navigate'&&initialized){installApi(data.initialState||{},identity.learnerId,identity.learnerName,identity.launchData,data.navigationState||null);await navigate(data.launchMember);reply('navigated',{member:data.launchMember,itemIdentifier:data.itemIdentifier||null});}}catch(error){showError(String(error?.message||error));} }
+window.addEventListener('message',(event)=>{const data=event.data;if(privatePort||event.source!==parent||!data||data.protocol!==PROTOCOL||data.action!=='connect'||!event.ports?.[0])return;privatePort=event.ports[0];privateSend=privatePort.postMessage.bind(privatePort);privatePort.onmessage=onPortMessage;privatePort.start?.();reply('connected');});
 window.addEventListener('unload',()=>{for(const url of urls.values())try{URL.revokeObjectURL(url)}catch{}});
-reply('shell-ready',{version:SCORM_VERSION});
+parent.postMessage({protocol:PROTOCOL,action:'shell-ready',version:SCORM_VERSION},'*');
+})();
 </script></body></html>`;
 }
 
@@ -165,7 +168,10 @@ export async function render({container, payload, representation, package: pkg, 
   }
   const extension = scormExtension(representation);
   const version = normalizeScormVersion(extension.scormVersion ?? extension.version ?? '1.2');
-  const initialState = await loadInitialState(adapter, context, eventTarget);
+  const restoredState = await loadInitialState(adapter, context, eventTarget);
+  const restoredValues = {...(restoredState.values ?? restoredState)};
+  for (const key of ['cmi.learner_id','cmi.learner_name','cmi.core.student_id','cmi.core.student_name']) delete restoredValues[key];
+  const initialState = restoredState.values ? {...restoredState, values:restoredValues} : restoredValues;
   let sequencer = null;
   try {
     sequencer = await createSequencerForPackage(nested, version, launchMember, initialState?.sequencing ?? null);
@@ -181,8 +187,9 @@ export async function render({container, payload, representation, package: pkg, 
   } catch (error) {
     if (error?.code !== 'P2LRN_SCORM_RUNTIME_ORIGIN_NOT_ISOLATED') throw error;
   }
-  const fallbackToken = isolatedRuntimeUrl ? null : (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const fallbackToken = null; // Kept only for the legacy shell function signature.
   const iframe = document.createElement('iframe');
+  iframe.setAttribute('allow', "camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; usb 'none'; clipboard-read 'none'; clipboard-write 'none'; fullscreen");
   iframe.className = 'p2lrn-scorm-runtime';
   iframe.setAttribute('title', 'SCORM');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
@@ -195,7 +202,7 @@ export async function render({container, payload, representation, package: pkg, 
     // for canonical parent.API discovery without granting application-origin access.
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-downloads');
   } else {
-    iframe.setAttribute('sandbox', 'allow-scripts allow-modals allow-downloads');
+    iframe.setAttribute('sandbox', 'allow-scripts');
   }
 
   let destroyed = false;
@@ -230,11 +237,7 @@ export async function render({container, payload, representation, package: pkg, 
   };
 
   const sendRuntimeCommand = (message) => {
-    if (isolatedRuntimeUrl) {
-      runtimeSend?.(message);
-      return;
-    }
-    iframe.contentWindow?.postMessage({...message, token:fallbackToken}, '*');
+    runtimeSend?.(message);
   };
 
   const processRuntimeData = (data) => {
@@ -296,17 +299,17 @@ export async function render({container, payload, representation, package: pkg, 
   const initPayload = () => ({
     protocol: runtimeProtocol, action:'init', version,
     launchMember, launchSuffix:launchReference.suffix, files, initialState,
-    learnerId: String(context?.learnerId ?? ''), learnerName: String(context?.learnerName ?? ''),
+    learnerId: '', learnerName: '',
     launchData: String(extension.launchData ?? ''), navigationState:sequencer?.state() ?? null,
   });
 
-  const runtimeOrigin = isolatedRuntimeUrl ? new URL(isolatedRuntimeUrl).origin : null;
+  const runtimeOrigin = isolatedRuntimeUrl ? new URL(isolatedRuntimeUrl).origin : 'null';
   const onMessage = (event) => {
     if (destroyed || event.source !== iframe.contentWindow) return;
     const data = event.data;
     if (!data || !isScormRuntimeProtocol(data.protocol)) return;
 
-    if (isolatedRuntimeUrl) {
+    {
       if (event.origin !== runtimeOrigin || data.action !== 'shell-ready' || runtimePort) return;
       runtimeProtocol = data.protocol;
       const channel = new MessageChannel();
@@ -323,17 +326,11 @@ export async function render({container, payload, representation, package: pkg, 
         processRuntimeData(message);
       };
       runtimePort.start?.();
-      iframe.contentWindow.postMessage({protocol: runtimeProtocol, action:'connect'}, runtimeOrigin, [channel.port2]);
+      iframe.contentWindow.postMessage({protocol: runtimeProtocol, action:'connect'}, isolatedRuntimeUrl ? runtimeOrigin : '*', [channel.port2]);
       return;
     }
 
-    if (data.token !== fallbackToken) return;
-    if (data.action === 'shell-ready' && !didInit) {
-      didInit = true;
-      iframe.contentWindow.postMessage({...initPayload(), token: fallbackToken}, '*', transfers);
-      return;
-    }
-    processRuntimeData(data);
+
   };
   window.addEventListener('message', onMessage);
 
@@ -352,3 +349,4 @@ export async function render({container, payload, representation, package: pkg, 
     flush: () => saveQueue,
   });
 }
+

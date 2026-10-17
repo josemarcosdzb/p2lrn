@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {dirname,resolve} from 'node:path';
 
 const here=dirname(fileURLToPath(import.meta.url));
-const hostPath=resolve(here,'../web/runtime-host/package-host.js');
+const hostPath=resolve(here,'../web/package-runtime-shell.js');
 const runtimePath=resolve(here,'../web/renderers/package-runtime.js');
 
 test('external package runtime rewrites deferred HTML templates and media references',async()=>{
@@ -29,3 +29,4 @@ test('cmi5 preview provides a local return URL and forwards exit to the player r
   assert.match(runtime,/exit:true/);
   assert.match(runtime,/Actividad cerrada\./);
 });
+
