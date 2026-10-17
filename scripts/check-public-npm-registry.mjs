@@ -1,43 +1,78 @@
-import {execFile} from 'node:child_process';
-import {readFile} from 'node:fs/promises';
+import {readFile, writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {promisify} from 'node:util';
 
-const execFileAsync=promisify(execFile);
-const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
-const directories=['h5p-libraries','toolkit','player','studio'];
-const packages=await Promise.all(directories.map(async dir=>{
-  const pkg=JSON.parse(await readFile(resolve(root,'packages',dir,'package.json'),'utf8'));
-  return {name:pkg.name,version:pkg.version};
+// This is an external registry inventory, NOT a prerequisite to validating a
+// release candidate's locally packed artifacts. After release, pass
+// --require-published to turn missing/unreachable packages into a release gate.
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const registry = 'https://registry.npmjs.org';
+const directories = ['h5p-libraries', 'toolkit', 'player', 'studio'];
+const packages = await Promise.all(directories.map(async (directory) => {
+  const pkg = JSON.parse(await readFile(resolve(root, 'packages', directory, 'package.json'), 'utf8'));
+  return {name:pkg.name, version:pkg.version};
 }));
-const versions=new Set(packages.map(p=>p.version));
-if(versions.size!==1)throw new Error('The four P2LRN npm packages do not share one release version.');
+if (new Set(packages.map(pkg=>pkg.version)).size !== 1) {
+  throw new Error('The four P2LRN npm packages do not share one release version.');
+}
 
-async function query({name,version}){
-  const identifier=name+'@'+version;
-  try{
-    const npmArgs=['view',identifier,'version','--json','--registry=https://registry.npmjs.org','--fetch-retries=0','--fetch-timeout=10000'];
-    const isWindows=process.platform==='win32';
-    const result=await execFileAsync(isWindows?'cmd.exe':'npm',isWindows?['/d','/s','/c','npm.cmd '+npmArgs.join(' ')]:npmArgs,{
-      cwd:root,timeout:15000,maxBuffer:1024*1024,windowsHide:true,env:{...process.env,NPM_CONFIG_AUDIT:'false'},
+// Native HTTPS requests avoid Windows cmd/npm.cmd launch and quoting failures.
+// Query the exact immutable version; a 404 is NOT a network failure.
+async function inspectVersion({name, version}) {
+  const url = `${registry}/${encodeURIComponent(name)}/${encodeURIComponent(version)}`;
+  try {
+    const response = await fetch(url, {
+      method:'GET',
+      headers:{Accept:'application/json'},
+      redirect:'error',
+      signal:AbortSignal.timeout(20000),
     });
-    const actual=JSON.parse(result.stdout.trim());
-    return {name,version,status:actual===version?'published-exact':'unexpected-registry-version',actual};
-  }catch(error){
-    const stderr=String(error?.stderr??error?.message??'');
-    if(/E404|404 Not Found|is not in this registry/iu.test(stderr))return {name,version,status:'not-published'};
-    return {name,version,status:'registry-unavailable',detail:stderr.slice(0,340)};
+    if (response.status === 404) return {name, version, status:'not-published', httpStatus:404};
+    if (!response.ok) {
+      return {name, version, status:'registry-unavailable', httpStatus:response.status};
+    }
+    let metadata;
+    try { metadata = await response.json(); }
+    catch (error) {
+      return {name, version, status:'registry-unavailable', httpStatus:200, detail:'Invalid JSON: '+error.message};
+    }
+    if (metadata?.name !== name || metadata?.version !== version || typeof metadata?.dist?.tarball !== 'string') {
+      return {
+        name, version, status:'registry-metadata-mismatch', httpStatus:200,
+        actualName:metadata?.name??null,
+        actualVersion:metadata?.version??null,
+        tarballAvailable:typeof metadata?.dist?.tarball==='string',
+      };
+    }
+    return {name, version, status:'published-exact', httpStatus:200, integrityAvailable:typeof metadata.dist.integrity==='string'};
+  } catch (error) {
+    return {
+      name, version, status:'registry-unavailable',
+      reason:String(error?.message??error).slice(0,220),
+      causeCode:String(error?.cause?.code??error?.code??'unknown').slice(0,50),
+    };
   }
 }
-const items=await Promise.all(packages.map(query));
-const report={
+
+const items = await Promise.all(packages.map(inspectVersion));
+const allPublished=items.every(item=>item.status==='published-exact');
+const anyUnavailable=items.some(item=>item.status==='registry-unavailable');
+const report = {
+  schema:'https://p2lrn.org/schema/npm-registry-readiness/1',
   checkedPublicRegistry:true,
-  registry:'https://registry.npmjs.org',
-  source:'npm view <scope/name>@<version> version --json',
-  status:items.every(item=>item.status==='published-exact')?'all-published':items.some(item=>item.status==='registry-unavailable')?'inconclusive':'publication-required',
-  readyForCleanRegistryInstall:items.every(item=>item.status==='published-exact'),
+  registry,
+  checkedAt:new Date().toISOString(),
+  source:'Official npm package-version metadata over HTTPS (GET /<encoded-name>/<version>)',
+  status:allPublished?'all-published':anyUnavailable?'inconclusive':'publication-required',
+  readyForCleanRegistryInstall:allPublished,
+  publicationCheckIsInformational:!process.argv.includes('--require-published'),
   items,
 };
+const destination=resolve(root,'.npm-registry-report.json');
+await writeFile(destination,JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify(report,null,2));
-if(report.status==='inconclusive')process.exitCode=2;
+
+if (!allPublished && process.argv.includes('--require-published')) {
+  console.error('The exact release is not verifiably available in the public npm registry.');
+  process.exitCode=1;
+}
