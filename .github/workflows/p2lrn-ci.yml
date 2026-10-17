@@ -256,6 +256,32 @@ jobs:
       - name: Verify local viewer and isolated runtimes
         run: node scripts/verify-local-viewer.mjs
 
+      - name: Verify actual Studio and Player UI in Microsoft Edge if installed
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $chromeEvidence = '.visual-evidence-chrome'
+          if (Test-Path .visual-evidence) {
+            New-Item -ItemType Directory -Force $chromeEvidence | Out-Null
+            Copy-Item .visual-evidence\*.png $chromeEvidence -Force
+          }
+          $candidates = @('C:\Program Files\Microsoft\Edge\Application\msedge.exe','C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe')
+          $edge = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+          if ($edge) {
+            $env:CHROME_PATH = $edge
+            node scripts/verify-local-viewer.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'Microsoft Edge UI E2E failed' }
+            New-Item -ItemType Directory -Force '.visual-evidence-edge' | Out-Null
+            Copy-Item .visual-evidence\*.png '.visual-evidence-edge' -Force
+            Remove-Item Env:CHROME_PATH
+            Write-Host 'MICROSOFT_EDGE_UI_E2E=PASS'
+          } else {
+            Write-Host 'MICROSOFT_EDGE_UI_E2E=NOT_INSTALLED'
+          }
+
+
+      - name: Inspect public npm registry for all four P2LRN distributions
+        run: node scripts/check-public-npm-registry.mjs
 
       - name: Verify npm tarballs as installed packages
         run: node scripts/verify-npm-pack.mjs
@@ -284,6 +310,8 @@ jobs:
           New-Item -ItemType Directory -Path $target -Force | Out-Null
           $sources = @(
             @{ directory = '.visual-evidence'; pattern = '*.png'; folder = 'cdn-visual' },
+            @{ directory = '.visual-evidence-chrome'; pattern = '*.png'; folder = 'cdn-chrome-visual' },
+            @{ directory = '.visual-evidence-edge'; pattern = '*.png'; folder = 'cdn-edge-visual' },
             @{ directory = '.npm-pack-gate/visual-evidence'; pattern = '*.png'; folder = 'npm-visual' },
             @{ directory = '.npm-pack-gate/browser-runtime/courses'; pattern = '*.p2lrn'; folder = 'npm-packages' }
           )
@@ -312,6 +340,8 @@ jobs:
           name: p2lrn-browser-evidence-${{ github.run_id }}
           path: |
             .visual-evidence/*.png
+            .visual-evidence-chrome/*.png
+            .visual-evidence-edge/*.png
             .npm-pack-gate/visual-evidence/*.png
             .npm-pack-gate/browser-runtime/courses/*.p2lrn
           if-no-files-found: warn
