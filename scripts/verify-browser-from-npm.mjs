@@ -46,11 +46,33 @@ function mediaType(path) {
   })[ext] ?? 'application/octet-stream';
 }
 
-function createStaticServer(base, {cors=false} = {}) {
+function createStaticServer(base, {cors=false,studioApi=null} = {}) {
   const rootPath = resolve(base);
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1/');
+      if(studioApi && url.pathname.startsWith('/api/p2lrn/studio/')){
+        const method=String(req.method??'GET').toUpperCase();
+        if(method!=='POST'){res.writeHead(405,{Allow:'POST'});res.end('Method Not Allowed');return;}
+        const limit=24*1024*1024;
+        const bodyChunks=[];let size=0;
+        for await(const chunk of req){
+          size+=chunk.length;if(size>limit){res.writeHead(413);res.end('Oversized UI test request');return;}
+          bodyChunks.push(chunk);
+        }
+        const request=new Request(url.href,{
+          method:'POST',headers:req.headers,body:Buffer.concat(bodyChunks),
+        });
+        let reply;
+        if(url.pathname==='/api/p2lrn/studio/import')reply=await studioApi.handleP2LRNStudioExternalImport(request);
+        else if(url.pathname==='/api/p2lrn/studio/read')reply=await studioApi.handleP2LRNStudioReader(request);
+        else if(url.pathname==='/api/p2lrn/studio/save')reply=await studioApi.handleP2LRNStudioSave(request,{root:rootPath,coursePath:'courses',allowClientPath:false});
+        else{res.writeHead(404);res.end('Unknown Studio operation');return;}
+        const headers=Object.fromEntries(reply.headers.entries());
+        res.writeHead(reply.status,headers);
+        res.end(Buffer.from(await reply.arrayBuffer()));
+        return;
+      }
       const decoded = decodeURIComponent(url.pathname);
       const relative = decoded === '/' ? 'index.html' : decoded.replace(/^\/+/, '');
       const file = resolve(rootPath, relative);
@@ -494,7 +516,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
 
 const sleep = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 
-async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
+async function runChromePageGate(chrome, url, profile, {timeoutMs=35000,screenshotName=null} = {}) {
   await rm(profile,{recursive:true,force:true});
   const args=[
     '--headless=new',
@@ -584,6 +606,7 @@ async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
     };
     await send('Runtime.enable');
     await send('Log.enable');
+    await send('Page.enable');
 
     const deadline=Date.now()+timeoutMs;
     let snapshot={status:'BOOT',detail:'BOOT',readyState:'loading'};
@@ -593,7 +616,19 @@ async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
         returnByValue:true,
       });
       snapshot=evaluated.result?.value??snapshot;
-      if(snapshot.status!=='BOOT'&&snapshot.status!=='MISSING')return {...snapshot,stderr,browserLogs,runtimeExceptions};
+      if(snapshot.status!=='BOOT'&&snapshot.status!=='MISSING'){
+        let screenshot=null;
+        if(screenshotName){
+          const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});
+          if(!shot.data)throw new Error('No Chrome screenshot captured for '+screenshotName);
+          const folder=join(gateRoot,'visual-evidence');await mkdir(folder,{recursive:true});
+          screenshot=screenshotName+'.png';
+          const target=join(folder,screenshot);
+          await writeFile(target,Buffer.from(shot.data,'base64'));
+          if((await stat(target)).size<5000)throw new Error('Chrome screenshot appears empty: '+target);
+        }
+        return {...snapshot,screenshot,stderr,browserLogs,runtimeExceptions};
+      }
       await sleep(100);
     }
     return {...snapshot,stderr,browserLogs,runtimeExceptions,timeout:true};
@@ -613,7 +648,7 @@ async function runChromePageGate(chrome, url, profile, {timeoutMs=35000} = {}) {
 async function runCourse(chrome, appOrigin, course, index) {
   const profile=join(gateRoot,`chrome-profile-${index}`);
   const url=`${appOrigin}/?course=${encodeURIComponent(course)}`;
-  const result=await runChromePageGate(chrome,url,profile,{timeoutMs:35000});
+  const result=await runChromePageGate(chrome,url,profile,{timeoutMs:35000,screenshotName:'npm-player-'+course.replace(/[^a-z0-9-]+/giu,'-')});
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
   if(status!=='PASS'){
@@ -624,7 +659,7 @@ async function runCourse(chrome, appOrigin, course, index) {
 
 async function runQuestionnaire(chrome, appOrigin) {
   const profile=join(gateRoot,'chrome-profile-questionnaire');
-  const result=await runChromePageGate(chrome,`${appOrigin}/questionnaire.html`,profile,{timeoutMs:45000});
+  const result=await runChromePageGate(chrome,`${appOrigin}/questionnaire.html`,profile,{timeoutMs:45000,screenshotName:'npm-player-questionnaire'});
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
   if(status!=='PASS')throw new Error(`Questionnaire browser gate failed: status=${status}\n${detail}\nBrowser logs:\n${JSON.stringify(result.browserLogs??[],null,2)}\nRuntime exceptions:\n${JSON.stringify(result.runtimeExceptions??[],null,2)}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
