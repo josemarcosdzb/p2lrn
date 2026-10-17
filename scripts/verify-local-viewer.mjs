@@ -173,9 +173,9 @@ async function runtimeTexts(cdp){
   return out;
 }
 
-async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXapi=false}={}){
+async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXapi=false,automaticRuntime=false}={}){
   const exceptionStart=cdp.exceptions.length;
-  await cdp.send('Page.navigate',{url:`${APP_ORIGIN}/demo/?src=${encodeURIComponent(src)}`});
+  await cdp.send('Page.navigate',{url:`${APP_ORIGIN}/demo/?src=${encodeURIComponent(src)}${automaticRuntime?'&runtime=auto':''}`});
   let state=null;
   const deadline=Date.now()+30000;
   while(Date.now()<deadline){
@@ -194,7 +194,15 @@ async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXap
   invariant(state?.activityReady,`${name}: activityready not reached. state=${JSON.stringify(state)} runtimeText=${JSON.stringify(texts)} exceptions=${JSON.stringify(cdp.exceptions.slice(exceptionStart))} security=${JSON.stringify(cdp.security)}`);
   invariant(!state.error,`${name}: p2lrn:error was emitted. ${state.tail}`);
   if(requireXapi) invariant(state.xapi,`${name}: cmi5 initialized without forwarding an xAPI statement. ${state.tail}`);
-  invariant(state.runtimeBase.startsWith(RUNTIME_ORIGIN),`${name}: runtime origin is not isolated locally: ${state.runtimeBase}`);
+  if (automaticRuntime) {
+    invariant(!state.runtimeBase.startsWith(RUNTIME_ORIGIN),name+': automatic mode must not use a dedicated runtime origin');
+    const probe=await evalTop(cdp,String.raw`(()=>{const frame=document.getElementById('demo-player')?.shadowRoot?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-runtime');return {sandbox:frame?.getAttribute('sandbox')||'',srcdoc:!!frame?.srcdoc,accessible:(()=>{try{return !!frame?.contentDocument}catch{return false}})()}})()`);
+    invariant(probe?.srcdoc,name+': automatic runtime did not use a srcdoc frame');
+    invariant(!probe?.sandbox.includes('allow-same-origin'),name+': opaque iframe unexpectedly has allow-same-origin');
+    invariant(!probe?.accessible,name+': application can access executable iframe content');
+  } else {
+    invariant(state.runtimeBase.startsWith(RUNTIME_ORIGIN),name+': runtime origin is not isolated locally: '+state.runtimeBase);
+  }
   invariant(state.pageOverflow<=2,`${name}: page overflows horizontally by ${state.pageOverflow}px`);
   if(expectIframe){
     invariant(state.iframe&&state.stage,`${name}: runtime iframe/stage missing.`);
@@ -246,6 +254,9 @@ try{
   await audit('h5p','/examples/canonical/external/h5p-crossword.p2lrn');
   await audit('scorm','/examples/canonical/external/scorm12-real.p2lrn',{rejectText:['Not implemented yet']});
   await audit('qti','/examples/canonical/external/qti3-minimal.p2lrn',{expectIframe:false,rejectText:['This QTI item has no itemBody.']});
+  await audit('cmi5-automatic','/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',{automaticRuntime:true,requireXapi:true,rejectText:['Not implemented yet']});
+  await audit('h5p-automatic','/examples/canonical/external/h5p-crossword.p2lrn',{automaticRuntime:true});
+  await audit('scorm-automatic','/examples/canonical/external/scorm12-real.p2lrn',{automaticRuntime:true,rejectText:['Not implemented yet']});
   let narrow=null;
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
   console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
