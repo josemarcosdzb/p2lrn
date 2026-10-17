@@ -1,6 +1,6 @@
 import {createServer} from 'node:http';
 import {createReadStream} from 'node:fs';
-import {mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
+import {cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {extname, join, resolve, sep} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -196,7 +196,7 @@ async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXap
   if(requireXapi) invariant(state.xapi,`${name}: cmi5 initialized without forwarding an xAPI statement. ${state.tail}`);
   if (automaticRuntime) {
     invariant(!state.runtimeBase.startsWith(RUNTIME_ORIGIN),name+': automatic mode must not use a dedicated runtime origin');
-    const probe=await evalTop(cdp,String.raw`(()=>{const frame=document.getElementById('demo-player')?.shadowRoot?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-runtime');return {sandbox:frame?.getAttribute('sandbox')||'',srcdoc:!!frame?.srcdoc,accessible:(()=>{try{return !!frame?.contentDocument}catch{return false}})()}})()`);
+    const probe=await evalTop(cdp,String.raw`(()=>{const frame=document.getElementById('demo-player')?.shadowRoot?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-frame');return {sandbox:frame?.getAttribute('sandbox')||'',srcdoc:!!frame?.srcdoc,accessible:(()=>{try{return !!frame?.contentDocument}catch{return false}})()}})()`);
     invariant(probe?.srcdoc,name+': automatic runtime did not use a srcdoc frame');
     invariant(!probe?.sandbox.includes('allow-same-origin'),name+': opaque iframe unexpectedly has allow-same-origin');
     invariant(!probe?.accessible,name+': application can access executable iframe content');
@@ -416,6 +416,9 @@ async function prepareVisualStudioFixture(){
 
 let appServer=null,runtimeServer=null,chrome=null,cdp=null;
 try{
+  // Match build-site.mjs: the static Studio page imports the toolkit's canonical browser modules.
+  // The CDN-only fixture does not materialize these until we copy them here.
+  await cp(join(root,'packages','toolkit','web','studio'),join(siteRoot,'studio','runtime'),{recursive:true,force:true});
   await prepareVisualStudioFixture();
   const builtViewer=await readFile(viewerPath,'utf8');
   const localViewer=builtViewer.replace(/const RUNTIME_ORIGINS=Object\.freeze\(\[[\s\S]*?\]\);/u,
