@@ -246,6 +246,18 @@ jobs:
       - name: Verify npm/CDN byte identity
         run: node scripts/verify-distribution-identity.mjs
 
+      - name: Upload browser evidence and Studio-generated package
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p2lrn-browser-evidence-${{ github.run_id }}
+          path: |
+            .visual-evidence/*.png
+            .npm-pack-gate/visual-evidence/*.png
+            .npm-pack-gate/browser-runtime/courses/*.p2lrn
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Verify generated runtime
         shell: powershell
         run: |
