@@ -276,6 +276,7 @@ jobs:
             .npm-pack-gate/visual-evidence/*.png
             .npm-pack-gate/browser-runtime/courses/*.p2lrn
           if-no-files-found: warn
+          include-hidden-files: true
           retention-days: 7
 
       - name: Verify generated runtime
