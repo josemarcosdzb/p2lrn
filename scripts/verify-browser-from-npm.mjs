@@ -304,6 +304,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   const p=document.createElement('p2lrn-player');
   p.id='player';
   p.setAttribute('src','/courses/'+course);
+  const node=params.get('node');if(node)p.setAttribute('node',node);
   for(const name of ['p2lrn:ready','p2lrn:rendered','p2lrn:activityready','p2lrn:statechange','p2lrn:error']){
     p.addEventListener(name,e=>{
       let detail=e.detail;
@@ -592,6 +593,8 @@ try{
   const api=await window.P2LRNReady;
   const pkg=await api.openPackageBytes(exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength));
   if(!pkg.manifest?.integrity?.contentRoot)throw new Error('npm Player rejected Studio export');
+  const authoredLesson=[...pkg.entities.values()].find(e=>e.type==='activity'&&e.title?.es==='Lección creada con Studio npm');
+  if(!authoredLesson?.id)throw new Error('Exported graph is missing the authored lesson');
   const lesson=[...q('[data-tree]').querySelectorAll('button')].find(b=>b.querySelector('span')?.textContent==='Lección creada con Studio npm');
   if(!lesson)throw new Error('npm Studio lesson title lost before preview');
   lesson.click();
@@ -615,7 +618,7 @@ try{
   q('[data-file]').dispatchEvent(new Event('change',{bubbles:true}));
   await wait(()=>events.some(e=>e.type==='p2lrn-studio-open'),'reopen saved file via UI',15000);
   if(!q('[data-tree]').textContent.includes('Lección creada con Studio npm'))throw new Error('Export/reimport lost authored lesson');
-  finish('PASS',{channel:'installed-npm-tarballs',filename,bytes:savedBytes.byteLength,contentRoot:pkg.manifest.integrity.contentRoot,activities:added,scormImport:true,readerImport:true,verifiedByPlayer:true,reopenedFromFile:true});
+  finish('PASS',{channel:'installed-npm-tarballs',filename,bytes:savedBytes.byteLength,contentRoot:pkg.manifest.integrity.contentRoot,activities:added,scormImport:true,readerImport:true,verifiedByPlayer:true,reopenedFromFile:true,lessonId:authoredLesson.id});
 }catch(error){finish('FAIL',{message:String(error?.stack||error)});}
 })();
 })();
@@ -787,9 +790,9 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
   }
 }
 
-async function runCourse(chrome, appOrigin, course, index, {authored=false}={}) {
+async function runCourse(chrome, appOrigin, course, index, {authored=false,node=null}={}) {
   const profile=join(gateRoot,`chrome-profile-${index}`);
-  const url=`${appOrigin}/?course=${encodeURIComponent(course)}${authored?'&authored=1':''}`;
+  const url=`${appOrigin}/?course=${encodeURIComponent(course)}${authored?'&authored=1':''}${node?'&node='+encodeURIComponent(node):''}`;
   const result=await runChromePageGate(chrome,url,profile,{timeoutMs:35000,screenshotName:'npm-player-'+course.replace(/[^a-z0-9-]+/giu,'-')});
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
@@ -841,7 +844,7 @@ try{
   results.push(await runQuestionnaire(chrome,appOrigin));
   const studioResult=await runStudioFromNpm(chrome,appOrigin);
   results.push(studioResult);
-  results.push(await runCourse(chrome,appOrigin,studioResult.filename,courses.length,{authored:true}));
+  results.push(await runCourse(chrome,appOrigin,studioResult.filename,courses.length,{authored:true,node:studioResult.lessonId}));
 }finally{
   await new Promise((resolvePromise)=>runtimeServer.close(()=>resolvePromise()));
   await new Promise((resolvePromise)=>appServer.close(()=>resolvePromise()));
