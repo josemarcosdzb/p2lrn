@@ -516,6 +516,128 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
 
 const sleep = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 
+
+async function prepareInstalledStudioBrowser(){
+  await cp(join(installRoot,'node_modules','@p2lrn','studio','dist'),
+    join(browserRoot,'studio','current','dist'),{recursive:true,force:true});
+  await cp(join(installRoot,'node_modules','@p2lrn','player','dist'),
+    join(browserRoot,'player','current','dist'),{recursive:true,force:true});
+  const html=String.raw`<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Studio npm UI gate</title>
+<style>body{background:#f4f5f7;padding:14px;font-family:system-ui,sans-serif}h1{font-size:19px}p2lrn-studio{display:block}#result{font-size:10px;white-space:pre-wrap}</style>
+<script src="/studio/current/dist/p2lrn-studio.js"></script></head>
+<body><h1>Studio npm: creación, importación y previsualización visual</h1>
+<p2lrn-studio id="studio" save-endpoint="/api/p2lrn/studio/save" reader-endpoint="/api/p2lrn/studio/read" import-endpoint="/api/p2lrn/studio/import" course-path="courses"></p2lrn-studio>
+<pre id="result" data-status="BOOT">BOOT</pre>
+<script>
+(function(){
+const output=document.getElementById('result');
+const events=[];
+const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+const wait=async(fn,label,ms=13000)=>{
+  const started=Date.now();
+  while(Date.now()-started<ms){const value=fn();if(value)return value;await sleep(60);}
+  throw new Error('Timeout at '+label);
+};
+const finish=(status,detail)=>{output.dataset.status=status;output.textContent=JSON.stringify({status,detail,events},null,2)};
+(async()=>{
+try{
+  await wait(()=>window.P2LRNStudioReady,'npm Studio loader',15000);
+  await window.P2LRNStudioReady;
+  const studio=document.getElementById('studio');
+  const root=studio.shadowRoot;
+  if(!root)throw new Error('Installed npm Studio component has no shadow UI');
+  for(const type of ['p2lrn-studio-save','p2lrn-studio-open','p2lrn-studio-download'])studio.addEventListener(type,e=>events.push({type,...(e.detail||{})}));
+  const q=(selector)=>root.querySelector(selector);
+  const click=(selector)=>{const el=q(selector);if(!el)throw new Error('No UI control '+selector);el.click();};
+  click('[data-create]');
+  await wait(()=>!q('[data-body]').hidden,'npm create course');
+  click('.tree-actions button:first-child');
+  await wait(()=>q('[data-tree]').textContent.includes('Unidad'),'npm unit');
+  click('.tree-actions button:nth-child(2)');
+  await wait(()=>q('.surface[contenteditable="true"]'),'npm lesson');
+  q('.title').textContent='Lección creada con Studio npm';
+  q('.title').dispatchEvent(new Event('input',{bubbles:true}));
+  q('.surface').textContent='Este contenido fue editado a través del editor instalado con npm.';
+  q('.surface').dispatchEvent(new Event('input',{bubbles:true}));
+  const added=[];
+  for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','component','composite']){
+    const count=q('[data-tree]').querySelectorAll('button').length;
+    q('[data-add-menu]').open=true;
+    click('[data-add-kind="'+kind+'"]');
+    await wait(()=>q('[data-tree]').querySelectorAll('button').length>count,'npm add '+kind);
+    added.push(kind);
+  }
+  let before=q('[data-tree]').querySelectorAll('button').length;
+  q('[data-add-menu]').open=true;
+  click('[data-add-kind="external"]');
+  const scormResponse=await fetch('/scorm12-interactive.zip',{cache:'no-store'});
+  if(!scormResponse.ok)throw new Error('No real SCORM ZIP fixture');
+  const scormFile=new File([await scormResponse.arrayBuffer()],'scorm12-interactive.zip',{type:'application/zip'});
+  const scormTransfer=new DataTransfer();scormTransfer.items.add(scormFile);
+  q('[data-external-file]').files=scormTransfer.files;
+  q('[data-external-file]').dispatchEvent(new Event('change',{bubbles:true}));
+  await wait(()=>q('[data-tree]').querySelectorAll('button').length>before,'npm import real SCORM via UI',25000);
+  if(q('[data-meta]').textContent.includes('failed'))throw new Error(q('[data-meta]').textContent);
+  before=q('[data-tree]').querySelectorAll('button').length;
+  q('[data-add-menu]').open=true;
+  click('[data-add-kind="reader"]');
+  const markdownFile=new File(['# Reader de Studio npm\n\nDocumento importado desde la interfaz.'],'learning-note.md',{type:'text/markdown'});
+  const readerTransfer=new DataTransfer();readerTransfer.items.add(markdownFile);
+  q('[data-reader-file]').files=readerTransfer.files;
+  q('[data-reader-file]').dispatchEvent(new Event('change',{bubbles:true}));
+  await wait(()=>q('[data-tree]').querySelectorAll('button').length>before,'npm Reader import',25000);
+  const exported=await studio.exportPackage();
+  if(exported.bytes.byteLength<1000)throw new Error('npm Studio generated empty package');
+  const api=await window.P2LRNReady;
+  const pkg=await api.openPackageBytes(exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength));
+  if(!pkg.manifest?.integrity?.contentRoot)throw new Error('npm Player rejected Studio export');
+  const lesson=[...q('[data-tree]').querySelectorAll('button')].find(b=>b.querySelector('span')?.textContent==='Lección creada con Studio npm');
+  if(!lesson)throw new Error('npm Studio lesson title lost before preview');
+  lesson.click();
+  await wait(()=>q('.title')?.textContent==='Lección creada con Studio npm','select lesson');
+  click('[data-preview]');
+  const frame=await wait(()=>q('p2lrn-player.preview')?.shadowRoot?.querySelector('.p2lrn-stage'),'npm Player preview',15000);
+  if(!frame)throw new Error('Player did not render the exported package');
+  click('[data-download]');
+  await wait(()=>events.some(e=>e.type==='p2lrn-studio-download'),'download click');
+  click('[data-save]');
+  const saved=await wait(()=>events.find(e=>e.type==='p2lrn-studio-save'),'save through Host adapter',15000);
+  const filename=saved.filename;
+  if(!filename||!filename.endsWith('.p2lrn'))throw new Error('Invalid saved name '+filename);
+  const savedResponse=await fetch('/courses/'+encodeURIComponent(filename),{cache:'no-store'});
+  if(!savedResponse.ok)throw new Error('Studio server did not persist exported package');
+  const savedBytes=await savedResponse.arrayBuffer();
+  if(savedBytes.byteLength!==exported.bytes.byteLength)throw new Error('Saved bytes differ from exported package');
+  const inputTransfer=new DataTransfer();
+  inputTransfer.items.add(new File([savedBytes],filename,{type:'application/vnd.p2lrn+zip'}));
+  q('[data-file]').files=inputTransfer.files;
+  q('[data-file]').dispatchEvent(new Event('change',{bubbles:true}));
+  await wait(()=>events.some(e=>e.type==='p2lrn-studio-open'),'reopen saved file via UI',15000);
+  if(!q('[data-tree]').textContent.includes('Lección creada con Studio npm'))throw new Error('Export/reimport lost authored lesson');
+  finish('PASS',{channel:'installed-npm-tarballs',filename,bytes:savedBytes.byteLength,contentRoot:pkg.manifest.integrity.contentRoot,activities:added,scormImport:true,readerImport:true,verifiedByPlayer:true,reopenedFromFile:true});
+}catch(error){finish('FAIL',{message:String(error?.stack||error)});}
+})();
+})();
+</script></body></html>`;
+  await writeFile(join(browserRoot,'studio-npm.html'),html);
+}
+
+async function runStudioFromNpm(chrome,appOrigin){
+  const profile=join(gateRoot,'chrome-profile-studio-npm');
+  const result=await runChromePageGate(chrome,appOrigin+'/studio-npm.html',profile,
+    {timeoutMs:95000,screenshotName:'npm-studio-ui'});
+  const detail=String(result.detail??'').trim();
+  if(result.status!=='PASS')throw new Error(
+    'npm Studio UI E2E failed: '+detail+
+    '\nBrowser logs: '+JSON.stringify(result.browserLogs)+
+    '\nJS exceptions: '+JSON.stringify(result.runtimeExceptions)+
+    '\nChrome stderr: '+String(result.stderr).slice(-5000)
+  );
+  const parsed=JSON.parse(detail);
+  return {name:'studio-ui-npm',status:'PASS',...parsed.detail,screenshot:result.screenshot};
+}
+
 async function runChromePageGate(chrome, url, profile, {timeoutMs=35000,screenshotName=null} = {}) {
   await rm(profile,{recursive:true,force:true});
   const args=[
@@ -671,12 +793,14 @@ await stat(join(copiedRuntime,'runtime-host','h5p-libraries','H5P.Crossword-0.5'
 await prepareCourses();
 
 const runtimeServer=createStaticServer(copiedRuntime,{cors:true});
-const appServer=createStaticServer(browserRoot,{cors:false});
+const studioApi=await importFile(join(installRoot,'node_modules','@p2lrn','studio','server','index.mjs'));
+const appServer=createStaticServer(browserRoot,{cors:false,studioApi});
 const runtimePort=await listen(runtimeServer);
 const appPort=await listen(appServer);
 const runtimeOrigin=`http://127.0.0.1:${runtimePort}`;
 const appOrigin=`http://127.0.0.1:${appPort}`;
 await writeHarness(runtimeOrigin);
+await prepareInstalledStudioBrowser();
 
 const chrome=await findChrome();
 const courses=[
@@ -694,6 +818,9 @@ const results=[];
 try{
   for(let i=0;i<courses.length;i++) results.push(await runCourse(chrome,appOrigin,courses[i],i));
   results.push(await runQuestionnaire(chrome,appOrigin));
+  const studioResult=await runStudioFromNpm(chrome,appOrigin);
+  results.push(studioResult);
+  results.push(await runCourse(chrome,appOrigin,studioResult.filename,courses.length));
 }finally{
   await new Promise((resolvePromise)=>runtimeServer.close(()=>resolvePromise()));
   await new Promise((resolvePromise)=>appServer.close(()=>resolvePromise()));
