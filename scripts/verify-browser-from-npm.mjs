@@ -630,10 +630,34 @@ try{
   const authoredLesson=entities.find(e=>e.type==='activity'&&e.title?.es==='Lección creada con Studio npm');
   if(!authoredLesson?.id)throw new Error('Exported graph is missing the authored lesson');
   const titleText=(entity)=>Object.values(entity?.title??{}).map(value=>String(value)).join(' | ');
-  const importedScormActivity=entities.find(entity=>entity.type==='activity'&&titleText(entity)===scormTitle);
+  // External SCORM import creates an actual UNIT wrapper. The SCORM activity
+  // lives among its descendants and keeps the imported package's own title.
+  const entityById=new Map(entities.map(entity=>[entity.id,entity]));
+  const scormWrapper=entities.find(entity=>entity.type==='unit'&&titleText(entity)===scormTitle);
+  const visit=(id,seen=new Set())=>{
+    if(seen.has(id))return [];
+    seen.add(id);
+    const entity=entityById.get(id);
+    return entity?[entity,...(entity.children??[]).flatMap(child=>visit(child,seen))]:[];
+  };
+  const nestedScormEntities=scormWrapper?visit(scormWrapper.id):[];
+  const importedScormActivity=nestedScormEntities.find(entity=>{
+    if(entity.type!=='activity'||!entity.resource)return false;
+    const resource=entityById.get(entity.resource);
+    return (resource?.representations??[]).some(rep=>
+      String(rep.profile??'')==='https://p2lrn.org/profile/scorm');
+  });
   const importedReaderActivity=entities.find(entity=>entity.type==='activity'&&titleText(entity)===readerTitle);
-  if(!importedScormActivity?.id||!importedReaderActivity?.id)
-    throw new Error('Studio export is missing imported SCORM/Reader activity nodes');
+  if(!importedScormActivity?.id||!importedReaderActivity?.id){
+    const overview=nestedScormEntities.map(entity=>({
+      id:entity.id,type:entity.type,title:titleText(entity),
+      profiles:(entity.representations??[]).map(rep=>rep.profile??null)
+    }));
+    throw new Error('Studio export missing imported launch activity: '+JSON.stringify({
+      wrapper:scormWrapper?.id??null,scorm:!!importedScormActivity,
+      reader:!!importedReaderActivity,overview
+    }));
+  }
   const authoredEntities=entities.filter(entity=>['course','unit','activity','resource'].includes(entity.type));
   const expectedExportedTitles=['Lección creada con Studio npm',...added.map(item=>item.title),scormTitle,readerTitle];
   const exportedTitles=authoredEntities.map(titleText);
