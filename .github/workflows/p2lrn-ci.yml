@@ -6,6 +6,12 @@ on:
     paths:
       - 'packages/toolkit/**'
       - 'packages/player/**'
+      - 'packages/studio/**'
+      - 'packages/h5p-libraries/**'
+      - 'deploy/netlify/**'
+      - 'PUBLISHING.md'
+      - 'LICENSE'
+      - 'NOTICE.md'
       - 'scripts/**'
       - '.github/workflows/p2lrn-ci.yml'
   push:
@@ -266,8 +272,41 @@ jobs:
       - name: Verify npm/CDN byte identity
         run: node scripts/verify-distribution-identity.mjs
 
+      # GitHub artifact storage can reach its quota. Keep the real packages and
+      # Chrome screenshots on the Windows runner as independently verifiable evidence.
+      - name: Preserve generated packages and screenshots on Windows
+        if: always()
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:USERPROFILE 'Downloads\p2lrn-validation'
+          $target = Join-Path $root $env:GITHUB_RUN_ID
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          $sources = @(
+            @{ directory = '.visual-evidence'; pattern = '*.png'; folder = 'cdn-visual' },
+            @{ directory = '.npm-pack-gate/visual-evidence'; pattern = '*.png'; folder = 'npm-visual' },
+            @{ directory = '.npm-pack-gate/browser-runtime/courses'; pattern = '*.p2lrn'; folder = 'npm-packages' }
+          )
+          $manifest = @()
+          foreach ($spec in $sources) {
+            if (!(Test-Path -LiteralPath $spec.directory -PathType Container)) { continue }
+            $dest = Join-Path $target $spec.folder
+            New-Item -ItemType Directory -Path $dest -Force | Out-Null
+            foreach ($file in (Get-ChildItem -LiteralPath $spec.directory -File -Filter $spec.pattern)) {
+              $destination = Join-Path $dest $file.Name
+              Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
+              $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+              $manifest += [pscustomobject]@{ file = "$($spec.folder)/$($file.Name)"; bytes = $file.Length; sha256 = $hash }
+            }
+          }
+          $report = [pscustomobject]@{ runId = "$env:GITHUB_RUN_ID"; commit = "$env:GITHUB_SHA"; files = $manifest }
+          $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $target 'manifest.json') -Encoding UTF8
+          Write-Host "Evidencias conservadas en $target ; archivos: $($manifest.Count)"
+          if ($manifest.Count -eq 0) { Write-Warning 'El navegador no produjo archivos que conservar en esta ejecución.' }
+
       - name: Upload browser evidence and Studio-generated package
         if: always()
+        continue-on-error: true # Windows already retains hashed copies when GitHub artifact quota is exhausted.
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: p2lrn-browser-evidence-${{ github.run_id }}
