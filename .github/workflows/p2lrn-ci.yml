@@ -253,6 +253,9 @@ jobs:
           Copy-Item -Recurse -Force examples/canonical/* .netlify-cdn/examples/canonical/
           Copy-Item -Force .netlify-cdn/player/current/dist/p2lrn-sw.js .netlify-cdn/p2lrn-sw.js
 
+      - name: Inspect public npm registry for all four P2LRN distributions
+        run: node scripts/check-public-npm-registry.mjs
+
       - name: Verify local viewer and isolated runtimes
         run: node scripts/verify-local-viewer.mjs
 
@@ -268,6 +271,10 @@ jobs:
           $candidates = @('C:\Program Files\Microsoft\Edge\Application\msedge.exe','C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe')
           $edge = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
           if ($edge) {
+            # The Chrome E2E rewrites the temporary viewer's runtime origins.
+            # Restore a clean copy before the independent Edge E2E to avoid
+            # mistaking a reused fixture for a browser incompatibility.
+            Copy-Item -LiteralPath 'deploy/netlify/site/demo/viewer.js' -Destination '.netlify-cdn/demo/viewer.js' -Force
             $env:CHROME_PATH = $edge
             node scripts/verify-local-viewer.mjs
             if ($LASTEXITCODE -ne 0) { throw 'Microsoft Edge UI E2E failed' }
@@ -279,9 +286,6 @@ jobs:
             Write-Host 'MICROSOFT_EDGE_UI_E2E=NOT_INSTALLED'
           }
 
-
-      - name: Inspect public npm registry for all four P2LRN distributions
-        run: node scripts/check-public-npm-registry.mjs
 
       - name: Verify npm tarballs as installed packages
         run: node scripts/verify-npm-pack.mjs
