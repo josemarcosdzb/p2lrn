@@ -32,6 +32,13 @@ on:
       - 'deploy/netlify/**'
       - 'netlify.toml'
       - '.github/workflows/p2lrn-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/toolkit/**'
+      - 'packages/player/**'
+      - 'deploy/netlify/site/docs/**'
+      - '.github/workflows/p2lrn-ci.yml'
   workflow_dispatch:
     inputs:
       license_only:
