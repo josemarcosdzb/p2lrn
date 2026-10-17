@@ -561,11 +561,23 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
     const pending=new Map();
     const browserLogs=[];
     const runtimeExceptions=[];
-    const contexts=new Set();
+    const contexts=new Map();
     socket.addEventListener('message',(event)=>{
       const message=JSON.parse(event.data);
-      if(message.method==='Runtime.executionContextCreated' && message.params?.context?.auxData?.isDefault) contexts.add(message.params.context.id);
-      if(message.method==='Runtime.executionContextDestroyed') contexts.delete(message.params.executionContextId);
+      const sessionId=message.sessionId ?? null;
+      if(message.method==='Runtime.executionContextCreated' && message.params?.context?.auxData?.isDefault) {
+        const contextId=message.params.context.id;
+        contexts.set(`${sessionId ?? ''}:${contextId}`,{sessionId,contextId});
+      }
+      if(message.method==='Runtime.executionContextDestroyed') contexts.delete(`${sessionId ?? ''}:${message.params.executionContextId}`);
+      if(message.method==='Target.attachedToTarget' && exerciseExpression) {
+        const childSession=message.params.sessionId;
+        void send('Runtime.enable',{},childSession).catch(()=>{});
+        void send('Log.enable',{},childSession).catch(()=>{});
+      }
+      if(message.method==='Target.detachedFromTarget') {
+        for(const [key,value] of contexts) if(value.sessionId===message.params.sessionId) contexts.delete(key);
+      }
       if(message.method==='Log.entryAdded'){
         const entry=message.params?.entry;
         if(entry)browserLogs.push({level:entry.level,source:entry.source,text:entry.text,url:entry.url||null});
@@ -580,19 +592,20 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
       if(message.error)wait.reject(new Error(JSON.stringify(message.error)));
       else wait.resolve(message.result);
     });
-    const send=(method,params={})=>{
+    const send=(method,params={},sessionId=null)=>{
       const id=++sequence;
-      socket.send(JSON.stringify({id,method,params}));
+      socket.send(JSON.stringify({id,method,params,...(sessionId ? {sessionId} : {})}));
       return new Promise((resolvePromise,reject)=>pending.set(id,{resolve:resolvePromise,reject}));
     };
     await send('Runtime.enable');
     await send('Log.enable');
+    if(exerciseExpression) await send('Target.setAutoAttach',{autoAttach:true,waitForDebuggerOnStart:false,flatten:true});
 
     const deadline=Date.now()+timeoutMs;
     let snapshot={status:'BOOT',detail:'BOOT',readyState:'loading'};
     while(Date.now()<deadline){
-      if(exerciseExpression) for(const contextId of contexts) {
-        try { await send('Runtime.evaluate',{expression:exerciseExpression,contextId,returnByValue:true}); } catch {}
+      if(exerciseExpression) for(const {contextId,sessionId} of contexts.values()) {
+        try { await send('Runtime.evaluate',{expression:exerciseExpression,contextId,returnByValue:true},sessionId); } catch {}
       }
       const evaluated=await send('Runtime.evaluate',{
         expression:`(()=>{const e=document.getElementById('result');return {status:e?.dataset?.status??'MISSING',detail:e?.textContent??'',readyState:document.readyState};})()`,
