@@ -912,7 +912,9 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
 async function runCourse(chrome, appOrigin, course, index, {authored=false,node=null,importedScorm=false,importedReader=false}={}) {
   const profile=join(gateRoot,`chrome-profile-${index}`);
   const url=`${appOrigin}/?course=${encodeURIComponent(course)}${authored?'&authored=1':''}${node?'&node='+encodeURIComponent(node):''}${importedScorm?'&importedScorm=1':''}${importedReader?'&importedReader=1':''}`;
-  const result=await runChromePageGate(chrome,url,profile,{timeoutMs:35000,screenshotName:'npm-player-'+course.replace(/[^a-z0-9-]+/giu,'-')});
+  const shotName='npm-player-'+course.replace(/[^a-z0-9-]+/giu,'-')
+    +(node?'-'+(importedScorm?'scorm':importedReader?'reader':'lesson')+'-'+node.slice(-8):'');
+  const result=await runChromePageGate(chrome,url,profile,{timeoutMs:35000,screenshotName:shotName});
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
   if(status!=='PASS'){
