@@ -334,6 +334,80 @@ async function verifyStudioComponentUI(cdp){
   invariant(cdp.exceptions.length===exceptionsStart,'Studio browser exceptions: '+JSON.stringify(cdp.exceptions.slice(exceptionsStart)));
   return {suite:'studio-component-cdn',...result,desktop,mobile,screenshotMobile};
 }
+
+async function studioSiteScenario(){
+  const q=(sel)=>document.querySelector(sel);
+  const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+  const wait=async(fn,label,limit=12000)=>{
+    const started=Date.now();
+    while(Date.now()-started<limit){const value=fn();if(value)return value;await sleep(65);}
+    throw new Error('Studio site timed out: '+label+' status='+q('[data-studio-status]')?.textContent);
+  };
+  const click=(sel)=>{const el=q(sel);if(!el)throw new Error('Missing Studio site UI '+sel);el.click();};
+  try{
+    await window.P2LRNReady;
+    click('[data-create-course]');
+    await wait(()=>!q('[data-workspace]').hidden,'create');
+    click('[data-add-unit]');
+    await wait(()=>q('[data-tree]').textContent.includes('Nueva unidad'),'unit');
+    click('[data-add-lesson]');
+    const sheet=await wait(()=>q('.studio-wysiwyg[contenteditable=true]'),'lesson');
+    const title=q('.studio-title');
+    title.textContent='Lección editada con Studio web';
+    title.dispatchEvent(new InputEvent('input',{bubbles:true}));
+    sheet.innerHTML='<p>Texto incorporado mediante el editor WYSIWYG real.</p>';
+    sheet.dispatchEvent(new InputEvent('input',{bubbles:true}));
+    click('[data-add-content]');
+    await wait(()=>q('[data-add-dialog]')?.open,'open palette');
+    click('[data-add-kind="questionnaire"]');
+    await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Cuestionario'),'questionnaire');
+    click('[data-add-content]');
+    await wait(()=>q('[data-add-dialog]').open,'reopen palette');
+    click('[data-add-kind="3d"]');
+    await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Juego 3D'),'3d game');
+    const lesson=[...q('[data-tree]').querySelectorAll('button')].find(x=>x.textContent.includes('Lección editada con Studio web'));
+    if(!lesson)throw new Error('Edited lesson not present in outline');
+    lesson.click();
+    await wait(()=>q('.studio-title')?.textContent==='Lección editada con Studio web','restore lesson editor');
+    click('[data-save-draft]');
+    await wait(()=>q('[data-studio-status]')?.textContent.includes('Borrador guardado'),'manual draft save',18000);
+    click('[data-export]');
+    await wait(()=>q('[data-studio-status]')?.textContent.includes('Paquete exportado y verificado'),'verified export',18000);
+    return {ok:true,lesson:'Lección editada con Studio web',questionnaire:true,game3d:true,draftSaved:true,packageExported:true,treeText:q('[data-tree]').textContent.slice(0,350)};
+  }catch(error){return {ok:false,error:String(error?.stack||error)};}
+}
+async function verifyStudioSiteUI(cdp){
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/studio/'});
+  const deadline=Date.now()+16000;let loaded=false;
+  while(Date.now()<deadline){
+    loaded=await evalTop(cdp,"!!document.querySelector('[data-create-course]') && !!window.P2LRNReady");
+    if(loaded)break;
+    await sleep(150);
+  }
+  invariant(loaded,'Visual Studio website did not initialize.');
+  const before=cdp.exceptions.length;
+  const result=await evalTop(cdp,'('+studioSiteScenario.toString()+')()');
+  invariant(result?.ok,'Studio website WYSIWYG/UI failure: '+JSON.stringify(result));
+  const editorScreenshot=await captureVisualEvidence(cdp,'studio-website-editor');
+  await evalTop(cdp,"document.querySelector('[data-mode-preview]').click();true");
+  const previewDeadline=Date.now()+14000;let previewed=false;
+  while(Date.now()<previewDeadline){
+    previewed=await evalTop(cdp,"!!document.querySelector('p2lrn-player[data-player]')?.shadowRoot?.querySelector('.p2lrn-stage') && !document.querySelector('[data-preview-stage]').hidden");
+    if(previewed)break;
+    await sleep(120);
+  }
+  invariant(previewed,'Studio website preview did not create a Player');
+  const previewScreenshot=await captureVisualEvidence(cdp,'studio-website-preview');
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await sleep(350);
+  const mobile=await evalTop(cdp,"({scrollWidth:document.documentElement.scrollWidth,clientWidth:document.documentElement.clientWidth,playerWidth:document.querySelector('[data-player]')?.getBoundingClientRect().width||0})");
+  invariant(mobile.scrollWidth<=mobile.clientWidth+3,'Studio website overflows mobile viewport: '+JSON.stringify(mobile));
+  const mobileScreenshot=await captureVisualEvidence(cdp,'studio-website-mobile');
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+  invariant(cdp.exceptions.length===before,'Studio website threw in Chrome: '+JSON.stringify(cdp.exceptions.slice(before)));
+  return {suite:'studio-website-ui',...result,editorScreenshot,previewScreenshot,mobile,mobileScreenshot};
+}
+
 async function prepareVisualStudioFixture(){
   const dir=join(siteRoot,'ui-gates');
   await mkdir(dir,{recursive:true});
@@ -372,7 +446,9 @@ try{
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
   let studioUI=null;
   try{studioUI=await verifyStudioComponentUI(cdp);}catch(error){failures.push({name:'studio-component-cdn',message:String(error?.message||error)});}
-  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,studioUI,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
+  let studioSiteUI=null;
+  try{studioSiteUI=await verifyStudioSiteUI(cdp);}catch(error){failures.push({name:'studio-website-ui',message:String(error?.message||error)});}
+  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,studioUI,studioSiteUI,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
 }finally{
   try{cdp?.socket?.close();}catch{}
