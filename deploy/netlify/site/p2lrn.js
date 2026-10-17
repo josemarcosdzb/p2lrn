@@ -152,10 +152,34 @@
     menuButton.setAttribute('aria-expanded','false');
 
     const hoverCapable = window.matchMedia?.('(hover:hover) and (pointer:fine)').matches;
+    const hoverCloseTimers = new WeakMap();
+    const clearHoverClose = (group) => {
+      const timer=hoverCloseTimers.get(group);
+      if (timer) window.clearTimeout(timer);
+      hoverCloseTimers.delete(group);
+    };
+    const closeOtherHoverGroups = (currentGroup) => {
+      nav.querySelectorAll('.nav-group[open]').forEach((group)=>{
+        if (group!==currentGroup) {
+          clearHoverClose(group);
+          group.open=false;
+        }
+      });
+    };
     nav.querySelectorAll('.nav-group').forEach((group) => {
       if (hoverCapable) {
-        group.addEventListener('pointerenter',()=>{group.open=true;});
-        group.addEventListener('pointerleave',()=>{group.open=false;});
+        group.addEventListener('pointerenter',()=>{
+          clearHoverClose(group);
+          closeOtherHoverGroups(group);
+          group.open=true;
+        });
+        group.addEventListener('pointerleave',()=>{
+          clearHoverClose(group);
+          hoverCloseTimers.set(group,window.setTimeout(()=>{
+            hoverCloseTimers.delete(group);
+            group.open=false;
+          },180));
+        });
       }
     });
     document.addEventListener('click',(event)=>{
