@@ -37,7 +37,7 @@ test('external package runtime selects automatic opaque origin without a configu
   const runtime=await readFile(runtimePath,'utf8');
   const resources=getAutomaticRuntimeHostResources('https://app.example.invalid/player/runtime-host/');
   assert.equal(resources.packageHostScriptUrl,'https://app.example.invalid/player/runtime-host/package-host.js');
-  const html=createOpaquePackageRuntimeDocument(resources);
+  const html=createOpaquePackageRuntimeDocument({hostScriptUrl:resources.packageHostScriptUrl});
   assert.match(html,/package-host\.js/u);
   assert.match(html,/Content-Security-Policy/u);
   assert.match(html,/connect-src 'none'/u);
