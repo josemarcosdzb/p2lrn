@@ -218,6 +218,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-npm-pack.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/check-public-npm-registry.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-browser-from-npm.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-distribution-identity.mjs
@@ -317,7 +319,8 @@ jobs:
             @{ directory = '.visual-evidence-chrome'; pattern = '*.png'; folder = 'cdn-chrome-visual' },
             @{ directory = '.visual-evidence-edge'; pattern = '*.png'; folder = 'cdn-edge-visual' },
             @{ directory = '.npm-pack-gate/visual-evidence'; pattern = '*.png'; folder = 'npm-visual' },
-            @{ directory = '.npm-pack-gate/browser-runtime/courses'; pattern = '*.p2lrn'; folder = 'npm-packages' }
+            @{ directory = '.npm-pack-gate/browser-runtime/courses'; pattern = '*.p2lrn'; folder = 'npm-packages' },
+            @{ directory = '.'; pattern = '.npm-registry-report.json'; folder = 'registry-report' }
           )
           $manifest = @()
           foreach ($spec in $sources) {
@@ -348,6 +351,7 @@ jobs:
             .visual-evidence-edge/*.png
             .npm-pack-gate/visual-evidence/*.png
             .npm-pack-gate/browser-runtime/courses/*.p2lrn
+            .npm-registry-report.json
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 7
