@@ -133,6 +133,10 @@ export async function findChrome() {
   const candidates = [
     process.env.CHROME_BIN,
     process.env.CHROMIUM_BIN,
+    process.env.CHROME_PATH,
+    process.env.EDGE_BIN,
+    process.platform === 'win32' ? 'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe' : null,
+    process.platform === 'win32' ? 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe' : null,
     process.platform === 'win32' ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' : null,
     process.platform === 'win32' ? 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' : null,
     process.platform === 'win32' ? 'C:\\Program Files\\Chromium\\Application\\chrome.exe' : null,
@@ -148,7 +152,7 @@ export async function findChrome() {
       return candidate;
     } catch {}
   }
-  throw new Error('Chrome/Chromium is required for the npm browser gate but was not found on the runner.');
+  throw new Error('A Chromium-based browser (Chrome, Edge or Chromium) is required for the real npm browser gate, but none was found on this runner.');
 }
 
 async function writeZipFixture(path, entries) {
