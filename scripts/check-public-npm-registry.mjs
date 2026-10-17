@@ -17,7 +17,9 @@ if(versions.size!==1)throw new Error('The four P2LRN npm packages do not share o
 async function query({name,version}){
   const identifier=name+'@'+version;
   try{
-    const result=await execFileAsync('npm',['view',identifier,'version','--json','--registry=https://registry.npmjs.org','--fetch-retries=0','--fetch-timeout=10000'],{
+    const npmArgs=['view',identifier,'version','--json','--registry=https://registry.npmjs.org','--fetch-retries=0','--fetch-timeout=10000'];
+    const isWindows=process.platform==='win32';
+    const result=await execFileAsync(isWindows?'cmd.exe':'npm',isWindows?['/d','/s','/c','npm.cmd '+npmArgs.join(' ')]:npmArgs,{
       cwd:root,timeout:15000,maxBuffer:1024*1024,windowsHide:true,env:{...process.env,NPM_CONFIG_AUDIT:'false'},
     });
     const actual=JSON.parse(result.stdout.trim());
