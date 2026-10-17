@@ -602,6 +602,12 @@ try{
   if(!readerTitle)throw new Error('Reader-imported tree node has no title');
   const exported=await studio.exportPackage();
   if(exported.bytes.byteLength<1000)throw new Error('npm Studio generated empty package');
+  // Preserve the actual browser-authored .p2lrn before any later inspection:
+  // failures in graph checks must not destroy the file needed for diagnosis.
+  click('[data-save]');
+  const saved=await wait(()=>events.find(e=>e.type==='p2lrn-studio-save'),'save through Host adapter',15000);
+  const filename=saved.filename;
+  if(!filename||!filename.endsWith('.p2lrn'))throw new Error('Invalid saved name '+filename);
   const api=await window.P2LRNReady;
   const pkg=await api.openPackageBytes(exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength));
   if(!pkg.manifest?.integrity?.contentRoot)throw new Error('npm Player rejected Studio export');
@@ -647,10 +653,6 @@ try{
   if(!frame)throw new Error('Player did not render the exported package');
   click('[data-download]');
   await wait(()=>events.some(e=>e.type==='p2lrn-studio-download'),'download click');
-  click('[data-save]');
-  const saved=await wait(()=>events.find(e=>e.type==='p2lrn-studio-save'),'save through Host adapter',15000);
-  const filename=saved.filename;
-  if(!filename||!filename.endsWith('.p2lrn'))throw new Error('Invalid saved name '+filename);
   const savedResponse=await fetch('/courses/'+encodeURIComponent(filename),{cache:'no-store'});
   if(!savedResponse.ok)throw new Error('Studio server did not persist exported package');
   const savedBytes=await savedResponse.arrayBuffer();
