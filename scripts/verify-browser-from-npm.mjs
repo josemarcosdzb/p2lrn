@@ -561,15 +561,19 @@ try{
   q('.title').dispatchEvent(new Event('input',{bubbles:true}));
   q('.surface').textContent='Este contenido fue editado a través del editor instalado con npm.';
   q('.surface').dispatchEvent(new Event('input',{bubbles:true}));
+  const treeButtons=()=>[...q('[data-tree]').querySelectorAll('button')];
+  const treeLabel=(button)=>String(button?.querySelector('span')?.textContent??button?.textContent??'').trim();
   const added=[];
   for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','component','composite']){
-    const count=q('[data-tree]').querySelectorAll('button').length;
+    const prior=treeButtons();
     q('[data-add-menu]').open=true;
     click('[data-add-kind="'+kind+'"]');
-    await wait(()=>q('[data-tree]').querySelectorAll('button').length>count,'npm add '+kind);
-    added.push(kind);
+    const created=await wait(()=>treeButtons().find(button=>!prior.includes(button)),'npm add '+kind);
+    const title=treeLabel(created);
+    if(!title)throw new Error('Studio created an untitled tree node for '+kind);
+    added.push({kind,title});
   }
-  let before=q('[data-tree]').querySelectorAll('button').length;
+  let prior=treeButtons();
   q('[data-add-menu]').open=true;
   click('[data-add-kind="external"]');
   const scormResponse=await fetch('/scorm12-interactive.zip',{cache:'no-store'});
@@ -578,23 +582,58 @@ try{
   const scormTransfer=new DataTransfer();scormTransfer.items.add(scormFile);
   q('[data-external-file]').files=scormTransfer.files;
   q('[data-external-file]').dispatchEvent(new Event('change',{bubbles:true}));
-  await wait(()=>q('[data-tree]').querySelectorAll('button').length>before,'npm import real SCORM via UI',25000);
+  const scormNode=await wait(()=>treeButtons().find(button=>!prior.includes(button)),'npm import real SCORM via UI',25000);
+  const scormTitle=treeLabel(scormNode);
+  if(!scormTitle)throw new Error('Imported SCORM tree node has no title');
   if(q('[data-meta]').textContent.includes('failed'))throw new Error(q('[data-meta]').textContent);
-  before=q('[data-tree]').querySelectorAll('button').length;
+  prior=treeButtons();
   q('[data-add-menu]').open=true;
   click('[data-add-kind="reader"]');
   const markdownFile=new File(['# Reader de Studio npm\n\nDocumento importado desde la interfaz.'],'learning-note.md',{type:'text/markdown'});
   const readerTransfer=new DataTransfer();readerTransfer.items.add(markdownFile);
   q('[data-reader-file]').files=readerTransfer.files;
   q('[data-reader-file]').dispatchEvent(new Event('change',{bubbles:true}));
-  await wait(()=>q('[data-tree]').querySelectorAll('button').length>before,'npm Reader import',25000);
+  const readerNode=await wait(()=>treeButtons().find(button=>!prior.includes(button)),'npm Reader import',25000);
+  const readerTitle=treeLabel(readerNode);
+  if(!readerTitle)throw new Error('Reader-imported tree node has no title');
   const exported=await studio.exportPackage();
   if(exported.bytes.byteLength<1000)throw new Error('npm Studio generated empty package');
   const api=await window.P2LRNReady;
   const pkg=await api.openPackageBytes(exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength));
   if(!pkg.manifest?.integrity?.contentRoot)throw new Error('npm Player rejected Studio export');
-  const authoredLesson=[...pkg.entities.values()].find(e=>e.type==='activity'&&e.title?.es==='Lección creada con Studio npm');
+  const entities=[...pkg.entities.values()];
+  const authoredLesson=entities.find(e=>e.type==='activity'&&e.title?.es==='Lección creada con Studio npm');
   if(!authoredLesson?.id)throw new Error('Exported graph is missing the authored lesson');
+  const titleText=(entity)=>Object.values(entity?.title??{}).map(value=>String(value)).join(' | ');
+  const exportedActivities=entities.filter(entity=>entity.type==='activity');
+  const expectedExportedTitles=['Lección creada con Studio npm',...added.map(item=>item.title),scormTitle,readerTitle];
+  const exportedTitles=exportedActivities.map(titleText);
+  for(const title of expectedExportedTitles){
+    if(!exportedTitles.includes(title))throw new Error('Studio export lost activity: '+title);
+  }
+  const entityCounts={};
+  for(const entity of entities)entityCounts[entity.type]=(entityCounts[entity.type]??0)+1;
+  const representations=[];
+  for(const entity of entities){
+    if(entity.type!=='resource')continue;
+    for(const rep of entity.representations??[])representations.push({
+      resourceId:entity.id,
+      representationId:rep.id,
+      profile:rep.profile??null,
+      role:rep.role??null,
+      mediaType:rep.mediaType??null,
+      locationType:rep.location?.type??null,
+    });
+  }
+  const packageHashBytes=new Uint8Array(await crypto.subtle.digest('SHA-256',exported.bytes));
+  const packageSha256='sha256:'+Array.from(packageHashBytes,byte=>byte.toString(16).padStart(2,'0')).join('');
+  const manifestFiles=(pkg.manifest.files??[]).map(file=>({
+    path:file.path,
+    mediaType:file.mediaType,
+    size:file.size,
+    byteDigest:file.byteDigest,
+    contentDigest:file.contentDigest,
+  }));
   const lesson=[...q('[data-tree]').querySelectorAll('button')].find(b=>b.querySelector('span')?.textContent==='Lección creada con Studio npm');
   if(!lesson)throw new Error('npm Studio lesson title lost before preview');
   lesson.click();
@@ -617,8 +656,35 @@ try{
   q('[data-file]').files=inputTransfer.files;
   q('[data-file]').dispatchEvent(new Event('change',{bubbles:true}));
   await wait(()=>events.some(e=>e.type==='p2lrn-studio-open'),'reopen saved file via UI',15000);
-  if(!q('[data-tree]').textContent.includes('Lección creada con Studio npm'))throw new Error('Export/reimport lost authored lesson');
-  finish('PASS',{channel:'installed-npm-tarballs',filename,bytes:savedBytes.byteLength,contentRoot:pkg.manifest.integrity.contentRoot,activities:added,scormImport:true,readerImport:true,verifiedByPlayer:true,reopenedFromFile:true,lessonId:authoredLesson.id});
+  const reopenedTree=String(q('[data-tree]').textContent??'');
+  for(const title of expectedExportedTitles){
+    if(!reopenedTree.includes(title))throw new Error('Studio export/reimport lost activity: '+title);
+  }
+  finish('PASS',{
+    channel:'installed-npm-tarballs',
+    filename,
+    bytes:savedBytes.byteLength,
+    packageSha256,
+    contentRoot:pkg.manifest.integrity.contentRoot,
+    packageId:pkg.manifest.packageId,
+    format:pkg.manifest.format,
+    formatVersion:pkg.manifest.formatVersion,
+    profiles:pkg.manifest.profiles,
+    entrypoints:pkg.manifest.entrypoints,
+    entityCounts,
+    manifestFileCount:manifestFiles.length,
+    manifestFiles,
+    representations,
+    activities:added,
+    scormImport:{ok:true,title:scormTitle},
+    readerImport:{ok:true,title:readerTitle},
+    exportedActivityTitles:exportedTitles,
+    verifiedAllAddedActivitiesInExport:true,
+    verifiedAllAddedActivitiesAfterReopen:true,
+    verifiedByPlayer:true,
+    reopenedFromFile:true,
+    lessonId:authoredLesson.id,
+  });
 }catch(error){finish('FAIL',{message:String(error?.stack||error)});}
 })();
 })();
