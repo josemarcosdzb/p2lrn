@@ -197,7 +197,7 @@ export async function render({container, payload, representation, package:pkg, e
   const opaqueMode = !runtimeUrl || !new URL(runtimeUrl).pathname.endsWith('/package.html');
   const runtimeOrigin = opaqueMode ? 'null' : new URL(runtimeUrl).origin;
   const opaqueDocument = opaqueMode ? createOpaquePackageRuntimeDocument(
-    getAutomaticRuntimeHostResources(runtimeBaseUrl),
+    {hostScriptUrl:getAutomaticRuntimeHostResources(runtimeBaseUrl).packageHostScriptUrl},
   ) : null;
   const transferred = await runtimeFiles(nested);
   const cmi5 = cmi5RuntimeConfig(representation, context);
