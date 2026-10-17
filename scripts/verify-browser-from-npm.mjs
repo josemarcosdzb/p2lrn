@@ -297,6 +297,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   try{await window.P2LRNReady;}catch(e){finish('FAIL',{phase:'loader',message:String(e?.message||e)});return;}
   const params=new URLSearchParams(location.search);
   const course=params.get('course');
+  const authoredCourse=params.get('authored')==='1';
   const passiveExpectations={
     'common-cartridge.p2lrn':'Common Cartridge browser OK',
   };
@@ -309,10 +310,10 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
       try{detail=JSON.parse(JSON.stringify(detail));}catch{detail=String(detail);}
       events.push({name,detail});
       if(name==='p2lrn:error')finish('FAIL',{phase:'p2lrn-error',detail});
-      if(name==='p2lrn:rendered'&&passiveExpectations[course]){
+      if(name==='p2lrn:rendered'&&(passiveExpectations[course]||authoredCourse)){
         const frame=p.shadowRoot?.querySelector('iframe.p2lrn-html');
         const srcdoc=frame?.getAttribute('srcdoc')||'';
-        const marker=passiveExpectations[course];
+        const marker=authoredCourse?'Este contenido fue editado a través del editor instalado con npm.':passiveExpectations[course];
         if(!frame||!srcdoc.includes(marker)){
           finish('FAIL',{phase:'passive-render-contract',course,renderer:detail?.rendererId,marker,frame:!!frame});
           return;
@@ -786,9 +787,9 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
   }
 }
 
-async function runCourse(chrome, appOrigin, course, index) {
+async function runCourse(chrome, appOrigin, course, index, {authored=false}={}) {
   const profile=join(gateRoot,`chrome-profile-${index}`);
-  const url=`${appOrigin}/?course=${encodeURIComponent(course)}`;
+  const url=`${appOrigin}/?course=${encodeURIComponent(course)}${authored?'&authored=1':''}`;
   const result=await runChromePageGate(chrome,url,profile,{timeoutMs:35000,screenshotName:'npm-player-'+course.replace(/[^a-z0-9-]+/giu,'-')});
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
@@ -840,7 +841,7 @@ try{
   results.push(await runQuestionnaire(chrome,appOrigin));
   const studioResult=await runStudioFromNpm(chrome,appOrigin);
   results.push(studioResult);
-  results.push(await runCourse(chrome,appOrigin,studioResult.filename,courses.length));
+  results.push(await runCourse(chrome,appOrigin,studioResult.filename,courses.length,{authored:true}));
 }finally{
   await new Promise((resolvePromise)=>runtimeServer.close(()=>resolvePromise()));
   await new Promise((resolvePromise)=>appServer.close(()=>resolvePromise()));
