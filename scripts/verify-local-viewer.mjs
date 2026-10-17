@@ -1,6 +1,6 @@
 import {createServer} from 'node:http';
 import {createReadStream} from 'node:fs';
-import {mkdtemp, readFile, rm, stat, writeFile} from 'node:fs/promises';
+import {mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {extname, join, resolve, sep} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -173,9 +173,9 @@ async function runtimeTexts(cdp){
   return out;
 }
 
-async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXapi=false}={}){
+async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXapi=false,automaticRuntime=false}={}){
   const exceptionStart=cdp.exceptions.length;
-  await cdp.send('Page.navigate',{url:`${APP_ORIGIN}/demo/?src=${encodeURIComponent(src)}`});
+  await cdp.send('Page.navigate',{url:`${APP_ORIGIN}/demo/?src=${encodeURIComponent(src)}${automaticRuntime?'&runtime=auto':''}`});
   let state=null;
   const deadline=Date.now()+30000;
   while(Date.now()<deadline){
@@ -194,7 +194,15 @@ async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXap
   invariant(state?.activityReady,`${name}: activityready not reached. state=${JSON.stringify(state)} runtimeText=${JSON.stringify(texts)} exceptions=${JSON.stringify(cdp.exceptions.slice(exceptionStart))} security=${JSON.stringify(cdp.security)}`);
   invariant(!state.error,`${name}: p2lrn:error was emitted. ${state.tail}`);
   if(requireXapi) invariant(state.xapi,`${name}: cmi5 initialized without forwarding an xAPI statement. ${state.tail}`);
-  invariant(state.runtimeBase.startsWith(RUNTIME_ORIGIN),`${name}: runtime origin is not isolated locally: ${state.runtimeBase}`);
+  if (automaticRuntime) {
+    invariant(!state.runtimeBase.startsWith(RUNTIME_ORIGIN),name+': automatic mode must not use a dedicated runtime origin');
+    const probe=await evalTop(cdp,String.raw`(()=>{const frame=document.getElementById('demo-player')?.shadowRoot?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-runtime');return {sandbox:frame?.getAttribute('sandbox')||'',srcdoc:!!frame?.srcdoc,accessible:(()=>{try{return !!frame?.contentDocument}catch{return false}})()}})()`);
+    invariant(probe?.srcdoc,name+': automatic runtime did not use a srcdoc frame');
+    invariant(!probe?.sandbox.includes('allow-same-origin'),name+': opaque iframe unexpectedly has allow-same-origin');
+    invariant(!probe?.accessible,name+': application can access executable iframe content');
+  } else {
+    invariant(state.runtimeBase.startsWith(RUNTIME_ORIGIN),name+': runtime origin is not isolated locally: '+state.runtimeBase);
+  }
   invariant(state.pageOverflow<=2,`${name}: page overflows horizontally by ${state.pageOverflow}px`);
   if(expectIframe){
     invariant(state.iframe&&state.stage,`${name}: runtime iframe/stage missing.`);
@@ -222,8 +230,119 @@ async function verifyNarrowLayout(cdp){
   return state;
 }
 
+
+const visualEvidenceRoot=join(root,'.visual-evidence');
+async function captureVisualEvidence(cdp,name){
+  await mkdir(visualEvidenceRoot,{recursive:true});
+  const shot=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});
+  if(!shot?.data)throw new Error('Chrome returned no screenshot for '+name);
+  const filepath=join(visualEvidenceRoot,name+'.png');
+  await writeFile(filepath,Buffer.from(shot.data,'base64'));
+  const info=await stat(filepath);
+  invariant(info.size>6000,name+': empty browser screenshot');
+  return {filename:name+'.png',bytes:info.size};
+}
+async function studioComponentScenario(){
+  const studio=document.getElementById('studio');
+  const root=studio?.shadowRoot;
+  const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+  const wait=async(fn,label,limit=10000)=>{
+    const started=Date.now();
+    while(Date.now()-started<limit){const value=fn();if(value)return value;await sleep(60);}
+    throw new Error('Studio UI timed out at '+label+': '+(root?.textContent||'').slice(-500));
+  };
+  const q=(sel)=>root.querySelector(sel);
+  const click=(sel)=>{const el=q(sel);if(!el)throw new Error('Studio control missing: '+sel);el.click();};
+  try{
+    await globalThis.P2LRNStudioReady;
+    if(!root)throw new Error('CDN Studio did not mount its shadow DOM.');
+    const events=[];
+    studio.addEventListener('p2lrn-studio-download',e=>events.push({type:'download',filename:e.detail?.filename}));
+    studio.addEventListener('p2lrn-studio-open',e=>events.push({type:'open',filename:e.detail?.name}));
+    click('[data-create]');
+    await wait(()=>!q('[data-body]').hidden,'create course');
+    click('.tree-actions button:first-child');
+    await wait(()=>q('[data-tree]')?.textContent.includes('Unidad'),'add unit');
+    click('.tree-actions button:nth-child(2)');
+    await wait(()=>q('.surface[contenteditable="true"]'),'add lesson');
+    const title=q('.title');title.textContent='Lección visual P2LRN';title.dispatchEvent(new InputEvent('input',{bubbles:true}));
+    const surface=q('.surface');surface.textContent='Lección escrita desde la interfaz visual';surface.dispatchEvent(new InputEvent('input',{bubbles:true}));
+    const lessonCount=q('[data-tree]').querySelectorAll('button').length;
+    const added=[];
+    for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','component','composite']){
+      const before=q('[data-tree]').querySelectorAll('button').length;
+      q('[data-add-menu]').open=true;
+      click('[data-add-kind="'+kind+'"]');
+      await wait(()=>q('[data-tree]').querySelectorAll('button').length>before,'add '+kind,10000);
+      added.push(kind);
+    }
+    const beforeMedia=q('[data-tree]').querySelectorAll('button').length;
+    q('[data-add-menu]').open=true;click('[data-add-kind="file"]');
+    const mediaFile=new File([new TextEncoder().encode('Archivo creado desde UI')],'evidence.txt',{type:'text/plain'});
+    const transfer=new DataTransfer();transfer.items.add(mediaFile);
+    q('[data-resource-file]').files=transfer.files;
+    q('[data-resource-file]').dispatchEvent(new Event('change',{bubbles:true}));
+    await wait(()=>q('[data-tree]').querySelectorAll('button').length>beforeMedia,'upload media file');
+    const exported=await studio.exportPackage();
+    if(!exported?.bytes?.byteLength)throw new Error('Empty Studio export');
+    const api=await globalThis.P2LRNReady;
+    const buffer=exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength);
+    const parsed=await api.openPackageBytes(buffer);
+    if(!parsed?.manifest?.integrity?.contentRoot)throw new Error('Studio export did not survive Player integrity validation');
+    const expectedNodes=lessonCount+added.length+1;
+    const actualNodes=q('[data-tree]').querySelectorAll('button').length;
+    if(actualNodes!==expectedNodes)throw new Error('Studio tree count mismatch: '+actualNodes+' vs '+expectedNodes);
+    const lesson=[...q('[data-tree]').querySelectorAll('button')].find(el=>el.querySelector('span')?.textContent==='Lección visual P2LRN');
+    if(!lesson)throw new Error('Edited lesson title missing in Studio course tree');
+    lesson.click();
+    await wait(()=>q('.title')?.textContent==='Lección visual P2LRN','reopen lesson');
+    click('[data-preview]');
+    await wait(()=>q('p2lrn-player.preview')?.shadowRoot?.querySelector('.p2lrn-stage'),'Player embedded preview',13000);
+    const player=q('p2lrn-player.preview');
+    if(!player?.getAttribute('src')?.startsWith('blob:'))throw new Error('Studio preview did not use exported P2LRN blob');
+    click('[data-download]');
+    await wait(()=>events.some(e=>e.type==='download'),'download through UI');
+    const local=new File([exported.bytes],exported.filename,{type:'application/vnd.p2lrn+zip'});
+    const inputTransfer=new DataTransfer();inputTransfer.items.add(local);
+    q('[data-file]').files=inputTransfer.files;
+    q('[data-file]').dispatchEvent(new Event('change',{bubbles:true}));
+    await wait(()=>events.some(e=>e.type==='open'),'reopen exported package through file input',14000);
+    if(!q('[data-tree]').textContent.includes('Lección visual P2LRN'))throw new Error('UI export/reimport lost edited lesson');
+    return {ok:true,added,courseEntries:actualNodes,packageBytes:exported.bytes.byteLength,contentRoot:parsed.manifest.integrity.contentRoot,events,preview:'p2lrn-player',lesson:'Lección visual P2LRN'};
+  }catch(error){return {ok:false,error:String(error?.stack||error?.message||error)};}
+}
+async function verifyStudioComponentUI(cdp){
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/ui-gates/studio-component.html'});
+  let loaded=false;
+  const deadline=Date.now()+20000;
+  while(Date.now()<deadline){
+    loaded=await evalTop(cdp,"Boolean(document.getElementById('studio')?.shadowRoot && window.P2LRNStudioReady)");
+    if(loaded)break;
+    await sleep(150);
+  }
+  invariant(loaded,'CDN Studio component did not register and render.');
+  const exceptionsStart=cdp.exceptions.length;
+  const result=await evalTop(cdp,'('+studioComponentScenario.toString()+')()');
+  invariant(result?.ok,'CDN Studio browser UI failed: '+JSON.stringify(result));
+  const desktop=await captureVisualEvidence(cdp,'studio-cdn-desktop');
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await sleep(350);
+  const mobile=await evalTop(cdp,"(()=>{const r=document.getElementById('studio').shadowRoot,b=r.querySelector('.shell').getBoundingClientRect();return {width:b.width,viewport:innerWidth,body:!r.querySelector('[data-body]').hidden}})()");
+  invariant(mobile.body&&mobile.width<=mobile.viewport+2,'Studio mobile layout overflows: '+JSON.stringify(mobile));
+  const screenshotMobile=await captureVisualEvidence(cdp,'studio-cdn-mobile');
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+  invariant(cdp.exceptions.length===exceptionsStart,'Studio browser exceptions: '+JSON.stringify(cdp.exceptions.slice(exceptionsStart)));
+  return {suite:'studio-component-cdn',...result,desktop,mobile,screenshotMobile};
+}
+async function prepareVisualStudioFixture(){
+  const dir=join(siteRoot,'ui-gates');
+  await mkdir(dir,{recursive:true});
+  await writeFile(join(dir,'studio-component.html'),'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>P2LRN Studio CDN UI E2E</title><style>body{font:15px system-ui,sans-serif;margin:0;padding:16px;background:#f3f5f7}h1{font-size:20px}p2lrn-studio{display:block}</style><script src="/studio/current/dist/p2lrn-studio.js"></script></head><body><h1>Prueba de interfaz Studio desde CDN local</h1><p2lrn-studio id="studio"></p2lrn-studio></body></html>');
+}
+
 let appServer=null,runtimeServer=null,chrome=null,cdp=null;
 try{
+  await prepareVisualStudioFixture();
   const builtViewer=await readFile(viewerPath,'utf8');
   const localViewer=builtViewer.replace(/const RUNTIME_ORIGINS=Object\.freeze\(\[[\s\S]*?\]\);/u,
     `const RUNTIME_ORIGINS=Object.freeze(['${RUNTIME_ORIGIN}','${APP_ORIGIN}']);`);
@@ -246,9 +365,14 @@ try{
   await audit('h5p','/examples/canonical/external/h5p-crossword.p2lrn');
   await audit('scorm','/examples/canonical/external/scorm12-real.p2lrn',{rejectText:['Not implemented yet']});
   await audit('qti','/examples/canonical/external/qti3-minimal.p2lrn',{expectIframe:false,rejectText:['This QTI item has no itemBody.']});
+  await audit('cmi5-automatic','/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',{automaticRuntime:true,requireXapi:true,rejectText:['Not implemented yet']});
+  await audit('h5p-automatic','/examples/canonical/external/h5p-crossword.p2lrn',{automaticRuntime:true});
+  await audit('scorm-automatic','/examples/canonical/external/scorm12-real.p2lrn',{automaticRuntime:true,rejectText:['Not implemented yet']});
   let narrow=null;
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
-  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
+  let studioUI=null;
+  try{studioUI=await verifyStudioComponentUI(cdp);}catch(error){failures.push({name:'studio-component-cdn',message:String(error?.message||error)});}
+  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,studioUI,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
 }finally{
   try{cdp?.socket?.close();}catch{}
