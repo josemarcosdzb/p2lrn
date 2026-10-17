@@ -1,8 +1,36 @@
 import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
-import {resolvePackageRuntimeUrl} from '../runtime-host-config.js';
+import {getAutomaticRuntimeHostResources, resolvePackageRuntimeUrl} from '../runtime-host-config.js';
 
 export const acceptsPayload = true;
+
+export function createOpaquePackageRuntimeDocument({hostScriptUrl}) {
+  const scriptUrl = new URL(hostScriptUrl);
+  const validHttp = scriptUrl.protocol === 'https:' || (
+    scriptUrl.protocol === 'http:' && ['127.0.0.1','localhost','[::1]'].includes(scriptUrl.hostname)
+  );
+  if (!validHttp || scriptUrl.username || scriptUrl.password || scriptUrl.search || scriptUrl.hash) {
+    const error = new Error('Automatic package runtime requires an accessible HTTPS runtime script (HTTP loopback only for development).');
+    error.code = 'P2LRN_PACKAGE_RUNTIME_ASSETS_INVALID';
+    throw error;
+  }
+  const src = scriptUrl.href.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;');
+  const scriptOrigin = scriptUrl.origin;
+  const csp = [
+    "default-src 'none'",
+    `script-src ${scriptOrigin}`,
+    "style-src 'unsafe-inline'",
+    "img-src data: blob:",
+    "media-src data: blob:",
+    "font-src data: blob:",
+    "frame-src about: blob: data:",
+    "connect-src 'none'",
+    "object-src 'none'",
+    "base-uri 'none'",
+    "form-action 'none'",
+  ].join('; ');
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${csp}"><meta name="referrer" content="no-referrer"><title>P2LRN Isolated Package Runtime</title><style>html,body,#stage{width:100%;height:100%;margin:0;overflow:auto;background:#fff}#content{width:100%;height:100%;min-width:0;border:0;display:block;background:#fff}.error{box-sizing:border-box;margin:0;padding:16px;white-space:pre-wrap;font:14px/1.5 system-ui,sans-serif;color:#7a1f1f}</style></head><body><div id="stage" aria-live="polite"></div><script src="${src}"></script></body></html>`;
+}
 const PROTOCOL = 'p2lrn-package-runtime/1';
 const MULTIPART_PROFILE = 'https://p2lrn.org/profile/multipart';
 const CMI5_PROFILE = 'https://p2lrn.org/profile/cmi5';
@@ -158,19 +186,27 @@ export async function render({container, payload, representation, package:pkg, e
     error.code = 'P2LRN_PACKAGE_RUNTIME_LAUNCH_MISSING';
     throw error;
   }
-  const runtimeUrl = resolvePackageRuntimeUrl(runtimeBaseUrl, {applicationOrigin:globalThis.location?.origin ?? null});
-  if (!runtimeUrl || !new URL(runtimeUrl).pathname.endsWith('/package.html')) {
-    const error = new Error('This package renderer requires the static isolated P2LRN CDN runtime.');
-    error.code = 'P2LRN_PACKAGE_RUNTIME_HOST_REQUIRED';
-    throw error;
+  let runtimeUrl = null;
+  try {
+    runtimeUrl = resolvePackageRuntimeUrl(runtimeBaseUrl, {applicationOrigin:globalThis.location?.origin ?? null});
+  } catch (error) {
+    if (error?.code !== 'P2LRN_PACKAGE_RUNTIME_ORIGIN_NOT_ISOLATED') throw error;
   }
-  const runtimeOrigin = new URL(runtimeUrl).origin;
+  // Browser-generated opaque origins are the safe default when no dedicated
+  // static runtime origin is available. The host script remains part of P2LRN.
+  const opaqueMode = !runtimeUrl || !new URL(runtimeUrl).pathname.endsWith('/package.html');
+  const runtimeOrigin = opaqueMode ? 'null' : new URL(runtimeUrl).origin;
+  const opaqueDocument = opaqueMode ? createOpaquePackageRuntimeDocument(
+    getAutomaticRuntimeHostResources(runtimeBaseUrl),
+  ) : null;
   const transferred = await runtimeFiles(nested);
   const cmi5 = cmi5RuntimeConfig(representation, context);
   const iframe = document.createElement('iframe');
   iframe.className = 'p2lrn-package-runtime';
   iframe.title = 'External package';
-  iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-downloads');
+  iframe.setAttribute('sandbox', opaqueMode
+    ? 'allow-scripts allow-forms allow-modals'
+    : 'allow-scripts allow-same-origin allow-forms allow-modals allow-downloads');
   iframe.setAttribute('allow', 'fullscreen');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
   iframe.style.cssText = 'display:block;width:100%;height:clamp(520px,68vh,760px);min-height:420px;max-width:100%;border:0;background:#fff';
@@ -257,15 +293,17 @@ export async function render({container, payload, representation, package:pkg, e
       }
     };
     port.start?.();
-    iframe.contentWindow.postMessage({protocol:PROTOCOL, action:'connect'}, runtimeOrigin, [channel.port2]);
+    iframe.contentWindow.postMessage({protocol:PROTOCOL, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  iframe.src = runtimeUrl;
+  if (opaqueMode) iframe.srcdoc = opaqueDocument;
+  else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 
   return Object.freeze({
     kind:'external-package',
     launchMember:launch.reference,
+    topology:opaqueMode ? 'opaque-inline' : 'isolated-origin',
     destroy() {
       destroyed = true;
       window.removeEventListener('message', onMessage);
