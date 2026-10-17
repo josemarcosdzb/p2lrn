@@ -816,10 +816,23 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
       if(message.error)wait.reject(new Error(JSON.stringify(message.error)));
       else wait.resolve(message.result);
     });
-    const send=(method,params={},sessionId=null)=>{
+    // A CDP target can disappear during navigation or sandbox teardown.
+    // Bound every request: without this, a lost Runtime.evaluate response
+    // silently hangs the process until the GitHub job's 20-minute deadline.
+    const send=(method,params={},sessionId=null,timeoutMs=6000)=>{
       const id=++sequence;
-      socket.send(JSON.stringify({id,method,params,...(sessionId ? {sessionId} : {})}));
-      return new Promise((resolvePromise,reject)=>pending.set(id,{resolve:resolvePromise,reject}));
+      return new Promise((resolvePromise,reject)=>{
+        const timer=setTimeout(()=>{
+          pending.delete(id);
+          reject(new Error('CDP command timed out: '+method+' session='+String(sessionId??'main')+' id='+id));
+        },timeoutMs);
+        pending.set(id,{
+          resolve:value=>{clearTimeout(timer);resolvePromise(value);},
+          reject:error=>{clearTimeout(timer);reject(error);},
+        });
+        try{socket.send(JSON.stringify({id,method,params,...(sessionId ? {sessionId} : {})}));}
+        catch(error){pending.delete(id);clearTimeout(timer);reject(error);}
+      });
     };
     await send('Runtime.enable');
     await send('Log.enable');
@@ -828,14 +841,27 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
 
     const deadline=Date.now()+timeoutMs;
     let snapshot={status:'BOOT',detail:'BOOT',readyState:'loading'};
+    let lastProgress=Date.now();
     while(Date.now()<deadline){
-      if(exerciseExpression) for(const {contextId,sessionId} of contexts.values()) {
-        try { await send('Runtime.evaluate',{expression:exerciseExpression,contextId,returnByValue:true},sessionId); } catch {}
+      if(exerciseExpression) {
+        for(const [key,{contextId,sessionId}] of [...contexts.entries()]) {
+          if(Date.now()>=deadline)break;
+          try {
+            await send('Runtime.evaluate',{expression:exerciseExpression,contextId,returnByValue:true},sessionId,1200);
+          } catch {
+            // The navigated/closed execution context will be re-announced by CDP.
+            contexts.delete(key);
+          }
+        }
+        if(Date.now()-lastProgress>7000){
+          console.log(JSON.stringify({phase:'browser-isolation-progress',status:snapshot.status,contexts:contexts.size,remainingMs:Math.max(0,deadline-Date.now())}));
+          lastProgress=Date.now();
+        }
       }
       const evaluated=await send('Runtime.evaluate',{
         expression:`(()=>{const e=document.getElementById('result');return {status:e?.dataset?.status??'MISSING',detail:e?.textContent??'',readyState:document.readyState};})()`,
         returnByValue:true,
-      });
+      },null,6000);
       snapshot=evaluated.result?.value??snapshot;
       if(snapshot.status!=='BOOT'&&snapshot.status!=='MISSING'){
         let screenshot=null;
