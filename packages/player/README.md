@@ -43,7 +43,7 @@ The canonical declarative surface is deliberately small:
 - `src` is required for playback and identifies the `.p2lrn` package URL.
 - `node` is optional; when omitted the primary package entrypoint is used.
 - `renderer` is optional and is a strict renderer request. When omitted the trusted runtime negotiates a compatible renderer.
-- `runtime-base-url` is an optional override for a separately managed runtime service. SCORM and H5P do not require it for normal playback: when the default runtime assets share the application origin, the Player creates an opaque sandbox automatically and transfers the verified package/runtime files into it. Generic external-package runtimes may still require a separate origin.
+- `runtime-base-url` is an optional override for a separately managed runtime service. SCORM, H5P and embedded HTML-launch packages do not require it for normal browser playback: when the default runtime assets share the application origin, the Player creates an opaque sandbox automatically and transfers verified package/runtime files into it. Embedded HTML-launch packages (including cmi5 preview) also use an automatic opaque sandbox when no independent static runtime is available. An explicit separate-origin runtime remains optional.
 
 The same values are reflected by the runtime API. Host-specific persistence, telemetry and verified virtual-resource delivery use Host Adapter v1. Identity, authorization and enrolment are deliberately outside this HTML contract; a protected host must resolve `src` according to its own deployment contract rather than serialize long-lived credentials into package markup.
 
@@ -51,7 +51,7 @@ Changing `src` reloads and verifies the package. Changing `node`, `renderer` or 
 
 Runtime events are DOM `CustomEvent` values using the canonical `p2lrn:*` namespace, including `p2lrn:ready`, `p2lrn:rendered`, activity/progress/state/score/completion events and `p2lrn:error`. Host-specific persistence or telemetry belongs in Host Adapter v1, not in the package.
 
-## Automatic SCORM and H5P isolation
+## Automatic isolation for executable packages
 
 The browser/npm distribution includes the SCORM/H5P runtime assets and the pinned `h5p-standalone` core. When SCORM or H5P is embedded inside the `.p2lrn` package, the Player keeps the original content inside the package, prepares the required files in memory and executes them in an ephemeral sandbox.
 
@@ -81,7 +81,7 @@ app.use(createP2LRNRuntimeHandler({
 }));
 ```
 
-The Node host is optional. Use it when server-created H5P sessions, server-managed shared libraries or a controlled runtime service are preferred. Static browser delivery does not require Node. Automatic browser playback isolates SCORM/H5P in an opaque sandbox; the Node host provides an explicit separately managed runtime origin. Both modes use a message-based control channel.
+The Node host is optional. Use it when server-created H5P sessions, server-managed shared libraries or a controlled runtime service are preferred. Static browser delivery does not require Node. Automatic browser playback isolates SCORM/H5P and embedded HTML-launch packages in an opaque sandbox; the Node host provides an explicit separately managed runtime origin. Both modes use a message-based control channel.
 
 Configure the runtime globally:
 
@@ -119,3 +119,11 @@ The canonical API, package name, namespace, MIME identifiers, runtime events and
 This first-party package is distributed under **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)**.
 
 Commercial use is not granted. See [LICENSE](./LICENSE) for the complete terms and [NOTICE.md](./NOTICE.md) for scope and third-party exceptions.
+
+### Scope of automatic external-package playback
+
+The generic package renderer selects the colocated `runtime-host/package-host.js` automatically. With no independently isolated `runtime-base-url`, it launches an ephemeral `srcdoc` iframe with an opaque origin, CSP limiting the host script to P2LRN assets, and a dedicated `MessageChannel` bound to its direct frame. It transfers verified archive members from memory and does not forward application cookies, bearer tokens, or LMS storage into the package. The application still owns authentication and persistence through the explicit host adapter. Deployments must serve the P2LRN runtime assets alongside the Player; a browser library cannot manufacture an HTTP origin or serve unshipped files.
+
+This is **isolated HTML launch playback**, not full protocol certification. The cmi5 xAPI transport currently uses a local preview bridge and its reported scores are non-authoritative. Third-party content that requires real HTTP navigation, absolute/remote URLs, external LRS services, unsupported cross-origin fetches, popup privileges, or server APIs may need a separately hosted, explicitly authorized integration and may not work in the opaque mode. H5P activities may need the optional `@p2lrn/h5p-libraries` corpus. Legacy plugins such as Flash are not supported. CSP, sandbox restrictions and browser API permissions still apply.
+
+Security expectations: executable content never receives the platform application's origin, secrets or direct state adapters; it communicates only through the constrained runtime protocol. Do not enable `allow-same-origin` on an automatically generated frame or grant arbitrary network access to package scripts. For sensitive integrations, run a browser security check against the exact package before considering it supported.
