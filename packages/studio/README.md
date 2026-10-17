@@ -69,12 +69,9 @@ import {
 } from '@p2lrn/studio/server';
 ```
 
-For example, a save route can delegate to:
+A production server route must first authenticate the requester and check the Host application's **course-specific** edit permission; only then may it call `handleP2LRNStudioSave`. Apply the same checks to Reader and Import. An unguarded route such as `POST(request) { return handleP2LRNStudioSave(request); }` is **not** a production-safe example. The package deliberately cannot know your application's session store, tenant membership or role model.
 
-```js
-import {handleP2LRNStudioSave} from '@p2lrn/studio/server';
-export const POST = (request) => handleP2LRNStudioSave(request);
-```
+Server implementation order: authenticate (401 if missing) → authorize the requested operation and course (403 if denied) → apply CSRF/origin checks for cookie sessions and bound request-size/rate limits → invoke the P2LRN helper with a server-controlled storage path. The Host also controls which users may download previously stored packages. See [public Studio security documentation](https://p2lrn.netlify.app/docs/integracion/).
 
 Use `download()` or the Download action when no server save endpoint is desired.
 
@@ -135,6 +132,6 @@ The generated `p2lrn-setup/README.md` always contains the three endpoint attribu
 
 ### Security
 
-The installer generates technical integration, not application authorization. Save, Reader and external-import routes must be protected by the Host's authentication and teacher/admin permissions.
+The installer generates technical integration, **not application authorization**. Each Host must protect the generated Save, Reader and external-import routes using its own authenticated identities and per-course/per-tenant teacher/editor/admin permissions, plus CSRF/origin checks where appropriate, request and archive limits, quotas, and rate limiting. Access checks must be on the server, before invoking P2LRN helpers; hidden UI controls or a generated route do not enforce permissions.
 
 The npm save helper fixes the configured server directory by default. The browser's `X-P2LRN-Path` header is ignored unless the integrator explicitly enables `allowClientPath: true`.
