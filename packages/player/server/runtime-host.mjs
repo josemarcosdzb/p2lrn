@@ -14,6 +14,7 @@ const ASSETS = new Map([
   ['/scorm-runtime-core.js',{path:new URL('../dist/scorm-runtime-core.js',import.meta.url),type:'text/javascript; charset=utf-8'}],
   ['/h5p/',{path:new URL('../dist/runtime-host/h5p.html',import.meta.url),type:'text/html; charset=utf-8',document:'h5p'}],
   ['/h5p/index.html',{path:new URL('../dist/runtime-host/h5p.html',import.meta.url),type:'text/html; charset=utf-8',document:'h5p'}],
+  ['/h5p-runtime-shell.js',{path:new URL('../dist/h5p-runtime-shell.js',import.meta.url),type:'text/javascript; charset=utf-8'}],
   ['/h5p/h5p-host.js',{path:new URL('../dist/runtime-host/h5p-host.js',import.meta.url),type:'text/javascript; charset=utf-8'}],
 ]);
 
@@ -83,3 +84,4 @@ export async function startP2LRNRuntimeHost(options={}){const host=String(option
 // Alpha15 API aliases. They intentionally call the canonical implementation.
 export const createP2RLNRuntimeHandler=createP2LRNRuntimeHandler;
 export const startP2RLNRuntimeHost=startP2LRNRuntimeHost;
+

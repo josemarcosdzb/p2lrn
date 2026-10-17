@@ -4,6 +4,10 @@
 
 Status: implementation candidate layered on P2LRN Core 0.4.0. This document does not declare general H5P `deliver` conformance.
 
+## Current automatic browser path (2026-10-17)
+
+Player now defaults to an opaque sandbox and a private transferred MessageChannel. `runtime-base-url` is optional; a dedicated HTTP runtime origin is an explicit compatibility option. The server topology below describes that optional mode, not a prerequisite for portable playback. See [automatic runtime validation](AUTOMATIC-RUNTIME-VALIDATION.md) for tested packages, rehydration behavior and browser restrictions. No universal SCORM/H5P delivery conformance is declared.
+
 ## 1. Purpose
 
 P2LRN preserves an imported `.h5p` package bit-for-bit and projects only enough metadata to negotiate a runtime. H5P remains authoritative for H5P content semantics, library metadata and xAPI events. P2LRN does not translate H5P into a second proprietary activity model and does not copy a player into each `.p2lrn` package.
@@ -181,3 +185,4 @@ A general `deliver` claim still requires at least:
 An exact `library.json` is not sufficient to make a host-provided H5P library runnable. Before a runtime session is accepted, the host also verifies every file declared by that library's `preloadedJs` and `preloadedCss`. The same rule applies recursively to every preloaded dependency and to libraries bundled inside the `.h5p` payload.
 
 If any declared preloaded asset is absent, unsafe, outside the configured library root, or resolves through a symbolic-link escape, session creation fails closed with `P2LRN_H5P_LIBRARY_ASSETS_MISSING` (HTTP 409). A 201 response therefore means that both the exact dependency graph and its declared preloaded runtime assets are physically present.
+

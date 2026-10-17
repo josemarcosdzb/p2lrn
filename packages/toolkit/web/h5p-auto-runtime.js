@@ -1,3 +1,4 @@
+import {startH5PRuntime} from './h5p-runtime-shell.js';
 const MAX_FILES = 10000;
 const MAX_BYTES = 512 * 1024 * 1024;
 // Use a computed runtime asset path: Next.js/Turbopack resolves literal directory URLs
@@ -65,11 +66,9 @@ export function getAutomaticH5PRuntimeResources(baseUrl=DEFAULT_BASE_URL) {
   });
 }
 
-export function createOpaqueH5PRuntimeDocument({hostScriptUrl}) {
-  const scriptUrl=new URL(hostScriptUrl);
-  const source=scriptUrl.origin.replaceAll('&','&amp;').replaceAll('"','&quot;');
-  const src=scriptUrl.href.replaceAll('&','&amp;').replaceAll('"','&quot;');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${source} blob:; style-src ${source} 'unsafe-inline' blob:; img-src ${source} data: blob:; media-src ${source} data: blob:; font-src ${source} data: blob:; connect-src 'none'; frame-src about: blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="no-referrer"><title>P2LRN H5P Runtime</title><style>html,body,#h5p-stage{width:100%;min-height:100%;margin:0;padding:0}#h5p-error{font:14px system-ui,sans-serif;color:#7a1f1f;padding:16px;white-space:pre-wrap}</style></head><body><div id="h5p-stage"></div><div id="h5p-error" hidden></div><script src="${src}"></script></body></html>`;
+export function createOpaqueH5PRuntimeDocument() {
+  const bootstrap = `(${startH5PRuntime.toString()})();`.replace(/<\/script/giu, '<\\/script');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src data: blob:; media-src data: blob:; font-src data: blob:; connect-src 'none'; frame-src about: blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="no-referrer"><title>P2LRN H5P Runtime</title><style>html,body,#h5p-stage{width:100%;min-height:100%;margin:0;padding:0}#h5p-error{font:14px system-ui,sans-serif;color:#7a1f1f;padding:16px;white-space:pre-wrap}</style></head><body><div id="h5p-stage"></div><div id="h5p-error" hidden></div><script>${bootstrap}</script></body></html>`;
 }
 
 async function readBundledMetadata(nested, names) {

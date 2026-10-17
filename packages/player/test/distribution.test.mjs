@@ -148,10 +148,11 @@ test('automatic runtime default is URL-resolved without a compile-time directory
   for(const name of ['h5p-auto-runtime.js','runtime-host-config.js']){
     const content=readFileSync(join(DIST,name),'utf8');
     assert.doesNotMatch(content,/new\s+URL\(\s*['"]\.\/runtime-host\/['"]\s*,\s*import\.meta\.url\s*\)/u);
-    assert.match(content,/new\s+URL\(runtimePath,\s*import\.meta\.url\)/u);
-    assert.match(content,/\['\.',\s*'runtime-host',\s*''\]\.join\('\/'\)/u);
+    if(name==='h5p-auto-runtime.js') assert.match(content,/new\s+URL\(runtimePath,\s*import\.meta\.url\)/u);
+    if(name==='h5p-auto-runtime.js') assert.match(content,/\['\.',\s*'runtime-host',\s*''\]\.join\('\/'\)/u);
   }
   const base=pathToFileURL(join(DIST,'runtime-host-config.js')).href;
   const config=await import(base+'?turbopack-path-contract=1');
-  assert.equal(config.getRuntimeHostConfig().baseUrl,new URL('./runtime-host/',base).href);
+  assert.equal(config.getRuntimeHostConfig().baseUrl,null);
 });
+

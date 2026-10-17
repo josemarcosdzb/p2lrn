@@ -1,6 +1,19 @@
 name: P2LRN CI
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/toolkit/**'
+      - 'packages/player/**'
+      - 'packages/studio/**'
+      - 'packages/h5p-libraries/**'
+      - 'deploy/netlify/**'
+      - 'PUBLISHING.md'
+      - 'LICENSE'
+      - 'NOTICE.md'
+      - 'scripts/**'
+      - '.github/workflows/p2lrn-ci.yml'
   push:
     branches: [main]
     paths:
@@ -53,6 +66,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  automatic-runtime:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Build canonical browser runtime and pinned H5P libraries
+        run: |
+          node packages/player/scripts/build-dist.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node packages/h5p-libraries/scripts/build.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify real playback and hostile-content isolation
+        run: node scripts/verify-automatic-runtimes.mjs
+
   license-integrity:
     if: ${{ contains(github.event.head_commit.message, '[license verify]') || (github.event_name == 'workflow_dispatch' && inputs.license_only) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
@@ -185,6 +218,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-npm-pack.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/check-public-npm-registry.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-browser-from-npm.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-distribution-identity.mjs
@@ -220,8 +255,38 @@ jobs:
           Copy-Item -Recurse -Force examples/canonical/* .netlify-cdn/examples/canonical/
           Copy-Item -Force .netlify-cdn/player/current/dist/p2lrn-sw.js .netlify-cdn/p2lrn-sw.js
 
+      - name: Inspect public npm registry for all four P2LRN distributions
+        run: node scripts/check-public-npm-registry.mjs
+
       - name: Verify local viewer and isolated runtimes
         run: node scripts/verify-local-viewer.mjs
+
+      - name: Verify actual Studio and Player UI in Microsoft Edge if installed
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $chromeEvidence = '.visual-evidence-chrome'
+          if (Test-Path .visual-evidence) {
+            New-Item -ItemType Directory -Force $chromeEvidence | Out-Null
+            Copy-Item .visual-evidence\*.png $chromeEvidence -Force
+          }
+          $candidates = @('C:\Program Files\Microsoft\Edge\Application\msedge.exe','C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe')
+          $edge = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+          if ($edge) {
+            # The Chrome E2E rewrites the temporary viewer's runtime origins.
+            # Restore a clean copy before the independent Edge E2E to avoid
+            # mistaking a reused fixture for a browser incompatibility.
+            Copy-Item -LiteralPath 'deploy/netlify/site/demo/viewer.js' -Destination '.netlify-cdn/demo/viewer.js' -Force
+            $env:CHROME_PATH = $edge
+            node scripts/verify-local-viewer.mjs
+            if ($LASTEXITCODE -ne 0) { throw 'Microsoft Edge UI E2E failed' }
+            New-Item -ItemType Directory -Force '.visual-evidence-edge' | Out-Null
+            Copy-Item .visual-evidence\*.png '.visual-evidence-edge' -Force
+            Remove-Item Env:CHROME_PATH
+            Write-Host 'MICROSOFT_EDGE_UI_E2E=PASS'
+          } else {
+            Write-Host 'MICROSOFT_EDGE_UI_E2E=NOT_INSTALLED'
+          }
 
 
       - name: Verify npm tarballs as installed packages
@@ -238,6 +303,58 @@ jobs:
 
       - name: Verify npm/CDN byte identity
         run: node scripts/verify-distribution-identity.mjs
+
+      # GitHub artifact storage can reach its quota. Keep the real packages and
+      # Chrome screenshots on the Windows runner as independently verifiable evidence.
+      - name: Preserve generated packages and screenshots on Windows
+        if: always()
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $env:USERPROFILE 'Downloads\p2lrn-validation'
+          $target = Join-Path $root $env:GITHUB_RUN_ID
+          New-Item -ItemType Directory -Path $target -Force | Out-Null
+          $sources = @(
+            @{ directory = '.visual-evidence'; pattern = '*.png'; folder = 'cdn-visual' },
+            @{ directory = '.visual-evidence-chrome'; pattern = '*.png'; folder = 'cdn-chrome-visual' },
+            @{ directory = '.visual-evidence-edge'; pattern = '*.png'; folder = 'cdn-edge-visual' },
+            @{ directory = '.npm-pack-gate/visual-evidence'; pattern = '*.png'; folder = 'npm-visual' },
+            @{ directory = '.npm-pack-gate/browser-runtime/courses'; pattern = '*.p2lrn'; folder = 'npm-packages' },
+            @{ directory = '.'; pattern = '.npm-registry-report.json'; folder = 'registry-report' }
+          )
+          $manifest = @()
+          foreach ($spec in $sources) {
+            if (!(Test-Path -LiteralPath $spec.directory -PathType Container)) { continue }
+            $dest = Join-Path $target $spec.folder
+            New-Item -ItemType Directory -Path $dest -Force | Out-Null
+            foreach ($file in (Get-ChildItem -LiteralPath $spec.directory -File -Filter $spec.pattern)) {
+              $destination = Join-Path $dest $file.Name
+              Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
+              $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+              $manifest += [pscustomobject]@{ file = "$($spec.folder)/$($file.Name)"; bytes = $file.Length; sha256 = $hash }
+            }
+          }
+          $report = [pscustomobject]@{ runId = "$env:GITHUB_RUN_ID"; commit = "$env:GITHUB_SHA"; files = $manifest }
+          $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $target 'manifest.json') -Encoding UTF8
+          Write-Host "Evidencias conservadas en $target ; archivos: $($manifest.Count)"
+          if ($manifest.Count -eq 0) { Write-Warning 'El navegador no produjo archivos que conservar en esta ejecución.' }
+
+      - name: Upload browser evidence and Studio-generated package
+        if: always()
+        continue-on-error: true # Windows already retains hashed copies when GitHub artifact quota is exhausted.
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p2lrn-browser-evidence-${{ github.run_id }}
+          path: |
+            .visual-evidence/*.png
+            .visual-evidence-chrome/*.png
+            .visual-evidence-edge/*.png
+            .npm-pack-gate/visual-evidence/*.png
+            .npm-pack-gate/browser-runtime/courses/*.p2lrn
+            .npm-registry-report.json
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 7
 
       - name: Verify generated runtime
         shell: powershell
@@ -273,3 +390,4 @@ jobs:
           if ($release.webSdkVersion -ne $VERSION) { throw "release.json webSdkVersion mismatch" }
           $index = Get-Content ".netlify-cdn/index.json" -Raw | ConvertFrom-Json
           if ($index.h5p.sharedLibraryMode -ne "bundled-npm-artifact") { throw "CDN sharedLibraryMode mismatch" }
+

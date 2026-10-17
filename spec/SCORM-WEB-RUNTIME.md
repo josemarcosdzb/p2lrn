@@ -4,6 +4,10 @@
 
 Status: experimental Reading-System/Web-SDK runtime. P2LRN Core remains 0.4.0 and the `.p2lrn` package format is unchanged.
 
+## Current automatic browser path (2026-10-17)
+
+Player now defaults to an opaque sandbox and a private transferred MessageChannel. `runtime-base-url` is optional; a dedicated HTTP runtime origin is an explicit compatibility option. The server topology below describes that optional mode, not a prerequisite for portable playback. See [automatic runtime validation](AUTOMATIC-RUNTIME-VALIDATION.md) for tested packages, rehydration behavior and browser restrictions. No universal SCORM/H5P delivery conformance is declared.
+
 ## Scope
 
 Alpha 12 introduced the first first-party browser execution path for preserved SCORM representations. Alpha 13 added the isolated different-origin parent-frame topology required by packages that discover `parent.API`, `parent.API_1484_11` or an opener-compatible API. Alpha 14 kept those boundaries and recovered the SCORM 2004 manifest/sequencing/navigation base that already existed in AulaP2P `todo-funciona`. Alpha 15 keeps that recovered base and adds the bounded hierarchical attempt/rule/rollup execution required by the regression corpus.
@@ -139,3 +143,4 @@ This boundary is deliberate: Alpha 15 executes the subset it tests and keeps uns
 The Alpha 13 isolated-origin Chromium gate remains valid for the unchanged topology files it covered: parent/opener API discovery, score/state persistence and browser-origin isolation were demonstrated before a later managed-browser policy blocked local-HTTP reruns.
 
 Alpha 14's historical gate remains recorded in `reconciliation/alpha14-gate.json`. Alpha 15 adds 18 focused regressions over that inherited SCORM module: the SCORM file gate is 29/29 and the combined SCORM + Web SDK distribution gate is 42/42. The full integrated project gate is recorded separately with the Alpha 15/H5P reconciliation artifact.
+

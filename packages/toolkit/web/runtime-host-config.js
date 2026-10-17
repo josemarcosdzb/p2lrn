@@ -1,11 +1,7 @@
-// A computed asset path preserves the colocated runtime URL without making
-// Turbopack resolve a directory as a module when this package is bundled.
-const runtimePath = ['.', 'runtime-host', ''].join('/');
-const DEFAULT_STATIC_BASE_URL = new URL(runtimePath, import.meta.url).href;
-
+// No implicit remote runtime: executable packages default to opaque browser sandboxes.
 const state = {
-  baseUrl: DEFAULT_STATIC_BASE_URL,
-  mode: 'static',
+  baseUrl: null,
+  mode: null,
 };
 
 function browserBaseUrl() {
@@ -105,3 +101,4 @@ export function resolveH5pRuntimeUrl(explicitBaseUrl = null, options = {}) {
 export function resolvePackageRuntimeUrl(explicitBaseUrl = null, options = {}) {
   return resolveRuntimeUrl('package', explicitBaseUrl, options);
 }
+

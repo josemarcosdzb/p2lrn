@@ -19,9 +19,10 @@ test('automatic H5P runtime builds an opaque srcdoc shell around local runtime a
   assert.equal(resources.hostScriptUrl,'https://app.example.invalid/player/runtime-host/h5p-host.js');
   assert.equal(resources.runtimeAssetsUrl,'https://app.example.invalid/player/runtime-host/assets/');
   const html=createOpaqueH5PRuntimeDocument(resources);
-  assert.match(html,/h5p-host\.js/u);
+  assert.match(html,/startH5PRuntime/u);
+  assert.doesNotMatch(html,/<script[^>]+src=/u);
   assert.match(html,/Content-Security-Policy/u);
-  assert.doesNotMatch(html,/allow-same-origin/u);
+  assert.doesNotMatch(html,/<iframe[^>]+allow-same-origin/u);
 });
 
 test('automatic H5P runtime hydrates missing shared libraries into the transferred static session',async()=>{
