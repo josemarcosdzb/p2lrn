@@ -45,7 +45,7 @@ test('external package runtime selects automatic opaque origin without a configu
   assert.match(runtime,/const opaqueMode = !runtimeUrl/u);
   assert.match(runtime,/iframe\.srcdoc = opaqueDocument/u);
   assert.match(runtime,/event\.source !== iframe\.contentWindow \|\| event\.origin !== runtimeOrigin/u);
-  assert.match(runtime,/opaqueMode \? 'allow-scripts allow-forms allow-modals'/u);
+  assert.match(runtime,/opaqueMode\s*\?\s*'allow-scripts allow-forms allow-modals'/u);
   assert.match(runtime,/new MessageChannel\(\)/u);
 });
 test('opaque runtime rejects unsafe externally supplied host script URLs',()=>{
