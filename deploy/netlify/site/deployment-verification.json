@@ -1,0 +1,13 @@
+{
+  "schema": "https://p2lrn.org/schema/deployment-verification/1",
+  "release": "p2lrn-0.5.0-alpha.10-2026-10-19",
+  "sourceBase": "39f4de017f5e7db867206a854d37c98a262fb236",
+  "channels": [
+    "site",
+    "cdn",
+    "studio",
+    "player",
+    "downloadable-p2lrn-examples"
+  ],
+  "validation": "2026-10-19-real-browser-and-http"
+}
