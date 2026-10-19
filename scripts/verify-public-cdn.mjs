@@ -195,38 +195,70 @@ async function startBrowser(){
       browserInfo.downloads.push(exported);
       console.log('PUBLIC_STUDIO_EXPORT',JSON.stringify(exported));
       await send('Page.navigate',{url:origin+'/demo/?runtime=auto'});
-      browserInfo.viewer=await evaluate(async function(){
-        const wait=async(pred,label)=>{
-          const limit=Date.now()+28000;
-          while(Date.now()<limit){const x=pred();if(x)return x;await new Promise(r=>setTimeout(r,150));}
-          throw new Error('Player live timeout: '+label+' state='+document.querySelector('[data-runtime-state]')?.textContent);
-        };
-        await wait(()=>document.readyState==='complete'&&window.P2LRNReady,'viewer scripts');
-        await window.P2LRNReady;
-        await wait(()=>document.querySelector('[data-load]'),'viewer controls');
-        const out=[];
-        for(const sample of ['scorm12-real.p2lrn','h5p-crossword.p2lrn']){
-          const url='/examples/canonical/external/'+sample;
-          document.querySelector('[data-clear-log]')?.click();
-          document.querySelector('[data-package-url]').value=url;
-          document.querySelector('[data-load]').click();
-          await wait(()=>document.querySelector('[data-package-label]')?.textContent?.includes(sample),'viewer sample selection');
-          await wait(()=>{
-            const integrity=document.querySelector('[data-inspect-integrity]')?.textContent??'';
+      // The public page bootstraps asynchronously (including two SW scopes).
+      // Loading another course by clicking before boot settles can race with
+      // the default course. Each fixture gets a fresh public page, exactly
+      // as the proven local browser E2E does.
+      const publicCases=[];
+      for(const [key,packagePath] of [
+        ['scorm','/examples/canonical/external/scorm12-real.p2lrn'],
+        ['h5p','/examples/canonical/external/h5p-crossword.p2lrn']
+      ]){
+        const url=origin+'/demo/?runtime=auto&src='+encodeURIComponent(packagePath);
+        await send('Page.navigate',{url},15000);
+        const inspectLive=()=>evaluate(async function(){
+          const deadline=Date.now()+35000;
+          const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+          let last={phase:'navigating'};
+          while(Date.now()<deadline){
+            const player=document.getElementById('demo-player');
+            const shadow=player?.shadowRoot;
+            const log=document.querySelector('[data-event-log]')?.textContent??'';
             const state=document.querySelector('[data-runtime-state]')?.textContent??'';
-            const events=document.querySelector('[data-event-log]')?.textContent??'';
-            return integrity.includes('verificada')&&['READY','RENDERED'].includes(state)
-              &&events.includes('p2lrn:activityready')&&!events.includes('p2lrn:error');
-          },'verified integrity and real activityready '+sample);
-          const state=document.querySelector('[data-runtime-state]')?.textContent??'';
-          out.push({sample,state,integrity:document.querySelector('[data-inspect-integrity]')?.textContent,activityReady:true,events:document.querySelector('[data-event-log]')?.textContent?.slice(-1600)});
+            const integrity=document.querySelector('[data-inspect-integrity]')?.textContent??'';
+            const urlValue=document.querySelector('[data-package-url]')?.value??'';
+            const iframe=shadow?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-frame');
+            const info={
+              page:location.href,
+              readyState:document.readyState,
+              urlValue,
+              playerSrc:player?.getAttribute('src')??null,
+              state,integrity,activityReady:log.includes('p2lrn:activityready'),
+              rendered:log.includes('p2lrn:rendered'),
+              error:log.includes('p2lrn:error')||log.includes('boot-error'),
+              tail:log.slice(-2400),
+              shadowText:shadow?.textContent?.slice(-1500)??null,
+              frame:iframe?{sandbox:iframe.getAttribute('sandbox'),srcdoc:!!iframe.srcdoc}:null
+            };
+            last=info;
+            if(info.error)throw new Error('Live Player reported error: '+JSON.stringify(info));
+            if(info.playerSrc===new URL(location.search.slice(1).split('&').find(x=>x.startsWith('src='))?.slice(4)??'',location.href).href
+               && info.integrity==='verificada'&&info.activityReady){
+              if(info.frame?.sandbox?.includes('allow-same-origin'))throw new Error('Executable iframe improperly granted allow-same-origin: '+JSON.stringify(info));
+              return {...info,status:'PASS'};
+            }
+            await sleep(150);
+          }
+          throw new Error('Public Player did not become playable: '+JSON.stringify(last));
+        },50000);
+        let played;
+        try{played=await inspectLive();}
+        catch(error){
+          try{
+            const failedShot=await screenshot('failed-live-'+key);
+            browserInfo.screenshots.push(failedShot);
+          }catch{}
+          console.error('PUBLIC_PLAYER_FAILURE',JSON.stringify({key,url,error:String(error?.message??error)}));
+          throw error;
         }
-        return {status:'PASS',url:location.href,packages:out};
-      },80000);
-      assert.equal(browserInfo.viewer.status,'PASS');
-      browserInfo.screenshots.push(await screenshot('live-player-desktop'));
+        publicCases.push({name:key,...played});
+        browserInfo.screenshots.push(await screenshot('live-player-'+key+'-desktop'));
+        console.log('PUBLIC_PLAYER_REPLAY',JSON.stringify({name:key,playerSrc:played.playerSrc,activityReady:played.activityReady,integrity:played.integrity,state:played.state,frame:played.frame}));
+      }
+      browserInfo.viewer={status:'PASS',cases:publicCases};
       await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
       browserInfo.screenshots.push(await screenshot('live-player-mobile'));
+      await send('Emulation.clearDeviceMetricsOverride');
       await send('Emulation.clearDeviceMetricsOverride');
       return browserInfo;
     }finally{try{ws.close()}catch{}}
