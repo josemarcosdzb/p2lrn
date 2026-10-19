@@ -14,6 +14,7 @@ on:
       - 'NOTICE.md'
       - 'scripts/**'
       - '.github/workflows/p2lrn-ci.yml'
+      - '.github/workflows/p2lrn-public-cdn.yml'
   push:
     branches: [main]
     paths:
