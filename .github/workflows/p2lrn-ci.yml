@@ -31,6 +31,7 @@ on:
       - 'scripts/verify-license-integration.mjs'
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
+      - 'scripts/verify-public-cdn.mjs'
       - 'scripts/verify-distribution-identity.mjs'
       - 'scripts/verify-local-viewer.mjs'
       - 'scripts/verify-doc-navigation.mjs'
@@ -395,3 +396,22 @@ jobs:
           $index = Get-Content ".netlify-cdn/index.json" -Raw | ConvertFrom-Json
           if ($index.h5p.sharedLibraryMode -ne "bundled-npm-artifact") { throw "CDN sharedLibraryMode mismatch" }
 
+
+  public-cdn:
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify live CDN]') }}
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Check production CDN browser gate syntax
+        run: node --check scripts/verify-public-cdn.mjs
+      - name: Download live .p2lrn and exercise published Studio and Player with Chrome
+        env:
+          P2LRN_PUBLIC_ORIGIN: https://p2lrn.netlify.app
+        run: node scripts/verify-public-cdn.mjs
