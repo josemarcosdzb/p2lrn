@@ -61,7 +61,18 @@ async function validateDownloadedPackage(path){
 }
 
 async function startBrowser(){
-  const chrome=await findChrome();
+  // On Windows GUI binaries can work normally yet return a nonzero code for
+  // --version. The proven local E2E uses existence checks rather than CLI probing.
+  const knownBrowsers=[process.env.CHROME_PATH,process.env.CHROME_BIN,
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
+  ].filter(Boolean);
+  let chrome=null;
+  for(const candidate of knownBrowsers){try{if((await stat(candidate)).isFile()){chrome=candidate;break;}}catch{}}
+  if(!chrome)chrome=await findChrome();
+  console.log('PUBLIC_BROWSER_SELECTED',JSON.stringify({path:chrome}));
   const profile=await mkdtemp(join(tmpdir(),'p2lrn-public-cdn-'));
   const args=['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--disable-cache','--window-size=1440,900','--user-data-dir='+profile,'--remote-debugging-port=0',origin+'/studio/'];
   const child=spawn(chrome,args,{stdio:['ignore','ignore','pipe'],windowsHide:true});
