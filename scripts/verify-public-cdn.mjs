@@ -124,9 +124,21 @@ async function startBrowser(){
     });
     const evaluate=async(fn,timeout=60000)=>{
       const expression='('+fn.toString()+')()';
-      const response=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true,userGesture:true},timeout);
-      if(response.exceptionDetails)throw new Error('Public page JS: '+(response.exceptionDetails.exception?.description||response.exceptionDetails.text));
-      return response.result?.value;
+      const deadline=Date.now()+timeout;
+      while(Date.now()<deadline){
+        try{
+          const response=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true,userGesture:true},Math.min(45000,Math.max(1000,deadline-Date.now())));
+          if(response.exceptionDetails)throw new Error('Public page JS: '+(response.exceptionDetails.exception?.description||response.exceptionDetails.text));
+          return response.result?.value;
+        }catch(error){
+          // Page.navigate and the initial Studio module load replace Chrome's
+          // execution context. Retry only this navigation race, not app errors.
+          const reason=String(error?.message||error);
+          if(!/Execution context was destroyed|Cannot find context with specified id|Inspected target navigated/.test(reason))throw error;
+          await sleep(400);
+        }
+      }
+      throw new Error('Public website Chrome evaluation did not stabilize before the deadline');
     };
     const screenshot=async(name)=>{
       const shot=await send('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:false});
