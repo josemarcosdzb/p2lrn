@@ -232,7 +232,7 @@ async function startBrowser(){
             };
             last=info;
             if(info.error)throw new Error('Live Player reported error: '+JSON.stringify(info));
-            if(info.playerSrc===new URL(location.search.slice(1).split('&').find(x=>x.startsWith('src='))?.slice(4)??'',location.href).href
+            if(info.playerSrc===new URL(new URLSearchParams(location.search).get('src')||'',location.href).href
                && info.integrity==='verificada'&&info.activityReady){
               if(info.frame?.sandbox?.includes('allow-same-origin'))throw new Error('Executable iframe improperly granted allow-same-origin: '+JSON.stringify(info));
               return {...info,status:'PASS'};
