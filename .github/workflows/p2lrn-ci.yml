@@ -32,6 +32,7 @@ on:
       - 'scripts/verify-license-integration.mjs'
       - 'scripts/verify-npm-pack.mjs'
       - 'scripts/verify-browser-from-npm.mjs'
+      - 'scripts/verify-public-npm-cdn.mjs'
       - 'scripts/verify-public-cdn.mjs'
       - 'scripts/verify-distribution-identity.mjs'
       - 'scripts/verify-local-viewer.mjs'
@@ -230,6 +231,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-distribution-identity.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/verify-public-npm-cdn.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-local-viewer.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-doc-professional.mjs
@@ -310,6 +313,12 @@ jobs:
       - name: Verify npm/CDN byte identity
         run: node scripts/verify-distribution-identity.mjs
 
+      - name: Compare installed npm tarballs with real deployed CDN
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify npm cdn]') }}
+        env:
+          P2LRN_PUBLIC_ORIGIN: https://p2lrn.netlify.app
+        run: node scripts/verify-public-npm-cdn.mjs
+
       # GitHub artifact storage can reach its quota. Keep the real packages and
       # Chrome screenshots on the Windows runner as independently verifiable evidence.
       - name: Preserve generated packages and screenshots on Windows
@@ -326,7 +335,8 @@ jobs:
             @{ directory = '.visual-evidence-edge'; pattern = '*.png'; folder = 'cdn-edge-visual' },
             @{ directory = '.npm-pack-gate/visual-evidence'; pattern = '*.png'; folder = 'npm-visual' },
             @{ directory = '.npm-pack-gate/browser-runtime/courses'; pattern = '*.p2lrn'; folder = 'npm-packages' },
-            @{ directory = '.'; pattern = '.npm-registry-report.json'; folder = 'registry-report' }
+            @{ directory = '.'; pattern = '.npm-registry-report.json'; folder = 'registry-report' },
+            @{ directory = '.npm-pack-gate'; pattern = 'public-npm-cdn-report.json'; folder = 'public-npm-cdn' }
           )
           $manifest = @()
           foreach ($spec in $sources) {
@@ -358,6 +368,7 @@ jobs:
             .npm-pack-gate/visual-evidence/*.png
             .npm-pack-gate/browser-runtime/courses/*.p2lrn
             .npm-registry-report.json
+            .npm-pack-gate/public-npm-cdn-report.json
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 7
