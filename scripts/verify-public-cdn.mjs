@@ -207,16 +207,19 @@ async function startBrowser(){
         const out=[];
         for(const sample of ['scorm12-real.p2lrn','h5p-crossword.p2lrn']){
           const url='/examples/canonical/external/'+sample;
+          document.querySelector('[data-clear-log]')?.click();
           document.querySelector('[data-package-url]').value=url;
           document.querySelector('[data-load]').click();
           await wait(()=>document.querySelector('[data-package-label]')?.textContent?.includes(sample),'viewer sample selection');
           await wait(()=>{
             const integrity=document.querySelector('[data-inspect-integrity]')?.textContent??'';
             const state=document.querySelector('[data-runtime-state]')?.textContent??'';
-            return integrity.includes('sha256:')&&['READY','RENDERED'].includes(state);
-          },'integrity and playback '+sample);
+            const events=document.querySelector('[data-event-log]')?.textContent??'';
+            return integrity.includes('verificada')&&['READY','RENDERED'].includes(state)
+              &&events.includes('p2lrn:activityready')&&!events.includes('p2lrn:error');
+          },'verified integrity and real activityready '+sample);
           const state=document.querySelector('[data-runtime-state]')?.textContent??'';
-          out.push({sample,state,integrity:document.querySelector('[data-inspect-integrity]')?.textContent,events:document.querySelector('[data-event-log]')?.textContent?.slice(-1100)});
+          out.push({sample,state,integrity:document.querySelector('[data-inspect-integrity]')?.textContent,activityReady:true,events:document.querySelector('[data-event-log]')?.textContent?.slice(-1600)});
         }
         return {status:'PASS',url:location.href,packages:out};
       },80000);
