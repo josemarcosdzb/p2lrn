@@ -31,6 +31,8 @@ on:
       - 'scripts/check-publish-ready.mjs'
       - 'scripts/verify-license-integration.mjs'
       - 'scripts/verify-npm-pack.mjs'
+      - 'scripts/verify-public-npm-e2e.mjs'
+      - 'scripts/ensure-browser-windows.ps1'
       - 'scripts/verify-browser-from-npm.mjs'
       - 'scripts/verify-public-cdn.mjs'
       - 'scripts/verify-distribution-identity.mjs'
@@ -68,382 +70,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   public-npm-registry:
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-      - name: Install exact published P2LRN packages from public npm with empty cache
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $version = '0.5.0-alpha.10'
-          $registry = 'https://registry.npmjs.org'
-          $gate = Join-Path $env:GITHUB_WORKSPACE '.npm-pack-gate'
-          $install = Join-Path $gate 'install'
-          $cache = Join-Path $gate 'public-npm-cache'
-          if (Test-Path -LiteralPath $gate) { Remove-Item -LiteralPath $gate -Recurse -Force }
-          New-Item -ItemType Directory -Force -Path $install | Out-Null
-          '{"name":"p2lrn-public-npm-registry-e2e","version":"1.0.0","private":true,"type":"module"}' | Set-Content -LiteralPath (Join-Path $install 'package.json') -Encoding UTF8
-          Push-Location $install
-          try {
-            npm install --registry=$registry --cache=$cache --prefer-online --ignore-scripts --no-audit --no-fund --save-exact "@p2lrn/h5p-libraries@$version" "@p2lrn/toolkit@$version" "@p2lrn/player@$version" "@p2lrn/studio@$version"
-            if ($LASTEXITCODE -ne 0) { throw 'Public npm installation failed.' }
-            npm ls --depth=0
-            if ($LASTEXITCODE -ne 0) { throw 'Installed dependencies are inconsistent.' }
-            $lock = Get-Content -LiteralPath 'package-lock.json' -Raw | ConvertFrom-Json
-            $proof = @()
-            foreach ($package in @('h5p-libraries','toolkit','player','studio')) {
-              $name = "@p2lrn/$package"
-              $key = "node_modules/$name"
-              $entry = $lock.packages.PSObject.Properties[$key].Value
-              if ($null -eq $entry) { throw "Missing $name from package-lock.json" }
-              if ($entry.version -ne $version) { throw "Incorrect public version for $name" }
-              $url = [System.Uri]$entry.resolved
-              if ($url.Scheme -ne 'https' -or $url.Host -ne 'registry.npmjs.org') { throw "Non-public package source for $name at $url" }
-              if ([string]$entry.integrity -notmatch '^sha(512|384|256)-[A-Za-z0-9+/=]+
-    if: ${{ github.event_name == 'pull_request' }}
-    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-      - name: Build canonical browser runtime and pinned H5P libraries
-        run: |
-          node packages/player/scripts/build-dist.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node packages/h5p-libraries/scripts/build.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Verify real playback and hostile-content isolation
-        run: node scripts/verify-automatic-runtimes.mjs
-
-  license-integrity:
-    if: ${{ contains(github.event.head_commit.message, '[license verify]') || (github.event_name == 'workflow_dispatch' && inputs.license_only) }}
-    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '22'
-
-      - name: Check license scripts syntax
-        run: |
-          node --check scripts/check-publish-ready.mjs
-          node --check scripts/verify-license-integration.mjs
-          node --check packages/player/scripts/prepare-source-snapshot.mjs
-          node --check packages/player/scripts/build-dist.mjs
-          node --check packages/studio/scripts/build-dist.mjs
-          node --check packages/studio/server/index.mjs
-          node --check packages/studio/bin/p2lrn-studio.mjs
-          node --check deploy/netlify/build-cdn.mjs
-          node --check deploy/netlify/build-site.mjs
-
-      - name: Verify license publication gate
-        run: node scripts/check-publish-ready.mjs
-
-      - name: Verify P2LRN-NCSL integration
-        run: node scripts/verify-license-integration.mjs
-
-  focused-local:
-    if: ${{ contains(github.event.head_commit.message, '[focused local]') || (github.event_name == 'workflow_dispatch' && inputs.focused_only) }}
-    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '22'
-
-      - name: Build toolkit only
-        working-directory: packages/toolkit
-        run: |
-          npm install --ignore-scripts --no-audit --no-fund --include=dev
-          npm run build
-
-      - name: Build Player runtime only
-        run: node packages/player/scripts/build-dist.mjs
-
-      - name: Prepare local CDN fixture
-        shell: powershell
-        run: |
-          node deploy/netlify/build-cdn.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item -Recurse -Force deploy/netlify/site/* .netlify-cdn/
-          New-Item -ItemType Directory -Force .netlify-cdn/examples/canonical | Out-Null
-          Copy-Item -Recurse -Force examples/canonical/* .netlify-cdn/examples/canonical/
-          Copy-Item -Force .netlify-cdn/player/current/dist/p2lrn-sw.js .netlify-cdn/p2lrn-sw.js
-
-      - name: Verify viewer and isolated runtimes locally
-        run: node scripts/verify-local-viewer.mjs
-
-  toolkit-and-cdn:
-    if: ${{ !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify public npm]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
-    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        with:
-          node-version: '22'
-
-      - name: Compile and test toolkit
-        working-directory: packages/toolkit
-        run: |
-          npm install --ignore-scripts --no-audit --no-fund --include=dev
-          npm test
-
-      - name: Verify Studio setup CLI
-        run: node --test packages/studio/test/*.test.mjs
-
-      - name: Verify global docs navigation
-        run: node scripts/verify-doc-navigation.mjs
-
-      - name: Verify documentation installation paths
-        run: node scripts/verify-doc-installation-paths.mjs
-
-      - name: Verify professional documentation quality
-        run: node scripts/verify-doc-professional.mjs
-
-      - name: Verify documentation flow
-        run: node scripts/verify-doc-flow.mjs
-
-      - name: Verify questionnaire documentation examples
-        run: node scripts/verify-doc-questionnaire-examples.mjs
-
-      - name: Verify public documentation content
-        run: node scripts/verify-public-doc-content.mjs
-
-      - name: Build Player runtime for security tests
-        run: node packages/player/scripts/build-dist.mjs
-
-      - name: Verify runtime host security
-        run: node --test packages/player/test/runtime-security.test.mjs
-
-      - name: Verify bundled runtime URL contract
-        run: node --test --test-name-pattern="automatic runtime default is URL-resolved" packages/player/test/distribution.test.mjs
-
-      - name: Check browser module syntax
-        shell: powershell
-        run: |
-          Get-ChildItem packages/toolkit/web,packages/toolkit/web-sdk-src -Recurse -Filter *.js | ForEach-Object {
-            node --check $_.FullName
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-          node --check packages/player/scripts/build-dist.mjs
-          node --check packages/studio/scripts/build-dist.mjs
-          node --check packages/studio/server/index.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check packages/studio/bin/p2lrn-studio.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check packages/h5p-libraries/scripts/build.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/verify-npm-pack.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/check-public-npm-registry.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/verify-browser-from-npm.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/verify-distribution-identity.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/verify-local-viewer.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/verify-doc-professional.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/verify-doc-flow.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/verify-doc-questionnaire-examples.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/verify-built-doc-links.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/verify-public-doc-content.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check scripts/set-version.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check deploy/netlify/build-cdn.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check deploy/netlify/build-site.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node --check deploy/netlify/build-doc-examples.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Prepare local viewer fixture
-        shell: powershell
-        run: |
-          node deploy/netlify/build-cdn.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item -Recurse -Force deploy/netlify/site/* .netlify-cdn/
-          New-Item -ItemType Directory -Force .netlify-cdn/examples/canonical | Out-Null
-          Copy-Item -Recurse -Force examples/canonical/* .netlify-cdn/examples/canonical/
-          Copy-Item -Force .netlify-cdn/player/current/dist/p2lrn-sw.js .netlify-cdn/p2lrn-sw.js
-
-      - name: Inspect public npm registry for all four P2LRN distributions
-        run: node scripts/check-public-npm-registry.mjs
-
-      - name: Verify local viewer and isolated runtimes
-        run: node scripts/verify-local-viewer.mjs
-
-      - name: Verify actual Studio and Player UI in Microsoft Edge if installed
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $chromeEvidence = '.visual-evidence-chrome'
-          if (Test-Path .visual-evidence) {
-            New-Item -ItemType Directory -Force $chromeEvidence | Out-Null
-            Copy-Item .visual-evidence\*.png $chromeEvidence -Force
-          }
-          $candidates = @('C:\Program Files\Microsoft\Edge\Application\msedge.exe','C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe')
-          $edge = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
-          if ($edge) {
-            # The Chrome E2E rewrites the temporary viewer's runtime origins.
-            # Restore a clean copy before the independent Edge E2E to avoid
-            # mistaking a reused fixture for a browser incompatibility.
-            Copy-Item -LiteralPath 'deploy/netlify/site/demo/viewer.js' -Destination '.netlify-cdn/demo/viewer.js' -Force
-            $env:CHROME_PATH = $edge
-            node scripts/verify-local-viewer.mjs
-            if ($LASTEXITCODE -ne 0) { throw 'Microsoft Edge UI E2E failed' }
-            New-Item -ItemType Directory -Force '.visual-evidence-edge' | Out-Null
-            Copy-Item .visual-evidence\*.png '.visual-evidence-edge' -Force
-            Remove-Item Env:CHROME_PATH
-            Write-Host 'MICROSOFT_EDGE_UI_E2E=PASS'
-          } else {
-            Write-Host 'MICROSOFT_EDGE_UI_E2E=NOT_INSTALLED'
-          }
-
-
-      - name: Verify npm tarballs as installed packages
-        run: node scripts/verify-npm-pack.mjs
-
-      - name: Browser smoke from installed npm tarballs
-        run: node scripts/verify-browser-from-npm.mjs
-
-      - name: Build production Netlify site locally
-        run: node deploy/netlify/build-site.mjs
-
-      - name: Verify published documentation links
-        run: node scripts/verify-built-doc-links.mjs
-
-      - name: Verify npm/CDN byte identity
-        run: node scripts/verify-distribution-identity.mjs
-
-      # GitHub artifact storage can reach its quota. Keep the real packages and
-      # Chrome screenshots on the Windows runner as independently verifiable evidence.
-      - name: Preserve generated packages and screenshots on Windows
-        if: always()
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $root = Join-Path $env:USERPROFILE 'Downloads\p2lrn-validation'
-          $target = Join-Path $root $env:GITHUB_RUN_ID
-          New-Item -ItemType Directory -Path $target -Force | Out-Null
-          $sources = @(
-            @{ directory = '.visual-evidence'; pattern = '*.png'; folder = 'cdn-visual' },
-            @{ directory = '.visual-evidence-chrome'; pattern = '*.png'; folder = 'cdn-chrome-visual' },
-            @{ directory = '.visual-evidence-edge'; pattern = '*.png'; folder = 'cdn-edge-visual' },
-            @{ directory = '.npm-pack-gate/visual-evidence'; pattern = '*.png'; folder = 'npm-visual' },
-            @{ directory = '.npm-pack-gate/browser-runtime/courses'; pattern = '*.p2lrn'; folder = 'npm-packages' },
-            @{ directory = '.'; pattern = '.npm-registry-report.json'; folder = 'registry-report' }
-          )
-          $manifest = @()
-          foreach ($spec in $sources) {
-            if (!(Test-Path -LiteralPath $spec.directory -PathType Container)) { continue }
-            $dest = Join-Path $target $spec.folder
-            New-Item -ItemType Directory -Path $dest -Force | Out-Null
-            foreach ($file in (Get-ChildItem -LiteralPath $spec.directory -File -Filter $spec.pattern)) {
-              $destination = Join-Path $dest $file.Name
-              Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
-              $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
-              $manifest += [pscustomobject]@{ file = "$($spec.folder)/$($file.Name)"; bytes = $file.Length; sha256 = $hash }
-            }
-          }
-          $report = [pscustomobject]@{ runId = "$env:GITHUB_RUN_ID"; commit = "$env:GITHUB_SHA"; files = $manifest }
-          $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $target 'manifest.json') -Encoding UTF8
-          Write-Host "Evidencias conservadas en $target ; archivos: $($manifest.Count)"
-          if ($manifest.Count -eq 0) { Write-Warning 'El navegador no produjo archivos que conservar en esta ejecución.' }
-
-      - name: Upload browser evidence and Studio-generated package
-        if: always()
-        continue-on-error: true # Windows already retains hashed copies when GitHub artifact quota is exhausted.
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: p2lrn-browser-evidence-${{ github.run_id }}
-          path: |
-            .visual-evidence/*.png
-            .visual-evidence-chrome/*.png
-            .visual-evidence-edge/*.png
-            .npm-pack-gate/visual-evidence/*.png
-            .npm-pack-gate/browser-runtime/courses/*.p2lrn
-            .npm-registry-report.json
-          if-no-files-found: warn
-          include-hidden-files: true
-          retention-days: 7
-
-      - name: Verify generated runtime
-        shell: powershell
-        run: |
-          $VERSION = node -p "require('./packages/player/package.json').version"
-          $required = @(
-            ".netlify-cdn/player/$VERSION/dist/p2lrn.js",
-            ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p.html",
-            ".netlify-cdn/player/$VERSION/dist/runtime-host/scorm.html",
-            ".netlify-cdn/player/$VERSION/dist/vendor/three.module.js",
-            ".netlify-cdn/player/$VERSION/dist/vendor/three.core.js",
-            ".netlify-cdn/player/$VERSION/dist/vendor/rapier3d.mjs",
-            ".netlify-cdn/player/$VERSION/dist/vendor/game-3d-runtime.json",
-            ".netlify-cdn/studio/$VERSION/dist/p2lrn-studio.js",
-            ".netlify-cdn/studio/$VERSION/dist/p2lrn-studio.esm.js",
-            ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.Crossword-0.5/library.json",
-            ".netlify-cdn/player/$VERSION/dist/runtime-host/h5p-libraries/H5P.BranchingScenario-1.8/library.json"
-          )
-          foreach ($path in $required) {
-            if (!(Test-Path $path -PathType Leaf)) { throw "Missing generated runtime file: $path" }
-          }
-          foreach ($path in @(
-            ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/frame.bundle.js",
-            ".netlify-cdn/player/$VERSION/dist/runtime-host/assets/styles/h5p.css",
-            ".netlify-cdn/player/$VERSION/dist/vendor/three.module.js",
-            ".netlify-cdn/player/$VERSION/dist/vendor/rapier3d.mjs"
-          )) {
-            if (!(Test-Path $path -PathType Leaf) -or (Get-Item $path).Length -le 0) {
-              throw "Missing or empty generated runtime asset: $path"
-            }
-          }
-          $release = Get-Content ".netlify-cdn/player/$VERSION/dist/release.json" -Raw | ConvertFrom-Json
-          if ($release.webSdkVersion -ne $VERSION) { throw "release.json webSdkVersion mismatch" }
-          $index = Get-Content ".netlify-cdn/index.json" -Raw | ConvertFrom-Json
-          if ($index.h5p.sharedLibraryMode -ne "bundled-npm-artifact") { throw "CDN sharedLibraryMode mismatch" }
-
-
-  public-cdn:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify live CDN]') }}
-    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
-    timeout-minutes: 20
-    steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
@@ -451,97 +82,37 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - name: Check production CDN browser gate syntax
-        run: node --check scripts/verify-public-cdn.mjs
-      - name: Download live .p2lrn and exercise published Studio and Player with Chrome
-        env:
-          P2LRN_PUBLIC_ORIGIN: https://p2lrn.netlify.app
-        run: node scripts/verify-public-cdn.mjs
-) { throw "Missing npm integrity for $name" }
-              $manifest = Get-Content -LiteralPath "node_modules/@p2lrn/$package/package.json" -Raw | ConvertFrom-Json
-              if ($manifest.name -ne $name -or $manifest.version -ne $version) { throw "Installed manifest mismatch for $name" }
-              $proof += [pscustomobject]@{ package=$name; version=$version; resolved=$entry.resolved; integrity=$entry.integrity }
-              Write-Host "PUBLIC_NPM_VERIFIED: $name@$version ($($entry.resolved))"
-            }
-            $report = [pscustomobject]@{
-              status = 'PASS'
-              type = 'public-registry-independent-install'
-              release = $version
-              registry = $registry
-              runId = $env:GITHUB_RUN_ID
-              checkedAt = (Get-Date).ToUniversalTime().ToString('o')
-              packages = $proof
-            }
-            $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $gate 'public-npm-report.json') -Encoding UTF8
-          } finally { Pop-Location }
-      - name: Verify runtime and Reader installed from public npm
+      - name: Install and inspect four official public npm packages
+        run: node scripts/verify-public-npm-e2e.mjs
+      - name: Provide a working browser on Windows
         shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $gate = Join-Path $env:GITHUB_WORKSPACE '.npm-pack-gate'
-          $scope = Join-Path $gate 'install/node_modules/@p2lrn'
-          $mustExist = @(
-            'toolkit/dist/cli/document-reader.js',
-            'toolkit/dist/document-reader/index.js',
-            'player/dist/p2lrn.js',
-            'player/dist/runtime-host/scorm.html',
-            'player/dist/runtime-host/h5p.html',
-            'studio/dist/p2lrn-studio.js',
-            'studio/dist/p2lrn-studio.esm.js',
-            'studio/server/index.mjs',
-            'h5p-libraries/dist/index.json',
-            'h5p-libraries/dist/H5P.Crossword-0.5/library.json'
-          )
-          foreach ($path in $mustExist) {
-            $file = Join-Path $scope $path
-            if (!(Test-Path -LiteralPath $file -PathType Leaf) -or (Get-Item -LiteralPath $file).Length -lt 1) { throw "Missing published file: $file" }
-          }
-          node (Join-Path $scope 'toolkit/dist/cli/main.js') --help
-          if ($LASTEXITCODE -ne 0) { throw 'Published Toolkit CLI failed' }
-          $smoke = Join-Path $gate 'reader-smoke.md'
-          '# Documento instalado desde npm' | Set-Content -LiteralPath $smoke -Encoding UTF8
-          node (Join-Path $scope 'toolkit/dist/cli/document-reader.js') $smoke --pretty
-          if ($LASTEXITCODE -ne 0) { throw 'Published document Reader failed' }
-          $runtime = Join-Path $gate 'copied-runtime'
-          New-Item -ItemType Directory -Force -Path $runtime | Out-Null
-          node (Join-Path $scope 'player/bin/p2lrn-copy-runtime.mjs') $runtime
-          if ($LASTEXITCODE -ne 0) { throw 'Published Player runtime copy failed' }
-          foreach ($file in @('p2lrn.js','runtime-host/scorm.html','runtime-host/h5p.html','runtime-host/h5p-libraries/H5P.Crossword-0.5/library.json')) {
-            if (!(Test-Path -LiteralPath (Join-Path $runtime $file) -PathType Leaf)) { throw "Missing runtime dependency: $file" }
-          }
-          Write-Host 'PUBLIC_NPM_RUNTIME_AND_READER=PASS'
-      - name: Browser E2E with public npm Studio authoring, save, import and Player playback
+        run: ./scripts/ensure-browser-windows.ps1
+      - name: Studio and Player browser E2E from public npm
         run: node scripts/verify-browser-from-npm.mjs
-      - name: Preserve public npm report and E2E screenshots on Windows
+      - name: Preserve public npm evidence on Windows
         if: always()
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $gate = Join-Path $env:GITHUB_WORKSPACE '.npm-pack-gate'
-          $target = Join-Path $env:USERPROFILE "Downloads/p2lrn-validation/$env:GITHUB_RUN_ID-public-npm"
+          $base = Join-Path $env:GITHUB_WORKSPACE '.npm-pack-gate'
+          $target = Join-Path $env:USERPROFILE ('Downloads\p2lrn-validation\' + $env:GITHUB_RUN_ID + '-public-npm')
           New-Item -ItemType Directory -Force -Path $target | Out-Null
-          $specs = @(
-            @{ from=(Join-Path $gate 'public-npm-report.json'); to='public-npm-report.json' },
-            @{ from=(Join-Path $gate 'visual-evidence'); to='visual-evidence' },
-            @{ from=(Join-Path $gate 'browser-runtime/courses'); to='generated-courses' }
+          $items = @(
+            @{ source='public-npm-report.json'; destination='public-npm-report.json' },
+            @{ source='visual-evidence'; destination='visual-evidence' },
+            @{ source='browser-runtime\courses'; destination='courses' }
           )
-          $manifest = @()
-          foreach ($spec in $specs) {
-            if (!(Test-Path -LiteralPath $spec.from)) { continue }
-            $destination = Join-Path $target $spec.to
-            Copy-Item -LiteralPath $spec.from -Destination $destination -Recurse -Force
-            if (Test-Path -LiteralPath $destination -PathType Leaf) {
-              $files = @(Get-Item -LiteralPath $destination)
-            } else {
-              $files = @(Get-ChildItem -LiteralPath $destination -Recurse -File)
-            }
-            foreach ($file in $files) {
-              $manifest += [pscustomobject]@{ name=$file.Name; size=$file.Length; sha256=(Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
+          foreach ($item in $items) {
+            $src = Join-Path $base $item.source
+            if (Test-Path -LiteralPath $src) {
+              Copy-Item -LiteralPath $src -Destination (Join-Path $target $item.destination) -Recurse -Force
             }
           }
+          $manifest = @(Get-ChildItem -LiteralPath $target -File -Recurse | ForEach-Object {
+            [pscustomobject]@{file=$_.FullName.Substring($target.Length + 1);bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
+          })
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $target 'manifest.json') -Encoding UTF8
-          Write-Host "PUBLIC_NPM_EVIDENCE=$target FILES=$($manifest.Count)"
-
+          Write-Host ('PUBLIC_NPM_EVIDENCE=' + $target + ' FILES=' + $manifest.Count)
   automatic-runtime:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
@@ -632,7 +203,7 @@ jobs:
         run: node scripts/verify-local-viewer.mjs
 
   toolkit-and-cdn:
-    if: ${{ !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
+    if: ${{ !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
