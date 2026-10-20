@@ -19,8 +19,7 @@ if (-not $browser) {
   $browser = Join-Path $folder 'chrome-win64\chrome.exe'
   if (!(Test-Path -LiteralPath $browser -PathType Leaf)) { throw 'Portable Chrome executable not found.' }
 }
-& $browser --version
-if ($LASTEXITCODE -ne 0) { throw 'Selected Chromium browser cannot execute.' }
+# Executable existence is verified above. The actual browser launch is exercised by the E2E gate.
 if (!$env:GITHUB_ENV) { throw 'GITHUB_ENV is missing: GitHub Actions runner required.' }
 [System.IO.File]::AppendAllText($env:GITHUB_ENV, ('CHROME_BIN=' + $browser + [Environment]::NewLine), (New-Object System.Text.UTF8Encoding($false)))
 Write-Host ('PUBLIC_NPM_BROWSER=' + $browser)
