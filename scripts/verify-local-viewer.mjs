@@ -290,7 +290,7 @@ async function studioComponentScenario(){
     const moveButton=[...root.querySelectorAll('button')].find((item)=>item.textContent==='Mover al compuesto');
     if(!moveButton||moveButton.disabled)throw new Error('Composite move action is not enabled');
     moveButton.click();
-    await wait(()=>q('[data-meta]')?.textContent?.includes('cambio'),'composite activity move');
+    await wait(()=>q('.studio-readonly')?.textContent?.includes('Sopa de letras'),'composite activity move');
 
     const beforeMedia=q('[data-tree]').querySelectorAll('button').length;
     q('[data-add-menu]').open=true;click('[data-add-kind="file"]');
@@ -395,15 +395,15 @@ async function studioSiteScenario(){
     await wait(()=>q('[data-add-dialog]').open,'open composite child palette');
     click('[data-add-kind="word-search"]');
     await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Sopa de letras'),'child game');
-    const group=[...q('[data-tree]').querySelectorAll('button')].find(x=>x.textContent.includes('Compuesto'));
-    const nested=group?.closest('.studio-tree-node')?.querySelector('.studio-tree-children button');
-    if(!nested?.textContent.includes('Sopa de letras')){
-      throw new Error('Studio website created a composite child outside its parent: '+JSON.stringify({
-        group:group?.textContent,
-        groupMarkup:group?.closest('.studio-tree-node')?.outerHTML.slice(0,950),
-        tree:q('[data-tree]')?.textContent.slice(0,800)
-      }));
-    }
+    const nested=await wait(()=>{
+      const group=[...q('[data-tree]').querySelectorAll('button')].find(x=>
+        x.querySelector('.title')?.textContent==='Compuesto'
+      );
+      const container=group?.closest('.studio-tree-node');
+      return [...(container?.querySelectorAll(':scope > .studio-tree-children > .studio-tree-node > button')??[])].find(x=>
+        x.querySelector('.title')?.textContent==='Sopa de letras'
+      );
+    },'composite child displayed inside its parent');
     const lesson=[...q('[data-tree]').querySelectorAll('button')].find(x=>x.textContent.includes('Lección editada con Studio web'));
     if(!lesson)throw new Error('Edited lesson not present in outline');
     lesson.click();
