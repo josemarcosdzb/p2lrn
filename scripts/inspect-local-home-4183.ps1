@@ -23,10 +23,10 @@ foreach($rel in @('index.html','p2lrn.js','p2lrn.css','player/current/dist/relea
     }catch{}
   }
 }
-$home=Join-Path $site 'index.html'
+$homeFile=Join-Path $site 'index.html'
 $source=Join-Path $env:GITHUB_WORKSPACE 'deploy/netlify/site/index.html'
-if((Test-Path -LiteralPath $source) -and (Test-Path -LiteralPath $home)){
-  $match=((Get-FileHash $source -Algorithm SHA256).Hash -eq (Get-FileHash $home -Algorithm SHA256).Hash)
+if((Test-Path -LiteralPath $source) -and (Test-Path -LiteralPath $homeFile)){
+  $match=((Get-FileHash $source -Algorithm SHA256).Hash -eq (Get-FileHash $homeFile -Algorithm SHA256).Hash)
   Write-Host ('LOCAL_HOME_MATCHES_MAIN='+$match)
 }
 Write-Host 'SITE_ROOT_CONTENTS_BEGIN'
