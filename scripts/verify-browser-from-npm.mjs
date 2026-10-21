@@ -146,7 +146,15 @@ export async function findChrome() {
     'chromium-browser',
   ].filter(Boolean);
   for (const candidate of candidates) {
-    if ((candidate.includes('/') || candidate.includes('\\')) && !existsSync(candidate)) continue;
+    // Installed Windows browsers can hand off "--version" to an existing
+    // session and exit non-zero. Path existence is sufficient here: the
+    // actual CDP browser startup is verified by the subsequent E2E gate.
+    if (candidate.includes('/') || candidate.includes('\\')) {
+      if (!existsSync(candidate)) continue;
+      try { if ((await stat(candidate)).isFile()) return candidate; }
+      catch {}
+      continue;
+    }
     try {
       await execFileAsync(candidate, ['--version'], {timeout:5000, maxBuffer:1024*1024});
       return candidate;
