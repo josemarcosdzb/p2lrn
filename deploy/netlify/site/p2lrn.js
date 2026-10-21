@@ -698,3 +698,142 @@
     if (node) node.textContent = health.ok && release.webSdkVersion === version ? 'CDN disponible' : 'CDN';
   }).catch(() => {});
 })();
+
+
+
+// P2LRN homepage media carousel
+(()=>{
+  const root=document.querySelector('[data-hero-carousel-root]');
+  if(!root)return;
+  const slides=[...root.querySelectorAll('[data-hero-slide]')];
+  const viewport=root.querySelector('[data-hero-viewport]');
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let index=Math.min(2,slides.length-1);
+  let locked=false;
+  let unlockTimer=null;
+  let startX=null;
+
+  slides.forEach(slide=>{
+    slide.querySelectorAll('img').forEach(img=>{img.draggable=false});
+  });
+  root.addEventListener('dragstart',event=>event.preventDefault());
+  root.addEventListener('selectstart',event=>event.preventDefault());
+
+  const normalizeDistance=(value)=>{
+    const n=slides.length;
+    let d=value;
+    while(d>n/2)d-=n;
+    while(d<-n/2)d+=n;
+    return d;
+  };
+  const slotFor=(d)=>{
+    if(d===0)return 'center';
+    if(d===-1)return 'left1';
+    if(d===1)return 'right1';
+    if(d===-2)return 'left2';
+    if(d===2)return 'right2';
+    return d<0?'left3':'right3';
+  };
+  const syncVideo=()=>{
+    slides.forEach((slide,i)=>{
+      const video=slide.querySelector('video');
+      if(!video)return;
+      const centered=i===index;
+      video.controls=centered;
+      if(!centered){
+        video.pause();
+        try{video.currentTime=0}catch{}
+      }
+    });
+  };
+  const render=()=>{
+    slides.forEach((slide,i)=>{
+      const slot=slotFor(normalizeDistance(i-index));
+      slide.dataset.slot=slot;
+      slide.classList.toggle('is-active',slot==='center');
+      slide.setAttribute('aria-hidden','false');
+      slide.style.pointerEvents='auto';
+    });
+    syncVideo();
+  };
+  const unlock=()=>{
+    locked=false;
+    root.classList.remove('is-moving');
+    slides.forEach(s=>s.classList.remove('is-moving'));
+  };
+  const goTo=(targetIndex)=>{
+    if(locked||targetIndex===index)return;
+    locked=true;
+    root.classList.add('is-moving');
+    slides.forEach(s=>s.classList.add('is-moving'));
+    index=(targetIndex+slides.length)%slides.length;
+    render();
+    if(unlockTimer)clearTimeout(unlockTimer);
+    unlockTimer=setTimeout(unlock,reduce?40:620);
+  };
+  const move=(direction)=>{
+    if(!direction)return;
+    goTo(index+direction);
+  };
+
+  slides.forEach((slide,i)=>{
+    slide.addEventListener('click',(event)=>{
+      if(locked||i===index)return;
+      goTo(i);
+    });
+  });
+
+  root.addEventListener('keydown',(event)=>{
+    if(event.key==='ArrowLeft'){event.preventDefault();move(-1)}
+    if(event.key==='ArrowRight'){event.preventDefault();move(1)}
+  });
+
+  viewport?.addEventListener('pointerdown',(event)=>{
+    if(locked)return;
+    startX=event.clientX;
+  });
+  viewport?.addEventListener('pointerup',(event)=>{
+    if(startX===null||locked)return;
+    const delta=event.clientX-startX;
+    startX=null;
+    if(Math.abs(delta)>48)move(delta<0?1:-1);
+  });
+  viewport?.addEventListener('pointercancel',()=>{startX=null});
+
+  root.tabIndex=0;
+  render();
+})();
+
+
+// Scroll reveal for the integrated-formats section
+(()=>{
+  const items=[...document.querySelectorAll('[data-scroll-reveal] .reveal-item')];
+  if(!items.length)return;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce||!('IntersectionObserver' in window)){
+    items.forEach(item=>item.classList.add('is-visible'));
+    return;
+  }
+
+  const bridgeBottomMargin=(item)=>{
+    if(!item.closest('.platform-bridge'))return 18;
+    const order=Number.parseInt(getComputedStyle(item).getPropertyValue('--reveal-order'),10)||0;
+    if(order<=1)return 18;
+    if(order===2)return 28;
+    if(order===3)return 60;
+    return 30;
+  };
+
+  items.forEach(item=>{
+    const bottom=bridgeBottomMargin(item);
+    const observer=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{
+        entry.target.classList.toggle('is-visible',entry.isIntersecting);
+      });
+    },{
+      threshold:.01,
+      rootMargin:'-7% 0px -'+bottom+'% 0px'
+    });
+    observer.observe(item);
+  });
+})();

@@ -6,8 +6,8 @@
   <meta name="description" content="P2LRN: formato portable de aprendizaje, Player web y Toolkit Node/TypeScript.">
   <meta name="theme-color" content="#0d1117">
   <title>P2LRN — documentación y runtime</title>
-  <link rel="stylesheet" href="/p2lrn.css">
-  <script src="/p2lrn.js" defer></script>
+  <link rel="stylesheet" href="/p2lrn.css?v=itemreveal-20261020">
+  <script src="/p2lrn.js?v=itemreveal2-20261020" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -25,51 +25,119 @@
   </header>
 
   <main id="top">
-    <section class="hero dev-hero">
-      <div class="hero-main">
-        <p class="eyebrow">FORMAT / PLAYER / TOOLKIT</p>
+        <section class="hero dev-hero hero-showcase" aria-labelledby="hero-title">
+      <div class="hero-ambient hero-ambient-one" aria-hidden="true"></div>
+      <div class="hero-ambient hero-ambient-two" aria-hidden="true"></div>
+
+      <div class="hero-feature-stack hero-feature-stack-left" aria-label="Formatos compatibles">
+        <article class="hero-feature-card"><span class="hero-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 4l8 3.5v9L12 20l-8-3.5z"/><path d="M8 10.5h8M9 14l3 2 3-2"/></svg></span><div><strong>SCORM</strong><small>1.2 / 2004</small></div></article>
+        <article class="hero-feature-card"><span class="hero-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8.5 8.5 5l3 3 3-3L19 8.5l-3 3 3 3L15.5 18l-3-3-3 3L5 14.5l3-3z"/></svg></span><div><strong>H5P</strong><small>Interactivo</small></div></article>
+        <article class="hero-feature-card"><span class="hero-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="m8 12 3 3 5-6"/></svg></span><div><strong>cmi5</strong><small>CATAPULT</small></div></article>
+        <article class="hero-feature-card"><span class="hero-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="M8 12h8M12 8v8"/></svg></span><div><strong>xAPI</strong><small>Tin Can</small></div></article>
+      </div>
+
+      <div class="hero-center">
+        <p class="eyebrow"><span class="hero-eyebrow-mark" aria-hidden="true"></span> FORMAT / PLAYER / STUDIO / TOOLKIT</p>
         <h1>P2LRN</h1>
-        <p class="hero-lead">Un formato portable para empaquetar, verificar y reproducir contenido formativo sin dejarlo atado a una sola plataforma.</p>
+        <h2 class="hero-title" id="hero-title">Crea, empaqueta, reproduce y comparte<br>contenido formativo <em>en cualquier plataforma</em>.</h2>
+        <p class="hero-lead">Un formato abierto y portable para que tus cursos, actividades e interacciones funcionen en tu web, en tu LMS y en cualquier entorno, sin quedar atados a una sola plataforma o formato.</p>
         <div class="hero-actions">
           <a class="button primary" href="/docs/paquetes/">Crear un paquete</a>
-          <a class="button" href="/demo/">Abrir el visor</a>
           <a class="button" href="/studio/">Abrir Studio</a>
+          <a class="button" href="/demo/">Abrir el visor</a>
         </div>
       </div>
 
-      <aside class="terminal-card" aria-label="Ejemplo de terminal">
-        <div class="terminal-title"><span>p2lrn / inspect</span><span>● ● ●</span></div>
-        <pre><code><span class="prompt">$</span> p2lrn-inspect curso.p2lrn
+      <div class="hero-feature-stack hero-feature-stack-right" aria-label="Capacidades P2LRN">
+        <article class="hero-feature-card"><span class="hero-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5z"/><path d="m8 15 2.5-.5L16 9l-1-1-5.5 5.5z"/></svg></span><div><strong>Cuestionarios</strong><small>Nativos</small></div></article>
+        <article class="hero-feature-card"><span class="hero-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></span><div><strong>Actividades 3D</strong><small>Interactivas</small></div></article>
+        <article class="hero-feature-card"><span class="hero-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg></span><div><strong>Componentes</strong><small>Modulares</small></div></article>
+        <article class="hero-feature-card"><span class="hero-feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></span><div><strong>Paquetes</strong><small>Reutilizables</small></div></article>
+      </div>
 
-format        P2LRN
-integrity     verified
-entrypoint    urn:p2lrn:course
-runtime       ready
-player        <span data-player-version>0.5.0-alpha.10</span>
-
-<span class="ok">✓ package ready to render</span></code></pre>
-      </aside>
+      <div class="hero-carousel" data-hero-carousel-root aria-label="Muestras de P2LRN">
+        <button class="hero-carousel-nav hero-carousel-prev" type="button" data-hero-prev aria-label="Anterior">&#8249;</button>
+        <div class="hero-carousel-viewport" data-hero-viewport>
+          <div class="hero-carousel-track" data-hero-carousel>
+            <figure class="hero-slide" data-hero-slide>
+              <div class="hero-slide-media"><img src="/assets/hero/player.png" alt="Vista del Player P2LRN"></div>
+              <figcaption><strong>Player</strong><span>Reproducci&oacute;n del paquete</span></figcaption>
+            </figure>
+            <figure class="hero-slide" data-hero-slide>
+              <div class="hero-slide-media"><img src="/assets/hero/studio.png" alt="Vista de P2LRN Studio"></div>
+              <figcaption><strong>Studio</strong><span>Edici&oacute;n visual</span></figcaption>
+            </figure>
+            <figure class="hero-slide" data-hero-slide data-video-slide>
+              <div class="hero-slide-media">
+                <video muted loop playsinline preload="metadata" poster="/assets/hero/video-reference.jpg">
+                  <source src="/assets/hero/preview.mp4" type="video/mp4">
+                </video>
+                <span class="hero-video-badge">VIDEO</span>
+              </div>
+              <figcaption><strong>Paquete en movimiento</strong><span>Verificar y reproducir</span></figcaption>
+            </figure>
+            <figure class="hero-slide" data-hero-slide>
+              <div class="hero-slide-media"><img src="/assets/hero/games.png" alt="Documentaci&oacute;n de actividades 3D"></div>
+              <figcaption><strong>Actividades 3D</strong><span>Experiencias interactivas</span></figcaption>
+            </figure>
+            <figure class="hero-slide" data-hero-slide>
+              <div class="hero-slide-media"><img src="/assets/hero/questionnaires.png" alt="Documentaci&oacute;n de cuestionarios"></div>
+              <figcaption><strong>Cuestionarios</strong><span>Actividades nativas</span></figcaption>
+            </figure>
+            <figure class="hero-slide" data-hero-slide>
+              <div class="hero-slide-media"><img src="/assets/hero/docs.png" alt="Documentaci&oacute;n P2LRN"></div>
+              <figcaption><strong>Documentaci&oacute;n</strong><span>Del formato a la integraci&oacute;n</span></figcaption>
+            </figure>
+          </div>
+        </div>
+        <button class="hero-carousel-nav hero-carousel-next" type="button" data-hero-next aria-label="Siguiente">&#8250;</button>
+        <div class="hero-carousel-dots" data-hero-dots aria-label="Seleccionar elemento del carrusel"></div>
+      </div>
     </section>
 
-    <section class="section">
-      <div class="section-label">01 · CONCEPTO</div>
+            <section class="platform-bridge" aria-labelledby="platform-bridge-title">
+      <div class="platform-bridge-copy">
+        <div class="bridge-kicker">INTEGRAR SIN COMPLICACIONES</div>
+        <h2 id="platform-bridge-title">Un paquete. Muchas plataformas.</h2>
+        <p>Empaquetas el curso una vez y puedes integrarlo en tu web, en un LMS, en una aplicación o en otros entornos. Player identifica los formatos incorporados y resuelve cómo reproducirlos, sin tener que construir una integración distinta para cada tecnología.</p>
+      </div>
+      <div class="platform-bridge-visual" aria-label="P2LRN integra distintos formatos en un mismo paquete y los reproduce en distintas plataformas">
+        <div class="bridge-sources" aria-label="Contenido que puede integrar P2LRN">
+          <span>SCORM</span><span>H5P</span><span>cmi5</span><span>xAPI</span><span>Lecciones</span><span>Juegos 3D</span>
+        </div>
+        <div class="bridge-package"><small>PAQUETE</small><strong>.p2lrn</strong></div>
+        <div class="bridge-connector"><span>PLAYER</span><i aria-hidden="true"></i></div>
+        <div class="bridge-targets">
+          <span>WEB</span><span>LMS</span><span>APP</span><span>OTROS</span>
+        </div>
+        <div class="bridge-runtime">Runtimes desde <strong>CDN</strong> o <strong>NPM</strong></div>
+      </div>
+      <div class="cdn-minimal bridge-cdn">
+        <div class="cdn-minimal-head"><strong>CDN · MÍNIMO</strong><span>HTML</span></div>
+        <pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+&lt;p2lrn-player src="./curso.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre>
+      </div>
+    </section>
+
+    <section class="section concept-formats" data-scroll-reveal>
+      <div class="section-label reveal-item" style="--reveal-order:0">01 · FORMATOS</div>
       <div class="section-body">
-        <h2>Separar el curso de la plataforma.</h2>
-        <p class="lead">P2LRN define qué pertenece al paquete y qué debe seguir siendo responsabilidad de la aplicación que lo aloja.</p>
-        <div class="steps compact">
-          <article><span class="step-no">1</span><div><h3>PACKAGE</h3><p>Estructura, recursos, metadatos, manifiestos y contenido portable.</p></div></article>
-          <article><span class="step-no">2</span><div><h3>VERIFY</h3><p>Validación de integridad mediante manifiestos, digests y contentRoot.</p></div></article>
-          <article><span class="step-no">3</span><div><h3>RENDER</h3><p>El Player selecciona el renderer y los runtimes necesarios para reproducir el contenido.</p></div></article>
+        <h2 class="reveal-item" style="--reveal-order:1">Cualquier formato, dentro del paquete.</h2>
+        <p class="lead reveal-item" style="--reveal-order:2">P2LRN integra dentro de un mismo paquete cualquier formato compatible —SCORM, H5P, cmi5, xAPI, QTI, HTML y otros— junto con sus recursos, estructura y metadatos. El mismo paquete puede utilizarse en web, LMS, aplicaciones y otros entornos sin tener que rehacer la integración para cada formato.</p>
+        <div class="steps compact format-flow">
+          <article class="reveal-item" style="--reveal-order:3"><span class="step-no">1</span><div><h3>PACKAGE</h3><p>El archivo .p2lrn conserva el curso y los formatos incorporados como parte de un único paquete portable.</p></div></article>
+          <article class="reveal-item" style="--reveal-order:4"><span class="step-no">2</span><div><h3>RUNTIME</h3><p>El visor identifica cada formato y carga el runtime necesario desde el CDN de P2LRN o desde los paquetes NPM instalados en la aplicación.</p></div></article>
+          <article class="reveal-item" style="--reveal-order:5"><span class="step-no">3</span><div><h3>RENDER</h3><p>Player reproduce cada contenido en el entorno adecuado y lo presenta dentro del curso como una experiencia unificada.</p></div></article>
         </div>
-        <div class="host-boundary"><strong>La plataforma conserva</strong><span>usuarios · permisos · matrícula · autenticación · telemetría · persistencia · recursos protegidos</span></div>
+        <div class="host-boundary reveal-item format-runtime-note" style="--reveal-order:6"><strong>Una integración</strong><span>Un solo Player para web, LMS, aplicaciones y otros entornos. El visor resuelve desde CDN o NPM los runtimes que necesita para leer cada formato, reduciendo la integración a un flujo común y sin complicaciones innecesarias.</span></div>
       </div>
     </section>
 
-    <section class="section">
+<section class="section">
       <div class="section-label">02 · DOCUMENTACIÓN</div>
       <div class="section-body">
-        <h2>Una página completa para cada parte.</h2>
-        <p class="lead">La documentación sigue el recorrido real de un desarrollador: entender el formato, ejecutar un curso, editarlo con Toolkit e integrarlo con una plataforma.</p>
+        <h2>Todo P2LRN, explicado paso a paso.</h2>
+        <p class="lead">Encuentra de forma clara cómo funciona el formato, cómo reproducir y editar paquetes, qué contenidos son compatibles y cómo integrarlos en tu plataforma.</p>
         <div class="docs-grid docs-links">
           <a class="doc-card" href="/docs/formato/"><span>01</span><h3>Formato P2LRN</h3><p>Identidad, estructura del paquete, manifiestos, contentRoot, proyecto de autoría y fronteras del formato.</p><b>Abrir documentación →</b></a>
           <a class="doc-card" href="/docs/player/"><span>02</span><h3>Player web</h3><p>NPM o CDN, Web Component, atributos, eventos, runtime aislado, Service Worker y ejemplos de integración.</p><b>Abrir documentación →</b></a>
@@ -83,7 +151,7 @@ player        <span data-player-version>0.5.0-alpha.10</span>
       <div class="section-label">03 · CONTACTO</div>
       <div class="section-body">
         <h2>¿Quieres preguntar, proponer o integrar P2LRN?</h2>
-        <p class="lead">El formulario de contacto está centralizado en una única ruta para evitar flujos duplicados y explicar antes del envío cómo se tratan los datos.</p>
+        <p class="lead">Si tienes una consulta sobre el formato P2LRN, alguna duda sobre su uso, has encontrado un fallo o quieres proponer una mejora o una integración, puedes contactar con nosotros desde aquí.</p>
         <div class="example-actions">
           <a class="button primary" href="/contacto/">Abrir contacto</a>
           <a class="button" href="/privacidad/">Privacidad</a>
@@ -92,6 +160,6 @@ player        <span data-player-version>0.5.0-alpha.10</span>
     </section>
   </main>
 
-  <footer><strong>P2LRN</strong><span>Formato portable · Player web · Toolkit Node/TypeScript</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/index.json">index.json ↗</a></div></footer>
+  <footer><strong>P2LRN</strong><span>Formato portable · Player web · Toolkit Node/TypeScript</span><div><span data-footer-version>0.5.0-alpha.10</span><a href="/index.json">index.json ↗</a></div><nav class="footer-legal" data-legal-links aria-label="Información legal"><a href="/licencia/">Licencia</a><a href="/terminos/">Términos</a><a href="/aviso-legal/">Aviso legal</a><a href="/cookies/">Cookies</a><a href="/cookies/#configuracion">Configurar cookies</a></nav></footer>
 </body>
 </html>
