@@ -627,7 +627,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const integrityLabel = pkg.verification?.mode === 'lazy' ? 'Manifest/grafo verificados · payload bajo demanda' : 'Integridad válida';
     const transportLabel = pkg.verification?.transport === 'range' ? ' · HTTP Range' : '';
     const zip64Label = pkg.verification?.zip64 ? ' · ZIP64' : '';
-    status.textContent = `${integrityLabel} · ${pkg.manifest.formatVersion}${transportLabel}${zip64Label}`;
+    status.textContent = `${integrityLabel} · Formato Core ${pkg.manifest.formatVersion} · Player ${P2LRN_WEB_SDK_VERSION}${transportLabel}${zip64Label}`;
     head.append(strong, status); shell.append(head);
 
     if (root.type === 'activity' || root.type === 'resource') {
