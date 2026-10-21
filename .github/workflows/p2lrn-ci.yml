@@ -203,7 +203,7 @@ jobs:
         run: node scripts/verify-local-viewer.mjs
 
   toolkit-and-cdn:
-    if: ${{ !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
+    if: ${{ !contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
@@ -465,3 +465,29 @@ jobs:
         env:
           P2LRN_PUBLIC_ORIGIN: https://p2lrn.netlify.app
         run: node scripts/verify-public-cdn.mjs
+
+  local-viewer-revision:
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[local viewer sync]') }}
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Validate shared revision generator and integration scripts
+        run: |
+          node --check deploy/netlify/browser-site-revision.mjs
+          node --check deploy/netlify/build-site.mjs
+          node --check scripts/sync-local-player-browser-revision.mjs
+          node --check scripts/verify-live-local-4183.mjs
+      - name: Sync corrected browser revision to localhost 4183
+        run: node scripts/sync-local-player-browser-revision.mjs
+      - name: Prepare Chrome for independent verification
+        shell: powershell
+        run: ./scripts/ensure-browser-windows.ps1
+      - name: Verify actual Player module URLs and rosco in local Chrome
+        run: node scripts/verify-live-local-4183.mjs
