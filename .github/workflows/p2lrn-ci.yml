@@ -482,3 +482,6 @@ jobs:
       - name: Inspect local 4183 homepage and previous 3D carousel (read-only)
         shell: powershell
         run: ./scripts/inspect-local-home-4183.ps1
+      - name: Locate original 3D carousel in local site backups (read-only)
+        shell: powershell
+        run: ./scripts/inspect-local-home-backups.ps1
