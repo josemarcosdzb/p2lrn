@@ -216,6 +216,10 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Inspect localhost 4183 landing before repair (read-only)
+        shell: powershell
+        run: ./scripts/inspect-local-home-4183.ps1
+
       - name: Compile and test toolkit
         working-directory: packages/toolkit
         run: |
