@@ -160,6 +160,45 @@ if (sidebarProblems.length) {
   throw new Error('Documentation sidebar normalization failed:\n' + sidebarProblems.join('\n'));
 }
 
+// One revision for the full mutable Player/Studio browser module graph.
+// Revisions follow file content, not npm semver (which may remain alpha.10
+// across development builds). An import map ensures every transitive ES module
+// gets a fresh URL when any module or its stylesheet changes.
+const mutableJsRoots = [
+  join(outputRoot,'player','current','dist'),
+  join(outputRoot,'studio','current','dist'),
+  join(outputRoot,'studio','runtime'),
+];
+const mutableAssetPaths = [];
+for (const dir of mutableJsRoots) {
+  for (const path of await walk(dir)) {
+    const rel = relative(outputRoot,path).replaceAll('\\','/');
+    if (!/\.(?:js|mjs|css)$/iu.test(rel)) continue;
+    if (rel.includes('/runtime-host/') || rel.includes('/vendor/')) continue;
+    mutableAssetPaths.push(path);
+  }
+}
+for (const rel of ['demo/viewer.js','studio/studio.js','studio/studio.css']) {
+  mutableAssetPaths.push(join(outputRoot,...rel.split('/')));
+}
+mutableAssetPaths.sort();
+const revisionDigest = createHash('sha256');
+for (const path of mutableAssetPaths) {
+  const bytes = await readFile(path);
+  revisionDigest.update(relative(outputRoot,path).replaceAll('\\','/'));
+  revisionDigest.update(createHash('sha256').update(bytes).digest());
+}
+const runtimeRevision = revisionDigest.digest('hex').slice(0,16);
+const revisionImports = {};
+for (const path of mutableAssetPaths) {
+  const rel = relative(outputRoot,path).replaceAll('\\','/');
+  if (!/\.(?:js|mjs)$/iu.test(rel)) continue;
+  const href = '/'+rel;
+  revisionImports[href] = href+'?v='+runtimeRevision;
+}
+const revisionImportMap = '<script type="importmap">'+
+  JSON.stringify({imports:revisionImports}).replaceAll('<','\\u003c')+'</script>';
+
 // Cache-bust the shared UI assets in generated HTML. The source pages keep
 // stable URLs, while every build publishes a content-derived revision so an
 // already-open browser cannot keep an older navigation model after an update.
@@ -173,6 +212,16 @@ for (const htmlPath of htmlFiles) {
   html = html
     .replace(/src=["']\/p2lrn\.js(?:\?[^"']*)?["']/gi,'src="/p2lrn.js?v=' + sharedUiRevision['p2lrn.js'] + '"')
     .replace(/href=["']\/p2lrn\.css(?:\?[^"']*)?["']/gi,'href="/p2lrn.css?v=' + sharedUiRevision['p2lrn.css'] + '"');
+  if (/(?:src|href)=["']\/(?:player\/current\/dist\/p2lrn\.js|studio\/studio\.(?:js|css)|demo\/viewer\.js)/iu.test(html)) {
+    // Put importmap before executable module scripts, even on the demo page.
+    // Query versions for the classic entrypoint and site controls are equally
+    // necessary because their URLs are mutable under /current/.
+    html = html.replace(
+      /\b(src|href)=(["'])(\/(?:player\/current\/dist\/p2lrn\.js|studio\/studio\.(?:js|css)|demo\/viewer\.js))(?:\?[^"']*)?\2/giu,
+      (_,kind,quote,asset)=>kind+'='+quote+asset+'?v='+runtimeRevision+quote,
+    );
+    html = html.replace(/<head(?:\s[^>]*)?>/iu,(tag)=>tag+revisionImportMap);
+  }
   await writeFile(htmlPath,html);
 }
 
