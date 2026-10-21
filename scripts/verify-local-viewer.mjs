@@ -244,7 +244,16 @@ async function verifyGameLayout(cdp,kind){
   const title=kind==='crossword'?'Crucigrama de prueba':'Rosco de prueba';
   const selector=kind==='crossword'?'.p2lrn-crossword-grid':'.p2lrn-rosco';
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
-  await waitCase(cdp,'game-ui-'+kind,'/examples/game-ui-'+kind+'.p2lrn',{expectIframe:false});
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/?src='+encodeURIComponent('/examples/game-ui-'+kind+'.p2lrn')});
+  let initial=null;
+  for(let i=0;i<150;i++){
+    initial=await evalTop(cdp,stateExpression);
+    if(initial?.ready&&initial?.rendered)break;
+    if(initial?.error)break;
+    await sleep(160);
+  }
+  invariant(initial?.ready&&initial?.rendered&&!initial.error,
+    kind+': generated course did not load: '+JSON.stringify(initial));
   const selectCode='(()=>{const r=document.getElementById("demo-player")?.shadowRoot;const title='+JSON.stringify(title)+';const button=[...(r?.querySelectorAll(".p2lrn-nav button")??[])].find(x=>x.textContent.includes(title));if(!button)return false;button.click();return true;})()';
   invariant(await evalTop(cdp,selectCode),kind+': game not found in Player navigation');
   let shown=false;
