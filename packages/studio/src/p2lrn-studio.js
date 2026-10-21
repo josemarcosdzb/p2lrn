@@ -174,8 +174,8 @@ export class P2LRNStudioElement extends HTMLElement{
   #renderTree(){
     const nav=this.shadowRoot.querySelector('[data-tree]');nav.replaceChildren();
     const actions=document.createElement('div');actions.className='tree-actions';
-    const unit=document.createElement('button');unit.type='button';unit.textContent='+ Unidad';unit.onclick=()=>this.addUnit();
-    const lesson=document.createElement('button');lesson.type='button';lesson.textContent='+ Lección';lesson.onclick=()=>this.addLesson();
+    const unit=document.createElement('button');unit.type='button';unit.textContent='+ Unidad';unit.onclick=()=>this.addUnit().catch((error)=>this.#status(error.message));
+    const lesson=document.createElement('button');lesson.type='button';lesson.textContent='+ Lección';lesson.onclick=()=>this.addLesson().catch((error)=>this.#status(error.message));
     actions.append(unit,lesson);nav.append(actions);
     const seen=new Set();
     const walk=(entity,depth=0)=>{
@@ -190,12 +190,14 @@ export class P2LRNStudioElement extends HTMLElement{
   }
   #insertionParent(){
     const current=this.#studio?.entity(this.#selected);if(!current)return this.#studio?.rootId??null;
-    if(['course','unit'].includes(current.type))return current.id;
+    if(['course','unit'].includes(current.type)||this.#studio.isCompositeActivity(current.id))return current.id;
     return this.#studio.parentId(current.id)??this.#studio.rootId;
   }
   async addUnit(options={}){
     if(!this.#studio)throw new Error('No hay ningún curso P2LRN abierto.');
-    const created=this.#studio.addUnit(this.#insertionParent(),options);this.#selected=created.id;
+    const parent=this.#insertionParent();
+    if(this.#studio.isCompositeActivity(parent))throw new Error('Un compuesto agrupa actividades, no unidades. Selecciona el curso o una unidad.');
+    const created=this.#studio.addUnit(parent,options);this.#selected=created.id;
     this.#renderTree();await this.#renderEditor();this.#updateState();return created;
   }
   async addLesson(options={}){
@@ -207,7 +209,7 @@ export class P2LRNStudioElement extends HTMLElement{
   async addContent(kind){
     if(!this.#studio)throw new Error('Crea o abre un curso primero.');
     if(kind==='lesson')return this.#selectCreated(this.#studio.addLesson(this.#insertionParent(),{title:'Nueva lección',language:'es'}));
-    if(kind==='unit'){const unit=this.#studio.addUnit(this.#insertionParent(),{title:'Nueva unidad',language:'es'});return this.#selectCreated(unit);}
+    if(kind==='unit')return this.addUnit({title:'Nueva unidad',language:'es'});
     if(kind==='file'){this.shadowRoot.querySelector('[data-resource-file]').click();return null;}
     if(kind==='reader'){this.shadowRoot.querySelector('[data-reader-file]').click();return null;}
     if(kind==='external'){this.shadowRoot.querySelector('[data-external-file]').click();return null;}
@@ -215,7 +217,7 @@ export class P2LRNStudioElement extends HTMLElement{
     if(kind==='questionnaire')return this.#selectCreated(this.#studio.addQuestionnaire(this.#insertionParent(),{title:'Cuestionario',language:'es'}));
     if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d'].includes(kind)){const titles={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','fill-blanks':'Completar huecos','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D'};return this.#selectCreated(this.#studio.addGame(this.#insertionParent(),{kind,title:titles[kind]??'Juego',language:'es'}));}
     if(kind==='component'){const payload={schema:'https://p2lrn.org/schema/native-component/0.1',version:'0.1',component:{id:'https://p2lrn.org/component/callout',componentVersion:'1',dataVersion:'2',runtimeContractVersion:'1'},data:{tone:'info',body:'Edita este componente'},title:'Componente'};return this.#selectCreated(this.#studio.addEmbeddedResource(this.#insertionParent(),{title:'Componente',filename:'component.json',mediaType:'application/vnd.p2lrn.component+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-component'}));}
-    if(kind==='composite'){const payload={schema:'https://p2lrn.org/schema/native-composite/0.1',version:'0.1',mode:'sequence',completion:'all',navigation:'open',title:'Grupo compuesto'};return this.#selectCreated(this.#studio.addEmbeddedResource(this.#insertionParent(),{title:'Grupo compuesto',filename:'composite.json',mediaType:'application/vnd.p2lrn.composite+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-composite'}));}
+    if(kind==='composite'){const payload={schema:'https://p2lrn.org/schema/native-composite/0.1',version:'0.1',mode:'sequence',completion:'all',navigation:'linear',title:'Grupo compuesto'};return this.#selectCreated(this.#studio.addEmbeddedResource(this.#insertionParent(),{title:'Grupo compuesto',filename:'composite.json',mediaType:'application/vnd.p2lrn.composite+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-composite'}));}
     return null;
   }
   async addResourceFile(file){const bytes=new Uint8Array(await file.arrayBuffer());const entity=this.#studio.addEmbeddedResource(this.#insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:file.type||'application/octet-stream',bytes});return this.#selectCreated(entity);}
@@ -249,7 +251,7 @@ export class P2LRNStudioElement extends HTMLElement{
       }
       const structured=await this.#studio.readStructuredJson(entity.id);
       if(structured){
-        renderStructuredVisualEditor(sheet,{model:this.#studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>this.#updateState(),onStatus:(message)=>this.#status(message)});
+        renderStructuredVisualEditor(sheet,{model:this.#studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>this.#updateState(),onStructureChange:()=>{this.#renderTree();this.#updateState();},onStatus:(message)=>this.#status(message)});
         stage.append(sheet);return;
       }
       const editable=await this.#studio.readEditableText(entity.id);
