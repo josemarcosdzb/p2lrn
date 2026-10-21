@@ -39,7 +39,10 @@ const MAX_GRAPH_RELATIONS = 100000;
 const textDecoder = new TextDecoder('utf-8', {fatal: true});
 const textEncoder = new TextEncoder();
 
-const PLAYER_STYLESHEET = new URL('./p2lrn-player.css', import.meta.url).href;
+const playerStyleUrl = new URL('./p2lrn-player.css', import.meta.url);
+// Preserve the generated runtime revision for styles, not just ES modules.
+playerStyleUrl.search = new URL(import.meta.url).search;
+const PLAYER_STYLESHEET = playerStyleUrl.href;
 const NATIVE_COMPOSITE_ACTIVITY_TYPE = 'https://p2lrn.org/type/composite';
 const NATIVE_COMPOSITE_PROFILE = 'https://p2lrn.org/profile/native-composite';
 const NATIVE_COMPOSITE_MEDIA_TYPE = 'application/vnd.p2lrn.composite+json';
