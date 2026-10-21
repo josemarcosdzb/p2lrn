@@ -16,4 +16,5 @@ await cp(join(repo,'packages','toolkit','web','studio','package-export.js'),join
 await cp(join(repo,'packages','toolkit','web','studio','new-document.js'),join(out,'runtime','new-document.js'));
 await cp(join(repo,'packages','toolkit','web','studio','questionnaire-editor.js'),join(out,'runtime','questionnaire-editor.js'));
 await cp(join(repo,'packages','toolkit','web','studio','structured-editor.js'),join(out,'runtime','structured-editor.js'));
+await cp(join(repo,'packages','toolkit','web','native-composite-core.js'),join(out,'native-composite-core.js'));
 console.log(JSON.stringify({ok:true,output:out},null,2));
