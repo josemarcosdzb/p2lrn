@@ -9,14 +9,19 @@ function record(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+export function compositeNavigationForMode(mode) {
+  if(mode==='sequence')return 'linear';
+  if(mode==='free')return 'open';
+  throw new Error('Modo de composite P2LRN no válido.');
+}
+
 export function validateNativeComposite(payload) {
   if (!record(payload)) throw new Error('El composite P2LRN debe ser un objeto JSON.');
   if (!identifierIs(payload.schema, NATIVE_COMPOSITE_SCHEMA) || payload.version !== '0.1') throw new Error('Versión de composite P2LRN no soportada.');
-  if (!['sequence', 'free'].includes(payload.mode)) throw new Error('Modo de composite P2LRN no válido.');
+  const requiredNavigation = compositeNavigationForMode(payload.mode);
   if (!['all', 'any'].includes(payload.completion)) throw new Error('Política de finalización del composite no válida.');
-  const navigation = payload.navigation ?? (payload.mode === 'sequence' ? 'linear' : 'open');
-  if (payload.mode === 'sequence' && navigation !== 'linear') throw new Error('El modo sequence requiere navegación linear.');
-  if (payload.mode === 'free' && navigation !== 'open') throw new Error('El modo free requiere navegación open.');
+  const navigation = payload.navigation ?? requiredNavigation;
+  if (navigation !== requiredNavigation) throw new Error('El modo '+payload.mode+' requiere navegación '+requiredNavigation+'.');
   return Object.freeze({...payload, navigation});
 }
 
