@@ -262,6 +262,27 @@ export class P2LRNStudioDocument{
     this.payloadOverrides.set(target.path,encoder.encode(JSON.stringify(payload,null,2)+'\n'));this.changeCount+=1;return payload;
   }
 
+  addComposite(parentId=this.rootId,{title='Compuesto',language='es'}={}){
+    const name=String(title||'Compuesto');
+    const payload={
+      schema:'https://p2lrn.org/schema/native-composite/0.1',
+      version:'0.1',
+      mode:'sequence',
+      completion:'all',
+      navigation:'linear',
+      title:name,
+    };
+    // An empty group is an editable draft. #appendActivity makes it a native
+    // composite once at least one activity has been added to its children.
+    return this.addEmbeddedResource(parentId,{
+      title:name,language,
+      filename:'composite.json',
+      mediaType:COMPOSITE_MEDIA_TYPE,
+      bytes:encoder.encode(JSON.stringify(payload,null,2)+'\n'),
+      profile:COMPOSITE_PROFILE,
+    });
+  }
+
   addQuestionnaire(parentId=this.rootId,{title='Cuestionario',language='es',renderer='https://p2lrn.org/renderer/questionnaire/standard',payload=null}={}){
     const data=payload??{schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Cuestionario'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'after-submit'},questions:[{id:'q1',type:'single-choice',prompt:'Escribe aquí la pregunta',points:1,choices:[{id:'a',text:'Respuesta correcta'},{id:'b',text:'Otra respuesta'}],solution:{choiceIds:['a']}}]};
     return this.addEmbeddedResource(parentId,{title,language,filename:'questionnaire.json',mediaType:'application/vnd.p2lrn.questionnaire+json',bytes:encoder.encode(JSON.stringify(data,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-questionnaire',activityType:'https://p2lrn.org/type/assessment',renderer});
