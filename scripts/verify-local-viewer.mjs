@@ -278,10 +278,11 @@ async function studioComponentScenario(){
     }
     // The last added item is a composite. Previously Studio inserted
     // additional activities next to it instead of under it.
-    const groupSelect=[...root.querySelectorAll('select')].find((el)=>
-      el.closest('label')?.textContent?.includes('Mover actividad existente')
+    const groupSelect=await wait(()=>
+      [...root.querySelectorAll('select')].find((el)=>
+        el.closest('label')?.textContent?.includes('Mover actividad existente')
+      ),'composite move controls'
     );
-    if(!groupSelect)throw new Error('Composite does not offer moving existing activities');
     const wordSearch=[...groupSelect.options].find((item)=>item.textContent==='Sopa de letras');
     if(!wordSearch)throw new Error('Existing sibling game is missing from composite move candidates');
     groupSelect.value=wordSearch.value;
@@ -396,7 +397,13 @@ async function studioSiteScenario(){
     await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Sopa de letras'),'child game');
     const group=[...q('[data-tree]').querySelectorAll('button')].find(x=>x.textContent.includes('Compuesto'));
     const nested=group?.closest('.studio-tree-node')?.querySelector('.studio-tree-children button');
-    if(!nested?.textContent.includes('Sopa de letras'))throw new Error('Studio website created a composite child outside its parent');
+    if(!nested?.textContent.includes('Sopa de letras')){
+      throw new Error('Studio website created a composite child outside its parent: '+JSON.stringify({
+        group:group?.textContent,
+        groupMarkup:group?.closest('.studio-tree-node')?.outerHTML.slice(0,950),
+        tree:q('[data-tree]')?.textContent.slice(0,800)
+      }));
+    }
     const lesson=[...q('[data-tree]').querySelectorAll('button')].find(x=>x.textContent.includes('Lección editada con Studio web'));
     if(!lesson)throw new Error('Edited lesson not present in outline');
     lesson.click();
