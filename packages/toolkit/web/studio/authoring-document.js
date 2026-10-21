@@ -1,6 +1,9 @@
 const decoder=new TextDecoder('utf-8',{fatal:true});
 const encoder=new TextEncoder();
 const WEB_CONTENT_PROFILE='https://p2lrn.org/profile/web-content';
+const COMPOSITE_PROFILE='https://p2lrn.org/profile/native-composite';
+const COMPOSITE_MEDIA_TYPE='application/vnd.p2lrn.composite+json';
+const COMPOSITE_ACTIVITY_TYPE='https://p2lrn.org/type/composite';
 
 function clone(value){return structuredClone(value);}
 function localized(entity,language='es'){
@@ -100,6 +103,66 @@ export class P2LRNStudioDocument{
     return null;
   }
 
+  isCompositeActivity(id){
+    const target=this.structuredJsonForActivity(id);
+    return target?.mediaType===COMPOSITE_MEDIA_TYPE && target.representation.profile===COMPOSITE_PROFILE;
+  }
+
+  #activityParent(parentId){
+    const parent=this.entity(parentId);
+    if(parent&&(['course','unit'].includes(parent.type)||this.isCompositeActivity(parent.id)))return parent;
+    throw new Error('Las actividades sólo se pueden añadir dentro de un curso, unidad o grupo compuesto.');
+  }
+
+  #appendActivity(parent,activityId){
+    parent.children??=[];
+    if(parent.children.includes(activityId))throw new Error('La actividad ya pertenece a este contenedor.');
+    parent.children.push(activityId);
+    // A newly created composite is a draft. Once it has a child, its graph
+    // identity must match the native composite contract enforced by Player.
+    if(this.isCompositeActivity(parent.id))parent.activityType=COMPOSITE_ACTIVITY_TYPE;
+  }
+
+  #containsDescendant(ancestorId,id){
+    const stack=[String(ancestorId)],visited=new Set();
+    while(stack.length){
+      const current=stack.pop();
+      if(current===String(id))return true;
+      if(visited.has(current))continue;
+      visited.add(current);
+      stack.push(...(this.entity(current)?.children??[]));
+    }
+    return false;
+  }
+
+  movableActivitiesForComposite(compositeId){
+    if(!this.isCompositeActivity(compositeId))return [];
+    return this.graph.entities.filter((activity)=>{
+      if(activity.type!=='activity'||activity.id===compositeId)return false;
+      const parent=this.entity(this.parentId(activity.id));
+      return ['course','unit'].includes(parent?.type)
+        && !this.#containsDescendant(activity.id,compositeId);
+    });
+  }
+
+  moveActivityToComposite(activityId,compositeId){
+    if(!this.isCompositeActivity(compositeId))throw new Error('El destino no es un grupo compuesto.');
+    const activity=this.entity(activityId);
+    if(!activity||activity.type!=='activity')throw new Error('Sólo se pueden agrupar actividades.');
+    if(!this.movableActivitiesForComposite(compositeId).some((item)=>item.id===activity.id)){
+      throw new Error('No se puede mover esta actividad al compuesto (contenedor o relación no permitidos).');
+    }
+    const previous=this.entity(this.parentId(activity.id));
+    const originalIndex=previous.children.indexOf(activity.id);
+    if(originalIndex<0)throw new Error('No se ha encontrado el contenedor original de la actividad.');
+    // Only change the graph after verifying the move; keep the existing
+    // resource, asset paths and activity ID unchanged.
+    previous.children.splice(originalIndex,1);
+    this.#appendActivity(this.entity(compositeId),activity.id);
+    this.changeCount+=1;
+    return activity;
+  }
+
   addUnit(parentId=this.rootId,{title='Nueva unidad',language='es'}={}){
     const parent=this.entity(parentId);
     if(!parent||!['course','unit'].includes(parent.type))throw new Error('Las unidades sólo se pueden añadir dentro de un curso o unidad.');
@@ -116,8 +179,7 @@ export class P2LRNStudioDocument{
   }
 
   addEmbeddedResource(parentId=this.rootId,{title='Recurso',language='es',filename='resource.bin',mediaType='application/octet-stream',bytes=new Uint8Array(),profile=null,activityType='https://p2lrn.org/type/resource',renderer=null}={}){
-    const parent=this.entity(parentId);
-    if(!parent||!['course','unit'].includes(parent.type))throw new Error('El contenido sólo se puede añadir dentro de un curso o unidad.');
+    const parent=this.#activityParent(parentId);
     const data=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
     const token=crypto.randomUUID(),resourceId='urn:uuid:'+crypto.randomUUID(),activityId='urn:uuid:'+crypto.randomUUID(),representationId='urn:uuid:'+crypto.randomUUID();
     const ext=String(filename||'resource.bin').split('.').pop()?.replace(/[^A-Za-z0-9]/g,'').toLowerCase()||'bin';
@@ -127,19 +189,19 @@ export class P2LRNStudioDocument{
     const resource={id:resourceId,type:'resource',title:{[language]:String(title||'Recurso')},representations:[representation]};
     const activity={id:activityId,type:'activity',activityType:String(activityType||'https://p2lrn.org/type/resource'),title:{[language]:String(title||'Recurso')},resource:resourceId};
     if(renderer)activity.extensions={'https://p2lrn.org/ext/renderer-preference/1':{preferred:String(renderer),required:false,version:'1'}};
-    this.graph.entities.push(resource,activity);this.entities.set(resource.id,resource);this.entities.set(activity.id,activity);parent.children??=[];parent.children.push(activity.id);
+    this.graph.entities.push(resource,activity);this.entities.set(resource.id,resource);this.entities.set(activity.id,activity);this.#appendActivity(parent,activity.id);
     const zero='sha256:'+'0'.repeat(64);this.manifest.files.push({path,mediaType:representation.mediaType,size:data.byteLength,byteDigest:zero,contentDigest:zero});this.payloadOverrides.set(path,data);
     if(profile)this.#ensureProfile(String(profile));this.changeCount+=1;return activity;
   }
 
   addRemoteResource(parentId=this.rootId,{title='Enlace',language='es',url,mediaType='text/html',profile=null,activityType='https://p2lrn.org/type/resource',renderer=null}={}){
-    const parent=this.entity(parentId);if(!parent||!['course','unit'].includes(parent.type))throw new Error('El contenido sólo se puede añadir dentro de un curso o unidad.');
+    const parent=this.#activityParent(parentId);
     const href=new URL(String(url)).href,resourceId='urn:uuid:'+crypto.randomUUID(),activityId='urn:uuid:'+crypto.randomUUID(),representationId='urn:uuid:'+crypto.randomUUID();
     const representation={id:representationId,role:'primary',location:{type:'remote',href},mediaType:String(mediaType||'text/html')};if(profile)representation.profile=String(profile);
     const resource={id:resourceId,type:'resource',title:{[language]:String(title||'Enlace')},representations:[representation]};
     const activity={id:activityId,type:'activity',activityType:String(activityType||'https://p2lrn.org/type/resource'),title:{[language]:String(title||'Enlace')},resource:resourceId};
     if(renderer)activity.extensions={'https://p2lrn.org/ext/renderer-preference/1':{preferred:String(renderer),required:false,version:'1'}};
-    this.graph.entities.push(resource,activity);this.entities.set(resource.id,resource);this.entities.set(activity.id,activity);parent.children??=[];parent.children.push(activity.id);if(profile)this.#ensureProfile(String(profile));this.changeCount+=1;return activity;
+    this.graph.entities.push(resource,activity);this.entities.set(resource.id,resource);this.entities.set(activity.id,activity);this.#appendActivity(parent,activity.id);if(profile)this.#ensureProfile(String(profile));this.changeCount+=1;return activity;
   }
 
   questionnaireForActivity(activityId){
@@ -219,15 +281,14 @@ export class P2LRNStudioDocument{
   }
 
   addLesson(parentId=this.rootId,{title='Nueva lección',language='es'}={}){
-    const parent=this.entity(parentId);
-    if(!parent||!['course','unit'].includes(parent.type))throw new Error('Las lecciones sólo se pueden añadir dentro de un curso o unidad.');
+    const parent=this.#activityParent(parentId);
     const token=crypto.randomUUID(),resourceId='urn:uuid:'+crypto.randomUUID(),activityId='urn:uuid:'+crypto.randomUUID(),representationId='urn:uuid:'+crypto.randomUUID();
     const path='content/lesson-'+token+'.html';
     const safe=String(title||'Nueva lección');
     const html='<!doctype html>\n<html lang="'+language+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+safe.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'</title></head><body><h1>'+safe.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')+'</h1><p>Empieza a escribir aquí.</p></body></html>\n';
     const resource={id:resourceId,type:'resource',title:{[language]:safe},representations:[{id:representationId,role:'primary',location:{type:'embedded',path},originalName:'lesson.html',mediaType:'text/html'}]};
     const activity={id:activityId,type:'activity',activityType:'https://p2lrn.org/type/resource',title:{[language]:safe},resource:resourceId};
-    this.graph.entities.push(resource,activity);this.entities.set(resource.id,resource);this.entities.set(activity.id,activity);parent.children??=[];parent.children.push(activity.id);
+    this.graph.entities.push(resource,activity);this.entities.set(resource.id,resource);this.entities.set(activity.id,activity);this.#appendActivity(parent,activity.id);
     const zero='sha256:'+'0'.repeat(64);this.manifest.files.push({path,mediaType:'text/html',size:0,byteDigest:zero,contentDigest:zero});this.payloadOverrides.set(path,encoder.encode(html));this.changeCount+=1;return activity;
   }
 
