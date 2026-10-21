@@ -582,7 +582,7 @@ async function verifyStudioSiteUI(cdp){
   await cdp.send('Page.navigate',{url:APP_ORIGIN+'/studio/'});
   const deadline=Date.now()+16000;let loaded=false;
   while(Date.now()<deadline){
-    loaded=await evalTop(cdp,"!!document.querySelector('[data-create-course]') && !!window.P2LRNReady");
+    loaded=await evalTop(cdp,"!!document.querySelector('[data-create-course]') && document.documentElement.dataset.p2lrnStudioReady==='true' && !!window.P2LRNReady");
     if(loaded)break;
     await sleep(150);
   }
