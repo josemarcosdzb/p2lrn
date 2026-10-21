@@ -759,7 +759,7 @@ async function runStudioFromNpm(chrome,appOrigin){
 }
 
 
-export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, exerciseExpression=null, screenshotName=null} = {}) {
+async function runChromePageGateOnce(chrome, url, profile, {timeoutMs=35000, exerciseExpression=null, screenshotName=null} = {}) {
   await rm(profile,{recursive:true,force:true});
   const args=[
     '--headless=new',
@@ -775,29 +775,43 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
   ];
   const child=spawn(chrome,args,{stdio:['ignore','ignore','pipe'],windowsHide:true});
   let stderr='';
-  let settled=false;
   let devtoolsReject;
   const devtools=new Promise((resolvePromise,reject)=>{
     devtoolsReject=reject;
-    const timer=setTimeout(()=>reject(new Error('Chrome DevTools endpoint did not start in time.')),10000);
+    let finished=false;
+    let timer,portWatcher;
+    const finish=(error,endpoint)=>{
+      if(finished)return;
+      finished=true;
+      clearTimeout(timer);
+      clearInterval(portWatcher);
+      if(error)reject(error);
+      else resolvePromise(endpoint);
+    };
+    // On Windows Chromium can publish the endpoint in DevToolsActivePort
+    // without printing a "DevTools listening" line to stderr.
+    portWatcher=setInterval(async()=>{
+      try{
+        const raw=await readFile(join(profile,'DevToolsActivePort'),'utf8');
+        const [port,path]=raw.trim().split(/\r?\n/u);
+        if(/^\d+$/u.test(port??'')&&/^\/devtools\/browser\//u.test(path??'')){
+          finish(null,'ws://127.0.0.1:'+port+path);
+        }
+      }catch{}
+    },200);
+    timer=setTimeout(()=>finish(new Error(
+      'Chrome DevTools endpoint did not start in time. Chrome stderr:\n'+stderr.slice(-4500)
+    )),30000);
     child.stderr?.on('data',(chunk)=>{
       stderr=(stderr+String(chunk)).slice(-64000);
       const match=/DevTools listening on (ws:\/\/[^\s]+)/u.exec(stderr);
-      if(match&&!settled){
-        settled=true;
-        clearTimeout(timer);
-        resolvePromise(match[1]);
-      }
+      if(match)finish(null,match[1]);
     });
-    child.once('error',(error)=>{clearTimeout(timer);reject(error);});
-    child.once('exit',(code)=>{
-      if(!settled){
-        clearTimeout(timer);
-        reject(new Error(`Chrome exited before DevTools was ready (code=${code}).\n${stderr.slice(-4000)}`));
-      }
-    });
+    child.once('error',(error)=>finish(error));
+    child.once('exit',(code)=>finish(new Error(
+      'Chrome exited before DevTools was ready (code='+code+').\n'+stderr.slice(-4500)
+    )));
   });
-
   let socket=null;
   try{
     const browserWs=await devtools;
@@ -930,6 +944,20 @@ export async function runChromePageGate(chrome, url, profile, {timeoutMs=35000, 
       ]);
     }
     void devtoolsReject;
+  }
+}
+
+export async function runChromePageGate(chrome,url,profile,options={}){
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      return await runChromePageGateOnce(chrome,url,profile,options);
+    }catch(error){
+      const message=String(error?.message??error);
+      const startupFailure=/Chrome DevTools endpoint did not start|Chrome exited before DevTools was ready|Chrome page target was not available/u.test(message);
+      if(!startupFailure||attempt===1)throw error;
+      console.warn('Retrying Chromium startup with isolated profile after:',message.slice(-1800));
+      await sleep(1500);
+    }
   }
 }
 
