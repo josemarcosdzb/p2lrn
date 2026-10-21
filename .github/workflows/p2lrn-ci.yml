@@ -485,3 +485,6 @@ jobs:
       - name: Locate original 3D carousel in local site backups (read-only)
         shell: powershell
         run: ./scripts/inspect-local-home-backups.ps1
+      - name: Compare original 3D carousel with current source (read-only)
+        shell: powershell
+        run: ./scripts/analyze-home-carousel-restore.ps1
