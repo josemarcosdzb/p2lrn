@@ -343,6 +343,10 @@ jobs:
       - name: Verify npm tarballs as installed packages
         run: node scripts/verify-npm-pack.mjs
 
+      - name: Ensure Chromium is available for installed npm package E2E
+        shell: powershell
+        run: ./scripts/ensure-browser-windows.ps1
+
       - name: Browser smoke from installed npm tarballs
         run: node scripts/verify-browser-from-npm.mjs
 
