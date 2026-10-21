@@ -837,3 +837,18 @@
     observer.observe(item);
   });
 })();
+
+// The npm release and the rebuilt web revision are different identifiers.
+// Keep both visible; never pretend unreleased site changes are a new npm tag.
+(()=>{
+  const label=document.querySelector('[data-site-build]');
+  if(!label)return;
+  const entry=[...document.scripts].find((script)=>{
+    if(!script.src)return false;
+    const url=new URL(script.src,document.baseURI);
+    return url.origin===location.origin&&url.pathname==='/p2lrn.js';
+  });
+  const revision=entry?new URL(entry.src).searchParams.get('v'):null;
+  label.textContent=revision?'Web '+revision.slice(0,12):'Web sin revisión';
+  label.title='Revisión de los archivos web; la versión npm se muestra por separado';
+})();
