@@ -237,6 +237,16 @@ async function verifyMutableAssetRevisions(){
   for(const [pattern,label] of checks){
     invariant(pattern.test(demo),'Missing content revision for '+label);
   }
+  const playerRevision = /src="\/player\/current\/dist\/p2lrn\.js\?v=([a-f0-9]{16})"/u.exec(demo)?.[1];
+  invariant(Boolean(playerRevision),'Missing Player runtime revision');
+  for(const asset of [
+    '/player/current/dist/p2lrn-player.js',
+    '/player/current/dist/renderers/questionnaire-rosco.js',
+    '/player/current/dist/renderers/game-common.js',
+  ]){
+    invariant(demo.includes(JSON.stringify(asset+'?v='+playerRevision)),
+      'Mixed revisions across runtime dependency graph: '+asset);
+  }
   invariant(/src="\/studio\/studio\.js\?v=[a-f0-9]{16}"/u.test(studio),
     'Missing content revision for Studio entry');
   invariant(/href="\/studio\/studio\.css\?v=[a-f0-9]{16}"/u.test(studio),
