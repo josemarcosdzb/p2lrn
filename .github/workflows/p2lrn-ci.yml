@@ -488,3 +488,6 @@ jobs:
       - name: Compare original 3D carousel with current source (read-only)
         shell: powershell
         run: ./scripts/analyze-home-carousel-restore.ps1
+      - name: Export verified public homepage backup files (read-only)
+        shell: powershell
+        run: ./scripts/export-original-home-carousel.ps1
