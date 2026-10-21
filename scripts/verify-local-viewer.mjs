@@ -452,6 +452,7 @@ try{
   // The CDN-only fixture does not materialize these until we copy them here.
   await cp(join(root,'packages','toolkit','web','studio'),join(siteRoot,'studio','runtime'),{recursive:true,force:true});
   await cp(join(root,'packages','toolkit','web','native-composite-core.js'),join(siteRoot,'studio','native-composite-core.js'));
+  await cp(join(root,'packages','toolkit','web','identifiers.js'),join(siteRoot,'studio','identifiers.js'));
   await prepareVisualStudioFixture();
   const builtViewer=await readFile(viewerPath,'utf8');
   const localViewer=builtViewer.replace(/const RUNTIME_ORIGINS=Object\.freeze\(\[[\s\S]*?\]\);/u,
