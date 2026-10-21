@@ -402,6 +402,16 @@ async function studioSiteScenario(){
     const choice=await wait(get3dType,'3D question type selector');
     if(JSON.stringify([...choice.options].map(option=>option.value))!==JSON.stringify(['ordering','matching','classification']))
       throw new Error('Studio does not expose all three 3D question types');
+    const gameField=(name)=>[...(q('.q-card .q-basic-grid')?.querySelectorAll('label')??[])]
+      .find(label=>label.querySelector('.q-label')?.textContent===name)?.querySelector('input,select');
+    const titleInput=gameField('Enunciado'),timeInput=gameField('Tiempo (s)'),pointsInput=gameField('Puntos');
+    if(!titleInput||!timeInput||!pointsInput)throw new Error('Missing 3D question editor fields');
+    titleInput.value='Juego 3D con enunciado personalizado';
+    titleInput.dispatchEvent(new Event('input',{bubbles:true}));
+    timeInput.value='45';
+    timeInput.dispatchEvent(new Event('input',{bubbles:true}));
+    pointsInput.value='4';
+    pointsInput.dispatchEvent(new Event('input',{bubbles:true}));
     const chooseType=async(type,selector)=>{
       const picker=get3dType();
       picker.value=type;
@@ -410,6 +420,11 @@ async function studioSiteScenario(){
     };
     await chooseType('matching','.q-pair-row');
     await chooseType('classification','.q-class-row');
+    if(gameField('Enunciado')?.value!=='Juego 3D con enunciado personalizado'
+      ||gameField('Tiempo (s)')?.value!=='45'
+      ||gameField('Puntos')?.value!=='4'){
+      throw new Error('Changing the 3D game mode erased its question metadata');
+    }
     click('[data-add-content]');
     await wait(()=>q('[data-add-dialog]').open,'open matching 3D palette');
     click('[data-add-kind="3d-matching"]');
