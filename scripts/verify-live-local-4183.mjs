@@ -103,6 +103,50 @@ try {
   assert(state?.ring&&state.center&&state.letterCount>=4&&state.spreadY>70,
     'Fresh browser did not render the circular rosco on the running local server.');
   console.log('LIVE_LOCAL_4183_FRESH_BROWSER_PASS');
+
+  // Re-test the exact preserved landing from localhost itself.
+  await cmd('Page.navigate',{url:origin+'/?check=restored-carousel'});
+  let home=null;
+  for(let i=0;i<110;i++){
+    home=await evaluate('(()=>{const root=document.querySelector("[data-hero-carousel-root]");const slides=[...(root?.querySelectorAll("[data-hero-slide]")??[])];return {build:document.documentElement.dataset.build,slides:slides.length,initialCenter:slides.find(x=>x.dataset.slot==="center")?.querySelector("figcaption strong")?.textContent,video:!!slides.find(x=>x.dataset.slot==="center")?.querySelector("video"),webBuild:document.querySelector("[data-site-build]")?.textContent,npmVersion:document.querySelector("[data-player-version]")?.textContent,images:slides.filter(x=>x.querySelector("img")).map(x=>({loaded:x.querySelector("img").complete&&x.querySelector("img").naturalWidth>0,draggable:x.querySelector("img").draggable}))};})()');
+    if(home?.initialCenter&&home.webBuild?.startsWith('Web '))break;
+    await sleep(160);
+  }
+  console.log('RESTORED_LOCAL_HOME='+JSON.stringify(home));
+  assert.equal(home.build,'inward-carousel-20261020');
+  assert.equal(home.slides,6);
+  assert.equal(home.initialCenter,'Paquete en movimiento');
+  assert.equal(home.video,true);
+  assert.equal(home.images.length,5);
+  assert(home.images.every(x=>x.loaded&&!x.draggable),'Restored carousel media missing or draggable');
+  assert.equal(home.npmVersion,'0.5.0-alpha.10');
+  assert(home.webBuild?.startsWith('Web ')&&home.webBuild!=='Web sin revisión','Missing distinct local build ID');
+  const move=async(slot,expected)=>{
+    const selector='[data-hero-carousel-root] [data-slot="'+slot+'"]';
+    const clicked=await evaluate('(()=>{const slide=document.querySelector('+JSON.stringify(selector)+');if(!slide)return false;slide.click();return true;})()');
+    assert(clicked,'No clickable carousel panel '+slot);
+    let current=null;
+    for(let i=0;i<35;i++){
+      current=await evaluate('document.querySelector("[data-hero-carousel-root] [data-slot=center] figcaption strong")?.textContent');
+      if(current===expected)break;
+      await sleep(100);
+    }
+    assert.equal(current,expected,'Direct card selection failed for '+slot);
+    await sleep(750);
+  };
+  await move('right2','Cuestionarios');
+  await move('left3','Studio');
+  const interaction=await evaluate('(()=>{const root=document.querySelector("[data-hero-carousel-root]");return {centered:root.querySelector("[data-slot=center] figcaption strong")?.textContent,total:root.querySelectorAll("[data-hero-slide]").length,selectable:getComputedStyle(root).userSelect,shift:root.querySelector("[data-slot=right1]")?.style.pointerEvents};})()');
+  console.log('RESTORED_LOCAL_CAROUSEL_INTERACTION='+JSON.stringify(interaction));
+  assert.equal(interaction.centered,'Studio');
+  assert.equal(interaction.total,6);
+  await cmd('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await sleep(320);
+  const mobile=await evaluate('(()=>{const hero=document.querySelector(".hero-showcase");return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,heroWidth:hero?.getBoundingClientRect().width,centered:document.querySelector("[data-slot=center] figcaption strong")?.textContent};})()');
+  console.log('RESTORED_LOCAL_CAROUSEL_MOBILE='+JSON.stringify(mobile));
+  assert(mobile.heroWidth<=mobile.viewport+2,'Home carousel exceeds mobile viewport');
+  assert(mobile.documentWidth<=mobile.viewport+4,'Homepage has mobile horizontal overflow');
+  console.log('LIVE_LOCAL_4183_RESTORED_CAROUSEL_PASS');
 }finally{
   try{socket?.close();}catch{}
   try{child.kill();}catch{}
