@@ -2,7 +2,9 @@ import {buildQuestionnaireGame} from '../questionnaire-games-core.js';
 import {createQuestionnaireGameRuntime} from '../questionnaire-game-runtime.js';
 import {validateQuestionnaire} from '../questionnaire-core.js';
 
-export const stylesheets = [new URL('../questionnaire-games.css', import.meta.url).href];
+const gameStyleUrl = new URL('../questionnaire-games.css', import.meta.url);
+gameStyleUrl.search = new URL(import.meta.url).search;
+export const stylesheets = [gameStyleUrl.href];
 
 export function el(tag, attrs = {}, text = null) {
   const node = document.createElement(tag);
