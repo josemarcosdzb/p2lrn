@@ -58,9 +58,12 @@ function switchType(question,type){
   const next=defaultQuestion(type);
   const defaults={ordering:'Ordena los elementos',matching:'Relaciona cada elemento',classification:'Clasifica los elementos'};
   const prompt=question.prompt===defaults[question.type]&&defaults[type] ? defaults[type] : question.prompt;
-  const {id,points}=question;
+  const {id,points,timeLimitSeconds,scoring,penalty}=question;
   Object.keys(question).forEach((k)=>delete question[k]);
   Object.assign(question,next,{id,prompt,points});
+  if(timeLimitSeconds!==undefined)question.timeLimitSeconds=timeLimitSeconds;
+  if(scoring!==undefined)question.scoring=scoring;
+  if(penalty!==undefined)question.penalty=penalty;
   ensureSolution(question);
 }
 function rowButton(text,handler,danger=false){const b=node('button',danger?'q-mini q-danger':'q-mini',text);b.type='button';b.addEventListener('click',handler);return b;}
@@ -103,7 +106,7 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
       ensureSolution(question);
       const card=node('section','q-card');
       const top=node('div','q-card-head');top.append(node('strong',null,'Pregunta '+(index+1)));const actions=node('div','q-card-actions');actions.append(rowButton('Duplicar',()=>{const copy=structuredClone(question);copy.id=uid('q');payload.questions.splice(index+1,0,copy);save(model,activityId,payload,onChange);render();}),rowButton('Eliminar',()=>{if(payload.questions.length<=1){onStatus?.('El cuestionario necesita al menos una pregunta');return;}payload.questions.splice(index,1);save(model,activityId,payload,onChange);render();},true));top.append(actions);card.append(top);
-      const basic=node('div','q-basic-grid');const prompt=textInput(question.prompt,'Pregunta');prompt.addEventListener('input',()=>{question.prompt=prompt.value;save(model,activityId,payload,onChange);});const allowed=RENDERER_TYPES[renderer]??Object.keys(TYPE_LABELS);let typeControl;if(allowed.length===1){typeControl=node('div','q-fixed-type',TYPE_LABELS[allowed[0]]??allowed[0]);if(question.type!==allowed[0]){switchType(question,allowed[0]);save(model,activityId,payload,onChange);}}else{typeControl=selectInput(question.type,allowed.map((key)=>[key,TYPE_LABELS[key]??key]));typeControl.addEventListener('change',()=>{switchType(question,typeControl.value);save(model,activityId,payload,onChange);render();});}
+      const basic=node('div','q-basic-grid');const prompt=textInput(question.prompt,'Pregunta');prompt.addEventListener('input',()=>{question.prompt=prompt.value;save(model,activityId,payload,onChange);});const allowed=RENDERER_TYPES[renderer]??Object.keys(TYPE_LABELS);let typeControl;if(allowed.length===1){typeControl=node('div','q-fixed-type',TYPE_LABELS[allowed[0]]??allowed[0]);if(question.type!==allowed[0]){switchType(question,allowed[0]);save(model,activityId,payload,onChange);}}else{typeControl=selectInput(question.type,allowed.map((key)=>[key,TYPE_LABELS[key]??key]));typeControl.title='Cambiar de modalidad reemplaza los elementos y soluciones de esta pregunta, conservando título, tiempo y puntuación.';typeControl.addEventListener('change',()=>{switchType(question,typeControl.value);save(model,activityId,payload,onChange);render();});}
       const points=numberInput(question.points,0);points.addEventListener('input',()=>{question.points=Math.max(0,Number(points.value)||0);save(model,activityId,payload,onChange);});
       const questionTime=numberInput(question.timeLimitSeconds??null,1,1);questionTime.placeholder='Sin límite';questionTime.addEventListener('input',()=>{const value=questionTime.value.trim();if(!value)delete question.timeLimitSeconds;else question.timeLimitSeconds=Math.max(1,Math.floor(Number(value)||1));save(model,activityId,payload,onChange);});
       const subtract=document.createElement('input');subtract.type='checkbox';subtract.checked=question.scoring==='partial-with-penalty';
