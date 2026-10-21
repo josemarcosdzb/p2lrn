@@ -116,7 +116,18 @@ export async function installP2LRNServiceWorker({
     throw error;
   }
 
-  const registration = existing ?? await container.register(absolute.href, {scope: scopeHref, type: 'module'});
+  const registration = existing ?? await container.register(absolute.href, {
+    scope: scopeHref,
+    type: 'module',
+    updateViaCache: 'none',
+  });
+  // When a previously installed worker owns the same scope, asking for its
+  // registration again is not enough to check for a changed script. Refresh
+  // the canonical worker and its imports without evicting course content.
+  if (existing) {
+    try { await registration.update(); }
+    catch { /* Continue using the active bridge while offline. */ }
+  }
   let worker = registration.active ?? registration.installing ?? registration.waiting;
   if (worker && worker.state !== 'activated') {
     await new Promise((resolve) => {
