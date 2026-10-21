@@ -102,6 +102,16 @@ try {
   console.log('FRESH_CHROME_LOCAL_4183='+JSON.stringify(state));
   assert(state?.ring&&state.center&&state.letterCount>=4&&state.spreadY>70,
     'Fresh browser did not render the circular rosco on the running local server.');
+  // A green UI is insufficient when Chrome can silently load an old module
+  // graph. Check the actual network resource URLs and the import-map revision.
+  const resources=await evaluate('(()=>{const script=document.querySelector("script[src^=\"/player/current/dist/p2lrn.js\"]");const revision=script?new URL(script.src).searchParams.get("v"):null;const urls=performance.getEntriesByType("resource").map(entry=>entry.name);const rosco=urls.filter(url=>new URL(url).pathname.endsWith("/renderers/questionnaire-rosco.js"));const esm=urls.filter(url=>new URL(url).pathname.endsWith("/p2lrn.esm.js"));const html=document.querySelector("script[type=importmap]")?.textContent??"";return {revision,rosco,esm,importMapRosco:revision?html.includes("/renderers/questionnaire-rosco.js?v="+revision):false};})()');
+  console.log('LOCAL_PLAYER_LOADED_MODULE_URLS='+JSON.stringify(resources));
+  assert.match(resources.revision??'',/^[a-f0-9]{16}$/u,'The local Player loader URL is not revisioned');
+  assert(resources.rosco.some(url=>new URL(url).searchParams.get('v')===resources.revision),
+    'Chrome loaded a rosco module without the active content revision');
+  assert(resources.esm.some(url=>new URL(url).searchParams.get('v')===resources.revision),
+    'Chrome loaded an old or unversioned Player ESM module');
+  assert(resources.importMapRosco,'The local document lacks a matching generated Player import map');
   console.log('LIVE_LOCAL_4183_FRESH_BROWSER_PASS');
 
   // Re-test the exact preserved landing from localhost itself.
