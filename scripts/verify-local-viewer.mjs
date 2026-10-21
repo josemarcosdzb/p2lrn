@@ -3,6 +3,9 @@ import {createReadStream} from 'node:fs';
 import {cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {extname, join, resolve, sep} from 'node:path';
+import {createP2LRNStudioDocument} from '../packages/toolkit/web/studio/new-document.js';
+import {exportP2LRNPackage} from '../packages/toolkit/web/studio/package-export.js';
+import {buildQuestionnaireGame} from '../packages/toolkit/web/questionnaire-games-core.js';
 import {tmpdir} from 'node:os';
 
 const root=resolve(process.cwd());
@@ -218,6 +221,109 @@ async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXap
   const caseExceptions=cdp.exceptions.slice(exceptionStart);
   invariant(caseExceptions.length===0,`${name}: unhandled runtime exceptions: ${JSON.stringify(caseExceptions)}`);
   return {name,src,state,texts:texts.map((item)=>item.text.slice(0,700)),exceptions:caseExceptions};
+}
+
+
+async function prepareGameFixtures(){
+  const games=[['crossword','Crucigrama de prueba'],['rosco','Rosco de prueba']];
+  await mkdir(join(siteRoot,'examples'),{recursive:true});
+  for(const [kind,title] of games){
+    const doc=createP2LRNStudioDocument({title,language:'es'});
+    const unit=doc.children(doc.rootId)[0];
+    const activity=doc.addGame(unit.id,{kind,title,language:'es'});
+    const record=await doc.readQuestionnaire(activity.id);
+    const renderer=activity.extensions?.['https://p2lrn.org/ext/renderer-preference/1']?.preferred;
+    const compiled=buildQuestionnaireGame(record.payload,renderer,{seedSource:'game-ui-regression'});
+    invariant(compiled.compatible,kind+': generated test package not playable '+JSON.stringify(compiled.reasons));
+    const exported=await exportP2LRNPackage(doc);
+    await writeFile(join(siteRoot,'examples','game-ui-'+kind+'.p2lrn'),exported.bytes);
+  }
+}
+
+async function verifyGameLayout(cdp,kind){
+  const title=kind==='crossword'?'Crucigrama de prueba':'Rosco de prueba';
+  const selector=kind==='crossword'?'.p2lrn-crossword-grid':'.p2lrn-rosco';
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+  await waitCase(cdp,'game-ui-'+kind,'/examples/game-ui-'+kind+'.p2lrn',{expectIframe:false});
+  const selectCode='(()=>{const r=document.getElementById("demo-player")?.shadowRoot;const title='+JSON.stringify(title)+';const button=[...(r?.querySelectorAll(".p2lrn-nav button")??[])].find(x=>x.textContent.includes(title));if(!button)return false;button.click();return true;})()';
+  invariant(await evalTop(cdp,selectCode),kind+': game not found in Player navigation');
+  let shown=false;
+  for(let i=0;i<90&&!shown;i++){
+    shown=await evalTop(cdp,'!!document.getElementById("demo-player")?.shadowRoot?.querySelector('+JSON.stringify(selector)+')');
+    if(!shown)await sleep(160);
+  }
+  invariant(shown,kind+': game did not render');
+
+  function baseScenario(){
+    const root=document.getElementById('demo-player').shadowRoot;
+    const game=root.querySelector('.p2lrn-crossword-grid,.p2lrn-rosco');
+    const stage=root.querySelector('.p2lrn-stage');
+    const status=root.querySelector('.p2lrn-status')?.textContent??'';
+    return {board:game.getBoundingClientRect().width,stage:stage.getBoundingClientRect().width,version:status,
+      overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};
+  }
+  const base=await evalTop(cdp,'('+baseScenario.toString()+')()');
+  invariant(base.version.includes('Formato Core')&&base.version.includes('Player '),kind+': missing explicit runtime version');
+  invariant(base.board<=base.stage+2&&base.overflow<=2,kind+': horizontal overflow '+JSON.stringify(base));
+  let behavior;
+  if(kind==='crossword'){
+    function crosswordScenario(){
+      const root=document.getElementById('demo-player').shadowRoot;
+      const grid=root.querySelector('.p2lrn-crossword-grid');
+      const cells=[...grid.querySelectorAll('.p2lrn-crossword-cell')];
+      const clues=[...root.querySelectorAll('.p2lrn-crossword-clue')];
+      const rect=cells[0]?.getBoundingClientRect();
+      clues[0]?.click();
+      const chosen=clues[0]?.getAttribute('aria-pressed')==='true';
+      const first=root.activeElement;
+      if(first?.tagName==='INPUT'){first.value='A';first.dispatchEvent(new InputEvent('input',{bubbles:true}));}
+      const advanced=first!==root.activeElement;
+      const wrap=grid.closest('.p2lrn-grid-scroll');
+      return {cells:cells.length,clues:clues.length,square:!!rect&&Math.abs(rect.width-rect.height)<2,
+        cellWidth:rect?.width??0,chosen,advanced,scroll:wrap.scrollWidth-wrap.clientWidth};
+    }
+    behavior=await evalTop(cdp,'('+crosswordScenario.toString()+')()');
+    invariant(behavior.cells>0&&behavior.clues>=4&&behavior.square,kind+': layout/pistas '+JSON.stringify(behavior));
+    invariant(behavior.cellWidth>=18&&behavior.cellWidth<=70&&behavior.scroll<=2,kind+': malformed cell dimensions '+JSON.stringify(behavior));
+    invariant(behavior.chosen&&behavior.advanced,kind+': clue or keyboard interaction failed '+JSON.stringify(behavior));
+  }else{
+    function roscoScenario(){
+      const root=document.getElementById('demo-player').shadowRoot;
+      const letters=[...root.querySelectorAll('.p2lrn-rosco-letter')];
+      const rectangles=letters.map(x=>x.getBoundingClientRect());
+      const xs=rectangles.map(x=>x.left),ys=rectangles.map(x=>x.top);
+      const initial=root.querySelector('.p2lrn-rosco-letter.is-current')?.textContent;
+      const button=(name)=>[...root.querySelectorAll('.p2lrn-rosco-challenge button')].find(x=>x.textContent===name);
+      button('Pasar')?.click();
+      const next=root.querySelector('.p2lrn-rosco-letter.is-current')?.textContent;
+      const input=root.querySelector('.p2lrn-rosco-challenge input');input.value='INCORRECTO';
+      button('Comprobar')?.click();
+      const wrong=root.querySelectorAll('.p2lrn-rosco-letter.is-wrong').length;
+      button('Reiniciar')?.click();
+      const restarted=root.querySelectorAll('.p2lrn-rosco-letter.is-wrong').length===0
+        &&root.querySelector('.p2lrn-rosco-progress')?.textContent.startsWith('0 /');
+      return {count:letters.length,spreadX:Math.max(...xs)-Math.min(...xs),
+        spreadY:Math.max(...ys)-Math.min(...ys),initial,next,wrong,restarted};
+    }
+    behavior=await evalTop(cdp,'('+roscoScenario.toString()+')()');
+    invariant(behavior.count>=4&&behavior.spreadX>80&&behavior.spreadY>80,kind+': expected circle, not horizontal letters '+JSON.stringify(behavior));
+    invariant(behavior.initial!==behavior.next&&behavior.wrong===1&&behavior.restarted,kind+': pass, check or reset failed '+JSON.stringify(behavior));
+  }
+  const desktop=await captureVisualEvidence(cdp,'game-'+kind+'-desktop');
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:840,deviceScaleFactor:1,mobile:true});
+  await sleep(400);
+  function mobileScenario(){
+    const root=document.getElementById('demo-player')?.shadowRoot;
+    const game=root?.querySelector('.p2lrn-crossword-grid,.p2lrn-rosco');
+    const stage=root?.querySelector('.p2lrn-stage');
+    return {overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
+      board:game?.getBoundingClientRect().width??0,stage:stage?.getBoundingClientRect().width??0};
+  }
+  const mobile=await evalTop(cdp,'('+mobileScenario.toString()+')()');
+  invariant(mobile.overflow<=2&&mobile.board<=mobile.stage+2,kind+': mobile UI overflows '+JSON.stringify(mobile));
+  const mobileScreenshot=await captureVisualEvidence(cdp,'game-'+kind+'-mobile');
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+  return {kind,base,behavior,mobile,desktopScreenshot:desktop,mobileScreenshot};
 }
 
 async function verifyNarrowLayout(cdp){
@@ -509,6 +615,7 @@ try{
   await cp(join(root,'packages','toolkit','web','native-composite-core.js'),join(siteRoot,'studio','native-composite-core.js'));
   await cp(join(root,'packages','toolkit','web','identifiers.js'),join(siteRoot,'studio','identifiers.js'));
   await prepareVisualStudioFixture();
+  await prepareGameFixtures();
   const builtViewer=await readFile(viewerPath,'utf8');
   const localViewer=builtViewer.replace(/const RUNTIME_ORIGINS=Object\.freeze\(\[[\s\S]*?\]\);/u,
     `const RUNTIME_ORIGINS=Object.freeze(['${RUNTIME_ORIGIN}','${APP_ORIGIN}']);`);
@@ -534,13 +641,18 @@ try{
   await audit('cmi5-automatic','/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',{automaticRuntime:true,requireXapi:true,rejectText:['Not implemented yet']});
   await audit('h5p-automatic','/examples/canonical/external/h5p-crossword.p2lrn',{automaticRuntime:true});
   await audit('scorm-automatic','/examples/canonical/external/scorm12-real.p2lrn',{automaticRuntime:true,rejectText:['Not implemented yet']});
+  const nativeGames=[];
+  for(const kind of ['crossword','rosco']){
+    try{nativeGames.push(await verifyGameLayout(cdp,kind));}
+    catch(error){failures.push({name:'game-'+kind+'-ui',message:String(error?.message||error)});}
+  }
   let narrow=null;
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
   let studioUI=null;
   try{studioUI=await verifyStudioComponentUI(cdp);}catch(error){failures.push({name:'studio-component-cdn',message:String(error?.message||error)});}
   let studioSiteUI=null;
   try{studioSiteUI=await verifyStudioSiteUI(cdp);}catch(error){failures.push({name:'studio-website-ui',message:String(error?.message||error)});}
-  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,studioUI,studioSiteUI,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
+  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,studioUI,studioSiteUI,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
 }finally{
   try{cdp?.socket?.close();}catch{}
