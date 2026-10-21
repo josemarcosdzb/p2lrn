@@ -482,6 +482,7 @@ jobs:
         run: |
           node --check deploy/netlify/browser-site-revision.mjs
           node --check deploy/netlify/build-site.mjs
+          node --check packages/player/scripts/build-dist.mjs
           node --check scripts/sync-local-player-browser-revision.mjs
           node --check scripts/verify-live-local-4183.mjs
       - name: Sync corrected browser revision to localhost 4183
