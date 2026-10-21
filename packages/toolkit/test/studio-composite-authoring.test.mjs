@@ -79,6 +79,18 @@ test('Studio re-parents existing activities without losing their identity or con
   assert.deepEqual(pkg.entities.get(nested.id).children,[nestedLesson.id]);
 });
 
+test('Studio keeps adding into the same composite after selecting one of its children',()=>{
+  const doc=createP2LRNStudioDocument();
+  const unit=doc.children(doc.rootId)[0];
+  const group=doc.addComposite(unit.id,{title:'Actividades'});
+  const first=doc.addLesson(group.id,{title:'Lección del grupo'});
+  // Studio resolves the insertion parent from the currently selected child.
+  const second=doc.addGame(doc.parentId(first.id),{kind:'word-search',title:'Sopa del grupo'});
+  assert.equal(doc.parentId(second.id),group.id);
+  assert.deepEqual(group.children,[first.id,second.id]);
+  assert.equal(doc.entity(unit.id).children.includes(second.id),false);
+});
+
 test('Studio refuses invalid nesting and composite mode/navigation conflicts',()=>{
   const doc=createP2LRNStudioDocument();
   const unit=doc.children(doc.rootId)[0];
