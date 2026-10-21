@@ -276,6 +276,21 @@ async function studioComponentScenario(){
       await wait(()=>q('[data-tree]').querySelectorAll('button').length>before,'add '+kind,10000);
       added.push(kind);
     }
+    // The last added item is a composite. Previously Studio inserted
+    // additional activities next to it instead of under it.
+    const groupSelect=[...root.querySelectorAll('select')].find((el)=>
+      el.closest('label')?.textContent?.includes('Mover actividad existente')
+    );
+    if(!groupSelect)throw new Error('Composite does not offer moving existing activities');
+    const wordSearch=[...groupSelect.options].find((item)=>item.textContent==='Sopa de letras');
+    if(!wordSearch)throw new Error('Existing sibling game is missing from composite move candidates');
+    groupSelect.value=wordSearch.value;
+    groupSelect.dispatchEvent(new Event('change',{bubbles:true}));
+    const moveButton=[...root.querySelectorAll('button')].find((item)=>item.textContent==='Mover al compuesto');
+    if(!moveButton||moveButton.disabled)throw new Error('Composite move action is not enabled');
+    moveButton.click();
+    await wait(()=>q('[data-meta]')?.textContent?.includes('cambio'),'composite activity move');
+
     const beforeMedia=q('[data-tree]').querySelectorAll('button').length;
     q('[data-add-menu]').open=true;click('[data-add-kind="file"]');
     const mediaFile=new File([new TextEncoder().encode('Archivo creado desde UI')],'evidence.txt',{type:'text/plain'});
@@ -289,6 +304,12 @@ async function studioComponentScenario(){
     const buffer=exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength);
     const parsed=await api.openPackageBytes(buffer);
     if(!parsed?.manifest?.integrity?.contentRoot)throw new Error('Studio export did not survive Player integrity validation');
+    const compound=exported.graph.entities.find((item)=>item.type==='activity'&&item.activityType==='https://p2lrn.org/type/composite');
+    if(!compound)throw new Error('A composite with children must carry the native composite activity type');
+    if(compound.children?.length!==2)throw new Error('Composite should own the moved word search and newly uploaded file');
+    if(compound.children[0]!==wordSearch.value)throw new Error('Existing word search was not re-parented into the composite');
+    const parentOfMoved=exported.graph.entities.filter((entity)=>(entity.children||[]).includes(wordSearch.value));
+    if(parentOfMoved.length!==1||parentOfMoved[0].id!==compound.id)throw new Error('Moved activity still has another parent');
     const expectedNodes=lessonCount+added.length+1;
     const actualNodes=q('[data-tree]').querySelectorAll('button').length;
     if(actualNodes!==expectedNodes)throw new Error('Studio tree count mismatch: '+actualNodes+' vs '+expectedNodes);
@@ -365,6 +386,17 @@ async function studioSiteScenario(){
     await wait(()=>q('[data-add-dialog]').open,'reopen palette');
     click('[data-add-kind="3d"]');
     await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Juego 3D'),'3d game');
+    click('[data-add-content]');
+    await wait(()=>q('[data-add-dialog]').open,'open composite palette');
+    click('[data-add-kind="composite"]');
+    await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Compuesto'),'new composite');
+    click('[data-add-content]');
+    await wait(()=>q('[data-add-dialog]').open,'open composite child palette');
+    click('[data-add-kind="word-search"]');
+    await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Sopa de letras'),'child game');
+    const group=[...q('[data-tree]').querySelectorAll('button')].find(x=>x.textContent.includes('Compuesto'));
+    const nested=group?.closest('.studio-tree-node')?.querySelector('.studio-tree-children button');
+    if(!nested?.textContent.includes('Sopa de letras'))throw new Error('Studio website created a composite child outside its parent');
     const lesson=[...q('[data-tree]').querySelectorAll('button')].find(x=>x.textContent.includes('Lección editada con Studio web'));
     if(!lesson)throw new Error('Edited lesson not present in outline');
     lesson.click();
@@ -373,7 +405,7 @@ async function studioSiteScenario(){
     await wait(()=>q('[data-studio-status]')?.textContent.includes('Borrador guardado'),'manual draft save',18000);
     click('[data-export]');
     await wait(()=>q('[data-studio-status]')?.textContent.includes('Paquete exportado y verificado'),'verified export',18000);
-    return {ok:true,lesson:'Lección editada con Studio web',questionnaire:true,game3d:true,draftSaved:true,packageExported:true,treeText:q('[data-tree]').textContent.slice(0,350)};
+    return {ok:true,lesson:'Lección editada con Studio web',questionnaire:true,game3d:true,compositeChild:true,draftSaved:true,packageExported:true,treeText:q('[data-tree]').textContent.slice(0,350)};
   }catch(error){return {ok:false,error:String(error?.stack||error)};}
 }
 async function verifyStudioSiteUI(cdp){
