@@ -269,11 +269,21 @@ async function studioComponentScenario(){
     const surface=q('.surface');surface.textContent='Lección escrita desde la interfaz visual';surface.dispatchEvent(new InputEvent('input',{bubbles:true}));
     const lessonCount=q('[data-tree]').querySelectorAll('button').length;
     const added=[];
-    for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','component','composite']){
+    for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification','component','composite']){
       const before=q('[data-tree]').querySelectorAll('button').length;
       q('[data-add-menu]').open=true;
       click('[data-add-kind="'+kind+'"]');
       await wait(()=>q('[data-tree]').querySelectorAll('button').length>before,'add '+kind,10000);
+      if(['3d','3d-matching','3d-classification'].includes(kind)){
+        const typePicker=await wait(()=>{
+          const fields=[...root.querySelectorAll('.q-card .q-basic-grid label')];
+          return fields.find(label=>label.querySelector('.q-label')?.textContent==='Tipo')?.querySelector('select');
+        },'3D type selector');
+        const options=[...typePicker.options].map(option=>option.value);
+        if(JSON.stringify(options)!==JSON.stringify(['ordering','matching','classification']))throw new Error('3D game modes missing: '+options.join(','));
+        const expected={'3d':'ordering','3d-matching':'matching','3d-classification':'classification'}[kind];
+        if(typePicker.value!==expected)throw new Error('Wrong initial 3D mode: '+kind+' => '+typePicker.value);
+      }
       added.push(kind);
     }
     // The last added item is a composite. Previously Studio inserted
@@ -387,6 +397,29 @@ async function studioSiteScenario(){
     await wait(()=>q('[data-add-dialog]').open,'reopen palette');
     click('[data-add-kind="3d"]');
     await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Juego 3D'),'3d game');
+    const get3dType=()=>[...(q('.q-card .q-basic-grid')?.querySelectorAll('label')??[])]
+      .find(label=>label.querySelector('.q-label')?.textContent==='Tipo')?.querySelector('select');
+    const choice=await wait(get3dType,'3D question type selector');
+    if(JSON.stringify([...choice.options].map(option=>option.value))!==JSON.stringify(['ordering','matching','classification']))
+      throw new Error('Studio does not expose all three 3D question types');
+    const chooseType=async(type,selector)=>{
+      const picker=get3dType();
+      picker.value=type;
+      picker.dispatchEvent(new Event('change',{bubbles:true}));
+      await wait(()=>get3dType()?.value===type&&q(selector),'switch 3D to '+type);
+    };
+    await chooseType('matching','.q-pair-row');
+    await chooseType('classification','.q-class-row');
+    click('[data-add-content]');
+    await wait(()=>q('[data-add-dialog]').open,'open matching 3D palette');
+    click('[data-add-kind="3d-matching"]');
+    await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Relacionar 3D'),'matching 3D game');
+    if((await wait(get3dType,'matching 3D type')).value!=='matching')throw new Error('Matching 3D initial question type mismatch');
+    click('[data-add-content]');
+    await wait(()=>q('[data-add-dialog]').open,'open classification 3D palette');
+    click('[data-add-kind="3d-classification"]');
+    await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Clasificar 3D'),'classification 3D game');
+    if((await wait(get3dType,'classification 3D type')).value!=='classification')throw new Error('Classification 3D initial question type mismatch');
     click('[data-add-content]');
     await wait(()=>q('[data-add-dialog]').open,'open composite palette');
     click('[data-add-kind="composite"]');
@@ -412,7 +445,7 @@ async function studioSiteScenario(){
     await wait(()=>q('[data-studio-status]')?.textContent.includes('Borrador guardado'),'manual draft save',18000);
     click('[data-export]');
     await wait(()=>q('[data-studio-status]')?.textContent.includes('Paquete exportado y verificado'),'verified export',18000);
-    return {ok:true,lesson:'Lección editada con Studio web',questionnaire:true,game3d:true,compositeChild:true,draftSaved:true,packageExported:true,treeText:q('[data-tree]').textContent.slice(0,350)};
+    return {ok:true,lesson:'Lección editada con Studio web',questionnaire:true,game3d:true,three3dModes:true,compositeChild:true,draftSaved:true,packageExported:true,treeText:q('[data-tree]').textContent.slice(0,350)};
   }catch(error){return {ok:false,error:String(error?.stack||error)};}
 }
 async function verifyStudioSiteUI(cdp){
