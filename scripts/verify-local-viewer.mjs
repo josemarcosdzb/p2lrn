@@ -224,6 +224,27 @@ async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXap
 }
 
 
+async function verifyMutableAssetRevisions(){
+  const demo=await readFile(join(siteRoot,'demo','index.html'),'utf8');
+  const studio=await readFile(join(siteRoot,'studio','index.html'),'utf8');
+  const checks=[
+    [/src="\/player\/current\/dist\/p2lrn\.js\?v=[a-f0-9]{16}"/u,'Player classic entry'],
+    [/"\/player\/current\/dist\/p2lrn-player\.js\?v=[a-f0-9]{16}"/u,'transitive Player module'],
+    [/"\/player\/current\/dist\/renderers\/questionnaire-rosco\.js\?v=[a-f0-9]{16}"/u,'transitive rosco module'],
+    [/<script type="importmap">/u,'module import map'],
+    [/src="\/demo\/viewer\.js\?v=[a-f0-9]{16}"/u,'demo control script'],
+  ];
+  for(const [pattern,label] of checks){
+    invariant(pattern.test(demo),'Missing content revision for '+label);
+  }
+  invariant(/src="\/studio\/studio\.js\?v=[a-f0-9]{16}"/u.test(studio),
+    'Missing content revision for Studio entry');
+  invariant(/href="\/studio\/studio\.css\?v=[a-f0-9]{16}"/u.test(studio),
+    'Missing content revision for Studio styles');
+  invariant(/"\/studio\/runtime\/authoring-document\.js\?v=[a-f0-9]{16}"/u.test(studio),
+    'Missing content revision for nested Studio modules');
+}
+
 async function prepareGameFixtures(){
   const games=[['crossword','Crucigrama de prueba'],['rosco','Rosco de prueba']];
   await mkdir(join(siteRoot,'examples'),{recursive:true});
@@ -626,6 +647,7 @@ try{
   for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js']){
     await cp(join(root,'packages','toolkit','web',file),join(siteRoot,'studio',file));
   }
+  await verifyMutableAssetRevisions();
   await prepareVisualStudioFixture();
   await prepareGameFixtures();
   const builtViewer=await readFile(viewerPath,'utf8');
