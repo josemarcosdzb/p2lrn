@@ -161,7 +161,7 @@ async function renderEditor(){
   }
   const structured=await studio.readStructuredJson(entity.id);
   if(structured){
-    renderStructuredVisualEditor(content,{model:studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>updateChanges(),onStatus:setStatus});
+    renderStructuredVisualEditor(content,{model:studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>updateChanges(),onStructureChange:()=>{renderTree();updateChanges();},onStatus:setStatus});
     return;
   }
   const editable=await studio.readEditableText(entity.id);
@@ -235,6 +235,7 @@ function structureParent(){
 }
 async function addUnit(){
   if(!studio)return;
+  if(studio.isCompositeActivity(insertionParent()))throw new Error('Un compuesto admite actividades, no unidades. Selecciona el curso o una unidad.');
   const created=studio.addUnit(structureParent(),{title:'Nueva unidad',language:'es'});selectedId=created.id;
   renderTree();await renderEditor();updateChanges();setStatus('Unidad añadida');
 }
@@ -263,7 +264,7 @@ async function openRemote(){
 }
 function insertionParent(){
   const current=studio?.entity(selectedId);if(!current)return studio?.rootId??null;
-  if(['course','unit'].includes(current.type))return current.id;
+  if(['course','unit'].includes(current.type)||studio.isCompositeActivity(current.id))return current.id;
   return studio.parentId(current.id)??studio.rootId;
 }
 async function selectCreated(activity,statusText){selectedId=activity.id;renderTree();await renderEditor();updateChanges();setStatus(statusText);addDialog?.close();}
@@ -271,6 +272,7 @@ function mediaTypeForFile(file){return file.type||({'md':'text/markdown','markdo
 async function addResourceFile(file){const activity=studio.addEmbeddedResource(insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:mediaTypeForFile(file),bytes:new Uint8Array(await file.arrayBuffer())});await selectCreated(activity,'Archivo añadido');}
 function extractedDocumentHtml(result){const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');return '<!doctype html><html><head><meta charset="utf-8"></head><body>'+result.blocks.map((b)=>b.type==='TITLE'?'<h2>'+esc(b.text)+'</h2>':b.type==='LIST'?'<li>'+esc(b.text)+'</li>':b.type==='SEPARATOR'?'<hr>':'<p>'+esc(b.text)+'</p>').join('')+'</body></html>';}
 async function importExternalFile(file){
+  if(studio.isCompositeActivity(insertionParent()))throw new Error('Los paquetes educativos importados crean unidades. Selecciona una unidad para importarlos.');
   const endpoint=document.body.dataset.importEndpoint||'/api/p2lrn/studio/import';
   const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':file.type||'application/zip','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
   if(!response.ok){let detail='';try{detail=(await response.json())?.error||''}catch{}throw new Error('No se pudo importar el paquete educativo'+(detail?': '+detail:' (HTTP '+response.status+')'));}
@@ -291,15 +293,17 @@ async function addReaderFile(file){
 async function addContentKind(kind){
   if(!studio)throw new Error('Crea o abre un curso primero.');
   if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:'Nueva lección',language:'es'});return selectCreated(a,'Lección añadida');}
-  renderTree();await renderEditor();updateChanges();setStatus('Unidad añadida');
   if(kind==='file'){resourceFileInput.click();return;}
   if(kind==='reader'){readerFileInput.click();return;}
-  if(kind==='external'){externalFileInput.click();return;}
+  if(kind==='external'){
+    if(studio.isCompositeActivity(insertionParent()))throw new Error('Los paquetes educativos completos se importan como unidades, no como actividades hijas. Selecciona una unidad.');
+    externalFileInput.click();return;
+  }
   if(kind==='url'){const url=prompt('URL del recurso');if(!url)return;const title=prompt('Título','Recurso web')||'Recurso web';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL añadida');}
   if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:'Cuestionario',language:'es'});return selectCreated(a,'Cuestionario añadido');}
   if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d'].includes(kind)){const names={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','fill-blanks':'Rellenar huecos','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'es'});return selectCreated(a,names[kind]+' añadido');}
   if(kind==='component'){const payload={schema:'https://p2lrn.org/schema/native-component/0.1',version:'0.1',component:{id:'https://p2lrn.org/component/callout',componentVersion:'1',dataVersion:'2',runtimeContractVersion:'1'},data:{tone:'info',body:'Edita este componente'},title:'Componente'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Componente',filename:'component.json',mediaType:'application/vnd.p2lrn.component+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-component'});return selectCreated(a,'Componente añadido');}
-  if(kind==='composite'){const payload={schema:'https://p2lrn.org/schema/native-composite/0.1',version:'0.1',mode:'sequence',completion:'all',navigation:'open',title:'Compuesto'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Compuesto',filename:'composite.json',mediaType:'application/vnd.p2lrn.composite+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-composite'});return selectCreated(a,'Compuesto añadido');}
+  if(kind==='composite'){const payload={schema:'https://p2lrn.org/schema/native-composite/0.1',version:'0.1',mode:'sequence',completion:'all',navigation:'linear',title:'Compuesto'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Compuesto',filename:'composite.json',mediaType:'application/vnd.p2lrn.composite+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-composite'});return selectCreated(a,'Compuesto añadido');}
 }
 function command(name,value=null){
   if(!activeEditable||!activeEditable.isContentEditable)return;
