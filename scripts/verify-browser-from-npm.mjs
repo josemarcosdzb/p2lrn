@@ -583,15 +583,32 @@ try{
   const selectedTreeNode=()=>q('[data-tree] > button[aria-current="true"]');
   const treeLabel=(button)=>String(button?.querySelector('span')?.textContent??button?.textContent??'').trim();
   const added=[];
-  for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','component','composite']){
+  for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification','component','composite']){
     const priorCount=treeButtons().length;
     q('[data-add-menu]').open=true;
     click('[data-add-kind="'+kind+'"]');
     const created=await wait(()=>treeButtons().length>priorCount&&selectedTreeNode(),'npm add '+kind);
     const title=treeLabel(created);
     if(!title)throw new Error('Studio created an untitled tree node for '+kind);
+    if(['3d','3d-matching','3d-classification'].includes(kind)){
+      const kindOf=await wait(()=>{
+        const labels=[...root.querySelectorAll('.q-card .q-basic-grid label')];
+        return labels.find(label=>label.querySelector('.q-label')?.textContent==='Tipo')?.querySelector('select');
+      },'npm 3D type selector',10000);
+      const modes=[...kindOf.options].map(option=>option.value);
+      if(JSON.stringify(modes)!==JSON.stringify(['ordering','matching','classification']))
+        throw new Error('Installed npm Studio does not allow all 3D modes: '+modes.join(','));
+      const mode={'3d':'ordering','3d-matching':'matching','3d-classification':'classification'}[kind];
+      if(kindOf.value!==mode)throw new Error('Incorrect initial npm 3D mode for '+kind);
+    }
     added.push({kind,title});
   }
+  // Importing an entire SCORM package creates a unit, which must be placed
+  // under a course or unit, never under the last selected composite activity.
+  const unitButton=treeButtons().find(button=>button.querySelector('small')?.textContent==='unit');
+  if(!unitButton)throw new Error('Could not select a unit before importing SCORM');
+  unitButton.click();
+  await wait(()=>selectedTreeNode()?.querySelector('small')?.textContent==='unit','select unit for imported package');
   let priorCount=treeButtons().length;
   q('[data-add-menu]').open=true;
   click('[data-add-kind="external"]');
