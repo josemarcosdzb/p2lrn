@@ -225,6 +225,36 @@ for (const htmlPath of htmlFiles) {
   await writeFile(htmlPath,html);
 }
 
+// Validate the compiled output here, not in the source-only browser fixture.
+// All mutable transitive modules and CSS must use the same content revision.
+const revisionedDemoHtml = await readFile(join(outputRoot,'demo','index.html'),'utf8');
+const revisionedStudioHtml = await readFile(join(outputRoot,'studio','index.html'),'utf8');
+for (const [html,label,expected] of [
+  [revisionedDemoHtml,'Player entrypoint','src="/player/current/dist/p2lrn.js?v='+runtimeRevision+'"'],
+  [revisionedDemoHtml,'Viewer entrypoint','src="/demo/viewer.js?v='+runtimeRevision+'"'],
+  [revisionedStudioHtml,'Studio entrypoint','src="/studio/studio.js?v='+runtimeRevision+'"'],
+  [revisionedStudioHtml,'Studio stylesheet','href="/studio/studio.css?v='+runtimeRevision+'"'],
+]) {
+  if (!html.includes(expected)) throw new Error('Missing built asset revision for '+label);
+}
+for (const [html,label] of [[revisionedDemoHtml,'Player'],[revisionedStudioHtml,'Studio']]) {
+  if (!html.includes('<script type="importmap">')) {
+    throw new Error('Missing '+label+' browser import map for mutable ES modules');
+  }
+}
+for (const path of [
+  '/player/current/dist/p2lrn-player.js',
+  '/player/current/dist/renderers/questionnaire-rosco.js',
+  '/player/current/dist/renderers/game-common.js',
+]) {
+  if (!revisionedDemoHtml.includes(JSON.stringify(path+'?v='+runtimeRevision))) {
+    throw new Error('Mixed versions in Player browser module graph: '+path);
+  }
+}
+if (!revisionedStudioHtml.includes(JSON.stringify('/studio/runtime/authoring-document.js?v='+runtimeRevision))) {
+  throw new Error('Missing versioned Studio authoring module');
+}
+
 // Central legal footer: injected into the built HTML so every public route has
 // the same compact legal navigation without duplicating it in every source page.
 const footerLinks = [
