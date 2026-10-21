@@ -199,6 +199,7 @@ for (const path of [
   join(studioRoot,'dist','p2lrn-studio.esm.js'),
   join(studioRoot,'dist','runtime','authoring-document.js'),
   join(studioRoot,'dist','runtime','package-export.js'),
+  join(studioRoot,'dist','native-composite-core.js'),
   join(studioRoot,'server','index.mjs'),
   join(studioRoot,'bin','p2lrn-studio.mjs'),
   join(studioRoot,'templates','next-route.ts'),
