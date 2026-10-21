@@ -1676,3 +1676,7 @@ footer a:hover{color:var(--blue)}
   }
 }
 
+
+/* Distinguish installed npm release from the independently built local site. */
+.site-header .site-release-label{color:#b8c5d9;white-space:nowrap}
+.site-header .site-build-label{display:inline-block;max-width:144px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:1px solid #343f51;padding-left:10px;color:#d4e0f5}
