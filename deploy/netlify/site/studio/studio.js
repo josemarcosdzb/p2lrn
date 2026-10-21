@@ -30,6 +30,8 @@ const editButton=document.querySelector('[data-mode-edit]');
 const previewButton=document.querySelector('[data-mode-preview]');
 const exportButton=document.querySelector('[data-export]');
 const blockSelect=document.querySelector('[data-block]');
+const fontFamily=document.querySelector('[data-font-family]');
+const fontSize=document.querySelector('[data-font-size]');
 const foreColor=document.querySelector('[data-fore-color]');
 const backColor=document.querySelector('[data-back-color]');
 const saveDraftButton=document.querySelector('[data-save-draft]');
@@ -44,6 +46,7 @@ let selectedId=null;
 let sourceObjectUrl=null;
 let previewObjectUrl=null;
 let activeEditable=null;
+let savedSelectionRange=null;
 let mode='edit';
 let draftMetadata=null;
 let savedRevision=0;
@@ -108,7 +111,30 @@ function markActive(node){
 function bindEditable(node,onInput){
   node.contentEditable='true';node.spellcheck=true;
   node.addEventListener('focus',()=>markActive(node));
-  node.addEventListener('input',()=>{onInput();updateChanges();});
+  node.addEventListener('mouseup',captureSelection);
+  node.addEventListener('keyup',captureSelection);
+  node.addEventListener('input',()=>{captureSelection();onInput();updateChanges();});
+}
+function captureSelection(){
+  if(!activeEditable)return;
+  const selection=getSelection();if(!selection?.rangeCount)return;
+  const range=selection.getRangeAt(0);
+  const anchor=range.commonAncestorContainer.nodeType===Node.ELEMENT_NODE?range.commonAncestorContainer:range.commonAncestorContainer.parentElement;
+  if(anchor&&activeEditable.contains(anchor))savedSelectionRange=range.cloneRange();
+  updateFormatState();
+}
+function restoreSelection(){
+  if(!activeEditable)return false;
+  activeEditable.focus();
+  if(!savedSelectionRange)return true;
+  const selection=getSelection();selection.removeAllRanges();selection.addRange(savedSelectionRange);
+  return true;
+}
+function updateFormatState(){
+  for(const button of document.querySelectorAll('.studio-format [data-command]')){
+    let active=false;try{active=document.queryCommandState(button.dataset.command)}catch{}
+    button.dataset.active=active?'true':'false';
+  }
 }
 
 function renderTree(){
@@ -132,6 +158,7 @@ function renderTree(){
     }
   };
   walk(root,tree);
+  updateStructureActions();
 }
 async function renderEditor(){
   editorStage.replaceChildren();activeEditable=null;
@@ -161,7 +188,7 @@ async function renderEditor(){
   }
   const structured=await studio.readStructuredJson(entity.id);
   if(structured){
-    renderStructuredVisualEditor(content,{model:studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>updateChanges(),onStructureChange:()=>{renderTree();updateChanges();},onStatus:setStatus});
+    renderStructuredVisualEditor(content,{model:studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>updateChanges(),onStructureChange:()=>{renderTree();updateChanges();},onStatus:setStatus,onSelectActivity:(id)=>{selectedId=id;renderTree();void renderEditor();},onCreateChild:(id)=>{selectedId=id;renderTree();addDialog?.showModal();}});
     return;
   }
   const editable=await studio.readEditableText(entity.id);
@@ -228,6 +255,15 @@ async function createNewCourse(){
   await activateStudio(document,{name:document.sourceName});
   setStatus('Curso nuevo listo para editar');
 }
+function compositeContext(){
+  const current=studio?.entity(selectedId);if(!current)return null;
+  if(current.type==='activity'&&studio.isCompositeActivity(current.id))return current.id;
+  const parent=studio.parentId(current.id);return parent&&studio.isCompositeActivity(parent)?parent:null;
+}
+function updateStructureActions(){
+  if(!addUnitButton)return;const blocked=Boolean(studio&&compositeContext());
+  addUnitButton.disabled=blocked;addUnitButton.title=blocked?'Las unidades se crean fuera de un grupo de actividades.':'';
+}
 function structureParent(){
   const current=studio?.entity(selectedId);if(!current)return studio?.rootId??null;
   if(['course','unit'].includes(current.type))return current.id;
@@ -241,7 +277,7 @@ async function addUnit(){
 }
 async function addLesson(){
   if(!studio)return;
-  const created=studio.addLesson(structureParent(),{title:'Nueva lección',language:'es'});selectedId=created.id;
+  const created=studio.addLesson(insertionParent(),{title:'Nueva lección',language:'es'});selectedId=created.id;
   renderTree();await renderEditor();updateChanges();setStatus('Lección añadida');
 }
 async function openLocal(file){
@@ -290,6 +326,20 @@ async function addReaderFile(file){
   const title=result.metadata?.detectedTitle||file.name.replace(/\.[^.]+$/,'');
   const activity=studio.addEmbeddedResource(insertionParent(),{title,filename:'reader.html',mediaType:'text/html',bytes:new TextEncoder().encode(extractedDocumentHtml(result))});await selectCreated(activity,'Documento importado con Reader');
 }
+function showStudioChoice(title,subtitle,items,onChoose){
+  const dialog=document.createElement('dialog');dialog.className='studio-choice-dialog';
+  const shell=document.createElement('div');shell.className='studio-choice-shell';
+  const head=document.createElement('div');head.className='studio-choice-head';
+  const copy=document.createElement('div');const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=subtitle;copy.append(h,p);
+  const close=document.createElement('button');close.type='button';close.textContent='Cerrar';close.addEventListener('click',()=>dialog.close());head.append(copy,close);shell.append(head);
+  const grid=document.createElement('div');grid.className='studio-choice-grid';
+  for(const item of items){const b=document.createElement('button');b.type='button';b.className='studio-choice-card';const strong=document.createElement('strong');strong.textContent=item.label;const small=document.createElement('small');small.textContent=item.description||'';b.append(strong,small);b.addEventListener('click',()=>Promise.resolve(onChoose(item)).then(()=>dialog.close()).catch((error)=>setStatus(error.message)));grid.append(b);}
+  shell.append(grid);dialog.append(shell);document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
+}
+function chooseComponent(){
+  const items=studio.componentCatalog().map((entry)=>({id:entry.id,label:entry.authoring.label,description:entry.authoring.description}));
+  showStudioChoice('Añadir componente','Elige el bloque nativo que quieres crear.',items,async(item)=>{const activity=studio.addNativeComponent(insertionParent(),{componentId:item.id,language:'es'});await selectCreated(activity,item.label+' añadido');});
+}
 async function addContentKind(kind){
   if(!studio)throw new Error('Crea o abre un curso primero.');
   if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:'Nueva lección',language:'es'});return selectCreated(a,'Lección añadida');}
@@ -302,14 +352,36 @@ async function addContentKind(kind){
   if(kind==='url'){const url=prompt('URL del recurso');if(!url)return;const title=prompt('Título','Recurso web')||'Recurso web';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL añadida');}
   if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:'Cuestionario',language:'es'});return selectCreated(a,'Cuestionario añadido');}
   if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const names={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','fill-blanks':'Rellenar huecos','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D','3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'es'});return selectCreated(a,names[kind]+' añadido');}
-  if(kind==='component'){const payload={schema:'https://p2lrn.org/schema/native-component/0.1',version:'0.1',component:{id:'https://p2lrn.org/component/callout',componentVersion:'1',dataVersion:'2',runtimeContractVersion:'1'},data:{tone:'info',body:'Edita este componente'},title:'Componente'};const a=studio.addEmbeddedResource(insertionParent(),{title:'Componente',filename:'component.json',mediaType:'application/vnd.p2lrn.component+json',bytes:new TextEncoder().encode(JSON.stringify(payload,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-component'});return selectCreated(a,'Componente añadido');}
-  if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:'Compuesto',language:'es'});return selectCreated(activity,'Compuesto añadido');}
+  if(kind==='component'){chooseComponent();return;}
+  if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:'Grupo de actividades',language:'es',mode:'free',completion:'all'});return selectCreated(activity,'Grupo de actividades añadido');}
+}
+function emitFormatInput(name){
+  captureSelection();
+  activeEditable?.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'format'+name}));
+  updateFormatState();
 }
 function command(name,value=null){
   if(!activeEditable||!activeEditable.isContentEditable)return;
-  activeEditable.focus();
+  if(!restoreSelection())return;
   document.execCommand(name,false,value);
-  activeEditable.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'format'+name}));
+  emitFormatInput(name);
+}
+function applyFontFamily(value){
+  if(!activeEditable||!restoreSelection())return;
+  document.execCommand('styleWithCSS',false,true);
+  document.execCommand('fontName',false,value);
+  emitFormatInput('fontName');
+}
+function applyFontSize(value){
+  if(!activeEditable||!restoreSelection())return;
+  const px=Math.max(8,Math.min(96,Number(value)||20));
+  document.execCommand('styleWithCSS',false,true);
+  document.execCommand('fontSize',false,'7');
+  for(const element of activeEditable.querySelectorAll('[style]'))if(element.style.fontSize==='xxx-large')element.style.fontSize=px+'px';
+  emitFormatInput('fontSize');
+}
+function syncColorButton(input){
+  const label=input?.closest('.format-color-button');if(label)label.style.setProperty('--format-color',input.value);
 }
 async function recoverLatestDraft(){
   const record=await loadLatestDraft();
@@ -398,10 +470,17 @@ openUrlButton.addEventListener('click',()=>void openRemote().catch((error)=>setS
 urlInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();void openRemote().catch((error)=>setStatus(error.message));}});
 editButton.addEventListener('click',()=>void setMode('edit').catch((error)=>setStatus(error.message)));
 previewButton.addEventListener('click',()=>void setMode('preview').catch((error)=>setStatus(error.message)));
-document.querySelectorAll('[data-command]').forEach((button)=>button.addEventListener('click',()=>command(button.dataset.command)));
+document.querySelectorAll('[data-command]').forEach((button)=>{
+  button.addEventListener('mousedown',(event)=>event.preventDefault());
+  button.addEventListener('click',()=>command(button.dataset.command));
+});
 blockSelect.addEventListener('change',()=>command('formatBlock',blockSelect.value));
-foreColor.addEventListener('input',()=>command('foreColor',foreColor.value));
-backColor.addEventListener('input',()=>command('hiliteColor',backColor.value));
+fontFamily?.addEventListener('change',()=>applyFontFamily(fontFamily.value));
+fontSize?.addEventListener('change',()=>applyFontSize(fontSize.value));
+foreColor.addEventListener('input',()=>{syncColorButton(foreColor);command('foreColor',foreColor.value);});
+backColor.addEventListener('input',()=>{syncColorButton(backColor);command('hiliteColor',backColor.value);});
+syncColorButton(foreColor);syncColorButton(backColor);
+document.addEventListener('selectionchange',()=>{if(activeEditable)captureSelection();});
 exportButton.addEventListener('click',()=>void exportPackage().catch((error)=>setStatus(error.message)));
 saveDraftButton?.addEventListener('click',()=>void persistDraft().catch((error)=>setStatus('No se pudo guardar el borrador local: '+error.message)));
 recoverDraftButton?.addEventListener('click',()=>void recoverLatestDraft().catch((error)=>setStatus(error.message)));

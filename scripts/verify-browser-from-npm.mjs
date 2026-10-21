@@ -595,6 +595,12 @@ try{
     const priorCount=treeButtons().length;
     q('[data-add-menu]').open=true;
     click('[data-add-kind="'+kind+'"]');
+    if(kind==='component'){
+      const picker=await wait(()=>root.querySelector('.studio-choice-dialog'),'npm component picker');
+      const option=picker.querySelector('.studio-choice-card');
+      if(!option)throw new Error('Studio component picker has no registered components');
+      option.click();
+    }
     const created=await wait(()=>treeButtons().length>priorCount&&selectedTreeNode(),'npm add '+kind);
     const title=treeLabel(created);
     if(!title)throw new Error('Studio created an untitled tree node for '+kind);
@@ -608,6 +614,16 @@ try{
         throw new Error('Installed npm Studio does not allow all 3D modes: '+modes.join(','));
       const mode={'3d':'ordering','3d-matching':'matching','3d-classification':'classification'}[kind];
       if(kindOf.value!==mode)throw new Error('Incorrect initial npm 3D mode for '+kind);
+    }
+    if(kind==='composite'){
+      const groupButton=created;
+      const beforeChild=treeButtons().length;
+      q('[data-add-menu]').open=true;
+      click('[data-add-kind="lesson"]');
+      await wait(()=>treeButtons().length>beforeChild&&selectedTreeNode(),'npm add lesson inside composite');
+      groupButton.click();
+      await wait(()=>root.querySelector('.composite-list'),'npm composite child list');
+      if(!root.querySelector('.composite-row'))throw new Error('Studio composite did not retain its child activity');
     }
     added.push({kind,title});
   }

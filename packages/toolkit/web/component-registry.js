@@ -47,6 +47,16 @@ function normalizeVersionUriMap(value) {
   return Object.freeze(out);
 }
 
+function normalizeAuthoring(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const label = nonEmpty(value.label, 'authoring.label');
+  const description = String(value.description ?? '').trim();
+  const editor = nonEmpty(value.editor, 'authoring.editor');
+  const initialData = cloneJson(value.initialData ?? {});
+  if (!initialData || typeof initialData !== 'object' || Array.isArray(initialData)) throw new TypeError('authoring.initialData must be an object.');
+  return Object.freeze({label, description, editor, initialData});
+}
+
 function validateCalloutV2(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
   if (typeof data.body !== 'string' || !data.body.trim()) return false;
@@ -101,6 +111,7 @@ export class ComponentRegistry {
       authoringDataVersion: descriptor.authoringDataVersion ? String(descriptor.authoringDataVersion).trim() : null,
       dataSchemas: normalizeVersionUriMap(descriptor.dataSchemas),
       editorSchemas: normalizeVersionUriMap(descriptor.editorSchemas),
+      authoring: normalizeAuthoring(descriptor.authoring),
       migrations,
       validateData: typeof descriptor.validateData === 'function' ? descriptor.validateData : null,
     });
@@ -218,6 +229,12 @@ export function createDefaultComponentRegistry() {
     editorSchemas: {
       '2': 'https://p2lrn.org/component/callout/editor/2',
     },
+    authoring: {
+      label: 'Aviso / destacado',
+      description: 'Bloque visual para información, notas, avisos o mensajes de éxito.',
+      editor: 'callout',
+      initialData: {tone: 'info', body: 'Escribe el contenido del aviso.'},
+    },
     migrations: [{
       from: '1',
       to: '2',
@@ -244,6 +261,12 @@ export function createDefaultComponentRegistry() {
     },
     editorSchemas: {
       '1': 'https://p2lrn.org/component/timeline/editor/1',
+    },
+    authoring: {
+      label: 'Línea temporal',
+      description: 'Secuencia ordenada de acontecimientos con fecha, título y descripción.',
+      editor: 'timeline',
+      initialData: {items: [{id: 'item-1', date: '', title: 'Primer acontecimiento', body: ''}]},
     },
     validateData: validateTimelineV1,
   });

@@ -12,8 +12,9 @@ const outputRoot = join(root,'.netlify-cdn');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
 await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));
 await cp(join(root,'packages','toolkit','web','studio'),join(outputRoot,'studio','runtime'),{recursive:true,force:true});
-await copyFile(join(root,'packages','toolkit','web','native-composite-core.js'),join(outputRoot,'studio','native-composite-core.js'));
-await copyFile(join(root,'packages','toolkit','web','identifiers.js'),join(outputRoot,'studio','identifiers.js'));
+for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js']){
+  await copyFile(join(root,'packages','toolkit','web',file),join(outputRoot,'studio',file));
+}
 
 async function walk(dir) {
   const out = [];

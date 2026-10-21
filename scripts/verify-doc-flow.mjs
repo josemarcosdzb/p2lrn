@@ -1,4 +1,4 @@
-﻿import {readFile} from 'node:fs/promises';
+import {readFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 
 const root=resolve(process.cwd());
@@ -51,8 +51,8 @@ for(const route of ['/docs/progresion/','/docs/metricas/']){
   const seguimiento=flatSidebar.slice(flatSidebar.indexOf("['SEGUIMIENTO', ["),flatSidebar.indexOf("['REFERENCIA', ["));
   if(!seguimiento.includes("['"+route+"'"))failures.push('tracking route missing from SEGUIMIENTO: '+route);
 }
-for(const token of ['docs-sidebar-toggle','doc-toc','doc-child-subnav','DOC_SIDEBAR_CHILDREN','doc-breadcrumbs','Migas de pan','requestAnimationFrame(revealCurrent)','syncToggleHeight','mobileIndexCurrent.textContent=pageTitle','aria-current\',\'location','Índice de documentación'])if(!js.includes(token))failures.push('p2lrn.js missing documentation UX hook '+token);
-for(const token of ['.doc-sidebar.is-open','.docs-sidebar-toggle{display:flex','.docs-sidebar-toggle{position:sticky;top:64px','.doc-sidebar.is-open{position:sticky!important;top:calc(64px + var(--docs-index-toggle-height,52px))!important','.doc-breadcrumbs{','.doc-toc ol','.doc-child-subnav{','.doc-child-subnav a[aria-current="page"]','max-height:calc(100vh - 124px)'])if(!css.includes(token))failures.push('p2lrn.css missing documentation UX rule '+token);
+for(const token of ['docs-sidebar-toggle','doc-page-toc','doc-page-toc-toggle','doc-page-toc-nav','doc-child-subnav','DOC_SIDEBAR_CHILDREN','doc-breadcrumbs','Migas de pan','requestAnimationFrame(revealCurrent)','syncToggleHeight','mobileIndexCurrent.textContent=pageTitle','aria-current\',\'location','Índice de documentación'])if(!js.includes(token))failures.push('p2lrn.js missing documentation UX hook '+token);
+for(const token of ['.doc-sidebar.is-open','.docs-sidebar-toggle{display:flex','.docs-sidebar-toggle{position:sticky;top:64px','.doc-sidebar.is-open{position:sticky!important;top:calc(64px + var(--docs-index-toggle-height,52px))!important','.doc-breadcrumbs{','.doc-page-toc{grid-column:3','.doc-page-toc ol','.doc-toc{display:none!important','.doc-child-subnav{','.doc-child-subnav a[aria-current="page"]','max-height:calc(100vh - 124px)'])if(!css.includes(token))failures.push('p2lrn.css missing documentation UX rule '+token);
 
 const easy=article(await read('deploy/netlify/site/docs/empezar-facil/index.html'));
 const npm=article(await read('deploy/netlify/site/docs/npm/index.html'));

@@ -542,15 +542,100 @@
       breadcrumb.append(list);
       docArticle.querySelector('.doc-hero')?.before(breadcrumb);
     }
-    if (headings.length >= 5 && !docArticle.querySelector('.doc-toc')) {
-      const toc=document.createElement('nav');
-      toc.className='doc-toc';
-      toc.setAttribute('aria-label','En esta página');
-      const title=document.createElement('strong'); title.textContent='En esta página'; toc.append(title);
+    const docMain=docArticle.closest('.doc-main');
+    const legacyToc=docArticle.querySelector('.doc-toc');
+    legacyToc?.remove();
+    if (headings.length >= 2 && docMain && !docMain.querySelector('.doc-page-toc')) {
+      const aside=document.createElement('aside');
+      aside.className='doc-page-toc';
+      aside.setAttribute('aria-label','En esta página');
+
+      const toggle=document.createElement('button');
+      toggle.type='button';
+      toggle.className='doc-page-toc-toggle';
+      toggle.setAttribute('aria-expanded','false');
+      toggle.innerHTML='<span>En esta página</span><strong></strong>';
+      toggle.querySelector('strong').textContent=headings[0]?.textContent || '';
+
+      const nav=document.createElement('nav');
+      nav.className='doc-page-toc-nav';
+      nav.setAttribute('aria-label','En esta página');
+      const title=document.createElement('strong');
+      title.textContent='En esta página';
       const list=document.createElement('ol');
-      headings.forEach((heading)=>{const li=document.createElement('li');const a=document.createElement('a');a.href='#'+heading.id;a.textContent=heading.textContent;li.append(a);list.append(li);});
-      toc.append(list);
-      docArticle.querySelector('.doc-hero')?.after(toc);
+      const links=[];
+
+      headings.forEach((heading,index)=>{
+        const li=document.createElement('li');
+        const a=document.createElement('a');
+        a.href='#'+heading.id;
+        a.textContent=heading.textContent;
+        a.dataset.targetId=heading.id;
+        if (index===0) a.setAttribute('aria-current','location');
+        li.append(a);
+        list.append(li);
+        links.push(a);
+      });
+
+      nav.append(title,list);
+      aside.append(toggle,nav);
+      docArticle.after(aside);
+
+      const setActive=(heading)=>{
+        if (!heading) return;
+        links.forEach((link)=>{
+          const active=link.dataset.targetId===heading.id;
+          if (active) link.setAttribute('aria-current','location');
+          else link.removeAttribute('aria-current');
+        });
+        toggle.querySelector('strong').textContent=heading.textContent;
+      };
+
+      let frame=0;
+      const syncActive=()=>{
+        frame=0;
+        const line=Math.max(104,window.innerHeight*.2);
+        let active=headings[0];
+        for (const heading of headings) {
+          if (heading.getBoundingClientRect().top<=line) active=heading;
+          else break;
+        }
+        setActive(active);
+      };
+      const requestSync=()=>{
+        if (frame) return;
+        frame=requestAnimationFrame(syncActive);
+      };
+
+      window.addEventListener('scroll',requestSync,{passive:true});
+      window.addEventListener('resize',requestSync,{passive:true});
+      links.forEach((link)=>link.addEventListener('click',()=>{
+        const target=document.getElementById(link.dataset.targetId);
+        if (target) setActive(target);
+        if (window.matchMedia('(max-width: 1180px)').matches) {
+          aside.classList.remove('is-open');
+          toggle.setAttribute('aria-expanded','false');
+        }
+      }));
+
+      const setTocOpen=(open)=>{
+        aside.classList.toggle('is-open',open);
+        toggle.setAttribute('aria-expanded',String(open));
+      };
+      toggle.addEventListener('click',()=>setTocOpen(!aside.classList.contains('is-open')));
+      document.addEventListener('keydown',(event)=>{
+        if (event.key==='Escape' && aside.classList.contains('is-open')) {
+          setTocOpen(false);
+          toggle.focus();
+        }
+      });
+      const desktop=window.matchMedia('(min-width: 1181px)');
+      const syncMode=()=>{
+        if (desktop.matches) setTocOpen(false);
+      };
+      desktop.addEventListener?.('change',syncMode);
+      syncMode();
+      syncActive();
     }
   }
 

@@ -388,6 +388,12 @@ async function studioComponentScenario(){
       const before=q('[data-tree]').querySelectorAll('button').length;
       q('[data-add-menu]').open=true;
       click('[data-add-kind="'+kind+'"]');
+      if(kind==='component'){
+        const picker=await wait(()=>q('.studio-choice-dialog'),'component picker');
+        const option=picker.querySelector('.studio-choice-card');
+        if(!option)throw new Error('Component picker has no registered components');
+        option.click();
+      }
       await wait(()=>q('[data-tree]').querySelectorAll('button').length>before,'add '+kind,10000);
       if(['3d','3d-matching','3d-classification'].includes(kind)){
         const typePicker=await wait(()=>{
@@ -403,19 +409,15 @@ async function studioComponentScenario(){
     }
     // The last added item is a composite. Previously Studio inserted
     // additional activities next to it instead of under it.
-    const groupSelect=await wait(()=>
-      [...root.querySelectorAll('select')].find((el)=>
-        el.closest('label')?.textContent?.includes('Mover actividad existente')
-      ),'composite move controls'
-    );
+    const groupSelect=await wait(()=>root.querySelector('.composite-existing select'),'composite move controls');
     const wordSearch=[...groupSelect.options].find((item)=>item.textContent==='Sopa de letras');
     if(!wordSearch)throw new Error('Existing sibling game is missing from composite move candidates');
     groupSelect.value=wordSearch.value;
     groupSelect.dispatchEvent(new Event('change',{bubbles:true}));
-    const moveButton=[...root.querySelectorAll('button')].find((item)=>item.textContent==='Mover al compuesto');
+    const moveButton=[...root.querySelectorAll('button')].find((item)=>item.textContent==='Añadir actividad existente');
     if(!moveButton||moveButton.disabled)throw new Error('Composite move action is not enabled');
     moveButton.click();
-    await wait(()=>q('.studio-readonly')?.textContent?.includes('Sopa de letras'),'composite activity move');
+    await wait(()=>[...root.querySelectorAll('.composite-row strong')].some((item)=>item.textContent==='Sopa de letras'),'composite activity move');
 
     const beforeMedia=q('[data-tree]').querySelectorAll('button').length;
     q('[data-add-menu]').open=true;click('[data-add-kind="file"]');
@@ -553,14 +555,14 @@ async function studioSiteScenario(){
     click('[data-add-content]');
     await wait(()=>q('[data-add-dialog]').open,'open composite palette');
     click('[data-add-kind="composite"]');
-    await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Compuesto'),'new composite');
+    await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Grupo de actividades'),'new composite');
     click('[data-add-content]');
     await wait(()=>q('[data-add-dialog]').open,'open composite child palette');
     click('[data-add-kind="word-search"]');
     await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Sopa de letras'),'child game');
     const nested=await wait(()=>{
       const group=[...q('[data-tree]').querySelectorAll('button')].find(x=>
-        x.querySelector('.title')?.textContent==='Compuesto'
+        x.querySelector('.title')?.textContent==='Grupo de actividades'
       );
       const container=group?.closest('.studio-tree-node');
       return [...(container?.querySelectorAll(':scope > .studio-tree-children > .studio-tree-node > button')??[])].find(x=>
@@ -621,8 +623,9 @@ try{
   // Match build-site.mjs: the static Studio page imports the toolkit's canonical browser modules.
   // The CDN-only fixture does not materialize these until we copy them here.
   await cp(join(root,'packages','toolkit','web','studio'),join(siteRoot,'studio','runtime'),{recursive:true,force:true});
-  await cp(join(root,'packages','toolkit','web','native-composite-core.js'),join(siteRoot,'studio','native-composite-core.js'));
-  await cp(join(root,'packages','toolkit','web','identifiers.js'),join(siteRoot,'studio','identifiers.js'));
+  for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js']){
+    await cp(join(root,'packages','toolkit','web',file),join(siteRoot,'studio',file));
+  }
   await prepareVisualStudioFixture();
   await prepareGameFixtures();
   const builtViewer=await readFile(viewerPath,'utf8');

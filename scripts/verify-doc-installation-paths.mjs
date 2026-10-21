@@ -77,7 +77,11 @@ for(const token of ['npm install','npx ','@p2lrn/'])forbid('easy-start article',
 
 forbid('css',css,'.doc-content .example-actions .button{color:inherit;text-decoration:none}');
 must('css',css,'.doc-content .example-actions .button.primary{color:#fff}');
-must('css',css,'.doc-content{min-width:0;width:100%;max-width:900px}');
+must('css',css,'.doc-main{width:min(calc(100% - 48px),1560px)');
+must('css',css,'.doc-content{grid-column:2;min-width:0;width:100%;max-width:980px}');
+must('css',css,'.doc-page-toc{grid-column:3');
+must('css',css,'@media(max-width:1180px)');
+must('css',css,'@media(max-width:900px)');
 
 async function walk(dir){
   const out=[];

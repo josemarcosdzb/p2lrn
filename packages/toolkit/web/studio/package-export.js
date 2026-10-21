@@ -91,6 +91,7 @@ function writeStoredZip(entries){
 
 export async function exportP2LRNPackage(document){
   if(!document?.package||!document?.manifest||!document?.graph)throw new TypeError('Studio document is required.');
+  if(typeof document.validateForExport==='function')await document.validateForExport();
   const manifest=structuredClone(document.manifest);
   const graph=structuredClone(document.graph);
   const rootId=document.rootId;

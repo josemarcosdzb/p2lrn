@@ -1,9 +1,16 @@
+import {createDefaultComponentRegistry} from '../component-registry.js';
+import {validateNativeComposite} from '../native-composite-core.js';
+
 const decoder=new TextDecoder('utf-8',{fatal:true});
 const encoder=new TextEncoder();
 const WEB_CONTENT_PROFILE='https://p2lrn.org/profile/web-content';
+const COMPONENT_PROFILE='https://p2lrn.org/profile/native-component';
+const COMPONENT_MEDIA_TYPE='application/vnd.p2lrn.component+json';
+const COMPONENT_ACTIVITY_TYPE='https://p2lrn.org/type/component';
 const COMPOSITE_PROFILE='https://p2lrn.org/profile/native-composite';
 const COMPOSITE_MEDIA_TYPE='application/vnd.p2lrn.composite+json';
 const COMPOSITE_ACTIVITY_TYPE='https://p2lrn.org/type/composite';
+const DEFAULT_COMPONENT_REGISTRY=createDefaultComponentRegistry();
 
 function clone(value){return structuredClone(value);}
 function localized(entity,language='es'){
@@ -36,6 +43,18 @@ export class P2LRNStudioDocument{
   entity(id){return this.entities.get(String(id))??null;}
   title(id,language='es'){return localized(this.entity(id),language);}
   children(id){return (this.entity(id)?.children??[]).map((child)=>this.entity(child)).filter(Boolean);}
+
+  componentCatalog(){
+    return DEFAULT_COMPONENT_REGISTRY.list().filter((descriptor)=>descriptor.authoring).map((descriptor)=>({
+      id:descriptor.id,
+      componentVersion:descriptor.componentVersion,
+      runtimeContractVersion:descriptor.runtimeContractVersion,
+      dataVersion:descriptor.authoringDataVersion??descriptor.targetDataVersion,
+      dataSchema:descriptor.dataSchemas?.[descriptor.authoringDataVersion??descriptor.targetDataVersion]??null,
+      editorSchema:descriptor.editorSchemas?.[descriptor.authoringDataVersion??descriptor.targetDataVersion]??null,
+      authoring:clone(descriptor.authoring),
+    }));
+  }
 
   setTitle(id,value,language='es'){
     const entity=this.entity(id);
@@ -262,14 +281,43 @@ export class P2LRNStudioDocument{
     this.payloadOverrides.set(target.path,encoder.encode(JSON.stringify(payload,null,2)+'\n'));this.changeCount+=1;return payload;
   }
 
-  addComposite(parentId=this.rootId,{title='Compuesto',language='es'}={}){
+  setStructuredTitle(activityId,value,payload,language='es'){
+    const target=this.structuredJsonForActivity(activityId);if(!target)throw new Error('La actividad no es contenido estructurado editable.');
+    const text=String(value??'').trim();if(!text)throw new Error('El título no puede estar vacío.');
+    target.activity.title??={};target.activity.title[language]=text;
+    target.resource.title??={};target.resource.title[language]=text;
+    const next=clone(payload??{});next.title=text;
+    this.payloadOverrides.set(target.path,encoder.encode(JSON.stringify(next,null,2)+'\n'));this.changeCount+=1;return next;
+  }
+
+  addNativeComponent(parentId=this.rootId,{componentId=null,componentVersion=null,title=null,language='es'}={}){
+    const catalog=DEFAULT_COMPONENT_REGISTRY.list().filter((descriptor)=>descriptor.authoring);
+    const descriptor=(componentId?catalog.find((entry)=>entry.id===String(componentId)&&(componentVersion==null||entry.componentVersion===String(componentVersion))):catalog[0])??null;
+    if(!descriptor)throw new Error('El componente seleccionado no está registrado para autoría.');
+    const dataVersion=descriptor.authoringDataVersion??descriptor.targetDataVersion;
+    const componentTitle=String(title||descriptor.authoring.label||'Componente');
+    const schemas={};
+    if(descriptor.dataSchemas?.[dataVersion])schemas.data=descriptor.dataSchemas[dataVersion];
+    if(descriptor.editorSchemas?.[dataVersion])schemas.editor=descriptor.editorSchemas[dataVersion];
+    const payload={schema:'https://p2lrn.org/schema/native-component/0.1',version:'0.1',component:{id:descriptor.id,componentVersion:descriptor.componentVersion,dataVersion,runtimeContractVersion:descriptor.runtimeContractVersion},data:clone(descriptor.authoring.initialData),title:componentTitle,language};
+    if(Object.keys(schemas).length)payload.schemas=schemas;
+    return this.addEmbeddedResource(parentId,{title:componentTitle,language,filename:'component.json',mediaType:COMPONENT_MEDIA_TYPE,bytes:encoder.encode(JSON.stringify(payload,null,2)+'\n'),profile:COMPONENT_PROFILE,activityType:COMPONENT_ACTIVITY_TYPE});
+  }
+
+  addNativeComposite(parentId=this.rootId,{title='Grupo de actividades',language='es',mode='free',completion='all'}={}){
+    return this.addComposite(parentId,{title,language,mode,completion});
+  }
+
+  addComposite(parentId=this.rootId,{title='Compuesto',language='es',mode='sequence',completion='all'}={}){
     const name=String(title||'Compuesto');
+    const normalizedMode=mode==='free'?'free':'sequence';
+    const normalizedCompletion=completion==='any'?'any':'all';
     const payload={
       schema:'https://p2lrn.org/schema/native-composite/0.1',
       version:'0.1',
-      mode:'sequence',
-      completion:'all',
-      navigation:'linear',
+      mode:normalizedMode,
+      completion:normalizedCompletion,
+      navigation:normalizedMode==='free'?'open':'linear',
       title:name,
     };
     // An empty group is an editable draft. #appendActivity makes it a native
@@ -281,6 +329,93 @@ export class P2LRNStudioDocument{
       bytes:encoder.encode(JSON.stringify(payload,null,2)+'\n'),
       profile:COMPOSITE_PROFILE,
     });
+  }
+
+  moveActivity(activityId,newParentId,index=null){
+    const activity=this.entity(activityId);if(!activity||activity.type!=='activity')throw new Error('Sólo se pueden mover actividades.');
+    const parent=this.#activityParent(newParentId);if(parent.id===activity.id)throw new Error('Una actividad no puede contenerse a sí misma.');
+    if(this.#containsDescendant(activity.id,parent.id))throw new Error('El movimiento crearía un ciclo en la estructura.');
+    const previousId=this.parentId(activity.id),previous=this.entity(previousId);
+    if(!previous||!Array.isArray(previous.children))throw new Error('No se ha encontrado el contenedor original de la actividad.');
+    if(previous.id===parent.id){
+      if(index==null)return activity;
+      return this.reorderChild(parent.id,activity.id,index);
+    }
+    previous.children=previous.children.filter((id)=>id!==activity.id);
+    parent.children??=[];
+    const target=index==null?parent.children.length:Math.max(0,Math.min(Number(index)||0,parent.children.length));
+    parent.children.splice(target,0,activity.id);
+    if(this.isCompositeActivity(parent.id))parent.activityType=COMPOSITE_ACTIVITY_TYPE;
+    if(this.isCompositeActivity(previous.id)&&(previous.children?.length??0)===0)previous.activityType='https://p2lrn.org/type/resource';
+    this.changeCount+=1;return activity;
+  }
+
+  async setCompositePolicy(activityId,{mode='free',completion='all'}={}){
+    if(!this.isCompositeActivity(activityId))throw new Error('La actividad no es un grupo de actividades.');
+    const target=await this.readStructuredJson(activityId);
+    const next=clone(target.payload);
+    next.mode=mode==='sequence'?'sequence':'free';
+    next.completion=completion==='any'?'any':'all';
+    next.navigation=next.mode==='sequence'?'linear':'open';
+    validateNativeComposite(next);
+    this.setStructuredJson(activityId,next);
+    return next;
+  }
+
+  reorderChild(parentId,childId,toIndex){
+    const parent=this.entity(parentId);if(!parent||!Array.isArray(parent.children))throw new Error('El contenedor no tiene elementos reordenables.');
+    const from=parent.children.indexOf(String(childId));if(from<0)throw new Error('La actividad no pertenece a este contenedor.');
+    const target=Math.max(0,Math.min(Number(toIndex)||0,parent.children.length-1));if(from===target)return this.entity(childId);
+    const [id]=parent.children.splice(from,1);parent.children.splice(target,0,id);this.changeCount+=1;return this.entity(id);
+  }
+
+  removeActivityFromComposite(compositeId,activityId){
+    const composite=this.entity(compositeId);if(!composite||!this.isCompositeActivity(composite.id))throw new Error('El destino no es un grupo de actividades.');
+    if(!(composite.children??[]).includes(String(activityId)))throw new Error('La actividad no pertenece a este grupo.');
+    const outerId=this.parentId(composite.id),outer=this.entity(outerId);if(!outer)throw new Error('El grupo no tiene un contenedor exterior válido.');
+    composite.children=composite.children.filter((id)=>id!==String(activityId));
+    outer.children??=[];outer.children=outer.children.filter((id)=>id!==String(activityId));
+    const at=outer.children.indexOf(composite.id);outer.children.splice(at<0?outer.children.length:at+1,0,String(activityId));
+    if(composite.children.length===0)composite.activityType='https://p2lrn.org/type/resource';
+    this.changeCount+=1;return this.entity(activityId);
+  }
+
+  removeActivity(activityId){
+    const root=this.entity(activityId);if(!root||root.type!=='activity')throw new Error('Sólo se pueden eliminar actividades.');
+    const activities=[],stack=[root.id],seen=new Set();
+    while(stack.length){const id=stack.pop();if(seen.has(id))continue;seen.add(id);const entity=this.entity(id);if(!entity||entity.type!=='activity')continue;activities.push(entity);for(const child of entity.children??[])stack.push(child);}
+    const activityIds=new Set(activities.map((entry)=>entry.id));
+    for(const entity of this.entities.values())if(Array.isArray(entity.children))entity.children=entity.children.filter((id)=>!activityIds.has(id));
+    const resourceIds=new Set(activities.map((entry)=>entry.resource).filter(Boolean));
+    for(const activity of activities){this.entities.delete(activity.id);this.graph.entities=this.graph.entities.filter((entity)=>entity.id!==activity.id);}
+    for(const resourceId of resourceIds){
+      const stillUsed=this.graph.entities.some((entity)=>entity.type==='activity'&&entity.resource===resourceId);if(stillUsed)continue;
+      const resource=this.entity(resourceId);
+      for(const rep of resource?.representations??[]){const filePath=rep.location?.type==='embedded'?rep.location.path:null;if(filePath){this.manifest.files=this.manifest.files.filter((file)=>file.path!==filePath);this.payloadOverrides.delete(filePath);}}
+      this.entities.delete(resourceId);this.graph.entities=this.graph.entities.filter((entity)=>entity.id!==resourceId);
+    }
+    this.changeCount+=1;return true;
+  }
+
+  async validateForExport(){
+    for(const entity of this.entities.values()){
+      if(entity.type!=='activity')continue;
+      const target=this.structuredJsonForActivity(entity.id);if(!target)continue;
+      const {payload}=await this.readStructuredJson(entity.id);
+      if(target.mediaType===COMPONENT_MEDIA_TYPE){await DEFAULT_COMPONENT_REGISTRY.prepare(payload,{activityId:entity.id});continue;}
+      if(target.mediaType===COMPOSITE_MEDIA_TYPE){
+        validateNativeComposite(payload);
+        const children=entity.children??[];
+        if(!children.length)throw new Error('El grupo de actividades "'+this.title(entity.id)+'" está vacío. Añade al menos una actividad antes de exportar.');
+        const unique=new Set();
+        for(const childId of children){
+          if(unique.has(childId))throw new Error('El grupo de actividades contiene una actividad duplicada.');
+          unique.add(childId);
+          const child=this.entity(childId);if(!child||child.type!=='activity')throw new Error('El grupo de actividades contiene un elemento que no es una actividad.');
+        }
+      }
+    }
+    return true;
   }
 
   addQuestionnaire(parentId=this.rootId,{title='Cuestionario',language='es',renderer='https://p2lrn.org/renderer/questionnaire/standard',payload=null}={}){
