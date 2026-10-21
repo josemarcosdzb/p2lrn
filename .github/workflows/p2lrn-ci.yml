@@ -203,7 +203,7 @@ jobs:
         run: node scripts/verify-local-viewer.mjs
 
   toolkit-and-cdn:
-    if: ${{ !contains(github.event.head_commit.message, '[home audit]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
+    if: ${{ !contains(github.event.head_commit.message, '[home audit]') && !contains(github.event.head_commit.message, '[home restore]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
@@ -471,7 +471,7 @@ jobs:
         run: node scripts/verify-public-cdn.mjs
 
   home-inspection:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[home audit]') }}
+    if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[home audit]') || contains(github.event.head_commit.message, '[home restore]')) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 10
     steps:
@@ -480,14 +480,34 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }}
       - name: Inspect local 4183 homepage and previous 3D carousel (read-only)
+        if: ${{ contains(github.event.head_commit.message, '[home audit]') }}
         shell: powershell
         run: ./scripts/inspect-local-home-4183.ps1
       - name: Locate original 3D carousel in local site backups (read-only)
+        if: ${{ contains(github.event.head_commit.message, '[home audit]') }}
         shell: powershell
         run: ./scripts/inspect-local-home-backups.ps1
       - name: Compare original 3D carousel with current source (read-only)
+        if: ${{ contains(github.event.head_commit.message, '[home audit]') }}
         shell: powershell
         run: ./scripts/analyze-home-carousel-restore.ps1
       - name: Export verified public homepage backup files (read-only)
+        if: ${{ contains(github.event.head_commit.message, '[home audit]') }}
         shell: powershell
         run: ./scripts/export-original-home-carousel.ps1
+      - name: Prepare local browser validation
+        if: ${{ contains(github.event.head_commit.message, '[home restore]') }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Ensure Chromium is available for local verification
+        if: ${{ contains(github.event.head_commit.message, '[home restore]') }}
+        shell: powershell
+        run: ./scripts/ensure-browser-windows.ps1
+      - name: Restore backed-up original carousel to localhost 4183
+        if: ${{ contains(github.event.head_commit.message, '[home restore]') }}
+        shell: powershell
+        run: ./scripts/restore-home-carousel-local-4183.ps1
+      - name: Test local website, carousel clicks and rosco with fresh Chrome
+        if: ${{ contains(github.event.head_commit.message, '[home restore]') }}
+        run: node scripts/verify-live-local-4183.mjs
