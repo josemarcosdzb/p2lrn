@@ -81,6 +81,20 @@ Do not apply P2LRN-NCSL 1.0 to third-party code. `@p2lrn/h5p-libraries` remains 
 
 External contributions must follow `CONTRIBUTING.md` so that accepting a contribution does not unintentionally prevent separate commercial licensing.
 
+## Native composite authoring regression gate
+
+Before publishing a new version that changes Studio's composite groups, run the
+`studio-composite-authoring.test.mjs` Toolkit regression suite and the real
+`verify-local-viewer.mjs` browser suite. Both Studio surfaces must create
+activities under the selected composite, move existing activities without
+duplicating them, export a valid hierarchy, and reproduce the exported
+group in Player. The composite payload accepts `sequence` with `linear`
+navigation or `free` with `open` navigation.
+
+A previously published npm version is immutable. Code fixes made after
+`0.5.0-alpha.10` require a new release version and the complete publication
+gate; do not claim the existing registry tarball contains unshipped fixes.
+
 ## Publishing order
 
 After every gate is green, the license gate passes and the release owner approves publication, publish the **four aligned packages** in dependency order: shared H5P libraries, Toolkit, Player, then Studio. For the current prerelease version use the npm `next` dist-tag, **not** the stable `latest` tag:
