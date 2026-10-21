@@ -414,3 +414,5 @@ window.addEventListener('beforeunload',(event)=>{
     event.returnValue='';
   }
 });
+// Signals that all Studio controls and listeners have finished initializing.
+document.documentElement.dataset.p2lrnStudioReady='true';
