@@ -46,7 +46,7 @@ function sha(data, algorithm, encoding) {
   return createHash(algorithm).update(data).digest(encoding);
 }
 
-async function copyCanonicalRuntime(dist) {
+export async function copyCanonicalRuntime(dist) {
   const canonicalToolkitRoot = await resolveToolkitSourceRoot();
   const web = join(canonicalToolkitRoot, 'web');
   const sdk = join(canonicalToolkitRoot, 'web-sdk-src');
@@ -184,7 +184,7 @@ async function installGame3dRuntime(dist) {
   await rm(work,{recursive:true,force:true});
 }
 
-async function validateLocalReferences(dist) {
+export async function validateLocalReferences(dist) {
   const missing = [];
   for (const source of (await walk(dist)).filter((path)=>path.endsWith('.js')).sort()) {
     const text = await readFile(source, 'utf8');
@@ -211,7 +211,7 @@ async function validateLocalReferences(dist) {
   if (missing.length) throw new Error('Player distribution has unresolved local references:\n' + missing.join('\n'));
 }
 
-async function writeRelease(dist, playerVersion, toolkitVersion) {
+export async function writeRelease(dist, playerVersion, toolkitVersion) {
   const files = [];
   for (const path of (await walk(dist)).filter((path)=>!path.endsWith('release.json')).sort()) {
     const data = await readFile(path);
