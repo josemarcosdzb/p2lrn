@@ -25,7 +25,7 @@ const RENDERER_TYPES={
   'https://p2lrn.org/renderer/questionnaire/word-search':['text'],
   'https://p2lrn.org/renderer/questionnaire/crossword':['text'],
   'https://p2lrn.org/renderer/questionnaire/rosco':['text'],
-  'https://p2lrn.org/renderer/questionnaire/3d-order-match':['ordering'],
+  'https://p2lrn.org/renderer/questionnaire/3d-order-match':['ordering','matching','classification'],
 };
 const uid=(prefix='id')=>prefix+'-'+crypto.randomUUID().slice(0,8);
 const node=(tag,className,text)=>{const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;};
@@ -54,7 +54,15 @@ function ensureSolution(question){
   else if(question.type==='matching'){question.left??=[];question.right??=[];question.solution={pairs:question.left.map((left,index)=>({left:left.id,right:question.right[index]?.id??question.right[0]?.id})).filter((p)=>p.right)};}
   else if(question.type==='classification'){question.items??=[];question.categories??=[];const fallback=question.categories[0]?.id;question.solution={assignments:question.items.map((item)=>({item:item.id,category:question.solution?.assignments?.find((x)=>x.item===item.id)?.category??fallback})).filter((x)=>x.category)};}
 }
-function switchType(question,type){const next=defaultQuestion(type);const id=question.id,prompt=question.prompt,points=question.points;Object.keys(question).forEach((k)=>delete question[k]);Object.assign(question,next,{id,prompt,points});ensureSolution(question);}
+function switchType(question,type){
+  const next=defaultQuestion(type);
+  const defaults={ordering:'Ordena los elementos',matching:'Relaciona cada elemento',classification:'Clasifica los elementos'};
+  const prompt=question.prompt===defaults[question.type]&&defaults[type] ? defaults[type] : question.prompt;
+  const {id,points}=question;
+  Object.keys(question).forEach((k)=>delete question[k]);
+  Object.assign(question,next,{id,prompt,points});
+  ensureSolution(question);
+}
 function rowButton(text,handler,danger=false){const b=node('button',danger?'q-mini q-danger':'q-mini',text);b.type='button';b.addEventListener('click',handler);return b;}
 function renderChoiceEditor(box,question,commit,rerender){
   const multiple=question.type==='multiple-choice';ensureSolution(question);
@@ -73,7 +81,7 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
     container.replaceChildren();
     const root=node('div','questionnaire-visual-editor');
     const hero=node('div','q-editor-head');
-    const copy=node('div');copy.append(node('span','q-kicker',GAME_LABELS[renderer]??'Cuestionario / juego'),node('h2',null,payload.title||'Cuestionario'),node('p',null,'Edita preguntas y respuestas con controles normales. No necesitas tocar JSON.'));
+    const copy=node('div');copy.append(node('span','q-kicker',GAME_LABELS[renderer]??'Cuestionario / juego'),node('h2',null,payload.title||'Cuestionario'),node('p',null,renderer==='https://p2lrn.org/renderer/questionnaire/3d-order-match'?'Cada pregunta puede ser Ordenar, Relacionar o Clasificar en 3D. Cambia su modalidad desde «Tipo».':'Edita preguntas y respuestas con controles normales. No necesitas tocar JSON.'));
     hero.append(copy);root.append(hero);
     const settings=node('div','q-settings');
     const title=textInput(payload.title,'Título');title.addEventListener('input',()=>{payload.title=title.value;save(model,activityId,payload,onChange);hero.querySelector('h2').textContent=title.value||'Cuestionario';});
