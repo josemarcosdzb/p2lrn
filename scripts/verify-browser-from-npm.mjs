@@ -288,8 +288,9 @@ async function prepareCourses() {
 
 async function writeHarness(runtimeOrigin) {
   const html=`<!doctype html>
-<html><head><meta charset="utf-8"><title>P2LRN npm browser gate</title></head>
-<body>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>P2LRN npm browser gate</title>
+<style>body{margin:0;padding:12px;background:#f3f5f8;font:14px system-ui,sans-serif}#result{display:none!important}p2lrn-player{display:block;width:100%;max-width:1320px;margin:0 auto;min-height:480px}</style>
+</head><body>
 <pre id="result" data-status="BOOT">BOOT</pre>
 <script>
 const result=document.getElementById('result');
@@ -436,8 +437,9 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   await writeFile(join(browserRoot,'index.html'),html);
 
   const questionnaireHtml=`<!doctype html>
-<html><head><meta charset="utf-8"><title>P2LRN questionnaire npm gate</title></head>
-<body>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>P2LRN questionnaire npm gate</title>
+<style>body{margin:0;padding:12px;background:#f3f5f8;font:14px system-ui,sans-serif}#result{display:none!important}p2lrn-player{display:block;width:100%;max-width:1320px;margin:0 auto;min-height:480px}</style>
+</head><body>
 <pre id="result" data-status="BOOT">BOOT</pre>
 <script>
 const result=document.getElementById('result');
@@ -644,6 +646,11 @@ try{
   for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification','component','composite']){
     const priorCount=treeButtons().length;
     q('[data-add-menu]').open=true;
+    if(!q('[data-add-kind="'+kind+'"]')){
+      visualDefects.push({kind,code:'PUBLISHED_STUDIO_CONTENT_TYPE_MISSING'});
+      q('[data-add-menu]').open=false;
+      continue;
+    }
     click('[data-add-kind="'+kind+'"]');
     if(kind==='component'){
       const picker=await wait(()=>root.querySelector('.studio-choice-dialog'),'npm component picker');
@@ -1031,6 +1038,8 @@ async function runChromePageGateOnce(chrome, url, profile, {timeoutMs=35000, exe
       if(snapshot.status!=='BOOT'&&snapshot.status!=='MISSING'){
         let screenshot=null;
         if(screenshotName){
+          // Native/iframe media may finish its paint after the activityready event.
+          await sleep(400);
           const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});
           if(!shot.data)throw new Error('No Chrome screenshot captured for '+screenshotName);
           const folder=join(gateRoot,'visual-evidence');await mkdir(folder,{recursive:true});
