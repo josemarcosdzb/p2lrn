@@ -113,6 +113,24 @@ jobs:
           })
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $target 'manifest.json') -Encoding UTF8
           Write-Host ('PUBLIC_NPM_EVIDENCE=' + $target + ' FILES=' + $manifest.Count)
+      - name: Export public npm visual QA fixture for independent browser review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: p2lrn-public-npm-visual-qa
+          if-no-files-found: warn
+          retention-days: 5
+          compression-level: 6
+          path: |
+            .npm-pack-gate/public-npm-report.json
+            .npm-pack-gate/visual-evidence/
+            .npm-pack-gate/browser-runtime/
+            .npm-pack-gate/install/package.json
+            .npm-pack-gate/install/package-lock.json
+            .npm-pack-gate/install/node_modules/@p2lrn/player/dist/
+            .npm-pack-gate/install/node_modules/@p2lrn/studio/dist/
+            .npm-pack-gate/install/node_modules/@p2lrn/h5p-libraries/dist/index.json
+
   automatic-runtime:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
