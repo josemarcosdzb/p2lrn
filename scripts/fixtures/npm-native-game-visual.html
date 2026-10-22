@@ -106,7 +106,7 @@ p2lrn-player{display:block;width:100%;max-width:1250px;min-height:540px;margin:a
             result.textEntryWorks=fields[0].value==='ejemplo';
           }
           clearInterval(poll);
-          finish(fields.length>0&&Boolean(prompt)&&overflow<=2&&result.textEntryWorks?'PASS':'VISUAL_FAIL',result);
+          finish(fields.length>0&&Boolean(prompt)&&result.contextForBlanks&&overflow<=2&&result.textEntryWorks?'PASS':'VISUAL_FAIL',result);
           return;
         }
         if(kind.startsWith('3d')){
