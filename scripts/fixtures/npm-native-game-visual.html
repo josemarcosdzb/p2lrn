@@ -13,7 +13,7 @@ p2lrn-player{display:block;width:100%;max-width:1250px;min-height:540px;margin:a
 </style>
 <script src="/player/current/dist/p2lrn.js"></script>
 </head><body>
-<header><h1>Auditoría visual de actividades P2LRN</h1><p>Player instalado directamente desde npm, sin utilizar el editor de GitHub.</p></header>
+<header><h1>Auditoría visual de actividades P2LRN</h1><p id="qa-channel">Origen del Player indicado por la prueba.</p></header>
 <p2lrn-player id="qa-player"></p2lrn-player>
 <pre id="result" data-status="BOOT">BOOT</pre>
 <script>
@@ -21,6 +21,9 @@ p2lrn-player{display:block;width:100%;max-width:1250px;min-height:540px;margin:a
   const result=document.getElementById('result');
   let finished=false;
   const params=new URLSearchParams(location.search);
+  const channel=params.get('channel')||'public-npm';
+  const channels={'github-main':'GitHub main construido desde fuente','running-local-files':'Instalación local Windows (copia idéntica a HTTP)','public-npm':'npm público 0.5.0-alpha.10'};
+  document.getElementById('qa-channel').textContent='Origen del Player: '+(channels[channel]??channel);
   const kind=params.get('kind');
   const source=params.get('src');
   const node=params.get('node');
