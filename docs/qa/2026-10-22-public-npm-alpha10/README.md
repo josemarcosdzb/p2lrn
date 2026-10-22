@@ -35,3 +35,13 @@ Ejecución de seguimiento: [39744609195](https://github.com/josemarcosfrodo/p2lr
 - Dos modalidades 3D adicionales siguen ausentes o no se generan en npm `0.5.0-alpha.10`
 
 Aviso: la carga visible y el diseño no equivalen todavía a una prueba completa de interacción y puntuación 3D.
+
+## Validación del código fuente actual, separada de npm publicado
+
+La [ejecución Windows 39745258814](https://github.com/josemarcosfrodo/p2lrn/actions/runs/39745258814) terminó en SUCCESS: 124/124 pruebas de Toolkit, 7/7 de Studio setup, controles del runtime y navegador, construcción web, y correspondencia de 115 archivos de Player, 4.723 archivos H5P y 11 archivos de Studio entre las distribuciones npm generadas localmente y CDN.
+
+**No equiparar este resultado con una certificación del npm 0.5.0-alpha.10 ya publicado**, cuyo rosco y crucigrama nativos permanecen antiguos. Las pruebas fuente y las pruebas independientes de publicación responden preguntas diferentes.
+
+## Integración Express
+
+Se ha añadido una comprobación externa con un proyecto Express independiente, generado por la CLI de Studio desde npm. Debe evaluar autenticación del anfitrión, autorizaciones, guardado, Reader, importación y una captura de Studio en Chrome, sin dar por satisfechos casos no ejecutados.
