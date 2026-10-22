@@ -254,6 +254,12 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Verify four-package release version alignment
+        run: node scripts/check-release-alignment.mjs
+
+      - name: Verify guarded version bump dry-run cannot modify source
+        run: node --test scripts/test-set-version.test.mjs
+
       - name: Compile and test toolkit
         working-directory: packages/toolkit
         run: |
