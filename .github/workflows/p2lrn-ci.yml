@@ -494,6 +494,18 @@ jobs:
           if ($index.h5p.sharedLibraryMode -ne "bundled-npm-artifact") { throw "CDN sharedLibraryMode mismatch" }
 
 
+
+      # Stage only after every source, browser, tarball, and CDN check succeeded.
+      # The script refuses a stale main SHA or a partially published version.
+      # No npm publication occurs during CI.
+      - name: Stage immutable SHA-locked npm release candidate on Windows
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node --check scripts/stage-npm-release.mjs
+          node scripts/stage-npm-release.mjs
+
   public-cdn:
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify live CDN]') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
