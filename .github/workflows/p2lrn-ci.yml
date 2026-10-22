@@ -152,6 +152,43 @@ jobs:
             }
           }
 
+
+  visual-qa-cloud:
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify isolated cloud browser and npm tooling
+        shell: bash
+        run: |
+          node --version
+          npm --version
+          node --check scripts/verify-browser-from-npm.mjs
+          command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser
+      - name: Clean public npm install in an independent cloud machine
+        run: node scripts/verify-public-npm-e2e.mjs
+      - name: All Player and Studio browser cases from public npm in cloud Chromium
+        run: node scripts/verify-browser-from-npm.mjs
+      - name: Preserve independent QA summary in cloud job log
+        if: always()
+        shell: bash
+        run: |
+          if test -f .npm-pack-gate/public-npm-report.json; then
+            cat .npm-pack-gate/public-npm-report.json
+          fi
+          if test -d .npm-pack-gate/visual-evidence; then
+            find .npm-pack-gate/visual-evidence -maxdepth 1 -type f -name '*.png' -printf 'CLOUD_SCREENSHOT %f %s bytes\n' | sort
+          fi
+
   automatic-runtime:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
