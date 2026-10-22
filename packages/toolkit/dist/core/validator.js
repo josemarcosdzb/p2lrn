@@ -10,8 +10,11 @@ import { validateComposite } from './native-composite.js';
 import { validateSchema } from './json-schema.js';
 import { validateWebContentMapping, isWebContentProfile } from './web-content.js';
 import { parseXml, descendants, localName, firstDirectChild, textContent, namespaceUri, attrLocal } from './xml-lite.js';
+import { validateProgression } from './progression.js';
 const RANGE_EXTENSION = 'org.p2lrn.rangeIntegrity';
 const RANGE_MEDIA = 'application/vnd.p2lrn.range-integrity+json';
+const MULTIPART_PROFILE = `${NS}profile/multipart`;
+const MULTIPART_MEDIA = 'application/vnd.p2lrn.multipart+json';
 function schemaId(format, suffix) { return `${format === LEGACY_FORMAT ? LEGACY_NS : NS}schema/${suffix}`; }
 function extensionValue(ext, canonical) { for (const [key, value] of Object.entries(ext ?? {}))
     if (canonicalIdentifier(key) === canonical)
@@ -140,6 +143,8 @@ export function validateGraphSemantics(graph, manifest) {
         const canonical = canonicalIdentifier(namespace);
         if (canonical.startsWith(`${NS}profile/`) && !declared.has(canonical))
             throw new ValidationError(`profile extension not declared in manifest at ${context}: ${namespace}`);
+        if (canonical === PROFILE.progression && !['course', 'unit', 'activity'].includes(holderType))
+            throw new ValidationError(`progression extension is only valid on course, unit or activity entities: ${context}`);
         if (canonical === rendererHint) {
             if (holderType !== 'activity')
                 throw new ValidationError(`renderer preference extension is only valid on activities: ${context}`);
@@ -246,6 +251,78 @@ function validatePackageMembers(graph, archive) { const by = new Map(); for (con
         if (!names.has(m))
             throw new ValidationError(`package-member target missing: ${path}#${m}`);
 } }
+function multipartExtension(rep) { return profileExtension(rep, MULTIPART_PROFILE); }
+function safeMultipartHref(value) {
+    if (!value || value.startsWith('/') || value.startsWith('//') || value.includes('\\') || value.includes('?') || value.includes('#'))
+        return false;
+    if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value))
+        return false;
+    return value.split('/').every((part) => !!part && part !== '.' && part !== '..');
+}
+function validateMultipartDescriptors(graph, manifest, archive) {
+    const inventory = new Map(manifest.files.map((file) => [file.path, file]));
+    for (const entity of graph.entities) {
+        if (entity.type !== 'resource')
+            continue;
+        for (const rep of entity.representations ?? []) {
+            const ext = multipartExtension(rep);
+            if (ext == null)
+                continue;
+            const extRecord = record(ext, `multipart extension ${rep.id}`);
+            if (extRecord.version !== '1')
+                throw new ValidationError(`multipart extension ${rep.id} requires version "1"`);
+            const location = record(rep.location ?? {}, `multipart representation ${rep.id}.location`);
+            if (location.type !== 'embedded')
+                throw new ValidationError(`multipart representation must use an embedded descriptor: ${rep.id}`);
+            const path = string(location.path, `multipart descriptor path ${rep.id}`);
+            const descriptorFile = inventory.get(path);
+            if (!descriptorFile)
+                throw new ValidationError(`multipart descriptor is not inventoried: ${path}`);
+            if (canonicalIdentifier(baseMediaType(descriptorFile.mediaType)) !== MULTIPART_MEDIA)
+                throw new ValidationError(`multipart descriptor has wrong media type: ${path}`);
+            const descriptor = record(parseIJson(archive.read(path), `multipart descriptor ${path}`), `multipart descriptor ${path}`);
+            if (descriptor.version !== '1')
+                throw new ValidationError(`unsupported multipart descriptor version at ${path}: ${String(descriptor.version)}`);
+            const mediaType = string(descriptor.mediaType, `multipart mediaType ${path}`);
+            const member = extRecord.member == null ? null : string(extRecord.member, `multipart member ${rep.id}`);
+            if (member != null)
+                safeZipPath(member);
+            if (member == null && baseMediaType(mediaType) !== baseMediaType(String(rep.mediaType ?? '')))
+                throw new ValidationError(`multipart mediaType mismatch at ${path}: representation=${rep.mediaType}, descriptor=${mediaType}`);
+            const size = integer(descriptor.size, `multipart size ${path}`);
+            if (size < 1)
+                throw new ValidationError(`multipart size must be positive: ${path}`);
+            const digest = string(descriptor.byteDigest, `multipart byteDigest ${path}`);
+            if (!/^sha256:[0-9a-f]{64}$/.test(digest))
+                throw new ValidationError(`multipart byteDigest must be SHA-256: ${path}`);
+            const parts = array(descriptor.parts, `multipart parts ${path}`);
+            if (parts.length < 2 || parts.length > 10000)
+                throw new ValidationError(`multipart descriptor requires 2..10000 parts: ${path}`);
+            const seen = new Set();
+            let total = 0;
+            for (const [index, raw] of parts.entries()) {
+                const part = record(raw, `multipart part ${path}[${index}]`);
+                const href = string(part.href, `multipart href ${path}[${index}]`);
+                if (!safeMultipartHref(href))
+                    throw new ValidationError(`unsafe multipart part href: ${href}`);
+                if (seen.has(href))
+                    throw new ValidationError(`duplicate multipart part href: ${href}`);
+                seen.add(href);
+                const partSize = integer(part.size, `multipart part size ${href}`);
+                if (partSize < 1)
+                    throw new ValidationError(`multipart part size must be positive: ${href}`);
+                const partDigest = string(part.byteDigest, `multipart part byteDigest ${href}`);
+                if (!/^sha256:[0-9a-f]{64}$/.test(partDigest))
+                    throw new ValidationError(`multipart part byteDigest must be SHA-256: ${href}`);
+                total += partSize;
+                if (!Number.isSafeInteger(total))
+                    throw new ValidationError(`multipart total exceeds safe integer range: ${path}`);
+            }
+            if (total !== size)
+                throw new ValidationError(`multipart size mismatch at ${path}: parts sum to ${total}, descriptor declares ${size}`);
+        }
+    }
+}
 function nestedFiles(bytes, label) { let archive; try {
     archive = ZipArchive.open(bytes, { ...DEFAULT_ZIP_LIMITS, entries: 20000, compressionRatio: 500 });
 }
@@ -283,6 +360,8 @@ function validateProfilePayloads(graph, archive) {
             continue;
         for (const rep of e.representations ?? []) {
             const rawProfile = rep.profile, profile = canonicalProfileId(rawProfile), l = (rep.location ?? {});
+            if (multipartExtension(rep) != null)
+                continue;
             if (profile === PROFILE.webContent) {
                 validateWebContentMapping(rep, new Set(archive.names()));
                 continue;
@@ -456,8 +535,10 @@ export function validatePackageBytes(bytes, options = {}) {
                 if (isWebContentProfile(rep.profile))
                     validateWebContentMapping(rep, inventory);
     const entities = validateGraphSemantics(graph, manifest);
+    validateProgression(graph, manifest);
     validateRangeIntegrity(graph, manifest, archive);
     validatePackageMembers(graph, archive);
+    validateMultipartDescriptors(graph, manifest, archive);
     const transform = extensionValue(graph.extensions, 'org.p2lrn.transform');
     if (transform) {
         const reportPath = transform.report;

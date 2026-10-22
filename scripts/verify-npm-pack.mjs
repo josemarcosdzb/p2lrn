@@ -203,6 +203,7 @@ for (const path of [
   join(studioRoot,'dist','component-registry.js'),
   join(studioRoot,'dist','identifiers.js'),
   join(studioRoot,'dist','renderer-registry.js'),
+  join(studioRoot,'dist','fill-blanks-core.js'),
   join(studioRoot,'server','index.mjs'),
   join(studioRoot,'bin','p2lrn-studio.mjs'),
   join(studioRoot,'templates','next-route.ts'),

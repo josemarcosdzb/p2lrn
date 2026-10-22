@@ -190,6 +190,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
   const bodies=new Set();
   const interactables=[];
   const connectors=[];
+  const carried=new Map();
   const raycaster=new THREE.Raycaster();
   const pointer=new THREE.Vector2();
   let alive=true;
@@ -285,6 +286,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     meshes.clear();
     interactables.length=0;
     connectors.length=0;
+    carried.clear();
   }
 
   function addLabel(parent,text,y=1.2,options={}) {
@@ -349,32 +351,76 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     return mesh;
   }
 
-  function connect(fromId,toId,{color='#34d399'}={}) {
+  function playerHandPosition(distance=0.82,height=1.18) {
+    const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
+    return player.position.clone().add(forward.multiplyScalar(distance)).add(new THREE.Vector3(0,height,0));
+  }
+
+  function carry(id,active=true,{distance=1.18,height=1.42}={}) {
+    const keyId=String(id);
+    if(!active){carried.delete(keyId);return false;}
+    if(!meshes.has(keyId))return false;
+    carried.set(keyId,{distance,height});
+    return true;
+  }
+
+  function syncCarried(delta) {
+    for(const [id,options] of carried){
+      const mesh=meshes.get(id);if(!mesh){carried.delete(id);continue;}
+      const target=playerHandPosition(options.distance,options.height);
+      mesh.position.lerp(target,1-Math.exp(-delta*20));
+      physicsWorld.setTranslation?.(id,[mesh.position.x,mesh.position.y,mesh.position.z]);
+    }
+  }
+
+  function connectorTarget(connector) {
+    if(connector.toPlayer)return playerHandPosition();
+    return meshes.get(connector.toId)?.position??null;
+  }
+
+  function createConnector(fromId,toId,{color='#34d399',toPlayer=false}={}) {
     const from=meshes.get(String(fromId));
-    const to=meshes.get(String(toId));
-    if (!from || !to) return null;
-    const state=createRopeState(from.position,to.position);
+    const to=toPlayer?playerHandPosition():meshes.get(String(toId));
+    if(!from||!to)return null;
+    const state=createRopeState(from.position,to);
     const geometry=new THREE.BufferGeometry();
     geometry.setAttribute('position',new THREE.BufferAttribute(state.current,3));
     const line=new THREE.Line(geometry,new THREE.LineBasicMaterial({color}));
     line.userData.fromId=String(fromId);
-    line.userData.toId=String(toId);
+    line.userData.toId=toId===null||toId===undefined?null:String(toId);
+    line.userData.toPlayer=toPlayer;
     stage.add(line);
-    connectors.push({line,fromId:String(fromId),toId:String(toId),state});
+    connectors.push({line,fromId:String(fromId),toId:line.userData.toId,toPlayer,state});
     return line;
+  }
+
+  function connect(fromId,toId,{color='#34d399'}={}) {
+    return createConnector(fromId,toId,{color,toPlayer:false});
+  }
+
+  function connectToPlayer(fromId,{color='#c0a270'}={}) {
+    return createConnector(fromId,null,{color,toPlayer:true});
+  }
+
+  function disconnect(line) {
+    const index=connectors.findIndex((item)=>item.line===line);
+    if(index<0)return false;
+    const [connector]=connectors.splice(index,1);
+    stage.remove(connector.line);
+    disposeObject(connector.line);
+    return true;
   }
 
   function syncConnectors(delta){
     for(const connector of connectors){
       const from=meshes.get(connector.fromId);
-      const to=meshes.get(connector.toId);
+      const to=connectorTarget(connector);
       if(!from||!to) continue;
-      simulateRope(connector.state,from.position,to.position,delta);
+      simulateRope(connector.state,from.position,to,delta);
       connector.line.geometry.attributes.position.needsUpdate=true;
       connector.line.geometry.computeBoundingSphere();
     }
   }
-
   function setTranslation(id,position) {
     const mesh=meshes.get(String(id));
     if (!mesh) return false;
@@ -412,6 +458,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     updatePlayer(delta);
     physicsWorld.step?.(delta);
     syncPhysics();
+    syncCarried(delta);
     syncConnectors(delta);
     renderer.render(scene,camera);
     raf=requestAnimationFrame(frame);
@@ -492,6 +539,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     addZone,
     addNode,
     connect,
+    connectToPlayer,
+    disconnect,
+    carry,
     setTranslation,
     highlight,
     playerDistanceTo,

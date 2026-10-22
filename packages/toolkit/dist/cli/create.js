@@ -105,3 +105,4 @@ export function main(argv = process.argv.slice(2)) {
 }
 if (isMain(import.meta.url))
     main();
+//# sourceMappingURL=create.js.map

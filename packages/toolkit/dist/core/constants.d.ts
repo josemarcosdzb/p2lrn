@@ -11,6 +11,7 @@ declare const PROFILE_SUFFIX: Readonly<{
     scorm: "scorm";
     cmi5: "cmi5";
     commonCartridge: "common-cartridge";
+    imsContentPackage: "ims-content-package";
     tincan: "tincan-package";
     lti: "lti";
     case: "case";
@@ -19,12 +20,14 @@ declare const PROFILE_SUFFIX: Readonly<{
     nativeQuestionnaire: "native-questionnaire";
     nativeComposite: "native-composite";
     nativeComponent: "native-component";
+    multipart: "multipart";
+    progression: "progression";
 }>;
 type ProfileKey = keyof typeof PROFILE_SUFFIX;
 /** Canonical P2LRN identifiers emitted by all new Node/TypeScript packages. */
-export declare const PROFILE: Readonly<Record<"course" | "webContent" | "qti" | "h5p" | "scorm" | "cmi5" | "commonCartridge" | "tincan" | "lti" | "case" | "xapi" | "accessibility" | "nativeQuestionnaire" | "nativeComposite" | "nativeComponent", string>>;
+export declare const PROFILE: Readonly<Record<"course" | "webContent" | "qti" | "h5p" | "scorm" | "cmi5" | "commonCartridge" | "imsContentPackage" | "tincan" | "lti" | "case" | "xapi" | "accessibility" | "nativeQuestionnaire" | "nativeComposite" | "nativeComponent" | "multipart" | "progression", string>>;
 /** Alpha15/Python identifiers accepted only for backwards compatibility. */
-export declare const LEGACY_PROFILE: Readonly<Record<"course" | "webContent" | "qti" | "h5p" | "scorm" | "cmi5" | "commonCartridge" | "tincan" | "lti" | "case" | "xapi" | "accessibility" | "nativeQuestionnaire" | "nativeComposite" | "nativeComponent", string>>;
+export declare const LEGACY_PROFILE: Readonly<Record<"course" | "webContent" | "qti" | "h5p" | "scorm" | "cmi5" | "commonCartridge" | "imsContentPackage" | "tincan" | "lti" | "case" | "xapi" | "accessibility" | "nativeQuestionnaire" | "nativeComposite" | "nativeComponent" | "multipart" | "progression", string>>;
 export declare function canonicalIdentifier(value: string): string;
 export declare function legacyIdentifier(value: string): string;
 export declare function canonicalizeJsonIdentifiers<T>(value: T): T;

@@ -100,6 +100,8 @@ function validateQuestionSemantics(question) {
     return;
   }
   if (question.type === 'fill-blanks') {
+    if (question.body !== undefined) invariant(typeof question.body === 'string' && question.body.length <= 20000, `${question.id}: body must be a string`);
+    if (question.inputMode !== undefined) invariant(['text','drag'].includes(question.inputMode), `${question.id}: inputMode must be text or drag`);
     invariant(Array.isArray(question.blanks) && question.blanks.length > 0, `${question.id}: blanks are required`);
     const ids = new Set();
     for (const blank of question.blanks) {
@@ -243,7 +245,9 @@ export function scoreQuestion(question, answer) {
     }
   }
 
-  const pointsAwarded = boundedScore(question, hits, errors, total);
+  const scoringMode = question.scoring ?? defaultScoring(question);
+  const effectiveHits = question.type === 'multiple-choice' && scoringMode === 'partial-per-item' ? Math.max(0, hits - errors) : hits;
+  const pointsAwarded = boundedScore(question, effectiveHits, errors, total);
   const correct = Math.abs(pointsAwarded - points) < 1e-9 && errors === 0;
   return {questionId: question.id, graded: true, correct, hits, errors, pointsAwarded, pointsPossible: points};
 }

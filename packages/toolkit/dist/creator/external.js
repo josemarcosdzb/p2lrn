@@ -12,7 +12,7 @@ const NS = '12d4c8f7-1b78-4bf2-9f7c-a2d215f8d8f5';
 const URI_RE = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 export const EXTERNAL_PROFILE = {
     h5p: 'https://p2lrn.org/profile/h5p', scorm: 'https://p2lrn.org/profile/scorm', cmi5: 'https://p2lrn.org/profile/cmi5',
-    'common-cartridge': 'https://p2lrn.org/profile/common-cartridge', 'tincan-package': 'https://p2lrn.org/profile/tincan-package',
+    'common-cartridge': 'https://p2lrn.org/profile/common-cartridge', 'ims-content-package': 'https://p2lrn.org/profile/ims-content-package', 'tincan-package': 'https://p2lrn.org/profile/tincan-package',
     'web-content': 'https://p2lrn.org/profile/web-content', qti: 'https://p2lrn.org/profile/qti', lti: 'https://p2lrn.org/profile/lti'
 };
 const td = new TextDecoder('utf-8', { fatal: true }), te = new TextEncoder();
@@ -74,6 +74,7 @@ export function detectExternalPackage(files) { const names = new Set(files.keys(
     const scormAttr = descendants(root).some((el) => Object.keys(el.attributes).some((k) => localName(k).toLowerCase() === 'scormtype'));
     if (schema.includes('SCORM') || scormAttr || names.has('adlcp_rootv1p2.xsd'))
         return 'scorm';
+    return 'ims-content-package';
 } throw new Error('unsupported or unrecognized package format'); }
 function basicLtiMetadata(files, src) { const member = firstResourceFile(src); if (!member || !files.has(member))
     return undefined; let root; try {
@@ -121,7 +122,7 @@ function imsManifestInfo(data, names) { const root = parseXml(data); let schema 
         resources.set(el.attributes.identifier, el); if (!version)
     version = 'unknown'; if ((schema.includes('SCORM') || !schema.includes('SCORM')) && version === 'unknown' && names.has('adlcp_rootv1p2.xsd'))
     version = '1.2-inferred'; return { root, org, resources, schema, version }; }
-function scormOrCcGraph(kind, seed, files, ppath, originalName) {
+function imsManifestGraph(kind, seed, files, ppath, originalName) {
     const profile = EXTERNAL_PROFILE[kind], info = imsManifestInfo(files.get('imsmanifest.xml'), new Set(files.keys())), { root, org, resources, schema, version } = info;
     const orgTitle = org ? textContent(firstDirectChild(org, 'title')) : '';
     let metadataTitle = '';
@@ -160,6 +161,8 @@ function scormOrCcGraph(kind, seed, files, ppath, originalName) {
         const rid = stableUrn(seed, 'resource', refid || href || 'resource'), reps = [rep(seed, profile, ppath, originalName, meta, 'res-package:' + (refid || ''))];
         if (kind === 'scorm' && member && files.has(member))
             reps.push(memberRep(seed, EXTERNAL_PROFILE.scorm, ppath, member, meta, 'res-launch:' + (refid || ''), 'primary'));
+        else if (kind === 'ims-content-package' && member && files.has(member))
+            reps.push(memberRep(seed, profile, ppath, member, meta, 'ims-member:' + refid, 'primary'));
         else if (kind === 'common-cartridge' && src) {
             const st = typ ?? '';
             if (st === 'webcontent' && member && files.has(member))
@@ -195,7 +198,7 @@ function scormOrCcGraph(kind, seed, files, ppath, originalName) {
         entities.push(r);
         return rid;
     };
-    const activityType = (srcType) => kind === 'scorm' ? 'https://p2lrn.org/type/scorm-activity' : (srcType ?? '').includes('assessment') ? 'https://p2lrn.org/type/assessment' : (srcType ?? '').includes('basiclti') ? 'https://p2lrn.org/type/external-tool' : (srcType ?? '').startsWith('imsdt_') ? 'https://p2lrn.org/type/discussion' : (srcType ?? '').startsWith('imswl_') ? 'https://p2lrn.org/type/web-link' : 'https://p2lrn.org/type/resource-view';
+    const activityType = (srcType) => kind === 'scorm' ? 'https://p2lrn.org/type/scorm-activity' : kind === 'ims-content-package' ? 'https://p2lrn.org/type/resource-view' : (srcType ?? '').includes('assessment') ? 'https://p2lrn.org/type/assessment' : (srcType ?? '').includes('basiclti') ? 'https://p2lrn.org/type/external-tool' : (srcType ?? '').startsWith('imsdt_') ? 'https://p2lrn.org/type/discussion' : (srcType ?? '').startsWith('imswl_') ? 'https://p2lrn.org/type/web-link' : 'https://p2lrn.org/type/resource-view';
     const projectItem = (item) => { const srcId = item.attributes.identifier ?? stableUrn(seed, 'source-item', 'missing'), refid = item.attributes.identifierref, title = textContent(firstDirectChild(item, 'title')) || srcId, children = item.children.filter((c) => localName(c.name) === 'item'); if (refid) {
         const srcRes = resources.get(refid), srcType = srcRes?.attributes.type, eid = stableUrn(seed, 'activity', srcId), e = { id: eid, type: 'activity', activityType: activityType(srcType), title: titleMap(title), resource: resourceFor(refid), extensions: { [profile]: { sourceItemIdentifier: srcId, sourceResourceIdentifier: refid } } };
         if (children.length)
@@ -216,8 +219,10 @@ function scormOrCcGraph(kind, seed, files, ppath, originalName) {
     course.extensions[profile].resourceTypeCounts = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
     if (kind === 'scorm')
         course.extensions[profile].scoCount = [...resources.values()].filter((r) => Object.entries(r.attributes).some(([k, v]) => localName(k).toLowerCase() === 'scormtype' && v.toLowerCase() === 'sco')).length;
-    else
+    else if (kind === 'common-cartridge')
         course.extensions[profile].cartridgeVersion = version;
+    else
+        course.extensions[profile].contentPackageVersion = version;
     return [entities, courseId, { title: resolvedTitle, version, resourceCount: resources.size }];
 }
 function manifestLomTitle(root) { const metadata = firstDirectChild(root, 'metadata'); if (!metadata)
@@ -344,7 +349,7 @@ function buildTransformationReport(kind, src, originalName, sourceHex, packageHe
         let locator;
         if (e.type === 'course') {
             const sid = ext.sourceManifestIdentifier ?? ext.sourceCourseId ?? ext.sourceActivityId;
-            locator = `${['scorm', 'common-cartridge', 'qti'].includes(kind) ? 'imsmanifest.xml' : kind === 'cmi5' ? 'cmi5.xml' : kind === 'tincan-package' ? 'tincan.xml' : 'h5p.json'}#${sid ?? 'root'}`;
+            locator = `${['scorm', 'common-cartridge', 'qti', 'ims-content-package'].includes(kind) ? 'imsmanifest.xml' : kind === 'cmi5' ? 'cmi5.xml' : kind === 'tincan-package' ? 'tincan.xml' : 'h5p.json'}#${sid ?? 'root'}`;
         }
         else if (['unit', 'activity'].includes(e.type)) {
             const sid = ext.sourceItemIdentifier ?? ext.sourceResourceIdentifier ?? ext.sourceId ?? ext.auId ?? ext.sourceActivityId;
@@ -385,6 +390,10 @@ function buildTransformationReport(kind, src, originalName, sourceHex, packageHe
         structuralProjection = 'partial';
         warnings.push('SCORM hierarchy/launch metadata are projected; SCORM sequencing and runtime data-model semantics remain authoritative in the preserved SCORM package.');
     }
+    else if (kind === 'ims-content-package') {
+        structuralProjection = 'partial';
+        warnings.push('Generic IMS Content Packaging organization/resources are projected; specialized SCORM, Common Cartridge and QTI semantics are not inferred under this fallback profile.');
+    }
     else if (kind === 'cmi5') {
         structuralProjection = 'partial';
         warnings.push('cmi5 course/block/AU structure is projected; runtime/xAPI execution semantics remain authoritative to cmi5/xAPI.');
@@ -409,8 +418,8 @@ function profilesUsed(entities) { const out = new Set(); for (const e of entitie
             if (r.profile)
                 out.add(r.profile);
 } return out; }
-export function convertExternalPackage(source, output, packageRoot) { const loaded = loadSource(source, packageRoot), kind = detectExternalPackage(loaded.files), profile = EXTERNAL_PROFILE[kind], sourceHex = sha256(loaded.original).slice(7), packageHex = sha256(loaded.packageBytes).slice(7), seed = packageHex, [ppath] = packagePath(loaded.packageBytes), originalName = loaded.normalizedRoot ? basename(loaded.normalizedRoot) + '.zip' : basename(source); let tuple; if (kind === 'scorm' || kind === 'common-cartridge')
-    tuple = scormOrCcGraph(kind, seed, loaded.files, ppath, originalName);
+export function convertExternalPackage(source, output, packageRoot) { const loaded = loadSource(source, packageRoot), kind = detectExternalPackage(loaded.files), profile = EXTERNAL_PROFILE[kind], sourceHex = sha256(loaded.original).slice(7), packageHex = sha256(loaded.packageBytes).slice(7), seed = packageHex, [ppath] = packagePath(loaded.packageBytes), originalName = loaded.normalizedRoot ? basename(loaded.normalizedRoot) + '.zip' : basename(source); let tuple; if (kind === 'scorm' || kind === 'common-cartridge' || kind === 'ims-content-package')
+    tuple = imsManifestGraph(kind, seed, loaded.files, ppath, originalName);
 else if (kind === 'qti')
     tuple = qtiGraph(seed, loaded.files, ppath, originalName);
 else if (kind === 'h5p')

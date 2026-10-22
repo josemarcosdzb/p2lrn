@@ -414,8 +414,7 @@ async function studioComponentScenario(){
     if(!wordSearch)throw new Error('Existing sibling game is missing from composite move candidates');
     groupSelect.value=wordSearch.value;
     groupSelect.dispatchEvent(new Event('change',{bubbles:true}));
-    const moveButton=[...root.querySelectorAll('button')].find((item)=>item.textContent==='Añadir actividad existente');
-    if(!moveButton||moveButton.disabled)throw new Error('Composite move action is not enabled');
+    const moveButton=await wait(()=>{const button=[...root.querySelectorAll('button')].find((item)=>item.textContent.includes('actividad existente'));return button&&!button.disabled?button:null;},'composite move action enabled');
     moveButton.click();
     await wait(()=>[...root.querySelectorAll('.composite-row strong')].some((item)=>item.textContent==='Sopa de letras'),'composite activity move');
 
@@ -510,6 +509,42 @@ async function studioSiteScenario(){
     await wait(()=>q('[data-add-dialog]')?.open,'open palette');
     click('[data-add-kind="questionnaire"]');
     await wait(()=>!q('[data-add-dialog]').open&&q('[data-studio-status]').textContent.includes('Cuestionario'),'questionnaire');
+    const getQuestionType=()=>[...(q('.q-card .q-basic-grid')?.querySelectorAll('label')??[])]
+      .find(label=>label.querySelector('.q-label')?.textContent==='Tipo')?.querySelector('select');
+    const standardType=await wait(getQuestionType,'standard questionnaire type selector');
+    const expectedQuestionTypes=['single-choice','multiple-choice','true-false','text','fill-blanks','ordering','matching','classification'];
+    if(JSON.stringify([...standardType.options].map(option=>option.value))!==JSON.stringify(expectedQuestionTypes))
+      throw new Error('Standard questionnaire types missing: '+[...standardType.options].map(option=>option.value).join(','));
+    const standardField=(name)=>[...(q('.q-card .q-basic-grid')?.querySelectorAll('label')??[])]
+      .find(label=>label.querySelector('.q-label')?.textContent===name)?.querySelector('input,select,textarea');
+    const standardPrompt=standardField('Enunciado'),standardTime=standardField('Tiempo (s)'),standardPoints=standardField('Puntos');
+    if(!standardPrompt||standardPrompt.tagName!=='TEXTAREA'||standardPrompt.getBoundingClientRect().height<90)
+      throw new Error('Question prompt editor is not the required multiline field');
+    standardPrompt.value='Enunciado largo conservado al cambiar entre todos los tipos de pregunta.';
+    standardPrompt.dispatchEvent(new Event('input',{bubbles:true}));
+    standardTime.value='37';standardTime.dispatchEvent(new Event('input',{bubbles:true}));
+    standardPoints.value='3';standardPoints.dispatchEvent(new Event('input',{bubbles:true}));
+    const typeEditor={
+      'single-choice':'.q-option-row',
+      'multiple-choice':'.q-option-row',
+      'true-false':'.q-option-row',
+      'text':'.q-answer-list',
+      'fill-blanks':'.q-blank-template-editor',
+      'ordering':'.q-order',
+      'matching':'.q-pair-row',
+      'classification':'.q-class-row',
+    };
+    for(const type of expectedQuestionTypes){
+      const picker=getQuestionType();picker.value=type;picker.dispatchEvent(new Event('change',{bubbles:true}));
+      await wait(()=>getQuestionType()?.value===type&&q(typeEditor[type]),'switch standard question to '+type);
+    }
+    if(standardField('Enunciado')?.value!=='Enunciado largo conservado al cambiar entre todos los tipos de pregunta.'
+      ||standardField('Tiempo (s)')?.value!=='37'||standardField('Puntos')?.value!=='3')
+      throw new Error('Changing the standard question type erased its metadata');
+    const fillPicker=getQuestionType();fillPicker.value='fill-blanks';fillPicker.dispatchEvent(new Event('change',{bubbles:true}));
+    await wait(()=>q('.q-blank-template-editor')&&q('.q-field--mode select'),'fill-blanks editor');
+    if(JSON.stringify([...q('.q-field--mode select').options].map(option=>option.value))!==JSON.stringify(['text','drag']))
+      throw new Error('Fill-blanks does not expose text and drag modes');
     click('[data-add-content]');
     await wait(()=>q('[data-add-dialog]').open,'reopen palette');
     click('[data-add-kind="3d"]');
@@ -520,7 +555,7 @@ async function studioSiteScenario(){
     if(JSON.stringify([...choice.options].map(option=>option.value))!==JSON.stringify(['ordering','matching','classification']))
       throw new Error('Studio does not expose all three 3D question types');
     const gameField=(name)=>[...(q('.q-card .q-basic-grid')?.querySelectorAll('label')??[])]
-      .find(label=>label.querySelector('.q-label')?.textContent===name)?.querySelector('input,select');
+      .find(label=>label.querySelector('.q-label')?.textContent===name)?.querySelector('input,select,textarea');
     const titleInput=gameField('Enunciado'),timeInput=gameField('Tiempo (s)'),pointsInput=gameField('Puntos');
     if(!titleInput||!timeInput||!pointsInput)throw new Error('Missing 3D question editor fields');
     titleInput.value='Juego 3D con enunciado personalizado';
@@ -623,7 +658,7 @@ try{
   // Match build-site.mjs: the static Studio page imports the toolkit's canonical browser modules.
   // The CDN-only fixture does not materialize these until we copy them here.
   await cp(join(root,'packages','toolkit','web','studio'),join(siteRoot,'studio','runtime'),{recursive:true,force:true});
-  for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js']){
+  for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js']){
     await cp(join(root,'packages','toolkit','web',file),join(siteRoot,'studio',file));
   }
   await prepareVisualStudioFixture();

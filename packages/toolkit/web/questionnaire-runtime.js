@@ -1,3 +1,4 @@
+import {fillBlankInputMode,fillBlankParts,fillBlankPromptLeaksAnswer,fillBlankWordBank} from './fill-blanks-core.js';
 import {answerIsMeaningful, QuestionnaireSession} from './questionnaire-session.js';
 
 function el(tag, attrs = {}, text = null) {
@@ -149,8 +150,10 @@ export class QuestionnaireRuntime {
   #renderQuestion(question, index) {
     const card = el('article', {class: 'p2lrn-q-card'});
     const meta = el('div', {class: 'p2lrn-q-meta'}, `${index + 1}. ${question.type} · ${question.points} pt${Number(question.points) === 1 ? '' : 's'}`);
-    card.append(meta, el('h3', {class: 'p2lrn-q-prompt'}, question.prompt));
-    if (question.type === 'fill-blanks' && question.body) card.append(el('p', {class: 'p2lrn-q-body'}, question.body));
+    const fill = question.type === 'fill-blanks' ? fillBlankParts(question) : null;
+    const visiblePrompt = fill && (fill.usesPrompt || fillBlankPromptLeaksAnswer(question)) ? 'Completa los huecos' : question.prompt;
+    card.append(meta, el('h3', {class: 'p2lrn-q-prompt'}, visiblePrompt));
+    if (question.type !== 'fill-blanks' && question.body) card.append(el('p', {class: 'p2lrn-q-body'}, question.body));
     const input = this.#renderInput(question);
     if (this.session.isQuestionExpired(question.id)) {
       card.append(el('p', {class: 'p2lrn-q-notice', role: 'status'}, 'Tiempo agotado para esta pregunta.'));
@@ -197,37 +200,80 @@ export class QuestionnaireRuntime {
     }
 
     if (question.type === 'fill-blanks') {
-      const list = el('div', {class: 'p2lrn-q-fields'});
-      question.blanks.forEach((blank, index) => {
-        const row = el('label', {class: 'p2lrn-q-field'});
-        row.append(el('span', {}, blank.label || `Hueco ${index + 1}`));
-        const values = isRecord(answer.blanks) ? answer.blanks : {};
-        let input;
-        if (Array.isArray(blank.options) && blank.options.length) {
-          input = el('select');
-          input.append(el('option', {value: ''}, 'Selecciona…'));
-          blank.options.forEach((option) => input.append(el('option', {value: option}, option)));
-          input.value = values[blank.id] ?? '';
-          input.addEventListener('change', () => {
-            const current = this.getAnswer(question);
-            const blanks = isRecord(current.blanks) ? current.blanks : {};
-            this.setAnswer(question, {blanks: {...blanks, [blank.id]: input.value}});
-          });
-        } else {
-          input = el('input', {type: 'text'});
-          input.value = values[blank.id] ?? '';
-          input.addEventListener('input', () => {
-            const current = this.getAnswer(question);
-            const blanks = isRecord(current.blanks) ? current.blanks : {};
-            this.setAnswer(question, {blanks: {...blanks, [blank.id]: input.value}});
-          });
-        }
-        row.append(input);
-        list.append(row);
-      });
-      return list;
-    }
+      const wrapper = el('div', {class: 'p2lrn-fill'});
+      const template = el('div', {class: 'p2lrn-fill-template'});
+      const details = fillBlankParts(question);
+      const values = isRecord(answer.blanks) ? {...answer.blanks} : {};
+      const blankById = new Map(question.blanks.map((blank,index)=>[String(blank.id),{blank,index}]));
+      const write = () => this.setAnswer(question, {blanks: {...values}});
 
+      if (fillBlankInputMode(question) === 'text') {
+        for (const part of details.parts) {
+          if (part.type === 'text') { template.append(document.createTextNode(part.text)); continue; }
+          const info=blankById.get(part.id);if(!info)continue;
+          const input=el('input',{type:'text',class:'p2lrn-fill-input','aria-label':info.blank.label||`Hueco ${info.index+1}`});
+          input.value=values[part.id]??'';
+          input.addEventListener('input',()=>{values[part.id]=input.value;write();});
+          template.append(input);
+        }
+        wrapper.append(template);
+        return wrapper;
+      }
+
+      const bank=fillBlankWordBank(question);
+      const bankNode=el('div',{class:'p2lrn-fill-bank','aria-label':'Palabras disponibles'});
+      const slots=new Map();
+      const chips=[];
+      let selectedId=null;
+      const norm=(value)=>String(value??'').normalize('NFKC').trim().toLocaleLowerCase('es');
+
+      const refresh=()=>{
+        for(const [id,slot] of slots){
+          const value=String(values[id]??'').trim();
+          slot.textContent=value||'Arrastra o selecciona';
+          slot.classList.toggle('is-filled',Boolean(value));
+          slot.classList.toggle('is-target',Boolean(selectedId&&!value));
+          slot.setAttribute('aria-label',value?`${slot.dataset.label}: ${value}. Pulsa para quitarlo.`:`${slot.dataset.label}. ${selectedId?'Pulsa para colocar la palabra seleccionada.':'Arrastra o selecciona una palabra.'}`);
+        }
+        const used=new Map();for(const value of Object.values(values)){const key=norm(value);if(key)used.set(key,(used.get(key)??0)+1);}
+        const occurrence=new Map();
+        for(const entry of chips){
+          const key=norm(entry.text);const n=(occurrence.get(key)??0)+1;occurrence.set(key,n);
+          const consumed=n<=(used.get(key)??0);
+          entry.button.hidden=consumed;entry.button.disabled=consumed;
+          entry.button.classList.toggle('is-selected',entry.id===selectedId);
+          entry.button.setAttribute('aria-pressed',String(entry.id===selectedId));
+        }
+      };
+
+      const assign=(blankId,wordId)=>{
+        const entry=bank.find((item)=>item.id===wordId);if(!entry)return;
+        values[blankId]=entry.text;selectedId=null;write();refresh();
+      };
+
+      for (const part of details.parts) {
+        if (part.type === 'text') { template.append(document.createTextNode(part.text)); continue; }
+        const info=blankById.get(part.id);if(!info)continue;
+        const slot=el('button',{type:'button',class:'p2lrn-fill-slot'});
+        slot.dataset.blankId=part.id;slot.dataset.label=info.blank.label||`Hueco ${info.index+1}`;
+        slot.addEventListener('dragover',(event)=>{event.preventDefault();event.dataTransfer.dropEffect='move';slot.classList.add('is-over');});
+        slot.addEventListener('dragleave',()=>slot.classList.remove('is-over'));
+        slot.addEventListener('drop',(event)=>{event.preventDefault();slot.classList.remove('is-over');const wordId=event.dataTransfer.getData('application/x-p2lrn-fill-word')||event.dataTransfer.getData('text/plain');if(wordId)assign(part.id,wordId);});
+        slot.addEventListener('click',()=>{if(selectedId){assign(part.id,selectedId);return;}if(values[part.id]){delete values[part.id];write();refresh();}});
+        slots.set(part.id,slot);template.append(slot);
+      }
+
+      bank.forEach((entry)=>{
+        const chip=el('button',{type:'button',class:'p2lrn-fill-chip','aria-pressed':'false'},entry.text);
+        chip.draggable=true;
+        chip.addEventListener('dragstart',(event)=>{selectedId=entry.id;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('application/x-p2lrn-fill-word',entry.id);event.dataTransfer.setData('text/plain',entry.id);refresh();});
+        chip.addEventListener('dragend',()=>{selectedId=null;refresh();});
+        chip.addEventListener('click',()=>{selectedId=selectedId===entry.id?null:entry.id;refresh();});
+        chips.push({...entry,button:chip});bankNode.append(chip);
+      });
+      wrapper.append(template,bankNode);refresh();
+      return wrapper;
+    }
     if (question.type === 'ordering') {
       const order = Array.isArray(answer.order) && answer.order.length === question.items.length ? [...answer.order] : [...question.items].reverse().map((item) => item.id);
       const byId = new Map(question.items.map((item) => [item.id, item]));

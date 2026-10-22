@@ -99,7 +99,7 @@
 .studio-add-grid button[data-help]:focus-visible{outline:2px solid #667085;outline-offset:2px}
 .studio-add-tooltip{position:fixed;z-index:1000;width:min(330px,calc(100vw - 24px));padding:10px 12px;border:1px solid #344054;border-radius:8px;background:#101828;color:#fff;box-shadow:0 12px 34px rgba(16,24,40,.24);font:600 .72rem/1.45 var(--sans);pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .12s ease,transform .12s ease}
 .studio-add-tooltip[data-visible=true]{opacity:1;transform:translateY(0)}
-.studio-add-tooltip::before{content:'QuÃƒÂ© hace';display:block;margin-bottom:3px;color:#d0d5dd;font:700 .58rem/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.studio-add-tooltip::before{content:'Qué hace';display:block;margin-bottom:3px;color:#d0d5dd;font:700 .58rem/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase}
 @media(max-width:640px){.studio-add-advanced{padding:10px}.studio-add-tooltip{font-size:.7rem}}
 /* Assessment authoring controls */
 .q-settings{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))!important}
@@ -156,3 +156,4 @@
 .studio-choice-card:hover{border-color:#98a2b3;background:#f8fafc}
 .studio-choice-card small{color:#667085;line-height:1.4}
 @media(max-width:760px){.composite-row,.composite-content-head{align-items:stretch;flex-direction:column}.composite-row .q-card-actions{flex-wrap:wrap}}
+.q-field--prompt,.q-field--wide{grid-column:1/-1}.q-prompt-input,.q-blank-template-editor{width:100%;min-width:0;box-sizing:border-box;border:1px solid #cfd5de;border-radius:6px;background:#fff;padding:10px 12px;font:500 .9rem/1.45 var(--sans);resize:vertical}.q-prompt-input{min-height:112px}.q-blank-template-editor{min-height:170px;font-family:var(--mono);line-height:1.55}.q-help{display:block;margin-top:2px;color:#667085;font-size:.75rem;line-height:1.4}.q-blank-convert{justify-self:start;font-weight:700}.q-blank-row{grid-template-columns:auto minmax(0,1fr) auto}.q-field--mode{max-width:360px}

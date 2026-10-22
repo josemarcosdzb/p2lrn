@@ -1,5 +1,6 @@
 import { type BuildResult } from '../creator/builder.js';
 import { type OpenPackageProjectOptions } from '../creator/import-project.js';
+import { type DocumentReaderOptions, type ExtractedDocument } from '../document-reader/index.js';
 import { type CreatorProject } from '../creator/project.js';
 /** Stable public contract consumed by P2LRN Studio and other authoring hosts. */
 export declare const AUTHORING_API_VERSION: "1";
@@ -109,6 +110,28 @@ export interface AuthoringChildrenResult {
     parentKey: string;
     children: string[];
 }
+export type AuthoringProgressionRequirement = 'viewed' | 'completed' | 'passed';
+export interface AuthoringProgressionCondition {
+    entityKey: string;
+    status?: AuthoringProgressionRequirement;
+    minScore?: number;
+}
+export interface AuthoringProgressionUnlock {
+    all?: AuthoringProgressionCondition[];
+    any?: AuthoringProgressionCondition[];
+}
+export interface AuthoringProgressionOptions {
+    required?: boolean;
+    gateFollowing?: boolean;
+    completionRequirement?: AuthoringProgressionRequirement;
+    minScore?: number | null;
+    unlockWhen?: AuthoringProgressionUnlock | null;
+}
+export interface AuthoringProgressionResult {
+    key: string;
+    rule: Record<string, unknown> | null;
+    profileRequirement: 'required' | 'optional' | null;
+}
 export interface AuthoringWorkspaceSummary {
     apiVersion: typeof AUTHORING_API_VERSION;
     projectVersion: string;
@@ -146,6 +169,7 @@ export declare class P2LRNAuthoringWorkspace {
     setCourseMetadata(options: AuthoringCourseOptions): AuthoringEntityTextResult;
     setEntityText(key: string, options: AuthoringTextOptions): AuthoringEntityTextResult;
     setChildren(parentKey: string, children: string[]): AuthoringChildrenResult;
+    setProgression(key: string, options: AuthoringProgressionOptions | null): AuthoringProgressionResult;
     addUnit(options: AuthoringUnitOptions): AuthoringUnitResult;
     addFile(options: AuthoringFileOptions): AuthoringResourceActivityResult;
     addUrl(options: AuthoringUrlOptions): AuthoringResourceActivityResult;
@@ -153,6 +177,10 @@ export declare class P2LRNAuthoringWorkspace {
     addQuestionnaire(options: AuthoringQuestionnaireOptions): AuthoringResourceActivityResult;
     addComponent(options: AuthoringComponentOptions): AuthoringResourceActivityResult;
     addComposite(options: AuthoringCompositeOptions): AuthoringResourceActivityResult;
+    /** Read and structurally extract a source document without mutating the authoring project.
+     * Relative paths are resolved from the workspace root; absolute paths are accepted unchanged.
+     */
+    reader(source: string, options?: DocumentReaderOptions): Promise<ExtractedDocument>;
     save(): void;
     build(output: string, options?: AuthoringBuildOptions): BuildResult;
 }

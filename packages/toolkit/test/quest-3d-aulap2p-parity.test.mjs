@@ -16,8 +16,13 @@ test('Quest 3D mirrors AulaP2P movement, camera and proximity mechanics without 
   assert.match(runtime,/playerDistanceTo/);
   assert.match(runtime,/nudgePlayer/);
   assert.match(runtime,/applyImpulse/);
+  assert.match(runtime,/function carry\(/);
+  assert.match(runtime,/syncCarried/);
+  assert.match(runtime,/connectToPlayer/);
   assert.match(renderer,/Acércate al bloque/);
   assert.match(renderer,/Acércate al bloque de origen/);
   assert.match(renderer,/WASD\/flechas/);
+  assert.match(renderer,/scene\.carry/);
+  assert.match(renderer,/scene\.connectToPlayer/);
   assert.equal(/aulap2p/i.test(runtime+renderer),false);
 });

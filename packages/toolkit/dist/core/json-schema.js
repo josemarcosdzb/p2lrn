@@ -184,3 +184,4 @@ export function validateSchema(schemaOrId, value, label = 'document') { const er
     throw new ValidationError(`invalid ${label}:\n${errors.slice(0, 20).map((e) => `${e.path}: ${e.message}`).join('\n')}`); return value; }
 export function schemaById(id) { const s = DEFAULT_SCHEMA_REGISTRY[id]; if (!s)
     throw new ValidationError(`reference document is not installed: ${id}`); return structuredClone(s); }
+//# sourceMappingURL=json-schema.js.map

@@ -9,7 +9,7 @@ import {buildQuestionnaireGame} from '../packages/toolkit/web/questionnaire-game
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const gate=join(root,'.npm-pack-gate');
-const samples=['rosco','crossword','3d','3d-matching','3d-classification','fill-blanks'];
+const samples=['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'];
 const manifest=join(gate,'three-way-browser-qa.json');
 const demo=join(root,'scripts','fixtures','npm-native-game-visual.html');
 const channels=[

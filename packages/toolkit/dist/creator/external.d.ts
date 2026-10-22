@@ -3,6 +3,7 @@ export declare const EXTERNAL_PROFILE: {
     readonly scorm: "https://p2lrn.org/profile/scorm";
     readonly cmi5: "https://p2lrn.org/profile/cmi5";
     readonly 'common-cartridge': "https://p2lrn.org/profile/common-cartridge";
+    readonly 'ims-content-package': "https://p2lrn.org/profile/ims-content-package";
     readonly 'tincan-package': "https://p2lrn.org/profile/tincan-package";
     readonly 'web-content': "https://p2lrn.org/profile/web-content";
     readonly qti: "https://p2lrn.org/profile/qti";

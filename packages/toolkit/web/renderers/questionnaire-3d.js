@@ -141,6 +141,9 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     }
     if (current>=0) placed[current]=null;
     placed[slotIndex]=itemId;
+    scene.carry(`order:${itemId}`,false);
+    scene.highlight(`order:${itemId}`,false);
+    if(selected===itemId)selected=null;
     syncObject(itemId);
     refreshSelects();
     const order=currentOrder();
@@ -181,9 +184,10 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(meta.kind==='ordering-object'){
         if(scene.playerDistanceTo(`order:${meta.id}`)>3.15){setText(status,'Acércate al bloque para cogerlo.');return true;}
-        if(selected) scene.highlight(`order:${selected}`,false);
+        if(selected&&selected!==meta.id){setText(status,'Ya llevas un objeto. Colócalo antes de coger otro.');return true;}
         selected=meta.id;
         scene.highlight(`order:${selected}`,true);
+        scene.carry(`order:${selected}`,true);
         setText(status,'Objeto seleccionado. Elige una posición.');
         return true;
       }
@@ -206,6 +210,7 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   const solved=new Set();
   let connections=[];
   let selected=null;
+  let activeRope=null;
 
   const leftPositions=matchingPositions('left',trial.left.length,seedText(`left:${trial.questionId}:${trial.prompt}`));
   const rightPositions=matchingPositions('right',trial.right.length,seedText(`right:${trial.questionId}:${trial.prompt}`));
@@ -230,9 +235,11 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   const leftButtons=new Map();
 
   function chooseLeft(id) {
+    if(activeRope){scene.disconnect(activeRope);activeRope=null;}
     if(selected) scene.highlight(`left:${selected}`,false);
     selected=id;
     scene.highlight(`left:${selected}`,true);
+    activeRope=scene.connectToPlayer(`left:${selected}`);
     leftButtons.forEach((button,key)=>button.classList.toggle('is-selected',key===id));
     setText(status,'Origen seleccionado. Elige su pareja.');
   }
@@ -240,15 +247,22 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   function chooseRight(id) {
     if(!selected){setText(status,'Selecciona primero un elemento de la izquierda.');return false;}
     const validation=validateConnection(selected,id,expected,solved);
-    if(!validation.ok){setText(status,'Esa relación no es correcta.');return false;}
+    if(!validation.ok){
+      if(activeRope){scene.disconnect(activeRope);activeRope=null;}
+      scene.highlight(`left:${selected}`,false);
+      selected=null;leftButtons.forEach((button)=>button.classList.remove('is-selected'));
+      setText(status,'Esa relación no es correcta. Busca otra pareja.');return false;
+    }
     const key=connectionKey(selected,id);
     if(!validation.alreadyExists){
       solved.add(key);
       connections=appendUniqueConnection(connections,{leftId:selected,rightId:id});
       runtime.applyPatch(trial.questionId,{kind:'pair-set',leftId:selected,rightId:id});
+      if(activeRope){scene.disconnect(activeRope);activeRope=null;}
       scene.connect(`left:${selected}`,`right:${id}`);
     }
     leftButtons.get(selected)?.classList.add('is-solved');
+    if(activeRope){scene.disconnect(activeRope);activeRope=null;}
     scene.highlight(`left:${selected}`,false);
     selected=null;
     leftButtons.forEach((button)=>button.classList.remove('is-selected'));
@@ -321,6 +335,9 @@ function buildClassificationControls({trial,runtime,scene,status}) {
       return false;
     }
     values[itemId]=categoryId;
+    scene.carry(`classify:${itemId}`,false);
+    scene.highlight(`classify:${itemId}`,false);
+    if(selected===itemId)selected=null;
     runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId});
     const categoryIndex=trial.categories.findIndex((item)=>item.id===categoryId);
     const base=classificationZonePosition(categoryIndex,trial.categories.length);
@@ -352,9 +369,10 @@ function buildClassificationControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(meta.kind==='classification-object'){
         if(scene.playerDistanceTo(`classify:${meta.id}`)>3.15){setText(status,'Acércate al bloque para cogerlo.');return true;}
-        if(selected) scene.highlight(`classify:${selected}`,false);
+        if(selected&&selected!==meta.id){setText(status,'Ya llevas un objeto. Deposítalo antes de coger otro.');return true;}
         selected=meta.id;
         scene.highlight(`classify:${selected}`,true);
+        scene.carry(`classify:${selected}`,true);
         setText(status,'Objeto seleccionado. Elige una categoría.');
         return true;
       }
@@ -392,7 +410,7 @@ export async function render(options) {
   });
 
   const technology=el('p',{class:'p2lrn-3d-runtime'},`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`);
-  const help=el('p',{class:'p2lrn-game-description'},'Muévete con WASD/flechas. Arrastra sobre la escena para girar la cámara. Acércate a los bloques para interactuar.');
+  const help=el('p',{class:'p2lrn-game-description'},'Muévete con WASD/flechas. Arrastra sobre el fondo para girar la cámara. Acércate y pulsa un bloque para cogerlo; en Relacionar llevarás el extremo de una cuerda flexible hasta su pareja.');
   const movePad=el('div',{class:'p2lrn-3d-move-pad','aria-label':'Controles de movimiento'});
   for(const [label,direction] of [['▲','forward'],['◀','left'],['▼','back'],['▶','right']]){
     const button=el('button',{type:'button',class:'p2lrn-game-button','aria-label':direction},label);

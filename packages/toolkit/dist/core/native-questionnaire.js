@@ -47,7 +47,7 @@ function validateQuestionShape(q0, index) {
     const label = `questions[${index}]`, q = obj(q0, label);
     validateCommon(q, label);
     const t = q.type;
-    if (!['single-choice', 'multiple-choice', 'true-false', 'text', 'fill-blanks', 'ordering', 'matching'].includes(t))
+    if (!['single-choice', 'multiple-choice', 'true-false', 'text', 'fill-blanks', 'ordering', 'matching', 'classification'].includes(t))
         throw new ValidationError(`${label}.type is unsupported: ${t}`);
     if (['single-choice', 'multiple-choice', 'true-false'].includes(t)) {
         allowed(q, new Set([...COMMON, 'choices', 'solution']), label);
@@ -73,9 +73,11 @@ function validateQuestionShape(q0, index) {
         return q;
     }
     if (t === 'fill-blanks') {
-        allowed(q, new Set([...COMMON, 'body', 'blanks', 'solution']), label);
+        allowed(q, new Set([...COMMON, 'body', 'inputMode', 'blanks', 'solution']), label);
         if (q.body !== undefined)
             str(q.body, `${label}.body`, 0, 20000);
+        if (q.inputMode !== undefined && !['text', 'drag'].includes(q.inputMode))
+            throw new ValidationError(`${label}.inputMode must be text or drag`);
         const blanks = arr(q.blanks, `${label}.blanks`, 1);
         for (const [i, v] of blanks.entries()) {
             const b = obj(v, `${label}.blanks[${i}]`);
@@ -114,6 +116,22 @@ function validateQuestionShape(q0, index) {
             const s = obj(q.solution, `${label}.solution`);
             allowed(s, new Set(['order']), `${label}.solution`);
             uniqueStrings(arr(s.order, `${label}.solution.order`, 2), `${label}.solution.order`);
+        }
+        return q;
+    }
+    if (t === 'classification') {
+        allowed(q, new Set([...COMMON, 'items', 'categories', 'solution']), label);
+        validateItems(q.items, `${label}.items`, 2);
+        validateItems(q.categories, `${label}.categories`, 2);
+        if (q.solution !== undefined) {
+            const s = obj(q.solution, `${label}.solution`);
+            allowed(s, new Set(['assignments']), `${label}.solution`);
+            for (const [i, a0] of arr(s.assignments, `${label}.solution.assignments`, 2).entries()) {
+                const a = obj(a0, `${label}.solution.assignments[${i}]`);
+                allowed(a, new Set(['item', 'category']), `${label}.solution.assignments[${i}]`);
+                token(a.item, `${label}.solution.assignments[${i}].item`);
+                token(a.category, `${label}.solution.assignments[${i}].category`);
+            }
         }
         return q;
     }
@@ -169,6 +187,21 @@ function semantic(q, embedded) { const qid = q.id, t = q.type, solution = q.solu
         const order = new Set(solution.order);
         if (order.size !== itemIds.size || [...itemIds].some((x) => !order.has(x)))
             throw new ValidationError(`${qid}: ordering solution must contain every item exactly once`);
+    }
+    return;
+} if (t === 'classification') {
+    const itemIds = ids(q.items, `${qid} classification item`), categoryIds = ids(q.categories, `${qid} classification category`);
+    if (solution) {
+        const seen = new Set();
+        for (const a of solution.assignments) {
+            if (!itemIds.has(a.item) || !categoryIds.has(a.category))
+                throw new ValidationError(`${qid}: classification solution references an unknown item or category`);
+            if (seen.has(a.item))
+                throw new ValidationError(`${qid}: classification solution repeats item ${a.item}`);
+            seen.add(a.item);
+        }
+        if (seen.size !== itemIds.size || [...itemIds].some((x) => !seen.has(x)))
+            throw new ValidationError(`${qid}: classification solution must assign every item exactly once`);
     }
     return;
 } if (t === 'matching') {
@@ -255,6 +288,12 @@ else if (question.type === 'ordering') {
     const supplied = Array.isArray(answer.order) ? answer.order : [], expected = solution.order;
     total = expected.length;
     hits = expected.reduce((n, x, i) => n + (i < supplied.length && String(supplied[i]) === String(x) ? 1 : 0), 0);
+    errors = total - hits;
+}
+else if (question.type === 'classification') {
+    const supplied = answer.classifications && typeof answer.classifications === 'object' && !Array.isArray(answer.classifications) ? answer.classifications : {}, expected = Object.fromEntries(solution.assignments.map((a) => [a.item, a.category]));
+    total = Object.keys(expected).length;
+    hits = Object.entries(expected).filter(([item, category]) => String(supplied[item] ?? '') === String(category)).length;
     errors = total - hits;
 }
 else if (question.type === 'matching') {

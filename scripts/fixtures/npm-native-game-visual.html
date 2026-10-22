@@ -95,18 +95,23 @@ p2lrn-player{display:block;width:100%;max-width:1250px;min-height:540px;margin:a
           return;
         }
         if(kind==='fill-blanks'){
-          const fields=[...root.querySelectorAll('.p2lrn-q-field input,.p2lrn-q-field select')];
+          const template=root.querySelector('.p2lrn-fill-template');
+          const fields=[...root.querySelectorAll('.p2lrn-fill-input,.p2lrn-fill-slot')];
           const prompt=root.querySelector('.p2lrn-q-prompt');
-          const body=root.querySelector('.p2lrn-q-body');
+          const chips=[...root.querySelectorAll('.p2lrn-fill-chip')];
           result.fields=fields.length;
           result.prompt=prompt?.textContent??null;
-          result.body=body?.textContent??null;
+          result.template=template?.textContent??null;
           result.inputModes=fields.map(field=>field.tagName.toLowerCase());
-          result.contextForBlanks=Boolean(body?.textContent?.trim());
-          if(fields.length && fields[0].tagName==='INPUT'){
-            fields[0].value='ejemplo';
-            fields[0].dispatchEvent(new Event('input',{bubbles:true}));
-            result.textEntryWorks=fields[0].value==='ejemplo';
+          result.wordBank=chips.map(chip=>chip.textContent.trim());
+          result.contextForBlanks=Boolean(template?.textContent?.trim());
+          const textField=fields.find(field=>field.matches('.p2lrn-fill-input'));
+          if(textField){
+            textField.value='ejemplo';
+            textField.dispatchEvent(new Event('input',{bubbles:true}));
+            result.textEntryWorks=textField.value==='ejemplo';
+          }else{
+            result.textEntryWorks=fields.length>0&&chips.length>0;
           }
           clearInterval(poll);
           finish(fields.length>0&&Boolean(prompt)&&result.contextForBlanks&&overflow<=2&&result.textEntryWorks?'PASS':'VISUAL_FAIL',result);

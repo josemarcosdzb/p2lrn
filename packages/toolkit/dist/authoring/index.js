@@ -1,9 +1,12 @@
 import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { basename, dirname, resolve } from 'node:path';
 import { ProjectError } from '../core/errors.js';
-import { FORMAT_VERSION } from '../core/constants.js';
+import { FORMAT_VERSION, PROFILE, canonicalIdentifier } from '../core/constants.js';
+import { portableUrn, uuidNamespace } from '../core/uuid.js';
 import { buildProject } from '../creator/builder.js';
 import { openPackageAsProject } from '../creator/import-project.js';
+import { readDocument } from '../document-reader/index.js';
 import { addComponent as creatorAddComponent, addComposite as creatorAddComposite, addFile as creatorAddFile, addQuestionnaire as creatorAddQuestionnaire, addUnit as creatorAddUnit, addUrl as creatorAddUrl, addWebContent as creatorAddWebContent, appendChild, entityByKey, loadProject, newProject, projectPath, saveProject, upgradeProjectWorkspace, validateProject, } from '../creator/project.js';
 /** Stable public contract consumed by P2LRN Studio and other authoring hosts. */
 export const AUTHORING_API_VERSION = '1';
@@ -41,6 +44,39 @@ function setLocalizedText(entity, options, language) {
         if (Object.keys(entity.description).length === 0)
             delete entity.description;
     }
+}
+function authoringEntityKind(project, key) {
+    if (project.course?.key === key)
+        return 'course';
+    if (project.units?.some((item) => item.key === key))
+        return 'unit';
+    if (project.activities?.some((item) => item.key === key))
+        return 'activity';
+    return 'other';
+}
+function authoringPortableId(project, key) {
+    const entity = entityByKey(project, key), kind = authoringEntityKind(project, key);
+    if (kind === 'other')
+        throw new ProjectError(`progression target must be course, unit or activity: ${key}`);
+    return canonicalIdentifier(String(entity.portableId ?? portableUrn(uuidNamespace(project.projectId), kind, key)));
+}
+function progressionScore(value, label) {
+    if (value === undefined)
+        return undefined;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 100)
+        throw new ProjectError(`${label} must be a percentage from 0 to 100`);
+    return value;
+}
+function syncProgressionProfile(project) {
+    const holders = [project.course, ...project.units, ...project.activities];
+    const rules = holders.map((entity) => entity.extensions?.[PROFILE.progression]).filter((value) => value && typeof value === 'object' && !Array.isArray(value));
+    project.profiles = (project.profiles ?? []).filter((profile) => canonicalIdentifier(String(profile.id)) !== PROFILE.progression);
+    if (!rules.length)
+        return null;
+    const gating = rules.some((rule) => rule.gateFollowing === true || rule.unlockWhen != null);
+    const resolved = gating ? 'required' : 'optional';
+    project.profiles.push({ id: PROFILE.progression, version: FORMAT_VERSION, requirement: resolved });
+    return resolved;
 }
 export class P2LRNAuthoringWorkspace {
     root;
@@ -85,6 +121,75 @@ export class P2LRNAuthoringWorkspace {
             throw new ProjectError('children must not contain duplicate keys'); const parent = entityByKey(draft, parentKey); parent.children = []; for (const child of unique)
             appendChild(draft, parentKey, child); return { parentKey, children: [...unique] }; });
     }
+    setProgression(key, options) {
+        return this.#edit((draft) => {
+            const entity = entityByKey(draft, key), kind = authoringEntityKind(draft, key);
+            if (kind === 'other')
+                throw new ProjectError('progression can only be set on course, unit or activity entities');
+            entity.extensions ??= {};
+            if (options === null) {
+                delete entity.extensions[PROFILE.progression];
+                if (Object.keys(entity.extensions).length === 0)
+                    delete entity.extensions;
+                const profileRequirement = syncProgressionProfile(draft);
+                return { key, rule: null, profileRequirement };
+            }
+            const rule = {};
+            if (options.required !== undefined) {
+                if (typeof options.required !== 'boolean')
+                    throw new ProjectError('progression required must be boolean');
+                rule.required = options.required;
+            }
+            if (options.gateFollowing !== undefined) {
+                if (typeof options.gateFollowing !== 'boolean')
+                    throw new ProjectError('progression gateFollowing must be boolean');
+                if (kind === 'course' && options.gateFollowing)
+                    throw new ProjectError('progression gateFollowing is not valid on the root course');
+                rule.gateFollowing = options.gateFollowing;
+            }
+            if (options.completionRequirement !== undefined) {
+                if (!['viewed', 'completed', 'passed'].includes(options.completionRequirement))
+                    throw new ProjectError('progression completionRequirement must be viewed, completed or passed');
+                rule.completionRequirement = options.completionRequirement;
+            }
+            if (options.minScore !== undefined && options.minScore !== null) {
+                if (kind !== 'activity')
+                    throw new ProjectError('progression minScore is only valid on activities');
+                rule.minScore = progressionScore(options.minScore, 'progression minScore');
+            }
+            if (options.unlockWhen !== undefined && options.unlockWhen !== null) {
+                const hasAll = Array.isArray(options.unlockWhen.all), hasAny = Array.isArray(options.unlockWhen.any);
+                if (hasAll === hasAny)
+                    throw new ProjectError('progression unlockWhen must contain exactly one of all or any');
+                const mode = hasAll ? 'all' : 'any';
+                const list = (hasAll ? options.unlockWhen.all : options.unlockWhen.any) ?? [];
+                if (!list.length)
+                    throw new ProjectError('progression unlockWhen conditions must not be empty');
+                rule.unlockWhen = { [mode]: list.map((condition, index) => {
+                        if (!condition || typeof condition.entityKey !== 'string' || !condition.entityKey)
+                            throw new ProjectError(`progression condition ${index} requires entityKey`);
+                        const targetKind = authoringEntityKind(draft, condition.entityKey);
+                        if (!['unit', 'activity'].includes(targetKind))
+                            throw new ProjectError(`progression condition target must be a unit or activity: ${condition.entityKey}`);
+                        if (condition.entityKey === key)
+                            throw new ProjectError('progression condition cannot depend on the same entity');
+                        const out = { entity: authoringPortableId(draft, condition.entityKey) };
+                        if (condition.status !== undefined) {
+                            if (!['viewed', 'completed', 'passed'].includes(condition.status))
+                                throw new ProjectError(`invalid progression condition status: ${condition.status}`);
+                            out.status = condition.status;
+                        }
+                        const minScore = progressionScore(condition.minScore, `progression condition minScore ${index}`);
+                        if (minScore !== undefined)
+                            out.minScore = minScore;
+                        return out;
+                    }) };
+            }
+            entity.extensions[PROFILE.progression] = rule;
+            const profileRequirement = syncProgressionProfile(draft);
+            return { key, rule: clone(rule), profileRequirement };
+        });
+    }
     addUnit(options) {
         return this.#edit((draft) => { const parent = options.parent ?? 'course'; creatorAddUnit(draft, options.key, options.title, options.language ?? 'es', options.role ?? 'module', parent); return { unitKey: options.key, parentKey: parent }; });
     }
@@ -106,9 +211,27 @@ export class P2LRNAuthoringWorkspace {
     addComposite(options) {
         return this.#edit((draft) => { const parent = options.parent ?? 'course'; const [resource, activity] = creatorAddComposite(this.root, draft, options.key, options.title, { language: options.language ?? 'es', parent, mode: options.mode ?? 'sequence', completion: options.completion ?? 'all', navigation: options.navigation, children: options.children, moveChildren: options.moveChildren !== false }); return { resourceKey: resource.key, activityKey: activity.key, parentKey: parent }; });
     }
+    /** Read and structurally extract a source document without mutating the authoring project.
+     * Relative paths are resolved from the workspace root; absolute paths are accepted unchanged.
+     */
+    async reader(source, options = {}) {
+        if (typeof source !== 'string' || !source.trim())
+            throw new ProjectError('document reader source path must not be empty');
+        const sourcePath = resolve(this.root, source);
+        let data;
+        try {
+            data = new Uint8Array(await readFile(sourcePath));
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            throw new ProjectError(`unable to read document source: ${sourcePath}: ${message}`);
+        }
+        return readDocument({ name: basename(sourcePath), data }, options);
+    }
     save() { saveProject(this.projectFile, this.#project); }
     build(output, options = {}) { return buildProject(this.root, output, options.strictProfiles ?? false); }
 }
 export function createAuthoringWorkspace(root, options) { return P2LRNAuthoringWorkspace.create(root, options); }
 export function openAuthoringWorkspace(packagePath, root, options = {}) { return P2LRNAuthoringWorkspace.open(packagePath, root, options); }
 export function loadAuthoringWorkspace(root) { return P2LRNAuthoringWorkspace.load(root); }
+//# sourceMappingURL=index.js.map

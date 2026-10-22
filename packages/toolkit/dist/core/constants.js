@@ -11,6 +11,7 @@ const PROFILE_SUFFIX = Object.freeze({
     scorm: 'scorm',
     cmi5: 'cmi5',
     commonCartridge: 'common-cartridge',
+    imsContentPackage: 'ims-content-package',
     tincan: 'tincan-package',
     lti: 'lti',
     case: 'case',
@@ -19,6 +20,8 @@ const PROFILE_SUFFIX = Object.freeze({
     nativeQuestionnaire: 'native-questionnaire',
     nativeComposite: 'native-composite',
     nativeComponent: 'native-component',
+    multipart: 'multipart',
+    progression: 'progression',
 });
 function profiles(base) {
     return Object.fromEntries(Object.entries(PROFILE_SUFFIX).map(([key, suffix]) => [key, `${base}profile/${suffix}`]));

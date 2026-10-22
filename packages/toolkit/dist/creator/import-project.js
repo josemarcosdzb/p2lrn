@@ -149,3 +149,4 @@ export function openPackageAsProject(packagePath, projectRoot, options = {}) {
     saveProject(projectFile, project);
     return { package: pkg, project: projectFile, sourceFormat: manifest.format, sourcePackageId: manifest.packageId, sourceContentRoot: manifest.integrity.contentRoot, entities: graph.entities.length, files: manifest.files.length, preservedFiles: preservedFiles.length, canonicalMigration: manifest.format !== 'P2LRN' };
 }
+//# sourceMappingURL=import-project.js.map

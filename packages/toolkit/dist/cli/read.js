@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { P2LRNReadingSystem, ReaderServer } from '../reader/index.js';
 import { parse, flag, opt, printJson, req, fail, CliExit, isMain } from './util.js';
 function open(url) { const platform = process.platform; if (platform === 'win32')
-    spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
+    spawn('explorer.exe', [url], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
 else if (platform === 'darwin')
     spawn('open', [url], { detached: true, stdio: 'ignore' }).unref();
 else

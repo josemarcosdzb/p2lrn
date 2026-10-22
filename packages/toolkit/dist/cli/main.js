@@ -7,10 +7,12 @@ import { main as trust } from './trust.js';
 import { main as read } from './read.js';
 import { main as inspect } from '../tools/inspect.js';
 import { main as repack } from '../tools/repack.js';
+import { main as multipart } from '../tools/multipart.js';
+import { main as documentReader } from './document-reader.js';
 import { main as extractSource } from '../tools/extract-source.js';
 const [command, ...args] = process.argv.slice(2);
 if (command === '--help' || command === '-h' || !command) {
-    process.stdout.write('Usage: p2lrn <validate|reader|inspect|create|convert|repack|extract-source|delta|trust> ...\n');
+    process.stdout.write('Usage: p2lrn <validate|reader|document-reader|inspect|create|convert|repack|multipart|extract-source|delta|trust> ...\n');
     if (!command)
         process.exitCode = 2;
 }
@@ -30,10 +32,14 @@ else if (command === 'inspect')
     inspect(args);
 else if (command === 'repack')
     repack(args);
+else if (command === 'multipart')
+    multipart(args);
+else if (command === 'document-reader')
+    documentReader(args);
 else if (command === 'extract-source')
     extractSource(args);
 else {
-    process.stderr.write('Usage: p2lrn <validate|reader|inspect|create|convert|repack|extract-source|delta|trust> ...\n');
+    process.stderr.write('Usage: p2lrn <validate|reader|document-reader|inspect|create|convert|repack|multipart|extract-source|delta|trust> ...\n');
     process.exitCode = 2;
 }
 //# sourceMappingURL=main.js.map

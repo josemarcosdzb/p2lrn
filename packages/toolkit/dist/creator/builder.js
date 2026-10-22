@@ -68,24 +68,35 @@ export function compileProject(projectRoot, project) {
             ids.set(item.key, entityId(item, kind));
     const payloads = new Map(), payloadMedia = new Map(), payloadMethods = new Map(), payloadSchemas = new Map(), entities = [];
     const used = new Set([PROFILE.course]);
+    const trackExtensionProfiles = (extensions) => { for (const uri of Object.keys(extensions ?? {})) {
+        const canonical = canonicalIdentifier(uri);
+        if (canonical.startsWith('https://p2lrn.org/profile/'))
+            used.add(canonical);
+    } };
     const c = project.course;
     const course = { id: ids.get(c.key), type: 'course', revision: c.revision, title: c.title, children: (c.children ?? []).map((k) => ids.get(k)) };
     copyFields(c, course, ['description', 'languages']);
-    if (c.extensions)
+    if (c.extensions) {
         course.extensions = canonicalizeJsonIdentifiers(c.extensions);
+        trackExtensionProfiles(c.extensions);
+    }
     entities.push(course);
     for (const item of project.units) {
         const out = { id: ids.get(item.key), type: 'unit', role: item.role, title: item.title, children: (item.children ?? []).map((k) => ids.get(k)) };
         copyFields(item, out, ['description']);
-        if (item.extensions)
+        if (item.extensions) {
             out.extensions = canonicalizeJsonIdentifiers(item.extensions);
+            trackExtensionProfiles(item.extensions);
+        }
         entities.push(out);
     }
     for (const item of project.resources) {
         const out = { id: ids.get(item.key), type: 'resource', representations: [] };
         copyFields(item, out, ['title', 'description']);
-        if (item.extensions)
+        if (item.extensions) {
             out.extensions = canonicalizeJsonIdentifiers(item.extensions);
+            trackExtensionProfiles(item.extensions);
+        }
         const repKeys = new Set();
         for (const rep of item.representations) {
             if (repKeys.has(rep.key))
@@ -144,8 +155,10 @@ export function compileProject(projectRoot, project) {
                     rout.profile = canonicalIdentifier(rep.profile);
                     used.add(rout.profile);
                 }
-                if (rep.extensions)
+                if (rep.extensions) {
                     rout.extensions = canonicalizeJsonIdentifiers(rep.extensions);
+                    trackExtensionProfiles(rep.extensions);
+                }
             }
             for (const name of ['language', 'accessibility'])
                 if (Object.prototype.hasOwnProperty.call(rep, name))
@@ -167,18 +180,16 @@ export function compileProject(projectRoot, project) {
             out.objectives = item.objectives.map((k) => ids.get(k));
         if (Object.prototype.hasOwnProperty.call(item, 'children'))
             out.children = (item.children ?? []).map((k) => ids.get(k));
-        for (const uri of Object.keys(item.extensions ?? {})) {
-            const canonical = canonicalIdentifier(uri);
-            if (canonical.startsWith('https://p2lrn.org/profile/'))
-                used.add(canonical);
-        }
+        trackExtensionProfiles(item.extensions);
         entities.push(out);
     }
     for (const item of project.objectives) {
         const out = { id: ids.get(item.key), type: 'objective', title: item.title };
         copyFields(item, out, ['description', 'alignments']);
-        if (item.extensions)
+        if (item.extensions) {
             out.extensions = canonicalizeJsonIdentifiers(item.extensions);
+            trackExtensionProfiles(item.extensions);
+        }
         entities.push(out);
     }
     if (project.entityOrder) {
@@ -186,7 +197,7 @@ export function compileProject(projectRoot, project) {
         const ordered = project.entityOrder.map((key) => byId.get(ids.get(key)));
         entities.splice(0, entities.length, ...ordered);
     }
-    const relations = project.relations.map((rel) => ({ source: ids.get(rel.source), predicate: canonicalIdentifier(rel.predicate), target: ids.get(rel.target), ...(rel.extensions ? { extensions: canonicalizeJsonIdentifiers(rel.extensions) } : {}) }));
+    const relations = project.relations.map((rel) => { trackExtensionProfiles(rel.extensions); return { source: ids.get(rel.source), predicate: canonicalIdentifier(rel.predicate), target: ids.get(rel.target), ...(rel.extensions ? { extensions: canonicalizeJsonIdentifiers(rel.extensions) } : {}) }; });
     const graph = { graphVersion: FORMAT_VERSION, entities, relations };
     if (project.graphPolicy === 'preserve') {
         if (project.graphExtensions !== undefined)
@@ -229,7 +240,7 @@ export function compileProject(projectRoot, project) {
         for (const p of [...used].sort())
             if (!explicit.has(p))
                 explicit.set(p, { id: p, version: FORMAT_VERSION, requirement: 'optional' });
-        profiles = [...explicit.values()].sort((a, b) => a.id.localeCompare(b.id));
+        profiles = [...explicit.values()].sort((a, b) => a.id.localeCompare(b));
     }
     const entrypoints = (project.entrypoints ?? [{ key: c.key, type: 'course', role: 'primary' }]).map((e) => ({ id: ids.get(e.key), type: e.type, role: e.role }));
     const files = [...payloads.keys()].sort().map((p) => descriptor(p, payloads.get(p), payloadMedia.get(p), payloadSchemas.get(p)));
@@ -244,3 +255,4 @@ export function compileProject(projectRoot, project) {
     return { manifest, payloads, mediaByPath, methodsByPath, graph };
 }
 export function buildProject(projectRoot, output, strictProfiles = false) { const loaded = loadProject(projectRoot), root = resolve(loaded.path, '..'), compiled = compileProject(root, loaded.project); mkdirSync(resolve(output, '..'), { recursive: true }); const entries = [...compiled.payloads.keys()].sort().map((path) => ({ path, data: compiled.payloads.get(path), mediaType: compiled.mediaByPath.get(path), method: compiled.methodsByPath.get(path) })); const bytes = writeZip(entries); writeFileSync(output, bytes); const validation = validatePackageBytes(bytes, { strictProfiles }); return { project: loaded.path, output, formatVersion: compiled.manifest.formatVersion, packageId: compiled.manifest.packageId, contentRoot: compiled.manifest.integrity.contentRoot, entities: validation.summary.entities, files: validation.summary.files, validation }; }
+//# sourceMappingURL=builder.js.map
