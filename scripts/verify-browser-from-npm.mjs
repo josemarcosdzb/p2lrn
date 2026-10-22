@@ -312,6 +312,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
   const authoredCourse=params.get('authored')==='1';
   const importedScorm=params.get('importedScorm')==='1';
   const importedReader=params.get('importedReader')==='1';
+  const nativeGameKind=params.get('nativeGame');
   const passiveExpectations={
     'common-cartridge.p2lrn':'Common Cartridge browser OK',
   };
@@ -377,6 +378,54 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
     });
   }
   document.body.append(p);
+  if(nativeGameKind){
+    const started=Date.now();
+    const timer=setInterval(()=>{
+      if(finished){clearInterval(timer);return;}
+      const root=p.shadowRoot;
+      const shell=root?.querySelector('.p2lrn-game-shell');
+      if(!shell){
+        if(Date.now()-started>11000){clearInterval(timer);finish('FAIL',{phase:'native-game-not-rendered',nativeGameKind});}
+        return;
+      }
+      const bb=el=>el?.getBoundingClientRect();
+      const overflow=Math.max(0,document.documentElement.scrollWidth-innerWidth);
+      if(nativeGameKind==='rosco'){
+        const letters=[...root.querySelectorAll('.p2lrn-rosco-letter')];
+        if(letters.length<4)return;
+        const positions=letters.map(el=>bb(el));
+        const spreadY=Math.max(...positions.map(x=>x.top))-Math.min(...positions.map(x=>x.top));
+        const circle=Boolean(root.querySelector('.p2lrn-rosco-center'))&&spreadY>75;
+        clearInterval(timer);
+        finish(circle&&overflow<=2?'PASS':'VISUAL_FAIL',{
+          kind:'rosco',letters:letters.length,circle,spreadY,
+          overflow,center:!!root.querySelector('.p2lrn-rosco-center'),
+          content:root.textContent.slice(0,220),
+        });return;
+      }
+      if(nativeGameKind==='crossword'){
+        const grid=root.querySelector('.p2lrn-crossword-grid');
+        const cells=[...root.querySelectorAll('.p2lrn-crossword-cell')];
+        if(!grid||!cells.length)return;
+        const rectangles=cells.slice(0,12).map(el=>bb(el));
+        const ratios=rectangles.filter(x=>x.width&&x.height).map(x=>x.width/x.height);
+        const square=ratios.length&&ratios.every(x=>Math.abs(x-1)<0.18);
+        const wrap=root.querySelector('.p2lrn-crossword-wrap');
+        const scroll=wrap?Math.max(0,wrap.scrollWidth-wrap.clientWidth):0;
+        clearInterval(timer);
+        finish(square&&overflow<=2&&scroll<=2?'PASS':'VISUAL_FAIL',{
+          kind:'crossword',cells:cells.length,gridWidth:bb(grid)?.width,
+          square,ratios,overflow,internalScroll:scroll,
+          hasClueButtons:root.querySelectorAll('.p2lrn-crossword-clue').length>0,
+        });return;
+      }
+      clearInterval(timer);
+      finish(overflow<=2?'PASS':'VISUAL_FAIL',{
+        kind:nativeGameKind,overflow,actions:root.querySelectorAll('button').length,
+        content:root.textContent.slice(0,320),
+      });
+    },160);
+  }
   // This page is executed with Chrome virtual time. An in-page timeout can
   // expire while network/runtime IPC is still progressing and produce a false
   // failure. The outer Chrome timeout and virtual-time budget are the deadline;
@@ -1022,11 +1071,11 @@ export async function runChromePageGate(chrome,url,profile,options={}){
   }
 }
 
-async function runCourse(chrome, appOrigin, course, index, {authored=false,node=null,importedScorm=false,importedReader=false}={}) {
+async function runCourse(chrome, appOrigin, course, index, {authored=false,node=null,importedScorm=false,importedReader=false,nativeGame=null}={}) {
   const profile=join(gateRoot,`chrome-profile-${index}`);
-  const url=`${appOrigin}/?course=${encodeURIComponent(course)}${authored?'&authored=1':''}${node?'&node='+encodeURIComponent(node):''}${importedScorm?'&importedScorm=1':''}${importedReader?'&importedReader=1':''}`;
+  const url=`${appOrigin}/?course=${encodeURIComponent(course)}${authored?'&authored=1':''}${node?'&node='+encodeURIComponent(node):''}${importedScorm?'&importedScorm=1':''}${importedReader?'&importedReader=1':''}${nativeGame?'&nativeGame='+encodeURIComponent(nativeGame):''}`;
   const shotName='npm-player-'+course.replace(/[^a-z0-9-]+/giu,'-')
-    +(node?'-'+(importedScorm?'scorm':importedReader?'reader':'lesson')+'-'+node.slice(-8):'');
+    +(node?'-'+(nativeGame|| (importedScorm?'scorm':importedReader?'reader':'lesson'))+'-'+node.slice(-8):'');
   const result=await runChromePageGate(chrome,url,profile,{timeoutMs:35000,screenshotName:shotName});
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
@@ -1078,6 +1127,19 @@ try{
   results.push(await runQuestionnaire(chrome,appOrigin));
   const studioResult=await runStudioFromNpm(chrome,appOrigin);
   results.push(studioResult);
+  const nativeVisualResults=[];
+  for(const kind of ['rosco','crossword','word-search','matching','ordering','classification','3d']){
+    const node=studioResult.nativeVisualNodeIds?.[kind];
+    if(!node){nativeVisualResults.push({kind,status:'NOT_TESTED',reason:'Activity not found in exported graph'});continue;}
+    try{
+      const visual=await runCourse(chrome,appOrigin,studioResult.filename,courses.length+20+nativeVisualResults.length,
+        {node,nativeGame:kind});
+      nativeVisualResults.push({...visual,kind});
+    }catch(error){
+      nativeVisualResults.push({kind,status:'VISUAL_FAIL',error:String(error?.message??error).slice(0,1250)});
+    }
+  }
+  results.push(...nativeVisualResults);
   results.push(await runCourse(chrome,appOrigin,studioResult.filename,courses.length,{authored:true,node:studioResult.lessonId}));
   // Test the real SCORM and Reader resources imported through Studio, rather
   // than only verifying that their names survive ZIP export/reimport.
@@ -1090,7 +1152,10 @@ try{
   await new Promise((resolvePromise)=>appServer.close(()=>resolvePromise()));
 }
 
-console.log(JSON.stringify({ok:true,chrome,runtimeOrigin,appOrigin,results},null,2));
+const defects=results.filter(item=>!['PASS'].includes(item.status));
+console.log('PUBLIC_NPM_VISUAL_MATRIX='+JSON.stringify({results:defects.length?results:results.map(item=>({name:item.name??item.kind??item.course,status:item.status})),defects},null,2));
+console.log(JSON.stringify({ok:defects.length===0,chrome,runtimeOrigin,appOrigin,results},null,2));
+if(defects.length)process.exitCode=1;
 
 
 }
