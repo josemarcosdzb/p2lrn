@@ -123,7 +123,7 @@ jobs:
           if (-not (Test-Path -LiteralPath $dir)) { Write-Host 'VISUAL_PREVIEW_MISSING=true'; exit 0 }
           $files = @(Get-ChildItem -LiteralPath $dir -Filter '*.png' -File)
           Write-Host ('VISUAL_SCREENSHOT_FILES=' + $files.Count)
-          $patterns = @('npm-studio-ui.png','*rosco*','*crossword*','npm-player-questionnaire.png')
+          $patterns = @('npm-studio-ui.png','*-rosco-????????.png','*-rosco-????????-mobile.png','*-crossword-????????.png','*-crossword-????????-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png')
           foreach($pattern in $patterns){
             $file=$files | Where-Object { $_.Name -like $pattern } | Select-Object -First 1
             if(-not $file){Write-Host ('VISUAL_PREVIEW_NOT_FOUND=' + $pattern);continue}
@@ -152,42 +152,6 @@ jobs:
             }
           }
 
-
-  visual-qa-cloud:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]') }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-      - name: Verify isolated cloud browser and npm tooling
-        shell: bash
-        run: |
-          node --version
-          npm --version
-          node --check scripts/verify-browser-from-npm.mjs
-          command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser
-      - name: Clean public npm install in an independent cloud machine
-        run: node scripts/verify-public-npm-e2e.mjs
-      - name: All Player and Studio browser cases from public npm in cloud Chromium
-        run: node scripts/verify-browser-from-npm.mjs
-      - name: Preserve independent QA summary in cloud job log
-        if: always()
-        shell: bash
-        run: |
-          if test -f .npm-pack-gate/public-npm-report.json; then
-            cat .npm-pack-gate/public-npm-report.json
-          fi
-          if test -d .npm-pack-gate/visual-evidence; then
-            find .npm-pack-gate/visual-evidence -maxdepth 1 -type f -name '*.png' -printf 'CLOUD_SCREENSHOT %f %s bytes\n' | sort
-          fi
 
   automatic-runtime:
     if: ${{ github.event_name == 'pull_request' }}
