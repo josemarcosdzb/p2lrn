@@ -14,6 +14,10 @@ const list=[
   'packages/toolkit/config/capabilities.json','packages/studio/src/p2lrn-studio.js',
   'packages/toolkit/web/p2lrn-player.js','packages/toolkit/web-sdk-src/p2lrn.js',
   'PUBLISHING.md',
+  'deploy/netlify/site/docs/npm/index.html',
+  'deploy/netlify/site/docs/npm/studio/index.html',
+  'deploy/netlify/site/docs/cdn/index.html',
+  'deploy/netlify/site/docs/cdn/studio/index.html',
 ];
 test('version bump dry-run validates four packages including Studio without writing any file',async()=>{
   const paths=list.map(file=>resolve(root,file));

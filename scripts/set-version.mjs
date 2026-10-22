@@ -101,6 +101,18 @@ for(const relative of [
   // Versionless package READMEs are valid and must remain unchanged.
   if(before.includes(previous))pending.set(relative,before.replaceAll(previous,version));
 }
+// Versioned npm/CDN documentation is part of the release, not a separate
+// hand-edited website. Retain the exact current examples for every channel.
+for(const relative of [
+  'deploy/netlify/site/docs/npm/index.html',
+  'deploy/netlify/site/docs/npm/studio/index.html',
+  'deploy/netlify/site/docs/cdn/index.html',
+  'deploy/netlify/site/docs/cdn/studio/index.html',
+]){
+  const before=await contents(relative);
+  if(!before.includes(previous))throw Error(relative+': current release marker missing');
+  pending.set(relative,before.replaceAll(previous,version));
+}
 // PUBLISHING.md includes an important historical statement about the previously
 // published immutable prerelease. Do not change that history.
 const publishing='PUBLISHING.md';
