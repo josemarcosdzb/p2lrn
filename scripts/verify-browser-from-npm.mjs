@@ -339,6 +339,7 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
         finish('PASS',{course,renderer:detail?.rendererId,passiveContentVerified:true});
       }
       if(name==='p2lrn:activityready'){
+        if(nativeGameKind)return; // Dedicated native game visual inspector makes the pass/fail decision.
         if(importedScorm){
           if(detail?.runtime!=='scorm'||detail?.scormVersion!=='1.2'){
             finish('FAIL',{phase:'studio-imported-scorm-not-replayed',course,detail});
@@ -870,7 +871,7 @@ async function runStudioFromNpm(chrome,appOrigin){
     '\nChrome stderr: '+String(result.stderr).slice(-5000)
   );
   const parsed=JSON.parse(detail);
-  return {name:'studio-ui-npm',status:result.status,...parsed.detail,screenshot:result.screenshot};
+  return {name:'studio-ui-npm',status:result.status,...parsed.detail,screenshot:result.screenshot,mobile:result.mobile,mobileScreenshot:result.mobileScreenshot};
 }
 
 
@@ -1048,7 +1049,23 @@ async function runChromePageGateOnce(chrome, url, profile, {timeoutMs=35000, exe
           await writeFile(target,Buffer.from(shot.data,'base64'));
           if((await stat(target)).size<5000)throw new Error('Chrome screenshot appears empty: '+target);
         }
-        return {...snapshot,screenshot,stderr,browserLogs,runtimeExceptions};
+        let mobile=null;
+        let mobileScreenshot=null;
+        if(screenshotName){
+          await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+          await sleep(300);
+          const result=await send('Runtime.evaluate',{
+            expression:'(()=>{const root=document.documentElement;const studio=document.querySelector("p2lrn-studio")?.shadowRoot;const player=document.querySelector("p2lrn-player");const shell=studio?.querySelector(".shell");return {width:innerWidth,documentWidth:root.scrollWidth,overflow:Math.max(0,root.scrollWidth-innerWidth),studioShell:shell?.getBoundingClientRect().width,studioOverflow:shell?Math.max(0,shell.scrollWidth-shell.clientWidth):null,playerWidth:player?.getBoundingClientRect().width,playerScroll:player?.scrollWidth,playerClient:player?.clientWidth};})()',
+            returnByValue:true,
+          });
+          mobile=result.result?.value??null;
+          const mobileShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});
+          mobileScreenshot=screenshotName+'-mobile.png';
+          const mobileTarget=join(gateRoot,'visual-evidence',mobileScreenshot);
+          await writeFile(mobileTarget,Buffer.from(mobileShot.data,'base64'));
+          if((await stat(mobileTarget)).size<5000)throw new Error('Empty mobile screenshot '+mobileTarget);
+        }
+        return {...snapshot,screenshot,mobile,mobileScreenshot,stderr,browserLogs,runtimeExceptions};
       }
       await sleep(100);
     }
@@ -1091,7 +1108,7 @@ async function runCourse(chrome, appOrigin, course, index, {authored=false,node=
   if(status!=='PASS'){
     throw new Error(`Browser gate failed for ${course}: status=${status}\n${detail}\nBrowser logs:\n${JSON.stringify(result.browserLogs??[],null,2)}\nRuntime exceptions:\n${JSON.stringify(result.runtimeExceptions??[],null,2)}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
   }
-  return {course,status,detail:detail.slice(0,1000)};
+  return {course,status,detail:detail.slice(0,1000),mobile:result.mobile,screenshot:result.screenshot,mobileScreenshot:result.mobileScreenshot};
 }
 
 async function runQuestionnaire(chrome, appOrigin) {
