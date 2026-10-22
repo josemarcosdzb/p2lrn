@@ -82,7 +82,7 @@ for(const channel of channels){
         results.push({channel:channel.name,kind:item.kind,status:'BUILD_FAIL',details:item.fixtureError});
         continue;
       }
-      const query=new URLSearchParams({kind:item.kind,src:'/native/'+item.kind+'.p2lrn',node:item.node});
+      const query=new URLSearchParams({channel:channel.name,kind:item.kind,src:'/native/'+item.kind+'.p2lrn',node:item.node});
       const url='http://127.0.0.1:'+port+'/?'+query;
       try{
         const result=await runChromePageGate(chrome,url,join(gate,'threeway-profile-'+channel.name+'-'+item.kind),
