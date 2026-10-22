@@ -80,6 +80,21 @@ export function validateQuestionnaire(payload) {
 
 function validateQuestionSemantics(question) {
   const solution = question.solution;
+  if (question.type === 'true-false') {
+    const mode = question.trueFalseMode ?? 'single';
+    invariant(['single','multiple'].includes(mode), `${question.id}: trueFalseMode must be single or multiple`);
+    if (mode === 'multiple') {
+      invariant(Array.isArray(question.statements) && question.statements.length >= 2, `${question.id}: multiple true-false requires at least two statements`);
+      const ids = uniqueIds(question.statements, `${question.id} statement`);
+      if (solution) {
+        invariant(solution.answers && typeof solution.answers === 'object' && !Array.isArray(solution.answers), `${question.id}: solution.answers is required`);
+        const answerIds = new Set(Object.keys(solution.answers));
+        invariant(answerIds.size === ids.size && [...ids].every((id) => answerIds.has(id)), `${question.id}: every true-false statement requires an answer`);
+        for (const [id,value] of Object.entries(solution.answers)) invariant(ids.has(id) && typeof value === 'boolean', `${question.id}: true-false answer ${id} must be boolean`);
+      }
+      return;
+    }
+  }
   if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) {
     invariant(Array.isArray(question.choices) && question.choices.length >= 2, `${question.id}: choices are required`);
     const ids = uniqueIds(question.choices, `${question.id} choice`);
@@ -168,6 +183,7 @@ export function normalizeText(value) {
 }
 
 function defaultScoring(question) {
+  if (question.type === 'true-false' && question.trueFalseMode === 'multiple') return 'partial-per-item';
   return ['single-choice', 'true-false', 'text'].includes(question.type) ? 'all-or-nothing' : 'partial-per-item';
 }
 
@@ -200,7 +216,15 @@ export function scoreQuestion(question, answer) {
   let errors = 0;
   let total = 1;
 
-  if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) {
+  if (question.type === 'true-false' && question.trueFalseMode === 'multiple') {
+    const values = supplied.booleans && typeof supplied.booleans === 'object' && !Array.isArray(supplied.booleans) ? supplied.booleans : {};
+    const expected = question.solution.answers;
+    total = Object.keys(expected).length;
+    for (const [statementId, correctValue] of Object.entries(expected)) {
+      if (typeof values[statementId] === 'boolean' && values[statementId] === correctValue) hits += 1;
+      else errors += 1;
+    }
+  } else if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) {
     const selected = new Set(Array.isArray(supplied.choiceIds) ? supplied.choiceIds.map(String) : []);
     const correct = new Set(question.solution.choiceIds.map(String));
     hits = [...selected].filter((id) => correct.has(id)).length;

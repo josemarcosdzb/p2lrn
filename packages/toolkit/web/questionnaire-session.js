@@ -61,6 +61,7 @@ function validQuestionOrder(payload, value) {
 
 export function answerIsMeaningful(question, answer) {
   if (!isRecord(answer)) return false;
+  if (question.type === 'true-false' && question.trueFalseMode === 'multiple') return isRecord(answer.booleans) && question.statements.every((statement) => typeof answer.booleans[statement.id] === 'boolean');
   if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) return Array.isArray(answer.choiceIds) && answer.choiceIds.length > 0;
   if (question.type === 'text') return typeof answer.text === 'string' && answer.text.trim().length > 0;
   if (question.type === 'fill-blanks') return isRecord(answer.blanks) && Object.values(answer.blanks).some((value) => String(value ?? '').trim());

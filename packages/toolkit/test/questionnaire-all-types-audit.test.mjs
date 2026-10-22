@@ -70,3 +70,29 @@ test('multiple choice cannot earn full credit by selecting every option',()=>{
   assert.equal(score.correct,false);
   assert.ok(score.pointsAwarded<question.points);
 });
+
+test('true-false multiple statements validate and score each statement independently',()=>{
+  const question={
+    id:'qtfm',type:'true-false',trueFalseMode:'multiple',prompt:'Indica si cada afirmación es verdadera o falsa',points:3,
+    statements:[{id:'s1',text:'La Tierra gira alrededor del Sol'},{id:'s2',text:'2 + 2 = 5'},{id:'s3',text:'El agua es H2O'}],
+    solution:{answers:{s1:true,s2:false,s3:true}},
+  };
+  validateQuestionnaire(wrap(structuredClone(question)));
+  const all=scoreQuestion(question,{booleans:{s1:true,s2:false,s3:true}});
+  assert.equal(all.correct,true);
+  assert.equal(all.pointsAwarded,3);
+  const partial=scoreQuestion(question,{booleans:{s1:true,s2:true,s3:true}});
+  assert.equal(partial.correct,false);
+  assert.equal(partial.hits,2);
+  assert.equal(partial.errors,1);
+  assert.equal(partial.pointsAwarded,2);
+});
+
+test('true-false multiple requires an answer for every statement',()=>{
+  const question={
+    id:'qtfm',type:'true-false',trueFalseMode:'multiple',prompt:'Clasifica',points:2,
+    statements:[{id:'s1',text:'A'},{id:'s2',text:'B'}],
+    solution:{answers:{s1:true}},
+  };
+  assert.throws(()=>validateQuestionnaire(wrap(question)),/every true-false statement requires an answer/);
+});

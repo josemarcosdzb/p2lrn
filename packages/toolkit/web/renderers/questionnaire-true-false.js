@@ -31,8 +31,7 @@ export async function render(options){
     const answer=(value)=>{
       if(locked||finished)return;
       locked=true;
-      const choiceId=value?item.trueId:item.falseId;
-      runtime.applyPatch(item.questionId,{kind:'choice-set',choiceId});
+      runtime.applyPatch(item.questionId,value?item.truePatch:item.falsePatch);
       if(item.correct===value)correctCount+=1;
       status.textContent=item.correct===value?'Correcto.':`Incorrecto: era ${item.correct?'verdadero':'falso'}.`;
       actions.querySelectorAll('button').forEach((button)=>button.disabled=true);

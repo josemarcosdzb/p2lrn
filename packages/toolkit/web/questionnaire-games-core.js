@@ -154,18 +154,32 @@ function orderingForQuestion(question) {
 }
 
 function trueFalseForQuestion(question) {
-  if (question.type !== 'true-false') return null;
+  if (question.type !== 'true-false') return [];
+  if (question.trueFalseMode === 'multiple') {
+    const answers=question.solution?.answers;
+    if(!answers||typeof answers!=='object'||Array.isArray(answers))return[];
+    const statements=Array.isArray(question.statements)?question.statements:[];
+    if(statements.length<2)return[];
+    return statements.map((statement)=>({
+      id:`${question.id}:tf:${statement.id}`,questionId:question.id,statementId:String(statement.id),prompt:String(statement.text),
+      correct:Boolean(answers[statement.id]),
+      truePatch:{kind:'boolean-set',statementId:String(statement.id),value:true},
+      falsePatch:{kind:'boolean-set',statementId:String(statement.id),value:false},
+    }));
+  }
   const correct = choiceSolutions(question);
-  if (correct.length !== 1 || (question.choices ?? []).length !== 2) return null;
+  if (correct.length !== 1 || (question.choices ?? []).length !== 2) return [];
   const values = new Map((question.choices ?? []).map((choice) => [normalizeText(choice.text), String(choice.id)]));
   const trueId = values.get('verdadero') ?? values.get('true');
   const falseId = values.get('falso') ?? values.get('false');
-  if (!trueId || !falseId || trueId === falseId) return null;
-  return {
+  if (!trueId || !falseId || trueId === falseId) return [];
+  return [{
     id: `${question.id}:tf`, questionId: question.id, prompt: question.prompt,
     correct: String(correct[0].id) === trueId,
     trueId, falseId,
-  };
+    truePatch:{kind:'choice-set',choiceId:trueId},
+    falsePatch:{kind:'choice-set',choiceId:falseId},
+  }];
 }
 
 function duplicateConflicts(entries, keyFn) {
@@ -441,7 +455,7 @@ function buildClassification(payload, seedSource) {
 
 function buildTrueFalse(payload) {
   if(!requireEmbeddedKey(payload))return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',false,null,['Necesita soluciones embebidas.']);
-  const questions=[]; const reasons=[]; for(const question of payload.questions){const item=trueFalseForQuestion(question);if(!item)reasons.push(`${question.id}: debe ser verdadero/falso con exactamente dos opciones inequívocas.`);else questions.push(item);} if(reasons.length)return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',false,null,reasons); if(questions.length<2)return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',false,null,['Necesita al menos 2 preguntas.']); return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',true,{questions});
+  const questions=[]; const reasons=[]; for(const question of payload.questions){const items=trueFalseForQuestion(question);if(!items.length)reasons.push(`${question.id}: debe ser verdadero/falso simple o contener al menos dos afirmaciones con respuesta.`);else questions.push(...items);} if(reasons.length)return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',false,null,reasons); if(questions.length<2)return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',false,null,['Necesita al menos 2 afirmaciones.']); return result(TRUE_FALSE_RENDERER,'Verdadero/Falso',true,{questions});
 }
 
 function rotate(items, offset) { if(!items.length)return[]; const n=((offset%items.length)+items.length)%items.length; return [...items.slice(n),...items.slice(0,n)]; }
@@ -503,6 +517,7 @@ export function mergeAnswerPatch(current, patch) {
   switch(patch?.kind){
     case 'choice-add': answer.choiceIds=unique([...(Array.isArray(answer.choiceIds)?answer.choiceIds.map(String):[]),String(patch.choiceId)]); break;
     case 'choice-set': answer.choiceIds=[String(patch.choiceId)]; break;
+    case 'boolean-set': answer.booleans={...(answer.booleans&&typeof answer.booleans==='object'&&!Array.isArray(answer.booleans)?answer.booleans:{}),[String(patch.statementId)]:Boolean(patch.value)}; break;
     case 'text': answer.text=String(patch.text); break;
     case 'blank-set': answer.blanks={...(answer.blanks&&typeof answer.blanks==='object'&&!Array.isArray(answer.blanks)?answer.blanks:{}),[String(patch.blankId)]:String(patch.value)}; break;
     case 'pair-set': answer.pairs={...(answer.pairs&&typeof answer.pairs==='object'&&!Array.isArray(answer.pairs)?answer.pairs:{}),[String(patch.leftId)]:String(patch.rightId)}; break;

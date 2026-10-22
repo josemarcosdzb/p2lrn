@@ -41,7 +41,7 @@ function defaultQuestion(type='single-choice'){
   const id=uid('q');
   if(type==='single-choice')return{id,type,prompt:'Escribe aquí la pregunta',points:1,choices:[{id:uid('a'),text:'Respuesta correcta'},{id:uid('a'),text:'Otra respuesta'}],solution:{choiceIds:[]}};
   if(type==='multiple-choice')return{id,type,prompt:'Selecciona todas las respuestas correctas',points:1,choices:[{id:uid('a'),text:'Opción 1'},{id:uid('a'),text:'Opción 2'},{id:uid('a'),text:'Opción 3'}],solution:{choiceIds:[]}};
-  if(type==='true-false')return{id,type,prompt:'Escribe una afirmación',points:1,choices:[{id:uid('t'),text:'Verdadero'},{id:uid('f'),text:'Falso'}],solution:{choiceIds:[]}};
+  if(type==='true-false')return{id,type,prompt:'Escribe una afirmación',trueFalseMode:'single',points:1,choices:[{id:uid('t'),text:'Verdadero'},{id:uid('f'),text:'Falso'}],solution:{choiceIds:[]}};
   if(type==='text')return{id,type,prompt:'Escribe la pregunta',points:1,solution:{acceptedAnswers:['Respuesta']}};
   if(type==='fill-blanks'){const blankId=uid('blank');return{id,type,prompt:'Completa los huecos',body:'Escribe aquí el texto y selecciona la palabra que quieras ocultar. {{'+blankId+'}}',inputMode:'text',points:1,blanks:[{id:blankId}],solution:{answers:{[blankId]:['Respuesta']}}};}
   if(type==='ordering')return{id,type,prompt:'Ordena los elementos',points:1,items:[{id:uid('i'),text:'Primero'},{id:uid('i'),text:'Segundo'}],solution:{order:[]}};
@@ -49,13 +49,27 @@ function defaultQuestion(type='single-choice'){
   return{id,type:'classification',prompt:'Clasifica los elementos',points:1,items:[{id:uid('i'),text:'Elemento A'},{id:uid('i'),text:'Elemento B'}],categories:[{id:uid('c'),text:'Grupo 1'},{id:uid('c'),text:'Grupo 2'}],solution:{assignments:[]}};
 }
 function ensureSolution(question){
-  if(['single-choice','multiple-choice','true-false'].includes(question.type)){question.choices??=[];question.solution={choiceIds:(question.solution?.choiceIds??[]).filter((id)=>question.choices.some((c)=>c.id===id))};if(!question.solution.choiceIds.length&&question.choices[0])question.solution.choiceIds=[question.choices[0].id];}
+  if(question.type==='true-false'){
+    question.trueFalseMode=question.trueFalseMode==='multiple'?'multiple':'single';
+    if(question.trueFalseMode==='multiple'){
+      question.statements=Array.isArray(question.statements)?question.statements:[];
+      while(question.statements.length<2)question.statements.push({id:uid('tf'),text:`Afirmación ${question.statements.length+1}`});
+      const old=question.solution?.answers??{};
+      question.solution={answers:Object.fromEntries(question.statements.map((statement,index)=>[statement.id,typeof old[statement.id]==='boolean'?old[statement.id]:index===0]))};
+      return;
+    }
+    question.choices=Array.isArray(question.choices)&&question.choices.length===2?question.choices:[{id:uid('t'),text:'Verdadero'},{id:uid('f'),text:'Falso'}];
+    const choiceIds=(question.solution?.choiceIds??[]).filter((id)=>question.choices.some((choice)=>choice.id===id));
+    question.solution={choiceIds:choiceIds.length?[choiceIds[0]]:[question.choices[0].id]};
+  }
+  else if(['single-choice','multiple-choice'].includes(question.type)){question.choices??=[];question.solution={choiceIds:(question.solution?.choiceIds??[]).filter((id)=>question.choices.some((c)=>c.id===id))};if(!question.solution.choiceIds.length&&question.choices[0])question.solution.choiceIds=[question.choices[0].id];}
   else if(question.type==='text'){question.solution={acceptedAnswers:question.solution?.acceptedAnswers?.length?question.solution.acceptedAnswers:['Respuesta']};}
   else if(question.type==='fill-blanks'){question.blanks??=[];const old=question.solution?.answers??{};question.solution={answers:Object.fromEntries(question.blanks.map((b)=>[b.id,old[b.id]?.length?old[b.id]:['Respuesta']]))};}
   else if(question.type==='ordering'){question.items??=[];question.solution={order:question.items.map((x)=>x.id)};}
   else if(question.type==='matching'){question.left??=[];question.right??=[];question.solution={pairs:question.left.map((left,index)=>({left:left.id,right:question.right[index]?.id??question.right[0]?.id})).filter((p)=>p.right)};}
   else if(question.type==='classification'){question.items??=[];question.categories??=[];const fallback=question.categories[0]?.id;question.solution={assignments:question.items.map((item)=>({item:item.id,category:question.solution?.assignments?.find((x)=>x.item===item.id)?.category??fallback})).filter((x)=>x.category)};}
 }
+
 function switchType(question,type){
   const next=defaultQuestion(type);
   const defaults={ordering:'Ordena los elementos',matching:'Relaciona cada elemento',classification:'Clasifica los elementos'};
@@ -70,6 +84,58 @@ function switchType(question,type){
 }
 function rowButton(text,handler,danger=false){const b=node('button',danger?'q-mini q-danger':'q-mini',text);b.type='button';b.addEventListener('click',handler);return b;}
 function guardedDelete(handler,enabled,reason){const b=rowButton('Eliminar',handler,true);b.disabled=!enabled;if(!enabled)b.title=reason;return b;}
+
+function setTrueFalseMode(question,mode){
+  ensureSolution(question);
+  const next=mode==='multiple'?'multiple':'single';
+  if(question.trueFalseMode===next)return;
+  if(next==='multiple'){
+    const trueChoice=question.choices?.find((choice)=>['verdadero','true'].includes(String(choice.text).normalize('NFKC').trim().toLocaleLowerCase('es')));
+    const correctId=question.solution?.choiceIds?.[0];
+    const firstValue=Boolean(trueChoice&&correctId===trueChoice.id);
+    const firstId=uid('tf'),secondId=uid('tf');
+    const firstText=String(question.prompt||'').trim()||'Afirmación 1';
+    question.trueFalseMode='multiple';
+    question.prompt='Indica si cada afirmación es verdadera o falsa';
+    question.statements=[{id:firstId,text:firstText},{id:secondId,text:'Afirmación 2'}];
+    delete question.choices;
+    question.solution={answers:{[firstId]:firstValue,[secondId]:false}};
+    return;
+  }
+  const first=question.statements?.[0];
+  const firstValue=first?question.solution?.answers?.[first.id]!==false:true;
+  const trueId=uid('t'),falseId=uid('f');
+  question.trueFalseMode='single';
+  question.prompt=first?.text||'Escribe una afirmación';
+  question.choices=[{id:trueId,text:'Verdadero'},{id:falseId,text:'Falso'}];
+  delete question.statements;
+  question.solution={choiceIds:[firstValue?trueId:falseId]};
+}
+
+function renderTrueFalseEditor(box,question,commit,rerender){
+  ensureSolution(question);
+  const mode=selectInput(question.trueFalseMode,[['single','Una afirmación'],['multiple','Varias afirmaciones']]);
+  const modeField=labeled('Formato de verdadero / falso',mode);modeField.classList.add('q-field--wide','q-tf-mode');
+  box.append(modeField);
+  mode.addEventListener('change',()=>{setTrueFalseMode(question,mode.value);commit();rerender();});
+  if(question.trueFalseMode==='single'){renderChoiceEditor(box,question,commit,rerender);return;}
+  box.append(node('small','q-help','Cada afirmación se responde de forma independiente. Marca cuál es la respuesta correcta para cada fila.'));
+  question.statements.forEach((statement,index)=>{
+    const row=node('div','q-tf-row');
+    const text=textAreaInput(statement.text,'Escribe una afirmación',2);text.className='q-tf-statement-input';
+    text.addEventListener('input',()=>{statement.text=text.value;commit();});
+    const answers=node('div','q-tf-answer');
+    for(const [value,labelText] of [[true,'Verdadero'],[false,'Falso']]){
+      const label=node('label','q-tf-answer-option');
+      const radio=document.createElement('input');radio.type='radio';radio.name='tf-correct-'+question.id+'-'+statement.id;radio.checked=question.solution.answers[statement.id]===value;
+      radio.addEventListener('change',()=>{if(radio.checked){question.solution.answers[statement.id]=value;commit();}});
+      label.append(radio,node('span',null,labelText));answers.append(label);
+    }
+    const remove=guardedDelete(()=>{question.statements.splice(index,1);ensureSolution(question);commit();rerender();},question.statements.length>2,'Se necesitan al menos dos afirmaciones.');
+    row.append(node('span','q-tf-number',String(index+1)),text,answers,remove);box.append(row);
+  });
+  box.append(rowButton('+ Añadir afirmación',()=>{const id=uid('tf');question.statements.push({id,text:'Nueva afirmación'});question.solution.answers[id]=true;commit();rerender();}));
+}
 
 function renderChoiceEditor(box,question,commit,rerender){
   const multiple=question.type==='multiple-choice';const trueFalse=question.type==='true-false';ensureSolution(question);
@@ -252,7 +318,8 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
       subtract.addEventListener('change',()=>{if(subtract.checked&&!penalty.value)penalty.value='0.25';savePenalty();});penalty.addEventListener('input',savePenalty);
       basic.append(promptField,labeled('Tipo',typeControl),labeled('Tiempo (s)',questionTime),labeled('Puntos',points),labeled('El fallo resta',subtract),labeled('Penalización',penalty));card.append(basic);
       const body=node('div','q-type-editor');const commit=()=>{ensureSolution(question);save(model,activityId,payload,onChange);};
-      if(['single-choice','multiple-choice','true-false'].includes(question.type))renderChoiceEditor(body,question,commit,render);
+      if(question.type==='true-false')renderTrueFalseEditor(body,question,commit,render);
+      else if(['single-choice','multiple-choice'].includes(question.type))renderChoiceEditor(body,question,commit,render);
       else if(question.type==='text')renderTextEditor(body,question,commit);
       else if(question.type==='fill-blanks')renderBlankEditor(body,question,commit,render);
       else if(question.type==='ordering')renderOrderingEditor(body,question,commit,render);

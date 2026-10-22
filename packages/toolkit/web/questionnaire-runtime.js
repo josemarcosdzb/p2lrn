@@ -23,6 +23,7 @@ function defaultAnswer(question) {
   if (question.type === 'matching') return {pairs: {}};
   if (question.type === 'classification') return {classifications: {}};
   if (question.type === 'fill-blanks') return {blanks: {}};
+  if (question.type === 'true-false' && question.trueFalseMode === 'multiple') return {booleans: {}};
   if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) return {choiceIds: []};
   if (question.type === 'text') return {text: ''};
   return {};
@@ -165,6 +166,31 @@ export class QuestionnaireRuntime {
 
   #renderInput(question) {
     const answer = this.getAnswer(question);
+    if (question.type === 'true-false' && question.trueFalseMode === 'multiple') {
+      const group = el('div', {class: 'p2lrn-tf-statements'});
+      const values = answer.booleans && typeof answer.booleans === 'object' && !Array.isArray(answer.booleans) ? {...answer.booleans} : {};
+      question.statements.forEach((statement,index) => {
+        const row = el('fieldset', {class: 'p2lrn-tf-statement'});
+        row.append(el('legend', {class: 'p2lrn-tf-statement-text'}, `${index + 1}. ${statement.text}`));
+        const actions = el('div', {class: 'p2lrn-tf-statement-actions'});
+        for (const [value,labelText] of [[true,'Verdadero'],[false,'Falso']]) {
+          const label = el('label', {class: 'p2lrn-q-option p2lrn-tf-choice'});
+          const input = el('input', {type:'radio'});
+          input.name = `p2lrn-${question.id}-${statement.id}`;
+          input.checked = values[statement.id] === value;
+          input.addEventListener('change', () => {
+            const next = this.getAnswer(question).booleans && typeof this.getAnswer(question).booleans === 'object' ? {...this.getAnswer(question).booleans} : {};
+            next[statement.id] = value;
+            this.setAnswer(question, {booleans: next});
+          });
+          label.append(input, el('span', {}, labelText));
+          actions.append(label);
+        }
+        row.append(actions);group.append(row);
+      });
+      return group;
+    }
+
     if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) {
       const group = el('fieldset', {class: 'p2lrn-q-options'});
       group.append(el('legend', {class: 'p2lrn-sr-only'}, question.prompt));

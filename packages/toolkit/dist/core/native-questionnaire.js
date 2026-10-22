@@ -49,8 +49,28 @@ function validateQuestionShape(q0, index) {
     const t = q.type;
     if (!['single-choice', 'multiple-choice', 'true-false', 'text', 'fill-blanks', 'ordering', 'matching', 'classification'].includes(t))
         throw new ValidationError(`${label}.type is unsupported: ${t}`);
+    if (t === 'true-false') {
+        const mode = q.trueFalseMode ?? 'single';
+        if (!['single', 'multiple'].includes(mode))
+            throw new ValidationError(`${label}.trueFalseMode must be single or multiple`);
+        if (mode === 'multiple') {
+            allowed(q, new Set([...COMMON, 'trueFalseMode', 'statements', 'solution']), label);
+            validateItems(q.statements, `${label}.statements`, 2);
+            if (q.solution !== undefined) {
+                const sol = obj(q.solution, `${label}.solution`);
+                allowed(sol, new Set(['answers']), `${label}.solution`);
+                const answers = obj(sol.answers, `${label}.solution.answers`);
+                for (const [id, value] of Object.entries(answers)) {
+                    token(id, `${label}.solution.answers id`);
+                    if (typeof value !== 'boolean')
+                        throw new ValidationError(`${label}.solution.answers.${id} must be boolean`);
+                }
+            }
+            return q;
+        }
+    }
     if (['single-choice', 'multiple-choice', 'true-false'].includes(t)) {
-        allowed(q, new Set([...COMMON, 'choices', 'solution']), label);
+        allowed(q, new Set([...COMMON, 'choices', 'solution', ...(t === 'true-false' ? ['trueFalseMode'] : [])]), label);
         validateItems(q.choices, `${label}.choices`, 2);
         if (q.solution !== undefined) {
             const s = obj(q.solution, `${label}.solution`);
@@ -158,7 +178,18 @@ function ids(items, label) { const s = new Set(); for (const x of items) {
     s.add(x.id);
 } return s; }
 function semantic(q, embedded) { const qid = q.id, t = q.type, solution = q.solution; if (embedded && solution === undefined)
-    throw new ValidationError(`${qid}: embedded-key grading requires a solution`); if (['single-choice', 'multiple-choice', 'true-false'].includes(t)) {
+    throw new ValidationError(`${qid}: embedded-key grading requires a solution`); if (t === 'true-false' && q.trueFalseMode === 'multiple') {
+    const statementIds = ids(q.statements, `${qid} statement`);
+    if (solution) {
+        const answerIds = new Set(Object.keys(solution.answers));
+        if (answerIds.size !== statementIds.size || [...statementIds].some((x) => !answerIds.has(x)))
+            throw new ValidationError(`${qid}: every true-false statement requires exactly one answer`);
+        for (const [id, value] of Object.entries(solution.answers))
+            if (!statementIds.has(id) || typeof value !== 'boolean')
+                throw new ValidationError(`${qid}: invalid true-false answer for ${id}`);
+    }
+    return;
+} if (['single-choice', 'multiple-choice', 'true-false'].includes(t)) {
     const choiceIds = ids(q.choices, `${qid} choice`);
     if (t === 'true-false' && choiceIds.size !== 2)
         throw new ValidationError(`${qid}: true-false requires exactly two choices`);
@@ -257,12 +288,23 @@ function round(value, digits) { const scale = 10 ** digits; const x = value * sc
     n = floor % 2 === 0 ? floor : floor + 1;
 else
     n = Math.round(x); return n / scale; }
-function defaultScoring(q) { return ['single-choice', 'true-false', 'text'].includes(q.type) ? 'all-or-nothing' : 'partial-per-item'; }
+function defaultScoring(q) { if (q.type === 'true-false' && q.trueFalseMode === 'multiple')
+    return 'partial-per-item'; return ['single-choice', 'true-false', 'text'].includes(q.type) ? 'all-or-nothing' : 'partial-per-item'; }
 function bounded(q, hits, errors, total) { const points = Number(q.points ?? 0); if (total <= 0 || points <= 0)
     return 0; const mode = q.scoring ?? defaultScoring(q); let raw = mode === 'all-or-nothing' ? (hits === total && errors === 0 ? points : 0) : hits * (points / total); if (mode === 'partial-with-penalty')
     raw -= errors * Number(q.penalty ?? 0); return round(Math.min(points, Math.max(0, raw)), 2); }
 export function scoreQuestion(question, answer) { const qid = question.id, points = round(Number(question.points ?? 0), 2), solution = question.solution; if (solution === undefined)
-    return { questionId: qid, graded: false, correct: null, hits: 0, errors: 0, pointsAwarded: 0, pointsPossible: points }; answer = answer && typeof answer === 'object' && !Array.isArray(answer) ? answer : {}; let hits = 0, errors = 0, total = 1; if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) {
+    return { questionId: qid, graded: false, correct: null, hits: 0, errors: 0, pointsAwarded: 0, pointsPossible: points }; answer = answer && typeof answer === 'object' && !Array.isArray(answer) ? answer : {}; let hits = 0, errors = 0, total = 1; if (question.type === 'true-false' && question.trueFalseMode === 'multiple') {
+    const values = answer.booleans && typeof answer.booleans === 'object' && !Array.isArray(answer.booleans) ? answer.booleans : {}, expected = solution.answers;
+    total = Object.keys(expected).length;
+    for (const [id, value] of Object.entries(expected)) {
+        if (typeof values[id] === 'boolean' && values[id] === value)
+            hits++;
+        else
+            errors++;
+    }
+}
+else if (['single-choice', 'multiple-choice', 'true-false'].includes(question.type)) {
     const selected = new Set((Array.isArray(answer.choiceIds) ? answer.choiceIds : []).filter((x) => typeof x === 'string' || typeof x === 'number').map(String)), correct = new Set(solution.choiceIds.map(String));
     hits = [...selected].filter((x) => correct.has(x)).length;
     errors = [...selected].filter((x) => !correct.has(x)).length;

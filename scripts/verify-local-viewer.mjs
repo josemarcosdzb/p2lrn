@@ -541,6 +541,19 @@ async function studioSiteScenario(){
     if(standardField('Enunciado')?.value!=='Enunciado largo conservado al cambiar entre todos los tipos de pregunta.'
       ||standardField('Tiempo (s)')?.value!=='37'||standardField('Puntos')?.value!=='3')
       throw new Error('Changing the standard question type erased its metadata');
+    const tfPicker=getQuestionType();tfPicker.value='true-false';tfPicker.dispatchEvent(new Event('change',{bubbles:true}));
+    await wait(()=>q('.q-tf-mode select'),'true-false format selector');
+    const tfMode=q('.q-tf-mode select');
+    if(JSON.stringify([...tfMode.options].map(option=>option.value))!==JSON.stringify(['single','multiple']))
+      throw new Error('True-false does not expose single and multiple modes');
+    tfMode.value='multiple';tfMode.dispatchEvent(new Event('change',{bubbles:true}));
+    await wait(()=>q('.q-tf-row')&&document.querySelectorAll('.q-tf-row').length===2,'multiple true-false rows');
+    const tfAdd=[...document.querySelectorAll('.q-type-editor button')].find(button=>button.textContent.includes('Añadir afirmación'));
+    if(!tfAdd)throw new Error('Multiple true-false add statement action missing');
+    tfAdd.click();
+    await wait(()=>document.querySelectorAll('.q-tf-row').length===3,'third true-false statement');
+    if([...document.querySelectorAll('.q-tf-row')].some(row=>row.querySelectorAll('input[type=radio]').length!==2))
+      throw new Error('Each true-false statement must expose Verdadero and Falso');
     const fillPicker=getQuestionType();fillPicker.value='fill-blanks';fillPicker.dispatchEvent(new Event('change',{bubbles:true}));
     await wait(()=>q('.q-blank-template-editor')&&q('.q-field--mode select'),'fill-blanks editor');
     if(JSON.stringify([...q('.q-field--mode select').options].map(option=>option.value))!==JSON.stringify(['text','drag']))
