@@ -55,7 +55,9 @@ async function main(){
   const {installP2LRNStudio}=await import(pathToFileURL(route).href);
   const app=express();
   app.disable('x-powered-by');
-  const output={version:publicVersion,integration:'Express 5.1.0',setupFiles:setup.files,
+  const channel=process.argv.find(arg=>arg.startsWith('--channel='))?.slice('--channel='.length)??'public-npm';
+  if(!['public-npm','staged-tarball'].includes(channel))throw Error('Unsupported tested distribution channel '+channel);
+  const output={version:publicVersion,channel,integration:'Express 5.1.0',setupFiles:setup.files,
     productionAuthCaveat:'Host auth/origin middleware is a simulated QA gate; the generated Studio routes do not implement application authentication.',
     checks:[],browser:null};
   let port=0;

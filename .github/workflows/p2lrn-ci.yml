@@ -382,6 +382,18 @@ jobs:
       - name: Browser smoke from installed npm tarballs
         run: node scripts/verify-browser-from-npm.mjs
 
+      # A browser smoke alone is insufficient: the release must render all
+      # twelve native games and operate inside a separate Host application.
+      - name: Verify twelve native games visually from staged npm tarballs
+        run: |
+          node --check scripts/verify-public-npm-native-visual.mjs
+          node scripts/verify-public-npm-native-visual.mjs --channel=staged-tarball
+
+      - name: Verify staged npm integration in independent Express Host
+        run: |
+          node --check scripts/verify-public-npm-express-app.mjs
+          node scripts/verify-public-npm-express-app.mjs --channel=staged-tarball
+
       - name: Build production Netlify site locally
         run: node deploy/netlify/build-site.mjs
 
@@ -407,6 +419,8 @@ jobs:
             @{ directory = '.visual-evidence-edge'; pattern = '*.png'; folder = 'cdn-edge-visual' },
             @{ directory = '.npm-pack-gate/visual-evidence'; pattern = '*.png'; folder = 'npm-visual' },
             @{ directory = '.npm-pack-gate/browser-runtime/courses'; pattern = '*.p2lrn'; folder = 'npm-packages' },
+            @{ directory = '.npm-pack-gate'; pattern = 'public-npm-native-visual.json'; folder = 'release-qa' },
+            @{ directory = '.npm-pack-gate'; pattern = 'public-npm-express-integration.json'; folder = 'release-qa' },
             @{ directory = '.'; pattern = '.npm-registry-report.json'; folder = 'registry-report' }
           )
           $manifest = @()

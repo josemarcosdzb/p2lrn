@@ -22,7 +22,8 @@ p2lrn-player{display:block;width:100%;max-width:1250px;min-height:540px;margin:a
   let finished=false;
   const params=new URLSearchParams(location.search);
   const channel=params.get('channel')||'public-npm';
-  const channels={'github-main':'GitHub main construido desde fuente','running-local-files':'Instalación local Windows (copia idéntica a HTTP)','public-npm':'npm público 0.5.0-alpha.10'};
+  const auditedVersion=params.get('version')||'versión no especificada';
+  const channels={'github-main':'GitHub main construido desde fuente','running-local-files':'Instalación local Windows (copia de archivos)','public-npm':'npm público '+auditedVersion,'staged-tarball':'Tarballs npm instalados desde build '+auditedVersion};
   document.getElementById('qa-channel').textContent='Origen del Player: '+(channels[channel]??channel);
   const kind=params.get('kind');
   const source=params.get('src');

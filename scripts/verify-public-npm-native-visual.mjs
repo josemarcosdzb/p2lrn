@@ -12,6 +12,8 @@ const reportFile=join(gate,'public-npm-native-visual.json');
 const allKinds=['rosco','crossword','memory','matching','ordering','classification','true-false','fill-blanks','word-search','3d','3d-matching','3d-classification'];
 const only=process.argv.find(arg=>arg.startsWith('--only='))?.slice('--only='.length).split(',').filter(Boolean);
 const kinds=only?.length?allKinds.filter(kind=>only.includes(kind)):allKinds;
+const channel=process.argv.find(arg=>arg.startsWith('--channel='))?.slice('--channel='.length)??'public-npm';
+if(!['public-npm','staged-tarball'].includes(channel))throw Error('Unsupported verified distribution channel: '+channel);
 const importLocal=async path=>import(pathToFileURL(path).href);
 const mime={'.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.p2lrn':'application/vnd.p2lrn.package','.png':'image/png','.wasm':'application/wasm'};
 async function writeFixture(kind){
@@ -49,6 +51,7 @@ async function serve(req,res){
   }
 }
 async function main(){
+  const packageVersion=JSON.parse(await readFile(join(packages,'player','package.json'),'utf8')).version;
   const playerDist=join(packages,'player','dist');
   if(!(await stat(join(playerDist,'p2lrn.js'))).isFile())throw Error('Public npm Player distribution is missing');
   await mkdir(join(site,'native'),{recursive:true});
@@ -73,7 +76,7 @@ async function main(){
     console.log('INDEPENDENT_NATIVE_BROWSER='+chrome);
     for(let i=0;i<fixture.length;i++){
       const entry=fixture[i];
-      const query=new URLSearchParams({kind:entry.kind,src:'/native/'+entry.filename,node:entry.node});
+      const query=new URLSearchParams({channel,version:packageVersion,kind:entry.kind,src:'/native/'+entry.filename,node:entry.node});
       const url='http://127.0.0.1:'+port+'/?'+query;
       const screenshotName='native-npm-'+entry.kind;
       try{
@@ -97,7 +100,7 @@ async function main(){
     await new Promise(ok=>server.close(ok));
   }
   const defects=results.filter(entry=>entry.status!=='PASS');
-  const output={version:JSON.parse(await readFile(join(packages,'player','package.json'),'utf8')).version,channel:'public-npm',browser:'isolated-Windows-Chrome',
+  const output={version:packageVersion,channel,browser:'isolated-Windows-Chrome',
     total:kinds.length,passed:results.filter(entry=>entry.status==='PASS').length,
     defects,results,checkedAt:new Date().toISOString()};
   await writeFile(reportFile,JSON.stringify(output,null,2)+'\n');
