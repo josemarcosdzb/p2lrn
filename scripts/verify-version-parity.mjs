@@ -37,7 +37,8 @@ const tests=[
   {id:'game-styles-loader',source:'packages/toolkit/web/renderers/game-common.js',npm:'player/dist/renderers/game-common.js',local:'player/current/dist/renderers/game-common.js',markers:['gameStyleUrl.search']},
   {id:'player-styles-loader',source:'packages/toolkit/web/p2lrn-player.js',npm:'player/dist/p2lrn-player.js',local:'player/current/dist/p2lrn-player.js',markers:['playerStyleUrl.search']},
   {id:'3d-engine',source:'packages/toolkit/web/renderers/questionnaire-3d.js',npm:'player/dist/renderers/questionnaire-3d.js',local:'player/current/dist/renderers/questionnaire-3d.js',markers:['Three','Rapier']},
-  {id:'authoring-game',source:'packages/toolkit/web/studio/new-document.js',npm:'toolkit/web/studio/new-document.js',markers:['3d-matching','3d-classification']},
+  {id:'authoring-editor',source:'packages/toolkit/web/studio/questionnaire-editor.js',npm:'toolkit/web/studio/questionnaire-editor.js',markers:['renderBlankEditor','Cada pregunta puede ser Ordenar']},
+  {id:'express-adapter',source:'packages/studio/templates/express-route.mjs',npm:'studio/templates/express-route.mjs',markers:['next(error)','convertP2LRNStudioExternalPackage']},
 ];
 const results=[];
 for(const item of tests){
