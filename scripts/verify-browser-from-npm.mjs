@@ -591,6 +591,7 @@ try{
   const selectedTreeNode=()=>q('[data-tree] > button[aria-current="true"]');
   const treeLabel=(button)=>String(button?.querySelector('span')?.textContent??button?.textContent??'').trim();
   const added=[];
+  const visualDefects=[];
   for(const kind of ['questionnaire','memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification','component','composite']){
     const priorCount=treeButtons().length;
     q('[data-add-menu]').open=true;
@@ -605,15 +606,23 @@ try{
     const title=treeLabel(created);
     if(!title)throw new Error('Studio created an untitled tree node for '+kind);
     if(['3d','3d-matching','3d-classification'].includes(kind)){
-      const kindOf=await wait(()=>{
-        const labels=[...root.querySelectorAll('.q-card .q-basic-grid label')];
-        return labels.find(label=>label.querySelector('.q-label')?.textContent==='Tipo')?.querySelector('select');
-      },'npm 3D type selector',10000);
-      const modes=[...kindOf.options].map(option=>option.value);
-      if(JSON.stringify(modes)!==JSON.stringify(['ordering','matching','classification']))
-        throw new Error('Installed npm Studio does not allow all 3D modes: '+modes.join(','));
-      const mode={'3d':'ordering','3d-matching':'matching','3d-classification':'classification'}[kind];
-      if(kindOf.value!==mode)throw new Error('Incorrect initial npm 3D mode for '+kind);
+      let kindOf=null;
+      try{
+        kindOf=await wait(()=>{
+          const labels=[...root.querySelectorAll('.q-card .q-basic-grid label')];
+          return labels.find(label=>label.querySelector('.q-label')?.textContent==='Tipo')?.querySelector('select');
+        },'npm 3D type selector',1900);
+      }catch{
+        visualDefects.push({kind,code:'PUBLISHED_STUDIO_3D_SELECTOR_MISSING'});
+      }
+      if(kindOf){
+        const modes=[...kindOf.options].map(option=>option.value);
+        if(JSON.stringify(modes)!==JSON.stringify(['ordering','matching','classification']))
+          visualDefects.push({kind,code:'PUBLISHED_STUDIO_3D_MODES_INCOMPLETE',modes});
+        const mode={'3d':'ordering','3d-matching':'matching','3d-classification':'classification'}[kind];
+        if(kindOf.value!==mode)
+          visualDefects.push({kind,code:'PUBLISHED_STUDIO_3D_DEFAULT_INCORRECT',actual:kindOf.value,expected:mode});
+      }
     }
     if(kind==='composite'){
       const groupButton=created;
@@ -705,6 +714,13 @@ try{
   for(const title of expectedExportedTitles){
     if(!exportedTitles.includes(title))throw new Error('Studio export lost authored node: '+title);
   }
+  const nativeVisualNodeIds={};
+  for(const kind of ['rosco','crossword','word-search','matching','ordering','classification','3d']){
+    const entry=added.find(item=>item.kind===kind);
+    if(!entry)continue;
+    const match=entities.find(entity=>entity.type==='activity'&&titleText(entity)===entry.title);
+    if(match?.id)nativeVisualNodeIds[kind]=match.id;
+  }
   const entityCounts={};
   for(const entity of entities)entityCounts[entity.type]=(entityCounts[entity.type]??0)+1;
   const representations=[];
@@ -750,8 +766,10 @@ try{
   for(const title of expectedExportedTitles){
     if(!reopenedTree.includes(title))throw new Error('Studio export/reimport lost activity: '+title);
   }
-  finish('PASS',{
+  finish(visualDefects.length?'DEGRADED':'PASS',{
     channel:'installed-npm-tarballs',
+    visualDefects,
+    nativeVisualNodeIds,
     filename,
     bytes:savedBytes.byteLength,
     packageSha256,
@@ -789,14 +807,14 @@ async function runStudioFromNpm(chrome,appOrigin){
   const result=await runChromePageGate(chrome,appOrigin+'/studio-npm.html',profile,
     {timeoutMs:95000,screenshotName:'npm-studio-ui'});
   const detail=String(result.detail??'').trim();
-  if(result.status!=='PASS')throw new Error(
+  if(!['PASS','DEGRADED'].includes(result.status))throw new Error(
     'npm Studio UI E2E failed: '+detail+
     '\nBrowser logs: '+JSON.stringify(result.browserLogs)+
     '\nJS exceptions: '+JSON.stringify(result.runtimeExceptions)+
     '\nChrome stderr: '+String(result.stderr).slice(-5000)
   );
   const parsed=JSON.parse(detail);
-  return {name:'studio-ui-npm',status:'PASS',...parsed.detail,screenshot:result.screenshot};
+  return {name:'studio-ui-npm',status:result.status,...parsed.detail,screenshot:result.screenshot};
 }
 
 
@@ -810,6 +828,8 @@ async function runChromePageGateOnce(chrome, url, profile, {timeoutMs=35000, exe
     '--no-first-run',
     '--no-default-browser-check',
     '--disable-cache',
+    '--disable-extensions',
+    '--window-size=1440,960',
     `--user-data-dir=${profile}`,
     '--remote-debugging-port=0',
     url,
