@@ -113,23 +113,44 @@ jobs:
           })
           $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $target 'manifest.json') -Encoding UTF8
           Write-Host ('PUBLIC_NPM_EVIDENCE=' + $target + ' FILES=' + $manifest.Count)
-      - name: Export public npm visual QA fixture for independent browser review
+      - name: Publish small visual previews in job log when artifact storage is unavailable
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: p2lrn-public-npm-visual-qa
-          if-no-files-found: warn
-          retention-days: 5
-          compression-level: 6
-          path: |
-            .npm-pack-gate/public-npm-report.json
-            .npm-pack-gate/visual-evidence/
-            .npm-pack-gate/browser-runtime/
-            .npm-pack-gate/install/package.json
-            .npm-pack-gate/install/package-lock.json
-            .npm-pack-gate/install/node_modules/@p2lrn/player/dist/
-            .npm-pack-gate/install/node_modules/@p2lrn/studio/dist/
-            .npm-pack-gate/install/node_modules/@p2lrn/h5p-libraries/dist/index.json
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Add-Type -AssemblyName System.Drawing
+          $dir = Join-Path $env:GITHUB_WORKSPACE '.npm-pack-gate\visual-evidence'
+          if (-not (Test-Path -LiteralPath $dir)) { Write-Host 'VISUAL_PREVIEW_MISSING=true'; exit 0 }
+          $files = @(Get-ChildItem -LiteralPath $dir -Filter '*.png' -File)
+          Write-Host ('VISUAL_SCREENSHOT_FILES=' + $files.Count)
+          $patterns = @('npm-studio-ui.png','*rosco*','*crossword*','npm-player-questionnaire.png')
+          foreach($pattern in $patterns){
+            $file=$files | Where-Object { $_.Name -like $pattern } | Select-Object -First 1
+            if(-not $file){Write-Host ('VISUAL_PREVIEW_NOT_FOUND=' + $pattern);continue}
+            $src=[System.Drawing.Image]::FromFile($file.FullName)
+            $canvas=$null
+            $graphics=$null
+            $ms=$null
+            try{
+              $width=[int][Math]::Min(740,$src.Width)
+              $height=[int][Math]::Max(1,[Math]::Round($src.Height*$width/[double]$src.Width))
+              $canvas=New-Object System.Drawing.Bitmap($width,$height)
+              $graphics=[System.Drawing.Graphics]::FromImage($canvas)
+              $graphics.InterpolationMode=[System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+              $graphics.DrawImage($src,0,0,$width,$height)
+              $ms=New-Object IO.MemoryStream
+              $codec=[System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object {$_.MimeType -eq 'image/jpeg'} | Select-Object -First 1
+              $args=New-Object System.Drawing.Imaging.EncoderParameters(1)
+              $args.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,[long]52)
+              $canvas.Save($ms,$codec,$args)
+              Write-Host ('VISUAL_JPEG_B64|' + $file.Name + '|' + [Convert]::ToBase64String($ms.ToArray()))
+            }finally{
+              if($graphics){$graphics.Dispose()}
+              if($canvas){$canvas.Dispose()}
+              if($ms){$ms.Dispose()}
+              $src.Dispose()
+            }
+          }
 
   automatic-runtime:
     if: ${{ github.event_name == 'pull_request' }}
