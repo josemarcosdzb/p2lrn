@@ -636,6 +636,10 @@ async function verifyStudioSiteUI(cdp){
     await sleep(120);
   }
   invariant(previewed,'Studio website preview did not create a Player');
+  const previewLayout=await evalTop(cdp,"(()=>{const toolbar=document.querySelector('[data-toolbar]');const preview=document.querySelector('[data-preview-stage]');const tb=toolbar.getBoundingClientRect();const pb=preview.getBoundingClientRect();return{mode:document.documentElement.dataset.studioMode,toolbarPosition:getComputedStyle(toolbar).position,toolbarBottom:tb.bottom,previewTop:pb.top};})()");
+  invariant(previewLayout.mode==='preview','Studio preview mode marker missing: '+JSON.stringify(previewLayout));
+  invariant(previewLayout.toolbarPosition==='static','Studio preview toolbar must not overlay content: '+JSON.stringify(previewLayout));
+  invariant(previewLayout.previewTop>=previewLayout.toolbarBottom-1,'Studio preview content is hidden below toolbar: '+JSON.stringify(previewLayout));
   const previewScreenshot=await captureVisualEvidence(cdp,'studio-website-preview');
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   await sleep(350);

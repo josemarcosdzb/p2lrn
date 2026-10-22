@@ -8,6 +8,7 @@
 .studio-url input{width:min(420px,48vw);min-height:42px;padding:0 11px;border:1px solid var(--line);border-radius:7px;background:#fff;font:inherit}
 .studio-toolbar{position:sticky;top:64px;z-index:20;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:'mode structure save' 'format format format';column-gap:14px;row-gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.97);box-shadow:0 8px 24px rgba(17,24,39,.08);backdrop-filter:blur(10px)}
 .studio-toolbar[hidden],.studio-workspace[hidden]{display:none}
+html[data-studio-mode=preview] .studio-toolbar{position:static}
 .studio-mode,.studio-structure,.studio-format,.studio-save{display:flex;gap:6px;align-items:center}.studio-mode{grid-area:mode}.studio-structure{grid-area:structure;min-width:0;flex-wrap:wrap}.studio-save{grid-area:save;justify-self:end}.studio-format{grid-area:format}
 .studio-format{width:100%;display:flex;align-items:center;gap:7px;min-width:0;flex-wrap:nowrap;padding-top:10px;border-top:1px solid #e7eaf0;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
 .format-group{display:flex;align-items:center;gap:4px;min-width:0}

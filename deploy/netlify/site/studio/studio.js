@@ -233,6 +233,7 @@ async function setMode(next){
   if(!studio)return;
   mode=next;
   const preview=next==='preview';
+  document.documentElement.dataset.studioMode=preview?'preview':'edit';
   editorStage.hidden=preview;previewStage.hidden=!preview;
   editButton.setAttribute('aria-pressed',String(!preview));previewButton.setAttribute('aria-pressed',String(preview));
   editButton.classList.toggle('primary',!preview);previewButton.classList.toggle('primary',preview);

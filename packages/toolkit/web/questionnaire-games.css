@@ -153,6 +153,9 @@
 
 .p2lrn-3d-runtime { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .72rem; color: #64748b; }
 .p2lrn-3d-trial, .p2lrn-3d-accessible { display: grid; gap: .7rem; }
+.p2lrn-3d-accessible .p2lrn-q-fields, .p2lrn-3d-trial > .p2lrn-q-fields { gap: .75rem; }
+.p2lrn-3d-accessible .p2lrn-q-field, .p2lrn-3d-trial > .p2lrn-q-fields .p2lrn-q-field { grid-template-columns: 1fr; gap: .35rem; align-items: stretch; }
+.p2lrn-3d-accessible .p2lrn-q-field select, .p2lrn-3d-trial > .p2lrn-q-fields .p2lrn-q-field select { width: 100%; min-height: 2.45rem; }
 .p2lrn-3d-trial h3 { margin: 0; }
 .p2lrn-3d-canvas { min-height: 28rem; touch-action: manipulation; }
 
