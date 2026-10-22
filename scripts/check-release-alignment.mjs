@@ -38,8 +38,18 @@ for(const relative of ['README.md','packages/player/README.md','packages/studio/
   const content=await readFile(resolve(root,relative),'utf8');
   assert(content.includes(version),relative+' does not document the current prerelease version');
 }
+const installationGuides=[
+  'deploy/netlify/site/docs/npm/index.html',
+  'deploy/netlify/site/docs/npm/studio/index.html',
+  'deploy/netlify/site/docs/cdn/index.html',
+  'deploy/netlify/site/docs/cdn/studio/index.html',
+];
+for(const relative of installationGuides){
+  const content=await readFile(resolve(root,relative),'utf8');
+  assert(content.includes(version),relative+' is not updated to the release version');
+}
 const report={ok:true,version,packages:names.map(name=>({name:pkg[name].name,version:pkg[name].version})),
   alignedInternalDependencies:['@p2lrn/studio -> @p2lrn/toolkit','@p2lrn/studio -> @p2lrn/player','@p2lrn/player -> @p2lrn/h5p-libraries'],
-  sourceMarkersChecked:markers.length,capabilities:version,
+  sourceMarkersChecked:markers.length,installationGuidesChecked:installationGuides.length,capabilities:version,
   npmPublish:'NOT_PERFORMED'};
 console.log('P2LRN_RELEASE_ALIGNMENT='+JSON.stringify(report));
