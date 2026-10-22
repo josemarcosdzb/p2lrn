@@ -28,7 +28,14 @@ Una corrección **en el código** no equivale a una corrección **publicada en n
 | QA-005 | Rellenar huecos, texto visible | El Player muestra un formulario de pregunta, pero el test antiguo lo clasificó como ausencia de `.p2lrn-game-shell` | El renderer `questionnaire-fill-blanks.js` delega en `questionnaire-runtime.js`; existe estructura `.p2lrn-q-shell` | Pendiente prueba de contexto, texto y escritura/selección | **No certificado**: fallo del comprobador anterior, no afirmar fallo de reproducción |
 | QA-006 | Juego 3D Ordenar | Tras corregir el MIME `.mjs` en el servidor de **pruebas**, se observó el entorno Three.js/Rapier en Chrome | Motor 3D presente y cubierto por tests mecánicos | Falta E2E completo de entrada, física, interacción, corrección y puntuación | **Parcial**; el MIME fue un error del harness, no evidencia de defecto del paquete |
 | QA-007 | Flujos Host: guardar, importar, reabrir y permisos | Instalación pública y varios smoke tests correctos; el E2E de Studio sigue detectando diferencias | Hay helpers y generadores para varias plataformas; falta certificar autorización específica de cada Host | No extrapolar a producción ni a todos los frameworks | **Parcial** |
+| QA-009 | Estructura de Grupo compuesto | El E2E del Studio publicado no encontró la lista de hijos `.composite-list` esperada y registró `PUBLISHED_COMPOSITE_CHILD_LIST_NOT_AVAILABLE` | Código actual contempla la gestión de hijos y los E2E de fuente comprueban inserción en compuesto | Comparación visual local pendiente | **No certificado**; comprobar si es una diferencia de UI o si impide la agrupación real |
 | QA-008 | Diferencia Core/Player | En paquetes puede mostrarse formato Core `0.4.0` mientras npm es `0.5.0-alpha.10` | Son campos de versión diferentes | Comprobar ambos, no sustituir el formato del paquete por la versión del reproductor | **No implica por sí mismo un fallo** |
+
+## E2E de autoría realmente exportada
+
+En la ejecución [39743180030](https://github.com/josemarcosfrodo/p2lrn/actions/runs/39743180030) se creó un curso con **13 tipos de actividad registrados por el harness**; la prueba de Studio terminó `DEGRADED` con cinco incidencias de interfaz: `PUBLISHED_STUDIO_3D_SELECTOR_MISSING`, `PUBLISHED_STUDIO_CONTENT_TYPE_MISSING` (dos tipos 3D), `PUBLISHED_COMPONENT_PICKER_NOT_AVAILABLE` y `PUBLISHED_COMPOSITE_CHILD_LIST_NOT_AVAILABLE`. Se exportó y se reprodujo el curso. En el Player cargado con ese curso exportado, **Rosco** y **Crucigrama** produjeron `VISUAL_FAIL`, mientras Sopa de letras, Relacionar, Ordenar, Clasificar y el modo 3D disponible superaron sus gates respectivos. Los casos de lección, SCORM y Reader importado terminaron en `PASS`.
+
+Esto demuestra la regresión visual también en un paquete **generado con el Studio publicado**; no depende exclusivamente de fixtures previas. No demostraría por sí solo que todos los modos se puntúan correctamente, ni que 13 tipos hayan superado todas sus interacciones.
 
 ## Cómo se contrasta
 
@@ -37,7 +44,7 @@ Los scripts reutilizables de este repositorio aportan evidencia distinta:
 - `scripts/verify-browser-from-npm.mjs`: edición, importación, guardado, exportación, Player y capturas reales desde npm.
 - `scripts/verify-public-npm-native-visual.mjs`: visualización de juegos nativos con Player público en Chrome aislado.
 - `scripts/verify-local-viewer.mjs`: Player construido desde fuente, Rosco/Crucigrama, eventos y capturas en Chrome y Edge.
-- `scripts/verify-version-parity.mjs`: SHA-256 y marcadores funcionales de GitHub/nmp/local; lee los recursos HTTP de `localhost:4183`.
+- `scripts/verify-version-parity.mjs`: SHA-256 y marcadores funcionales de GitHub/npm/local; lee los recursos HTTP de `localhost:4183`.
 - `scripts/verify-main-local-visual-parity.mjs`: **mismos bytes** de cada paquete de prueba en Player construido desde `main`, Player local instalado y Player publicado.
 - `scripts/verify-live-local-4183.mjs`: Chrome nuevo sobre servidor local real; rosco, módulos cacheados y portada.
 
