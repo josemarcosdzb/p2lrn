@@ -89,6 +89,11 @@ jobs:
         run: ./scripts/ensure-browser-windows.ps1
       - name: Studio and Player browser E2E from public npm
         run: node scripts/verify-browser-from-npm.mjs
+      - name: Independent native-game visual matrix from public npm
+        if: always()
+        run: |
+          node --check scripts/verify-public-npm-native-visual.mjs
+          node scripts/verify-public-npm-native-visual.mjs
       - name: Preserve public npm evidence on Windows
         if: always()
         shell: powershell
@@ -99,6 +104,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $target | Out-Null
           $items = @(
             @{ source='public-npm-report.json'; destination='public-npm-report.json' },
+            @{ source='public-npm-native-visual.json'; destination='public-npm-native-visual.json' },
             @{ source='visual-evidence'; destination='visual-evidence' },
             @{ source='browser-runtime\courses'; destination='courses' }
           )
@@ -123,7 +129,7 @@ jobs:
           if (-not (Test-Path -LiteralPath $dir)) { Write-Host 'VISUAL_PREVIEW_MISSING=true'; exit 0 }
           $files = @(Get-ChildItem -LiteralPath $dir -Filter '*.png' -File)
           Write-Host ('VISUAL_SCREENSHOT_FILES=' + $files.Count)
-          $patterns = @('npm-studio-ui.png','*-rosco-????????.png','*-rosco-????????-mobile.png','*-crossword-????????.png','*-crossword-????????-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png')
+          $patterns = @('npm-studio-ui.png','native-npm-rosco.png','native-npm-rosco-mobile.png','native-npm-crossword.png','native-npm-crossword-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png')
           foreach($pattern in $patterns){
             $file=$files | Where-Object { $_.Name -like $pattern } | Select-Object -First 1
             if(-not $file){Write-Host ('VISUAL_PREVIEW_NOT_FOUND=' + $pattern);continue}
