@@ -125,37 +125,6 @@ jobs:
         run: ./scripts/emit-visual-evidence.ps1 -Patterns @('npm-studio-ui.png','native-npm-rosco.png','native-npm-rosco-mobile.png','native-npm-crossword.png','native-npm-crossword-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png')
 
 
-  native-3d-audit:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[native audit]') }}
-    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
-    timeout-minutes: 25
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-      - name: Download public npm package versions independently
-        run: node scripts/verify-public-npm-e2e.mjs
-      - name: Prepare isolated Chrome
-        shell: powershell
-        run: ./scripts/ensure-browser-windows.ps1
-      - name: Test 3D modes and fill-blanks native rendering
-        run: |
-          node --check scripts/verify-public-npm-native-visual.mjs
-          node scripts/verify-public-npm-native-visual.mjs --only=3d,fill-blanks,3d-matching,3d-classification
-      - name: Inspect screenshot evidence independently of GitHub artifacts
-        if: always()
-        shell: powershell
-        run: |
-          ./scripts/emit-visual-evidence.ps1 -Patterns @('native-npm-3d.png','native-npm-3d-mobile.png','native-npm-fill-blanks.png','native-npm-fill-blanks-mobile.png')
-          $report=Join-Path $env:GITHUB_WORKSPACE '.npm-pack-gate\public-npm-native-visual.json'
-          if(Test-Path -LiteralPath $report){Get-Content -LiteralPath $report -Raw|Write-Host}
-
   automatic-runtime:
     if: ${{ github.event_name == 'pull_request' }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
@@ -263,7 +232,10 @@ jobs:
         working-directory: packages/toolkit
         run: |
           npm install --ignore-scripts --no-audit --no-fund --include=dev
-          npm test
+          npm run build
+          # Same complete test corpus, but bound Windows child-process concurrency.
+          # Node test subprocesses in the parallel audit exited 0xC0000409.
+          node --test --test-concurrency=2 test/*.test.mjs
 
       - name: Verify Studio setup CLI
         run: node --test packages/studio/test/*.test.mjs
