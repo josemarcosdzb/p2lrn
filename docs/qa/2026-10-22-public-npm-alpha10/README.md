@@ -1,5 +1,9 @@
 # Evidencias visuales de P2LRN npm 0.5.0-alpha.10 — 22 de octubre de 2026
 
+[Registro de incidencias y verificación cruzada npm / GitHub main / localhost](./MATRIZ-AUDITORIA.md).
+
+El [CI completo de código fuente 39745258814](https://github.com/josemarcosfrodo/p2lrn/actions/runs/39745258814) terminó en **SUCCESS**, incluyendo Toolkit, Studio/Player Chrome y Edge, build web y verificaciones de paquete. **Eso no certifica el npm 0.5.0-alpha.10**, cuyas pruebas reales detectaron regresiones. Se ejecutan gates independientes desde el registro público.
+
 Origen: paquetes instalados con caché nueva desde https://registry.npmjs.org, no archivos tar locales.
 
 Runs: [Matriz de Studio/Player y casos importados](https://github.com/josemarcosfrodo/p2lrn/actions/runs/39743180030), [Matriz visual independiente](https://github.com/josemarcosfrodo/p2lrn/actions/runs/39743634914).
