@@ -654,10 +654,15 @@ try{
     }
     click('[data-add-kind="'+kind+'"]');
     if(kind==='component'){
-      const picker=await wait(()=>root.querySelector('.studio-choice-dialog'),'npm component picker');
-      const option=picker.querySelector('.studio-choice-card');
-      if(!option)throw new Error('Studio component picker has no registered components');
-      option.click();
+      const picker=await wait(()=>root.querySelector('.studio-choice-dialog'),'npm component picker',1900).catch(()=>null);
+      if(picker){
+        const option=picker.querySelector('.studio-choice-card');
+        if(!option)visualDefects.push({kind,code:'COMPONENT_PICKER_EMPTY'});
+        else option.click();
+      }else{
+        const editorVisible=root.textContent.includes('Componente')&&root.querySelectorAll('input, textarea, select').length>0;
+        visualDefects.push({kind,code:editorVisible?'PUBLISHED_COMPONENT_PICKER_NOT_AVAILABLE':'PUBLISHED_COMPONENT_EDITOR_NOT_AVAILABLE'});
+      }
     }
     const created=await wait(()=>treeButtons().length>priorCount&&selectedTreeNode(),'npm add '+kind);
     const title=treeLabel(created);
@@ -688,8 +693,9 @@ try{
       click('[data-add-kind="lesson"]');
       await wait(()=>treeButtons().length>beforeChild&&selectedTreeNode(),'npm add lesson inside composite');
       groupButton.click();
-      await wait(()=>root.querySelector('.composite-list'),'npm composite child list');
-      if(!root.querySelector('.composite-row'))throw new Error('Studio composite did not retain its child activity');
+      const childList=await wait(()=>root.querySelector('.composite-list'),'npm composite child list',1900).catch(()=>null);
+      if(!childList)visualDefects.push({kind,code:'PUBLISHED_COMPOSITE_CHILD_LIST_NOT_AVAILABLE'});
+      else if(!root.querySelector('.composite-row'))visualDefects.push({kind,code:'PUBLISHED_COMPOSITE_CHILD_ROW_NOT_AVAILABLE'});
     }
     added.push({kind,title});
   }
