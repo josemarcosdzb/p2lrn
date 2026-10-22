@@ -87,6 +87,9 @@ jobs:
       - name: Provide a working browser on Windows
         shell: powershell
         run: ./scripts/ensure-browser-windows.ps1
+      - name: Compare exact public npm files with GitHub main and localhost 4183
+        if: always()
+        run: node scripts/verify-version-parity.mjs
       - name: Studio and Player browser E2E from public npm
         run: node scripts/verify-browser-from-npm.mjs
       - name: Independent native-game visual matrix from public npm
@@ -99,6 +102,19 @@ jobs:
         run: |
           node --check scripts/verify-public-npm-express-app.mjs
           node scripts/verify-public-npm-express-app.mjs
+      - name: Build current GitHub main Player for same-content comparison
+        if: always()
+        run: node packages/player/scripts/build-dist.mjs
+      - name: Test identical game packages in npm, GitHub main and local Player
+        if: always()
+        continue-on-error: true
+        run: |
+          node --check scripts/verify-main-local-visual-parity.mjs
+          node scripts/verify-main-local-visual-parity.mjs
+      - name: Verify real localhost 4183 rosco, module revisions and restored carousel
+        if: always()
+        continue-on-error: true
+        run: node scripts/verify-live-local-4183.mjs
       - name: Preserve public npm evidence on Windows
         if: always()
         shell: powershell
@@ -110,6 +126,8 @@ jobs:
           $items = @(
             @{ source='public-npm-report.json'; destination='public-npm-report.json' },
             @{ source='public-npm-native-visual.json'; destination='public-npm-native-visual.json' },
+            @{ source='version-parity.json'; destination='version-parity.json' },
+            @{ source='three-way-browser-qa.json'; destination='three-way-browser-qa.json' },
             @{ source='public-npm-express-integration.json'; destination='public-npm-express-integration.json' },
             @{ source='visual-evidence'; destination='visual-evidence' },
             @{ source='browser-runtime\courses'; destination='courses' }
@@ -128,7 +146,7 @@ jobs:
       - name: Publish visual previews in job log without artifacts
         if: always()
         shell: powershell
-        run: ./scripts/emit-visual-evidence.ps1 -Patterns @('npm-studio-ui.png','native-npm-rosco.png','native-npm-rosco-mobile.png','native-npm-crossword.png','native-npm-crossword-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png','npm-express-host.png','npm-express-host-mobile.png')
+        run: ./scripts/emit-visual-evidence.ps1 -Patterns @('npm-studio-ui.png','native-npm-rosco.png','native-npm-rosco-mobile.png','native-npm-crossword.png','native-npm-crossword-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png','npm-express-host.png','npm-express-host-mobile.png','threeway-github-main-rosco.png','threeway-running-local-files-rosco.png','threeway-public-npm-rosco.png','threeway-running-local-files-crossword.png','threeway-public-npm-crossword.png')
 
 
   automatic-runtime:
