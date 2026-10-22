@@ -94,6 +94,11 @@ jobs:
         run: |
           node --check scripts/verify-public-npm-native-visual.mjs
           node scripts/verify-public-npm-native-visual.mjs
+      - name: Real Express host application with Studio/Player browser E2E
+        if: always()
+        run: |
+          node --check scripts/verify-public-npm-express-app.mjs
+          node scripts/verify-public-npm-express-app.mjs
       - name: Preserve public npm evidence on Windows
         if: always()
         shell: powershell
@@ -105,6 +110,7 @@ jobs:
           $items = @(
             @{ source='public-npm-report.json'; destination='public-npm-report.json' },
             @{ source='public-npm-native-visual.json'; destination='public-npm-native-visual.json' },
+            @{ source='public-npm-express-integration.json'; destination='public-npm-express-integration.json' },
             @{ source='visual-evidence'; destination='visual-evidence' },
             @{ source='browser-runtime\courses'; destination='courses' }
           )
@@ -122,7 +128,7 @@ jobs:
       - name: Publish visual previews in job log without artifacts
         if: always()
         shell: powershell
-        run: ./scripts/emit-visual-evidence.ps1 -Patterns @('npm-studio-ui.png','native-npm-rosco.png','native-npm-rosco-mobile.png','native-npm-crossword.png','native-npm-crossword-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png')
+        run: ./scripts/emit-visual-evidence.ps1 -Patterns @('npm-studio-ui.png','native-npm-rosco.png','native-npm-rosco-mobile.png','native-npm-crossword.png','native-npm-crossword-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png','npm-express-host.png','npm-express-host-mobile.png')
 
 
   automatic-runtime:
