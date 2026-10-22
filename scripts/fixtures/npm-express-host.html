@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>P2LRN - real Express integration visual E2E</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f7fa;color:#111827;font:15px system-ui,sans-serif}
+header{padding:12px 18px;background:#111827;color:white}
+header strong{font-size:19px}
+header span{font-size:12px;margin-left:12px;color:#cbd5e1}
+main{padding:12px;max-width:1440px;margin:auto}
+p2lrn-studio{display:block;min-height:570px}
+#result{display:none!important}
+</style>
+<script src="/studio/current/dist/p2lrn-studio.js"></script>
+</head>
+<body>
+<header><strong>P2LRN en aplicación Express</strong><span>Studio y Player desde npm público</span></header>
+<main><p2lrn-studio id="studio" save-endpoint="/api/p2lrn/studio/save" reader-endpoint="/api/p2lrn/studio/read" import-endpoint="/api/p2lrn/studio/import" course-path="courses"></p2lrn-studio></main>
+<pre id="result" data-status="BOOT">BOOT</pre>
+<script>
+(async function(){
+  const report=document.getElementById('result'),events=[];
+  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const finish=(status,detail)=>{report.dataset.status=status;report.textContent=JSON.stringify({status,detail,events},null,2)};
+  const wait=async(fn,label,ms=16000)=>{
+    const start=Date.now();
+    while(Date.now()-start<ms){const hit=fn();if(hit)return hit;await sleep(65)}
+    throw Error('Timeout at '+label);
+  };
+  try{
+    document.cookie='qa_session=editor; Path=/; SameSite=Lax';
+    await wait(()=>window.P2LRNStudioReady,'Studio npm loader');
+    await window.P2LRNStudioReady;
+    const studio=document.getElementById('studio'),root=studio.shadowRoot;
+    if(!root)throw Error('No Studio shadow root');
+    const q=sel=>root.querySelector(sel);
+    const click=sel=>{const el=q(sel);if(!el)throw Error('Missing '+sel);el.click()};
+    studio.addEventListener('p2lrn-studio-save',event=>events.push({name:'save',filename:event.detail?.filename}));
+    studio.addEventListener('p2lrn-studio-open',event=>events.push({name:'open',filename:event.detail?.filename}));
+    click('[data-create]');
+    await wait(()=>!q('[data-body]').hidden,'create new course');
+    click('.tree-actions button:nth-child(2)');
+    await wait(()=>q('.surface[contenteditable="true"]'),'editable lesson');
+    q('.title').textContent='Express visual QA lesson';
+    q('.title').dispatchEvent(new Event('input',{bubbles:true}));
+    q('.surface').textContent='Curso guardado en Express desde Studio publicado en npm.';
+    q('.surface').dispatchEvent(new Event('input',{bubbles:true}));
+    click('[data-save]');
+    await wait(()=>events.some(entry=>entry.name==='save'),'server save event');
+    const saved=events.find(entry=>entry.name==='save');
+    if(!saved?.filename?.endsWith('.p2lrn'))throw Error('No saved P2LRN filename');
+    const response=await fetch('/courses/'+encodeURIComponent(saved.filename),{cache:'no-store'});
+    if(!response.ok)throw Error('Express host did not serve saved P2LRN');
+    const bytes=await response.arrayBuffer();
+    if(bytes.byteLength<1000)throw Error('Express host persisted empty package');
+    const api=await window.P2LRNReady;
+    const validated=await api.openPackageBytes(bytes);
+    if(!validated.manifest?.integrity?.contentRoot)throw Error('Express saved invalid package integrity');
+    click('[data-preview]');
+    await wait(()=>q('p2lrn-player.preview')?.shadowRoot?.querySelector('.p2lrn-stage'),'Studio embedded Player preview');
+    const screenshotStatus={
+      title:q('.title')?.textContent,
+      course:saved.filename,
+      bytes:bytes.byteLength,
+      integrity:validated.manifest.integrity.contentRoot,
+      bodyWidth:document.documentElement.scrollWidth,
+      viewportWidth:innerWidth,
+      previewPlayer:!!q('p2lrn-player.preview'),
+      origin:location.origin,
+    };
+    finish('PASS',screenshotStatus);
+  }catch(error){finish('FAIL',{error:String(error?.stack??error)})}
+})();
+</script>
+</body></html>
