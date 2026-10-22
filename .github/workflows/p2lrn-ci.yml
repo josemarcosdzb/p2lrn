@@ -89,7 +89,9 @@ jobs:
         run: ./scripts/ensure-browser-windows.ps1
       - name: Compare exact public npm files with GitHub main and localhost 4183
         if: always()
-        run: node scripts/verify-version-parity.mjs
+        run: |
+          node --check scripts/verify-version-parity.mjs
+          node scripts/verify-version-parity.mjs
       - name: Studio and Player browser E2E from public npm
         run: node scripts/verify-browser-from-npm.mjs
       - name: Independent native-game visual matrix from public npm
