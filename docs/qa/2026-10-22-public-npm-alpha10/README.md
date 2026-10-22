@@ -21,3 +21,13 @@ Capturas JPEG reducidas de pruebas reales de Chrome, a partir de la ejecución 3
 - [npm-player-h5p-crossword-p2lrn-mobile.jpg](./npm-player-h5p-crossword-p2lrn-mobile.jpg)
 
 Esta revisión de screenshots **no certifica producción**; identifica diferencias entre npm publicado y el código de desarrollo.
+
+## Comprobación adicional de modalidades 3D y rellenar huecos
+
+Ejecución de seguimiento: [39744609195](https://github.com/josemarcosfrodo/p2lrn/actions/runs/39744609195). La carga 3D se ha repetido con el MIME JavaScript correcto para los módulos `.mjs`.
+
+- [3D Ordenar en escritorio](./native-npm-3d.jpg) y [3D Ordenar en móvil](./native-npm-3d-mobile.jpg): la escena WebGL/Three.js/Rapier carga; el fallo MIME anterior era del servidor de pruebas
+- [Rellenar huecos en escritorio](./native-npm-fill-blanks.jpg) y [Rellenar huecos en móvil](./native-npm-fill-blanks-mobile.jpg): se reproduce en el cuestionario estándar, no en un renderer de juego independiente
+- Dos modalidades 3D adicionales siguen ausentes o no se generan en npm `0.5.0-alpha.10`
+
+Aviso: la carga visible y el diseño no equivalen todavía a una prueba completa de interacción y puntuación 3D.
