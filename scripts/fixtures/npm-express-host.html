@@ -39,6 +39,8 @@ p2lrn-studio{display:block;min-height:570px}
     studio.addEventListener('p2lrn-studio-open',event=>events.push({name:'open',filename:event.detail?.filename}));
     click('[data-create]');
     await wait(()=>!q('[data-body]').hidden,'create new course');
+    click('.tree-actions button:first-child');
+    await wait(()=>q('[data-tree]').textContent.includes('Unidad'),'create unit');
     click('.tree-actions button:nth-child(2)');
     await wait(()=>q('.surface[contenteditable="true"]'),'editable lesson');
     q('.title').textContent='Express visual QA lesson';
