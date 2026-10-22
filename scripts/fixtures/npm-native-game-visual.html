@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>P2LRN npm native game visual audit</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#f3f5f8;color:#141820;font:15px system-ui,sans-serif}
+header{max-width:1250px;margin:auto auto 15px}
+header h1{font-size:24px;margin:0 0 8px}
+header p{margin:0;color:#667085}
+p2lrn-player{display:block;width:100%;max-width:1250px;min-height:540px;margin:auto}
+#result{display:none!important}
+</style>
+<script src="/player/current/dist/p2lrn.js"></script>
+</head><body>
+<header><h1>Auditoría visual de actividades P2LRN</h1><p>Player instalado directamente desde npm, sin utilizar el editor de GitHub.</p></header>
+<p2lrn-player id="qa-player"></p2lrn-player>
+<pre id="result" data-status="BOOT">BOOT</pre>
+<script>
+(function(){
+  const result=document.getElementById('result');
+  let finished=false;
+  const params=new URLSearchParams(location.search);
+  const kind=params.get('kind');
+  const source=params.get('src');
+  const node=params.get('node');
+  const started=performance.now();
+  function finish(status,detail){
+    if(finished)return;
+    finished=true;
+    result.dataset.status=status;
+    result.textContent=JSON.stringify({status,detail});
+  }
+  window.addEventListener('error',event=>finish('FAIL',{kind,phase:'window-error',error:event.message}));
+  window.addEventListener('unhandledrejection',event=>finish('FAIL',{kind,phase:'rejection',error:String(event.reason)}));
+  async function run(){
+    try{
+      await window.P2LRNReady;
+      const player=document.getElementById('qa-player');
+      if(node)player.setAttribute('node',node);
+      player.setAttribute('src',source);
+      const poll=setInterval(()=>{
+        if(finished){clearInterval(poll);return}
+        const root=player.shadowRoot;
+        const shell=root?.querySelector('.p2lrn-game-shell');
+        const elapsed=performance.now()-started;
+        if(!shell){
+          if(elapsed>14500){clearInterval(poll);finish('FAIL',{kind,reason:'Game UI not rendered',body:root?.textContent?.slice(0,450)})}
+          return;
+        }
+        const overflow=Math.max(0,document.documentElement.scrollWidth-innerWidth);
+        const buttons=[...root.querySelectorAll('button')];
+        const result={kind,overflow,buttons:buttons.length,content:root.textContent.slice(0,550)};
+        if(kind==='rosco'){
+          const letters=[...root.querySelectorAll('.p2lrn-rosco-letter')];
+          if(letters.length<4 && elapsed<12000)return;
+          const positions=letters.map(element=>element.getBoundingClientRect());
+          const spreadY=positions.length?Math.max(...positions.map(item=>item.y))-Math.min(...positions.map(item=>item.y)):0;
+          result.letters=letters.length;
+          result.verticalSpread=spreadY;
+          result.center=!!root.querySelector('.p2lrn-rosco-center');
+          result.statusCount=!!root.querySelector('.p2lrn-rosco-stats');
+          if(letters.length){
+            const selected=letters[Math.min(1,letters.length-1)];
+            selected.click();
+            result.letterClick=selected.classList.contains('is-current')||selected.getAttribute('aria-current')==='true';
+            const pass=buttons.find(button=>button.textContent.trim()==='Pasar');
+            if(pass){pass.click();result.pass=true}
+            const reset=buttons.find(button=>button.textContent.trim()==='Reiniciar');
+            if(reset){reset.click();result.reset=true}
+          }
+          clearInterval(poll);
+          finish(result.center&&spreadY>75&&overflow<=2&&result.letterClick&&result.pass&&result.reset?'PASS':'VISUAL_FAIL',result);
+          return;
+        }
+        if(kind==='crossword'){
+          const board=root.querySelector('.p2lrn-crossword-grid');
+          const cells=[...root.querySelectorAll('.p2lrn-crossword-cell')];
+          if(!board && elapsed<12000)return;
+          const rects=cells.slice(0,10).map(cell=>cell.getBoundingClientRect());
+          const ratios=rects.filter(rect=>rect.height>0).map(rect=>rect.width/rect.height);
+          result.cellCount=cells.length;
+          result.cellRatios=ratios;
+          result.square=ratios.length>0&&ratios.every(value=>Math.abs(value-1)<0.18);
+          const wrap=root.querySelector('.p2lrn-crossword-wrap');
+          result.internalScroll=wrap?Math.max(0,wrap.scrollWidth-wrap.clientWidth):null;
+          result.hasClickableClues=root.querySelectorAll('.p2lrn-crossword-clue').length>0;
+          const clue=root.querySelector('.p2lrn-crossword-clue');
+          if(clue){clue.click();result.clueInteraction=clue.getAttribute('aria-pressed')==='true'}
+          clearInterval(poll);
+          finish(result.square&&result.internalScroll<=2&&result.hasClickableClues&&result.clueInteraction&&overflow<=2?'PASS':'VISUAL_FAIL',result);
+          return;
+        }
+        clearInterval(poll);
+        result.visible=shell.getBoundingClientRect().height>50;
+        finish(overflow<=2&&buttons.length>0&&result.visible?'PASS':'VISUAL_FAIL',result);
+      },180);
+    }catch(error){
+      finish('FAIL',{kind,message:String(error.stack||error)});
+    }
+  }
+  void run();
+})();
+</script>
+</body></html>
