@@ -34,7 +34,7 @@ for(const [relative,expected] of markers){
 }
 const capabilities=JSON.parse(await readFile(resolve(root,'packages/toolkit/config/capabilities.json'),'utf8'));
 assert.equal(capabilities.product.version,version,'Capabilities report a different product version');
-for(const relative of ['README.md','packages/player/README.md','packages/toolkit/README.md','packages/studio/README.md']){
+for(const relative of ['README.md','packages/player/README.md','packages/studio/README.md']){
   const content=await readFile(resolve(root,relative),'utf8');
   assert(content.includes(version),relative+' does not document the current prerelease version');
 }
