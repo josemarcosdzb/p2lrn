@@ -7,7 +7,7 @@ Embeddable visual authoring surface for P2LRN.
 Install Studio and its Player peer dependency:
 
 ```bash
-npm install @p2lrn/studio@0.5.0-alpha.10 @p2lrn/player@0.5.0-alpha.10
+npm install @p2lrn/studio@0.5.0-alpha.11 @p2lrn/player@0.5.0-alpha.11
 ```
 
 Import Studio from your application code:
@@ -33,7 +33,7 @@ For a plain browser page use the classic Studio loader:
 <p2lrn-studio></p2lrn-studio>
 ```
 
-The classic loader derives its channel from its own URL, loads the matching Player first and then imports `p2lrn-studio.esm.js`. A versioned loader such as `/studio/0.5.0-alpha.10/dist/p2lrn-studio.js` therefore loads the matching Player `0.5.0-alpha.10`.
+The classic loader derives its channel from its own URL, loads the matching Player first and then imports `p2lrn-studio.esm.js`. A versioned loader such as `/studio/0.5.0-alpha.11/dist/p2lrn-studio.js` therefore loads the matching Player `0.5.0-alpha.11`.
 
 Do not use the ESM file directly in plain HTML unless your environment resolves the bare `@p2lrn/player` specifier. The documented CDN entrypoint is `p2lrn-studio.js`.
 

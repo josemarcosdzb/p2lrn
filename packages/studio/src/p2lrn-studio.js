@@ -14,7 +14,7 @@ import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 
-export const P2LRN_STUDIO_VERSION='0.5.0-alpha.10';
+export const P2LRN_STUDIO_VERSION='0.5.0-alpha.11';
 
 const css=`
 :host{display:block;min-height:640px;font-family:Inter,system-ui,sans-serif;color:#111827}

@@ -81,7 +81,7 @@ const sourceRevision=process.env.GITHUB_SHA??null;
 const comparison={
   recordedAt:new Date().toISOString(),runId:process.env.GITHUB_RUN_ID??null,
   gitHead:sourceRevision,versions:{npmPlayer,npmStudio,mainPlayer,mainStudio},
-  context:{npm:'fresh registry.npmjs.org install, exact 0.5.0-alpha.10',github:'checked-out main at recorded SHA',local:'read-only localhost:4183 and on-disk site'},
+  context:{npm:'fresh registry.npmjs.org install, exact '+(npmPlayer??'unknown'),github:'checked-out main at recorded SHA',local:'read-only localhost:4183 and on-disk site'},
   pages:{home,viewer,studio},
   results,
   summary:{

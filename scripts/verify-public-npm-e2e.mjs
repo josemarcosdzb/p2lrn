@@ -53,7 +53,7 @@ async function verify(){
   const versions=[...new Set(manifests.map(pkg=>pkg.version))];
   assert.equal(versions.length,1,'Release versions are not aligned');
   const version=versions[0];
-  assert.equal(version,'0.5.0-alpha.10','The public npm release gate targets alpha.10');
+  assert.match(version,/^\d+\.\d+\.\d+-[0-9A-Za-z.-]+$/u,'Public npm release gate expects an exact prerelease version');
 
   // No packed local archives or reused modules/caches are allowed in this gate.
   await rm(gate,{recursive:true,force:true,maxRetries:3,retryDelay:250});

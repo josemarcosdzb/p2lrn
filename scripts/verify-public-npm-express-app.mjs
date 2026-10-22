@@ -27,10 +27,11 @@ async function npmCli(){
 async function main(){
   for(const name of ['player','studio','toolkit','h5p-libraries'])
     assert(await fileExists(join(packages,name,'package.json')),'Public npm package is not installed: '+name);
+  const publicVersion=JSON.parse(await readFile(join(packages,'studio','package.json'),'utf8')).version;
   await mkdir(host,{recursive:true});
   await writeFile(join(host,'package.json'),JSON.stringify({
     name:'p2lrn-express-host-e2e',private:true,type:'module',
-    dependencies:{express:'5.1.0','@p2lrn/studio':'0.5.0-alpha.10','@p2lrn/player':'0.5.0-alpha.10'},
+    dependencies:{express:'5.1.0','@p2lrn/studio':publicVersion,'@p2lrn/player':publicVersion},
   },null,2));
   if(!await fileExists(join(nodeModules,'express','package.json'))){
     const {command,prefix}=await npmCli();
@@ -54,7 +55,7 @@ async function main(){
   const {installP2LRNStudio}=await import(pathToFileURL(route).href);
   const app=express();
   app.disable('x-powered-by');
-  const output={version:'0.5.0-alpha.10',integration:'Express 5.1.0',setupFiles:setup.files,
+  const output={version:publicVersion,integration:'Express 5.1.0',setupFiles:setup.files,
     productionAuthCaveat:'Host auth/origin middleware is a simulated QA gate; the generated Studio routes do not implement application authentication.',
     checks:[],browser:null};
   let port=0;

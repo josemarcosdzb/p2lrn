@@ -1,6 +1,6 @@
 {
   "name": "@p2lrn/player",
-  "version": "0.5.0-alpha.10",
+  "version": "0.5.0-alpha.11",
   "description": "Embeddable Web Component runtime for P2LRN learning packages",
   "type": "module",
   "sideEffects": true,
@@ -60,7 +60,7 @@
     "postpack": "node ./scripts/prepare-source-snapshot.mjs --clean"
   },
   "peerDependencies": {
-    "@p2lrn/h5p-libraries": "0.5.0-alpha.10"
+    "@p2lrn/h5p-libraries": "0.5.0-alpha.11"
   },
   "peerDependenciesMeta": {
     "@p2lrn/h5p-libraries": {

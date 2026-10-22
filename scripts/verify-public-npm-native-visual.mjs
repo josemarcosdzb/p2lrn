@@ -97,7 +97,7 @@ async function main(){
     await new Promise(ok=>server.close(ok));
   }
   const defects=results.filter(entry=>entry.status!=='PASS');
-  const output={version:'0.5.0-alpha.10',channel:'public-npm',browser:'isolated-Windows-Chrome',
+  const output={version:JSON.parse(await readFile(join(packages,'player','package.json'),'utf8')).version,channel:'public-npm',browser:'isolated-Windows-Chrome',
     total:kinds.length,passed:results.filter(entry=>entry.status==='PASS').length,
     defects,results,checkedAt:new Date().toISOString()};
   await writeFile(reportFile,JSON.stringify(output,null,2)+'\n');

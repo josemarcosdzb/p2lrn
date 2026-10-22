@@ -7,7 +7,7 @@ The npm distribution consists of four version-aligned packages:
 - `@p2lrn/h5p-libraries` — pinned reusable third-party H5P library corpus. It contains no user/course packages.
 - `@p2lrn/studio` — browser authoring component and optional Host-backed Save, Reader and Import endpoints.
 
-All four packages currently use the same release version: `0.5.0-alpha.10`.
+All four packages currently use the same release version: `0.5.0-alpha.11`.
 
 ## Required gates
 
