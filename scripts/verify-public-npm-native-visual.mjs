@@ -9,9 +9,11 @@ const gate=join(root,'.npm-pack-gate');
 const packages=join(gate,'install','node_modules','@p2lrn');
 const site=join(gate,'independent-native-qa');
 const reportFile=join(gate,'public-npm-native-visual.json');
-const kinds=['rosco','crossword','memory','matching','ordering','classification','true-false','fill-blanks','word-search','3d','3d-matching','3d-classification'];
+const allKinds=['rosco','crossword','memory','matching','ordering','classification','true-false','fill-blanks','word-search','3d','3d-matching','3d-classification'];
+const only=process.argv.find(arg=>arg.startsWith('--only='))?.slice('--only='.length).split(',').filter(Boolean);
+const kinds=only?.length?allKinds.filter(kind=>only.includes(kind)):allKinds;
 const importLocal=async path=>import(pathToFileURL(path).href);
-const mime={'.js':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.p2lrn':'application/vnd.p2lrn.package','.png':'image/png','.wasm':'application/wasm'};
+const mime={'.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.p2lrn':'application/vnd.p2lrn.package','.png':'image/png','.wasm':'application/wasm'};
 async function writeFixture(kind){
   const toolkit=join(packages,'toolkit','web');
   const {createP2LRNStudioDocument}=await importLocal(join(toolkit,'studio','new-document.js'));
