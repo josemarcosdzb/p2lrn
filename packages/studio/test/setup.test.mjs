@@ -134,3 +134,19 @@ test('every supported setup target materializes safely with no unresolved placeh
     }
   }
 });
+
+
+test('generated Express routes preserve shared 422 errors and do not expose absolute save paths',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'p2lrn-express-shared-'));
+  try{
+    await exec(process.execPath,[cli,'setup','express','--cwd',root,'--course-path','courses/custom']);
+    const body=await readFile(join(root,'p2lrn-setup','express-route.mjs'),'utf8');
+    for(const handler of ['handleP2LRNStudioSave','handleP2LRNStudioReader','handleP2LRNStudioExternalImport'])
+      assert.match(body,new RegExp(handler));
+    assert.match(body,/allowClientPath:false/);
+    assert.doesNotMatch(body,/res\.json\(await saveP2LRNStudioPackage/);
+    assert.doesNotMatch(body,/convertP2LRNStudioExternalPackage/);
+    assert.match(body,/response\.status/);
+    assert.match(body,/response\.arrayBuffer\(\)/);
+  }finally{await rm(root,{recursive:true,force:true})}
+});

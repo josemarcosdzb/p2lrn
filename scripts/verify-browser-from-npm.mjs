@@ -881,7 +881,12 @@ async function runStudioFromNpm(chrome,appOrigin){
 }
 
 
-async function runChromePageGateOnce(chrome, url, profile, {timeoutMs=35000, exerciseExpression=null, screenshotName=null} = {}) {
+async function runChromePageGateOnce(chrome, url, profileHint, {timeoutMs=35000, exerciseExpression=null, screenshotName=null} = {}) {
+  // Windows Chrome creates deep background-app paths even with extensions disabled.
+  // Keep its real profile below Temp, never the deeply nested Actions workspace.
+  const runId=String(process.env.GITHUB_RUN_ID??'manual').replace(/[^0-9a-z_-]/giu,'');
+  const profile=join(tmpdir(),'p2lrn-qa-'+runId,basename(profileHint));
+  await mkdir(dirname(profile),{recursive:true});
   await rm(profile,{recursive:true,force:true});
   const args=[
     '--headless=new',
@@ -892,6 +897,9 @@ async function runChromePageGateOnce(chrome, url, profile, {timeoutMs=35000, exe
     '--no-default-browser-check',
     '--disable-cache',
     '--disable-extensions',
+    '--disable-default-apps',
+    '--disable-background-networking',
+    '--disable-component-update',
     '--window-size=1440,960',
     `--user-data-dir=${profile}`,
     '--remote-debugging-port=0',
@@ -1016,6 +1024,17 @@ async function runChromePageGateOnce(chrome, url, profile, {timeoutMs=35000, exe
     await send('Runtime.enable');
     await send('Log.enable');
     await send('Page.enable');
+    // Chrome can initially expose an unrelated managed-app tab on the runner.
+    // Always verify that DevTools is connected to the requested test document.
+    const firstLocation=await send('Runtime.evaluate',{
+      expression:'location.href',returnByValue:true,
+    });
+    const initialUrl=firstLocation.result?.value??null;
+    if(initialUrl!==url){
+      const navigation=await send('Page.navigate',{url});
+      if(navigation.errorText)throw Error('Chromium could not open expected test page: '+navigation.errorText);
+      console.log('CHROME_QA_TARGET_RECOVERED='+JSON.stringify({requested:url,initial:initialUrl}));
+    }
     if(exerciseExpression) await send('Target.setAutoAttach',{autoAttach:true,waitForDebuggerOnStart:false,flatten:true});
 
     const deadline=Date.now()+timeoutMs;
@@ -1075,7 +1094,17 @@ async function runChromePageGateOnce(chrome, url, profile, {timeoutMs=35000, exe
       }
       await sleep(100);
     }
-    return {...snapshot,stderr,browserLogs,runtimeExceptions,timeout:true};
+    let diagnostic={};
+    try{
+      const probe=await send('Runtime.evaluate',{
+        expression:'(()=>({url:location.href,title:document.title,readyState:document.readyState,body:document.body?.innerText?.slice(0,450)??null}))()',
+        returnByValue:true,
+      },null,3500);
+      diagnostic=probe.result?.value??{};
+    }catch(error){diagnostic={probeError:String(error?.message??error)}}
+    return {...snapshot,
+      detail:JSON.stringify({reason:'Timed out without an explicit harness PASS/FAIL',lastStatus:snapshot.status,diagnostic}),
+      stderr,browserLogs,runtimeExceptions,timeout:true};
   } finally {
     try{socket?.close();}catch{}
     if(child.exitCode===null){
@@ -1092,7 +1121,14 @@ async function runChromePageGateOnce(chrome, url, profile, {timeoutMs=35000, exe
 export async function runChromePageGate(chrome,url,profile,options={}){
   for(let attempt=0;attempt<2;attempt++){
     try{
-      return await runChromePageGateOnce(chrome,url,profile,options);
+      const result=await runChromePageGateOnce(chrome,url,profile,options);
+      // Retry only an uninitialized/wrong browser tab once, never a real
+      // application FAIL or a visual regression.
+      if(['BOOT','MISSING'].includes(result.status)&&attempt===0){
+        console.warn('Retrying Chrome once after missing QA page: '+result.detail.slice(0,600));
+        continue;
+      }
+      return result;
     }catch(error){
       const message=String(error?.message??error);
       const startupFailure=/Chrome DevTools endpoint did not start|Chrome exited before DevTools was ready|Chrome page target was not available/u.test(message);
