@@ -42,7 +42,7 @@ p2lrn-player{display:block;width:100%;max-width:1250px;min-height:540px;margin:a
       const poll=setInterval(()=>{
         if(finished){clearInterval(poll);return}
         const root=player.shadowRoot;
-        const shell=root?.querySelector('.p2lrn-game-shell');
+        const shell=root?.querySelector('.p2lrn-game-shell')||(kind==='fill-blanks'?root?.querySelector('.p2lrn-q-shell'):null);
         const elapsed=performance.now()-started;
         if(!shell){
           if(elapsed>14500){clearInterval(poll);finish('FAIL',{kind,reason:'Game UI not rendered',body:root?.textContent?.slice(0,450)})}
@@ -89,6 +89,37 @@ p2lrn-player{display:block;width:100%;max-width:1250px;min-height:540px;margin:a
           if(clue){clue.click();result.clueInteraction=clue.getAttribute('aria-pressed')==='true'}
           clearInterval(poll);
           finish(result.square&&result.internalScroll<=2&&result.hasClickableClues&&result.clueInteraction&&overflow<=2?'PASS':'VISUAL_FAIL',result);
+          return;
+        }
+        if(kind==='fill-blanks'){
+          const fields=[...root.querySelectorAll('.p2lrn-q-field input,.p2lrn-q-field select')];
+          const prompt=root.querySelector('.p2lrn-q-prompt');
+          const body=root.querySelector('.p2lrn-q-body');
+          result.fields=fields.length;
+          result.prompt=prompt?.textContent??null;
+          result.body=body?.textContent??null;
+          result.inputModes=fields.map(field=>field.tagName.toLowerCase());
+          result.contextForBlanks=Boolean(body?.textContent?.trim());
+          if(fields.length && fields[0].tagName==='INPUT'){
+            fields[0].value='ejemplo';
+            fields[0].dispatchEvent(new Event('input',{bubbles:true}));
+            result.textEntryWorks=fields[0].value==='ejemplo';
+          }
+          clearInterval(poll);
+          finish(fields.length>0&&Boolean(prompt)&&overflow<=2&&result.textEntryWorks?'PASS':'VISUAL_FAIL',result);
+          return;
+        }
+        if(kind.startsWith('3d')){
+          const canvas=root.querySelector('.p2lrn-3d-canvas');
+          const rect=canvas?.getBoundingClientRect();
+          const tech=root.querySelector('.p2lrn-3d-runtime')?.textContent??null;
+          result.canvas=!!canvas;
+          result.canvasSize=rect?{width:rect.width,height:rect.height}:null;
+          result.engine=tech;
+          result.questionText=root.querySelector('.p2lrn-3d-trial')?.textContent?.slice(0,220)??null;
+          result.sceneReady=!!canvas&&rect.width>80&&rect.height>80&&Boolean(tech?.includes('Three.js'));
+          clearInterval(poll);
+          finish(result.sceneReady&&overflow<=2?'PASS':'VISUAL_FAIL',result);
           return;
         }
         clearInterval(poll);
