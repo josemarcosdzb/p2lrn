@@ -98,8 +98,8 @@ for(const relative of [
   'packages/studio/README.md',
 ]){
   const before=await contents(relative);
-  if(!before.includes(previous))throw Error(relative+': cannot find current version '+previous);
-  pending.set(relative,before.replaceAll(previous,version));
+  // Versionless package READMEs are valid and must remain unchanged.
+  if(before.includes(previous))pending.set(relative,before.replaceAll(previous,version));
 }
 // PUBLISHING.md includes an important historical statement about the previously
 // published immutable prerelease. Do not change that history.
