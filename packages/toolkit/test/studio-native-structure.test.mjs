@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createP2LRNStudioDocument} from '../web/studio/new-document.js';
 import {exportP2LRNPackage} from '../web/studio/package-export.js';
 import {openP2LRNPackageBytes} from '../web/p2lrn-player.js';
-import {createDefaultComponentRegistry, CALLOUT_COMPONENT, TIMELINE_COMPONENT} from '../web/component-registry.js';
+import {createDefaultComponentRegistry, CALLOUT_COMPONENT, TIMELINE_COMPONENT, CAPABILITY_ACTION_COMPONENT} from '../web/component-registry.js';
 import {validateNativeComponent} from '../web/native-component-core.js';
 import {validateNativeComposite} from '../web/native-composite-core.js';
 
@@ -12,7 +12,7 @@ const toArrayBuffer=(bytes)=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffse
 test('Studio creates registered native components from the component registry',async()=>{
   const doc=createP2LRNStudioDocument({title:'Componentes Studio',language:'es'});
   const catalog=doc.componentCatalog();
-  assert.deepEqual(catalog.map((entry)=>entry.id),[CALLOUT_COMPONENT,TIMELINE_COMPONENT]);
+  assert.deepEqual(catalog.map((entry)=>entry.id),[CALLOUT_COMPONENT,TIMELINE_COMPONENT,CAPABILITY_ACTION_COMPONENT]);
   const registry=createDefaultComponentRegistry();
 
   const callout=doc.addNativeComponent(doc.rootId,{componentId:CALLOUT_COMPONENT,language:'es'});
@@ -27,6 +27,14 @@ test('Studio creates registered native components from the component registry',a
   validateNativeComponent(timelineJson.payload);
   await registry.prepare(timelineJson.payload);
   assert.ok(timelineJson.payload.data.items[0].id);
+
+  const connected=doc.addNativeComponent(doc.rootId,{componentId:CAPABILITY_ACTION_COMPONENT,language:'es'});
+  const connectedJson=await doc.readStructuredJson(connected.id);
+  validateNativeComponent(connectedJson.payload);
+  await registry.prepare(connectedJson.payload);
+  assert.equal(connectedJson.payload.data.capability,'ai.tutor');
+  assert.equal(connectedJson.payload.data.operation,'hint');
+  assert.deepEqual(doc.hostCapabilitiesForEntity(connected.id).map(({id,required,operations})=>({id,required,operations})),[{id:'ai.tutor',required:false,operations:['hint']}]);
 });
 
 test('Studio activity groups are valid nested activity containers',async()=>{

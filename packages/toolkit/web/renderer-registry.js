@@ -4,6 +4,7 @@ export const COMPOSITE_RENDERER = 'https://p2lrn.org/renderer/composite/standard
 export const COMPONENT_ROUTER_RENDERER = 'https://p2lrn.org/renderer/component/router';
 export const CALLOUT_COMPONENT_RENDERER = 'https://p2lrn.org/renderer/component/callout';
 export const TIMELINE_COMPONENT_RENDERER = 'https://p2lrn.org/renderer/component/timeline';
+export const CAPABILITY_ACTION_COMPONENT_RENDERER = 'https://p2lrn.org/renderer/component/capability-action';
 export const STANDARD_QUESTIONNAIRE_RENDERER = 'https://p2lrn.org/renderer/questionnaire/standard';
 export const MEMORY_RENDERER = 'https://p2lrn.org/renderer/questionnaire/memory';
 export const MATCHING_RENDERER = 'https://p2lrn.org/renderer/questionnaire/matching';
@@ -15,6 +16,7 @@ export const WORD_SEARCH_RENDERER = 'https://p2lrn.org/renderer/questionnaire/wo
 export const CROSSWORD_RENDERER = 'https://p2lrn.org/renderer/questionnaire/crossword';
 export const ROSCO_RENDERER = 'https://p2lrn.org/renderer/questionnaire/rosco';
 export const THREE_D_RENDERER = 'https://p2lrn.org/renderer/questionnaire/3d-order-match';
+export const REMOTE_MEDIA_RENDERER = 'https://p2lrn.org/renderer/passive/remote-media';
 
 function strings(value) {
   return Array.isArray(value) ? value.map(String) : value ? [String(value)] : [];
@@ -65,6 +67,7 @@ export class RendererRegistry {
       permissions: Object.freeze(strings(descriptor.permissions)),
       selectable: descriptor.selectable !== false,
       presentation: String(descriptor.presentation ?? 'generic'),
+      acceptsRemoteLocation: descriptor.acceptsRemoteLocation === true,
       supports: typeof descriptor.supports === 'function' ? descriptor.supports : null,
       load: descriptor.load,
     });
@@ -79,6 +82,7 @@ export class RendererRegistry {
   descriptorMatches(descriptor, representation) {
     const profile = canonicalIdentifier(representation?.profile ?? null);
     const mediaType = normalizeMediaType(representation?.mediaType);
+    if (representation?.location?.type === 'remote' && descriptor.acceptsRemoteLocation !== true) return false;
     if (descriptor.profiles.length && !descriptor.profiles.includes(profile)) return false;
     if (descriptor.mediaTypes.length && !descriptor.mediaTypes.some((item) => item === mediaType || (item.endsWith('/*') && mediaType.startsWith(item.slice(0, -1))))) return false;
     if (descriptor.roles.length && !descriptor.roles.includes(String(representation?.role ?? ''))) return false;

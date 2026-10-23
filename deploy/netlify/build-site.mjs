@@ -13,7 +13,7 @@ const outputRoot = join(root,'.netlify-cdn');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
 await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));
 await cp(join(root,'packages','toolkit','web','studio'),join(outputRoot,'studio','runtime'),{recursive:true,force:true});
-for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js']){
+for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','capability-broker.js']){
   await copyFile(join(root,'packages','toolkit','web',file),join(outputRoot,'studio',file));
 }
 

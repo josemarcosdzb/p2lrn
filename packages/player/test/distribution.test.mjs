@@ -14,7 +14,17 @@ const TOOLKIT_WEB=join(PACKAGES,'toolkit','web');
 const sha256=(data)=>'sha256:'+createHash('sha256').update(data).digest('hex');
 const sri384=(data)=>'sha384-'+createHash('sha384').update(data).digest('base64');
 function walk(root){const out=[];for(const name of readdirSync(root)){const p=join(root,name),s=statSync(p);if(s.isDirectory())out.push(...walk(p));else if(s.isFile())out.push(p);}return out;}
-function run(command,args,{cwd=ROOT,env=process.env}={}){return spawnSync(command,args,{cwd,env,text:true,encoding:'utf8'});}
+function run(command,args,{cwd=ROOT,env=process.env}={}){
+  if(process.platform==='win32'&&command==='npm'){
+    const cli=join(dirname(process.execPath),'node_modules','npm','bin','npm-cli.js');
+    if(existsSync(cli))return spawnSync(process.execPath,[cli,...args],{cwd,env,text:true,encoding:'utf8'});
+  }
+  if(command==='tsc'){
+    const cli=join(PACKAGES,'toolkit','node_modules','typescript','bin','tsc');
+    if(existsSync(cli))return spawnSync(process.execPath,[cli,...args],{cwd,env,text:true,encoding:'utf8'});
+  }
+  return spawnSync(command,args,{cwd,env,text:true,encoding:'utf8'});
+}
 function node(script,args=[],cwd=ROOT){return run(process.execPath,['--input-type=module','-e',script,...args],{cwd});}
 
 // Gates recovered from the Alpha15 distribution suite, now owned by the Node package.
@@ -22,7 +32,7 @@ test('release manifest authenticates the exact distributed runtime tree',()=>{
   const release=JSON.parse(readFileSync(join(DIST,'release.json'),'utf8'));
   assert.equal(release.schema,'https://p2lrn.org/schema/web-sdk-release/1');
   assert.equal(release.version,'1');
-  assert.equal(release.webSdkVersion,'0.5.0-alpha.1');
+  assert.equal(release.webSdkVersion,'0.5.0-alpha.11');
   const declared=new Map(release.files.map((x)=>[x.path,x]));
   const actual=walk(DIST).filter((p)=>p!==join(DIST,'release.json'));
   assert.deepEqual(new Set(declared.keys()),new Set(actual.map((p)=>relative(DIST,p).replaceAll('\\','/'))));
@@ -51,23 +61,30 @@ test('Web SDK build is reproducible from the canonical toolkit runtime',()=>{
   }finally{rmSync(tmp,{recursive:true,force:true});}
 });
 
+test('renderer capability bridge exposes only the declared-operation invocation wrapper',()=>{
+  const source=readFileSync(join(DIST,'p2lrn-player.js'),'utf8');
+  assert.match(source,/invokeCapability/);
+  assert.doesNotMatch(source,/capabilityBroker\s*:\s*this\._capabilityBroker/);
+  assert.match(source,/P2LRN_CAPABILITY_OPERATION_UNDECLARED/);
+});
+
 test('ESM package registers canonical and Alpha15 custom elements and public API',()=>{
   const entry=pathToFileURL(join(DIST,'p2lrn.esm.js')).href;
   const script=`
-    globalThis.HTMLElement=class {
-      constructor(){this._attrs=new Map();this.isConnected=false;}
+    globalThis.HTMLElement=class extends EventTarget {
+      constructor(){super();this._attrs=new Map();this.isConnected=false;}
       attachShadow(){this.shadowRoot={replaceChildren(){},querySelector(){return null},insertBefore(){}};return this.shadowRoot;}
       setAttribute(n,v){this._attrs.set(n,String(v));} getAttribute(n){return this._attrs.has(n)?this._attrs.get(n):null;} removeAttribute(n){this._attrs.delete(n);}
     };
     const registry=new Map();
     globalThis.customElements={get:(n)=>registry.get(n),define:(n,v)=>{if(registry.has(n))throw new Error('duplicate '+n);registry.set(n,v);}};
     const mod=await import(${JSON.stringify(entry)}+'?element-contract=1');
-    if(mod.version!=='0.5.0-alpha.1')process.exit(2);
+    if(mod.version!=='0.5.0-alpha.11')process.exit(2);
     if(globalThis.P2LRN?.version!==mod.version)process.exit(3);
     if(registry.get('p2lrn-player')!==mod.P2LRNPlayerElement)process.exit(4);
     const legacy=registry.get('p2rln-player');
     if(!legacy||legacy.p2rlnVersion!==mod.version||legacy===mod.P2LRNPlayerElement)process.exit(5);
-    if(typeof mod.mountP2LRN!=='function'||mod.renderers().length<10||mod.components().length<2)process.exit(6);
+    if(typeof mod.mountP2LRN!=='function'||typeof mod.createToolCapabilityProvider!=='function'||typeof globalThis.P2LRN?.createToolCapabilityProvider!=='function'||mod.renderers().length<10||mod.components().length<2)process.exit(6);
     const el=new mod.P2LRNPlayerElement();
     if(typeof el.reload!=='function')process.exit(7);
   `;
@@ -83,7 +100,7 @@ test('classic loader derives its module URL and exposes one reusable ready promi
     await import(process.argv[1]+'?loader-contract=1');
     const first=globalThis.P2LRNReady;const api=await first;
     const state=globalThis.__P2LRN_CDN_LOADER__;
-    if(api.version!=='0.5.0-alpha.1'||!state||state.version!==api.version)process.exit(2);
+    if(api.version!=='0.5.0-alpha.11'||!state||state.version!==api.version)process.exit(2);
     if(state.moduleUrl!==new URL('./p2lrn.esm.js',process.argv[1]).href)process.exit(3);
     await import(process.argv[1]+'?loader-contract=2');
     if(globalThis.P2LRNReady!==first)process.exit(4);
@@ -108,7 +125,7 @@ test('packed player installs offline and imports by package name',()=>{
   try{
     const packed=run('npm',['pack',ROOT,'--pack-destination',tmp,'--json'],{cwd:tmp});assert.equal(packed.status,0,packed.stderr||packed.stdout);const tar=join(tmp,JSON.parse(packed.stdout)[0].filename),app=join(tmp,'app');mkdirSync(app);writeFileSync(join(app,'package.json'),'{"type":"module"}\n');
     const installed=run('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund',tar],{cwd:app});assert.equal(installed.status,0,installed.stderr||installed.stdout);
-    const probe=`globalThis.HTMLElement=class {};const r=new Map();globalThis.customElements={get:n=>r.get(n),define:(n,v)=>r.set(n,v)};const m=await import('@p2lrn/player');if(m.version!=='0.5.0-alpha.1'||!r.get('p2lrn-player')||!r.get('p2rln-player'))process.exit(2);`;
+    const probe=`globalThis.HTMLElement=class {};const r=new Map();globalThis.customElements={get:n=>r.get(n),define:(n,v)=>r.set(n,v)};const m=await import('@p2lrn/player');if(m.version!=='0.5.0-alpha.11'||!r.get('p2lrn-player')||!r.get('p2rln-player'))process.exit(2);`;
     const loaded=node(probe,[],app);assert.equal(loaded.status,0,loaded.stderr||loaded.stdout);
     const serverProbe=`import {startP2LRNRuntimeHost} from '@p2lrn/player/server';const h=await startP2LRNRuntimeHost({basePath:'/runtime',allowedParentOrigins:['https://app.example.invalid']});try{const r=await fetch(h.baseUrl+'health');const j=await r.json();if(r.status!==200||j.runtime!=='p2lrn-runtime')process.exit(2);}finally{await h.close();}`;
     const serverLoaded=node(serverProbe,[],app);assert.equal(serverLoaded.status,0,serverLoaded.stderr||serverLoaded.stdout);
@@ -120,14 +137,20 @@ test('public TypeScript declarations compile for canonical and legacy HTML eleme
   const check=run('tsc',['--version']);if(check.status!==0){t.skip('tsc unavailable');return;}
   const tmp=mkdtempSync(join(tmpdir(),'p2lrn-player-types-'));
   try{
+    writeFileSync(join(tmp,'package.json'),'{"type":"module"}\n');
     const moduleDir=join(tmp,'node_modules','@p2lrn','player');mkdirSync(dirname(moduleDir),{recursive:true});cpSync(ROOT,moduleDir,{recursive:true});
-    const source=join(tmp,'probe.ts');writeFileSync(source,`import P2LRN,{createHostAdapter,mountP2LRN,version} from '@p2lrn/player';
+    const source=join(tmp,'probe.ts');writeFileSync(source,`import P2LRN,{createHostAdapter,createCapabilityBroker,createToolCapabilityProvider,createOfflineHostAdapter,createActivityTracker,mountP2LRN,version} from '@p2lrn/player';
 const player=document.createElement('p2lrn-player');
 player.setAttribute('src','/course.p2lrn'); player.setAttribute('node','urn:uuid:11111111-1111-4111-8111-111111111111');
 player.adapter=createHostAdapter({saveState:async()=>{}});
 void mountP2LRN(player,{src:'/course.p2lrn'});
+const toolProvider=createToolCapabilityProvider({id:'ai.tutor',tools:{hint:'tutor.hint'},callTool:async()=>({ok:true})});
+const broker=createCapabilityBroker({authorize:()=>true,providers:[toolProvider]});
+player.capabilityBroker=broker;
+const offline=createOfflineHostAdapter({remote:player.adapter}); player.adapter=offline; void offline.sync();
+const tracker=createActivityTracker({target:document,idleAfterMs:30000}); tracker.stop();
 const legacy=document.createElement('p2rln-player'); legacy.setAttribute('src','/legacy.p2rln');
-const v:'0.5.0-alpha.1'=version; void P2LRN; void v;
+const v:'0.5.0-alpha.11'=version; void P2LRN; void v;
 `);
     const r=run('tsc',['--noEmit','--strict','--target','ES2022','--module','NodeNext','--moduleResolution','NodeNext','--lib','ES2022,DOM',source],{cwd:tmp});assert.equal(r.status,0,r.stderr||r.stdout);
   }finally{rmSync(tmp,{recursive:true,force:true});}

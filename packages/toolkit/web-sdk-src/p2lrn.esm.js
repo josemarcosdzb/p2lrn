@@ -10,8 +10,14 @@ import {
   mountP2LRN,
   openP2LRNPackageBytes,
   openP2LRNPackageURL,
+  cacheP2LRNPackageURL,
+  openCachedP2LRNPackage,
 } from './p2lrn-player.js';
 import {createHostAdapter, HOST_ADAPTER_VERSION} from './host-adapter.js';
+import {CapabilityBroker, createCapabilityBroker, createToolCapabilityProvider, capabilityRequirements, mergeCapabilityRequirements, capabilityOperationAllowed, validateCapabilityGraph, HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION} from './capability-broker.js';
+import {createOfflineHostAdapter, createMemoryOfflineStore, createIndexedDbOfflineStore, OFFLINE_HOST_ADAPTER_VERSION, DEFAULT_OFFLINE_DB_NAME} from './offline-host-adapter.js';
+import {createActivityTracker, DEFAULT_ACTIVITY_IDLE_AFTER_MS} from './activity-tracker.js';
+import {createMemoryPackageCache, createCacheStoragePackageCache, createPackageCacheFetch, DEFAULT_PACKAGE_CACHE_NAME, PACKAGE_CACHE_VERSION} from './package-cache.js';
 import {installP2LRNServiceWorker} from './static-resource-bridge.js';
 import {configureRuntimeHost, getRuntimeHostConfig, normalizeRuntimeBaseUrl, resolveScormRuntimeUrl, resolveH5pRuntimeUrl, resolvePackageRuntimeUrl} from './runtime-host-config.js';
 import {PROGRESSION_PROFILE, normalizeProgressionState} from './progression-core.js';
@@ -43,6 +49,29 @@ export {
   P2LRNPlayerElement,
   HOST_ADAPTER_VERSION,
   createHostAdapter,
+  CapabilityBroker,
+  createCapabilityBroker,
+  createToolCapabilityProvider,
+  capabilityRequirements,
+  mergeCapabilityRequirements,
+  capabilityOperationAllowed,
+  validateCapabilityGraph,
+  HOST_CAPABILITY_EXTENSION,
+  HOST_CAPABILITY_CONTRACT_VERSION,
+  createOfflineHostAdapter,
+  createMemoryOfflineStore,
+  createIndexedDbOfflineStore,
+  OFFLINE_HOST_ADAPTER_VERSION,
+  DEFAULT_OFFLINE_DB_NAME,
+  createActivityTracker,
+  DEFAULT_ACTIVITY_IDLE_AFTER_MS,
+  createMemoryPackageCache,
+  createCacheStoragePackageCache,
+  createPackageCacheFetch,
+  DEFAULT_PACKAGE_CACHE_NAME,
+  PACKAGE_CACHE_VERSION,
+  cacheP2LRNPackageURL,
+  openCachedP2LRNPackage,
   mountP2LRN,
   openP2LRNPackageBytes,
   openP2LRNPackageURL,

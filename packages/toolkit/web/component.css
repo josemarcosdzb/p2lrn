@@ -35,3 +35,29 @@
 .p2lrn-component-timeline__date { font-weight: 700; }
 .p2lrn-component-timeline__item h3 { margin: .2rem 0; }
 .p2lrn-component-timeline__item p { margin: .2rem 0 0; }
+.p2lrn-component-capability {
+  display: grid;
+  gap: .75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .75rem;
+  padding: 1rem 1.125rem;
+  background: #fff;
+  color: #0f172a;
+}
+.p2lrn-component-capability h3, .p2lrn-component-capability p { margin: 0; }
+.p2lrn-capability-action {
+  justify-self: start;
+  min-height: 2.5rem;
+  padding: .55rem .9rem;
+  border: 1px solid #0f172a;
+  border-radius: .55rem;
+  background: #0f172a;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.p2lrn-capability-action:disabled { cursor: not-allowed; opacity: .55; }
+.p2lrn-capability-output { border-top: 1px solid #e2e8f0; padding-top: .75rem; }
+.p2lrn-capability-output pre { margin: .4rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.p2lrn-capability-fallback { color: #475569; }

@@ -1,9 +1,10 @@
 import {canonicalIdentifier} from './identifiers.js';
-import {CALLOUT_COMPONENT_RENDERER, TIMELINE_COMPONENT_RENDERER} from './renderer-registry.js';
+import {CALLOUT_COMPONENT_RENDERER, TIMELINE_COMPONENT_RENDERER, CAPABILITY_ACTION_COMPONENT_RENDERER} from './renderer-registry.js';
 
 export const COMPONENT_RUNTIME_CONTRACT_VERSION = '1';
 export const CALLOUT_COMPONENT = 'https://p2lrn.org/component/callout';
 export const TIMELINE_COMPONENT = 'https://p2lrn.org/component/timeline';
+export const CAPABILITY_ACTION_COMPONENT = 'https://p2lrn.org/component/capability-action';
 
 function cloneJson(value) {
   if (value === undefined) return undefined;
@@ -78,6 +79,19 @@ function validateTimelineV1(data) {
     if (item.body !== undefined && (typeof item.body !== 'string' || item.body.length > 10000)) return false;
   }
   return true;
+}
+
+
+function validateCapabilityActionV1(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+  const token=/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
+  if (typeof data.capability !== 'string' || data.capability.length > 128 || !token.test(data.capability)) return false;
+  if (typeof data.operation !== 'string' || data.operation.length > 128 || !token.test(data.operation)) return false;
+  for (const key of ['heading','body','instruction','buttonLabel','resultLabel','fallbackText']) {
+    if (data[key] !== undefined && (typeof data[key] !== 'string' || data[key].length > 10000)) return false;
+  }
+  if (data.required !== undefined && typeof data.required !== 'boolean') return false;
+  return Object.keys(data).every((key)=>['capability','operation','heading','body','instruction','buttonLabel','resultLabel','fallbackText','required'].includes(key));
 }
 
 export class ComponentRegistry {
@@ -269,6 +283,24 @@ export function createDefaultComponentRegistry() {
       initialData: {items: [{id: 'item-1', date: '', title: 'Primer acontecimiento', body: ''}]},
     },
     validateData: validateTimelineV1,
+  });
+  registry.register({
+    id: CAPABILITY_ACTION_COMPONENT,
+    componentVersion: '1',
+    runtimeContractVersion: COMPONENT_RUNTIME_CONTRACT_VERSION,
+    rendererId: CAPABILITY_ACTION_COMPONENT_RENDERER,
+    supportedDataVersions: ['1'],
+    targetDataVersion: '1',
+    authoringDataVersion: '1',
+    dataSchemas: {'1':'https://p2lrn.org/component/capability-action/schema/data/1'},
+    editorSchemas: {'1':'https://p2lrn.org/component/capability-action/editor/1'},
+    authoring: {
+      label: 'Acción conectada',
+      description: 'Invoca una capacidad semántica del host, como tutor, búsqueda, voz, datos o colaboración, sin guardar credenciales ni endpoints en el paquete.',
+      editor: 'capability-action',
+      initialData: {capability:'ai.tutor', operation:'hint', instruction:'Ayuda al alumno con esta actividad sin revelar directamente la respuesta.', buttonLabel:'Pedir pista', resultLabel:'Respuesta del servicio', fallbackText:'Esta función necesita un proveedor compatible del host.', required:false},
+    },
+    validateData: validateCapabilityActionV1,
   });
   return registry;
 }

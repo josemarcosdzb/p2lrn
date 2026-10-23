@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-export declare function buildWebSdk(root: string, output: string): {
+export declare function buildWebSdk(root: string, output: string): Promise<{
     output: string;
     files: number;
     release: {
@@ -8,6 +8,9 @@ export declare function buildWebSdk(root: string, output: string): {
         webSdkVersion: string;
         toolkitVersion: string;
         coreVersion: string;
+        h5pStandaloneVersion: any;
+        threeVersion: any;
+        rapier3dVersion: any;
         entrypoints: {
             classic: string;
             module: string;
@@ -20,5 +23,5 @@ export declare function buildWebSdk(root: string, output: string): {
             sri: string;
         }[];
     };
-};
-export declare function main(argv?: string[]): void;
+}>;
+export declare function main(argv?: string[]): Promise<void>;

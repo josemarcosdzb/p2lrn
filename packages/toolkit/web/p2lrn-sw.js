@@ -10,6 +10,7 @@
 export const P2LRN_SW_PROTOCOL = 'p2lrn-static-bridge/1';
 export const VIRTUAL_MARKER = '/__p2lrn__/v1/';
 export const REGISTRY_CACHE = 'p2lrn-static-bridge-registry-v2';
+export const PACKAGE_CACHE = 'p2lrn-package-cache-v1';
 export const MAX_BUFFERED_RESOURCE = 64 * 1024 * 1024;
 export const MAX_ROUTE_RESOURCES = 4096;
 export const MAX_ROUTE_CHUNK_DIGESTS = 262144;
@@ -19,6 +20,7 @@ const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 const textDecoder = new TextDecoder('utf-8', {fatal: true});
 const memoryRoutes = new Map();
 const resolvedOffsets = new Map();
+const cachedPackageBuffers = new Map();
 
 function u16(view, offset) { return view.getUint16(offset, true); }
 function u32(view, offset) { return view.getUint32(offset, true); }
@@ -203,7 +205,29 @@ export async function loadRouteConfig(routeId) {
   return normalized;
 }
 
-async function fetchExactRange(url, start, end, fetchImpl = fetch) {
+async function cachedPackageBytes(url, expectedContentRoot = null) {
+  const cacheKey=String(url);
+  const existing=cachedPackageBuffers.get(cacheKey);
+  if(existing && (!expectedContentRoot || existing.contentRoot===expectedContentRoot)) return existing.bytes;
+  if(!globalThis.caches)return null;
+  try{
+    const cache=await caches.open(PACKAGE_CACHE);
+    const response=await cache.match(cacheKey);
+    if(!response || response.headers.get('X-P2LRN-Cache-Version')!=='1')return null;
+    const contentRoot=response.headers.get('X-P2LRN-Content-Root');
+    if(expectedContentRoot && contentRoot!==expectedContentRoot)return null;
+    const bytes=new Uint8Array(await response.arrayBuffer());
+    cachedPackageBuffers.set(cacheKey,{contentRoot,bytes});
+    return bytes;
+  }catch{return null;}
+}
+
+async function fetchExactRange(url, start, end, fetchImpl = fetch, expectedContentRoot = null) {
+  const cached=await cachedPackageBytes(url,expectedContentRoot);
+  if(cached){
+    if(start<0||end<start||end>=cached.byteLength)throw new Error('Cached P2LRN package range is outside package bounds.');
+    return cached.slice(start,end+1);
+  }
   const response = await fetchImpl(url, {
     method: 'GET',
     credentials: 'same-origin',
@@ -220,7 +244,7 @@ async function resolveDataStart(route, logical, resource, fetchImpl) {
   const cacheKey = `${route.routeId}\0${logical}`;
   if (resolvedOffsets.has(cacheKey)) return resolvedOffsets.get(cacheKey);
   const offset = resource.archiveEntry.localOffset;
-  const header = await fetchExactRange(route.sourceUrl, offset, offset + 29, fetchImpl);
+  const header = await fetchExactRange(route.sourceUrl, offset, offset + 29, fetchImpl, route.contentRoot);
   const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
   if (u32(view, 0) !== LOCAL_SIGNATURE) throw new Error(`Invalid local ZIP header: ${resource.embeddedPath}`);
   const flags = u16(view, 6);
@@ -230,7 +254,7 @@ async function resolveDataStart(route, logical, resource, fetchImpl) {
   if (flags & 0x1) throw new Error(`Encrypted ZIP member is not allowed: ${resource.embeddedPath}`);
   if (method !== resource.archiveEntry.method) throw new Error(`ZIP method mismatch: ${resource.embeddedPath}`);
   if (nameLength) {
-    const nameBytes = await fetchExactRange(route.sourceUrl, offset + 30, offset + 30 + nameLength - 1, fetchImpl);
+    const nameBytes = await fetchExactRange(route.sourceUrl, offset + 30, offset + 30 + nameLength - 1, fetchImpl, route.contentRoot);
     const localName = textDecoder.decode(nameBytes);
     if (localName !== resource.embeddedPath) throw new Error(`Local/central ZIP name mismatch: ${resource.embeddedPath}`);
   }
@@ -252,7 +276,7 @@ function chunkVerifiedStream(route, logical, resource, start, end, fetchImpl) {
         const dataStart = await resolveDataStart(route, logical, resource, fetchImpl);
         const chunkStart = chunkIndex * chunkSize;
         const chunkEnd = Math.min(resource.size - 1, chunkStart + chunkSize - 1);
-        const bytes = await fetchExactRange(route.sourceUrl, dataStart + chunkStart, dataStart + chunkEnd, fetchImpl);
+        const bytes = await fetchExactRange(route.sourceUrl, dataStart + chunkStart, dataStart + chunkEnd, fetchImpl, route.contentRoot);
         const actual = await sha256(bytes);
         if (actual !== integrity.chunks[chunkIndex]) throw new Error(`P2LRN chunk integrity mismatch: ${resource.embeddedPath}#${chunkIndex}`);
         const from = Math.max(start, chunkStart) - chunkStart;
@@ -273,7 +297,7 @@ async function fullVerifiedBytes(route, logical, resource, fetchImpl) {
   if (resource.archiveEntry.compressedSize === 0) {
     bytes = new Uint8Array();
   } else {
-    const compressed = await fetchExactRange(route.sourceUrl, dataStart, dataStart + resource.archiveEntry.compressedSize - 1, fetchImpl);
+    const compressed = await fetchExactRange(route.sourceUrl, dataStart, dataStart + resource.archiveEntry.compressedSize - 1, fetchImpl, route.contentRoot);
     if (resource.archiveEntry.method === 0) bytes = compressed;
     else {
       let inflater;

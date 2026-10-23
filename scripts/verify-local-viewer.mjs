@@ -670,16 +670,104 @@ async function prepareVisualStudioFixture(){
   await writeFile(join(dir,'studio-component.html'),'<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>P2LRN Studio CDN UI E2E</title><style>body{font:15px system-ui,sans-serif;margin:0;padding:16px;background:#f3f5f7}h1{font-size:20px}p2lrn-studio{display:block}</style><script src="/studio/current/dist/p2lrn-studio.js"></script></head><body><h1>Prueba de interfaz Studio desde CDN local</h1><p2lrn-studio id="studio"></p2lrn-studio></body></html>');
 }
 
+
+async function prepareConnectedArchitectureFixtures(){
+  const dir=join(siteRoot,'tests');
+  await mkdir(dir,{recursive:true});
+  const doc=createP2LRNStudioDocument({title:'Curso de capacidades',language:'es'});
+  const activity=doc.addNativeComponent(doc.rootId,{componentId:'https://p2lrn.org/component/capability-action',title:'Tutor conectado',language:'es'});
+  const target=await doc.readStructuredJson(activity.id);
+  target.payload.data.heading='Tutor opcional';
+  target.payload.data.body='Esta actividad solicita una pista sin conocer el proveedor que hay detrás.';
+  target.payload.data.instruction='Da una pista breve sobre el objetivo actual sin revelar la solución.';
+  target.payload.data.buttonLabel='Pedir pista';
+  doc.setStructuredJson(activity.id,target.payload);
+  doc.setHostCapabilities(activity.id,[{id:'ai.tutor',required:false,operations:['hint'],context:['component.input'],description:'Tutor semántico de ejemplo.'}]);
+  const exported=await exportP2LRNPackage(doc);
+  await writeFile(join(dir,'capability-action.p2lrn'),exported.bytes);
+  await cp(join(siteRoot,'examples','canonical','web-bundle-course.p2lrn'),join(dir,'offline-web.p2lrn'),{force:true});
+  return Object.freeze({activityId:activity.id,offlineSource:join(dir,'offline-web.p2lrn')});
+}
+
+async function verifyConnectedArchitecture(cdp,fixture){
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
+  for(let i=0;i<120;i++){
+    if(await evalTop(cdp,"Boolean(globalThis.P2LRN?.createCapabilityBroker && customElements.get('p2lrn-player'))"))break;
+    await sleep(50);
+  }
+  invariant(await evalTop(cdp,"Boolean(globalThis.P2LRN?.createCapabilityBroker && customElements.get('p2lrn-player'))"),'Connected architecture public API did not load.');
+
+  const capability=await evalTop(cdp,`(async()=>{
+    const host=document.createElement('div');host.id='connected-capability-gate';document.body.append(host);
+    const provider=P2LRN.createToolCapabilityProvider({
+      id:'ai.tutor',
+      tools:{hint:'mcp.tutor.hint'},
+      callTool:async(tool,input)=>({text:'Pista MCP: '+input.instruction,tool}),
+    });
+    const broker=P2LRN.createCapabilityBroker({providers:[provider],authorize:({capabilityId,operation})=>capabilityId==='ai.tutor'&&operation==='hint'});
+    const player=document.createElement('p2lrn-player');
+    player.capabilityBroker=broker;
+    player.setAttribute('node',${JSON.stringify(fixture.activityId)});
+    player.setAttribute('src','/tests/capability-action.p2lrn');
+    host.append(player);
+    const wait=async(test,label)=>{for(let i=0;i<240;i++){const value=test();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw new Error(label+' timeout');};
+    await wait(()=>player.shadowRoot?.querySelector('.p2lrn-component-capability'),'capability render');
+    const button=player.shadowRoot.querySelector('.p2lrn-capability-action');
+    if(!button||button.disabled)throw new Error('Connected capability button unavailable.');
+    button.click();
+    await wait(()=>player.shadowRoot?.querySelector('.p2lrn-capability-output pre')?.textContent?.includes('Pista MCP:'),'capability result');
+    return {
+      text:player.shadowRoot.querySelector('.p2lrn-capability-output pre').textContent,
+      brokerExposed:Boolean(player.shadowRoot.querySelector('[data-broker]')),
+      capabilityStatus:player.shadowRoot.querySelector('.p2lrn-component-capability').textContent,
+    };
+  })()`);
+  invariant(capability.text.includes('Pista MCP:'),'Connected capability did not reach the host tool provider.');
+  invariant(capability.brokerExposed===false,'Connected component exposed the host broker to package-authored DOM.');
+
+  const cached=await evalTop(cdp,`(async()=>{
+    await P2LRN.installServiceWorker();
+    const store=P2LRN.createCacheStoragePackageCache();
+    await store.clear();
+    const saved=await P2LRN.cachePackageURL('/tests/offline-web.p2lrn',{store});
+    globalThis.__p2lrnConnectedCache=store;
+    return {...saved,count:(await store.list()).length};
+  })()`);
+  invariant(cached.count===1,'Verified package cache did not persist exactly one test package.');
+  await rm(fixture.offlineSource,{force:true});
+
+  const offline=await evalTop(cdp,`(async()=>{
+    const player=document.createElement('p2lrn-player');
+    player.id='offline-package-gate';
+    player.packageCache=globalThis.__p2lrnConnectedCache;
+    player.setAttribute('node','urn:uuid:36676731-dfe6-5125-afa5-dc8d76c94859');
+    player.setAttribute('src','/tests/offline-web.p2lrn');
+    document.body.append(player);
+    const wait=async(test,label)=>{for(let i=0;i<320;i++){const value=test();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw new Error(label+' timeout');};
+    const frame=await wait(()=>player.shadowRoot?.querySelector('iframe'),'offline web package render');
+    await new Promise(r=>setTimeout(r,250));
+    return {
+      frameSrc:frame.src,
+      status:player.shadowRoot.textContent.slice(0,600),
+      cacheCount:(await globalThis.__p2lrnConnectedCache.list()).length,
+    };
+  })()`);
+  invariant(offline.cacheCount===1,'Offline package cache entry disappeared during playback.');
+  invariant(offline.frameSrc.includes('/__p2lrn__/v1/'),'Offline web package did not resolve through the verified static-resource bridge.');
+  return Object.freeze({capability,cached,offline});
+}
+
 let appServer=null,runtimeServer=null,chrome=null,cdp=null;
 try{
   // Match build-site.mjs: the static Studio page imports the toolkit's canonical browser modules.
   // The CDN-only fixture does not materialize these until we copy them here.
   await cp(join(root,'packages','toolkit','web','studio'),join(siteRoot,'studio','runtime'),{recursive:true,force:true});
-  for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js']){
+  for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','capability-broker.js']){
     await cp(join(root,'packages','toolkit','web',file),join(siteRoot,'studio',file));
   }
   await prepareVisualStudioFixture();
   await prepareGameFixtures();
+  const connectedFixture=await prepareConnectedArchitectureFixtures();
   const builtViewer=await readFile(viewerPath,'utf8');
   const localViewer=builtViewer.replace(/const RUNTIME_ORIGINS=Object\.freeze\(\[[\s\S]*?\]\);/u,
     `const RUNTIME_ORIGINS=Object.freeze(['${RUNTIME_ORIGIN}','${APP_ORIGIN}']);`);
@@ -716,7 +804,9 @@ try{
   try{studioUI=await verifyStudioComponentUI(cdp);}catch(error){failures.push({name:'studio-component-cdn',message:String(error?.message||error)});}
   let studioSiteUI=null;
   try{studioSiteUI=await verifyStudioSiteUI(cdp);}catch(error){failures.push({name:'studio-website-ui',message:String(error?.message||error)});}
-  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,studioUI,studioSiteUI,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
+  let connectedArchitecture=null;
+  try{connectedArchitecture=await verifyConnectedArchitecture(cdp,connectedFixture);}catch(error){failures.push({name:'connected-architecture',message:String(error?.message||error)});}
+  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
 }finally{
   try{cdp?.socket?.close();}catch{}

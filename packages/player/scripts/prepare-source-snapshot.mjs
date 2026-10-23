@@ -59,6 +59,7 @@ export async function preparePlayerSourceSnapshot({output = defaultOutput} = {})
     [join(playerRoot,'types'), join(output,'packages','player','types')],
     [join(toolkitRoot,'web'), join(output,'packages','toolkit','web')],
     [join(toolkitRoot,'web-sdk-src'), join(output,'packages','toolkit','web-sdk-src')],
+    [join(toolkitRoot,'web-build'), join(output,'packages','toolkit','web-build')],
   ]) {
     await copyTree(from,to);
   }
@@ -129,9 +130,11 @@ export async function preparePlayerSourceSnapshot({output = defaultOutput} = {})
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   if (process.argv.includes('--clean')) {
     await cleanPlayerSourceSnapshot();
-    console.log(JSON.stringify({ok:true,cleaned:defaultOutput},null,2));
+    const message=JSON.stringify({ok:true,cleaned:defaultOutput},null,2)+'\n';
+    if (process.env.npm_config_json === 'true') process.stderr.write(message); else process.stdout.write(message);
   } else {
     const result = await preparePlayerSourceSnapshot();
-    console.log(JSON.stringify({ok:true,output:result.output,sourceRef:result.manifest.sourceRef},null,2));
+    const message=JSON.stringify({ok:true,output:result.output,sourceRef:result.manifest.sourceRef},null,2)+'\n';
+    if (process.env.npm_config_json === 'true') process.stderr.write(message); else process.stdout.write(message);
   }
 }

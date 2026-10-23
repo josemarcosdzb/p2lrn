@@ -1,5 +1,6 @@
-import {createDefaultComponentRegistry} from '../component-registry.js';
+import {createDefaultComponentRegistry, CAPABILITY_ACTION_COMPONENT} from '../component-registry.js';
 import {validateNativeComposite} from '../native-composite-core.js';
+import {HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION, capabilityRequirements} from '../capability-broker.js';
 
 const decoder=new TextDecoder('utf-8',{fatal:true});
 const encoder=new TextEncoder();
@@ -240,6 +241,33 @@ export class P2LRNStudioDocument{
     this.payloadOverrides.set(target.path,encoder.encode(JSON.stringify(payload,null,2)+'\n'));this.changeCount+=1;return payload;
   }
 
+  hostCapabilitiesForEntity(entityId){
+    const entity=this.entity(entityId);
+    if(!entity)return [];
+    return capabilityRequirements(entity).map((request)=>clone(request));
+  }
+
+  setHostCapabilities(entityId,requests=[]){
+    const entity=this.entity(entityId);
+    if(!entity)throw new Error('La entidad P2LRN no existe.');
+    if(!['course','activity','resource'].includes(entity.type))throw new Error('Las capacidades del host sólo se pueden declarar en curso, actividad o recurso.');
+    const list=Array.isArray(requests)?clone(requests):null;
+    if(!list)throw new TypeError('Las capacidades del host deben ser una lista.');
+    entity.extensions??={};
+    if(!list.length){
+      delete entity.extensions[HOST_CAPABILITY_EXTENSION];
+      if(Object.keys(entity.extensions).length===0)delete entity.extensions;
+      this.changeCount+=1;
+      return [];
+    }
+    const declaration={version:HOST_CAPABILITY_CONTRACT_VERSION,requests:list};
+    const probe={extensions:{[HOST_CAPABILITY_EXTENSION]:declaration}};
+    capabilityRequirements(probe);
+    entity.extensions[HOST_CAPABILITY_EXTENSION]=declaration;
+    this.changeCount+=1;
+    return this.hostCapabilitiesForEntity(entityId);
+  }
+
   progressionForActivity(activityId){
     const activity=this.entity(activityId);
     if(!activity||activity.type!=='activity')return null;
@@ -301,7 +329,11 @@ export class P2LRNStudioDocument{
     if(descriptor.editorSchemas?.[dataVersion])schemas.editor=descriptor.editorSchemas[dataVersion];
     const payload={schema:'https://p2lrn.org/schema/native-component/0.1',version:'0.1',component:{id:descriptor.id,componentVersion:descriptor.componentVersion,dataVersion,runtimeContractVersion:descriptor.runtimeContractVersion},data:clone(descriptor.authoring.initialData),title:componentTitle,language};
     if(Object.keys(schemas).length)payload.schemas=schemas;
-    return this.addEmbeddedResource(parentId,{title:componentTitle,language,filename:'component.json',mediaType:COMPONENT_MEDIA_TYPE,bytes:encoder.encode(JSON.stringify(payload,null,2)+'\n'),profile:COMPONENT_PROFILE,activityType:COMPONENT_ACTIVITY_TYPE});
+    const activity=this.addEmbeddedResource(parentId,{title:componentTitle,language,filename:'component.json',mediaType:COMPONENT_MEDIA_TYPE,bytes:encoder.encode(JSON.stringify(payload,null,2)+'\n'),profile:COMPONENT_PROFILE,activityType:COMPONENT_ACTIVITY_TYPE});
+    if(descriptor.id===CAPABILITY_ACTION_COMPONENT){
+      this.setHostCapabilities(activity.id,[{id:payload.data.capability,required:payload.data.required===true,operations:[payload.data.operation],context:['component.input'],description:'Operación solicitada por un componente conectado.'}]);
+    }
+    return activity;
   }
 
   addNativeComposite(parentId=this.rootId,{title='Grupo de actividades',language='es',mode='free',completion='all'}={}){

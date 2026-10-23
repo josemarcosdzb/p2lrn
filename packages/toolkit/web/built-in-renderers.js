@@ -11,6 +11,7 @@ import {
   COMPONENT_ROUTER_RENDERER,
   CALLOUT_COMPONENT_RENDERER,
   TIMELINE_COMPONENT_RENDERER,
+  CAPABILITY_ACTION_COMPONENT_RENDERER,
   STANDARD_QUESTIONNAIRE_RENDERER,
   MEMORY_RENDERER,
   MATCHING_RENDERER,
@@ -22,6 +23,7 @@ import {
   CROSSWORD_RENDERER,
   ROSCO_RENDERER,
   THREE_D_RENDERER,
+  REMOTE_MEDIA_RENDERER,
 } from './renderer-registry.js';
 
 export const SCORM_RUNTIME_RENDERER = 'https://p2lrn.org/renderer/scorm/runtime';
@@ -98,6 +100,12 @@ export function registerBuiltInRenderers(registry) {
     dependencies: [DOM_DEPENDENCY], load: () => import('./renderers/component-timeline.js'),
   });
   registry.register({
+    id: CAPABILITY_ACTION_COMPONENT_RENDERER, version: '1', priority: -1000, presentation: 'component-implementation',
+    selectable: false,
+    profiles: [NATIVE_COMPONENT_PROFILE], mediaTypes: [NATIVE_COMPONENT_MEDIA_TYPE],
+    dependencies: [DOM_DEPENDENCY], load: () => import('./renderers/component-capability-action.js'),
+  });
+  registry.register({
     id: STANDARD_QUESTIONNAIRE_RENDERER, version: '1', priority: 100, presentation: 'questionnaire',
     ...questionnaire, load: () => import('./renderers/questionnaire-standard.js'),
   });
@@ -113,6 +121,12 @@ export function registerBuiltInRenderers(registry) {
   registry.register({
     id: THREE_D_RENDERER, version: '1', priority: 10, presentation: 'game-3d',
     ...questionnaire, dependencies: [DOM_DEPENDENCY, WEBGL2_DEPENDENCY], load: () => import('./renderers/questionnaire-3d.js'),
+  });
+  registry.register({
+    id: REMOTE_MEDIA_RENDERER, version: '1', priority: 90, presentation: 'media', acceptsRemoteLocation: true,
+    mediaTypes: ['image/*', 'audio/*', 'video/*'], dependencies: [DOM_DEPENDENCY],
+    supports: ({representation}) => representation?.location?.type === 'remote' && /^sha256:[0-9a-f]{64}$/.test(String(representation.location.expectedDigest ?? '')),
+    load: () => import('./renderers/remote-media.js'),
   });
   registry.register({
     id: PASSIVE_MEDIA_RENDERER, version: '1', priority: 80, presentation: 'media',

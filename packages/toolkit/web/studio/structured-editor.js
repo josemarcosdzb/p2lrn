@@ -116,6 +116,26 @@ export function renderStructuredVisualEditor(container,options={}){
         while(ids.has(id)){n+=1;id='item-'+n;}
         payload.data.items.push({id,date:'',title:'Nuevo acontecimiento',body:''});save();rerender();
       },'q-mini q-add-primary'));
+    }else if(editor==='capability-action'){
+      const capability=input(payload.data.capability||'ai.tutor');capability.placeholder='ai.tutor';
+      const operation=input(payload.data.operation||'hint');operation.placeholder='hint';
+      const instruction=textarea(payload.data.instruction||'');instruction.className='q-answer-list';instruction.placeholder='Qué debe hacer el proveedor conectado';
+      const buttonLabel=input(payload.data.buttonLabel||'Ejecutar');
+      const fallback=textarea(payload.data.fallbackText||'');fallback.className='q-answer-list';fallback.placeholder='Texto cuando la capacidad no esté disponible';
+      const required=document.createElement('input');required.type='checkbox';required.checked=payload.data.required===true;
+      const token=/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
+      const save=()=>{
+        const cap=capability.value.trim(),op=operation.value.trim();
+        if(!token.test(cap)||!token.test(op)){onStatus?.('Capacidad y operación deben ser identificadores semánticos, por ejemplo ai.tutor / hint.');return;}
+        payload.data.capability=cap;payload.data.operation=op;payload.data.instruction=instruction.value;payload.data.buttonLabel=buttonLabel.value.trim()||'Ejecutar';payload.data.fallbackText=fallback.value;payload.data.required=required.checked;
+        model.setStructuredJson(activityId,payload);
+        model.setHostCapabilities(activityId,[{id:cap,required:required.checked,operations:[op],context:['component.input'],description:'Operación solicitada por un componente conectado.'}]);
+        onChange?.();
+      };
+      capability.addEventListener('change',save);operation.addEventListener('change',save);instruction.addEventListener('input',save);buttonLabel.addEventListener('input',save);fallback.addEventListener('input',save);required.addEventListener('change',save);
+      settings.append(labeled('Capacidad',capability),labeled('Operación',operation),labeled('Texto del botón',buttonLabel),labeled('Obligatoria',required));
+      root.append(labeled('Instrucción para el proveedor',instruction),labeled('Fallback sin proveedor',fallback));
+      const note=node('div','studio-readonly','El paquete sólo guarda la intención semántica. El host decide si la capacidad la ofrece MCP, Paula, un modelo local, AulaP2P u otro proveedor y conserva fuera del paquete las credenciales y endpoints.');root.append(note);
     }else{
       root.append(node('div','studio-readonly','Este componente está registrado, pero todavía no tiene un editor visual específico. Puedes editar su JSON en Avanzado.'));
     }

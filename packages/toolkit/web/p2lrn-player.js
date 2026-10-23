@@ -4,7 +4,11 @@ import {registerBuiltInRenderers} from './built-in-renderers.js';
 import {createDefaultComponentRegistry} from './component-registry.js';
 import {dispatchRuntimeEvent} from './runtime-events.js';
 import {createHostAdapter, normalizeHostAdapter} from './host-adapter.js';
-import {BufferZipArchive, openRemoteZipArchive, safeZipPath} from './zip-source.js';
+import {createCapabilityBroker, createToolCapabilityProvider, normalizeCapabilityBroker, capabilityRequirements, mergeCapabilityRequirements, capabilityOperationAllowed, validateCapabilityGraph, HOST_CAPABILITY_EXTENSION} from './capability-broker.js';
+import {createOfflineHostAdapter, createMemoryOfflineStore, createIndexedDbOfflineStore, DEFAULT_OFFLINE_DB_NAME} from './offline-host-adapter.js';
+import {createActivityTracker, DEFAULT_ACTIVITY_IDLE_AFTER_MS} from './activity-tracker.js';
+import {BufferZipArchive, openRemoteZipArchive, readResponseBounded, safeZipPath} from './zip-source.js';
+import {createMemoryPackageCache, createCacheStoragePackageCache, createPackageCacheFetch, normalizePackageCache, DEFAULT_PACKAGE_CACHE_NAME} from './package-cache.js';
 import {Sha256State, verifiedBinaryBlob, verifiedBinaryStream} from './stream-integrity.js';
 import {WEB_CONTENT_PROFILE, webContentMapping} from './web-content-core.js';
 import {rangeIntegrityPointer, validateRangeIntegrityIndex, RANGE_INTEGRITY_MEDIA_TYPE} from './range-integrity-core.js';
@@ -177,6 +181,7 @@ function ensureGraphShape(graph, manifest) {
 
   for (const ep of manifest.entrypoints) if (ids.get(ep.id)?.type !== ep.type) throw new Error(`Broken entrypoint: ${ep.id}`);
   validateProgressionGraph(graph, manifest);
+  validateCapabilityGraph(graph);
   return ids;
 }
 
@@ -363,12 +368,48 @@ export async function openP2LRNPackageBytes(buffer, limits = DEFAULT_LIMITS) {
 
 export async function openP2LRNPackageURL(url, options = {}) {
   const limits = normalizeLimits(options.limits ?? DEFAULT_LIMITS);
+  const packageCache = normalizePackageCache(options.packageCache ?? null);
+  const cacheOnly = options.cacheMode === 'cache-only';
+  const fetchImpl = packageCache ? createPackageCacheFetch({
+    store:packageCache,
+    networkFetch:cacheOnly ? null : (options.fetchImpl ?? globalThis.fetch),
+    networkFirst:!cacheOnly,
+  }) : options.fetchImpl;
   const zip = await openRemoteZipArchive(url, limits, {
-    fetchImpl: options.fetchImpl,
+    fetchImpl,
     fetchOptions: options.fetchOptions,
   });
   const eager = zip.transport !== 'range';
   return openP2LRNArchive(zip, {eagerPayloadVerification: eager, sourceUrl: String(url)});
+}
+
+function defaultPackageCacheStore() {
+  if (!globalThis.caches) throw new Error('Cache Storage is unavailable; provide an explicit P2LRN package cache store.');
+  return createCacheStoragePackageCache();
+}
+
+export async function cacheP2LRNPackageURL(url, options = {}) {
+  const limits = normalizeLimits(options.limits ?? DEFAULT_LIMITS);
+  const store = normalizePackageCache(options.store ?? options.packageCache ?? defaultPackageCacheStore());
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== 'function') throw new Error('fetch is unavailable for P2LRN package caching.');
+  const sourceUrl = new URL(String(url), globalThis.location?.href ?? 'http://127.0.0.1/').href;
+  const response = await (fetchImpl === globalThis.fetch ? fetchImpl.bind(globalThis) : fetchImpl)(sourceUrl,{cache:'no-store',credentials:'same-origin',...(options.fetchOptions??{}),headers:{...(options.fetchOptions?.headers??{})}});
+  if (!response?.ok) throw new Error(`P2LRN package cache fetch failed (${response?.status ?? 'network error'}).`);
+  const bytes = await readResponseBounded(response, limits.packageBytes, {label:'P2LRN package cache download'});
+  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  const pkg = await openP2LRNPackageBytes(buffer, limits);
+  const entry = await store.put({sourceUrl,contentRoot:pkg.manifest.integrity.contentRoot,packageId:pkg.manifest.packageId,bytes:buffer,cachedAt:new Date().toISOString()});
+  return Object.freeze({sourceUrl:entry.sourceUrl,contentRoot:entry.contentRoot,packageId:entry.packageId,size:entry.size,cachedAt:entry.cachedAt});
+}
+
+export async function openCachedP2LRNPackage(contentRoot, options = {}) {
+  const store = normalizePackageCache(options.store ?? options.packageCache ?? defaultPackageCacheStore());
+  const entry = await store.getByContentRoot(String(contentRoot));
+  if (!entry) { const error=new Error('P2LRN package is not present in the offline cache: '+String(contentRoot)); error.code='P2LRN_PACKAGE_CACHE_MISS'; throw error; }
+  const pkg = await openP2LRNPackageURL(entry.sourceUrl,{...options,packageCache:store,cacheMode:'cache-only'});
+  if (pkg.manifest.integrity.contentRoot !== entry.contentRoot) { const error=new Error('Cached P2LRN package contentRoot mismatch.'); error.code='P2LRN_PACKAGE_CACHE_INTEGRITY'; throw error; }
+  return pkg;
 }
 
 function titleOf(entity) {
@@ -403,6 +444,9 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     super();
     this.attachShadow({mode: 'open'});
     this._adapter = null;
+    this._capabilityBroker = null;
+    this._packageCache = null;
+    this._activityTracker = null;
     this._package = null;
     this._runtimeByContainer = new Map();
     this._loadGeneration = 0;
@@ -438,6 +482,56 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   }
   set adapter(value) { this._adapter = normalizeHostAdapter(value); }
   get adapter() { return this._adapter; }
+  set capabilityBroker(value) { this._capabilityBroker = normalizeCapabilityBroker(value); }
+  get capabilityBroker() { return this._capabilityBroker; }
+  set packageCache(value) { this._packageCache = normalizePackageCache(value); }
+  get packageCache() { return this._packageCache; }
+
+  async cacheSource(options = {}) {
+    const src=this.getAttribute('src');
+    if(!src)throw new Error('P2LRN Player has no src to cache.');
+    const store=normalizePackageCache(options.store ?? this._packageCache ?? defaultPackageCacheStore());
+    this._packageCache=store;
+    return cacheP2LRNPackageURL(src,{...options,store});
+  }
+
+  async loadCachedPackage(contentRoot, options = {}) {
+    const generation=++this._loadGeneration;
+    this.#cleanupRuntime();
+    this.#renderLoading();
+    try {
+      const store=normalizePackageCache(options.store ?? this._packageCache ?? defaultPackageCacheStore());
+      this._packageCache=store;
+      this._package=await openCachedP2LRNPackage(contentRoot,{...options,store});
+      this._staticResourceBridge=null;
+      if(generation!==this._loadGeneration)return null;
+      await this.#renderPackage();
+      dispatchRuntimeEvent(this,'p2lrn:ready',{kind:'package',packageId:this._package.manifest.packageId,contentRoot:this._package.manifest.integrity.contentRoot,source:'offline-cache'},this.#packageContext());
+      return this._package;
+    } catch(error) {
+      if(generation!==this._loadGeneration)return null;
+      this.#renderError(error?.message ?? String(error));
+      dispatchRuntimeEvent(this,'p2lrn:error',{phase:'package-cache-load',error:error?.message ?? String(error)},this.#packageContext());
+      throw error;
+    }
+  }
+
+  startActivityTracking(options = {}) {
+    this.stopActivityTracking();
+    const externalOnEvent = typeof options.onEvent === 'function' ? options.onEvent : null;
+    const target = options.target ?? globalThis.document;
+    const interactionTarget = options.interactionTarget ?? this;
+    this._activityTracker = createActivityTracker({...options, target, interactionTarget, onEvent: (type, payload) => {
+      try { externalOnEvent?.(type, payload); } catch {}
+      dispatchRuntimeEvent(this, type, payload, this.#packageContext(), {adapter:this._adapter});
+    }});
+    return this._activityTracker;
+  }
+  stopActivityTracking() {
+    const tracker = this._activityTracker;
+    this._activityTracker = null;
+    return tracker?.stop?.() ?? null;
+  }
   set runtimeBaseUrl(value) {
     if (value == null || String(value).trim() === '') this.removeAttribute('runtime-base-url');
     else this.setAttribute('runtime-base-url', String(value));
@@ -451,7 +545,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     this.#cleanupRuntime();
     this.#renderLoading();
     try {
-      this._package = await openP2LRNPackageURL(src);
+      this._package = await openP2LRNPackageURL(src,{packageCache:this._packageCache});
       this._staticResourceBridge = null;
       if (generation !== this._loadGeneration) return;
       await this.#renderPackage();
@@ -689,6 +783,34 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
+  #rootCourseEntity() {
+    if (!this._package) return null;
+    const id = (this._package.manifest.entrypoints?.find((item) => item.type === 'course' && item.role === 'primary')
+      ?? this._package.manifest.entrypoints?.find((item) => item.type === 'course'))?.id;
+    return id ? this._package.entities.get(id) ?? null : null;
+  }
+
+  async #negotiateHostCapabilities(entity, resource) {
+    const requests = mergeCapabilityRequirements(
+      capabilityRequirements(this.#rootCourseEntity()),
+      capabilityRequirements(entity),
+      capabilityRequirements(resource),
+    );
+    if (!requests.length) return Object.freeze({requests, statuses:Object.freeze([]), blocked:Object.freeze([])});
+    const context = Object.freeze({
+      packageId:this._package?.manifest?.packageId ?? null,
+      contentRoot:this._package?.manifest?.integrity?.contentRoot ?? null,
+      entityId:entity?.id ?? null,
+      resourceId:resource?.id ?? null,
+    });
+    const statuses = this._capabilityBroker
+      ? await this._capabilityBroker.negotiate(requests, context)
+      : Object.freeze(requests.map((request) => Object.freeze({id:request.id, required:request.required, available:false, provider:null, operations:Object.freeze([]), fallback:request.fallback ?? null})));
+    const blocked = Object.freeze(statuses.filter((status) => status.required && !status.available));
+    dispatchRuntimeEvent(this, 'p2lrn:capability', {requests, statuses, blocked:blocked.map((item)=>item.id)}, context, {adapter:this._adapter});
+    return Object.freeze({requests, statuses, blocked});
+  }
+
   async #renderEntity(entity, stage, {requestedRenderer = undefined} = {}) {
     this.#cleanupRuntime(stage);
     stage.replaceChildren();
@@ -703,8 +825,20 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
     if (!resource || resource.type !== 'resource') { this.#stageMessage(stage, 'El recurso no existe o no es reproducible.'); return null; }
 
+    const capabilityState = await this.#negotiateHostCapabilities(entity, resource);
+    if (capabilityState.blocked.length) {
+      this.#stageMessage(stage, 'Esta actividad requiere capacidades del host no disponibles: ' + capabilityState.blocked.map((item)=>item.id).join(', '));
+      return null;
+    }
+    const declaredCapabilityIds = new Set(capabilityState.requests.map((request)=>request.id));
+
     const allRepresentations = [...(resource.representations ?? [])];
-    const representations = allRepresentations.filter((candidate) => ['embedded', 'package-member'].includes(candidate.location?.type));
+    const representations = allRepresentations.filter((candidate) => {
+      if (['embedded', 'package-member'].includes(candidate.location?.type)) return true;
+      return candidate.location?.type === 'remote'
+        && /^sha256:[0-9a-f]{64}$/.test(String(candidate.location.expectedDigest ?? ''))
+        && typeof this._adapter?.resolveResourceUrl === 'function';
+    });
     if (!representations.length) {
       this.#stageMessage(stage, allRepresentations.length ? 'El reproductor web no abre representaciones remotas sin un adaptador compatible.' : 'El recurso no contiene representaciones.');
       return null;
@@ -738,8 +872,14 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       try {
         const module = await defaultRendererRegistry.load(candidate, context);
         this.#ensureRendererStyles(module.stylesheets ?? []);
-        const payload = await representationPayload(this._package, rep);
-        const bytes = module.acceptsPayload === true ? null : await payload.read();
+        const remoteLocation = rep.location?.type === 'remote';
+        if (remoteLocation && module.acceptsRemoteLocation !== true) {
+          const error = new Error('Selected renderer does not accept trusted remote P2LRN resources.');
+          error.code = 'P2LRN_RENDERER_INCOMPATIBLE';
+          throw error;
+        }
+        const payload = remoteLocation ? null : await representationPayload(this._package, rep);
+        const bytes = remoteLocation || module.acceptsPayload === true ? null : await payload.read();
         const runtime = await module.render({
           container: stage,
           bytes,
@@ -751,6 +891,26 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           decodeJson,
           eventTarget: this,
           adapter: this._adapter,
+          capabilities: capabilityState.statuses,
+          invokeCapability: async (id, operation, input = {}) => {
+            const capabilityId = String(id ?? '');
+            if (!declaredCapabilityIds.has(capabilityId)) {
+              const error = new Error('P2LRN activity attempted to use an undeclared host capability: ' + capabilityId);
+              error.code = 'P2LRN_CAPABILITY_UNDECLARED';
+              throw error;
+            }
+            if (!capabilityOperationAllowed(capabilityState.requests, capabilityId, operation)) {
+              const error = new Error('P2LRN activity attempted to use an undeclared host capability operation: ' + capabilityId + '.' + String(operation ?? ''));
+              error.code = 'P2LRN_CAPABILITY_OPERATION_UNDECLARED';
+              throw error;
+            }
+            if (!this._capabilityBroker) {
+              const error = new Error('P2LRN host capability broker is unavailable: ' + capabilityId);
+              error.code = 'P2LRN_CAPABILITY_UNAVAILABLE';
+              throw error;
+            }
+            return this._capabilityBroker.invoke(capabilityId, operation, input, context);
+          },
           componentRegistry: defaultComponentRegistry,
           rendererRegistry: defaultRendererRegistry,
           context,
@@ -783,6 +943,8 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           'P2LRN_COMPONENT_DATA_INVALID',
           'P2LRN_COMPONENT_RENDERER_UNAVAILABLE',
           'P2LRN_COMPONENT_RUNTIME_UNAVAILABLE',
+          'P2LRN_REMOTE_RESOURCE_UNAVAILABLE',
+          'P2LRN_REMOTE_RESOURCE_UNVERIFIED',
         ].includes(error?.code);
         if (!canFallback) throw error;
         excluded.add(candidate.descriptor.id);
@@ -852,7 +1014,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
-  disconnectedCallback() { this.#cleanupRuntime(); }
+  disconnectedCallback() { this.#cleanupRuntime(); this.stopActivityTracking(); }
 }
 
 export async function mountP2LRN(target, options = {}) {
@@ -863,11 +1025,14 @@ export async function mountP2LRN(target, options = {}) {
   player._suppressAutoReload = true;
   try {
     if (options.adapter) player.adapter = options.adapter;
+    if (options.capabilityBroker) player.capabilityBroker = options.capabilityBroker;
+    if (options.packageCache) player.packageCache = options.packageCache;
     if (options.src) player.setAttribute('src', options.src);
     if (options.node) player.setAttribute('node', options.node);
     if (options.renderer) player.setAttribute('renderer', options.renderer);
     if (Object.prototype.hasOwnProperty.call(options, 'runtimeBaseUrl')) player.runtimeBaseUrl = options.runtimeBaseUrl;
     if (!existing) host.replaceChildren(player);
+    if (options.activityTracking) player.startActivityTracking(options.activityTracking === true ? {} : options.activityTracking);
   } finally {
     player._suppressAutoReload = false;
   }
@@ -925,6 +1090,20 @@ if (!existingP2LRNApi) {
     dependencies: () => defaultDependencyRegistry.list(),
     setPermissionPolicy: (policy) => defaultRendererRegistry.setPermissionPolicy(policy),
     createHostAdapter,
+    createCapabilityBroker,
+    createToolCapabilityProvider,
+    createOfflineHostAdapter,
+    createMemoryOfflineStore,
+    createIndexedDbOfflineStore,
+    createActivityTracker,
+    createMemoryPackageCache,
+    createCacheStoragePackageCache,
+    cachePackageURL: cacheP2LRNPackageURL,
+    openCachedPackage: openCachedP2LRNPackage,
+    DEFAULT_PACKAGE_CACHE_NAME,
+    HOST_CAPABILITY_EXTENSION,
+    DEFAULT_OFFLINE_DB_NAME,
+    DEFAULT_ACTIVITY_IDLE_AFTER_MS,
     configureRuntimeHost,
     getRuntimeHostConfig,
     installServiceWorker: installP2LRNServiceWorker,

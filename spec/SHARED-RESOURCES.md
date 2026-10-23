@@ -1,0 +1,47 @@
+# P2LRN Shared Resources by Digest
+
+Status: experimental delivery contract built on existing Core 0.4.0 remote representations and Host Adapter v1.
+
+## Reuse the Core location model
+
+Core 0.4.0 already permits:
+
+```json
+{
+  "role": "primary",
+  "mediaType": "video/mp4",
+  "location": {
+    "type": "remote",
+    "href": "https://publisher.example/resources/video.mp4",
+    "expectedDigest": "sha256:..."
+  }
+}
+```
+
+No new `location.type` is introduced for a content-addressed store.
+
+For shared-library delivery, `expectedDigest` is mandatory in the first-party Player. The original `href` is metadata/input to trusted host resolution; the Player does not navigate to it directly.
+
+## Host-verified resolution
+
+A host may resolve the resource through existing `resolveResourceUrl(request, context)`. For remote resources the request contains `kind:'remote'`, `href`, `expectedDigest`, media type and purpose.
+
+The host must verify that the bytes it exposes correspond to the declared digest and return:
+
+```js
+{url: 'https://host.example/verified/...', verified: true, seekable: true}
+```
+
+The Player rejects unverified results. Audio/video delivery additionally requires a seekable verified URL in the reference remote-media renderer.
+
+This allows the host to implement a content-addressed store such as `sha256:<digest> -> one verified object` without putting database credentials or a private storage URL in the package.
+
+## Portable fallback
+
+A publisher may include both a remote primary representation and an embedded fallback representation for the same Resource. If the trusted remote resolver is unavailable or refuses the object, renderer negotiation can fall back to the embedded representation.
+
+This yields one P2LRN format with two deployment modes rather than separate portable/connected formats.
+
+## Trust boundary
+
+`verified:true` is a host attestation. The Player does not treat an arbitrary network URL as verified merely because a package supplied `expectedDigest`. Hosts that implement a shared resource library must perform digest verification before exposing the resolved URL.

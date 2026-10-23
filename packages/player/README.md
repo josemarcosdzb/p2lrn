@@ -51,6 +51,39 @@ Changing `src` reloads and verifies the package. Changing `node`, `renderer` or 
 
 Runtime events are DOM `CustomEvent` values using the canonical `p2lrn:*` namespace, including `p2lrn:ready`, `p2lrn:rendered`, activity/progress/state/score/completion events and `p2lrn:error`. Host-specific persistence or telemetry belongs in Host Adapter v1, not in the package.
 
+## Optional host capabilities and offline state
+
+P2LRN keeps Host Adapter v1 unchanged. Additional connected services use a separate trusted capability broker, so a package can request semantic operations without learning provider credentials or private endpoints:
+
+```js
+const broker = P2LRN.createCapabilityBroker({
+  authorize: ({capabilityId, operation}) => capabilityId === 'ai.tutor' && operation === 'hint',
+  providers: [{
+    id: 'ai.tutor',
+    operations: ['hint'],
+    invoke: (operation, input, context) => myProvider(operation, input, context)
+  }]
+});
+player.capabilityBroker = broker;
+```
+
+The provider may internally use MCP, a local model, a remote service or a non-AI implementation. The `.p2lrn` package never contains MCP/API credentials.
+
+For offline resume/event buffering, wrap the existing Host Adapter rather than changing it:
+
+```js
+const offline = P2LRN.createOfflineHostAdapter({
+  remote: myHostAdapter,
+  storageNamespace: opaqueLearnerPartition
+});
+player.adapter = offline;
+// The application decides when to synchronize; no background scheduler is created.
+await offline.sync();
+```
+
+Activity/idle telemetry is opt-in: `player.startActivityTracking()`. It reports coarse active/hidden/focused/idle state and never captures typed key values.
+
+See `spec/CONNECTED-ARCHITECTURE.md`, `spec/HOST-CAPABILITIES.md`, `spec/OFFLINE-SYNC.md` and `spec/SHARED-RESOURCES.md` in the source repository for the experimental contracts and portability boundary.
 ## Automatic executable-content isolation
 
 The browser/npm distribution includes the SCORM/H5P runtime assets and the pinned `h5p-standalone` core. When SCORM or H5P is embedded inside the `.p2lrn` package, the Player keeps the original content inside the package, prepares the required files in memory and executes them in an ephemeral sandbox.
@@ -134,3 +167,8 @@ This first-party package is distributed under **P2LRN Non-Commercial Source Lice
 
 Commercial use is not granted. See [LICENSE](./LICENSE) for the complete terms and [NOTICE.md](./NOTICE.md) for scope and third-party exceptions.
 
+
+
+### Verified offline package cache
+
+Persistent course bytes are opt-in and separate from learner state. Use P2LRN.createCacheStoragePackageCache(), P2LRN.cachePackageURL() and player.packageCache/player.loadCachedPackage(contentRoot). Packages are verified before storage and again when reopened; see spec/PACKAGE-CACHE.md.

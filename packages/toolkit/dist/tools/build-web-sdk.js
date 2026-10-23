@@ -5,8 +5,9 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync,
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse, opt, printJson, fail, CliExit, flag, isMain } from '../cli/util.js';
+import { H5P_STANDALONE_VERSION, THREE_VERSION, RAPIER3D_VERSION, installWebRuntimeAssets } from '../../web-build/runtime-assets.mjs';
 const EXCLUDED = new Set(['app.js', 'index.html', 'style.css']);
-const LOCAL_REF = /(?:from\s+|import\()(['"])(\.{1,2}\/[^'"]+)\1|new URL\((['"])(\.{1,2}\/[^'"]+)\3/g;
+const LOCAL_REF = /(?:from\s+|import\()(['\"])(\.{1,2}\/[^'\"]+)\1|new URL\((['\"])(\.{1,2}\/[^'\"]+)\3\s*,\s*import\.meta\.url\)/g;
 function walk(dir) { const out = []; for (const name of readdirSync(dir)) {
     const p = join(dir, name), s = statSync(p);
     if (s.isDirectory())
@@ -60,17 +61,17 @@ function validateLocalRefs(dist) { const missing = []; for (const source of walk
     }
 } if (missing.length)
     throw new Error('Web SDK has unresolved local references:\n' + missing.join('\n')); }
-function writeRelease(dist) { const files = walk(dist).filter((p) => !p.endsWith('/release.json') && p !== join(dist, 'release.json')).sort((a, b) => pathPartsCompare(a, b, dist)).map((p) => { const data = readFileSync(p); return { path: relative(dist, p).split('\\').join('/'), bytes: data.byteLength, sha256: 'sha256:' + sha(data, 'sha256', 'hex'), sri: 'sha384-' + sha(data, 'sha384', 'base64') }; }); const release = { schema: 'https://p2lrn.org/schema/web-sdk-release/1', version: '1', webSdkVersion: '0.5.0-alpha.11', toolkitVersion: '0.5.0-alpha.11', coreVersion: '0.4.0', entrypoints: { classic: 'p2lrn.js', module: 'p2lrn.esm.js', serviceWorker: 'p2lrn-sw.js' }, files }; writeFileSync(join(dist, 'release.json'), JSON.stringify(release, null, 2) + '\n'); return release; }
-export function buildWebSdk(root, output) { if (existsSync(output))
-    rmSync(output, { recursive: true, force: true }); mkdirSync(output, { recursive: true }); copyRuntime(root, output); validateLocalRefs(output); const release = writeRelease(output); return { output, files: release.files.length, release }; }
-export function main(argv = process.argv.slice(2)) { try {
+function writeRelease(dist) { const files = walk(dist).filter((p) => !p.endsWith('/release.json') && p !== join(dist, 'release.json')).sort((a, b) => pathPartsCompare(a, b, dist)).map((p) => { const data = readFileSync(p); return { path: relative(dist, p).split('\\').join('/'), bytes: data.byteLength, sha256: 'sha256:' + sha(data, 'sha256', 'hex'), sri: 'sha384-' + sha(data, 'sha384', 'base64') }; }); const release = { schema: 'https://p2lrn.org/schema/web-sdk-release/1', version: '1', webSdkVersion: '0.5.0-alpha.11', toolkitVersion: '0.5.0-alpha.11', coreVersion: '0.4.0', h5pStandaloneVersion: H5P_STANDALONE_VERSION, threeVersion: THREE_VERSION, rapier3dVersion: RAPIER3D_VERSION, entrypoints: { classic: 'p2lrn.js', module: 'p2lrn.esm.js', serviceWorker: 'p2lrn-sw.js' }, files }; writeFileSync(join(dist, 'release.json'), JSON.stringify(release, null, 2) + '\n'); return release; }
+export async function buildWebSdk(root, output) { if (existsSync(output))
+    rmSync(output, { recursive: true, force: true }); mkdirSync(output, { recursive: true }); copyRuntime(root, output); await installWebRuntimeAssets(output); validateLocalRefs(output); const release = writeRelease(output); return { output, files: release.files.length, release }; }
+export async function main(argv = process.argv.slice(2)) { try {
     const p = parse(argv);
     if (flag(p, 'help')) {
         process.stdout.write('Usage: p2lrn-build-web-sdk [--root DIR] [--output DIR]\n');
         return;
     }
     const root = resolve(opt(p, 'root') ?? fileURLToPath(new URL('../../', import.meta.url))), output = resolve(opt(p, 'output') ?? join(process.cwd(), 'p2lrn-web-sdk'));
-    const r = buildWebSdk(root, output);
+    const r = await buildWebSdk(root, output);
     printJson({ output: r.output, files: r.files });
 }
 catch (e) {
@@ -79,5 +80,5 @@ catch (e) {
     fail('P2LRN Web SDK build error', e);
 } }
 if (isMain(import.meta.url))
-    main();
+    await main();
 //# sourceMappingURL=build-web-sdk.js.map

@@ -137,6 +137,7 @@ for (const path of [
   join(playerRoot,'source','packages','toolkit','web-sdk-src','p2lrn.js'),
   join(toolkitRoot,'src','index.ts'),
   join(toolkitRoot,'tsconfig.json'),
+  join(toolkitRoot,'web-build','runtime-assets.mjs'),
   join(h5pRoot,'THIRD_PARTY_NOTICES.md'),
 ]) {
   await assertFile(path);
@@ -152,6 +153,7 @@ for (const requiredSource of [
   'packages/player/scripts/build-dist.mjs',
   'packages/toolkit/web/p2lrn-player.js',
   'packages/toolkit/web-sdk-src/p2lrn.js',
+  'packages/toolkit/web-build/runtime-assets.mjs',
 ]) {
   if (!packedSourceManifest.files.some((item)=>item?.path === requiredSource && typeof item?.sha256 === 'string')) {
     throw new Error('Packed Player source manifest is missing required source entry: ' + requiredSource);
@@ -204,6 +206,7 @@ for (const path of [
   join(studioRoot,'dist','identifiers.js'),
   join(studioRoot,'dist','renderer-registry.js'),
   join(studioRoot,'dist','fill-blanks-core.js'),
+  join(studioRoot,'dist','capability-broker.js'),
   join(studioRoot,'server','index.mjs'),
   join(studioRoot,'bin','p2lrn-studio.mjs'),
   join(studioRoot,'templates','next-route.ts'),

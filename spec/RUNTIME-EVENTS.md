@@ -32,7 +32,7 @@ The DOM CustomEvent name remains the event `type`. For compatibility, the refere
 
 ## 2. Event families
 
-Reference events currently include `p2lrn:ready`, `p2lrn:activityready`, `p2lrn:rendered`, `p2lrn:answer`, `p2lrn:progress`, `p2lrn:statechange`, `p2lrn:timeupdate`, `p2lrn:timeout`, `p2lrn:score`, `p2lrn:complete`, `p2lrn:progressionchange`, `p2lrn:xapi`, `p2lrn:navigation` and `p2lrn:error`. Not every renderer emits every family.
+Reference events currently include `p2lrn:ready`, `p2lrn:activityready`, `p2lrn:rendered`, `p2lrn:answer`, `p2lrn:progress`, `p2lrn:statechange`, `p2lrn:timeupdate`, `p2lrn:timeout`, `p2lrn:score`, `p2lrn:complete`, `p2lrn:progressionchange`, `p2lrn:xapi`, `p2lrn:navigation`, `p2lrn:capability`, opt-in `p2lrn:attention`/`p2lrn:active-time`, and `p2lrn:error`. Not every renderer emits every family.
 
 The envelope is deliberately not xAPI or Caliper. A host may map the same event to xAPI, Caliper, local analytics or no persistent event log at all.
 
@@ -84,3 +84,24 @@ SCORM state preserves the CMI key/value model. Score forwarding is derived from 
 H5P `p2lrn:xapi` payloads remain content-generated input and are marked `authoritative:false`. A host forwarding statements to an LRS must rebuild actor, authority, registration/attempt and other platform-owned fields server-side.
 
 The event timestamp is runtime time. Hosts that need audit-grade ingestion time should additionally stamp events on receipt. The runtime-event envelope does not define a durable database event id; retry/idempotency policy belongs to the host.
+
+
+## 7. Attention and active time
+
+The reference Player does not enable human-activity tracking automatically. A host may opt in with `player.startActivityTracking()` or `mountP2LRN(..., {activityTracking: ...})`.
+
+The tracker observes only coarse signals needed to distinguish active use from an open but inactive tab: document visibility, window focus and the occurrence of pointer, keyboard, touch or wheel interaction. By default those interaction signals are scoped to the Player element, so unrelated host-page interaction does not keep the course active. It does not record key values, typed text, pointer coordinates or other interaction content.
+
+`p2lrn:attention` reports state transitions (`visible`, `focused`, `idle`, `active`) and accumulated active milliseconds. `p2lrn:active-time` is emitted when tracking stops. The idle threshold is configurable; the reference default is 60 seconds and is not a package-level pedagogical rule.
+
+These runtime measurements are evidence, not identity proof. A host that stores them remains responsible for privacy notices, retention and any policy about how they affect analytics or assessment.
+
+## 8. Host capability negotiation
+
+`p2lrn:capability` reports negotiation of the additive Host Capability extension. It uses the same `runtime-event/1` envelope and contains package-declared requests plus availability/blocking results. Provider endpoints, credentials and secret configuration must never be included in this event.
+
+See `HOST-CAPABILITIES.md`.
+
+## 9. Offline forwarding
+
+`createOfflineHostAdapter()` may queue `emitEvent` calls while disconnected and replay them later in their stored order. This does not change the event envelope or place learner event history inside the package. See `OFFLINE-SYNC.md` for ACK/retry and duplicate-delivery limitations.
