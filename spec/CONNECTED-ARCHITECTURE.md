@@ -2,6 +2,8 @@
 
 Status: experimental Reading-System architecture. This document defines boundaries between portable package semantics and connected runtime services. It is additive to Core 0.4.0.
 
+Implementation status is audited separately in [CONNECTED-IMPLEMENTATION-MATRIX.md](./CONNECTED-IMPLEMENTATION-MATRIX.md); that matrix distinguishes working reference code from partial contracts and host-external services.
+
 ## 1. Non-negotiable portability rule
 
 A `.p2lrn` package must remain an educational object that can still be opened when a particular LMS, AI vendor, MCP server or cloud service no longer exists. Core educational meaning travels with the package; identity, secrets, authoritative learner state and provider implementations do not.
