@@ -20,7 +20,7 @@ The largest remaining product-level gaps are:
 1. a semantic context resolver so an MCP/AI provider can safely receive declared context such as `current_question`, objectives and previous answers;
 2. a first-party shared resource library/content-addressed store by digest, plus authoring UX;
 3. richer standardized learning-event semantics across renderers;
-4. a reference collaboration layer/profile/provider;
+4. production collaboration persistence/transport beyond the first-party lightweight room contract;
 5. a reference authoritative host/server for idempotent results, analytics and multi-device policy.
 
 ## 1. Portable package and Core boundary
@@ -121,13 +121,13 @@ For “connect it and it knows what to do”, the most important missing piece i
 
 | Capability | Status | Current evidence | What remains |
 | --- | --- | --- | --- |
-| Declare `collaboration.room` / `collaboration.poll` | **IMPLEMENTED AS SUBSTRATE** | Host Capability extension accepts semantic namespaces | no collaboration behavior yet |
-| Broker can bind collaboration provider | **IMPLEMENTED AS SUBSTRATE** | generic provider model supports it | no reference collaboration provider |
-| Native collaborative activity profile | **MISSING** | architecture reserves the slot | define portable board/poll/peer activity semantics |
-| Presence/room membership | **MISSING** | no runtime provider/profile | host/live service required |
-| Shared document/board state | **MISSING** | no CRDT/shared-state contract | define activity semantics + provider contract |
-| Live poll synchronization | **MISSING** | namespace only | reference provider + activity contract |
-| Peer review / peer learning | **MISSING** | no native contract | define identity-safe host workflow and portable activity definition |
+| Declare `collaboration.room` | **IMPLEMENTED** | Host Capability extension plus `COLLABORATION.md` five-operation contract | production provider remains host-selected |
+| Broker can bind collaboration provider | **IMPLEMENTED** | generic provider model plus `createMemoryCollaborationHub()` reference provider | production persistence/transport remains host-specific |
+| Native collaborative activity | **IMPLEMENTED** | one native collaboration component with poll, board and peer-review modes | independent interoperability evidence |
+| Presence/room membership | **IMPLEMENTED REFERENCE** | `join/listen/snapshot/leave` and opaque participant/session IDs | production host owns identity and distributed presence |
+| Shared board state | **IMPLEMENTED REFERENCE** | bounded semantic board events over the same room contract | no character-level CRDT by design |
+| Live poll synchronization | **IMPLEMENTED REFERENCE** | poll renderer + room provider + snapshot/listen recovery | production service implementation |
+| Peer review / peer learning | **IMPLEMENTED REFERENCE** | native submission/comment flow with host-assigned opaque participant IDs | richer assignment/rubric policies can remain host workflows |
 | Transport/auth/persistence | **HOST-EXTERNAL** | correctly excluded from package | reference service can be supplied separately |
 
 ## 7. Security boundaries for connected architecture
