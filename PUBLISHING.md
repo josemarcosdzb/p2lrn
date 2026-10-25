@@ -9,6 +9,8 @@ The npm distribution consists of four version-aligned packages:
 
 All four packages currently use the same release version: `0.5.0-alpha.11`.
 
+Candidate release notes: `spec/RELEASE-NOTES-0.5.0-alpha.11.md`. The executable acceptance matrix is `spec/E2E-MATRIX-0.5.0-alpha.11.md` plus `scripts/verify-connected-e2e-matrix.mjs`.
+
 ## Required gates
 
 Before publication:
