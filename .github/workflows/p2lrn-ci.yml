@@ -429,6 +429,11 @@ jobs:
       - name: Verify npm/CDN byte identity
         run: node scripts/verify-distribution-identity.mjs
 
+      - name: Verify connected learning E2E matrix
+        run: |
+          node --check scripts/verify-connected-e2e-matrix.mjs
+          node scripts/verify-connected-e2e-matrix.mjs
+
       # GitHub artifact storage can reach its quota. Keep the real packages and
       # Chrome screenshots on the Windows runner as independently verifiable evidence.
       - name: Preserve generated packages and screenshots on Windows
@@ -447,7 +452,8 @@ jobs:
             @{ directory = '.npm-pack-gate/browser-runtime/courses'; pattern = '*.p2lrn'; folder = 'npm-packages' },
             @{ directory = '.npm-pack-gate'; pattern = 'public-npm-native-visual.json'; folder = 'release-qa' },
             @{ directory = '.npm-pack-gate'; pattern = 'public-npm-express-integration.json'; folder = 'release-qa' },
-            @{ directory = '.'; pattern = '.npm-registry-report.json'; folder = 'registry-report' }
+            @{ directory = '.'; pattern = '.npm-registry-report.json'; folder = 'registry-report' },
+            @{ directory = '.'; pattern = '.connected-e2e-matrix.json'; folder = 'release-qa' }
           )
           $manifest = @()
           foreach ($spec in $sources) {
@@ -479,6 +485,7 @@ jobs:
             .npm-pack-gate/visual-evidence/*.png
             .npm-pack-gate/browser-runtime/courses/*.p2lrn
             .npm-registry-report.json
+            .connected-e2e-matrix.json
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 7
