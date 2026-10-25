@@ -697,8 +697,18 @@ async function prepareConnectedArchitectureFixtures(){
   doc.setHostCapabilities(activity.id,[{id:'ai.tutor',required:false,operations:['hint'],context:['component.input'],description:'Tutor semántico de ejemplo.'}]);
   const exported=await exportP2LRNPackage(doc);
   await writeFile(join(dir,'capability-action.p2lrn'),exported.bytes);
+
+  const collaborative=createP2LRNStudioDocument({title:'Curso colaborativo',language:'es'});
+  const poll=collaborative.addCollaborationActivity(collaborative.rootId,{mode:'poll',title:'Votación E2E',language:'es'});
+  const pollTarget=await collaborative.readStructuredJson(poll.id);
+  pollTarget.payload.data.prompt='Elige para validar la sincronización';
+  pollTarget.payload.data.options=[{id:'a',label:'Opción A'},{id:'b',label:'Opción B'}];
+  collaborative.setStructuredJson(poll.id,pollTarget.payload);
+  const collaborativeExport=await exportP2LRNPackage(collaborative);
+  await writeFile(join(dir,'collaboration-poll.p2lrn'),collaborativeExport.bytes);
+
   await cp(join(siteRoot,'examples','canonical','web-bundle-course.p2lrn'),join(dir,'offline-web.p2lrn'),{force:true});
-  return Object.freeze({activityId:activity.id,offlineSource:join(dir,'offline-web.p2lrn')});
+  return Object.freeze({activityId:activity.id,collaborationActivityId:poll.id,offlineSource:join(dir,'offline-web.p2lrn')});
 }
 
 async function verifyConnectedArchitecture(cdp,fixture){
@@ -737,6 +747,32 @@ async function verifyConnectedArchitecture(cdp,fixture){
   invariant(capability.text.includes('Pista MCP:'),'Connected capability did not reach the host tool provider.');
   invariant(capability.brokerExposed===false,'Connected component exposed the host broker to package-authored DOM.');
 
+  const collaboration=await evalTop(cdp,`(async()=>{
+    if(typeof P2LRN.createMemoryCollaborationHub!=='function')throw new Error('Collaboration reference host helper missing.');
+    const hub=P2LRN.createMemoryCollaborationHub();
+    const host=document.createElement('div');host.id='collaboration-e2e';host.style.display='grid';host.style.gridTemplateColumns='1fr 1fr';host.style.gap='16px';document.body.append(host);
+    const make=(id,participant)=>{
+      const player=document.createElement('p2lrn-player');player.id=id;
+      player.capabilityBroker=P2LRN.createCapabilityBroker({providers:[hub.provider({participantId:participant})],authorize:({capabilityId})=>capabilityId==='collaboration.room'});
+      player.setAttribute('node',${JSON.stringify(fixture.collaborationActivityId)});
+      player.setAttribute('src','/tests/collaboration-poll.p2lrn');
+      host.append(player);return player;
+    };
+    const a=make('collab-a','learner-a'),b=make('collab-b','learner-b');
+    const wait=async(test,label)=>{for(let i=0;i<320;i++){const value=test();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw new Error(label+' timeout');};
+    await wait(()=>a.shadowRoot?.querySelector('.p2lrn-collaboration-poll')&&b.shadowRoot?.querySelector('.p2lrn-collaboration-poll'),'collaboration render');
+    const radio=a.shadowRoot.querySelector('input[value="a"]');radio.click();
+    a.shadowRoot.querySelector('.p2lrn-collaboration-button').click();
+    await wait(()=>b.shadowRoot?.querySelector('.p2lrn-collaboration-results')?.textContent?.includes('Opción A · 1'),'collaboration synchronization');
+    const status=b.shadowRoot.querySelector('.p2lrn-collaboration-status')?.textContent||'';
+    const result=b.shadowRoot.querySelector('.p2lrn-collaboration-results')?.textContent||'';
+    const accessible=Boolean(b.shadowRoot.querySelector('fieldset legend')&&b.shadowRoot.querySelector('[role="status"][aria-live="polite"]'));
+    a.remove();b.remove();host.remove();
+    return {status,result,accessible};
+  })()`);
+  invariant(collaboration.result.includes('Opción A · 1'),'Collaboration vote did not synchronize between two Players.');
+  invariant(collaboration.accessible===true,'Collaboration renderer lost semantic accessibility controls.');
+
   const cached=await evalTop(cdp,`(async()=>{
     await P2LRN.installServiceWorker();
     const store=P2LRN.createCacheStoragePackageCache();
@@ -766,7 +802,7 @@ async function verifyConnectedArchitecture(cdp,fixture){
   })()`);
   invariant(offline.cacheCount===1,'Offline package cache entry disappeared during playback.');
   invariant(offline.frameSrc.includes('/__p2lrn__/v1/'),'Offline web package did not resolve through the verified static-resource bridge.');
-  return Object.freeze({capability,cached,offline});
+  return Object.freeze({capability,collaboration,cached,offline});
 }
 
 let appServer=null,runtimeServer=null,chrome=null,cdp=null;
