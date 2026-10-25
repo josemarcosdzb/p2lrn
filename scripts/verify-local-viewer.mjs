@@ -448,7 +448,7 @@ async function studioComponentScenario(){
     click('.tree-actions button:first-child');
     await wait(()=>q('[data-tree]')?.textContent.includes('Unidad'),'add unit');
     click('.tree-actions button:nth-child(2)');
-    await wait(()=>q('.surface[contenteditable="true"]'),'add lesson');
+    await wait(()=>{const surface=q('.surface');return surface?.isContentEditable?surface:null;},'add lesson');
     const title=q('.title');title.textContent='Lección visual P2LRN';title.dispatchEvent(new InputEvent('input',{bubbles:true}));
     const surface=q('.surface');surface.textContent='Lección escrita desde la interfaz visual';surface.dispatchEvent(new InputEvent('input',{bubbles:true}));
     const lessonCount=q('[data-tree]').querySelectorAll('button').length;
