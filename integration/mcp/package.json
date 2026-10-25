@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.4.0",
-    "@modelcontextprotocol/node": "2.4.0",
+    "@modelcontextprotocol/node": "2.1.2",
     "zod": "^4.0.0"
   },
   "devDependencies": {
