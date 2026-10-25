@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import {createServer as createHttpServer} from 'node:http';
+import {resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {timingSafeEqual} from 'node:crypto';
 import {McpServer, createMcpHandler} from '@modelcontextprotocol/server';
 import {serveStdio} from '@modelcontextprotocol/server/stdio';
@@ -143,7 +145,7 @@ async function main() {
   }
 }
 
-if (process.argv[1] && import.meta.url === new URL('file:' + (process.platform === 'win32' ? '/' : '') + resolve(process.argv[1]).replaceAll('\\', '/')).href) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   main().catch((error) => {
     console.error('P2LRN MCP:', error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
