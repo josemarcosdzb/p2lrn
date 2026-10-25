@@ -1,6 +1,7 @@
+import {dispatchRuntimeEvent} from '../runtime-events.js';
 export const acceptsPayload = true;
 
-export async function render({container, bytes, payload, representation, resolveResourceUrl}) {
+export async function render({container, bytes, payload, representation, resolveResourceUrl, eventTarget, adapter, context = {}}) {
   const media = String(representation.mediaType ?? 'application/octet-stream').split(';', 1)[0].trim().toLowerCase();
   if (!/^(image|audio|video)\//.test(media)) throw new Error(`Representación multimedia no soportada: ${representation.mediaType}`);
 
@@ -36,6 +37,15 @@ export async function render({container, bytes, payload, representation, resolve
   }
   node.className = 'p2lrn-media';
   node.src = url;
+  if (media.startsWith('audio/') || media.startsWith('video/')) {
+    let lastTime = 0;
+    const emit=(action,extra={})=>dispatchRuntimeEvent(eventTarget,'p2lrn:interaction',{action,mediaType:media,currentTime:Number.isFinite(node.currentTime)?Math.round(node.currentTime*10)/10:null,duration:Number.isFinite(node.duration)?Math.round(node.duration*10)/10:null,...extra},context,{adapter});
+    node.addEventListener('play',()=>emit('media-play'));
+    node.addEventListener('pause',()=>{if(!node.ended)emit('media-pause');});
+    node.addEventListener('seeking',()=>emit('media-seek',{fromTime:Math.round(lastTime*10)/10}));
+    node.addEventListener('timeupdate',()=>{lastTime=node.currentTime;});
+    node.addEventListener('ended',()=>emit('media-ended'));
+  }
   container.append(node);
   return {destroy() { if (revoke) URL.revokeObjectURL(url); node.removeAttribute('src'); node.load?.(); container.replaceChildren(); }};
 }
