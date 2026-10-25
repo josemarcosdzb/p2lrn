@@ -151,3 +151,12 @@ Si se ejecuta sin el lanzador de Windows, es necesario tener Toolkit compilado y
 **Para ChatGPT web, Claude web y Grok web** hay que utilizar HTTPS o un túnel compatible, porque sus servidores no pueden iniciar un proceso stdio local directamente. La opción local no necesita OAuth remoto: el proceso se ejecuta con los permisos de usuario del sistema operativo y solo ve la carpeta de cursos seleccionada.
 
 Se conservan todas las herramientas ya disponibles de Reader/Authoring a través del mismo servidor para cualquier cliente compatible. La escritura solo modifica copias en borrador, verifica digests y exporta un `.p2lrn` nuevo. No se modifica el núcleo de P2LRN, no se crean ramas ni tareas programadas y no se publica npm automáticamente.
+
+## Auditoría con modelo de IA local (sin nube)
+
+Esta integración incluye dos ensayos aislados para no confundir la compatibilidad MCP con la autonomía del modelo:
+
+- `node test/local-agent-matrix.e2e.mjs`: ofrece varias herramientas reales al modelo y registra cuáles decide e invoca sin intervención; si el modelo falla, los controles del MCP quedan diferenciados de los éxitos autónomos.
+- `node test/local-agent-structured.e2e.mjs`: el modelo local genera material educativo en JSON (curso, preguntas, relaciones, secuencias 3D, sopa de letras y aviso); el Toolkit valida y genera paquetes nativos exclusivamente en una carpeta temporal.
+
+Por defecto usa el servidor Ollama de `127.0.0.1:11434` y el modelo `qwen3:4b`, configurable mediante `P2LRN_LOCAL_AGENT_URL` (solo loopback) y `P2LRN_LOCAL_AGENT_MODEL`. No descarga modelos, no lee cursos personales ni usa inferencia en la nube. Es intencionadamente una **prueba de laboratorio**, no un servicio agente ni un despliegue de producción. Los scripts generan un resultado explícito de cada operación y dejan el estado global como fallido si hay errores. No se ejecutan automáticamente en cada push.
