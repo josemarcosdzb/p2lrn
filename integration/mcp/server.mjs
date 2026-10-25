@@ -37,6 +37,19 @@ export function createP2LRNMcpServer(service) {
     'Read a single validated portable graph entity by its ID.',
     z.object({relative_path: z.string(), entity_id: z.string()}),
     ({relative_path, entity_id}) => service.readEntity(relative_path, entity_id));
+  register(server, 'p2lrn_read_plan',
+    'Get the validated Reader plan for learning content and its supported representations, without executing course files.',
+    z.object({relative_path: z.string()}),
+    ({relative_path}) => service.readPlan(relative_path));
+  register(server, 'p2lrn_validate_course',
+    'Validate an authorized package and native profile payloads using P2LRN Toolkit.',
+    z.object({relative_path: z.string()}),
+    ({relative_path}) => service.validateCourse(relative_path));
+  register(server, 'p2lrn_read_text_member',
+    'Read a small embedded text/HTML/JSON/XML resource; binary packages are never exposed as text and no code executes.',
+    z.object({relative_path: z.string(), member: z.string(), max_bytes: z.number().int().min(1).max(32768).optional()}),
+    ({relative_path, member, max_bytes}) => service.readTextMember(relative_path, member, max_bytes));
+
   register(server, 'p2lrn_search_metadata',
     'Search only titles, descriptions, and IDs in a validated course. This does not search opaque package payloads.',
     z.object({relative_path: z.string(), query: z.string(), limit: z.number().int().min(1).max(200).optional()}),
@@ -45,6 +58,10 @@ export function createP2LRNMcpServer(service) {
   if (!service.writeEnabled) return server;
 
   const idAndDigest = {draft_id: z.string().uuid(), expected_digest: z.string().regex(/^[a-f0-9]{64}$/i)};
+  register(server, 'p2lrn_draft_new',
+    'Create a brand-new isolated P2LRN authoring draft via Toolkit; it will only export as a new course file.',
+    z.object({title: z.string().min(1).max(500), language: z.string().optional(), description: z.string().optional()}),
+    ({title,language,description}) => service.createEmptyDraft({title,language,description}));
   register(server, 'p2lrn_draft_create',
     'Create an isolated editable draft from a validated course; never alter the source package.',
     z.object({relative_path: z.string()}),
@@ -62,6 +79,25 @@ export function createP2LRNMcpServer(service) {
     'Add one course unit to the isolated draft using the validated Authoring API.',
     z.object({...idAndDigest, key: z.string(), title: z.string(), parent: z.string().optional(), language: z.string().optional()}),
     ({draft_id, expected_digest, ...unit}) => service.addUnit(draft_id, expected_digest, unit));
+  register(server, 'p2lrn_draft_set_children',
+    'Set ordered children for a draft course, unit or composite through typed Authoring API validation.',
+    z.object({...idAndDigest, parent_key:z.string(), children:z.array(z.string())}),
+    ({draft_id,expected_digest,parent_key,children}) => service.setChildren(draft_id,expected_digest,parent_key,children));
+  register(server, 'p2lrn_draft_add_file',
+    'Attach a file inside the authorized course directory to a draft; copies it into the isolated authoring workspace.',
+    z.object({...idAndDigest, relative_source_path:z.string(), key:z.string(), title:z.string(),
+      parent:z.string().optional(), language:z.string().optional(), media_type:z.string().optional(),
+      profile:z.string().optional()}),
+    ({draft_id,expected_digest,relative_source_path,key,title,parent,language,media_type,profile}) =>
+      service.addFile(draft_id,expected_digest,relative_source_path,
+        {key,title,parent,language,mediaType:media_type,profile}));
+  register(server, 'p2lrn_draft_add_web_content',
+    'Add a web directory inside authorized root to a draft; rejects symlinks and preserves assets through Toolkit.',
+    z.object({...idAndDigest,relative_directory_path:z.string(),key:z.string(),title:z.string(),
+      entrypoint:z.string().optional(),parent:z.string().optional(),language:z.string().optional()}),
+    ({draft_id,expected_digest,relative_directory_path,key,title,entrypoint,parent,language}) =>
+      service.addWebContent(draft_id,expected_digest,relative_directory_path,
+        {key,title,entrypoint,parent,language}));
   register(server, 'p2lrn_draft_add_url',
     'Add an external URL resource descriptor to a draft without fetching or executing it.',
     z.object({...idAndDigest, key: z.string(), title: z.string(), url: z.string().url(), parent: z.string().optional()}),

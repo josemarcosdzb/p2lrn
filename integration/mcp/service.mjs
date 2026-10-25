@@ -102,6 +102,28 @@ export class P2LRNMcpService {
     return {path: relativePath, entity: reader.entity(entityId)};
   }
 
+  readPlan(relativePath) {
+    const reader = new P2LRNReadingSystem(this.packagePath(relativePath));
+    return {path: relativePath, plan: reader.readPlan()};
+  }
+
+  validateCourse(relativePath) {
+    const reader = new P2LRNReadingSystem(this.packagePath(relativePath), {validateProfilePayloads: true});
+    return {path: relativePath, valid: true, summary: reader.summary()};
+  }
+
+  readTextMember(relativePath, member, maxBytes = 32768) {
+    if (typeof member !== 'string' || !member.trim() || member.length > 512) throw new Error('An embedded member path is required');
+    if (!Number.isInteger(maxBytes) || maxBytes < 1 || maxBytes > 32768) throw new Error('Text read maximum is 32768 bytes');
+    const reader = new P2LRNReadingSystem(this.packagePath(relativePath));
+    const [bytes, mediaType] = reader.readOuter(member, maxBytes);
+    if (!(/^text\//i.test(mediaType) || /\/(json|xml|javascript)$/i.test(mediaType))) {
+      throw new Error('Binary resource content cannot be exposed as plain text');
+    }
+    return {path: relativePath, member, mediaType, bytes: bytes.length,
+      text: new TextDecoder('utf-8', {fatal:true}).decode(bytes)};
+  }
+
   searchMetadata(relativePath, query, limit = 40) {
     if (typeof query !== 'string' || !query.trim() || query.length > 200) throw new Error('A search query is required');
     if (!Number.isInteger(limit) || limit < 1 || limit > 200) throw new Error('Invalid result limit');
@@ -149,6 +171,28 @@ export class P2LRNMcpService {
     }
   }
 
+  createEmptyDraft(options) {
+    this.requireWrite();
+    const settings = object(options, 'new course');
+    if (typeof settings.title !== 'string' || !settings.title.trim() || settings.title.length > 500) {
+      throw new Error('New course title is required (maximum 500 characters)');
+    }
+    const parent = safeInternalDirectory(this.root, DRAFTS);
+    const draftId = randomUUID(), dir = join(parent, draftId);
+    try {
+      P2LRNAuthoringWorkspace.create(dir, {
+        title: settings.title.trim(),
+        language: settings.language ?? 'es',
+        ...(settings.description ? {description: settings.description} : {})
+      });
+      writeFileSync(join(dir, 'mcp-draft.json'), JSON.stringify({source:null,contentRoot:null,created:true}, null, 2), {flag:'wx'});
+      return this.draftState(draftId).data;
+    } catch (error) {
+      if (existsSync(dir)) rmSync(dir, {force:true,recursive:true});
+      throw error;
+    }
+  }
+
   inspectDraft(draftId, includeProject = false) {
     return this.draftState(draftId, includeProject).data;
   }
@@ -180,6 +224,43 @@ export class P2LRNMcpService {
     return this.mutateDraft(draftId, expectedDigest, (workspace) => workspace.addUnit(object(unit, 'unit')));
   }
 
+  setChildren(draftId, expectedDigest, parentKey, children) {
+    if (!Array.isArray(children) || !children.every(child => typeof child === 'string')) {
+      throw new Error('children must be an array of entity keys');
+    }
+    return this.mutateDraft(draftId, expectedDigest,
+      workspace => workspace.setChildren(parentKey, children));
+  }
+
+  addFile(draftId, expectedDigest, sourceRelativePath, options) {
+    const source = existingUnder(this.root, segments(sourceRelativePath));
+    const opts = object(options, 'file resource');
+    return this.mutateDraft(draftId, expectedDigest,
+      workspace => workspace.addFile({...opts, source, copyFile:true}));
+  }
+
+  addWebContent(draftId, expectedDigest, directoryRelativePath, options) {
+    const sourceDirectory = existingUnder(this.root, segments(directoryRelativePath), 'directory');
+    // Web bundles may include many nested assets. Reject symlinks before the
+    // trusted Toolkit copies resources into the isolated authoring workspace.
+    let count = 0;
+    const inspect = (dir, depth = 0) => {
+      if (depth > 24) throw new Error('Web content directory nesting is too deep');
+      for (const entry of readdirSync(dir, {withFileTypes:true})) {
+        if (++count > 5000) throw new Error('Web content directory contains too many files');
+        if (entry.isSymbolicLink()) throw new Error('Web content cannot contain symlinks');
+        const candidate = join(dir, entry.name);
+        if (!within(this.root, candidate)) throw new Error('Web content must stay under course root');
+        if (entry.isDirectory()) inspect(candidate, depth + 1);
+        else if (!entry.isFile()) throw new Error('Unsupported filesystem item in web content');
+      }
+    };
+    inspect(sourceDirectory);
+    const opts = object(options, 'web content');
+    return this.mutateDraft(draftId, expectedDigest,
+      workspace => workspace.addWebContent({...opts, sourceDirectory, copyDirectory:true}));
+  }
+
   addUrl(draftId, expectedDigest, resource) {
     return this.mutateDraft(draftId, expectedDigest, (workspace) => workspace.addUrl(object(resource, 'resource')));
   }
@@ -209,15 +290,19 @@ export class P2LRNMcpService {
     this.requireWrite();
     const state = this.draftState(draftId);
     if (state.data.digest !== expectedDigest) throw new Error('Draft changed: reload its digest before exporting');
-    const original = new P2LRNReadingSystem(this.packagePath(state.meta.source));
-    if (original.reader.package.manifest.integrity.contentRoot !== state.meta.contentRoot) throw new Error('Source course changed since the draft was created');
+    if (state.meta.source) {
+      const original = new P2LRNReadingSystem(this.packagePath(state.meta.source));
+      if (original.reader.package.manifest.integrity.contentRoot !== state.meta.contentRoot) throw new Error('Source course changed since the draft was created');
+    } else if (state.meta.created !== true) {
+      throw new Error('Unknown draft origin: cannot export');
+    }
     const targetDir = safeInternalDirectory(this.root, EXPORTS);
     const filename = randomUUID() + '.p2lrn';
     const file = join(targetDir, filename);
     state.workspace.build(file, {strictProfiles: true});
     try {
       const validated = new P2LRNReadingSystem(file);
-      return {path: EXPORTS + '/' + filename, draftId, source: state.meta.source, contentRoot: validated.reader.package.manifest.integrity.contentRoot, originalContentRoot: state.meta.contentRoot, sourceUnchanged: true, note: 'A separate validated export; the original course was not replaced'};
+      return {path: EXPORTS + '/' + filename, draftId, source: state.meta.source, contentRoot: validated.reader.package.manifest.integrity.contentRoot, originalContentRoot: state.meta.contentRoot, sourceUnchanged: true, createdFromScratch: state.meta.created === true, note: 'A separate validated export; the original course was not replaced'};
     } catch (error) {
       rmSync(file, {force: true});
       throw error;
