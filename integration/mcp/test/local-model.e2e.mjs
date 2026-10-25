@@ -19,14 +19,17 @@ if (explicitUrl) {
 const candidates = explicitUrl ? [explicitUrl] : portHosts;
 async function query(url, options = {}, timeout = 4000) {
   const response = await fetch(url, {...options, signal: AbortSignal.timeout(timeout)});
-  if (!response.ok) throw new Error('HTTP ' + response.status);
+  if (!response.ok) throw new Error('HTTP ' + response.status + ': ' + (await response.text()).slice(0,400));
   return response.json();
 }
 async function detect() {
   for (const root of candidates) {
     try {
       const tags = await query(root.replace(/\/$/,'') + '/api/tags');
-      const models = Array.isArray(tags.models) ? tags.models.map(x => x.name).filter(Boolean) : [];
+      const models = Array.isArray(tags.models)
+        ? tags.models.filter(x => x && x.name).sort((a,b) => (Number(a.size)||0) - (Number(b.size)||0))
+          .map(x => x.name).filter(x => !process.env.P2LRN_LOCAL_MODEL_NAME || x === process.env.P2LRN_LOCAL_MODEL_NAME)
+        : [];
       for (const model of models) {
         try {
           const detail = await query(root.replace(/\/$/,'') + '/api/show',{
@@ -71,7 +74,7 @@ try {
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:found.model,stream:false,options:{temperature:0,num_predict:128},
         messages:[{role:'system',content:system},{role:'user',content:user}],tools:[tool]})
-    },90000);
+    },180000);
   } else {
     response = await query(found.root.replace(/\/$/,'') + '/chat/completions', {
       method:'POST',headers:{'Content-Type':'application/json'},
