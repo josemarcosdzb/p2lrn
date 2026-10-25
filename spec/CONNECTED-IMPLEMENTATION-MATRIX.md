@@ -149,12 +149,12 @@ These are engineering estimates for the specific Connected Architecture, not ove
 | --- | ---: | --- |
 | Core/package boundary | **90%** | graph, integrity, progression and capability declarations exist; richer deterministic evidence/fallback enforcement remain |
 | Host/local runtime | **85%** | Host Adapter, offline outbox, package cache and active-time tracker work; authoritative server is external |
-| Resource Layer | **60%** | digest-pinned resolution/fallback works; central catalog/store/dedup UX is absent |
+| Resource Layer | **72%** | digest-pinned resolution/fallback, reference SHA-256 dedup store and Studio authoring exist; persistent searchable multi-user catalog remains |
 | Capability Layer | **75%** | negotiation, security, tool mapping and connected component work; semantic context and provider reference bindings remain |
-| Collaboration | **15%** | generic capability substrate exists; actual collaboration semantics/runtime do not |
-| Learning events/analytics | **55%** | event envelope and important events exist; detailed pedagogical vocabulary/aggregation are incomplete |
+| Collaboration | **72%** | five-operation contract, reference provider, native poll/board/peer-review UI and two-Player E2E exist; production distributed persistence remains host-side |
+| Learning events/analytics | **68%** | event envelope, active time, answer changes, media behavior and collaboration interactions exist; broader 3D/resource/attempt vocabulary and aggregation remain |
 
-A simple average is about **63%**, but that hides the key fact: **architectural boundaries and security are much further along than the server-side services built on top of them**.
+The connected architecture is now roughly **70–75% implemented at reference level**. Production persistence, searchable catalogs, richer semantic context and independent interoperability remain deliberately separate from the portable package.
 
 ## 9. What must not be changed while completing this architecture
 
