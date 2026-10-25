@@ -98,15 +98,41 @@ function authorized(header, token) {
   return provided.length === wanted.length && timingSafeEqual(provided, wanted);
 }
 
-export async function startP2LRNMcpHttp(service, {token, port = 37871} = {}) {
+export function validatePublicOrigin(value) {
+  if (value == null || value === '') return null;
+  if (typeof value !== 'string') throw new Error('P2LRN_MCP_PUBLIC_ORIGIN must be a URL');
+  let parsed;
+  try { parsed = new URL(value); } catch { throw new Error('Invalid P2LRN_MCP_PUBLIC_ORIGIN URL'); }
+  if (parsed.protocol !== 'https:' || parsed.pathname !== '/' || parsed.search || parsed.hash || parsed.username || parsed.password) {
+    throw new Error('P2LRN_MCP_PUBLIC_ORIGIN must be an HTTPS origin without credentials, path, query or fragment');
+  }
+  if (['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname.toLowerCase())) {
+    throw new Error('P2LRN_MCP_PUBLIC_ORIGIN must be a genuine public HTTPS origin');
+  }
+  return parsed.origin;
+}
+
+export async function startP2LRNMcpHttp(service, {token, port = 37871, publicOrigin = null} = {}) {
   if (typeof token !== 'string' || Buffer.byteLength(token) < 32) throw new Error('HTTP requires P2LRN_MCP_TOKEN with at least 32 bytes');
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid HTTP port');
   const handler = createMcpHandler(() => createP2LRNMcpServer(service));
   const nodeHandler = toNodeHandler(handler);
   const validateHost = localhostHostValidation();
   const validateOrigin = localhostOriginValidation();
+  // A TLS-terminating reverse proxy can forward the actual public Host header.
+  // Never trust X-Forwarded-Host, X-Forwarded-Proto or unconfigured origins.
+  const declaredOrigin = validatePublicOrigin(publicOrigin);
+  const publicHost = declaredOrigin ? new URL(declaredOrigin).host.toLowerCase() : null;
+  const remoteHosts = publicHost ? new Set([publicHost, publicHost + (publicHost.includes(':') ? '' : ':443')]) : new Set();
+  const reject = (res) => {
+    res.writeHead(403, {'Content-Type': 'text/plain', 'Cache-Control': 'no-store'});
+    res.end('Forbidden');
+  };
   const listener = createHttpServer((req, res) => {
-    if (!validateHost(req, res) || !validateOrigin(req, res)) return;
+    const host = typeof req.headers.host === 'string' ? req.headers.host.toLowerCase() : '';
+    if (remoteHosts.has(host)) {
+      if (req.headers.origin && req.headers.origin !== declaredOrigin) { reject(res); return; }
+    } else if (!validateHost(req, res) || !validateOrigin(req, res)) return;
     if (req.url?.split('?')[0] !== '/mcp') {
       res.writeHead(404, {'Content-Type': 'text/plain', 'Cache-Control': 'no-store'});
       res.end('Not Found');
@@ -138,7 +164,7 @@ async function main() {
     console.error('P2LRN MCP stdio ready; root configured; writes ' + (service.writeEnabled ? 'enabled (drafts only)' : 'disabled'));
   } else if (mode === '--http') {
     const port = Number(process.env.P2LRN_MCP_PORT || '37871');
-    const started = await startP2LRNMcpHttp(service, {token: process.env.P2LRN_MCP_TOKEN, port});
+    const started = await startP2LRNMcpHttp(service, {token: process.env.P2LRN_MCP_TOKEN, port, publicOrigin: process.env.P2LRN_MCP_PUBLIC_ORIGIN});
     console.error('P2LRN MCP HTTP listening on ' + started.url + ' (loopback only)');
   } else {
     throw new Error('Use --stdio or --http');
