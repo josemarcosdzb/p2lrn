@@ -104,6 +104,17 @@ export interface P2LRNMemoryCollaborationHub {
   inspect(): readonly unknown[];
 }
 export function createMemoryCollaborationHub(options?: {maxEvents?: number; clock?(): number}): P2LRNMemoryCollaborationHub;
+export interface P2LRNSharedResourceRecord { readonly digest:string; readonly mediaType:string; readonly size:number; }
+export interface P2LRNMemorySharedResourceStore {
+  put(value:ArrayBuffer|ArrayBufferView|string, options?:{mediaType?:string}): Promise<P2LRNSharedResourceRecord & {readonly deduplicated:boolean}>;
+  has(digest:string): boolean;
+  get(digest:string): (P2LRNSharedResourceRecord & {readonly bytes:Uint8Array}) | null;
+  list(): readonly P2LRNSharedResourceRecord[];
+  delete(digest:string): boolean;
+  clear(): void;
+  resolve(request:Readonly<P2LRNResourceUrlRequest>): Promise<P2LRNResolvedResourceUrl|null>;
+}
+export function createMemorySharedResourceStore(): P2LRNMemorySharedResourceStore;
 
 export interface P2LRNOfflineStore {
   getState(key: string): Promise<unknown>;
@@ -234,6 +245,7 @@ export interface P2LRNPublicAPI {
   readonly createMemoryCollaborationHub: typeof createMemoryCollaborationHub;
   readonly COLLABORATION_CAPABILITY: typeof COLLABORATION_CAPABILITY;
   readonly COLLABORATION_OPERATIONS: typeof COLLABORATION_OPERATIONS;
+  readonly createMemorySharedResourceStore: typeof createMemorySharedResourceStore;
   readonly createOfflineHostAdapter: typeof createOfflineHostAdapter;
   readonly createMemoryOfflineStore: typeof createMemoryOfflineStore;
   readonly createIndexedDbOfflineStore: typeof createIndexedDbOfflineStore;
