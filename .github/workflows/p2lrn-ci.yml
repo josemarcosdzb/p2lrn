@@ -568,3 +568,42 @@ jobs:
         run: ./scripts/ensure-browser-windows.ps1
       - name: Verify actual Player module URLs and rosco in local Chrome
         run: node scripts/verify-live-local-4183.mjs
+
+  mcp-connectors-windows:
+    # Independent gate to isolate MCP results from unrelated Studio/Player CI failures.
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Compile existing Toolkit for MCP integration
+        working-directory: packages/toolkit
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install optional MCP dependencies
+        working-directory: integration/mcp
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify MCP tools and ChatGPT Claude Grok connector kit
+        working-directory: integration/mcp
+        run: |
+          node --check server.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check service.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check install-client.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check prepare-connectors.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test test/*.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
