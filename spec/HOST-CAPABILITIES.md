@@ -121,3 +121,23 @@ The mapping belongs to trusted host configuration. It is not serialized into the
 ## Runtime event
 
 Negotiation emits `p2lrn:capability` using the existing `runtime-event/1` envelope. It reports requested/available capability IDs and blocked required capabilities. It must not include provider secrets.
+
+## Reference collaboration binding
+
+The first-party browser API includes `createMemoryCollaborationHub()` as a deliberately small reference host. It proves the contract without making P2LRN depend on a transport:
+
+```js
+const hub = P2LRN.createMemoryCollaborationHub();
+
+const broker = P2LRN.createCapabilityBroker({
+  providers: [hub.provider({participantId: hostOpaqueLearnerId})],
+  authorize: ({capabilityId}) => capabilityId === 'collaboration.room'
+});
+
+await P2LRN.mount('#course', {
+  src: '/course.p2lrn',
+  capabilityBroker: broker
+});
+```
+
+A production host replaces only the provider. The package and component continue invoking the same five semantic operations. WebSocket, SSE, long-poll, a local process or a clustered service are host implementation details.
