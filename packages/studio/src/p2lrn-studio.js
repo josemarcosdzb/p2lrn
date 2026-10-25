@@ -91,6 +91,11 @@ export class P2LRNStudioElement extends HTMLElement{
               <button type="button" data-add-kind="3d-matching" data-help="Conecta parejas de objetos dentro del entorno 3D.">Relacionar 3D</button>
               <button type="button" data-add-kind="3d-classification" data-help="Clasifica objetos en zonas dentro del entorno 3D.">Clasificar 3D</button>
             </div></div>
+            <div class="add-section"><strong>Colaboración</strong><p>Actividades ligeras conectadas por el host. Sin servidores ni credenciales dentro del paquete.</p><div class="add-grid">
+              <button type="button" data-add-kind="live-poll" data-help="Votación sincronizada entre participantes con fallback individual.">Votación en directo</button>
+              <button type="button" data-add-kind="shared-board" data-help="Pizarra de notas compartidas mediante la capacidad collaboration.room.">Pizarra compartida</button>
+              <button type="button" data-add-kind="peer-review" data-help="Aportaciones y comentarios entre pares sin acoplar el curso al transporte.">Revisión entre pares</button>
+            </div></div>
             <div class="add-section"><strong>Estructura avanzada</strong><p>Añade componentes nativos o agrupa varias actividades en un mismo recorrido. Usa + Unidad para las secciones normales.</p><div class="add-grid">
               <button type="button" data-add-kind="component" data-help="Añade avisos, líneas temporales y otros componentes nativos registrados en P2LRN."><span>Componente</span><small>Avisos, líneas de tiempo y otros bloques nativos</small></button>
               <button type="button" data-add-kind="composite" data-help="Crea un grupo que contiene actividades reales y define cómo se recorren y completan."><span>Grupo de actividades</span><small>Agrupa varias actividades en un mismo recorrido</small></button>
@@ -234,6 +239,9 @@ export class P2LRNStudioElement extends HTMLElement{
     if(kind==='external'){this.shadowRoot.querySelector('[data-external-file]').click();return null;}
     if(kind==='url'){const url=prompt('URL del recurso');if(!url)return null;return this.#selectCreated(this.#studio.addRemoteResource(this.#insertionParent(),{title:'Recurso web',url}));}
     if(kind==='questionnaire')return this.#selectCreated(this.#studio.addQuestionnaire(this.#insertionParent(),{title:'Cuestionario',language:'es'}));
+    if(kind==='live-poll')return this.#selectCreated(this.#studio.addCollaborationActivity(this.#insertionParent(),{mode:'poll',language:'es'}));
+    if(kind==='shared-board')return this.#selectCreated(this.#studio.addCollaborationActivity(this.#insertionParent(),{mode:'board',language:'es'}));
+    if(kind==='peer-review')return this.#selectCreated(this.#studio.addCollaborationActivity(this.#insertionParent(),{mode:'peer-review',language:'es'}));
     if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const titles={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','fill-blanks':'Completar huecos','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D','3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D'};return this.#selectCreated(this.#studio.addGame(this.#insertionParent(),{kind,title:titles[kind]??'Juego',language:'es'}));}
     if(kind==='component'){this.#chooseComponent();return null;}
     if(kind==='composite')return this.#selectCreated(this.#studio.addComposite(this.#insertionParent(),{title:'Grupo de actividades',language:'es',mode:'free',completion:'all'}));
@@ -256,8 +264,8 @@ export class P2LRNStudioElement extends HTMLElement{
     const entity=this.#studio?.entity(this.#selected);if(!entity)return;
     if(this.#mode==='preview'){await this.#renderPreview();return;}
     const sheet=document.createElement('article');sheet.className='sheet';
-    const title=document.createElement('h1');title.className='title';title.textContent=this.#studio.title(entity.id);title.contentEditable='true';
-    const desc=document.createElement('p');desc.className='description';desc.textContent=entity.description?.es??entity.description?.en??'';desc.contentEditable='true';
+    const title=document.createElement('h1');title.className='title';title.textContent=this.#studio.title(entity.id);title.contentEditable='true';title.setAttribute('role','textbox');title.setAttribute('aria-label','Título');title.setAttribute('aria-multiline','true');
+    const desc=document.createElement('p');desc.className='description';desc.textContent=entity.description?.es??entity.description?.en??'';desc.contentEditable='true';desc.setAttribute('role','textbox');desc.setAttribute('aria-label','Descripción');desc.setAttribute('aria-multiline','true');
     title.oninput=()=>{this.#studio.setTitle(entity.id,title.textContent||'');this.#renderTree();this.#updateState();};
     desc.oninput=()=>{this.#studio.setDescription(entity.id,desc.textContent||'');this.#updateState();};
     sheet.append(title,desc);
