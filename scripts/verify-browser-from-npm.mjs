@@ -308,6 +308,9 @@ addEventListener('unhandledrejection',e=>finish('FAIL',{phase:'unhandledrejectio
 <script>
 (async()=>{
   try{await window.P2LRNReady;}catch(e){finish('FAIL',{phase:'loader',message:String(e?.message||e)});return;}
+  if(typeof window.P2LRN?.createHttpCollaborationProvider!=='function'||window.P2LRN?.COLLABORATION_HTTP_VERSION!=='1'){
+    finish('FAIL',{phase:'collaboration-http-api-missing',version:window.P2LRN?.version});return;
+  }
   const params=new URLSearchParams(location.search);
   const course=params.get('course');
   const authoredCourse=params.get('authored')==='1';
