@@ -775,11 +775,12 @@ async function verifyConnectedArchitecture(cdp,fixture){
     const status=b.shadowRoot.querySelector('.p2lrn-collaboration-status')?.textContent||'';
     const result=b.shadowRoot.querySelector('.p2lrn-collaboration-results')?.textContent||'';
     const accessible=Boolean(b.shadowRoot.querySelector('fieldset legend')&&b.shadowRoot.querySelector('[role="status"][aria-live="polite"]'));
-    a.remove();b.remove();host.remove();
     return {status,result,accessible};
   })()`);
   invariant(collaboration.result.includes('Opción A · 1'),'Collaboration vote did not synchronize between two Players.');
   invariant(collaboration.accessible===true,'Collaboration renderer lost semantic accessibility controls.');
+  const collaborationScreenshot=await captureVisualEvidence(cdp,'collaboration-two-player');
+  await evalTop(cdp,"document.getElementById('collaboration-e2e')?.remove()");
 
   const sharedResource=await evalTop(cdp,`(async()=>{
     if(typeof P2LRN.createMemorySharedResourceStore!=='function')throw new Error('Shared resource reference store missing.');
@@ -791,12 +792,14 @@ async function verifyConnectedArchitecture(cdp,fixture){
     const player=document.createElement('p2lrn-player');player.adapter=adapter;player.setAttribute('node',${JSON.stringify(fixture.sharedActivityId)});player.setAttribute('src','/tests/shared-resource.p2lrn');document.body.append(player);
     const wait=async(test,label)=>{for(let i=0;i<240;i++){const value=test();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw new Error(label+' timeout');};
     const image=await wait(()=>player.shadowRoot?.querySelector('img.p2lrn-media'),'shared resource render');
-    const result={src:image.src,alt:image.alt,count:store.list().length,digest:first.digest};
-    player.remove();store.clear();return result;
+    globalThis.__p2lrnSharedResourceStore=store;player.id='shared-resource-e2e';
+    return {src:image.src,alt:image.alt,count:store.list().length,digest:first.digest};
   })()`);
   invariant(sharedResource.src.startsWith('blob:'),'Shared resource did not resolve through verified host object URL.');
   invariant(sharedResource.count===1,'Shared resource store retained duplicate physical objects.');
   invariant(sharedResource.alt==='Diagrama P2LRN compartido','Shared image did not inherit portable resource title as alt text.');
+  const sharedResourceScreenshot=await captureVisualEvidence(cdp,'shared-resource-digest');
+  await evalTop(cdp,"document.getElementById('shared-resource-e2e')?.remove();globalThis.__p2lrnSharedResourceStore?.clear();delete globalThis.__p2lrnSharedResourceStore");
 
   const cached=await evalTop(cdp,`(async()=>{
     await P2LRN.installServiceWorker();
@@ -827,7 +830,7 @@ async function verifyConnectedArchitecture(cdp,fixture){
   })()`);
   invariant(offline.cacheCount===1,'Offline package cache entry disappeared during playback.');
   invariant(offline.frameSrc.includes('/__p2lrn__/v1/'),'Offline web package did not resolve through the verified static-resource bridge.');
-  return Object.freeze({capability,collaboration,sharedResource,cached,offline});
+  return Object.freeze({capability,collaboration,collaborationScreenshot,sharedResource,sharedResourceScreenshot,cached,offline});
 }
 
 let appServer=null,runtimeServer=null,chrome=null,cdp=null;
