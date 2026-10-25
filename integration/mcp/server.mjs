@@ -50,6 +50,11 @@ export function createP2LRNMcpServer(service) {
     z.object({relative_path: z.string(), member: z.string(), max_bytes: z.number().int().min(1).max(32768).optional()}),
     ({relative_path, member, max_bytes}) => service.readTextMember(relative_path, member, max_bytes));
 
+  register(server, 'p2lrn_list_game_renderers',
+    'Discover actual P2LRN native questionnaire game renderers (matching, memory, rosco, word search, 3D and more) from the installed Toolkit registry.',
+    z.object({}),
+    () => service.listGameRenderers());
+
   register(server, 'p2lrn_search_metadata',
     'Search only titles, descriptions, and IDs in a validated course. This does not search opaque package payloads.',
     z.object({relative_path: z.string(), query: z.string(), limit: z.number().int().min(1).max(200).optional()}),
@@ -103,9 +108,10 @@ export function createP2LRNMcpServer(service) {
     z.object({...idAndDigest, key: z.string(), title: z.string(), url: z.string().url(), parent: z.string().optional()}),
     ({draft_id, expected_digest, ...resource}) => service.addUrl(draft_id, expected_digest, resource));
   register(server, 'p2lrn_draft_add_native_activity',
-    'Add an existing P2LRN native questionnaire or component using its canonical validated payload schema; no new runtime or game type.',
-    z.object({...idAndDigest, kind: z.enum(['questionnaire', 'component']), key: z.string(), title: z.string().optional(), parent: z.string().optional(), payload: z.record(z.string(), z.unknown())}),
-    ({draft_id, expected_digest, kind, key, title, parent, payload}) => service.addNativeActivity(draft_id, expected_digest, kind, key, parent, title, payload));
+    'Add a P2LRN native questionnaire or component through Toolkit. For a playable game, provide a renderer from p2lrn_list_game_renderers. Reject incompatible questions instead of silently substituting a plain questionnaire.',
+    z.object({...idAndDigest, kind: z.enum(['questionnaire', 'component']), key: z.string(), title: z.string().optional(), parent: z.string().optional(), payload: z.record(z.string(), z.unknown()),
+      renderer: z.string().url().optional()}),
+    ({draft_id, expected_digest, kind, key, title, parent, payload, renderer}) => service.addNativeActivity(draft_id, expected_digest, kind, key, parent, title, payload, renderer));
   register(server, 'p2lrn_draft_add_composite',
     'Group existing draft activities into a native composite through the Authoring API.',
     z.object({...idAndDigest, key: z.string(), title: z.string(), children: z.array(z.string()).min(1), parent: z.string().optional(),

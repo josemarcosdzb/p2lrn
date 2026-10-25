@@ -3,10 +3,21 @@ import {existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSyn
 import {isAbsolute, join, relative, resolve, sep} from 'node:path';
 import {P2LRNReadingSystem} from '../../packages/toolkit/dist/reader/index.js';
 import {P2LRNAuthoringWorkspace} from '../../packages/toolkit/dist/authoring/index.js';
+import {buildQuestionnaireGame} from '../../packages/toolkit/web/questionnaire-games-core.js';
+import * as rendererRegistry from '../../packages/toolkit/web/renderer-registry.js';
 import {validateQuestionnaire, validateComponentInstance} from '../../packages/toolkit/dist/core/index.js';
 
 const DRAFTS = '.p2lrn-mcp-drafts';
 const EXPORTS = '.p2lrn-mcp-exports';
+const gameRenderers = Object.freeze(
+  Object.entries(rendererRegistry).filter(([symbol, id]) =>
+    symbol.endsWith('_RENDERER') &&
+    symbol !== 'STANDARD_QUESTIONNAIRE_RENDERER' &&
+    typeof id === 'string' &&
+    id.startsWith('https://p2lrn.org/renderer/questionnaire/')
+  ).map(([symbol, id]) => Object.freeze({symbol, id}))
+);
+const knownGameRenderers = new Set(gameRenderers.map(item => item.id));
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DIGEST = /^[a-f0-9]{64}$/i;
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
@@ -100,6 +111,11 @@ export class P2LRNMcpService {
     if (typeof entityId !== 'string' || !entityId) throw new Error('entityId is required');
     const reader = new P2LRNReadingSystem(this.packagePath(relativePath));
     return {path: relativePath, entity: reader.entity(entityId)};
+  }
+
+  listGameRenderers() {
+    return {renderers:gameRenderers.map(({symbol,id}) => ({id, name:symbol.toLowerCase().replace(/_renderer$/, '').replaceAll('_', '-')})),
+      catalog:'P2LRN Toolkit renderer registry', hint:'Game compatibility is checked before authoring. Only complete questionnaires are accepted.'};
   }
 
   readPlan(relativePath) {
@@ -265,15 +281,21 @@ export class P2LRNMcpService {
     return this.mutateDraft(draftId, expectedDigest, (workspace) => workspace.addUrl(object(resource, 'resource')));
   }
 
-  addNativeActivity(draftId, expectedDigest, kind, key, parent, title, payload) {
+  addNativeActivity(draftId, expectedDigest, kind, key, parent, title, payload, renderer = null) {
     if (!['questionnaire', 'component'].includes(kind)) throw new Error('Unsupported native activity kind');
     const validated = kind === 'questionnaire' ? validateQuestionnaire(payload) : validateComponentInstance(payload);
+    if (renderer !== null && renderer !== undefined) {
+      if (kind !== 'questionnaire') throw new Error('Game renderer is only valid for a native questionnaire');
+      if (!knownGameRenderers.has(renderer)) throw new Error('Game renderer is not installed in the P2LRN registry: ' + renderer);
+      const built = buildQuestionnaireGame(validated, renderer, {seedSource:key});
+      if (!built.compatible) throw new Error('Questionnaire is incompatible with this complete game: ' + JSON.stringify(built.reasons));
+    }
     return this.mutateDraft(draftId, expectedDigest, (workspace, dir) => {
       const inputDir = join(dir, '.mcp-inputs');
       mkdirSync(inputDir, {recursive: true});
       const source = join(inputDir, randomUUID() + '.json');
       writeFileSync(source, JSON.stringify(validated), {flag: 'wx', mode: 0o600});
-      const args = {source, key, title, parent};
+      const args = {source, key, title, parent, ...(renderer ? {renderer} : {})};
       return kind === 'questionnaire' ? workspace.addQuestionnaire(args) : workspace.addComponent(args);
     });
   }
