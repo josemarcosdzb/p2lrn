@@ -32,7 +32,7 @@ The DOM CustomEvent name remains the event `type`. For compatibility, the refere
 
 ## 2. Event families
 
-Reference events currently include `p2lrn:ready`, `p2lrn:activityready`, `p2lrn:rendered`, `p2lrn:answer`, `p2lrn:progress`, `p2lrn:statechange`, `p2lrn:timeupdate`, `p2lrn:timeout`, `p2lrn:score`, `p2lrn:complete`, `p2lrn:progressionchange`, `p2lrn:xapi`, `p2lrn:navigation`, `p2lrn:capability`, opt-in `p2lrn:attention`/`p2lrn:active-time`, and `p2lrn:error`. Not every renderer emits every family.
+Reference events currently include `p2lrn:ready`, `p2lrn:activityready`, `p2lrn:rendered`, `p2lrn:answer`, `p2lrn:progress`, `p2lrn:statechange`, `p2lrn:timeupdate`, `p2lrn:timeout`, `p2lrn:score`, `p2lrn:complete`, `p2lrn:progressionchange`, `p2lrn:xapi`, `p2lrn:navigation`, `p2lrn:capability`, `p2lrn:interaction`, opt-in `p2lrn:attention`/`p2lrn:active-time`, and `p2lrn:error`. Not every renderer emits every family.
 
 The envelope is deliberately not xAPI or Caliper. A host may map the same event to xAPI, Caliper, local analytics or no persistent event log at all.
 
@@ -105,3 +105,16 @@ See `HOST-CAPABILITIES.md`.
 ## 9. Offline forwarding
 
 `createOfflineHostAdapter()` may queue `emitEvent` calls while disconnected and replay them later in their stored order. This does not change the event envelope or place learner event history inside the package. See `OFFLINE-SYNC.md` for ACK/retry and duplicate-delivery limitations.
+
+
+## 10. Rich pedagogical interactions
+
+`p2lrn:interaction` is the reference family for meaningful learning actions that are more detailed than score/progress but do not deserve a new transport or persistence API.
+
+The first-party runtime currently emits privacy-bounded actions including:
+
+- `answer-change`: a learner changed an already populated questionnaire answer. The interaction event records question identity/type and whether the new answer is meaningful; it does not duplicate free-text answer contents.
+- `media-play`, `media-pause`, `media-seek`, `media-ended`: coarse audio/video behavior with media time rounded to tenths of a second.
+- collaboration actions such as vote, board contribution and peer-review submission/comment.
+
+Raw pointer coordinates, key values and typed text are not part of this generic analytics family. The authoritative activity state may still contain learner-authored content where required for resume/assessment; analytics consumers should not infer that every state field is appropriate for behavioral telemetry.
