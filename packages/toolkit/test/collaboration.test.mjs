@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CapabilityBroker} from '../web/capability-broker.js';
 import {createMemoryCollaborationHub,COLLABORATION_OPERATIONS} from '../web/collaboration-provider.js';
+import {createMemorySharedResourceStore} from '../web/shared-resource-store.js';
 import {createP2LRNStudioDocument} from '../web/studio/new-document.js';
 import {exportP2LRNPackage} from '../web/studio/package-export.js';
 import {openP2LRNPackageBytes} from '../web/p2lrn-player.js';
@@ -63,4 +64,18 @@ test('Studio accepts digest-pinned shared remote resources and rejects malformed
   const resource=doc.entity(activity.resource);
   assert.equal(resource.representations[0].location.expectedDigest,digest);
   assert.throws(()=>doc.addRemoteResource(doc.rootId,{url:'https://content.example/bad',expectedDigest:'sha256:bad'}),/expectedDigest/);
+});
+
+
+test('shared resource store deduplicates identical bytes by SHA-256 and resolves verified media',async()=>{
+  const store=createMemorySharedResourceStore();
+  const first=await store.put(new TextEncoder().encode('same-video-bytes'),{mediaType:'video/mp4'});
+  const second=await store.put(new TextEncoder().encode('same-video-bytes'),{mediaType:'video/mp4'});
+  assert.equal(first.digest,second.digest);
+  assert.equal(store.list().length,1);
+  const resolved=await store.resolve({kind:'remote',expectedDigest:first.digest});
+  assert.equal(resolved?.verified,true);
+  assert.equal(resolved?.seekable,true);
+  assert.ok(String(resolved?.url||'').startsWith('blob:'));
+  store.clear();
 });
