@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import {copyFileSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {Client} from '@modelcontextprotocol/client';
 import {StdioClientTransport} from '@modelcontextprotocol/client/stdio';
 import {P2LRNMcpService} from '../service.mjs';
 import {createP2LRNMcpServer} from '../server.mjs';
 
-const fixture = resolve('examples/canonical/minimal-course.p2lrn');
+const fixture = fileURLToPath(new URL('../../../examples/canonical/minimal-course.p2lrn', import.meta.url));
 const digest = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
 const makeRoot = () => {
   const root = mkdtempSync(join(tmpdir(), 'p2lrn-mcp-test-'));
@@ -86,7 +87,7 @@ test('MCP rejects symlinked course sources', (t) => {
 
 test('MCP over real stdio negotiates protocol and exposes only read tools by default', async () => {
   const root = makeRoot();
-  const server = resolve('integration/mcp/server.mjs');
+  const server = fileURLToPath(new URL('../server.mjs', import.meta.url));
   const transport = new StdioClientTransport({
     command: process.execPath, args: [server, '--stdio'],
     env: {...process.env, P2LRN_MCP_ROOT: root, P2LRN_MCP_WRITE: '0'},
