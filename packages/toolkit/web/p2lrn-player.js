@@ -8,6 +8,7 @@ import {createCapabilityBroker, createToolCapabilityProvider, normalizeCapabilit
 import {createOfflineHostAdapter, createMemoryOfflineStore, createIndexedDbOfflineStore, DEFAULT_OFFLINE_DB_NAME} from './offline-host-adapter.js';
 import {createActivityTracker, DEFAULT_ACTIVITY_IDLE_AFTER_MS} from './activity-tracker.js';
 import {createMemoryCollaborationHub, COLLABORATION_CAPABILITY, COLLABORATION_OPERATIONS} from './collaboration-provider.js';
+import {createHttpCollaborationProvider, COLLABORATION_HTTP_VERSION, COLLABORATION_HTTP_MEDIA_TYPE} from './collaboration-http-provider.js';
 import {createMemorySharedResourceStore} from './shared-resource-store.js';
 import {BufferZipArchive, openRemoteZipArchive, readResponseBounded, safeZipPath} from './zip-source.js';
 import {createMemoryPackageCache, createCacheStoragePackageCache, createPackageCacheFetch, normalizePackageCache, DEFAULT_PACKAGE_CACHE_NAME} from './package-cache.js';
@@ -1106,8 +1107,11 @@ if (!existingP2LRNApi) {
     createIndexedDbOfflineStore,
     createActivityTracker,
     createMemoryCollaborationHub,
+    createHttpCollaborationProvider,
     COLLABORATION_CAPABILITY,
     COLLABORATION_OPERATIONS,
+    COLLABORATION_HTTP_VERSION,
+    COLLABORATION_HTTP_MEDIA_TYPE,
     createMemorySharedResourceStore,
     createMemoryPackageCache,
     createCacheStoragePackageCache,
