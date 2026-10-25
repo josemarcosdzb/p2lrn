@@ -930,6 +930,13 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           representationId: rep.id,
           entityId: entity.id,
         }, context);
+        dispatchRuntimeEvent(this, 'p2lrn:interaction', {
+          action:'resource-open',
+          resourceId:resource.id,
+          representationId:rep.id,
+          mediaType:rep.mediaType??null,
+          rendererId:candidate.descriptor.id,
+        }, context, {adapter:this._adapter});
         return runtime;
       } catch (error) {
         const canFallback = candidate.selection?.required !== true && [
