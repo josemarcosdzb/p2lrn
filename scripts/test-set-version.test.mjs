@@ -13,6 +13,7 @@ const list=[
   'packages/toolkit/package.json','packages/h5p-libraries/package.json',
   'packages/toolkit/config/capabilities.json','packages/studio/src/p2lrn-studio.js',
   'packages/toolkit/web/p2lrn-player.js','packages/toolkit/web-sdk-src/p2lrn.js',
+  'packages/player/server/runtime-host.mjs',
   'PUBLISHING.md',
   'deploy/netlify/site/docs/npm/index.html',
   'deploy/netlify/site/docs/npm/studio/index.html',
