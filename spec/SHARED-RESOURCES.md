@@ -45,3 +45,18 @@ This yields one P2LRN format with two deployment modes rather than separate port
 ## Trust boundary
 
 `verified:true` is a host attestation. The Player does not treat an arbitrary network URL as verified merely because a package supplied `expectedDigest`. Hosts that implement a shared resource library must perform digest verification before exposing the resolved URL.
+
+## First-party lightweight reference store
+
+The browser API exposes `createMemorySharedResourceStore()` to prove content-addressed deduplication without requiring a storage product. `put(bytes)` computes SHA-256 and stores one byte object per digest. The same store can be connected directly to Host Adapter v1:
+
+```js
+const resources = P2LRN.createMemorySharedResourceStore();
+const saved = await resources.put(videoBytes, {mediaType:'video/mp4'});
+
+const adapter = P2LRN.createHostAdapter({
+  resolveResourceUrl: (request) => resources.resolve(request)
+});
+```
+
+Studio can author the corresponding remote representation with a logical URL, media type and `expectedDigest`. The memory store is for tests/local/reference use; a production catalog may persist the same digest contract in filesystem, object storage or another host-managed store. The `.p2lrn` remains unchanged.
