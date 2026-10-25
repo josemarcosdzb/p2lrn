@@ -65,3 +65,43 @@ Opt-in draft editing: `p2lrn_draft_create`, `p2lrn_draft_read`, `p2lrn_draft_set
 ## Regression gates
 
 Run `npm test` in this directory after building Toolkit, then the main Windows P2LRN CI. The MCP integration does not publish existing npm packages or modify local Studio/Player installations.
+
+## Conectores web para ChatGPT, Claude y Grok (mismo servidor)
+
+Los tres clientes web aceptan un servidor MCP remoto. **El MCP de P2LRN es uno solo** y los tres conectores comparten el endpoint HTTPS. Se necesita configurar cada cuenta en su interfaz; ningún script local puede instalar el plugin en una cuenta externa de forma silenciosa.
+
+### Ejecutar el servidor en una máquina con los paquetes autorizados
+
+```powershell
+$env:P2LRN_MCP_ROOT = 'C:\p2lrn-courses'
+$env:P2LRN_MCP_WRITE = '0'
+$env:P2LRN_MCP_TOKEN = '<clave-aleatoria-de-mas-de-32-bytes>'
+$env:P2LRN_MCP_PUBLIC_ORIGIN = 'https://courses.your-domain.example'
+node .\integration\mcp\server.mjs --http
+```
+
+El servidor continúa enlazado a `127.0.0.1`. Configura un túnel/proxy HTTPS autenticado hacia `127.0.0.1:37871` para obtener la dirección real que usarán los clientes (`https://tu-dominio/mcp`). **No abras 37871 a Internet**. `P2LRN_MCP_PUBLIC_ORIGIN` debe ser exactamente el origen público de ese proxy; cualquier otro Host/Origin es rechazado antes de MCP. Nunca confíes en `X-Forwarded-Host` no validado.
+
+### Construir el plugin y las configuraciones de las tres IA
+
+```powershell
+cd integration\mcp
+npm install --ignore-scripts
+node prepare-connectors.mjs --endpoint https://tu-dominio/mcp --out .generated\connectors
+```
+
+El generador **no inventa una URL**: exige HTTPS real y bloquea `localhost`, IP directas, URL con contraseñas o parámetros con tokens. Produce `chatgpt/p2lrn-plugin.zip` con un manifiesto Agent Plugins y MCP, una guía de uso y los archivos `claude/connection.json`, `grok/connection.json` y `README.md`. No guarda tokens ni altera la configuración de las cuentas. Los paquetes generados quedan ignorados por Git.
+
+**ChatGPT:** Plugins > + > Añadir servidor MCP personalizado. Registrar la URL HTTPS (o Secure MCP Tunnel), configurar la autenticación y revisar los permisos. El ZIP generado es material para pruebas privadas: **no es una publicación en el directorio de plugins**. El servidor actual emplea bearer fijo: el portal de publicación pública no admite completar ese método; para una versión pública con múltiples usuarios hay que integrar OAuth, autorización individual, verificación de dominio y revisión del plugin.
+
+**Claude web:** Customize > Connectors > Add > Custom > Web. Registrar la URL, configurar un encabezado `Authorization: Bearer` en la interfaz y comprobar las herramientas. Claude Desktop local sigue usando el instalador `install-client.mjs` mediante `stdio`.
+
+**Grok web:** grok.com/connectors > New Connector > Custom. Registrar la misma URL y completar el mecanismo de autenticación. En planes Business/Enterprise el administrador puede tener que provisionar el conector.
+
+En todos los casos, probar primero `p2lrn_list_courses`, después `p2lrn_read_course` y validar que el modelo NO recibe herramientas de escritura mientras `P2LRN_MCP_WRITE=0`.
+
+### Evidencia automatizada
+
+Las pruebas de `test/connector.test.mjs` verifican manifiestos y ZIP, URLs inválidas, rechazo de hosts externos y orígenes falsos, token bearer y negociación real MCP a través de HTTP. El workflow canónico Windows incluye estas pruebas sin crear otro workflow.
+
+**Pendiente para distribución pública:** OAuth multiusuario y su consentimiento, disponibilidad HTTPS estable, aprobación del usuario para registrar la conexión, pruebas E2E dentro de las interfaces reales de ChatGPT, Claude y Grok, y publicación en sus catálogos si se desea.
