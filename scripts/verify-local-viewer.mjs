@@ -779,6 +779,8 @@ async function verifyConnectedArchitecture(cdp,fixture){
   })()`);
   invariant(collaboration.result.includes('Opción A · 1'),'Collaboration vote did not synchronize between two Players.');
   invariant(collaboration.accessible===true,'Collaboration renderer lost semantic accessibility controls.');
+  await evalTop(cdp,"document.getElementById('collaboration-e2e')?.scrollIntoView({block:'center'})");
+  await sleep(250);
   const collaborationScreenshot=await captureVisualEvidence(cdp,'collaboration-two-player');
   await evalTop(cdp,"document.getElementById('collaboration-e2e')?.remove()");
 
@@ -798,6 +800,8 @@ async function verifyConnectedArchitecture(cdp,fixture){
   invariant(sharedResource.src.startsWith('blob:'),'Shared resource did not resolve through verified host object URL.');
   invariant(sharedResource.count===1,'Shared resource store retained duplicate physical objects.');
   invariant(sharedResource.alt==='Diagrama P2LRN compartido','Shared image did not inherit portable resource title as alt text.');
+  await evalTop(cdp,"document.getElementById('shared-resource-e2e')?.scrollIntoView({block:'center'})");
+  await sleep(250);
   const sharedResourceScreenshot=await captureVisualEvidence(cdp,'shared-resource-digest');
   await evalTop(cdp,"document.getElementById('shared-resource-e2e')?.remove();globalThis.__p2lrnSharedResourceStore?.clear();delete globalThis.__p2lrnSharedResourceStore");
 
