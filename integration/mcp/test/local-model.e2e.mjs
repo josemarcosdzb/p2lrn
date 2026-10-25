@@ -64,15 +64,19 @@ async function detectCandidates() {
 
 async function askModel(found,tool,system,user) {
   if (found.kind === 'ollama') {
+    const context=Number(process.env.P2LRN_LOCAL_MODEL_CONTEXT || 2048);
+    const gpu=process.env.P2LRN_LOCAL_MODEL_GPU_LAYERS;
+    if (!Number.isInteger(context)||context<512||(gpu!==undefined&&(!Number.isInteger(Number(gpu))||Number(gpu)<0))) throw new Error('Invalid local model context or GPU layer configuration');
+    const options={temperature:0,num_predict:256,num_ctx:context,...(gpu!==undefined?{num_gpu:Number(gpu)}:{})};
     return query(found.root.replace(/\/$/,'') + '/api/chat', {
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:found.model,stream:false,
-        options:{temperature:0,num_predict:128},
+        model:found.model,stream:false,think:false,keep_alive:'0',
+        options,
         messages:[{role:'system',content:system},{role:'user',content:user}],
         tools:[tool]
       })
-    },120000);
+    },180000);
   }
   return query(found.root.replace(/\/$/,'') + '/chat/completions', {
     method:'POST',headers:{'Content-Type':'application/json'},
@@ -110,9 +114,9 @@ try {
   const match=(await client.listTools()).tools.find(tool=>tool.name==='p2lrn_list_courses');
   if (!match) throw new Error('MCP list tool missing');
 
-  const system='Tienes disponible un servidor MCP con cursos P2LRN. Para responder debes llamar exactamente a la herramienta p2lrn_list_courses. No inventes cursos ni respondas sin usar la herramienta.';
-  const user='Usa ahora p2lrn_list_courses y enumera los cursos P2LRN disponibles.';
-  const tool={type:'function',function:{name:match.name,description:match.description,parameters:match.inputSchema}};
+  const system='You have tools. You MUST call p2lrn_list_courses before answering any question about courses. Do not write a tool call in text; invoke it as an actual function call.';
+  const user='List my P2LRN courses by calling p2lrn_list_courses with limit 10. Do not answer without a function call.';
+  const tool={type:'function',function:{name:match.name,description:'Return the list of available P2LRN courses. Call this function to find the actual course names.',parameters:match.inputSchema}};
   const rejected=[];
 
   for (const found of models) {
