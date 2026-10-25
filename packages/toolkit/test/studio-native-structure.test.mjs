@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createP2LRNStudioDocument} from '../web/studio/new-document.js';
 import {exportP2LRNPackage} from '../web/studio/package-export.js';
 import {openP2LRNPackageBytes} from '../web/p2lrn-player.js';
-import {createDefaultComponentRegistry, CALLOUT_COMPONENT, TIMELINE_COMPONENT, CAPABILITY_ACTION_COMPONENT} from '../web/component-registry.js';
+import {createDefaultComponentRegistry, CALLOUT_COMPONENT, TIMELINE_COMPONENT, CAPABILITY_ACTION_COMPONENT, COLLABORATION_COMPONENT} from '../web/component-registry.js';
 import {validateNativeComponent} from '../web/native-component-core.js';
 import {validateNativeComposite} from '../web/native-composite-core.js';
 
@@ -12,7 +12,7 @@ const toArrayBuffer=(bytes)=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffse
 test('Studio creates registered native components from the component registry',async()=>{
   const doc=createP2LRNStudioDocument({title:'Componentes Studio',language:'es'});
   const catalog=doc.componentCatalog();
-  assert.deepEqual(catalog.map((entry)=>entry.id),[CALLOUT_COMPONENT,TIMELINE_COMPONENT,CAPABILITY_ACTION_COMPONENT]);
+  assert.deepEqual(catalog.map((entry)=>entry.id),[CALLOUT_COMPONENT,TIMELINE_COMPONENT,CAPABILITY_ACTION_COMPONENT,COLLABORATION_COMPONENT]);
   const registry=createDefaultComponentRegistry();
 
   const callout=doc.addNativeComponent(doc.rootId,{componentId:CALLOUT_COMPONENT,language:'es'});
