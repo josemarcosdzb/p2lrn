@@ -115,6 +115,7 @@ The first-party runtime currently emits privacy-bounded actions including:
 
 - `answer-change`: a learner changed an already populated questionnaire answer. The interaction event records question identity/type and whether the new answer is meaningful; it does not duplicate free-text answer contents.
 - `media-play`, `media-pause`, `media-seek`, `media-ended`: coarse audio/video behavior with media time rounded to tenths of a second.
+- `resource-open`: a verified representation was successfully selected and rendered, with portable resource/representation/renderer identifiers and media type.
 - collaboration actions such as vote, board contribution and peer-review submission/comment.
 
 Raw pointer coordinates, key values and typed text are not part of this generic analytics family. The authoritative activity state may still contain learner-authored content where required for resume/assessment; analytics consumers should not infer that every state field is appropriate for behavioral telemetry.
