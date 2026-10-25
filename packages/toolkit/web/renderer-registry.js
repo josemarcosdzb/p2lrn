@@ -5,6 +5,7 @@ export const COMPONENT_ROUTER_RENDERER = 'https://p2lrn.org/renderer/component/r
 export const CALLOUT_COMPONENT_RENDERER = 'https://p2lrn.org/renderer/component/callout';
 export const TIMELINE_COMPONENT_RENDERER = 'https://p2lrn.org/renderer/component/timeline';
 export const CAPABILITY_ACTION_COMPONENT_RENDERER = 'https://p2lrn.org/renderer/component/capability-action';
+export const COLLABORATION_COMPONENT_RENDERER = 'https://p2lrn.org/renderer/component/collaboration';
 export const STANDARD_QUESTIONNAIRE_RENDERER = 'https://p2lrn.org/renderer/questionnaire/standard';
 export const MEMORY_RENDERER = 'https://p2lrn.org/renderer/questionnaire/memory';
 export const MATCHING_RENDERER = 'https://p2lrn.org/renderer/questionnaire/matching';
