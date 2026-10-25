@@ -69,6 +69,22 @@ player.capabilityBroker = broker;
 
 The provider may internally use MCP, a local model, a remote service or a non-AI implementation. The `.p2lrn` package never contains MCP/API credentials.
 
+For production collaboration, keep authentication and persistence in the Host. The browser-side provider maps the portable five-operation contract to an application endpoint:
+
+```js
+const collaboration = P2LRN.createHttpCollaborationProvider({
+  endpoint: '/api/p2lrn/collaboration',
+  getHeaders: () => ({Authorization: 'Bearer ' + hostToken})
+});
+
+player.capabilityBroker = P2LRN.createCapabilityBroker({
+  providers: [collaboration],
+  authorize: ({capabilityId}) => capabilityId === 'collaboration.room'
+});
+```
+
+The server-side `@p2lrn/player/server` export provides `createP2LRNCollaborationHandler()`. It requires explicit origin allowlisting, authentication, trusted context resolution, authorization and a five-operation service. The package never supplies the learner identity or database/transport credentials.
+
 For offline resume/event buffering, wrap the existing Host Adapter rather than changing it:
 
 ```js
