@@ -1,0 +1,22 @@
+{
+  "name": "@p2lrn/mcp-integration",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "P2LRN MCP server and AI client installer; optional integration",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check server.mjs && node --check service.mjs && node --check install-client.mjs && npm test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.4.0",
+    "@modelcontextprotocol/node": "2.4.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.4.0"
+  }
+}
