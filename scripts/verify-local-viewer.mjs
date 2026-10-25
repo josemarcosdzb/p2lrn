@@ -2,6 +2,7 @@ import {createServer} from 'node:http';
 import {createReadStream} from 'node:fs';
 import {cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {extname, join, resolve, sep} from 'node:path';
 import {createP2LRNStudioDocument} from '../packages/toolkit/web/studio/new-document.js';
 import {exportP2LRNPackage} from '../packages/toolkit/web/studio/package-export.js';
@@ -707,8 +708,15 @@ async function prepareConnectedArchitectureFixtures(){
   const collaborativeExport=await exportP2LRNPackage(collaborative);
   await writeFile(join(dir,'collaboration-poll.p2lrn'),collaborativeExport.bytes);
 
+  const sharedSvg='<svg xmlns="http://www.w3.org/2000/svg" width="64" height="32" viewBox="0 0 64 32"><rect width="64" height="32" fill="white"/><text x="4" y="20">P2LRN</text></svg>';
+  const sharedDigest='sha256:'+createHash('sha256').update(sharedSvg).digest('hex');
+  const shared=createP2LRNStudioDocument({title:'Curso con recurso compartido',language:'es'});
+  const sharedActivity=shared.addRemoteResource(shared.rootId,{title:'Diagrama P2LRN compartido',url:'https://publisher.invalid/shared/p2lrn.svg',mediaType:'image/svg+xml',expectedDigest:sharedDigest});
+  const sharedExport=await exportP2LRNPackage(shared);
+  await writeFile(join(dir,'shared-resource.p2lrn'),sharedExport.bytes);
+
   await cp(join(siteRoot,'examples','canonical','web-bundle-course.p2lrn'),join(dir,'offline-web.p2lrn'),{force:true});
-  return Object.freeze({activityId:activity.id,collaborationActivityId:poll.id,offlineSource:join(dir,'offline-web.p2lrn')});
+  return Object.freeze({activityId:activity.id,collaborationActivityId:poll.id,sharedActivityId:sharedActivity.id,sharedSvg,sharedDigest,offlineSource:join(dir,'offline-web.p2lrn')});
 }
 
 async function verifyConnectedArchitecture(cdp,fixture){
@@ -773,6 +781,23 @@ async function verifyConnectedArchitecture(cdp,fixture){
   invariant(collaboration.result.includes('Opción A · 1'),'Collaboration vote did not synchronize between two Players.');
   invariant(collaboration.accessible===true,'Collaboration renderer lost semantic accessibility controls.');
 
+  const sharedResource=await evalTop(cdp,`(async()=>{
+    if(typeof P2LRN.createMemorySharedResourceStore!=='function')throw new Error('Shared resource reference store missing.');
+    const store=P2LRN.createMemorySharedResourceStore();
+    const first=await store.put(new TextEncoder().encode(${JSON.stringify(fixture.sharedSvg)}),{mediaType:'image/svg+xml'});
+    const second=await store.put(new TextEncoder().encode(${JSON.stringify(fixture.sharedSvg)}),{mediaType:'image/svg+xml'});
+    if(first.digest!==${JSON.stringify(fixture.sharedDigest)}||second.digest!==first.digest||store.list().length!==1)throw new Error('Digest store did not deduplicate fixture bytes.');
+    const adapter=P2LRN.createHostAdapter({resolveResourceUrl:(request)=>store.resolve(request)});
+    const player=document.createElement('p2lrn-player');player.adapter=adapter;player.setAttribute('node',${JSON.stringify(fixture.sharedActivityId)});player.setAttribute('src','/tests/shared-resource.p2lrn');document.body.append(player);
+    const wait=async(test,label)=>{for(let i=0;i<240;i++){const value=test();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw new Error(label+' timeout');};
+    const image=await wait(()=>player.shadowRoot?.querySelector('img.p2lrn-media'),'shared resource render');
+    const result={src:image.src,alt:image.alt,count:store.list().length,digest:first.digest};
+    player.remove();store.clear();return result;
+  })()`);
+  invariant(sharedResource.src.startsWith('blob:'),'Shared resource did not resolve through verified host object URL.');
+  invariant(sharedResource.count===1,'Shared resource store retained duplicate physical objects.');
+  invariant(sharedResource.alt==='Diagrama P2LRN compartido','Shared image did not inherit portable resource title as alt text.');
+
   const cached=await evalTop(cdp,`(async()=>{
     await P2LRN.installServiceWorker();
     const store=P2LRN.createCacheStoragePackageCache();
@@ -802,7 +827,7 @@ async function verifyConnectedArchitecture(cdp,fixture){
   })()`);
   invariant(offline.cacheCount===1,'Offline package cache entry disappeared during playback.');
   invariant(offline.frameSrc.includes('/__p2lrn__/v1/'),'Offline web package did not resolve through the verified static-resource bridge.');
-  return Object.freeze({capability,collaboration,cached,offline});
+  return Object.freeze({capability,collaboration,sharedResource,cached,offline});
 }
 
 let appServer=null,runtimeServer=null,chrome=null,cdp=null;
