@@ -65,3 +65,21 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     for(const profile of ['https://p2lrn.org/profile/web-content','https://p2lrn.org/profile/native-questionnaire','https://p2lrn.org/profile/native-component','https://p2lrn.org/profile/native-composite'])assert.ok(profiles.has(profile),profile);
   }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+test('opening an existing course retains imported entityOrder when adding new authoring entities',()=>{
+  const dir=mkdtempSync(join(tmpdir(),'p2lrn-authoring-import-order-'));
+  try{
+    const workspace=P2LRNAuthoringWorkspace.open(join(canonicalExamples,'minimal-course.p2lrn'),join(dir,'workspace'));
+    const before=workspace.project.entityOrder;
+    assert.ok(Array.isArray(before)&&before.length>0);
+    workspace.addUnit({key:'extra-unit',title:'Nueva unidad'});
+    workspace.addUrl({key:'extra-resource',title:'Enlace añadido',url:'https://example.com/learning',parent:'extra-unit'});
+    const after=workspace.project.entityOrder;
+    assert.deepEqual(after.slice(0,before.length),before,'original portable entity order remains unchanged');
+    assert.deepEqual(after.slice(before.length),['extra-unit','res-extra-resource','act-extra-resource']);
+    const target=join(dir,'roundtrip.p2lrn');
+    workspace.build(target,{strictProfiles:true});
+    const reader=new P2LRNReader(target,{strictProfiles:true,validateProfilePayloads:true});
+    assert.ok(reader.tree());
+  }finally{rmSync(dir,{recursive:true,force:true});}
+});
