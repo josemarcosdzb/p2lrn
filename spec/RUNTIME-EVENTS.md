@@ -32,7 +32,7 @@ The DOM CustomEvent name remains the event `type`. For compatibility, the refere
 
 ## 2. Event families
 
-Reference events currently include `p2lrn:ready`, `p2lrn:activityready`, `p2lrn:rendered`, `p2lrn:answer`, `p2lrn:progress`, `p2lrn:statechange`, `p2lrn:timeupdate`, `p2lrn:timeout`, `p2lrn:score`, `p2lrn:complete`, `p2lrn:progressionchange`, `p2lrn:xapi`, `p2lrn:navigation`, `p2lrn:capability`, `p2lrn:interaction`, opt-in `p2lrn:attention`/`p2lrn:active-time`, and `p2lrn:error`. Not every renderer emits every family.
+Reference events currently include `p2lrn:ready`, `p2lrn:activityready`, `p2lrn:rendered`, `p2lrn:answer`, `p2lrn:progress`, `p2lrn:statechange`, `p2lrn:timeupdate`, `p2lrn:timeout`, `p2lrn:score`, `p2lrn:complete`, `p2lrn:progressionchange`, `p2lrn:xapi`, `p2lrn:navigation`, `p2lrn:capability`, `p2lrn:attempt`, `p2lrn:interaction`, opt-in `p2lrn:attention`/`p2lrn:active-time`, and `p2lrn:error`. Not every renderer emits every family.
 
 The envelope is deliberately not xAPI or Caliper. A host may map the same event to xAPI, Caliper, local analytics or no persistent event log at all.
 
@@ -118,3 +118,14 @@ The first-party runtime currently emits privacy-bounded actions including:
 - collaboration actions such as vote, board contribution and peer-review submission/comment.
 
 Raw pointer coordinates, key values and typed text are not part of this generic analytics family. The authoritative activity state may still contain learner-authored content where required for resume/assessment; analytics consumers should not infer that every state field is appropriate for behavioral telemetry.
+
+
+## 11. Native assessment attempts
+
+Native questionnaires emit `p2lrn:attempt` with explicit phases instead of inferring an attempt from answer events:
+
+- `started`: a new native questionnaire attempt begins;
+- `resumed`: persisted state for an unfinished attempt is restored;
+- `submitted`: the attempt is finalized, with attempt number, completion reason, answered/total counts and normalized score summary.
+
+The attempt event deliberately omits raw learner answers. Other activity families MUST NOT reuse these questionnaire semantics unless their own attempt lifecycle is explicitly defined.
