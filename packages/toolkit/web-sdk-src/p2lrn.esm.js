@@ -17,6 +17,7 @@ import {createHostAdapter, HOST_ADAPTER_VERSION} from './host-adapter.js';
 import {CapabilityBroker, createCapabilityBroker, createToolCapabilityProvider, capabilityRequirements, mergeCapabilityRequirements, capabilityOperationAllowed, validateCapabilityGraph, HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION} from './capability-broker.js';
 import {createOfflineHostAdapter, createMemoryOfflineStore, createIndexedDbOfflineStore, OFFLINE_HOST_ADAPTER_VERSION, DEFAULT_OFFLINE_DB_NAME} from './offline-host-adapter.js';
 import {createActivityTracker, DEFAULT_ACTIVITY_IDLE_AFTER_MS} from './activity-tracker.js';
+import {createMemoryCollaborationHub, COLLABORATION_CAPABILITY, COLLABORATION_OPERATIONS} from './collaboration-provider.js';
 import {createMemoryPackageCache, createCacheStoragePackageCache, createPackageCacheFetch, DEFAULT_PACKAGE_CACHE_NAME, PACKAGE_CACHE_VERSION} from './package-cache.js';
 import {installP2LRNServiceWorker} from './static-resource-bridge.js';
 import {configureRuntimeHost, getRuntimeHostConfig, normalizeRuntimeBaseUrl, resolveScormRuntimeUrl, resolveH5pRuntimeUrl, resolvePackageRuntimeUrl} from './runtime-host-config.js';
@@ -65,6 +66,9 @@ export {
   DEFAULT_OFFLINE_DB_NAME,
   createActivityTracker,
   DEFAULT_ACTIVITY_IDLE_AFTER_MS,
+  createMemoryCollaborationHub,
+  COLLABORATION_CAPABILITY,
+  COLLABORATION_OPERATIONS,
   createMemoryPackageCache,
   createCacheStoragePackageCache,
   createPackageCacheFetch,
