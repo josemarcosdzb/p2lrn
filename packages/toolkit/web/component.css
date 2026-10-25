@@ -61,3 +61,20 @@
 .p2lrn-capability-output { border-top: 1px solid #e2e8f0; padding-top: .75rem; }
 .p2lrn-capability-output pre { margin: .4rem 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
 .p2lrn-capability-fallback { color: #475569; }
+
+.p2lrn-collaboration{display:grid;gap:1rem;border:1px solid #cbd5e1;border-radius:.85rem;padding:1rem 1.125rem;background:#fff;color:#0f172a}
+.p2lrn-collaboration h3,.p2lrn-collaboration h4,.p2lrn-collaboration p{margin:0}
+.p2lrn-collaboration-head,.p2lrn-collaboration-body,.p2lrn-collaboration-results,.p2lrn-collaboration-compose,.p2lrn-collaboration-field,.p2lrn-collaboration-peer,.p2lrn-collaboration-received{display:grid;gap:.55rem}
+.p2lrn-collaboration-status{color:#475569;font-size:.9rem}
+.p2lrn-collaboration-poll{display:grid;gap:.55rem;border:0;padding:0;margin:0}
+.p2lrn-collaboration-option{display:flex;align-items:center;gap:.55rem;padding:.65rem .75rem;border:1px solid #e2e8f0;border-radius:.6rem}
+.p2lrn-collaboration-button{justify-self:start;min-height:2.5rem;padding:.55rem .9rem;border:1px solid #0f172a;border-radius:.55rem;background:#0f172a;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.p2lrn-collaboration-button:disabled{opacity:.55;cursor:not-allowed}
+.p2lrn-collaboration-link{border:0;background:transparent;color:inherit;text-decoration:underline;cursor:pointer}
+.p2lrn-collaboration-result{display:grid;grid-template-columns:minmax(7rem,1fr) minmax(8rem,2fr);gap:.7rem;align-items:center}
+.p2lrn-collaboration-result progress{width:100%}
+.p2lrn-collaboration-field textarea,.p2lrn-collaboration-peer-card textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:.55rem;padding:.65rem;font:inherit;resize:vertical}
+.p2lrn-collaboration-board{display:grid;gap:.55rem;list-style:none;padding:0;margin:0}
+.p2lrn-collaboration-note,.p2lrn-collaboration-peer-card{display:grid;gap:.5rem;border:1px solid #e2e8f0;border-radius:.65rem;padding:.75rem;background:#f8fafc}
+.p2lrn-collaboration-confirm{padding:.65rem .75rem;border-radius:.55rem;background:#f1f5f9}
+@media(max-width:560px){.p2lrn-collaboration-result{grid-template-columns:1fr}}
