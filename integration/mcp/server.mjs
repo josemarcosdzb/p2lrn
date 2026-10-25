@@ -114,7 +114,7 @@ export function validatePublicOrigin(value) {
 
 export async function startP2LRNMcpHttp(service, {token, port = 37871, publicOrigin = null} = {}) {
   if (typeof token !== 'string' || Buffer.byteLength(token) < 32) throw new Error('HTTP requires P2LRN_MCP_TOKEN with at least 32 bytes');
-  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid HTTP port');
+  if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('Invalid HTTP port');
   const handler = createMcpHandler(() => createP2LRNMcpServer(service));
   const nodeHandler = toNodeHandler(handler);
   const validateHost = localhostHostValidation();
@@ -153,7 +153,8 @@ export async function startP2LRNMcpHttp(service, {token, port = 37871, publicOri
     listener.once('error', reject);
     listener.listen(port, '127.0.0.1', resolve);
   });
-  return {server: listener, handler, url: 'http://127.0.0.1:' + port + '/mcp'};
+  const bound = listener.address();
+  return {server: listener, handler, url: 'http://127.0.0.1:' + bound.port + '/mcp'};
 }
 
 async function main() {
