@@ -32,9 +32,9 @@ async function detect() {
           const detail = await query(root.replace(/\/$/,'') + '/api/show',{
             method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({model})
           });
-          if (Array.isArray(detail.capabilities) && !detail.capabilities.includes('tools')) continue;
+          if (!Array.isArray(detail.capabilities) || !detail.capabilities.includes('completion') || !detail.capabilities.includes('tools')) continue;
           return {kind:'ollama', root, model};
-        } catch { return {kind:'ollama', root, model}; }
+        } catch { continue; }
       }
     } catch {}
     try {
