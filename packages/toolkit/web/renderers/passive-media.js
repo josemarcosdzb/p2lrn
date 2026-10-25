@@ -1,7 +1,15 @@
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 export const acceptsPayload = true;
 
-export async function render({container, bytes, payload, representation, resolveResourceUrl, eventTarget, adapter, context = {}}) {
+function resourceTitle(resource,representation){
+  if(typeof representation?.title==='string'&&representation.title.trim())return representation.title.trim();
+  const title=resource?.title;
+  if(typeof title==='string')return title;
+  if(title&&typeof title==='object')return title.es??title.en??title.und??Object.values(title).find((value)=>typeof value==='string')??'';
+  return '';
+}
+
+export async function render({container, bytes, payload, representation, resource, resolveResourceUrl, eventTarget, adapter, context = {}}) {
   const media = String(representation.mediaType ?? 'application/octet-stream').split(';', 1)[0].trim().toLowerCase();
   if (!/^(image|audio|video)\//.test(media)) throw new Error(`Representación multimedia no soportada: ${representation.mediaType}`);
 
@@ -25,7 +33,7 @@ export async function render({container, bytes, payload, representation, resolve
   let node;
   if (media.startsWith('image/')) {
     node = document.createElement('img');
-    node.alt = representation.title ?? '';
+    node.alt = resourceTitle(resource,representation);
   } else if (media.startsWith('audio/')) {
     node = document.createElement('audio');
     node.controls = true;
