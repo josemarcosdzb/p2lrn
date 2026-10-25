@@ -1,13 +1,21 @@
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 export const acceptsRemoteLocation = true;
 
+function resourceTitle(resource,representation){
+  if(typeof representation?.title==='string'&&representation.title.trim())return representation.title.trim();
+  const title=resource?.title;
+  if(typeof title==='string')return title;
+  if(title&&typeof title==='object')return title.es??title.en??title.und??Object.values(title).find((value)=>typeof value==='string')??'';
+  return '';
+}
+
 function fail(code, message) {
   const error = new Error(message);
   error.code = code;
   return error;
 }
 
-export async function render({container, representation, resolveResourceUrl, eventTarget, adapter, context = {}}) {
+export async function render({container, representation, resource, resolveResourceUrl, eventTarget, adapter, context = {}}) {
   const media = String(representation?.mediaType ?? '').split(';', 1)[0].trim().toLowerCase();
   const location = representation?.location;
   if (!/^(image|audio|video)\//.test(media)) throw fail('P2LRN_RENDERER_INCOMPATIBLE', `Remote media renderer does not support ${representation?.mediaType ?? 'missing media type'}.`);
@@ -40,7 +48,7 @@ export async function render({container, representation, resolveResourceUrl, eve
   let node;
   if (media.startsWith('image/')) {
     node = document.createElement('img');
-    node.alt = representation.title ?? '';
+    node.alt = resourceTitle(resource,representation);
   } else if (media.startsWith('audio/')) {
     node = document.createElement('audio');
     node.controls = true;
