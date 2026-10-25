@@ -85,24 +85,36 @@ async function findChrome(){
 }
 
 async function launchChrome(chrome){
-  const profile=await mkdtemp(join(tmpdir(),'p2lrn-local-viewer-'));
-  const args=[
-    '--headless=new','--no-sandbox','--no-first-run','--no-default-browser-check','--disable-cache',
-    '--enable-unsafe-swiftshader','--use-gl=swiftshader',`--user-data-dir=${profile}`,'--remote-debugging-port=0','about:blank',
-  ];
-  const child=spawn(chrome,args,{stdio:['ignore','ignore','pipe'],windowsHide:true});
-  let stderr='';
-  const browserWs=await new Promise((resolvePromise,reject)=>{
-    const timer=setTimeout(()=>reject(new Error('Chrome DevTools endpoint did not start.')),12000);
-    child.stderr.on('data',(chunk)=>{
-      stderr=(stderr+String(chunk)).slice(-64000);
-      const match=/DevTools listening on (ws:\/\/[^\s]+)/u.exec(stderr);
-      if(match){clearTimeout(timer);resolvePromise(match[1]);}
-    });
-    child.once('error',(error)=>{clearTimeout(timer);reject(error);});
-    child.once('exit',(code)=>{clearTimeout(timer);reject(new Error(`Chrome exited early: ${code}\n${stderr.slice(-4000)}`));});
-  });
-  return {child,profile,browserWs,getStderr:()=>stderr};
+  let lastError=null;
+  for(let attempt=1;attempt<=2;attempt++){
+    const profile=await mkdtemp(join(tmpdir(),'p2lrn-local-viewer-'));
+    const args=[
+      '--headless=new','--no-sandbox','--no-first-run','--no-default-browser-check','--disable-cache',
+      '--enable-unsafe-swiftshader','--use-gl=swiftshader',`--user-data-dir=${profile}`,'--remote-debugging-port=0','about:blank',
+    ];
+    const child=spawn(chrome,args,{stdio:['ignore','ignore','pipe'],windowsHide:true});
+    let stderr='';
+    try{
+      const browserWs=await new Promise((resolvePromise,reject)=>{
+        const timer=setTimeout(()=>reject(new Error('Chrome DevTools endpoint did not start.')),12000);
+        child.stderr.on('data',(chunk)=>{
+          stderr=(stderr+String(chunk)).slice(-64000);
+          const match=/DevTools listening on (ws:\/\/[^\s]+)/u.exec(stderr);
+          if(match){clearTimeout(timer);resolvePromise(match[1]);}
+        });
+        child.once('error',(error)=>{clearTimeout(timer);reject(error);});
+        child.once('exit',(code)=>{clearTimeout(timer);reject(new Error(`Chrome exited early: ${code}\n${stderr.slice(-4000)}`));});
+      });
+      return {child,profile,browserWs,getStderr:()=>stderr};
+    }catch(error){
+      lastError=error;
+      try{if(child.exitCode===null)child.kill();}catch{}
+      try{await rm(profile,{recursive:true,force:true});}catch{}
+      if(attempt===2||!/Chrome exited early: 0/u.test(String(error?.message??error)))throw error;
+      await sleep(500);
+    }
+  }
+  throw lastError??new Error('Browser launch failed.');
 }
 
 async function connectPage(browserWs){
