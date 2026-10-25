@@ -1,4 +1,4 @@
-import {createDefaultComponentRegistry, CAPABILITY_ACTION_COMPONENT} from '../component-registry.js';
+import {createDefaultComponentRegistry, CAPABILITY_ACTION_COMPONENT, COLLABORATION_COMPONENT} from '../component-registry.js';
 import {validateNativeComposite} from '../native-composite-core.js';
 import {HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION, capabilityRequirements} from '../capability-broker.js';
 
@@ -214,10 +214,10 @@ export class P2LRNStudioDocument{
     if(profile)this.#ensureProfile(String(profile));this.changeCount+=1;return activity;
   }
 
-  addRemoteResource(parentId=this.rootId,{title='Enlace',language='es',url,mediaType='text/html',profile=null,activityType='https://p2lrn.org/type/resource',renderer=null}={}){
+  addRemoteResource(parentId=this.rootId,{title='Enlace',language='es',url,mediaType='text/html',profile=null,activityType='https://p2lrn.org/type/resource',renderer=null,expectedDigest=null}={}){
     const parent=this.#activityParent(parentId);
     const href=new URL(String(url)).href,resourceId='urn:uuid:'+crypto.randomUUID(),activityId='urn:uuid:'+crypto.randomUUID(),representationId='urn:uuid:'+crypto.randomUUID();
-    const representation={id:representationId,role:'primary',location:{type:'remote',href},mediaType:String(mediaType||'text/html')};if(profile)representation.profile=String(profile);
+    const location={type:'remote',href};if(expectedDigest!=null){const digest=String(expectedDigest).trim().toLowerCase();if(!/^sha256:[0-9a-f]{64}$/.test(digest))throw new Error('expectedDigest debe ser sha256: seguido de 64 caracteres hexadecimales.');location.expectedDigest=digest;}const representation={id:representationId,role:'primary',location,mediaType:String(mediaType||'text/html')};if(profile)representation.profile=String(profile);
     const resource={id:resourceId,type:'resource',title:{[language]:String(title||'Enlace')},representations:[representation]};
     const activity={id:activityId,type:'activity',activityType:String(activityType||'https://p2lrn.org/type/resource'),title:{[language]:String(title||'Enlace')},resource:resourceId};
     if(renderer)activity.extensions={'https://p2lrn.org/ext/renderer-preference/1':{preferred:String(renderer),required:false,version:'1'}};
@@ -332,7 +332,26 @@ export class P2LRNStudioDocument{
     const activity=this.addEmbeddedResource(parentId,{title:componentTitle,language,filename:'component.json',mediaType:COMPONENT_MEDIA_TYPE,bytes:encoder.encode(JSON.stringify(payload,null,2)+'\n'),profile:COMPONENT_PROFILE,activityType:COMPONENT_ACTIVITY_TYPE});
     if(descriptor.id===CAPABILITY_ACTION_COMPONENT){
       this.setHostCapabilities(activity.id,[{id:payload.data.capability,required:payload.data.required===true,operations:[payload.data.operation],context:['component.input'],description:'Operación solicitada por un componente conectado.'}]);
+    }else if(descriptor.id===COLLABORATION_COMPONENT){
+      this.setHostCapabilities(activity.id,[{id:'collaboration.room',required:payload.data.required===true,operations:['join','send','listen','snapshot','leave'],context:['component.input'],description:'Sala colaborativa resuelta por el host.',fallback:'individual'}]);
     }
+    return activity;
+  }
+
+  addCollaborationActivity(parentId=this.rootId,{mode='poll',title=null,language='es'}={}){
+    const normalized=['poll','board','peer-review'].includes(mode)?mode:'poll';
+    const names={poll:'Votación en directo',board:'Pizarra compartida','peer-review':'Revisión entre pares'};
+    const activity=this.addNativeComponent(parentId,{componentId:COLLABORATION_COMPONENT,title:title||names[normalized],language});
+    const target=this.structuredJsonForActivity(activity.id);
+    if(!target)return activity;
+    const base={mode:normalized,room:'main',heading:title||names[normalized],fallbackText:'La colaboración no está disponible. Puedes continuar de forma individual.',required:false};
+    if(normalized==='poll')Object.assign(base,{prompt:'Elige una opción',options:[{id:'a',label:'Opción A'},{id:'b',label:'Opción B'}],allowChange:true,showResults:true});
+    if(normalized==='board')base.prompt='Comparte una idea con el grupo.';
+    if(normalized==='peer-review')base.prompt='Comparte tu aportación y comenta la de otros participantes.';
+    const payload=JSON.parse(decoder.decode(this.payloadOverrides.get(target.path)));
+    payload.data=base;payload.title=title||names[normalized];
+    this.setStructuredJson(activity.id,payload);
+    this.setHostCapabilities(activity.id,[{id:'collaboration.room',required:false,operations:['join','send','listen','snapshot','leave'],context:['component.input'],description:'Sala colaborativa resuelta por el host.',fallback:'individual'}]);
     return activity;
   }
 
