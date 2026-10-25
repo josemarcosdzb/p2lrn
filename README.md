@@ -7,6 +7,8 @@ Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeS
 - `packages/toolkit/`: Core, validación, ZIP/ZIP64, `contentRoot`, Creator, API estable de autoría para Studio, Reader de paquetes, **Reader documental ligero autónomo** (`@p2lrn/toolkit/document-reader`), servidor local, conversión/preservación de paquetes externos, cuestionarios/componentes/composites, delta y firmas Ed25519.
 - `packages/player/`: Web SDK/browser runtime, renderers, Service Worker, hosts aislados SCORM/H5P/paquetes externos y tipos TypeScript. Su `npm pack` reconstruye `dist/` desde el runtime canónico e incluye `h5p-standalone` fijado.
 - `packages/h5p-libraries/`: corpus compartido de librerías H5P, separado del Player y fijado a un snapshot reproducible. Contiene runtime compartido, nunca cursos de usuarios.
+- Colaboración conectada ligera: el componente nativo de votación/pizarra/peer review usa `collaboration.room` con `join`, `send`, `listen`, `snapshot` y `leave`; identidad, transporte y persistencia permanecen en el host. El Player incluye un provider en memoria para pruebas/local, no como servidor de producción.
+- Analítica pedagógica: `p2lrn:interaction` añade cambios de respuesta y eventos de reproducción/pausa/seek sin convertir la telemetría genérica en captura de texto o coordenadas.
 - `schemas/`, `profiles/`, `spec/`, `integration/`: material canónico con namespace P2LRN.
 - `examples/canonical/`: 18 paquetes `.p2lrn` validados.
 - `examples/legacy-alpha15/`: los 17 paquetes `.p2rln` usados para comprobar retrocompatibilidad.
