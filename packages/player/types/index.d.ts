@@ -97,6 +97,13 @@ export function capabilityOperationAllowed(requests: readonly P2LRNHostCapabilit
 export function validateCapabilityGraph(graph: unknown): true;
 export function createCapabilityBroker(options?: P2LRNCapabilityBrokerOptions): CapabilityBroker;
 export function createToolCapabilityProvider(options: P2LRNToolCapabilityProviderOptions): P2LRNCapabilityProvider;
+export const COLLABORATION_CAPABILITY: "collaboration.room";
+export const COLLABORATION_OPERATIONS: readonly ["join","send","listen","snapshot","leave"];
+export interface P2LRNMemoryCollaborationHub {
+  provider(options?: {participantId?: string | null}): P2LRNCapabilityProvider;
+  inspect(): readonly unknown[];
+}
+export function createMemoryCollaborationHub(options?: {maxEvents?: number; clock?(): number}): P2LRNMemoryCollaborationHub;
 
 export interface P2LRNOfflineStore {
   getState(key: string): Promise<unknown>;
@@ -224,6 +231,9 @@ export interface P2LRNPublicAPI {
   readonly createHostAdapter: typeof createHostAdapter;
   readonly createCapabilityBroker: typeof createCapabilityBroker;
   readonly createToolCapabilityProvider: typeof createToolCapabilityProvider;
+  readonly createMemoryCollaborationHub: typeof createMemoryCollaborationHub;
+  readonly COLLABORATION_CAPABILITY: typeof COLLABORATION_CAPABILITY;
+  readonly COLLABORATION_OPERATIONS: typeof COLLABORATION_OPERATIONS;
   readonly createOfflineHostAdapter: typeof createOfflineHostAdapter;
   readonly createMemoryOfflineStore: typeof createMemoryOfflineStore;
   readonly createIndexedDbOfflineStore: typeof createIndexedDbOfflineStore;
