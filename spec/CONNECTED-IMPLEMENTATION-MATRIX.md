@@ -121,14 +121,14 @@ For “connect it and it knows what to do”, the most important missing piece i
 
 | Capability | Status | Current evidence | What remains |
 | --- | --- | --- | --- |
-| Declare `collaboration.room` | **IMPLEMENTED** | Host Capability extension plus `COLLABORATION.md` five-operation contract | production provider remains host-selected |
-| Broker can bind collaboration provider | **IMPLEMENTED** | generic provider model plus `createMemoryCollaborationHub()` reference provider | production persistence/transport remains host-specific |
+| Declare `collaboration.room` | **IMPLEMENTED** | Host Capability extension plus `COLLABORATION.md` five-operation contract | preserve the transport-neutral package contract |
+| Broker can bind collaboration provider | **IMPLEMENTED** | memory reference plus `createHttpCollaborationProvider()` production HTTP binding | host selects its endpoint/auth policy |
 | Native collaborative activity | **IMPLEMENTED** | one native collaboration component with poll, board and peer-review modes | independent interoperability evidence |
-| Presence/room membership | **IMPLEMENTED REFERENCE** | `join/listen/snapshot/leave` and opaque participant/session IDs | production host owns identity and distributed presence |
+| Presence/room membership | **IMPLEMENTED** | reference hub plus authenticated HTTP handler; sessions remain bound to host-resolved actors/scopes | distributed presence storage remains host-specific |
 | Shared board state | **IMPLEMENTED REFERENCE** | bounded semantic board events over the same room contract | no character-level CRDT by design |
-| Live poll synchronization | **IMPLEMENTED REFERENCE** | poll renderer + room provider + snapshot/listen recovery + two-Player browser E2E | production service implementation |
-| Peer review / peer learning | **IMPLEMENTED REFERENCE** | native submission/comment flow with host-assigned opaque participant IDs | richer assignment/rubric policies can remain host workflows |
-| Transport/auth/persistence | **HOST-EXTERNAL** | correctly excluded from package | reference service can be supplied separately |
+| Live poll synchronization | **IMPLEMENTED** | two real Players synchronize through `createHttpCollaborationProvider()` and authenticated Node handler in browser E2E | production deployment/storage topology remains host-specific |
+| Peer review / peer learning | **IMPLEMENTED REFERENCE** | native submission/comment flow over the same five-operation provider contract with host-owned identity | richer assignment/rubric policies can remain host workflows |
+| Transport/auth boundary | **IMPLEMENTED** | HTTP provider + server handler require origin allowlist, authentication, trusted-context resolution and authorization; package cannot set participant identity | durable multi-node persistence remains host-specific |
 
 ## 7. Security boundaries for connected architecture
 
@@ -151,10 +151,10 @@ These are engineering estimates for the specific Connected Architecture, not ove
 | Host/local runtime | **85%** | Host Adapter, offline outbox, package cache and active-time tracker work; authoritative server is external |
 | Resource Layer | **72%** | digest-pinned resolution/fallback, reference SHA-256 dedup store and Studio authoring exist; persistent searchable multi-user catalog remains |
 | Capability Layer | **75%** | negotiation, security, tool mapping and connected component work; semantic context and provider reference bindings remain |
-| Collaboration | **72%** | five-operation contract, reference provider, native poll/board/peer-review UI and two-Player E2E exist; production distributed persistence remains host-side |
+| Collaboration | **82%** | five-operation contract, native UI, memory reference, production HTTP provider/server security boundary and two-Player HTTP E2E exist; distributed durable persistence remains host-side |
 | Learning events/analytics | **72%** | event envelope, active time, explicit native assessment attempts, answer changes, media behavior and collaboration interactions exist; broader 3D/resource-consultation vocabulary and aggregation remain |
 
-The connected architecture is now roughly **70–75% implemented at reference level**. Production persistence, searchable catalogs, richer semantic context and independent interoperability remain deliberately separate from the portable package.
+The connected architecture is now roughly **75–80% implemented at reference/adapter level**. Durable production persistence, searchable catalogs, richer semantic context and independent interoperability remain deliberately separate from the portable package.
 
 ## 9. What must not be changed while completing this architecture
 
@@ -188,32 +188,21 @@ The digest store, verified resolver and Studio authoring path are implemented at
 
 Demonstrate durable state keyed by host learner/attempt + P2LRN context, `offlineDeliveryId` idempotency, authoritative score/event ingestion and explicit multi-device conflict policy.
 
-### P2 — Production collaboration provider
+### P2 — Durable collaboration deployment
 
-The portable five-operation contract, poll/board/peer-review renderer, fallback and two-Player E2E are implemented. A production host can now add durable rooms, authentication and scale without changing the `.p2lrn` format or its native component data.
+The production HTTP adapter boundary is now implemented and tested: browser provider, authenticated server handler, trusted context resolution, authorization and two-Player HTTP E2E. The remaining deployment work is the Host's durable/distributed room persistence, observability and scale policy without changing the `.p2lrn` format.
 
 ### P2 — Accessibility and interoperability hardening
 
 Keep adding keyboard/screen-reader/browser evidence to native renderers and maintain the existing SCORM/H5P/cmi5/QTI/Common Cartridge regression gates. Do not claim WCAG certification or full external-standard conformance until their dedicated test corpora pass.
 
-## 11. Evidence run for this audit
+## 11. Release evidence gate
 
-Targeted Node verification on 2026-10-24:
+The release workflow now has an executable connected E2E matrix in `scripts/verify-connected-e2e-matrix.mjs`. It runs after the source tests, local browser E2E, Edge UI verification, installed npm tarballs, installed-package browser smoke, twelve-game visual gate, independent Express Host, generated site and npm/CDN byte-identity gate.
 
-- `host-capability-offline.test.mjs`
-- `progression.test.mjs`
-- `package-cache.test.mjs`
-- `remote-resource-fallback.test.mjs`
-- `studio-browser-export.test.mjs`
+A passing run writes `.connected-e2e-matrix.json` and preserves it with the Windows evidence. The matrix requires explicit evidence for authoring round-trip, authenticated production HTTP collaboration, two-Player synchronization, shared-resource deduplication, rich analytics, accessibility checks, offline/cache playback, external-format regression, installed npm use, all native games, independent Host integration and distribution identity.
 
-Result: **27/27 PASS**.
-
-Browser verification with `scripts/verify-local-viewer.mjs` also passed with `failures: []` and proved:
-
-- a Studio-authored capability-action package invokes a host tool mapping and receives `Pista MCP: ...`;
-- the raw broker is not exposed to package-authored DOM;
-- a verified package is persisted in the package cache;
-- after the source package is removed, the cached package reopens through the P2LRN static-resource bridge.
+The prior baseline run `40190933100` was green before the production HTTP collaboration additions. It is not used as evidence for those newer changes; the release candidate must be restaged only from the new exact green `main` SHA.
 
 ## 12. Final verdict
 
