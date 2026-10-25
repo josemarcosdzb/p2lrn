@@ -68,7 +68,7 @@ The largest remaining product-level gaps are:
 | Progress/score/completion/navigation events | **IMPLEMENTED** | first-party Player/renderers emit core families | coverage differs by renderer |
 | Attention/active-time events | **IMPLEMENTED** | tracker emits coarse privacy-preserving state | host decides whether to enable/use |
 | Rich learning-event semantics | **PARTIAL** | `p2lrn:interaction` now covers answer changes, media play/pause/seek/end and native collaboration actions | still missing a broader standardized vocabulary for detailed 3D interaction, resource consultation and misconception evidence |
-| Universal pedagogical attempt event | **MISSING** | assessment configs can limit attempts | `p2lrn:answer` is deliberately not defined as one pedagogical attempt |
+| Native questionnaire attempt lifecycle | **IMPLEMENTED** | `p2lrn:attempt` emits explicit started/resumed/submitted phases without raw answers | other activity families need their own explicit attempt semantics before reusing it |
 | Global analytics aggregation/dashboard | **HOST-EXTERNAL** | event stream exists | no first-party analytics/LRS-like server here |
 
 ## 4. Shared resources and deduplication
@@ -152,7 +152,7 @@ These are engineering estimates for the specific Connected Architecture, not ove
 | Resource Layer | **72%** | digest-pinned resolution/fallback, reference SHA-256 dedup store and Studio authoring exist; persistent searchable multi-user catalog remains |
 | Capability Layer | **75%** | negotiation, security, tool mapping and connected component work; semantic context and provider reference bindings remain |
 | Collaboration | **72%** | five-operation contract, reference provider, native poll/board/peer-review UI and two-Player E2E exist; production distributed persistence remains host-side |
-| Learning events/analytics | **68%** | event envelope, active time, answer changes, media behavior and collaboration interactions exist; broader 3D/resource/attempt vocabulary and aggregation remain |
+| Learning events/analytics | **72%** | event envelope, active time, explicit native assessment attempts, answer changes, media behavior and collaboration interactions exist; broader 3D/resource-consultation vocabulary and aggregation remain |
 
 The connected architecture is now roughly **70–75% implemented at reference level**. Production persistence, searchable catalogs, richer semantic context and independent interoperability remain deliberately separate from the portable package.
 
@@ -172,38 +172,29 @@ The connected architecture is now roughly **70–75% implemented at reference le
 
 ## 10. Recommended implementation order
 
-### P0 — Semantic context for capabilities
+### P0 — Semantic context for connected capabilities
 
-Add a trusted context resolver that resolves only context keys explicitly requested by the package and explicitly allowed by the host.
+Keep the existing broker boundary and add a trusted resolver for explicitly requested/allowed context keys. Do not expose raw learner state or the broker itself. Useful next keys are objectives, current question, score/progression and opt-in active time.
 
-First useful keys:
+### P0 — Finish the rich learning-event vocabulary
 
-- `activity.objectives`
-- `current_question`
-- `current_answer`
-- `previous_answers`
-- `score`
-- `progression.state`
-- `attempts` only after attempt semantics are standardized
-- `active_time` only when host policy allows it
+The runtime now has explicit questionnaire attempts, answer changes, media play/pause/seek/end and collaboration interactions. Next standardize resource consultation, native-game/3D interactions and abandonment/resume semantics without falling back to generic click logging.
 
-The renderer must continue receiving only `invokeCapability()`, never raw learner/host state.
+### P1 — Persistent shared-resource catalog
 
-### P0 — Learning Event Model additions
-
-Define explicit event/evidence semantics for assessment attempt started/submitted, answer changed, media play/pause/seek/completed, resource consulted, native-game and 3D interaction/result, and activity abandonment/resume. Do not infer these from generic clicks or `p2lrn:answer`.
-
-### P1 — Shared Resource Library reference host
-
-Build a reference host around the existing resource contract: `sha256 -> verified object` store, upload/verify/deduplicate, `resolveResourceUrl()` adapter, seekable AV delivery, optional catalog/search capability, and a Studio picker that can also embed a fallback.
+The digest store, verified resolver and Studio authoring path are implemented at reference level. Add persistence/search on the host side while preserving the same `sha256 -> verified object` contract and self-contained embedded fallback.
 
 ### P1 — Authoritative Host reference
 
-Demonstrate state persistence keyed by host learner/attempt + P2LRN context, `offlineDeliveryId` idempotency, authoritative score storage, runtime-event ingestion, explicit synchronization policy and multi-device conflict policy.
+Demonstrate durable state keyed by host learner/attempt + P2LRN context, `offlineDeliveryId` idempotency, authoritative score/event ingestion and explicit multi-device conflict policy.
 
-### P2 — Collaboration profile + provider
+### P2 — Production collaboration provider
 
-After capability/context semantics are stable, define one small native collaborative activity first, preferably poll or board, keep room identity/auth/presence/persistence in the host provider, and add a reference `collaboration.room` provider.
+The portable five-operation contract, poll/board/peer-review renderer, fallback and two-Player E2E are implemented. A production host can now add durable rooms, authentication and scale without changing the `.p2lrn` format or its native component data.
+
+### P2 — Accessibility and interoperability hardening
+
+Keep adding keyboard/screen-reader/browser evidence to native renderers and maintain the existing SCORM/H5P/cmi5/QTI/Common Cartridge regression gates. Do not claim WCAG certification or full external-standard conformance until their dedicated test corpora pass.
 
 ## 11. Evidence run for this audit
 
