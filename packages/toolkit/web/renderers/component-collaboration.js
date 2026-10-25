@@ -25,10 +25,11 @@ function fallback(container,data,eventTarget,adapter,context){
   status.setAttribute('role','status');shell.append(status);
   if(data.mode==='poll'){
     const field=document.createElement('fieldset');field.className='p2lrn-collaboration-poll';
+    const radioGroup='p2lrn-local-'+String(context?.entityId??'activity').replace(/[^A-Za-z0-9_-]/g,'-');
     field.append(el('legend',null,data.prompt||'Elige una opción'));
     for(const option of data.options??[]){
       const label=el('label','p2lrn-collaboration-option');
-      const input=document.createElement('input');input.type='radio';input.name='p2lrn-local-poll';input.value=option.id;
+      const input=document.createElement('input');input.type='radio';input.name=radioGroup;input.value=option.id;
       label.append(input,document.createTextNode(option.label));field.append(label);
     }
     shell.append(field,button('Guardar respuesta individual',()=>{
@@ -86,25 +87,32 @@ export async function render({container,componentInstance,capabilities=[],invoke
   const applyMany=(events)=>{for(const event of events??[])apply(event);};
 
   const send=async(type,payload)=>{
-    const result=await invokeCapability(CAPABILITY,'send',{sessionId:session.sessionId,type,payload});
-    if(result?.event)apply(result.event);
-    presence=Number(result?.presence??presence);cursor=Math.max(cursor,Number(result?.revision??cursor));renderView();
-    return result;
+    try{
+      const result=await invokeCapability(CAPABILITY,'send',{sessionId:session.sessionId,type,payload});
+      if(result?.event)apply(result.event);
+      presence=Number(result?.presence??presence);cursor=Math.max(cursor,Number(result?.revision??cursor));renderView();
+      return result;
+    }catch(error){
+      status.textContent='No se pudo sincronizar. Se volverá a intentar al recibir cambios.';
+      dispatchRuntimeEvent(eventTarget,'p2lrn:error',{phase:'collaboration-send',mode:data.mode,error:String(error?.message??error)},context,{adapter});
+      return null;
+    }
   };
 
   const renderPoll=()=>{
     const field=document.createElement('fieldset');field.className='p2lrn-collaboration-poll';
+    const radioGroup='p2lrn-collab-'+String(context?.entityId??'activity').replace(/[^A-Za-z0-9_-]/g,'-');
     field.append(el('legend',null,data.prompt||'Elige una opción'));
     for(const option of data.options??[]){
       const label=el('label','p2lrn-collaboration-option');
-      const radio=document.createElement('input');radio.type='radio';radio.name='p2lrn-collaboration-poll';radio.value=option.id;radio.checked=myVote===option.id;
+      const radio=document.createElement('input');radio.type='radio';radio.name=radioGroup;radio.value=option.id;radio.checked=myVote===option.id;
       if(myVote&&!data.allowChange)radio.disabled=true;
       label.append(radio,document.createTextNode(option.label));field.append(label);
     }
     const submit=button(myVote&&data.allowChange?'Cambiar voto':'Enviar voto',async()=>{
       const selected=field.querySelector('input:checked');if(!selected)return;
       submit.disabled=true;
-      try{await send('poll.vote',{choiceId:selected.value});emit('collaboration-vote',{choiceId:selected.value});}
+      try{const sent=await send('poll.vote',{choiceId:selected.value});if(sent)emit('collaboration-vote',{choiceId:selected.value});}
       finally{submit.disabled=false;}
     });
     if(myVote&&!data.allowChange)submit.disabled=true;
@@ -129,14 +137,14 @@ export async function render({container,componentInstance,capabilities=[],invoke
     const area=document.createElement('textarea');area.rows=3;area.maxLength=4000;label.append(area);
     const add=button('Compartir',async()=>{
       const text=area.value.trim();if(!text)return;add.disabled=true;
-      try{const itemId=globalThis.crypto?.randomUUID?.()??('item-'+Date.now());await send('board.upsert',{itemId,text});area.value='';emit('collaboration-board-add');}
+      try{const itemId=globalThis.crypto?.randomUUID?.()??('item-'+Date.now());const sent=await send('board.upsert',{itemId,text});if(sent){area.value='';emit('collaboration-board-add');}}
       finally{add.disabled=false;}
     });
     form.append(label,add);body.append(form);
     const list=el('ul','p2lrn-collaboration-board');
     for(const item of board.values()){
       const li=el('li','p2lrn-collaboration-note');li.append(el('p',null,item.text));
-      if(item.participantId===session.participantId)li.append(button('Eliminar',()=>void send('board.delete',{itemId:item.id}).then(()=>emit('collaboration-board-delete')),'p2lrn-collaboration-link'));
+      if(item.participantId===session.participantId)li.append(button('Eliminar',()=>void send('board.delete',{itemId:item.id}).then((sent)=>{if(sent)emit('collaboration-board-delete');}),'p2lrn-collaboration-link'));
       list.append(li);
     }
     body.append(list);
@@ -149,7 +157,7 @@ export async function render({container,componentInstance,capabilities=[],invoke
       const submit=button('Enviar aportación',async()=>{
         const text=area.value.trim();if(!text)return;
         const submissionId=globalThis.crypto?.randomUUID?.()??('submission-'+Date.now());
-        await send('peer.submission',{submissionId,text});emit('collaboration-peer-submit');
+        const sent=await send('peer.submission',{submissionId,text});if(sent)emit('collaboration-peer-submit');
       });
       body.append(label,submit);
     }else body.append(el('p','p2lrn-collaboration-confirm','Tu aportación está compartida.'));
@@ -160,7 +168,7 @@ export async function render({container,componentInstance,capabilities=[],invoke
       others.forEach((item,index)=>{
         const card=el('article','p2lrn-collaboration-peer-card');card.append(el('strong',null,'Aportación '+(index+1)),el('p',null,item.text));
         const area=document.createElement('textarea');area.rows=3;area.maxLength=5000;area.setAttribute('aria-label','Comentario para la aportación '+(index+1));
-        const sendReview=button('Enviar comentario',async()=>{const text=area.value.trim();if(!text)return;await send('peer.review',{submissionId:item.id,text});area.value='';emit('collaboration-peer-review');});
+        const sendReview=button('Enviar comentario',async()=>{const text=area.value.trim();if(!text)return;const sent=await send('peer.review',{submissionId:item.id,text});if(sent){area.value='';emit('collaboration-peer-review');}});
         card.append(area,sendReview);section.append(card);
       });
       body.append(section);
