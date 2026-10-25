@@ -1,0 +1,49 @@
+name: P2LRN MCP Windows verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'integration/mcp/**'
+      - '.github/workflows/p2lrn-mcp.yml'
+      - 'packages/toolkit/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mcp-windows:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Build existing P2LRN Toolkit
+        working-directory: packages/toolkit
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install optional MCP integration
+        working-directory: integration/mcp
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test real MCP stdio tools, draft safety and export
+        working-directory: integration/mcp
+        run: |
+          node --check service.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check server.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check install-client.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
