@@ -1,3 +1,4 @@
+import {dispatchRuntimeEvent} from '../runtime-events.js';
 export const acceptsRemoteLocation = true;
 
 function fail(code, message) {
@@ -6,7 +7,7 @@ function fail(code, message) {
   return error;
 }
 
-export async function render({container, representation, resolveResourceUrl}) {
+export async function render({container, representation, resolveResourceUrl, eventTarget, adapter, context = {}}) {
   const media = String(representation?.mediaType ?? '').split(';', 1)[0].trim().toLowerCase();
   const location = representation?.location;
   if (!/^(image|audio|video)\//.test(media)) throw fail('P2LRN_RENDERER_INCOMPATIBLE', `Remote media renderer does not support ${representation?.mediaType ?? 'missing media type'}.`);
@@ -52,6 +53,15 @@ export async function render({container, representation, resolveResourceUrl}) {
   node.className = 'p2lrn-media';
   node.referrerPolicy = 'no-referrer';
   node.src = resolved.url;
+  if (media.startsWith('audio/') || media.startsWith('video/')) {
+    let lastTime=0;
+    const emit=(action,extra={})=>dispatchRuntimeEvent(eventTarget,'p2lrn:interaction',{action,mediaType:media,currentTime:Number.isFinite(node.currentTime)?Math.round(node.currentTime*10)/10:null,duration:Number.isFinite(node.duration)?Math.round(node.duration*10)/10:null,...extra},context,{adapter});
+    node.addEventListener('play',()=>emit('media-play'));
+    node.addEventListener('pause',()=>{if(!node.ended)emit('media-pause');});
+    node.addEventListener('seeking',()=>emit('media-seek',{fromTime:Math.round(lastTime*10)/10}));
+    node.addEventListener('timeupdate',()=>{lastTime=node.currentTime;});
+    node.addEventListener('ended',()=>emit('media-ended'));
+  }
   container.append(node);
   return {destroy() { node.removeAttribute('src'); node.load?.(); container.replaceChildren(); }};
 }
