@@ -7,6 +7,7 @@ import {extname, join, resolve, sep} from 'node:path';
 import {createP2LRNStudioDocument} from '../packages/toolkit/web/studio/new-document.js';
 import {exportP2LRNPackage} from '../packages/toolkit/web/studio/package-export.js';
 import {buildQuestionnaireGame} from '../packages/toolkit/web/questionnaire-games-core.js';
+import {createP2LRNCollaborationHandler} from '../packages/player/server/collaboration-http.mjs';
 import {tmpdir} from 'node:os';
 
 const root=resolve(process.cwd());
@@ -14,6 +15,7 @@ const siteRoot=join(root,'.netlify-cdn');
 const viewerPath=join(siteRoot,'demo','viewer.js');
 const APP_ORIGIN='http://127.0.0.1:8765';
 const RUNTIME_ORIGIN='http://127.0.0.1:8766';
+const COLLABORATION_ORIGIN='http://127.0.0.1:8767';
 
 function invariant(value,message){if(!value)throw new Error(message);}
 const sleep=(ms)=>new Promise((resolvePromise)=>setTimeout(resolvePromise,ms));
@@ -66,6 +68,60 @@ async function listen(port){
   await new Promise((resolvePromise,reject)=>{
     server.once('error',reject);
     server.listen(port,'127.0.0.1',resolvePromise);
+  });
+  return server;
+}
+
+function createQaCollaborationService(){
+  const rooms=new Map(),sessions=new Map();let sequence=0;
+  const roomFor=(context,room)=>{
+    const key=[context.courseScope,context.contentRoot,context.entityId,room].join('|');
+    if(!rooms.has(key))rooms.set(key,{revision:0,participants:new Map(),events:[]});
+    return {key,state:rooms.get(key)};
+  };
+  const current=({actor,input,context})=>{
+    const session=sessions.get(String(input.sessionId??''));
+    if(!session)throw Object.assign(new Error('Session required.'),{code:'P2LRN_COLLABORATION_SESSION_REQUIRED',statusCode:409});
+    if(session.actor!==actor.id)throw Object.assign(new Error('Session actor mismatch.'),{code:'P2LRN_COLLABORATION_SESSION_ACTOR',statusCode:403});
+    const scoped=roomFor(context,session.room);
+    if(scoped.key!==session.key)throw Object.assign(new Error('Session scope mismatch.'),{code:'P2LRN_COLLABORATION_SCOPE_MISMATCH',statusCode:403});
+    return {session,room:scoped.state};
+  };
+  return {
+    async join({actor,input,context}){
+      const room=String(input.room??'main'),scoped=roomFor(context,room),sessionId='qa-'+(++sequence);
+      sessions.set(sessionId,{actor:actor.id,room,key:scoped.key});scoped.state.participants.set(sessionId,actor.id);
+      return {sessionId,participantId:actor.id,revision:scoped.state.revision,presence:scoped.state.participants.size};
+    },
+    async send(args){
+      const {actor,input}=args,{room}=current(args);room.revision+=1;
+      const event={revision:room.revision,type:String(input.type??''),participantId:actor.id,payload:input.payload??{}};
+      room.events.push(event);return {revision:room.revision,presence:room.participants.size,event};
+    },
+    async listen(args){
+      const {input}=args,{room}=current(args),cursor=Math.max(0,Number(input.cursor)||0);
+      return {revision:room.revision,presence:room.participants.size,events:room.events.filter((event)=>event.revision>cursor),hasMore:false};
+    },
+    async snapshot(args){const {room}=current(args);return {revision:room.revision,presence:room.participants.size,events:room.events};},
+    async leave(args){const {input}=args,{room}=current(args);room.participants.delete(String(input.sessionId));sessions.delete(String(input.sessionId));return {left:true,revision:room.revision,presence:room.participants.size};},
+  };
+}
+
+async function listenCollaboration(port){
+  const handler=createP2LRNCollaborationHandler({
+    allowedOrigins:[APP_ORIGIN],
+    authenticate:(req)=>{const id=String(req.headers.authorization??'').replace(/^Bearer\s+/u,'').trim();return id?{id}:null;},
+    resolveContext:({clientContext})=>{
+      const contentRoot=String(clientContext.contentRoot??''),entityId=String(clientContext.entityId??'');
+      if(!/^sha256:[0-9a-f]{64}$/u.test(contentRoot)||!entityId)throw Object.assign(new Error('Invalid package collaboration context.'),{statusCode:403,code:'P2LRN_COLLABORATION_CONTEXT_DENIED'});
+      return {courseScope:'qa-course',contentRoot,entityId};
+    },
+    authorize:({actor,context})=>Boolean(actor?.id&&context.courseScope==='qa-course'),
+    service:createQaCollaborationService(),
+  });
+  const server=createServer((req,res)=>void handler(req,res));
+  await new Promise((resolvePromise,reject)=>{
+    server.once('error',reject);server.listen(port,'127.0.0.1',resolvePromise);
   });
   return server;
 }
@@ -756,28 +812,33 @@ async function verifyConnectedArchitecture(cdp,fixture){
   invariant(capability.brokerExposed===false,'Connected component exposed the host broker to package-authored DOM.');
 
   const collaboration=await evalTop(cdp,`(async()=>{
+    if(typeof P2LRN.createHttpCollaborationProvider!=='function')throw new Error('Production collaboration HTTP provider missing.');
     if(typeof P2LRN.createMemoryCollaborationHub!=='function')throw new Error('Collaboration reference host helper missing.');
-    const hub=P2LRN.createMemoryCollaborationHub();
     const host=document.createElement('div');host.id='collaboration-e2e';host.style.display='grid';host.style.gridTemplateColumns='1fr 1fr';host.style.gap='16px';document.body.append(host);
     const make=(id,participant)=>{
       const player=document.createElement('p2lrn-player');player.id=id;
-      player.capabilityBroker=P2LRN.createCapabilityBroker({providers:[hub.provider({participantId:participant})],authorize:({capabilityId})=>capabilityId==='collaboration.room'});
+      const provider=P2LRN.createHttpCollaborationProvider({
+        endpoint:${JSON.stringify(COLLABORATION_ORIGIN+'/collaboration')},
+        getHeaders:()=>({Authorization:'Bearer '+participant}),
+      });
+      player.capabilityBroker=P2LRN.createCapabilityBroker({providers:[provider],authorize:({capabilityId})=>capabilityId==='collaboration.room'});
       player.setAttribute('node',${JSON.stringify(fixture.collaborationActivityId)});
       player.setAttribute('src','/tests/collaboration-poll.p2lrn');
       host.append(player);return player;
     };
     const a=make('collab-a','learner-a'),b=make('collab-b','learner-b');
-    const wait=async(test,label)=>{for(let i=0;i<320;i++){const value=test();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw new Error(label+' timeout');};
+    const wait=async(test,label)=>{for(let i=0;i<360;i++){const value=test();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw new Error(label+' timeout');};
     await wait(()=>a.shadowRoot?.querySelector('.p2lrn-collaboration-poll')&&b.shadowRoot?.querySelector('.p2lrn-collaboration-poll'),'collaboration render');
     const radio=a.shadowRoot.querySelector('input[value="a"]');radio.click();
     a.shadowRoot.querySelector('.p2lrn-collaboration-button').click();
-    await wait(()=>b.shadowRoot?.querySelector('.p2lrn-collaboration-results')?.textContent?.includes('Opción A · 1'),'collaboration synchronization');
+    await wait(()=>b.shadowRoot?.querySelector('.p2lrn-collaboration-results')?.textContent?.includes('Opción A · 1'),'collaboration HTTP synchronization');
     const status=b.shadowRoot.querySelector('.p2lrn-collaboration-status')?.textContent||'';
     const result=b.shadowRoot.querySelector('.p2lrn-collaboration-results')?.textContent||'';
     const accessible=Boolean(b.shadowRoot.querySelector('fieldset legend')&&b.shadowRoot.querySelector('[role="status"][aria-live="polite"]'));
-    return {status,result,accessible};
+    return {status,result,accessible,transport:'http'};
   })()`);
-  invariant(collaboration.result.includes('Opción A · 1'),'Collaboration vote did not synchronize between two Players.');
+  invariant(collaboration.result.includes('Opción A · 1'),'Collaboration vote did not synchronize between two Players through the production HTTP provider.');
+  invariant(collaboration.transport==='http','Collaboration E2E did not use the production HTTP provider.');
   invariant(collaboration.accessible===true,'Collaboration renderer lost semantic accessibility controls.');
   await evalTop(cdp,"document.getElementById('collaboration-e2e')?.scrollIntoView({block:'center'})");
   await sleep(250);
@@ -837,7 +898,7 @@ async function verifyConnectedArchitecture(cdp,fixture){
   return Object.freeze({capability,collaboration,collaborationScreenshot,sharedResource,sharedResourceScreenshot,cached,offline});
 }
 
-let appServer=null,runtimeServer=null,chrome=null,cdp=null;
+let appServer=null,runtimeServer=null,collaborationServer=null,chrome=null,cdp=null;
 try{
   // Match build-site.mjs: the static Studio page imports the toolkit's canonical browser modules.
   // The CDN-only fixture does not materialize these until we copy them here.
@@ -856,6 +917,7 @@ try{
 
   appServer=await listen(8765);
   runtimeServer=await listen(8766);
+  collaborationServer=await listenCollaboration(8767);
   const chromePath=await findChrome();
   chrome=await launchChrome(chromePath);
   cdp=await connectPage(chrome.browserWs);
@@ -894,4 +956,5 @@ try{
   if(chrome?.profile)await rm(chrome.profile,{recursive:true,force:true}).catch(()=>{});
   await new Promise((resolvePromise)=>appServer?appServer.close(()=>resolvePromise()):resolvePromise());
   await new Promise((resolvePromise)=>runtimeServer?runtimeServer.close(()=>resolvePromise()):resolvePromise());
+  await new Promise((resolvePromise)=>collaborationServer?collaborationServer.close(()=>resolvePromise()):resolvePromise());
 }
