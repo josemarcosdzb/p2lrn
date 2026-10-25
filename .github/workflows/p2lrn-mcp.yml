@@ -31,6 +31,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify existing Toolkit authoring regression and imported entity order
+        working-directory: packages/toolkit
+        run: |
+          node --test test/authoring-studio-boundary.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Install optional MCP integration
         working-directory: integration/mcp
         run: |
