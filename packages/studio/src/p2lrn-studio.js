@@ -82,6 +82,7 @@ export class P2LRNStudioElement extends HTMLElement{
               <button type="button" data-add-kind="lesson" data-help="Crea una lección editable para redactar y dar formato al contenido del curso.">Lección</button>
               <button type="button" data-add-kind="file" data-help="Añade una imagen, vídeo, audio u otro recurso local al curso.">Archivo / multimedia</button>
               <button type="button" data-add-kind="url" data-help="Enlaza un recurso web externo sin copiarlo dentro del paquete.">URL</button>
+              <button type="button" data-add-kind="shared-resource" data-help="Referencia un recurso compartido por URL y SHA-256 para que el host pueda reutilizar una sola copia verificada.">Recurso compartido</button>
               <button type="button" data-add-kind="reader" data-help="Importa documentos como PDF, DOCX, PPTX, EPUB, TXT o Markdown mediante el servicio Reader de la plataforma.">Reader / documento</button>
               <button type="button" data-add-kind="external" data-help="Importa un paquete educativo existente como SCORM, H5P, cmi5, QTI, Common Cartridge o IMS Content Package.">Paquete educativo</button>
             </div></div>
@@ -238,6 +239,13 @@ export class P2LRNStudioElement extends HTMLElement{
     if(kind==='reader'){this.shadowRoot.querySelector('[data-reader-file]').click();return null;}
     if(kind==='external'){this.shadowRoot.querySelector('[data-external-file]').click();return null;}
     if(kind==='url'){const url=prompt('URL del recurso');if(!url)return null;return this.#selectCreated(this.#studio.addRemoteResource(this.#insertionParent(),{title:'Recurso web',url}));}
+    if(kind==='shared-resource'){
+      const url=prompt('URL lógica del recurso compartido');if(!url)return null;
+      const digest=prompt('SHA-256 esperado (sha256:...)');if(!digest)return null;
+      const mediaType=prompt('Tipo MIME','video/mp4')||'application/octet-stream';
+      const title=prompt('Título','Recurso compartido')||'Recurso compartido';
+      return this.#selectCreated(this.#studio.addRemoteResource(this.#insertionParent(),{title,url,mediaType,expectedDigest:digest}));
+    }
     if(kind==='questionnaire')return this.#selectCreated(this.#studio.addQuestionnaire(this.#insertionParent(),{title:'Cuestionario',language:'es'}));
     if(kind==='live-poll')return this.#selectCreated(this.#studio.addCollaborationActivity(this.#insertionParent(),{mode:'poll',language:'es'}));
     if(kind==='shared-board')return this.#selectCreated(this.#studio.addCollaborationActivity(this.#insertionParent(),{mode:'board',language:'es'}));
