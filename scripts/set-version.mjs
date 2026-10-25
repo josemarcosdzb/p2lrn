@@ -83,6 +83,9 @@ await change('packages/studio/src/p2lrn-studio.js',
 await change('packages/toolkit/web-sdk-src/p2lrn.js',
   /const version = '[^']+';/u,
   "const version = '"+version+"';",'Web loader version');
+await change('packages/player/server/runtime-host.mjs',
+  /const VERSION='[^']+';/u,
+  "const VERSION='"+version+"';",'Player server runtime version');
 await change('packages/toolkit/src/tools/build-web-sdk.ts',
   /webSdkVersion:'[^']+'/u,"webSdkVersion:'"+version+"'",'Web release version');
 await change('packages/toolkit/src/tools/build-web-sdk.ts',
@@ -127,7 +130,7 @@ if(!dryRun){
 }
 console.log(JSON.stringify({
   ok:true,dryRun,previous,version,aligned:paths.map(name=>'@p2lrn/'+name),
-  releaseIdentifiers:['Studio runtime','Player runtime','Toolkit runtime','H5P library builder','CDN loader','source release','capabilities','installation docs'],
+  releaseIdentifiers:['Studio runtime','Player runtime','Player server runtime','Toolkit runtime','H5P library builder','CDN loader','source release','capabilities','installation docs'],
   touched:changes.map(([path])=>path),
   publication:'NOT_PERFORMED',
 },null,2));
