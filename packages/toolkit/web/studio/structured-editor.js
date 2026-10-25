@@ -116,6 +116,50 @@ export function renderStructuredVisualEditor(container,options={}){
         while(ids.has(id)){n+=1;id='item-'+n;}
         payload.data.items.push({id,date:'',title:'Nuevo acontecimiento',body:''});save();rerender();
       },'q-mini q-add-primary'));
+    }else if(editor==='collaboration'){
+      const mode=select(payload.data.mode||'poll',[['poll','Votación en directo'],['board','Pizarra compartida'],['peer-review','Revisión entre pares']]);
+      const room=input(payload.data.room||'main');room.placeholder='main';
+      const prompt=textarea(payload.data.prompt||'');prompt.className='q-answer-list';
+      const fallback=textarea(payload.data.fallbackText||'');fallback.className='q-answer-list';
+      const required=document.createElement('input');required.type='checkbox';required.checked=payload.data.required===true;
+      const allowChange=document.createElement('input');allowChange.type='checkbox';allowChange.checked=payload.data.allowChange!==false;
+      const showResults=document.createElement('input');showResults.type='checkbox';showResults.checked=payload.data.showResults!==false;
+      const optionList=node('div','q-list collaboration-options');
+      const save=()=>{
+        const roomValue=room.value.trim()||'main';
+        if(!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(roomValue)){onStatus?.('La sala debe ser un identificador portable, por ejemplo main o equipo-1.');return;}
+        payload.data.mode=mode.value;payload.data.room=roomValue;payload.data.prompt=prompt.value;payload.data.fallbackText=fallback.value;payload.data.required=required.checked;
+        if(mode.value==='poll'){
+          payload.data.allowChange=allowChange.checked;payload.data.showResults=showResults.checked;
+          if(!Array.isArray(payload.data.options)||payload.data.options.length<2)payload.data.options=[{id:'a',label:'Opción A'},{id:'b',label:'Opción B'}];
+        }else{
+          delete payload.data.options;delete payload.data.allowChange;delete payload.data.showResults;
+        }
+        model.setStructuredJson(activityId,payload);
+        model.setHostCapabilities(activityId,[{id:'collaboration.room',required:required.checked,operations:['join','send','listen','snapshot','leave'],context:['component.input'],description:'Sala colaborativa resuelta por el host.',fallback:'individual'}]);
+        onChange?.();
+      };
+      const drawOptions=()=>{
+        optionList.replaceChildren();
+        if(mode.value!=='poll')return;
+        payload.data.options=(payload.data.options??[]).length>=2?payload.data.options:[{id:'a',label:'Opción A'},{id:'b',label:'Opción B'}];
+        payload.data.options.forEach((option,index)=>{
+          const row=node('div','q-option-row');const text=input(option.label||'');
+          const remove=button('Eliminar',()=>{if(payload.data.options.length<=2){onStatus?.('La votación necesita al menos dos opciones.');return;}payload.data.options.splice(index,1);save();drawOptions();},'q-mini q-danger');
+          text.addEventListener('input',()=>{option.label=text.value;save();});row.append(node('span','q-label',String(index+1)),text,remove);optionList.append(row);
+        });
+        optionList.append(button('+ Añadir opción',()=>{const used=new Set(payload.data.options.map((o)=>o.id));let n=payload.data.options.length+1,id='option-'+n;while(used.has(id)){n+=1;id='option-'+n;}payload.data.options.push({id,label:'Opción '+n});save();drawOptions();},'q-mini q-add-primary'));
+      };
+      mode.addEventListener('change',()=>{save();rerender();});room.addEventListener('change',save);prompt.addEventListener('input',save);fallback.addEventListener('input',save);required.addEventListener('change',save);allowChange.addEventListener('change',save);showResults.addEventListener('change',save);
+      settings.append(labeled('Tipo',mode),labeled('Sala lógica',room),labeled('Obligatoria',required));
+      root.append(labeled('Consigna',prompt));
+      if(mode.value==='poll'){
+        const pollSettings=node('div','q-settings collaboration-poll-settings');
+        pollSettings.append(labeled('Permitir cambiar voto',allowChange),labeled('Mostrar resultados',showResults));
+        root.append(pollSettings,optionList);drawOptions();
+      }
+      root.append(labeled('Fallback sin servicio',fallback));
+      root.append(node('div','studio-readonly','El curso sólo guarda la actividad y la sala lógica. El host aporta identidad, permisos, transporte y persistencia. Si no hay servicio, se usa el fallback individual.'));
     }else if(editor==='capability-action'){
       const capability=input(payload.data.capability||'ai.tutor');capability.placeholder='ai.tutor';
       const operation=input(payload.data.operation||'hint');operation.placeholder='hint';
