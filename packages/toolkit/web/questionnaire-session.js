@@ -237,11 +237,17 @@ export class QuestionnaireSession {
       this.#emit('p2lrn:error', {phase: 'answer-after-timeout', questionId: key, context: this.context});
       return false;
     }
+    const previous = this.state.answers[key];
+    const hadPrevious = isRecord(previous) && Object.keys(previous).length > 0;
     this.state.answers[key] = clone(answer);
     delete this.state.score;
     this.state.completed = false;
     this.state.completionReason = null;
     this.#emit('p2lrn:answer', {questionId: key, answer: clone(answer), rendererId: this.rendererId, context: this.context});
+    if (hadPrevious && JSON.stringify(previous) !== JSON.stringify(answer)) {
+      const question=this.payload.questions.find((item)=>String(item.id)===key);
+      this.#emit('p2lrn:interaction', {action:'answer-change',questionId:key,questionType:question?.type??null,hadPrevious:true,meaningful:answerIsMeaningful(question,answer),rendererId:this.rendererId,context:this.context});
+    }
     this.#emit('p2lrn:progress', {value: this.progress(), answered: this.answeredCount(), total: this.payload.questions.length, rendererId: this.rendererId, context: this.context});
     this.save();
     return true;
