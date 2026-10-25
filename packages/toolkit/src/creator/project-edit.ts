@@ -8,7 +8,15 @@ import {NATIVE_COMPONENT_ACTIVITY_TYPE, NATIVE_COMPONENT_MEDIA_TYPE, NATIVE_COMP
 import {NATIVE_COMPOSITE_ACTIVITY_TYPE, NATIVE_COMPOSITE_MEDIA_TYPE, NATIVE_COMPOSITE_PROFILE, NATIVE_COMPOSITE_SCHEMA, validateComposite} from '../core/native-composite.js';
 import {KEY_RE, entityByKey, validateProject, type CreatorProject} from './project-model.js';
 
-export function appendChild(project:CreatorProject,parentKey:string,childKey:string):void{const parent=entityByKey(project,parentKey);let allowed=parent===project.course||project.units.includes(parent);if(project.activities.includes(parent)&&identifierIs(parent.activityType,NATIVE.compositeActivityType))allowed=true;if(!allowed)throw new ProjectError('children can only be attached to course, unit, or native composite activity entities');if(project.activities.includes(parent)&&!project.activities.includes(entityByKey(project,childKey)))throw new ProjectError('native composite children must be activities');parent.children??=[];if(!parent.children.includes(childKey))parent.children.push(childKey);}
+export function appendChild(project:CreatorProject,parentKey:string,childKey:string):void{const parent=entityByKey(project,parentKey);let allowed=parent===project.course||project.units.includes(parent);if(project.activities.includes(parent)&&identifierIs(parent.activityType,NATIVE.compositeActivityType))allowed=true;if(!allowed)throw new ProjectError('children can only be attached to course, unit, or native composite activity entities');if(project.activities.includes(parent)&&!project.activities.includes(entityByKey(project,childKey)))throw new ProjectError('native composite children must be activities');parent.children??=[];if(!parent.children.includes(childKey))parent.children.push(childKey);
+  // Imported workspaces preserve their original entityOrder; newly authored entities
+  // must be appended without reordering or dropping previously imported entities.
+  if(Array.isArray(project.entityOrder)){
+    const orderedKeys=[project.course.key,...['units','resources','activities','objectives'].flatMap((group)=>(project[group]??[]).map((entity:any)=>entity.key))];
+    const seen=new Set(project.entityOrder);
+    for(const key of orderedKeys)if(!seen.has(key)){project.entityOrder.push(key);seen.add(key);}
+  }
+}
 function assertUnused(project:CreatorProject,key:string):void{try{entityByKey(project,key);}catch{return;}throw new ProjectError(`project key already exists: ${key}`);}
 export function addUnit(project:CreatorProject,key:string,title:string,language='es',role='module',parent='course'):any{if(!KEY_RE.test(key))throw new ProjectError(`invalid key: ${JSON.stringify(key)}`);assertUnused(project,key);const unit={key,role,title:{[language]:title.trim()||key},children:[]};project.units.push(unit);appendChild(project,parent,key);validateProject(project);return unit;}
 function inside(root:string,path:string):string{const r=resolve(root),p=resolve(path),rel=relative(r,p);if(rel===''||(!rel.startsWith(`..${sep}`)&&rel!=='..'&&!rel.startsWith(sep)))return rel.replaceAll(sep,'/');throw new ProjectError('source must be inside the project unless copy is used');}
