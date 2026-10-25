@@ -12,6 +12,7 @@ import {
   CALLOUT_COMPONENT_RENDERER,
   TIMELINE_COMPONENT_RENDERER,
   CAPABILITY_ACTION_COMPONENT_RENDERER,
+  COLLABORATION_COMPONENT_RENDERER,
   STANDARD_QUESTIONNAIRE_RENDERER,
   MEMORY_RENDERER,
   MATCHING_RENDERER,
@@ -104,6 +105,12 @@ export function registerBuiltInRenderers(registry) {
     selectable: false,
     profiles: [NATIVE_COMPONENT_PROFILE], mediaTypes: [NATIVE_COMPONENT_MEDIA_TYPE],
     dependencies: [DOM_DEPENDENCY], load: () => import('./renderers/component-capability-action.js'),
+  });
+  registry.register({
+    id: COLLABORATION_COMPONENT_RENDERER, version: '1', priority: -1000, presentation: 'component-implementation',
+    selectable: false,
+    profiles: [NATIVE_COMPONENT_PROFILE], mediaTypes: [NATIVE_COMPONENT_MEDIA_TYPE],
+    dependencies: [DOM_DEPENDENCY], load: () => import('./renderers/component-collaboration.js'),
   });
   registry.register({
     id: STANDARD_QUESTIONNAIRE_RENDERER, version: '1', priority: 100, presentation: 'questionnaire',
