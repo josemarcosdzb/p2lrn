@@ -352,6 +352,14 @@ async function addContentKind(kind){
     externalFileInput.click();return;
   }
   if(kind==='url'){const url=prompt('URL del recurso');if(!url)return;const title=prompt('Título','Recurso web')||'Recurso web';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL añadida');}
+  if(kind==='shared-resource'){
+    const url=prompt('URL lógica del recurso compartido');if(!url)return;
+    const expectedDigest=prompt('SHA-256 esperado (sha256:...)');if(!expectedDigest)return;
+    const mediaType=prompt('Tipo MIME','video/mp4')||'application/octet-stream';
+    const title=prompt('Título','Recurso compartido')||'Recurso compartido';
+    const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType,expectedDigest});
+    return selectCreated(a,'Recurso compartido añadido');
+  }
   if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:'Cuestionario',language:'es'});return selectCreated(a,'Cuestionario añadido');}
   if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'es'});return selectCreated(a,'Votación en directo añadida');}
   if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'es'});return selectCreated(a,'Pizarra compartida añadida');}
