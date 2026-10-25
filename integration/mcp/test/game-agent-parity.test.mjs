@@ -115,7 +115,7 @@ test('P2LRN Studio -> MCP authoring -> export -> Reader preserves 12 real 2D/3D 
     const reader=new P2LRNReadingSystem(outputFile,{validateProfilePayloads:true});
     assert.match(reader.summary().contentRoot,/^sha256:/);
     const portable=[...reader.reader.entities.values()];
-    const quizNode=portable.find(x=>Object.values(x.title??{}).includes('Evaluación inicial'));
+    const quizNode=portable.find(x=>x.type==='activity' && Object.values(x.title??{}).includes('Evaluación inicial'));
     assert.ok(quizNode,'Questionnaire must remain visible after export');
     const quizResource=reader.reader.entities.get(quizNode.resource);
     assert.ok(quizResource?.representations?.length,'Questionnaire representation must exist');
@@ -123,7 +123,7 @@ test('P2LRN Studio -> MCP authoring -> export -> Reader preserves 12 real 2D/3D 
     assert.equal(scoreQuestionnaire(quizData,{q1:{choiceIds:['sol']},q2:{choiceIds:['v']}}).normalized,1);
     assert.ok(scoreQuestionnaire(quizData,{q1:{choiceIds:['luna']},q2:{choiceIds:['f']}}).normalized<1);
     for(const game of gameEntries) {
-      const entity=portable.find(x=>Object.values(x.title??{}).includes('Juego '+game.kind));
+      const entity=portable.find(x=>x.type==='activity' && Object.values(x.title??{}).includes('Juego '+game.kind));
       assert.ok(entity,'Missing exported game '+game.kind);
       assert.equal(entity.extensions?.[HINT]?.preferred,game.renderer,'Game must retain its renderer hint: '+game.kind);
       const resource=reader.reader.entities.get(entity.resource);
