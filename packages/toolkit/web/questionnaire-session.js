@@ -189,15 +189,17 @@ export class QuestionnaireSession {
       error.code = 'P2LRN_TIMING_UNSUPPORTED';
       throw error;
     }
+    let restored = false;
     if (this.adapter?.loadState) {
       try {
         const loaded = await this.adapter.loadState(this.context);
-        if (isRecord(loaded)) this.state = this.#sanitizeState(loaded);
+        if (isRecord(loaded)) { this.state = this.#sanitizeState(loaded); restored = true; }
       } catch (error) {
         this.#emit('p2lrn:error', {phase: 'loadState', error: String(error?.message ?? error), context: this.context});
       }
     }
     if (!this.state.completed) {
+      this.#emit('p2lrn:attempt', {phase:restored?'resumed':'started',attemptNumber:Number(this.state.attemptsCompleted??0)+1,answered:this.answeredCount(),total:this.payload.questions.length,rendererId:this.rendererId,context:this.context});
       const changed = this.#ensureTiming();
       if (changed) this.save();
       await this.checkTiming();
@@ -377,6 +379,7 @@ export class QuestionnaireSession {
       if (this.timerHandle !== null) clearInterval(this.timerHandle);
       this.timerHandle = null;
       this.save();
+      this.#emit('p2lrn:attempt', {phase:'submitted',attemptNumber:this.state.attemptsCompleted,reason,answered:this.answeredCount(),total:this.payload.questions.length,score:{graded:score.graded,raw:score.raw,max:score.max,normalized:score.normalized},rendererId:this.rendererId,context:this.context});
       this.#emit('p2lrn:score', {...score, rendererId: this.rendererId, context: this.context});
       if (this.adapter?.reportScore) {
         try { await this.adapter.reportScore(score, this.context); }
@@ -397,6 +400,7 @@ export class QuestionnaireSession {
     this.timerHandle = null;
     this.state = this.#newState({attemptsCompleted: completed});
     this.#ensureTiming();
+    this.#emit('p2lrn:attempt', {phase:'started',attemptNumber:completed+1,answered:0,total:this.payload.questions.length,rendererId:this.rendererId,context:this.context});
     this.save();
     if (this.autoTiming && timingRequired(this.payload)) this.#startTimer();
     return true;
