@@ -266,6 +266,12 @@ jobs:
           node --check server.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check install-client.mjs
+          node --check local-clients.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check connect-local.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node connect-local.mjs --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check prepare-connectors.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -602,6 +608,12 @@ jobs:
           node --check service.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check install-client.mjs
+          node --check local-clients.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check connect-local.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node connect-local.mjs --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check prepare-connectors.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

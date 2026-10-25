@@ -9,16 +9,16 @@
   },
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "check": "node --check server.mjs && node --check service.mjs && node --check install-client.mjs && node --check prepare-connectors.mjs && npm test",
-    "build:connectors": "node prepare-connectors.mjs"
+    "check": "node --check server.mjs && node --check service.mjs && node --check install-client.mjs && node --check local-clients.mjs && node --check connect-local.mjs && node --check prepare-connectors.mjs && npm test",
+    "build:connectors": "node prepare-connectors.mjs",
+    "connect": "node connect-local.mjs",
+    "connect:help": "node connect-local.mjs --help"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.4.0",
     "@modelcontextprotocol/node": "2.1.2",
     "zod": "^4.0.0",
-    "fflate": "0.8.2"
-  },
-  "devDependencies": {
+    "fflate": "0.8.2",
     "@modelcontextprotocol/client": "2.4.0"
   }
 }

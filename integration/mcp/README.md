@@ -105,3 +105,49 @@ En todos los casos, probar primero `p2lrn_list_courses`, después `p2lrn_read_co
 Las pruebas de `test/connector.test.mjs` verifican manifiestos y ZIP, URLs inválidas, rechazo de hosts externos y orígenes falsos, token bearer y negociación real MCP a través de HTTP. El workflow canónico Windows incluye estas pruebas sin crear otro workflow.
 
 **Pendiente para distribución pública:** OAuth multiusuario y su consentimiento, disponibilidad HTTPS estable, aprobación del usuario para registrar la conexión, pruebas E2E dentro de las interfaces reales de ChatGPT, Claude y Grok, y publicación en sus catálogos si se desea.
+
+## Instalación local: asistente único y más clientes de IA
+
+**No requiere HTTPS, un dominio ni token para conectarse desde una IA instalada en el equipo.** Todos los programas utilizan el mismo servidor MCP y las mismas herramientas, mediante el transporte local stdio.
+
+### Windows: doble clic
+
+Abre `integration/mcp/Conectar-P2LRN.cmd` con doble clic. El asistente comprueba Node 22+, prepara las dependencias si faltan y pide una carpeta concreta de cursos (valor predeterminado: `Documentos/P2LRN`). No concede acceso al resto de Descargas ni al disco. Detecta clientes, permite seleccionar uno o varios, ofrece lectura sola o edición en borradores, enseña las rutas que modificará, pide confirmación, conserva otros MCP y comprueba la conexión real. El proceso MCP se ejecuta bajo demanda, no en segundo plano.
+
+### Comandos para usuarios avanzados
+
+```powershell
+# Asistente guiado
+node integration/mcp/connect-local.mjs
+
+# Conexión local sin internet para la inferencia
+node integration/mcp/connect-local.mjs --root C:\MisCursos --clients claude,cursor,windsurf,gemini --install --verify
+
+# Habilitar escritura segura en borradores y exportaciones nuevas
+node integration/mcp/connect-local.mjs --root C:\MisCursos --clients auto --enable-drafts --install --verify
+
+# VS Code, solo en el proyecto elegido
+node integration/mcp/connect-local.mjs --root C:\MisCursos --clients vscode --workspace C:\MiProyecto --install --verify
+
+# Obtener configuración genérica y comandos para más aplicaciones, sin instalarlas
+node integration/mcp/connect-local.mjs --root C:\MisCursos --clients generic,codex,claude-code,opencode,chatgpt-desktop
+```
+
+Si se ejecuta sin el lanzador de Windows, es necesario tener Toolkit compilado y dependencias instaladas; el `.cmd` hace esa preparación automáticamente.
+
+### Clientes soportados
+
+| Cliente | Tipo de instalación local |
+| --- | --- |
+| Claude Desktop | JSON automático, tras confirmación |
+| Cursor | JSON automático, tras confirmación |
+| Windsurf | JSON automático, tras confirmación |
+| Gemini CLI | JSON automático, tras confirmación |
+| VS Code | JSON en `.vscode/mcp.json` del proyecto explícito |
+| Codex CLI, Claude Code y OpenCode | Genera configuración/instrucción para revisar y registrar según versión del cliente |
+| Cualquier IA que admita MCP stdio | Entrada genérica con `command`, `args` y `env` |
+| ChatGPT Desktop | Entrada de desarrollo local; instalación de plugins stdio sujeta a elegibilidad y aprobación de OpenAI |
+
+**Para ChatGPT web, Claude web y Grok web** hay que utilizar HTTPS o un túnel compatible, porque sus servidores no pueden iniciar un proceso stdio local directamente. La opción local no necesita OAuth remoto: el proceso se ejecuta con los permisos de usuario del sistema operativo y solo ve la carpeta de cursos seleccionada.
+
+Se conservan todas las herramientas ya disponibles de Reader/Authoring a través del mismo servidor para cualquier cliente compatible. La escritura solo modifica copias en borrador, verifica digests y exporta un `.p2lrn` nuevo. No se modifica el núcleo de P2LRN, no se crean ramas ni tareas programadas y no se publica npm automáticamente.
