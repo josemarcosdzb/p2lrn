@@ -27,7 +27,12 @@ node scripts/verify-browser-from-npm.mjs
 node scripts/verify-automatic-runtimes.mjs
 node deploy/netlify/build-site.mjs
 node scripts/verify-distribution-identity.mjs
+node scripts/verify-connected-e2e-matrix.mjs
 ```
+
+The connected E2E matrix is also a release gate. It verifies that the current workflow still covers collaboration authoring/round-trip, authenticated production HTTP collaboration, two-Player browser synchronization, resource deduplication, rich analytics, accessibility checks, offline/cache playback, external-format regression, installed npm browser use, all twelve native games, an independent Express Host and npm/CDN identity. CI writes `.connected-e2e-matrix.json` and preserves it with the Windows evidence.
+
+For `0.5.0-alpha.11`, any previously staged candidate from an older commit is stale once source changes land. The staging step must recreate all four tarballs from the exact green `main` SHA. Public-registry publication remains a separate explicit action.
 
 These readiness commands do not publish packages and do not deploy the Netlify site. Actual publication begins only with the explicit `npm publish` commands in the Publishing order section.
 
