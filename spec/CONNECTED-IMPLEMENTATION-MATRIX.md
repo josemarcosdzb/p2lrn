@@ -67,7 +67,7 @@ The largest remaining product-level gaps are:
 | Forward events to Host Adapter | **IMPLEMENTED** | ordered `emitEvent` forwarding | storage/analytics is external |
 | Progress/score/completion/navigation events | **IMPLEMENTED** | first-party Player/renderers emit core families | coverage differs by renderer |
 | Attention/active-time events | **IMPLEMENTED** | tracker emits coarse privacy-preserving state | host decides whether to enable/use |
-| Rich learning-event semantics | **PARTIAL** | answer/xAPI/runtime events exist | no universal answer-change, media pause/seek, resource consultation, detailed 3D interaction or misconception contract |
+| Rich learning-event semantics | **PARTIAL** | `p2lrn:interaction` now covers answer changes, media play/pause/seek/end and native collaboration actions | still missing a broader standardized vocabulary for detailed 3D interaction, resource consultation and misconception evidence |
 | Universal pedagogical attempt event | **MISSING** | assessment configs can limit attempts | `p2lrn:answer` is deliberately not defined as one pedagogical attempt |
 | Global analytics aggregation/dashboard | **HOST-EXTERNAL** | event stream exists | no first-party analytics/LRS-like server here |
 
@@ -80,10 +80,10 @@ The largest remaining product-level gaps are:
 | Trusted host resolution | **IMPLEMENTED** | Player uses Host Adapter `resolveResourceUrl()` | host must provide and verify bytes |
 | Reject unverified remote media | **IMPLEMENTED** | `remote-media.js` requires `verified:true`; AV requires `seekable:true` | None |
 | Embedded fallback | **IMPLEMENTED** | renderer negotiation falls through to embedded representation; tested | Studio can make this easier to author |
-| Content-addressed shared store (`sha256 -> object`) | **PARTIAL** | current digest + resolver contract can implement it | no first-party persistent library/server/catalog |
-| Cross-course physical deduplication | **PARTIAL** | one-copy/many-reference is architecturally possible | no reference host implementation proves storage dedup across courses |
+| Content-addressed shared store (`sha256 -> object`) | **PARTIAL** | digest resolver contract plus `createMemorySharedResourceStore()` prove one-copy/many-reference delivery | no first-party persistent multi-user library/server/catalog |
+| Cross-course physical deduplication | **PARTIAL** | reference digest store deduplicates identical bytes and resolves the same verified object for multiple packages | persistent cross-process storage remains host-specific |
 | Shared-resource discovery/search | **MISSING** | `search.library` can be a capability | no catalog protocol/provider implemented |
-| Studio shared-library picker | **MISSING** | Studio can author resources but has no first-party hash-library browser | add UX without putting credentials in package |
+| Studio shared-library picker | **PARTIAL** | Studio can author a digest-pinned shared resource from logical URL + SHA-256 + media type | searchable host catalog/browser is still missing |
 | Portable self-contained export | **IMPLEMENTED** | embedded representations and normal package export remain valid | improve materialization from connected resource to embedded fallback |
 
 ## 5. Host Capabilities, AI and MCP
@@ -126,7 +126,7 @@ For “connect it and it knows what to do”, the most important missing piece i
 | Native collaborative activity | **IMPLEMENTED** | one native collaboration component with poll, board and peer-review modes | independent interoperability evidence |
 | Presence/room membership | **IMPLEMENTED REFERENCE** | `join/listen/snapshot/leave` and opaque participant/session IDs | production host owns identity and distributed presence |
 | Shared board state | **IMPLEMENTED REFERENCE** | bounded semantic board events over the same room contract | no character-level CRDT by design |
-| Live poll synchronization | **IMPLEMENTED REFERENCE** | poll renderer + room provider + snapshot/listen recovery | production service implementation |
+| Live poll synchronization | **IMPLEMENTED REFERENCE** | poll renderer + room provider + snapshot/listen recovery + two-Player browser E2E | production service implementation |
 | Peer review / peer learning | **IMPLEMENTED REFERENCE** | native submission/comment flow with host-assigned opaque participant IDs | richer assignment/rubric policies can remain host workflows |
 | Transport/auth/persistence | **HOST-EXTERNAL** | correctly excluded from package | reference service can be supplied separately |
 
