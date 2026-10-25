@@ -22,6 +22,7 @@ const markers=[
   ['packages/toolkit/web/p2lrn-player.js',"P2LRN_TOOLKIT_VERSION = '"+version+"'"],
   ['packages/studio/src/p2lrn-studio.js',"P2LRN_STUDIO_VERSION='"+version+"'"],
   ['packages/toolkit/web-sdk-src/p2lrn.js',"const version = '"+version+"'"],
+  ['packages/player/server/runtime-host.mjs',"const VERSION='"+version+"'"],
   ['packages/toolkit/src/tools/build-web-sdk.ts',"webSdkVersion:'"+version+"'"],
   ['packages/toolkit/src/tools/build-web-sdk.ts',"toolkitVersion:'"+version+"'"],
   ['packages/h5p-libraries/scripts/build.mjs',"packageVersion:'"+version+"'"],
