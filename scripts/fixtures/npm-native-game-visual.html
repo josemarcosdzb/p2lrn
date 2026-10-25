@@ -127,6 +127,7 @@ p2lrn-player{display:block;width:100%;max-width:1250px;min-height:540px;margin:a
           result.engine=tech;
           result.questionText=root.querySelector('.p2lrn-3d-trial')?.textContent?.slice(0,220)??null;
           result.sceneReady=!!canvas&&rect.width>80&&rect.height>80&&Boolean(tech?.includes('Three.js'));
+          if(!result.sceneReady && elapsed<12000)return;
           clearInterval(poll);
           finish(result.sceneReady&&overflow<=2?'PASS':'VISUAL_FAIL',result);
           return;
