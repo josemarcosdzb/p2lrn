@@ -135,6 +135,8 @@ for (const path of [
   join(playerRoot,'source','packages','player','scripts','build-dist.mjs'),
   join(playerRoot,'source','packages','toolkit','web','p2lrn-player.js'),
   join(playerRoot,'source','packages','toolkit','web-sdk-src','p2lrn.js'),
+  join(playerRoot,'source','packages','toolkit','web','collaboration-http-provider.js'),
+  join(playerRoot,'source','packages','player','server','collaboration-http.mjs'),
   join(toolkitRoot,'src','index.ts'),
   join(toolkitRoot,'tsconfig.json'),
   join(toolkitRoot,'web-build','runtime-assets.mjs'),
@@ -153,6 +155,8 @@ for (const requiredSource of [
   'packages/player/scripts/build-dist.mjs',
   'packages/toolkit/web/p2lrn-player.js',
   'packages/toolkit/web-sdk-src/p2lrn.js',
+  'packages/toolkit/web/collaboration-http-provider.js',
+  'packages/player/server/collaboration-http.mjs',
   'packages/toolkit/web-build/runtime-assets.mjs',
 ]) {
   if (!packedSourceManifest.files.some((item)=>item?.path === requiredSource && typeof item?.sha256 === 'string')) {
@@ -194,6 +198,9 @@ for (const path of [
   join(playerRoot,'dist','runtime-host','assets','frame.bundle.js'),
   join(playerRoot,'dist','runtime-host','assets','styles','h5p.css'),
   join(playerRoot,'dist','runtime-host','assets','LICENSE.h5p-standalone.txt'),
+  join(playerRoot,'server','runtime-host.mjs'),
+  join(playerRoot,'server','collaboration-http.mjs'),
+  join(playerRoot,'types','server.d.ts'),
   join(h5pRoot,'dist','index.json'),
   join(h5pRoot,'dist','H5P.Crossword-0.5','library.json'),
   join(h5pRoot,'dist','H5P.BranchingScenario-1.8','library.json'),
@@ -230,12 +237,24 @@ if (catalog.packageVersion !== h5pPackage.version || catalog.libraryCount !== 14
 
 await run(node, ['--check', join(playerRoot,'dist','p2lrn.js')]);
 await run(node, ['--check', join(playerRoot,'dist','runtime-host','h5p-host.js')]);
+await run(node, ['--check', join(playerRoot,'server','runtime-host.mjs')]);
+await run(node, ['--check', join(playerRoot,'server','collaboration-http.mjs')]);
 await run(node, ['--check', join(studioRoot,'dist','p2lrn-studio.esm.js')]);
 await run(node, ['--check', join(studioRoot,'server','index.mjs')]);
 await run(node, ['--check', join(studioRoot,'bin','p2lrn-studio.mjs')]);
 await run(node, [join(toolkitRoot,'dist','cli','main.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','tools','multipart.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','cli','document-reader.js'),'--help']);
+
+const collaborationServerSmoke=join(installRoot,'collaboration-server-smoke.mjs');
+await writeFile(collaborationServerSmoke,[
+  "import {createP2LRNCollaborationHandler,P2LRN_COLLABORATION_HTTP_VERSION} from '@p2lrn/player/server';",
+  "if(typeof createP2LRNCollaborationHandler!=='function'||P2LRN_COLLABORATION_HTTP_VERSION!=='1')throw new Error('Installed collaboration server API missing');",
+  "let rejected=false;try{createP2LRNCollaborationHandler({});}catch{rejected=true;}if(!rejected)throw new Error('Collaboration handler accepted unsafe empty configuration');",
+  "console.log(JSON.stringify({ok:true,version:P2LRN_COLLABORATION_HTTP_VERSION}));",
+  '',
+].join('\n'));
+await run(node,[collaborationServerSmoke],{cwd:installRoot});
 
 const studioCliSmoke=join(work,'p2lrn-studio-cli-smoke');
 await mkdir(studioCliSmoke,{recursive:true});
