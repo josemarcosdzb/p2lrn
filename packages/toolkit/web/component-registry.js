@@ -1,10 +1,11 @@
 import {canonicalIdentifier} from './identifiers.js';
-import {CALLOUT_COMPONENT_RENDERER, TIMELINE_COMPONENT_RENDERER, CAPABILITY_ACTION_COMPONENT_RENDERER} from './renderer-registry.js';
+import {CALLOUT_COMPONENT_RENDERER, TIMELINE_COMPONENT_RENDERER, CAPABILITY_ACTION_COMPONENT_RENDERER, COLLABORATION_COMPONENT_RENDERER} from './renderer-registry.js';
 
 export const COMPONENT_RUNTIME_CONTRACT_VERSION = '1';
 export const CALLOUT_COMPONENT = 'https://p2lrn.org/component/callout';
 export const TIMELINE_COMPONENT = 'https://p2lrn.org/component/timeline';
 export const CAPABILITY_ACTION_COMPONENT = 'https://p2lrn.org/component/capability-action';
+export const COLLABORATION_COMPONENT = 'https://p2lrn.org/component/collaboration';
 
 function cloneJson(value) {
   if (value === undefined) return undefined;
@@ -92,6 +93,30 @@ function validateCapabilityActionV1(data) {
   }
   if (data.required !== undefined && typeof data.required !== 'boolean') return false;
   return Object.keys(data).every((key)=>['capability','operation','heading','body','instruction','buttonLabel','resultLabel','fallbackText','required'].includes(key));
+}
+
+function validateCollaborationV1(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+  if (!['poll','board','peer-review'].includes(data.mode)) return false;
+  if (typeof data.room !== 'string' || data.room.length < 1 || data.room.length > 128 || !/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(data.room)) return false;
+  for (const key of ['heading','prompt','fallbackText']) {
+    if (data[key] !== undefined && (typeof data[key] !== 'string' || data[key].length > 10000)) return false;
+  }
+  for (const key of ['allowChange','showResults','required']) {
+    if (data[key] !== undefined && typeof data[key] !== 'boolean') return false;
+  }
+  if (data.mode === 'poll') {
+    if (!Array.isArray(data.options) || data.options.length < 2 || data.options.length > 12) return false;
+    const ids = new Set();
+    for (const option of data.options) {
+      if (!option || typeof option !== 'object' || Array.isArray(option)) return false;
+      if (!Object.keys(option).every((key)=>['id','label'].includes(key))) return false;
+      if (typeof option.id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(option.id) || option.id.length > 64 || ids.has(option.id)) return false;
+      if (typeof option.label !== 'string' || !option.label.trim() || option.label.length > 500) return false;
+      ids.add(option.id);
+    }
+  } else if (data.options !== undefined) return false;
+  return Object.keys(data).every((key)=>['mode','room','heading','prompt','options','allowChange','showResults','fallbackText','required'].includes(key));
 }
 
 export class ComponentRegistry {
@@ -301,6 +326,22 @@ export function createDefaultComponentRegistry() {
       initialData: {capability:'ai.tutor', operation:'hint', instruction:'Ayuda al alumno con esta actividad sin revelar directamente la respuesta.', buttonLabel:'Pedir pista', resultLabel:'Respuesta del servicio', fallbackText:'Esta función necesita un proveedor compatible del host.', required:false},
     },
     validateData: validateCapabilityActionV1,
+  });
+  registry.register({
+    id: COLLABORATION_COMPONENT,
+    componentVersion: '1',
+    runtimeContractVersion: COMPONENT_RUNTIME_CONTRACT_VERSION,
+    rendererId: COLLABORATION_COMPONENT_RENDERER,
+    supportedDataVersions: ['1'],
+    targetDataVersion: '1',
+    authoringDataVersion: '1',
+    authoring: {
+      label: 'Actividad colaborativa',
+      description: 'Votación, pizarra o revisión entre pares mediante una capacidad del host; el paquete no contiene servidores, cuentas ni credenciales.',
+      editor: 'collaboration',
+      initialData: {mode:'poll',room:'main',heading:'Votación en directo',prompt:'Elige una opción',options:[{id:'a',label:'Opción A'},{id:'b',label:'Opción B'}],allowChange:true,showResults:true,fallbackText:'La colaboración no está disponible. Puedes responder de forma individual.',required:false},
+    },
+    validateData: validateCollaborationV1,
   });
   return registry;
 }
