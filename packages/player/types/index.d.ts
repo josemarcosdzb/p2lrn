@@ -104,6 +104,17 @@ export interface P2LRNMemoryCollaborationHub {
   inspect(): readonly unknown[];
 }
 export function createMemoryCollaborationHub(options?: {maxEvents?: number; clock?(): number}): P2LRNMemoryCollaborationHub;
+export const COLLABORATION_HTTP_VERSION: "1";
+export const COLLABORATION_HTTP_MEDIA_TYPE: "application/vnd.p2lrn.collaboration+json";
+export interface P2LRNHttpCollaborationProviderOptions {
+  endpoint?: string;
+  fetchImpl?: typeof fetch;
+  credentials?: RequestCredentials;
+  getHeaders?(request: Readonly<{operation:string;context:Readonly<Record<string,string>>}>): Record<string,string> | Promise<Record<string,string>>;
+  requestTimeoutMs?: number;
+  listenTimeoutMs?: number;
+}
+export function createHttpCollaborationProvider(options?: P2LRNHttpCollaborationProviderOptions): P2LRNCapabilityProvider;
 export interface P2LRNSharedResourceRecord { readonly digest:string; readonly mediaType:string; readonly size:number; }
 export interface P2LRNMemorySharedResourceStore {
   put(value:ArrayBuffer|ArrayBufferView|string, options?:{mediaType?:string}): Promise<P2LRNSharedResourceRecord & {readonly deduplicated:boolean}>;
@@ -243,6 +254,9 @@ export interface P2LRNPublicAPI {
   readonly createCapabilityBroker: typeof createCapabilityBroker;
   readonly createToolCapabilityProvider: typeof createToolCapabilityProvider;
   readonly createMemoryCollaborationHub: typeof createMemoryCollaborationHub;
+  readonly createHttpCollaborationProvider: typeof createHttpCollaborationProvider;
+  readonly COLLABORATION_HTTP_VERSION: typeof COLLABORATION_HTTP_VERSION;
+  readonly COLLABORATION_HTTP_MEDIA_TYPE: typeof COLLABORATION_HTTP_MEDIA_TYPE;
   readonly COLLABORATION_CAPABILITY: typeof COLLABORATION_CAPABILITY;
   readonly COLLABORATION_OPERATIONS: typeof COLLABORATION_OPERATIONS;
   readonly createMemorySharedResourceStore: typeof createMemorySharedResourceStore;
