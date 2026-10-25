@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'packages/toolkit/**'
+      - 'integration/mcp/**'
       - 'packages/player/**'
       - 'packages/studio/**'
       - 'packages/h5p-libraries/**'
@@ -19,6 +20,7 @@ on:
     branches: [main]
     paths:
       - 'packages/toolkit/**'
+      - 'integration/mcp/**'
       - 'packages/player/**'
       - 'packages/studio/**'
       - 'packages/h5p-libraries/**'
@@ -253,6 +255,20 @@ jobs:
           # Same complete test corpus, but bound Windows child-process concurrency.
           # Node test subprocesses in the parallel audit exited 0xC0000409.
           node --test --test-concurrency=2 test/*.test.mjs
+
+      - name: Verify optional P2LRN MCP server and AI client integration on Windows
+        working-directory: integration/mcp
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check service.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check server.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check install-client.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test test/*.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify Studio setup CLI
         run: node --test packages/studio/test/*.test.mjs
