@@ -22,6 +22,56 @@ A package supplies only a local room name such as `main` or `team-1`. The host s
 
 The first-party memory hub is only a reference provider for tests, local demos and host prototypes. Production persistence and multi-server synchronization remain host responsibilities.
 
+## Production HTTP binding
+
+The browser distribution now includes `createHttpCollaborationProvider()`. It maps the same five semantic operations to one Host-owned HTTP endpoint without changing the package contract:
+
+```js
+const provider = P2LRN.createHttpCollaborationProvider({
+  endpoint: '/api/p2lrn/collaboration',
+  getHeaders: () => ({Authorization: 'Bearer ' + shortLivedHostToken})
+});
+
+player.capabilityBroker = P2LRN.createCapabilityBroker({
+  providers: [provider],
+  authorize: ({capabilityId}) => capabilityId === 'collaboration.room'
+});
+```
+
+Only `contentRoot`, `packageId` and `entityId` are eligible to cross the browser transport as portable context. The browser provider does not serialize learner identity, arbitrary host state or package-selected credentials. Absolute non-local endpoints must use HTTPS and embedded URL credentials are rejected.
+
+The Node server export `@p2lrn/player/server` includes `createP2LRNCollaborationHandler()`. It intentionally has no open/default deployment mode. Construction requires:
+
+- an explicit trusted `allowedOrigins` list;
+- `authenticate(request)` to resolve the Host principal;
+- `resolveContext(...)` to translate portable package/activity identifiers into the Host's trusted tenant/course/group scope;
+- `authorize(...)` for the requested operation;
+- a five-operation service implementation.
+
+Example:
+
+```js
+import {
+  createP2LRNCollaborationHandler
+} from '@p2lrn/player/server';
+
+app.post('/api/p2lrn/collaboration',
+  createP2LRNCollaborationHandler({
+    allowedOrigins: ['https://learn.example.com'],
+    authenticate: (req) => sessionUser(req),
+    resolveContext: ({actor, clientContext}) =>
+      resolveEnrolmentScope(actor, clientContext),
+    authorize: ({actor, operation, context}) =>
+      canCollaborate(actor, operation, context),
+    service: collaborationStore
+  })
+);
+```
+
+The service may use PostgreSQL, Redis, a durable actor/service, filesystem-backed development storage or another Host-managed implementation. P2LRN does not prescribe that storage product. Top-level package input attempting to set `participantId`, `actorId`, `userId`, `identity` or `principal` is rejected before the service receives the operation.
+
+The built-in per-process request limit is a defensive baseline only. Clustered production deployments should still apply their normal distributed rate limiting, CSRF/session policy, observability and abuse controls.
+
 ## Native UI
 
 The first-party component provides three modes over the same five operations:
