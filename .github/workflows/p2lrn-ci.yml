@@ -272,6 +272,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node connect-local.mjs --help
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmd /c .\Conectar-P2LRN.cmd --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check prepare-connectors.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -613,6 +615,8 @@ jobs:
           node --check connect-local.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node connect-local.mjs --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmd /c .\Conectar-P2LRN.cmd --help
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check prepare-connectors.mjs

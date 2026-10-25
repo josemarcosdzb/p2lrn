@@ -58,9 +58,9 @@ This prints connection instructions, not a fake installation.
 
 ## Tool categories
 
-Read: `p2lrn_list_courses`, `p2lrn_read_course`, `p2lrn_read_entity`, `p2lrn_search_metadata`. Search covers metadata, not opaque payloads.
+Read: `p2lrn_list_courses`, `p2lrn_read_course`, `p2lrn_read_entity`, `p2lrn_read_plan`, `p2lrn_validate_course`, `p2lrn_read_text_member`, `p2lrn_search_metadata`. Search covers metadata; short text members are read explicitly and opaque payloads remain untouched.
 
-Opt-in draft editing: `p2lrn_draft_create`, `p2lrn_draft_read`, `p2lrn_draft_set_text`, `p2lrn_draft_add_unit`, `p2lrn_draft_add_url`, `p2lrn_draft_add_native_activity`, `p2lrn_draft_add_composite`, `p2lrn_draft_set_progression`, `p2lrn_draft_export`. All edit paths call typed Toolkit authoring methods. A fully integrated Studio visual approval workflow and production OAuth connector remain separate delivery gates.
+Opt-in draft editing: `p2lrn_draft_new`, `p2lrn_draft_create`, `p2lrn_draft_read`, `p2lrn_draft_set_text`, `p2lrn_draft_add_unit`, `p2lrn_draft_set_children`, `p2lrn_draft_add_file`, `p2lrn_draft_add_web_content`, `p2lrn_draft_add_url`, `p2lrn_draft_add_native_activity`, `p2lrn_draft_add_composite`, `p2lrn_draft_set_progression`, `p2lrn_draft_export`. All edit paths call typed Toolkit authoring methods. A fully integrated Studio visual approval workflow and production OAuth connector remain separate delivery gates.
 
 ## Regression gates
 

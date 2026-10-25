@@ -15,6 +15,13 @@ if errorlevel 1 (
   goto :failed
 )
 
+if /i "%~1"=="--help" (
+  node integration\mcp\connect-local.mjs --help
+  if errorlevel 1 goto :failed
+  popd
+  exit /b 0
+)
+
 if not exist "packages\toolkit\dist\authoring\index.js" (
   echo Preparando Toolkit P2LRN...
   pushd "packages\toolkit"
@@ -33,7 +40,11 @@ if not exist "integration\mcp\node_modules\@modelcontextprotocol\client" (
   popd
 )
 
-node integration\mcp\connect-local.mjs --wizard
+if "%~1"=="" (
+  node integration\mcp\connect-local.mjs --wizard
+) else (
+  node integration\mcp\connect-local.mjs %*
+)
 set "RESULT=%ERRORLEVEL%"
 if not "%RESULT%"=="0" goto :failed
 echo.
