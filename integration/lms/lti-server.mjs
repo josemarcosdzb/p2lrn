@@ -6,7 +6,7 @@ import {createHash,randomBytes,createPublicKey,createPrivateKey,timingSafeEqual}
 import {createReadStream,existsSync,readFileSync,writeFileSync,mkdirSync,statSync} from 'node:fs';
 import {join,resolve,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createP2LRNLtiProvider,LTI_CLAIMS} from './lti-provider.mjs';
+import {createP2LRNLtiProvider} from './lti-provider.mjs';
 import {createLtiStore} from './lti-store.mjs';
 import {createLtiAgsClient} from './lti-ags.mjs';
 import {validatePackageBytes} from '../../packages/toolkit/dist/core/validator.js';
