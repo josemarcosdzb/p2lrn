@@ -880,6 +880,9 @@ async function runStudioFromNpm(chrome,appOrigin){
     '\nChrome stderr: '+String(result.stderr).slice(-5000)
   );
   const parsed=JSON.parse(detail);
+  if((result.mobile?.overflow??0)>2||(result.mobile?.studioOverflow??0)>2){
+    throw new Error('npm Studio has horizontal mobile overflow: '+JSON.stringify(result.mobile));
+  }
   return {name:'studio-ui-npm',status:result.status,...parsed.detail,screenshot:result.screenshot,mobile:result.mobile,mobileScreenshot:result.mobileScreenshot};
 }
 
@@ -1153,6 +1156,9 @@ async function runCourse(chrome, appOrigin, course, index, {authored=false,node=
   if(status!=='PASS'){
     throw new Error(`Browser gate failed for ${course}: status=${status}\n${detail}\nBrowser logs:\n${JSON.stringify(result.browserLogs??[],null,2)}\nRuntime exceptions:\n${JSON.stringify(result.runtimeExceptions??[],null,2)}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
   }
+  if((result.mobile?.overflow??0)>2||((result.mobile?.playerScroll??0)>(result.mobile?.playerClient??0)+2)){
+    throw new Error('Installed Player has horizontal mobile overflow for '+course+': '+JSON.stringify(result.mobile));
+  }
   return {course,status,detail:detail.slice(0,1000),mobile:result.mobile,screenshot:result.screenshot,mobileScreenshot:result.mobileScreenshot};
 }
 
@@ -1162,7 +1168,10 @@ async function runQuestionnaire(chrome, appOrigin) {
   const status=result.status??'MISSING';
   const detail=String(result.detail??'').trim();
   if(status!=='PASS')throw new Error(`Questionnaire browser gate failed: status=${status}\n${detail}\nBrowser logs:\n${JSON.stringify(result.browserLogs??[],null,2)}\nRuntime exceptions:\n${JSON.stringify(result.runtimeExceptions??[],null,2)}\nChrome stderr:\n${String(result.stderr??'').slice(-4000)}`);
-  return {course:'native-questionnaire-course.p2lrn',status,detail:detail.slice(0,2000)};
+  if((result.mobile?.overflow??0)>2||((result.mobile?.playerScroll??0)>(result.mobile?.playerClient??0)+2)){
+    throw new Error('Installed questionnaire Player has horizontal mobile overflow: '+JSON.stringify(result.mobile));
+  }
+  return {course:'native-questionnaire-course.p2lrn',status,detail:detail.slice(0,2000),mobile:result.mobile,screenshot:result.screenshot,mobileScreenshot:result.mobileScreenshot};
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
