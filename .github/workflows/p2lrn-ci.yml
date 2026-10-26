@@ -59,6 +59,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  security-windows:
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify browser security headers and HTML
+        run: node scripts/verify-site-security.mjs
+      - name: Audit locked dependencies of all five package roots
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($dir in @('packages/toolkit','packages/player','packages/studio','packages/h5p-libraries','integration/mcp')) {
+            Push-Location $dir
+            try {
+              npm ci --ignore-scripts --no-audit --no-fund
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+              npm audit --audit-level=moderate --no-fund
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            } finally { Pop-Location }
+          }
+      - name: Verify Studio upload and path security tests
+        run: node --test packages/toolkit/test/studio-server-save.test.mjs
   public-npm-registry:
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]

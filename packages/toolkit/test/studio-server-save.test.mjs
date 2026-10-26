@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile,rm,stat} from 'node:fs/promises';
+import {mkdtemp,readFile,rm,stat,symlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {saveP2LRNStudioPackage} from '../../studio/server/index.mjs';
@@ -62,4 +62,32 @@ test('server route accepts client path only when explicitly enabled',async()=>{
   }finally{
     await rm(root,{recursive:true,force:true});
   }
+});
+
+test('Studio rejects oversized streaming uploads before writing any files',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'p2lrn-studio-limit-'));let cancelled=false;
+  try{
+    const stream=new ReadableStream({start(controller){controller.enqueue(new Uint8Array([1,2,3,4]));controller.enqueue(new Uint8Array([5]));},cancel(){cancelled=true;}});
+    const request=new Request('http://local/api/p2lrn/studio/save',{method:'POST',body:stream,duplex:'half'});
+    const {handleP2LRNStudioSave}=await import('../../studio/server/index.mjs');
+    const response=await handleP2LRNStudioSave(request,{root,maxBytes:3});
+    assert.equal(response.status,413);assert.equal(cancelled,true);
+    await assert.rejects(()=>stat(join(root,'course','course.p2lrn')));
+  }finally{await rm(root,{recursive:true,force:true});}
+});
+test('all Studio upload endpoints reject oversized declared content length',async()=>{
+  const routes=await import('../../studio/server/index.mjs');
+  for(const [handler,label] of [[routes.handleP2LRNStudioSave,'save'],[routes.handleP2LRNStudioReader,'read'],[routes.handleP2LRNStudioExternalImport,'import']]){
+    const request=new Request('http://local/api/p2lrn/studio/'+label,{method:'POST',headers:{'content-length':'9999'},body:new Uint8Array([1])});
+    const response=await handler(request,{maxBytes:2});assert.equal(response.status,413,label);
+  }
+});
+test('Studio rejects symlink directories pointing outside authorized storage',async(t)=>{
+  const root=await mkdtemp(join(tmpdir(),'p2lrn-studio-safe-root-'));
+  const elsewhere=await mkdtemp(join(tmpdir(),'p2lrn-studio-safe-outside-'));
+  try{
+    try{await symlink(elsewhere,join(root,'link'),'dir');}
+    catch(error){if(['EPERM','EACCES','ENOTSUP'].includes(error?.code)){t.skip('Symlink creation requires Windows developer privileges');return;}throw error;}
+    await assert.rejects(()=>import('../../studio/server/index.mjs').then(m=>m.saveP2LRNStudioPackage(new Uint8Array([1]),{root,coursePath:'link'})),/symbolic link|escapes/i);
+  }finally{await rm(root,{recursive:true,force:true});await rm(elsewhere,{recursive:true,force:true});}
 });

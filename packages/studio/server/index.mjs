@@ -1,8 +1,48 @@
-import {mkdir,mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
+import {lstat,mkdir,mkdtemp,readFile,realpath,rm,writeFile} from 'node:fs/promises';
 import {basename,join,resolve,sep} from 'node:path';
 import {tmpdir} from 'node:os';
 
 const DEFAULT_MAX_BYTES=512*1024*1024;
+
+function uploadError(statusCode,message){return Object.assign(new Error(message),{statusCode});}
+async function receiveBodyBounded(request,maxBytes){
+  const limit=Number(maxBytes);
+  if(!Number.isSafeInteger(limit)||limit<1)throw new TypeError('Invalid Studio maxBytes limit.');
+  const header=request.headers.get('content-length');
+  if(header!==null){
+    if(!/^(0|[1-9][0-9]*)$/.test(header.trim()))throw uploadError(400,'Invalid Content-Length.');
+    if(Number(header)>limit)throw uploadError(413,'Studio upload exceeds size limit.');
+  }
+  if(!request.body)return new Uint8Array(0);
+  const reader=request.body.getReader();const chunks=[];let total=0;
+  try{
+    for(;;){
+      const {done,value}=await reader.read();if(done)break;
+      if(!(value instanceof Uint8Array))throw uploadError(400,'Invalid Studio request body chunk.');
+      total+=value.byteLength;
+      if(total>limit)throw uploadError(413,'Studio upload exceeds size limit.');
+      chunks.push(value);
+    }
+  }catch(error){await reader.cancel().catch(()=>{});throw error;}
+  finally{reader.releaseLock();}
+  const bytes=new Uint8Array(total);let offset=0;
+  for(const part of chunks){bytes.set(part,offset);offset+=part.byteLength;}
+  return bytes;
+}
+async function readUpload(request,maxBytes,label){
+  try{return {bytes:await receiveBodyBounded(request,maxBytes)};}
+  catch(error){if(error?.statusCode===413)return {response:new Response(label+' too large',{status:413})};
+    if(error?.statusCode===400)return {response:new Response('Invalid request body',{status:400})};throw error;}
+}
+async function assertWithinStorageRoot(root,target){
+  const canonicalRoot=await realpath(resolve(root));
+  const canonicalDir=await realpath(target.dir);
+  if(canonicalDir!==canonicalRoot&&!canonicalDir.startsWith(canonicalRoot+sep))throw new Error('Studio destination escapes storage root through a symbolic link.');
+  let existing;try{existing=await lstat(target.file);}catch(error){if(error?.code!=='ENOENT')throw error;}
+  if(existing?.isSymbolicLink())throw new Error('Studio destination must not be a symbolic link.');
+  if(existing){const canonicalFile=await realpath(target.file);
+    if(canonicalFile!==canonicalRoot&&!canonicalFile.startsWith(canonicalRoot+sep))throw new Error('Studio destination escapes storage root.');}
+}
 
 function safeSegment(value,label){
   const text=String(value??'').trim();
@@ -25,16 +65,16 @@ export async function saveP2LRNStudioPackage(bytes,{root=process.cwd(),coursePat
   const body=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
   const target=destination(root,coursePath,filename);
   await mkdir(target.dir,{recursive:true});
+  await assertWithinStorageRoot(root,target);
   await writeFile(target.file,body,{flag:'w'});
   return {ok:true,path:target.file,coursePath:safeSegment(coursePath||'course','course path'),filename:safeFilename(filename),bytes:body.byteLength};
 }
 
 export async function handleP2LRNStudioSave(request,{root=process.cwd(),coursePath='course',allowClientPath=false,maxBytes=DEFAULT_MAX_BYTES}={}){
   if(request.method!=='POST')return new Response('Method Not Allowed',{status:405,headers:{Allow:'POST'}});
-  const length=Number(request.headers.get('content-length')||0);
-  if(length>maxBytes)return new Response('Package too large',{status:413});
-  const body=new Uint8Array(await request.arrayBuffer());
-  if(body.byteLength>maxBytes)return new Response('Package too large',{status:413});
+  const upload=await readUpload(request,maxBytes,'Package');
+  if(upload.response)return upload.response;
+  const body=upload.bytes;
   const result=await saveP2LRNStudioPackage(body,{
     root,
     coursePath:allowClientPath?(request.headers.get('x-p2lrn-path')||coursePath):coursePath,
@@ -52,10 +92,9 @@ export async function readP2LRNStudioDocument(bytes,{filename='document.bin',med
 
 export async function handleP2LRNStudioReader(request,{maxBytes=128*1024*1024}={}){
   if(request.method!=='POST')return new Response('Method Not Allowed',{status:405,headers:{Allow:'POST'}});
-  const length=Number(request.headers.get('content-length')||0);
-  if(length>maxBytes)return new Response('Document too large',{status:413});
-  const body=new Uint8Array(await request.arrayBuffer());
-  if(body.byteLength>maxBytes)return new Response('Document too large',{status:413});
+  const upload=await readUpload(request,maxBytes,'Document');
+  if(upload.response)return upload.response;
+  const body=upload.bytes;
   let filename='document.bin';
   const raw=request.headers.get('x-p2lrn-filename');
   if(raw){try{filename=decodeURIComponent(raw);}catch{filename=raw;}}
@@ -85,10 +124,9 @@ export async function convertP2LRNStudioExternalPackage(bytes,{filename='package
 
 export async function handleP2LRNStudioExternalImport(request,{maxBytes=512*1024*1024}={}){
   if(request.method!=='POST')return new Response('Method Not Allowed',{status:405,headers:{Allow:'POST'}});
-  const length=Number(request.headers.get('content-length')||0);
-  if(length>maxBytes)return new Response('Package too large',{status:413});
-  const body=new Uint8Array(await request.arrayBuffer());
-  if(body.byteLength>maxBytes)return new Response('Package too large',{status:413});
+  const upload=await readUpload(request,maxBytes,'Package');
+  if(upload.response)return upload.response;
+  const body=upload.bytes;
   let filename='package.zip';const raw=request.headers.get('x-p2lrn-filename');if(raw){try{filename=decodeURIComponent(raw);}catch{filename=raw;}}
   try{
     const result=await convertP2LRNStudioExternalPackage(body,{filename});
