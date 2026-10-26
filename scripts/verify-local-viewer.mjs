@@ -301,7 +301,7 @@ async function runOfflineDoubleClickE2E({launcherPath,chromePath,exportMeta}){
   invariant(process.env.LOCALAPPDATA,'LOCALAPPDATA is required for the Windows offline launcher.');
   let launcher=null,browser=null,offlineCdp=null,downloads=null,extractedRoot=null;
   try{
-    launcher=spawn(process.env.ComSpec||'cmd.exe',['/d','/s','/c',`call "${launcherPath}"`],{cwd:dirname(launcherPath),windowsHide:true,stdio:['ignore','pipe','pipe']});
+    launcher=spawn(process.env.ComSpec||'cmd.exe',['/d','/c','call',launcherPath],{cwd:dirname(launcherPath),windowsHide:true,stdio:['ignore','pipe','pipe']});
     const launched=await waitForLauncherUrl(launcher);
     const payloadDigest=String(exportMeta.payloadDigest??'').toLowerCase();
     invariant(/^sha256:[0-9a-f]{64}$/u.test(payloadDigest),'Studio did not return a valid launcher payload digest.');
