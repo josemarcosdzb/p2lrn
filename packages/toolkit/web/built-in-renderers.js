@@ -127,7 +127,10 @@ export function registerBuiltInRenderers(registry) {
   registry.register({id: ROSCO_RENDERER, version: '1', priority: 20, presentation: 'game-2d', ...questionnaire, load: () => import('./renderers/questionnaire-rosco.js')});
   registry.register({
     id: THREE_D_RENDERER, version: '1', priority: 10, presentation: 'game-3d',
-    ...questionnaire, dependencies: [DOM_DEPENDENCY, WEBGL2_DEPENDENCY], load: () => import('./renderers/questionnaire-3d.js'),
+    // WebGL2 enables the scene; the same 3D renderer also supplies accessible
+    // questionnaire controls when no graphics context is available.
+    // Do not fall back to a different game or hide the activity.
+    ...questionnaire, dependencies: [DOM_DEPENDENCY, {id: WEBGL2_DEPENDENCY, optional: true}], load: () => import('./renderers/questionnaire-3d.js'),
   });
   registry.register({
     id: REMOTE_MEDIA_RENDERER, version: '1', priority: 90, presentation: 'media', acceptsRemoteLocation: true,
