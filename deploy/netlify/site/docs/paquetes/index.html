@@ -11,7 +11,12 @@
 const workspace = P2LRNAuthoringWorkspace.create('./workspace', {
   title: 'Curso de seguridad básica',
   language: 'es',
-});</code></pre></div></section>
+});</code></pre></div></section><section class="doc-section"><h2>Autoría y derechos</h2><p>Si el curso debe identificar autor, fecha, licencia o titular de derechos, utiliza los metadatos portables del propio curso. Studio, Toolkit, Player y Reader comparten el mismo contrato.</p><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.setCourseRights({
+  author: 'Nombre del autor',
+  createdAt: '2026-10-26',
+  license: 'CC BY 4.0',
+  copyrightHolder: 'Titular de los derechos'
+});</code></pre></div><p>Todos los campos son opcionales y sólo se guardan los que hayas definido. Para el esquema y sus límites consulta <a href="/docs/formato/">Formato P2LRN</a>.</p></section>
 <section class="doc-section"><h2>4. Añadir estructura y recursos</h2><p>Las unidades organizan el curso y los recursos proporcionan el contenido que utilizan las actividades. Las claves devueltas por las funciones de autoría sirven para relacionar después progresión u otras reglas con las entidades reales.</p><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>workspace.addUnit({
   key: 'unidad-1',
   title: 'Unidad 1 · Fundamentos',
