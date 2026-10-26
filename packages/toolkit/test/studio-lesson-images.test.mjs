@@ -5,7 +5,7 @@ import {exportP2LRNPackage} from '../web/studio/package-export.js';
 import {openP2LRNPackageBytes} from '../web/p2lrn-player.js';
 import {lessonImageData,lessonImageMediaType,MAX_LESSON_IMAGE_BYTES} from '../web/studio/lesson-images.js';
 
-const png=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==','base64'));
+const png=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==','base64'));
 const file=(bytes,name='diagrama.png')=>({name,size:bytes.byteLength,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)});
 
 test('raster image stays inside lesson HTML with its position after valid P2LRN export/import',async()=>{

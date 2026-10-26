@@ -639,13 +639,13 @@ try{
   q('.title').dispatchEvent(new Event('input',{bubbles:true}));
   q('.surface').textContent='Este contenido fue editado a través del editor instalado con npm.';
   q('.surface').dispatchEvent(new Event('input',{bubbles:true}));
-  const png=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));
+  const png=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));
   const imageTransfer=new DataTransfer();imageTransfer.items.add(new File([png],'e2e-image.png',{type:'image/png'}));
   const imageInput=await wait(()=>q('[data-lesson-image-file]'),'inline lesson image file input');
   imageInput.files=imageTransfer.files;imageInput.dispatchEvent(new Event('change',{bubbles:true}));
   const placed=await wait(()=>q('.surface img[data-p2lrn-lesson-image]'),'inline image inserted',8000);
   if(!placed.src.startsWith('data:image/png;base64,'))throw new Error('Lesson image was not embedded as raster data');
-  await wait(()=>placed.complete&&placed.naturalWidth===1,'inline image decodes in Studio',8000);
+  await wait(()=>placed.complete&&placed.naturalWidth===2,'inline image decodes in Studio',8000);
   const surface=q('.surface'),before=parseInt(placed.style.top,10),p=placed.getBoundingClientRect();
   placed.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1,clientX:p.left+1,clientY:p.top+1}));
   surface.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:1,clientX:p.left+31,clientY:p.top+31}));
@@ -852,7 +852,7 @@ try{
   const lessonAfterReopen=[...q('[data-tree]').querySelectorAll('button')].find(b=>b.querySelector('span')?.textContent==='Lección creada con Studio npm');
   lessonAfterReopen?.click();
   const restored=await wait(()=>q('.surface img[data-p2lrn-lesson-image]'),'reopened embedded lesson image',5000);
-  if(restored.style.top!==imageTop||restored.naturalWidth!==1)throw new Error('Imported lesson image lost position or raster data');
+  if(restored.style.top!==imageTop||restored.naturalWidth!==2)throw new Error('Imported lesson image lost position or raster data');
   finish(visualDefects.length?'DEGRADED':'PASS',{
     channel:'installed-npm-tarballs',
     visualDefects,
