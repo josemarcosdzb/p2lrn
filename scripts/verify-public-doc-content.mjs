@@ -24,7 +24,6 @@ const forbidden=[
   [/--renderizador\b/iu,'translated CLI flag'],
   [/Modelo mínimo/iu,'vague minimum-example heading'],
   [/JSON \/ guía/iu,'unclear JSON guide label'],
-  [/aulap2p/iu,'AulaP2P reference'],
   [/\bdeploy\b/iu,'deployment-process wording'],
   [/\bfixtures?\b/iu,'test-fixture wording'],
   [/Gate del/iu,'internal gate wording'],
@@ -38,6 +37,13 @@ const forbidden=[
   [/contrastad[oa] con/iu,'validation wording'],
   [/Versión instalada actualmente/iu,'development-status wording'],
 ];
+// P2LRN remains vendor-neutral. AulaP2P may be named only when
+// describing an explicit LMS interoperability case, never in general docs.
+const aulaP2PIntegrationDocs = new Set([
+  'deploy/netlify/site/docs/conectores/index.html',
+  'deploy/netlify/site/docs/conectores/lms/index.html',
+  'deploy/netlify/site/docs/conectores/lti/index.html',
+]);
 for(const file of files){
   const html=await readFile(file,'utf8');
   for(const match of html.matchAll(/<pre><code>([\s\S]*?)<\/code><\/pre>/gi)){
@@ -50,6 +56,8 @@ for(const file of files){
     }
   }
   const rel=relative(root,file).replaceAll('\\','/');
+  if(/aulap2p/iu.test(html) && !aulaP2PIntegrationDocs.has(rel))
+    failures.push(rel+': AulaP2P reference outside the LMS connector documentation');
   for(const section of html.matchAll(/<section class="doc-section"[^>]*>([\s\S]*?)<\/section>/gi)){
     const body=section[1].replace(/^\s*<h2[^>]*>[\s\S]*?<\/h2>/i,'').trim();
     if(body.startsWith('<div class="codebox"')||body.startsWith('<div class="install"')){
