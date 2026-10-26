@@ -11,6 +11,7 @@ import {parseOfflineAssignmentResult} from '../packages/toolkit/web/studio/offli
 import {buildQuestionnaireGame} from '../packages/toolkit/web/questionnaire-games-core.js';
 import {createP2LRNCollaborationHandler} from '../packages/player/server/collaboration-http.mjs';
 import {tmpdir} from 'node:os';
+import {STUDIO_RUNTIME_SHARED_FILES} from '../deploy/netlify/studio-runtime-assets.mjs';
 
 const root=resolve(process.cwd());
 const siteRoot=join(root,'.netlify-cdn');
@@ -1205,7 +1206,7 @@ try{
   // Match build-site.mjs: the static Studio page imports the toolkit's canonical browser modules.
   // The CDN-only fixture does not materialize these until we copy them here.
   await cp(join(root,'packages','toolkit','web','studio'),join(siteRoot,'studio','runtime'),{recursive:true,force:true});
-  for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','capability-broker.js']){
+  for(const file of STUDIO_RUNTIME_SHARED_FILES){
     await cp(join(root,'packages','toolkit','web',file),join(siteRoot,'studio',file));
   }
   await prepareVisualStudioFixture();

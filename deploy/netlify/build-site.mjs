@@ -3,6 +3,7 @@ import {cp, copyFile, mkdir, readFile, readdir, stat, writeFile} from 'node:fs/p
 import {dirname, join, relative, resolve} from 'node:path';
 import {openP2LRNPackageBytes} from '../../packages/toolkit/web/p2lrn-player.js';
 import {buildDocExamples} from './build-doc-examples.mjs';
+import {STUDIO_RUNTIME_SHARED_FILES} from './studio-runtime-assets.mjs';
 import {reviseSiteBrowserAssets} from './browser-site-revision.mjs';
 
 const root = resolve(process.cwd());
@@ -15,7 +16,7 @@ await cp(siteRoot,outputRoot,{recursive:true,force:true});
 await import('./build-connector-downloads.mjs');
 await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));
 await cp(join(root,'packages','toolkit','web','studio'),join(outputRoot,'studio','runtime'),{recursive:true,force:true});
-for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','capability-broker.js','course-rights.js']){
+for(const file of STUDIO_RUNTIME_SHARED_FILES){
   await copyFile(join(root,'packages','toolkit','web',file),join(outputRoot,'studio',file));
 }
 
@@ -136,11 +137,18 @@ const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','
 for (const htmlPath of htmlFiles) {
   let html = await readFile(htmlPath,'utf8');
   html = html.replaceAll('0.5.0-alpha.10',productionPublicVersion);
-  html = html.replace(/<div\s+class=["']header-meta["'][^>]*>[\s\S]*?<\/div>/gi,'');
+  // Decorative release badges may be removed, but Studio's live status is a functional control.
+  html = html.replace(/<div\s+class=["']header-meta["'][^>]*>[\s\S]*?<\/div>/gi,
+    (block)=>block.includes('data-studio-status')?block:'');
   html = html.replace(/<span\s+[^>]*data-footer-version(?:=["'][^"']*["'])?[^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-release-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-build-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
   await writeFile(htmlPath,html);
+}
+// Preserve the real Studio status and Player mount across website normalization.
+const studioBuildHtml=await readFile(join(outputRoot,'studio','index.html'),'utf8');
+for(const marker of ['data-studio-status','data-player','data-mode-preview','data-mode-edit']){
+  if(!studioBuildHtml.includes(marker))throw new Error('Published Studio lost functional control: '+marker);
 }
 
 // Normalize every documentation sidebar in the generated site. Source articles

@@ -53,7 +53,11 @@
   netlifyBrandingObserver.observe(document.documentElement,{childList:true,subtree:true});
 
   const cleanProductionChrome = () => {
-    document.querySelectorAll('.header-meta,[data-footer-version],.site-release-label,.site-build-label').forEach((node) => node.remove());
+    // Keep functional Studio controls; remove only obsolete decorative release metadata.
+    document.querySelectorAll('.header-meta').forEach((node)=>{
+      if(!node.querySelector('[data-studio-status]'))node.remove();
+    });
+    document.querySelectorAll('[data-footer-version],.site-release-label,.site-build-label').forEach((node)=>node.remove());
   };
   cleanProductionChrome();
 
