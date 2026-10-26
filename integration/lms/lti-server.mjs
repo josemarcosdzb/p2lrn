@@ -181,7 +181,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   if(pending.status==='SENT')return {delivered:true,duplicate:false};
   try{
    const result=await ags.postScore({
-    ags:pending.ags,subject:pending.subject,clientId:pending.clientId,
+    ags:pending.ags,subject:pending.subject,resourceLinkId:pending.resourceLinkId,clientId:pending.clientId,
     tokenUrl:pending.tokenUrl,issuer:pending.issuer,
     score:pending.payload
    });
@@ -236,7 +236,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     const claims=inspected.claims;
     const agsClaim=claims[AGS_CLAIM];
     const agsData=agsClaim&&typeof agsClaim==='object'&&!Array.isArray(agsClaim)?
-      {lineitem:agsClaim.lineitem,scope:agsClaim.scope}:null;
+      {lineitem:agsClaim.lineitem,lineitems:agsClaim.lineitems,scope:agsClaim.scope}:null;
     store.attachLaunch({launch:verified.launch,ags:agsData,tokenHash:digest(token),
       csrfHash:digest(csrf),expiresAt:time()+3600});
     const cspNonce=nonce(16);
