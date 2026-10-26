@@ -427,6 +427,7 @@ async function captureVisualEvidence(cdp,name){
   return {filename:name+'.png',bytes:info.size};
 }
 async function captureElementVisualEvidence(cdp,name,expression,{padding=12,maxHeight=1800}={}){
+  await mkdir(visualEvidenceRoot,{recursive:true});
   const found=await evalTop(cdp,`(()=>{const el=(${expression});if(!el)return false;el.scrollIntoView({block:'center',inline:'nearest'});return true;})()`);
   invariant(found,name+': visual target is missing');
   await sleep(250);
