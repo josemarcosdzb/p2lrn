@@ -6,6 +6,7 @@ on:
     paths:
       - 'packages/toolkit/**'
       - 'integration/mcp/**'
+      - 'integration/lms/**'
       - 'packages/player/**'
       - 'packages/studio/**'
       - 'packages/h5p-libraries/**'
@@ -21,6 +22,7 @@ on:
     paths:
       - 'packages/toolkit/**'
       - 'integration/mcp/**'
+      - 'integration/lms/**'
       - 'packages/player/**'
       - 'packages/studio/**'
       - 'packages/h5p-libraries/**'
@@ -246,7 +248,7 @@ jobs:
         run: node scripts/verify-local-viewer.mjs
 
   toolkit-and-cdn:
-    if: ${{ !contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !contains(github.event.head_commit.message, '[verify live CDN]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
+    if: ${{ !contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !contains(github.event.head_commit.message, '[verify live CDN]') && !contains(github.event.head_commit.message, '[lms design]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
@@ -619,6 +621,27 @@ jobs:
         run: node --check scripts/verify-deployment-state.mjs
       - name: Read live localhost 4183 and Netlify assets and npm tags
         run: node scripts/verify-deployment-state.mjs
+
+  lms-contracts-windows:
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify universal LMS architecture contracts
+        run: |
+          node --check integration/lms/launch-contract.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check integration/lms/host-adapter.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test integration/lms/lms-contracts.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   mcp-connectors-windows:
     # Independent gate to isolate MCP results from unrelated Studio/Player CI failures.
