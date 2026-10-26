@@ -12,3 +12,28 @@ test('Quest 3D fallback physics lets player contact move standalone blocks',asyn
   assert.ok(after.z>before.z);
   world.destroy();
 });
+
+import {createDefaultDependencyRegistry,DOM_DEPENDENCY,WEBGL2_DEPENDENCY} from '../web/dependency-registry.js';
+import {RendererRegistry,THREE_D_RENDERER} from '../web/renderer-registry.js';
+import {registerBuiltInRenderers} from '../web/built-in-renderers.js';
+
+test('3D retains its own accessible renderer without WebGL2, without weakening hard dependencies',async()=>{
+  const dependencies=createDefaultDependencyRegistry();
+  const registry=registerBuiltInRenderers(new RendererRegistry({dependencies}));
+  const three=registry.get(THREE_D_RENDERER);
+  assert.deepEqual(three.dependencies,[DOM_DEPENDENCY,{id:WEBGL2_DEPENDENCY,optional:true}]);
+  const oldDocument=globalThis.document,oldHTMLElement=globalThis.HTMLElement;
+  globalThis.document={createElement:()=>({getContext:()=>null})};
+  globalThis.HTMLElement=class {};
+  try{
+    await assert.doesNotReject(()=>dependencies.resolve(three.dependencies));
+    await assert.rejects(()=>dependencies.resolve([DOM_DEPENDENCY,WEBGL2_DEPENDENCY]),
+      {code:'P2LRN_DEPENDENCY_UNAVAILABLE'});
+    delete globalThis.document;
+    await assert.rejects(()=>dependencies.resolve(three.dependencies),
+      {code:'P2LRN_DEPENDENCY_UNAVAILABLE'});
+  }finally{
+    if(oldDocument===undefined)delete globalThis.document;else globalThis.document=oldDocument;
+    if(oldHTMLElement===undefined)delete globalThis.HTMLElement;else globalThis.HTMLElement=oldHTMLElement;
+  }
+});
