@@ -52,6 +52,11 @@
   });
   netlifyBrandingObserver.observe(document.documentElement,{childList:true,subtree:true});
 
+  const cleanProductionChrome = () => {
+    document.querySelectorAll('.header-meta,[data-footer-version],.site-release-label,.site-build-label').forEach((node) => node.remove());
+  };
+  cleanProductionChrome();
+
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
@@ -367,8 +372,6 @@
       ['/studio/','Abrir Studio ↗'],
       ['/demo/','Visor ↗'],
       ['/examples/catalog.json','Catálogo de ejemplos ↗'],
-      ['/index.json','Índice CDN ↗'],
-      ['/health.json','Estado del CDN ↗'],
     ]],
   ];
 
