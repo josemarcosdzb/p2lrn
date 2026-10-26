@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1117"><meta name="description" content="Instalación y verificación de P2LRN MCP stdio en Claude Desktop, Cursor, Windsurf, Gemini CLI, VS Code y otros clientes locales.">
+<title>Conectores de IA local — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
+<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"></nav>
+<div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
+<button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / IA LOCAL</p><h1>Conectores de IA local</h1><p>Las aplicaciones de IA instaladas en tu ordenador pueden abrir herramientas P2LRN mediante MCP por stdio, sin dominio, túnel ni servidor en la nube. La carpeta de cursos autorizada y la posibilidad de editar se seleccionan durante la configuración.</p></header>
+<section class="doc-section"><h2>Qué instala el conector local</h2>
+<p>La implementación reutiliza <code>integration/mcp/server.mjs</code>, el mismo servidor MCP que emplean los clientes web, pero mediante transporte <code>stdio</code> en vez de HTTP remoto. No instala un segundo formato ni modifica Studio, Toolkit o Player.</p>
+<div class="reference-table"><div><strong>Lectura (predeterminada)</strong><p>Listar, buscar, leer y validar paquetes dentro de una carpeta permitida.</p></div>
+<div><strong>Edición opcional</strong><p>Crear proyectos de borrador, añadir contenidos y actividades y exportar paquetes nuevos. Las operaciones requieren habilitación explícita.</p></div>
+<div><strong>Acceso restringido</strong><p>El proceso usa los permisos de tu usuario y sólo lee la carpeta seleccionada; no debe apuntar a todo el disco ni abrir rutas sin autorizar.</p></div></div></section>
+<section class="doc-section"><h2>Instalación guiada en Windows</h2>
+<ol class="doc-list"><li>Ten instalado <strong>Node.js 22 o posterior</strong> y una copia local autorizada del repositorio P2LRN.</li>
+<li>Desde el Explorador, abre <code>integration/mcp/Conectar-P2LRN.cmd</code> con doble clic.</li>
+<li>Selecciona la carpeta que contiene tus cursos. El valor sugerido es <code>Documentos/P2LRN</code>, pero puedes elegir otra.</li>
+<li>Elige los clientes detectados y si quieres solamente lectura o también edición en borradores.</li>
+<li>Revisa la lista de archivos de configuración que va a cambiar y confirma. El asistente crea copias de seguridad y no borra otros servidores MCP.</li>
+<li>Comprueba que el cliente puede listar un curso y valida el paquete antes de probar edición.</li></ol>
+<div class="doc-callout"><strong>El proceso se inicia bajo demanda</strong><p>No necesitas instalar un servicio en segundo plano ni exponer una URL a Internet. Si no tienes el ejecutable <code>.cmd</code>, usa el script avanzado después de preparar Toolkit y las dependencias.</p></div></section>
+<section class="doc-section"><h2>Clientes y tipos de registro</h2>
+<div class="reference-table">
+<div><strong>Claude Desktop</strong><p>Configura un servidor MCP local con JSON. El asistente solicita confirmación y preserva las demás entradas existentes.</p></div>
+<div><strong>Cursor</strong><p>Registra las herramientas P2LRN en la configuración MCP del editor, sin modificar los paquetes del curso.</p></div>
+<div><strong>Windsurf</strong><p>Configura la conexión local compatible con MCP; debe verificarse que la versión instalada expone las herramientas.</p></div>
+<div><strong>Gemini CLI</strong><p>Registra el proceso <code>stdio</code> como servidor MCP. La conexión es local incluso si el modelo que usa Gemini CLI puede estar alojado en la nube.</p></div>
+<div><strong>VS Code</strong><p>Usa un archivo <code>.vscode/mcp.json</code> dentro del proyecto indicado explícitamente por <code>--workspace</code>.</p></div>
+<div><strong>Codex CLI, Claude Code, OpenCode</strong><p>Genera una configuración o instrucciones para importar y revisar según la versión del cliente; no se promete instalación automática en todos los casos.</p></div>
+<div><strong>Clientes MCP stdio genéricos</strong><p>Se facilita la entrada de conexión con comando, argumentos y variables de entorno. La compatibilidad depende del cliente.</p></div>
+<div><strong>ChatGPT Desktop</strong><p>Existe una guía de desarrollo local, pero la instalación directa de servidores stdio depende de las capacidades y permisos disponibles en esa aplicación.</p></div>
+</div></section>
+<section class="doc-section"><h2>Comandos para usuarios avanzados</h2>
+<p>Ejecuta los siguientes comandos desde la raíz del repositorio. Para el script directo debes preparar primero el Toolkit y las dependencias, cosa que hace automáticamente el lanzador de Windows.</p>
+<div class="codebox"><div class="codebox-head"><span>PowerShell · asistente interactivo</span><button type="button" data-copy>Copiar</button></div><pre><code>node integration/mcp/connect-local.mjs</code></pre></div>
+<div class="codebox"><div class="codebox-head"><span>Instalar y verificar clientes elegidos</span><button type="button" data-copy>Copiar</button></div><pre><code>node integration/mcp/connect-local.mjs --root C:\MisCursos --clients claude,cursor,windsurf,gemini --install --verify</code></pre></div>
+<div class="codebox"><div class="codebox-head"><span>Editar sólo borradores y exportaciones nuevas</span><button type="button" data-copy>Copiar</button></div><pre><code>node integration/mcp/connect-local.mjs --root C:\MisCursos --clients auto --enable-drafts --install --verify</code></pre></div>
+<div class="codebox"><div class="codebox-head"><span>VS Code · sólo un proyecto explícito</span><button type="button" data-copy>Copiar</button></div><pre><code>node integration/mcp/connect-local.mjs --root C:\MisCursos --clients vscode --workspace C:\MiProyecto --install --verify</code></pre></div>
+</section>
+<section class="doc-section"><h2>Trabajar con Ollama y un modelo local</h2>
+<p>El repositorio incorpora ensayos de laboratorio con Ollama en <code>127.0.0.1:11434</code> y, por defecto, el modelo <code>qwen3:4b</code>. El modelo debe instalarse por separado y estar disponible localmente; este conector no descarga modelos ni garantiza su capacidad autónoma para completar todas las tareas.</p>
+<div class="reference-table"><div><strong>Uso de herramientas</strong><p><code>integration/mcp/test/local-agent-matrix.e2e.mjs</code> registra qué herramientas elige y ejecuta el modelo.</p></div>
+<div><strong>Generación de contenido</strong><p><code>integration/mcp/test/local-agent-structured.e2e.mjs</code> evalúa respuestas estructuradas que Toolkit valida para construir paquetes temporales.</p></div>
+<div><strong>Diferenciar local de remoto</strong><p>El servidor MCP puede ser local aunque la IA usada por un editor sea remota. Para inferencia sin nube hay que configurar específicamente un modelo local.</p></div></div></section>
+<section class="doc-section"><h2>Verificar que funciona y resolver errores</h2>
+<ul class="doc-list"><li>Comprueba versión de Node, ubicación del repositorio y existencia de las dependencias.</li>
+<li>Confirma que el cliente muestra las herramientas <code>p2lrn_list_courses</code> y <code>p2lrn_validate_course</code>.</li>
+<li>Haz una lectura real de un <code>.p2lrn</code> de la carpeta autorizada. Fuera de ella, el acceso debe rechazarse.</li>
+<li>Si activaste edición, exporta un nuevo paquete y comprueba que el original conserva su contenido.</li>
+<li>Si el cliente muestra una versión antigua, revisa su configuración MCP y reinícialo cuando proceda; no reemplaces configuraciones ajenas sin revisarlas.</li></ul>
+<p>La alternativa para ChatGPT web, Claude web y Grok web es el <a href="/docs/conectores/ia/">conector remoto HTTPS</a>.</p></section>
+<nav class="doc-pager"><a class="prev" href="/docs/conectores/ia/"><span>← Anterior</span><strong>ChatGPT, Claude y Grok</strong></a>
+<a class="next" href="/docs/conectores/lms/"><span>Siguiente →</span><strong>Plataformas LMS</strong></a></nav>
+</article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
