@@ -855,8 +855,15 @@ try{
     if(!reopenedTree.includes(title))throw new Error('Studio export/reimport lost activity: '+title);
   }
   if(imageFeatureExpected){
+    // Reopening preserves the current Studio mode. The flow above intentionally
+    // entered learner preview, so return to edit mode before asserting the
+    // editable lesson DOM. Otherwise the image is present in the package but
+    // the test looks for an editor surface while Studio is still rendering Player.
+    click('[data-edit]');
+    await wait(()=>q('[data-edit]').classList.contains('primary'),'return to edit mode after reopen');
     const lessonAfterReopen=[...q('[data-tree]').querySelectorAll('button')].find(b=>b.querySelector('span')?.textContent==='Lección creada con Studio npm');
-    lessonAfterReopen?.click();
+    if(!lessonAfterReopen)throw new Error('Reopened lesson is missing from Studio tree');
+    lessonAfterReopen.click();
     const restored=await wait(()=>q('.surface img[data-p2lrn-lesson-image]'),'reopened embedded lesson image',5000);
     if(restored.style.top!==imageTop||restored.naturalWidth!==2)throw new Error('Imported lesson image lost position or raster data');
   }
