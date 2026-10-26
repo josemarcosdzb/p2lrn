@@ -1,0 +1,325 @@
+import {exportP2LRNPackage, writeStoredZip} from './package-export.js';
+import {capabilityRequirements} from '../capability-broker.js';
+
+export const OFFLINE_ASSIGNMENT_SCHEMA='https://p2lrn.org/schema/offline-assignment/1';
+export const OFFLINE_RESULT_SCHEMA='https://p2lrn.org/schema/offline-result/1';
+export const OFFLINE_ASSIGNMENT_VERSION='1';
+
+const encoder=new TextEncoder();
+const decoder=new TextDecoder();
+
+function clone(value){return value==null?value:structuredClone(value);}
+function canonicalize(value){
+  if(value===null||typeof value==='boolean'||typeof value==='string')return JSON.stringify(value);
+  if(typeof value==='number'){
+    if(!Number.isFinite(value))throw new Error('Non-finite JSON number.');
+    if(Number.isInteger(value)&&!Number.isSafeInteger(value))throw new Error('Unsafe JSON integer.');
+    return JSON.stringify(value);
+  }
+  if(Array.isArray(value))return '['+value.map(canonicalize).join(',')+']';
+  if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map((key)=>JSON.stringify(key)+':'+canonicalize(value[key])).join(',')+'}';
+  throw new Error('Unsupported JSON value.');
+}
+async function sha256Bytes(bytes){
+  const view=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',view));
+  return 'sha256:'+Array.from(digest,(byte)=>byte.toString(16).padStart(2,'0')).join('');
+}
+async function sha256Json(value){return sha256Bytes(encoder.encode(canonicalize(value)));}
+function jsonBytes(value){return encoder.encode(JSON.stringify(value,null,2)+'\n');}
+function textBytes(value){return encoder.encode(String(value).replace(/\r?\n/g,'\r\n'));}
+function validIso(value,label){
+  if(value==null||String(value).trim()==='')return null;
+  const date=new Date(String(value));
+  if(Number.isNaN(date.getTime()))throw new TypeError(label+' no es una fecha válida.');
+  return date.toISOString();
+}
+function positiveInteger(value,label,{min=1,max=100000000}={}){
+  if(value==null||value==='')return null;
+  const parsed=Number(value);
+  if(!Number.isInteger(parsed)||parsed<min||parsed>max)throw new TypeError(label+' debe ser un entero entre '+min+' y '+max+'.');
+  return parsed;
+}
+function cleanFilename(value,fallback='curso'){
+  const base=String(value??fallback).replace(/\.[^.]+$/,'').replace(/[<>:"/\\|?*\u0000-\u001f]/g,'-').trim();
+  return base||fallback;
+}
+function safeRuntimePath(value){
+  const path=String(value??'').replaceAll('\\','/');
+  if(!path||path.startsWith('/')||path.includes('..')||/^[a-z][a-z0-9+.-]*:/i.test(path))throw new Error('Ruta insegura en el runtime Player: '+path);
+  return path;
+}
+function localRepresentation(rep){return ['embedded','package-member'].includes(rep?.location?.type);}
+
+export function normalizeOfflineAssignmentPolicy(options={}){
+  const availableFrom=validIso(options.availableFrom,'Disponible desde');
+  const dueAt=validIso(options.dueAt,'Fecha límite');
+  if(availableFrom&&dueAt&&new Date(dueAt)<=new Date(availableFrom))throw new TypeError('La fecha límite debe ser posterior a la fecha de disponibilidad.');
+  return Object.freeze({
+    availableFrom,
+    dueAt,
+    attemptDurationSeconds:positiveInteger(options.attemptDurationSeconds,'Tiempo máximo',{min:30,max:31*24*60*60}),
+    maxAttempts:positiveInteger(options.maxAttempts??1,'Intentos máximos',{min:1,max:100})??1,
+    allowResume:options.allowResume!==false,
+    collaboration:'disabled',
+    network:'deny-by-default',
+    activityTracking:options.activityTracking!==false,
+  });
+}
+
+export function inspectOfflineAssignmentCompatibility(document){
+  const issues=[];
+  const entities=Array.isArray(document?.graph?.entities)?document.graph.entities:[];
+  for(const entity of entities){
+    let requests=[];
+    try{requests=capabilityRequirements(entity);}catch(error){
+      issues.push({code:'INVALID_HOST_CAPABILITY',entityId:entity?.id??null,message:String(error?.message??error)});
+      continue;
+    }
+    for(const request of requests){
+      if(String(request.id).startsWith('collaboration.')&&request.required){
+        issues.push({code:'REQUIRED_COLLABORATION',entityId:entity.id,capabilityId:request.id,message:'La actividad requiere colaboración en directo y no puede ejecutarse sin host.'});
+      }else if(request.required&&!request.fallback){
+        issues.push({code:'REQUIRED_LIVE_CAPABILITY',entityId:entity.id,capabilityId:request.id,message:'La actividad requiere una capacidad del host sin fallback offline: '+request.id});
+      }
+    }
+    if(entity?.type==='resource'){
+      const reps=Array.isArray(entity.representations)?entity.representations:[];
+      if(reps.length&&reps.every((rep)=>!localRepresentation(rep))){
+        issues.push({code:'REMOTE_ONLY_RESOURCE',entityId:entity.id,message:'El recurso sólo tiene representaciones remotas y no puede incluirse en una entrega autocontenida.'});
+      }
+    }
+  }
+  return Object.freeze({ok:issues.length===0,issues:Object.freeze(issues.map((item)=>Object.freeze(item)))});
+}
+
+export function detectPlayerRuntimeBaseUrl({runtimeBaseUrl=null,documentObject=globalThis.document}={}){
+  if(runtimeBaseUrl){
+    const resolved=new URL(String(runtimeBaseUrl),documentObject?.baseURI??globalThis.location?.href??'http://localhost/');
+    return new URL('./',resolved).href;
+  }
+  const moduleUrl=globalThis.__P2LRN_CDN_LOADER__?.moduleUrl;
+  if(moduleUrl)return new URL('./',moduleUrl).href;
+  const scripts=[...(documentObject?.scripts??[])];
+  const match=scripts.map((script)=>script.src).find((src)=>/\/p2lrn(?:\.esm)?\.js(?:[?#].*)?$/i.test(String(src)));
+  if(match)return new URL('./',match).href;
+  throw new Error('No se ha podido localizar el runtime Player para crear la entrega offline. Configura offline-runtime-base-url en Studio.');
+}
+
+async function fetchBytes(fetchImpl,url){
+  const response=await fetchImpl(url,{credentials:'same-origin'});
+  if(!response?.ok)throw new Error('No se pudo incluir el runtime Player: HTTP '+(response?.status??'?')+' · '+url);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+async function collectRuntime(runtimeBaseUrl,fetchImpl){
+  const base=new URL('./',runtimeBaseUrl).href;
+  const releaseBytes=await fetchBytes(fetchImpl,new URL('release.json',base).href);
+  let release;
+  try{release=JSON.parse(decoder.decode(releaseBytes));}
+  catch{throw new Error('release.json del Player no contiene JSON válido.');}
+  if(!release||!Array.isArray(release.files)||!release.webSdkVersion)throw new Error('release.json del Player no tiene el contrato esperado.');
+  const entries=[{path:'www/player/release.json',data:releaseBytes}];
+  for(const descriptor of release.files){
+    const path=safeRuntimePath(descriptor?.path);
+    if(path==='release.json')continue;
+    const bytes=await fetchBytes(fetchImpl,new URL(path,base).href);
+    if(Number.isInteger(descriptor.bytes)&&descriptor.bytes!==bytes.byteLength)throw new Error('El runtime Player cambió durante la exportación: '+path);
+    if(/^sha256:[0-9a-f]{64}$/i.test(String(descriptor.sha256??''))){
+      const digest=await sha256Bytes(bytes);
+      if(digest.toLowerCase()!==String(descriptor.sha256).toLowerCase())throw new Error('Digest inválido del runtime Player: '+path);
+    }
+    entries.push({path:'www/player/'+path,data:bytes});
+  }
+  return {release,releaseBytes,entries,base};
+}
+
+function launcherCmd(){
+  return [
+    '@echo off',
+    'setlocal',
+    'cd /d "%~dp0"',
+    'title P2LRN - Entrega offline',
+    'where powershell.exe >nul 2>&1 || (echo PowerShell no esta disponible en este equipo. & pause & exit /b 1)',
+    'powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File ".\\runtime\\serve.ps1"',
+    'if errorlevel 1 pause',
+    '',
+  ].join('\r\n');
+}
+
+function launcherPowerShell(){
+  return [
+    "$ErrorActionPreference='Stop'",
+    "$bundleRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))",
+    "$webRoot=[IO.Path]::GetFullPath((Join-Path $bundleRoot 'www'))",
+    "if(!(Test-Path (Join-Path $webRoot 'index.html'))){throw 'No se encuentra www\\index.html'}",
+    "$listener=$null;$port=$null;$nl=[Environment]::NewLine",
+    "foreach($candidate in 8769..8799){",
+    "  try{$test=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,$candidate);$test.Start();$listener=$test;$port=$candidate;break}catch{if($test){try{$test.Stop()}catch{}}}",
+    "}",
+    "if(!$listener){throw 'No hay un puerto local disponible entre 8769 y 8799.'}",
+    "$mime=@{'.html'='text/html; charset=utf-8';'.js'='text/javascript; charset=utf-8';'.css'='text/css; charset=utf-8';'.json'='application/json; charset=utf-8';'.wasm'='application/wasm';'.png'='image/png';'.jpg'='image/jpeg';'.jpeg'='image/jpeg';'.svg'='image/svg+xml';'.gif'='image/gif';'.webp'='image/webp';'.mp3'='audio/mpeg';'.mp4'='video/mp4';'.p2lrn'='application/vnd.p2lrn+zip';'.zip'='application/zip'}",
+    "$url=('http://127.0.0.1:'+ $port +'/index.html')",
+    "Write-Host 'P2LRN offline iniciado en' $url",
+    "Write-Host 'Cierra esta ventana cuando termines.'",
+    "Start-Process $url",
+    "try{",
+    "  while($true){",
+    "    $client=$listener.AcceptTcpClient()",
+    "    try{",
+    "      $stream=$client.GetStream()",
+    "      $reader=[IO.StreamReader]::new($stream,[Text.Encoding]::ASCII,$false,4096,$true)",
+    "      $line=$reader.ReadLine()",
+    "      if(!$line){continue}",
+    "      $parts=$line.Split(' ');$method=$parts[0];$target=$parts[1]",
+    "      while(($header=$reader.ReadLine()) -ne $null -and $header -ne ''){}",
+    "      if($method -ne 'GET' -and $method -ne 'HEAD'){",
+    "        $body=[Text.Encoding]::UTF8.GetBytes('Method Not Allowed')",
+    "        $head='HTTP/1.1 405 Method Not Allowed'+$nl+'Content-Length: '+$body.Length+$nl+'Connection: close'+$nl+$nl",
+    "        $hb=[Text.Encoding]::ASCII.GetBytes($head);$stream.Write($hb,0,$hb.Length);if($method -ne 'HEAD'){$stream.Write($body,0,$body.Length)};continue",
+    "      }",
+    "      try{$uri=[Uri]('http://127.0.0.1:'+ $port + $target);$relative=[Uri]::UnescapeDataString($uri.AbsolutePath.TrimStart('/'))}catch{$relative=''}",
+    "      if([string]::IsNullOrWhiteSpace($relative)){$relative='index.html'}",
+    "      $relative=$relative.Replace('/',[IO.Path]::DirectorySeparatorChar)",
+    "      $file=[IO.Path]::GetFullPath((Join-Path $webRoot $relative))",
+    "      if(!$file.StartsWith($webRoot,[StringComparison]::OrdinalIgnoreCase) -or !(Test-Path -LiteralPath $file -PathType Leaf)){",
+    "        $body=[Text.Encoding]::UTF8.GetBytes('Not Found');$head='HTTP/1.1 404 Not Found'+$nl+'Content-Length: '+$body.Length+$nl+'Connection: close'+$nl+$nl",
+    "        $hb=[Text.Encoding]::ASCII.GetBytes($head);$stream.Write($hb,0,$hb.Length);if($method -ne 'HEAD'){$stream.Write($body,0,$body.Length)};continue",
+    "      }",
+    "      $bytes=[IO.File]::ReadAllBytes($file);$ext=[IO.Path]::GetExtension($file).ToLowerInvariant();$type=if($mime.ContainsKey($ext)){$mime[$ext]}else{'application/octet-stream'}",
+    "      $cache=if($relative -match '^player[\\\\/]'){'public, max-age=31536000, immutable'}else{'no-store'}",
+    "      $head='HTTP/1.1 200 OK'+$nl+'Content-Type: '+$type+$nl+'Content-Length: '+$bytes.Length+$nl+'Cache-Control: '+$cache+$nl+'X-Content-Type-Options: nosniff'+$nl+'Connection: close'+$nl+$nl",
+    "      $hb=[Text.Encoding]::ASCII.GetBytes($head);$stream.Write($hb,0,$hb.Length);if($method -ne 'HEAD'){$stream.Write($bytes,0,$bytes.Length)}",
+    "    }catch{Write-Warning $_.Exception.Message}finally{try{$client.Close()}catch{}}",
+    "  }",
+    "}finally{try{$listener.Stop()}catch{}}",
+    '',
+  ].join('\r\n');
+}
+
+function assignmentHtml(){
+  return [
+    '<!doctype html>',
+    '<html lang="es"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<meta http-equiv="Content-Security-Policy" content="default-src \\'self\\' blob: data:; connect-src \\'self\\' blob: data:; img-src \\'self\\' blob: data:; media-src \\'self\\' blob: data:; frame-src \\'self\\' blob: data:; script-src \\'self\\' \\'wasm-unsafe-eval\\'; style-src \\'self\\' \\'unsafe-inline\\'; object-src \\'none\\'; base-uri \\'none\\'; form-action \\'none\\'">',
+    '<title>P2LRN · Entrega offline</title>',
+    '<link rel="stylesheet" href="./style.css">',
+    '</head><body>',
+    '<header><div><strong>P2LRN</strong><span>Entrega offline autorreproducible</span></div><div id="clock"></div></header>',
+    '<main>',
+    '<section class="assignment-card" id="gate"><h1 id="title">Cargando entrega…</h1><p id="policy"></p><div id="participant-wrap" hidden><label>Nombre o identificador del alumno<input id="participant" autocomplete="name" maxlength="160"></label></div><button id="start" type="button" disabled>Comenzar</button><p class="status" id="gate-status" role="status"></p></section>',
+    '<section id="session" hidden><div class="session-bar"><div><strong id="session-title"></strong><span id="timer"></span></div><button id="finish" type="button">Finalizar y descargar entrega</button></div><div id="player"></div></section>',
+    '<section id="finished" hidden class="assignment-card"><h2>Entrega preparada</h2><p>Se ha descargado un archivo <code>.p2lrn-result</code>. Envíalo al profesor para corregir y revisar las métricas.</p><button id="download-again" type="button">Descargar otra vez</button></section>',
+    '</main>',
+    '<footer>La colaboración y los servicios externos están desactivados en esta entrega. Las fechas offline dependen del reloj del equipo.</footer>',
+    '<script src="./player/p2lrn.js"></script><script src="./app.js"></script>',
+    '</body></html>',
+  ].join('\n');
+}
+
+function assignmentCss(){
+  return [
+    ':root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111827;background:#f4f6f8}',
+    '*{box-sizing:border-box}body{margin:0;min-height:100vh}header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;gap:20px;align-items:center;padding:14px 24px;background:#0b1017;color:#fff}header div:first-child{display:flex;gap:14px;align-items:baseline}header span{color:#cbd5e1;font-size:13px}main{width:min(1180px,calc(100% - 32px));margin:28px auto}.assignment-card{max-width:760px;margin:10vh auto 0;padding:28px;border:1px solid #d7dde5;border-radius:14px;background:#fff;box-shadow:0 14px 40px rgba(15,23,42,.08)}h1,h2{margin-top:0}.assignment-card label{display:grid;gap:7px;margin:18px 0;font-weight:700}.assignment-card input{min-height:42px;border:1px solid #cbd5e1;border-radius:8px;padding:8px 11px;font:inherit}.assignment-card button,.session-bar button{min-height:42px;border:0;border-radius:8px;padding:0 16px;background:#111827;color:#fff;font-weight:700;cursor:pointer}.assignment-card button:disabled{opacity:.45;cursor:not-allowed}.status{color:#667085}.status.error{color:#b42318}.session-bar{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px;padding:12px 14px;border:1px solid #d7dde5;border-radius:10px;background:#fff}.session-bar>div{display:flex;gap:14px;align-items:center;flex-wrap:wrap}#timer{font:700 12px ui-monospace,monospace;color:#475467}#player{min-height:600px;border:1px solid #d7dde5;border-radius:12px;background:#fff;overflow:hidden}footer{max-width:1180px;margin:30px auto;padding:0 16px 28px;color:#667085;font-size:12px}code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}@media(max-width:700px){header{align-items:flex-start;padding:12px 16px}header div:first-child{display:grid;gap:2px}.session-bar{align-items:stretch;flex-direction:column}.session-bar button{width:100%}main{width:min(100% - 18px,1180px);margin-top:14px}.assignment-card{margin-top:4vh;padding:20px}#player{min-height:520px}}',
+  ].join('\n');
+}
+
+function assignmentApp(){
+  return [
+    "'use strict';",
+    "const RESULT_SCHEMA='https://p2lrn.org/schema/offline-result/1';",
+    "const $=(id)=>document.getElementById(id);",
+    "const enc=new TextEncoder();",
+    "let assignment=null,adapter=null,player=null,attempt=null,resultCache=null,timerHandle=null;",
+    "const storageKey=()=> 'p2lrn:offline-assignment:'+assignment.assignmentId;",
+    "function canonical(v){if(v===null||typeof v==='boolean'||typeof v==='string')return JSON.stringify(v);if(typeof v==='number')return JSON.stringify(v);if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';throw new Error('Unsupported JSON');}",
+    "async function sha(text){const d=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(text)));return 'sha256:'+Array.from(d,b=>b.toString(16).padStart(2,'0')).join('');}",
+    "function state(){try{return JSON.parse(localStorage.getItem(storageKey())||'null')||{attempts:[],activeAttempt:null,lastWallAt:null,participantLabel:assignment.participant?.label||''};}catch{return{attempts:[],activeAttempt:null,lastWallAt:null,participantLabel:assignment.participant?.label||''};}}",
+    "function saveState(s){localStorage.setItem(storageKey(),JSON.stringify(s));}",
+    "function fmt(iso){return iso?new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(iso)):'Sin límite';}",
+    "function humanSeconds(value){const s=Math.max(0,Math.ceil(value));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),r=s%60;return(h?h+' h ':'')+(m||h?m+' min ':'')+r+' s';}",
+    "function anomaly(code,detail=null){attempt.anomalies??=[];if(!attempt.anomalies.some(x=>x.code===code))attempt.anomalies.push({code,observedAt:new Date().toISOString(),detail});}",
+    "function policyGate(){const now=Date.now(),p=assignment.policy;if(p.availableFrom&&now<new Date(p.availableFrom).getTime())return{ok:false,message:'La entrega estará disponible el '+fmt(p.availableFrom)+'.'};if(p.dueAt&&now>new Date(p.dueAt).getTime())return{ok:false,message:'La fecha límite indicada era '+fmt(p.dueAt)+'.'};return{ok:true};}",
+    "function renderGate(){const s=state(),g=policyGate();$('title').textContent=assignment.title||'Entrega P2LRN';const bits=['Disponible: '+fmt(assignment.policy.availableFrom),'Límite: '+fmt(assignment.policy.dueAt),assignment.policy.attemptDurationSeconds?'Tiempo por intento: '+humanSeconds(assignment.policy.attemptDurationSeconds):'Sin tiempo máximo','Intentos: '+assignment.policy.maxAttempts];$('policy').textContent=bits.join(' · ');const needsParticipant=!s.participantLabel;$('participant-wrap').hidden=!needsParticipant;if(!needsParticipant)$('participant').value=s.participantLabel;const active=s.activeAttempt&&assignment.policy.allowResume;const used=s.attempts.length;let allowed=g.ok&&(active||used<assignment.policy.maxAttempts);$('start').textContent=active?'Continuar intento':'Comenzar';$('start').disabled=!allowed;$('gate-status').textContent=g.ok?(allowed?'La entrega funciona sin conexión. La colaboración está desactivada.':'No quedan intentos disponibles.'):g.message;$('gate-status').classList.toggle('error',!g.ok||!allowed);}",
+    "function createAttempt(){const s=state();if(!assignment.policy.allowResume&&s.activeAttempt){s.attempts.push({...s.activeAttempt,finishedAt:new Date().toISOString(),status:'abandoned',anomalies:[...(s.activeAttempt.anomalies||[]),{code:'SESSION_RESET',observedAt:new Date().toISOString()}]});s.activeAttempt=null;}if(s.activeAttempt&&assignment.policy.allowResume)return{s,attempt:s.activeAttempt};if(s.attempts.length>=assignment.policy.maxAttempts)throw new Error('No quedan intentos disponibles.');const now=Date.now();const next={id:crypto.randomUUID(),number:s.attempts.length+1,startedAt:new Date(now).toISOString(),startedWallMs:now,lastWallMs:now,anomalies:[]};s.activeAttempt=next;return{s,attempt:next};}",
+    "function tick(){if(!attempt)return;const s=state(),now=Date.now();if(Number.isFinite(attempt.lastWallMs)&&now<attempt.lastWallMs-5000)anomaly('CLOCK_ROLLBACK',{previous:attempt.lastWallMs,current:now});if(Number.isFinite(attempt.lastWallMs)&&now>attempt.lastWallMs+10*60*1000)anomaly('CLOCK_JUMP',{previous:attempt.lastWallMs,current:now});attempt.lastWallMs=now;s.activeAttempt=attempt;s.lastWallAt=now;saveState(s);const p=assignment.policy;let label='Intento '+attempt.number;if(p.attemptDurationSeconds){const elapsed=Math.max(0,(now-attempt.startedWallMs)/1000),remaining=p.attemptDurationSeconds-elapsed;label+=' · '+humanSeconds(remaining);if(remaining<=0){anomaly('ATTEMPT_LIMIT_EXCEEDED');$('finish').textContent='Tiempo agotado · descargar entrega';if(player)player.style.pointerEvents='none';}}if(p.dueAt&&now>new Date(p.dueAt).getTime()){anomaly('DEADLINE_CLOCK_UNTRUSTED');label+=' · fuera de plazo';if(player)player.style.pointerEvents='none';}$('timer').textContent=label;$('clock').textContent=new Date(now).toLocaleString();}",
+    "async function start(){const gate=policyGate();if(!gate.ok)throw new Error(gate.message);const created=createAttempt(),s=created.s;attempt=created.attempt;const label=String($('participant').value||s.participantLabel||'').trim();if(!label)throw new Error('Indica el nombre o identificador del alumno.');s.participantLabel=label;s.activeAttempt=attempt;saveState(s);$('gate').hidden=true;$('session').hidden=false;$('session-title').textContent=assignment.title||'Entrega P2LRN';const api=await globalThis.P2LRNReady;adapter=api.createOfflineHostAdapter({remote:null,online:()=>false,storageNamespace:assignment.assignmentId+':'+attempt.id});player=await api.mount('#player',{src:'./course.p2lrn',adapter,runtimeBaseUrl:'./player/runtime-host/',activityTracking:assignment.policy.activityTracking});timerHandle=setInterval(tick,1000);tick();}",
+    "function latestScore(ops){return [...ops].reverse().find(x=>x.type==='score')?.value??null;}",
+    "function answersFromStates(states){const out=[];for(const op of states){const answers=op?.value?.answers;if(!answers||typeof answers!=='object'||Array.isArray(answers))continue;for(const [questionId,answer] of Object.entries(answers))out.push({entityId:op.context?.entityId??null,questionId,answer});}return out;}",
+    "function activeMs(events){let best=0;for(const op of events){if(op?.value?.type==='p2lrn:active-time')best=Math.max(best,Number(op.value?.payload?.totalActiveMs)||0);else if(op?.value?.payload&&Number.isFinite(Number(op.value.payload.totalActiveMs)))best=Math.max(best,Number(op.value.payload.totalActiveMs));}return best;}",
+    "async function evidenceRoot(records){let root=await sha(assignment.assignmentId+'|'+assignment.contentRoot);for(const record of records)root=await sha(root+'|'+canonical(record));return root;}",
+    "async function buildResult(){if(player?.stopActivityTracking)player.stopActivityTracking();await new Promise(r=>setTimeout(r,20));const ops=await adapter.pending();const states=ops.filter(x=>x.type==='state'),scores=ops.filter(x=>x.type==='score'),events=ops.filter(x=>x.type==='event');const now=new Date().toISOString();const elapsed=Math.max(0,Math.round((Date.now()-attempt.startedWallMs)/1000));const s=state();attempt.finishedAt=now;attempt.elapsedSeconds=elapsed;attempt.status='submitted';s.attempts.push(attempt);s.activeAttempt=null;saveState(s);const body={schema:RESULT_SCHEMA,version:'1',assignment:{assignmentId:assignment.assignmentId,packageId:assignment.packageId,contentRoot:assignment.contentRoot,participantToken:assignment.participant.assignmentToken,participantLabel:s.participantLabel,policy:assignment.policy},runtime:{playerVersion:assignment.runtime.playerVersion,runtimeDigest:assignment.runtime.runtimeDigest},attempt:{id:attempt.id,number:attempt.number,startedAt:attempt.startedAt,finishedAt:now,elapsedSeconds:elapsed},summary:{latestScore:latestScore(ops),stateSnapshots:states.length,events:events.length,activeTimeMs:activeMs(events),answers:answersFromStates(states).length},submission:{states,answers:answersFromStates(states),scores},analytics:{events,activeTimeMs:activeMs(events)},audit:{anomalies:attempt.anomalies||[],evidenceRoot:await evidenceRoot(ops),collaborationDisabled:true,networkPolicy:'deny-by-default'}};const digest=await sha(canonical(body));return{...body,integrity:{algorithm:'sha256',payloadDigest:digest}};}",
+    "function downloadResult(result){const blob=new Blob([JSON.stringify(result,null,2)+'\\n'],{type:'application/vnd.p2lrn-result+json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(assignment.filenameBase||'entrega')+'-intento-'+result.attempt.number+'.p2lrn-result';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}",
+    "async function finish(){if(timerHandle){clearInterval(timerHandle);timerHandle=null;}$('finish').disabled=true;$('finish').textContent='Preparando entrega…';resultCache=await buildResult();downloadResult(resultCache);$('session').hidden=true;$('finished').hidden=false;}",
+    "async function boot(){try{assignment=await fetch('./assignment.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se puede leer assignment.json');return r.json();});renderGate();$('start').addEventListener('click',()=>start().catch(e=>{$('gate-status').textContent=e.message;$('gate-status').classList.add('error')}));$('finish').addEventListener('click',()=>finish().catch(e=>{$('finish').disabled=false;$('finish').textContent='Finalizar y descargar entrega';alert(e.message)}));$('download-again').addEventListener('click',()=>{if(resultCache)downloadResult(resultCache)});setInterval(()=>{$('clock').textContent=new Date().toLocaleString()},1000);}catch(error){$('title').textContent='No se puede abrir la entrega';$('gate-status').textContent=String(error?.message||error);$('gate-status').classList.add('error');}}",
+    "boot();",
+    '',
+  ].join('\n');
+}
+
+function readmeText(assignment){
+  return [
+    'P2LRN · Entrega offline autorreproducible','',
+    '1. Extrae esta carpeta/ZIP completa.',
+    '2. Haz doble clic en "Abrir P2LRN.cmd".',
+    '3. El navegador se abrirá en 127.0.0.1. No necesita Internet.',
+    '4. Completa la actividad.',
+    '5. Pulsa "Finalizar y descargar entrega".',
+    '6. Envía al profesor el archivo .p2lrn-result descargado.','',
+    'Colaboración: desactivada.',
+    'Red: denegada por diseño del runtime offline; el servidor sólo escucha en 127.0.0.1.',
+    'Métricas de actividad: '+(assignment.policy.activityTracking?'activadas':'desactivadas')+'.',
+    'Disponible desde: '+(assignment.policy.availableFrom??'sin fecha')+'.',
+    'Fecha límite: '+(assignment.policy.dueAt??'sin fecha')+'.',
+    'Tiempo máximo: '+(assignment.policy.attemptDurationSeconds?assignment.policy.attemptDurationSeconds+' segundos':'sin límite')+'.',
+    'Intentos máximos: '+assignment.policy.maxAttempts+'.','',
+    'Nota: en una entrega completamente offline, la fecha/hora absoluta depende del reloj del equipo del alumno.','',
+  ].join('\r\n');
+}
+
+export async function exportOfflineAssignmentBundle(document,options={}){
+  if(!document?.manifest||!document?.graph)throw new TypeError('Studio document is required.');
+  const policy=normalizeOfflineAssignmentPolicy(options);
+  const compatibility=inspectOfflineAssignmentCompatibility(document);
+  if(!compatibility.ok){
+    const error=new Error('El curso no es autocontenido para entrega offline: '+compatibility.issues.map((item)=>item.code).join(', '));
+    error.code='P2LRN_OFFLINE_EXPORT_INCOMPATIBLE';error.issues=compatibility.issues;throw error;
+  }
+  const course=await (options.packageExporter??exportP2LRNPackage)(document);
+  const runtimeBaseUrl=detectPlayerRuntimeBaseUrl({runtimeBaseUrl:options.runtimeBaseUrl,documentObject:options.documentObject});
+  const runtime=await collectRuntime(runtimeBaseUrl,options.fetchImpl??globalThis.fetch.bind(globalThis));
+  const title=typeof document.title==='function'?document.title(document.rootId):'Entrega P2LRN';
+  const filenameBase=cleanFilename(options.filenameBase??course.filename,'entrega-p2lrn');
+  const assignment={
+    schema:OFFLINE_ASSIGNMENT_SCHEMA,version:OFFLINE_ASSIGNMENT_VERSION,assignmentId:'urn:uuid:'+crypto.randomUUID(),
+    packageId:course.manifest.packageId,contentRoot:course.manifest.integrity.contentRoot,title:String(options.title??title??'Entrega P2LRN'),filenameBase,createdAt:new Date().toISOString(),
+    runtime:{playerVersion:String(runtime.release.webSdkVersion),toolkitVersion:String(runtime.release.toolkitVersion??''),runtimeDigest:await sha256Bytes(runtime.releaseBytes)},
+    policy,participant:{assignmentToken:crypto.randomUUID(),label:String(options.participantLabel??'').trim()||null},
+  };
+  const entries=[
+    {path:'Abrir P2LRN.cmd',data:textBytes(launcherCmd())},{path:'LEEME.txt',data:textBytes(readmeText(assignment))},{path:'runtime/serve.ps1',data:textBytes(launcherPowerShell())},
+    {path:'www/index.html',data:encoder.encode(assignmentHtml())},{path:'www/style.css',data:encoder.encode(assignmentCss())},{path:'www/app.js',data:encoder.encode(assignmentApp())},
+    {path:'www/assignment.json',data:jsonBytes(assignment)},{path:'www/course.p2lrn',data:course.bytes},...runtime.entries,
+  ];
+  return Object.freeze({bytes:writeStoredZip(entries),filename:filenameBase+'.p2lrn-offline.zip',assignment:Object.freeze(clone(assignment)),course,runtimeRelease:clone(runtime.release)});
+}
+
+export async function parseOfflineAssignmentResult(value,{expectedContentRoot=null,expectedAssignmentId=null}={}){
+  let result;
+  if(typeof value==='string')result=JSON.parse(value);
+  else if(value instanceof Uint8Array||value instanceof ArrayBuffer)result=JSON.parse(decoder.decode(value instanceof Uint8Array?value:new Uint8Array(value)));
+  else result=clone(value);
+  if(!result||result.schema!==OFFLINE_RESULT_SCHEMA||result.version!=='1')throw new Error('El archivo no es una entrega offline P2LRN compatible.');
+  const body=clone(result);delete body.integrity;
+  const calculated=await sha256Json(body),declared=String(result.integrity?.payloadDigest??'').toLowerCase();
+  const integrityValid=/^sha256:[0-9a-f]{64}$/.test(declared)&&declared===calculated.toLowerCase();
+  const contentRoot=String(result.assignment?.contentRoot??''),assignmentId=String(result.assignment?.assignmentId??'');
+  const courseMatches=expectedContentRoot==null||String(expectedContentRoot)===contentRoot,assignmentMatches=expectedAssignmentId==null||String(expectedAssignmentId)===assignmentId;
+  const answers=Array.isArray(result.submission?.answers)?result.submission.answers:[],scores=Array.isArray(result.submission?.scores)?result.submission.scores:[],events=Array.isArray(result.analytics?.events)?result.analytics.events:[],anomalies=Array.isArray(result.audit?.anomalies)?result.audit.anomalies:[];
+  return Object.freeze({result:Object.freeze(result),integrityValid,courseMatches,assignmentMatches,calculatedDigest:calculated,summary:Object.freeze({
+    participantLabel:result.assignment?.participantLabel??null,attemptNumber:Number(result.attempt?.number)||null,elapsedSeconds:Number(result.attempt?.elapsedSeconds)||0,
+    activeTimeMs:Number(result.analytics?.activeTimeMs)||0,latestScore:result.summary?.latestScore??null,
+    answers:Object.freeze(answers),scores:Object.freeze(scores),events:Object.freeze(events),anomalies:Object.freeze(anomalies),
+  })});
+}
