@@ -35,6 +35,7 @@ export function createLtiStore(filename){
  const decodeReg=r=>r?{id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url??undefined,tokenUrl:r.token_url,jwks:P(r.jwks_json),deployments:P(r.deployments_json),deepLinkReturnOrigins:P(r.origins_json),status:r.status}:null;
  const getRegistration=({issuer,clientId})=>decodeReg(sql('SELECT * FROM platforms WHERE issuer=? AND client_id=?').get(issuer,clientId));
  const getRegistrationById=id=>decodeReg(sql('SELECT * FROM platforms WHERE id=?').get(id));
+ const getRegistrationByIssuer=issuer=>{const rows=sql("SELECT * FROM platforms WHERE issuer=? AND status='ACTIVE' LIMIT 2").all(issuer);return rows.length===1?decodeReg(rows[0]):null;};
  const listPlatforms=()=>sql('SELECT id,tenant_id,issuer,client_id,auth_url,launch_url,deep_link_launch_url,token_url,deployments_json,status FROM platforms ORDER BY tenant_id,id').all().map(r=>({id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url,tokenUrl:r.token_url,deployments:P(r.deployments_json),status:r.status}));
  const transactions={
   create(v){sql('INSERT INTO oidc(state_hash,nonce_hash,browser_hash,issuer,client_id,registration_id,deployment_hint,target_link_uri,expires_at) VALUES(?,?,?,?,?,?,?,?,?)').run(v.stateHash,v.nonceHash,v.browserHash,v.issuer,v.clientId,v.registrationId,v.deploymentHint,v.targetLinkUri,v.expiresAt);},
@@ -111,7 +112,7 @@ export function createLtiStore(filename){
  const listPending=()=>sql("SELECT id FROM ags_outbox WHERE status='PENDING' ORDER BY created_at LIMIT 50").all().map(r=>r.id);
  const listAttempts=tenantId=>sql('SELECT id,tenant_id,binding_id,context_id,status,created_at,updated_at FROM attempts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,contextId:r.context_id,status:r.status,createdAt:r.created_at,updatedAt:r.updated_at}));
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
- return Object.freeze({close:()=>db.close(),upsertPlatform,getRegistration,getRegistrationById,listPlatforms,transactions,
+ return Object.freeze({close:()=>db.close(),upsertPlatform,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
  publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,consumePicker,attachLaunch,getSession,
  getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,count});
 }
