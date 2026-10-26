@@ -73,6 +73,8 @@ jobs:
           node-version: '22'
       - name: Verify browser security headers and HTML
         run: node scripts/verify-site-security.mjs
+      - name: Verify contact server route and anti-abuse frontend contract
+        run: node scripts/verify-contact-security.mjs
       - name: Audit locked dependencies of all five package roots
         shell: powershell
         run: |
