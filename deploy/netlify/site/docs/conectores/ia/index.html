@@ -8,6 +8,16 @@
 <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
 <main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
 <article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / IA WEB</p><h1>Conectores de IA: ChatGPT, Claude y Grok</h1><p>ChatGPT, Claude y Grok pueden utilizar las herramientas de P2LRN mediante un mismo servidor MCP. El acceso a cursos existentes requiere una conexión autenticada; generar un paquete nuevo directamente desde una IA es una modalidad diferente.</p></header>
+<section class="doc-section"><h2>Descargar el conector MCP para IA web</h2>
+<p>Este kit contiene el servidor MCP real de P2LRN, sus dependencias declaradas, el Toolkit y el generador de configuraciones para las tres plataformas. No es un instalador de una cuenta web y no lleva credenciales incluidas.</p>
+<div class="example-actions"><a class="button primary" href="/downloads/p2lrn-conector-mcp.zip" download>Descargar kit MCP (.zip)</a><a class="button" href="/downloads/manifest.json">Comprobar integridad SHA-256</a></div>
+<ol class="doc-list"><li>Descomprime el ZIP y consulta <code>LEEME-PRIMERO.md</code>. Instala Node.js 22 o posterior.</li>
+<li>Prepara las dependencias y ejecuta el servidor MCP sobre una carpeta de cursos autorizados. Mantén la escritura desactivada al comenzar.</li>
+<li>Configura un proxy HTTPS autenticado con un origen público válido. El servidor local no puede exponerse directamente a Internet.</li>
+<li>Usa <code>prepare-connectors.mjs</code> con <strong>tu URL HTTPS real</strong> para generar los descriptores de ChatGPT, Claude y Grok.</li>
+<li>Importa o registra la conexión donde el proveedor lo permita y comprueba que puedes listar, leer y validar un curso autorizado.</li></ol>
+<div class="doc-callout"><strong>No es una descarga de plugin público</strong><p>No existe aquí un botón de instalación de ChatGPT, Claude o Grok porque la activación de un conector remoto depende de la cuenta y del endpoint autenticado. Los ZIP generados con el kit son descriptores privados, no publicaciones aprobadas en sus catálogos.</p></div>
+</section>
 <section class="doc-section"><h2>Dos modalidades: crear un paquete o conectar tus cursos</h2>
 <div class="reference-table"><div><strong>Crear y descargar .p2lrn</strong><p>Un creador P2LRN habilitado dentro de una IA puede construir un archivo nuevo a partir de instrucciones y entregarlo como descarga. No necesita conectar tu PC ni consultar cursos privados. Sólo está disponible cuando el asistente tiene incorporada esa capacidad.</p></div>
 <div><strong>Conector MCP a cursos autorizados</strong><p>El servidor de <code>integration/mcp/</code> permite enumerar, leer y validar cursos existentes; la edición en borradores se habilita explícitamente. Para una IA web el servidor debe ser accesible en una URL HTTPS protegida; tener un ZIP de plugin no instala ni activa por sí solo el conector.</p></div></div>
@@ -40,6 +50,13 @@ node prepare-connectors.mjs --endpoint https://tu-dominio.example/mcp --out .gen
 <section class="doc-section"><h2>Grok</h2>
 <p>Cuando la cuenta ofrezca conectores personalizados, registra una conexión MCP a la misma URL HTTPS, añade el mecanismo de autenticación admitido y revisa los permisos. En cuentas de organización puede requerirse autorización de un administrador.</p>
 <p>El generador crea un archivo <code>grok/connection.json</code> con los parámetros previstos para revisar; no puede activar remotamente tu cuenta ni confirmar que el conector está aprobado.</p></section>
+<section class="doc-section"><h2>Ejemplo práctico en cada plataforma</h2>
+<div class="reference-table">
+<div><strong>ChatGPT</strong><p>Tras conectar el servidor, solicita: «Lista los cursos P2LRN autorizados y valida el paquete que elija». Para crear un paquete desde cero sin conexión, usa un creador P2LRN habilitado en ChatGPT y descarga el resultado; son recorridos independientes.</p></div>
+<div><strong>Claude</strong><p>Después de autorizar el MCP web, solicita: «Lee el índice de mi curso P2LRN y prepara un plan de mejoras en un borrador». Si la conexión sólo permite lectura, el cliente debe explicar que no puede editar.</p></div>
+<div><strong>Grok</strong><p>Comprueba que el conector muestra las herramientas de lectura y solicita un resumen de un curso autorizado. La configuración depende de las opciones de conectores habilitadas por la cuenta.</p></div></div>
+<p>En los tres casos, comprueba primero la respuesta real de <code>p2lrn_list_courses</code> y después <code>p2lrn_validate_course</code>. No consideres suficiente que aparezca el nombre del conector en la interfaz.</p>
+</section>
 <section class="doc-section"><h2>Pruebas recomendadas y solución de problemas</h2>
 <ul class="doc-list"><li><strong>Lectura:</strong> ejecuta <code>p2lrn_list_courses</code>, abre un curso permitido y valida el paquete.</li>
 <li><strong>Escritura:</strong> sólo con permiso explícito, crea un borrador, edita un elemento y exporta un archivo nuevo. Verifica que el curso original no cambia.</li>
