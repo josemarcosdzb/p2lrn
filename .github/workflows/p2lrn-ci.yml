@@ -75,6 +75,18 @@ jobs:
         run: node scripts/verify-site-security.mjs
       - name: Verify contact server route and anti-abuse frontend contract
         run: node scripts/verify-contact-security.mjs
+      - name: Check native 3D game modules and physics contract
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web/game-3d/three-runtime.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/renderers/questionnaire-3d.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/verify-local-viewer.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/quest-3d-player-physics.test.mjs packages/toolkit/test/quest-gameplay-parity.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Audit locked dependencies of all five package roots
         shell: powershell
         run: |
