@@ -268,7 +268,13 @@ async function startBrowser(){
   }
 }
 try{
-  report.deployment=await waitForDeploy();
+  if(process.env.P2LRN_PUBLIC_CDN_NO_WAIT==='1'){
+    // Independent QA of an existing deployment, not a new-release deployment wait.
+    try{
+      report.deployment=JSON.parse((await get('/deployment-verification.json',{timeout:14000})).bytes.toString('utf8'));
+      if(report.deployment?.release!==release)report.warnings.push('Live deployment marker differs from historical '+release);
+    }catch(error){report.warnings.push('Live deployment marker unavailable: '+String(error?.message||error));}
+  }else report.deployment=await waitForDeploy();
   for(const [name,path,marker] of [
     ['home','/','P2LRN'],['studio','/studio/','P2LRN'],['player','/demo/','Visor P2LRN'],
     ['integration','/docs/integracion/','Studio'],['cd-player','/player/current/dist/p2lrn.js','P2LRN'],

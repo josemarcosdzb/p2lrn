@@ -1,14 +1,15 @@
 param(
-  [string[]]$Patterns = @('npm-studio-ui.png','native-npm-rosco.png','native-npm-crossword.png')
+  [string[]]$Patterns = @('npm-studio-ui.png','native-npm-rosco.png','native-npm-crossword.png'),
+  [string[]]$Directories = @('.npm-pack-gate\visual-evidence')
 )
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Drawing
-$dir=Join-Path $env:GITHUB_WORKSPACE '.npm-pack-gate\visual-evidence'
-if(-not (Test-Path -LiteralPath $dir)){
-  Write-Host 'VISUAL_PREVIEW_MISSING=true'
-  exit 0
+$files=@()
+foreach($entry in $Directories){
+  $dir=if([IO.Path]::IsPathRooted($entry)){$entry}else{Join-Path $env:GITHUB_WORKSPACE $entry}
+  if(Test-Path -LiteralPath $dir -PathType Container){$files+=@(Get-ChildItem -LiteralPath $dir -Filter '*.png' -File)}
 }
-$files=@(Get-ChildItem -LiteralPath $dir -Filter '*.png' -File)
+if($files.Count -eq 0){Write-Host 'VISUAL_PREVIEW_MISSING=true';exit 0}
 Write-Host ('VISUAL_SCREENSHOT_FILES='+$files.Count)
 foreach($pattern in $Patterns){
   $file=$files|Where-Object{$_.Name -like $pattern}|Select-Object -First 1

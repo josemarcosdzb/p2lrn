@@ -52,7 +52,9 @@ async function verify(){
   ));
   const versions=[...new Set(manifests.map(pkg=>pkg.version))];
   assert.equal(versions.length,1,'Release versions are not aligned');
-  const version=versions[0];
+  const sourceVersion=versions[0];
+  const version=(process.env.P2LRN_PUBLIC_NPM_VERSION||sourceVersion).trim();
+  console.log('PUBLIC_NPM_VERSION_SELECTION',JSON.stringify({sourceVersion,installVersion:version,explicitVersion:!!process.env.P2LRN_PUBLIC_NPM_VERSION}));
   assert.match(version,/^\d+\.\d+\.\d+-[0-9A-Za-z.-]+$/u,'Public npm release gate expects an exact prerelease version');
 
   // No packed local archives or reused modules/caches are allowed in this gate.
@@ -142,7 +144,7 @@ async function verify(){
     status:'PASS',
     scope:'public-npm-installation-and-runtime-smoke-only',
     browserE2E:'NOT_RUN_BY_THIS_SCRIPT',
-    version,registry,
+    version,sourceVersion,registry,
     runId:process.env.GITHUB_RUN_ID||null,
     checkedAt:new Date().toISOString(),
     packages:proof,

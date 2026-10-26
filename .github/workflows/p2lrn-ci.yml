@@ -61,6 +61,9 @@ jobs:
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
+    env:
+      P2LRN_PUBLIC_NPM_VERSION: 0.5.0-alpha.10
+      P2LRN_PUBLIC_ORIGIN: https://p2lrn.netlify.app
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -81,6 +84,16 @@ jobs:
           node scripts/verify-version-parity.mjs
       - name: Studio and Player browser E2E from public npm
         run: node scripts/verify-browser-from-npm.mjs
+      - name: Compare real installed public npm packages with the live CDN
+        if: always()
+        run: |
+          node --check scripts/verify-public-npm-cdn.mjs
+          node scripts/verify-public-npm-cdn.mjs
+      - name: Visually exercise real CDN Studio, Player, H5P and SCORM
+        if: always()
+        env:
+          P2LRN_PUBLIC_CDN_NO_WAIT: '1'
+        run: node scripts/verify-public-cdn.mjs
       - name: Independent native-game visual matrix from public npm
         if: always()
         run: |
@@ -114,6 +127,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $target | Out-Null
           $items = @(
             @{ source='public-npm-report.json'; destination='public-npm-report.json' },
+            @{ source='public-npm-cdn-report.json'; destination='public-npm-cdn-report.json' },
             @{ source='public-npm-native-visual.json'; destination='public-npm-native-visual.json' },
             @{ source='version-parity.json'; destination='version-parity.json' },
             @{ source='three-way-browser-qa.json'; destination='three-way-browser-qa.json' },
@@ -127,6 +141,10 @@ jobs:
               Copy-Item -LiteralPath $src -Destination (Join-Path $target $item.destination) -Recurse -Force
             }
           }
+          $live = Join-Path $env:USERPROFILE ('Downloads\p2lrn-public-validation\' + $env:GITHUB_RUN_ID)
+          if (Test-Path -LiteralPath $live -PathType Container) {
+            Copy-Item -LiteralPath $live -Destination (Join-Path $target 'live-cdn') -Recurse -Force
+          }
           $manifest = @(Get-ChildItem -LiteralPath $target -File -Recurse | ForEach-Object {
             [pscustomobject]@{file=$_.FullName.Substring($target.Length + 1);bytes=$_.Length;sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
           })
@@ -135,7 +153,7 @@ jobs:
       - name: Publish visual previews in job log without artifacts
         if: always()
         shell: powershell
-        run: ./scripts/emit-visual-evidence.ps1 -Patterns @('npm-studio-ui.png','native-npm-rosco.png','native-npm-rosco-mobile.png','native-npm-crossword.png','native-npm-crossword-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png','npm-express-host.png','npm-express-host-mobile.png','threeway-github-main-rosco.png','threeway-running-local-files-rosco.png','threeway-public-npm-rosco.png','threeway-running-local-files-crossword.png','threeway-public-npm-crossword.png')
+        run: ./scripts/emit-visual-evidence.ps1 -Directories @('.npm-pack-gate\visual-evidence',(Join-Path $env:USERPROFILE ('Downloads\p2lrn-public-validation\' + $env:GITHUB_RUN_ID))) -Patterns @('npm-studio-ui.png','native-npm-rosco.png','native-npm-rosco-mobile.png','native-npm-crossword.png','native-npm-crossword-mobile.png','npm-player-questionnaire.png','npm-player-h5p-crossword-p2lrn-mobile.png','npm-express-host.png','npm-express-host-mobile.png','threeway-github-main-rosco.png','threeway-running-local-files-rosco.png','threeway-public-npm-rosco.png','threeway-running-local-files-crossword.png','threeway-public-npm-crossword.png','live-studio-desktop.png','live-studio-mobile.png','live-player-scorm-desktop.png','live-player-h5p-desktop.png','live-player-mobile.png')
 
 
   automatic-runtime:
