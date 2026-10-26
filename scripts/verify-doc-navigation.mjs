@@ -86,9 +86,9 @@ for(const href of ['/docs/progresion/','/docs/metricas/']){
   if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: advanced tracking route must not be under EMPEZAR: '+href);
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==31) failures.push('p2lrn.js: expected 31 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==32) failures.push('p2lrn.js: expected 32 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
-for(const required of ['/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/','/docs/progresion/','/docs/metricas/','/docs/compatibilidad/']){
+for(const required of ['/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/','/docs/colaboracion/','/docs/progresion/','/docs/metricas/','/docs/compatibilidad/']){
   if(!hrefs.includes(required)) failures.push('p2lrn.js: missing global sidebar route '+required);
 }
 const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
