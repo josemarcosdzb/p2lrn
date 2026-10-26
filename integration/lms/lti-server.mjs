@@ -387,7 +387,9 @@ if(script){
   const dev=process.env.P2LRN_LTI_DEV_INSECURE==='true';
   const gateway=createP2LRNLtiServer({
    dataDir:valid(process.env.P2LRN_LTI_DATA_DIR,'P2LRN_LTI_DATA_DIR',4096),
-   baseUrl,tool:{privateKeyPem,kid:keyId},adminToken:process.env.P2LRN_LTI_ADMIN_TOKEN,
+   baseUrl,tool:{privateKeyPem,kid:keyId},adminToken:process.env.P2LRN_LTI_ADMIN_TOKEN_FILE
+    ? readFileSync(process.env.P2LRN_LTI_ADMIN_TOKEN_FILE,'utf8').trim()
+    : process.env.P2LRN_LTI_ADMIN_TOKEN,
    port,bindHost:process.env.P2LRN_LTI_HOST||'127.0.0.1',allowInsecureLoopback:dev
   });
   await gateway.listen();
