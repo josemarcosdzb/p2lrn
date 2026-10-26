@@ -133,7 +133,7 @@ function signToolJwt(privateKey, kid, payload) {
 // {id,tenantId,issuer,clientId,authUrl,launchUrl,deepLinkLaunchUrl?,
 //  deployments,jwks:{keys:[...]},deepLinkReturnOrigins:[...] }.
 // getBinding({id,tenantId,registrationId,deploymentId}) -> published P2LRN binding.
-export function createP2LRNLtiProvider({getRegistration, getRegistrationById, transactions, getBinding, tool, now = () => Math.floor(Date.now() / 1000)}) {
+export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer, getRegistrationById, transactions, getBinding, tool, now = () => Math.floor(Date.now() / 1000)}) {
   if (typeof getRegistration !== 'function' || typeof getBinding !== 'function' ||
       typeof transactions?.create !== 'function' || typeof transactions?.consume !== 'function')
     throw new TypeError('Trusted registration, binding and atomic transaction adapters are required');
@@ -144,11 +144,13 @@ export function createP2LRNLtiProvider({getRegistration, getRegistrationById, tr
   async function beginLogin({login, browserBinding}) {
     const request = object(login);
     const issuer = required(request.iss, 'iss');
-    const clientId = required(request.client_id, 'client_id', 512);
+    const requestedClientId = request.client_id == null || request.client_id === '' ? null : required(request.client_id, 'client_id', 512);
     const hint = required(request.login_hint, 'login_hint', MAX_LOGIN_HINT_LENGTH);
     const target = url(request.target_link_uri, 'target_link_uri').toString();
     const binding = required(browserBinding, 'browserBinding', 512);
-    const reg = assertRegistration(await getRegistration({issuer, clientId}), issuer, clientId);
+    const selected = requestedClientId ? await getRegistration({issuer, clientId:requestedClientId}) : await getRegistrationByIssuer?.(issuer);
+    const clientId = required(requestedClientId || selected?.clientId, 'client_id', 512);
+    const reg = assertRegistration(selected, issuer, clientId);
     const targets = [reg.launchUrl, reg.deepLinkLaunchUrl].filter(Boolean);
     if (!targets.includes(target)) throw new Error('Unregistered LTI target_link_uri');
     const deploymentHint = request.lti_deployment_id == null
