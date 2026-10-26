@@ -524,6 +524,20 @@ function buildClassificationControls({trial,runtime,scene,status}) {
   };
 }
 
+// A WebGL failure must not make the entire authored exercise unusable.
+// The accessible fields still drive the same native questionnaire session.
+function createAccessibleOnlyScene() {
+  return {
+    physics:'none',
+    reset(){},
+    addBox(){},addZone(){},addNode(){},
+    connect(){return null;},connectToPlayer(){return null;},connectToPointer(){return null;},
+    setPointerTarget(){},disconnect(){return false;},
+    carry(){return false;},setTranslation(){return false;},highlight(){},
+    playerDistanceTo(){return 0;},nudgePlayer(){},resetPlayer(){},destroy(){},
+  };
+}
+
 export async function render(options) {
   const {game,runtime,shell}=await setupGame({...options,rendererId:THREE_D_RENDERER});
   const layout=el('div',{class:'p2lrn-3d-layout'});
@@ -539,13 +553,29 @@ export async function render(options) {
   let currentInteraction=()=>false;
   let currentDrag=()=>false;
 
-  const scene=await createThreeGameScene(canvas,{
-    onInteraction:(meta)=>currentInteraction(meta),
-    onDrag:(meta,phase,info)=>currentDrag(meta,phase,info),
-  });
+  let scene;
+  let accessibleOnly=false;
+  try{
+    scene=await createThreeGameScene(canvas,{
+      onInteraction:(meta)=>currentInteraction(meta),
+      onDrag:(meta,phase,info)=>currentDrag(meta,phase,info),
+    });
+  }catch(error){
+    console.warn('P2LRN 3D renderer unavailable; accessible controls remain enabled:',error);
+    scene=createAccessibleOnlyScene();
+    accessibleOnly=true;
+    canvas.style.display='none';
+    layout.style.gridTemplateColumns='minmax(0,1fr)';
+    layout.append(el('p',{class:'p2lrn-game-description',role:'status'},
+      'La escena 3D no está disponible en este dispositivo. Puedes completar las mismas preguntas con los controles accesibles.'));
+  }
 
-  const technology=el('p',{class:'p2lrn-3d-runtime'},`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`);
-  const help=el('p',{class:'p2lrn-game-description'},'Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.');
+  const technology=el('p',{class:'p2lrn-3d-runtime'},accessibleOnly
+    ?'Escena 3D no disponible · modo accesible'
+    :`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`);
+  const help=el('p',{class:'p2lrn-game-description'},accessibleOnly
+    ?'Elige las respuestas usando los botones y selectores de cada prueba.'
+    :'Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.');
   const movePad=el('div',{class:'p2lrn-3d-move-pad','aria-label':'Controles de movimiento'});
   for(const [label,direction] of [['▲','forward'],['◀','left'],['▼','back'],['▶','right']]){
     const button=el('button',{type:'button',class:'p2lrn-game-button','aria-label':direction},label);
