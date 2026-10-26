@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1117"><meta name="description" content="Guía completa de conectores MCP P2LRN para ChatGPT, Claude y Grok: instalación, uso, seguridad y estado de publicación.">
+<title>Conectores de IA: ChatGPT, Claude y Grok — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
+<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"></nav>
+<div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
+<button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / IA WEB</p><h1>Conectores de IA: ChatGPT, Claude y Grok</h1><p>ChatGPT, Claude y Grok pueden utilizar las herramientas de P2LRN mediante un mismo servidor MCP. El acceso a cursos existentes requiere una conexión autenticada; generar un paquete nuevo directamente desde una IA es una modalidad diferente.</p></header>
+<section class="doc-section"><h2>Dos modalidades: crear un paquete o conectar tus cursos</h2>
+<div class="reference-table"><div><strong>Crear y descargar .p2lrn</strong><p>Un creador P2LRN habilitado dentro de una IA puede construir un archivo nuevo a partir de instrucciones y entregarlo como descarga. No necesita conectar tu PC ni consultar cursos privados. Sólo está disponible cuando el asistente tiene incorporada esa capacidad.</p></div>
+<div><strong>Conector MCP a cursos autorizados</strong><p>El servidor de <code>integration/mcp/</code> permite enumerar, leer y validar cursos existentes; la edición en borradores se habilita explícitamente. Para una IA web el servidor debe ser accesible en una URL HTTPS protegida; tener un ZIP de plugin no instala ni activa por sí solo el conector.</p></div></div>
+<p>Estas dos modalidades pueden convivir sin cambiar el formato P2LRN ni crear una versión específica de cada curso para cada IA.</p></section>
+<section class="doc-section"><h2>Qué herramientas ofrece el servidor MCP</h2>
+<div class="reference-table"><div><strong>Consulta</strong><p><code>p2lrn_list_courses</code>, <code>p2lrn_read_course</code>, <code>p2lrn_read_entity</code>, <code>p2lrn_read_plan</code>, <code>p2lrn_search_metadata</code> y <code>p2lrn_read_text_member</code> permiten navegar contenido expresamente autorizado.</p></div>
+<div><strong>Validación</strong><p><code>p2lrn_validate_course</code> comprueba el paquete. El servidor no ejecuta como código los contenidos de terceros ni interpreta formatos opacos como si fueran nativos.</p></div>
+<div><strong>Autoría controlada</strong><p>Con permiso de edición se exponen operaciones <code>p2lrn_draft_*</code> para construir unidades, actividades nativas, archivos y componentes y exportar un <code>.p2lrn</code> nuevo. No se sobrescriben paquetes originales.</p></div></div></section>
+<section class="doc-section"><h2>Preparar la conexión remota segura</h2>
+<ol class="doc-list"><li>Descarga una copia autorizada del repositorio y prepara Node.js 22 o posterior junto con las dependencias de <code>integration/mcp</code>.</li>
+<li>Delimita con <code>P2LRN_MCP_ROOT</code> la carpeta que el servidor puede leer. Mantén <code>P2LRN_MCP_WRITE=0</code> al empezar.</li>
+<li>Configura un token aleatorio seguro. El servidor HTTP escucha sólo en <code>127.0.0.1:37871/mcp</code>; sitúa delante un proxy HTTPS autenticado y ajusta su origen público exacto.</li>
+<li>Registra esa URL en cada plataforma cuando su interfaz y plan admitan conectores MCP personalizados. Revisa los permisos antes de conectar.</li></ol>
+<div class="codebox"><div class="codebox-head"><span>PowerShell · desde la raíz de P2LRN</span><button type="button" data-copy>Copiar</button></div><pre><code>$env:P2LRN_MCP_ROOT = 'C:\CursosP2LRN'
+$env:P2LRN_MCP_WRITE = '0'
+$env:P2LRN_MCP_TOKEN = '&lt;token-aleatorio-de-al-menos-32-bytes&gt;'
+$env:P2LRN_MCP_PUBLIC_ORIGIN = 'https://tu-dominio.example'
+node .\integration\mcp\server.mjs --http</code></pre></div>
+<p>La dirección <code>https://tu-dominio.example</code> es un marcador, no un servicio desplegado. No abras el puerto 37871 directamente a Internet y no guardes secretos en el repositorio, en un ZIP o en los cursos.</p>
+<div class="codebox"><div class="codebox-head"><span>Generación del kit de conectores · carpeta integration/mcp</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install --ignore-scripts
+node prepare-connectors.mjs --endpoint https://tu-dominio.example/mcp --out .generated\connectors</code></pre></div>
+<p>El generador produce <code>chatgpt/p2lrn-plugin.zip</code>, los metadatos de ChatGPT y los archivos de configuración para Claude y Grok. <strong>No instala ni publica</strong> un conector en una cuenta externa.</p></section>
+<section class="doc-section"><h2>ChatGPT</h2>
+<p>Para crear cursos desde el chat, usa un creador P2LRN habilitado en esa conversación y solicita el fichero descargable. Para consultar o modificar cursos alojados en tu servidor, la cuenta debe tener acceso al registro de un conector MCP personalizado.</p>
+<ol class="doc-list"><li>En la opción de plugins o conectores personalizados disponible en tu cuenta, elige agregar un servidor MCP.</li><li>Indica la URL HTTPS terminada en <code>/mcp</code> y configura el método de autenticación admitido.</li><li>Autoriza sólo la carpeta y las herramientas necesarias; comienza con lectura.</li><li>Prueba enumerar un curso, leerlo y validarlo antes de permitir la edición.</li></ol>
+<div class="doc-callout"><strong>Estado de publicación</strong><p>El ZIP preparado es de desarrollo privado. No equivale a un plugin aprobado en el directorio público de ChatGPT. Para un servicio multiusuario faltan OAuth, autorización individual, infraestructura HTTPS estable y revisión del proveedor.</p></div></section>
+<section class="doc-section"><h2>Claude</h2>
+<p>En Claude web, si tu plan dispone de conectores personalizados, registra un conector MCP web e introduce la URL HTTPS protegida junto con las credenciales. Comprueba que aparece la lista de herramientas del servidor y que un curso autorizado puede abrirse.</p>
+<p>La versión <strong>Claude Desktop</strong> también permite una conexión distinta: ejecuta P2LRN localmente por <code>stdio</code>, sin proxy ni dominio. La instalación está explicada en <a href="/docs/conectores/local/">IA local</a>. No confundas la configuración web con la de escritorio.</p></section>
+<section class="doc-section"><h2>Grok</h2>
+<p>Cuando la cuenta ofrezca conectores personalizados, registra una conexión MCP a la misma URL HTTPS, añade el mecanismo de autenticación admitido y revisa los permisos. En cuentas de organización puede requerirse autorización de un administrador.</p>
+<p>El generador crea un archivo <code>grok/connection.json</code> con los parámetros previstos para revisar; no puede activar remotamente tu cuenta ni confirmar que el conector está aprobado.</p></section>
+<section class="doc-section"><h2>Pruebas recomendadas y solución de problemas</h2>
+<ul class="doc-list"><li><strong>Lectura:</strong> ejecuta <code>p2lrn_list_courses</code>, abre un curso permitido y valida el paquete.</li>
+<li><strong>Escritura:</strong> sólo con permiso explícito, crea un borrador, edita un elemento y exporta un archivo nuevo. Verifica que el curso original no cambia.</li>
+<li><strong>Conexión rechazada:</strong> revisa URL HTTPS, token, <code>P2LRN_MCP_PUBLIC_ORIGIN</code>, permisos y opciones disponibles en la cuenta.</li>
+<li><strong>Aislamiento:</strong> comprueba que una carpeta no autorizada no puede leerse y que un cliente sólo lector no recibe operaciones <code>p2lrn_draft_*</code>.</li>
+<li><strong>No hay endpoint público:</strong> un servidor limitado a <code>127.0.0.1</code> no es accesible desde los servicios web de terceros.</li></ul>
+<p>Para trabajar en tu propio ordenador sin túnel ni URL pública utiliza los <a href="/docs/conectores/local/">conectores locales</a>.</p></section>
+<nav class="doc-pager"><a class="prev" href="/docs/conectores/"><span>← Anterior</span><strong>Conectores</strong></a>
+<a class="next" href="/docs/conectores/local/"><span>Siguiente →</span><strong>IA local</strong></a></nav>
+</article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
