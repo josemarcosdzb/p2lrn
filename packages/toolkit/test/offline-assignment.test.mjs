@@ -144,6 +144,8 @@ test('offline exporter creates a self-playing ZIP with a real Studio course, loc
   const launcher=decoder.decode(entries.get('runtime/serve.ps1'));
   assert.match(launcher,/IPAddress\]::Loopback/);
   assert.match(launcher,/127\.0\.0\.1/);
+  assert.match(launcher,/Forbidden Host/,'loopback server must reject forged Host headers');
+  assert.match(launcher,/\$file\.StartsWith\(\$webPrefix,/,'file access must be confined to the web directory, not just a shared text prefix');
   const embeddedCourse=entries.get('www/course.p2lrn');
   assert.ok(embeddedCourse.byteLength>500,'embedded course must be a complete P2LRN ZIP, not a marker fixture');
   const embeddedEntries=storedZipEntries(embeddedCourse);

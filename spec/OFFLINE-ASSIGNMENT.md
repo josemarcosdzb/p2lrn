@@ -42,7 +42,7 @@ It is convenient but MUST be labelled as tamper-evident rather than high-assuran
 
 ### Protected offline delivery
 
-Recommended for assessed work. On Windows, the reference exporter produces a signed launcher executable. Equivalent host launchers can be implemented on other platforms without changing the P2LRN package or result format.
+**Planned protected mode (not yet delivered):** recommended for assessed work needing strong authenticity, with a signed launcher and verified teacher signature. The current Windows delivery is an unsigned `.p2lrn-offline.cmd` with embedded ZIP SHA-256 verification; the portable ZIP has a CMD launcher after extraction. Both are suitable for ordinary offline learning but are not authenticated examination applications. Equivalent signed launchers can be developed for other platforms without changing the P2LRN course or result schemas.
 
 Double-click flow:
 
@@ -64,7 +64,7 @@ signed launcher
               +--> .p2lrn-result
 ```
 
-The browser remains the presentation layer. The launcher owns the trusted local persistence/export boundary.
+The browser remains the presentation layer. The future signed/protected launcher would own the trusted persistence/export boundary; the current unsigned CMD delegates storage and result export to the browser and must not be described as a trusted evidence boundary.
 
 ## 4. Assignment envelope
 
@@ -101,7 +101,7 @@ Minimum fields:
 
 Dates/limits are optional when the teacher does not need them.
 
-The whole assignment statement is Ed25519-signed by the teacher/exporter key. Existing P2LRN detached-signature primitives SHOULD be reused instead of defining another cryptographic algorithm.
+**Required for future protected mode:** the assignment statement should be Ed25519-signed by a trusted teacher/exporter key, reusing existing detached-signature primitives. **Current implementation:** portable Windows CMD/ZIP verifies the embedded ZIP's SHA-256 but does not provide a trusted Ed25519 assignment signature. A learner can recompute an unkeyed result digest after altering a result; treat current integrity as corruption detection, not proof of authorship or cheating resistance.
 
 A student-specific export MAY bind a random opaque assignment token to one learner in the teacher's local roster. The package does not need to contain the learner's personal data.
 
