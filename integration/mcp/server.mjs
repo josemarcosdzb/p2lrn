@@ -112,6 +112,13 @@ export function createP2LRNMcpServer(service) {
     z.object({...idAndDigest, kind: z.enum(['questionnaire', 'component']), key: z.string(), title: z.string().optional(), parent: z.string().optional(), payload: z.record(z.string(), z.unknown()),
       renderer: z.string().url().optional()}),
     ({draft_id, expected_digest, kind, key, title, parent, payload, renderer}) => service.addNativeActivity(draft_id, expected_digest, kind, key, parent, title, payload, renderer));
+  register(server, 'p2lrn_draft_edit_native_activity',
+    'Safely replace the validated questionnaire, game questions, or component data of an EXISTING activity in an isolated authoring draft. Requires activity key and latest draft digest; preserves native game renderer and never modifies the original course.',
+    z.object({...idAndDigest, activity_key: z.string(), kind: z.enum(['questionnaire', 'component']),
+      payload: z.record(z.string(), z.unknown()), renderer: z.string().url().optional()}),
+    ({draft_id, expected_digest, activity_key, kind, payload, renderer}) =>
+      service.editNativeActivity(draft_id, expected_digest, activity_key, kind, payload, renderer));
+
   register(server, 'p2lrn_draft_add_composite',
     'Group existing draft activities into a native composite through the Authoring API.',
     z.object({...idAndDigest, key: z.string(), title: z.string(), children: z.array(z.string()).min(1), parent: z.string().optional(),
