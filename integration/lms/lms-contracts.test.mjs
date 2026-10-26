@@ -23,8 +23,8 @@ function fixture(platform='moodle'){
  };
  return {verified:{verifier:'server-verified-lti-1.3',claims},registration,binding};
 }
-test('same resource launch contract covers six LMS without platform-specific branches',()=>{
- for(const vendor of ['moodle','canvas','sakai','chamilo','open-edx','aulap2p']){
+test('same resource launch contract covers five LMS and a separate application host without vendor branches',()=>{
+ for(const vendor of ['moodle','canvas','sakai','chamilo','open-edx','host-application']){
   const f=fixture(vendor),launch=projectVerifiedLtiResourceLaunch(f);
   assert.equal(launch.registrationId,'reg-'+vendor);
   assert.equal(launch.packageId,'urn:uuid:course-1');
