@@ -364,9 +364,40 @@ async function runtimeTexts(cdp){
   return out;
 }
 
+// A public visitor opens /demo/ without URL parameters. This must succeed
+// without a CORS-readable secondary Netlify origin, unlike the legacy static-only boot.
+async function verifyDefaultViewerStartup(cdp){
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
+  const probe=String.raw`(()=>{
+    const sample=document.querySelector('[data-sample]');
+    const player=document.getElementById('demo-player');
+    const log=document.querySelector('[data-event-log]')?.textContent||'';
+    const src=player?.getAttribute('src')||'';
+    const status=document.querySelector('[data-runtime-state]')?.textContent||'';
+    const result={
+      catalogCount:sample?.options?.length||0,
+      src,
+      status,
+      rendered:log.includes('p2lrn:rendered'),
+      activityReady:log.includes('p2lrn:activityready'),
+      runtimeAutomatic:log.includes('automatic-opaque'),
+      failedRuntime:log.includes('runtime-host-candidate-failed'),
+      bootError:log.includes('boot-error'),
+      tail:log.slice(-1500)
+    };
+    return result.bootError||(result.catalogCount>1&&src&&(result.rendered||result.activityReady))
+      ? result : null;
+  })()`;
+  const result=await waitForEval(cdp,probe,'unparameterized public viewer startup',30000);
+  invariant(result&&!result.bootError,'Public viewer failed to initialize: '+JSON.stringify(result));
+  invariant(result.catalogCount>1&&result.src,'Default viewer did not populate the catalogue and load src');
+  invariant(result.runtimeAutomatic&&!result.failedRuntime,'Default viewer must use its secure opaque runtime without remote health probing');
+  return result;
+}
+
 async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXapi=false,automaticRuntime=false}={}){
   const exceptionStart=cdp.exceptions.length;
-  await cdp.send('Page.navigate',{url:`${APP_ORIGIN}/demo/?src=${encodeURIComponent(src)}${automaticRuntime?'&runtime=auto':''}`});
+  await cdp.send('Page.navigate',{url:`${APP_ORIGIN}/demo/?src=${encodeURIComponent(src)}${automaticRuntime?'&runtime=auto':'&runtime=isolated'}`});
   let state=null;
   const deadline=Date.now()+30000;
   while(Date.now()<deadline){
@@ -1195,6 +1226,8 @@ try{
 
   const cases=[];
   const failures=[];
+  try{cases.push({name:'public-default-startup',state:await verifyDefaultViewerStartup(cdp)});}
+  catch(error){failures.push({name:'public-default-startup',message:String(error?.message||error)});}
   const audit=async(name,src,options={})=>{
     try{cases.push(await waitCase(cdp,name,src,options));}
     catch(error){failures.push({name,message:String(error?.message||error)});}
