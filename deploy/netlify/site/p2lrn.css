@@ -1680,3 +1680,12 @@ footer a:hover{color:var(--blue)}
 /* Distinguish installed npm release from the independently built local site. */
 .site-header .site-release-label{color:#b8c5d9;white-space:nowrap}
 .site-header .site-build-label{display:inline-block;max-width:144px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:1px solid #343f51;padding-left:10px;color:#d4e0f5}
+
+/* Netlify may inject its own production toolbar/badge after the page loads.
+   It is not part of the P2LRN interface and must never affect the site UI. */
+netlify-toolbar,
+#netlify-toolbar,
+[data-netlify-toolbar],
+iframe[title*="Netlify" i],
+iframe[src*="netlify"][style*="position: fixed" i],
+[aria-label*="Netlify" i][style*="position: fixed" i]{display:none!important;visibility:hidden!important;pointer-events:none!important}
