@@ -1,3 +1,4 @@
+import {renderCourseRights} from './course-rights.js';
 import {createDefaultDependencyRegistry} from './dependency-registry.js';
 import {RendererRegistry} from './renderer-registry.js';
 import {registerBuiltInRenderers} from './built-in-renderers.js';
@@ -729,6 +730,9 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const zip64Label = pkg.verification?.zip64 ? ' · ZIP64' : '';
     status.textContent = `${integrityLabel} · Formato Core ${pkg.manifest.formatVersion} · Player ${P2LRN_WEB_SDK_VERSION}${transportLabel}${zip64Label}`;
     head.append(strong, status); shell.append(head);
+    const rightsBox=document.createElement('section');rightsBox.className='p2lrn-rights';
+    renderCourseRights(rightsBox,(progressionRoot?.type==='course'?progressionRoot:null)??(root.type==='course'?root:null));
+    if(!rightsBox.hidden)shell.append(rightsBox);
 
     if (root.type === 'activity' || root.type === 'resource') {
       const stage = document.createElement('main'); stage.className = 'p2lrn-stage'; shell.append(stage);

@@ -1,4 +1,5 @@
 import {P2LRNStudioDocument} from './authoring-document.js';
+import {setCourseRights,currentCreationDate} from '../course-rights.js';
 
 const encoder=new TextEncoder();
 const ZERO_DIGEST='sha256:'+'0'.repeat(64);
@@ -15,12 +16,13 @@ function lessonHtml(title,language){
   return `<!doctype html>\n<html lang="${language}">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escaped}</title></head>\n<body><h1>${escaped}</h1><p>Empieza a escribir aquí.</p></body>\n</html>\n`;
 }
 
-export function createP2LRNStudioDocument({title='Curso nuevo',language='es',description=''}={}){
+export function createP2LRNStudioDocument({title='Curso nuevo',language='es',description='',author,createdAt,license,copyrightHolder}={}){
   const lang=safeLanguage(language),courseId=id(),unitId=id(),resourceId=id(),activityId=id(),representationId=id();
   const path='content/lesson-1.html';
   const payloads=new Map([[path,encoder.encode(lessonHtml('Primera lección',lang))]]);
   const course={id:courseId,type:'course',revision:0,title:{[lang]:String(title||'Curso nuevo')},languages:[lang],children:[unitId]};
   if(String(description||'').trim())course.description={[lang]:String(description).trim()};
+  setCourseRights(course,{createdAt:currentCreationDate(),...Object.fromEntries(Object.entries({author,createdAt,license,copyrightHolder}).filter(([,v])=>v!==undefined))});
   const graph={graphVersion:FORMAT_VERSION,entities:[
     course,
     {id:unitId,type:'unit',role:'module',title:{[lang]:'Unidad 1'},children:[activityId]},

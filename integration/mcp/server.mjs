@@ -80,6 +80,12 @@ export function createP2LRNMcpServer(service) {
     z.object({...idAndDigest, entity_key: z.string(), title: z.string().optional(), description: z.string().nullable().optional(), language: z.string().optional()}),
     ({draft_id, expected_digest, entity_key, title, description, language}) => service.setText(draft_id, expected_digest, entity_key,
       Object.fromEntries(Object.entries({title, description, language}).filter(([, value]) => value !== undefined))));
+  register(server, 'p2lrn_draft_set_rights',
+    'Set only the course content author, original creation date (YYYY-MM-DD), license conditions and copyright holder in an isolated draft.',
+    z.object({...idAndDigest, author:z.string().nullable().optional(),createdAt:z.string().nullable().optional(),
+      license:z.string().nullable().optional(),copyrightHolder:z.string().nullable().optional()}),
+    ({draft_id,expected_digest,...changes})=>service.setRights(draft_id,expected_digest,
+      Object.fromEntries(Object.entries(changes).filter(([,v])=>v!==undefined))));
   register(server, 'p2lrn_draft_add_unit',
     'Add one course unit to the isolated draft using the validated Authoring API.',
     z.object({...idAndDigest, key: z.string(), title: z.string(), parent: z.string().optional(), language: z.string().optional()}),

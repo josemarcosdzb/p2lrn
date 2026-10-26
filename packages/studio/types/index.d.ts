@@ -6,7 +6,7 @@ export class P2LRNStudioElement extends HTMLElement {
   readerEndpoint:string;
   importEndpoint:string;
   coursePath:string;
-  createCourse(options?:{title?:string;language?:string;description?:string}):Promise<unknown>;
+  createCourse(options?:{title?:string;language?:string;description?:string;author?:string;createdAt?:string;license?:string;copyrightHolder?:string}):Promise<unknown>;
   openFile(file:File):Promise<void>;
   openUrl(url:string):Promise<void>;
   setMode(mode:'edit'|'preview'):Promise<void>;

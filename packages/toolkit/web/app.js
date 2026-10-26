@@ -1,4 +1,5 @@
 import './p2lrn-player.js';
+import {renderCourseRights} from './course-rights.js';
 import {createHostAdapter} from './host-adapter.js';
 
 const token = new URLSearchParams(location.search).get('t');
@@ -130,6 +131,10 @@ async function boot() {
   document.getElementById('format').textContent = `${summary.format} ${summary.formatVersion}`;
   document.getElementById('integrity').textContent = 'Integridad válida · sin red automática';
   document.getElementById('course-title').textContent = tree.title;
+  if(tree.type==='course'){
+    const course=await api('/api/entity?id='+encodeURIComponent(tree.id));
+    renderCourseRights(document.getElementById('course-rights'),course,{heading:'Autoría y derechos'});
+  }
   document.getElementById('package-meta').textContent = summary.packageId;
   const root = document.getElementById('tree');
   renderNode(tree, root);

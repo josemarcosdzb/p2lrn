@@ -8,6 +8,7 @@ async function playerApi(){
     openPackageURL:mod.openP2LRNPackageURL,
   };
 }
+import {COURSE_RIGHTS_FIELDS,COURSE_RIGHTS_LABELS} from './course-rights.js';
 import {P2LRNStudioDocument} from './runtime/authoring-document.js';
 import {exportP2LRNPackage} from './runtime/package-export.js';
 import {createP2LRNStudioDocument} from './runtime/new-document.js';
@@ -44,6 +45,7 @@ nav small{display:block;color:#667085;text-transform:uppercase;font:600 10px ui-
 .q-field--prompt,.q-field--wide{grid-column:1/-1}.q-prompt-input,.q-blank-template-editor{width:100%;min-width:0;box-sizing:border-box;border:1px solid #cfd5de;border-radius:6px;background:#fff;padding:10px 12px;font:500 13px/1.45 Arial,sans-serif;resize:vertical}.q-prompt-input{min-height:112px}.q-blank-template-editor{min-height:170px;font-family:ui-monospace,monospace;line-height:1.55}.q-help{display:block;margin-top:2px;color:#667085;font-size:11px;line-height:1.4}.q-blank-convert{justify-self:start;font-weight:700}.q-blank-row{grid-template-columns:auto minmax(0,1fr) auto}.q-field--mode{max-width:360px}
 
 .component-preview{display:grid;gap:6px}.component-preview-card{border:1px solid #d0d5dd;border-radius:10px;padding:14px;background:#f8fafc}.component-preview-card strong{display:block;margin-bottom:6px}.component-preview-card p{margin:0}.timeline-item{cursor:grab}.composite-content{display:grid;gap:12px}.composite-content-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.composite-content-head h3{margin:0 0 4px}.composite-content-head p{margin:0;color:#667085}.composite-list{display:grid;gap:8px}.composite-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #d9dee7;border-radius:8px;padding:10px}.composite-row-meta{display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;min-width:0}.composite-row-meta small{grid-column:2;color:#667085}.drag-handle{grid-row:1/3;color:#98a2b3;cursor:grab}.studio-warning{padding:12px;border:1px solid #f0cf75;border-radius:8px;background:#fffbeb;color:#7a5d00}.studio-choice-dialog{border:0;border-radius:12px;padding:0;width:min(680px,calc(100vw - 30px));box-shadow:0 22px 60px rgba(15,23,42,.28)}.studio-choice-dialog::backdrop{background:rgba(15,23,42,.42)}.studio-choice-shell{padding:16px}.studio-choice-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.studio-choice-head h2{margin:0 0 4px}.studio-choice-head p{margin:0;color:#667085}.studio-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}.studio-choice-card{display:grid;gap:4px;text-align:left;min-height:84px;padding:12px}.studio-choice-card small{color:#667085}.q-add-primary{font-weight:700}.q-tf-mode{max-width:420px}.q-tf-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px;border:1px solid #e1e5eb;border-radius:8px;background:#fafbfc}.q-tf-number{font:700 .72rem/1 ui-monospace,monospace;color:#667085}.q-tf-statement-input{width:100%;min-height:64px;box-sizing:border-box;border:1px solid #cfd5de;border-radius:6px;padding:8px 10px;font:500 .82rem/1.4 Arial,sans-serif;resize:vertical}.q-tf-answer{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.q-tf-answer-option{display:flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid #d0d5dd;border-radius:7px;background:#fff;font-size:.78rem}.q-tf-answer-option input{margin:0}@media(max-width:900px){.q-tf-row{grid-template-columns:auto minmax(0,1fr)}.q-tf-answer,.q-tf-row>.q-danger{grid-column:2}}
+.rights-panel{margin:24px 0 0;padding:18px;border:1px solid #d9dee7;border-radius:9px;background:#f8fafc}.rights-panel h2{font-size:16px;margin:0 0 14px}.rights-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.rights-field{display:flex;flex-direction:column;gap:5px;min-width:0;color:#475467;font-size:12px;font-weight:600}.rights-field input,.rights-field textarea{width:100%;min-width:0;min-height:37px;padding:8px 10px;border:1px solid #cfd5de;border-radius:7px;background:#fff;color:#111827;font:inherit;font-size:13px}.rights-field textarea{min-height:72px;resize:vertical}
 [hidden]{display:none!important}
 @media(max-width:760px){.body{grid-template-columns:1fr}nav{max-height:220px;border-right:0;border-bottom:1px solid #d9dee7}.meta{width:100%;margin-left:0}}
 `;
@@ -278,6 +280,30 @@ export class P2LRNStudioElement extends HTMLElement{
     title.oninput=()=>{this.#studio.setTitle(entity.id,title.textContent||'');this.#renderTree();this.#updateState();};
     desc.oninput=()=>{this.#studio.setDescription(entity.id,desc.textContent||'');this.#updateState();};
     sheet.append(title,desc);
+    if(entity.type==='course'){
+      const rights=document.createElement('section');rights.className='rights-panel';
+      const heading=document.createElement('h2');heading.textContent='Autoría y derechos';rights.append(heading);
+      const fields=document.createElement('div');fields.className='rights-fields';
+      const values=this.#studio.getCourseRights();
+      for(const key of COURSE_RIGHTS_FIELDS){
+        const field=document.createElement('label');field.className='rights-field';
+        const caption=document.createElement('span');caption.textContent=COURSE_RIGHTS_LABELS[key];
+        const input=key==='license'?document.createElement('textarea'):document.createElement('input');
+        if(key==='createdAt')input.type='date';
+        else if(key!=='license')input.type='text';
+        if(key==='author')input.maxLength=300;
+        if(key==='copyrightHolder')input.maxLength=300;
+        if(key==='license')input.maxLength=2000;
+        input.value=values[key]??'';
+        input.setAttribute('aria-label',COURSE_RIGHTS_LABELS[key]);
+        input.addEventListener('change',()=>{
+          try{this.#studio.setCourseRights({[key]:input.value});this.#updateState();}
+          catch(error){this.#status(error.message);}
+        });
+        field.append(caption,input);fields.append(field);
+      }
+      rights.append(fields);sheet.append(rights);
+    }
     if(entity.type==='activity'){
       const questionnaire=await this.#studio.readQuestionnaire(entity.id);
       if(questionnaire){

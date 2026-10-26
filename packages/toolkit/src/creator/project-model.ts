@@ -2,6 +2,7 @@ import {existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync} fr
 import {dirname, extname, join, resolve} from 'node:path';
 import {ProjectError} from '../core/errors.js';
 import {newUrnUuid} from '../core/uuid.js';
+import {COURSE_RIGHTS_EXTENSION,newCourseCreationDate} from '../core/course-rights.js';
 import {NATIVE, FORMAT_VERSION, identifierIs} from '../core/constants.js';
 import {validateSchema} from '../core/json-schema.js';
 
@@ -11,7 +12,7 @@ export const CURRENT_PROJECT_VERSION='0.3.0';
 export const KEY_RE=/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 export type CreatorProject=Record<string,any>;
 function langMap(text:string|undefined,language:string):Record<string,string>|undefined{if(text==null)return undefined;const v=text.trim();return v?{[language]:v}:undefined;}
-export function newProject(title:string,language='es',description?:string):CreatorProject{const course:any={key:'course',revision:1,title:{[language]:title.trim()||'Untitled course'},languages:[language],children:[]};const d=langMap(description,language);if(d)course.description=d;return{projectVersion:CURRENT_PROJECT_VERSION,targetFormatVersion:FORMAT_VERSION,projectId:newUrnUuid(),profilePolicy:'derive',graphPolicy:'derive',course,units:[],resources:[],activities:[],objectives:[],relations:[],profiles:[],preservedFiles:[]};}
+export function newProject(title:string,language='es',description?:string):CreatorProject{const course:any={key:'course',revision:1,title:{[language]:title.trim()||'Untitled course'},languages:[language],children:[],extensions:{[COURSE_RIGHTS_EXTENSION]:{createdAt:newCourseCreationDate()}}};const d=langMap(description,language);if(d)course.description=d;return{projectVersion:CURRENT_PROJECT_VERSION,targetFormatVersion:FORMAT_VERSION,projectId:newUrnUuid(),profilePolicy:'derive',graphPolicy:'derive',course,units:[],resources:[],activities:[],objectives:[],relations:[],profiles:[],preservedFiles:[]};}
 export function projectPath(root:string):string{try{if(existsSync(root)&&statSync(root).isDirectory()){const current=join(root,PROJECT_FILE),legacy=join(root,LEGACY_PROJECT_FILE);return existsSync(current)?current:existsSync(legacy)?legacy:current;}}catch{}return extname(root)?root:join(root,PROJECT_FILE);}
 export function loadProject(root:string):{path:string;project:CreatorProject}{const path=projectPath(root);if(!existsSync(path))throw new ProjectError(`project file not found: ${path}`);let p:any;try{p=JSON.parse(new TextDecoder().decode(readFileSync(path)));}catch(e){throw new ProjectError(`invalid project JSON: ${e instanceof Error?e.message:String(e)}`);}validateProject(p);return{path,project:p};}
 export function saveProject(path:string,project:CreatorProject):void{validateProject(project);mkdirSync(dirname(path),{recursive:true});writeFileSync(path,JSON.stringify(project,null,2)+'\n');}

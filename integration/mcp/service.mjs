@@ -229,6 +229,11 @@ export class P2LRNMcpService {
     }
   }
 
+  setRights(draftId, expectedDigest, changes) {
+    object(changes,'course rights');
+    return this.mutateDraft(draftId, expectedDigest, workspace=>workspace.setCourseRights(changes));
+  }
+
   setText(draftId, expectedDigest, key, changes) {
     object(changes, 'changes');
     return this.mutateDraft(draftId, expectedDigest, (workspace) => {

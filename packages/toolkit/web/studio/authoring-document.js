@@ -1,3 +1,4 @@
+import {getCourseRights,setCourseRights} from '../course-rights.js';
 import {createDefaultComponentRegistry, CAPABILITY_ACTION_COMPONENT, COLLABORATION_COMPONENT} from '../component-registry.js';
 import {validateNativeComposite} from '../native-composite-core.js';
 import {HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION, capabilityRequirements} from '../capability-broker.js';
@@ -55,6 +56,17 @@ export class P2LRNStudioDocument{
       editorSchema:descriptor.editorSchemas?.[descriptor.authoringDataVersion??descriptor.targetDataVersion]??null,
       authoring:clone(descriptor.authoring),
     }));
+  }
+
+  getCourseRights(){return {...(getCourseRights(this.entity(this.rootId))??{})};}
+
+  setCourseRights(changes){
+    const course=this.entity(this.rootId);
+    if(!course || course.type!=='course')throw new Error('No hay un curso abierto.');
+    const previous=JSON.stringify(getCourseRights(course)??{});
+    const result=setCourseRights(course,changes);
+    if(JSON.stringify(result)!==previous)this.changeCount+=1;
+    return {...result};
   }
 
   setTitle(id,value,language='es'){

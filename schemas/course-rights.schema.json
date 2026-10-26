@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/schema/course-rights/1",
+  "title": "P2LRN Course Authorship and Rights v1",
+  "description": "Exactly four optional fields for the authorship and distribution rights of educational content. No software, tool or AI attribution.",
+  "type": "object",
+  "minProperties": 1,
+  "additionalProperties": false,
+  "properties": {
+    "author": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])$"
+    },
+    "license": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "copyrightHolder": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    }
+  }
+}

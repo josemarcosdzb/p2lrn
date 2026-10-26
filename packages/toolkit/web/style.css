@@ -10,6 +10,7 @@ aside { border-right:1px solid #d9d9d5; background:#fbfbf9; overflow:auto; }
 .aside-head { padding:18px 16px 14px; border-bottom:1px solid #e7e7e2; }
 .course-title { font-weight:650; font-size:16px; }
 .muted { color:#777770; font-size:11px; margin-top:5px; overflow-wrap:anywhere; }
+.course-rights{margin-top:12px;padding-top:11px;border-top:1px solid #e7e7e2;font-size:12px}.course-rights strong{font-size:12px}.course-rights dl{margin:7px 0 0;display:grid;gap:7px}.course-rights dt{color:#777770;font-size:11px}.course-rights dd{margin:2px 0 0;overflow-wrap:anywhere}
 #tree { padding:10px; }
 .tree-node { margin:2px 0; }
 .tree-button { width:100%; border:0; background:transparent; text-align:left; padding:8px 9px; border-radius:7px; cursor:pointer; color:inherit; display:flex; gap:8px; align-items:flex-start; }

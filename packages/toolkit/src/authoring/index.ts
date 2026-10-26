@@ -4,6 +4,7 @@ import {basename, dirname, resolve} from 'node:path';
 import {ProjectError} from '../core/errors.js';
 import {FORMAT_VERSION, PROFILE, canonicalIdentifier} from '../core/constants.js';
 import {portableUrn, uuidNamespace} from '../core/uuid.js';
+import {applyCourseRights, type CourseRightsChanges, type CourseRights} from '../core/course-rights.js';
 import {buildProject, type BuildResult} from '../creator/builder.js';
 import {openPackageAsProject, type OpenPackageProjectOptions} from '../creator/import-project.js';
 import {readDocument, type DocumentReaderOptions, type ExtractedDocument} from '../document-reader/index.js';
@@ -35,6 +36,7 @@ export const AUTHORING_FORMAT_VERSION = FORMAT_VERSION;
 export interface AuthoringCreateOptions { title:string; language?:string; description?:string; force?:boolean; }
 export interface AuthoringBuildOptions { strictProfiles?:boolean; }
 export interface AuthoringTextOptions { language?:string; title?:string; description?:string|null; }
+export interface AuthoringCourseRightsResult {key:string; rights:CourseRights;}
 export interface AuthoringCourseOptions extends AuthoringTextOptions { revision?:number; incrementRevision?:boolean; }
 export interface AuthoringUnitOptions { key:string; title:string; language?:string; role?:string; parent?:string; }
 export interface AuthoringFileOptions { source:string; key:string; title:string; language?:string; parent?:string; mediaType?:string; profile?:string; role?:string; activityType?:string; copyFile?:boolean; }
@@ -148,6 +150,10 @@ export class P2LRNAuthoringWorkspace {
   update(mutator:(draft:CreatorProject)=>void):CreatorProject{const draft=this.project;mutator(draft);return this.replace(draft);}
 
   #edit<T>(operation:(draft:CreatorProject)=>T):T{const draft=clone(this.#project),result=operation(draft);validateProject(draft);saveProject(this.projectFile,draft);this.#project=draft;return result;}
+
+  setCourseRights(changes:CourseRightsChanges):AuthoringCourseRightsResult{
+    return this.#edit(draft=>({key:draft.course.key,rights:applyCourseRights(draft.course,changes)}));
+  }
 
   setCourseMetadata(options:AuthoringCourseOptions):AuthoringEntityTextResult{
     return this.#edit((draft)=>{const language=normalizedLanguage(options.language,draft);setLocalizedText(draft.course,options,language);draft.course.languages=[...new Set([...(draft.course.languages??[]),language])];if(options.revision!==undefined&&options.incrementRevision)throw new ProjectError('revision and incrementRevision are mutually exclusive');if(options.revision!==undefined){if(!Number.isInteger(options.revision)||options.revision<0)throw new ProjectError('course revision must be a non-negative integer');draft.course.revision=options.revision;}else if(options.incrementRevision)draft.course.revision=(draft.course.revision??0)+1;return{key:draft.course.key,language};});
