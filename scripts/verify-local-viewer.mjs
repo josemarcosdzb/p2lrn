@@ -3,9 +3,11 @@ import {createReadStream} from 'node:fs';
 import {cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {extname, join, resolve, sep} from 'node:path';
+import {basename, dirname, extname, join, resolve, sep} from 'node:path';
 import {createP2LRNStudioDocument} from '../packages/toolkit/web/studio/new-document.js';
 import {exportP2LRNPackage} from '../packages/toolkit/web/studio/package-export.js';
+import {openP2LRNPackageBytes} from '../packages/toolkit/web/p2lrn-player.js';
+import {parseOfflineAssignmentResult} from '../packages/toolkit/web/studio/offline-assignment.js';
 import {buildQuestionnaireGame} from '../packages/toolkit/web/questionnaire-games-core.js';
 import {createP2LRNCollaborationHandler} from '../packages/player/server/collaboration-http.mjs';
 import {tmpdir} from 'node:os';
@@ -230,6 +232,123 @@ async function evalTop(cdp,expression){
   return result.result?.value;
 }
 
+async function waitForEval(cdp,expression,label,timeout=20000){
+  const started=Date.now();
+  while(Date.now()-started<timeout){
+    try{const value=await evalTop(cdp,expression);if(value)return value;}catch{}
+    await sleep(100);
+  }
+  throw new Error(`Timed out waiting for ${label}.`);
+}
+
+async function waitForDownloadedFile(directory,suffix,timeout=20000){
+  const started=Date.now();
+  while(Date.now()-started<timeout){
+    const names=await readdir(directory).catch(()=>[]);
+    const name=names.find((item)=>item.endsWith(suffix)&&!item.endsWith('.crdownload'));
+    if(name){
+      const filepath=join(directory,name);
+      try{const info=await stat(filepath);if(info.isFile()&&info.size>0)return filepath;}catch{}
+    }
+    await sleep(100);
+  }
+  throw new Error(`Timed out waiting for a ${suffix} download in ${directory}.`);
+}
+
+async function waitForExistingFile(filepath,label,timeout=20000){
+  const started=Date.now();
+  while(Date.now()-started<timeout){
+    try{const info=await stat(filepath);if(info.isFile()&&info.size>0)return info;}catch{}
+    await sleep(100);
+  }
+  throw new Error(`Timed out waiting for ${label}: ${filepath}`);
+}
+
+async function waitForLauncherUrl(child,timeout=25000){
+  let output='';
+  return new Promise((resolvePromise,reject)=>{
+    let settled=false,timer=null;
+    const finish=(fn,value)=>{if(settled)return;settled=true;if(timer)clearTimeout(timer);fn(value);};
+    const inspect=(chunk)=>{
+      output=(output+String(chunk)).slice(-64000);
+      const match=/http:\/\/127\.0\.0\.1:\d+\/index\.html/u.exec(output);
+      if(match)finish(resolvePromise,{url:match[0],output});
+    };
+    child.stdout?.on('data',inspect);
+    child.stderr?.on('data',inspect);
+    child.once('error',(error)=>finish(reject,error));
+    child.once('exit',(code)=>finish(reject,new Error(`Offline launcher exited before exposing its URL (code ${code}).\n${output.slice(-5000)}`)));
+    timer=setTimeout(()=>finish(reject,new Error(`Offline launcher did not expose its loopback URL.\n${output.slice(-5000)}`)),timeout);
+  });
+}
+
+async function stopWindowsTree(child){
+  if(!child||child.exitCode!==null)return;
+  await new Promise((resolvePromise)=>{
+    let settled=false;
+    const done=()=>{if(!settled){settled=true;resolvePromise();}};
+    try{
+      const killer=spawn('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true,stdio:'ignore'});
+      killer.once('exit',done);
+      killer.once('error',()=>{try{child.kill();}catch{}done();});
+      setTimeout(done,4000);
+    }catch{try{child.kill();}catch{}done();}
+  });
+}
+
+async function runOfflineDoubleClickE2E({launcherPath,chromePath,exportMeta}){
+  invariant(process.platform==='win32','The real double-click offline gate requires Windows.');
+  invariant(process.env.LOCALAPPDATA,'LOCALAPPDATA is required for the Windows offline launcher.');
+  let launcher=null,browser=null,offlineCdp=null,downloads=null,extractedRoot=null;
+  try{
+    launcher=spawn(process.env.ComSpec||'cmd.exe',['/d','/s','/c',`call "${launcherPath}"`],{cwd:dirname(launcherPath),windowsHide:true,stdio:['ignore','pipe','pipe']});
+    const launched=await waitForLauncherUrl(launcher);
+    const payloadDigest=String(exportMeta.payloadDigest??'').toLowerCase();
+    invariant(/^sha256:[0-9a-f]{64}$/u.test(payloadDigest),'Studio did not return a valid launcher payload digest.');
+    extractedRoot=join(process.env.LOCALAPPDATA,'P2LRN','Offline',payloadDigest.slice(7));
+    const extractedCourse=join(extractedRoot,'www','course.p2lrn');
+    const extractedAssignment=join(extractedRoot,'www','assignment.json');
+    const courseInfo=await waitForExistingFile(extractedCourse,'the extracted real P2LRN course');
+    await waitForExistingFile(extractedAssignment,'the extracted offline assignment manifest');
+    const courseBytes=await readFile(extractedCourse);
+    const courseBuffer=courseBytes.buffer.slice(courseBytes.byteOffset,courseBytes.byteOffset+courseBytes.byteLength);
+    const opened=await openP2LRNPackageBytes(courseBuffer);
+    invariant(opened.manifest.integrity.contentRoot===exportMeta.contentRoot,'The launcher extracted a course with a different content root.');
+    const assignmentJson=JSON.parse(await readFile(extractedAssignment,'utf8'));
+    invariant(assignmentJson.assignmentId===exportMeta.assignmentId,'The launcher extracted a different assignment.');
+    invariant(assignmentJson.contentRoot===exportMeta.contentRoot,'The extracted assignment points to a different course.');
+
+    downloads=await mkdtemp(join(tmpdir(),'p2lrn-offline-result-'));
+    browser=await launchChrome(chromePath);
+    offlineCdp=await connectPage(browser.browserWs);
+    await offlineCdp.send('Page.setDownloadBehavior',{behavior:'allow',downloadPath:downloads});
+    await offlineCdp.send('Page.navigate',{url:launched.url});
+    await waitForEval(offlineCdp,`(()=>{const b=document.getElementById('start');return Boolean(b&&!b.disabled&&document.getElementById('title')?.textContent.includes('Prueba doble clic real'));})()`,'the real offline assignment gate');
+    invariant(await evalTop(offlineCdp,`(()=>{const b=document.getElementById('start');if(!b||b.disabled)return false;b.click();return true;})()`),'The real offline assignment could not be started.');
+    await waitForEval(offlineCdp,`(()=>{const p=document.querySelector('#player p2lrn-player'),r=p?.shadowRoot;if(!r)return false;if(r.querySelector('.p2lrn-q-card'))return true;const target=[...r.querySelectorAll('button')].find((button)=>button.textContent.includes('Pregunta offline real'));if(target)target.click();return Boolean(r.querySelector('.p2lrn-q-card'));})()`,'the questionnaire rendered from the extracted P2LRN',25000);
+    const answered=await evalTop(offlineCdp,`(()=>{const p=document.querySelector('#player p2lrn-player'),r=p?.shadowRoot,input=r?.querySelector('input[type="radio"]:not(:disabled)');if(!input)return false;input.checked=true;input.dispatchEvent(new Event('change',{bubbles:true}));const finish=[...r.querySelectorAll('button:not(:disabled)')].find((button)=>button.textContent.trim()==='Finalizar');if(!finish)return false;finish.click();return true;})()`);
+    invariant(answered,'The real offline questionnaire could not be answered and submitted.');
+    const scoreText=await waitForEval(offlineCdp,`(()=>document.querySelector('#player p2lrn-player')?.shadowRoot?.querySelector('.p2lrn-q-score')?.textContent||'')()`,'the questionnaire score');
+    invariant(/1\s*\/\s*1/u.test(scoreText),`Unexpected score from the real offline questionnaire: ${scoreText}`);
+    const interactionScreenshot=await captureVisualEvidence(offlineCdp,'studio-offline-double-click-real-score');
+    invariant(await evalTop(offlineCdp,`(()=>{const b=document.getElementById('finish');if(!b||b.disabled)return false;b.click();return true;})()`),'The outer offline submission button is unavailable.');
+    await waitForEval(offlineCdp,`Boolean(document.querySelector('#finished:not([hidden])'))`,'the final offline submission screen');
+    const finalScreenshot=await captureVisualEvidence(offlineCdp,'studio-offline-double-click-real-result');
+    const resultPath=await waitForDownloadedFile(downloads,'.p2lrn-result',25000);
+    const resultText=await readFile(resultPath,'utf8');
+    return {
+      resultText,resultFilename:basename(resultPath),launcherUrl:launched.url,launcherOutput:launched.output.slice(-5000),
+      extractedCourseBytes:courseInfo.size,scoreText,interactionScreenshot,finalScreenshot,
+    };
+  }finally{
+    try{offlineCdp?.socket?.close();}catch{}
+    if(browser?.child?.exitCode===null)browser.child.kill();
+    if(browser?.profile)await rm(browser.profile,{recursive:true,force:true}).catch(()=>{});
+    await stopWindowsTree(launcher);
+    if(downloads)await rm(downloads,{recursive:true,force:true}).catch(()=>{});
+    if(extractedRoot)await rm(extractedRoot,{recursive:true,force:true}).catch(()=>{});
+  }
+}
 const stateExpression=String.raw`(()=>{const p=document.getElementById('demo-player'),r=p?.shadowRoot,log=document.querySelector('[data-event-log]')?.textContent||'',rect=(el)=>{if(!el)return null;const b=el.getBoundingClientRect();return {left:b.left,top:b.top,right:b.right,bottom:b.bottom,width:b.width,height:b.height}};const iframe=r?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-runtime,.p2lrn-h5p-frame');const stage=r?.querySelector('.p2lrn-stage');const shell=document.querySelector('.viewer-player-shell');const consoleEl=document.querySelector('.viewer-console');const workbench=document.querySelector('.viewer-workbench');return {state:document.querySelector('[data-runtime-state]')?.textContent||'',status:document.querySelector('[data-viewer-status]')?.textContent||'',renderer:document.querySelector('[data-inspect-renderer]')?.textContent||'',runtimeBase:p?.runtimeBaseUrl||'',activityReady:log.includes('p2lrn:activityready'),xapi:log.includes('p2lrn:xapi'),error:log.includes('p2lrn:error'),ready:log.includes('p2lrn:ready'),rendered:log.includes('p2lrn:rendered'),tail:log.slice(-2200),shadowText:r?.textContent?.slice(0,5000)||'',pageOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,innerWidth:innerWidth,grid:workbench?getComputedStyle(workbench).gridTemplateColumns:'',iframe:rect(iframe),stage:rect(stage),shell:rect(shell),console:rect(consoleEl)}})()`;
 
 async function runtimeTexts(cdp){
@@ -566,7 +685,7 @@ async function studioComponentScenario(){
     return {ok:true,added,courseEntries:actualNodes,packageBytes:exported.bytes.byteLength,contentRoot:parsed.manifest.integrity.contentRoot,events,preview:'p2lrn-player',lesson:'Lección visual P2LRN'};
   }catch(error){return {ok:false,error:String(error?.stack||error?.message||error)};}
 }
-async function verifyStudioComponentUI(cdp){
+async function verifyStudioComponentUI(cdp,chromePath){
   await cdp.send('Page.navigate',{url:APP_ORIGIN+'/ui-gates/studio-component.html'});
   let loaded=false;
   const deadline=Date.now()+20000;
@@ -605,34 +724,54 @@ async function verifyStudioComponentUI(cdp){
   const offlineDialogScreenshot=await captureElementVisualEvidence(cdp,'studio-offline-assignment-dialog',"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog:has(.offline-form)')",{maxHeight:1200});
   await evalTop(cdp,"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog:has(.offline-form)')?.close()");
 
-  const offlineReview=await evalTop(cdp,`(async()=>{
-    const studio=document.getElementById('studio'),root=studio.shadowRoot;
-    const exported=await studio.exportPackage();
-    const canonical=(v)=>{if(v===null||typeof v==='boolean'||typeof v==='string')return JSON.stringify(v);if(typeof v==='number')return JSON.stringify(v);if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}'};
-    const sha=async(v)=>{const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical(v))));return 'sha256:'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')};
-    const body={
-      schema:'https://p2lrn.org/schema/offline-result/1',version:'1',
-      assignment:{assignmentId:'urn:uuid:11111111-1111-4111-8111-111111111111',contentRoot:exported.manifest.integrity.contentRoot,participantLabel:'Alumno visual'},
-      runtime:{playerVersion:P2LRN.version},
-      attempt:{number:1,elapsedSeconds:754},
-      summary:{latestScore:{normalized:.8}},
-      submission:{answers:[{entityId:'urn:test:activity',questionId:'q1',answer:{choiceIds:['a']}}],scores:[{value:{normalized:.8}}]},
-      analytics:{events:[{type:'event'}],activeTimeMs:540000},
-      audit:{anomalies:[]}
-    };
-    const result={...body,integrity:{algorithm:'sha256',payloadDigest:await sha(body)}};
-    await studio.reviewOfflineResult(new File([JSON.stringify(result)],'alumno-visual.p2lrn-result',{type:'application/vnd.p2lrn-result+json'}));
-    for(let i=0;i<100;i++){
-      const dialog=[...root.querySelectorAll('.studio-choice-dialog')].find((item)=>item.querySelector('h2')?.textContent==='Revisar entrega offline');
-      if(dialog?.open)return {text:dialog.textContent,open:true};
-      await new Promise((resolve)=>setTimeout(resolve,40));
-    }
-    throw new Error('Offline result review dialog did not open.');
-  })()`);
-  invariant(offlineReview.open===true&&offlineReview.text.includes('Integridad')&&offlineReview.text.includes('Válida')&&offlineReview.text.includes('Alumno visual')&&offlineReview.text.includes('80 %'),'Offline result review UI is incomplete: '+JSON.stringify(offlineReview));
-  const offlineReviewScreenshot=await captureElementVisualEvidence(cdp,'studio-offline-result-review',"[...document.getElementById('studio').shadowRoot.querySelectorAll('.studio-choice-dialog')].find((item)=>item.querySelector('h2')?.textContent==='Revisar entrega offline')",{maxHeight:1400});
-  await evalTop(cdp,"[...document.getElementById('studio').shadowRoot.querySelectorAll('.studio-choice-dialog')].find((item)=>item.querySelector('h2')?.textContent==='Revisar entrega offline')?.close()");
-
+  const launcherDownloads=await mkdtemp(join(tmpdir(),'p2lrn-offline-launcher-'));
+  let offlineFlow=null;
+  try{
+    await cdp.send('Page.setDownloadBehavior',{behavior:'allow',downloadPath:launcherDownloads});
+    const offlineExport=await evalTop(cdp,`(async()=>{
+      const studio=document.getElementById('studio');
+      const doc=await studio.createCourse({title:'Prueba doble clic real',language:'es'});
+      const unit=doc.children(doc.rootId)[0];
+      if(!unit)throw new Error('Studio did not create its initial unit.');
+      const starter=doc.children(unit.id)[0];
+      if(starter)doc.removeActivity(starter.id);
+      const activity=doc.addQuestionnaire(unit.id,{title:'Pregunta offline real',language:'es'});
+      const questionnaire=await doc.readQuestionnaire(activity.id);
+      questionnaire.payload.questions[0].prompt='Selecciona la respuesta correcta para validar la entrega offline real.';
+      questionnaire.payload.questions[0].choices[0].text='Respuesta correcta real';
+      questionnaire.payload.questions[0].choices[1].text='Respuesta incorrecta';
+      doc.setQuestionnaire(activity.id,questionnaire.payload);
+      studio.offlineRuntimeBaseUrl='${APP_ORIGIN}/player/current/dist/';
+      const exported=await studio.downloadOfflineAssignment({deliveryFormat:'windows-single',participantLabel:'Alumno visual real',maxAttempts:1,activityTracking:true});
+      return {downloadedFilename:exported.downloadedFilename,assignmentId:exported.assignment.assignmentId,contentRoot:exported.assignment.contentRoot,payloadDigest:exported.windowsLauncher.payloadDigest,courseBytes:exported.course.bytes.byteLength,bundleBytes:exported.bytes.byteLength};
+    })()`);
+    invariant(offlineExport?.downloadedFilename?.endsWith('.p2lrn-offline.cmd'),'Studio did not download the one-file Windows offline delivery: '+JSON.stringify(offlineExport));
+    invariant(offlineExport.courseBytes>500,'Studio exported an implausibly small P2LRN course.');
+    const launcherPath=await waitForDownloadedFile(launcherDownloads,'.p2lrn-offline.cmd',25000);
+    const executed=await runOfflineDoubleClickE2E({launcherPath,chromePath,exportMeta:offlineExport});
+    const parsed=await parseOfflineAssignmentResult(executed.resultText,{expectedContentRoot:offlineExport.contentRoot,expectedAssignmentId:offlineExport.assignmentId});
+    invariant(parsed.integrityValid&&parsed.courseMatches&&parsed.assignmentMatches,'The real .p2lrn-result failed integrity or identity verification.');
+    invariant(parsed.summary.participantLabel==='Alumno visual real','The real result lost the participant identity.');
+    invariant(parsed.summary.answers.length>=1&&parsed.summary.scores.length>=1&&parsed.summary.events.length>=1,'The real result is missing answers, scores or telemetry events.');
+    invariant(Number(parsed.summary.latestScore?.normalized)===1,'The real result did not preserve the questionnaire score.');
+    const resultLiteral=JSON.stringify(executed.resultText),filenameLiteral=JSON.stringify(executed.resultFilename);
+    const offlineReview=await evalTop(cdp,`(async()=>{
+      const studio=document.getElementById('studio'),root=studio.shadowRoot;
+      await studio.reviewOfflineResult(new File([${resultLiteral}],${filenameLiteral},{type:'application/vnd.p2lrn-result+json'}));
+      for(let i=0;i<100;i++){
+        const dialog=[...root.querySelectorAll('.studio-choice-dialog')].find((item)=>item.querySelector('h2')?.textContent==='Revisar entrega offline');
+        if(dialog?.open)return {text:dialog.textContent,open:true};
+        await new Promise((resolve)=>setTimeout(resolve,40));
+      }
+      throw new Error('Offline result review dialog did not open.');
+    })()`);
+    invariant(offlineReview.open===true&&offlineReview.text.includes('Integridad')&&offlineReview.text.includes('Válida')&&offlineReview.text.includes('Coincide')&&offlineReview.text.includes('Alumno visual real')&&offlineReview.text.includes('100 %'),'Offline result review UI is incomplete or is not reviewing the real result: '+JSON.stringify(offlineReview));
+    const offlineReviewScreenshot=await captureElementVisualEvidence(cdp,'studio-offline-result-review-real',"[...document.getElementById('studio').shadowRoot.querySelectorAll('.studio-choice-dialog')].find((item)=>item.querySelector('h2')?.textContent==='Revisar entrega offline')",{maxHeight:1400});
+    await evalTop(cdp,"[...document.getElementById('studio').shadowRoot.querySelectorAll('.studio-choice-dialog')].find((item)=>item.querySelector('h2')?.textContent==='Revisar entrega offline')?.close()");
+    offlineFlow={export:offlineExport,result:{filename:executed.resultFilename,integrityValid:parsed.integrityValid,courseMatches:parsed.courseMatches,assignmentMatches:parsed.assignmentMatches,participantLabel:parsed.summary.participantLabel,answers:parsed.summary.answers.length,scores:parsed.summary.scores.length,events:parsed.summary.events.length,latestScore:parsed.summary.latestScore},launcherUrl:executed.launcherUrl,extractedCourseBytes:executed.extractedCourseBytes,scoreText:executed.scoreText,interactionScreenshot:executed.interactionScreenshot,finalScreenshot:executed.finalScreenshot,reviewScreenshot:offlineReviewScreenshot};
+  }finally{
+    await rm(launcherDownloads,{recursive:true,force:true}).catch(()=>{});
+  }
   const desktop=await captureVisualEvidence(cdp,'studio-cdn-desktop');
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   await sleep(350);
@@ -641,7 +780,7 @@ async function verifyStudioComponentUI(cdp){
   const screenshotMobile=await captureElementVisualEvidence(cdp,'studio-cdn-mobile',"document.getElementById('studio')",{maxHeight:1600});
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
   invariant(cdp.exceptions.length===exceptionsStart,'Studio browser exceptions: '+JSON.stringify(cdp.exceptions.slice(exceptionsStart)));
-  return {suite:'studio-component-cdn',...result,offlineDialog,offlineDialogScreenshot,offlineReview,offlineReviewScreenshot,desktop,mobile,screenshotMobile};
+  return {suite:'studio-component-cdn',...result,offlineDialog,offlineDialogScreenshot,offlineFlow,desktop,mobile,screenshotMobile};
 }
 
 async function studioSiteScenario(){
@@ -1075,7 +1214,7 @@ try{
   let narrow=null;
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
   let studioUI=null;
-  try{studioUI=await verifyStudioComponentUI(cdp);}catch(error){failures.push({name:'studio-component-cdn',message:String(error?.message||error)});}
+  try{studioUI=await verifyStudioComponentUI(cdp,chromePath);}catch(error){failures.push({name:'studio-component-cdn',message:String(error?.message||error)});}
   let studioSiteUI=null;
   try{studioSiteUI=await verifyStudioSiteUI(cdp);}catch(error){failures.push({name:'studio-website-ui',message:String(error?.message||error)});}
   let connectedArchitecture=null;
