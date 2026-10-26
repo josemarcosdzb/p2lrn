@@ -584,6 +584,7 @@ export async function render(options) {
   }
   const resetView=el('button',{type:'button',class:'p2lrn-game-button'},'Recentrar jugador');
   resetView.addEventListener('click',()=>scene.resetPlayer());
+  if(accessibleOnly){movePad.style.display='none';resetView.style.display='none';}
   controls.append(technology,help,movePad,resetView);
 
   const renderTrial=()=>{
