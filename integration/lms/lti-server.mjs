@@ -156,7 +156,8 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  mkdirSync(packages,{recursive:true});
  const store=createLtiStore(join(root,'lti.sqlite'));
  const provider=createP2LRNLtiProvider({
-  getRegistration:store.getRegistration,getRegistrationById:store.getRegistrationById,
+  getRegistration:store.getRegistration,getRegistrationByIssuer:store.getRegistrationByIssuer,
+  getRegistrationById:store.getRegistrationById,
   transactions:store.transactions,getBinding:store.getBinding,tool
  });
  const ags=createLtiAgsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
