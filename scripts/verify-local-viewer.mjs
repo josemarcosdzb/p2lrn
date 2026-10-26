@@ -387,7 +387,7 @@ async function verifyGameLayout(cdp,kind){
     invariant(behavior.count>=4&&behavior.spreadX>80&&behavior.spreadY>80,kind+': expected circle, not horizontal letters '+JSON.stringify(behavior));
     invariant(behavior.initial!==behavior.next&&behavior.wrong===1&&behavior.restarted,kind+': pass, check or reset failed '+JSON.stringify(behavior));
   }
-  const desktop=await captureVisualEvidence(cdp,'game-'+kind+'-desktop');
+  const desktop=await captureElementVisualEvidence(cdp,'game-'+kind+'-desktop',"document.getElementById('demo-player')",{maxHeight:1300});
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:840,deviceScaleFactor:1,mobile:true});
   await sleep(400);
   function mobileScenario(){
@@ -399,7 +399,7 @@ async function verifyGameLayout(cdp,kind){
   }
   const mobile=await evalTop(cdp,'('+mobileScenario.toString()+')()');
   invariant(mobile.overflow<=2&&mobile.board<=mobile.stage+2,kind+': mobile UI overflows '+JSON.stringify(mobile));
-  const mobileScreenshot=await captureVisualEvidence(cdp,'game-'+kind+'-mobile');
+  const mobileScreenshot=await captureElementVisualEvidence(cdp,'game-'+kind+'-mobile',"document.getElementById('demo-player')",{maxHeight:1500});
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
   return {kind,base,behavior,mobile,desktopScreenshot:desktop,mobileScreenshot};
 }
@@ -425,6 +425,23 @@ async function captureVisualEvidence(cdp,name){
   const info=await stat(filepath);
   invariant(info.size>6000,name+': empty browser screenshot');
   return {filename:name+'.png',bytes:info.size};
+}
+async function captureElementVisualEvidence(cdp,name,expression,{padding=12,maxHeight=1800}={}){
+  const found=await evalTop(cdp,`(()=>{const el=(${expression});if(!el)return false;el.scrollIntoView({block:'center',inline:'nearest'});return true;})()`);
+  invariant(found,name+': visual target is missing');
+  await sleep(250);
+  const box=await evalTop(cdp,`(()=>{const el=(${expression});if(!el)return null;const r=el.getBoundingClientRect();return{x:r.left+scrollX,y:r.top+scrollY,width:r.width,height:r.height,docWidth:document.documentElement.scrollWidth,docHeight:document.documentElement.scrollHeight};})()`);
+  invariant(box&&box.width>20&&box.height>20,name+': visual target has no visible box '+JSON.stringify(box));
+  const x=Math.max(0,box.x-padding),y=Math.max(0,box.y-padding);
+  const width=Math.max(1,Math.min(box.docWidth-x,box.width+padding*2));
+  const height=Math.max(1,Math.min(maxHeight,box.docHeight-y,box.height+padding*2));
+  const shot=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,fromSurface:true,clip:{x,y,width,height,scale:1}});
+  if(!shot?.data)throw new Error('Chrome returned no element screenshot for '+name);
+  const filepath=join(visualEvidenceRoot,name+'.png');
+  await writeFile(filepath,Buffer.from(shot.data,'base64'));
+  const info=await stat(filepath);
+  invariant(info.size>6000,name+': empty element screenshot');
+  return {filename:name+'.png',bytes:info.size,box:{width:box.width,height:box.height,capturedHeight:height}};
 }
 async function studioComponentScenario(){
   const studio=document.getElementById('studio');
@@ -544,9 +561,9 @@ async function verifyStudioComponentUI(cdp){
   const desktop=await captureVisualEvidence(cdp,'studio-cdn-desktop');
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   await sleep(350);
-  const mobile=await evalTop(cdp,"(()=>{const r=document.getElementById('studio').shadowRoot,b=r.querySelector('.shell').getBoundingClientRect();return {width:b.width,viewport:innerWidth,body:!r.querySelector('[data-body]').hidden}})()");
-  invariant(mobile.body&&mobile.width<=mobile.viewport+2,'Studio mobile layout overflows: '+JSON.stringify(mobile));
-  const screenshotMobile=await captureVisualEvidence(cdp,'studio-cdn-mobile');
+  const mobile=await evalTop(cdp,"(()=>{const r=document.getElementById('studio').shadowRoot,s=r.querySelector('.shell'),b=s.getBoundingClientRect(),nav=r.querySelector('nav');return {width:b.width,viewport:innerWidth,body:!r.querySelector('[data-body]').hidden,overflow:Math.max(0,s.scrollWidth-s.clientWidth),navOverflow:nav?Math.max(0,nav.scrollWidth-nav.clientWidth):0}})()");
+  invariant(mobile.body&&mobile.width<=mobile.viewport+2&&mobile.overflow<=2&&mobile.navOverflow<=2,'Studio mobile layout overflows: '+JSON.stringify(mobile));
+  const screenshotMobile=await captureElementVisualEvidence(cdp,'studio-cdn-mobile',"document.getElementById('studio')",{maxHeight:1600});
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
   invariant(cdp.exceptions.length===exceptionsStart,'Studio browser exceptions: '+JSON.stringify(cdp.exceptions.slice(exceptionsStart)));
   return {suite:'studio-component-cdn',...result,desktop,mobile,screenshotMobile};
@@ -840,9 +857,7 @@ async function verifyConnectedArchitecture(cdp,fixture){
   invariant(collaboration.result.includes('Opción A · 1'),'Collaboration vote did not synchronize between two Players through the production HTTP provider.');
   invariant(collaboration.transport==='http','Collaboration E2E did not use the production HTTP provider.');
   invariant(collaboration.accessible===true,'Collaboration renderer lost semantic accessibility controls.');
-  await evalTop(cdp,"document.getElementById('collaboration-e2e')?.scrollIntoView({block:'center'})");
-  await sleep(250);
-  const collaborationScreenshot=await captureVisualEvidence(cdp,'collaboration-two-player');
+  const collaborationScreenshot=await captureElementVisualEvidence(cdp,'collaboration-two-player',"document.getElementById('collaboration-e2e')",{maxHeight:1400});
   await evalTop(cdp,"document.getElementById('collaboration-e2e')?.remove()");
 
   const sharedResource=await evalTop(cdp,`(async()=>{
@@ -861,9 +876,7 @@ async function verifyConnectedArchitecture(cdp,fixture){
   invariant(sharedResource.src.startsWith('blob:'),'Shared resource did not resolve through verified host object URL.');
   invariant(sharedResource.count===1,'Shared resource store retained duplicate physical objects.');
   invariant(sharedResource.alt==='Diagrama P2LRN compartido','Shared image did not inherit portable resource title as alt text.');
-  await evalTop(cdp,"document.getElementById('shared-resource-e2e')?.scrollIntoView({block:'center'})");
-  await sleep(250);
-  const sharedResourceScreenshot=await captureVisualEvidence(cdp,'shared-resource-digest');
+  const sharedResourceScreenshot=await captureElementVisualEvidence(cdp,'shared-resource-digest',"document.getElementById('shared-resource-e2e')",{maxHeight:1200});
   await evalTop(cdp,"document.getElementById('shared-resource-e2e')?.remove();globalThis.__p2lrnSharedResourceStore?.clear();delete globalThis.__p2lrnSharedResourceStore");
 
   const cached=await evalTop(cdp,`(async()=>{
