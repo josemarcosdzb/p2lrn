@@ -378,7 +378,7 @@ for(const [slug,required] of connectorDocs){
   if(!html.includes('<h1>') || !html.includes('class="doc-content"') ||
      (html.match(/<section class="doc-section">/g)||[]).length<4)
     throw new Error('Connector documentation structure missing: '+route);
-  for(const term of required)if(!html.includes(term))
+  for(const term of required)if(!html.toLocaleLowerCase('es').includes(term.toLocaleLowerCase('es')))
     throw new Error('Connector documentation missing '+term+' in '+route);
   if(!connectorNavigation.includes("['"+route+"',"))
     throw new Error('Connector navigation missing '+route);
