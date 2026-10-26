@@ -151,8 +151,10 @@ test('offline exporter creates a self-playing ZIP with local Player, course and 
   assert.match(single,/SHA256/i);
   assert.match(single,/Expand-Archive/);
   assert.match(single,/runtime\\serve\.ps1/);
-  const marker='__P2LRN_PAYLOAD__';
-  const payload=single.slice(single.indexOf(marker)+marker.length).replace(/\s+/g,'');
+  const marker='\r\n__P2LRN_PAYLOAD__\r\n';
+  const markerIndex=single.indexOf(marker);
+  assert.notEqual(markerIndex,-1,'single-file launcher must contain a standalone payload marker line');
+  const payload=single.slice(markerIndex+marker.length).replace(/\s+/g,'');
   const decoded=new Uint8Array(Buffer.from(payload,'base64'));
   assert.deepEqual([...decoded],[...result.bytes],'single-file launcher must embed the exact portable ZIP');
 });
