@@ -71,7 +71,7 @@ function filenameFromUrl(value){
 
 export class P2LRNStudioElement extends HTMLElement{
   static p2lrnStudioVersion=P2LRN_STUDIO_VERSION;
-  static get observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path'];}
+  static get observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path','offline-runtime-base-url'];}
   #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;
 
   constructor(){
@@ -110,6 +110,8 @@ export class P2LRNStudioElement extends HTMLElement{
           <button type="button" data-edit class="primary">Editar</button>
           <button type="button" data-preview>Vista alumno</button>
           <button type="button" data-download>Descargar .p2lrn</button>
+          <button type="button" data-offline>Entrega offline</button>
+          <label><button type="button" data-review-result>Revisar entrega</button><input data-result-file type="file" accept=".p2lrn-result,application/vnd.p2lrn-result+json,application/json" hidden></label>
           <button type="button" data-save hidden>Guardar curso</button>
           <span class="meta" data-meta>Sin curso</span>
         </div>
@@ -137,6 +139,9 @@ export class P2LRNStudioElement extends HTMLElement{
     q('[data-edit]').addEventListener('click',()=>this.setMode('edit'));
     q('[data-preview]').addEventListener('click',()=>this.setMode('preview'));
     q('[data-download]').addEventListener('click',()=>this.download());
+    q('[data-offline]').addEventListener('click',()=>this.showOfflineExportDialog());
+    q('[data-review-result]').addEventListener('click',()=>q('[data-result-file]').click());
+    q('[data-result-file]').addEventListener('change',()=>{const file=q('[data-result-file]').files?.[0];if(file)this.reviewOfflineResult(file).catch((e)=>this.#status(e.message));q('[data-result-file]').value='';});
     q('[data-save]').addEventListener('click',()=>this.saveCourse());
     this.#syncSaveButton();
     if(this.src&&!this.#studio)this.openUrl(this.src).catch((e)=>this.#status(e.message));
@@ -152,6 +157,8 @@ export class P2LRNStudioElement extends HTMLElement{
   get saveEndpoint(){return this.getAttribute('save-endpoint')||''}
   get readerEndpoint(){return this.getAttribute('reader-endpoint')||''}
   get importEndpoint(){return this.getAttribute('import-endpoint')||''}
+  get offlineRuntimeBaseUrl(){return this.getAttribute('offline-runtime-base-url')||''}
+  set offlineRuntimeBaseUrl(v){v?this.setAttribute('offline-runtime-base-url',v):this.removeAttribute('offline-runtime-base-url')}
   set importEndpoint(v){v?this.setAttribute('import-endpoint',v):this.removeAttribute('import-endpoint')}
   set readerEndpoint(v){v?this.setAttribute('reader-endpoint',v):this.removeAttribute('reader-endpoint')}
   set saveEndpoint(v){v?this.setAttribute('save-endpoint',v):this.removeAttribute('save-endpoint')}
