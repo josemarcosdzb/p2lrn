@@ -122,7 +122,7 @@ function normalizePosition(value=[0,0,0]) {
   return [Number(value[0])||0,Number(value[1])||0,Number(value[2])||0];
 }
 
-export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics='rapier'}={}) {
+export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=()=>false,physics='rapier'}={}) {
   let physicsWorld;
   try {
     physicsWorld=physics==='none'?await createNoPhysicsWorld():await createRapierPhysicsWorld();
@@ -193,6 +193,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
   const carried=new Map();
   const raycaster=new THREE.Raycaster();
   const pointer=new THREE.Vector2();
+  const dragPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-0.78);
+  const dragWorld=new THREE.Vector3();
+  const dragPointer=new THREE.Vector3();
   let alive=true;
   let raf=0;
   let last=performance.now();
@@ -287,6 +290,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     interactables.length=0;
     connectors.length=0;
     carried.clear();
+    dragPointer.set(0,0.78,0);
   }
 
   function addLabel(parent,text,y=1.2,options={}) {
@@ -375,12 +379,13 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
 
   function connectorTarget(connector) {
     if(connector.toPlayer)return playerHandPosition();
+    if(connector.toPointer)return dragPointer;
     return meshes.get(connector.toId)?.position??null;
   }
 
-  function createConnector(fromId,toId,{color='#34d399',toPlayer=false}={}) {
+  function createConnector(fromId,toId,{color='#34d399',toPlayer=false,toPointer=false}={}) {
     const from=meshes.get(String(fromId));
-    const to=toPlayer?playerHandPosition():meshes.get(String(toId));
+    const to=toPlayer?playerHandPosition():toPointer?dragPointer:meshes.get(String(toId))?.position;
     if(!from||!to)return null;
     const state=createRopeState(from.position,to);
     const geometry=new THREE.BufferGeometry();
@@ -390,7 +395,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     line.userData.toId=toId===null||toId===undefined?null:String(toId);
     line.userData.toPlayer=toPlayer;
     stage.add(line);
-    connectors.push({line,fromId:String(fromId),toId:line.userData.toId,toPlayer,state});
+    connectors.push({line,fromId:String(fromId),toId:line.userData.toId,toPlayer,toPointer,state});
     return line;
   }
 
@@ -400,6 +405,13 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
 
   function connectToPlayer(fromId,{color='#c0a270'}={}) {
     return createConnector(fromId,null,{color,toPlayer:true});
+  }
+  function connectToPointer(fromId,{color='#c0a270'}={}) {
+    dragPointer.copy(playerHandPosition());
+    return createConnector(fromId,null,{color,toPointer:true});
+  }
+  function setPointerTarget(position) {
+    dragPointer.set(...normalizePosition(position));
   }
 
   function disconnect(line) {
@@ -464,33 +476,52 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     raf=requestAnimationFrame(frame);
   }
 
-  function raycastInteraction(event) {
+  function raycastInteraction(event,{dispatch=true,exclude=null}={}) {
     const rect=canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    if(!rect.width||!rect.height)return null;
     pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
     pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
     raycaster.setFromCamera(pointer,camera);
     const hits=raycaster.intersectObjects(interactables,true);
-    for (const hit of hits) {
+    for(const hit of hits){
       let node=hit.object;
-      while (node && !node.userData?.p2lrnInteraction) node=node.parent;
-      if (node?.userData?.p2lrnInteraction) {
-        onInteraction(node.userData.p2lrnInteraction,{point:hit.point,event,playerDistance:player.position.distanceTo(hit.point)});
-        break;
-      }
+      while(node&&!node.userData?.p2lrnInteraction)node=node.parent;
+      const meta=node?.userData?.p2lrnInteraction;
+      if(!meta)continue;
+      if(exclude&&meta.kind===exclude.kind&&meta.id===exclude.id)continue;
+      const info={point:hit.point,event,playerDistance:player.position.distanceTo(hit.point)};
+      if(dispatch)onInteraction(meta,info);
+      return {meta,...info};
     }
+    return null;
+  }
+  function pointerWorldPosition(event){
+    const rect=canvas.getBoundingClientRect();
+    if(!rect.width||!rect.height)return null;
+    pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
+    pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
+    raycaster.setFromCamera(pointer,camera);
+    const hit=raycaster.ray.intersectPlane(dragPlane,dragWorld);
+    if(!hit)return null;
+    return [clamp(hit.x,-11.2,11.2),0.78,clamp(hit.z,-12,12)];
   }
   function onPointerDown(event){
-    cameraDrag={pointerId:event.pointerId,x:event.clientX,y:event.clientY,moved:false};
+    if(event.button!==0&&event.pointerType==='mouse')return;
+    const hit=raycastInteraction(event,{dispatch:false});
+    const draggable=hit&&['ordering-object','classification-object','matching-left'].includes(hit.meta.kind);
+    const objectDrag=Boolean(draggable&&onDrag(hit.meta,'start',{position:pointerWorldPosition(event),event,hit}));
+    cameraDrag={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,moved:false,
+      mode:objectDrag?'object':'camera',source:objectDrag?hit.meta:null};
     canvas.setPointerCapture?.(event.pointerId);
   }
   function onPointerMove(event){
     const drag=cameraDrag;
     if(!drag||drag.pointerId!==event.pointerId)return;
-    const dx=event.clientX-drag.x;
-    const dy=event.clientY-drag.y;
-    if(Math.abs(dx)+Math.abs(dy)>2)drag.moved=true;
-    if(drag.moved){
+    const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+    if(Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)>6)drag.moved=true;
+    if(drag.mode==='object'){
+      if(drag.moved)onDrag(drag.source,'move',{position:pointerWorldPosition(event),event});
+    } else if(drag.moved) {
       cameraYaw-=dx*0.006;
       cameraPitch=clamp(cameraPitch-dy*0.004,-0.58,0.24);
     }
@@ -499,11 +530,22 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
   function onPointerUp(event){
     const drag=cameraDrag;
     if(!drag||drag.pointerId!==event.pointerId)return;
-    if(!drag.moved)raycastInteraction(event);
+    if(drag.mode==='object'){
+      if(drag.moved){
+        const hit=raycastInteraction(event,{dispatch:false,exclude:drag.source});
+        onDrag(drag.source,'end',{position:pointerWorldPosition(event),target:hit?.meta??null,event});
+      }else{
+        onDrag(drag.source,'cancel',{event});
+        raycastInteraction(event);
+      }
+    }else if(!drag.moved)raycastInteraction(event);
     cameraDrag=null;
     try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
   }
-  function onPointerCancel(){cameraDrag=null;}
+  function onPointerCancel(event){
+    if(cameraDrag?.mode==='object')onDrag(cameraDrag.source,'cancel',{event});
+    cameraDrag=null;
+  }
   function onKeyDown(event){
     const code=event.code;
     if(!['KeyW','KeyS','KeyA','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(code))return;
@@ -540,6 +582,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},physics=
     addNode,
     connect,
     connectToPlayer,
+    connectToPointer,
+    setPointerTarget,
     disconnect,
     carry,
     setTranslation,
