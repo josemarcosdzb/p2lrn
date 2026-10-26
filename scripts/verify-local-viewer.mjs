@@ -490,6 +490,94 @@ async function prepareGameFixtures(){
   await writeFile(join(siteRoot,'examples','game-ui-3d-mixed.p2lrn'),exported3D.bytes);
 }
 
+async function verifyThreeGameInteractionAndResume(cdp){
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/?src='+encodeURIComponent('/examples/game-ui-3d-mixed.p2lrn')});
+  await waitForEval(cdp,"document.getElementById('demo-player')?.shadowRoot?.querySelectorAll('.p2lrn-nav button').length>0",'3D browser course navigation',30000);
+  const outcome=await evalTop(cdp,`(async()=>{
+    const player=document.getElementById('demo-player'),root=player.shadowRoot;
+    const wait=async(predicate,label,timeout=20000)=>{
+      const start=performance.now();
+      while(performance.now()-start<timeout){
+        if(predicate())return true;
+        await new Promise(resolve=>setTimeout(resolve,100));
+      }
+      throw new Error(label+' timeout');
+    };
+    const open=[...root.querySelectorAll('.p2lrn-nav button')].find(button=>button.textContent.includes('Laboratorio 3D QA'));
+    if(!open)throw new Error('3D QA activity missing from navigation');
+    open.click();
+    await wait(()=>root.querySelector('.p2lrn-3d-trial')?.querySelector('h3')?.textContent==='Ordena los tres bloques','3D ordering scene');
+    const trial=()=>root.querySelector('.p2lrn-3d-trial');
+    const title=()=>trial()?.querySelector('h3')?.textContent||'';
+    const status=()=>[...root.querySelectorAll('.p2lrn-game-status')].at(-1)?.textContent??'';
+    const select=(name,value)=>{
+      const label=[...trial().querySelectorAll('label')].find(node=>node.querySelector('span')?.textContent===name);
+      const input=label?.querySelector('select');
+      if(!input)throw new Error('3D option missing: '+name);
+      input.value=value;
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+      return input.value;
+    };
+    const read=(name)=>{
+      const label=[...trial().querySelectorAll('label')].find(node=>node.querySelector('span')?.textContent===name);
+      return label?.querySelector('select')?.value;
+    };
+    const go=(label)=>{
+      const button=[...trial().querySelectorAll('button')].find(node=>node.textContent.trim()===label);
+      if(!button||button.disabled)throw new Error('3D navigation '+label+' unavailable');
+      button.click();
+    };
+    const choose=(column,label)=>{
+      const items=[...trial().querySelectorAll('.p2lrn-match-column')];
+      const button=[...items[column]?.querySelectorAll('button')??[]].find(x=>x.textContent===label);
+      if(!button)throw new Error('3D matching button missing: '+label);
+      button.click();
+    };
+    if(select('Primero','0')!=='0')throw new Error('3D ordering placement failed');
+    go('Siguiente');
+    if(title()!=='Relaciona país y capital')throw new Error('3D did not navigate to matching');
+    choose(0,'España');choose(1,'Madrid');
+    if(!status().includes('1/3'))throw new Error('3D matching did not register first relation: '+status());
+    go('Anterior');
+    if(read('Primero')!=='0'||!status().includes('recuperadas'))
+      throw new Error('3D ordering placement lost when returning: '+read('Primero')+' '+status());
+    select('Segundo','1');select('Tercero','2');
+    if(!status().includes('Orden correcto'))throw new Error('3D ordering did not finish: '+status());
+    go('Siguiente');
+    if(!status().includes('Conexiones recuperadas · 1/3'))
+      throw new Error('3D matching connection did not restore: '+status());
+    choose(0,'Francia');choose(1,'París');
+    choose(0,'Italia');choose(1,'Roma');
+    if(!status().includes('3/3'))throw new Error('3D matching could not finish: '+status());
+    const matchingPreserved=[...trial().querySelectorAll('.p2lrn-match-column button.is-solved')].length;
+    go('Siguiente');
+    if(title()!=='Clasifica los objetos')throw new Error('3D did not navigate to classification');
+    if(select('Triángulo','g1')!=='g1')throw new Error('3D classification failed');
+    go('Anterior');
+    go('Siguiente');
+    if(read('Triángulo')!=='g1'||!status().includes('recuperadas'))
+      throw new Error('3D classification did not restore: '+read('Triángulo')+' '+status());
+    select('Círculo','g2');
+    if(!status().includes('completada'))throw new Error('3D classification could not finish: '+status());
+    const finish=[...root.querySelectorAll('.p2lrn-game-shell button')].find(x=>x.textContent==='Finalizar actividad');
+    if(!finish)throw new Error('3D scoring action missing');
+    finish.click();
+    await wait(()=>root.querySelector('.p2lrn-game-shell')?.textContent?.includes('Resultado:')||
+      document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:score'),'3D final score');
+    const log=document.querySelector('[data-event-log]')?.textContent||'';
+    if(log.includes('p2lrn:error'))throw new Error('3D runtime emitted an error: '+log.slice(-1000));
+    return {threeModes:['ordering','matching','classification'],orderedAndSaved:true,matchingRestored:true,
+      classificationRestored:true,solvedConnectionButtons:matchingPreserved,
+      finalScoreReceived:log.includes('p2lrn:score'),noRuntimeError:true};
+  })()`);
+  invariant(outcome?.orderedAndSaved&&outcome?.matchingRestored&&outcome?.classificationRestored
+    &&outcome.finalScoreReceived, '3D browser regression incomplete: '+JSON.stringify(outcome));
+  const screenshot=await captureElementVisualEvidence(cdp,'3d-three-modes-completed',
+    "document.getElementById('demo-player')",{maxHeight:1450});
+  return {...outcome,screenshot};
+}
+
 async function verifyGameLayout(cdp,kind){
   const title=kind==='crossword'?'Crucigrama de prueba':'Rosco de prueba';
   const selector=kind==='crossword'?'.p2lrn-crossword-grid':'.p2lrn-rosco';
@@ -1275,6 +1363,9 @@ try{
     try{nativeGames.push(await verifyGameLayout(cdp,kind));}
     catch(error){failures.push({name:'game-'+kind+'-ui',message:String(error?.message||error)});}
   }
+  let threeGame=null;
+  try{threeGame=await verifyThreeGameInteractionAndResume(cdp);}
+  catch(error){failures.push({name:'three-games-restore-and-complete',message:String(error?.message||error)});}
   let narrow=null;
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
   let studioUI=null;
@@ -1283,7 +1374,7 @@ try{
   try{studioSiteUI=await verifyStudioSiteUI(cdp);}catch(error){failures.push({name:'studio-website-ui',message:String(error?.message||error)});}
   let connectedArchitecture=null;
   try{connectedArchitecture=await verifyConnectedArchitecture(cdp,connectedFixture);}catch(error){failures.push({name:'connected-architecture',message:String(error?.message||error)});}
-  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
+  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
 }finally{
   try{cdp?.socket?.close();}catch{}
