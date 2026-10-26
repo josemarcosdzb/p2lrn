@@ -104,7 +104,10 @@ for (const name of requiredExecutableExamples) {
   if (!(await exists(demoPath))) throw new Error('Executable documentation example is missing: ' + name);
   await inspectPackage(demoPath);
 }
+const verifiedDefaultViewerExample=canonicalEntries.find((example)=>example.url==='/examples/canonical/creator-course.p2lrn');
+if(!verifiedDefaultViewerExample)throw new Error('The public viewer default must be a verified local playable package.');
 const catalog = {
+  defaultExample:verifiedDefaultViewerExample.url,
   schema:'https://p2lrn.org/schema/docs-example-catalog/1',
   version:'1',
   examples:[...canonicalEntries,...generatedEntries],
