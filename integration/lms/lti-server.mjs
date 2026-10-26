@@ -333,6 +333,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      const tenantId=valid(decodeURIComponent(path.slice('/lti/admin/catalog/'.length)),'tenantId',128);
      return sendJson(res,200,{courses:store.listCatalog(tenantId)});
     }
+    if(method==='GET'&&path==='/lti/admin/attempts'){
+     const tenantId=valid(incoming.searchParams.get('tenantId'),'tenantId',128);
+     return sendJson(res,200,{attempts:store.listAttempts(tenantId)});
+    }
     if(method==='GET'&&path==='/lti/admin/ags/pending')
      return sendJson(res,200,{pending:store.listPending()});
     if(method==='POST'&&path==='/lti/admin/grades'){
