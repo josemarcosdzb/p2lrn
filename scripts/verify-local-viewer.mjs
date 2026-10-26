@@ -579,6 +579,57 @@ async function verifyStudioComponentUI(cdp){
   const exceptionsStart=cdp.exceptions.length;
   const result=await evalTop(cdp,'('+studioComponentScenario.toString()+')()');
   invariant(result?.ok,'CDN Studio browser UI failed: '+JSON.stringify(result));
+
+  const offlineDialog=await evalTop(cdp,`(async()=>{
+    const studio=document.getElementById('studio'),root=studio?.shadowRoot;
+    const button=root?.querySelector('[data-offline]');
+    if(!button)throw new Error('Offline assignment control is missing from Studio.');
+    button.click();
+    for(let i=0;i<100;i++){
+      const dialog=root.querySelector('.studio-choice-dialog.offline-form');
+      if(dialog?.open){
+        const labels=[...dialog.querySelectorAll('.offline-field span')].map((node)=>node.textContent);
+        const fixed=dialog.querySelector('.offline-fixed')?.textContent??'';
+        return {open:true,labels,fixed};
+      }
+      await new Promise((resolve)=>setTimeout(resolve,40));
+    }
+    throw new Error('Offline assignment dialog did not open.');
+  })()`);
+  invariant(offlineDialog.open===true,'Offline assignment dialog is not open.');
+  invariant(offlineDialog.labels.includes('Disponible desde')&&offlineDialog.labels.includes('Fecha límite')&&offlineDialog.labels.includes('Tiempo máximo desde que empieza (minutos)')&&offlineDialog.labels.includes('Intentos máximos'),'Offline assignment policy controls are incomplete: '+JSON.stringify(offlineDialog));
+  invariant(offlineDialog.fixed.includes('Colaboración')&&offlineDialog.fixed.includes('Desactivada'),'Offline assignment UI does not make collaboration disabled explicit.');
+  const offlineDialogScreenshot=await captureElementVisualEvidence(cdp,'studio-offline-assignment-dialog',"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog.offline-form')",{maxHeight:1200});
+  await evalTop(cdp,"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog.offline-form')?.close()");
+
+  const offlineReview=await evalTop(cdp,`(async()=>{
+    const studio=document.getElementById('studio'),root=studio.shadowRoot;
+    const exported=await studio.exportPackage();
+    const canonical=(v)=>{if(v===null||typeof v==='boolean'||typeof v==='string')return JSON.stringify(v);if(typeof v==='number')return JSON.stringify(v);if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}'};
+    const sha=async(v)=>{const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical(v))));return 'sha256:'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('')};
+    const body={
+      schema:'https://p2lrn.org/schema/offline-result/1',version:'1',
+      assignment:{assignmentId:'urn:uuid:11111111-1111-4111-8111-111111111111',contentRoot:exported.manifest.integrity.contentRoot,participantLabel:'Alumno visual'},
+      runtime:{playerVersion:P2LRN.version},
+      attempt:{number:1,elapsedSeconds:754},
+      summary:{latestScore:{normalized:.8}},
+      submission:{answers:[{entityId:'urn:test:activity',questionId:'q1',answer:{choiceIds:['a']}}],scores:[{value:{normalized:.8}}]},
+      analytics:{events:[{type:'event'}],activeTimeMs:540000},
+      audit:{anomalies:[]}
+    };
+    const result={...body,integrity:{algorithm:'sha256',payloadDigest:await sha(body)}};
+    await studio.reviewOfflineResult(new File([JSON.stringify(result)],'alumno-visual.p2lrn-result',{type:'application/vnd.p2lrn-result+json'}));
+    for(let i=0;i<100;i++){
+      const dialog=[...root.querySelectorAll('.studio-choice-dialog')].find((item)=>item.querySelector('h2')?.textContent==='Revisar entrega offline');
+      if(dialog?.open)return {text:dialog.textContent,open:true};
+      await new Promise((resolve)=>setTimeout(resolve,40));
+    }
+    throw new Error('Offline result review dialog did not open.');
+  })()`);
+  invariant(offlineReview.open===true&&offlineReview.text.includes('Integridad')&&offlineReview.text.includes('Válida')&&offlineReview.text.includes('Alumno visual')&&offlineReview.text.includes('80 %'),'Offline result review UI is incomplete: '+JSON.stringify(offlineReview));
+  const offlineReviewScreenshot=await captureElementVisualEvidence(cdp,'studio-offline-result-review',"[...document.getElementById('studio').shadowRoot.querySelectorAll('.studio-choice-dialog')].find((item)=>item.querySelector('h2')?.textContent==='Revisar entrega offline')",{maxHeight:1400});
+  await evalTop(cdp,"[...document.getElementById('studio').shadowRoot.querySelectorAll('.studio-choice-dialog')].find((item)=>item.querySelector('h2')?.textContent==='Revisar entrega offline')?.close()");
+
   const desktop=await captureVisualEvidence(cdp,'studio-cdn-desktop');
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   await sleep(350);
@@ -587,7 +638,7 @@ async function verifyStudioComponentUI(cdp){
   const screenshotMobile=await captureElementVisualEvidence(cdp,'studio-cdn-mobile',"document.getElementById('studio')",{maxHeight:1600});
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
   invariant(cdp.exceptions.length===exceptionsStart,'Studio browser exceptions: '+JSON.stringify(cdp.exceptions.slice(exceptionsStart)));
-  return {suite:'studio-component-cdn',...result,desktop,mobile,screenshotMobile};
+  return {suite:'studio-component-cdn',...result,offlineDialog,offlineDialogScreenshot,offlineReview,offlineReviewScreenshot,desktop,mobile,screenshotMobile};
 }
 
 async function studioSiteScenario(){
