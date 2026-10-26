@@ -790,6 +790,21 @@ async function verifyStudioSiteUI(cdp){
   invariant(previewLayout.toolbarPosition==='static','Studio preview toolbar must not overlay content: '+JSON.stringify(previewLayout));
   invariant(previewLayout.previewTop>=previewLayout.toolbarBottom-1,'Studio preview content is hidden below toolbar: '+JSON.stringify(previewLayout));
   const previewScreenshot=await captureVisualEvidence(cdp,'studio-website-preview');
+  // Screenshot the exact regression from the user's recording: selecting a
+  // whole UNIT inside Studio used to show a second Player outline.
+  const unitId=await evalTop(cdp,"(()=>{const button=[...document.querySelectorAll('[data-tree] button')].find(item=>item.querySelector('.type')?.textContent==='unit' && item.textContent.includes('Nueva unidad'));if(!button)return null;const id=button.dataset.entityId;button.click();return id;})()");
+  invariant(unitId,'Could not select unit for the duplicated-navigation visual regression.');
+  const unitDeadline=Date.now()+18000;
+  let unitLayout=null;
+  while(Date.now()<unitDeadline){
+    unitLayout=await evalTop(cdp,"(()=>{const p=document.querySelector('[data-player]');if(!p||p.getAttribute('node')!=="+JSON.stringify(unitId)+")return null;const root=p.shadowRoot;const layout=root?.querySelector('.p2lrn-layout-external'),stage=root?.querySelector('.p2lrn-stage');if(!layout||!stage)return null;return {navigation:p.getAttribute('navigation'),navCount:root.querySelectorAll('.p2lrn-nav').length,hostOutlineCount:document.querySelectorAll('[data-tree] button').length,layoutWidth:layout.getBoundingClientRect().width,stageWidth:stage.getBoundingClientRect().width,rendered:!!stage.querySelector('iframe')};})()");
+    if(unitLayout?.rendered)break;
+    await sleep(120);
+  }
+  invariant(unitLayout?.rendered,'Unit preview HTML did not render in Player.');
+  invariant(unitLayout.navigation==='external'&&unitLayout.navCount===0&&unitLayout.hostOutlineCount>=3,'Duplicate navigation persisted: '+JSON.stringify(unitLayout));
+  invariant(unitLayout.stageWidth+2>=unitLayout.layoutWidth,'Unit preview lost the available content width: '+JSON.stringify(unitLayout));
+  const unitPreviewScreenshot=await captureVisualEvidence(cdp,'studio-website-unit-single-outline');
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   await sleep(350);
   const mobile=await evalTop(cdp,"({scrollWidth:document.documentElement.scrollWidth,clientWidth:document.documentElement.clientWidth,playerWidth:document.querySelector('[data-player]')?.getBoundingClientRect().width||0})");
@@ -797,7 +812,7 @@ async function verifyStudioSiteUI(cdp){
   const mobileScreenshot=await captureVisualEvidence(cdp,'studio-website-mobile');
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
   invariant(cdp.exceptions.length===before,'Studio website threw in Chrome: '+JSON.stringify(cdp.exceptions.slice(before)));
-  return {suite:'studio-website-ui',...result,editorScreenshot,previewScreenshot,mobile,mobileScreenshot};
+  return {suite:'studio-website-ui',...result,editorScreenshot,previewScreenshot,unitLayout,unitPreviewScreenshot,mobile,mobileScreenshot};
 }
 
 async function prepareVisualStudioFixture(){
