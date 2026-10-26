@@ -10,6 +10,7 @@ import {
   parseOfflineAssignmentResult,
 } from '../web/studio/offline-assignment.js';
 import {HOST_CAPABILITY_EXTENSION} from '../web/capability-broker.js';
+import {createP2LRNStudioDocument} from '../web/studio/new-document.js';
 
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 
@@ -53,7 +54,7 @@ function fakeDocument(entities=[]){
     title:()=> 'Curso offline',
   };
 }
-const packageExporter=async()=>({
+const truncatedPackageExporter=async()=>({
   bytes:new Uint8Array([80,75,3,4,1,2,3]),
   filename:'curso.p2lrn',
   manifest:{packageId:'urn:uuid:11111111-1111-4111-8111-111111111111',integrity:{contentRoot:'sha256:'+'1'.repeat(64)}},
@@ -112,11 +113,11 @@ test('offline compatibility rejects required collaboration and remote-only resou
   assert.equal(inspectOfflineAssignmentCompatibility(optional).ok,true);
 });
 
-test('offline exporter creates a self-playing ZIP with local Player, course and Windows launcher',async()=>{
-  const result=await exportOfflineAssignmentBundle(fakeDocument([{id:'urn:test:course',type:'course',children:[]}]),{
+test('offline exporter creates a self-playing ZIP with a real Studio course, local Player and Windows launcher',async()=>{
+  const document=createP2LRNStudioDocument({title:'Prueba doble clic'});
+  const result=await exportOfflineAssignmentBundle(document,{
     runtimeBaseUrl:'https://runtime.example/player/current/dist/',
     fetchImpl:runtimeFetch(),
-    packageExporter,
     participantLabel:'Alumno 7',
     availableFrom:'2026-10-27T08:00:00Z',
     dueAt:'2026-10-30T20:00:00Z',
@@ -143,7 +144,13 @@ test('offline exporter creates a self-playing ZIP with local Player, course and 
   const launcher=decoder.decode(entries.get('runtime/serve.ps1'));
   assert.match(launcher,/IPAddress\]::Loopback/);
   assert.match(launcher,/127\.0\.0\.1/);
-  assert.deepEqual([...entries.get('www/course.p2lrn')],[80,75,3,4,1,2,3]);
+  const embeddedCourse=entries.get('www/course.p2lrn');
+  assert.ok(embeddedCourse.byteLength>500,'embedded course must be a complete P2LRN ZIP, not a marker fixture');
+  const embeddedEntries=storedZipEntries(embeddedCourse);
+  assert.equal(embeddedEntries.has('META-INF/manifest.json'),true,'embedded course manifest missing');
+  assert.equal(embeddedEntries.has('content/graph.json'),true,'embedded course graph missing');
+  const eocd=embeddedCourse.slice(-22);
+  assert.deepEqual([...eocd.slice(0,4)],[0x50,0x4b,0x05,0x06],'embedded course must contain ZIP EOCD');
 
   const single=decoder.decode(result.windowsLauncher.bytes);
   assert.match(single,/^@echo off\r?\n/i);
@@ -157,6 +164,17 @@ test('offline exporter creates a self-playing ZIP with local Player, course and 
   const payload=single.slice(markerIndex+marker.length).replace(/\s+/g,'');
   const decoded=new Uint8Array(Buffer.from(payload,'base64'));
   assert.deepEqual([...decoded],[...result.bytes],'single-file launcher must embed the exact portable ZIP');
+});
+
+test('offline exporter rejects a truncated P2LRN course before creating a launcher',async()=>{
+  await assert.rejects(
+    ()=>exportOfflineAssignmentBundle(fakeDocument([{id:'urn:test:course',type:'course',children:[]}]),{
+      runtimeBaseUrl:'https://runtime.example/player/current/dist/',
+      fetchImpl:runtimeFetch(),
+      packageExporter:truncatedPackageExporter,
+    }),
+    (error)=>error?.code==='P2LRN_OFFLINE_INVALID_COURSE_ZIP'&&/end-of-central-directory|demasiado pequeño/i.test(String(error.message)),
+  );
 });
 
 test('offline result verifier checks digest and original course identity',async()=>{
