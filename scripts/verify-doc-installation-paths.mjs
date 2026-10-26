@@ -67,7 +67,7 @@ for(const text of ['Añadir contenido','Vista alumno','Descargar .p2lrn'])must('
 
 must('studio loader',studioLoader,"../../../player/'+channel+'/dist/p2lrn.js");
 must('studio loader',studioLoader,'import(moduleUrl)');
-must('studio source',studioSource,"observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path']");
+must('studio source',studioSource,"observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path','offline-runtime-base-url']");
 must('studio cli',studioCli,'generatedEndpoints:{save:true,reader:materialized.generatedReader,import:materialized.generatedImport}');
 must('studio README',studioReadme,'npm install @p2lrn/studio@'+version+' @p2lrn/player@'+version);
 if(startDoc.includes('npm install')||startDoc.includes('p2lrn.netlify.app'))failures.push('start docs must orient without embedding installation code');
