@@ -51,6 +51,32 @@ function safeRuntimePath(value){
 }
 function localRepresentation(rep){return ['embedded','package-member'].includes(rep?.location?.type);}
 
+function invalidCourseZip(message){
+  const error=new Error('El paquete P2LRN embebido no es un ZIP completo: '+message);
+  error.code='P2LRN_OFFLINE_INVALID_COURSE_ZIP';
+  return error;
+}
+function assertCompleteCourseZip(value){
+  const bytes=value instanceof Uint8Array?value:(value instanceof ArrayBuffer?new Uint8Array(value):null);
+  if(!bytes)throw invalidCourseZip('el exportador no devolvió bytes.');
+  if(bytes.byteLength<22)throw invalidCourseZip('archivo demasiado pequeño ('+bytes.byteLength+' bytes).');
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  if(view.getUint32(0,true)!==0x04034b50)throw invalidCourseZip('falta la cabecera local ZIP.');
+  const min=Math.max(0,bytes.byteLength-22-0xffff),start=bytes.byteLength-22;
+  let eocd=-1;
+  for(let offset=start;offset>=min;offset--){
+    if(view.getUint32(offset,true)!==0x06054b50)continue;
+    const commentLength=view.getUint16(offset+20,true);
+    if(offset+22+commentLength===bytes.byteLength){eocd=offset;break;}
+  }
+  if(eocd<0)throw invalidCourseZip('falta el end-of-central-directory.');
+  const entries=view.getUint16(eocd+10,true),centralSize=view.getUint32(eocd+12,true),centralOffset=view.getUint32(eocd+16,true);
+  if(entries<2)throw invalidCourseZip('el ZIP no contiene las entradas mínimas del paquete.');
+  if(centralOffset+centralSize!==eocd)throw invalidCourseZip('el directorio central no coincide con el final del archivo.');
+  if(centralOffset<4||centralOffset+4>bytes.byteLength||view.getUint32(centralOffset,true)!==0x02014b50)throw invalidCourseZip('el directorio central está ausente o truncado.');
+  return bytes;
+}
+
 export function normalizeOfflineAssignmentPolicy(options={}){
   const availableFrom=validIso(options.availableFrom,'Disponible desde');
   const dueAt=validIso(options.dueAt,'Fecha límite');
@@ -327,6 +353,12 @@ export async function exportOfflineAssignmentBundle(document,options={}){
     error.code='P2LRN_OFFLINE_EXPORT_INCOMPATIBLE';error.issues=compatibility.issues;throw error;
   }
   const course=await (options.packageExporter??exportP2LRNPackage)(document);
+  const courseBytes=assertCompleteCourseZip(course?.bytes);
+  if(!course?.manifest?.packageId||!/^sha256:[0-9a-f]{64}$/i.test(String(course?.manifest?.integrity?.contentRoot??''))){
+    const error=new Error('El paquete P2LRN exportado no contiene una identidad/integridad válida.');
+    error.code='P2LRN_OFFLINE_INVALID_COURSE';
+    throw error;
+  }
   const runtimeBaseUrl=detectPlayerRuntimeBaseUrl({runtimeBaseUrl:options.runtimeBaseUrl,documentObject:options.documentObject});
   const runtime=await collectRuntime(runtimeBaseUrl,options.fetchImpl??globalThis.fetch.bind(globalThis));
   const title=typeof document.title==='function'?document.title(document.rootId):'Entrega P2LRN';
@@ -340,7 +372,7 @@ export async function exportOfflineAssignmentBundle(document,options={}){
   const entries=[
     {path:'Abrir P2LRN.cmd',data:textBytes(launcherCmd())},{path:'LEEME.txt',data:textBytes(readmeText(assignment))},{path:'runtime/serve.ps1',data:textBytes(launcherPowerShell())},
     {path:'www/index.html',data:encoder.encode(assignmentHtml())},{path:'www/style.css',data:encoder.encode(assignmentCss())},{path:'www/app.js',data:encoder.encode(assignmentApp())},
-    {path:'www/assignment.json',data:jsonBytes(assignment)},{path:'www/course.p2lrn',data:course.bytes},...runtime.entries,
+    {path:'www/assignment.json',data:jsonBytes(assignment)},{path:'www/course.p2lrn',data:courseBytes},...runtime.entries,
   ];
   const bytes=writeStoredZip(entries);
   const windowsLauncher=await windowsSingleFileLauncher(bytes,filenameBase);
