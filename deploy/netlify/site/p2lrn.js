@@ -111,11 +111,12 @@
     },
     {
       label: 'Integrar',
-      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/'],
+      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/'],
       items: [
         ['/docs/integracion/','Integración'],
         ['/docs/colaboracion/','Colaboración'],
         ['/docs/eventos/','Eventos'],
+        ['/docs/conectores/','Conectores de IA, LMS y LTI'],
       ],
     },
     {
@@ -348,6 +349,9 @@
       ['/docs/colaboracion/','Colaboración'],
       ['/docs/eventos/','Eventos'],
     ]],
+    ['CONECTORES', [
+      ['/docs/conectores/','Conectores e integración'],
+    ]],
     ['SEGUIMIENTO', [
       ['/docs/progresion/','Progresión'],
       ['/docs/metricas/','Métricas y analítica'],
@@ -394,6 +398,7 @@
     CREAR:'Crear',
     REPRODUCIR:'Reproducir',
     INTEGRAR:'Integrar',
+    CONECTORES:'Conectores',
     SEGUIMIENTO:'Seguimiento',
     REFERENCIA:'Referencia',
   });
@@ -458,7 +463,7 @@
   if (sidebar) {
     const search = document.createElement('div');
     search.className = 'docs-search';
-    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" placeholder="NPM, CDN, Studio, multipart…" autocomplete="off"><div class="docs-search-results" hidden></div>';
+    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" placeholder="NPM, IA, LMS, LTI…" autocomplete="off"><div class="docs-search-results" hidden></div>';
     sidebar.prepend(search);
     const input = search.querySelector('input');
     const results = search.querySelector('.docs-search-results');
