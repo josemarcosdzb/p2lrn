@@ -8,6 +8,17 @@
 <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
 <main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
 <article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / IA LOCAL</p><h1>Conectores de IA local</h1><p>Las aplicaciones de IA instaladas en tu ordenador pueden abrir herramientas P2LRN mediante MCP por stdio, sin dominio, túnel ni servidor en la nube. La carpeta de cursos autorizada y la posibilidad de editar se seleccionan durante la configuración.</p></header>
+<section class="doc-section"><h2>Descargar e instalar el conector</h2>
+<p>El archivo descargable incluye el servidor MCP, el Toolkit y el asistente Windows en la estructura de carpetas necesaria. No tienes que clonar todo el repositorio ni buscar sus componentes por separado.</p>
+<div class="example-actions"><a class="button primary" href="/downloads/p2lrn-conector-mcp.zip" download>Descargar conector P2LRN (.zip)</a><a class="button" href="/downloads/manifest.json">Ver SHA-256 y tamaño</a></div>
+<ol class="doc-list"><li>Instala <strong>Node.js 22 o posterior</strong>.</li>
+<li>Descomprime completamente el archivo ZIP, por ejemplo en <code>C:\P2LRN-MCP</code>. No ejecutes el asistente dentro del ZIP sin extraerlo.</li>
+<li>Abre la carpeta <code>integration\mcp</code> y ejecuta <code>Conectar-P2LRN.cmd</code>. La primera vez necesita Internet para descargar dependencias npm del MCP y compilar Toolkit.</li>
+<li>Indica una carpeta de cursos a la que quieras dar acceso; el asistente propone <code>Documentos\P2LRN</code> y puede crearla tras pedir confirmación.</li>
+<li>Selecciona la aplicación detectada, permisos iniciales de sólo lectura y revisa los cambios de configuración propuestos.</li>
+<li>Confirma la instalación, deja que el asistente verifique el MCP y reinicia el cliente de IA cuando corresponda.</li></ol>
+<div class="doc-callout"><strong>La descarga no incluye las aplicaciones de IA</strong><p>Claude Desktop, Cursor, Windsurf, Gemini CLI o VS Code deben estar instalados por separado. El ZIP tampoco incluye un modelo de IA; sólo las herramientas P2LRN que podrá invocar el cliente.</p></div>
+</section>
 <section class="doc-section"><h2>Qué instala el conector local</h2>
 <p>La implementación reutiliza <code>integration/mcp/server.mjs</code>, el mismo servidor MCP que emplean los clientes web, pero mediante transporte <code>stdio</code> en vez de HTTP remoto. No instala un segundo formato ni modifica Studio, Toolkit o Player.</p>
 <div class="reference-table"><div><strong>Lectura (predeterminada)</strong><p>Listar, buscar, leer y validar paquetes dentro de una carpeta permitida.</p></div>
@@ -44,6 +55,13 @@
 <div class="reference-table"><div><strong>Uso de herramientas</strong><p><code>integration/mcp/test/local-agent-matrix.e2e.mjs</code> registra qué herramientas elige y ejecuta el modelo.</p></div>
 <div><strong>Generación de contenido</strong><p><code>integration/mcp/test/local-agent-structured.e2e.mjs</code> evalúa respuestas estructuradas que Toolkit valida para construir paquetes temporales.</p></div>
 <div><strong>Diferenciar local de remoto</strong><p>El servidor MCP puede ser local aunque la IA usada por un editor sea remota. Para inferencia sin nube hay que configurar específicamente un modelo local.</p></div></div></section>
+<section class="doc-section"><h2>Qué hacer después de instalarlo</h2>
+<div class="reference-table">
+<div><strong>Primera prueba</strong><p>Abre el cliente de IA y solicita «Muestra mis cursos P2LRN». Debe llamar realmente a <code>p2lrn_list_courses</code> y devolver sólo cursos de tu carpeta autorizada.</p></div>
+<div><strong>Validar un curso</strong><p>Selecciona un archivo <code>.p2lrn</code> y ejecuta <code>p2lrn_validate_course</code>. Si está vacío el directorio, añade un curso propio o <a href="/examples/generated/questionnaire-standard.p2lrn" download>descarga este ejemplo P2LRN</a> y cópialo allí.</p></div>
+<div><strong>Crear otro curso</strong><p>Si habilitas permisos de borrador, crea un proyecto, añade unidades o actividades y exporta un paquete nuevo; comprueba que el archivo original no se ha sobrescrito.</p></div>
+<div><strong>Configurar más clientes</strong><p>Puedes volver a ejecutar el asistente para registrar el mismo servidor en otros programas compatibles. Revisa siempre los cambios que propone en sus configuraciones.</p></div>
+</div></section>
 <section class="doc-section"><h2>Verificar que funciona y resolver errores</h2>
 <ul class="doc-list"><li>Comprueba versión de Node, ubicación del repositorio y existencia de las dependencias.</li>
 <li>Confirma que el cliente muestra las herramientas <code>p2lrn_list_courses</code> y <code>p2lrn_validate_course</code>.</li>
