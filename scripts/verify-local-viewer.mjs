@@ -389,7 +389,23 @@ async function verifyDefaultViewerStartup(cdp){
     return result.bootError||(result.catalogCount>1&&src&&(result.rendered||result.activityReady))
       ? result : null;
   })()`;
-  const result=await waitForEval(cdp,probe,'unparameterized public viewer startup',30000);
+  let result;
+  try{result=await waitForEval(cdp,probe,'unparameterized public viewer startup',30000);}
+  catch(error){
+    const detail=await evalTop(cdp,String.raw`(()=>({
+      url:location.href,
+      ready:document.readyState,
+      catalogCount:document.querySelector('[data-sample]')?.options?.length??null,
+      selected:document.querySelector('[data-sample]')?.value??null,
+      playerSrc:document.getElementById('demo-player')?.getAttribute('src')??null,
+      runtimeState:document.querySelector('[data-runtime-state]')?.textContent??null,
+      viewerStatus:document.querySelector('[data-viewer-status]')?.textContent??null,
+      playerText:document.getElementById('demo-player')?.shadowRoot?.textContent?.slice(0,500)??null,
+      swController:navigator.serviceWorker?.controller?.scriptURL??null,
+      eventLog:document.querySelector('[data-event-log]')?.textContent?.slice(-2400)??null,
+    }))()`).catch((diagnosticError)=>({diagnosticError:String(diagnosticError)}));
+    throw new Error(String(error?.message??error)+'; default viewer state='+JSON.stringify(detail));
+  }
   invariant(result&&!result.bootError,'Public viewer failed to initialize: '+JSON.stringify(result));
   invariant(result.catalogCount>1&&result.src,'Default viewer did not populate the catalogue and load src');
   invariant(result.runtimeAutomatic&&!result.failedRuntime,'Default viewer must use its secure opaque runtime without remote health probing');
