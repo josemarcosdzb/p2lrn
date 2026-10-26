@@ -20,7 +20,7 @@ const html=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':
 const safeJs=s=>JSON.stringify(s).replaceAll('<','\\u003c').replaceAll('\u2028','\\u2028').replaceAll('\u2029','\\u2029');
 const time=()=>Math.floor(Date.now()/1000);
 const allowedType={'.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.html':'text/html; charset=utf-8','.json':'application/json; charset=utf-8','.wasm':'application/wasm','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.woff2':'font/woff2','.woff':'font/woff','.glb':'model/gltf-binary','.gltf':'model/gltf+json','.mp3':'audio/mpeg','.mp4':'video/mp4','.map':'application/json'};
-const secureCookie=(name,value,secure,maxAge)=>name+'='+value+'; Path=/; HttpOnly; SameSite='+(secure?'None':'Lax')+(secure?'; Secure; Partitioned':'')+'; Max-Age='+maxAge;
+const secureCookie=(name,value,secure,maxAge,partitioned=false)=>name+'='+value+'; Path=/; HttpOnly; SameSite='+(secure?'None':'Lax')+(secure?'; Secure':'')+(secure&&partitioned?'; Partitioned':'')+'; Max-Age='+maxAge;
 const cookies=request=>Object.fromEntries(String(request.headers.cookie||'').split(';').map(x=>x.trim().split('=')).filter(p=>p.length===2));
 const compare=(a,b)=>typeof a==='string'&&typeof b==='string'&&
  timingSafeEqual(Buffer.from(digest(a),'hex'),Buffer.from(digest(b),'hex'));
@@ -58,7 +58,7 @@ const policy=(nonceStr,ancestor)=>[
  "connect-src 'self' blob:","worker-src 'self' blob:","frame-src 'self' blob:",
  "frame-ancestors "+(ancestor||"'none'")
 ].join('; ');
-const browserId=(req)=>valid(cookies(req).p2lrn_oidc||cookies(req)['__Host-p2lrn-oidc'],'OIDC browser binding',512);
+const browserId=(req)=>valid(cookies(req).p2lrn_oidc||cookies(req)['__Host-p2lrn-oidc']||cookies(req)['__Host-p2lrn-oidc-partitioned'],'OIDC browser binding',512);
 const csrfGuard=(req,session,baseUrl)=>{
  const origin=req.headers.origin;
  if(origin&&origin!==new URL(baseUrl).origin)throw new Error('CROSS_SITE_REQUEST');
@@ -208,7 +208,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      binding=incomingCookie;
     const result=await provider.beginLogin({login,browserBinding:binding});
     res.writeHead(302,{'Location':result.authorizationUrl,
-     'Set-Cookie':secureCookie(oidcCookie,binding,secure,3600),'Cache-Control':'no-store',
+     'Set-Cookie':secure?[secureCookie(oidcCookie,binding,true,3600),secureCookie(oidcCookie+'-partitioned',binding,true,3600,true)]:secureCookie(oidcCookie,binding,false,3600),'Cache-Control':'no-store',
      'Referrer-Policy':'no-referrer'});return res.end();
    }
    if(method==='POST'&&(path==='/lti/launch'||path==='/lti/deep-link')){
@@ -244,7 +244,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       playerScript:'/lti/assets/player/p2lrn.js'})
       .replace('__CSP_NONCE__',html(cspNonce));
     return sendHtml(res,200,body,policy(cspNonce,ancestor),
-      {'Set-Cookie':secureCookie(sessionCookie,token,secure,3600)});
+      {'Set-Cookie':secureCookie(sessionCookie,token,secure,3600,true)});
    }
    if(method==='POST'&&path==='/lti/deep-link/confirm'){
     const formData=input(await readBody(req,32768),req);
