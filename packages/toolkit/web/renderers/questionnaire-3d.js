@@ -81,7 +81,15 @@ function setText(node,value) {
 }
 
 function buildOrderingControls({trial,runtime,scene,status}) {
-  const placed=Array(trial.objects.length).fill(null);
+  const saveKey=`3d:ordering:${trial.questionId}`;
+  const validIds=new Set(trial.objects.map((item)=>item.id));
+  const stored=runtime.getGameState(saveKey,null);
+  const answer=runtime.answer(trial.questionId).order;
+  const validSlots=(items)=>Array.isArray(items)&&items.length===trial.objects.length
+    && items.every((id)=>id===null||validIds.has(String(id)))
+    && new Set(items.filter(Boolean).map(String)).size===items.filter(Boolean).length;
+  const restored=validSlots(stored)?stored:validSlots(answer)?answer:null;
+  const placed=restored?restored.map((id)=>id===null?null:String(id)):Array(trial.objects.length).fill(null);
   const randomPositions=randomRoomPositions(trial.objects.length,seedText(`order:${trial.questionId}:${trial.prompt}`));
   const staging=new Map(trial.objects.map((item,index)=>[item.id,randomPositions[index]]));
   let selected=null;
@@ -124,6 +132,11 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     scene.setTranslation(`order:${itemId}`,position);
   }
 
+  function persistPlacement(){
+    runtime.setGameState(saveKey,[...placed]);
+    runtime.replaceAnswer(trial.questionId,{order:currentOrder()??[]});
+  }
+
   function refreshSelects() {
     for(const [itemId,select] of selects){
       const slot=placed.findIndex((id)=>id===itemId);
@@ -146,9 +159,9 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     if(selected===itemId)selected=null;
     syncObject(itemId);
     refreshSelects();
+    persistPlacement();
     const order=currentOrder();
     if (order) {
-      runtime.replaceAnswer(trial.questionId,{order});
       setText(status,orderingIsCorrect(order,trial.correctOrder)?'Orden correcto.':'Orden completo; puedes seguir ajustándolo.');
     } else {
       setText(status,`Objeto colocado en la posición ${slotIndex+1}.`);
@@ -166,8 +179,12 @@ function buildOrderingControls({trial,runtime,scene,status}) {
       if(select.value===''){
         const current=placed.indexOf(item.id);
         if(current>=0) placed[current]=null;
+        scene.carry(`order:${item.id}`,false);
+        scene.highlight(`order:${item.id}`,false);
+        if(selected===item.id)selected=null;
         syncObject(item.id);
         refreshSelects();
+        persistPlacement();
         setText(status,'Objeto devuelto a la zona de salida.');
         return;
       }
@@ -178,10 +195,43 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     rows.append(row);
   });
 
+  placed.forEach((id)=>{if(id)syncObject(id);});
+  refreshSelects();
   panel.append(title,rows);
   return {
     panel,
+    summary:restored?.some(Boolean)?`Posiciones recuperadas · ${placed.filter(Boolean).length}/${placed.length}`:null,
+    drag(meta,phase,{position=null,target=null}={}){
+      if(meta.kind!=='ordering-object')return false;
+      if(phase==='start'){
+        if(runtime.state.completed)return false;
+        selected=meta.id;
+        scene.carry(`order:${meta.id}`,false);
+        scene.highlight(`order:${meta.id}`,true);
+        setText(status,'Arrastra el bloque hasta una posición.');
+        return true;
+      }
+      if(phase==='move'){if(position)scene.setTranslation(`order:${meta.id}`,position);return true;}
+      if(phase==='end'){
+        const success=target?.kind==='ordering-slot'&&place(meta.id,target.index);
+        if(!success){
+          syncObject(meta.id);
+          scene.highlight(`order:${meta.id}`,false);
+          setText(status,'Suelta el bloque sobre una posición disponible.');
+        }
+        selected=null;
+        return true;
+      }
+      if(phase==='cancel'){
+        syncObject(meta.id);
+        scene.highlight(`order:${meta.id}`,false);
+        selected=null;
+        return true;
+      }
+      return false;
+    },
     interact(meta) {
+      if(runtime.state.completed){setText(status,'Esta actividad ya está finalizada.');return true;}
       if(meta.kind==='ordering-object'){
         if(scene.playerDistanceTo(`order:${meta.id}`)>3.15){setText(status,'Acércate al bloque para cogerlo.');return true;}
         if(selected&&selected!==meta.id){setText(status,'Ya llevas un objeto. Colócalo antes de coger otro.');return true;}
