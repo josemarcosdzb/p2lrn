@@ -62,7 +62,7 @@ function normalizedIntegrityInput(manifest){
     files:manifest.files.map(({path,mediaType,contentDigest})=>({path,mediaType,contentDigest})).sort((a,b)=>compare(a.path,b.path)),
   };
 }
-function writeStoredZip(entries){
+export function writeStoredZip(entries){
   if(entries.length>=0xffff)throw new Error('Studio browser export currently supports fewer than 65535 files.');
   const localParts=[],centralParts=[];
   let offset=0;
