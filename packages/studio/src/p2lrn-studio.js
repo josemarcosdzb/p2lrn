@@ -370,6 +370,98 @@ export class P2LRNStudioElement extends HTMLElement{
     const a=document.createElement('a');a.href=url;a.download=exported.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
     this.dispatchEvent(new CustomEvent('p2lrn-studio-download',{detail:{filename:exported.filename},bubbles:true,composed:true}));
   }
+  showOfflineExportDialog(){
+    if(!this.#studio){this.#status('Crea o abre un curso primero.');return;}
+    const dialog=document.createElement('dialog');dialog.className='studio-choice-dialog';
+    const shell=document.createElement('div');shell.className='studio-choice-shell offline-form';
+    const head=document.createElement('div');head.className='studio-choice-head';
+    const copy=document.createElement('div');const h=document.createElement('h2');h.textContent='Entrega offline autorreproducible';
+    const p=document.createElement('p');p.textContent='Genera un ZIP autocontenido. El alumno lo extrae, hace doble clic en Abrir P2LRN.cmd, completa la actividad y devuelve un .p2lrn-result.';
+    copy.append(h,p);const close=document.createElement('button');close.type='button';close.textContent='Cerrar';close.onclick=()=>dialog.close();head.append(copy,close);shell.append(head);
+    const grid=document.createElement('div');grid.className='offline-grid';
+    const field=(label,type,value='')=>{const wrap=document.createElement('label');wrap.className='offline-field';const span=document.createElement('span');span.textContent=label;const input=document.createElement('input');input.type=type;input.value=value;wrap.append(span,input);grid.append(wrap);return input;};
+    const available=field('Disponible desde','datetime-local');
+    const due=field('Fecha límite','datetime-local');
+    const duration=field('Tiempo máximo desde que empieza (minutos)','number');duration.min='1';duration.step='1';duration.placeholder='Sin límite';
+    const attempts=field('Intentos máximos','number','1');attempts.min='1';attempts.max='100';attempts.step='1';
+    const participant=field('Alumno / identificador (opcional)','text');participant.maxLength=160;participant.placeholder='Si se deja vacío, lo escribirá el alumno';
+    shell.append(grid);
+    const resumeLabel=document.createElement('label');resumeLabel.className='offline-check';const resume=document.createElement('input');resume.type='checkbox';resume.checked=true;resumeLabel.append(resume,document.createTextNode('Permitir continuar el mismo intento después de cerrar'));shell.append(resumeLabel);
+    const metricsLabel=document.createElement('label');metricsLabel.className='offline-check';const metrics=document.createElement('input');metrics.type='checkbox';metrics.checked=true;metricsLabel.append(metrics,document.createTextNode('Incluir métricas de actividad y telemetría pedagógica'));shell.append(metricsLabel);
+    const fixed=document.createElement('div');fixed.className='offline-fixed';
+    const collaboration=document.createElement('div');collaboration.innerHTML='<strong>Colaboración</strong><span>Desactivada en la entrega offline</span>';
+    const network=document.createElement('div');network.innerHTML='<strong>Servicios externos</strong><span>Denegados; Player y curso viajan dentro del ZIP</span>';fixed.append(collaboration,network);shell.append(fixed);
+    const note=document.createElement('p');note.className='offline-note';note.textContent='Las fechas se aplican localmente. Sin una autoridad externa, la hora absoluta depende del reloj del equipo del alumno.';shell.append(note);
+    const status=document.createElement('div');status.className='offline-status';status.setAttribute('role','status');shell.append(status);
+    const actions=document.createElement('div');actions.className='offline-actions';const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancelar';cancel.onclick=()=>dialog.close();
+    const generate=document.createElement('button');generate.type='button';generate.className='primary';generate.textContent='Crear paquete offline';
+    generate.onclick=async()=>{
+      generate.disabled=true;status.textContent='Incluyendo Player, curso y recursos verificados…';
+      try{
+        const toIso=(input)=>input.value?new Date(input.value).toISOString():null;
+        const minutes=String(duration.value||'').trim();
+        await this.downloadOfflineAssignment({
+          availableFrom:toIso(available),dueAt:toIso(due),
+          attemptDurationSeconds:minutes?Math.round(Number(minutes)*60):null,
+          maxAttempts:Number(attempts.value||1),allowResume:resume.checked,activityTracking:metrics.checked,
+          participantLabel:participant.value,
+        });
+        status.textContent='Paquete offline creado.';dialog.close();
+      }catch(error){status.textContent=String(error?.message??error);generate.disabled=false;}
+    };
+    actions.append(cancel,generate);shell.append(actions);dialog.append(shell);this.shadowRoot.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
+  }
+  async exportOfflineAssignment(options={}){
+    if(!this.#studio)throw new Error('No hay ningún curso P2LRN abierto.');
+    return exportOfflineAssignmentBundle(this.#studio,{...options,runtimeBaseUrl:options.runtimeBaseUrl??this.offlineRuntimeBaseUrl||null});
+  }
+  async downloadOfflineAssignment(options={}){
+    const exported=await this.exportOfflineAssignment(options);
+    const url=URL.createObjectURL(new Blob([exported.bytes],{type:'application/zip'}));
+    const a=document.createElement('a');a.href=url;a.download=exported.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    this.dispatchEvent(new CustomEvent('p2lrn-studio-offline-export',{detail:{filename:exported.filename,assignmentId:exported.assignment.assignmentId,contentRoot:exported.assignment.contentRoot},bubbles:true,composed:true}));
+    return exported;
+  }
+  async reviewOfflineResult(file){
+    if(!file)throw new TypeError('Selecciona un archivo .p2lrn-result.');
+    let expectedContentRoot=null;
+    if(this.#studio){
+      const current=await this.exportPackage();
+      expectedContentRoot=current.manifest.integrity.contentRoot;
+    }
+    const review=await parseOfflineAssignmentResult(await file.text(),{expectedContentRoot});
+    this.#showOfflineReview(review,file.name||'entrega.p2lrn-result');
+    this.dispatchEvent(new CustomEvent('p2lrn-studio-offline-review',{detail:{filename:file.name||'',integrityValid:review.integrityValid,courseMatches:review.courseMatches,attemptNumber:review.summary.attemptNumber},bubbles:true,composed:true}));
+    return review;
+  }
+  #showOfflineReview(review,filename){
+    const dialog=document.createElement('dialog');dialog.className='studio-choice-dialog';
+    const shell=document.createElement('div');shell.className='studio-choice-shell offline-review';
+    const head=document.createElement('div');head.className='studio-choice-head';const copy=document.createElement('div');
+    const h=document.createElement('h2');h.textContent='Revisar entrega offline';const p=document.createElement('p');p.textContent=filename;copy.append(h,p);
+    const close=document.createElement('button');close.type='button';close.textContent='Cerrar';close.onclick=()=>dialog.close();head.append(copy,close);shell.append(head);
+    const summary=document.createElement('div');summary.className='offline-summary';
+    const add=(label,value,kind='')=>{const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent=label;const span=document.createElement('span');span.textContent=String(value??'—');if(kind)span.className=kind;box.append(strong,span);summary.append(box);};
+    add('Integridad',review.integrityValid?'Válida':'Inválida',review.integrityValid?'offline-good':'offline-bad');
+    add('Curso',review.courseMatches?'Coincide':'No coincide',review.courseMatches?'offline-good':'offline-bad');
+    add('Alumno',review.summary.participantLabel||'Sin identificar');
+    add('Intento',review.summary.attemptNumber??'—');
+    add('Duración',Math.round(review.summary.elapsedSeconds/60)+' min');
+    add('Tiempo activo',Math.round(review.summary.activeTimeMs/60000)+' min');
+    const score=review.summary.latestScore;add('Última puntuación',score?.normalized!=null?Math.round(Number(score.normalized)*100)+' %':score?.raw??'—');
+    add('Eventos',review.summary.events.length);
+    shell.append(summary);
+    const answersHeading=document.createElement('h3');answersHeading.textContent='Respuestas para corrección';shell.append(answersHeading);
+    if(review.summary.answers.length){
+      const table=document.createElement('table');const thead=document.createElement('thead');thead.innerHTML='<tr><th>Actividad</th><th>Pregunta</th><th>Respuesta</th></tr>';table.append(thead);
+      const tbody=document.createElement('tbody');
+      for(const item of review.summary.answers){const tr=document.createElement('tr');for(const value of [item.entityId??'—',item.questionId??'—',JSON.stringify(item.answer)]){const td=document.createElement('td');td.textContent=String(value);tr.append(td);}tbody.append(tr);}table.append(tbody);shell.append(table);
+    }else{const empty=document.createElement('p');empty.className='offline-note';empty.textContent='La entrega no contiene respuestas estructuradas detectables.';shell.append(empty);}
+    const anomaliesHeading=document.createElement('h3');anomaliesHeading.textContent='Incidencias / anomalías';shell.append(anomaliesHeading);
+    const anomalies=document.createElement('p');anomalies.className='offline-note';anomalies.textContent=review.summary.anomalies.length?review.summary.anomalies.map((item)=>item.code).join(' · '):'Sin anomalías registradas.';shell.append(anomalies);
+    const details=document.createElement('details');const detailsSummary=document.createElement('summary');detailsSummary.textContent='Ver métricas y entrega completa';const pre=document.createElement('pre');pre.textContent=JSON.stringify(review.result,null,2);details.append(detailsSummary,pre);shell.append(details);
+    dialog.append(shell);this.shadowRoot.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
+  }
   async saveCourse(){
     if(!this.saveEndpoint)throw new Error('save-endpoint is required to save to the host server.');
     const exported=await this.exportPackage();
