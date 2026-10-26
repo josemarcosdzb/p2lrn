@@ -22,6 +22,7 @@ export class P2LRNStudioElement extends HTMLElement {
   showOfflineExportDialog():void;
   exportOfflineAssignment(options?:{
     runtimeBaseUrl?:string|null;
+    deliveryFormat?:'windows-single'|'portable-zip';
     availableFrom?:string|null;
     dueAt?:string|null;
     attemptDurationSeconds?:number|null;
@@ -29,8 +30,25 @@ export class P2LRNStudioElement extends HTMLElement {
     allowResume?:boolean;
     activityTracking?:boolean;
     participantLabel?:string|null;
-  }):Promise<{bytes:Uint8Array;filename:string;assignment:unknown;course:unknown;runtimeRelease:unknown}>;
-  downloadOfflineAssignment(options?:Record<string,unknown>):Promise<unknown>;
+  }):Promise<{
+    bytes:Uint8Array;
+    filename:string;
+    windowsLauncher:{bytes:Uint8Array;filename:string;payloadDigest:string};
+    assignment:unknown;
+    course:unknown;
+    runtimeRelease:unknown;
+  }>;
+  downloadOfflineAssignment(options?:{
+    runtimeBaseUrl?:string|null;
+    deliveryFormat?:'windows-single'|'portable-zip';
+    availableFrom?:string|null;
+    dueAt?:string|null;
+    attemptDurationSeconds?:number|null;
+    maxAttempts?:number;
+    allowResume?:boolean;
+    activityTracking?:boolean;
+    participantLabel?:string|null;
+  }):Promise<unknown>;
   reviewOfflineResult(file:File):Promise<unknown>;
   saveCourse():Promise<unknown>;
 }
