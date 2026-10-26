@@ -58,7 +58,7 @@ const policy=(nonceStr,ancestor)=>[
  "connect-src 'self' blob:","worker-src 'self' blob:","frame-src 'self' blob:",
  "frame-ancestors "+(ancestor||"'none'")
 ].join('; ');
-const browserId=(req)=>valid(cookies(req).p2lrn_oidc||cookies(req).__Host_p2lrn_oidc,'OIDC browser binding',512);
+const browserId=(req)=>valid(cookies(req).p2lrn_oidc||cookies(req).__Host-p2lrn-oidc,'OIDC browser binding',512);
 const csrfGuard=(req,session,baseUrl)=>{
  const origin=req.headers.origin;
  if(origin&&origin!==new URL(baseUrl).origin)throw new Error('CROSS_SITE_REQUEST');
@@ -160,8 +160,8 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   transactions:store.transactions,getBinding:store.getBinding,tool
  });
  const ags=createLtiAgsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
- const sessionCookie=secure?'__Host_p2lrn_session':'p2lrn_session';
- const oidcCookie=secure?'__Host_p2lrn_oidc':'p2lrn_oidc';
+ const sessionCookie=secure?'__Host-p2lrn-session':'p2lrn_session';
+ const oidcCookie=secure?'__Host-p2lrn-oidc':'p2lrn_oidc';
  const playerDist=resolve(ROOT,'packages/player/dist');
  function requireAdmin(req){
   const raw=String(req.headers.authorization||'');
