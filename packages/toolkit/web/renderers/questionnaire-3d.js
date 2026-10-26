@@ -331,11 +331,50 @@ function buildMatchingControls({trial,runtime,scene,status}) {
     button.addEventListener('click',()=>chooseRight(item.id));
     rightColumn.append(button);
   });
+  const savedPairs=runtime.answer(trial.questionId).pairs??{};
+  for(const connection of trial.connections){
+    if(savedPairs?.[connection.leftId]!==connection.rightId)continue;
+    const key=connectionKey(connection.leftId,connection.rightId);
+    if(solved.has(key))continue;
+    solved.add(key);
+    connections=appendUniqueConnection(connections,connection);
+    scene.connect(`left:${connection.leftId}`,`right:${connection.rightId}`);
+    leftButtons.get(connection.leftId)?.classList.add('is-solved');
+  }
   panel.append(leftColumn,rightColumn);
+
+  function clearSelection(){
+    if(activeRope){scene.disconnect(activeRope);activeRope=null;}
+    if(selected)scene.highlight(`left:${selected}`,false);
+    selected=null;
+    leftButtons.forEach((button)=>button.classList.remove('is-selected'));
+  }
 
   return {
     panel,
+    summary:connections.length?`Conexiones recuperadas · ${connections.length}/${trial.connections.length}`:null,
+    drag(meta,phase,{position=null,target=null}={}){
+      if(meta.kind!=='matching-left')return false;
+      if(phase==='start'){
+        if(runtime.state.completed)return false;
+        chooseLeft(meta.id);
+        if(activeRope){scene.disconnect(activeRope);activeRope=null;}
+        activeRope=scene.connectToPointer(`left:${meta.id}`);
+        if(position)scene.setPointerTarget(position);
+        setText(status,'Lleva la cuerda hasta la pareja en la escena.');
+        return true;
+      }
+      if(phase==='move'){if(position)scene.setPointerTarget(position);return true;}
+      if(phase==='end'){
+        if(target?.kind==='matching-right')chooseRight(target.id);
+        else {clearSelection();setText(status,'Suelta la cuerda encima de su pareja.');}
+        return true;
+      }
+      if(phase==='cancel'){clearSelection();return true;}
+      return false;
+    },
     interact(meta) {
+      if(runtime.state.completed){setText(status,'Esta actividad ya está finalizada.');return true;}
       if(meta.kind==='matching-left'){
         if(scene.playerDistanceTo(`left:${meta.id}`)>3.15){setText(status,'Acércate al bloque de origen para coger la cuerda.');return true;}
         chooseLeft(meta.id);return true;
