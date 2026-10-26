@@ -138,13 +138,15 @@ No hay contraseñas, URLs reales de terceros ni cuentas preconfiguradas en esta 
 ];
 const lti=[
   ...await collect('integration/lms'),
+  await file('packages/toolkit/web/host-adapter.js'),
+  await file('packages/toolkit/package.json'),
   license,notice,
   note('LEEME-PRIMERO.md',`# Contratos LTI 1.3 para desarrolladores P2LRN
 
 Este ZIP contiene el diseño, el contrato inicial de lanzamiento, el Host Adapter
 y pruebas de contrato de P2LRN. No es un módulo LMS listo para instalar.
 
-Para ejecutar las pruebas desde una copia completa del repositorio P2LRN:
+Para ejecutar las pruebas desde la carpeta descomprimida (Node.js 22+):
   node --test integration/lms/lms-contracts.test.mjs
 
 Pendiente: registro confiable de LMS, OIDC/JWKS/launch firmado, selector Deep Linking,
