@@ -1,0 +1,50 @@
+name: P2LRN LTI 1.3 standalone Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'integration/lms/**'
+      - 'packages/toolkit/dist/**'
+      - 'packages/player/server/**'
+      - '.github/workflows/p2lrn-lti-windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-standalone-lti-windows
+  cancel-in-progress: false
+
+jobs:
+  standalone-lti-windows:
+    name: Verify P2LRN-owned LTI provider, durable storage and AGS
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact P2LRN main revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Use Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Check independent LTI server modules
+        shell: powershell
+        run: |
+          node --version
+          node --check integration/lms/lti-provider.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check integration/lms/lti-store.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check integration/lms/lti-ags.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check integration/lms/lti-server.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test full standalone LTI 1.3 cycle and real P2LRN packages
+        shell: powershell
+        run: |
+          node --test --test-concurrency=1 integration/lms/lms-contracts.test.mjs integration/lms/lti-provider.test.mjs integration/lms/lti-store.test.mjs integration/lms/lti-server.test.mjs integration/lms/package-validation.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
