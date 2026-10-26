@@ -11,6 +11,7 @@ import {createP2LRNStudioDocument} from '../web/studio/new-document.js';
 import {P2LRNStudioDocument} from '../web/studio/authoring-document.js';
 import {exportP2LRNPackage} from '../web/studio/package-export.js';
 import {COURSE_RIGHTS_EXTENSION as WEB_EXTENSION,getCourseRights,normalizeCourseRights} from '../web/course-rights.js';
+import {STUDIO_RUNTIME_SHARED_FILES} from '../../../deploy/netlify/studio-runtime-assets.mjs';
 
 const toBuffer=bytes=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
 const date=/^\d{4}-\d{2}-\d{2}$/;
@@ -109,5 +110,8 @@ test('native Studio and web Studio both expose all four fields and Reader/Player
   assert.match(player,/renderCourseRights/);
   assert.match(viewer,/renderCourseRights/);
   const site=readFileSync(join(root,'deploy/netlify/build-site.mjs'),'utf8');
-  assert.match(site,/course-rights.js/);
+  assert.match(site,/STUDIO_RUNTIME_SHARED_FILES/);
+  assert.ok(STUDIO_RUNTIME_SHARED_FILES.includes('course-rights.js'),'website Studio must copy the course-rights runtime');
+  const browserGate=readFileSync(join(root,'scripts/verify-local-viewer.mjs'),'utf8');
+  assert.match(browserGate,/STUDIO_RUNTIME_SHARED_FILES/,'browser E2E must copy identical Studio runtime files');
 });
