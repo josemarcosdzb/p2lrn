@@ -18,7 +18,7 @@ function fixture(){
  jwks:{keys:[{kty:'RSA',kid:'x',n:'AA',e:'AQAB'}]},
  deepLinkReturnOrigins:['https://moodle.example']};
  store.upsertPlatform(reg);
- return {folder,path,store,reg,clean(){try{store.close()}catch{}rmSync(folder,{recursive:true,force:true})}};
+ return {folder,path,store,reg,clean(){try{this.store.close()}catch{}rmSync(folder,{recursive:true,force:true})}};
 }
 test('LTI registrations and deployment allowlist survive process restart',()=>{
  const f=fixture();
