@@ -578,6 +578,67 @@ async function verifyThreeGameInteractionAndResume(cdp){
   return {...outcome,screenshot};
 }
 
+async function verifyThreePointerDragAndRope(cdp){
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
+  await waitForEval(cdp,"Boolean(globalThis.P2LRN?.createCapabilityBroker&&customElements.get('p2lrn-player'))",'3D pointer test runtime',30000);
+  const result=await evalTop(cdp,`(async()=>{
+    const {createThreeGameScene}=await import('/player/current/dist/game-3d/three-runtime.js');
+    const canvas=document.createElement('canvas');
+    canvas.style.width='780px';
+    canvas.style.height='500px';
+    canvas.style.display='block';
+    document.body.append(canvas);
+    // Synthetic CDP test input has no OS pointer record: bypass pointer capture
+    // only for this temporary QA canvas, not for the Player's real canvas.
+    canvas.setPointerCapture=()=>{};
+    canvas.releasePointerCapture=()=>{};
+    const phases=[];
+    let game=null;
+    try{
+      game=await createThreeGameScene(canvas,{physics:'none',
+        onDrag:(meta,phase,info)=>{phases.push({id:meta.id,phase,target:info.target?.kind??null});return true;},
+        onInteraction:()=>{}});
+      game.addBox({id:'qa-object',text:'Arrastrar',position:[0,0.75,4.4],dynamic:false,
+        interaction:{kind:'ordering-object',id:'qa-object'}});
+      game.addZone({id:'qa-target',text:'Destino',position:[3.1,0.14,1.6],size:[2.35,0.22,1.85],
+        interaction:{kind:'ordering-slot',index:0}});
+      const line=game.connect('qa-object','qa-target');
+      if(!line)throw new Error('3D rope could not connect two nodes');
+      await new Promise(resolve=>setTimeout(resolve,450));
+      const floats=line.geometry.attributes.position.array;
+      if(![...floats].every(Number.isFinite))throw new Error('3D rope produced non-finite coordinates');
+      const stage=game.scene.children.find(node=>node.type==='Group'&&node.children.some(child=>child.userData?.p2lrnInteraction));
+      const source=stage?.children.find(node=>node.userData?.p2lrnInteraction?.kind==='ordering-object');
+      const target=stage?.children.find(node=>node.userData?.p2lrnInteraction?.kind==='ordering-slot');
+      if(!source||!target)throw new Error('3D QA scene has no interactive nodes');
+      function point(node){
+        game.camera.updateMatrixWorld();
+        const world=node.getWorldPosition(node.position.clone().set(0,0,0));
+        const projected=world.project(game.camera);
+        const rect=canvas.getBoundingClientRect();
+        return {x:rect.left+(projected.x+1)*rect.width/2,
+          y:rect.top+(1-projected.y)*rect.height/2};
+      }
+      const from=point(source),to=point(target);
+      const pointer=(type,pos)=>canvas.dispatchEvent(new PointerEvent(type,{
+        bubbles:true,pointerId:123,pointerType:'mouse',button:0,buttons:type==='pointerup'?0:1,
+        clientX:pos.x,clientY:pos.y}));
+      pointer('pointerdown',from);
+      pointer('pointermove',to);
+      pointer('pointerup',to);
+      const began=phases.some(item=>item.phase==='start'&&item.id==='qa-object');
+      const moved=phases.some(item=>item.phase==='move'&&item.id==='qa-object');
+      const ended=phases.some(item=>item.phase==='end'&&item.target==='ordering-slot');
+      if(!began||!moved||!ended)throw new Error('3D pointer drag failed: '+JSON.stringify({phases,from,to}));
+      return {finiteRope:true,dragPhases:phases.map(item=>item.phase),target:'ordering-slot',
+        syntheticPointer:true};
+    }finally{game?.destroy();canvas.remove();}
+  })()`);
+  invariant(result?.finiteRope&&result?.dragPhases?.includes('end'),
+    '3D pointer-drag scene test failed: '+JSON.stringify(result));
+  return result;
+}
+
 async function verifyGameLayout(cdp,kind){
   const title=kind==='crossword'?'Crucigrama de prueba':'Rosco de prueba';
   const selector=kind==='crossword'?'.p2lrn-crossword-grid':'.p2lrn-rosco';
@@ -1366,6 +1427,9 @@ try{
   let threeGame=null;
   try{threeGame=await verifyThreeGameInteractionAndResume(cdp);}
   catch(error){failures.push({name:'three-games-restore-and-complete',message:String(error?.message||error)});}
+  let pointerDrag=null;
+  try{pointerDrag=await verifyThreePointerDragAndRope(cdp);}
+  catch(error){failures.push({name:'three-pointer-drag-and-rope',message:String(error?.message||error)});}
   let narrow=null;
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
   let studioUI=null;
@@ -1374,7 +1438,7 @@ try{
   try{studioSiteUI=await verifyStudioSiteUI(cdp);}catch(error){failures.push({name:'studio-website-ui',message:String(error?.message||error)});}
   let connectedArchitecture=null;
   try{connectedArchitecture=await verifyConnectedArchitecture(cdp,connectedFixture);}catch(error){failures.push({name:'connected-architecture',message:String(error?.message||error)});}
-  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
+  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,pointerDrag,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
 }finally{
   try{cdp?.socket?.close();}catch{}
