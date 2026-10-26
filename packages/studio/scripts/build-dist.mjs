@@ -17,6 +17,7 @@ await cp(join(repo,'packages','toolkit','web','studio','new-document.js'),join(o
 await cp(join(repo,'packages','toolkit','web','studio','questionnaire-editor.js'),join(out,'runtime','questionnaire-editor.js'));
 await cp(join(repo,'packages','toolkit','web','studio','structured-editor.js'),join(out,'runtime','structured-editor.js'));
 await cp(join(repo,'packages','toolkit','web','studio','lesson-images.js'),join(out,'runtime','lesson-images.js'));
+await cp(join(repo,'packages','toolkit','web','studio','offline-assignment.js'),join(out,'runtime','offline-assignment.js'));
 for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','capability-broker.js','course-rights.js']){
   await cp(join(repo,'packages','toolkit','web',file),join(out,file));
 }
