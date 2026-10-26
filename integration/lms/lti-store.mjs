@@ -109,8 +109,9 @@ export function createLtiStore(filename){
  }
  const markOutbox=(id,status,error=null)=>sql('UPDATE ags_outbox SET status=?,tries=tries+1,last_error=?,updated_at=? WHERE id=?').run(status,error,t(),id);
  const listPending=()=>sql("SELECT id FROM ags_outbox WHERE status='PENDING' ORDER BY created_at LIMIT 50").all().map(r=>r.id);
+ const listAttempts=tenantId=>sql('SELECT id,tenant_id,binding_id,context_id,status,created_at,updated_at FROM attempts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,contextId:r.context_id,status:r.status,createdAt:r.created_at,updatedAt:r.updated_at}));
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
  return Object.freeze({close:()=>db.close(),upsertPlatform,getRegistration,getRegistrationById,listPlatforms,transactions,
  publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,consumePicker,attachLaunch,getSession,
- getState,saveState,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,count});
+ getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,count});
 }
