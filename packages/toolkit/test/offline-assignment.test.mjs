@@ -150,7 +150,7 @@ test('offline exporter creates a self-playing ZIP with local Player, course and 
   assert.match(single,/__P2LRN_PAYLOAD__/);
   assert.match(single,/SHA256/i);
   assert.match(single,/Expand-Archive/);
-  assert.match(single,/runtime\\\\serve\.ps1/);
+  assert.match(single,/runtime\\serve\.ps1/);
   const marker='__P2LRN_PAYLOAD__';
   const payload=single.slice(single.indexOf(marker)+marker.length).replace(/\s+/g,'');
   const decoded=new Uint8Array(Buffer.from(payload,'base64'));
