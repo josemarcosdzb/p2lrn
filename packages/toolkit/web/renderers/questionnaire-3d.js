@@ -537,13 +537,15 @@ export async function render(options) {
   const status=statusNode('Preparando escena 3D…');
   let trialIndex=0;
   let currentInteraction=()=>false;
+  let currentDrag=()=>false;
 
   const scene=await createThreeGameScene(canvas,{
     onInteraction:(meta)=>currentInteraction(meta),
+    onDrag:(meta,phase,info)=>currentDrag(meta,phase,info),
   });
 
   const technology=el('p',{class:'p2lrn-3d-runtime'},`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`);
-  const help=el('p',{class:'p2lrn-game-description'},'Muévete con WASD/flechas. Arrastra sobre el fondo para girar la cámara. Acércate y pulsa un bloque para cogerlo; en Relacionar llevarás el extremo de una cuerda flexible hasta su pareja.');
+  const help=el('p',{class:'p2lrn-game-description'},'Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.');
   const movePad=el('div',{class:'p2lrn-3d-move-pad','aria-label':'Controles de movimiento'});
   for(const [label,direction] of [['▲','forward'],['◀','left'],['▼','back'],['▶','right']]){
     const button=el('button',{type:'button',class:'p2lrn-game-button','aria-label':direction},label);
@@ -571,6 +573,7 @@ export async function render(options) {
     else throw new Error(`Unsupported P2LRN 3D trial: ${trial.type}`);
 
     currentInteraction=controller.interact;
+    currentDrag=controller.drag??(()=>false);
     wrap.append(controller.panel);
 
     const nav=el('div',{class:'p2lrn-game-actions'});
@@ -581,7 +584,7 @@ export async function render(options) {
     nav.append(previous,next);
     wrap.append(nav);
     controls.append(wrap);
-    setText(status,'Selecciona elementos en la escena o utiliza los controles accesibles.');
+    setText(status,controller.summary??'Selecciona elementos en la escena o utiliza los controles accesibles.');
   };
 
   renderTrial();
