@@ -202,7 +202,7 @@ function assignmentHtml(){
     '<!doctype html>',
     '<html lang="es"><head><meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width,initial-scale=1">',
-    '<meta http-equiv="Content-Security-Policy" content="default-src \\'self\\' blob: data:; connect-src \\'self\\' blob: data:; img-src \\'self\\' blob: data:; media-src \\'self\\' blob: data:; frame-src \\'self\\' blob: data:; script-src \\'self\\' \\'wasm-unsafe-eval\\'; style-src \\'self\\' \\'unsafe-inline\\'; object-src \\'none\\'; base-uri \\'none\\'; form-action \\'none\\'">',
+    "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self' blob: data:; connect-src 'self' blob: data:; img-src 'self' blob: data:; media-src 'self' blob: data:; frame-src 'self' blob: data:; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; form-action 'none'\">",
     '<title>P2LRN · Entrega offline</title>',
     '<link rel="stylesheet" href="./style.css">',
     '</head><body>',
