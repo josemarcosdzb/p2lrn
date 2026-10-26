@@ -61,9 +61,10 @@
     },
     {
       label: 'Integrar',
-      active: ['/docs/integracion/','/docs/eventos/'],
+      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/'],
       items: [
         ['/docs/integracion/','Integración'],
+        ['/docs/colaboracion/','Colaboración'],
         ['/docs/eventos/','Eventos'],
       ],
     },
@@ -294,6 +295,7 @@
     ]],
     ['INTEGRAR', [
       ['/docs/integracion/','Integración'],
+      ['/docs/colaboracion/','Colaboración'],
       ['/docs/eventos/','Eventos'],
     ]],
     ['SEGUIMIENTO', [
