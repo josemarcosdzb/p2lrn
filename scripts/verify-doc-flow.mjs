@@ -34,6 +34,19 @@ for(const [route,prev,next] of branches){
   if(p.prev!==prev||p.next!==next)failures.push(`${route}: branch pager ${JSON.stringify(p)} expected ${prev} -> ${next}`);
 }
 
+const connectorFlow=[
+  ['/docs/conectores/','/docs/integracion/','/docs/conectores/ia/'],
+  ['/docs/conectores/ia/','/docs/conectores/','/docs/conectores/local/'],
+  ['/docs/conectores/local/','/docs/conectores/ia/','/docs/conectores/lms/'],
+  ['/docs/conectores/lms/','/docs/conectores/local/','/docs/conectores/lti/'],
+  ['/docs/conectores/lti/','/docs/conectores/lms/','/docs/conectores/'],
+];
+for(const [route,prev,next] of connectorFlow){
+  const p=pager(await readFile(routeFile(route),'utf8'));
+  if(p.prev!==prev||p.next!==next)
+    failures.push(route+': connector guide pager '+JSON.stringify(p)+' expected '+prev+' -> '+next);
+}
+
 const js=await read('deploy/netlify/site/p2lrn.js');
 const css=await read('deploy/netlify/site/p2lrn.css');
 for(const token of ["['EMPEZAR'","['CREAR'","['INSTALAR'","['REPRODUCIR'","['INTEGRAR'","['SEGUIMIENTO'","['REFERENCIA'"])if(!js.includes(token))failures.push('p2lrn.js missing sidebar group '+token);
@@ -75,4 +88,4 @@ for(const route of primary.filter(x=>x.startsWith('/docs/questionnaires/')&&x!==
 
 for(const route of primary){const body=article(await readFile(routeFile(route),'utf8'));if(body.includes('Modelo mínimo'))failures.push(route+': vague Modelo mínimo section remains');if(body.includes('p2lrn.org/renderizador/'))failures.push(route+': translated renderer identifier remains');if(body.includes('--renderizador'))failures.push(route+': translated CLI flag remains');}
 if(failures.length)throw new Error('Documentation flow audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,easyStartBeforeInstall:true,defaultInstallPath:'CDN',cdnBeforeNpm:true,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,childPageSubmenu:true,samePageSectionsInSidebar:false,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,beforeStartOwnsFoundationalDocs:true,progressionAndMetricsGroupedUnderTracking:true,trackingAfterIntegration:true,longPageToc:true,questionnaireExperienceGuides:10,noVagueMinimumExamples:true},null,2));
+console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,connectorFlowPages:connectorFlow.length,easyStartBeforeInstall:true,defaultInstallPath:'CDN',cdnBeforeNpm:true,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,childPageSubmenu:true,samePageSectionsInSidebar:false,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,beforeStartOwnsFoundationalDocs:true,progressionAndMetricsGroupedUnderTracking:true,trackingAfterIntegration:true,longPageToc:true,questionnaireExperienceGuides:10,noVagueMinimumExamples:true},null,2));
