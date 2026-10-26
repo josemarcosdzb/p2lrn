@@ -62,7 +62,7 @@ const browserId=(req)=>valid(cookies(req).p2lrn_oidc||cookies(req)['__Host-p2lrn
 const csrfGuard=(req,session,baseUrl)=>{
  const origin=req.headers.origin;
  if(origin&&origin!==new URL(baseUrl).origin)throw new Error('CROSS_SITE_REQUEST');
- if(!compare(String(req.headers['x-p2lrn-csrf']||''),session.csrfHash))
+ if(!compare(digest(String(req.headers['x-p2lrn-csrf']||'')),session.csrfHash))
   throw new Error('INVALID_CSRF_TOKEN');
 };
 const form=(url,jwt,nonceStr)=>[
