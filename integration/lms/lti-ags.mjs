@@ -1,8 +1,9 @@
 // P2LRN-owned LTI Advantage AGS service. Browser scores are NEVER trusted here.
-import {createPrivateKey,randomUUID,sign} from 'node:crypto';
+import {createHash,createPrivateKey,randomUUID,sign} from 'node:crypto';
 import {isIP} from 'node:net';
 import {lookup as dnsLookup} from 'node:dns/promises';
 const SCORE_SCOPE='https://purl.imsglobal.org/spec/lti-ags/scope/score';
+const LINEITEM_SCOPE='https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
 const bytes=v=>Buffer.from(JSON.stringify(v)).toString('base64url');
 const URL_LIMIT=4096;
 const allowedUrl=(value,origins,local)=>{
@@ -47,22 +48,33 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
     throw new Error('LMS service resolves to a private or unsafe address');
   }
  }
- async function postScore({ags,subject,clientId,tokenUrl,issuer,score}){
+ async function postScore({ags,subject,resourceLinkId,clientId,tokenUrl,issuer,score}){
   if(!ags||!Array.isArray(ags.scope)||!ags.scope.includes(SCORE_SCOPE))
    throw new Error('LMS did not authorize AGS score scope');
+  if(typeof subject!=='string'||!subject.trim())throw new Error('Missing verified LMS learner');
+  const n=score?.normalized;
+  if(typeof n!=='number'||!Number.isFinite(n)||n<0||n>1)
+   throw new Error('Server-approved score must be within [0,1]');
+  const needsLineitem=typeof ags.lineitem!=='string'||!ags.lineitem.trim();
+  if(needsLineitem&&(!ags.scope.includes(LINEITEM_SCOPE)||
+     typeof resourceLinkId!=='string'||!resourceLinkId.trim()||resourceLinkId.length>1024))
+   throw new Error('AGS lineitem creation requires an authorized collection and resource link');
   const allowed=new Set([new URL(issuer).origin,new URL(tokenUrl).origin]);
   if(Array.isArray(ags.allowedOrigins))for(const origin of ags.allowedOrigins)allowed.add(origin);
   const tokenEndpoint=allowedUrl(tokenUrl,allowed,allowInsecureLoopback);
-  const lineitem=allowedUrl(ags.lineitem,allowed,allowInsecureLoopback);
-  if(lineitem.search||lineitem.hash)throw new Error('AGS lineitem URL must not include query');
-  const scoreUrl=new URL(lineitem.toString());
-  scoreUrl.pathname=scoreUrl.pathname.replace(/\/$/,'')+'/scores';
-  await checkHost(tokenEndpoint);await checkHost(scoreUrl);
+  let lineitem=needsLineitem?null:allowedUrl(ags.lineitem,allowed,allowInsecureLoopback);
+  const collection=needsLineitem?allowedUrl(ags.lineitems,allowed,allowInsecureLoopback):null;
+  if(lineitem&&(lineitem.search||lineitem.hash))
+   throw new Error('AGS lineitem URL must not include query');
+  await checkHost(tokenEndpoint);
+  if(lineitem)await checkHost(lineitem);
+  if(collection)await checkHost(collection);
   const clientAssertion=signAssertion(tool,clientId,tokenEndpoint.toString());
+  const scopes=needsLineitem?[SCORE_SCOPE,LINEITEM_SCOPE]:[SCORE_SCOPE];
   const form=new URLSearchParams({
    grant_type:'client_credentials',
    client_assertion_type:'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
-   client_assertion:clientAssertion,scope:SCORE_SCOPE
+   client_assertion:clientAssertion,scope:scopes.join(' ')
   });
   const auth=await fetchImpl(tokenEndpoint,{method:'POST',redirect:'manual',
    headers:{'Content-Type':'application/x-www-form-urlencoded'},
@@ -72,15 +84,48 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
   if(typeof reply.access_token!=='string'||!reply.access_token.trim()||reply.access_token.length>8192 ||
      reply.token_type?.toLowerCase()!=='bearer')
    throw new Error('LMS did not return a valid bearer token');
-  if(typeof subject!=='string'||!subject.trim())throw new Error('Missing verified LMS learner');
-  const n=score?.normalized;
-  if(typeof n!=='number'||!Number.isFinite(n)||n<0||n>1)
-   throw new Error('Server-approved score must be within [0,1]');
+  const bearer='Bearer '+reply.access_token;
+  if(!lineitem){
+   // Never create a new gradebook column for each learner or each retry.
+   // This key identifies the LTI resource link and remains stable across attempts.
+   const tag='p2lrn:'+createHash('sha256').update(resourceLinkId).digest('hex').slice(0,24);
+   const filter=new URL(collection.toString());
+   filter.searchParams.set('resource_link_id',resourceLinkId);
+   await checkHost(filter);
+   const list=await fetchImpl(filter,{method:'GET',redirect:'manual',
+    headers:{Authorization:bearer,Accept:'application/vnd.ims.lis.v2.lineitemcontainer+json'},
+    signal:AbortSignal.timeout(8000)});
+   if(!list.ok||list.status>=300)throw new Error('LMS AGS lineitems lookup failed: HTTP '+list.status);
+   const items=await readJson(list,262144);
+   if(!Array.isArray(items))throw new Error('LMS AGS lineitems collection is not a JSON array');
+   const matching=items.filter(item=>item&&item.tag===tag&&item.resourceLinkId===resourceLinkId);
+   if(matching.length>1)throw new Error('Duplicate P2LRN gradebook columns for the same resource');
+   if(matching.length===1){
+    lineitem=allowedUrl(matching[0].id,allowed,allowInsecureLoopback);
+   }else{
+    const body=JSON.stringify({label:'P2LRN',scoreMaximum:1,resourceLinkId,tag});
+    const created=await fetchImpl(collection,{method:'POST',redirect:'manual',
+     headers:{Authorization:bearer,'Content-Type':'application/vnd.ims.lis.v2.lineitem+json'},
+     body,signal:AbortSignal.timeout(8000)});
+    if(!created.ok||created.status>=300)throw new Error('LMS AGS lineitem creation failed: HTTP '+created.status);
+    let id=created.headers.get('location');
+    if(!id){
+     const response=await readJson(created,65536);
+     id=response?.id;
+    }
+    if(typeof id!=='string'||!id.trim())throw new Error('LMS AGS did not return created lineitem id');
+    lineitem=allowedUrl(new URL(id,collection).toString(),allowed,allowInsecureLoopback);
+   }
+  }
+  if(lineitem.search||lineitem.hash)throw new Error('AGS lineitem URL must not include query');
+  const scoreUrl=new URL(lineitem.toString());
+  scoreUrl.pathname=scoreUrl.pathname.replace(/\/$/,'')+'/scores';
+  await checkHost(scoreUrl);
   const payload={userId:subject,scoreGiven:Math.round(n*1000000)/1000000,
    scoreMaximum:1,activityProgress:score.completed?'Completed':'InProgress',
    gradingProgress:'FullyGraded',timestamp:new Date().toISOString()};
   const response=await fetchImpl(scoreUrl,{method:'POST',redirect:'manual',
-   headers:{Authorization:'Bearer '+reply.access_token,
+   headers:{Authorization:bearer,
     'Content-Type':'application/vnd.ims.lis.v1.score+json'},
    body:JSON.stringify(payload),signal:AbortSignal.timeout(8000)});
   if(!response.ok||response.status>=300)throw new Error('LMS AGS score delivery failed: HTTP '+response.status);
