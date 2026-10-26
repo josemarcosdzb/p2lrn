@@ -42,3 +42,7 @@ La política CSP del sitio se limita a las páginas propias: **no se impone a lo
 Antes de publicar una versión npm o desplegar cambios web, exigir CI de seguridad exitoso, comprobar navegación real en navegador y reproducir los flujos de Studio, Player, SCORM y H5P con aplicaciones anfitrionas. No clasificar como seguridad certificada ningún elemento pendiente.
 
 Fuentes: https://github.com/advisories/GHSA-px8p-9vwx-vf98 ; https://docs.netlify.com/manage/routing/headers/
+
+## Resultado posterior de GitHub Actions
+
+La ejecución [40330106866](https://github.com/josemarcosfrodo/p2lrn/actions/runs/40330106866), asociada al commit de seguridad `d32b1d5`, terminó con estado general **failure**, aunque los jobs independientes **security-windows**, **mcp-connectors-windows** y **lms-contracts-windows** finalizaron **success**. El job `toolkit-and-cdn` falló al verificar el visor en navegador: `studio-component-cdn` informó `Offline assignment dialog is not open` y `studio-website-ui` informó `Visual Studio website did not initialize`. No se atribuye ese fallo a los cambios de seguridad sin un análisis causal. El límite de cuota de artefactos de GitHub impidió subir algunas evidencias, aunque se conservaron archivos de evidencia en Windows. **La validación integral del sitio sigue pendiente.**
