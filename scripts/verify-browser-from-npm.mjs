@@ -639,6 +639,10 @@ try{
   q('.title').dispatchEvent(new Event('input',{bubbles:true}));
   q('.surface').textContent='Este contenido fue editado a través del editor instalado con npm.';
   q('.surface').dispatchEvent(new Event('input',{bubbles:true}));
+  const studioVersion=(await window.P2LRNStudioReady)?.P2LRN_STUDIO_VERSION||'unknown';
+  const imageFeatureExpected=studioVersion!=='0.5.0-alpha.10';
+  let imageTop=null;
+  if(imageFeatureExpected){
   const png=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));
   const imageTransfer=new DataTransfer();imageTransfer.items.add(new File([png],'e2e-image.png',{type:'image/png'}));
   const imageInput=await wait(()=>q('[data-lesson-image-file]'),'inline lesson image file input');
@@ -651,7 +655,8 @@ try{
   surface.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:1,clientX:p.left+31,clientY:p.top+31}));
   surface.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1,clientX:p.left+31,clientY:p.top+31}));
   if(parseInt(placed.style.top,10)===before)throw new Error('Dragging an image did not update its saved position');
-  const imageTop=placed.style.top;
+  imageTop=placed.style.top;
+  }
   // The tree is fully recreated on every selection. Identify a newly added
   // activity from the real outline children, not from stale DOM node identity
   // (which would mistakenly match action buttons such as "+ Unidad").
@@ -760,7 +765,7 @@ try{
   if(!authoredLesson?.id)throw new Error('Exported graph is missing the authored lesson');
   const authoredRep=pkg.entities.get(authoredLesson.resource)?.representations?.[0];
   const authoredHtml=new TextDecoder().decode(await pkg.payload(authoredRep.location.path).read());
-  if(!authoredHtml.includes('data:image/png;base64,')||!authoredHtml.includes('top: '+imageTop))
+  if(imageFeatureExpected&&(!authoredHtml.includes('data:image/png;base64,')||!authoredHtml.includes('top: '+imageTop)))
     throw new Error('Export lost embedded lesson image or dragged position');
   const titleText=(entity)=>Object.values(entity?.title??{}).map(value=>String(value)).join(' | ');
   // External SCORM import creates an actual UNIT wrapper. The SCORM activity
@@ -849,10 +854,12 @@ try{
   for(const title of expectedExportedTitles){
     if(!reopenedTree.includes(title))throw new Error('Studio export/reimport lost activity: '+title);
   }
-  const lessonAfterReopen=[...q('[data-tree]').querySelectorAll('button')].find(b=>b.querySelector('span')?.textContent==='Lección creada con Studio npm');
-  lessonAfterReopen?.click();
-  const restored=await wait(()=>q('.surface img[data-p2lrn-lesson-image]'),'reopened embedded lesson image',5000);
-  if(restored.style.top!==imageTop||restored.naturalWidth!==2)throw new Error('Imported lesson image lost position or raster data');
+  if(imageFeatureExpected){
+    const lessonAfterReopen=[...q('[data-tree]').querySelectorAll('button')].find(b=>b.querySelector('span')?.textContent==='Lección creada con Studio npm');
+    lessonAfterReopen?.click();
+    const restored=await wait(()=>q('.surface img[data-p2lrn-lesson-image]'),'reopened embedded lesson image',5000);
+    if(restored.style.top!==imageTop||restored.naturalWidth!==2)throw new Error('Imported lesson image lost position or raster data');
+  }
   finish(visualDefects.length?'DEGRADED':'PASS',{
     channel:'installed-npm-tarballs',
     visualDefects,
@@ -877,7 +884,7 @@ try{
     verifiedAllAddedActivitiesInExport:true,
     verifiedAllAddedActivitiesAfterReopen:true,
     verifiedByPlayer:true,
-    embeddedImage:{inserted:true,decoded:true,dragged:true,restored:true,top:imageTop},
+    embeddedImage:imageFeatureExpected?{status:'PASS',studioVersion,inserted:true,decoded:true,dragged:true,restored:true,top:imageTop}:{status:'NOT_AVAILABLE_IN_PUBLIC_LEGACY_RELEASE',studioVersion},
     reopenedFromFile:true,
     lessonId:authoredLesson.id,
     scormActivityId:importedScormActivity.id,
