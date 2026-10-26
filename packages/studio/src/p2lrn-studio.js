@@ -413,7 +413,7 @@ export class P2LRNStudioElement extends HTMLElement{
   }
   async exportOfflineAssignment(options={}){
     if(!this.#studio)throw new Error('No hay ningún curso P2LRN abierto.');
-    return exportOfflineAssignmentBundle(this.#studio,{...options,runtimeBaseUrl:options.runtimeBaseUrl??this.offlineRuntimeBaseUrl||null});
+    return exportOfflineAssignmentBundle(this.#studio,{...options,runtimeBaseUrl:options.runtimeBaseUrl??(this.offlineRuntimeBaseUrl||null)});
   }
   async downloadOfflineAssignment(options={}){
     const exported=await this.exportOfflineAssignment(options);
