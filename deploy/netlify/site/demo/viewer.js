@@ -18,7 +18,9 @@
   const params=new URLSearchParams(location.search);
   const initialSrc=params.get('src');
   const initialRenderer=params.get('renderer')||'';
-  const automaticRuntime=params.get('runtime')==='auto';
+  // The Player already isolates executable content in an opaque sandbox by default.
+  // External runtime hosts are optional and explicitly requested, never a prerequisite for the viewer.
+  const automaticRuntime=params.get('runtime')!=='isolated';
   let paused=false,records=[],catalog=[];
   const MAX_EVENTS=200;
   const RUNTIME_ORIGINS=Object.freeze([
