@@ -684,6 +684,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --test integration/lms/lti-provider.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test integration/lms/package-validation.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   mcp-connectors-windows:
     # Independent gate to isolate MCP results from unrelated Studio/Player CI failures.
