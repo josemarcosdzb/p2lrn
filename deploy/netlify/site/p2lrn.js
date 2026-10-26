@@ -55,7 +55,7 @@
   const cleanProductionChrome = () => {
     // Keep functional Studio controls; remove only obsolete decorative release metadata.
     document.querySelectorAll('.header-meta').forEach((node)=>{
-      if(!node.querySelector('[data-studio-status]'))node.remove();
+      if(!node.querySelector('[data-functional-status]'))node.remove();
     });
     document.querySelectorAll('[data-footer-version],.site-release-label,.site-build-label').forEach((node)=>node.remove());
   };

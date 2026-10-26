@@ -137,18 +137,23 @@ const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','
 for (const htmlPath of htmlFiles) {
   let html = await readFile(htmlPath,'utf8');
   html = html.replaceAll('0.5.0-alpha.10',productionPublicVersion);
-  // Decorative release badges may be removed, but Studio's live status is a functional control.
+  // Decorative release badges may be removed, but live application status controls must remain.
   html = html.replace(/<div\s+class=["']header-meta["'][^>]*>[\s\S]*?<\/div>/gi,
-    (block)=>block.includes('data-studio-status')?block:'');
+    (block)=>block.includes('data-functional-status')?block:'');
   html = html.replace(/<span\s+[^>]*data-footer-version(?:=["'][^"']*["'])?[^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-release-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-build-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
   await writeFile(htmlPath,html);
 }
-// Preserve the real Studio status and Player mount across website normalization.
-const studioBuildHtml=await readFile(join(outputRoot,'studio','index.html'),'utf8');
-for(const marker of ['data-studio-status','data-player','data-mode-preview','data-mode-edit']){
-  if(!studioBuildHtml.includes(marker))throw new Error('Published Studio lost functional control: '+marker);
+// Never remove stateful UI controls when stripping decorative website metadata.
+const functionalPages=[
+  {path:['studio','index.html'],markers:['data-functional-status','data-studio-status','data-player','data-mode-preview','data-mode-edit']},
+  {path:['demo','index.html'],markers:['data-functional-status','data-viewer-status','data-runtime-state','id="demo-player"']},
+];
+for(const page of functionalPages){
+  const built=await readFile(join(outputRoot,...page.path),'utf8');
+  for(const marker of page.markers)if(!built.includes(marker))
+    throw new Error('Published functional page lost control '+page.path.join('/')+': '+marker);
 }
 
 // Normalize every documentation sidebar in the generated site. Source articles
