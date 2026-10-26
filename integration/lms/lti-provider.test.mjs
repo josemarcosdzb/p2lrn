@@ -32,7 +32,7 @@ function createFixture(){
  });
  function token({nonce,kind='LtiResourceLinkRequest',changes={}}){
    const claims={
-    iss,aud:clientId,sub:'learner1',iat:now,exp:now+300,nonce,
+    iss:issuer,aud:clientId,sub:'learner1',iat:now,exp:now+300,nonce,
     [LTI_CLAIMS.version]:'1.3.0',[LTI_CLAIMS.messageType]:kind,
     [LTI_CLAIMS.deploymentId]:'deployment-1',
     [LTI_CLAIMS.targetLinkUri]:kind==='LtiDeepLinkingRequest'?deepLinkLaunchUrl:launchUrl,
