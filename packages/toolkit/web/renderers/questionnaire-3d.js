@@ -390,7 +390,9 @@ function buildMatchingControls({trial,runtime,scene,status}) {
 
 function buildClassificationControls({trial,runtime,scene,status}) {
   const expected=new Map(trial.assignments.map((item)=>[item.itemId,item.categoryId]));
-  const values={};
+  const saved=runtime.answer(trial.questionId).classifications??{};
+  const values=Object.fromEntries(Object.entries(saved).filter(([itemId,categoryId])=>
+    expected.get(itemId)===categoryId));
   const randomPositions=randomRoomPositions(trial.objects.length,seedText(`classify:${trial.questionId}:${trial.prompt}`),{zMin:2.5,zMax:9.2});
   const staging=new Map(trial.objects.map((item,index)=>[item.id,randomPositions[index]]));
   let selected=null;
@@ -417,6 +419,15 @@ function buildClassificationControls({trial,runtime,scene,status}) {
   const panel=el('div',{class:'p2lrn-q-fields'});
   const selects=new Map();
 
+  function syncClassifiedPosition(itemId,categoryId){
+    const categoryIndex=trial.categories.findIndex((item)=>item.id===categoryId);
+    if(categoryIndex<0)return;
+    const base=classificationZonePosition(categoryIndex,trial.categories.length);
+    const siblings=Object.entries(values).filter(([,value])=>value===categoryId).map(([id])=>id);
+    const offset=siblings.indexOf(itemId);
+    scene.setTranslation(`classify:${itemId}`,[base[0]+((offset%3)-1)*0.9,0.72,base[2]+1.25+Math.floor(offset/3)*0.95]);
+  }
+
   function moveToCategory(itemId,categoryId) {
     const expectedCategory=expected.get(itemId);
     if(expectedCategory!==categoryId){
@@ -428,11 +439,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
     scene.highlight(`classify:${itemId}`,false);
     if(selected===itemId)selected=null;
     runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId});
-    const categoryIndex=trial.categories.findIndex((item)=>item.id===categoryId);
-    const base=classificationZonePosition(categoryIndex,trial.categories.length);
-    const siblings=Object.entries(values).filter(([,value])=>value===categoryId).map(([id])=>id);
-    const offset=siblings.indexOf(itemId);
-    scene.setTranslation(`classify:${itemId}`,[base[0]+((offset%3)-1)*0.9,0.72,base[2]+1.25+Math.floor(offset/3)*0.95]);
+    syncClassifiedPosition(itemId,categoryId);
     selects.get(itemId).value=categoryId;
     setText(status,classificationIsCorrect(values,expected)?'Clasificación completada correctamente.':'Objeto clasificado correctamente.');
     return true;
@@ -453,9 +460,46 @@ function buildClassificationControls({trial,runtime,scene,status}) {
     panel.append(row);
   });
 
+  for(const [itemId,categoryId] of Object.entries(values)){
+    syncClassifiedPosition(itemId,categoryId);
+    const select=selects.get(itemId);
+    if(select)select.value=categoryId;
+  }
+
   return {
     panel,
+    summary:Object.keys(values).length?`Clasificaciones recuperadas · ${Object.keys(values).length}/${trial.objects.length}`:null,
+    drag(meta,phase,{position=null,target=null}={}){
+      if(meta.kind!=='classification-object')return false;
+      if(phase==='start'){
+        if(runtime.state.completed||values[meta.id])return false;
+        selected=meta.id;
+        scene.carry(`classify:${meta.id}`,false);
+        scene.highlight(`classify:${meta.id}`,true);
+        setText(status,'Arrastra el objeto hasta su categoría.');
+        return true;
+      }
+      if(phase==='move'){if(position)scene.setTranslation(`classify:${meta.id}`,position);return true;}
+      if(phase==='end'){
+        const ok=target?.kind==='classification-category'&&moveToCategory(meta.id,target.id);
+        if(!ok){
+          scene.setTranslation(`classify:${meta.id}`,staging.get(meta.id));
+          scene.highlight(`classify:${meta.id}`,false);
+          if(target?.kind!=='classification-category')setText(status,'Suelta el bloque sobre una categoría.');
+        }
+        selected=null;
+        return true;
+      }
+      if(phase==='cancel'){
+        scene.setTranslation(`classify:${meta.id}`,staging.get(meta.id));
+        scene.highlight(`classify:${meta.id}`,false);
+        selected=null;
+        return true;
+      }
+      return false;
+    },
     interact(meta) {
+      if(runtime.state.completed){setText(status,'Esta actividad ya está finalizada.');return true;}
       if(meta.kind==='classification-object'){
         if(scene.playerDistanceTo(`classify:${meta.id}`)>3.15){setText(status,'Acércate al bloque para cogerlo.');return true;}
         if(selected&&selected!==meta.id){setText(status,'Ya llevas un objeto. Deposítalo antes de coger otro.');return true;}
