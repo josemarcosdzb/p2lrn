@@ -11,6 +11,8 @@ await import('./build-cdn.mjs');
 const siteRoot = join(root,'deploy','netlify','site');
 const outputRoot = join(root,'.netlify-cdn');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
+// The web build publishes real, inspectable connector ZIPs from this same source.
+await import('./build-connector-downloads.mjs');
 await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));
 await cp(join(root,'packages','toolkit','web','studio'),join(outputRoot,'studio','runtime'),{recursive:true,force:true});
 for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','capability-broker.js','course-rights.js']){
@@ -356,6 +358,20 @@ for (const part of multipartMetadata.parts) {
   }
 }
 
+const connectorDownloadManifest=JSON.parse(await readFile(join(outputRoot,'downloads','manifest.json'),'utf8'));
+const requiredConnectorZips=['p2lrn-conector-mcp.zip','p2lrn-lti-contratos.zip'];
+if(!Array.isArray(connectorDownloadManifest.artifacts) ||
+   connectorDownloadManifest.artifacts.length!==requiredConnectorZips.length)
+  throw new Error('Connector downloads manifest is incomplete');
+for(const name of requiredConnectorZips){
+  const artifact=connectorDownloadManifest.artifacts.find(item=>item.file===name);
+  const bytes=await readFile(join(outputRoot,'downloads',name));
+  if(!artifact||artifact.path!=='/downloads/'+name||artifact.bytes!==bytes.length||
+    artifact.members<3||artifact.sha256!==createHash('sha256').update(bytes).digest('hex')||
+    bytes.subarray(0,4).toString('hex')!=='504b0304')
+    throw new Error('Connector downloadable archive is missing or corrupt: '+name);
+}
+
 // Documentation connectors are separate, navigable pages with source-backed
 // explanations. Check the common navigation and sitemap before publishing.
 const connectorDocs = [
@@ -386,6 +402,17 @@ for(const [slug,required] of connectorDocs){
     throw new Error('Connector sitemap missing '+route);
   if(slug && !connectorHome.includes('href="'+route+'"'))
     throw new Error('Connector overview missing '+route);
+}
+const expectedDownloads=[
+  ['ia','p2lrn-conector-mcp.zip'],
+  ['local','p2lrn-conector-mcp.zip'],
+  ['lms','p2lrn-lti-contratos.zip'],
+  ['lti','p2lrn-lti-contratos.zip']
+];
+for(const [slug,filename] of expectedDownloads){
+  const guide=await readFile(join(outputRoot,'docs','conectores',slug,'index.html'),'utf8');
+  if(!guide.includes('href="/downloads/'+filename+'"'))
+    throw new Error('Connector guide does not link the verified downloadable asset: '+slug);
 }
 if(!connectorNavigation.includes("['/docs/conectores/',["))
   throw new Error('Connector child navigation must be nested under Conectores');
