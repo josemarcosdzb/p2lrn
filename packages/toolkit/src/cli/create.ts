@@ -8,7 +8,7 @@ import {parse,flag,opt,opts,printJson,req,fail,CliExit,isMain} from './util.js';
 function withProject(path:string,fn:(root:string,project:any)=>any){const l=loadProject(path),root=dirname(l.path),r=fn(root,l.project);saveProject(l.path,l.project);return{path:l.path,result:r,project:l.project};}
 export function main(argv=process.argv.slice(2)){try{const p=parse(argv);if(flag(p,'help')){process.stdout.write('Usage: p2lrn-create <init|open|upgrade|set-rights|add-unit|add-file|add-web-content|add-questionnaire|add-component|add-composite|add-url|build|convert|ingest-aulap2p|ingest-aulap2p-course|extract-aulap2p-course|component-catalog|validate-component-authoring|show> ...\n');return;}const cmd=req(p.positional[0],'command');let r:any;
 if(cmd==='init'){const dir=resolve(req(p.positional[1],'directory')),path=join(dir,PROJECT_FILE);if(existsSync(path)&&!flag(p,'force'))throw new Error(`project already exists: ${path}; use --force to replace it`);mkdirSync(dir,{recursive:true});const project=newProject(req(opt(p,'title'),'--title'),opt(p,'language','es'),opt(p,'description'));const changes=Object.fromEntries([['author','author'],['createdAt','created-at'],['license','license'],['copyrightHolder','copyright-holder']]
-  .map(([key,name])=>[key,opt(p,name)]).filter(([,value])=>value!==undefined)) as CourseRightsChanges;
+  .map(([key,name])=>[key,opt(p,String(name))]).filter(([,value])=>value!==undefined)) as CourseRightsChanges;
 if(Object.keys(changes).length)applyCourseRights(project.course,changes);
 saveProject(path,project);r={project:path,projectId:project.projectId,course:project.course.title};}
 else if(cmd==='open'){r=openPackageAsProject(req(p.positional[1],'package'),req(p.positional[2],'project_directory'),{force:flag(p,'force')});}
@@ -16,7 +16,7 @@ else if(cmd==='upgrade'){const x=upgradeProjectWorkspace(req(p.positional[1],'pr
 else if(cmd==='set-rights'){
   const proj=req(p.positional[1],'project');
   const changes=Object.fromEntries([['author','author'],['createdAt','created-at'],['license','license'],['copyrightHolder','copyright-holder']]
-    .map(([key,name])=>[key,opt(p,name)]).filter(([,value])=>value!==undefined)) as CourseRightsChanges;
+    .map(([key,name])=>[key,opt(p,String(name))]).filter(([,value])=>value!==undefined)) as CourseRightsChanges;
   if(!Object.keys(changes).length)throw new Error('provide --author, --created-at, --license or --copyright-holder');
   const x=withProject(proj,(_root,project)=>applyCourseRights(project.course,changes));
   r={project:x.path,rights:x.result};
