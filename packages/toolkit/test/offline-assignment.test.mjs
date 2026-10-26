@@ -124,6 +124,8 @@ test('offline exporter creates a self-playing ZIP with local Player, course and 
     maxAttempts:1,
   });
   assert.match(result.filename,/\.p2lrn-offline\.zip$/);
+  assert.match(result.windowsLauncher.filename,/\.p2lrn-offline\.cmd$/);
+  assert.match(result.windowsLauncher.payloadDigest,/^sha256:[0-9a-f]{64}$/);
   assert.equal(result.assignment.schema,OFFLINE_ASSIGNMENT_SCHEMA);
   assert.equal(result.assignment.policy.collaboration,'disabled');
   assert.equal(result.assignment.participant.label,'Alumno 7');
@@ -142,6 +144,17 @@ test('offline exporter creates a self-playing ZIP with local Player, course and 
   assert.match(launcher,/IPAddress\]::Loopback/);
   assert.match(launcher,/127\.0\.0\.1/);
   assert.deepEqual([...entries.get('www/course.p2lrn')],[80,75,3,4,1,2,3]);
+
+  const single=decoder.decode(result.windowsLauncher.bytes);
+  assert.match(single,/^@echo off\r?\n/i);
+  assert.match(single,/__P2LRN_PAYLOAD__/);
+  assert.match(single,/SHA256/i);
+  assert.match(single,/Expand-Archive/);
+  assert.match(single,/runtime\\\\serve\.ps1/);
+  const marker='__P2LRN_PAYLOAD__';
+  const payload=single.slice(single.indexOf(marker)+marker.length).replace(/\s+/g,'');
+  const decoded=new Uint8Array(Buffer.from(payload,'base64'));
+  assert.deepEqual([...decoded],[...result.bytes],'single-file launcher must embed the exact portable ZIP');
 });
 
 test('offline result verifier checks digest and original course identity',async()=>{
