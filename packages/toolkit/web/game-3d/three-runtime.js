@@ -131,7 +131,13 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     physicsWorld=await createNoPhysicsWorld();
   }
 
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
+  let renderer;
+  try{
+    renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
+  }catch(error){
+    physicsWorld.destroy?.();
+    throw error;
+  }
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio||1,2));
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
