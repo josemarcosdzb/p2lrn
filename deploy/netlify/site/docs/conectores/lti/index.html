@@ -33,7 +33,7 @@
 <div class="reference-table"><div><strong>Existe: Player y Host Adapter</strong><p>Reproducción del paquete y contrato de <code>loadState</code>, <code>saveState</code>, <code>reportScore</code>, <code>emitEvent</code> y <code>resolveResourceUrl</code>.</p></div>
 <div><strong>Existen contratos LTI iniciales</strong><p><code>integration/lms/launch-contract.mjs</code> define enlaces, identidad versionada y borradores de AGS; <code>integration/lms/host-adapter.mjs</code> conecta el Player a una API de gateway. Hay pruebas de contrato.</p></div>
 <div><strong>Pendiente: proveedor P2LRN LTI real</strong><p>Faltan registro persistente por institución, comprobación OIDC/JWKS, sesiones, endpoints operativos, catálogo y selector Deep Linking firmado, AGS real y NRPS opcional.</p></div>
-<div><strong>Pendiente: interoperabilidad E2E</strong><p>No se han certificado con P2LRN todos los flujos en Moodle, Canvas, Sakai, Chamilo, Open edX y AulaP2P.</p></div></div>
+<div><strong>Pendiente: interoperabilidad E2E</strong><p>No se han certificado con P2LRN todos los flujos en Moodle, Canvas, Sakai, Chamilo y Open edX.</p></div></div>
 <div class="doc-callout"><strong>No son endpoints publicados</strong><p>Las rutas <code>/lti/login</code>, <code>/lti/launch</code> y <code>/lti/jwks</code> aparecen en el diseño técnico, pero no deben registrarse en un LMS real hasta disponer de un gateway desplegado y validado.</p></div></section>
 <section class="doc-section"><h2>Seguridad y aislamiento multiinstitución</h2>
 <ul class="doc-list"><li>Validar criptográficamente JWT y comprobar <code>iss</code>, <code>aud</code>, <code>azp</code>, <code>exp</code>, <code>iat</code>, <code>nonce</code>, <code>state</code>, versión, tipo de mensaje y <code>deployment_id</code>.</li>
