@@ -300,6 +300,60 @@ export class P2LRNMcpService {
     });
   }
 
+  editNativeActivity(draftId, expectedDigest, activityKey, kind, payload, renderer = null) {
+    this.requireWrite();
+    if (!['questionnaire', 'component'].includes(kind)) throw new Error('Unsupported native activity kind');
+    if (typeof activityKey !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(activityKey))
+      throw new Error('A valid activity key is required');
+    const validated = kind === 'questionnaire' ? validateQuestionnaire(payload) : validateComponentInstance(payload);
+    if (renderer && kind !== 'questionnaire') throw new Error('A game renderer can only be used for questionnaires');
+    if (renderer && !knownGameRenderers.has(renderer)) throw new Error('Renderer not installed in the P2LRN catalog');
+
+    return this.mutateDraft(draftId, expectedDigest, (workspace, dir) => {
+      const project = workspace.project;
+      const activity = project.activities.find(item => item.key === activityKey);
+      if (!activity || typeof activity.resource !== 'string') throw new Error('Native activity not found in draft');
+      const resource = project.resources.find(item => item.key === activity.resource);
+      if (!resource || !Array.isArray(resource.representations) || resource.representations.length !== 1)
+        throw new Error('Editing requires one native resource representation; compound or multi-representation resources are not replaced');
+      if (project.activities.filter(item => item.resource === resource.key).length !== 1)
+        throw new Error('Shared resource cannot be edited without affecting other activities');
+      const rep = resource.representations[0];
+      const expectedType = kind === 'questionnaire' ? 'application/vnd.p2lrn.questionnaire+json' : 'application/vnd.p2lrn.component+json';
+      if (rep.mediaType !== expectedType) throw new Error('Existing activity is not a P2LRN ' + kind + ' resource');
+
+      const HINT = 'https://p2lrn.org/ext/renderer-preference/1';
+      const selectedRenderer = renderer ?? activity.extensions?.[HINT]?.preferred ?? null;
+      if (kind === 'questionnaire' && selectedRenderer) {
+        if (!knownGameRenderers.has(selectedRenderer)) throw new Error('Unrecognized existing game renderer');
+        const result = buildQuestionnaireGame(validated, selectedRenderer, {seedSource: activityKey});
+        if (!result.compatible) throw new Error('Edited questions are incompatible with the selected game renderer: ' + JSON.stringify(result.reasons));
+      }
+
+      const assetDir = join(dir, 'assets');
+      mkdirSync(assetDir, {recursive: true});
+      const filename = 'mcp-edit-' + randomUUID() + '.json';
+      const output = join(assetDir, filename);
+      writeFileSync(output, JSON.stringify(validated), {flag: 'wx', mode: 0o600});
+      try {
+        workspace.update(draft => {
+          const nextActivity = draft.activities.find(item => item.key === activityKey);
+          const nextResource = draft.resources.find(item => item.key === nextActivity.resource);
+          const nextRep = nextResource.representations[0];
+          nextRep.source = {type: 'file', path: 'assets/' + filename};
+          if (renderer) {
+            nextActivity.extensions ??= {};
+            nextActivity.extensions[HINT] = {preferred: renderer, required: false};
+          }
+        });
+      } catch (error) {
+        rmSync(output, {force: true});
+        throw error;
+      }
+      return {activityKey, resourceKey: resource.key, kind, renderer: selectedRenderer, sourceReplacedInDraftOnly: true};
+    });
+  }
+
   addComposite(draftId, expectedDigest, composite) {
     return this.mutateDraft(draftId, expectedDigest, (workspace) => workspace.addComposite(object(composite, 'composite')));
   }
