@@ -162,6 +162,26 @@ const playerRuntimeDocs=article(await readFile(join(root,'deploy/netlify/site/do
 if(!playerRuntimeDocs.includes('crea automáticamente un iframe sandbox de origen opaco')){
   failures.push('deploy/netlify/site/docs/player/index.html: automatic embedded runtime flow is missing');
 }
+const updatedStudioDocs=article(await readFile(join(root,'deploy/netlify/site/docs/studio/index.html'),'utf8'));
+for(const token of ['Componentes nativos','<strong>Aviso</strong>','<strong>Línea temporal</strong>']){
+  if(!updatedStudioDocs.includes(token)) failures.push('deploy/netlify/site/docs/studio/index.html: missing native content component '+token);
+}
+const formatRightsDocs=article(await readFile(join(root,'deploy/netlify/site/docs/formato/index.html'),'utf8'));
+for(const token of ['https://p2lrn.org/ext/course-rights/1','<code>author</code>','<code>createdAt</code>','<code>license</code>','<code>copyrightHolder</code>']){
+  if(!formatRightsDocs.includes(token)) failures.push('deploy/netlify/site/docs/formato/index.html: missing course rights metadata '+token);
+}
+const packageRightsDocs=article(await readFile(join(root,'deploy/netlify/site/docs/paquetes/index.html'),'utf8'));
+if(!packageRightsDocs.includes('workspace.setCourseRights({')){
+  failures.push('deploy/netlify/site/docs/paquetes/index.html: package workflow must explain setCourseRights');
+}
+const questionnaireOverviewDocs=article(await readFile(join(root,'deploy/netlify/site/docs/questionnaires/index.html'),'utf8'));
+if(!questionnaireOverviewDocs.includes('Completar huecos')){
+  failures.push('deploy/netlify/site/docs/questionnaires/index.html: fill-blanks game is missing from the overview');
+}
+const componentMapDocs=article(await readFile(join(root,'deploy/netlify/site/docs/que-usar/index.html'),'utf8'));
+for(const token of ['Componentes nativos','Aviso','línea temporal']){
+  if(!componentMapDocs.includes(token)) failures.push('deploy/netlify/site/docs/que-usar/index.html: missing native component map token '+token);
+}
 for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/site/docs/integracion/index.html']){
   const html=article(await readFile(join(root,rel),'utf8'));
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
