@@ -376,10 +376,15 @@ export class P2LRNStudioElement extends HTMLElement{
     const shell=document.createElement('div');shell.className='studio-choice-shell offline-form';
     const head=document.createElement('div');head.className='studio-choice-head';
     const copy=document.createElement('div');const h=document.createElement('h2');h.textContent='Entrega offline autorreproducible';
-    const p=document.createElement('p');p.textContent='Genera un ZIP autocontenido. El alumno lo extrae, hace doble clic en Abrir P2LRN.cmd, completa la actividad y devuelve un .p2lrn-result.';
+    const p=document.createElement('p');p.textContent='Crea una entrega autocontenida. En Windows puedes generar un único archivo para doble clic; el alumno completa la actividad en el navegador y devuelve un .p2lrn-result.';
     copy.append(h,p);const close=document.createElement('button');close.type='button';close.textContent='Cerrar';close.onclick=()=>dialog.close();head.append(copy,close);shell.append(head);
     const grid=document.createElement('div');grid.className='offline-grid';
     const field=(label,type,value='')=>{const wrap=document.createElement('label');wrap.className='offline-field';const span=document.createElement('span');span.textContent=label;const input=document.createElement('input');input.type=type;input.value=value;wrap.append(span,input);grid.append(wrap);return input;};
+    const formatWrap=document.createElement('label');formatWrap.className='offline-field';
+    const formatLabel=document.createElement('span');formatLabel.textContent='Formato de entrega';
+    const format=document.createElement('select');
+    format.innerHTML='<option value="windows-single">Windows · un archivo (doble clic)</option><option value="portable-zip">ZIP portable · extraer y abrir</option>';
+    formatWrap.append(formatLabel,format);grid.append(formatWrap);
     const available=field('Disponible desde','datetime-local');
     const due=field('Fecha límite','datetime-local');
     const duration=field('Tiempo máximo desde que empieza (minutos)','number');duration.min='1';duration.step='1';duration.placeholder='Sin límite';
@@ -390,7 +395,7 @@ export class P2LRNStudioElement extends HTMLElement{
     const metricsLabel=document.createElement('label');metricsLabel.className='offline-check';const metrics=document.createElement('input');metrics.type='checkbox';metrics.checked=true;metricsLabel.append(metrics,document.createTextNode('Incluir métricas de actividad y telemetría pedagógica'));shell.append(metricsLabel);
     const fixed=document.createElement('div');fixed.className='offline-fixed';
     const collaboration=document.createElement('div');collaboration.innerHTML='<strong>Colaboración</strong><span>Desactivada en la entrega offline</span>';
-    const network=document.createElement('div');network.innerHTML='<strong>Servicios externos</strong><span>Denegados; Player y curso viajan dentro del ZIP</span>';fixed.append(collaboration,network);shell.append(fixed);
+    const network=document.createElement('div');network.innerHTML='<strong>Servicios externos</strong><span>Denegados; Player, curso y métricas viajan dentro de la entrega</span>';fixed.append(collaboration,network);shell.append(fixed);
     const note=document.createElement('p');note.className='offline-note';note.textContent='Las fechas se aplican localmente. Sin una autoridad externa, la hora absoluta depende del reloj del equipo del alumno.';shell.append(note);
     const status=document.createElement('div');status.className='offline-status';status.setAttribute('role','status');shell.append(status);
     const actions=document.createElement('div');actions.className='offline-actions';const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancelar';cancel.onclick=()=>dialog.close();
@@ -401,6 +406,7 @@ export class P2LRNStudioElement extends HTMLElement{
         const toIso=(input)=>input.value?new Date(input.value).toISOString():null;
         const minutes=String(duration.value||'').trim();
         await this.downloadOfflineAssignment({
+          deliveryFormat:format.value,
           availableFrom:toIso(available),dueAt:toIso(due),
           attemptDurationSeconds:minutes?Math.round(Number(minutes)*60):null,
           maxAttempts:Number(attempts.value||1),allowResume:resume.checked,activityTracking:metrics.checked,
@@ -417,10 +423,13 @@ export class P2LRNStudioElement extends HTMLElement{
   }
   async downloadOfflineAssignment(options={}){
     const exported=await this.exportOfflineAssignment(options);
-    const url=URL.createObjectURL(new Blob([exported.bytes],{type:'application/zip'}));
-    const a=document.createElement('a');a.href=url;a.download=exported.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
-    this.dispatchEvent(new CustomEvent('p2lrn-studio-offline-export',{detail:{filename:exported.filename,assignmentId:exported.assignment.assignmentId,contentRoot:exported.assignment.contentRoot},bubbles:true,composed:true}));
-    return exported;
+    const windowsSingle=String(options.deliveryFormat??'windows-single')==='windows-single';
+    const artifact=windowsSingle?exported.windowsLauncher:{filename:exported.filename,bytes:exported.bytes};
+    const type=windowsSingle?'application/x-msdos-program':'application/zip';
+    const url=URL.createObjectURL(new Blob([artifact.bytes],{type}));
+    const a=document.createElement('a');a.href=url;a.download=artifact.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    this.dispatchEvent(new CustomEvent('p2lrn-studio-offline-export',{detail:{filename:artifact.filename,format:windowsSingle?'windows-single':'portable-zip',assignmentId:exported.assignment.assignmentId,contentRoot:exported.assignment.contentRoot},bubbles:true,composed:true}));
+    return {...exported,downloadedFilename:artifact.filename,deliveryFormat:windowsSingle?'windows-single':'portable-zip'};
   }
   async reviewOfflineResult(file){
     if(!file)throw new TypeError('Selecciona un archivo .p2lrn-result.');
