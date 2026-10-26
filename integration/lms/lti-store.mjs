@@ -105,8 +105,8 @@ export function createLtiStore(filename){
   }catch(e){try{db.exec('ROLLBACK');}catch{}throw e;}
  }
  function outboxById(id){
-  const r=sql('SELECT o.*,a.ags_json,a.subject,p.token_url,p.client_id,p.issuer FROM ags_outbox o JOIN attempts a ON a.id=o.attempt_id JOIN bindings b ON b.id=a.binding_id JOIN platforms p ON p.id=b.registration_id WHERE o.id=?').get(id);
-  return r?{id:r.id,attemptId:r.attempt_id,status:r.status,tries:r.tries,payload:P(r.payload_json),ags:P(r.ags_json),subject:r.subject,tokenUrl:r.token_url,clientId:r.client_id,issuer:r.issuer}:null;
+  const r=sql('SELECT o.*,a.ags_json,a.subject,a.resource_link_id,p.token_url,p.client_id,p.issuer FROM ags_outbox o JOIN attempts a ON a.id=o.attempt_id JOIN bindings b ON b.id=a.binding_id JOIN platforms p ON p.id=b.registration_id WHERE o.id=?').get(id);
+  return r?{id:r.id,attemptId:r.attempt_id,status:r.status,tries:r.tries,payload:P(r.payload_json),ags:P(r.ags_json),subject:r.subject,resourceLinkId:r.resource_link_id,tokenUrl:r.token_url,clientId:r.client_id,issuer:r.issuer}:null;
  }
  const markOutbox=(id,status,error=null)=>sql('UPDATE ags_outbox SET status=?,tries=tries+1,last_error=?,updated_at=? WHERE id=?').run(status,error,t(),id);
  const listPending=()=>sql("SELECT id FROM ags_outbox WHERE status='PENDING' ORDER BY created_at LIMIT 50").all().map(r=>r.id);
