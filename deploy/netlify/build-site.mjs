@@ -356,6 +356,40 @@ for (const part of multipartMetadata.parts) {
   }
 }
 
+// Documentation connectors are separate, navigable pages with source-backed
+// explanations. Check the common navigation and sitemap before publishing.
+const connectorDocs = [
+  ['', ['Conectores e integración', 'ChatGPT, Claude y Grok', 'IA local', 'Plataformas LMS', 'LTI 1.3']],
+  ['ia', ['ChatGPT', 'Claude', 'Grok', 'P2LRN_MCP_WRITE', 'HTTPS']],
+  ['local', ['Conectar-P2LRN.cmd', 'stdio', 'Cursor', 'Windsurf', 'Ollama']],
+  ['lms', ['Moodle', 'Canvas', 'Sakai', 'Chamilo', 'Open edX', 'AulaP2P']],
+  ['lti', ['OIDC', 'JWKS', 'Deep Linking', 'AGS', 'NRPS', 'no se han certificado']],
+];
+const [connectorNavigation,connectorSitemap,connectorHome] = await Promise.all([
+  readFile(join(outputRoot,'p2lrn.js'),'utf8'),
+  readFile(join(outputRoot,'sitemap.xml'),'utf8'),
+  readFile(join(outputRoot,'docs','conectores','index.html'),'utf8')
+]);
+for(const [slug,required] of connectorDocs){
+  const route='/docs/conectores/' + (slug ? slug+'/' : '');
+  const file=join(outputRoot,'docs','conectores',...(slug?[slug]:[]),'index.html');
+  if(!(await exists(file)))throw new Error('Connector documentation page missing: '+route);
+  const html=await readFile(file,'utf8');
+  if(!html.includes('<h1>') || !html.includes('class="doc-content"') ||
+     (html.match(/<section class="doc-section">/g)||[]).length<4)
+    throw new Error('Connector documentation structure missing: '+route);
+  for(const term of required)if(!html.includes(term))
+    throw new Error('Connector documentation missing '+term+' in '+route);
+  if(!connectorNavigation.includes("['"+route+"',"))
+    throw new Error('Connector navigation missing '+route);
+  if(!connectorSitemap.includes('https://p2lrn.netlify.app'+route))
+    throw new Error('Connector sitemap missing '+route);
+  if(slug && !connectorHome.includes('href="'+route+'"'))
+    throw new Error('Connector overview missing '+route);
+}
+if(!connectorNavigation.includes("['/docs/conectores/',["))
+  throw new Error('Connector child navigation must be nested under Conectores');
+
 const docsFiles = htmlFiles.filter((path)=>relative(outputRoot,path).replaceAll('\\','/').startsWith('docs/'));
 const searchIndex = [];
 for (const path of docsFiles) {
@@ -415,4 +449,5 @@ console.log(JSON.stringify({
   contactFormsCentralized:true,
   cliBinsDocumented:Object.keys(toolkitPackage.bin ?? {}).length,
   multipartParts:multipartMetadata.parts.length,
+  connectorDocPages:connectorDocs.length,
 },null,2));
