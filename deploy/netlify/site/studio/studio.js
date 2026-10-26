@@ -198,7 +198,7 @@ async function renderEditor(){
     const message=document.createElement('div');message.className='studio-readonly';
     message.textContent='Este contenido se reproduce con el Player pero no se edita internamente en Studio 1. SCORM, H5P, cmi5, QTI, multimedia y paquetes externos permanecen encapsulados.';
     content.append(message);
-    const inline=document.createElement('p2lrn-player');inline.className='studio-inline-player';inline.setAttribute('src',studio.sourceUrl);inline.setAttribute('node',entity.id);content.append(inline);
+    const inline=document.createElement('p2lrn-player');inline.className='studio-inline-player';inline.setAttribute('src',studio.sourceUrl);inline.setAttribute('node',entity.id);inline.setAttribute('navigation','external');content.append(inline);
     return;
   }
   if(editable.mediaType==='text/plain'){

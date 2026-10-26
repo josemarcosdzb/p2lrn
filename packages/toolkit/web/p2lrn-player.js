@@ -441,7 +441,7 @@ const HTMLElementBase = globalThis.HTMLElement ?? class {};
 export class P2LRNPlayerElement extends HTMLElementBase {
   static get p2lrnVersion() { return P2LRN_WEB_SDK_VERSION; }
   static get p2rlnVersion() { return P2LRN_WEB_SDK_VERSION; }
-  static get observedAttributes() { return ['src', 'node', 'renderer', 'runtime-base-url']; }
+  static get observedAttributes() { return ['src', 'node', 'renderer', 'runtime-base-url', 'navigation']; }
 
   constructor() {
     super();
@@ -740,17 +740,27 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       return;
     }
 
-    const layout = document.createElement('div'); layout.className = 'p2lrn-layout';
-    const nav = document.createElement('nav'); nav.className = 'p2lrn-nav'; nav.setAttribute('aria-label', 'Contenido P2LRN');
+    // A host such as Studio already has the course outline. In that case the
+    // Player renders only the selected node's content, without a competing
+    // internal tree. Standalone Player instances retain their own navigation.
+    const externalNavigation = this.getAttribute('navigation') === 'external';
+    const layout = document.createElement('div');
+    layout.className = externalNavigation ? 'p2lrn-layout p2lrn-layout-external' : 'p2lrn-layout';
+    const nav = externalNavigation ? null : document.createElement('nav');
+    if (nav) {
+      nav.className = 'p2lrn-nav';
+      nav.setAttribute('aria-label', 'Contenido P2LRN');
+      layout.append(nav);
+    }
     const stage = document.createElement('main'); stage.className = 'p2lrn-stage';
-    layout.append(nav, stage); shell.append(layout);
+    layout.append(stage); shell.append(layout);
     const activities = [];
     const seen = new Set();
     const walk = (entity, depth = 0) => {
       if (!entity || seen.has(entity.id)) return;
       seen.add(entity.id);
       if (entity.type === 'activity') activities.push(entity);
-      if (entity.type !== 'course') {
+      if (nav && entity.type !== 'course') {
         const button = document.createElement('button');
         const baseTitle = titleOf(entity);
         button.type = 'button'; button.className = `depth-${Math.min(depth, 3)}`; button.textContent = baseTitle;
@@ -776,7 +786,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     if (activities.length) {
       const firstActivity = activities.find((activity) => !this._progressionModel?.isLocked(activity.id, this._progressionState));
       if (firstActivity) {
-        this._progressionButtons.get(firstActivity.id)?.button?.setAttribute('aria-current', 'true');
+        if (nav) this._progressionButtons.get(firstActivity.id)?.button?.setAttribute('aria-current', 'true');
         await this.#renderEntity(firstActivity, stage);
       } else {
         this.#stageMessage(stage, this.#progressionLockMessage(activities[0].id));

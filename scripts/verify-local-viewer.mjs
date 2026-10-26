@@ -535,6 +535,26 @@ async function studioComponentScenario(){
     await wait(()=>q('p2lrn-player.preview')?.shadowRoot?.querySelector('.p2lrn-stage'),'Player embedded preview',13000);
     const player=q('p2lrn-player.preview');
     if(!player?.getAttribute('src')?.startsWith('blob:'))throw new Error('Studio preview did not use exported P2LRN blob');
+    // A selected unit contains several activities; the outer Studio outline
+    // must remain the only navigation when its Player preview is rendered.
+    const unitOutline=[...q('[data-tree]').querySelectorAll('button')].find(button=>
+      button.querySelector('small')?.textContent==='unit'
+    );
+    if(!unitOutline)throw new Error('The Studio component lost its unit in the outline');
+    unitOutline.click();
+    const unitPreview=await wait(()=>{
+      const candidate=q('p2lrn-player.preview');
+      return candidate&&candidate!==player
+        &&candidate.getAttribute('navigation')==='external'
+        &&candidate.shadowRoot?.querySelector('.p2lrn-layout-external .p2lrn-stage')
+        ?candidate:null;
+    },'npm Studio unit preview without a nested navigation',18000);
+    if(unitPreview.shadowRoot.querySelector('.p2lrn-nav'))
+      throw new Error('npm Studio duplicated the course outline inside Player');
+    const compactLayout=unitPreview.shadowRoot.querySelector('.p2lrn-layout-external');
+    const compactStage=compactLayout.querySelector('.p2lrn-stage');
+    if(compactStage.getBoundingClientRect().width+2<compactLayout.getBoundingClientRect().width)
+      throw new Error('npm Studio did not expand its Player stage to full width');
     click('[data-download]');
     await wait(()=>events.some(e=>e.type==='download'),'download through UI');
     const local=new File([exported.bytes],exported.filename,{type:'application/vnd.p2lrn+zip'});
@@ -592,6 +612,35 @@ async function studioSiteScenario(){
     title.dispatchEvent(new InputEvent('input',{bubbles:true}));
     sheet.innerHTML='<p>Texto incorporado mediante el editor WYSIWYG real.</p>';
     sheet.dispatchEvent(new InputEvent('input',{bubbles:true}));
+    // The Studio outline is the single navigation authority, including when
+    // a whole unit (rather than one activity) is selected for preview.
+    const editedLessonId=q('[data-tree] button[aria-current="true"]')?.dataset.entityId;
+    const unitNode=[...q('[data-tree]').querySelectorAll('button')].find(button=>
+      button.querySelector('.type')?.textContent==='unit'&&button.textContent.includes('Nueva unidad')
+    );
+    if(!unitNode||!editedLessonId)throw new Error('Cannot find unit and edited lesson for duplicate navigation regression');
+    const unitId=unitNode.dataset.entityId;
+    unitNode.click();
+    await wait(()=>q('.studio-readonly'),'select full unit');
+    click('[data-mode-preview]');
+    const unitPlayer=await wait(()=>{
+      const p=q('[data-player]');
+      const layout=p?.shadowRoot?.querySelector('.p2lrn-layout-external');
+      return p?.getAttribute('node')===unitId&&p.getAttribute('navigation')==='external'&&layout&&layout.querySelector('.p2lrn-stage')?p:null;
+    },'unit preview without second navigation',18000);
+    const unitShadow=unitPlayer.shadowRoot;
+    if(unitShadow.querySelector('.p2lrn-nav')||unitShadow.querySelectorAll('nav').length)
+      throw new Error('Studio unit preview duplicated the course navigation');
+    const unitLayout=unitShadow.querySelector('.p2lrn-layout-external');
+    const unitStage=unitShadow.querySelector('.p2lrn-stage');
+    if(unitStage.getBoundingClientRect().width+2<unitLayout.getBoundingClientRect().width)
+      throw new Error('Unit preview did not expand to the available editor width');
+    click('[data-mode-edit]');
+    await wait(()=>q('[data-editor-stage]')&&!q('[data-editor-stage]').hidden,'return to editing after unit preview');
+    const editedLessonNode=q('[data-tree] button[data-entity-id="'+editedLessonId+'"]');
+    if(!editedLessonNode)throw new Error('The outer course outline lost the edited lesson');
+    editedLessonNode.click();
+    await wait(()=>q('.studio-wysiwyg[contenteditable=true]'),'return to the HTML editor after unit preview');
     click('[data-add-content]');
     await wait(()=>q('[data-add-dialog]')?.open,'open palette');
     click('[data-add-kind="questionnaire"]');

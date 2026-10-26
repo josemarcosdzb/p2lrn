@@ -317,7 +317,7 @@ export class P2LRNStudioElement extends HTMLElement{
     const exported=await this.exportPackage();
     if(this.#previewObjectUrl)URL.revokeObjectURL(this.#previewObjectUrl);
     this.#previewObjectUrl=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
-    const player=document.createElement('p2lrn-player');player.className='preview';player.setAttribute('src',this.#previewObjectUrl);player.setAttribute('node',this.#selected);stage.append(player);
+    const player=document.createElement('p2lrn-player');player.className='preview';player.setAttribute('navigation','external');player.setAttribute('src',this.#previewObjectUrl);player.setAttribute('node',this.#selected);stage.append(player);
   }
   async setMode(mode){
     this.#mode=mode==='preview'?'preview':'edit';
