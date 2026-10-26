@@ -116,12 +116,16 @@
     },
     {
       label: 'Integrar',
-      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/'],
+      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*'],
       items: [
         ['/docs/integracion/','Integración'],
         ['/docs/colaboracion/','Colaboración'],
         ['/docs/eventos/','Eventos'],
-        ['/docs/conectores/','Conectores de IA, LMS y LTI'],
+        ['/docs/conectores/','Conectores: visión general'],
+        ['/docs/conectores/ia/','ChatGPT, Claude y Grok'],
+        ['/docs/conectores/local/','IA local'],
+        ['/docs/conectores/lms/','Plataformas LMS'],
+        ['/docs/conectores/lti/','LTI 1.3'],
       ],
     },
     {
@@ -381,6 +385,12 @@
       ['/docs/conceptos/','Conceptos fundamentales'],
       ['/docs/formato/','Formato P2LRN'],
     ]],
+    ['/docs/conectores/',[
+      ['/docs/conectores/ia/','ChatGPT, Claude y Grok'],
+      ['/docs/conectores/local/','IA local'],
+      ['/docs/conectores/lms/','Plataformas LMS'],
+      ['/docs/conectores/lti/','Módulo LTI 1.3'],
+    ]],
     ['/docs/questionnaires/',[
       ['/docs/questionnaires/standard/','Cuestionario estándar'],
       ['/docs/questionnaires/memory/','Memoria'],
@@ -412,6 +422,10 @@
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
+    ['/docs/conectores/ia/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/local/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/lms/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/lti/',['/docs/conectores/','Conectores e integración']],
   ]);
   const sidebarLocation = (current) => {
     for (const [section,items] of GLOBAL_SIDEBAR) {
