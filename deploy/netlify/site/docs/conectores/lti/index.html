@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1117"><meta name="description" content="Funcionamiento y estado del módulo LTI 1.3 P2LRN: OIDC, JWKS, Deep Linking, AGS, NRPS, sesiones y seguridad.">
+<title>Módulo LTI 1.3 de P2LRN — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
+<body><a class="skip-link" href="#contenido">Saltar al contenido</a>
+<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"></nav>
+<div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
+<button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
+<main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / LTI 1.3</p><h1>Módulo LTI 1.3 de P2LRN</h1><p>LTI 1.3 permite que una plataforma educativa abra un recurso P2LRN con una sesión verificada y, cuando proceda, intercambie calificaciones. Es una integración entre LMS y servidor, no una característica añadida dentro del ZIP del curso.</p></header>
+<section class="doc-section"><h2>Arquitectura: un único Player</h2>
+<div class="integration-chain"><span>LMS</span><b>→</b><span>Gateway LTI 1.3</span><b>→</b><span>Host Adapter</span><b>→</b><span>Player</span></div>
+<p>El LMS conserva estudiantes, docentes, matrículas y libreta de calificaciones. El gateway comprueba la identidad y selecciona el contenido publicado; el Host Adapter gestiona carga y guardado de estado, eventos y notas. Player abre siempre el mismo <code>.p2lrn</code>, independientemente del fabricante del LMS.</p></section>
+<section class="doc-section"><h2>OIDC: inicio y lanzamiento seguro</h2>
+<ol class="doc-list"><li>El administrador registra de forma explícita la plataforma mediante <code>issuer</code>, <code>client_id</code>, <code>deployment_id</code> y URLs confiables.</li>
+<li>Cuando un usuario abre la actividad, comienza el inicio de sesión OIDC. El gateway genera una transacción con <code>state</code> y <code>nonce</code> únicos.</li>
+<li>El LMS devuelve un <code>id_token</code> firmado. El servidor valida firma y claims, incluida la audiencia, versión, tipo de lanzamiento y URI de destino.</li>
+<li>Se consumen <code>state</code> y <code>nonce</code> de manera atómica para impedir reutilización, y sólo se inicia la sesión del contenido publicado autorizado.</li></ol>
+<p>Estas comprobaciones no deben realizarse sólo en JavaScript del navegador: corresponden al backend confiable.</p></section>
+<section class="doc-section"><h2>JWKS y claves públicas</h2>
+<p>JWKS permite obtener las claves públicas con las que comprobar las firmas. El gateway únicamente debe aceptar URLs JWKS de plataformas previamente registradas y aprobadas; no puede confiar en la dirección suministrada por un JWT desconocido.</p>
+<p>El proveedor también tendrá que publicar sus claves públicas para firmar respuestas de Deep Linking y autenticarse ante los servicios del LMS, con rotación controlada.</p></section>
+<section class="doc-section"><h2>Deep Linking: elegir curso y lección</h2>
+<p>Un profesor podrá seleccionar un curso, unidad o actividad desde un catálogo P2LRN de recursos publicados. La selección genera un enlace de tipo <code>ltiResourceLink</code> con un <code>p2lrn_binding_id</code> opaco vinculado a la institución, registro, despliegue, paquete y revisión del contenido.</p>
+<div class="reference-table"><div><strong>Identidad portable</strong><p><code>packageId + contentRoot + entityId</code> identifica el contenido elegido y su revisión.</p></div><div><strong>Identidad de despliegue</strong><p>El vínculo opaco se guarda por institución y despliegue. No depende únicamente del <code>resource_link.id</code> de la plataforma.</p></div><div><strong>Copias de cursos</strong><p>Si el LMS duplica un curso, la referencia al contenido no debe depender de un ID de actividad que podría cambiar.</p></div></div>
+<p>La firma de Deep Linking y el selector real requieren un backend y catálogo que todavía no se han completado.</p></section>
+<section class="doc-section"><h2>AGS: enviar calificaciones</h2>
+<p>AGS (Assignment and Grade Services) es el servicio LTI para comunicar resultados al libro de notas del LMS. El navegador puede notificar una puntuación al Host Adapter, pero el backend debe validarla de forma autoritativa según la evaluación y el intento antes de enviarla.</p>
+<p>El envío requiere scopes autorizados y tokens OAuth adecuados, con control de reintentos e idempotencia para evitar notas duplicadas. Si una plataforma no concede AGS, el contenido puede reproducirse, pero no se debe prometer sincronización automática de notas.</p></section>
+<section class="doc-section"><h2>NRPS: roles y matrículas (opcional)</h2>
+<p>NRPS (Names and Role Provisioning Services) permite consultar roles y miembros cuando el LMS expone ese servicio, la institución lo autoriza y es necesario. No sustituye el control local de permisos ni obliga a copiar listas de alumnos al paquete P2LRN.</p></section>
+<section class="doc-section"><h2>Qué existe y qué falta implementar</h2>
+<div class="reference-table"><div><strong>Existe: Player y Host Adapter</strong><p>Reproducción del paquete y contrato de <code>loadState</code>, <code>saveState</code>, <code>reportScore</code>, <code>emitEvent</code> y <code>resolveResourceUrl</code>.</p></div>
+<div><strong>Existen contratos LTI iniciales</strong><p><code>integration/lms/launch-contract.mjs</code> define enlaces, identidad versionada y borradores de AGS; <code>integration/lms/host-adapter.mjs</code> conecta el Player a una API de gateway. Hay pruebas de contrato.</p></div>
+<div><strong>Pendiente: proveedor P2LRN LTI real</strong><p>Faltan registro persistente por institución, comprobación OIDC/JWKS, sesiones, endpoints operativos, catálogo y selector Deep Linking firmado, AGS real y NRPS opcional.</p></div>
+<div><strong>Pendiente: interoperabilidad E2E</strong><p>No se han certificado con P2LRN todos los flujos en Moodle, Canvas, Sakai, Chamilo, Open edX y AulaP2P.</p></div></div>
+<div class="doc-callout"><strong>No son endpoints publicados</strong><p>Las rutas <code>/lti/login</code>, <code>/lti/launch</code> y <code>/lti/jwks</code> aparecen en el diseño técnico, pero no deben registrarse en un LMS real hasta disponer de un gateway desplegado y validado.</p></div></section>
+<section class="doc-section"><h2>Seguridad y aislamiento multiinstitución</h2>
+<ul class="doc-list"><li>Validar criptográficamente JWT y comprobar <code>iss</code>, <code>aud</code>, <code>azp</code>, <code>exp</code>, <code>iat</code>, <code>nonce</code>, <code>state</code>, versión, tipo de mensaje y <code>deployment_id</code>.</li>
+<li>Consumir cada transacción una sola vez; prevenir replay y acceso entre instituciones o despliegues.</li>
+<li>Particionar el progreso por institución, despliegue, vínculo, alumno, intento, paquete, revisión y actividad.</li>
+<li>No exponer claves privadas, credenciales del LMS, datos personales ni tokens dentro de un <code>.p2lrn</code> o URLs del navegador.</li>
+<li>Rechazar cualquier acceso a un contenido no publicado, actividad inexistente o servicio no autorizado.</li>
+<li>Verificar en servidor los resultados antes de transmitir notas oficiales.</li></ul></section>
+<section class="doc-section"><h2>Proceso de validación para producción</h2>
+<ol class="doc-list"><li>Implementar registros, OIDC y JWKS con claves auditables, rotación y sesión transaccional.</li><li>Conectar el catálogo de cursos publicados y respuestas Deep Linking firmadas.</li>
+<li>Persistir progreso y resultados por alumno y recurso, incorporando un outbox AGS idempotente.</li>
+<li>Validar los flujos completos en LMS reales: docente, alumno, copias de curso, reanudación, expiración, accesos denegados y libro de notas.</li>
+<li>Comprobar accesibilidad, dispositivos móviles, juegos, SCORM, H5P y regresiones frente a las capacidades existentes.</li></ol>
+<p>Más información del estándar en <a href="https://www.1edtech.org/standards/lti" rel="noopener noreferrer">1EdTech LTI</a>. Para las opciones por plataforma consulta <a href="/docs/conectores/lms/">Conectores LMS</a>.</p></section>
+<nav class="doc-pager"><a class="prev" href="/docs/conectores/lms/"><span>← Anterior</span><strong>Plataformas LMS</strong></a>
+<a class="next" href="/docs/conectores/"><span>Siguiente →</span><strong>Conectores</strong></a></nav>
+</article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
