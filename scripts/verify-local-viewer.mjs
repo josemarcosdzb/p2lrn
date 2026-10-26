@@ -589,15 +589,18 @@ async function verifyStudioComponentUI(cdp){
       const dialog=root.querySelector('.studio-choice-dialog.offline-form');
       if(dialog?.open){
         const labels=[...dialog.querySelectorAll('.offline-field span')].map((node)=>node.textContent);
+        const format=dialog.querySelector('.offline-field select');
         const fixed=dialog.querySelector('.offline-fixed')?.textContent??'';
-        return {open:true,labels,fixed};
+        return {open:true,labels,fixed,formatValue:format?.value??null,formatOptions:format?[...format.options].map((option)=>({value:option.value,text:option.textContent})):[]};
       }
       await new Promise((resolve)=>setTimeout(resolve,40));
     }
     throw new Error('Offline assignment dialog did not open.');
   })()`);
   invariant(offlineDialog.open===true,'Offline assignment dialog is not open.');
-  invariant(offlineDialog.labels.includes('Disponible desde')&&offlineDialog.labels.includes('Fecha límite')&&offlineDialog.labels.includes('Tiempo máximo desde que empieza (minutos)')&&offlineDialog.labels.includes('Intentos máximos'),'Offline assignment policy controls are incomplete: '+JSON.stringify(offlineDialog));
+  invariant(offlineDialog.labels.includes('Formato de entrega')&&offlineDialog.labels.includes('Disponible desde')&&offlineDialog.labels.includes('Fecha límite')&&offlineDialog.labels.includes('Tiempo máximo desde que empieza (minutos)')&&offlineDialog.labels.includes('Intentos máximos'),'Offline assignment policy controls are incomplete: '+JSON.stringify(offlineDialog));
+  invariant(offlineDialog.formatValue==='windows-single','Offline assignment must default to the one-file Windows delivery: '+JSON.stringify(offlineDialog));
+  invariant(offlineDialog.formatOptions.some((item)=>item.value==='windows-single')&&offlineDialog.formatOptions.some((item)=>item.value==='portable-zip'),'Offline assignment format selector is incomplete: '+JSON.stringify(offlineDialog));
   invariant(offlineDialog.fixed.includes('Colaboración')&&offlineDialog.fixed.includes('Desactivada'),'Offline assignment UI does not make collaboration disabled explicit.');
   const offlineDialogScreenshot=await captureElementVisualEvidence(cdp,'studio-offline-assignment-dialog',"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog.offline-form')",{maxHeight:1200});
   await evalTop(cdp,"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog.offline-form')?.close()");
