@@ -37,6 +37,19 @@ The classic loader derives its channel from its own URL, loads the matching Play
 
 Do not use the ESM file directly in plain HTML unless your environment resolves the bare `@p2lrn/player` specifier. The documented CDN entrypoint is `p2lrn-studio.js`.
 
+## Entrega offline autorreproducible
+
+Studio puede exportar el curso abierto como una entrega offline autocontenida. La opción **Entrega offline** ofrece dos formatos que comparten exactamente el mismo curso, Player, política y formato de resultados:
+
+- **Windows · un archivo (doble clic)**: genera `.p2lrn-offline.cmd`. El alumno hace doble clic, el archivo verifica el SHA-256 de la entrega embebida, la extrae en una carpeta local aislada, inicia un servidor sólo en `127.0.0.1` y abre el navegador.
+- **ZIP portable · extraer y abrir**: genera `.p2lrn-offline.zip` con `Abrir P2LRN.cmd`, útil para inspección, archivo o distribución portable.
+
+El profesor puede configurar disponibilidad, fecha límite, duración máxima por intento, número de intentos, reanudación e identificación opcional del alumno. La colaboración y los servicios externos quedan desactivados en este modo. El Player utiliza persistencia offline local y conserva estados, respuestas, puntuaciones, eventos y tiempo activo.
+
+Al finalizar, el alumno descarga un único `.p2lrn-result` y lo devuelve al profesor. Studio incluye **Revisar entrega** para comprobar integridad, coincidencia con el curso, puntuación, respuestas, duración, tiempo activo, eventos y anomalías registradas.
+
+La hora absoluta de una entrega completamente offline depende del reloj del equipo del alumno. El formato registra retrocesos/saltos de reloj, pero no presenta la fecha offline como una autoridad externa confiable.
+
 ## Server-backed features
 
 The browser component exposes these attributes:
