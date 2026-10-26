@@ -586,7 +586,7 @@ async function verifyStudioComponentUI(cdp){
     if(!button)throw new Error('Offline assignment control is missing from Studio.');
     button.click();
     for(let i=0;i<100;i++){
-      const dialog=root.querySelector('.studio-choice-dialog.offline-form');
+      const dialog=root.querySelector('.studio-choice-dialog:has(.offline-form)');
       if(dialog?.open){
         const labels=[...dialog.querySelectorAll('.offline-field span')].map((node)=>node.textContent);
         const format=dialog.querySelector('.offline-field select');
@@ -602,8 +602,8 @@ async function verifyStudioComponentUI(cdp){
   invariant(offlineDialog.formatValue==='windows-single','Offline assignment must default to the one-file Windows delivery: '+JSON.stringify(offlineDialog));
   invariant(offlineDialog.formatOptions.some((item)=>item.value==='windows-single')&&offlineDialog.formatOptions.some((item)=>item.value==='portable-zip'),'Offline assignment format selector is incomplete: '+JSON.stringify(offlineDialog));
   invariant(offlineDialog.fixed.includes('Colaboración')&&offlineDialog.fixed.includes('Desactivada'),'Offline assignment UI does not make collaboration disabled explicit.');
-  const offlineDialogScreenshot=await captureElementVisualEvidence(cdp,'studio-offline-assignment-dialog',"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog.offline-form')",{maxHeight:1200});
-  await evalTop(cdp,"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog.offline-form')?.close()");
+  const offlineDialogScreenshot=await captureElementVisualEvidence(cdp,'studio-offline-assignment-dialog',"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog:has(.offline-form)')",{maxHeight:1200});
+  await evalTop(cdp,"document.getElementById('studio').shadowRoot.querySelector('.studio-choice-dialog:has(.offline-form)')?.close()");
 
   const offlineReview=await evalTop(cdp,`(async()=>{
     const studio=document.getElementById('studio'),root=studio.shadowRoot;

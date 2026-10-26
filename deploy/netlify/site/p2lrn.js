@@ -739,22 +739,21 @@
       if (status) status.textContent = 'Enviando…';
 
       try {
-        const response = await fetch(SUPABASE_URL + '/rest/v1/contact_messages', {
+        const response = await fetch(SUPABASE_URL + '/functions/v1/p2lrn-contact', {
           method: 'POST',
           headers: {
             apikey: SUPABASE_PUBLISHABLE_KEY,
-            Authorization: 'Bearer ' + SUPABASE_PUBLISHABLE_KEY,
             'Content-Type': 'application/json',
-            Prefer: 'return=minimal',
           },
           body: JSON.stringify(payload),
         });
+        if (response.status === 429) throw new Error('contact_rate_limited');
         if (!response.ok) throw new Error('contact_failed');
         localStorage.setItem('p2lrn-contact-last', String(now));
         form.reset();
         if (status) status.textContent = 'Mensaje enviado. Gracias por contactar.';
-      } catch {
-        if (status) status.textContent = 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
+      } catch (error) {
+        if (status) status.textContent = error?.message === 'contact_rate_limited' ? 'Límite de envíos alcanzado. Inténtalo más tarde.' : 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
       } finally {
         if (button) button.disabled = false;
       }
