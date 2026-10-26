@@ -130,6 +130,17 @@ function isCorrespondingSourcePath(path) {
 const allHtmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
 const htmlFiles = allHtmlFiles.filter((path)=>!isCorrespondingSourcePath(path));
 
+const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
+for (const htmlPath of htmlFiles) {
+  let html = await readFile(htmlPath,'utf8');
+  html = html.replaceAll('0.5.0-alpha.10',productionPublicVersion);
+  html = html.replace(/<div\s+class=["']header-meta["'][^>]*>[\s\S]*?<\/div>/gi,'');
+  html = html.replace(/<span\s+[^>]*data-footer-version(?:=["'][^"']*["'])?[^>]*>[\s\S]*?<\/span>/gi,'');
+  html = html.replace(/<span\s+class=["']site-release-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
+  html = html.replace(/<span\s+class=["']site-build-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
+  await writeFile(htmlPath,html);
+}
+
 // Normalize every documentation sidebar in the generated site. Source articles
 // may contain historical fallback links, but published HTML must have one empty
 // placeholder so p2lrn.js is the sole navigation authority.
