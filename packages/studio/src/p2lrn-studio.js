@@ -13,6 +13,7 @@ import {exportP2LRNPackage} from './runtime/package-export.js';
 import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
+import {mountLessonImageEditor} from './runtime/lesson-images.js';
 
 export const P2LRN_STUDIO_VERSION='0.5.0-alpha.11';
 
@@ -299,7 +300,12 @@ export class P2LRNStudioElement extends HTMLElement{
           else {const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);}
           this.#updateState();
         };
-        sheet.append(surface);
+        if(editable.mediaType==='text/html')mountLessonImageEditor({host:sheet,surface,onChange:()=>{
+          const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');
+          this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);
+          this.#updateState();
+        },onStatus:(message)=>this.#status(message)});
+        else sheet.append(surface);
       }else{
         const n=document.createElement('div');n.className='notice';n.textContent='Esta actividad se previsualiza con el Player y su paquete interno permanece encapsulado.';sheet.append(n);
       }

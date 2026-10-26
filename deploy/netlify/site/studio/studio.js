@@ -4,6 +4,7 @@ import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
+import {mountLessonImageEditor} from './runtime/lesson-images.js';
 
 const createCourseButton=document.querySelector('[data-create-course]');
 const addUnitButton=document.querySelector('[data-add-unit]');
@@ -210,7 +211,11 @@ async function renderEditor(){
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
   });
-  content.append(surface);
+  mountLessonImageEditor({host:content,surface,onChange:()=>{
+    source.body.innerHTML=surface.innerHTML;
+    studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
+    updateChanges();
+  },onStatus:setStatus});
 }
 
 async function buildVerifiedPreview(){
