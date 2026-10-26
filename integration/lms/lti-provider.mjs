@@ -133,7 +133,7 @@ function signToolJwt(privateKey, kid, payload) {
 // {id,tenantId,issuer,clientId,authUrl,launchUrl,deepLinkLaunchUrl?,
 //  deployments,jwks:{keys:[...]},deepLinkReturnOrigins:[...] }.
 // getBinding({id,tenantId,registrationId,deploymentId}) -> published P2LRN binding.
-export function createP2LRNLtiProvider({getRegistration, transactions, getBinding, tool, now = () => Math.floor(Date.now() / 1000)}) {
+export function createP2LRNLtiProvider({getRegistration, getRegistrationById, transactions, getBinding, tool, now = () => Math.floor(Date.now() / 1000)}) {
   if (typeof getRegistration !== 'function' || typeof getBinding !== 'function' ||
       typeof transactions?.create !== 'function' || typeof transactions?.consume !== 'function')
     throw new TypeError('Trusted registration, binding and atomic transaction adapters are required');
@@ -274,5 +274,32 @@ export function createP2LRNLtiProvider({getRegistration, transactions, getBindin
     const jwk = createPublicKey(privateKey).export({format: 'jwk'});
     return {keys: [{...jwk, kid, use: 'sig', alg: 'RS256'}]};
   }
-  return Object.freeze({beginLogin, verifyLaunch, deepLinkResponse, publicJwks});
+  // Server-internal data only; never return the raw verified JWT claims to the browser.
+  function inspectVerifiedLaunch(result) {
+    const context = launched.get(result);
+    if (!context) throw new Error('Unverified LTI launch context');
+    return {claims: context.claims, registration: context.registration, deployment: context.deployment};
+  }
+
+  // A consumed, durable Deep Linking picker ticket may be resumed after restart.
+  // Only the trusted HTTP server can call this function with an atomically
+  // consumed picker record; untrusted browser fields are NOT accepted here.
+  async function restoreDeepLink(picker) {
+    if (typeof getRegistrationById !== 'function')
+      throw new Error('Persistent LTI registration lookup required');
+    const reg = await getRegistrationById(required(picker.registrationId,'registrationId'));
+    if (!reg || reg.status !== 'ACTIVE' || reg.tenantId !== picker.tenantId ||
+        !reg.deployments?.includes(picker.deploymentId))
+      throw new Error('Revoked LTI Deep Linking registration or deployment');
+    const returnUrl = url(required(picker.returnUrl,'returnUrl'),'returnUrl').toString();
+    if (!reg.deepLinkReturnOrigins?.includes(new URL(returnUrl).origin))
+      throw new Error('Unapproved LMS Deep Linking return origin');
+    const result = Object.freeze({kind:'deep-link',tenantId:reg.tenantId,
+      registrationId:reg.id,deploymentId:picker.deploymentId,returnUrl});
+    launched.set(result,{registration:reg,deployment:picker.deploymentId,
+      claims:{},settings:{data:picker.ltiData??undefined}});
+    return result;
+  }
+  return Object.freeze({beginLogin, verifyLaunch, deepLinkResponse, publicJwks,
+    inspectVerifiedLaunch, restoreDeepLink});
 }
