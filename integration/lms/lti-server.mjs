@@ -132,12 +132,12 @@ function contextFor(body,session){
  if(surface.length>180||!surface.trim())throw new Error('INVALID_PLAYER_SURFACE');
  return {entityId:ctx.entityId,surface};
 }
-function assertTrustedReg(reg,baseUrl){
+function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
  if(!reg||typeof reg!=='object')throw new TypeError('LTI platform JSON object required');
  if(reg.launchUrl!==baseUrl+'/lti/launch'||(reg.deepLinkLaunchUrl&&reg.deepLinkLaunchUrl!==baseUrl+'/lti/deep-link'))
   throw new Error('LTI launch URL must match this independent P2LRN server');
  for(const v of [reg.issuer,reg.authUrl,reg.tokenUrl,...(reg.deepLinkReturnOrigins||[])])
-  if(new URL(v).protocol!=='https:')throw new Error('LTI platform endpoints must use HTTPS');
+  if(!(new URL(v).protocol==='https:'||(allowInsecureLocal&&new URL(v).protocol==='http:'&&/^(localhost|127\.0\.0\.1|[a-z0-9-]+\.localhost)$/.test(new URL(v).hostname))))throw new Error('LTI platform endpoints must use HTTPS outside the local test lab');
  return reg;
 }
 export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindHost='127.0.0.1',
@@ -147,7 +147,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  if(typeof adminToken!=='string'||adminToken.length<32)throw new TypeError('Secure P2LRN admin token must contain at least 32 characters');
  const base=new URL(baseUrl);
  if(base.username||base.password||base.hash||base.search||
-    (base.protocol!=='https:'&&!(allowInsecureLoopback&&base.protocol==='http:'&&['127.0.0.1','localhost'].includes(base.hostname))))
+    (base.protocol!=='https:'&&!(allowInsecureLoopback&&base.protocol==='http:'&&/^(localhost|127\.0\.0\.1|[a-z0-9-]+\.localhost)$/.test(base.hostname))))
   throw new Error('Public P2LRN LTI endpoint requires HTTPS');
  const baseOrigin=base.origin,canonicalBase=baseUrl.replace(/\/$/,'');
  if(canonicalBase!==base.origin)throw new Error('P2LRN LTI baseUrl must be an origin without path');
@@ -158,7 +158,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  const provider=createP2LRNLtiProvider({
   getRegistration:store.getRegistration,getRegistrationByIssuer:store.getRegistrationByIssuer,
   getRegistrationById:store.getRegistrationById,
-  transactions:store.transactions,getBinding:store.getBinding,tool
+  transactions:store.transactions,getBinding:store.getBinding,tool,allowInsecureLocal:allowInsecureLoopback
  });
  const ags=createLtiAgsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
  const sessionCookie=secure?'__Host-p2lrn-session':'p2lrn_session';
@@ -310,7 +310,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     if(method==='GET'&&path==='/lti/admin/platforms')
      return sendJson(res,200,{platforms:store.listPlatforms()});
     if(method==='POST'&&path==='/lti/admin/platforms'){
-     const reg=assertTrustedReg(input(await readBody(req,131072),req),canonicalBase);
+     const reg=assertTrustedReg(input(await readBody(req,131072),req),canonicalBase,allowInsecureLoopback);
      store.upsertPlatform(reg);return sendJson(res,201,{id:reg.id,status:reg.status});
     }
     if(method==='POST'&&path==='/lti/admin/catalog'){
