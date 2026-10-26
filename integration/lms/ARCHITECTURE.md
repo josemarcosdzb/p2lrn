@@ -7,7 +7,7 @@ Fecha: 26 de octubre de 2026. Estado: **arquitectura y contratos iniciales, no p
 Un archivo `.p2lrn`, un motor `@p2lrn/player` y un Host Adapter. No se
 crea otro Player por LMS, no se exige transformar P2LRN en SCORM y no se
 introducen ramas de ejecución especiales para Moodle, Canvas, Sakai, Chamilo,
-Open edX ni AulaP2P.
+Open edX.
 
 El núcleo P2LRN sigue siendo portable: los usuarios, matrículas, permisos,
 estados privados, notas oficiales, credenciales y políticas de evaluación
@@ -16,7 +16,7 @@ pertenecen al anfitrión, nunca al ZIP del curso.
 ### Componentes y frontera de responsabilidades
 
 ```text
-LMS (Moodle, Canvas, Sakai, Chamilo, Open edX) / AulaP2P
+LMS (Moodle, Canvas, Sakai, Chamilo, Open edX)
        │ configuración de plataforma / sesión / usuarios / calificaciones
        ▼
 Gateway universal P2LRN LTI 1.3 + catálogo de contenidos
@@ -44,15 +44,12 @@ localmente, pero debe reutilizar el mismo Player y el mismo contrato de datos.
 | Host Adapter (load/save/score/event/resources) | Existe |
 | Progresión y eventos en Player | Existe; no sustituye libro de notas del LMS |
 | Perfil experimental LTI `profiles/lti-0.4.0` | Describe contenido/enlaces, no implementa OIDC |
-| AulaP2P OIDC/JWKS/launch, AGS y NRPS | Código presente en `backend/src/lti`, orientado hoy a SCORM |
 | Proveedor P2LRN LTI 1.3 multiinstitución | Pendiente |
 | Deep Linking de cursos P2LRN, AGS validado y selector real | Pendiente |
 | Actividad nativa .p2lrn en cada LMS | Pendiente, opcional |
 
 Ni el perfil LTI experimental ni las pruebas actuales de Player acreditan
-conformidad completa de LTI Advantage o de todos los LMS. AulaP2P no debe
-duplicar su servidor LTI: se ampliará su elección de recursos para P2LRN
-tras verificar seguridad y compatibilidad SCORM existentes.
+conformidad completa de LTI Advantage o de todos los LMS.
 
 ## Flujo del profesor, del alumno y del administrador
 
@@ -149,7 +146,6 @@ en el paquete distribuible.
 | Sakai | External Tools LTI 1.3 | AGS cuando la instancia lo expone |
 | Chamilo | Integración LTI conforme a versión/instancia | AGS si está habilitado |
 | Open edX | LTI Consumer XBlock 1.3 | AGS |
-| AulaP2P | Player y Host Adapter nativos; ampliar LTI existente | API propia / AGS externo |
 
 La configuración debe verificarse en cada instancia real; no se promete
 que todas las versiones de un LMS expongan todos los servicios. NRPS sólo
@@ -178,7 +174,7 @@ B. **Proveedor LTI real:** registro, OIDC y JWKS verificables, lanzamiento,
    Deep Linking firmado y catálogo autorizado, base de datos transaccional.
 C. **Seguimiento:** sesión, reanudación, eventos, evaluación confiable,
    outbox AGS, NRPS optativo, políticas de matriculación y cursos copiados.
-D. **Matriz E2E:** Moodle, Canvas, Sakai, Chamilo, Open edX y AulaP2P,
+D. **Matriz E2E:** Moodle, Canvas, Sakai, Chamilo y Open edX,
    dos usuarios y varios intentos; publicación, launch, reanudación,
    calificación en LMS, duplicado de curso, acceso denegado, replay,
    sesiones expiradas, móvil, SCORM/H5P/juegos, regressions visuales.
