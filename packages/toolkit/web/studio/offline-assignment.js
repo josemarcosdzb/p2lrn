@@ -258,6 +258,46 @@ function assignmentApp(){
   ].join('\n');
 }
 
+function base64Lines(bytes,{lineLength=120}={}){
+  const view=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+  const chunkSize=3*16384;
+  let encoded='';
+  for(let offset=0;offset<view.length;offset+=chunkSize){
+    const chunk=view.subarray(offset,Math.min(view.length,offset+chunkSize));
+    let binary='';
+    for(let i=0;i<chunk.length;i+=8192)binary+=String.fromCharCode(...chunk.subarray(i,Math.min(chunk.length,i+8192)));
+    encoded+=btoa(binary);
+  }
+  const lines=[];
+  for(let i=0;i<encoded.length;i+=lineLength)lines.push(encoded.slice(i,i+lineLength));
+  return lines;
+}
+
+async function windowsSingleFileLauncher(zipBytes,filenameBase){
+  const digest=await sha256Bytes(zipBytes);
+  const expected=digest.slice('sha256:'.length);
+  const payload=base64Lines(zipBytes);
+  const ps="$ErrorActionPreference='Stop';$self=$env:P2LRN_SELF;$lines=Get-Content -LiteralPath $self -Encoding ASCII;$marker=[Array]::IndexOf($lines,'__P2LRN_PAYLOAD__');if($marker -lt 0){throw 'Payload P2LRN no encontrado.'};$b64=($lines[($marker+1)..($lines.Length-1)] -join '');$bytes=[Convert]::FromBase64String($b64);$sha=[BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($bytes)).Replace('-','').ToLowerInvariant();if($sha -ne '"+expected+"'){throw 'El paquete P2LRN ha sido modificado o esta corrupto.'};$root=Join-Path $env:LOCALAPPDATA ('P2LRN\\Offline\\'+$sha);$ready=Join-Path $root 'ready.ok';if(!(Test-Path $ready)){if(Test-Path $root){Remove-Item $root -Recurse -Force};New-Item -ItemType Directory -Path $root -Force|Out-Null;$zip=Join-Path $root 'bundle.zip';[IO.File]::WriteAllBytes($zip,$bytes);Expand-Archive -LiteralPath $zip -DestinationPath $root -Force;Remove-Item $zip -Force;Set-Content -LiteralPath $ready -Value $sha -Encoding ASCII};$serve=Join-Path $root 'runtime\\serve.ps1';if(!(Test-Path $serve)){throw 'Runtime offline no encontrado.'};& $serve";
+  const preamble=[
+    '@echo off',
+    'setlocal',
+    'set "P2LRN_SELF=%~f0"',
+    'title P2LRN - Entrega offline',
+    'where powershell.exe >nul 2>&1 || (echo PowerShell no esta disponible en este equipo. & pause & exit /b 1)',
+    'powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "'+ps.replaceAll('"','\\"')+'"',
+    'set "P2LRN_EXIT=%ERRORLEVEL%"',
+    'if not "%P2LRN_EXIT%"=="0" pause',
+    'exit /b %P2LRN_EXIT%',
+    '__P2LRN_PAYLOAD__',
+    ...payload,
+    '',
+  ].join('\r\n');
+  return Object.freeze({
+    filename:cleanFilename(filenameBase,'entrega-p2lrn')+'.p2lrn-offline.cmd',
+    bytes:textBytes(preamble),
+    payloadDigest:digest,
+  });
+}
 function readmeText(assignment){
   return [
     'P2LRN · Entrega offline autorreproducible','',
@@ -302,7 +342,16 @@ export async function exportOfflineAssignmentBundle(document,options={}){
     {path:'www/index.html',data:encoder.encode(assignmentHtml())},{path:'www/style.css',data:encoder.encode(assignmentCss())},{path:'www/app.js',data:encoder.encode(assignmentApp())},
     {path:'www/assignment.json',data:jsonBytes(assignment)},{path:'www/course.p2lrn',data:course.bytes},...runtime.entries,
   ];
-  return Object.freeze({bytes:writeStoredZip(entries),filename:filenameBase+'.p2lrn-offline.zip',assignment:Object.freeze(clone(assignment)),course,runtimeRelease:clone(runtime.release)});
+  const bytes=writeStoredZip(entries);
+  const windowsLauncher=await windowsSingleFileLauncher(bytes,filenameBase);
+  return Object.freeze({
+    bytes,
+    filename:filenameBase+'.p2lrn-offline.zip',
+    windowsLauncher,
+    assignment:Object.freeze(clone(assignment)),
+    course,
+    runtimeRelease:clone(runtime.release),
+  });
 }
 
 export async function parseOfflineAssignmentResult(value,{expectedContentRoot=null,expectedAssignmentId=null}={}){
