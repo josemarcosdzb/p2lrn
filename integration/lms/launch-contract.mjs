@@ -23,11 +23,11 @@ const hash=items=>createHash('sha256').update(JSON.stringify(items)).digest('hex
 const bindingPattern=/^[A-Za-z0-9_-]{32,128}$/;
 const rootPattern=/^sha256:[0-9a-f]{64}$/;
 
-function httpsUrl(value,label){
+function httpsUrl(value,label,allowInsecureLocal=false){
   const text=str(value,label);
   let parsed;
   try{parsed=new URL(text);}catch{throw new TypeError(label+' must be an HTTPS URL');}
-  if(parsed.protocol!=='https:'||!parsed.hostname||parsed.username||parsed.password||parsed.hash)
+  if(!(parsed.protocol==='https:'||(allowInsecureLocal&&parsed.protocol==='http:'&&/^(localhost|127\.0\.0\.1|[a-z0-9-]+\.localhost)$/.test(parsed.hostname)))||!parsed.hostname||parsed.username||parsed.password||parsed.hash)
     throw new TypeError(label+' must be an HTTPS URL without embedded credentials or fragment');
   return parsed.href;
 }
@@ -50,20 +50,20 @@ function publishedBinding(value){
 export function issueP2LRNBindingId(){
   return randomBytes(24).toString('base64url');
 }
-export function createP2LRNDeepLinkItem({binding,title,launchUrl}){
+export function createP2LRNDeepLinkItem({binding,title,launchUrl,allowInsecureLocal=false}){
   const b=publishedBinding(binding);
   const name=str(title,'title');
   if(name.length>200)throw new TypeError('Deep Linking title is too long');
   return Object.freeze({
     type:'ltiResourceLink',title:name,
-    url:httpsUrl(launchUrl,'launchUrl'),
+    url:httpsUrl(launchUrl,'launchUrl',allowInsecureLocal),
     custom:Object.freeze({p2lrn_binding_id:b.id})
   });
 }
 // SERVER-ONLY projection, not OIDC/JWT authentication.
 // The verified envelope must be constructed by the trusted LTI verifier,
 // never accepted from user input or a browser API.
-export function projectVerifiedLtiResourceLaunch({verified,registration,binding}){
+export function projectVerifiedLtiResourceLaunch({verified,registration,binding,allowInsecureLocal=false}){
   if(verified?.verifier!=='server-verified-lti-1.3')
     throw new Error('LTI authentication must precede P2LRN launch mapping');
   const claims=obj(verified.claims);
@@ -74,7 +74,7 @@ export function projectVerifiedLtiResourceLaunch({verified,registration,binding}
   const issuer=str(reg.issuer,'registration.issuer');
   const clientId=str(reg.clientId,'registration.clientId');
   const deploymentId=str(reg.deploymentId,'registration.deploymentId');
-  const launchUrl=httpsUrl(reg.launchUrl,'registration.launchUrl');
+  const launchUrl=httpsUrl(reg.launchUrl,'registration.launchUrl',allowInsecureLocal);
   if(claims.iss!==issuer)throw new Error('Unexpected LTI issuer');
   const audiences=Array.isArray(claims.aud)?claims.aud:[claims.aud];
   if(!audiences.includes(clientId))throw new Error('Unexpected LTI audience');
