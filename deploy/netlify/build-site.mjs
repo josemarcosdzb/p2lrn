@@ -362,7 +362,7 @@ const connectorDocs = [
   ['', ['Conectores e integración', 'ChatGPT, Claude y Grok', 'IA local', 'Plataformas LMS', 'LTI 1.3']],
   ['ia', ['ChatGPT', 'Claude', 'Grok', 'P2LRN_MCP_WRITE', 'HTTPS']],
   ['local', ['Conectar-P2LRN.cmd', 'stdio', 'Cursor', 'Windsurf', 'Ollama']],
-  ['lms', ['Moodle', 'Canvas', 'Sakai', 'Chamilo', 'Open edX', 'AulaP2P']],
+  ['lms', ['Moodle', 'Canvas', 'Sakai', 'Chamilo', 'Open edX']],
   ['lti', ['OIDC', 'JWKS', 'Deep Linking', 'AGS', 'NRPS', 'no se han certificado']],
 ];
 const [connectorNavigation,connectorSitemap,connectorHome] = await Promise.all([
