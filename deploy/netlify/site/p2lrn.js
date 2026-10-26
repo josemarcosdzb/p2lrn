@@ -2,6 +2,56 @@
   const SUPABASE_URL = 'https://yurtnmtesugykrqtujdx.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_cmC0leUeJtwzXrZb7nUn1Q_xdYoAKfH';
 
+  const removeInjectedNetlifyBranding = () => {
+    const removeCandidate = (node) => {
+      if (!(node instanceof Element)) return;
+      const tag = node.tagName.toLowerCase();
+      const id = String(node.id || '').toLowerCase();
+      const cls = String(node.className || '').toLowerCase();
+      const aria = String(node.getAttribute?.('aria-label') || '').toLowerCase();
+      const title = String(node.getAttribute?.('title') || '').toLowerCase();
+      const src = String(node.getAttribute?.('src') || '').toLowerCase();
+      const marker = tag === 'netlify-toolbar' || id === 'netlify-toolbar' || node.hasAttribute?.('data-netlify-toolbar');
+      const netlifyFrame = tag === 'iframe' && (title.includes('netlify') || src.includes('netlify'));
+      const toolbarLike = (id.includes('netlify') || cls.includes('netlify') || aria.includes('netlify')) && (() => {
+        const style = window.getComputedStyle(node);
+        return style.position === 'fixed' || style.position === 'sticky';
+      })();
+      if (marker || netlifyFrame || toolbarLike) {
+        node.remove();
+        return;
+      }
+      const ownText = String(node.textContent || '').replace(/\s+/g,' ').trim();
+      if (ownText === 'Powered by Netlify') {
+        let target = node;
+        for (let i=0;i<5 && target.parentElement;i++) {
+          const parent = target.parentElement;
+          const style = window.getComputedStyle(parent);
+          const rect = parent.getBoundingClientRect();
+          target = parent;
+          if ((style.position === 'fixed' || style.position === 'sticky') && rect.width < 360 && rect.height < 140) break;
+        }
+        target.remove();
+      }
+    };
+    document.querySelectorAll('netlify-toolbar,#netlify-toolbar,[data-netlify-toolbar],iframe,[aria-label*="Netlify" i],[id*="netlify" i],[class*="netlify" i]').forEach(removeCandidate);
+    document.querySelectorAll('a,button,div,span').forEach((node) => {
+      if (String(node.textContent || '').replace(/\s+/g,' ').trim() === 'Powered by Netlify') removeCandidate(node);
+    });
+  };
+
+  removeInjectedNetlifyBranding();
+  const netlifyBrandingObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof Element)) continue;
+        removeInjectedNetlifyBranding();
+        return;
+      }
+    }
+  });
+  netlifyBrandingObserver.observe(document.documentElement,{childList:true,subtree:true});
+
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
