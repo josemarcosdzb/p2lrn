@@ -178,6 +178,36 @@ async function renderEditor(){
   const content=document.createElement('div');content.className='studio-content';sheet.append(content);
   editorStage.append(sheet);
 
+  if(entity.type==='course'){
+    const rights=document.createElement('section');rights.className='studio-rights';
+    const heading=document.createElement('h2');heading.textContent='Autoría y derechos';rights.append(heading);
+    const fields=document.createElement('div');fields.className='studio-rights-fields';
+    const rows=[
+      ['author','Autor del contenido'],
+      ['createdAt','Fecha de creación'],
+      ['license','Licencia · Condiciones de uso y distribución'],
+      ['copyrightHolder','Derechos de autor · Titular de los derechos']
+    ];
+    const values=studio.getCourseRights();
+    for(const [key,labelText] of rows){
+      const field=document.createElement('label');field.className='studio-rights-field';
+      const label=document.createElement('span');label.textContent=labelText;
+      const input=key==='license'?document.createElement('textarea'):document.createElement('input');
+      if(key==='createdAt')input.type='date';
+      else if(key!=='license')input.type='text';
+      if(key==='author'||key==='copyrightHolder')input.maxLength=300;
+      if(key==='license')input.maxLength=2000;
+      input.value=values[key]??'';
+      input.setAttribute('aria-label',labelText);
+      input.addEventListener('change',()=>{
+        try{studio.setCourseRights({[key]:input.value});updateChanges();}
+        catch(error){setStatus(error.message);}
+      });
+      field.append(label,input);fields.append(field);
+    }
+    rights.append(fields);content.append(rights);
+    return;
+  }
   if(entity.type!=='activity'){
     content.append(Object.assign(document.createElement('div'),{className:'studio-readonly',textContent:'Selecciona una actividad para editar su contenido. El título y la descripción de este nodo sí son editables.'}));
     return;

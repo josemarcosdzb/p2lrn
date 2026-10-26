@@ -160,3 +160,11 @@ html[data-studio-mode=preview] .studio-toolbar{position:static}
 .q-field--prompt,.q-field--wide{grid-column:1/-1}.q-prompt-input,.q-blank-template-editor{width:100%;min-width:0;box-sizing:border-box;border:1px solid #cfd5de;border-radius:6px;background:#fff;padding:10px 12px;font:500 .9rem/1.45 var(--sans);resize:vertical}.q-prompt-input{min-height:112px}.q-blank-template-editor{min-height:170px;font-family:var(--mono);line-height:1.55}.q-help{display:block;margin-top:2px;color:#667085;font-size:.75rem;line-height:1.4}.q-blank-convert{justify-self:start;font-weight:700}.q-blank-row{grid-template-columns:auto minmax(0,1fr) auto}.q-field--mode{max-width:360px}
 
 .q-tf-mode{max-width:420px}.q-tf-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px;border:1px solid #e1e5eb;border-radius:8px;background:#fafbfc}.q-tf-number{font:700 .72rem/1 var(--mono);color:#667085}.q-tf-statement-input{width:100%;min-height:64px;box-sizing:border-box;border:1px solid #cfd5de;border-radius:6px;padding:8px 10px;font:500 .82rem/1.4 var(--sans);resize:vertical}.q-tf-answer{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.q-tf-answer-option{display:flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid #d0d5dd;border-radius:7px;background:#fff;font-size:.78rem}.q-tf-answer-option input{margin:0}@media(max-width:900px){.q-tf-row{grid-template-columns:auto minmax(0,1fr)}.q-tf-answer,.q-tf-row>.q-danger{grid-column:2}}
+
+/* Autoría y derechos del curso: los cuatro campos portables de P2LRN */
+.studio-rights{padding:18px;border:1px solid #d9dee7;border-radius:12px;background:#f8fafc;max-width:100%}
+.studio-rights h2{margin:0 0 14px;font:700 1rem/1.4 var(--sans,system-ui);color:#273449}
+.studio-rights-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.studio-rights-field{display:grid;gap:6px;min-width:0;font:600 .78rem/1.35 var(--sans,system-ui);color:#475467}
+.studio-rights-field input,.studio-rights-field textarea{box-sizing:border-box;width:100%;min-width:0;padding:10px 11px;border:1px solid #cfd5de;border-radius:8px;background:#fff;color:#101828;font:400 .88rem/1.5 var(--sans,system-ui)}
+.studio-rights-field textarea{min-height:70px;resize:vertical}

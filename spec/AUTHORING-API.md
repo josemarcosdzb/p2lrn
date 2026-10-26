@@ -36,3 +36,13 @@ The editable API is course-oriented: one primary course entrypoint and one match
 `packages/toolkit/config/authoring-capabilities.json` distinguishes `author`, `openRebuild`, `transformExternal`, `validate`, `read`, `preserve` and `deliver`.
 
 Alpha15 `.p2rln` inputs reuse canonical `p2lrn-repack --canonicalize-identifiers` before authoring materialization. Legacy Creator workspaces use explicit 0.1/0.2 -> 0.3 migration: canonical `p2lrn.project.json` is written and validated first, then the historical `p2rln.project.json` alias is removed so one editable authority remains.
+
+## Course authorship and rights
+
+`workspace.setCourseRights({author?,createdAt?,license?,copyrightHolder?})` edits the portable
+`https://p2lrn.org/ext/course-rights/1` extension on the course only. For new native courses,
+`createdAt` defaults to the original creation day; imported packages retain their existing value
+or absence. Clear an individual value with `null`. Creator CLI supports
+`p2lrn-create set-rights workspace --author "..." --created-at YYYY-MM-DD --license "..." --copyright-holder "..."`
+and the same optional flags on `init`. Studio and Player use the same extension and the Reader
+shows it directly. The schema exposes no other fields.

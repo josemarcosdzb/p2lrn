@@ -320,3 +320,21 @@ LMS-specific import/export behavior is separated from Core by `spec/ADAPTER-CONT
 ## Reading System separation
 
 Core defines portable data, not an embedded executable. A conforming ecosystem SHOULD provide a P2LRN Reading System capable of opening `.p2lrn` directly. Reader behavior, runtime delegation and the no-network-on-open boundary are specified in `READING-SYSTEM.md`.
+
+## Optional Course authorship and rights metadata
+
+The course entity may declare the optional extension `https://p2lrn.org/ext/course-rights/1`, whose
+value conforms to `schemas/course-rights.schema.json`. Its only four properties are:
+
+- `author`: author of the educational content;
+- `createdAt`: original creation date of the content, Gregorian `YYYY-MM-DD`;
+- `license`: terms of use and distribution;
+- `copyrightHolder`: copyright owner.
+
+There is no tool-generated attribution field. These values describe the **content**, not a particular
+export event, technical generator, LMS account, runtime, or software. The extension lives only on
+the course entity and is protected by the graph's existing digests and `contentRoot`. The Core
+manifest schema is unchanged. Missing metadata in older packages must remain missing, rather than
+being inferred from the current export time, filename, or account. Editing or importing must preserve
+the original values unless a user explicitly changes them. SHA-256 integrity is not evidence of the
+author's identity.

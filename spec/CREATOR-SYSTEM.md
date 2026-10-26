@@ -195,3 +195,11 @@ p2lrn-create upgrade workspace
 The migration validates both the source and target contracts, writes canonical `p2lrn.project.json` 0.3.0, and leaves the historical project file in place. `creatorMetadataVersion` is retained as a compatibility baseline for the emitted Creator extension so a no-op workspace-schema upgrade does not itself modify `contentRoot`.
 
 Opening an Alpha15 P2RLN package follows a different path: the already-authoritative canonical repack algorithm first normalizes P2RLN-owned JSON/paths/digests to P2LRN, then the normal P2LRN authoring importer materializes the workspace. External package payloads remain opaque and byte-preserved.
+
+## Course rights and author metadata
+
+For portable author attribution, add the four optional values `author`, `createdAt` (YYYY-MM-DD),
+`license` and `copyrightHolder` via `setCourseRights` or the CLI `set-rights` command.
+Creator stores them under `course.extensions["https://p2lrn.org/ext/course-rights/1"]`.
+Do not change existing author/date/license information when exporting a package again. A new
+workspace sets its original creation day once and preserves it on subsequent builds.
