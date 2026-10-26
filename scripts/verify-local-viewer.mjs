@@ -458,6 +458,36 @@ async function prepareGameFixtures(){
     const exported=await exportP2LRNPackage(doc);
     await writeFile(join(siteRoot,'examples','game-ui-'+kind+'.p2lrn'),exported.bytes);
   }
+
+  // One exported 3D package exercises all three native modes in sequence,
+  // including saved partial state when navigating between trials.
+  const threeDoc=createP2LRNStudioDocument({title:'Curso QA 3D',language:'es'});
+  const unit=threeDoc.children(threeDoc.rootId)[0];
+  const threePayload={
+    schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',
+    version:'0.4.0',title:'Laboratorio 3D QA',language:'es',
+    grading:{mode:'embedded-key'},
+    presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'after-submit'},
+    questions:[
+      {id:'q-order',type:'ordering',prompt:'Ordena los tres bloques',points:1,
+        items:[{id:'o1',text:'Primero'},{id:'o2',text:'Segundo'},{id:'o3',text:'Tercero'}],
+        solution:{order:['o1','o2','o3']}},
+      {id:'q-match',type:'matching',prompt:'Relaciona país y capital',points:1,
+        left:[{id:'l1',text:'España'},{id:'l2',text:'Francia'},{id:'l3',text:'Italia'}],
+        right:[{id:'r1',text:'Madrid'},{id:'r2',text:'París'},{id:'r3',text:'Roma'}],
+        solution:{pairs:[{left:'l1',right:'r1'},{left:'l2',right:'r2'},{left:'l3',right:'r3'}]}},
+      {id:'q-class',type:'classification',prompt:'Clasifica los objetos',points:1,
+        items:[{id:'c1',text:'Triángulo'},{id:'c2',text:'Círculo'}],
+        categories:[{id:'g1',text:'Tres lados'},{id:'g2',text:'Sin lados'}],
+        solution:{assignments:[{item:'c1',category:'g1'},{item:'c2',category:'g2'}]}}
+    ]
+  };
+  const threeRenderer='https://p2lrn.org/renderer/questionnaire/3d-order-match';
+  const compiled3D=buildQuestionnaireGame(threePayload,threeRenderer,{seedSource:'real-three-game-regression'});
+  invariant(compiled3D.compatible,'3D game modes must be compatible: '+JSON.stringify(compiled3D.reasons));
+  threeDoc.addQuestionnaire(unit.id,{title:'Laboratorio 3D QA',language:'es',renderer:threeRenderer,payload:threePayload});
+  const exported3D=await exportP2LRNPackage(threeDoc);
+  await writeFile(join(siteRoot,'examples','game-ui-3d-mixed.p2lrn'),exported3D.bytes);
 }
 
 async function verifyGameLayout(cdp,kind){
