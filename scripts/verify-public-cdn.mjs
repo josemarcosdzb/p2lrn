@@ -172,11 +172,37 @@ async function startBrowser(){
         document.querySelector('[data-add-lesson]').click();
         await wait(()=>tree.querySelectorAll('button').length>after,'new lesson');
         const titles=tree.textContent;
+        // A whole unit must not create a second Player navigation next to
+        // Studio's own outline. Exercise this against the actual public URL.
+        const unit=[...tree.querySelectorAll('button')].find(button=>button.querySelector('.type')?.textContent==='unit');
+        if(!unit)throw new Error('Public Studio did not create a navigable unit.');
+        const unitId=unit.dataset.entityId;
+        unit.click();
+        await wait(()=>document.querySelector('.studio-readonly'),'select whole unit');
+        document.querySelector('[data-mode-preview]').click();
+        const unitPlayer=await wait(()=>{
+          const p=document.querySelector('p2lrn-player[data-player]');
+          return p?.getAttribute('node')===unitId&&p.shadowRoot?.querySelector('.p2lrn-stage iframe')?p:null;
+        },'unit Player HTML preview');
+        const shadow=unitPlayer.shadowRoot,layout=shadow.querySelector('.p2lrn-layout'),stage=shadow.querySelector('.p2lrn-stage');
+        const unitPreview={
+          node:unitId,navCount:shadow.querySelectorAll('.p2lrn-nav').length,
+          navigation:unitPlayer.getAttribute('navigation'),
+          layoutWidth:layout?.getBoundingClientRect().width,
+          stageWidth:stage?.getBoundingClientRect().width,
+          hostOutlineItems:tree.querySelectorAll('button').length
+        };
+        if(unitPreview.navCount!==0||unitPreview.navigation!=='external'||!layout?.classList.contains('p2lrn-layout-external')||
+           unitPreview.stageWidth+2<unitPreview.layoutWidth)
+          throw new Error('Duplicated navigation or narrowed unit on public Studio: '+JSON.stringify(unitPreview));
+        console.log('PUBLIC_LIVE_UNIT_SINGLE_OUTLINE',JSON.stringify(unitPreview));
         document.querySelector('[data-export]').click();
         await wait(()=>document.querySelector('[data-studio-status]')?.textContent?.includes('exportado y verificado'),'download from Studio');
-        return {status:'PASS',url:location.href,tree:titles.slice(0,1000),editorVisible:!document.querySelector('[data-workspace]').hidden,downloadInitiated:true};
+        return {status:'PASS',url:location.href,tree:titles.slice(0,1000),editorVisible:!document.querySelector('[data-workspace]').hidden,downloadInitiated:true,unitPreview};
       });
       assert.equal(browserInfo.studio.status,'PASS');
+      browserInfo.screenshots.push(await screenshot('live-studio-unit-single-outline'));
+      await evaluate(()=>{document.querySelector('[data-mode-edit]').click();return true;});
       browserInfo.screenshots.push(await screenshot('live-studio-desktop'));
       await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
       browserInfo.screenshots.push(await screenshot('live-studio-mobile'));

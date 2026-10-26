@@ -246,7 +246,7 @@ jobs:
         run: node scripts/verify-local-viewer.mjs
 
   toolkit-and-cdn:
-    if: ${{ !contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
+    if: ${{ !contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !contains(github.event.head_commit.message, '[verify live CDN]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
@@ -573,6 +573,7 @@ jobs:
       - name: Download live .p2lrn and exercise published Studio and Player with Chrome
         env:
           P2LRN_PUBLIC_ORIGIN: https://p2lrn.netlify.app
+          P2LRN_PUBLIC_CDN_NO_WAIT: '1'
         run: node scripts/verify-public-cdn.mjs
 
   local-viewer-revision:
