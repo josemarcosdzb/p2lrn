@@ -138,6 +138,14 @@ const allHtmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.htm
 const htmlFiles = allHtmlFiles.filter((path)=>!isCorrespondingSourcePath(path));
 
 const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
+const brandHead = [
+  '<link rel="icon" type="image/png" sizes="96x96" href="/favicon.png?v=p2lrn-brand-20261027">',
+  '<link rel="shortcut icon" type="image/png" href="/favicon.png?v=p2lrn-brand-20261027">',
+  '<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=p2lrn-brand-20261027">',
+  '<link rel="manifest" href="/site.webmanifest">',
+  '<meta property="og:image" content="https://p2lrn.netlify.app/p2lrn-mark.png">',
+  '<meta name="twitter:image" content="https://p2lrn.netlify.app/p2lrn-mark.png">'
+].join('');
 for (const htmlPath of htmlFiles) {
   let html = await readFile(htmlPath,'utf8');
   html = html.replaceAll('0.5.0-alpha.10',productionPublicVersion);
@@ -147,8 +155,22 @@ for (const htmlPath of htmlFiles) {
   html = html.replace(/<span\s+[^>]*data-footer-version(?:=["'][^"']*["'])?[^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-release-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-build-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
+  if (!html.includes('/favicon.png?v=p2lrn-brand-20261027')) {
+    html = html.replace(/<\/head>/i,brandHead + '</head>');
+  }
   await writeFile(htmlPath,html);
 }
+const brandAssets=['p2lrn-mark.png','favicon.png','apple-touch-icon.png','site.webmanifest'];
+for (const asset of brandAssets) {
+  if (!(await exists(join(outputRoot,asset)))) throw new Error('Missing brand asset: ' + asset);
+}
+for (const htmlPath of htmlFiles) {
+  const html=await readFile(htmlPath,'utf8');
+  for (const required of ['/favicon.png?v=p2lrn-brand-20261027','/apple-touch-icon.png?v=p2lrn-brand-20261027','/site.webmanifest']) {
+    if (!html.includes(required)) throw new Error('Missing brand metadata in ' + relative(outputRoot,htmlPath) + ': ' + required);
+  }
+}
+
 // Never remove stateful UI controls when stripping decorative website metadata.
 const functionalPages=[
   {path:['studio','index.html'],markers:['data-functional-status','data-studio-status','data-player','data-mode-preview','data-mode-edit']},

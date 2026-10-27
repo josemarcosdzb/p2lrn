@@ -35,10 +35,32 @@ code{font-family:var(--mono)}
   border-bottom:1px solid var(--line);
 }
 .brand{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
   font-weight:900;
   letter-spacing:-.04em;
   text-decoration:none;
   font-size:1.18rem;
+}
+.brand::before{
+  content:"";
+  width:28px;
+  height:28px;
+  flex:0 0 28px;
+  background:url("/p2lrn-mark.png?v=p2lrn-brand-20261027") center/contain no-repeat;
+}
+footer>strong{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+}
+footer>strong::before{
+  content:"";
+  width:20px;
+  height:20px;
+  flex:0 0 20px;
+  background:url("/p2lrn-mark.png?v=p2lrn-brand-20261027") center/contain no-repeat;
 }
 .nav{
   display:flex;
