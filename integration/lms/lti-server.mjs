@@ -109,7 +109,7 @@ function playerHtml({entityId,csrf,playerScript}){
  'resolveResourceUrl:async()=>null});',
  'const resp=await fetch(api+"/package",{credentials:"same-origin",cache:"no-store"});',
  'if(!resp.ok)throw Error("Paquete no disponible: "+resp.status);',
- 'const blob=await resp.blob();const src=URL.createObjectURL(blob);player.src=src;',
+ 'const blob=await resp.blob();const src=URL.createObjectURL(blob);player.setAttribute("src",src);',
  'window.addEventListener("pagehide",()=>URL.revokeObjectURL(src),{once:true});',
  'status.textContent="";',
  '}main().catch(e=>{status.textContent="No se pudo cargar P2LRN: "+String(e.message||e)});})();'
