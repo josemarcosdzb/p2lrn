@@ -36,9 +36,8 @@ for(const [route,prev,next] of branches){
 
 const connectorFlow=[
   ['/docs/conectores/','/docs/integracion/','/docs/conectores/ia/'],
-  ['/docs/conectores/ia/','/docs/conectores/','/docs/conectores/local/'],
-  ['/docs/conectores/local/','/docs/conectores/ia/','/docs/conectores/lms/'],
-  ['/docs/conectores/lms/','/docs/conectores/local/','/docs/conectores/lti/'],
+  ['/docs/conectores/ia/','/docs/conectores/','/docs/conectores/lms/'],
+  ['/docs/conectores/lms/','/docs/conectores/ia/','/docs/conectores/lti/'],
   ['/docs/conectores/lti/','/docs/conectores/lms/','/docs/conectores/'],
 ];
 for(const [route,prev,next] of connectorFlow){
