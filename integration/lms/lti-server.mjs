@@ -134,8 +134,13 @@ function contextFor(body,session){
 }
 function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
  if(!reg||typeof reg!=='object')throw new TypeError('LTI platform JSON object required');
- if(reg.launchUrl!==baseUrl+'/lti/launch'||(reg.deepLinkLaunchUrl&&reg.deepLinkLaunchUrl!==baseUrl+'/lti/deep-link'))
-  throw new Error('LTI launch URL must match this independent P2LRN server');
+ const direct=reg.launchUrl===baseUrl+'/lti/launch'&&(!reg.deepLinkLaunchUrl||reg.deepLinkLaunchUrl===baseUrl+'/lti/deep-link');
+ const localCohost=allowInsecureLocal&&new URL(baseUrl).protocol==='http:'&&
+  new URL(reg.issuer).protocol==='http:'&&
+  reg.launchUrl===new URL(reg.issuer).origin+'/lti/launch'&&
+  (!reg.deepLinkLaunchUrl||reg.deepLinkLaunchUrl===new URL(reg.issuer).origin+'/lti/deep-link');
+ if(!direct&&!localCohost)
+  throw new Error('LTI launch URL must match this independent P2LRN server or its registered LMS-origin local proxy');
  for(const v of [reg.issuer,reg.authUrl,reg.tokenUrl,...(reg.deepLinkReturnOrigins||[])])
   if(!(new URL(v).protocol==='https:'||(allowInsecureLocal&&new URL(v).protocol==='http:'&&/^(localhost|127\.0\.0\.1|(?:[a-z0-9-]+\.)+localhost)$/.test(new URL(v).hostname))))throw new Error('LTI platform endpoints must use HTTPS outside the local test lab');
  return reg;
@@ -157,6 +162,19 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  // Never enable it on a public hostname or without allowInsecureLoopback.
  const localHttp=!secure&&allowInsecureLoopback;
  const crossSiteCookie=secure||localHttp;
+ const localHost=/^(localhost|127\.0\.0\.1|(?:[a-z0-9-]+\.)+localhost)$/;
+ function originForRequest(req){
+  const host=valid(req.headers.host,'HTTP Host',255);
+  const parsed=new URL('http://'+host);
+  if(!localHost.test(parsed.hostname)||parsed.username||parsed.password||parsed.pathname!=='/'||parsed.search||parsed.hash)
+   throw new Error('UNAPPROVED_LTI_LOCAL_HOST');
+  return parsed.origin;
+ }
+ function checkLocalCohost(req,target){
+  if(localHttp&&new URL(target).origin!==baseOrigin&&originForRequest(req)!==new URL(target).origin)
+   throw new Error('LTI_LOCAL_HOST_MISMATCH');
+ }
+ const isLmsCohost=(reg,target)=>localHttp&&new URL(reg.issuer).origin===new URL(target).origin;
  const root=resolve(dataDir),packages=join(root,'packages');
  mkdirSync(packages,{recursive:true});
  const store=createLtiStore(join(root,'lti.sqlite'));
@@ -179,7 +197,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   const hash=digest(String(value||''));
   const s=store.getSession(hash);
   if(!s)throw new Error('SESSION_EXPIRED');
-  if(csrf)csrfGuard(req,s,canonicalBase);
+  const reg=store.getRegistrationById(s.registrationId);
+  if(!reg||reg.status!=='ACTIVE')throw new Error('SESSION_PLATFORM_REVOKED');
+  checkLocalCohost(req,reg.launchUrl);
+  if(csrf)csrfGuard(req,s,new URL(reg.launchUrl).origin);
   return s;
  }
  async function deliver(id){
@@ -214,8 +235,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     if(typeof incomingCookie==='string'&&/^[A-Za-z0-9_-]{32,128}$/.test(incomingCookie))
      binding=incomingCookie;
     const result=await provider.beginLogin({login,browserBinding:binding});
+    checkLocalCohost(req,login.target_link_uri);
+    const cohost=isLmsCohost({issuer:login.iss},login.target_link_uri);
     res.writeHead(302,{'Location':result.authorizationUrl,
-     'Set-Cookie':crossSiteCookie?[secureCookie(oidcCookie,binding,true,3600),secureCookie(oidcCookie+'-partitioned',binding,true,3600,true)]:secureCookie(oidcCookie,binding,false,3600),'Cache-Control':'no-store',
+     'Set-Cookie':cohost?secureCookie(oidcCookie,binding,false,3600):crossSiteCookie?[secureCookie(oidcCookie,binding,true,3600),secureCookie(oidcCookie+'-partitioned',binding,true,3600,true)]:secureCookie(oidcCookie,binding,false,3600),'Cache-Control':'no-store',
      'Referrer-Policy':'no-referrer'});return res.end();
    }
    if(method==='POST'&&(path==='/lti/launch'||path==='/lti/deep-link')){
@@ -225,6 +248,9 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      browserBinding:browserId(req)
     });
     const inspected=provider.inspectVerifiedLaunch(verified);
+    const expectedTarget=verified.kind==='deep-link'?(inspected.registration.deepLinkLaunchUrl||inspected.registration.launchUrl):inspected.registration.launchUrl;
+    checkLocalCohost(req,expectedTarget);
+    const cohost=isLmsCohost(inspected.registration,expectedTarget);
     const ancestor=new URL(inspected.registration.issuer).origin;
     if(verified.kind==='deep-link'){
      if(path!=='/lti/deep-link')throw new Error('WRONG_LTI_TARGET');
@@ -251,7 +277,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       playerScript:'/lti/assets/player/p2lrn.js'})
       .replace('__CSP_NONCE__',html(cspNonce));
     return sendHtml(res,200,body,policy(cspNonce,ancestor),
-      {'Set-Cookie':localHttp?[
+      {'Set-Cookie':cohost?secureCookie(sessionCookie,token,false,3600):localHttp?[
        secureCookie(sessionCookie,token,true,3600),
        secureCookie(sessionCookie+'-partitioned',token,true,3600,true)
       ]:secureCookie(sessionCookie,token,secure,3600,true)});
@@ -260,6 +286,9 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     const formData=input(await readBody(req,32768),req);
     const entry=store.consumePicker(digest(valid(formData.ticket,'picker ticket',128)));
     if(!entry)throw new Error('PICKER_EXPIRED');
+    const pickerReg=store.getRegistrationById(entry.registrationId);
+    if(!pickerReg||pickerReg.status!=='ACTIVE')throw new Error('PICKER_PLATFORM_REVOKED');
+    checkLocalCohost(req,pickerReg.deepLinkLaunchUrl||pickerReg.launchUrl);
     const c=store.getCatalog(valid(formData.catalogId,'catalogId',128),entry.tenantId);
     const node=valid(formData.entityId,'entityId',2048);
     if(!c||!JSON.parse(c.entities_json).some(e=>e.id===node))

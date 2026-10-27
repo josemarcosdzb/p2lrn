@@ -72,6 +72,42 @@ es necesaria.
 
 
 
+### Modo recomendado si un LMS incrusta P2LRN: mismo origen HTTP local
+
+Chrome 142+ aplica **Local Network Access** a algunos iframes entre
+orígenes `localhost`. Aunque el proveedor HTTP y las cookies funcionen
+por separado, la navegación al iframe puede bloquearse. Para evitar
+advertencias, banderas inseguras y permisos adicionales del navegador, el
+proxy local debe servir los endpoints de P2LRN bajo el **mismo origen que
+el LMS**, sin cambiar el código ni la base de datos de P2LRN.
+
+Por ejemplo, sobre las instancias QA existentes:
+
+- Moodle: `http://jose-moodle-qa-20261017.localhost/lti/launch`
+- Chamilo: `http://chamilojose.localhost/lti/launch`
+- Sakai: `http://josesakai.localhost/lti/launch`
+
+En cada bloque de sitio de Caddy (escuchando solo en `127.0.0.1:80`),
+enrutar `/lti/login`, `/lti/launch`, `/lti/deep-link`,
+`/lti/deep-link/confirm`, `/lti/assets/*`, `/lti/runtime/*`,
+`/lti/jwks` y `/lti/health` al contenedor
+`p2lrn-lti-provider:37891`. El resto de las rutas siguen apuntando
+al LMS. **No exponer `/lti/admin/*` en los nombres del LMS.**
+
+Registrar en P2LRN una `launchUrl` y una `deepLinkLaunchUrl` diferentes
+para cada LMS, siempre dentro del mismo origen que el emisor (`issuer`)
+registrado. Se mantiene un único proceso y una sola base de datos P2LRN.
+La excepción de múltiples orígenes está restringida a
+`P2LRN_LTI_DEV_INSECURE=true`, HTTP y `localhost`. P2LRN comprueba el
+`Host` del lanzamiento contra el registro LMS y ata las sesiones y el
+CSRF al origen autorizado.
+
+En este modo las cookies de inicio y sesión son host-only, `SameSite=Lax`
+y no necesitan `Secure`, porque el LMS y el contenido están en el mismo
+origen HTTP. Para instalaciones reales, los LMS pueden seguir separados
+y el proveedor utiliza su HTTPS oficial.
+
+
 ## Configuración de herramienta en cualquier LMS
 
 En la interfaz del LMS, crear una herramienta externa LTI 1.3 con estas URLs:

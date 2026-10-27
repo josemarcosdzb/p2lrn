@@ -76,8 +76,8 @@ export function createLtiStore(filename){
   }catch(e){db.exec('ROLLBACK');throw e;}
  }
  function getSession(hash){
-  const r=sql("SELECT s.csrf_hash,s.expires_at,a.*,b.entity_id,c.package_id,c.content_root,c.entities_json,c.filename,c.bytes FROM sessions s JOIN attempts a ON a.id=s.attempt_id JOIN bindings b ON b.id=a.binding_id JOIN catalog c ON c.id=b.catalog_id WHERE s.token_hash=? AND s.expires_at>? AND s.revoked_at IS NULL AND a.status='IN_PROGRESS' AND b.status='PUBLISHED' AND c.status='PUBLISHED'").get(hash,t());
-  return r?{attemptId:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,subject:r.subject,ags:P(r.ags_json),packageId:r.package_id,contentRoot:r.content_root,entityId:r.entity_id,entities:P(r.entities_json),filename:r.filename,bytes:r.bytes,csrfHash:r.csrf_hash,expiresAt:r.expires_at}:null;
+  const r=sql("SELECT s.csrf_hash,s.expires_at,a.*,b.registration_id,b.entity_id,c.package_id,c.content_root,c.entities_json,c.filename,c.bytes FROM sessions s JOIN attempts a ON a.id=s.attempt_id JOIN bindings b ON b.id=a.binding_id JOIN catalog c ON c.id=b.catalog_id WHERE s.token_hash=? AND s.expires_at>? AND s.revoked_at IS NULL AND a.status='IN_PROGRESS' AND b.status='PUBLISHED' AND c.status='PUBLISHED'").get(hash,t());
+  return r?{attemptId:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,registrationId:r.registration_id,subject:r.subject,ags:P(r.ags_json),packageId:r.package_id,contentRoot:r.content_root,entityId:r.entity_id,entities:P(r.entities_json),filename:r.filename,bytes:r.bytes,csrfHash:r.csrf_hash,expiresAt:r.expires_at}:null;
  }
  const getState=(a,e,s)=>{const r=sql('SELECT value_json,revision FROM snapshots WHERE attempt_id=? AND entity_id=? AND surface=?').get(a,e,s);return r?{value:P(r.value_json),revision:r.revision}:{value:null,revision:0};};
  function saveState(a,e,s,v,expectedRevision){
