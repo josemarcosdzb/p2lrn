@@ -1,5 +1,6 @@
 import {P2LRNStudioDocument} from './runtime/authoring-document.js';
 import {exportP2LRNPackage} from './runtime/package-export.js';
+import {exportOfflineAssignmentBundle,parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
 import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
@@ -30,6 +31,15 @@ const changeCount=document.querySelector('[data-change-count]');
 const editButton=document.querySelector('[data-mode-edit]');
 const previewButton=document.querySelector('[data-mode-preview]');
 const exportButton=document.querySelector('[data-export]');
+const offlineButton=document.querySelector('[data-export-offline]');
+const offlineDialog=document.querySelector('[data-offline-dialog]');
+const offlineForm=document.querySelector('[data-offline-form]');
+const offlineError=document.querySelector('[data-offline-error]');
+const offlineGenerate=document.querySelector('[data-offline-generate]');
+const offlineResultButton=document.querySelector('[data-review-offline]');
+const offlineResultInput=document.querySelector('[data-offline-result-file]');
+const offlineReviewDialog=document.querySelector('[data-offline-review-dialog]');
+const offlineReviewContent=document.querySelector('[data-offline-review-content]');
 const blockSelect=document.querySelector('[data-block]');
 const fontFamily=document.querySelector('[data-font-family]');
 const fontSize=document.querySelector('[data-font-size]');
@@ -461,13 +471,81 @@ async function discardLocalDraft(){
   if(draftMenu)draftMenu.hidden=true;
   setStatus('Borrador local eliminado');
 }
+
+function downloadStudioBytes(bytes,filename,type){
+  const url=URL.createObjectURL(new Blob([bytes],{type}));
+  const anchor=document.createElement('a');
+  anchor.href=url;anchor.download=filename;document.body.append(anchor);anchor.click();anchor.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+}
+async function generateOfflineDelivery(){
+  if(!studio)throw new Error('Crea o abre un curso antes de generar una entrega.');
+  const details=new FormData(offlineForm);
+  const deliveryFormat=String(details.get('deliveryFormat')||'windows-single');
+  if(!['windows-single','portable-zip'].includes(deliveryFormat))throw new Error('Formato de entrega no reconocido.');
+  const minutes=String(details.get('durationMinutes')||'').trim();
+  const options={
+    runtimeBaseUrl:new URL('/player/current/dist/',document.baseURI).href,
+    participantLabel:String(details.get('participantLabel')||'').trim(),
+    availableFrom:String(details.get('availableFrom')||'').trim()||null,
+    dueAt:String(details.get('dueAt')||'').trim()||null,
+    attemptDurationSeconds:minutes?Number(minutes)*60:null,
+    maxAttempts:Number(details.get('maxAttempts')||1),
+    allowResume:offlineForm.elements.namedItem('allowResume').checked,
+    activityTracking:offlineForm.elements.namedItem('activityTracking').checked,
+  };
+  setStatus('Verificando curso y preparando entrega offline…');
+  const bundle=await exportOfflineAssignmentBundle(studio,options);
+  const selected=deliveryFormat==='windows-single'
+    ? bundle.windowsLauncher
+    : {filename:bundle.filename,bytes:bundle.bytes};
+  downloadStudioBytes(selected.bytes,selected.filename,deliveryFormat==='windows-single'?'application/octet-stream':'application/zip');
+  exportedRevision=studio.changeCount;
+  updateChanges();
+  setStatus('Entrega offline preparada: '+selected.filename);
+  return selected.filename;
+}
+function addOfflineReviewRow(host,label,value){
+  const line=document.createElement('p');
+  const heading=document.createElement('strong');heading.textContent=label;
+  const detail=document.createElement('span');detail.textContent=String(value??'—');
+  line.append(heading,detail);host.append(line);
+}
+async function reviewOfflineDelivery(file){
+  if(!studio)throw new Error('Abre primero el curso original para comprobar su correspondencia.');
+  if(file.size>32*1024*1024)throw new Error('El archivo de resultados supera 32 MiB.');
+  setStatus('Comprobando resultado offline…');
+  const exported=await exportP2LRNPackage(studio);
+  const parsed=await parseOfflineAssignmentResult(await file.text(),{
+    expectedContentRoot:exported.manifest.integrity.contentRoot,
+  });
+  const content=offlineReviewContent;
+  content.replaceChildren();
+  addOfflineReviewRow(content,'Archivo',file.name);
+  addOfflineReviewRow(content,'SHA-256 del resultado',parsed.integrityValid?'Coincide':'NO coincide');
+  addOfflineReviewRow(content,'Curso original',parsed.courseMatches?'Coincide':'NO coincide');
+  addOfflineReviewRow(content,'Alumno',parsed.summary.participantLabel||'Sin identificar');
+  addOfflineReviewRow(content,'Intento',parsed.summary.attemptNumber);
+  const score=parsed.summary.latestScore?.normalized;
+  addOfflineReviewRow(content,'Puntuación',score==null?'Sin puntuación':Math.round(Number(score)*10000)/100+' %');
+  addOfflineReviewRow(content,'Respuestas',parsed.summary.answers.length);
+  addOfflineReviewRow(content,'Evaluaciones',parsed.summary.scores.length);
+  addOfflineReviewRow(content,'Eventos',parsed.summary.events.length);
+  addOfflineReviewRow(content,'Tiempo activo',Math.round(parsed.summary.activeTimeMs/1000)+' s');
+  addOfflineReviewRow(content,'Incidencias',parsed.summary.anomalies.length
+    ? parsed.summary.anomalies.map(item=>item.code||'Incidencia').join(', ') : 'Ninguna registrada');
+  const note=document.createElement('p');note.className='studio-offline-note';
+  note.textContent='El SHA-256 detecta cambios sin rehacer el digest, pero el resultado no lleva una firma digital de confianza. Los plazos sin conexión dependen del reloj del alumno.';
+  content.append(note);
+  offlineReviewDialog.showModal();
+  setStatus(parsed.integrityValid&&parsed.courseMatches?'Resultado offline comprobado':'Resultado offline: comprobar integridad o curso');
+}
+
 async function exportPackage(){
   if(!studio)return;
   setStatus('Construyendo paquete…');
   const exported=await buildVerifiedPreview();
-  const url=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
-  const anchor=document.createElement('a');anchor.href=url;anchor.download=exported.filename;document.body.append(anchor);anchor.click();anchor.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  downloadStudioBytes(exported.bytes,exported.filename,'application/vnd.p2lrn+zip');
   exportedRevision=studio.changeCount;
   updateChanges();
   setStatus('Paquete exportado y verificado');
@@ -530,6 +608,21 @@ backColor.addEventListener('input',()=>{syncColorButton(backColor);command('hili
 syncColorButton(foreColor);syncColorButton(backColor);
 document.addEventListener('selectionchange',()=>{if(activeEditable)captureSelection();});
 exportButton.addEventListener('click',()=>void exportPackage().catch((error)=>setStatus(error.message)));
+offlineButton?.addEventListener('click',()=>{offlineError.hidden=true;offlineError.textContent='';offlineDialog.showModal();});
+document.querySelector('[data-offline-cancel]')?.addEventListener('click',()=>offlineDialog.close());
+offlineForm?.addEventListener('submit',(event)=>{
+  event.preventDefault();
+  offlineError.hidden=true;offlineError.textContent='';offlineGenerate.disabled=true;
+  void generateOfflineDelivery().then(()=>offlineDialog.close()).catch((error)=>{
+    offlineError.textContent=String(error?.message||error);offlineError.hidden=false;setStatus('No se pudo generar la entrega offline');
+  }).finally(()=>{offlineGenerate.disabled=false;});
+});
+offlineResultButton?.addEventListener('click',()=>offlineResultInput.click());
+offlineResultInput?.addEventListener('change',()=>{
+  const file=offlineResultInput.files?.[0];offlineResultInput.value='';
+  if(file)void reviewOfflineDelivery(file).catch((error)=>setStatus('No se pudo revisar la entrega: '+error.message));
+});
+document.querySelector('[data-offline-review-close]')?.addEventListener('click',()=>offlineReviewDialog.close());
 saveDraftButton?.addEventListener('click',()=>void persistDraft().catch((error)=>setStatus('No se pudo guardar el borrador local: '+error.message)));
 recoverDraftButton?.addEventListener('click',()=>void recoverLatestDraft().catch((error)=>setStatus(error.message)));
 clearDraftButton?.addEventListener('click',()=>void discardLocalDraft().catch((error)=>setStatus(error.message)));

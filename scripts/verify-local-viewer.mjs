@@ -1232,7 +1232,82 @@ async function verifyStudioSiteUI(cdp){
   const mobileScreenshot=await captureVisualEvidence(cdp,'studio-website-mobile');
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
   invariant(cdp.exceptions.length===before,'Studio website threw in Chrome: '+JSON.stringify(cdp.exceptions.slice(before)));
-  return {suite:'studio-website-ui',...result,editorScreenshot,previewScreenshot,unitLayout,unitPreviewScreenshot,mobile,mobileScreenshot};
+  // Exercise both offline delivery formats through the independent public Studio website.
+  // The toolkit component has a separate offline E2E; these controls must also work here.
+  const offlineExportsDir=await mkdtemp(join(tmpdir(),'p2lrn-web-studio-offline-'));
+  let offlineWeb=null;
+  try{
+    await cdp.send('Page.setDownloadBehavior',{behavior:'allow',downloadPath:offlineExportsDir});
+    await evalTop(cdp,"document.querySelector('[data-create-course]').click();true");
+    await waitForEval(cdp,"document.querySelector('[data-studio-status]')?.textContent==='Curso nuevo listo para editar'",'fresh standalone Studio course');
+    const options=await evalTop(cdp,`(()=>{
+      const button=document.querySelector('[data-export-offline]'),review=document.querySelector('[data-review-offline]');
+      if(!button||!review)throw new Error('Standalone Studio offline controls missing');
+      button.click();
+      const dialog=document.querySelector('[data-offline-dialog]'),form=document.querySelector('[data-offline-form]');
+      return {open:dialog?.open,formats:[...(form?.elements.namedItem('deliveryFormat')?.options??[])].map(option=>option.value),
+        tries:form?.elements.namedItem('maxAttempts')?.value,reviewInput:!!document.querySelector('[data-offline-result-file]')};
+    })()`);
+    invariant(options.open&&options.formats.includes('windows-single')&&options.formats.includes('portable-zip')&&options.reviewInput,'Web Studio offline options are missing: '+JSON.stringify(options));
+    const offlineWebScreenshot=await captureElementVisualEvidence(cdp,'studio-web-offline-export-dialog',"document.querySelector('[data-offline-dialog]')",{maxHeight:1200});
+    await evalTop(cdp,"(()=>{const form=document.querySelector('[data-offline-form]');form.elements.namedItem('deliveryFormat').value='portable-zip';form.elements.namedItem('participantLabel').value='Alumno web';form.requestSubmit();return true})()");
+    const zipFile=await waitForDownloadedFile(offlineExportsDir,'.p2lrn-offline.zip',90000);
+    const zip=await readFile(zipFile);
+    invariant(zip.byteLength>100000&&zip[0]===0x50&&zip[1]===0x4b,'Standalone Studio offline ZIP is invalid or incomplete.');
+    await waitForEval(cdp,"!document.querySelector('[data-offline-dialog]').open",'standalone ZIP export completed');
+    await evalTop(cdp,"(()=>{document.querySelector('[data-export-offline]').click();const form=document.querySelector('[data-offline-form]');form.elements.namedItem('deliveryFormat').value='windows-single';form.requestSubmit();return true})()");
+    const cmdFile=await waitForDownloadedFile(offlineExportsDir,'.p2lrn-offline.cmd',90000);
+    const cmdText=(await readFile(cmdFile)).toString('utf8');
+    invariant(cmdText.startsWith('@echo off')&&cmdText.includes('__P2LRN_PAYLOAD__')&&cmdText.includes('powershell.exe')&&cmdText.length>100000,'Standalone Studio single-file Windows delivery is missing its embedded runtime.');
+    await waitForEval(cdp,"!document.querySelector('[data-offline-dialog]').open",'standalone CMD export completed');
+    const webReview=await evalTop(cdp,"(()=>({review:!!document.querySelector('[data-review-offline]'),fileInput:!!document.querySelector('[data-offline-result-file]'),status:document.querySelector('[data-studio-status]')?.textContent,dialogOpen:document.querySelector('[data-offline-dialog]')?.open}))()");
+    invariant(webReview.review&&webReview.fileInput&&!webReview.dialogOpen&&webReview.status?.includes('.p2lrn-offline.cmd'),'Standalone offline delivery completion did not update Studio status: '+JSON.stringify(webReview));
+
+    // Validate result review against a real course identity from the ZIP exported here.
+    function storedEntry(archive,name){
+      let offset=0;
+      while(offset+30<=archive.length&&archive.readUInt32LE(offset)===0x04034b50){
+        const size=archive.readUInt32LE(offset+18),nameLen=archive.readUInt16LE(offset+26),extra=archive.readUInt16LE(offset+28);
+        const start=offset+30,body=start+nameLen+extra,path=archive.subarray(start,start+nameLen).toString('utf8');
+        if(path===name)return archive.subarray(body,body+size);
+        offset=body+size;
+      }
+      throw new Error('Missing real ZIP entry '+name);
+    }
+    const exportedAssignment=JSON.parse(storedEntry(zip,'www/assignment.json').toString('utf8'));
+    const canonical=(v)=>{
+      if(v===null||typeof v==='boolean'||typeof v==='string'||typeof v==='number')return JSON.stringify(v);
+      if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';
+      return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';
+    };
+    const resultBody={schema:'https://p2lrn.org/schema/offline-result/1',version:'1',
+      assignment:{assignmentId:exportedAssignment.assignmentId,contentRoot:exportedAssignment.contentRoot,participantLabel:'Alumno web'},
+      runtime:{playerVersion:exportedAssignment.runtime.playerVersion},
+      attempt:{number:1,elapsedSeconds:27},summary:{latestScore:{normalized:.75}},
+      submission:{answers:[{entityId:'a',questionId:'q1',answer:{choiceIds:['choice-a']}}],scores:[]},
+      analytics:{events:[{type:'p2lrn:ready'}],activeTimeMs:10000},audit:{anomalies:[]}};
+    const validResult={...resultBody,integrity:{algorithm:'sha256',payloadDigest:'sha256:'+createHash('sha256').update(canonical(resultBody)).digest('hex')}};
+    async function openReview(data){
+      const payload=JSON.stringify(JSON.stringify(data));
+      const expression="(()=>{const file=new File(["+payload+"],'entrega-web.p2lrn-result',{type:'application/vnd.p2lrn-result+json'});const transfer=new DataTransfer();transfer.items.add(file);const input=document.querySelector('[data-offline-result-file]');input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));return true;})()";
+      await evalTop(cdp,expression);
+      return waitForEval(cdp,"(()=>{const dialog=document.querySelector('[data-offline-review-dialog]');return dialog?.open?dialog.querySelector('[data-offline-review-content]')?.textContent:null})()",'standalone Studio result-review dialog',16000);
+    }
+    const validText=await openReview(validResult);
+    invariant(validText.includes('SHA-256 del resultadoCoincide')&&validText.includes('Curso originalCoincide')&&validText.includes('Alumno web')&&validText.includes('75 %'),
+      'Standalone Studio did not accept a matching integrity-valid offline result: '+validText);
+    const reviewScreenshot=await captureElementVisualEvidence(cdp,'studio-web-offline-result-review-valid',"document.querySelector('[data-offline-review-dialog]')",{maxHeight:1000});
+    await evalTop(cdp,"document.querySelector('[data-offline-review-dialog]').close()");
+    const tampered=structuredClone(validResult);tampered.attempt.elapsedSeconds=71;
+    const invalidText=await openReview(tampered);
+    invariant(invalidText.includes('SHA-256 del resultadoNO coincide')&&invalidText.includes('Curso originalCoincide'),
+      'Standalone Studio failed to flag a deliberately tampered offline result: '+invalidText);
+    await evalTop(cdp,"document.querySelector('[data-offline-review-dialog]').close()");
+    offlineWeb={formats:options.formats,zip:{name:basename(zipFile),bytes:zip.byteLength},windowsSingle:{name:basename(cmdFile),bytes:Buffer.byteLength(cmdText)},
+      reviewAvailable:webReview.fileInput,matchingResultAccepted:true,tamperedResultRejected:true,screenshot:offlineWebScreenshot,reviewScreenshot};
+  }finally{await rm(offlineExportsDir,{recursive:true,force:true}).catch(()=>{});}
+  invariant(cdp.exceptions.length===before,'Standalone Studio offline export caused browser exceptions: '+JSON.stringify(cdp.exceptions.slice(before)));
+  return {suite:'studio-website-ui',...result,editorScreenshot,previewScreenshot,unitLayout,unitPreviewScreenshot,mobile,mobileScreenshot,offlineWeb};
 }
 
 async function prepareVisualStudioFixture(){

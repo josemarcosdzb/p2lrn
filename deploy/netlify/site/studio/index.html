@@ -88,9 +88,34 @@
         </div>
       </details>
       <button class="button primary" type="button" data-export>Exportar .p2lrn</button>
+      <button class="button" type="button" data-export-offline>Entrega offline</button>
+      <button class="button" type="button" data-review-offline>Revisar entrega</button>
     </div>
   </section>
 
+<dialog class="studio-offline-dialog" data-offline-dialog aria-labelledby="studio-offline-title">
+  <form data-offline-form>
+    <header class="studio-offline-head"><div><p class="eyebrow">ENTREGA SIN LMS</p><h2 id="studio-offline-title">Entrega offline autorreproducible</h2><p>Incluye este curso y el Player. El alumno lo abre en su navegador y devuelve un archivo .p2lrn-result.</p></div><button type="button" class="button" data-offline-cancel>Cerrar</button></header>
+    <div class="studio-offline-fields">
+      <label>Formato de entrega<select name="deliveryFormat" required><option value="windows-single">Windows · un archivo (doble clic)</option><option value="portable-zip">ZIP portable · extraer y abrir</option></select></label>
+      <label>Identificador del alumno (opcional)<input name="participantLabel" type="text" maxlength="160" placeholder="Se puede indicar al abrir la entrega"></label>
+      <label>Disponible desde (opcional)<input name="availableFrom" type="datetime-local"></label>
+      <label>Fecha límite (opcional)<input name="dueAt" type="datetime-local"></label>
+      <label>Tiempo máximo por intento (minutos)<input name="durationMinutes" type="number" min="1" max="44640" step="1" placeholder="Sin límite"></label>
+      <label>Intentos máximos<input name="maxAttempts" type="number" min="1" max="100" step="1" value="1" required></label>
+      <label class="studio-offline-check"><input name="allowResume" type="checkbox" checked> Permitir reanudar el intento</label>
+      <label class="studio-offline-check"><input name="activityTracking" type="checkbox" checked> Registrar métricas y tiempo activo</label>
+    </div>
+    <p class="studio-offline-note">Colaboración desactivada. Sin conexión durante la actividad. Los límites de fecha dependen del reloj del alumno. Este lanzador no está firmado digitalmente.</p>
+    <p class="studio-offline-error" data-offline-error role="alert" hidden></p>
+    <footer class="studio-offline-actions"><button class="button primary" type="submit" data-offline-generate>Generar entrega</button></footer>
+  </form>
+</dialog>
+<input type="file" data-offline-result-file accept=".p2lrn-result,application/vnd.p2lrn-result+json" hidden>
+<dialog class="studio-offline-dialog" data-offline-review-dialog aria-labelledby="studio-offline-review-title">
+  <header class="studio-offline-head"><div><p class="eyebrow">RESULTADOS / REVISIÓN</p><h2 id="studio-offline-review-title">Revisar entrega offline</h2></div><button class="button" type="button" data-offline-review-close>Cerrar</button></header>
+  <div class="studio-offline-review-content" data-offline-review-content></div>
+</dialog>
   <div class="studio-warning" data-unsaved-warning hidden role="status">
     <strong>Cambios sin guardar.</strong>
     <span>Studio trabaja en memoria. Si cierras o recargas esta página antes de guardar un borrador o exportar el <code>.p2lrn</code>, perderás esos cambios.</span>

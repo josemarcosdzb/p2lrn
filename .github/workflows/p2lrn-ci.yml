@@ -420,14 +420,16 @@ jobs:
       - name: Prepare local viewer fixture
         shell: powershell
         run: |
+          # build-site already invokes build-cdn, then copies the website,
+          # builds the examples/catalog.json, and publishes the root Service Worker.
+          # Running build-cdn a second time deletes these finished website files.
           node deploy/netlify/build-site.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node deploy/netlify/build-cdn.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item -Recurse -Force deploy/netlify/site/* .netlify-cdn/
-          New-Item -ItemType Directory -Force .netlify-cdn/examples/canonical | Out-Null
-          Copy-Item -Recurse -Force examples/canonical/* .netlify-cdn/examples/canonical/
-          Copy-Item -Force .netlify-cdn/player/current/dist/p2lrn-sw.js .netlify-cdn/p2lrn-sw.js
+          if (-not (Test-Path .netlify-cdn/examples/catalog.json)) { throw 'Viewer catalog missing from canonical website build' }
+          if (-not (Test-Path .netlify-cdn/examples/canonical/creator-course.p2lrn)) { throw 'Canonical viewer fixture missing from website build' }
+          if (-not (Test-Path .netlify-cdn/p2lrn-sw.js)) { throw 'Root Service Worker missing from website build' }
+          $catalog = Get-Content -Raw .netlify-cdn/examples/catalog.json | ConvertFrom-Json
+          if ($catalog.examples.Count -le 1) { throw 'Website catalog must include the canonical and generated examples' }
 
       - name: Inspect public npm registry for all four P2LRN distributions
         run: node scripts/check-public-npm-registry.mjs

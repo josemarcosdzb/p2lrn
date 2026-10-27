@@ -326,7 +326,12 @@ const repeatedForms = [];
 for (const htmlPath of htmlFiles) {
   const rel = relative(outputRoot,htmlPath).replaceAll('\\','/');
   const html = await readFile(htmlPath,'utf8');
-  if (/<form\b/i.test(html) && rel !== 'contacto/index.html') repeatedForms.push(rel);
+  for (const match of html.matchAll(/<form\b[^>]*>/gi)) {
+    if (rel === 'contacto/index.html') continue;
+    // Studio's offline assignment form is local-only and has no network action.
+    if (rel === 'studio/index.html' && /\bdata-offline-form(?:\s|>)/i.test(match[0]) && !/\baction\s*=/i.test(match[0])) continue;
+    repeatedForms.push(rel);
+  }
 }
 if (repeatedForms.length) {
   throw new Error('Documentation forms must be centralized in /contacto/:\\n' + repeatedForms.join('\\n'));
