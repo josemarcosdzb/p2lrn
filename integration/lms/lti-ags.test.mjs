@@ -127,6 +127,26 @@ test('AGS readonly-only scope never creates a new LMS gradebook column',async()=
  assert.deepEqual(operations,['POST /oauth/token','GET /ags/lineitems']);
 });
 
+test('AGS diagnostic phase identifies OAuth timeout without leaking signed JWT or bearer',async()=>{
+ const client=createLtiAgsClient({tool,lookup,fetchImpl:async()=>{
+  throw new DOMException('Network request timed out','TimeoutError');
+ }});
+ await assert.rejects(client.postScore({...base,ags:{
+  scope:[SCORE],lineitem:'https://school.example/ags/lineitems/45'
+ }}),error=>error.message==='LMS AGS TOKEN_REQUEST TIMEOUT'&&!error.message.includes('jwt'));
+});
+
+test('AGS diagnostic phase identifies lineitems lookup timeout',async()=>{
+ const client=createLtiAgsClient({tool,lookup,fetchImpl:async(url,options)=>{
+  if(new URL(url).pathname==='/oauth/token')
+   return new Response(JSON.stringify({access_token:'private-token',token_type:'Bearer'}),{status:200});
+  throw new DOMException('Network request timed out','TimeoutError');
+ }});
+ await assert.rejects(client.postScore({...base,ags:{
+  scope:[SCORE,LINEITEM_READ],lineitems:'https://school.example/ags/lineitems'
+ }}),error=>error.message==='LMS AGS LINEITEM_LOOKUP TIMEOUT'&&!error.message.includes('private-token'));
+});
+
 test('AGS rejects unapproved lineitems collections, missing scopes and invalid grades before network calls',async()=>{
  const client=createLtiAgsClient({tool,lookup,fetchImpl:async()=>{throw new Error('Network should not be called');}});
  await assert.rejects(client.postScore({...base,ags:{
