@@ -427,6 +427,14 @@ jobs:
           node scripts/verify-studio-image-reflow.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Verify unified footer, legal navigation and Studio form isolation
+        shell: powershell
+        run: |
+          node --check deploy/netlify/site-footer.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test deploy/netlify/test/site-footer.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Prepare local viewer fixture
         shell: powershell
         run: |
