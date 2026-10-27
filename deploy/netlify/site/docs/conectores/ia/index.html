@@ -1,98 +1,151 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0d1117"><meta name="description" content="Guía completa de conectores MCP P2LRN para ChatGPT, Claude y Grok: instalación, uso, seguridad y estado de publicación.">
-<title>ChatGPT, Claude y Grok: Skills sin MCP y conectores — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
+<meta name="theme-color" content="#0d1117"><meta name="description" content="Conectores para IA P2LRN: ChatGPT, Claude, Gemini, Grok, Skills sin MCP, conexión local y remota, instalación y pruebas.">
+<title>Conectores para IA: ChatGPT, Claude, Gemini y Grok — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
 <body><a class="skip-link" href="#contenido">Saltar al contenido</a>
 <header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/instalar/">Instalar</a><a class="nav-direct" href="/docs/studio/">Crear</a><a class="nav-direct" href="/docs/player/">Reproducir</a><a class="nav-direct" href="/docs/integracion/">Integrar</a><a class="nav-direct" href="/docs/referencia/">Referencia</a></nav>
 <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
 <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
 <main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
-<article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / IA WEB</p><h1>Conectores de IA: ChatGPT, Claude y Grok</h1><p>P2LRN utiliza un mismo servidor MCP para herramientas de IA. <strong>Si quieres trabajar con los cursos guardados en tu PC, no necesitas tener una web ni comprar un dominio.</strong> La conexión cambia según uses una aplicación instalada en el ordenador o una IA en la nube.</p></header>
-<section class="doc-section"><h2>Si sólo quieres crear un curso, utiliza una Skill sin MCP</h2>
-<p>Para <strong>crear y descargar un archivo <code>.p2lrn</code> nuevo</strong>, no necesitas instalar el servidor MCP, conectar tu ordenador ni contratar un dominio. Ya existe una Skill «P2LRN – Crear y descargar» en un entorno de ChatGPT; puede producir un paquete Core 0.4.0 y verificarlo cuando está habilitada. <a href="/docs/conectores/skills/"><strong>Ver la guía de Skills sin MCP</strong></a>.</p>
-<p>Esta vía no ofrece acceso automático a cursos privados del PC. Para otras plataformas, <a href="/docs/conectores/gemini/">Gemini web y CLI</a> dispone de Skills/Gems y <a href="/docs/conectores/skills/">Claude</a> permite Skills según el entorno; hay que comprobar que realmente generan y verifican el paquete, sin asumir paridad universal.</p>
-</section>
-<section class="doc-section" id="elegir-conexion"><h2>Elige cómo conectar P2LRN a tu ordenador</h2>
+<article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">CONECTORES / INTELIGENCIA ARTIFICIAL</p><h1>Conectores para IA</h1>
+<p>Una sola guía para <strong>ChatGPT, Claude, Gemini y Grok</strong>. Explica cómo crear cursos P2LRN con Skills sin instalar MCP, cómo conectar cursos existentes desde una aplicación instalada en el PC y cuándo es necesario configurar una conexión remota. <strong>No necesitas dominio para crear cursos ni para utilizar un cliente MCP local.</strong></p></header>
+
+<section class="doc-section" id="elegir-conexion"><h2>Elige lo que necesitas antes de instalar nada</h2>
+<div class="example-actions"><a class="button primary" href="#skills-sin-mcp">Crear con Skills, sin MCP</a><a class="button" href="#chatgpt">ChatGPT</a><a class="button" href="#claude">Claude</a><a class="button" href="#gemini">Gemini</a><a class="button" href="#grok">Grok</a><a class="button" href="#conexion-local">MCP local</a></div>
 <div class="reference-table">
-<div><strong>1. Aplicación de IA instalada en tu PC · sin dominio</strong><p>Claude Desktop, Cursor, Windsurf, Gemini CLI, VS Code y otros clientes compatibles pueden iniciar el MCP mediante <code>stdio</code>. Los cursos permanecen en una carpeta autorizada del ordenador; no necesitas una URL, proxy ni puerto abierto.<span class="example-actions"><a class="button primary" href="#conexion-local">Conectar en mi PC</a><a class="button" href="/docs/conectores/local/">Guía local completa</a></span></p></div>
-<div><strong>2. ChatGPT web → cursos de tu PC · sin dominio propio</strong><p>ChatGPT web no puede iniciar directamente un proceso de tu PC ni acceder a <code>localhost</code>. Si tienes los permisos necesarios, <strong>Secure MCP Tunnel</strong> conecta un MCP privado mediante una conexión saliente, sin exponer tu ordenador a Internet ni tener un dominio. El túnel no está incluido ni configurado automáticamente en el ZIP.<span class="example-actions"><a class="button" href="#chatgpt-pc">Conectar ChatGPT al PC</a></span></p></div>
-<div><strong>3. Servicio MCP público en HTTPS · opcional</strong><p>Un servidor accesible en Internet puede servir a clientes MCP web que lo admitan. Necesita una URL HTTPS y autenticación; <strong>no es un requisito</strong> para la conexión local ni para un Secure MCP Tunnel privado.<span class="example-actions"><a class="button" href="#conexion-remota">Configuración remota avanzada</a></span></p></div>
+<div><strong>Crear un .p2lrn nuevo desde la IA</strong><p><strong>Sin MCP, sin servidor y sin dominio.</strong> Usa una Skill cuando el asistente pueda ejecutar un empaquetador y entregar un archivo descargable. No puede leer automáticamente tus carpetas privadas.</p></div>
+<div><strong>Leer o editar cursos guardados en tu PC</strong><p>Usa el <a href="#conexion-local">MCP local</a> con Claude Desktop, Gemini CLI, Cursor, VS Code u otros clientes compatibles. Requiere Node.js y autorizar una carpeta; <strong>no</strong> requiere publicar una web.</p></div>
+<div><strong>Una IA en la web accediendo a tus cursos locales</strong><p>Depende de la plataforma. ChatGPT puede utilizar un <a href="#chatgpt-pc">túnel MCP privado</a> cuando esté habilitado; un conector remoto público necesita <a href="#conexion-remota">HTTPS y autenticación</a>. No confundas esa necesidad con la creación mediante Skills.</p></div>
 </div></section>
-<section class="doc-section"><h2>Descargar el conector MCP para tu PC o para IA web</h2>
-<p>El mismo ZIP contiene el servidor MCP, Toolkit, <code>integration/mcp/Conectar-P2LRN.cmd</code> para Windows y herramientas de configuración. <strong>Para uso local no tienes que registrar una URL ni preparar un dominio.</strong> No contiene claves de terceros ni instala por sí solo un conector en ninguna cuenta web.</p>
-<div class="example-actions"><a class="button primary" href="/downloads/p2lrn-conector-mcp.zip" download>Descargar kit MCP (.zip)</a><a class="button" href="/downloads/manifest.json">Comprobar integridad SHA-256</a></div>
-<ol class="doc-list"><li>Descomprime el ZIP y consulta <code>LEEME-PRIMERO.md</code>. Instala Node.js 22 o posterior.</li>
-<li>Si utilizarás una aplicación de IA en tu ordenador, abre <code>integration/mcp/Conectar-P2LRN.cmd</code>, elige tu carpeta de cursos y el cliente instalado. Empieza en sólo lectura.</li>
-<li>Si utilizarás <strong>ChatGPT web para consultar cursos del PC</strong>, sigue el apartado de Secure MCP Tunnel. No necesitas dominio propio, pero sí una configuración de túnel autorizada.</li>
-<li>Sólo si quieres publicar un endpoint MCP accesible desde Internet, configura aparte un proxy HTTPS con autenticación y sigue la sección remota avanzada.</li>
-<li>En todos los casos, comprueba <code>p2lrn_list_courses</code> y <code>p2lrn_validate_course</code> con archivos dentro de la carpeta autorizada.</li></ol>
-<div class="doc-callout"><strong>El ZIP no es un plugin publicado</strong><p>El asistente instala configuraciones locales sólo en clientes compatibles y con confirmación. ChatGPT web necesita un MCP remoto o un Secure MCP Tunnel autorizado. Los ZIP de descriptores no son plugins aprobados en directorios públicos.</p></div>
-</section>
-<section class="doc-section"><h2>Dos necesidades distintas: crear un paquete o conectar tus cursos</h2>
-<div class="reference-table"><div><strong>Crear y descargar .p2lrn mediante Skill</strong><p>La Skill «P2LRN – Crear y descargar» instalada en un entorno compatible de ChatGPT crea y verifica paquetes nuevos sin servidor MCP, Node en tu PC ni carpetas compartidas. Requiere que la Skill esté habilitada y que el entorno ejecute su empaquetador. <a href="/docs/conectores/skills/">Ver requisitos y límites</a>.</p></div>
-<div><strong>Conector MCP a cursos autorizados</strong><p>El servidor de <code>integration/mcp/</code> permite enumerar, leer y validar cursos existentes; la edición en borradores se habilita explícitamente. Para una IA web el servidor debe ser accesible en una URL HTTPS protegida; tener un ZIP de plugin no instala ni activa por sí solo el conector.</p></div></div>
-<p>Estas dos modalidades pueden convivir sin cambiar el formato P2LRN ni crear una versión específica de cada curso para cada IA.</p></section>
-<section class="doc-section"><h2>Qué herramientas ofrece el servidor MCP</h2>
-<div class="reference-table"><div><strong>Consulta</strong><p><code>p2lrn_list_courses</code>, <code>p2lrn_read_course</code>, <code>p2lrn_read_entity</code>, <code>p2lrn_read_plan</code>, <code>p2lrn_search_metadata</code> y <code>p2lrn_read_text_member</code> permiten navegar contenido expresamente autorizado.</p></div>
-<div><strong>Validación</strong><p><code>p2lrn_validate_course</code> comprueba el paquete. El servidor no ejecuta como código los contenidos de terceros ni interpreta formatos opacos como si fueran nativos.</p></div>
-<div><strong>Autoría controlada</strong><p>Con permiso de edición se exponen operaciones <code>p2lrn_draft_*</code> para construir unidades, actividades nativas, archivos y componentes y exportar un <code>.p2lrn</code> nuevo. No se sobrescriben paquetes originales.</p></div></div></section>
-<section class="doc-section" id="conexion-local"><h2>Conectar una IA instalada en tu PC — sin dominio</h2>
-<p><strong>Esta es la opción adecuada si quieres abrir y editar cursos almacenados en tu ordenador desde un cliente MCP compatible.</strong> Descarga el ZIP anterior, extráelo, instala Node.js 22 o posterior y abre con doble clic <code>integration/mcp/Conectar-P2LRN.cmd</code>. El asistente prepara Toolkit y dependencias, te pregunta qué carpeta autorizas y qué aplicaciones quieres configurar. No necesita HTTPS ni un servidor en segundo plano.</p>
-<div class="codebox"><div class="codebox-head"><span>Windows · instalación local con asistente</span><button type="button" data-copy>Copiar</button></div><pre><code>cd C:\P2LRN-MCP
-.\integration\mcp\Conectar-P2LRN.cmd</code></pre></div>
-<p><code>C:\P2LRN-MCP</code> es una ruta de ejemplo: sustitúyela por la carpeta donde extrajiste el ZIP. Comienza con <code>P2LRN_MCP_WRITE=0</code>. El cliente inicia el servidor mediante <code>node ...\server.mjs --stdio</code> y sólo accede a la carpeta seleccionada. Para activar borradores posteriormente hay que conceder permiso explícito; no se sobrescriben los paquetes originales.</p>
-<div class="example-actions"><a class="button" href="/docs/conectores/local/">Instalación local paso a paso y clientes compatibles</a></div>
-</section>
-<section class="doc-section" id="chatgpt-pc"><h2>ChatGPT web conectado a tu PC, sin dominio propio</h2>
-<p>Si lo que quieres es utilizar <strong>ChatGPT en el navegador</strong> para consultar los archivos P2LRN del PC, la conexión local <code>stdio</code> no basta por sí sola. ChatGPT admite <a href="https://developers.openai.com/api/docs/guides/secure-mcp-tunnels">Secure MCP Tunnel</a> cuando tu cuenta, tu organización y tu área de trabajo tienen los permisos necesarios. El conector se ejecuta en tu PC y el cliente del túnel mantiene una conexión saliente HTTPS con OpenAI; no necesitas contratar un dominio ni abrir puertos entrantes.</p>
+
+<section class="doc-section" id="skills-sin-mcp"><h2>Skills sin MCP: crear y descargar cursos</h2>
+<p>Una Skill es una carpeta de instrucciones y, si hace falta, scripts y referencias. <strong>La Skill «P2LRN – Crear y descargar» ya existe en un entorno de ChatGPT</strong>; puede construir y verificar paquetes nuevos de un subconjunto P2LRN Core <code>0.4.0</code> cuando ese entorno ejecuta Python y permite adjuntar archivos. <strong>No es el ZIP del conector MCP.</strong> El paquete de Skill no se ofrece todavía como descarga pública desde esta web.</p>
 <ol class="doc-list">
-<li>Instala el conector P2LRN local del ZIP y verifica sus herramientas con lectura y una carpeta de cursos autorizada.</li>
-<li>En <a href="https://platform.openai.com/settings">OpenAI Platform</a>, accede a la configuración de túneles MCP y crea o selecciona uno que esté asociado a tu área de trabajo de ChatGPT. Necesitas permisos de túneles y de creación de complementos MCP.</li>
-<li>Instala <code>tunnel-client</code> desde el enlace de descargas oficial, revisa <code>tunnel-client help quickstart</code> y configura el perfil con el <code>tunnel_id</code> y el comando <code>stdio</code> de P2LRN. Las credenciales se introducen localmente; nunca se copian al HTML, a GitHub o al ZIP.</li>
-<li>Comprueba el perfil con <code>tunnel-client doctor --profile p2lrn-local --explain</code> y mantenlo funcionando con <code>tunnel-client run --profile p2lrn-local</code>. El nombre <code>p2lrn-local</code> es sólo un ejemplo de perfil.</li>
-<li>En ChatGPT abre <strong>Complementos → Añadir servidor MCP personalizado → Túnel</strong>, selecciona el mismo <code>tunnel_id</code>, configura la autorización y valida una llamada real a <code>p2lrn_list_courses</code>. Si las opciones no aparecen, revisa los permisos de tu cuenta o área de trabajo.</li>
+<li>Comprueba que tu plataforma permite instalar o activar Skills y ejecutar el empaquetador; no todas las cuentas o regiones lo permiten.</li>
+<li>Activa una Skill P2LRN realmente compatible. Indica título, idioma, unidades, lecciones, preguntas y juegos.</li>
+<li>Exige la ejecución del empaquetador y su verificación: el resultado debe ser un <code>.p2lrn</code> descargable, no sólo texto ni un JSON renombrado.</li>
+<li>Abre el archivo en <a href="/demo/">Player</a> o <a href="/studio/">Studio</a>. La verificación estructural no sustituye una prueba visual de los juegos 3D.</li>
 </ol>
-<p><strong>Estado:</strong> P2LRN ya proporciona el servidor <code>stdio</code>. Secure MCP Tunnel es una integración adicional de OpenAI que requiere instalación y configuración propias; no se debe anunciar como conectado hasta completar una llamada real desde ChatGPT. Para distribuir un plugin públicamente siguen aplicándose requisitos distintos.</p>
-<div class="doc-callout"><strong>ChatGPT Desktop</strong><p>Los plugins locales <code>stdio</code> para la aplicación de escritorio son una vía diferente y dependen de la disponibilidad y aprobación de la función correspondiente. El ZIP P2LRN no es, por sí mismo, un plugin ChatGPT Desktop instalado o aprobado. Consulta la <a href="https://developers.openai.com/plugins/deploy/desktop-only">documentación oficial de plugins Desktop only</a>.</p></div>
-</section>
+<div class="codebox"><div class="codebox-head"><span>Ejemplo · para una IA con Skill P2LRN disponible</span><button type="button" data-copy>Copiar</button></div><pre><code>Usa la Skill P2LRN para crear y verificar un curso nuevo.
+Tema: seguridad digital. Idioma: español. 3 unidades,
+6 lecciones, 10 preguntas con soluciones y 2 juegos.
+Entrega el archivo .p2lrn real y descargable.
+No instales MCP ni accedas a archivos de mi ordenador.</code></pre></div>
+<p><strong>Por plataforma:</strong> ChatGPT admite Skills según el área de trabajo; Claude permite cargar una Skill ZIP con ejecución de código habilitada; Gemini CLI admite Agent Skills, mientras que la disponibilidad de Skills en Gemini web depende de la cuenta y región. Grok no dispone aquí de una Skill P2LRN ejecutable certificada. <a href="/docs/conectores/skills/">Limitaciones y guía ampliada de Skills</a>.</p></section>
+
+<section class="doc-section" id="chatgpt"><h2>ChatGPT</h2>
+<h3>Crear cursos sin MCP</h3>
+<ol class="doc-list">
+<li>En ChatGPT, abre las opciones de <strong>Skills/Habilidades</strong> disponibles en tu cuenta o área de trabajo y busca «P2LRN – Crear y descargar». Si no aparece, su instalación o distribución en esa cuenta no está confirmada.</li>
+<li>Con la Skill habilitada, describe el curso y solicita el <code>.p2lrn</code>. No necesitas instalar Node.js en tu PC ni registrar un servidor.</li>
+<li>Comprueba que la Skill ha ejecutado su verificador y que puedes abrir el archivo descargado. No basta con que el asistente diga que lo ha creado.</li>
+</ol>
+<h3>Conectar cursos del PC</h3>
+<p>Para consultar los cursos guardados en Windows desde <strong>ChatGPT web</strong>, una Skill sola no da acceso al PC. Cuando tu cuenta y organización admitan servidores MCP personalizados, usa <a href="#chatgpt-pc">Secure MCP Tunnel</a> o un endpoint HTTPS autenticado. ChatGPT web <strong>no puede conectar directamente con <code>localhost</code></strong>. En la aplicación Desktop pueden existir plugins locales <code>stdio</code> sujetos a requisitos independientes; el ZIP MCP no instala automáticamente uno.</p>
+<div class="codebox"><div class="codebox-head"><span>Prueba · ChatGPT con MCP autorizado</span><button type="button" data-copy>Copiar</button></div><pre><code>Muestra únicamente los cursos P2LRN de mi carpeta autorizada,
+llama a p2lrn_list_courses y valida el que elija con
+p2lrn_validate_course. No modifiques los originales.</code></pre></div>
+<p><strong>Estado:</strong> Skill P2LRN comprobada en un entorno de ChatGPT, pero no publicada universalmente; proveedor MCP privado y generación de descriptores de desarrollo, sin certificación de un plugin público de directorio. <a href="https://help.openai.com/es-es/articles/20001066-skills-in-chatgpt">Ayuda oficial sobre Skills</a>.</p></section>
+
+<section class="doc-section" id="claude"><h2>Claude</h2>
+<h3>Sin MCP: Claude Skills</h3>
+<ol class="doc-list">
+<li>Activa la opción de ejecución de código y creación de archivos cuando tu plan permita Skills.</li>
+<li>En <strong>Personalizar → Habilidades/Skills</strong>, utiliza la opción de importar una Skill ZIP autorizada; revisa su <code>SKILL.md</code> y scripts antes de subirla.</li>
+<li>Solicita un curso P2LRN y comprueba que Claude ha ejecutado un empaquetador compatible, verificado el archivo y adjuntado el <code>.p2lrn</code>.</li>
+</ol>
+<p><strong>Importante:</strong> el ZIP de MCP de esta web no es una Skill. La Skill P2LRN de ChatGPT no se ha certificado como empaquetador autónomo en Claude; hace falta comprobar el entorno y el resultado. <a href="https://support.claude.com/es/articles/12512180-usar-habilidades-en-claude">Instrucciones oficiales de Skills en Claude</a>.</p>
+<h3>Con MCP: Claude Desktop y Claude web</h3>
+<p>Para acceder a los cursos del PC desde <strong>Claude Desktop</strong>, instala el <a href="/downloads/p2lrn-conector-mcp.zip" download>kit MCP P2LRN</a>, ejecuta <code>Conectar-P2LRN.cmd</code> y selecciona Claude. El transporte es <code>stdio</code> y no necesita dominio. <strong>Claude web</strong> requiere que la cuenta admita conectores remotos y que el servidor sea accesible y esté autenticado; un proceso local no se registra en la web directamente.</p>
+<div class="codebox"><div class="codebox-head"><span>Prueba · Claude Desktop con MCP</span><button type="button" data-copy>Copiar</button></div><pre><code>Lee el índice de mi curso P2LRN autorizado.
+Comprueba sus actividades y prepara un plan de mejora.
+No edites el curso si el conector sólo tiene lectura.</code></pre></div>
+<p><strong>Comprobación:</strong> exige una llamada real a <code>p2lrn_list_courses</code> o <code>p2lrn_read_course</code>, comprueba que se respetan los permisos y valida un paquete. <a href="/docs/conectores/local/">Instalación local detallada</a>.</p></section>
+
+<section class="doc-section" id="gemini"><h2>Gemini</h2>
+<h3>Gemini web: Skills o Gems, sin MCP</h3>
+<p>Gemini web no es Gemini CLI. Cuando tu cuenta y región tengan disponibles <a href="https://support.google.com/gemini/answer/17094296">Skills de Gemini</a>, puedes preparar instrucciones reutilizables para cursos P2LRN. Si no aparecen, las <a href="https://support.google.com/gemini/answer/15146780?hl=es">Gems</a> permiten mantener instrucciones y referencias. <strong>Una Gem no ejecuta por sí sola el empaquetador</strong>; si la sesión no puede crear y verificar el archivo, prepara el contenido y termínalo en Studio.</p>
+<h3>Gemini CLI: Agent Skills sin MCP</h3>
+<p>Gemini CLI reconoce Skills en <code>~/.gemini/skills/</code> y <code>.gemini/skills/</code>. En la sesión de Gemini CLI puedes utilizar <code>/skills list</code> para comprobar cuáles están disponibles y <code>/skills link</code> para enlazar una carpeta local autorizada. Es necesario instalar Gemini CLI, <strong>pero no el servidor MCP P2LRN</strong> cuando sólo quieres crear un curso nuevo. Debes comprobar que la Skill ejecuta un empaquetador y verifica el <code>.p2lrn</code>.</p>
+<div class="codebox"><div class="codebox-head"><span>Gemini CLI · dentro de una sesión</span><button type="button" data-copy>Copiar</button></div><pre><code>/skills list
+/skills link C:\Ruta\a\skill-p2lrn --scope user
+/skills list</code></pre></div>
+<h3>Gemini CLI con MCP local (opcional)</h3>
+<p>Para <strong>leer, validar o editar borradores que ya tienes en el PC</strong>, utiliza el mismo <a href="/downloads/p2lrn-conector-mcp.zip" download>ZIP MCP</a> y el asistente para Gemini CLI. Empieza con sólo lectura; configura la carpeta autorizada y verifica las herramientas.</p>
+<div class="codebox"><div class="codebox-head"><span>Windows · desde el kit P2LRN extraído</span><button type="button" data-copy>Copiar</button></div><pre><code>.\integration\mcp\Conectar-P2LRN.cmd --root C:\MisCursos --clients gemini --install --verify</code></pre></div>
+<p><strong>Prueba:</strong> solicita a Gemini CLI «Lista mis cursos P2LRN autorizados y valida uno sin modificarlo». Verifica en el cliente que invoca <code>p2lrn_list_courses</code> y <code>p2lrn_validate_course</code>. La compatibilidad de la Skill P2LRN con Gemini web no está certificada, ni Gemini web ejecuta directamente este MCP <code>stdio</code>. <a href="/docs/conectores/gemini/">Guía detallada Gemini web/CLI</a> y <a href="https://geminicli.com/docs/cli/skills/">Agent Skills oficiales de Gemini CLI</a>.</p></section>
+
+<section class="doc-section" id="grok"><h2>Grok</h2>
+<h3>Crear cursos sin un conector MCP</h3>
+<p>Grok puede ayudar a estructurar lecciones, preguntas y juegos mediante instrucciones, pero <strong>no existe aquí una Skill P2LRN de Grok certificada para empaquetar y validar archivos</strong>. Si no puede ejecutar un empaquetador real, utiliza <a href="/studio/">Studio</a> para crear el <code>.p2lrn</code> a partir del contenido preparado. No se anuncia una instalación de Skill inexistente.</p>
+<h3>Conector MCP personalizado</h3>
+<p>Grok admite conectores MCP personalizados en los entornos y cuentas que ofrecen esa función. En <a href="https://grok.com/connectors">Grok → Connectors → New Connector → Custom</a>, registra la URL de un servidor MCP <strong>accesible desde Internet y autenticado</strong>. Un proceso que escucha sólo en tu PC no es accesible desde Grok web: requiere una solución remota o túnel compatible. <a href="https://docs.x.ai/grok/connectors">Documentación oficial de Grok Connectors</a>.</p>
+<p>El kit MCP de P2LRN contiene un generador de parámetros de conexión, pero esos descriptores no activan la cuenta ni certifican la integración en Grok.</p>
+<div class="codebox"><div class="codebox-head"><span>Prueba · Grok cuando el MCP esté conectado</span><button type="button" data-copy>Copiar</button></div><pre><code>Enumera sólo mis cursos P2LRN autorizados.
+Haz un resumen del curso que seleccione y valida
+el archivo con p2lrn_validate_course, sin editarlo.</code></pre></div>
+<p><strong>Comprobación:</strong> asegúrate de que Grok muestra las herramientas reales, ejecuta la consulta y rechaza rutas fuera de la carpeta autorizada. Si tu cuenta no muestra conectores personalizados, no se ha establecido esa conexión.</p></section>
+
+<section class="doc-section" id="conexion-local"><h2>MCP local para aplicaciones de IA instaladas en tu PC</h2>
+<p>Este apartado es <strong>opcional si sólo utilizas Skills</strong>. Sirve para Claude Desktop, Gemini CLI, Cursor, Windsurf, VS Code y otros clientes MCP <code>stdio</code> compatibles. No requiere una web, un dominio ni abrir puertos entrantes.</p>
+<div class="example-actions"><a class="button primary" href="/downloads/p2lrn-conector-mcp.zip" download>Descargar MCP P2LRN para Windows (.zip)</a><a class="button" href="/downloads/manifest.json">Ver SHA-256 del ZIP</a><a class="button" href="/docs/conectores/local/">Guía local completa</a></div>
+<ol class="doc-list">
+<li>Descarga y descomprime el kit, e instala Node.js 22 o posterior. No ejecutes el asistente dentro del ZIP comprimido.</li>
+<li>Abre <code>integration/mcp/Conectar-P2LRN.cmd</code> desde la carpeta extraída y selecciona la aplicación compatible que tengas instalada.</li>
+<li>Elige una <strong>carpeta concreta</strong> de cursos. Mantén <code>P2LRN_MCP_WRITE=0</code> y revisa cualquier cambio de configuración antes de aceptarlo.</li>
+<li>Reinicia el cliente cuando corresponda y comprueba <code>p2lrn_list_courses</code> y <code>p2lrn_validate_course</code>. Para crear borradores autoriza expresamente la escritura; los originales no deben sobrescribirse.</li>
+</ol>
+<div class="codebox"><div class="codebox-head"><span>Windows · desde la carpeta donde extrajiste P2LRN</span><button type="button" data-copy>Copiar</button></div><pre><code>cd C:\P2LRN-MCP
+.\integration\mcp\Conectar-P2LRN.cmd</code></pre></div>
+<p><code>C:\P2LRN-MCP</code> es sólo una ruta de ejemplo. El servidor se ejecuta bajo demanda con transporte <code>stdio</code>. El ZIP MCP <strong>no es</strong> un plugin de ChatGPT aprobado ni el archivo de una Skill.</p></section>
+
+<section class="doc-section" id="chatgpt-pc"><h2>ChatGPT web conectado a un PC: túnel privado opcional</h2>
+<p>ChatGPT web no puede abrir directamente <code>localhost</code>. Cuando tu cuenta y área de trabajo tengan permisos para <a href="https://developers.openai.com/api/docs/guides/secure-mcp-tunnels">Secure MCP Tunnel</a>, puedes ejecutar el MCP P2LRN en el PC y establecer una conexión saliente autorizada, sin contratar un dominio ni abrir puertos entrantes.</p>
+<ol class="doc-list">
+<li>Instala el MCP local de P2LRN con lectura y comprueba las herramientas en el ordenador.</li>
+<li>Crea o selecciona un <code>tunnel_id</code> en la configuración de túneles MCP de OpenAI Platform, con permisos del área de trabajo correspondiente.</li>
+<li>Descarga y configura el <code>tunnel-client</code> oficial con un perfil que lance <code>node .../integration/mcp/server.mjs --stdio</code>. No guardes claves en GitHub ni en los cursos.</li>
+<li>Ejecuta la comprobación con <code>tunnel-client doctor --profile p2lrn-local --explain</code> y el cliente con <code>tunnel-client run --profile p2lrn-local</code>; el nombre del perfil es un ejemplo.</li>
+<li>En ChatGPT registra el servidor MCP mediante Túnel si esa opción está disponible y realiza una llamada real a <code>p2lrn_list_courses</code>. No se considera configurado hasta comprobar la llamada.</li>
+</ol>
+<p>El túnel requiere instalación y autorización aparte; no forma parte del ZIP MCP ni crea automáticamente un plugin público.</p></section>
+
 <section class="doc-section" id="conexion-remota"><h2>Opcional: preparar un servidor MCP remoto mediante HTTPS</h2>
-<p><strong>Ignora esta sección si sólo conectarás una aplicación instalada en tu PC o utilizarás Secure MCP Tunnel con <code>stdio</code>.</strong> Estas instrucciones son exclusivamente para servir un endpoint HTTP a clientes web remotos y requieren infraestructura y autenticación adicionales.</p><ol class="doc-list"><li>Descarga una copia autorizada del repositorio y prepara Node.js 22 o posterior junto con las dependencias de <code>integration/mcp</code>.</li>
-<li>Delimita con <code>P2LRN_MCP_ROOT</code> la carpeta que el servidor puede leer. Mantén <code>P2LRN_MCP_WRITE=0</code> al empezar.</li>
-<li>Configura un token aleatorio seguro. El servidor HTTP escucha sólo en <code>127.0.0.1:37871/mcp</code>; sitúa delante un proxy HTTPS autenticado y ajusta su origen público exacto.</li>
-<li>Registra esa URL en cada plataforma cuando su interfaz y plan admitan conectores MCP personalizados. Revisa los permisos antes de conectar.</li></ol>
-<div class="codebox"><div class="codebox-head"><span>PowerShell · desde la raíz de P2LRN</span><button type="button" data-copy>Copiar</button></div><pre><code>$env:P2LRN_MCP_ROOT = 'C:\CursosP2LRN'
+<p><strong>No es necesario para Skills ni clientes MCP locales.</strong> Un endpoint HTTP remoto es útil cuando una IA web requiere un servidor accesible públicamente y su cuenta admite MCP personalizado. Configura un proxy HTTPS autenticado, aislamiento de carpetas y controles de acceso: no abras el puerto local directamente a Internet.</p>
+<ol class="doc-list"><li>Prepara Node.js 22 o posterior y las dependencias de <code>integration/mcp</code> en una instalación autorizada.</li>
+<li>Define <code>P2LRN_MCP_ROOT</code> con la carpeta que se puede leer, mantén <code>P2LRN_MCP_WRITE=0</code> y crea un token seguro.</li>
+<li>El servidor escucha en <code>127.0.0.1:37871/mcp</code>; configura por delante un proxy HTTPS autenticado y una URL pública real o un túnel HTTPS compatible.</li>
+<li>Registra la URL sólo en proveedores que admitan conectores personalizados. Prueba autenticación, aislamiento y permisos antes de habilitar escritura.</li></ol>
+<div class="codebox"><div class="codebox-head"><span>PowerShell · ejemplo de servidor HTTP protegido</span><button type="button" data-copy>Copiar</button></div><pre><code>$env:P2LRN_MCP_ROOT = 'C:\CursosP2LRN'
 $env:P2LRN_MCP_WRITE = '0'
-$env:P2LRN_MCP_TOKEN = '&lt;token-aleatorio-de-al-menos-32-bytes&gt;'
-$env:P2LRN_MCP_PUBLIC_ORIGIN = 'https://tu-dominio.example'
+$env:P2LRN_MCP_TOKEN = '&lt;token-aleatorio-seguro&gt;'
+$env:P2LRN_MCP_PUBLIC_ORIGIN = 'https://tu-endpoint.example'
 node .\integration\mcp\server.mjs --http</code></pre></div>
-<p>La dirección <code>https://tu-dominio.example</code> es un marcador, no un servicio desplegado. No abras el puerto 37871 directamente a Internet y no guardes secretos en el repositorio, en un ZIP o en los cursos.</p>
-<div class="codebox"><div class="codebox-head"><span>Generación del kit de conectores · carpeta integration/mcp</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install --ignore-scripts
-node prepare-connectors.mjs --endpoint https://tu-dominio.example/mcp --out .generated\connectors</code></pre></div>
-<p>El generador produce <code>chatgpt/p2lrn-plugin.zip</code>, los metadatos de ChatGPT y los archivos de configuración para Claude y Grok. <strong>No instala ni publica</strong> un conector en una cuenta externa.</p></section>
-<section class="doc-section"><h2>ChatGPT</h2>
-<p>Para crear cursos descargables desde una conversación no necesitas conectar tu PC cuando el creador P2LRN ya está habilitado. Para trabajar sobre archivos locales desde <strong>ChatGPT web</strong> puedes usar un <a href="#chatgpt-pc">Secure MCP Tunnel privado</a> con permisos adecuados, sin dominio propio; la otra alternativa es un endpoint HTTPS remoto. ChatGPT web no conecta directamente con <code>localhost</code>.</p>
-<ol class="doc-list"><li>En la opción de complementos MCP personalizados disponible en tu cuenta, elige agregar un servidor MCP.</li><li>Selecciona <strong>Túnel</strong> para un MCP privado en tu PC, o introduce una URL HTTPS terminada en <code>/mcp</code> si has desplegado un servidor remoto; configura la autenticación correspondiente.</li><li>Autoriza sólo la carpeta y las herramientas necesarias; comienza con lectura.</li><li>Prueba enumerar un curso, leerlo y validarlo antes de permitir la edición.</li></ol>
-<div class="doc-callout"><strong>Estado de publicación</strong><p>El ZIP preparado es de desarrollo privado. No equivale a un plugin aprobado en el directorio público de ChatGPT. Para un servicio multiusuario faltan OAuth, autorización individual, infraestructura HTTPS estable y revisión del proveedor.</p></div></section>
-<section class="doc-section"><h2>Claude</h2>
-<p>En Claude web, si tu plan dispone de conectores personalizados, registra un conector MCP web e introduce la URL HTTPS protegida junto con las credenciales. Comprueba que aparece la lista de herramientas del servidor y que un curso autorizado puede abrirse.</p>
-<p>La versión <strong>Claude Desktop</strong> también permite una conexión distinta: ejecuta P2LRN localmente por <code>stdio</code>, sin proxy ni dominio. La instalación está explicada en <a href="/docs/conectores/local/">IA local</a>. No confundas la configuración web con la de escritorio.</p></section>
-<section class="doc-section"><h2>Grok</h2>
-<p>Cuando la cuenta ofrezca conectores personalizados, registra una conexión MCP a la misma URL HTTPS, añade el mecanismo de autenticación admitido y revisa los permisos. En cuentas de organización puede requerirse autorización de un administrador.</p>
-<p>El generador crea un archivo <code>grok/connection.json</code> con los parámetros previstos para revisar; no puede activar remotamente tu cuenta ni confirmar que el conector está aprobado.</p></section>
-<section class="doc-section"><h2>Ejemplo práctico en cada plataforma</h2>
+<div class="codebox"><div class="codebox-head"><span>Opcional · generar descriptores de conectores</span><button type="button" data-copy>Copiar</button></div><pre><code>cd integration\mcp
+npm install --ignore-scripts
+node prepare-connectors.mjs --endpoint https://tu-endpoint.example/mcp --out .generated\connectors</code></pre></div>
+<p>Los dominios <code>.example</code> son marcadores, no servicios desplegados. El generador produce descriptores de desarrollo para ChatGPT, Claude y Grok, <strong>pero no instala conectores en cuentas externas ni concede acceso automático</strong>. Para Gemini web no se anuncia un conector remoto no certificado.</p></section>
+
+<section class="doc-section" id="ejemplos"><h2>Ejemplos prácticos de cada plataforma</h2>
 <div class="reference-table">
-<div><strong>ChatGPT</strong><p>Tras conectar el servidor, solicita: «Lista los cursos P2LRN autorizados y valida el paquete que elija». Para crear un paquete desde cero sin conexión, usa un creador P2LRN habilitado en ChatGPT y descarga el resultado; son recorridos independientes.</p></div>
-<div><strong>Claude</strong><p>Después de autorizar el MCP web, solicita: «Lee el índice de mi curso P2LRN y prepara un plan de mejoras en un borrador». Si la conexión sólo permite lectura, el cliente debe explicar que no puede editar.</p></div>
-<div><strong>Grok</strong><p>Comprueba que el conector muestra las herramientas de lectura y solicita un resumen de un curso autorizado. La configuración depende de las opciones de conectores habilitadas por la cuenta.</p></div></div>
-<p>En los tres casos, comprueba primero la respuesta real de <code>p2lrn_list_courses</code> y después <code>p2lrn_validate_course</code>. No consideres suficiente que aparezca el nombre del conector en la interfaz.</p>
-</section>
-<section class="doc-section"><h2>Pruebas recomendadas y solución de problemas</h2>
-<ul class="doc-list"><li><strong>Lectura:</strong> ejecuta <code>p2lrn_list_courses</code>, abre un curso permitido y valida el paquete.</li>
-<li><strong>Escritura:</strong> sólo con permiso explícito, crea un borrador, edita un elemento y exporta un archivo nuevo. Verifica que el curso original no cambia.</li>
-<li><strong>Conexión rechazada:</strong> para un cliente local revisa Node, la carpeta autorizada y el proceso <code>stdio</code>; para un túnel revisa <code>tunnel-client doctor</code>, su identificador y sus permisos; para un endpoint público revisa URL HTTPS, token, <code>P2LRN_MCP_PUBLIC_ORIGIN</code> y proxy.</li>
-<li><strong>Aislamiento:</strong> comprueba que una carpeta no autorizada no puede leerse y que un cliente sólo lector no recibe operaciones <code>p2lrn_draft_*</code>.</li>
-<li><strong>No hay endpoint público:</strong> <code>127.0.0.1</code> no es accesible directamente desde una IA web, pero un túnel privado compatible puede conectar ambos extremos sin abrir un puerto público.</li></ul>
-<p>Para trabajar en tu propio ordenador sin túnel ni URL pública utiliza los <a href="/docs/conectores/local/">conectores locales</a>.</p></section>
-<nav class="doc-pager"><a class="prev" href="/docs/conectores/"><span>← Anterior</span><strong>Conectores</strong></a>
-<a class="next" href="/docs/conectores/gemini/"><span>Siguiente →</span><strong>Gemini</strong></a></nav>
+<div><strong>ChatGPT</strong><p><strong>Sin MCP:</strong> «Crea y verifica un curso P2LRN de tres unidades y adjunta el .p2lrn». <strong>Con MCP:</strong> «Lista y valida los cursos autorizados». El resultado tiene que ser un archivo descargable o llamadas reales a las herramientas, respectivamente.</p></div>
+<div><strong>Claude</strong><p><strong>Con Skill:</strong> «Genera un curso y entrega el archivo verificado, no sólo el temario». <strong>Con MCP local:</strong> «Revisa este curso en lectura y prepara recomendaciones». No permitas edición sin autorización.</p></div>
+<div><strong>Gemini</strong><p><strong>Gemini web Skills/Gems:</strong> «Diseña el curso y empaquétalo sólo si dispones de una herramienta verificable». <strong>Gemini CLI:</strong> «Utiliza la Skill autorizada para generar el paquete» o, mediante MCP, «Lista mis cursos y valida uno».</p></div>
+<div><strong>Grok</strong><p><strong>Sin MCP:</strong> «Prepara el contenido del curso sin afirmar que has creado el ZIP». <strong>Con MCP remoto:</strong> «Lista y valida los cursos de mi carpeta autorizada». Confirma que el conector realmente ha llamado al servidor.</p></div>
+</div></section>
+
+<section class="doc-section" id="solucion-problemas"><h2>Pruebas recomendadas y solución de problemas</h2>
+<ul class="doc-list">
+<li><strong>La Skill no aparece:</strong> comprueba habilitación y permisos del proveedor. No confundas la Skill con el ZIP MCP de la web. La Skill P2LRN actual no dispone de una descarga pública certificada aquí.</li>
+<li><strong>La IA responde con JSON, pero no hay .p2lrn:</strong> todavía no ha ejecutado ni verificado el empaquetador; no declares completada la creación.</li>
+<li><strong>Gemini web no muestra Skills:</strong> revisa región, cuenta y despliegue. Puedes utilizar Gems para diseñar, pero no garantiza empaquetado.</li>
+<li><strong>El cliente local no muestra herramientas:</strong> comprueba Node, carpeta autorizada, configuración <code>stdio</code> y reinicia el cliente si hace falta.</li>
+<li><strong>ChatGPT web no accede al PC:</strong> <code>localhost</code> no es accesible directamente. Revisa autorización y estado del túnel o endpoint remoto.</li>
+<li><strong>Claude web o Grok no conectan:</strong> confirma que la cuenta permite MCP personalizado, que el endpoint HTTPS es accesible y que la autenticación es válida.</li>
+<li><strong>Lectura o edición:</strong> comprueba que sólo se leen los cursos de la carpeta permitida, que un cliente de sólo lectura no tiene herramientas de escritura y que los borradores no sobrescriben originales.</li>
+<li><strong>Validación:</strong> ejecuta <code>p2lrn_list_courses</code> y <code>p2lrn_validate_course</code> en conexiones MCP; con Skills, verifica el archivo ZIP P2LRN y prueba la reproducción en Player.</li>
+</ul></section>
+
+<nav class="doc-pager"><a class="prev" href="/docs/conectores/"><span>← Anterior</span><strong>Conectores e integración</strong></a><a class="next" href="/docs/conectores/lms/"><span>Siguiente →</span><strong>Plataformas LMS</strong></a></nav>
 </article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
