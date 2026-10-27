@@ -126,10 +126,7 @@
         ['/docs/colaboracion/','Colaboración'],
         ['/docs/eventos/','Eventos'],
         ['/docs/conectores/','Conectores: visión general'],
-        ['/docs/conectores/ia/','ChatGPT, Claude y Grok'],
-        ['/docs/conectores/gemini/','Gemini web y CLI'],
-        ['/docs/conectores/skills/','Skills sin MCP'],
-        ['/docs/conectores/local/','IA local'],
+        ['/docs/conectores/ia/','Conectores para IA'],
         ['/docs/conectores/lms/','Plataformas LMS'],
         ['/docs/conectores/lti/','LTI 1.3'],
       ],
@@ -172,6 +169,7 @@
     nav.id = 'nav';
     nav.setAttribute('aria-label','Navegación principal');
     const current = normalizePath(window.location.pathname);
+    const selected = sidebarPath(current);
     const fragment = document.createDocumentFragment();
 
     for (const entry of GLOBAL_NAV) {
@@ -392,10 +390,7 @@
       ['/docs/formato/','Formato P2LRN'],
     ]],
     ['/docs/conectores/',[
-      ['/docs/conectores/ia/','ChatGPT, Claude y Grok'],
-      ['/docs/conectores/gemini/','Gemini web y CLI'],
-      ['/docs/conectores/skills/','Skills sin MCP'],
-      ['/docs/conectores/local/','IA local'],
+      ['/docs/conectores/ia/','Conectores para IA'],
       ['/docs/conectores/lms/','Plataformas LMS'],
       ['/docs/conectores/lti/','Módulo LTI 1.3'],
     ]],
@@ -431,19 +426,29 @@
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
     ['/docs/conectores/ia/',['/docs/conectores/','Conectores e integración']],
-    ['/docs/conectores/gemini/',['/docs/conectores/','Conectores e integración']],
-    ['/docs/conectores/skills/',['/docs/conectores/','Conectores e integración']],
-    ['/docs/conectores/local/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/gemini/',['/docs/conectores/ia/','Conectores para IA']],
+    ['/docs/conectores/skills/',['/docs/conectores/ia/','Conectores para IA']],
+    ['/docs/conectores/local/',['/docs/conectores/ia/','Conectores para IA']],
     ['/docs/conectores/lms/',['/docs/conectores/','Conectores e integración']],
     ['/docs/conectores/lti/',['/docs/conectores/','Conectores e integración']],
   ]);
+  // Keep legacy detail URLs reachable without advertising a separate IA
+  // navigation entry for every provider or installation method.
+  const CONNECTOR_IA_DETAIL_ROUTES=new Set([
+    '/docs/conectores/gemini/',
+    '/docs/conectores/skills/',
+    '/docs/conectores/local/',
+  ]);
+  const sidebarPath=(path)=>CONNECTOR_IA_DETAIL_ROUTES.has(path)
+    ?'/docs/conectores/ia/':path;
   const sidebarLocation = (current) => {
+    const selected=sidebarPath(current);
     for (const [section,items] of GLOBAL_SIDEBAR) {
       for (const [href,label] of items) {
         const normalized=normalizePath(href);
-        if (current===normalized) return {section,href,label};
+        if (selected===normalized) return {section,href,label};
         const children=DOC_SIDEBAR_CHILDREN.get(href) || [];
-        if (children.some(([childHref])=>current===normalizePath(childHref))) {
+        if (children.some(([childHref])=>selected===normalizePath(childHref))) {
           return {section,href,label,child:true};
         }
       }
@@ -462,7 +467,7 @@
       for (const [href,textValue] of items) {
         const normalized=normalizePath(href);
         const children=DOC_SIDEBAR_CHILDREN.get(href) || [];
-        const currentChild=children.find(([childHref])=>current===normalizePath(childHref));
+        const currentChild=children.find(([childHref])=>selected===normalizePath(childHref));
         const a=document.createElement('a');
         a.href=href;
         a.textContent=textValue;
@@ -479,6 +484,7 @@
             childLink.href=childHref;
             childLink.textContent=childLabel;
             if (current===normalizePath(childHref)) childLink.setAttribute('aria-current','page');
+            else if (selected===normalizePath(childHref)) childLink.setAttribute('aria-current','location');
             childNav.append(childLink);
           }
           fragment.append(childNav);
