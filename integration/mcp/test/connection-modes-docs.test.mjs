@@ -75,6 +75,14 @@ test('sidebar advertises a single AI entry and retains nested LMS and LTI',()=>{
   assert(!connectorChild.includes('Skills sin MCP'));
   assert(!connectorChild.includes('IA local'));
   assert(nav.includes('CONNECTOR_IA_DETAIL_ROUTES'));
+  const binding=nav.indexOf('const sidebarPath=');
+  assert(binding>0,'IA sidebar alias definition missing');
+  assert(!nav.slice(0,binding).includes('sidebarPath('),
+    'IA navigation alias is invoked before initialization');
+  const sidebarRender=nav.slice(nav.indexOf("const sidebar = document.querySelector('.doc-sidebar')"));
+  assert(sidebarRender.includes('const selected = sidebarPath(current);'),
+    'IA subnavigation is not applying its route alias');
+
   for(const detail of ['gemini','skills','local']){
     const route='/docs/conectores/'+detail+'/';
     assert(!links.includes(route),'AI subguide leaked into overview: '+route);
