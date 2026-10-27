@@ -83,8 +83,6 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
   let lineitem=needsLineitem?null:allowedUrl(ags.lineitem,allowed,allowInsecureLoopback);
   let scoreMaximum=1;
   const collection=needsLineitem?allowedUrl(ags.lineitems,allowed,allowInsecureLoopback):null;
-  if(lineitem&&(lineitem.search||lineitem.hash))
-   throw new Error('AGS lineitem URL must not include query');
   await checkHost(tokenEndpoint);
   if(lineitem)await checkHost(lineitem);
   if(collection)await checkHost(collection);
@@ -144,7 +142,8 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
     lineitem=allowedUrl(new URL(id,collection).toString(),allowed,allowInsecureLoopback);
    }
   }
-  if(lineitem.search||lineitem.hash)throw new Error('AGS lineitem URL must not include query');
+  // LMS-provided lineitem ids may include query parameters; retain them unchanged
+  // when appending the AGS score endpoint. URL origin, scheme and redirects are validated.
   const scoreUrl=new URL(lineitem.toString());
   scoreUrl.pathname=scoreUrl.pathname.replace(/\/$/,'')+'/scores';
   await checkHost(scoreUrl);
