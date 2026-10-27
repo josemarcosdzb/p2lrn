@@ -49,6 +49,21 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
     throw new Error('LMS service resolves to a private or unsafe address');
   }
  }
+ async function requestLms(phase,url,options){
+  try{return await fetchImpl(url,options);}
+  catch(error){
+   const reason=error?.name==='TimeoutError'||error?.name==='AbortError'?'TIMEOUT':'NETWORK_ERROR';
+   // Never include access tokens, signed assertions, request bodies or LMS response text.
+   throw new Error('LMS AGS '+phase+' '+reason);
+  }
+ }
+ async function readLmsJson(phase,response,limit){
+  try{return await readJson(response,limit);}
+  catch(error){
+   const reason=error?.name==='TimeoutError'||error?.name==='AbortError'?'TIMEOUT':'INVALID_RESPONSE';
+   throw new Error('LMS AGS '+phase+' '+reason);
+  }
+ }
  async function postScore({ags,subject,resourceLinkId,clientId,tokenUrl,issuer,score}){
   if(!ags||!Array.isArray(ags.scope)||!ags.scope.includes(SCORE_SCOPE))
    throw new Error('LMS did not authorize AGS score scope');
@@ -80,11 +95,11 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
    client_assertion_type:'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
    client_assertion:clientAssertion,scope:scopes.join(' ')
   });
-  const auth=await fetchImpl(tokenEndpoint,{method:'POST',redirect:'manual',
+  const auth=await requestLms('TOKEN_REQUEST',tokenEndpoint,{method:'POST',redirect:'manual',
    headers:{'Content-Type':'application/x-www-form-urlencoded'},
    body:form,signal:AbortSignal.timeout(8000)});
   if(!auth.ok||auth.status>=300)throw new Error('LMS OAuth token request failed: HTTP '+auth.status);
-  const reply=await readJson(auth,65536);
+  const reply=await readLmsJson('TOKEN_RESPONSE',auth,65536);
   if(typeof reply.access_token!=='string'||!reply.access_token.trim()||reply.access_token.length>8192 ||
      reply.token_type?.toLowerCase()!=='bearer')
    throw new Error('LMS did not return a valid bearer token');
@@ -96,11 +111,11 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
    const filter=new URL(collection.toString());
    filter.searchParams.set('resource_link_id',resourceLinkId);
    await checkHost(filter);
-   const list=await fetchImpl(filter,{method:'GET',redirect:'manual',
+   const list=await requestLms('LINEITEM_LOOKUP',filter,{method:'GET',redirect:'manual',
     headers:{Authorization:bearer,Accept:'application/vnd.ims.lis.v2.lineitemcontainer+json'},
     signal:AbortSignal.timeout(8000)});
    if(!list.ok||list.status>=300)throw new Error('LMS AGS lineitems lookup failed: HTTP '+list.status);
-   const items=await readJson(list,262144);
+   const items=await readLmsJson('LINEITEM_LOOKUP_RESPONSE',list,262144);
    if(!Array.isArray(items))throw new Error('LMS AGS lineitems collection is not a JSON array');
    const matching=items.filter(item=>item&&item.resourceLinkId===resourceLinkId);
    const tagged=matching.filter(item=>item.tag===tag);
@@ -116,13 +131,13 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
     if(!canCreateLineitem)
      throw new Error('No LMS gradebook column for resource and lineitem creation scope was not granted');
     const body=JSON.stringify({label:'P2LRN',scoreMaximum:1,resourceLinkId,tag});
-    const created=await fetchImpl(collection,{method:'POST',redirect:'manual',
+    const created=await requestLms('LINEITEM_CREATE',collection,{method:'POST',redirect:'manual',
      headers:{Authorization:bearer,'Content-Type':'application/vnd.ims.lis.v2.lineitem+json'},
      body,signal:AbortSignal.timeout(8000)});
     if(!created.ok||created.status>=300)throw new Error('LMS AGS lineitem creation failed: HTTP '+created.status);
     let id=created.headers.get('location');
     if(!id){
-     const response=await readJson(created,65536);
+     const response=await readLmsJson('LINEITEM_CREATE_RESPONSE',created,65536);
      id=response?.id;
     }
     if(typeof id!=='string'||!id.trim())throw new Error('LMS AGS did not return created lineitem id');
@@ -136,7 +151,7 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
   const payload={userId:subject,scoreGiven:Math.round(n*scoreMaximum*1000000)/1000000,
    scoreMaximum,activityProgress:score.completed?'Completed':'InProgress',
    gradingProgress:'FullyGraded',timestamp:new Date().toISOString()};
-  const response=await fetchImpl(scoreUrl,{method:'POST',redirect:'manual',
+  const response=await requestLms('SCORE_DELIVERY',scoreUrl,{method:'POST',redirect:'manual',
    headers:{Authorization:bearer,
     'Content-Type':'application/vnd.ims.lis.v1.score+json'},
    body:JSON.stringify(payload),signal:AbortSignal.timeout(8000)});
