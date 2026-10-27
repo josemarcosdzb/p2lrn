@@ -8,8 +8,8 @@
   "theme_color": "#0d1117",
   "icons": [
     {
-      "src": "/p2lrn-mark.png",
-      "sizes": "96x96",
+      "src": "/p2lrn-mark.png?v=p2lrn-brand-20261027-v2",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     }

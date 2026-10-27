@@ -37,18 +37,27 @@ code{font-family:var(--mono)}
 .brand{
   display:inline-flex;
   align-items:center;
-  gap:8px;
+  gap:10px;
   font-weight:900;
   letter-spacing:-.04em;
   text-decoration:none;
   font-size:1.18rem;
 }
 .brand::before{
-  content:"";
-  width:28px;
-  height:28px;
-  flex:0 0 28px;
-  background:url("/p2lrn-mark.png?v=p2lrn-brand-20261027") center/contain no-repeat;
+  content:"P2";
+  display:grid;
+  place-items:center;
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border-radius:12px;
+  color:#fff;
+  font-size:.78rem;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:-.04em;
+  background:linear-gradient(145deg,#4d7df8 0%,#6e83f7 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 6px 18px rgba(8,24,68,.22);
 }
 footer>strong{
   display:inline-flex;
@@ -57,10 +66,10 @@ footer>strong{
 }
 footer>strong::before{
   content:"";
-  width:20px;
-  height:20px;
-  flex:0 0 20px;
-  background:url("/p2lrn-mark.png?v=p2lrn-brand-20261027") center/contain no-repeat;
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
+  background:url("/p2lrn-mark.png?v=p2lrn-brand-20261027-v2") center/contain no-repeat;
 }
 .nav{
   display:flex;
