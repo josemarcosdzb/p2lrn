@@ -35,6 +35,31 @@ npm test
 
 Use Node.js 22+. Until packaged in a release, installation is from the checked-out repository.
 
+## Crear cursos sin MCP: Skills P2LRN en ChatGPT, Claude y Gemini
+
+Si solo se necesita **crear un nuevo archivo `.p2lrn` descargable a partir de una conversación**, no es necesario instalar el MCP, Node.js en el PC, el asistente Windows, un dominio, un proxy ni un túnel. Esto **no** conecta a carpetas del PC. No mezclarlo con el caso de leer/editar cursos privados existentes.
+
+- **ChatGPT:** existe una Skill «P2LRN – Crear y descargar» instalada en un entorno de ChatGPT. Contiene un empaquetador Python autónomo de un subconjunto P2LRN Core `0.4.0` que construye y verifica un nuevo `.p2lrn` cuando el entorno puede ejecutar scripts y adjuntar archivos. El uso depende de la habilitación de Skills en la cuenta. En ChatGPT: Complementos → Habilidades; no se instala automáticamente en todas las cuentas. Referencia: https://help.openai.com/es-es/articles/20001066-skills-in-chatgpt. Esta Skill no constituye instalación MCP, no lee el PC ni garantiza round-trip de todos los perfiles.
+- **Claude:** admite Skills personalizadas en claude.ai y Claude Code donde las funciones y permisos están disponibles. Requiere adaptar/probar el paquete de Skill y sus scripts para el entorno de Claude: que acepte un `SKILL.md` **no demuestra** que genere paquetes P2LRN válidos. https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview.
+- **Gemini web:** la función Skills se despliega según cuenta, región y producto. Google también ofrece Gems para instrucciones reutilizables si no hay Skills. **La ejecución de la Skill P2LRN de ChatGPT no está validada en Gemini web**. No basta con producir JSON o escribir una respuesta con extensión `.p2lrn`; hay que ejecutar un empaquetador compatible y verificar el ZIP. https://support.google.com/gemini/answer/17094296 y https://support.google.com/gemini/answer/15146780.
+- **Gemini CLI:** admite Agent Skills con `SKILL.md` bajo `~/.gemini/skills/` o `.gemini/skills/`. El comando `gemini skills list` permite inspeccionarlas y `gemini skills link <directorio>` registra un directorio autorizado para desarrollo. **Esto no instala MCP** pero requiere tener Gemini CLI. Ver https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/using-agent-skills.md.
+- **Grok:** no se declara una Skill P2LRN ejecutable e instalada para Grok. Puede ayudar a preparar contenido, pero no se garantiza un `.p2lrn` descargable sin un empaquetador probado.
+
+La Skill ChatGPT y los descriptores MCP son artefactos **distintos**: el ZIP `p2lrn-conector-mcp.zip` no es la Skill; no hay una descarga pública de la Skill ofrecida por la web P2LRN. Si otro entorno recibe un paquete compatible, debe verificar su procedencia, derechos, scripts y resultado.
+
+Documentación navegable: `/docs/conectores/skills/` (sin MCP) y `/docs/conectores/gemini/` (Gemini web, CLI y MCP opcional).
+
+## Gemini CLI con el MCP local opcional
+
+Si Gemini CLI necesita **leer y validar los archivos del PC** en lugar de crear un curso nuevo desde la conversación, puede utilizar el servidor MCP P2LRN ya implementado en `integration/mcp/server.mjs --stdio`:
+
+```powershell
+# Desde la raíz de P2LRN, después de descargar y extraer el kit oficial:
+.\integration\mcp\Conectar-P2LRN.cmd --root C:\MisCursos --clients gemini --install --verify
+```
+
+El asistente pide permisos para modificar la configuración de Gemini CLI, conserva los demás servidores y verifica las herramientas `p2lrn_list_courses` y `p2lrn_validate_course`. La configuración está en `~/.gemini/settings.json` (o perfil de Windows equivalente). Utiliza el mismo servidor P2LRN, sin otra implementación; mantiene `P2LRN_MCP_WRITE=0` por defecto. **No es una conexión directa a Gemini web**.
+
 ## Local MCP (recommended)
 
 A client starts the server via stdio and specifies an absolute directory of **authorized** courses:
