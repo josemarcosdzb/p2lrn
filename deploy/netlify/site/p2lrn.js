@@ -169,7 +169,6 @@
     nav.id = 'nav';
     nav.setAttribute('aria-label','Navegación principal');
     const current = normalizePath(window.location.pathname);
-    const selected = sidebarPath(current);
     const fragment = document.createDocumentFragment();
 
     for (const entry of GLOBAL_NAV) {
@@ -459,6 +458,7 @@
   const sidebar = document.querySelector('.doc-sidebar');
   if (sidebar) {
     const current = normalizePath(window.location.pathname);
+    const selected = sidebarPath(current);
     const fragment = document.createDocumentFragment();
     for (const [section,items] of GLOBAL_SIDEBAR) {
       const label=document.createElement('span');
