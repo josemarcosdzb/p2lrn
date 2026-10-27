@@ -127,6 +127,8 @@
         ['/docs/eventos/','Eventos'],
         ['/docs/conectores/','Conectores: visión general'],
         ['/docs/conectores/ia/','ChatGPT, Claude y Grok'],
+        ['/docs/conectores/gemini/','Gemini web y CLI'],
+        ['/docs/conectores/skills/','Skills sin MCP'],
         ['/docs/conectores/local/','IA local'],
         ['/docs/conectores/lms/','Plataformas LMS'],
         ['/docs/conectores/lti/','LTI 1.3'],
@@ -391,6 +393,8 @@
     ]],
     ['/docs/conectores/',[
       ['/docs/conectores/ia/','ChatGPT, Claude y Grok'],
+      ['/docs/conectores/gemini/','Gemini web y CLI'],
+      ['/docs/conectores/skills/','Skills sin MCP'],
       ['/docs/conectores/local/','IA local'],
       ['/docs/conectores/lms/','Plataformas LMS'],
       ['/docs/conectores/lti/','Módulo LTI 1.3'],
@@ -427,6 +431,8 @@
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
     ['/docs/conectores/ia/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/gemini/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/skills/',['/docs/conectores/','Conectores e integración']],
     ['/docs/conectores/local/',['/docs/conectores/','Conectores e integración']],
     ['/docs/conectores/lms/',['/docs/conectores/','Conectores e integración']],
     ['/docs/conectores/lti/',['/docs/conectores/','Conectores e integración']],
@@ -484,7 +490,7 @@
   if (sidebar) {
     const search = document.createElement('div');
     search.className = 'docs-search';
-    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" placeholder="NPM, IA, LMS, LTI…" autocomplete="off"><div class="docs-search-results" hidden></div>';
+    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" placeholder="NPM, Skills, Gemini, LMS…" autocomplete="off"><div class="docs-search-results" hidden></div>';
     sidebar.prepend(search);
     const input = search.querySelector('input');
     const results = search.querySelector('.docs-search-results');
