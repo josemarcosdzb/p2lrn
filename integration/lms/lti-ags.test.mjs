@@ -5,6 +5,7 @@ import {createLtiAgsClient} from './lti-ags.mjs';
 
 const SCORE='https://purl.imsglobal.org/spec/lti-ags/scope/score';
 const LINEITEM='https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
+const LINEITEM_READ='https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly';
 const {privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});
 const tool={kid:'p2lrn-test-key',privateKeyPem:privateKey.export({type:'pkcs8',format:'pem'})};
 const base={clientId:'p2lrn',issuer:'https://school.example',
@@ -79,6 +80,53 @@ test('AGS collection creates one stable gradebook column and reuses it for later
  assert.equal(calls.filter(x=>x.path.endsWith('/scores')).length,2);
 });
 
+
+test('AGS readonly lineitems scope reuses a gradebook column without creating one',async()=>{
+ const operations=[];
+ const client=createLtiAgsClient({tool,lookup,fetchImpl:async(url,opts)=>{
+  const parsed=new URL(url);
+  operations.push(opts.method+' '+parsed.pathname);
+  if(parsed.pathname==='/oauth/token'){
+   assert.deepEqual(new URLSearchParams(opts.body).get('scope').split(' ').sort(),[SCORE,LINEITEM_READ].sort());
+   return new Response(JSON.stringify({access_token:'qa-token',token_type:'Bearer'}),{status:200});
+  }
+  if(parsed.pathname==='/ags/lineitems'&&opts.method==='GET'){
+   assert.equal(parsed.searchParams.get('resource_link_id'),base.resourceLinkId);
+   return new Response(JSON.stringify([{id:'https://school.example/ags/lineitems/44',
+    resourceLinkId:base.resourceLinkId,scoreMaximum:100,label:'Moodle existing activity'}]),{status:200});
+  }
+  if(parsed.pathname==='/ags/lineitems/44/scores'&&opts.method==='POST'){
+   const payload=JSON.parse(opts.body);
+   assert.equal(payload.scoreGiven,85);
+   assert.equal(payload.scoreMaximum,100);
+   return new Response(null,{status:200});
+  }
+  throw new Error('Unexpected AGS endpoint or write '+parsed.pathname);
+ }});
+ const ags={scope:[SCORE,LINEITEM_READ],lineitems:'https://school.example/ags/lineitems'};
+ const result=await client.postScore({...base,ags});
+ assert.equal(result.ok,true);
+ assert.deepEqual(operations,[
+  'POST /oauth/token','GET /ags/lineitems','POST /ags/lineitems/44/scores'
+ ]);
+});
+
+test('AGS readonly-only scope never creates a new LMS gradebook column',async()=>{
+ const operations=[];
+ const client=createLtiAgsClient({tool,lookup,fetchImpl:async(url,opts)=>{
+  const parsed=new URL(url);
+  operations.push(opts.method+' '+parsed.pathname);
+  if(parsed.pathname==='/oauth/token')
+   return new Response(JSON.stringify({access_token:'qa-token',token_type:'Bearer'}),{status:200});
+  if(parsed.pathname==='/ags/lineitems'&&opts.method==='GET')
+   return new Response('[]',{status:200});
+  throw new Error('Readonly AGS client attempted unauthorized creation');
+ }});
+ const ags={scope:[SCORE,LINEITEM_READ],lineitems:'https://school.example/ags/lineitems'};
+ await assert.rejects(client.postScore({...base,ags}),/creation scope was not granted/);
+ assert.deepEqual(operations,['POST /oauth/token','GET /ags/lineitems']);
+});
+
 test('AGS rejects unapproved lineitems collections, missing scopes and invalid grades before network calls',async()=>{
  const client=createLtiAgsClient({tool,lookup,fetchImpl:async()=>{throw new Error('Network should not be called');}});
  await assert.rejects(client.postScore({...base,ags:{
@@ -86,7 +134,7 @@ test('AGS rejects unapproved lineitems collections, missing scopes and invalid g
  }}),/Unapproved LMS service URL/);
  await assert.rejects(client.postScore({...base,ags:{
   scope:[SCORE],lineitems:'https://school.example/ags/lineitems'
- }}),/lineitem creation requires/);
+ }}),/lineitem lookup requires/);
  await assert.rejects(client.postScore({...base,score:{normalized:2,completed:true},ags:{
   scope:[SCORE],lineitem:'https://school.example/ags/lineitems/12'
  }}),/Server-approved score/);
