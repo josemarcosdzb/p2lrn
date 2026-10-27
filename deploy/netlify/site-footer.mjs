@@ -6,7 +6,7 @@ export const SITE_FOOTER_GROUPS = Object.freeze([
   {
     label: 'Crear y explorar',
     links: [
-      ['/studio/', 'Studio'],
+      ['/docs/paquetes/', 'Crear paquetes'],
       ['/demo/', 'Player y visor'],
       ['/docs/questionnaires/', 'Cuestionarios y juegos'],
       ['/docs/ejemplos/', 'Ejemplos'],
