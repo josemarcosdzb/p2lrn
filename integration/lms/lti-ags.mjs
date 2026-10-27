@@ -4,6 +4,7 @@ import {isIP} from 'node:net';
 import {lookup as dnsLookup} from 'node:dns/promises';
 const SCORE_SCOPE='https://purl.imsglobal.org/spec/lti-ags/scope/score';
 const LINEITEM_SCOPE='https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
+const LINEITEM_READ_SCOPE='https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly';
 const bytes=v=>Buffer.from(JSON.stringify(v)).toString('base64url');
 const URL_LIMIT=4096;
 const allowedUrl=(value,origins,local)=>{
@@ -56,9 +57,11 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
   if(typeof n!=='number'||!Number.isFinite(n)||n<0||n>1)
    throw new Error('Server-approved score must be within [0,1]');
   const needsLineitem=typeof ags.lineitem!=='string'||!ags.lineitem.trim();
-  if(needsLineitem&&(!ags.scope.includes(LINEITEM_SCOPE)||
+  const canCreateLineitem=ags.scope.includes(LINEITEM_SCOPE);
+  const canReadLineitem=canCreateLineitem||ags.scope.includes(LINEITEM_READ_SCOPE);
+  if(needsLineitem&&(!canReadLineitem||
      typeof resourceLinkId!=='string'||!resourceLinkId.trim()||resourceLinkId.length>1024))
-   throw new Error('AGS lineitem creation requires an authorized collection and resource link');
+   throw new Error('AGS lineitem lookup requires an authorized collection and resource link');
   const allowed=new Set([new URL(issuer).origin,new URL(tokenUrl).origin]);
   if(Array.isArray(ags.allowedOrigins))for(const origin of ags.allowedOrigins)allowed.add(origin);
   const tokenEndpoint=allowedUrl(tokenUrl,allowed,allowInsecureLoopback);
@@ -70,7 +73,7 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
   if(lineitem)await checkHost(lineitem);
   if(collection)await checkHost(collection);
   const clientAssertion=signAssertion(tool,clientId,tokenEndpoint.toString());
-  const scopes=needsLineitem?[SCORE_SCOPE,LINEITEM_SCOPE]:[SCORE_SCOPE];
+  const scopes=needsLineitem?[SCORE_SCOPE,canCreateLineitem?LINEITEM_SCOPE:LINEITEM_READ_SCOPE]:[SCORE_SCOPE];
   const form=new URLSearchParams({
    grant_type:'client_credentials',
    client_assertion_type:'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
@@ -98,11 +101,16 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
    if(!list.ok||list.status>=300)throw new Error('LMS AGS lineitems lookup failed: HTTP '+list.status);
    const items=await readJson(list,262144);
    if(!Array.isArray(items))throw new Error('LMS AGS lineitems collection is not a JSON array');
-   const matching=items.filter(item=>item&&item.tag===tag&&item.resourceLinkId===resourceLinkId);
-   if(matching.length>1)throw new Error('Duplicate P2LRN gradebook columns for the same resource');
-   if(matching.length===1){
-    lineitem=allowedUrl(matching[0].id,allowed,allowInsecureLoopback);
+   const matching=items.filter(item=>item&&item.resourceLinkId===resourceLinkId);
+   const tagged=matching.filter(item=>item.tag===tag);
+   if(tagged.length>1||(tagged.length===0&&matching.length>1))
+    throw new Error('Ambiguous LMS gradebook columns for the same resource');
+   const existing=tagged[0]||(matching.length===1?matching[0]:null);
+   if(existing){
+    lineitem=allowedUrl(existing.id,allowed,allowInsecureLoopback);
    }else{
+    if(!canCreateLineitem)
+     throw new Error('No LMS gradebook column for resource and lineitem creation scope was not granted');
     const body=JSON.stringify({label:'P2LRN',scoreMaximum:1,resourceLinkId,tag});
     const created=await fetchImpl(collection,{method:'POST',redirect:'manual',
      headers:{Authorization:bearer,'Content-Type':'application/vnd.ims.lis.v2.lineitem+json'},
