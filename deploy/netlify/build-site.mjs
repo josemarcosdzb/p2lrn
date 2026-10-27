@@ -255,6 +255,12 @@ if (!revisionedStudioHtml.includes(JSON.stringify('/studio/runtime/authoring-doc
 // footer after </main>: Studio also contains a form's <footer> INSIDE <main>,
 // which must keep its buttons and must NEVER receive legal/navigation links.
 const publicFooter=renderSiteFooter();
+if (publicFooter.includes('site-footer__brand-mark" aria-hidden="true">P2</span>')) {
+  throw new Error('Shared footer still contains the legacy P2 badge');
+}
+if (!publicFooter.includes('<span class="site-footer__brand-mark" aria-hidden="true"></span>')) {
+  throw new Error('Shared footer is missing the unified P2LRN brand mark slot');
+}
 let publicFooterPages=0;
 for (const htmlPath of htmlFiles) {
   let html=await readFile(htmlPath,'utf8');

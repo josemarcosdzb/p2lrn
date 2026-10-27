@@ -64,7 +64,7 @@ export function renderSiteFooter() {
       '<div class="site-footer__main">'+
         '<div class="site-footer__intro">'+
           '<a class="site-footer__brand" href="/" aria-label="P2LRN — Inicio">'+
-            '<span class="site-footer__brand-mark" aria-hidden="true">P2</span>'+
+            '<span class="site-footer__brand-mark" aria-hidden="true"></span>'+
             '<span class="site-footer__brand-text">P2LRN</span>'+
           '</a>'+
           '<p class="site-footer__description">Crea, reproduce y comparte contenidos educativos interactivos en un formato portable.</p>'+

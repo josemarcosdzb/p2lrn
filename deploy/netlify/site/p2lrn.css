@@ -425,18 +425,11 @@ main{max-width:1220px;margin:0 auto;padding:0 24px}
 }
 .site-footer__brand:hover,.site-footer__brand:focus-visible{color:#fff}
 .site-footer__brand-mark{
-  display:grid;
-  place-items:center;
-  width:42px;
-  height:42px;
+  display:block;
+  width:46px;
+  height:46px;
   flex:none;
-  border-radius:11px;
-  background:linear-gradient(145deg,#4066dc,#7387e6);
-  box-shadow:0 8px 20px rgba(25,48,105,.27);
-  color:#fff;
-  font-weight:850;
-  font-size:.88rem;
-  letter-spacing:-.055em;
+  background:url("/p2lrn-mark.png?v=p2lrn-brand-20261027-v3") center/contain no-repeat;
 }
 .site-footer__description{
   max-width:315px;
