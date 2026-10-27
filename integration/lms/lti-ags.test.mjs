@@ -25,6 +25,8 @@ test('AGS existing lineitem uses signed OAuth and writes only server-approved sc
    return new Response(JSON.stringify({access_token:'test-bearer',token_type:'Bearer'}),{status:200});
   }
   if(request.path==='/ags/lineitems/42/scores'){
+   assert.equal(new URL(url).searchParams.get('typeid'),'42',
+    'signed lineitem query parameters must reach the score endpoint');
    assert.equal(opts.headers.Authorization,'Bearer test-bearer');
    const score=JSON.parse(opts.body);
    assert.equal(score.userId,'anonymous-learner');
@@ -34,7 +36,7 @@ test('AGS existing lineitem uses signed OAuth and writes only server-approved sc
   throw new Error('Unexpected AGS request '+request.path);
  }});
  const result=await client.postScore({...base,ags:{
-  scope:[SCORE],lineitem:'https://school.example/ags/lineitems/42'
+  scope:[SCORE],lineitem:'https://school.example/ags/lineitems/42?typeid=42'
  }});
  assert.equal(result.ok,true);
  assert.deepEqual(calls.map(x=>x.method),['POST','POST']);
@@ -92,10 +94,11 @@ test('AGS readonly lineitems scope reuses a gradebook column without creating on
   }
   if(parsed.pathname==='/ags/lineitems'&&opts.method==='GET'){
    assert.equal(parsed.searchParams.get('resource_link_id'),base.resourceLinkId);
-   return new Response(JSON.stringify([{id:'https://school.example/ags/lineitems/44',
+   return new Response(JSON.stringify([{id:'https://school.example/ags/lineitems/44?typeid=123',
     resourceLinkId:base.resourceLinkId,scoreMaximum:100,label:'Moodle existing activity'}]),{status:200});
   }
   if(parsed.pathname==='/ags/lineitems/44/scores'&&opts.method==='POST'){
+   assert.equal(parsed.searchParams.get('typeid'),'123');
    const payload=JSON.parse(opts.body);
    assert.equal(payload.scoreGiven,85);
    assert.equal(payload.scoreMaximum,100);
