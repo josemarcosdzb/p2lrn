@@ -9,7 +9,7 @@
   "icons": [
     {
       "src": "/p2lrn-mark.png?v=p2lrn-brand-20261027-v3",
-      "sizes": "192x192",
+      "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     }
