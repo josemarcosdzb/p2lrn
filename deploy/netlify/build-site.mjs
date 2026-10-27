@@ -396,9 +396,11 @@ for(const name of requiredConnectorZips){
 // Documentation connectors are separate, navigable pages with source-backed
 // explanations. Check the common navigation and sitemap before publishing.
 const connectorDocs = [
-  ['', ['Conectores e integración', 'ChatGPT, Claude y Grok', 'IA local', 'Plataformas LMS', 'LTI 1.3']],
-  ['ia', ['ChatGPT', 'Claude', 'Grok', 'P2LRN_MCP_WRITE', 'HTTPS']],
-  ['local', ['Conectar-P2LRN.cmd', 'stdio', 'Cursor', 'Windsurf', 'Ollama']],
+  ['', ['Conectores e integración', 'ChatGPT, Claude y Grok', 'Skills', 'Gemini', 'IA local', 'Plataformas LMS', 'LTI 1.3']],
+  ['ia', ['ChatGPT', 'Claude', 'Grok', 'Skills sin MCP', 'P2LRN_MCP_WRITE', 'HTTPS']],
+  ['gemini', ['Gemini web', 'Gemini CLI', 'Skills', 'Gems', 'SKILL.md', 'gemini skills list', 'MCP']],
+  ['skills', ['P2LRN – Crear y descargar', 'sin instalar MCP', 'ChatGPT', 'Claude', 'Gemini', 'Core 0.4.0']],
+  ['local', ['Conectar-P2LRN.cmd', 'stdio', 'Cursor', 'Windsurf', 'Gemini CLI', 'Ollama']],
   ['lms', ['Moodle', 'Canvas', 'Sakai', 'Chamilo', 'Open edX']],
   ['lti', ['OIDC', 'JWKS', 'Deep Linking', 'AGS', 'NRPS', 'no se han certificado']],
 ];
@@ -426,6 +428,7 @@ for(const [slug,required] of connectorDocs){
 }
 const expectedDownloads=[
   ['ia','p2lrn-conector-mcp.zip'],
+  ['gemini','p2lrn-conector-mcp.zip'],
   ['local','p2lrn-conector-mcp.zip'],
   ['lms','p2lrn-lti-contratos.zip'],
   ['lti','p2lrn-lti-contratos.zip']
