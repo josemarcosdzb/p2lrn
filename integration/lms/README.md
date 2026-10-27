@@ -82,6 +82,37 @@ Límite: 64 MiB. Toolkit valida integridad y perfiles antes de publicarlo. Consu
 
 La API del Player utiliza sesión HttpOnly, protección CSRF y permisos del grafo de contenido. Los eventos y notas del navegador son **observaciones, no calificaciones oficiales**.
 
+## Herramientas sin Deep Linking: vinculación manual autorizada
+
+Deep Linking firmado es el flujo recomendado. Si una plataforma LMS solo permite
+añadir una herramienta externa manualmente, **no** se debe abrir un contenido
+P2LRN a partir de una URL editable por el alumno. Antes, un administrador del
+proveedor P2LRN registra un vínculo validado, reutilizando la misma política
+de aislamiento que Deep Linking:
+
+    POST /lti/admin/bindings
+    Authorization: Bearer <token-administrativo>
+    Content-Type: application/json
+
+    {
+      "registrationId": "centro-moodle",
+      "deploymentId": "DESPLIEGUE-APROBADO-DEL-LMS",
+      "catalogId": "ID-CATALOGO-PUBLICADO",
+      "entityId": "ID-CURSO-UNIDAD-O-ACTIVIDAD"
+    }
+
+La respuesta incluye `bindingId` y
+`customParameters.p2lrn_binding_id`. Guardar ese valor opaco como
+parámetro personalizado **p2lrn_binding_id** de la actividad externa LTI 1.3
+en el LMS. El servidor comprueba institución, registro activo, despliegue y
+contenido publicado antes de crear el vínculo y vuelve a verificarlos en cada
+lanzamiento. No incluir claves, JWT, cookies ni tokens administrativos en
+parámetros personalizados ni en paquetes.
+
+Las instalaciones que no transmitan parámetros personalizados dentro de la
+claim LTI 1.3 `https://purl.imsglobal.org/spec/lti/claim/custom` deben
+configurarse mediante Deep Linking; no debilitar la comprobación de vínculos.
+
 ## Calificaciones reales con AGS
 
 El servidor guarda cualquier nota observada sin enviarla automáticamente. Después de comprobar la evaluación, el administrador puede consultar los identificadores de intentos autorizados:
@@ -94,7 +125,7 @@ Para validar y enviar una nota oficial, POST /lti/admin/grades con JSON:
 
 La nota se registra antes del envío, genera una entrada idempotente en una cola persistente y solicita un token AGS mediante una aserción JWT firmada. Si la plataforma devuelve error o está desconectada, la calificación permanece pendiente: GET /lti/admin/ags/pending y POST /lti/admin/ags/retry con JSON que contenga outboxId.
 
-Se requiere el scope AGS score y el identificador lineitem en el launch firmado. La entrega se limita a URLs autorizadas y rechaza redirecciones. La corrección automática de todos los juegos y cuestionarios no se deduce simplemente de un score enviado por el navegador.
+Se requiere el scope AGS `score`. El LMS puede entregar un `lineitem` directo o una colección `lineitems`. Cuando concede `lineitem.readonly`, P2LRN busca y reutiliza una columna existente del mismo `resourceLinkId` sin crear otra ni solicitar permisos adicionales. Crear columnas nuevas exige expresamente el scope de escritura `lineitem`; si solo hay permiso de lectura y no existe columna compatible, el envío permanece pendiente. La entrega se limita a URLs autorizadas y rechaza redirecciones. La corrección automática de todos los juegos y cuestionarios no se deduce simplemente de un score enviado por el navegador.
 
 ## Validación y limitaciones
 
@@ -103,6 +134,7 @@ Ejecutar los tests en Windows con el job lms-contracts-windows de P2LRN CI, o de
     node --test integration/lms/lms-contracts.test.mjs
     node --test integration/lms/lti-provider.test.mjs
     node --test integration/lms/lti-store.test.mjs
+    node --test integration/lms/lti-ags.test.mjs
     node --test integration/lms/lti-server.test.mjs
     node --test integration/lms/package-validation.test.mjs
 
