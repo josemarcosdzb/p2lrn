@@ -81,6 +81,9 @@ test('one AI guide explains concepts once and documents all four platforms',()=>
   assert(sidebar.includes("link.dataset.targetId===sectionId"),'Scroll position is not reflected in sidebar');
   assert(css.includes('.doc-sidebar .doc-ai-topics a[aria-current="location"]'));
   assert(css.includes('.doc-section[id],.doc-anchor-alias[id]'));
+  assert(ai.includes('<html lang="es" class="doc-instant-anchor">'),
+    'AI guide needs instant anchors to keep its active sidebar in sync');
+  assert(css.includes('html.doc-instant-anchor{scroll-behavior:auto}'));
 });
 
 test('legacy links redirect to canonical section and are excluded from navigation',()=>{
