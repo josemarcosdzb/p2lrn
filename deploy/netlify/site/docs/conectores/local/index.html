@@ -7,7 +7,12 @@
 <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
 <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
 <main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
-<article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / IA LOCAL</p><h1>Conectores de IA local</h1><p>Las aplicaciones de IA instaladas en tu ordenador pueden abrir herramientas P2LRN mediante MCP por stdio, sin dominio, túnel ni servidor en la nube. La carpeta de cursos autorizada y la posibilidad de editar se seleccionan durante la configuración.</p></header>
+<article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / IA LOCAL</p><h1>Conecta P2LRN a tu ordenador sin dominio</h1><p>Para usar tus cursos con una aplicación de IA instalada en el PC, conecta el servidor P2LRN por <code>stdio</code>. <strong>No necesitas una web, dominio, HTTPS ni abrir puertos.</strong> La carpeta de cursos autorizada y los permisos de edición se eligen durante la configuración.</p></header>
+<section class="doc-section"><h2>¿Qué tipo de conexión necesitas?</h2><div class="reference-table">
+<div><strong>IA instalada en el PC</strong><p>Usa el asistente Windows descrito a continuación. Funciona con los clientes MCP locales compatibles y sólo accede a las carpetas que autorices. No requiere que el modelo de IA sea local: eso depende de la aplicación.</p></div>
+<div><strong>ChatGPT en el navegador → archivos de tu PC</strong><p>ChatGPT web no se conecta a <code>localhost</code> directamente. Con permisos de cuenta y área de trabajo puedes utilizar <a href="/docs/conectores/ia/#chatgpt-pc">Secure MCP Tunnel</a>: conecta el proceso local a ChatGPT mediante una salida HTTPS, sin dominio propio ni puerto entrante público. El túnel no forma parte del instalador P2LRN y se configura aparte.</p></div>
+<div><strong>ChatGPT Desktop y plugins MCP locales</strong><p>Los plugins de escritorio con servidor MCP <code>stdio</code> son otra vía, pero su instalación y distribución están sujetas a las capacidades y permisos de la aplicación. P2LRN no se instala automáticamente como plugin de ChatGPT Desktop. <a href="https://developers.openai.com/plugins/deploy/desktop-only">Requisitos oficiales</a>.</p></div>
+</div></section>
 <section class="doc-section"><h2>Descargar e instalar el conector</h2>
 <p>El archivo descargable incluye el servidor MCP, el Toolkit y el asistente Windows en la estructura de carpetas necesaria. No tienes que clonar todo el repositorio ni buscar sus componentes por separado.</p>
 <div class="example-actions"><a class="button primary" href="/downloads/p2lrn-conector-mcp.zip" download>Descargar conector P2LRN (.zip)</a><a class="button" href="/downloads/manifest.json">Ver SHA-256 y tamaño</a></div>
@@ -41,7 +46,7 @@
 <div><strong>VS Code</strong><p>Usa un archivo <code>.vscode/mcp.json</code> dentro del proyecto indicado explícitamente por <code>--workspace</code>.</p></div>
 <div><strong>Codex CLI, Claude Code, OpenCode</strong><p>Genera una configuración o instrucciones para importar y revisar según la versión del cliente; no se promete instalación automática en todos los casos.</p></div>
 <div><strong>Clientes MCP stdio genéricos</strong><p>Se facilita la entrada de conexión con comando, argumentos y variables de entorno. La compatibilidad depende del cliente.</p></div>
-<div><strong>ChatGPT Desktop</strong><p>Existe una guía de desarrollo local, pero la instalación directa de servidores stdio depende de las capacidades y permisos disponibles en esa aplicación.</p></div>
+<div><strong>ChatGPT Desktop</strong><p>La aplicación puede ejecutar plugins locales <code>stdio</code> cuando están disponibles y autorizados. P2LRN ofrece el servidor, no un plugin de ChatGPT instalado: la instalación requiere empaquetado compatible, aprobación o elegibilidad y comprobación en una sesión local.</p></div>
 </div></section>
 <section class="doc-section"><h2>Comandos para usuarios avanzados</h2>
 <p>Ejecuta los siguientes comandos desde la raíz del repositorio. Para el script directo debes preparar primero el Toolkit y las dependencias, cosa que hace automáticamente el lanzador de Windows.</p>
@@ -68,7 +73,7 @@
 <li>Haz una lectura real de un <code>.p2lrn</code> de la carpeta autorizada. Fuera de ella, el acceso debe rechazarse.</li>
 <li>Si activaste edición, exporta un nuevo paquete y comprueba que el original conserva su contenido.</li>
 <li>Si el cliente muestra una versión antigua, revisa su configuración MCP y reinícialo cuando proceda; no reemplaces configuraciones ajenas sin revisarlas.</li></ul>
-<p>La alternativa para ChatGPT web, Claude web y Grok web es el <a href="/docs/conectores/ia/">conector remoto HTTPS</a>.</p></section>
+<p>Si quieres ChatGPT web sin dominio propio, revisa la <a href="/docs/conectores/ia/#chatgpt-pc">conexión privada mediante Secure MCP Tunnel</a>. Para un servidor público de otra IA web, consulta las <a href="/docs/conectores/ia/#conexion-remota">instrucciones HTTPS</a>.</p></section>
 <nav class="doc-pager"><a class="prev" href="/docs/conectores/ia/"><span>← Anterior</span><strong>ChatGPT, Claude y Grok</strong></a>
 <a class="next" href="/docs/conectores/lms/"><span>Siguiente →</span><strong>Plataformas LMS</strong></a></nav>
 </article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
