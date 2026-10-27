@@ -334,6 +334,25 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      const tenantId=valid(decodeURIComponent(path.slice('/lti/admin/catalog/'.length)),'tenantId',128);
      return sendJson(res,200,{courses:store.listCatalog(tenantId)});
     }
+    // For LMS instances where a teacher cannot use Deep Linking, an explicitly
+    // authenticated P2LRN administrator may prepare a resource binding to
+    // be stored as an LTI custom parameter. Content and deployment are checked
+    // by the same store validation used for signed Deep Linking responses.
+    if(method==='POST'&&path==='/lti/admin/bindings'){
+     const reqData=input(await readBody(req,32768),req);
+     const registrationId=valid(reqData.registrationId,'registrationId',128);
+     const deploymentId=valid(reqData.deploymentId,'deploymentId',256);
+     const catalogId=valid(reqData.catalogId,'catalogId',128);
+     const entityId=valid(reqData.entityId,'entityId',2048);
+     const registration=store.getRegistrationById(registrationId);
+     if(!registration||registration.status!=='ACTIVE')throw new Error('Unregistered LMS');
+     const bindingId=store.createBinding({
+      tenantId:registration.tenantId,registrationId,deploymentId,catalogId,entityId
+     });
+     return sendJson(res,201,{bindingId,
+      customParameters:{p2lrn_binding_id:bindingId},
+      registrationId,deploymentId,catalogId,entityId});
+    }
     if(method==='GET'&&path==='/lti/admin/attempts'){
      const tenantId=valid(incoming.searchParams.get('tenantId'),'tenantId',128);
      return sendJson(res,200,{attempts:store.listAttempts(tenantId)});
