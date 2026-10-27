@@ -160,6 +160,8 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
    headers:{'Content-Type':'application/x-www-form-urlencoded','Cookie':learner.browserCookie},
    body:new URLSearchParams({state:learner.state,id_token:token})});
   assert.equal(launch.status,200);
+  assert.match(launch.headers.get('content-security-policy')??'',/script-src[^;]*'wasm-unsafe-eval'/,
+    'the LTI Player must permit WebAssembly physics without globally enabling JavaScript eval');
   const htmlBody=await launch.text();
   assert.match(htmlBody,/<p2lrn-player/);
   assert.match(htmlBody,/player\.setAttribute\("src",src\)/,

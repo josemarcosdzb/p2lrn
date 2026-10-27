@@ -53,7 +53,7 @@ const sendHtml=(res,status,body,csp,headers={})=>{
 };
 const policy=(nonceStr,ancestor)=>[
  "default-src 'none'","base-uri 'none'","form-action 'self' "+(ancestor||''),
- "script-src 'self' 'nonce-"+nonceStr+"' blob:","style-src 'self' 'unsafe-inline'",
+ "script-src 'self' 'nonce-"+nonceStr+"' 'wasm-unsafe-eval' blob:","style-src 'self' 'unsafe-inline'",
  "img-src 'self' blob: data:","font-src 'self' data:",
  "connect-src 'self' blob:","worker-src 'self' blob:","frame-src 'self' blob:",
  "frame-ancestors "+(ancestor||"'none'")

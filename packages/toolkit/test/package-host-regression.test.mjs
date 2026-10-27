@@ -30,3 +30,11 @@ test('cmi5 preview provides a local return URL and forwards exit to the player r
   assert.match(runtime,/Actividad cerrada\./);
 });
 
+
+test('3D physics does not require arbitrary JS eval in package host CSP',async()=>{
+  const host=await readFile(hostPath,'utf8');
+  assert.match(host,/script-src[^;]*'wasm-unsafe-eval'/,
+    'WASM Rapier physics must be allowed in sandboxed package previews');
+  assert.doesNotMatch(host,/script-src[^;]*\s'unsafe-eval'(?=\s|;)/,
+    'arbitrary JavaScript eval must remain disabled');
+});
