@@ -19,7 +19,7 @@ const nonce=(len=32)=>randomBytes(len).toString('base64url');
 const html=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const safeJs=s=>JSON.stringify(s).replaceAll('<','\\u003c').replaceAll('\u2028','\\u2028').replaceAll('\u2029','\\u2029');
 const time=()=>Math.floor(Date.now()/1000);
-const allowedType={'.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.html':'text/html; charset=utf-8','.json':'application/json; charset=utf-8','.wasm':'application/wasm','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.woff2':'font/woff2','.woff':'font/woff','.glb':'model/gltf-binary','.gltf':'model/gltf+json','.mp3':'audio/mpeg','.mp4':'video/mp4','.map':'application/json'};
+const allowedType={'.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.html':'text/html; charset=utf-8','.json':'application/json; charset=utf-8','.wasm':'application/wasm','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.woff2':'font/woff2','.woff':'font/woff','.glb':'model/gltf-binary','.gltf':'model/gltf+json','.mp3':'audio/mpeg','.mp4':'video/mp4','.map':'application/json'};
 const secureCookie=(name,value,secure,maxAge,partitioned=false)=>name+'='+value+'; Path=/; HttpOnly; SameSite='+(secure?'None':'Lax')+(secure?'; Secure':'')+(secure&&partitioned?'; Partitioned':'')+'; Max-Age='+maxAge;
 const cookies=request=>Object.fromEntries(String(request.headers.cookie||'').split(';').map(x=>x.trim().split('=')).filter(p=>p.length===2));
 const compare=(a,b)=>typeof a==='string'&&typeof b==='string'&&
