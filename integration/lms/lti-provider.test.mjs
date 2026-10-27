@@ -94,6 +94,29 @@ test('JWT signature, issuer, audience, nonce and deployment are enforced',async(
  const altered=valid.slice(0,-2)+(valid.slice(-2)==='AA'?'BB':'AA');
  await assert.rejects(f.provider.verifyLaunch({state,idToken:altered,browserBinding:'browser-secret'}),/signature/);
 });
+test('Sakai one-hour signed JWTs are accepted, but future/old tokens remain rejected',async()=>{
+ const accepted=createFixture(),a=await accepted.start();
+ const launch=await accepted.provider.verifyLaunch({
+  state:a.state,idToken:accepted.token({nonce:a.nonce,changes:{exp:now+3600}}),
+  browserBinding:'browser-secret'
+ });
+ assert.equal(launch.kind,'resource');
+ const denied=[
+  {exp:now+3601},
+  {iat:now-601,exp:now+30},
+  {iat:now+61,exp:now+3600},
+  {exp:now-100},
+  {iat:'invalid'}
+ ];
+ for(const changes of denied){
+  const f=createFixture(),{state,nonce}=await f.start();
+  await assert.rejects(
+   f.provider.verifyLaunch({state,idToken:f.token({nonce,changes}),browserBinding:'browser-secret'}),
+   /timestamps/
+  );
+ }
+});
+
 test('signed Deep Linking is restricted to approved instructor and registered return origin',async()=>{
  const f=createFixture(),{nonce,state}=await f.start('LtiDeepLinkingRequest');
  const verified=await f.provider.verifyLaunch({state,

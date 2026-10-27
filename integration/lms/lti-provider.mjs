@@ -14,6 +14,7 @@ const DL_DATA = 'https://purl.imsglobal.org/spec/lti-dl/claim/data';
 const MAX_TOKEN_LENGTH = 65536;
 const MAX_LOGIN_HINT_LENGTH = 4096;
 const STATE_LIFETIME = 300;
+const MAX_LMS_JWT_VALIDITY_SECONDS = 3600;
 const bytes = size => randomBytes(size).toString('base64url');
 const digest = value => createHash('sha256').update(value).digest('hex');
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -83,7 +84,7 @@ function verifyPlatformJwt(token, registration, nonceHash, now) {
     throw new Error('LMS audience/authorized party mismatch');
   if (!Number.isInteger(claims.iat) || !Number.isInteger(claims.exp) ||
       claims.iat > now + 60 || claims.iat < now - 600 ||
-      claims.exp <= now - 60 || claims.exp > claims.iat + 900 ||
+      claims.exp <= now - 60 || claims.exp > claims.iat + MAX_LMS_JWT_VALIDITY_SECONDS ||
       (claims.nbf !== undefined && (!Number.isInteger(claims.nbf) || claims.nbf > now + 60)))
     throw new Error('Expired, future or invalid LMS JWT timestamps');
   if (typeof claims.nonce !== 'string' ||
