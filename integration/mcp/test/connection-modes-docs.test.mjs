@@ -78,7 +78,7 @@ test('Gemini and no-MCP Skills stay separate from MCP across site navigation and
     'No-MCP creation path must be visible before remote MCP');
   assert(ai.includes('Skill sin MCP')&&ai.includes('href="/docs/conectores/skills/"'));
   assert(local.includes('Skills sin MCP')&&local.includes('Gemini CLI'));
-  assert.match(gemini,/Gemini web: Skills, sin MCP/);
+  assert.match(gemini,/Gemini en la web: Skills, sin MCP/);
   assert.match(gemini,/Gemini web: alternativa con Gems/);
   assert.match(gemini,/Gemini CLI: Agent Skills sin servidor MCP/);
   assert.match(gemini,/Gemini CLI: conectar tus cursos del PC mediante MCP/);
