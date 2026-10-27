@@ -86,10 +86,11 @@
     },
     {
       label: 'Crear',
-      active: ['/studio/','/docs/studio/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
+      active: ['/studio/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
       items: [
         ['/studio/','Abrir Studio'],
         ['/docs/studio/','Guía de Studio'],
+        ['/docs/entrega-offline/','Entrega offline'],
         ['/docs/paquetes/','Crear paquetes'],
         ['/docs/paquetes/multipart/','Multipart'],
         ['/docs/toolkit/','Toolkit'],
@@ -345,6 +346,7 @@
     ]],
     ['CREAR', [
       ['/docs/studio/','Studio visual'],
+      ['/docs/entrega-offline/','Entrega offline'],
       ['/docs/paquetes/','Crear paquetes'],
       ['/docs/paquetes/multipart/','Multipart'],
       ['/docs/toolkit/','Toolkit'],
