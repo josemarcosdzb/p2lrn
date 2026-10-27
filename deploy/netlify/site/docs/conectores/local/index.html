@@ -8,8 +8,12 @@
 <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
 <main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
 <article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / IA LOCAL</p><h1>Conecta P2LRN a tu ordenador sin dominio</h1><p>Para usar tus cursos con una aplicación de IA instalada en el PC, conecta el servidor P2LRN por <code>stdio</code>. <strong>No necesitas una web, dominio, HTTPS ni abrir puertos.</strong> La carpeta de cursos autorizada y los permisos de edición se eligen durante la configuración.</p></header>
+<section class="doc-section"><h2>Sin instalar MCP: crear y descargar un curso mediante Skills</h2>
+<p>Si lo único que quieres es <strong>crear un archivo <code>.p2lrn</code> nuevo en una conversación</strong>, no necesitas este instalador, Node.js en tu PC ni conectar tus carpetas. La Skill «P2LRN – Crear y descargar» existe en un entorno de ChatGPT; consulta <a href="/docs/conectores/skills/">cómo usar Skills sin MCP</a>. Gemini cuenta además con <a href="/docs/conectores/gemini/">Skills/Gems web y Agent Skills CLI</a>, según cuenta y plataforma.</p>
+<p>Este instalador es sólo para trabajar desde un cliente MCP con cursos ya guardados en una carpeta de tu ordenador.</p>
+</section>
 <section class="doc-section"><h2>¿Qué tipo de conexión necesitas?</h2><div class="reference-table">
-<div><strong>IA instalada en el PC</strong><p>Usa el asistente Windows descrito a continuación. Funciona con los clientes MCP locales compatibles y sólo accede a las carpetas que autorices. No requiere que el modelo de IA sea local: eso depende de la aplicación.</p></div>
+<div><strong>IA instalada en el PC</strong><p>Usa el asistente Windows descrito a continuación para las aplicaciones MCP compatibles, incluido <a href="/docs/conectores/gemini/">Gemini CLI</a>. Sólo accede a carpetas autorizadas. No requiere un modelo de IA local: eso depende de la aplicación.</p></div>
 <div><strong>ChatGPT en el navegador → archivos de tu PC</strong><p>ChatGPT web no se conecta a <code>localhost</code> directamente. Con permisos de cuenta y área de trabajo puedes utilizar <a href="/docs/conectores/ia/#chatgpt-pc">Secure MCP Tunnel</a>: conecta el proceso local a ChatGPT mediante una salida HTTPS, sin dominio propio ni puerto entrante público. El túnel no forma parte del instalador P2LRN y se configura aparte.</p></div>
 <div><strong>ChatGPT Desktop y plugins MCP locales</strong><p>Los plugins de escritorio con servidor MCP <code>stdio</code> son otra vía, pero su instalación y distribución están sujetas a las capacidades y permisos de la aplicación. P2LRN no se instala automáticamente como plugin de ChatGPT Desktop. <a href="https://developers.openai.com/plugins/deploy/desktop-only">Requisitos oficiales</a>.</p></div>
 </div></section>
@@ -42,7 +46,7 @@
 <div><strong>Claude Desktop</strong><p>Configura un servidor MCP local con JSON. El asistente solicita confirmación y preserva las demás entradas existentes.</p></div>
 <div><strong>Cursor</strong><p>Registra las herramientas P2LRN en la configuración MCP del editor, sin modificar los paquetes del curso.</p></div>
 <div><strong>Windsurf</strong><p>Configura la conexión local compatible con MCP; debe verificarse que la versión instalada expone las herramientas.</p></div>
-<div><strong>Gemini CLI</strong><p>Registra el proceso <code>stdio</code> como servidor MCP. La conexión es local incluso si el modelo que usa Gemini CLI puede estar alojado en la nube.</p></div>
+<div><strong>Gemini CLI</strong><p>Registra el proceso <code>stdio</code> como servidor MCP. También soporta <a href="/docs/conectores/gemini/">Agent Skills sin MCP</a> cuando sólo quieres crear nuevos cursos siguiendo instrucciones. No confundas Gemini CLI con Gemini web.</p></div>
 <div><strong>VS Code</strong><p>Usa un archivo <code>.vscode/mcp.json</code> dentro del proyecto indicado explícitamente por <code>--workspace</code>.</p></div>
 <div><strong>Codex CLI, Claude Code, OpenCode</strong><p>Genera una configuración o instrucciones para importar y revisar según la versión del cliente; no se promete instalación automática en todos los casos.</p></div>
 <div><strong>Clientes MCP stdio genéricos</strong><p>Se facilita la entrada de conexión con comando, argumentos y variables de entorno. La compatibilidad depende del cliente.</p></div>
@@ -74,6 +78,6 @@
 <li>Si activaste edición, exporta un nuevo paquete y comprueba que el original conserva su contenido.</li>
 <li>Si el cliente muestra una versión antigua, revisa su configuración MCP y reinícialo cuando proceda; no reemplaces configuraciones ajenas sin revisarlas.</li></ul>
 <p>Si quieres ChatGPT web sin dominio propio, revisa la <a href="/docs/conectores/ia/#chatgpt-pc">conexión privada mediante Secure MCP Tunnel</a>. Para un servidor público de otra IA web, consulta las <a href="/docs/conectores/ia/#conexion-remota">instrucciones HTTPS</a>.</p></section>
-<nav class="doc-pager"><a class="prev" href="/docs/conectores/ia/"><span>← Anterior</span><strong>ChatGPT, Claude y Grok</strong></a>
+<nav class="doc-pager"><a class="prev" href="/docs/conectores/skills/"><span>← Anterior</span><strong>Skills sin MCP</strong></a>
 <a class="next" href="/docs/conectores/lms/"><span>Siguiente →</span><strong>Plataformas LMS</strong></a></nav>
 </article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
