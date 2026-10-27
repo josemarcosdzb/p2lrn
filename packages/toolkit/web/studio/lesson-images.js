@@ -34,6 +34,36 @@ export async function lessonImageData(file){
   const alt=String(file.name||'Imagen').replace(/\.[^.]+$/,'').slice(0,160)||'Imagen';
   return {src,alt,mediaType,bytes:bytes.byteLength};
 }
+
+// One layout contract for Studio, exported lesson HTML and the Player.
+// A float excludes only the actual image; text before, beside and after it
+// can occupy the remaining lines without being covered.
+export function lessonImageFlowLayout({x=0,y=0,width=280,height=180},canvasWidth,previousBottom=0){
+  const fullWidth=Math.max(1,Number(canvasWidth)||1);
+  const imageWidth=Math.min(Math.max(1,Number(width)||280),Math.max(1,fullWidth-12));
+  const imageHeight=imageWidth*Math.max(1,Number(height)||180)/Math.max(1,Number(width)||280);
+  const freeSpace=Math.max(0,fullWidth-imageWidth-12);
+  const requested=clamp((Number(x)||0)*fullWidth/100,0,freeSpace);
+  const right=requested>freeSpace-requested;
+  const stack=freeSpace<180;
+  const snap=!stack&&Math.max(requested,freeSpace-requested)<180;
+  const left=stack?0:snap?(right?freeSpace:0):requested;
+  const start=stack?previousBottom:Math.max(Math.max(0,Number(y)||0),previousBottom);
+  const gap=Math.max(0,start-previousBottom);
+  return {
+    nextBottom:start+imageHeight+12,
+    style:{
+      float:stack?'left':right?'right':'left',
+      clear:'both',
+      marginTop:gap+'px',
+      marginBottom:'12px',
+      marginLeft:stack?'0px':right?'12px':Math.round(left)+'px',
+      marginRight:stack?'12px':right?Math.round(Math.max(0,fullWidth-left-imageWidth))+'px':'12px',
+      shapeOutside:'inset('+gap+'px 0px 0px 0px)',
+    },
+  };
+}
+
 const STYLES=".p2lrn-lesson-image-editor{display:grid;gap:8px;min-width:0;max-width:100%}\n.p2lrn-lesson-image-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-height:34px}\n.p2lrn-lesson-image-toolbar button{min-height:32px;padding:6px 10px;border:1px solid #cfd8e4;border-radius:7px;background:#fff;color:#172033;font:600 12px/1.2 system-ui,sans-serif;cursor:pointer}\n.p2lrn-lesson-image-toolbar button:hover:not(:disabled){background:#eef3f9}\n.p2lrn-lesson-image-toolbar button:disabled{opacity:.45;cursor:default}\n.p2lrn-lesson-image-toolbar span{color:#64748b;font:11px/1.35 system-ui,sans-serif}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]{cursor:grab;touch-action:none;user-select:none;object-fit:contain}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:hover,.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:focus-visible{outline:2px solid #437ddd;outline-offset:2px}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:active{cursor:grabbing}\n.p2lrn-lesson-image-editor .surface img,.p2lrn-lesson-image-editor .studio-wysiwyg img{height:auto}";
 
 export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus=()=>{}}){
@@ -52,36 +82,88 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus=()
   const smaller=button('− Tamaño','data-lesson-image-smaller');
   const bigger=button('+ Tamaño','data-lesson-image-bigger');
   const remove=button('Eliminar imagen','data-lesson-image-remove');
-  const hint=doc.createElement('span');hint.textContent='Arrastra, pega o elige imágenes; haz clic para moverlas.';
+  const hint=doc.createElement('span');hint.textContent='Arrastra o cambia el tamaño de las imágenes: el texto se recoloca automáticamente.';
   toolbar.append(hint);
   const picker=doc.createElement('input');picker.type='file';picker.multiple=true;
   picker.accept='image/png,image/jpeg,image/gif,image/webp,image/avif';
   picker.hidden=true;picker.setAttribute('data-lesson-image-file','');
   wrapper.append(style,toolbar,picker,surface);host.append(wrapper);
   let selected=null,drag=null;
+
   const currentCanvas=()=>surface.querySelector(':scope > [data-p2lrn-lesson-canvas]');
   const refresh=()=>{for(const b of [smaller,bigger,remove])b.disabled=!selected||!surface.contains(selected);};
+  const hydratedImages=new WeakSet();
+  function imagePosition(img){
+    const rawX=img.dataset.p2lrnImageX;
+    const rawY=img.dataset.p2lrnImageY;
+    return {
+      x:clamp(Number.isFinite(parseFloat(rawX))?parseFloat(rawX):(parseFloat(img.style.left)||0),0,100),
+      y:clamp(Number.isFinite(parseFloat(rawY))?parseFloat(rawY):(parseFloat(img.style.top)||0),0,6000),
+    };
+  }
+  function reflow(box){
+    if(!box)return;
+    box.style.position='relative';
+    box.style.display='flow-root';
+    box.style.boxSizing='border-box';
+    box.style.maxWidth='100%';
+    // Old absolute-position canvases forced unused space below short texts.
+    box.style.minHeight='0px';
+    const canvasWidth=Math.max(1,box.clientWidth||box.getBoundingClientRect().width);
+    const images=[...box.children].filter(node=>node.matches?.(IMAGE))
+      .sort((a,b)=>imagePosition(a).y-imagePosition(b).y);
+    // Floats must precede the text in DOM order to affect all of its lines.
+    for(let index=0;index<images.length;index++){
+      if(box.children[index]!==images[index])
+        box.insertBefore(images[index],box.children[index]||null);
+    }
+    let previousBottom=0;
+    for(const img of images){
+      if(!hydratedImages.has(img)){
+        hydratedImages.add(img);
+        img.addEventListener('load',()=>{if(box.isConnected)reflow(box);});
+      }
+      const {x,y}=imagePosition(img);
+      img.dataset.p2lrnImageX=x.toFixed(3);
+      img.dataset.p2lrnImageY=String(Math.round(y));
+      const requestedWidth=clamp(parseFloat(img.style.width)||280,80,800);
+      const measuredRatio=img.naturalWidth>0&&img.naturalHeight>0
+        ?img.naturalWidth/img.naturalHeight
+        :(parseFloat(img.dataset.p2lrnImageRatio)||1.5);
+      const ratio=Math.max(.05,Math.min(20,measuredRatio));
+      img.dataset.p2lrnImageRatio=String(ratio);
+      const geometry=lessonImageFlowLayout({x,y,width:requestedWidth,height:requestedWidth/ratio},
+        canvasWidth,previousBottom);
+      previousBottom=geometry.nextBottom;
+      img.style.position='relative';
+      img.style.left='';
+      img.style.top='';
+      img.style.zIndex='';
+      img.style.display='block';
+      img.style.width=requestedWidth+'px';
+      img.style.maxWidth='calc(100% - 12px)';
+      img.style.height='auto';
+      img.style.aspectRatio=String(ratio);
+      for(const [name,value] of Object.entries(geometry.style))img.style[name]=value;
+    }
+  }
   function ensureCanvas(){
-    let box=currentCanvas();if(box)return box;
-    box=doc.createElement('div');box.dataset.p2lrnLessonCanvas='1';
-    box.style.cssText='position:relative;min-height:360px;max-width:100%;box-sizing:border-box;';
-    while(surface.firstChild)box.append(surface.firstChild);
-    surface.append(box);return box;
+    let box=currentCanvas();
+    if(!box){
+      box=doc.createElement('div');box.dataset.p2lrnLessonCanvas='1';
+      while(surface.firstChild)box.append(surface.firstChild);
+      surface.append(box);
+    }
+    reflow(box);
+    return box;
   }
-  function grow(box,img,top){
-    const height=img.getBoundingClientRect().height||Math.min(250,parseInt(img.style.width,10)||280);
-    box.style.minHeight=Math.max(360,parseInt(box.style.minHeight,10)||360,Math.ceil(top+height+20))+'px';
-  }
-  function place(img,box,left,top,expand=false){
+  function place(img,box,left,top){
     const width=Math.max(1,box.getBoundingClientRect().width||box.clientWidth);
-    const imgWidth=img.getBoundingClientRect().width||Math.min(280,width);
-    const imgHeight=img.getBoundingClientRect().height||180;
-    const x=clamp(left,0,Math.max(0,width-imgWidth));
-    const y=clamp(top,0,expand?Math.max(0,top):Math.max(0,box.clientHeight-imgHeight));
-    const percent=x/width*100;
-    img.style.left=percent.toFixed(3)+'%';img.style.top=Math.round(y)+'px';
-    img.style.maxWidth='calc('+(100-percent).toFixed(3)+'% - 4px)';
-    if(expand)grow(box,img,y);
+    const imageWidth=img.getBoundingClientRect().width||Math.min(280,width);
+    const x=clamp(left,0,Math.max(0,width-imageWidth));
+    img.dataset.p2lrnImageX=(x/width*100).toFixed(3);
+    img.dataset.p2lrnImageY=String(Math.round(clamp(top,0,6000)));
+    reflow(box);
   }
   const choose=img=>{selected=img;refresh();try{img.focus({preventScroll:true});}catch{}};
   const changed=()=>onChange();
@@ -91,15 +173,15 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus=()
     const rect=box.getBoundingClientRect();
     const nonImages=[...box.children].filter(child=>child.nodeType===1&&!child.matches(IMAGE));
     const textBottom=nonImages.reduce((max,item)=>Math.max(max,item.getBoundingClientRect().bottom-rect.top),0);
-    const lastBottom=[...box.querySelectorAll(IMAGE)].reduce((max,item)=>Math.max(max,(parseFloat(item.style.top)||0)+(item.getBoundingClientRect().height||220)),0);
+    const lastBottom=[...box.querySelectorAll(IMAGE)].reduce((max,item)=>Math.max(max,imagePosition(item).y+(item.getBoundingClientRect().height||220)),0);
     const top=point?point.y:Math.max(24,textBottom,lastBottom)+16;
     const img=doc.createElement('img');
     img.dataset.p2lrnLessonImage='1';img.alt=data.alt;img.src=data.src;
     img.setAttribute('contenteditable','false');img.setAttribute('draggable','false');
     img.tabIndex=0;img.title='Arrastra para colocar esta imagen en la lección';
-    img.style.cssText='position:absolute;top:0;left:0;width:280px;max-width:calc(100% - 4px);height:auto;z-index:1;';
-    box.append(img);place(img,box,point?point.x:0,top,true);
-    img.addEventListener('load',()=>{if(box.isConnected){grow(box,img,parseFloat(img.style.top)||0);changed();}},{once:true});
+    img.style.cssText='position:relative;float:left;clear:both;width:280px;max-width:calc(100% - 12px);height:auto;';
+    box.prepend(img);place(img,box,point?point.x:0,top);
+    img.addEventListener('load',()=>{if(box.isConnected){reflow(box);changed();}},{once:true});
     choose(img);changed();
     onStatus('Imagen incrustada en la lección. Puedes moverla arrastrando.');
     return img;
@@ -128,7 +210,7 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus=()
     if(!selected||!surface.contains(selected))return;
     const box=currentCanvas();if(!box)return;
     selected.style.width=clamp((parseInt(selected.style.width,10)||280)+step,80,800)+'px';
-    place(selected,box,box.clientWidth*(parseFloat(selected.style.left)||0)/100,parseFloat(selected.style.top)||0,true);
+    place(selected,box,box.clientWidth*imagePosition(selected).x/100,imagePosition(selected).y);
     changed();
   };
   smaller.addEventListener('click',()=>resize(-60));bigger.addEventListener('click',()=>resize(60));
@@ -145,9 +227,9 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus=()
   surface.addEventListener('pointermove',event=>{
     if(!drag)return;
     const {img,box}=drag;const rect=box.getBoundingClientRect();
-    const before=img.style.left+','+img.style.top;
+    const before=img.dataset.p2lrnImageX+','+img.dataset.p2lrnImageY;
     place(img,box,event.clientX-rect.left-drag.x,event.clientY-rect.top-drag.y);
-    if(before!==img.style.left+','+img.style.top)drag.moved=true;
+    if(before!==img.dataset.p2lrnImageX+','+img.dataset.p2lrnImageY)drag.moved=true;
   });
   const finish=event=>{
     if(!drag)return;const moved=drag.moved;drag=null;
@@ -162,9 +244,25 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus=()
     if(!delta)return;
     event.preventDefault();
     const box=currentCanvas(),step=event.shiftKey?10:2;
-    place(selected,box,box.clientWidth*(parseFloat(selected.style.left)||0)/100+delta[0]*step,(parseFloat(selected.style.top)||0)+delta[1]*step);
+    place(selected,box,box.clientWidth*imagePosition(selected).x/100+delta[0]*step,imagePosition(selected).y+delta[1]*step);
     changed();
   });
+  // Convert existing absolute-position images without deleting the content.
+  // Normalization persists into the same portable HTML payload.
+  const initial=currentCanvas();
+  if(initial){
+    const legacy=[...initial.querySelectorAll(IMAGE)].some(img=>
+      img.style.position==='absolute'||!img.dataset.p2lrnImageX);
+    reflow(initial);
+    if(legacy)changed();
+  }
+  if(typeof ResizeObserver!=='undefined'){
+    const observer=new ResizeObserver(()=>{
+      if(!wrapper.isConnected){observer.disconnect();return;}
+      const box=currentCanvas();if(box)reflow(box);
+    });
+    observer.observe(surface);
+  }
   refresh();
   return {openPicker:()=>picker.click(),insertImage,element:wrapper};
 }
