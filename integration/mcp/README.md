@@ -58,6 +58,20 @@ After reviewing the printed JSON, add `--write` to configure the selected instal
 
 **Draft write tools are opt-in**: append `--enable-drafts` to the client setup command. They edit isolated authoring workspaces and produce a newly validated `.p2lrn` in `.p2lrn-mcp-exports/`, **never replacing the source** or deploying to a third-party LMS. Calls include an expected SHA-256 of the project JSON to reject stale writes. The model/client must display changes and obtain user consent before using write tools.
 
+## ChatGPT web leyendo cursos del PC sin un dominio propio
+
+Una aplicación de IA instalada en Windows puede ejecutar P2LRN por `stdio` con `Conectar-P2LRN.cmd`; es la solución más sencilla y **no requiere dominio, HTTP ni servidor en la nube**. Los cursos permanecen en `P2LRN_MCP_ROOT`. El modelo de IA puede funcionar localmente o en la nube, según el cliente; no son equivalentes.
+
+**ChatGPT web no puede iniciar directamente `stdio` ni leer `127.0.0.1` del ordenador del usuario.** Para conectar ChatGPT web con el servidor privado del PC **sin comprar un dominio, abrir un puerto ni configurar un proxy público**, puede utilizarse el [Secure MCP Tunnel de OpenAI](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels), si la cuenta y el área de trabajo tienen los permisos correspondientes.
+
+1. Preparar el kit P2LRN local y comprobar que `integration/mcp/server.mjs --stdio` responde usando una carpeta autorizada con `P2LRN_MCP_WRITE=0`. El archivo ZIP no incluye `tunnel-client`.
+2. En la configuración de túneles MCP de OpenAI Platform, crear o elegir un `tunnel_id` asociado al área de trabajo ChatGPT que utilizará la conexión. Son necesarios permisos adecuados de lectura/uso/gestión de túneles y permiso para crear complementos MCP.
+3. Descargar `tunnel-client` desde el enlace oficial y leer `tunnel-client help quickstart`. Crear un perfil de tipo `stdio` que lance el mismo `node .../integration/mcp/server.mjs --stdio`, apuntando a una **ruta absoluta** del servidor P2LRN. Configurar localmente `P2LRN_MCP_ROOT` y `P2LRN_MCP_WRITE=0`. No incluir las claves ni los cursos en los argumentos del navegador, GitHub o el ZIP.
+4. Ejecutar `tunnel-client doctor --profile p2lrn-local --explain` y `tunnel-client run --profile p2lrn-local` (el nombre del perfil se elige al configurarlo). El proceso del túnel debe permanecer activo cuando ChatGPT necesite usar las herramientas.
+5. En ChatGPT: Complementos → Añadir servidor MCP personalizado → Túnel. Seleccionar el mismo identificador, configurar la autenticación admitida y comprobar `p2lrn_list_courses` y `p2lrn_validate_course` con cursos de prueba.
+
+Esta opción es **privada**, depende de `tunnel-client` y de los permisos de OpenAI. No se despliega automáticamente al instalar P2LRN ni sirve para publicar un plugin público en el directorio global. La vía de plugin local para ChatGPT Desktop es distinta; la [distribución de plugins Desktop only](https://developers.openai.com/plugins/deploy/desktop-only) tiene requisitos de elegibilidad/aprobación y el kit MCP no equivale a una instalación de ese plugin.
+
 ## HTTP for a protected local bridge
 
 ```powershell
