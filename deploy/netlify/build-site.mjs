@@ -393,68 +393,83 @@ for(const name of requiredConnectorZips){
     throw new Error('Connector downloadable archive is missing or corrupt: '+name);
 }
 
-// Documentation connectors are separate, navigable pages with source-backed
-// explanations. Check the common navigation and sitemap before publishing.
-// Only three subpages are directly navigable: IA (all providers/methods), LMS
-// and LTI. Historical per-provider/deep-help URLs must continue to resolve.
+// Canonical documentation: one AI guide, one LMS guide, one LTI guide.
+// Old AI URLs redirect to specific sections rather than creating orphan pages.
 const connectorDocs = [
   ['', ['Conectores e integración', 'Conectores para IA', 'Plataformas LMS', 'LTI 1.3']],
-  ['ia', ['Conectores para IA', 'ChatGPT', 'Claude', 'Gemini', 'Grok', 'Skills sin MCP', 'P2LRN_MCP_WRITE', 'HTTPS']],
-  ['gemini', ['Gemini web', 'Gemini CLI', 'Skills', 'Gems', 'SKILL.md', 'gemini skills list', 'MCP']],
-  ['skills', ['P2LRN – Crear y descargar', 'sin instalar MCP', 'ChatGPT', 'Claude', 'Gemini', 'Core 0.4.0']],
-  ['local', ['Conectar-P2LRN.cmd', 'stdio', 'Cursor', 'Windsurf', 'Gemini CLI', 'Ollama']],
+  ['ia', ['Conectores para IA', 'ChatGPT', 'Claude', 'Gemini', 'Grok', 'P2LRN – Crear y descargar', 'p2lrn_list_courses']],
   ['lms', ['Moodle', 'Canvas', 'Sakai', 'Chamilo', 'Open edX']],
   ['lti', ['OIDC', 'JWKS', 'Deep Linking', 'AGS', 'NRPS', 'no se han certificado']],
 ];
-const visibleConnectorSlugs = new Set(['','ia','lms','lti']);
-const connectorAiPage=await readFile(join(outputRoot,'docs','conectores','ia','index.html'),'utf8');
-const [connectorNavigation,connectorSitemap,connectorHome] = await Promise.all([
+const legacyConnectorSections = new Map([
+  ['gemini','gemini'],
+  ['skills','crear-cursos'],
+  ['local','conectar-ordenador'],
+]);
+const [connectorNavigation,connectorSitemap,connectorHome,connectorAiPage,netlifyConfig] = await Promise.all([
   readFile(join(outputRoot,'p2lrn.js'),'utf8'),
   readFile(join(outputRoot,'sitemap.xml'),'utf8'),
-  readFile(join(outputRoot,'docs','conectores','index.html'),'utf8')
+  readFile(join(outputRoot,'docs','conectores','index.html'),'utf8'),
+  readFile(join(outputRoot,'docs','conectores','ia','index.html'),'utf8'),
+  readFile(join(root,'netlify.toml'),'utf8'),
 ]);
-for(const [slug,required] of connectorDocs){
+for(const [slug,required] of connectorDocs) {
   const route='/docs/conectores/' + (slug ? slug+'/' : '');
-  const file=join(outputRoot,'docs','conectores',...(slug?[slug]:[]),'index.html');
-  if(!(await exists(file)))throw new Error('Connector documentation page missing: '+route);
-  const html=await readFile(file,'utf8');
-  if(!html.includes('<h1>') || !html.includes('class="doc-content"') ||
-     (html.match(/<section\b[^>]*class="doc-section"[^>]*>/g)||[]).length<4)
-    throw new Error('Connector documentation structure missing: '+route);
+  const html=await readFile(join(outputRoot,'docs','conectores',...(slug?[slug]:[]),'index.html'),'utf8');
+  if(!html.includes('class="doc-content"') ||
+     (html.match(/<section\b[^>]*class="doc-section"[^>]*>/g)||[]).length<3)
+    throw new Error('Canonical connector page structure missing: '+route);
   for(const term of required)if(!html.toLocaleLowerCase('es').includes(term.toLocaleLowerCase('es')))
-    throw new Error('Connector documentation missing '+term+' in '+route);
-  if(visibleConnectorSlugs.has(slug)){
-    if(!connectorNavigation.includes("['"+route+"','"))
-      throw new Error('Visible connector navigation missing '+route);
-    if(slug && !connectorHome.includes('href="'+route+'"'))
-      throw new Error('Connector overview missing '+route);
-  }else{
-    if(connectorNavigation.includes("['"+route+"','"))
-      throw new Error('Provider/Skills/MCP detail must not be a separate menu entry: '+route);
-    if(!connectorAiPage.includes('href="'+route+'"'))
-      throw new Error('Historical detail route is not reachable from the IA guide: '+route);
-  }
+    throw new Error('Canonical connector page missing '+term+' in '+route);
+  if(!connectorNavigation.includes("['"+route+"','"))
+    throw new Error('Sidebar must include '+route);
+  if(slug && !connectorHome.includes('href="'+route+'"'))
+    throw new Error('Connector overview missing '+route);
   if(!connectorSitemap.includes('https://p2lrn.netlify.app'+route))
-    throw new Error('Connector sitemap missing '+route);
+    throw new Error('Canonical connector sitemap route missing '+route);
 }
+const netlifyRedirects=netlifyConfig.split('[[redirects]]').slice(1);
+for(const [slug,section] of legacyConnectorSections){
+  const route='/docs/conectores/'+slug+'/';
+  const target='/docs/conectores/ia/#'+section;
+  const oldHtml=await readFile(join(outputRoot,'docs','conectores',slug,'index.html'),'utf8');
+  if(!oldHtml.includes('content="0;url='+target+'"') ||
+     !oldHtml.includes('name="robots" content="noindex,follow"'))
+    throw new Error('Old connector route must redirect to canonical section: '+route);
+  if(!netlifyRedirects.some(block=>block.includes('from = "'+route+'"') &&
+      block.includes('to = "'+target+'"') && block.includes('status = 301') &&
+      block.includes('force = true')))
+    throw new Error('Netlify redirect to canonical AI section missing: '+route);
+  if(connectorSitemap.includes('https://p2lrn.netlify.app'+route))
+    throw new Error('Obsolete guide must not remain in sitemap: '+route);
+  if(connectorNavigation.includes("['"+route+"','"))
+    throw new Error('Obsolete guide must not be shown as its own sidebar item: '+route);
+  if(!connectorAiPage.includes('id="'+section+'"'))
+    throw new Error('Obsolete guide redirect target missing from canonical AI guide: '+section);
+}
+for(const section of ['para-que','crear-cursos','chatgpt','claude','gemini','grok','conectar-ordenador','servicios-web','comprobar'])
+  if(!connectorAiPage.includes('id="'+section+'"') ||
+     !connectorNavigation.includes("['"+section+"','"))
+    throw new Error('AI topic must exist in content and sidebar: '+section);
 const expectedDownloads=[
   ['ia','p2lrn-conector-mcp.zip'],
-  ['gemini','p2lrn-conector-mcp.zip'],
-  ['local','p2lrn-conector-mcp.zip'],
   ['lms','p2lrn-lti-contratos.zip'],
-  ['lti','p2lrn-lti-contratos.zip']
+  ['lti','p2lrn-lti-contratos.zip'],
 ];
 for(const [slug,filename] of expectedDownloads){
   const guide=await readFile(join(outputRoot,'docs','conectores',slug,'index.html'),'utf8');
   if(!guide.includes('href="/downloads/'+filename+'"'))
-    throw new Error('Connector guide does not link the verified downloadable asset: '+slug);
+    throw new Error('Canonical connector guide does not link verified archive: '+slug);
 }
-if(!connectorNavigation.includes("['/docs/conectores/',["))
-  throw new Error('Connector child navigation must be nested under Conectores');
 if((connectorHome.match(/<div class="docs-path-grid">[\s\S]*?<\/div>/)?.[0].match(/<a href=/g)||[]).length!==3)
-  throw new Error('Connector overview must present IA, LMS and LTI only');
+  throw new Error('Connector overview must contain only IA, LMS and LTI choices');
 
-const docsFiles = htmlFiles.filter((path)=>relative(outputRoot,path).replaceAll('\\','/').startsWith('docs/'));
+const docsFiles = htmlFiles.filter((path)=>{
+  const relativePath=relative(outputRoot,path).replaceAll('\\','/');
+  if(!relativePath.startsWith('docs/'))return false;
+  return ![...legacyConnectorSections.keys()].some(slug=>
+    relativePath==='docs/conectores/'+slug+'/index.html');
+});
 const searchIndex = [];
 for (const path of docsFiles) {
   const html = await readFile(path,'utf8');
