@@ -56,7 +56,9 @@ for(const file of files){
       failures.push(rel+': unexplained code block appears before user-facing context');
     }
   }
-  for(const [pattern,label] of forbidden)if(pattern.test(html))failures.push(rel+': '+label);
+  // Validate wording visible to readers, not HTML attributes or hyperlink URLs.
+  const visibleText=html.replace(/<[^>]+>/g,' ');
+  for(const [pattern,label] of forbidden)if(pattern.test(visibleText))failures.push(rel+': '+label);
 }
 const strict=[
   ['deploy/netlify/site/docs/npm/index.html',[/\bCDN\b/u,/p2lrn\.netlify\.app/u]],
