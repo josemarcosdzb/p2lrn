@@ -1,56 +1,14 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0d1117"><meta name="description" content="Gemini con P2LRN: Skills y Gems sin MCP en Gemini web, Agent Skills en Gemini CLI y conector stdio opcional para trabajar con cursos del PC.">
-<title>Gemini: Skills, Gems y conector MCP — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
+<meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="0;url=/docs/conectores/ia/#gemini">
+<link rel="canonical" href="https://p2lrn.netlify.app/docs/conectores/ia/#gemini"><title>Gemini — Conectores para IA — P2LRN</title>
+<link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
 <body><a class="skip-link" href="#contenido">Saltar al contenido</a>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/instalar/">Instalar</a><a class="nav-direct" href="/docs/studio/">Crear</a><a class="nav-direct" href="/docs/player/">Reproducir</a><a class="nav-direct" href="/docs/integracion/">Integrar</a><a class="nav-direct" href="/docs/referencia/">Referencia</a></nav>
-<div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
-<button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
-<article class="doc-content">
-<header class="doc-hero"><p class="eyebrow">CONECTORES / GEMINI</p><h1>Gemini con P2LRN: sin MCP o con MCP local</h1><p>Gemini no es lo mismo que Gemini CLI. Para <strong>crear cursos nuevos sin conectar tu ordenador</strong> puedes utilizar Skills o Gems donde estén disponibles. Para <strong>leer y editar cursos que ya tienes en el PC</strong>, Gemini CLI dispone de un conector MCP local <code>stdio</code>. Ninguna modalidad exige comprar un dominio.</p></header>
-<section class="doc-section"><h2>Elige la opción correcta para Gemini</h2>
-<div class="reference-table">
-<div><strong>Gemini en la web: Skills, sin MCP</strong><p>Si tu cuenta tiene acceso a Skills, crea o importa un flujo reutilizable con instrucciones y archivos. No necesitas servidor P2LRN ni instalar Node.js. Consulta <a href="https://support.google.com/gemini/answer/17094296">la guía oficial de Skills de Gemini</a>. Su disponibilidad depende del despliegue, país, cuenta y condiciones del servicio; no se garantiza en España.</p></div>
-<div><strong>Gemini web: Gems, si no aparecen Skills</strong><p>Si la sección Skills no está disponible, puedes utilizar una <a href="https://support.google.com/gemini/answer/15146780?hl=es">Gem personalizada</a> para repetir instrucciones y aportar archivos de referencia. Una Gem no es el servidor MCP ni ejecuta automáticamente el empaquetador de P2LRN.</p></div>
-<div><strong>Gemini CLI: Agent Skills sin MCP</strong><p>En la aplicación de terminal, las Skills se almacenan en <code>~/.gemini/skills/</code> o <code>.gemini/skills/</code> y se descubren mediante <code>/skills list</code>. Gemini CLI debe estar instalado, pero no hace falta el MCP de P2LRN si sólo quieres crear paquetes nuevos siguiendo una Skill compatible.</p></div>
-<div><strong>Gemini CLI: MCP local para cursos existentes</strong><p>Para enumerar, leer, validar y, si lo autorizas, crear borradores de tus cursos del PC, utiliza el mismo servidor MCP P2LRN que Claude Desktop y Cursor. La configuración se registra en <code>~/.gemini/settings.json</code> sin abrir puertos.</p></div>
-</div></section>
-<section class="doc-section"><h2>1. Gemini web: crear un curso sin instalar MCP</h2>
-<ol class="doc-list">
-<li>Abre <a href="https://gemini.google.com/">Gemini</a> y comprueba si tu cuenta muestra <strong>Personalizar → Skills</strong>. Google está desplegando esa función por fases, con restricciones de región y cuenta.</li>
-<li>Cuando esté disponible, crea una Skill o carga una carpeta autorizada con <code>SKILL.md</code> y sus archivos compatibles. Revisa su contenido antes de activarla.</li>
-<li>Indica título, idioma, unidades, lecciones, preguntas y juegos. Exige como resultado un <strong>archivo <code>.p2lrn</code> real y verificable</strong>, no sólo un esquema de texto.</li>
-<li>Si Gemini no permite ejecutar el empaquetador o entregar el archivo, la tarea no está terminada. No renombres un JSON como <code>.p2lrn</code>.</li>
-</ol>
-<p><strong>En España:</strong> la ayuda de Google ha indicado restricciones regionales para Gemini Skills; comprueba la interfaz real de tu cuenta. Si no aparece, utiliza Gems mientras estén disponibles o un cliente compatible distinto. La disponibilidad no puede confirmarse desde P2LRN.</p>
-<div class="doc-callout"><strong>Skill de P2LRN y compatibilidad</strong><p>Existe una Skill «P2LRN – Crear y descargar» comprobada en un entorno de ChatGPT. <strong>No está verificada como Skill de Gemini web</strong>. Copiar sus instrucciones sin ejecutar el empaquetador y validar el ZIP no demuestra compatibilidad. Consulta <a href="/docs/conectores/skills/">la guía de Skills sin MCP</a>.</p></div></section>
-<section class="doc-section"><h2>2. Gemini web: alternativa con Gems</h2>
-<p>En <a href="https://gemini.google.com/">gemini.google.com</a>, abre <strong>Gems → Nuevo Gem</strong> cuando esa opción exista en tu cuenta. Escribe instrucciones para estructurar un curso P2LRN, mantener soluciones correctas y evitar afirmar que un archivo está validado sin ejecutar herramientas. Puedes añadir documentación de P2LRN como archivos de conocimiento admitidos por Google.</p>
-<div class="codebox"><div class="codebox-head"><span>Solicitud de ejemplo · Gemini web</span><button type="button" data-copy>Copiar</button></div><pre><code>Diseña un curso P2LRN de 3 unidades sobre seguridad digital,
-con lecciones, 10 preguntas con respuestas verificables y
-dos juegos. Si puedes ejecutar un empaquetador P2LRN autorizado,
-entrega un archivo .p2lrn válido y verificado. En caso contrario,
-entrega sólo el diseño e indica expresamente que falta empaquetarlo.</code></pre></div>
-<p>Una Gem puede preparar el contenido sin MCP. Para obtener un paquete real, la sesión de IA debe poder crear archivos y utilizar un empaquetador/validador compatible; si no es posible, exporta el contenido e impórtalo con Studio.</p></section>
-<section class="doc-section"><h2>3. Gemini CLI: Agent Skills sin servidor MCP</h2>
-<p>Gemini CLI admite Skills de usuario y de proyecto mediante <code>SKILL.md</code>. Consulta la <a href="https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/using-agent-skills.md">documentación oficial de Agent Skills</a>. Revisa que la Skill que importes sea compatible con su entorno de ejecución y valida cualquier paquete obtenido.</p>
-<div class="codebox"><div class="codebox-head"><span>Gemini CLI · detectar y enlazar una Skill local autorizada</span><button type="button" data-copy>Copiar</button></div><pre><code>gemini skills list
-gemini skills link C:\Ruta\a\skill-p2lrn --scope user
-gemini skills list</code></pre></div>
-<p><code>C:\Ruta\a\skill-p2lrn</code> es un ejemplo, no un archivo incluido en el conector MCP. La instalación/enlace de una Skill no instala el servidor P2LRN. Si el flujo requiere generar un <code>.p2lrn</code>, confirma que la Skill contiene y ejecuta un empaquetador real y que produce un paquete válido. Para instalar Gemini CLI, sigue su documentación oficial.</p></section>
-<section class="doc-section"><h2>4. Gemini CLI: conectar tus cursos del PC mediante MCP (opcional)</h2>
-<p>Esta opción <strong>sí</strong> utiliza MCP. El mismo servidor P2LRN funciona por <code>stdio</code>; no requiere dominio, HTTPS ni exponer <code>127.0.0.1</code> a Internet. Primero descarga y extrae el <a href="/downloads/p2lrn-conector-mcp.zip" download>kit MCP P2LRN para Windows</a> e instala Node.js 22 o posterior.</p>
-<div class="codebox"><div class="codebox-head"><span>PowerShell · desde la raíz de P2LRN</span><button type="button" data-copy>Copiar</button></div><pre><code>.\integration\mcp\Conectar-P2LRN.cmd --root C:\MisCursos --clients gemini --install --verify</code></pre></div>
-<p>La carpeta <code>C:\MisCursos</code> debe existir y contener exclusivamente los cursos autorizados. El asistente prepara Toolkit y las dependencias, conserva y respalda la configuración existente de Gemini CLI, registra el MCP y comprueba una negociación real. Empieza con <code>P2LRN_MCP_WRITE=0</code>. No habilita edición sin permiso explícito.</p>
-<p><strong>Gemini web no ejecuta directamente este comando</strong> ni puede leer carpetas de tu PC mediante <code>stdio</code>. Para Gemini web las opciones compatibles dependen de los servicios de Google; no se anuncia aquí una integración web MCP que no esté probada.</p></section>
-<section class="doc-section"><h2>Comprobar el resultado y límites</h2>
-<ul class="doc-list">
-<li><strong>Skills o Gems:</strong> comprueba que el archivo <code>.p2lrn</code> exista, tenga manifiesto y pase la validación; una respuesta de texto no es una descarga.</li>
-<li><strong>Gemini CLI Skill:</strong> confirma que <code>gemini skills list</code> muestra la habilidad y que el entorno puede ejecutar los scripts permitidos.</li>
-<li><strong>Gemini CLI MCP:</strong> comprueba <code>p2lrn_list_courses</code> y <code>p2lrn_validate_course</code>; verifica que se rechacen rutas fuera de la carpeta autorizada.</li>
-<li><strong>No equivalentes:</strong> Skills no leen automáticamente cursos privados; MCP no garantiza que el modelo pueda generar contenidos correctos sin supervisión.</li>
-</ul>
-<p>Consulta <a href="/docs/conectores/skills/">Skills sin MCP</a> o <a href="/docs/conectores/local/">instalación local MCP</a> según el objetivo.</p></section>
-<nav class="doc-pager"><a class="prev" href="/docs/conectores/ia/"><span>← Anterior</span><strong>ChatGPT, Claude y Grok</strong></a><a class="next" href="/docs/conectores/skills/"><span>Siguiente →</span><strong>Skills sin MCP</strong></a></nav>
-</article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
+<header class="site-header"><a class="brand" href="/">P2LRN</a></header>
+<main class="doc-main" id="contenido"><aside class="doc-sidebar"></aside><article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">DOCUMENTACIÓN / CONECTORES / IA</p><h1>Gemini</h1>
+<p>Esta información está integrada en la guía principal. La nueva ruta te lleva directamente al apartado correspondiente.</p></header>
+<section class="doc-section"><h2>Continuar en Conectores para IA</h2>
+<p><a href="/docs/conectores/ia/#gemini">Abrir Gemini</a></p></section>
+</article></main>
+<script>window.location.replace("/docs/conectores/ia/#gemini");</script></body></html>
