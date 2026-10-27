@@ -2,6 +2,7 @@
 import { dirname, join, resolve } from 'node:path';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { addComponent, addComposite, addFile, addQuestionnaire, addUnit, addUrl, addWebContent, loadProject, newProject, PROJECT_FILE, saveProject, upgradeProjectWorkspace } from '../creator/project.js';
+import { applyCourseRights } from '../core/course-rights.js';
 import { buildProject, guessMediaType } from '../creator/builder.js';
 import { convertExternalPackage } from '../creator/external.js';
 import { ingestAulaP2PReader } from '../creator/aulap2p-ingest.js';
@@ -14,7 +15,7 @@ export function main(argv = process.argv.slice(2)) {
     try {
         const p = parse(argv);
         if (flag(p, 'help')) {
-            process.stdout.write('Usage: p2lrn-create <init|open|upgrade|add-unit|add-file|add-web-content|add-questionnaire|add-component|add-composite|add-url|build|convert|ingest-aulap2p|ingest-aulap2p-course|extract-aulap2p-course|component-catalog|validate-component-authoring|show> ...\n');
+            process.stdout.write('Usage: p2lrn-create <init|open|upgrade|set-rights|add-unit|add-file|add-web-content|add-questionnaire|add-component|add-composite|add-url|build|convert|ingest-aulap2p|ingest-aulap2p-course|extract-aulap2p-course|component-catalog|validate-component-authoring|show> ...\n');
             return;
         }
         const cmd = req(p.positional[0], 'command');
@@ -25,6 +26,10 @@ export function main(argv = process.argv.slice(2)) {
                 throw new Error(`project already exists: ${path}; use --force to replace it`);
             mkdirSync(dir, { recursive: true });
             const project = newProject(req(opt(p, 'title'), '--title'), opt(p, 'language', 'es'), opt(p, 'description'));
+            const changes = Object.fromEntries([['author', 'author'], ['createdAt', 'created-at'], ['license', 'license'], ['copyrightHolder', 'copyright-holder']]
+                .map(([key, name]) => [key, opt(p, String(name))]).filter(([, value]) => value !== undefined));
+            if (Object.keys(changes).length)
+                applyCourseRights(project.course, changes);
             saveProject(path, project);
             r = { project: path, projectId: project.projectId, course: project.course.title };
         }
@@ -34,6 +39,15 @@ export function main(argv = process.argv.slice(2)) {
         else if (cmd === 'upgrade') {
             const x = upgradeProjectWorkspace(req(p.positional[1], 'project'));
             r = { sourceProject: x.sourcePath, project: x.projectPath, fromVersion: x.fromVersion, toVersion: x.toVersion, changed: x.changed };
+        }
+        else if (cmd === 'set-rights') {
+            const proj = req(p.positional[1], 'project');
+            const changes = Object.fromEntries([['author', 'author'], ['createdAt', 'created-at'], ['license', 'license'], ['copyrightHolder', 'copyright-holder']]
+                .map(([key, name]) => [key, opt(p, String(name))]).filter(([, value]) => value !== undefined));
+            if (!Object.keys(changes).length)
+                throw new Error('provide --author, --created-at, --license or --copyright-holder');
+            const x = withProject(proj, (_root, project) => applyCourseRights(project.course, changes));
+            r = { project: x.path, rights: x.result };
         }
         else if (cmd === 'add-unit') {
             const proj = req(p.positional[1], 'project'), key = req(opt(p, 'key'), '--key'), title = req(opt(p, 'title'), '--title'), x = withProject(proj, (_root, pr) => addUnit(pr, key, title, opt(p, 'language', 'es'), opt(p, 'role', 'module'), opt(p, 'parent', 'course')));

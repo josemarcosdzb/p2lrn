@@ -1,3 +1,4 @@
+import { type CourseRightsChanges, type CourseRights } from '../core/course-rights.js';
 import { type BuildResult } from '../creator/builder.js';
 import { type OpenPackageProjectOptions } from '../creator/import-project.js';
 import { type DocumentReaderOptions, type ExtractedDocument } from '../document-reader/index.js';
@@ -20,6 +21,10 @@ export interface AuthoringTextOptions {
     language?: string;
     title?: string;
     description?: string | null;
+}
+export interface AuthoringCourseRightsResult {
+    key: string;
+    rights: CourseRights;
 }
 export interface AuthoringCourseOptions extends AuthoringTextOptions {
     revision?: number;
@@ -166,6 +171,7 @@ export declare class P2LRNAuthoringWorkspace {
     replace(project: CreatorProject): CreatorProject;
     /** @deprecated Low-level escape hatch. Studio integrations should use the typed editing methods. */
     update(mutator: (draft: CreatorProject) => void): CreatorProject;
+    setCourseRights(changes: CourseRightsChanges): AuthoringCourseRightsResult;
     setCourseMetadata(options: AuthoringCourseOptions): AuthoringEntityTextResult;
     setEntityText(key: string, options: AuthoringTextOptions): AuthoringEntityTextResult;
     setChildren(parentKey: string, children: string[]): AuthoringChildrenResult;

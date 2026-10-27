@@ -7,11 +7,41 @@ import { NATIVE_QUESTIONNAIRE_MEDIA_TYPE, NATIVE_QUESTIONNAIRE_PROFILE, validate
 import { NATIVE_COMPONENT_ACTIVITY_TYPE, NATIVE_COMPONENT_MEDIA_TYPE, NATIVE_COMPONENT_PROFILE, validateComponentInstance } from '../core/native-component.js';
 import { NATIVE_COMPOSITE_ACTIVITY_TYPE, NATIVE_COMPOSITE_MEDIA_TYPE, NATIVE_COMPOSITE_PROFILE, NATIVE_COMPOSITE_SCHEMA, validateComposite } from '../core/native-composite.js';
 import { KEY_RE, entityByKey, validateProject } from './project-model.js';
-export function appendChild(project, parentKey, childKey) { const parent = entityByKey(project, parentKey); let allowed = parent === project.course || project.units.includes(parent); if (project.activities.includes(parent) && identifierIs(parent.activityType, NATIVE.compositeActivityType))
-    allowed = true; if (!allowed)
-    throw new ProjectError('children can only be attached to course, unit, or native composite activity entities'); if (project.activities.includes(parent) && !project.activities.includes(entityByKey(project, childKey)))
-    throw new ProjectError('native composite children must be activities'); parent.children ??= []; if (!parent.children.includes(childKey))
-    parent.children.push(childKey); }
+export function appendChild(project, parentKey, childKey) {
+    const parent = entityByKey(project, parentKey);
+    let allowed = parent === project.course || project.units.includes(parent);
+    if (project.activities.includes(parent) && identifierIs(parent.activityType, NATIVE.compositeActivityType))
+        allowed = true;
+    if (!allowed)
+        throw new ProjectError('children can only be attached to course, unit, or native composite activity entities');
+    if (project.activities.includes(parent) && !project.activities.includes(entityByKey(project, childKey)))
+        throw new ProjectError('native composite children must be activities');
+    parent.children ??= [];
+    if (!parent.children.includes(childKey))
+        parent.children.push(childKey);
+    // Imported workspaces preserve their original entityOrder; newly authored entities
+    // must be appended without reordering or dropping previously imported entities.
+    if (Array.isArray(project.entityOrder)) {
+        const orderedKeys = [project.course.key, ...['units', 'resources', 'activities', 'objectives'].flatMap((group) => (project[group] ?? []).map((entity) => entity.key))];
+        const seen = new Set(project.entityOrder);
+        for (const key of orderedKeys)
+            if (!seen.has(key)) {
+                project.entityOrder.push(key);
+                seen.add(key);
+            }
+    }
+}
+function declareImportedNativeProfile(project, profile) {
+    // Round-tripped imported manifests retain their original profiles verbatim.
+    // Only newly authored native representations add their missing declaration.
+    if (project.profilePolicy !== 'preserve')
+        return;
+    const canonical = canonicalIdentifier(profile);
+    project.profiles ??= [];
+    if (!project.profiles.some((p) => canonicalIdentifier(p.id) === canonical)) {
+        project.profiles.push({ id: canonical, version: project.targetFormatVersion, requirement: 'optional' });
+    }
+}
 function assertUnused(project, key) { try {
     entityByKey(project, key);
 }
@@ -99,7 +129,7 @@ catch (e) {
     }
 }
 else if (rendererVersion !== undefined)
-    throw new ProjectError('renderer_version requires renderer'); const resolved = (title ?? String(payload.title ?? '')).trim() || key; const [resource, activity] = addFile(root, project, source, key, resolved, { language: options.language ?? 'es', parent: options.parent ?? 'course', mediaType: NATIVE_QUESTIONNAIRE_MEDIA_TYPE, profile: NATIVE_QUESTIONNAIRE_PROFILE, role: 'primary', activityType: 'https://p2lrn.org/type/assessment', copyFile: options.copyFile !== false }); if (renderer) {
+    throw new ProjectError('renderer_version requires renderer'); const resolved = (title ?? String(payload.title ?? '')).trim() || key; const [resource, activity] = addFile(root, project, source, key, resolved, { language: options.language ?? 'es', parent: options.parent ?? 'course', mediaType: NATIVE_QUESTIONNAIRE_MEDIA_TYPE, profile: NATIVE_QUESTIONNAIRE_PROFILE, role: 'primary', activityType: 'https://p2lrn.org/type/assessment', copyFile: options.copyFile !== false }); declareImportedNativeProfile(project, NATIVE_QUESTIONNAIRE_PROFILE); if (renderer) {
     const hint = { preferred: renderer, required: false };
     if (rendererVersion)
         hint.version = rendererVersion;
@@ -114,7 +144,7 @@ catch (e) {
     if (e instanceof ProjectError)
         throw e;
     throw new ProjectError(`invalid native component: ${e instanceof Error ? e.message : String(e)}`);
-} const candidate = cloneProject(project), resolved = (title ?? String(payload.title ?? '')).trim() || key, rk = `res-${key}`, ak = `act-${key}`; assertUnused(candidate, rk); assertUnused(candidate, ak); const copy = options.copyFile !== false, rel = copy ? `assets/${key}${extname(source).toLowerCase()}` : inside(root, source), language = options.language ?? 'es'; const resource = { key: rk, title: { [language]: resolved }, representations: [{ key: 'primary', role: 'primary', mediaType: NATIVE_COMPONENT_MEDIA_TYPE, profile: NATIVE_COMPONENT_PROFILE, source: { type: 'file', path: rel } }] }, activity = { key: ak, activityType: NATIVE_COMPONENT_ACTIVITY_TYPE, title: { [language]: resolved }, resource: rk }; candidate.resources.push(resource); candidate.activities.push(activity); appendChild(candidate, options.parent ?? 'course', ak); validateProject(candidate); if (copy) {
+} const candidate = cloneProject(project), resolved = (title ?? String(payload.title ?? '')).trim() || key, rk = `res-${key}`, ak = `act-${key}`; assertUnused(candidate, rk); assertUnused(candidate, ak); const copy = options.copyFile !== false, rel = copy ? `assets/${key}${extname(source).toLowerCase()}` : inside(root, source), language = options.language ?? 'es'; const resource = { key: rk, title: { [language]: resolved }, representations: [{ key: 'primary', role: 'primary', mediaType: NATIVE_COMPONENT_MEDIA_TYPE, profile: NATIVE_COMPONENT_PROFILE, source: { type: 'file', path: rel } }] }, activity = { key: ak, activityType: NATIVE_COMPONENT_ACTIVITY_TYPE, title: { [language]: resolved }, resource: rk }; candidate.resources.push(resource); candidate.activities.push(activity); appendChild(candidate, options.parent ?? 'course', ak); declareImportedNativeProfile(candidate, NATIVE_COMPONENT_PROFILE); validateProject(candidate); if (copy) {
     const actual = copyIntoProject(root, source, key);
     candidate.resources.find((x) => x.key === rk).representations[0].source.path = actual;
 } replaceProject(project, candidate); return [entityByKey(project, rk), entityByKey(project, ak)]; }
@@ -133,5 +163,5 @@ catch (e) {
     throw new ProjectError(`invalid native composite: ${e instanceof Error ? e.message : String(e)}`);
 } const rel = `assets/${key}.composite.json`, language = options.language ?? 'es', resource = { key: rk, title: { [language]: title.trim() || key }, representations: [{ key: 'primary', role: 'primary', mediaType: NATIVE_COMPOSITE_MEDIA_TYPE, profile: NATIVE_COMPOSITE_PROFILE, source: { type: 'file', path: rel } }] }, activity = { key: ak, activityType: NATIVE_COMPOSITE_ACTIVITY_TYPE, title: { [language]: title.trim() || key }, resource: rk, children }; candidate.resources.push(resource); candidate.activities.push(activity); if (options.moveChildren !== false)
     for (const child of children)
-        detachChild(candidate, child, ak); appendChild(candidate, options.parent ?? 'course', ak); validateProject(candidate); const dir = join(root, 'assets'); mkdirSync(dir, { recursive: true }); const out = join(dir, `${key}.composite.json`), tmp = join(dir, `.${key}.composite.json.tmp`); writeFileSync(tmp, JSON.stringify(payload, null, 2) + '\n'); renameSync(tmp, out); replaceProject(project, candidate); return [entityByKey(project, rk), entityByKey(project, ak)]; }
+        detachChild(candidate, child, ak); appendChild(candidate, options.parent ?? 'course', ak); declareImportedNativeProfile(candidate, NATIVE_COMPOSITE_PROFILE); validateProject(candidate); const dir = join(root, 'assets'); mkdirSync(dir, { recursive: true }); const out = join(dir, `${key}.composite.json`), tmp = join(dir, `.${key}.composite.json.tmp`); writeFileSync(tmp, JSON.stringify(payload, null, 2) + '\n'); renameSync(tmp, out); replaceProject(project, candidate); return [entityByKey(project, rk), entityByKey(project, ak)]; }
 //# sourceMappingURL=project-edit.js.map

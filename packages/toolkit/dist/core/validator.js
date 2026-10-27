@@ -1,3 +1,4 @@
+import { COURSE_RIGHTS_EXTENSION, validateCourseRights } from './course-rights.js';
 import { readFileSync } from 'node:fs';
 import { ValidationError } from './errors.js';
 import { computeContentRoot, contentDigest, sha256, baseMediaType } from './integrity.js';
@@ -141,6 +142,11 @@ export function validateGraphSemantics(graph, manifest) {
     const rendererHint = `${NS}ext/renderer-preference/1`;
     const checkExtensions = (ext, context, holderType) => { for (const [namespace, value] of Object.entries(ext ?? {})) {
         const canonical = canonicalIdentifier(namespace);
+        if (canonical === COURSE_RIGHTS_EXTENSION) {
+            if (holderType !== 'course')
+                throw new ValidationError('course rights extension may only be set on the course');
+            validateCourseRights(value);
+        }
         if (canonical.startsWith(`${NS}profile/`) && !declared.has(canonical))
             throw new ValidationError(`profile extension not declared in manifest at ${context}: ${namespace}`);
         if (canonical === PROFILE.progression && !['course', 'unit', 'activity'].includes(holderType))

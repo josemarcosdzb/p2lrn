@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } 
 import { dirname, extname, join, resolve } from 'node:path';
 import { ProjectError } from '../core/errors.js';
 import { newUrnUuid } from '../core/uuid.js';
+import { COURSE_RIGHTS_EXTENSION, newCourseCreationDate } from '../core/course-rights.js';
 import { NATIVE, FORMAT_VERSION, identifierIs } from '../core/constants.js';
 import { validateSchema } from '../core/json-schema.js';
 export const PROJECT_FILE = 'p2lrn.project.json';
@@ -10,7 +11,7 @@ export const CURRENT_PROJECT_VERSION = '0.3.0';
 export const KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 function langMap(text, language) { if (text == null)
     return undefined; const v = text.trim(); return v ? { [language]: v } : undefined; }
-export function newProject(title, language = 'es', description) { const course = { key: 'course', revision: 1, title: { [language]: title.trim() || 'Untitled course' }, languages: [language], children: [] }; const d = langMap(description, language); if (d)
+export function newProject(title, language = 'es', description) { const course = { key: 'course', revision: 1, title: { [language]: title.trim() || 'Untitled course' }, languages: [language], children: [], extensions: { [COURSE_RIGHTS_EXTENSION]: { createdAt: newCourseCreationDate() } } }; const d = langMap(description, language); if (d)
     course.description = d; return { projectVersion: CURRENT_PROJECT_VERSION, targetFormatVersion: FORMAT_VERSION, projectId: newUrnUuid(), profilePolicy: 'derive', graphPolicy: 'derive', course, units: [], resources: [], activities: [], objectives: [], relations: [], profiles: [], preservedFiles: [] }; }
 export function projectPath(root) { try {
     if (existsSync(root) && statSync(root).isDirectory()) {

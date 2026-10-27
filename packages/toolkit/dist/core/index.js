@@ -1,3 +1,4 @@
+export { COURSE_RIGHTS_EXTENSION, COURSE_RIGHTS_SCHEMA, validateCourseRights, applyCourseRights, newCourseCreationDate } from './course-rights.js';
 export * from './constants.js';
 export * from './errors.js';
 export * from './types.js';

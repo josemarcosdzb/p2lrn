@@ -4,6 +4,7 @@ import { basename, dirname, resolve } from 'node:path';
 import { ProjectError } from '../core/errors.js';
 import { FORMAT_VERSION, PROFILE, canonicalIdentifier } from '../core/constants.js';
 import { portableUrn, uuidNamespace } from '../core/uuid.js';
+import { applyCourseRights } from '../core/course-rights.js';
 import { buildProject } from '../creator/builder.js';
 import { openPackageAsProject } from '../creator/import-project.js';
 import { readDocument } from '../document-reader/index.js';
@@ -103,6 +104,9 @@ export class P2LRNAuthoringWorkspace {
     /** @deprecated Low-level escape hatch. Studio integrations should use the typed editing methods. */
     update(mutator) { const draft = this.project; mutator(draft); return this.replace(draft); }
     #edit(operation) { const draft = clone(this.#project), result = operation(draft); validateProject(draft); saveProject(this.projectFile, draft); this.#project = draft; return result; }
+    setCourseRights(changes) {
+        return this.#edit(draft => ({ key: draft.course.key, rights: applyCourseRights(draft.course, changes) }));
+    }
     setCourseMetadata(options) {
         return this.#edit((draft) => { const language = normalizedLanguage(options.language, draft); setLocalizedText(draft.course, options, language); draft.course.languages = [...new Set([...(draft.course.languages ?? []), language])]; if (options.revision !== undefined && options.incrementRevision)
             throw new ProjectError('revision and incrementRevision are mutually exclusive'); if (options.revision !== undefined) {
