@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "pretest": "npm --prefix ../../packages/toolkit run build",
     "test": "node --test test/*.test.mjs",
     "check": "node --check server.mjs && node --check service.mjs && node --check install-client.mjs && node --check local-clients.mjs && node --check connect-local.mjs && node --check prepare-connectors.mjs && npm test",
     "build:connectors": "node prepare-connectors.mjs",

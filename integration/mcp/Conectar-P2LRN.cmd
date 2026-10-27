@@ -22,15 +22,19 @@ if /i "%~1"=="--help" (
   exit /b 0
 )
 
-if not exist "packages\toolkit\dist\authoring\index.js" (
-  echo Preparando Toolkit P2LRN...
+if not exist "packages\toolkit\node_modules\.bin\tsc.cmd" (
+  echo Instalando dependencias verificadas de Toolkit...
   pushd "packages\toolkit"
-  call npm install --ignore-scripts --no-audit --no-fund
-  if errorlevel 1 goto :failed_subdir
-  call npm run build
+  call npm ci --ignore-scripts --no-audit --no-fund
   if errorlevel 1 goto :failed_subdir
   popd
 )
+
+echo Actualizando Toolkit para esta version del codigo...
+pushd "packages\toolkit"
+call npm run build
+if errorlevel 1 goto :failed_subdir
+popd
 
 if not exist "integration\mcp\node_modules\@modelcontextprotocol\client" (
   echo Instalando integracion MCP opcional...

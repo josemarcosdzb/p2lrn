@@ -4,6 +4,24 @@ This integration adds a **P2LRN-side MCP server** and a **client-side setup help
 
 It uses the existing `@p2lrn/toolkit/reader` and `@p2lrn/toolkit/authoring` contracts. The server is a separate Node.js process and **never executes course payloads**. Imported/unsupported representations remain opaque.
 
+## Inventario real de capacidades de MCP (27-10-2026)
+
+**P2LRN Core** sigue siendo `0.4.0`; la versión del Toolkit es `0.5.0-alpha.11`. No confundir versiones de formato y producto. MCP es otro componente independiente (`0.1.0`).
+
+**23 herramientas registradas**: ocho de lectura y quince de escritura en borradores (éstas solo aparecen si `P2LRN_MCP_WRITE=1`).
+
+Lectura: `p2lrn_list_courses`, `p2lrn_read_course`, `p2lrn_read_entity`, `p2lrn_read_plan`, `p2lrn_validate_course`, `p2lrn_read_text_member`, `p2lrn_list_game_renderers`, `p2lrn_search_metadata`.
+
+Edición optativa: `p2lrn_draft_new`, `p2lrn_draft_create`, `p2lrn_draft_read`, `p2lrn_draft_set_text`, `p2lrn_draft_set_rights`, `p2lrn_draft_add_unit`, `p2lrn_draft_set_children`, `p2lrn_draft_add_file`, `p2lrn_draft_add_web_content`, `p2lrn_draft_add_url`, `p2lrn_draft_add_native_activity`, `p2lrn_draft_edit_native_activity`, `p2lrn_draft_add_composite`, `p2lrn_draft_set_progression`, `p2lrn_draft_export`.
+
+Las preguntas `true-false` con `trueFalseMode: multiple`, los cuatro campos de derechos y los renderizadores de juegos se gestionan mediante las herramientas nativas actuales y el registro de Toolkit. No se inventan herramientas específicas.
+
+**Límites reales:** MCP no exporta paquetes offline `.p2lrn-offline.cmd`/`.p2lrn-offline.zip`, no importa `.p2lrn-result`, no controla la interfaz visual de Studio ni publica mediante LMS/LTI. Lo offline corresponde a Studio/Player; LTI/AGS es `integration/lms`. Los SHA-256 de resultados offline no son firmas digitales de confianza.
+
+La Skill ChatGPT «P2LRN - Crear y descargar» es un empaquetador Python autónomo de un subconjunto Core 0.4.0. No instala el MCP, no sincroniza carpetas del PC ni se actualiza automáticamente al publicar código en GitHub. El usuario debe aprobar la instalación o conexión a su cuenta.
+
+**Evitar Toolkit obsoleto:** `npm test` de MCP recompila Toolkit antes de probar la integración. `Conectar-P2LRN.cmd` también recompila Toolkit al configurar clientes, aunque exista `dist`, para no reutilizar binarios generados de un commit previo.
+
 ## Build and install, Windows (PowerShell)
 
 ```powershell
