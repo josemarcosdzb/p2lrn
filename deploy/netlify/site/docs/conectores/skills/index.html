@@ -1,53 +1,14 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0d1117"><meta name="description" content="Crear y descargar cursos P2LRN con Skills en ChatGPT, Claude y Gemini, sin servidor MCP, sin dominio y sin instalar programas en el PC.">
-<title>Skills P2LRN sin instalar MCP — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
+<meta name="robots" content="noindex,follow"><meta http-equiv="refresh" content="0;url=/docs/conectores/ia/#crear-cursos">
+<link rel="canonical" href="https://p2lrn.netlify.app/docs/conectores/ia/#crear-cursos"><title>Crear cursos con Skills — Conectores para IA — P2LRN</title>
+<link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
 <body><a class="skip-link" href="#contenido">Saltar al contenido</a>
-<header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/instalar/">Instalar</a><a class="nav-direct" href="/docs/studio/">Crear</a><a class="nav-direct" href="/docs/player/">Reproducir</a><a class="nav-direct" href="/docs/integracion/">Integrar</a><a class="nav-direct" href="/docs/referencia/">Referencia</a></nav>
-<div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
-<button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
-<main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
-<article class="doc-content">
-<header class="doc-hero"><p class="eyebrow">CONECTORES / SKILLS SIN MCP</p><h1>Crear cursos P2LRN con Skills, sin instalar MCP</h1><p>Si sólo quieres pedirle a una IA que <strong>cree un curso y te entregue un <code>.p2lrn</code> descargable</strong>, no necesitas instalar MCP, descargar Node.js, tener un dominio, abrir puertos ni conectar tus archivos privados. La Skill aporta las instrucciones y el empaquetador donde el entorno puede ejecutarlo.</p></header>
-<section class="doc-section"><h2>Qué hace una Skill y qué no hace</h2>
-<div class="reference-table">
-<div><strong>Skill sin MCP: crear un archivo nuevo</strong><p>La IA recibe un encargo, construye el contenido de un curso, ejecuta el empaquetador de la Skill si dispone de un entorno de código y verifica un nuevo <code>.p2lrn</code>. Devuelve el archivo en el chat. No lee carpetas de tu PC de manera automática.</p></div>
-<div><strong>MCP local: trabajar con tus archivos existentes</strong><p>El conector MCP es diferente: permite listar, leer y validar paquetes que están en la carpeta autorizada de tu ordenador y, con permisos adicionales, editar borradores. Sólo es necesario si necesitas esa conexión persistente a tus archivos.</p></div>
-<div><strong>Studio: edición visual y funciones completas</strong><p>Studio permite editar visualmente, preparar proyectos y exportaciones avanzadas. Una Skill autónoma no equivale al editor completo, ni garantiza colaboración, LTI, LMS, paquetes autorreproducibles o ejecución gráfica de juegos 3D.</p></div>
-</div></section>
-<section class="doc-section"><h2>ChatGPT: «P2LRN – Crear y descargar»</h2>
-<p><strong>Existe una Skill P2LRN – Crear y descargar</strong> ya comprobada e instalada en un entorno de ChatGPT. Trabaja con Python y un empaquetador autónomo del subconjunto P2LRN Core <code>0.4.0</code>, sin llamar al servidor MCP. Cuando esté instalada y permitida en tu cuenta, puedes solicitar un curso directamente en la conversación.</p>
-<div class="codebox"><div class="codebox-head"><span>Ejemplo · pegar en ChatGPT con la Skill habilitada</span><button type="button" data-copy>Copiar</button></div><pre><code>Usa la Skill P2LRN – Crear y descargar.
-Crea un curso .p2lrn sobre prevención de riesgos laborales,
-en español, con 3 unidades, 6 lecciones, un cuestionario
-de 10 preguntas, un juego de relacionar y uno de ordenar.
-Verifica el paquete P2LRN Core y adjunta el archivo real
-.p2lrn descargable. No uses MCP ni accedas a mi ordenador.</code></pre></div>
-<ol class="doc-list">
-<li>En ChatGPT, abre <strong>Complementos → Habilidades</strong> y comprueba si «P2LRN – Crear y descargar» está disponible o compartida contigo. La instalación de Skills depende del plan y los permisos del área de trabajo.</li>
-<li>Si está instalada, pide el archivo <code>.p2lrn</code> con un encargo como el anterior. No instales nada en Windows para este flujo.</li>
-<li>Comprueba que el asistente ejecuta la verificación del empaquetador y entrega un archivo descargable real; rechaza respuestas sólo en JSON o texto.</li>
-</ol>
-<p><a href="https://help.openai.com/es-es/articles/20001066-skills-in-chatgpt">Instrucciones oficiales para encontrar, compartir e instalar Skills en ChatGPT</a>. La Skill no se instala en todas las cuentas automáticamente y esta web <strong>no ofrece todavía un ZIP público de esa Skill</strong>. No confundas el ZIP del conector MCP con un ZIP de Skill.</p></section>
-<section class="doc-section"><h2>Claude: Skills sin instalar el servidor P2LRN</h2>
-<p>Claude admite Skills personalizadas cuando tu cuenta y entorno tienen habilitada esa función. Puedes cargar una Skill compatible en <strong>Personalizar → Skills</strong> y utilizarla en conversaciones. En Claude Code, las Skills de proyecto o usuario utilizan carpetas con <code>SKILL.md</code>, según <a href="https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview">la guía oficial de Anthropic</a>.</p>
-<p>Una Skill preparada para el entorno de ChatGPT <strong>no queda validada automáticamente en Claude</strong>. Antes de prometer descargas, hay que comprobar que sus scripts se ejecutan en el entorno de Claude, que puede entregar el archivo y que el <code>.p2lrn</code> pasa la verificación. El servidor MCP no es obligatorio para crear un paquete desde cero.</p></section>
-<section class="doc-section"><h2>Gemini: Skills o Gems web y Agent Skills en CLI</h2>
-<div class="reference-table">
-<div><strong>Gemini web · Skills, si están habilitadas</strong><p>Google ofrece <a href="https://support.google.com/gemini/answer/17094296">Skills de Gemini</a> con instrucciones reutilizables y archivos compatibles. La función depende de cuenta, región y despliegue; en España podría no estar todavía disponible. Para empaquetar P2LRN debe existir un entorno capaz de ejecutar la Skill y adjuntar el resultado; no está certificado.</p></div>
-<div><strong>Gemini web · Gems como alternativa</strong><p>Si no aparece Skills, una <a href="https://support.google.com/gemini/answer/15146780?hl=es">Gem</a> permite guardar instrucciones y referencias para diseñar el curso. No equivale a ejecutar el empaquetador: si Gemini sólo devuelve contenido, habrá que utilizar Studio para obtener un paquete real.</p></div>
-<div><strong>Gemini CLI · Skills de usuario/proyecto</strong><p>Utiliza <code>gemini skills list</code> y una carpeta <code>SKILL.md</code> autorizada. No requiere servidor MCP P2LRN; sí necesita Gemini CLI y las herramientas que utilice esa Skill. <a href="/docs/conectores/gemini/">Pasos específicos de Gemini</a>.</p></div>
-</div></section>
-<section class="doc-section"><h2>¿Y Grok sin MCP?</h2>
-<p>Puedes pedirle a Grok que <strong>prepare el contenido</strong> de un curso siguiendo las instrucciones del formato y las preguntas correctas, pero P2LRN no ha certificado una integración de Skills ejecutables de Grok que genere y valide un <code>.p2lrn</code>. No se ofrece un botón de instalación que no exista. Para exportación verificable usa un entorno con Skill y empaquetador probados o Studio.</p></section>
-<section class="doc-section"><h2>Validaciones y límites de la Skill P2LRN actual</h2>
-<ul class="doc-list">
-<li><strong>Sí:</strong> crear y verificar cursos nuevos del subconjunto Core 0.4.0 con lecciones, cuestionarios y juegos compatibles, entregar ZIP con extensión <code>.p2lrn</code> y manifest de integridad.</li>
-<li><strong>No:</strong> leer automáticamente tus carpetas, modificar LMS/AulaP2P, instalar MCP, publicar en npm, garantizar edición sin pérdida de cualquier paquete antiguo o convertir el curso a un ejecutable offline.</li>
-<li><strong>Juegos 3D:</strong> el empaquetador verifica su estructura; una ejecución real del Player es necesaria para afirmar que el juego funciona visualmente.</li>
-<li><strong>Seguridad:</strong> revisa archivos y scripts antes de instalar cualquier Skill de terceros. No envíes contraseñas ni carpetas privadas para crear un curso nuevo.</li>
-</ul>
-<div class="example-actions"><a class="button primary" href="/docs/conectores/gemini/">Ver Gemini</a><a class="button" href="/studio/">Usar Studio visual</a><a class="button" href="/docs/conectores/local/">Conectar cursos del PC por MCP (opcional)</a></div>
-</section>
-<nav class="doc-pager"><a class="prev" href="/docs/conectores/gemini/"><span>← Anterior</span><strong>Gemini</strong></a><a class="next" href="/docs/conectores/local/"><span>Siguiente →</span><strong>IA local y MCP</strong></a></nav>
-</article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
+<header class="site-header"><a class="brand" href="/">P2LRN</a></header>
+<main class="doc-main" id="contenido"><aside class="doc-sidebar"></aside><article class="doc-content">
+<header class="doc-hero"><p class="eyebrow">DOCUMENTACIÓN / CONECTORES / IA</p><h1>Crear cursos con Skills</h1>
+<p>Esta información está integrada en la guía principal. La nueva ruta te lleva directamente al apartado correspondiente.</p></header>
+<section class="doc-section"><h2>Continuar en Conectores para IA</h2>
+<p><a href="/docs/conectores/ia/#crear-cursos">Abrir Crear cursos con Skills</a></p></section>
+</article></main>
+<script>window.location.replace("/docs/conectores/ia/#crear-cursos");</script></body></html>
