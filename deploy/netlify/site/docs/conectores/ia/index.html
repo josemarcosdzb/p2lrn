@@ -1,13 +1,17 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0d1117"><meta name="description" content="Guía completa de conectores MCP P2LRN para ChatGPT, Claude y Grok: instalación, uso, seguridad y estado de publicación.">
-<title>Conectores de IA: ChatGPT, Claude y Grok — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
+<title>ChatGPT, Claude y Grok: Skills sin MCP y conectores — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head>
 <body><a class="skip-link" href="#contenido">Saltar al contenido</a>
 <header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/instalar/">Instalar</a><a class="nav-direct" href="/docs/studio/">Crear</a><a class="nav-direct" href="/docs/player/">Reproducir</a><a class="nav-direct" href="/docs/integracion/">Integrar</a><a class="nav-direct" href="/docs/referencia/">Referencia</a></nav>
 <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
 <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header>
 <main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
 <article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONECTORES / IA WEB</p><h1>Conectores de IA: ChatGPT, Claude y Grok</h1><p>P2LRN utiliza un mismo servidor MCP para herramientas de IA. <strong>Si quieres trabajar con los cursos guardados en tu PC, no necesitas tener una web ni comprar un dominio.</strong> La conexión cambia según uses una aplicación instalada en el ordenador o una IA en la nube.</p></header>
+<section class="doc-section"><h2>Si sólo quieres crear un curso, utiliza una Skill sin MCP</h2>
+<p>Para <strong>crear y descargar un archivo <code>.p2lrn</code> nuevo</strong>, no necesitas instalar el servidor MCP, conectar tu ordenador ni contratar un dominio. Ya existe una Skill «P2LRN – Crear y descargar» en un entorno de ChatGPT; puede producir un paquete Core 0.4.0 y verificarlo cuando está habilitada. <a href="/docs/conectores/skills/"><strong>Ver la guía de Skills sin MCP</strong></a>.</p>
+<p>Esta vía no ofrece acceso automático a cursos privados del PC. Para otras plataformas, <a href="/docs/conectores/gemini/">Gemini web y CLI</a> dispone de Skills/Gems y <a href="/docs/conectores/skills/">Claude</a> permite Skills según el entorno; hay que comprobar que realmente generan y verifican el paquete, sin asumir paridad universal.</p>
+</section>
 <section class="doc-section" id="elegir-conexion"><h2>Elige cómo conectar P2LRN a tu ordenador</h2>
 <div class="reference-table">
 <div><strong>1. Aplicación de IA instalada en tu PC · sin dominio</strong><p>Claude Desktop, Cursor, Windsurf, Gemini CLI, VS Code y otros clientes compatibles pueden iniciar el MCP mediante <code>stdio</code>. Los cursos permanecen en una carpeta autorizada del ordenador; no necesitas una URL, proxy ni puerto abierto.<span class="example-actions"><a class="button primary" href="#conexion-local">Conectar en mi PC</a><a class="button" href="/docs/conectores/local/">Guía local completa</a></span></p></div>
@@ -24,8 +28,8 @@
 <li>En todos los casos, comprueba <code>p2lrn_list_courses</code> y <code>p2lrn_validate_course</code> con archivos dentro de la carpeta autorizada.</li></ol>
 <div class="doc-callout"><strong>El ZIP no es un plugin publicado</strong><p>El asistente instala configuraciones locales sólo en clientes compatibles y con confirmación. ChatGPT web necesita un MCP remoto o un Secure MCP Tunnel autorizado. Los ZIP de descriptores no son plugins aprobados en directorios públicos.</p></div>
 </section>
-<section class="doc-section"><h2>Dos modalidades: crear un paquete o conectar tus cursos</h2>
-<div class="reference-table"><div><strong>Crear y descargar .p2lrn</strong><p>Un creador P2LRN habilitado dentro de una IA puede construir un archivo nuevo a partir de instrucciones y entregarlo como descarga. No necesita conectar tu PC ni consultar cursos privados. Sólo está disponible cuando el asistente tiene incorporada esa capacidad.</p></div>
+<section class="doc-section"><h2>Dos necesidades distintas: crear un paquete o conectar tus cursos</h2>
+<div class="reference-table"><div><strong>Crear y descargar .p2lrn mediante Skill</strong><p>La Skill «P2LRN – Crear y descargar» instalada en un entorno compatible de ChatGPT crea y verifica paquetes nuevos sin servidor MCP, Node en tu PC ni carpetas compartidas. Requiere que la Skill esté habilitada y que el entorno ejecute su empaquetador. <a href="/docs/conectores/skills/">Ver requisitos y límites</a>.</p></div>
 <div><strong>Conector MCP a cursos autorizados</strong><p>El servidor de <code>integration/mcp/</code> permite enumerar, leer y validar cursos existentes; la edición en borradores se habilita explícitamente. Para una IA web el servidor debe ser accesible en una URL HTTPS protegida; tener un ZIP de plugin no instala ni activa por sí solo el conector.</p></div></div>
 <p>Estas dos modalidades pueden convivir sin cambiar el formato P2LRN ni crear una versión específica de cada curso para cada IA.</p></section>
 <section class="doc-section"><h2>Qué herramientas ofrece el servidor MCP</h2>
@@ -90,5 +94,5 @@ node prepare-connectors.mjs --endpoint https://tu-dominio.example/mcp --out .gen
 <li><strong>No hay endpoint público:</strong> <code>127.0.0.1</code> no es accesible directamente desde una IA web, pero un túnel privado compatible puede conectar ambos extremos sin abrir un puerto público.</li></ul>
 <p>Para trabajar en tu propio ordenador sin túnel ni URL pública utiliza los <a href="/docs/conectores/local/">conectores locales</a>.</p></section>
 <nav class="doc-pager"><a class="prev" href="/docs/conectores/"><span>← Anterior</span><strong>Conectores</strong></a>
-<a class="next" href="/docs/conectores/local/"><span>Siguiente →</span><strong>IA local</strong></a></nav>
+<a class="next" href="/docs/conectores/gemini/"><span>Siguiente →</span><strong>Gemini</strong></a></nav>
 </article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
