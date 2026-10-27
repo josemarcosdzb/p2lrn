@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createP2LRNStudioDocument} from '../web/studio/new-document.js';
 import {exportP2LRNPackage} from '../web/studio/package-export.js';
 import {openP2LRNPackageBytes} from '../web/p2lrn-player.js';
-import {lessonImageData,lessonImageMediaType,MAX_LESSON_IMAGE_BYTES} from '../web/studio/lesson-images.js';
+import {lessonImageData,lessonImageMediaType,lessonImageFlowLayout,MAX_LESSON_IMAGE_BYTES} from '../web/studio/lesson-images.js';
 
 const png=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==','base64'));
 const file=(bytes,name='diagrama.png')=>({name,size:bytes.byteLength,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)});
@@ -29,4 +29,25 @@ test('rejects SVG and untrusted MIME even when renamed, before allocating oversi
   assert.equal(lessonImageMediaType(fake),null);
   await assert.rejects(lessonImageData(file(fake,'trampa.png')),/No se admite SVG/);
   await assert.rejects(lessonImageData({name:'enorme.png',size:MAX_LESSON_IMAGE_BYTES+1,arrayBuffer:()=>{throw Error('Should not read');}}),/8 MB/);
+});
+
+
+test('3D-free lesson image layout wraps text, keeps its upper lines and never overlays another image',()=>{
+  const initial=lessonImageFlowLayout({x:12,y:100,width:280,height:160},720);
+  assert.equal(initial.style.float,'left');
+  assert.equal(initial.style.marginTop,'100px');
+  assert.equal(initial.style.shapeOutside,'inset(100px 0px 0px 0px)');
+  assert.equal(initial.style.marginLeft,'86px');
+  const moved=lessonImageFlowLayout({x:70,y:280,width:280,height:160},720);
+  assert.equal(moved.style.float,'right');
+  assert.equal(moved.style.marginTop,'280px');
+  assert.equal(moved.style.shapeOutside,'inset(280px 0px 0px 0px)');
+  assert(moved.nextBottom>initial.nextBottom);
+  const second=lessonImageFlowLayout({x:5,y:300,width:240,height:130},720,moved.nextBottom);
+  assert.equal(second.style.marginTop,'0px');
+  assert(second.nextBottom>moved.nextBottom);
+  const mobile=lessonImageFlowLayout({x:80,y:500,width:320,height:210},345);
+  assert.equal(mobile.style.float,'left');
+  assert.equal(mobile.style.marginTop,'0px');
+  assert(mobile.nextBottom<500);
 });
