@@ -4,3 +4,24 @@
 
 [build.environment]
   NODE_VERSION = "22"
+
+# Historical IA documentation paths now point to the corresponding section
+# in the single canonical guide. Force redirects even when legacy HTML exists,
+# and preserve working links shared before the navigation was reorganized.
+[[redirects]]
+  from = "/docs/conectores/gemini/"
+  to = "/docs/conectores/ia/#gemini"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/docs/conectores/skills/"
+  to = "/docs/conectores/ia/#crear-cursos"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/docs/conectores/local/"
+  to = "/docs/conectores/ia/#conectar-ordenador"
+  status = 301
+  force = true
