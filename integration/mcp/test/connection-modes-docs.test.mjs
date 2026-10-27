@@ -53,3 +53,49 @@ test('local PC first-run --help succeeds without installing any MCP dependencies
     assert.match(result.stdout,/HTTPS\/túnel/);
   }finally{rmSync(temp,{recursive:true,force:true});}
 });
+
+
+test('Gemini and no-MCP Skills stay separate from MCP across site navigation and docs',()=>{
+  const index=read('deploy/netlify/site/docs/conectores/index.html');
+  const ai=read('deploy/netlify/site/docs/conectores/ia/index.html');
+  const local=read('deploy/netlify/site/docs/conectores/local/index.html');
+  const gemini=read('deploy/netlify/site/docs/conectores/gemini/index.html');
+  const skills=read('deploy/netlify/site/docs/conectores/skills/index.html');
+  const navbar=read('deploy/netlify/site/p2lrn.js');
+  const sitemap=read('deploy/netlify/site/sitemap.xml');
+  const build=read('deploy/netlify/build-site.mjs');
+  const readme=read('integration/mcp/README.md');
+
+  assert.match(index,/Seis guías independientes/);
+  for(const route of ['skills','gemini','ia','local','lms','lti']){
+    assert(index.includes('href="/docs/conectores/'+route+'/"'),'Missing index card: '+route);
+    assert(navbar.includes("['/docs/conectores/"+route+"/',"),'Missing shared sidebar entry: '+route);
+    assert(sitemap.includes('https://p2lrn.netlify.app/docs/conectores/'+route+'/'),
+      'Missing sitemap route: '+route);
+    assert(build.includes("['"+route+"',"),'Build not guarding route: '+route);
+  }
+  assert(index.indexOf('href="/docs/conectores/skills/"')<index.indexOf('href="/docs/conectores/ia/"'),
+    'No-MCP creation path must be visible before remote MCP');
+  assert(ai.includes('Skill sin MCP')&&ai.includes('href="/docs/conectores/skills/"'));
+  assert(local.includes('Skills sin MCP')&&local.includes('Gemini CLI'));
+  assert.match(gemini,/Gemini web: Skills, sin MCP/);
+  assert.match(gemini,/Gemini web: alternativa con Gems/);
+  assert.match(gemini,/Gemini CLI: Agent Skills sin servidor MCP/);
+  assert.match(gemini,/Gemini CLI: conectar tus cursos del PC mediante MCP/);
+  assert.match(gemini,/--clients gemini --install --verify/);
+  assert.match(gemini,/no está verificada como Skill de Gemini web/);
+  assert.match(skills,/ChatGPT: «P2LRN – Crear y descargar»/);
+  assert.match(skills,/Claude: Skills sin instalar el servidor P2LRN/);
+  assert.match(skills,/Gemini: Skills o Gems web y Agent Skills en CLI/);
+  assert.match(skills,/esta web <strong>no ofrece todavía un ZIP público/);
+  assert(!skills.includes('href="/downloads/p2lrn-conector-mcp.zip"'),
+    'No-MCP skill guide must not misdirect users to install MCP');
+  assert.match(readme,/## Crear cursos sin MCP: Skills P2LRN en ChatGPT, Claude y Gemini/);
+  assert.match(readme,/## Gemini CLI con el MCP local opcional/);
+  for(const content of [gemini,skills]){
+    assert(content.includes('class="doc-main"'));
+    assert(content.includes('class="doc-sidebar"'));
+    assert((content.match(/<section class="doc-section">/g)||[]).length>=5);
+    assert(content.includes('class="doc-pager"'));
+  }
+});
