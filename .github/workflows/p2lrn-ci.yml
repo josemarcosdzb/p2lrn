@@ -417,6 +417,16 @@ jobs:
           node --check deploy/netlify/build-doc-examples.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Verify lesson image text reflow, drag, resizing and legacy packages in Chrome
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web/studio/lesson-images.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/studio-lesson-images.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-studio-image-reflow.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Prepare local viewer fixture
         shell: powershell
         run: |
