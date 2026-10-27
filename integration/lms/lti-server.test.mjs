@@ -61,6 +61,11 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   const admin={'Authorization':'Bearer '+adminToken};
   const req=(path,options={})=>fetch(local+path,options);
   assert.equal((await req('/lti/health')).status,200);
+  const rapierModule=await req('/lti/assets/player/vendor/rapier3d.mjs');
+  assert.equal(rapierModule.status,200,'3D physics module must be available to the Player');
+  assert.match(rapierModule.headers.get('content-type')??'',/^text\/javascript\b/,
+    'browser must receive .mjs as JavaScript, never application/octet-stream');
+  assert.ok((await rapierModule.arrayBuffer()).byteLength>100000,'3D physics payload is present');
   const pub=await (await req('/lti/jwks')).json();
   assert.equal(pub.keys[0].kid,'tool-key');
   assert.equal(pub.keys[0].kty,'RSA');
