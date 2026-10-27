@@ -321,7 +321,15 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    }
    if(method==='POST'&&path.startsWith('/lti/runtime/')){
     const s=requireSession(req,true),data=input(await readBody(req,512*1024),req);
-    const {entityId,surface}=contextFor(data,s);
+    // Package-level ready/error telemetry carries package integrity but no entityId.
+    // Bind only these lifecycle events to the launch-authorized root entity;
+    // all other events and state/grade writes require their explicit graph entity.
+    const packageLifecycle=path==='/lti/runtime/event'
+     && ['p2lrn:ready','p2lrn:error'].includes(data.event?.type)
+     && data.context&&typeof data.context==='object'&&!Array.isArray(data.context)
+     && data.context.entityId==null;
+    const scoped=packageLifecycle?{...data,context:{...data.context,entityId:s.entityId}}:data;
+    const {entityId,surface}=contextFor(scoped,s);
     if(path==='/lti/runtime/state/load')
      return sendJson(res,200,store.getState(s.attemptId,entityId,surface));
     if(path==='/lti/runtime/state/save'){

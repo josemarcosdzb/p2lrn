@@ -189,6 +189,15 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.equal((await postRuntime('score',{context:playerContext,score:{normalized:0.8,completed:true}})).status,200);
   assert.equal(calls.length,0,'browser-reported grade must never trigger AGS OAuth');
   assert.equal((await postRuntime('event',{context:playerContext,event:{id:'ev1',type:'p2lrn:complete'}})).status,200);
+  const packageContext={packageId:catalogue.packageId,contentRoot:catalogue.contentRoot};
+  assert.equal((await postRuntime('event',{context:packageContext,event:{id:'package-ready',type:'p2lrn:ready'}})).status,200,
+    'the real Player sends package-ready telemetry without an entityId');
+  assert.equal((await postRuntime('event',{context:packageContext,event:{id:'package-error',type:'p2lrn:error'}})).status,200);
+  assert.equal((await postRuntime('event',{context:packageContext,event:{id:'no-entity',type:'p2lrn:interaction'}})).status,403,
+    'activity events must still identify an authorized graph entity');
+  assert.equal((await postRuntime('event',{context:{...packageContext,packageId:'forged'},event:{type:'p2lrn:ready'}})).status,403);
+  assert.equal((await postRuntime('state/load',{context:packageContext})).status,403,
+    'missing entityId must never be accepted for state, score or other APIs');
   assert.equal((await req('/lti/launch',{method:'POST',
    headers:{'Content-Type':'application/x-www-form-urlencoded','Cookie':learner.browserCookie},
    body:new URLSearchParams({state:learner.state,id_token:token})})).status,403);
