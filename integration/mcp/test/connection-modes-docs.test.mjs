@@ -130,6 +130,29 @@ test('no documentation link opens a hidden old AI page',()=>{
   assert(checked>35,'Whole documentation site was not inspected');
 });
 
+test('every documentation page is represented in the shared sidebar',()=>{
+  const nav=read('deploy/netlify/site/p2lrn.js');
+  const docs=join(root,'deploy','netlify','site','docs');
+  function* pages(dir){
+    for(const entry of readdirSync(dir,{withFileTypes:true})){
+      const full=join(dir,entry.name);
+      if(entry.isDirectory())yield* pages(full);
+      else if(entry.name==='index.html')yield full;
+    }
+  }
+  let checked=0;
+  for(const file of pages(docs)){
+    const relative=file.slice(docs.length).replaceAll('\\','/').replace(/^\/+/, '');
+    const parts=relative.split('/');
+    const slug=parts.length>2&&parts[0]==='conectores'?parts[1]:null;
+    if(slug&&legacy.has(slug))continue;
+    const route='/docs/'+parts.slice(0,-1).join('/')+(parts.length>1?'/':'');
+    assert(nav.includes("'"+route+"'"),'Documentation page missing from sidebar/navigation: '+route);
+    checked++;
+  }
+  assert(checked>40,'Documentation page inventory incomplete');
+});
+
 test('local connector first-run help works with no installed MCP package',()=>{
   const dir=mkdtempSync(join(tmpdir(),'p2lrn-connector-help-'));
   try{
