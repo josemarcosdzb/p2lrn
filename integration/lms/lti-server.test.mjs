@@ -86,6 +86,26 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   const catalogue=list.courses[0];
   const selected=catalogue.entities.find(x=>['course','unit','activity'].includes(x.type));
   assert.ok(selected);
+  const bindingBody={registrationId:'moodle',deploymentId:'D1',
+   catalogId:catalogue.id,entityId:selected.id};
+  const unauthenticated=await req('/lti/admin/bindings',{method:'POST',
+   headers:{'Content-Type':'application/json'},body:JSON.stringify(bindingBody)});
+  assert.equal(unauthenticated.status,403,'manual binding must require admin authorization');
+  const wrongDeployment=await req('/lti/admin/bindings',{method:'POST',
+   headers:{...admin,'Content-Type':'application/json'},
+   body:JSON.stringify({...bindingBody,deploymentId:'OTHER-LMS'})});
+  assert.equal(wrongDeployment.status,403,'manual binding cannot cross LTI deployment');
+  const manual=await req('/lti/admin/bindings',{method:'POST',
+   headers:{...admin,'Content-Type':'application/json'},
+   body:JSON.stringify(bindingBody)});
+  assert.equal(manual.status,201);
+  const manualData=await manual.json();
+  assert.match(manualData.bindingId,/^[a-f0-9]{64}$/);
+  assert.equal(manualData.customParameters.p2lrn_binding_id,manualData.bindingId);
+  assert.equal(gateway.store.getBinding({id:manualData.bindingId,
+   tenantId:'school',registrationId:'moodle',deploymentId:'D1'}).entityId,selected.id);
+  assert.equal(gateway.store.getBinding({id:manualData.bindingId,
+   tenantId:'other-school',registrationId:'moodle',deploymentId:'D1'}),null);
 
   async function begin(kind){
    const target=BASE+(kind==='LtiDeepLinkingRequest'?'/lti/deep-link':'/lti/launch');
