@@ -716,7 +716,11 @@
       let frame=0;
       const syncActive=()=>{
         frame=0;
-        const line=Math.max(104,window.innerHeight*.2);
+        // The IA sidebar identifies a section once its title enters the
+        // reading area, not only after it reaches the very top. This keeps
+        // deep-link redirects and smooth anchor scrolling understandable.
+        const line=Math.max(104,window.innerHeight*(
+          currentPath==='/docs/conectores/ia/' ? .58 : .2));
         let active=headings[0];
         for (const heading of headings) {
           if (heading.getBoundingClientRect().top<=line) active=heading;
