@@ -3,8 +3,8 @@ import {existsSync, mkdirSync, writeFileSync} from 'node:fs';
 import {resolve, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createInterface} from 'node:readline/promises';
-import {Client} from '@modelcontextprotocol/client';
-import {StdioClientTransport} from '@modelcontextprotocol/client/stdio';
+// MCP client dependencies load only for --verify: --help and dry-run
+// setup must work before the first npm installation.
 import {
   LOCAL_CLIENTS, OTHER_CLIENTS, applyLocalRegistration, buildLocalClientSnippet,
   defaultCourseDirectory, listDetectedClients, localStdioDefinition,
@@ -32,6 +32,10 @@ function normalizedClients(list, options = {}) {
 }
 
 export async function verifyLocalMcp(entry) {
+  const [{Client},{StdioClientTransport}] = await Promise.all([
+    import('@modelcontextprotocol/client'),
+    import('@modelcontextprotocol/client/stdio'),
+  ]);
   const client = new Client({name:'p2lrn-local-connection-check',version:'0.1.0'});
   const transport = new StdioClientTransport({
     command:entry.command,
