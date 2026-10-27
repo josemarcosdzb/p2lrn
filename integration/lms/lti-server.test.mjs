@@ -137,6 +137,9 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.equal(launch.status,200);
   const htmlBody=await launch.text();
   assert.match(htmlBody,/<p2lrn-player/);
+  assert.match(htmlBody,/player\.setAttribute\("src",src\)/,
+    'LTI HTML must use the observed src attribute, not an inert player.src property');
+  assert.doesNotMatch(htmlBody,/player\.src=src/);
   assert(!htmlBody.includes('learner-opaque-1'));
   const cookie=launch.headers.get('set-cookie').split(';')[0];
   assert.ok(cookie.startsWith('__Host-p2lrn-session='));
