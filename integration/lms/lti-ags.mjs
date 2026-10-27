@@ -66,6 +66,7 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
   if(Array.isArray(ags.allowedOrigins))for(const origin of ags.allowedOrigins)allowed.add(origin);
   const tokenEndpoint=allowedUrl(tokenUrl,allowed,allowInsecureLoopback);
   let lineitem=needsLineitem?null:allowedUrl(ags.lineitem,allowed,allowInsecureLoopback);
+  let scoreMaximum=1;
   const collection=needsLineitem?allowedUrl(ags.lineitems,allowed,allowInsecureLoopback):null;
   if(lineitem&&(lineitem.search||lineitem.hash))
    throw new Error('AGS lineitem URL must not include query');
@@ -107,6 +108,9 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
     throw new Error('Ambiguous LMS gradebook columns for the same resource');
    const existing=tagged[0]||(matching.length===1?matching[0]:null);
    if(existing){
+    if(typeof existing.scoreMaximum==='number'&&Number.isFinite(existing.scoreMaximum)&&
+       existing.scoreMaximum>0&&existing.scoreMaximum<=1000000)
+     scoreMaximum=existing.scoreMaximum;
     lineitem=allowedUrl(existing.id,allowed,allowInsecureLoopback);
    }else{
     if(!canCreateLineitem)
@@ -129,8 +133,8 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
   const scoreUrl=new URL(lineitem.toString());
   scoreUrl.pathname=scoreUrl.pathname.replace(/\/$/,'')+'/scores';
   await checkHost(scoreUrl);
-  const payload={userId:subject,scoreGiven:Math.round(n*1000000)/1000000,
-   scoreMaximum:1,activityProgress:score.completed?'Completed':'InProgress',
+  const payload={userId:subject,scoreGiven:Math.round(n*scoreMaximum*1000000)/1000000,
+   scoreMaximum,activityProgress:score.completed?'Completed':'InProgress',
    gradingProgress:'FullyGraded',timestamp:new Date().toISOString()};
   const response=await fetchImpl(scoreUrl,{method:'POST',redirect:'manual',
    headers:{Authorization:bearer,
