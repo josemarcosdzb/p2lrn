@@ -22,6 +22,9 @@ const httpTests=await read('packages/toolkit/test/collaboration-http.test.mjs');
 const analyticsTests=await read('packages/toolkit/test/rich-analytics.test.mjs');
 const server=await read('packages/player/server/collaboration-http.mjs');
 const browserProvider=await read('packages/toolkit/web/collaboration-http-provider.js');
+// This gate runs after the actual Windows Chrome/Edge E2E and requires its real screenshot.
+const collaborationScreenshot=await readFile(resolve(root,'.visual-evidence/collaboration-two-player.png')).catch(()=>null);
+const sharedResourceScreenshot=await readFile(resolve(root,'.visual-evidence/shared-resource-digest.png')).catch(()=>null);
 
 const rows=[
   {
@@ -51,7 +54,9 @@ const rows=[
       localViewer.includes('createHttpCollaborationProvider'),
       localViewer.includes("transport:'http'"),
       localViewer.includes('collaboration HTTP synchronization'),
-      localViewer.includes("captureVisualEvidence(cdp,'collaboration-two-player')"),
+      localViewer.includes("captureElementVisualEvidence(cdp,'collaboration-two-player'") &&
+        collaborationScreenshot?.byteLength>2048 && collaborationScreenshot[0]===0x89 &&
+        collaborationScreenshot[1]===0x50 && collaborationScreenshot[2]===0x4e && collaborationScreenshot[3]===0x47,
     ],
   },
   {
@@ -60,7 +65,9 @@ const rows=[
     checks:[
       localViewer.includes('createMemorySharedResourceStore'),
       localViewer.includes('Shared resource store retained duplicate physical objects.'),
-      localViewer.includes("captureVisualEvidence(cdp,'shared-resource-digest')"),
+      localViewer.includes("captureElementVisualEvidence(cdp,'shared-resource-digest'") &&
+        sharedResourceScreenshot?.byteLength>1024 && sharedResourceScreenshot[0]===0x89 &&
+        sharedResourceScreenshot[1]===0x50 && sharedResourceScreenshot[2]===0x4e && sharedResourceScreenshot[3]===0x47,
     ],
   },
   {
