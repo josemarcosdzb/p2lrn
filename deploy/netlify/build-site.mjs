@@ -139,23 +139,24 @@ const htmlFiles = allHtmlFiles.filter((path)=>!isCorrespondingSourcePath(path));
 
 const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
 const brandHead = [
-  '<link rel="icon" type="image/png" sizes="96x96" href="/favicon.png?v=p2lrn-brand-20261027-v2">',
-  '<link rel="shortcut icon" type="image/png" href="/favicon.png?v=p2lrn-brand-20261027-v2">',
-  '<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=p2lrn-brand-20261027-v2">',
+  '<link rel="icon" type="image/png" sizes="96x96" href="/favicon.png?v=p2lrn-brand-20261027-v3">',
+  '<link rel="shortcut icon" type="image/png" href="/favicon.png?v=p2lrn-brand-20261027-v3">',
+  '<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=p2lrn-brand-20261027-v3">',
   '<link rel="manifest" href="/site.webmanifest">',
-  '<meta property="og:image" content="https://p2lrn.netlify.app/p2lrn-mark.png">',
-  '<meta name="twitter:image" content="https://p2lrn.netlify.app/p2lrn-mark.png">'
+  '<meta property="og:image" content="https://p2lrn.netlify.app/p2lrn-mark.png?v=p2lrn-brand-20261027-v3">',
+  '<meta name="twitter:image" content="https://p2lrn.netlify.app/p2lrn-mark.png?v=p2lrn-brand-20261027-v3">'
 ].join('');
 for (const htmlPath of htmlFiles) {
   let html = await readFile(htmlPath,'utf8');
   html = html.replaceAll('0.5.0-alpha.10',productionPublicVersion);
+  html = html.replace(/href=["']\/p2lrn\.css(?:\?[^"']*)?["']/gi,'href="/p2lrn.css?v=p2lrn-brand-20261027-v3"');
   // Decorative release badges may be removed, but live application status controls must remain.
   html = html.replace(/<div\s+class=["']header-meta["'][^>]*>[\s\S]*?<\/div>/gi,
     (block)=>block.includes('data-functional-status')?block:'');
   html = html.replace(/<span\s+[^>]*data-footer-version(?:=["'][^"']*["'])?[^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-release-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-build-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
-  if (!html.includes('/favicon.png?v=p2lrn-brand-20261027-v2')) {
+  if (!html.includes('/favicon.png?v=p2lrn-brand-20261027-v3')) {
     html = html.replace(/<\/head>/i,brandHead + '</head>');
   }
   await writeFile(htmlPath,html);
@@ -166,7 +167,7 @@ for (const asset of brandAssets) {
 }
 for (const htmlPath of htmlFiles) {
   const html=await readFile(htmlPath,'utf8');
-  for (const required of ['/favicon.png?v=p2lrn-brand-20261027-v2','/apple-touch-icon.png?v=p2lrn-brand-20261027-v2','/site.webmanifest']) {
+  for (const required of ['/p2lrn.css?v=p2lrn-brand-20261027-v3','/favicon.png?v=p2lrn-brand-20261027-v3','/apple-touch-icon.png?v=p2lrn-brand-20261027-v3','/site.webmanifest']) {
     if (!html.includes(required)) throw new Error('Missing brand metadata in ' + relative(outputRoot,htmlPath) + ': ' + required);
   }
 }
