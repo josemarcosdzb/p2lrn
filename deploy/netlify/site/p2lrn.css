@@ -12,6 +12,8 @@
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;background:var(--bg)}
+/* Platform jumps in the long IA guide must not leave the sidebar temporarily on an old section. */
+html.doc-instant-anchor{scroll-behavior:auto}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6}
 a{color:inherit}
 button{font:inherit}
