@@ -395,15 +395,19 @@ for(const name of requiredConnectorZips){
 
 // Documentation connectors are separate, navigable pages with source-backed
 // explanations. Check the common navigation and sitemap before publishing.
+// Only three subpages are directly navigable: IA (all providers/methods), LMS
+// and LTI. Historical per-provider/deep-help URLs must continue to resolve.
 const connectorDocs = [
-  ['', ['Conectores e integración', 'ChatGPT, Claude y Grok', 'Skills', 'Gemini', 'IA local', 'Plataformas LMS', 'LTI 1.3']],
-  ['ia', ['ChatGPT', 'Claude', 'Grok', 'Skills sin MCP', 'P2LRN_MCP_WRITE', 'HTTPS']],
+  ['', ['Conectores e integración', 'Conectores para IA', 'Plataformas LMS', 'LTI 1.3']],
+  ['ia', ['Conectores para IA', 'ChatGPT', 'Claude', 'Gemini', 'Grok', 'Skills sin MCP', 'P2LRN_MCP_WRITE', 'HTTPS']],
   ['gemini', ['Gemini web', 'Gemini CLI', 'Skills', 'Gems', 'SKILL.md', 'gemini skills list', 'MCP']],
   ['skills', ['P2LRN – Crear y descargar', 'sin instalar MCP', 'ChatGPT', 'Claude', 'Gemini', 'Core 0.4.0']],
   ['local', ['Conectar-P2LRN.cmd', 'stdio', 'Cursor', 'Windsurf', 'Gemini CLI', 'Ollama']],
   ['lms', ['Moodle', 'Canvas', 'Sakai', 'Chamilo', 'Open edX']],
   ['lti', ['OIDC', 'JWKS', 'Deep Linking', 'AGS', 'NRPS', 'no se han certificado']],
 ];
+const visibleConnectorSlugs = new Set(['','ia','lms','lti']);
+const connectorAiPage=await readFile(join(outputRoot,'docs','conectores','ia','index.html'),'utf8');
 const [connectorNavigation,connectorSitemap,connectorHome] = await Promise.all([
   readFile(join(outputRoot,'p2lrn.js'),'utf8'),
   readFile(join(outputRoot,'sitemap.xml'),'utf8'),
@@ -415,16 +419,23 @@ for(const [slug,required] of connectorDocs){
   if(!(await exists(file)))throw new Error('Connector documentation page missing: '+route);
   const html=await readFile(file,'utf8');
   if(!html.includes('<h1>') || !html.includes('class="doc-content"') ||
-     (html.match(/<section class="doc-section">/g)||[]).length<4)
+     (html.match(/<section\b[^>]*class="doc-section"[^>]*>/g)||[]).length<4)
     throw new Error('Connector documentation structure missing: '+route);
   for(const term of required)if(!html.toLocaleLowerCase('es').includes(term.toLocaleLowerCase('es')))
     throw new Error('Connector documentation missing '+term+' in '+route);
-  if(!connectorNavigation.includes("['"+route+"',"))
-    throw new Error('Connector navigation missing '+route);
+  if(visibleConnectorSlugs.has(slug)){
+    if(!connectorNavigation.includes("['"+route+"','"))
+      throw new Error('Visible connector navigation missing '+route);
+    if(slug && !connectorHome.includes('href="'+route+'"'))
+      throw new Error('Connector overview missing '+route);
+  }else{
+    if(connectorNavigation.includes("['"+route+"','"))
+      throw new Error('Provider/Skills/MCP detail must not be a separate menu entry: '+route);
+    if(!connectorAiPage.includes('href="'+route+'"'))
+      throw new Error('Historical detail route is not reachable from the IA guide: '+route);
+  }
   if(!connectorSitemap.includes('https://p2lrn.netlify.app'+route))
     throw new Error('Connector sitemap missing '+route);
-  if(slug && !connectorHome.includes('href="'+route+'"'))
-    throw new Error('Connector overview missing '+route);
 }
 const expectedDownloads=[
   ['ia','p2lrn-conector-mcp.zip'],
@@ -440,6 +451,8 @@ for(const [slug,filename] of expectedDownloads){
 }
 if(!connectorNavigation.includes("['/docs/conectores/',["))
   throw new Error('Connector child navigation must be nested under Conectores');
+if((connectorHome.match(/<div class="docs-path-grid">[\s\S]*?<\/div>/)?.[0].match(/<a href=/g)||[]).length!==3)
+  throw new Error('Connector overview must present IA, LMS and LTI only');
 
 const docsFiles = htmlFiles.filter((path)=>relative(outputRoot,path).replaceAll('\\','/').startsWith('docs/'));
 const searchIndex = [];
