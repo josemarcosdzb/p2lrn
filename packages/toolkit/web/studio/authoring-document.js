@@ -236,6 +236,27 @@ export class P2LRNStudioDocument{
     this.graph.entities.push(resource,activity);this.entities.set(resource.id,resource);this.entities.set(activity.id,activity);this.#appendActivity(parent,activity.id);if(profile)this.#ensureProfile(String(profile));this.changeCount+=1;return activity;
   }
 
+  addSharedResource(parentId=this.rootId,{title='Recurso compartido',language='es',href,digest,mediaType='application/octet-stream',profile=null,activityType='https://p2lrn.org/type/resource',renderer=null}={}){
+    if(!href)throw new Error('El recurso compartido necesita una URL de origen para conservar la referencia portable.');
+    return this.addRemoteResource(parentId,{title,language,url:href,mediaType,profile,activityType,renderer,expectedDigest:digest});
+  }
+
+  materializeSharedResource(activityId,{bytes,filename='resource.bin',mediaType=null,role='fallback'}={}){
+    const activity=this.entity(activityId);if(!activity||activity.type!=='activity'||!activity.resource)throw new Error('Actividad con recurso no encontrada.');
+    const resource=this.entity(activity.resource);if(!resource||resource.type!=='resource')throw new Error('Recurso no encontrado.');
+    const primary=resource.representations?.find((rep)=>rep.location?.type==='remote'&&rep.location?.expectedDigest);
+    if(!primary)throw new Error('El recurso no tiene una representación remota fijada por digest.');
+    const data=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes??[]);
+    const token=crypto.randomUUID(),representationId='urn:uuid:'+crypto.randomUUID();
+    const ext=String(filename||'resource.bin').split('.').pop()?.replace(/[^A-Za-z0-9]/g,'').toLowerCase()||'bin';
+    const path='content/resources/'+token+'.'+ext;
+    const representation={id:representationId,role:String(role||'fallback'),location:{type:'embedded',path},originalName:String(filename||'resource.bin'),mediaType:String(mediaType||primary.mediaType||'application/octet-stream')};
+    if(primary.profile)representation.profile=primary.profile;
+    resource.representations.push(representation);
+    const zero='sha256:'+'0'.repeat(64);this.manifest.files.push({path,mediaType:representation.mediaType,size:data.byteLength,byteDigest:zero,contentDigest:zero});
+    this.payloadOverrides.set(path,data);this.changeCount+=1;return representation;
+  }
+
   questionnaireForActivity(activityId){
     const resolved=this.representationForActivity(activityId);if(!resolved)return null;
     const rep=resolved.representation;if(baseMedia(rep.mediaType)!=='application/vnd.p2lrn.questionnaire+json'||rep.location?.type!=='embedded')return null;

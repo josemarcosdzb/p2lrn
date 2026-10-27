@@ -165,21 +165,27 @@ export function renderStructuredVisualEditor(container,options={}){
       const operation=input(payload.data.operation||'hint');operation.placeholder='hint';
       const instruction=textarea(payload.data.instruction||'');instruction.className='q-answer-list';instruction.placeholder='Qué debe hacer el proveedor conectado';
       const buttonLabel=input(payload.data.buttonLabel||'Ejecutar');
-      const fallback=textarea(payload.data.fallbackText||'');fallback.className='q-answer-list';fallback.placeholder='Texto cuando la capacidad no esté disponible';
+      const fallback=textarea(payload.data.fallbackText||'');fallback.className='q-answer-list';fallback.placeholder='Texto cuando la capacidad no está disponible';
+      const contextKeys=textarea((payload.data.context??[]).join('\n'));contextKeys.className='q-answer-list';contextKeys.placeholder='activity.objectives\ncurrent_question';
+      const revealAnswer=document.createElement('input');revealAnswer.type='checkbox';revealAnswer.checked=payload.data.restrictions?.revealAnswer===true;
+      const externalKnowledge=document.createElement('input');externalKnowledge.type='checkbox';externalKnowledge.checked=payload.data.restrictions?.allowExternalKnowledge===true;
+      const maxOutput=input(String(payload.data.restrictions?.maxOutputChars??8000));maxOutput.type='number';maxOutput.min='1';maxOutput.max='50000';
       const required=document.createElement('input');required.type='checkbox';required.checked=payload.data.required===true;
-      const token=/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/;
+      const token=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
       const save=()=>{
         const cap=capability.value.trim(),op=operation.value.trim();
         if(!token.test(cap)||!token.test(op)){onStatus?.('Capacidad y operación deben ser identificadores semánticos, por ejemplo ai.tutor / hint.');return;}
-        payload.data.capability=cap;payload.data.operation=op;payload.data.instruction=instruction.value;payload.data.buttonLabel=buttonLabel.value.trim()||'Ejecutar';payload.data.fallbackText=fallback.value;payload.data.required=required.checked;
+        const requestedContext=[...new Set(contextKeys.value.split(/[\s,]+/).map((value)=>value.trim()).filter(Boolean))];
+        if(requestedContext.some((value)=>!token.test(value))){onStatus?.('Las claves de contexto deben ser identificadores semánticos, no URLs.');return;}
+        payload.data.capability=cap;payload.data.operation=op;payload.data.instruction=instruction.value;payload.data.buttonLabel=buttonLabel.value.trim()||'Ejecutar';payload.data.fallbackText=fallback.value;payload.data.required=required.checked;payload.data.context=requestedContext;payload.data.restrictions={revealAnswer:revealAnswer.checked,allowExternalKnowledge:externalKnowledge.checked,maxOutputChars:Math.max(1,Math.min(50000,Number(maxOutput.value)||8000))};
         model.setStructuredJson(activityId,payload);
-        model.setHostCapabilities(activityId,[{id:cap,required:required.checked,operations:[op],context:['component.input'],description:'Operación solicitada por un componente conectado.'}]);
+        model.setHostCapabilities(activityId,[{id:cap,required:required.checked,operations:[op],context:requestedContext,description:'Operación solicitada por un componente conectado.'}]);
         onChange?.();
       };
-      capability.addEventListener('change',save);operation.addEventListener('change',save);instruction.addEventListener('input',save);buttonLabel.addEventListener('input',save);fallback.addEventListener('input',save);required.addEventListener('change',save);
+      capability.addEventListener('change',save);operation.addEventListener('change',save);instruction.addEventListener('input',save);buttonLabel.addEventListener('input',save);fallback.addEventListener('input',save);contextKeys.addEventListener('input',save);maxOutput.addEventListener('input',save);revealAnswer.addEventListener('change',save);externalKnowledge.addEventListener('change',save);required.addEventListener('change',save);
       settings.append(labeled('Capacidad',capability),labeled('Operación',operation),labeled('Texto del botón',buttonLabel),labeled('Obligatoria',required));
-      root.append(labeled('Instrucción para el proveedor',instruction),labeled('Fallback sin proveedor',fallback));
-      const note=node('div','studio-readonly','El paquete sólo guarda la intención semántica. El host decide si la capacidad la ofrece MCP, Paula, un modelo local, AulaP2P u otro proveedor y conserva fuera del paquete las credenciales y endpoints.');root.append(note);
+      root.append(labeled('Instrucción para el proveedor',instruction),labeled('Contexto semántico solicitado',contextKeys),labeled('Puede revelar la respuesta',revealAnswer),labeled('Puede usar conocimiento externo',externalKnowledge),labeled('Máximo de salida',maxOutput),labeled('Fallback sin proveedor',fallback));
+      const note=node('div','studio-readonly','El paquete sólo declara intención, contexto solicitado y restricciones. El host decide qué datos entrega y si la capacidad la ofrece MCP, Paula, un modelo local, AulaP2P u otro proveedor; credenciales y endpoints permanecen fuera del paquete.');root.append(note);
     }else{
       root.append(node('div','studio-readonly','Este componente está registrado, pero todavía no tiene un editor visual específico. Puedes editar su JSON en Avanzado.'));
     }

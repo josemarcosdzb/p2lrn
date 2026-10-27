@@ -5,9 +5,11 @@ import {registerBuiltInRenderers} from './built-in-renderers.js';
 import {createDefaultComponentRegistry} from './component-registry.js';
 import {dispatchRuntimeEvent} from './runtime-events.js';
 import {createHostAdapter, normalizeHostAdapter} from './host-adapter.js';
-import {createCapabilityBroker, createToolCapabilityProvider, normalizeCapabilityBroker, capabilityRequirements, mergeCapabilityRequirements, capabilityOperationAllowed, validateCapabilityGraph, HOST_CAPABILITY_EXTENSION} from './capability-broker.js';
-import {createOfflineHostAdapter, createMemoryOfflineStore, createIndexedDbOfflineStore, DEFAULT_OFFLINE_DB_NAME} from './offline-host-adapter.js';
+import {createCapabilityBroker, createToolCapabilityProvider, createMcpCapabilityProvider, normalizeCapabilityBroker, capabilityRequirements, mergeCapabilityRequirements, capabilityOperationAllowed, projectCapabilityContext, validateCapabilityGraph, HOST_CAPABILITY_EXTENSION} from './capability-broker.js';
+import {createOfflineHostAdapter, createMemoryOfflineStore, createIndexedDbOfflineStore, createOfflineSyncController, DEFAULT_OFFLINE_DB_NAME} from './offline-host-adapter.js';
 import {createActivityTracker, DEFAULT_ACTIVITY_IDLE_AFTER_MS} from './activity-tracker.js';
+import {createLearningEvent, createLearningEventStream, observeLearningEvents, learningEventCategory, LEARNING_EVENT_SCHEMA, LEARNING_EVENT_MODEL_VERSION} from './learning-events.js';
+import {createMemoryResourceLibrary, createCacheStorageResourceLibrary, createResourceLibraryResolver, createResourceLibraryCapabilityProvider, RESOURCE_LIBRARY_CAPABILITY_ID, DEFAULT_RESOURCE_LIBRARY_CACHE} from './resource-library.js';
 import {createMemoryCollaborationHub, COLLABORATION_CAPABILITY, COLLABORATION_OPERATIONS} from './collaboration-provider.js';
 import {createHttpCollaborationProvider, COLLABORATION_HTTP_VERSION, COLLABORATION_HTTP_MEDIA_TYPE} from './collaboration-http-provider.js';
 import {createMemorySharedResourceStore} from './shared-resource-store.js';
@@ -449,8 +451,11 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     this.attachShadow({mode: 'open'});
     this._adapter = null;
     this._capabilityBroker = null;
+    this._capabilityContextResolver = null;
     this._packageCache = null;
+    this._resourceResolver = null;
     this._activityTracker = null;
+    this._learningEventObserver = null;
     this._package = null;
     this._runtimeByContainer = new Map();
     this._loadGeneration = 0;
@@ -488,8 +493,20 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   get adapter() { return this._adapter; }
   set capabilityBroker(value) { this._capabilityBroker = normalizeCapabilityBroker(value); }
   get capabilityBroker() { return this._capabilityBroker; }
+  set capabilityContextResolver(value) {
+    if(value!=null && typeof value!=='function')throw new TypeError('P2LRN capabilityContextResolver must be a function.');
+    this._capabilityContextResolver=value??null;
+  }
+  get capabilityContextResolver() { return this._capabilityContextResolver; }
   set packageCache(value) { this._packageCache = normalizePackageCache(value); }
   get packageCache() { return this._packageCache; }
+  set resourceResolver(value) {
+    if(value==null){this._resourceResolver=null;return;}
+    if(typeof value==='function'){this._resourceResolver=value;return;}
+    if(typeof value?.resolve==='function'){this._resourceResolver=value.resolve.bind(value);return;}
+    throw new TypeError('P2LRN resourceResolver must be a function or expose resolve().');
+  }
+  get resourceResolver() { return this._resourceResolver; }
 
   async cacheSource(options = {}) {
     const src=this.getAttribute('src');
@@ -535,6 +552,17 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const tracker = this._activityTracker;
     this._activityTracker = null;
     return tracker?.stop?.() ?? null;
+  }
+  startLearningEventTracking(options = {}) {
+    this.stopLearningEventTracking();
+    this._learningEventObserver = observeLearningEvents({target:this,...options});
+    return this._learningEventObserver;
+  }
+  stopLearningEventTracking() {
+    const observer=this._learningEventObserver;
+    this._learningEventObserver=null;
+    observer?.stop?.();
+    return observer?.stream?.snapshot?.() ?? null;
   }
   set runtimeBaseUrl(value) {
     if (value == null || String(value).trim() === '') this.removeAttribute('runtime-base-url');
@@ -854,7 +882,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       if (['embedded', 'package-member'].includes(candidate.location?.type)) return true;
       return candidate.location?.type === 'remote'
         && /^sha256:[0-9a-f]{64}$/.test(String(candidate.location.expectedDigest ?? ''))
-        && typeof this._adapter?.resolveResourceUrl === 'function';
+        && (this._resourceResolver != null || typeof this._adapter?.resolveResourceUrl === 'function');
     });
     if (!representations.length) {
       this.#stageMessage(stage, allRepresentations.length ? 'El reproductor web no abre representaciones remotas sin un adaptador compatible.' : 'El recurso no contiene representaciones.');
@@ -926,7 +954,16 @@ export class P2LRNPlayerElement extends HTMLElementBase {
               error.code = 'P2LRN_CAPABILITY_UNAVAILABLE';
               throw error;
             }
-            return this._capabilityBroker.invoke(capabilityId, operation, input, context);
+            const request=capabilityState.requests.find((item)=>item.id===capabilityId);
+            let capabilityContext=Object.freeze({});
+            if(this._capabilityContextResolver && request?.context?.length){
+              const supplied=await this._capabilityContextResolver(Object.freeze({
+                capabilityId, operation:String(operation ?? ''), requested:Object.freeze([...request.context]),
+                systemContext:Object.freeze({...context}), input:Object.freeze(structuredClone(input ?? {})),
+              }));
+              capabilityContext=projectCapabilityContext(request,supplied);
+            }
+            return this._capabilityBroker.invoke(capabilityId, operation, input, Object.freeze({...context,capabilityContext}));
           },
           componentRegistry: defaultComponentRegistry,
           rendererRegistry: defaultRendererRegistry,
@@ -994,9 +1031,12 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     normalized.sourceUrl = this._package.sourceUrl;
 
     let result = null;
-    if (this._adapter?.resolveResourceUrl) {
+    if (this._resourceResolver && normalized.expectedDigest) {
+      result = await this._resourceResolver(Object.freeze(normalized), Object.freeze({...context}));
+    }
+    if (result == null && this._adapter?.resolveResourceUrl) {
       result = await this._adapter.resolveResourceUrl(Object.freeze(normalized), Object.freeze({...context}));
-    } else {
+    } else if (result == null && !this._adapter?.resolveResourceUrl) {
       if (!this._staticResourceBridge) this._staticResourceBridge = createStaticResourceBridge(this._package);
       result = await this._staticResourceBridge.resolve(Object.freeze(normalized), Object.freeze({...context}));
     }
@@ -1038,7 +1078,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
-  disconnectedCallback() { this.#cleanupRuntime(); this.stopActivityTracking(); }
+  disconnectedCallback() { this.#cleanupRuntime(); this.stopActivityTracking(); this.stopLearningEventTracking(); }
 }
 
 export async function mountP2LRN(target, options = {}) {
@@ -1050,13 +1090,16 @@ export async function mountP2LRN(target, options = {}) {
   try {
     if (options.adapter) player.adapter = options.adapter;
     if (options.capabilityBroker) player.capabilityBroker = options.capabilityBroker;
+    if (options.capabilityContextResolver) player.capabilityContextResolver = options.capabilityContextResolver;
     if (options.packageCache) player.packageCache = options.packageCache;
+    if (options.resourceResolver) player.resourceResolver = options.resourceResolver;
     if (options.src) player.setAttribute('src', options.src);
     if (options.node) player.setAttribute('node', options.node);
     if (options.renderer) player.setAttribute('renderer', options.renderer);
     if (Object.prototype.hasOwnProperty.call(options, 'runtimeBaseUrl')) player.runtimeBaseUrl = options.runtimeBaseUrl;
     if (!existing) host.replaceChildren(player);
     if (options.activityTracking) player.startActivityTracking(options.activityTracking === true ? {} : options.activityTracking);
+    if (options.learningEvents) player.startLearningEventTracking(options.learningEvents === true ? {} : options.learningEvents);
   } finally {
     player._suppressAutoReload = false;
   }
@@ -1116,10 +1159,20 @@ if (!existingP2LRNApi) {
     createHostAdapter,
     createCapabilityBroker,
     createToolCapabilityProvider,
+    createMcpCapabilityProvider,
     createOfflineHostAdapter,
     createMemoryOfflineStore,
     createIndexedDbOfflineStore,
+    createOfflineSyncController,
     createActivityTracker,
+    createLearningEvent,
+    createLearningEventStream,
+    observeLearningEvents,
+    learningEventCategory,
+    createMemoryResourceLibrary,
+    createCacheStorageResourceLibrary,
+    createResourceLibraryResolver,
+    createResourceLibraryCapabilityProvider,
     createMemoryCollaborationHub,
     createHttpCollaborationProvider,
     COLLABORATION_CAPABILITY,
@@ -1134,6 +1187,10 @@ if (!existingP2LRNApi) {
     DEFAULT_PACKAGE_CACHE_NAME,
     HOST_CAPABILITY_EXTENSION,
     DEFAULT_OFFLINE_DB_NAME,
+    RESOURCE_LIBRARY_CAPABILITY_ID,
+    DEFAULT_RESOURCE_LIBRARY_CACHE,
+    LEARNING_EVENT_SCHEMA,
+    LEARNING_EVENT_MODEL_VERSION,
     DEFAULT_ACTIVITY_IDLE_AFTER_MS,
     configureRuntimeHost,
     getRuntimeHostConfig,

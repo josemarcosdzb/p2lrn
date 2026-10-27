@@ -72,7 +72,7 @@ function filenameFromUrl(value){
 export class P2LRNStudioElement extends HTMLElement{
   static p2lrnStudioVersion=P2LRN_STUDIO_VERSION;
   static get observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path','offline-runtime-base-url'];}
-  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;
+  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;#resourceLibrary=null;
 
   constructor(){
     super();
@@ -88,6 +88,7 @@ export class P2LRNStudioElement extends HTMLElement{
               <button type="button" data-add-kind="file" data-help="Añade una imagen, vídeo, audio u otro recurso local al curso.">Archivo / multimedia</button>
               <button type="button" data-add-kind="url" data-help="Enlaza un recurso web externo sin copiarlo dentro del paquete.">URL</button>
               <button type="button" data-add-kind="shared-resource" data-help="Referencia un recurso compartido por URL y SHA-256 para que el host pueda reutilizar una sola copia verificada.">Recurso compartido</button>
+              <button type="button" data-add-kind="shared-library" data-shared-library hidden data-help="Selecciona un recurso ya verificado por SHA-256 de la biblioteca compartida conectada por el host.">Biblioteca compartida</button>
               <button type="button" data-add-kind="reader" data-help="Importa documentos como PDF, DOCX, PPTX, EPUB, TXT o Markdown mediante el servicio Reader de la plataforma.">Reader / documento</button>
               <button type="button" data-add-kind="external" data-help="Importa un paquete educativo existente como SCORM, H5P, cmi5, QTI, Common Cartridge o IMS Content Package.">Paquete educativo</button>
             </div></div>
@@ -144,6 +145,7 @@ export class P2LRNStudioElement extends HTMLElement{
     q('[data-result-file]').addEventListener('change',()=>{const file=q('[data-result-file]').files?.[0];if(file)this.reviewOfflineResult(file).catch((e)=>this.#status(e.message));q('[data-result-file]').value='';});
     q('[data-save]').addEventListener('click',()=>this.saveCourse());
     this.#syncSaveButton();
+    this.#syncResourceLibraryButton();
     if(this.src&&!this.#studio)this.openUrl(this.src).catch((e)=>this.#status(e.message));
   }
   disconnectedCallback(){this.#revoke();}
@@ -152,6 +154,11 @@ export class P2LRNStudioElement extends HTMLElement{
     if(name==='save-endpoint')this.#syncSaveButton();
     if(name==='src'&&this.isConnected&&newValue)this.openUrl(newValue).catch((e)=>this.#status(e.message));
   }
+  set resourceLibrary(value){
+    if(value!=null&&(typeof value.list!=='function'||typeof value.get!=='function'))throw new TypeError('resourceLibrary must expose list() and get().');
+    this.#resourceLibrary=value??null;this.#syncResourceLibraryButton();
+  }
+  get resourceLibrary(){return this.#resourceLibrary}
   get src(){return this.getAttribute('src')||''}
   set src(v){v?this.setAttribute('src',v):this.removeAttribute('src')}
   get saveEndpoint(){return this.getAttribute('save-endpoint')||''}
@@ -226,6 +233,29 @@ export class P2LRNStudioElement extends HTMLElement{
     for(const item of items){const b=document.createElement('button');b.type='button';b.className='studio-choice-card';const strong=document.createElement('strong');strong.textContent=item.label;const small=document.createElement('small');small.textContent=item.description||'';b.append(strong,small);b.onclick=()=>Promise.resolve(onChoose(item)).then(()=>dialog.close()).catch((error)=>this.#status(error.message));grid.append(b);}
     shell.append(grid);dialog.append(shell);this.shadowRoot.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
   }
+  async #chooseSharedResource(){
+    if(!this.#resourceLibrary)throw new Error('El host no ha conectado una biblioteca de recursos compartidos.');
+    const listed=await this.#resourceLibrary.list();
+    const items=(listed??[]).filter((entry)=>entry?.digest&&entry?.href).map((entry)=>({
+      ...entry,id:entry.digest,label:entry.href.split('/').filter(Boolean).at(-1)||entry.digest,description:(entry.mediaType||'application/octet-stream')+' · '+entry.digest.slice(0,22)+'…',
+    }));
+    if(!items.length)throw new Error('La biblioteca no contiene recursos con URL de origen y digest verificable.');
+    this.#showChoice('Biblioteca compartida','El recurso quedará referenciado por URL y SHA-256. Puedes materializarlo después como fallback embebido.',items,async(item)=>{
+      const created=this.#studio.addSharedResource(this.#insertionParent(),{title:item.label,href:item.href,digest:item.digest,mediaType:item.mediaType||'application/octet-stream',language:'es'});
+      await this.#selectCreated(created);
+    });
+  }
+  async materializeSharedResource(activityId=this.#selected,{filename=null}={}){
+    if(!this.#resourceLibrary)throw new Error('El host no ha conectado una biblioteca de recursos compartidos.');
+    const activity=this.#studio?.entity(activityId);const resource=activity?.resource?this.#studio.entity(activity.resource):null;
+    const remote=resource?.representations?.find((rep)=>rep.location?.type==='remote'&&rep.location?.expectedDigest);
+    if(!remote)throw new Error('La actividad seleccionada no es un recurso compartido fijado por digest.');
+    const entry=await this.#resourceLibrary.get(remote.location.expectedDigest);
+    if(!entry?.bytes)throw new Error('El recurso no está materializado en la biblioteca local.');
+    const inferred=filename||entry.href?.split('/').filter(Boolean).at(-1)||'resource.bin';
+    const rep=this.#studio.materializeSharedResource(activityId,{bytes:new Uint8Array(entry.bytes),filename:inferred,mediaType:entry.mediaType});
+    await this.#renderEditor();this.#updateState();return rep;
+  }
   #chooseComponent(){
     const items=this.#studio.componentCatalog().map((entry)=>({id:entry.id,label:entry.authoring.label,description:entry.authoring.description}));
     this.#showChoice('Añadir componente','Elige el bloque nativo que quieres crear.',items,async(item)=>this.#selectCreated(this.#studio.addNativeComponent(this.#insertionParent(),{componentId:item.id,language:'es'})));
@@ -251,6 +281,7 @@ export class P2LRNStudioElement extends HTMLElement{
     if(kind==='reader'){this.shadowRoot.querySelector('[data-reader-file]').click();return null;}
     if(kind==='external'){this.shadowRoot.querySelector('[data-external-file]').click();return null;}
     if(kind==='url'){const url=prompt('URL del recurso');if(!url)return null;return this.#selectCreated(this.#studio.addRemoteResource(this.#insertionParent(),{title:'Recurso web',url}));}
+    if(kind==='shared-library'){await this.#chooseSharedResource();return null;}
     if(kind==='shared-resource'){
       const url=prompt('URL lógica del recurso compartido');if(!url)return null;
       const digest=prompt('SHA-256 esperado (sha256:...)');if(!digest)return null;
@@ -491,6 +522,7 @@ export class P2LRNStudioElement extends HTMLElement{
     this.shadowRoot.querySelector('[data-warn]').hidden=!changes;
   }
   #syncSaveButton(){if(this.shadowRoot)this.shadowRoot.querySelector('[data-save]').hidden=!this.saveEndpoint}
+  #syncResourceLibraryButton(){const button=this.shadowRoot?.querySelector('[data-shared-library]');if(button)button.hidden=!this.#resourceLibrary}
   #revoke(){if(this.#sourceObjectUrl)URL.revokeObjectURL(this.#sourceObjectUrl);if(this.#previewObjectUrl)URL.revokeObjectURL(this.#previewObjectUrl);this.#sourceObjectUrl=null;this.#previewObjectUrl=null}
 }
 

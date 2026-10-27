@@ -14,9 +14,11 @@ import {
   openCachedP2LRNPackage,
 } from './p2lrn-player.js';
 import {createHostAdapter, HOST_ADAPTER_VERSION} from './host-adapter.js';
-import {CapabilityBroker, createCapabilityBroker, createToolCapabilityProvider, capabilityRequirements, mergeCapabilityRequirements, capabilityOperationAllowed, validateCapabilityGraph, HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION} from './capability-broker.js';
-import {createOfflineHostAdapter, createMemoryOfflineStore, createIndexedDbOfflineStore, OFFLINE_HOST_ADAPTER_VERSION, DEFAULT_OFFLINE_DB_NAME} from './offline-host-adapter.js';
+import {CapabilityBroker, createCapabilityBroker, createToolCapabilityProvider, createMcpCapabilityProvider, capabilityRequirements, mergeCapabilityRequirements, capabilityOperationAllowed, projectCapabilityContext, validateCapabilityGraph, HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION} from './capability-broker.js';
+import {createOfflineHostAdapter, createMemoryOfflineStore, createIndexedDbOfflineStore, createOfflineSyncController, OFFLINE_HOST_ADAPTER_VERSION, DEFAULT_OFFLINE_DB_NAME} from './offline-host-adapter.js';
 import {createActivityTracker, DEFAULT_ACTIVITY_IDLE_AFTER_MS} from './activity-tracker.js';
+import {createLearningEvent, createLearningEventStream, observeLearningEvents, isLearningEvent, learningEventCategory, LEARNING_EVENT_SCHEMA, LEARNING_EVENT_MODEL_VERSION, LEARNING_RUNTIME_EVENT_TYPES, LEARNING_EVENT_CATEGORIES} from './learning-events.js';
+import {createMemoryResourceLibrary, createCacheStorageResourceLibrary, createResourceLibraryResolver, createResourceLibraryCapabilityProvider, verifyResourceBytes, RESOURCE_LIBRARY_VERSION, RESOURCE_LIBRARY_CAPABILITY_ID, DEFAULT_RESOURCE_LIBRARY_CACHE, DEFAULT_RESOURCE_LIBRARY_MAX_BYTES} from './resource-library.js';
 import {createMemoryCollaborationHub, COLLABORATION_CAPABILITY, COLLABORATION_OPERATIONS} from './collaboration-provider.js';
 import {createHttpCollaborationProvider, COLLABORATION_HTTP_VERSION, COLLABORATION_HTTP_MEDIA_TYPE} from './collaboration-http-provider.js';
 import {createMemorySharedResourceStore} from './shared-resource-store.js';
@@ -55,19 +57,40 @@ export {
   CapabilityBroker,
   createCapabilityBroker,
   createToolCapabilityProvider,
+  createMcpCapabilityProvider,
   capabilityRequirements,
   mergeCapabilityRequirements,
   capabilityOperationAllowed,
+  projectCapabilityContext,
   validateCapabilityGraph,
   HOST_CAPABILITY_EXTENSION,
   HOST_CAPABILITY_CONTRACT_VERSION,
   createOfflineHostAdapter,
   createMemoryOfflineStore,
   createIndexedDbOfflineStore,
+  createOfflineSyncController,
   OFFLINE_HOST_ADAPTER_VERSION,
   DEFAULT_OFFLINE_DB_NAME,
   createActivityTracker,
   DEFAULT_ACTIVITY_IDLE_AFTER_MS,
+  createLearningEvent,
+  createLearningEventStream,
+  observeLearningEvents,
+  isLearningEvent,
+  learningEventCategory,
+  LEARNING_EVENT_SCHEMA,
+  LEARNING_EVENT_MODEL_VERSION,
+  LEARNING_RUNTIME_EVENT_TYPES,
+  LEARNING_EVENT_CATEGORIES,
+  createMemoryResourceLibrary,
+  createCacheStorageResourceLibrary,
+  createResourceLibraryResolver,
+  createResourceLibraryCapabilityProvider,
+  verifyResourceBytes,
+  RESOURCE_LIBRARY_VERSION,
+  RESOURCE_LIBRARY_CAPABILITY_ID,
+  DEFAULT_RESOURCE_LIBRARY_CACHE,
+  DEFAULT_RESOURCE_LIBRARY_MAX_BYTES,
   createMemoryCollaborationHub,
   createHttpCollaborationProvider,
   COLLABORATION_CAPABILITY,

@@ -130,3 +130,11 @@ Native questionnaires emit `p2lrn:attempt` with explicit phases instead of infer
 - `submitted`: the attempt is finalized, with attempt number, completion reason, answered/total counts and normalized score summary.
 
 The attempt event deliberately omits raw learner answers. Other activity families MUST NOT reuse these questionnaire semantics unless their own attempt lifecycle is explicitly defined.
+
+## 12. Learning Event projection
+
+Hosts that need one normalized analytics stream may project canonical `runtime-event/1` envelopes through `createLearningEvent()`, `createLearningEventStream()` or `observeLearningEvents()`. The projection adds a stable event id, monotonic sequence, category and optional opaque session/attempt ids while preserving the canonical runtime type/context/payload.
+
+The projection follows the current semantic vocabulary: `p2lrn:attempt` remains the assessment lifecycle, while `p2lrn:interaction` is categorized from its semantic action (`answer-change`, `media-*`, `resource-open`, `collaboration-*`). It does not reintroduce obsolete event names and it does not duplicate free-text answers into analytics.
+
+Learning Event v1 is a host-side projection, not a replacement for `runtime-event/1`, and it does not add learner identity to the package. See `LEARNING-EVENTS.md`.

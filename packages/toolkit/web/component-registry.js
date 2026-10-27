@@ -92,7 +92,17 @@ function validateCapabilityActionV1(data) {
     if (data[key] !== undefined && (typeof data[key] !== 'string' || data[key].length > 10000)) return false;
   }
   if (data.required !== undefined && typeof data.required !== 'boolean') return false;
-  return Object.keys(data).every((key)=>['capability','operation','heading','body','instruction','buttonLabel','resultLabel','fallbackText','required'].includes(key));
+  if (data.context !== undefined) {
+    if (!Array.isArray(data.context) || data.context.length > 64 || data.context.some((item)=>typeof item!=='string'||!token.test(item))) return false;
+  }
+  if (data.restrictions !== undefined) {
+    if (!data.restrictions || typeof data.restrictions !== 'object' || Array.isArray(data.restrictions)) return false;
+    if (data.restrictions.revealAnswer !== undefined && typeof data.restrictions.revealAnswer !== 'boolean') return false;
+    if (data.restrictions.allowExternalKnowledge !== undefined && typeof data.restrictions.allowExternalKnowledge !== 'boolean') return false;
+    if (data.restrictions.maxOutputChars !== undefined && (!Number.isInteger(data.restrictions.maxOutputChars) || data.restrictions.maxOutputChars < 1 || data.restrictions.maxOutputChars > 50000)) return false;
+    if (!Object.keys(data.restrictions).every((key)=>['revealAnswer','allowExternalKnowledge','maxOutputChars'].includes(key))) return false;
+  }
+  return Object.keys(data).every((key)=>['capability','operation','heading','body','instruction','buttonLabel','resultLabel','fallbackText','required','context','restrictions'].includes(key));
 }
 
 function validateCollaborationV1(data) {
@@ -323,7 +333,7 @@ export function createDefaultComponentRegistry() {
       label: 'Acción conectada',
       description: 'Invoca una capacidad semántica del host, como tutor, búsqueda, voz, datos o colaboración, sin guardar credenciales ni endpoints en el paquete.',
       editor: 'capability-action',
-      initialData: {capability:'ai.tutor', operation:'hint', instruction:'Ayuda al alumno con esta actividad sin revelar directamente la respuesta.', buttonLabel:'Pedir pista', resultLabel:'Respuesta del servicio', fallbackText:'Esta función necesita un proveedor compatible del host.', required:false},
+      initialData: {capability:'ai.tutor', operation:'hint', instruction:'Ayuda al alumno con esta actividad sin revelar directamente la respuesta.', buttonLabel:'Pedir pista', resultLabel:'Respuesta del servicio', fallbackText:'Esta función necesita un proveedor compatible del host.', required:false, context:['activity.objectives','current_question'], restrictions:{revealAnswer:false,allowExternalKnowledge:false,maxOutputChars:8000}},
     },
     validateData: validateCapabilityActionV1,
   });

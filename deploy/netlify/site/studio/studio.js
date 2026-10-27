@@ -14,6 +14,11 @@ const addContentButton=document.querySelector('[data-add-content]');
 const addDialog=document.querySelector('[data-add-dialog]');
 const addHelp=document.querySelector('[data-add-help]');
 const resourceFileInput=document.querySelector('[data-resource-file]');
+const sharedLibraryButton=document.querySelector('[data-shared-library]');
+let connectedResourceLibrary=globalThis.P2LRNStudioResourceLibrary??null;
+function setStudioResourceLibrary(library){if(library!=null&&(typeof library.list!=='function'||typeof library.get!=='function'))throw new TypeError('resourceLibrary debe exponer list() y get().');connectedResourceLibrary=library??null;if(sharedLibraryButton)sharedLibraryButton.hidden=!connectedResourceLibrary;return connectedResourceLibrary;}
+globalThis.P2LRNStudioSetResourceLibrary=setStudioResourceLibrary;
+setStudioResourceLibrary(connectedResourceLibrary);
 const readerFileInput=document.querySelector('[data-reader-file]');
 const externalFileInput=document.querySelector('[data-external-file]');
 const fileInput=document.querySelector('[data-file]');
@@ -383,6 +388,28 @@ function showStudioChoice(title,subtitle,items,onChoose){
   for(const item of items){const b=document.createElement('button');b.type='button';b.className='studio-choice-card';const strong=document.createElement('strong');strong.textContent=item.label;const small=document.createElement('small');small.textContent=item.description||'';b.append(strong,small);b.addEventListener('click',()=>Promise.resolve(onChoose(item)).then(()=>dialog.close()).catch((error)=>setStatus(error.message)));grid.append(b);}
   shell.append(grid);dialog.append(shell);document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
 }
+async function chooseSharedResource(){
+  const library=connectedResourceLibrary;
+  if(!library||typeof library.list!=='function'||typeof library.get!=='function')throw new Error('No hay una biblioteca de recursos compartidos conectada al Studio.');
+  const listed=await library.list();
+  const items=(listed??[]).filter((entry)=>entry?.digest&&entry?.href).map((entry)=>({...entry,id:entry.digest,label:entry.href.split('/').filter(Boolean).at(-1)||entry.digest,description:(entry.mediaType||'application/octet-stream')+' · '+entry.digest.slice(0,22)+'…'}));
+  if(!items.length)throw new Error('La biblioteca no contiene recursos con URL de origen y digest verificable.');
+  showStudioChoice('Biblioteca compartida','El recurso se referencia por URL y SHA-256.',items,async(item)=>{const activity=studio.addSharedResource(insertionParent(),{title:item.label,href:item.href,digest:item.digest,mediaType:item.mediaType||'application/octet-stream',language:'es'});await selectCreated(activity,'Recurso compartido añadido');});
+}
+async function materializeSelectedSharedResource(activityId=selectedId){
+  if(!studio||!activityId)throw new Error('No hay un recurso seleccionado.');
+  if(!connectedResourceLibrary)throw new Error('No hay una biblioteca de recursos conectada.');
+  const activity=studio.entity(activityId);const resource=activity?.resource?studio.entity(activity.resource):null;
+  const remote=resource?.representations?.find((rep)=>rep.location?.type==='remote'&&rep.location?.expectedDigest);
+  if(!remote)throw new Error('La actividad seleccionada no es un recurso compartido fijado por digest.');
+  const entry=await connectedResourceLibrary.get(remote.location.expectedDigest);
+  if(!entry?.bytes)throw new Error('El recurso no está disponible localmente para materializarlo.');
+  const filename=entry.href?.split('/').filter(Boolean).at(-1)||'resource.bin';
+  const representation=studio.materializeSharedResource(activityId,{bytes:new Uint8Array(entry.bytes),filename,mediaType:entry.mediaType});
+  await renderEditor();updateChanges();setStatus('Fallback embebido materializado');return representation;
+}
+globalThis.P2LRNStudioMaterializeSharedResource=materializeSelectedSharedResource;
+
 function chooseComponent(){
   const items=studio.componentCatalog().map((entry)=>({id:entry.id,label:entry.authoring.label,description:entry.authoring.description}));
   showStudioChoice('Añadir componente','Elige el bloque nativo que quieres crear.',items,async(item)=>{const activity=studio.addNativeComponent(insertionParent(),{componentId:item.id,language:'es'});await selectCreated(activity,item.label+' añadido');});
@@ -397,6 +424,7 @@ async function addContentKind(kind){
     externalFileInput.click();return;
   }
   if(kind==='url'){const url=prompt('URL del recurso');if(!url)return;const title=prompt('Título','Recurso web')||'Recurso web';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL añadida');}
+  if(kind==='shared-library'){await chooseSharedResource();return;}
   if(kind==='shared-resource'){
     const url=prompt('URL lógica del recurso compartido');if(!url)return;
     const expectedDigest=prompt('SHA-256 esperado (sha256:...)');if(!expectedDigest)return;

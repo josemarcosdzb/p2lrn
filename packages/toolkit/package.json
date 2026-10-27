@@ -30,6 +30,10 @@
       "types": "./dist/authoring/index.d.ts",
       "import": "./dist/authoring/index.js"
     },
+    "./host": {
+      "types": "./dist/host/index.d.ts",
+      "import": "./dist/host/index.js"
+    },
     "./document-reader": {
       "types": "./dist/document-reader/index.d.ts",
       "import": "./dist/document-reader/index.js"

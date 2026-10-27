@@ -56,4 +56,10 @@ player.adapter = offline;
 await offline.sync();
 ```
 
-The runtime does not create background schedulers. The host decides when to call `sync()`.
+Manual `sync()` remains supported and deterministic. Hosts that want automatic reconnection may opt into `createOfflineSyncController({adapter})`. The controller listens to host `online`/`offline` lifecycle events, preserves ordered outbox semantics and retries pending work with bounded exponential backoff. It does not create an OS scheduler, service account or background process; it exists only while the host runtime is alive.
+
+Hosts may still call `syncNow()` at explicit checkpoints and `stop()` during logout/unmount.
+
+## Local verified resource fallback
+
+`createOfflineHostAdapter()` may receive a trusted `resourceResolver`. Resolution is attempted locally before the remote Host Adapter. This allows digest-pinned resources that were previously verified and cached to stay available while disconnected without changing Host Adapter v1.

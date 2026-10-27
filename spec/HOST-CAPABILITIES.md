@@ -92,7 +92,7 @@ The `.p2lrn` file does not know the MCP URL, transport, credentials or model ven
 A host that already has an MCP/tool client can use the transport-neutral mapping helper:
 
 ```js
-const tutor = P2LRN.createToolCapabilityProvider({
+const tutor = P2LRN.createMcpCapabilityProvider({
   id:'ai.tutor',
   tools:{
     hint:'tutor.hint',
@@ -118,6 +118,25 @@ The mapping belongs to trusted host configuration. It is not serialized into the
 4. Capability invocation is not a general-purpose arbitrary MCP tool call. The broker exposes only registered capability IDs and operations.
 5. Renderers receive negotiated status plus the restricted `invokeCapability()` bridge; the raw broker object is not passed into renderer context. Existing sandboxed SCORM/H5P/package runtimes do not gain direct broker access merely because the Player has a broker.
 
+
+## Trusted semantic context projection
+
+Capability `context` entries are requests for semantic keys, not values and not permission to read host state. A trusted host may set:
+
+```js
+player.capabilityContextResolver = async ({capabilityId, operation, requested, systemContext, input}) => ({
+  'activity.objectives': await objectivesFor(systemContext.entityId),
+  current_question: await currentQuestionFor(systemContext.entityId)
+});
+```
+
+The Player applies `projectCapabilityContext()` and releases only keys explicitly declared by the negotiated capability request. Extra fields accidentally returned by host code are dropped. Providers receive the projected values under `context.capabilityContext`; package content never receives the resolver or the raw host context.
+
+The native `capability-action` component can additionally declare `restrictions` such as `revealAnswer`, `allowExternalKnowledge` and bounded `maxOutputChars`. Package restrictions can narrow an activity's requested behavior but cannot grant provider permissions or override host authorization.
+
+`createMcpCapabilityProvider()` is a named alias of the transport-neutral tool provider for hosts that bind semantic P2LRN operations to an MCP client. The MCP URL, credentials and tool transport remain outside the package.
+
+Official state/result ingestion and offline idempotency are demonstrated separately by the reference Authoritative Host in `AUTHORITATIVE-HOST.md`.
 ## Runtime event
 
 Negotiation emits `p2lrn:capability` using the existing `runtime-event/1` envelope. It reports requested/available capability IDs and blocked required capabilities. It must not include provider secrets.

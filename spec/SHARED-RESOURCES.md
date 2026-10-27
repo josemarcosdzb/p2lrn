@@ -60,3 +60,21 @@ const adapter = P2LRN.createHostAdapter({
 ```
 
 Studio can author the corresponding remote representation with a logical URL, media type and `expectedDigest`. The memory store is for tests/local/reference use; a production catalog may persist the same digest contract in filesystem, object storage or another host-managed store. The `.p2lrn` remains unchanged.
+
+## Persistent/searchable reference resource library
+
+The browser SDK also provides a first-party resource-library layer:
+
+- `createMemoryResourceLibrary()`
+- `createCacheStorageResourceLibrary()`
+- `createResourceLibraryResolver()`
+- `createResourceLibraryCapabilityProvider()`
+- `verifyResourceBytes()`
+
+Entries are keyed by `sha256:<digest>`. `createCacheStorageResourceLibrary()` persists verified bytes across browser sessions where Cache Storage is available. `resource.library` exposes metadata-only `search`, `describe` and `has` operations; bytes stay behind the verified resolver boundary.
+
+A Player may use `player.resourceResolver = resolver` or `mountP2LRN(...,{resourceResolver:resolver})`. The resolver checks local verified content before network retrieval and verifies SHA-256 before inserting a miss.
+
+Studio supports both manual URL+digest authoring and an optional connected library picker. The npm Studio Web Component accepts a `resourceLibrary` object exposing `list()` and `get()`. The standalone Studio accepts the equivalent host hook through `globalThis.P2LRNStudioResourceLibrary` / `P2LRNStudioSetResourceLibrary()`. `materializeSharedResource()` can add an embedded fallback to the same Resource without creating a second format.
+
+Production multi-user catalog persistence and authorization remain host deployment concerns.

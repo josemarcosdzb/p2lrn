@@ -93,6 +93,15 @@ export function capabilityOperationAllowed(requests, id, operation) {
   return operations.includes(operationId);
 }
 
+export function projectCapabilityContext(request, value) {
+  const normalized=normalizeRequirement(request);
+  const source=value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+  const projected={};
+  for(const key of normalized.context)if(Object.prototype.hasOwnProperty.call(source,key))projected[key]=cloneJson(source[key]);
+  return Object.freeze(projected);
+}
+
+
 export function mergeCapabilityRequirements(...groups) {
   const merged = new Map();
   for (const group of groups) {
@@ -163,6 +172,10 @@ export function createToolCapabilityProvider({id, tools, callTool, available = n
     },
   });
 }
+export function createMcpCapabilityProvider(options = {}) {
+  return createToolCapabilityProvider(options);
+}
+
 
 export class CapabilityBroker {
   constructor({providers = [], authorize = null} = {}) {

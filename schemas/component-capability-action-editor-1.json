@@ -1,0 +1,14 @@
+{
+  "schema":"https://p2lrn.org/schema/component-editor/0.1",
+  "version":"0.1",
+  "id":"https://p2lrn.org/component/capability-action/editor/1",
+  "component":{"id":"https://p2lrn.org/component/capability-action","componentVersion":"1","dataVersion":"1"},
+  "dataSchema":"https://p2lrn.org/component/capability-action/schema/data/1",
+  "fields":[
+    {"path":"/capability","control":"text","label":{"es":"Capacidad","en":"Capability"},"required":true},
+    {"path":"/operation","control":"text","label":{"es":"Operación","en":"Operation"},"required":true},
+    {"path":"/instruction","control":"textarea","label":{"es":"Instrucción","en":"Instruction"}},
+    {"path":"/context","control":"textarea","label":{"es":"Contexto semántico solicitado","en":"Requested semantic context"}},
+    {"path":"/required","control":"checkbox","label":{"es":"Obligatoria","en":"Required"}}
+  ]
+}

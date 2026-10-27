@@ -1,3 +1,13 @@
+export interface P2LRNStudioResourceLibraryEntry {
+  digest:string;
+  href:string;
+  mediaType?:string;
+  bytes?:ArrayBuffer|Uint8Array;
+}
+export interface P2LRNStudioResourceLibrary {
+  list():Promise<P2LRNStudioResourceLibraryEntry[]>|P2LRNStudioResourceLibraryEntry[];
+  get(digest:string):Promise<P2LRNStudioResourceLibraryEntry|null|undefined>|P2LRNStudioResourceLibraryEntry|null|undefined;
+}
 export interface P2LRNStudioSaveDetail { filename:string; coursePath:string; result:unknown; }
 export class P2LRNStudioElement extends HTMLElement {
   static readonly p2lrnStudioVersion:string;
@@ -7,6 +17,7 @@ export class P2LRNStudioElement extends HTMLElement {
   importEndpoint:string;
   offlineRuntimeBaseUrl:string;
   coursePath:string;
+  resourceLibrary:P2LRNStudioResourceLibrary|null;
   createCourse(options?:{title?:string;language?:string;description?:string;author?:string;createdAt?:string;license?:string;copyrightHolder?:string}):Promise<unknown>;
   openFile(file:File):Promise<void>;
   openUrl(url:string):Promise<void>;
@@ -17,6 +28,7 @@ export class P2LRNStudioElement extends HTMLElement {
   addResourceFile(file:File):Promise<unknown>;
   importDocument(file:File):Promise<unknown>;
   importExternalPackage(file:File):Promise<unknown>;
+  materializeSharedResource(activityId?:string,options?:{filename?:string|null}):Promise<unknown>;
   exportPackage():Promise<{bytes:Uint8Array;filename:string;manifest:unknown;graph:unknown}>;
   download():Promise<void>;
   showOfflineExportDialog():void;

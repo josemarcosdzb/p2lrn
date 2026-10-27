@@ -80,11 +80,11 @@ The largest remaining product-level gaps are:
 | Trusted host resolution | **IMPLEMENTED** | Player uses Host Adapter `resolveResourceUrl()` | host must provide and verify bytes |
 | Reject unverified remote media | **IMPLEMENTED** | `remote-media.js` requires `verified:true`; AV requires `seekable:true` | None |
 | Embedded fallback | **IMPLEMENTED** | renderer negotiation falls through to embedded representation; tested | Studio can make this easier to author |
-| Content-addressed shared store (`sha256 -> object`) | **PARTIAL** | digest resolver contract plus `createMemorySharedResourceStore()` prove one-copy/many-reference delivery | no first-party persistent multi-user library/server/catalog |
-| Cross-course physical deduplication | **PARTIAL** | reference digest store deduplicates identical bytes and resolves the same verified object for multiple packages | persistent cross-process storage remains host-specific |
-| Shared-resource discovery/search | **MISSING** | `search.library` can be a capability | no catalog protocol/provider implemented |
-| Studio shared-library picker | **PARTIAL** | Studio can author a digest-pinned shared resource from logical URL + SHA-256 + media type | searchable host catalog/browser is still missing |
-| Portable self-contained export | **IMPLEMENTED** | embedded representations and normal package export remain valid | improve materialization from connected resource to embedded fallback |
+| Content-addressed shared store (`sha256 -> object`) | **IMPLEMENTED AT REFERENCE LEVEL** | memory + Cache Storage libraries, verified resolver and existing digest store | production multi-user authorization/storage remains host-specific |
+| Cross-course physical deduplication | **IMPLEMENTED AT REFERENCE LEVEL** | digest-keyed memory/Cache Storage libraries reuse identical verified bytes across packages | server-side cross-process/object-store deployment remains host-specific |
+| Shared-resource discovery/search | **IMPLEMENTED AT REFERENCE LEVEL** | `resource.library` provider exposes metadata-only `search`, `describe`, `has` | production catalog authorization/indexing remains host-specific |
+| Studio shared-library picker | **IMPLEMENTED AT REFERENCE LEVEL** | npm and standalone Studio accept a host library and author digest-pinned resources from it | production catalog UX/auth remains host-specific |
+| Portable self-contained export | **IMPLEMENTED** | `materializeSharedResource()` adds embedded fallback to the same digest-pinned resource | None at format level |
 
 ## 5. Host Capabilities, AI and MCP
 
@@ -103,9 +103,9 @@ The largest remaining product-level gaps are:
 | Browser E2E through tool provider | **IMPLEMENTED** | browser gate returns `Pista MCP: ...` and confirms broker is not exposed | proves P2LRN-side integration, not a specific MCP transport |
 | Actual MCP transport/client inside P2LRN | **MISSING BY DESIGN** | no MCP URL, credential or client in package | trusted host binds its MCP client to `callTool()` |
 | AI vendor/model binding | **MISSING BY DESIGN** | semantic `ai.tutor` rather than vendor IDs | host can bind Paula, Cerebro, OpenAI, Ollama, etc. |
-| Declared semantic context keys | **PARTIAL** | capability requests can list `context` tokens | Player does not yet resolve those tokens to standardized privacy-filtered values |
-| Activity-aware AI context | **MISSING** | broker currently gets package/entity/resource/renderer context plus component input | add trusted context resolver for current question, objectives, answers, progression, etc. |
-| Machine-readable AI restrictions | **MISSING** | instruction/fallback can express intent as text | define policy vocabulary such as answer-reveal restrictions if needed |
+| Declared semantic context keys | **IMPLEMENTED AT BOUNDARY** | trusted `capabilityContextResolver` + `projectCapabilityContext()` release only declared keys | standardize optional key vocabulary incrementally |
+| Activity-aware AI context | **IMPLEMENTED AT BOUNDARY** | host resolver receives requested keys + system context and returns privacy-filtered semantic values | host decides which values are authorized |
+| Machine-readable AI restrictions | **IMPLEMENTED** | `capability-action` supports `revealAnswer`, `allowExternalKnowledge`, bounded `maxOutputChars` | host/provider policy remains authoritative |
 | Misconception/adaptive AI analysis | **PARTIAL** | can already be requested as a semantic capability | no standard input/output contract or context resolver yet |
 | Search/TTS/STT/data/simulation providers | **PARTIAL** | generic broker can host them | no first-party reference provider contract for each family |
 
@@ -154,7 +154,7 @@ These are engineering estimates for the specific Connected Architecture, not ove
 | Collaboration | **82%** | five-operation contract, native UI, memory reference, production HTTP provider/server security boundary and two-Player HTTP E2E exist; distributed durable persistence remains host-side |
 | Learning events/analytics | **72%** | event envelope, active time, explicit native assessment attempts, answer changes, media behavior and collaboration interactions exist; broader 3D/resource-consultation vocabulary and aggregation remain |
 
-The connected architecture is now roughly **75–80% implemented at reference/adapter level**. Durable production persistence, searchable catalogs, richer semantic context and independent interoperability remain deliberately separate from the portable package.
+The connected architecture is now roughly **75ÔÇô80% implemented at reference/adapter level**. Durable production persistence, searchable catalogs, richer semantic context and independent interoperability remain deliberately separate from the portable package.
 
 ## 9. What must not be changed while completing this architecture
 
@@ -174,7 +174,7 @@ The connected architecture is now roughly **75–80% implemented at reference/ad
 
 ### P0 — Semantic context for connected capabilities
 
-Keep the existing broker boundary and add a trusted resolver for explicitly requested/allowed context keys. Do not expose raw learner state or the broker itself. Useful next keys are objectives, current question, score/progression and opt-in active time.
+Implemented at reference level: `capabilityContextResolver` plus `projectCapabilityContext()` enforce requested-key projection without exposing the broker or raw host state. Next work is optional standard vocabulary for objectives, current question, score/progression and opt-in active time.
 
 ### P0 — Finish the rich learning-event vocabulary
 
@@ -182,11 +182,11 @@ The runtime now has explicit questionnaire attempts, answer changes, media play/
 
 ### P1 — Persistent shared-resource catalog
 
-The digest store, verified resolver and Studio authoring path are implemented at reference level. Add persistence/search on the host side while preserving the same `sha256 -> verified object` contract and self-contained embedded fallback.
+Implemented at browser/reference level: memory + Cache Storage libraries, digest verification, metadata search capability, Studio picker and embedded materialization. Next work is authenticated multi-user/server catalog persistence while preserving the same `sha256 -> verified object` contract.
 
 ### P1 — Authoritative Host reference
 
-Demonstrate durable state keyed by host learner/attempt + P2LRN context, `offlineDeliveryId` idempotency, authoritative score/event ingestion and explicit multi-device conflict policy.
+Implemented as `@p2lrn/toolkit/host`: memory and JSON-file stores, host partitioning, durable `offlineDeliveryId` idempotency, explicit conflict policy and authoritative grading hook. Next work is binding the same store contract to production transactional databases.
 
 ### P2 — Durable collaboration deployment
 

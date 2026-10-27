@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/component/capability-action/schema/data/1",
+  "title": "P2LRN Capability Action data 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["capability", "operation"],
+  "properties": {
+    "capability": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "operation": {"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "heading": {"type":"string","maxLength":10000},
+    "body": {"type":"string","maxLength":10000},
+    "instruction": {"type":"string","maxLength":10000},
+    "buttonLabel": {"type":"string","maxLength":10000},
+    "resultLabel": {"type":"string","maxLength":10000},
+    "fallbackText": {"type":"string","maxLength":10000},
+    "required": {"type":"boolean"},
+    "context": {
+      "type":"array","maxItems":64,"uniqueItems":true,
+      "items":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"}
+    },
+    "restrictions": {
+      "type":"object","additionalProperties":false,
+      "properties":{
+        "revealAnswer":{"type":"boolean"},
+        "allowExternalKnowledge":{"type":"boolean"},
+        "maxOutputChars":{"type":"integer","minimum":1,"maximum":50000}
+      }
+    }
+  }
+}

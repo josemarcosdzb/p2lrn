@@ -1,13 +1,13 @@
 ﻿import {dispatchRuntimeEvent} from '../runtime-events.js';
 
-function resultText(value) {
-  if (typeof value === 'string') return value.slice(0,50000);
-  for (const key of ['text','message','output']) if (typeof value?.[key] === 'string') return value[key].slice(0,50000);
+function resultText(value,max=50000) {
+  if (typeof value === 'string') return value.slice(0,max);
+  for (const key of ['text','message','output']) if (typeof value?.[key] === 'string') return value[key].slice(0,max);
   if (Array.isArray(value?.content)) {
     const text=value.content.map((item)=>typeof item==='string'?item:(typeof item?.text==='string'?item.text:'')).filter(Boolean).join('\n');
-    if(text)return text.slice(0,50000);
+    if(text)return text.slice(0,max);
   }
-  try { return JSON.stringify(value,null,2).slice(0,50000); } catch { return String(value).slice(0,50000); }
+  try { return JSON.stringify(value,null,2).slice(0,max); } catch { return String(value).slice(0,max); }
 }
 
 export async function render({container,componentInstance,capabilities=[],invokeCapability,eventTarget,adapter,context}) {
@@ -27,8 +27,8 @@ export async function render({container,componentInstance,capabilities=[],invoke
     button.addEventListener('click',async()=>{
       button.disabled=true;button.setAttribute('aria-busy','true');output.hidden=false;pre.textContent='Procesando…';
       try{
-        const result=await invokeCapability(data.capability,data.operation,{instruction:data.instruction??'',component:{id:componentInstance.component.id,componentVersion:componentInstance.component.componentVersion,dataVersion:componentInstance.component.dataVersion}});
-        pre.textContent=resultText(result);
+        const result=await invokeCapability(data.capability,data.operation,{instruction:data.instruction??'',restrictions:data.restrictions??{},component:{id:componentInstance.component.id,componentVersion:componentInstance.component.componentVersion,dataVersion:componentInstance.component.dataVersion}});
+        pre.textContent=resultText(result,Number.isInteger(data.restrictions?.maxOutputChars)?data.restrictions.maxOutputChars:50000);
       }catch(error){
         pre.textContent=data.fallbackText||'La capacidad conectada no está disponible.';
         dispatchRuntimeEvent(eventTarget,'p2lrn:error',{phase:'capability-action',capability:data.capability,operation:data.operation,error:String(error?.message??error)},context,{adapter});

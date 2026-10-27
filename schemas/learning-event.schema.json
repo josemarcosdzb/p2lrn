@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/schema/learning-event/1",
+  "title": "P2LRN Learning Event 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "id", "sequence", "type", "category", "timestamp", "context", "payload"],
+  "properties": {
+    "schema": {"const": "https://p2lrn.org/schema/learning-event/1"},
+    "version": {"const": "1"},
+    "id": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"},
+    "sequence": {"type": "integer", "minimum": 0},
+    "sessionId": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"},
+    "attemptId": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"},
+    "type": {"type": "string", "pattern": "^p2lrn:[a-z][a-z0-9-]*$", "maxLength": 96},
+    "category": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "context": {"type": "object", "additionalProperties": true},
+    "payload": {"type": "object", "additionalProperties": true}
+  }
+}

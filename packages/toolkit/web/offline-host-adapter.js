@@ -99,9 +99,11 @@ export function createIndexedDbOfflineStore({name=DEFAULT_OFFLINE_DB_NAME, names
 function defaultOnline() { return globalThis.navigator?.onLine !== false; }
 function sameJson(a,b){try{return stable(a)===stable(b);}catch{return false;}}
 
-export function createOfflineHostAdapter({remote=null,store=null,online=defaultOnline,conflictResolver=null,storageNamespace=null,dbName=DEFAULT_OFFLINE_DB_NAME}={}) {
+export function createOfflineHostAdapter({remote=null,store=null,online=defaultOnline,conflictResolver=null,resourceResolver=null,storageNamespace=null,dbName=DEFAULT_OFFLINE_DB_NAME}={}) {
   if (typeof online !== 'function') throw new TypeError('offline adapter online must be a function.');
   if (conflictResolver != null && typeof conflictResolver !== 'function') throw new TypeError('offline adapter conflictResolver must be a function.');
+  const localResolver = typeof resourceResolver === 'function' ? resourceResolver : (typeof resourceResolver?.resolve === 'function' ? resourceResolver.resolve.bind(resourceResolver) : null);
+  if (resourceResolver != null && !localResolver) throw new TypeError('offline adapter resourceResolver must be a function or expose resolve().');
   const remoteAdapter=normalizeHostAdapter(remote);
   const persistence=store ?? (globalThis.indexedDB && String(storageNamespace ?? '').trim() ? createIndexedDbOfflineStore({name:dbName,namespace:String(storageNamespace).trim()}) : createMemoryOfflineStore());
   for(const method of ['getState','setState','enqueue','listOutbox','removeOutbox','removeByCoalesceKey','hasCoalesceKey','clear'])if(typeof persistence?.[method]!=='function')throw new TypeError(`Offline store requires ${method}().`);
@@ -177,6 +179,10 @@ export function createOfflineHostAdapter({remote=null,store=null,online=defaultO
       await enqueue(item);
     });},
     async resolveResourceUrl(request,context={}){
+      if(localResolver){
+        const local=await localResolver(request,context);
+        if(local!=null)return local;
+      }
       if(!remoteAdapter?.resolveResourceUrl||!(await connected()))return null;
       return remoteAdapter.resolveResourceUrl(request,context);
     },
@@ -199,5 +205,57 @@ export function createOfflineHostAdapter({remote=null,store=null,online=defaultO
       summary.pending=(await persistence.listOutbox()).length;return summary;
     });},
     store:persistence,
+  });
+}
+
+export function createOfflineSyncController({
+  adapter,
+  target=globalThis,
+  baseDelayMs=1000,
+  maxDelayMs=30000,
+  setTimer=globalThis.setTimeout?.bind(globalThis),
+  clearTimer=globalThis.clearTimeout?.bind(globalThis),
+  autoStart=true,
+  onState=()=>{},
+}={}){
+  if(!adapter||typeof adapter.sync!=='function'||typeof adapter.pending!=='function')throw new TypeError('P2LRN offline sync controller requires an offline Host Adapter.');
+  if(!target||typeof target.addEventListener!=='function'||typeof target.removeEventListener!=='function')throw new TypeError('P2LRN offline sync controller target must be EventTarget-like.');
+  if(!Number.isFinite(baseDelayMs)||baseDelayMs<100)throw new TypeError('baseDelayMs must be at least 100.');
+  if(!Number.isFinite(maxDelayMs)||maxDelayMs<baseDelayMs)throw new TypeError('maxDelayMs must be >= baseDelayMs.');
+  if(typeof setTimer!=='function'||typeof clearTimer!=='function'||typeof onState!=='function')throw new TypeError('Invalid P2LRN offline sync controller callbacks.');
+
+  let stopped=false,running=false,timer=null,attempt=0,lastResult=null,lastError=null;
+  const emit=()=>{try{onState(Object.freeze({stopped,running,attempt,lastResult:cloneJson(lastResult),lastError:lastError?String(lastError?.message??lastError):null}));}catch{}};
+  const cancel=()=>{if(timer!=null){clearTimer(timer);timer=null;}};
+  const schedule=(delay)=>{if(stopped)return;cancel();timer=setTimer(()=>{timer=null;void run();},Math.max(0,delay));};
+  const online=()=>globalThis.navigator?.onLine!==false;
+
+  async function run(){
+    if(stopped||running)return lastResult;
+    running=true;lastError=null;emit();
+    try{
+      const result=await adapter.sync();
+      lastResult=result;attempt=result.pending>0?attempt+1:0;
+      if(result.pending>0&&result.online!==false){
+        const delay=Math.min(maxDelayMs,baseDelayMs*Math.pow(2,Math.max(0,attempt-1)));
+        schedule(delay);
+      }else cancel();
+      return result;
+    }catch(error){
+      lastError=error;attempt+=1;
+      if(online())schedule(Math.min(maxDelayMs,baseDelayMs*Math.pow(2,Math.max(0,attempt-1))));
+      throw error;
+    }finally{running=false;emit();}
+  }
+  const onOnline=()=>{attempt=0;void run().catch(()=>{});};
+  const onOffline=()=>{cancel();emit();};
+  target.addEventListener('online',onOnline);
+  target.addEventListener('offline',onOffline);
+  if(autoStart)schedule(0);
+
+  return Object.freeze({
+    syncNow:run,
+    snapshot(){return Object.freeze({stopped,running,attempt,lastResult:cloneJson(lastResult),lastError:lastError?String(lastError?.message??lastError):null});},
+    stop(){if(stopped)return;stopped=true;cancel();target.removeEventListener('online',onOnline);target.removeEventListener('offline',onOffline);emit();},
   });
 }
