@@ -167,8 +167,11 @@ for (const asset of brandAssets) {
 }
 for (const htmlPath of htmlFiles) {
   const html=await readFile(htmlPath,'utf8');
-  for (const required of ['/p2lrn.css?v=p2lrn-brand-20261027-v3','/favicon.png?v=p2lrn-brand-20261027-v3','/apple-touch-icon.png?v=p2lrn-brand-20261027-v3','/site.webmanifest']) {
+  for (const required of ['/favicon.png?v=p2lrn-brand-20261027-v3','/apple-touch-icon.png?v=p2lrn-brand-20261027-v3','/site.webmanifest']) {
     if (!html.includes(required)) throw new Error('Missing brand metadata in ' + relative(outputRoot,htmlPath) + ': ' + required);
+  }
+  if (html.includes('/p2lrn.css') && !html.includes('/p2lrn.css?v=p2lrn-brand-20261027-v3')) {
+    throw new Error('Unversioned brand stylesheet in ' + relative(outputRoot,htmlPath));
   }
 }
 
