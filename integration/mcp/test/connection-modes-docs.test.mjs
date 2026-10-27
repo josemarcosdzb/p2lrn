@@ -83,7 +83,7 @@ test('Gemini and no-MCP Skills stay separate from MCP across site navigation and
   assert.match(gemini,/Gemini CLI: Agent Skills sin servidor MCP/);
   assert.match(gemini,/Gemini CLI: conectar tus cursos del PC mediante MCP/);
   assert.match(gemini,/--clients gemini --install --verify/);
-  assert.match(gemini,/no está verificada como Skill de Gemini web/);
+  assert.match(gemini,/No está verificada como Skill de Gemini web/);
   assert.match(skills,/ChatGPT: «P2LRN – Crear y descargar»/);
   assert.match(skills,/Claude: Skills sin instalar el servidor P2LRN/);
   assert.match(skills,/Gemini: Skills o Gems web y Agent Skills en CLI/);
