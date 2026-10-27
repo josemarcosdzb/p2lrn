@@ -58,7 +58,9 @@ export function lessonImageFlowLayout({x=0,y=0,width=280,height=180},canvasWidth
       marginTop:gap+'px',
       marginBottom:'12px',
       marginLeft:stack?'0px':right?'12px':Math.round(left)+'px',
-      marginRight:stack?'12px':right?Math.round(Math.max(0,fullWidth-left-imageWidth))+'px':'12px',
+      // On narrow screens the float's entire margin-box occupies the row:
+      // headings and paragraphs continue underneath, never in a tiny column.
+      marginRight:stack?Math.round(Math.max(0,fullWidth-imageWidth))+'px':right?Math.round(Math.max(0,fullWidth-left-imageWidth))+'px':'12px',
       shapeOutside:'inset('+gap+'px 0px 0px 0px)',
     },
   };
