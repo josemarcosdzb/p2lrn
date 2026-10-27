@@ -27,7 +27,7 @@ function httpsUrl(value,label,allowInsecureLocal=false){
   const text=str(value,label);
   let parsed;
   try{parsed=new URL(text);}catch{throw new TypeError(label+' must be an HTTPS URL');}
-  if(!(parsed.protocol==='https:'||(allowInsecureLocal&&parsed.protocol==='http:'&&/^(localhost|127\.0\.0\.1|[a-z0-9-]+\.localhost)$/.test(parsed.hostname)))||!parsed.hostname||parsed.username||parsed.password||parsed.hash)
+  if(!(parsed.protocol==='https:'||(allowInsecureLocal&&parsed.protocol==='http:'&&/^(localhost|127\.0\.0\.1|(?:[a-z0-9-]+\.)+localhost)$/.test(parsed.hostname)))||!parsed.hostname||parsed.username||parsed.password||parsed.hash)
     throw new TypeError(label+' must be an HTTPS URL without embedded credentials or fragment');
   return parsed.href;
 }

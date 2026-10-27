@@ -25,7 +25,7 @@ function required(value, label, max = 2048) {
 }
 function url(value, label, allowInsecureLocal = false) {
   const parsed = new URL(required(value, label));
-  if (!(parsed.protocol === 'https:' || (allowInsecureLocal && parsed.protocol === 'http:' && /^(localhost|127\.0\.0\.1|[a-z0-9-]+\.localhost)$/.test(parsed.hostname))) || !parsed.hostname || parsed.username || parsed.password || parsed.hash)
+  if (!(parsed.protocol === 'https:' || (allowInsecureLocal && parsed.protocol === 'http:' && /^(localhost|127\.0\.0\.1|(?:[a-z0-9-]+\.)+localhost)$/.test(parsed.hostname))) || !parsed.hostname || parsed.username || parsed.password || parsed.hash)
     throw new TypeError(label + ' must be HTTPS without credentials or fragment');
   return parsed;
 }

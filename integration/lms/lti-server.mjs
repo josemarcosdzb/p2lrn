@@ -58,7 +58,7 @@ const policy=(nonceStr,ancestor)=>[
  "connect-src 'self' blob:","worker-src 'self' blob:","frame-src 'self' blob:",
  "frame-ancestors "+(ancestor||"'none'")
 ].join('; ');
-const browserId=(req)=>valid(cookies(req).p2lrn_oidc||cookies(req)['__Host-p2lrn-oidc']||cookies(req)['__Host-p2lrn-oidc-partitioned'],'OIDC browser binding',512);
+const browserId=(req)=>valid(cookies(req).p2lrn_oidc||cookies(req)['p2lrn_oidc-partitioned']||cookies(req)['__Host-p2lrn-oidc']||cookies(req)['__Host-p2lrn-oidc-partitioned'],'OIDC browser binding',512);
 const csrfGuard=(req,session,baseUrl)=>{
  const origin=req.headers.origin;
  if(origin&&origin!==new URL(baseUrl).origin)throw new Error('CROSS_SITE_REQUEST');
@@ -137,7 +137,7 @@ function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
  if(reg.launchUrl!==baseUrl+'/lti/launch'||(reg.deepLinkLaunchUrl&&reg.deepLinkLaunchUrl!==baseUrl+'/lti/deep-link'))
   throw new Error('LTI launch URL must match this independent P2LRN server');
  for(const v of [reg.issuer,reg.authUrl,reg.tokenUrl,...(reg.deepLinkReturnOrigins||[])])
-  if(!(new URL(v).protocol==='https:'||(allowInsecureLocal&&new URL(v).protocol==='http:'&&/^(localhost|127\.0\.0\.1|[a-z0-9-]+\.localhost)$/.test(new URL(v).hostname))))throw new Error('LTI platform endpoints must use HTTPS outside the local test lab');
+  if(!(new URL(v).protocol==='https:'||(allowInsecureLocal&&new URL(v).protocol==='http:'&&/^(localhost|127\.0\.0\.1|(?:[a-z0-9-]+\.)+localhost)$/.test(new URL(v).hostname))))throw new Error('LTI platform endpoints must use HTTPS outside the local test lab');
  return reg;
 }
 export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindHost='127.0.0.1',
@@ -147,11 +147,16 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  if(typeof adminToken!=='string'||adminToken.length<32)throw new TypeError('Secure P2LRN admin token must contain at least 32 characters');
  const base=new URL(baseUrl);
  if(base.username||base.password||base.hash||base.search||
-    (base.protocol!=='https:'&&!(allowInsecureLoopback&&base.protocol==='http:'&&/^(localhost|127\.0\.0\.1|[a-z0-9-]+\.localhost)$/.test(base.hostname))))
+    (base.protocol!=='https:'&&!(allowInsecureLoopback&&base.protocol==='http:'&&/^(localhost|127\.0\.0\.1|(?:[a-z0-9-]+\.)+localhost)$/.test(base.hostname))))
   throw new Error('Public P2LRN LTI endpoint requires HTTPS');
  const baseOrigin=base.origin,canonicalBase=baseUrl.replace(/\/$/,'');
  if(canonicalBase!==base.origin)throw new Error('P2LRN LTI baseUrl must be an origin without path');
  const secure=base.protocol==='https:';
+ // HTTP is an explicit loopback-only integration test mode. Chromium treats
+ // .localhost as a potentially trustworthy origin for Secure cookies.
+ // Never enable it on a public hostname or without allowInsecureLoopback.
+ const localHttp=!secure&&allowInsecureLoopback;
+ const crossSiteCookie=secure||localHttp;
  const root=resolve(dataDir),packages=join(root,'packages');
  mkdirSync(packages,{recursive:true});
  const store=createLtiStore(join(root,'lti.sqlite'));
@@ -169,7 +174,9 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   if(!raw.startsWith('Bearer ')||!compare(raw.slice(7),adminToken))throw new Error('ADMIN_DENIED');
  }
  function requireSession(req,csrf=false){
-  const hash=digest(String(cookies(req)[sessionCookie]||''));
+  const cookieValues=cookies(req);
+  const value=cookieValues[sessionCookie]||(localHttp?cookieValues[sessionCookie+'-partitioned']:null);
+  const hash=digest(String(value||''));
   const s=store.getSession(hash);
   if(!s)throw new Error('SESSION_EXPIRED');
   if(csrf)csrfGuard(req,s,canonicalBase);
@@ -208,7 +215,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      binding=incomingCookie;
     const result=await provider.beginLogin({login,browserBinding:binding});
     res.writeHead(302,{'Location':result.authorizationUrl,
-     'Set-Cookie':secure?[secureCookie(oidcCookie,binding,true,3600),secureCookie(oidcCookie+'-partitioned',binding,true,3600,true)]:secureCookie(oidcCookie,binding,false,3600),'Cache-Control':'no-store',
+     'Set-Cookie':crossSiteCookie?[secureCookie(oidcCookie,binding,true,3600),secureCookie(oidcCookie+'-partitioned',binding,true,3600,true)]:secureCookie(oidcCookie,binding,false,3600),'Cache-Control':'no-store',
      'Referrer-Policy':'no-referrer'});return res.end();
    }
    if(method==='POST'&&(path==='/lti/launch'||path==='/lti/deep-link')){
@@ -244,7 +251,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       playerScript:'/lti/assets/player/p2lrn.js'})
       .replace('__CSP_NONCE__',html(cspNonce));
     return sendHtml(res,200,body,policy(cspNonce,ancestor),
-      {'Set-Cookie':secureCookie(sessionCookie,token,secure,3600,true)});
+      {'Set-Cookie':localHttp?[
+       secureCookie(sessionCookie,token,true,3600),
+       secureCookie(sessionCookie+'-partitioned',token,true,3600,true)
+      ]:secureCookie(sessionCookie,token,secure,3600,true)});
    }
    if(method==='POST'&&path==='/lti/deep-link/confirm'){
     const formData=input(await readBody(req,32768),req);

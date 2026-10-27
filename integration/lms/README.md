@@ -38,7 +38,39 @@ Arrancar desde la raíz del repositorio:
 
 El servidor escucha por defecto en loopback y necesita un proxy HTTPS de confianza para exposición pública. Comprobar GET /lti/health y GET /lti/jwks. Jamás publicar el token administrativo, el PEM privado, la base SQLite o el directorio de paquetes. No regenerar la clave cada vez que arranque.
 
-Solo para pruebas de loopback es posible habilitar P2LRN_LTI_DEV_INSECURE=true y usar un origen HTTP localhost. **Las conexiones reales LTI 1.3 entre plataformas requieren HTTPS.**
+### HTTP local sin instalar certificados
+
+Para ejecutar el laboratorio en Chrome/Chromium, sin dominio público ni
+certificados raíz en Windows, se puede utilizar el proxy HTTP **limitado a
+loopback** (`127.0.0.1:80`):
+
+- `P2LRN_LTI_DEV_INSECURE=true`.
+- `P2LRN_LTI_BASE_URL=http://p2lrn-lti.localhost`.
+- `P2LRN_LTI_HOST=0.0.0.0` solo en la red privada de Docker; no publicar el
+  puerto directo del proveedor.
+- Proxy local `http://p2lrn-lti.localhost` a
+  `p2lrn-lti-provider:37891`.
+- Registrar la misma URL HTTP de `login`, `launch`, `deep-link` y `jwks`
+  tanto en P2LRN como en cada LMS; mantener los `issuer`, `clientId` y
+  `deploymentId` reales de esos LMS.
+
+El modo HTTP solo se habilita para `localhost`, `127.0.0.1` y subdominios
+`*.localhost`, y solo con la bandera de desarrollo. Para el retorno
+OIDC `form_post` entre sitios, el servidor emite cookies de laboratorio
+`SameSite=None; Secure`, más una variante `Partitioned`. Chrome reconoce la
+excepción de origen confiable de `*.localhost` incluso sin HTTPS. **No es una
+garantía para cualquier navegador o política empresarial**. Si un navegador
+bloquea estas cookies, registrar Moodle y la herramienta bajo subdominios de
+un mismo origen `*.p2lrn.localhost` es una alternativa de pruebas. No
+deshabilitar las verificaciones de `state`, `nonce`, firma JWT ni CSRF.
+
+**Producción: HTTPS obligatorio**. No publicar HTTP local en Internet,
+no reutilizar estas cookies en servidores públicos y no mezclar URLs HTTP
+y HTTPS dentro de una transacción LTI. Conservar la clave RSA y la base
+existente al cambiar de modo. La instalación de una CA local en Windows no
+es necesaria.
+
+
 
 ## Configuración de herramienta en cualquier LMS
 
