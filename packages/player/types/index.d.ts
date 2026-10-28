@@ -97,6 +97,8 @@ export function capabilityOperationAllowed(requests: readonly P2LRNHostCapabilit
 export function validateCapabilityGraph(graph: unknown): true;
 export function createCapabilityBroker(options?: P2LRNCapabilityBrokerOptions): CapabilityBroker;
 export function createToolCapabilityProvider(options: P2LRNToolCapabilityProviderOptions): P2LRNCapabilityProvider;
+export function createMcpCapabilityProvider(options: P2LRNToolCapabilityProviderOptions): P2LRNCapabilityProvider;
+export function projectCapabilityContext(request: P2LRNHostCapabilityRequest, value: Record<string,unknown>): Readonly<Record<string,unknown>>;
 export const COLLABORATION_CAPABILITY: "collaboration.room";
 export const COLLABORATION_OPERATIONS: readonly ["join","send","listen","snapshot","leave"];
 export interface P2LRNMemoryCollaborationHub {
@@ -126,6 +128,33 @@ export interface P2LRNMemorySharedResourceStore {
   resolve(request:Readonly<P2LRNResourceUrlRequest>): Promise<P2LRNResolvedResourceUrl|null>;
 }
 export function createMemorySharedResourceStore(): P2LRNMemorySharedResourceStore;
+export interface P2LRNResourceLibraryEntry { readonly digest:string; readonly mediaType:string; readonly bytes:ArrayBuffer; readonly size:number; readonly storedAt:string; readonly href:string|null; }
+export interface P2LRNResourceLibraryMetadata { readonly digest:string; readonly mediaType:string; readonly size:number|null; readonly storedAt:string|null; readonly href:string|null; }
+export interface P2LRNResourceLibrary {
+  put(entry:{digest:string;mediaType?:string;bytes:ArrayBuffer|ArrayBufferView;storedAt?:string;href?:string|null}):Promise<P2LRNResourceLibraryEntry>;
+  get(digest:string):Promise<P2LRNResourceLibraryEntry|null>;
+  has(digest:string):Promise<boolean>;
+  delete(digest:string):Promise<boolean>;
+  list():Promise<readonly P2LRNResourceLibraryMetadata[]>;
+  clear?():Promise<void>;
+}
+export interface P2LRNResourceLibraryResolver {
+  resolve(request:P2LRNResourceUrlRequest):Promise<P2LRNResolvedResourceUrl|null>;
+  prefetch(request:{href:string;expectedDigest:string;mediaType?:string}):Promise<P2LRNResourceLibraryMetadata|null>;
+  has(digest:string):Promise<boolean>;
+  list():Promise<readonly P2LRNResourceLibraryMetadata[]>;
+  destroy():void;
+  readonly store:P2LRNResourceLibrary;
+}
+export const RESOURCE_LIBRARY_VERSION: "1";
+export const RESOURCE_LIBRARY_CAPABILITY_ID: "resource.library";
+export const DEFAULT_RESOURCE_LIBRARY_CACHE: "p2lrn-resource-library-v1";
+export const DEFAULT_RESOURCE_LIBRARY_MAX_BYTES: number;
+export function createMemoryResourceLibrary(options?:{maxBytes?:number}):P2LRNResourceLibrary;
+export function createCacheStorageResourceLibrary(options?:{name?:string;cacheStorage?:CacheStorage;maxBytes?:number}):P2LRNResourceLibrary;
+export function verifyResourceBytes(bytes:ArrayBuffer|ArrayBufferView,expectedDigest:string,options?:{maxBytes?:number}):Promise<Readonly<{bytes:ArrayBuffer;digest:string;size:number}>>;
+export function createResourceLibraryResolver(options:{store:P2LRNResourceLibrary;networkFetch?:typeof fetch|null;maxBytes?:number;createObjectUrl?:(blob:Blob)=>string;revokeObjectUrl?:(url:string)=>void}):P2LRNResourceLibraryResolver;
+export function createResourceLibraryCapabilityProvider(options:{store:P2LRNResourceLibrary;id?:string}):P2LRNCapabilityProvider;
 
 export interface P2LRNOfflineStore {
   getState(key: string): Promise<unknown>;
@@ -158,6 +187,9 @@ export const DEFAULT_OFFLINE_DB_NAME: "p2lrn-runtime-v1";
 export function createMemoryOfflineStore(): P2LRNOfflineStore;
 export function createIndexedDbOfflineStore(options: {namespace:string; name?:string}): P2LRNOfflineStore;
 export function createOfflineHostAdapter(options?: P2LRNOfflineHostAdapterOptions): P2LRNOfflineHostAdapter;
+export interface P2LRNOfflineSyncControllerSnapshot { readonly stopped:boolean; readonly running:boolean; readonly attempt:number; readonly lastResult:P2LRNOfflineSyncResult|null; readonly lastError:string|null; }
+export interface P2LRNOfflineSyncController { syncNow():Promise<P2LRNOfflineSyncResult|null>; snapshot():P2LRNOfflineSyncControllerSnapshot; stop():void; }
+export function createOfflineSyncController(options:{adapter:P2LRNOfflineHostAdapter;target?:EventTarget;baseDelayMs?:number;maxDelayMs?:number;autoStart?:boolean;onState?:(state:P2LRNOfflineSyncControllerSnapshot)=>void}):P2LRNOfflineSyncController;
 
 export interface P2LRNActivitySnapshot { active:boolean; visible:boolean; focused:boolean; idle:boolean; totalActiveMs:number; idleAfterMs?:number; reason?:string; }
 export interface P2LRNActivityTrackerOptions {
@@ -175,6 +207,17 @@ export interface P2LRNActivityTracker {
 }
 export const DEFAULT_ACTIVITY_IDLE_AFTER_MS: 60000;
 export function createActivityTracker(options?: P2LRNActivityTrackerOptions): P2LRNActivityTracker;
+export interface P2LRNLearningEvent { readonly schema:string; readonly version:string; readonly id:string; readonly sequence:number; readonly type:string; readonly category:string; readonly timestamp:string; readonly context:Readonly<Record<string,unknown>>; readonly payload:Readonly<Record<string,unknown>>; readonly sessionId?:string; readonly attemptId?:string; }
+export interface P2LRNLearningEventStream { push(runtimeEvent:unknown):P2LRNLearningEvent; setSession(value:string|null):void; setAttempt(value:string|null):void; snapshot():Readonly<{sessionId:string|null;attemptId:string|null;sequence:number}>; }
+export const LEARNING_EVENT_MODEL_VERSION: "1";
+export const LEARNING_EVENT_SCHEMA: "https://p2lrn.org/schema/learning-event/1";
+export const LEARNING_RUNTIME_EVENT_TYPES: readonly string[];
+export const LEARNING_EVENT_CATEGORIES: readonly string[];
+export function learningEventCategory(type:string,payload?:Record<string,unknown>):string;
+export function createLearningEvent(runtimeEvent:unknown,options?:{sessionId?:string|null;attemptId?:string|null;sequence?:number;id?:string|null;category?:string|null}):P2LRNLearningEvent;
+export function createLearningEventStream(options?:{sessionId?:string|null;attemptId?:string|null;startSequence?:number;onEvent?:(event:P2LRNLearningEvent)=>void}):P2LRNLearningEventStream;
+export function isLearningEvent(value:unknown):boolean;
+export function observeLearningEvents(options:{target:EventTarget;sessionId?:string|null;attemptId?:string|null;onEvent?:(event:P2LRNLearningEvent)=>void;types?:readonly string[]}):Readonly<{stream:P2LRNLearningEventStream;stop():void}>;
 
 
 export interface P2LRNPackageCacheEntry {
@@ -253,6 +296,7 @@ export interface P2LRNPublicAPI {
   readonly createHostAdapter: typeof createHostAdapter;
   readonly createCapabilityBroker: typeof createCapabilityBroker;
   readonly createToolCapabilityProvider: typeof createToolCapabilityProvider;
+  readonly createMcpCapabilityProvider: typeof createMcpCapabilityProvider;
   readonly createMemoryCollaborationHub: typeof createMemoryCollaborationHub;
   readonly createHttpCollaborationProvider: typeof createHttpCollaborationProvider;
   readonly COLLABORATION_HTTP_VERSION: typeof COLLABORATION_HTTP_VERSION;
@@ -260,10 +304,19 @@ export interface P2LRNPublicAPI {
   readonly COLLABORATION_CAPABILITY: typeof COLLABORATION_CAPABILITY;
   readonly COLLABORATION_OPERATIONS: typeof COLLABORATION_OPERATIONS;
   readonly createMemorySharedResourceStore: typeof createMemorySharedResourceStore;
+  readonly createMemoryResourceLibrary: typeof createMemoryResourceLibrary;
+  readonly createCacheStorageResourceLibrary: typeof createCacheStorageResourceLibrary;
+  readonly createResourceLibraryResolver: typeof createResourceLibraryResolver;
+  readonly createResourceLibraryCapabilityProvider: typeof createResourceLibraryCapabilityProvider;
   readonly createOfflineHostAdapter: typeof createOfflineHostAdapter;
   readonly createMemoryOfflineStore: typeof createMemoryOfflineStore;
   readonly createIndexedDbOfflineStore: typeof createIndexedDbOfflineStore;
+  readonly createOfflineSyncController: typeof createOfflineSyncController;
   readonly createActivityTracker: typeof createActivityTracker;
+  readonly createLearningEvent: typeof createLearningEvent;
+  readonly createLearningEventStream: typeof createLearningEventStream;
+  readonly observeLearningEvents: typeof observeLearningEvents;
+  readonly learningEventCategory: typeof learningEventCategory;
   readonly createMemoryPackageCache: typeof createMemoryPackageCache;
   readonly createCacheStoragePackageCache: typeof createCacheStoragePackageCache;
   readonly cachePackageURL: typeof cacheP2LRNPackageURL;
@@ -271,6 +324,10 @@ export interface P2LRNPublicAPI {
   readonly DEFAULT_PACKAGE_CACHE_NAME: typeof DEFAULT_PACKAGE_CACHE_NAME;
   readonly HOST_CAPABILITY_EXTENSION: typeof HOST_CAPABILITY_EXTENSION;
   readonly DEFAULT_OFFLINE_DB_NAME: typeof DEFAULT_OFFLINE_DB_NAME;
+  readonly RESOURCE_LIBRARY_CAPABILITY_ID: typeof RESOURCE_LIBRARY_CAPABILITY_ID;
+  readonly DEFAULT_RESOURCE_LIBRARY_CACHE: typeof DEFAULT_RESOURCE_LIBRARY_CACHE;
+  readonly LEARNING_EVENT_SCHEMA: typeof LEARNING_EVENT_SCHEMA;
+  readonly LEARNING_EVENT_MODEL_VERSION: typeof LEARNING_EVENT_MODEL_VERSION;
   readonly DEFAULT_ACTIVITY_IDLE_AFTER_MS: typeof DEFAULT_ACTIVITY_IDLE_AFTER_MS;
   readonly configureRuntimeHost: typeof configureRuntimeHost;
   readonly getRuntimeHostConfig: typeof getRuntimeHostConfig;

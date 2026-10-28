@@ -1,4 +1,4 @@
-import {readFile} from 'node:fs/promises';
+import {readFile,readdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 
 const root=resolve(process.cwd());
@@ -91,5 +91,80 @@ for(const term of ['Entrega offline y paquetes autorreproducibles','Windows · u
 for(const source of ['deploy/netlify/site/index.html','deploy/netlify/site/docs/index.html','deploy/netlify/site/docs/empezar/index.html','deploy/netlify/site/docs/studio/index.html','deploy/netlify/site/studio/index.html']){const html=await read(source);if(!html.includes('href="/docs/entrega-offline/"'))failures.push(source+': missing offline delivery discovery link');}
 if(!js.includes("['/docs/entrega-offline/','Entrega offline']"))failures.push('documentation navigation missing offline delivery route');
 const sitemap=await read('deploy/netlify/site/sitemap.xml');if(!sitemap.includes('https://p2lrn.netlify.app/docs/entrega-offline/'))failures.push('sitemap missing offline delivery route');
+
+// Full public-source currentness audit. The generated build has additional
+// artifact checks, but source documentation must also remain truthful/readable.
+const currentPlayerVersion=JSON.parse(await read('packages/player/package.json')).version;
+const publicEntries=await readdir(site,{recursive:true});
+const publicHtml=publicEntries.filter(name=>String(name).replaceAll('\\','/').endsWith('.html'));
+for(const name of publicHtml){
+  const html=await readFile(join(site,name),'utf8');
+  if(html.includes('0.5.0-alpha.10'))failures.push('stale alpha.10 reference in public source: '+String(name));
+}
+if(publicHtml.length<57)failures.push('public HTML inventory unexpectedly shrank: '+publicHtml.length);
+
+const requiredByFile=new Map([
+  ['deploy/netlify/site/docs/player/index.html',[
+    'createCapabilityBroker','createMcpCapabilityProvider','createOfflineHostAdapter',
+    'createOfflineSyncController','createCacheStoragePackageCache','createActivityTracker',
+    'createLearningEventStream','createMemoryResourceLibrary','createHttpCollaborationProvider'
+  ]],
+  ['deploy/netlify/site/docs/integracion/index.html',[
+    'offlineDeliveryId','createOfflineSyncController','createCacheStorageResourceLibrary',
+    'createResourceLibraryResolver','createReferenceAuthoritativeHost','cachePackageURL'
+  ]],
+  ['deploy/netlify/site/docs/toolkit/index.html',[
+    '@p2lrn/toolkit@'+currentPlayerVersion,'@p2lrn/toolkit/host','setCourseRights',
+    'createReferenceAuthoritativeHost'
+  ]],
+  ['deploy/netlify/site/docs/studio/index.html',[
+    'author','createdAt','license','copyrightHolder','resourceLibrary',
+    'materializeSharedResource','exportOfflineAssignment','reviewOfflineResult'
+  ]],
+  ['deploy/netlify/site/docs/referencia/index.html',[
+    'createMcpCapabilityProvider','createOfflineSyncController','createLearningEventStream',
+    'createCacheStorageResourceLibrary','@p2lrn/toolkit/host','reviewOfflineResult'
+  ]],
+  ['deploy/netlify/site/docs/conectores/lti/index.html',[
+    'createP2LRNLtiProvider','createP2LRNLtiServer','/lti/login','/lti/launch',
+    '/lti/deep-link','/lti/jwks','NRPS','self-hosted'
+  ]],
+  ['deploy/netlify/site/docs/conectores/lms/index.html',[
+    'proveedor LTI 1.3 universal self-hosted','binding manual autorizado',
+    'Implementado no equivale a certificado en todos los LMS'
+  ]]
+]);
+for(const [file,tokens] of requiredByFile){
+  const body=await read(file);
+  for(const token of tokens)if(!body.includes(token))failures.push(file+': missing current API/status token '+token);
+}
+const ltiDoc=await read('deploy/netlify/site/docs/conectores/lti/index.html');
+for(const stale of [
+  'no contiene endpoints OIDC/JWKS o un gateway operativo',
+  'Pendiente: proveedor P2LRN LTI real',
+  'Las rutas <code>/lti/login</code>, <code>/lti/launch</code> y <code>/lti/jwks</code> aparecen en el diseño técnico',
+  'queda pendiente de implementación E2E. Los contratos descargables cubren sólo una parte'
+])if(ltiDoc.includes(stale))failures.push('LTI documentation still contains obsolete implementation claim: '+stale);
+const lmsDoc=await read('deploy/netlify/site/docs/conectores/lms/index.html');
+for(const stale of [
+  'gateway LTI 1.3 multiinstitución continúa en desarrollo',
+  'gateway de producción de P2LRN todavía no está implementado',
+  'Este recorrido está diseñado, no desplegado',
+  'el gateway real todavía está pendiente'
+])if(lmsDoc.includes(stale))failures.push('LMS documentation still contains obsolete provider claim: '+stale);
+
+const playerTypes=await read('packages/player/types/index.d.ts');
+for(const token of [
+  'createMcpCapabilityProvider','createOfflineSyncController','createMemoryResourceLibrary',
+  'createCacheStorageResourceLibrary','createResourceLibraryResolver',
+  'createLearningEventStream','observeLearningEvents','RESOURCE_LIBRARY_CAPABILITY_ID'
+])if(!playerTypes.includes(token))failures.push('Player public TypeScript declaration missing runtime export '+token);
+const ltiArchitecture=await read('integration/lms/ARCHITECTURE.md');
+if(ltiArchitecture.includes('| Proveedor P2LRN LTI 1.3 multiinstitución | Pendiente |'))
+  failures.push('internal LTI architecture still marks implemented provider as pending');
+const connectorBuild=await read('deploy/netlify/build-connector-downloads.mjs');
+if(connectorBuild.includes('Pendiente: registro confiable de LMS, OIDC/JWKS/launch firmado'))
+  failures.push('downloadable LTI README still describes implemented provider as pending');
+
 if(failures.length)throw new Error('Documentation flow audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,connectorFlowPages:connectorFlow.length,easyStartBeforeInstall:true,defaultInstallPath:'CDN',cdnBeforeNpm:true,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,childPageSubmenu:true,samePageSectionsInSidebar:false,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,beforeStartOwnsFoundationalDocs:true,progressionAndMetricsGroupedUnderTracking:true,trackingAfterIntegration:true,longPageToc:true,questionnaireExperienceGuides:10,offlineDeliveryGuide:true,noVagueMinimumExamples:true},null,2));
+console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,connectorFlowPages:connectorFlow.length,easyStartBeforeInstall:true,defaultInstallPath:'CDN',cdnBeforeNpm:true,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,childPageSubmenu:true,samePageSectionsInSidebar:false,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,beforeStartOwnsFoundationalDocs:true,progressionAndMetricsGroupedUnderTracking:true,trackingAfterIntegration:true,longPageToc:true,questionnaireExperienceGuides:10,offlineDeliveryGuide:true,fullPublicHtmlAudit:true,currentVersion:currentPlayerVersion,noVagueMinimumExamples:true},null,2));

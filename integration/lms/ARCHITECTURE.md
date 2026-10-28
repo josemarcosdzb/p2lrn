@@ -1,6 +1,6 @@
-# Diseño de integración universal P2LRN con LMS — v0.1
+# Diseño de integración universal P2LRN con LMS — v0.2
 
-Fecha: 26 de octubre de 2026. Estado: **arquitectura y contratos iniciales, no proveedor LTI de producción**.
+Fecha de revisión: 28 de octubre de 2026. Estado: **proveedor LTI 1.3 self-hosted implementado; validación por LMS real y NRPS todavía pendientes**.
 
 ## Decisión principal
 
@@ -43,13 +43,16 @@ localmente, pero debe reutilizar el mismo Player y el mismo contrato de datos.
 | Player web, paquetes portables, import/export, renderers | Existe |
 | Host Adapter (load/save/score/event/resources) | Existe |
 | Progresión y eventos en Player | Existe; no sustituye libro de notas del LMS |
-| Perfil experimental LTI `profiles/lti-0.4.0` | Describe contenido/enlaces, no implementa OIDC |
-| Proveedor P2LRN LTI 1.3 multiinstitución | Pendiente |
-| Deep Linking de cursos P2LRN, AGS validado y selector real | Pendiente |
-| Actividad nativa .p2lrn en cada LMS | Pendiente, opcional |
+| Perfil LTI `profiles/lti-0.4.0` | Describe representaciones/enlaces; la autenticación vive en el proveedor |
+| Proveedor P2LRN LTI 1.3 multiinstitución | Implementado en `lti-provider.mjs`, `lti-server.mjs` y `lti-store.mjs` |
+| OIDC/JWT, JWKS, catálogo y Deep Linking | Implementados y cubiertos por pruebas automatizadas |
+| AGS OAuth2, lineitems, outbox y reintentos | Implementados; la nota requiere decisión autoritativa del servidor |
+| Binding administrativo para LMS sin Deep Linking | Implementado |
+| NRPS | No implementado |
+| Actividad/plugin nativo .p2lrn específico de cada LMS | No necesario para LTI; opcional si un producto quiere integración propia |
+| Matriz E2E en Moodle/Canvas/Sakai/Chamilo/Open edX reales | Pendiente por versión/instancia |
 
-Ni el perfil LTI experimental ni las pruebas actuales de Player acreditan
-conformidad completa de LTI Advantage o de todos los LMS.
+La implementación común no acredita por sí sola conformidad completa de LTI Advantage ni certificación de todas las versiones de todos los LMS.
 
 ## Flujo del profesor, del alumno y del administrador
 
@@ -151,30 +154,29 @@ La configuración debe verificarse en cada instancia real; no se promete
 que todas las versiones de un LMS expongan todos los servicios. NRPS sólo
 se utiliza donde exista, se autorice y haga falta para una función concreta.
 
-## Contratos previstos (sin presentarlos como endpoints desplegados)
+## Endpoints y contratos implementados (self-hosted)
 
-Server: `/lti/login`, `/lti/launch`, `/lti/jwks`, catálogo protegido
-y selector Deep Linking; APIs de sesión, estado, nota, eventos y recursos
-con autorización propia. No se acoplan rutas del LMS a la lógica
-de Player, y no se introduce código específico de cada LMS en el Core.
+El servidor implementa `/lti/login`, `/lti/launch`, `/lti/jwks`,
+`/lti/deep-link`, catálogo/bindings administrativos y APIs autorizadas de
+sesión, paquete, estado, eventos y notas. `lti-provider.mjs` valida JWT/OIDC
+y firma Deep Linking; `lti-ags.mjs` realiza OAuth2 y entrega AGS con
+restricciones de origen. No se introduce código específico de cada LMS en el
+Core ni en Player.
 
-La librería de contratos iniciales en este directorio sólo proyecta
-**claims ya verificados** a una identidad de contenido autorizada y
-construye claves versionadas, descriptores Deep Linking y borradores AGS.
-No valida JWT ni firma respuestas y no efectúa peticiones AGS.
-Su Host Adapter browser sólo enlaza las cinco operaciones con la API del
-servidor; no concede autenticación ni notas por sí mismo.
+`launch-contract.mjs` sigue siendo la proyección server-only desde claims
+ya verificados a identidad portable/estado/score. El Host Adapter del navegador
+sólo enlaza las cinco operaciones con la API del servidor; nunca concede por sí
+solo autenticación o autoridad de calificación.
 
 ## Gates y secuencia de implementación
 
-A. **Contrato y pruebas:** enlace estable, aislamiento multi-tenant,
-   aislamiento de intento/revisión, parámetros de AGS, Host Adapter;
-   ejecutar en Windows sin ramificaciones por marca de LMS.
-B. **Proveedor LTI real:** registro, OIDC y JWKS verificables, lanzamiento,
-   Deep Linking firmado y catálogo autorizado, base de datos transaccional.
-C. **Seguimiento:** sesión, reanudación, eventos, evaluación confiable,
-   outbox AGS, NRPS optativo, políticas de matriculación y cursos copiados.
-D. **Matriz E2E:** Moodle, Canvas, Sakai, Chamilo y Open edX,
+A. **Contrato y pruebas — implementado:** enlace estable, aislamiento
+   multi-tenant, intento/revisión, parámetros AGS y Host Adapter.
+B. **Proveedor LTI — implementado:** registro, OIDC/JWKS, launch, Deep Linking,
+   catálogo/bindings y SQLite persistente.
+C. **Seguimiento — implementado salvo NRPS:** sesión, reanudación, eventos,
+   decisión de nota, outbox AGS y reintentos. NRPS continúa pendiente.
+D. **Matriz E2E por plataforma — pendiente:** Moodle, Canvas, Sakai, Chamilo y Open edX,
    dos usuarios y varios intentos; publicación, launch, reanudación,
    calificación en LMS, duplicado de curso, acceso denegado, replay,
    sesiones expiradas, móvil, SCORM/H5P/juegos, regressions visuales.

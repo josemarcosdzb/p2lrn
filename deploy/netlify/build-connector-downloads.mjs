@@ -3,7 +3,7 @@ import {readdir,readFile,mkdir,writeFile} from 'node:fs/promises';
 import {join,relative,resolve} from 'node:path';
 import {deflateRawSync,inflateRawSync} from 'node:zlib';
 
-// Bundles the actual versioned MCP source and LTI contracts used by P2LRN.
+// Bundles the actual versioned MCP source and current self-hosted LTI provider source used by P2LRN.
 // No fabricated HTTPS endpoints, client tokens, or compiled server binaries.
 const root=resolve(process.cwd());
 const out=join(root,'.netlify-cdn','downloads');
@@ -141,18 +141,28 @@ const lti=[
   await file('packages/toolkit/web/host-adapter.js'),
   await file('packages/toolkit/package.json'),
   license,notice,
-  note('LEEME-PRIMERO.md',`# Contratos LTI 1.3 para desarrolladores P2LRN
+  note('LEEME-PRIMERO.md',`# Proveedor LTI 1.3 P2LRN · fuente para desarrolladores
 
-Este ZIP contiene el diseño, el contrato inicial de lanzamiento, el Host Adapter
-y pruebas de contrato de P2LRN. No es un módulo LMS listo para instalar.
+Este ZIP contiene el código actual de integration/lms: proveedor OIDC/JWT, servidor,
+SQLite, catálogo y bindings, Deep Linking, Host Adapter, AGS y sus pruebas.
+No es un plugin específico de Moodle/Canvas/Sakai/Chamilo/Open edX ni un binario listo
+para doble clic.
 
-Para ejecutar las pruebas desde la carpeta descomprimida (Node.js 22+):
+Requisitos para ejecutar el servidor: Node.js 22.13+, packages/toolkit/dist y
+packages/player/dist compilados, una clave RSA persistente y configuración privada.
+Desde un checkout completo de P2LRN:
   node --test integration/lms/lms-contracts.test.mjs
+  node --test integration/lms/lti-provider.test.mjs
+  node --test integration/lms/lti-store.test.mjs
+  node --test integration/lms/lti-ags.test.mjs
+  node --test integration/lms/lti-server.test.mjs
+  node integration/lms/lti-server.mjs
 
-Pendiente: registro confiable de LMS, OIDC/JWKS/launch firmado, selector Deep Linking,
-sesiones verificadas y envío AGS real. No se suministran URLs operativas ni secretos.
+Producción exige HTTPS y registros LMS reales. No se suministran claves, tokens,
+cuentas ni URLs públicas preconfiguradas. NRPS no está implementado. La matriz E2E
+contra versiones reales de los cinco LMS sigue siendo una validación separada.
 
-La integración con cinco LMS externos se documenta en /docs/conectores/lms/.
+La guía completa está en /docs/conectores/lti/ y /docs/conectores/lms/.
 `)
 ];
 await mkdir(out,{recursive:true});
