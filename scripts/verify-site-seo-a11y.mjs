@@ -45,7 +45,22 @@ const sitemap=await readFile(join(out,'sitemap.xml'),'utf8').catch(()=>{errors.p
 const xmlUrls=[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]).sort();
 const expected=indexable.map(x=>CANONICAL_ORIGIN+x).sort();
 if(JSON.stringify(xmlUrls)!==JSON.stringify(expected))errors.push('sitemap does not match indexed routes');
-if(sourcePages.length!==57||indexable.length!==54||aliases.length!==3)errors.push('unexpected source/indexable/alias counts: '+[sourcePages.length,indexable.length,aliases.length].join('/'));
+if(sourcePages.length!==60||indexable.length!==57||aliases.length!==3)errors.push('unexpected source/indexable/alias counts: '+[sourcePages.length,indexable.length,aliases.length].join('/'));
+// Public solution pages have unique search intent, real actions, and inbound links from the homepage.
+const solutionRoutes=['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'];
+const homeHtml=await readFile(join(out,'index.html'),'utf8');
+for(const route of solutionRoutes){
+  if(!indexable.includes(route))errors.push('Solution route is not indexable: '+route);
+  if(!homeHtml.includes('href="'+route+'"'))errors.push('No discoverable home link to '+route);
+  const html=await readFile(join(out,route.slice(1),'index.html'),'utf8').catch(()=>null);
+  if(!html||!html.includes('class="landing-hero"')||!html.includes('class="landing-steps"')||!html.includes('class="landing-card-grid"'))
+    errors.push('Missing actionable solution content: '+route);
+}
+const schemaScripts=[...homeHtml.matchAll(/<script\s+type="application\/ld\+json"\s*>([\s\S]*?)<\/script>/gi)];
+const siteSchemas=schemaScripts.map(m=>{try{return JSON.parse(m[1])}catch{return null}}).filter(s=>s&&s['@type']==='WebSite');
+if(siteSchemas.length!==1||siteSchemas[0].name!=='P2LRN'||siteSchemas[0].url!==CANONICAL_ORIGIN+'/')
+  errors.push('Missing or inconsistent P2LRN WebSite identity structured data');
+if(named(homeHtml,'meta','property','og:site_name').length!==1)errors.push('Missing site identity in home OpenGraph');
 const [quick,creator]=await Promise.all(['quickstart.p2lrn','canonical/creator-course.p2lrn'].map(p=>readFile(join(out,'examples',p)).catch(()=>null)));
 if(!quick||!creator||!quick.equals(creator))errors.push('compatibility quickstart package missing or not identical to verified creator-course');
 const studio=await readFile(join(out,'studio/index.html'),'utf8');

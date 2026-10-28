@@ -6,6 +6,9 @@ export const SITE_FOOTER_GROUPS = Object.freeze([
   {
     label: 'Crear y explorar',
     links: [
+      ['/crear-cursos-interactivos/', 'Crear cursos interactivos'],
+      ['/juegos-educativos-3d/', 'Juegos educativos 3D'],
+      ['/cursos-offline/', 'Cursos sin LMS'],
       ['/docs/paquetes/', 'Crear paquetes'],
       ['/demo/', 'Player y visor'],
       ['/docs/questionnaires/', 'Cuestionarios y juegos'],

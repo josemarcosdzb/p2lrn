@@ -86,9 +86,11 @@
     },
     {
       label: 'Crear',
-      active: ['/studio/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
+      active: ['/studio/','/crear-cursos-interactivos/','/cursos-offline/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
       items: [
         ['/studio/','Abrir Studio'],
+        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
+        ['/cursos-offline/','Cursos offline sin LMS'],
         ['/docs/studio/','Guía de Studio'],
         ['/docs/entrega-offline/','Entrega offline'],
         ['/docs/paquetes/','Crear paquetes'],
@@ -99,11 +101,12 @@
     },
     {
       label: 'Reproducir',
-      active: ['/docs/player/','/demo/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],
+      active: ['/docs/player/','/demo/','/juegos-educativos-3d/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],
       wide: true,
       items: [
         ['/docs/player/','Player'],
         ['/demo/','Visor'],
+        ['/juegos-educativos-3d/','Juegos educativos 3D'],
         ['/docs/questionnaires/','Cuestionarios y juegos'],
         ['/docs/questionnaires/standard/','Cuestionario estándar'],
         ['/docs/questionnaires/memory/','Memoria'],
