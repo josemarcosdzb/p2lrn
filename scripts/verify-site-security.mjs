@@ -33,6 +33,33 @@ for(const [page,marker] of [['studio/index.html','data-studio-status'],['demo/in
   assert.ok(html.includes(marker),'Application status element missing from '+page);
 }
 let pages=0;
-function scan(dir){for(const e of readdirSync(dir,{withFileTypes:true})){const f=join(dir,e.name);if(e.isDirectory())scan(f);else if(e.name.endsWith('.html')){pages++;const h=readFileSync(f,'utf8');for(const m of h.matchAll(/<script\b([^>]*)>/gi))assert.match(m[1],/\bsrc\s*=/i,'Inline script: '+f);assert.ok(!/\son(?:load|error|click|submit|change|input)\s*=/i.test(h),'Inline handler: '+f);}}}
+function scan(dir){
+  for(const e of readdirSync(dir,{withFileTypes:true})){
+    const f=join(dir,e.name);
+    if(e.isDirectory()){scan(f);continue}
+    if(!e.name.endsWith('.html'))continue;
+    pages++;
+    const h=readFileSync(f,'utf8');
+    for(const m of h.matchAll(/<script\b([^>]*)>/gi)){
+      if(/\bsrc\s*=/i.test(m[1]))continue;
+      // Google site-name JSON-LD is inert data, not executable JavaScript.
+      // Accept it only in the homepage and validate its exact schema identity.
+      assert.ok(f===join(site,'index.html')&&/^\s*type=["']application\/ld\+json["']\s*$/i.test(m[1]),'Inline script: '+f);
+      const trailing=h.slice(m.index+m[0].length);
+      const close=trailing.toLowerCase().indexOf('</script>');
+      assert.ok(close>=0,'Unclosed JSON-LD script: '+f);
+      let schema;
+      try{schema=JSON.parse(trailing.slice(0,close))}catch{assert.fail('Invalid JSON-LD on '+f)}
+      const allowedKeys=new Set(['@context','@type','@id','name','url','inLanguage','description']);
+      assert.ok(Object.keys(schema).every(k=>allowedKeys.has(k)),'Unexpected JSON-LD fields on '+f);
+      assert.equal(schema['@context'],'https://schema.org');
+      assert.equal(schema['@type'],'WebSite');
+      assert.equal(schema.name,'P2LRN');
+      assert.equal(schema.url,'https://p2lrn.netlify.app/');
+    }
+    // Preserve the prohibition of all inline event handlers.
+    assert.ok(!/\son(?:load|error|click|submit|change|input)\s*=/i.test(h),'Inline handler: '+f);
+  }
+}
 scan(site);assert.ok(pages>=30,'Unexpected HTML coverage');
 console.log('Website CSP and '+pages+' HTML pages verified');
