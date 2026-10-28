@@ -750,8 +750,19 @@ jobs:
         run: |
           node --check deploy/netlify/build-site.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node deploy/netlify/build-site.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node deploy/netlify/build-site.mjs *> .audit-build.log
+          $buildCode = $LASTEXITCODE
+          Get-Content .audit-build.log -Tail 160
+          if ($buildCode -ne 0) { exit $buildCode }
+      - name: Upload audited Netlify build log
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: p2lrn-audited-build-${{ github.run_id }}-${{ github.job }}
+          path: .audit-build.log
+          if-no-files-found: warn
+          retention-days: 7
 
   mcp-connectors-windows:
     # Independent gate to isolate MCP results from unrelated Studio/Player CI failures.
