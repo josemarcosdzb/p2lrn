@@ -813,3 +813,19 @@ jobs:
           } else {
             Write-Host 'P2LRN_LOCAL_LLM_TEST=SKIPPED: configure P2LRN_LOCAL_MODEL_NAME to opt in to local model inference'
           }
+      - name: Verify audited documentation on independent runner
+        run: |
+          node --check scripts/verify-doc-navigation.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-doc-navigation.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/verify-doc-flow.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-doc-flow.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build audited production site on independent runner
+        run: |
+          node --check deploy/netlify/build-site.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node deploy/netlify/build-site.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
