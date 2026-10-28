@@ -556,8 +556,10 @@ async function reviewOfflineDelivery(file){
   if(file.size>32*1024*1024)throw new Error('El archivo de resultados supera 32 MiB.');
   setStatus('Comprobando resultado offline…');
   const exported=await exportP2LRNPackage(studio);
-  const trustedReceipt=offlineReviewReceipt?.files?.[0]
-    ?await offlineReviewReceipt.files[0].text():null;
+  const receiptFile=offlineReviewReceipt?.files?.[0]??null;
+  if(receiptFile && receiptFile.size>256*1024)
+    throw new Error('El comprobante del profesor supera 256 KiB y no es válido.');
+  const trustedReceipt=receiptFile?await receiptFile.text():null;
   const parsed=await parseOfflineAssignmentResult(await file.text(),{
     expectedContentRoot:exported.manifest.integrity.contentRoot,
     trustedReceipt,
@@ -688,7 +690,10 @@ offlineReviewReceipt?.addEventListener('change',()=>{
   if(latestOfflineResultFile)void reviewOfflineDelivery(latestOfflineResultFile)
     .catch((error)=>setStatus('Comprobante inválido: '+error.message));
 });
-offlineResultButton?.addEventListener('click',()=>offlineResultInput.click());
+offlineResultButton?.addEventListener('click',()=>{
+  if(offlineReviewReceipt)offlineReviewReceipt.value='';
+  offlineResultInput.click();
+});
 offlineResultInput?.addEventListener('change',()=>{
   const file=offlineResultInput.files?.[0];offlineResultInput.value='';
   if(file)void reviewOfflineDelivery(file).catch((error)=>setStatus('No se pudo revisar la entrega: '+error.message));
