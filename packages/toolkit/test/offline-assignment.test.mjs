@@ -392,3 +392,39 @@ test('self-playing app saves operation order and verifies signed assignments bef
   const standardApp=decoder.decode(storedZipEntries(standard.bytes).get('www/app.js'));
   assert.match(standardApp,/const SIGNATURE_REQUIRED=false;/);
 });
+
+test('CDN HTML post-processing cannot silently corrupt exported Player runtime',async()=>{
+  const original='<!doctype html><html><head><title>Runtime</title></head><body>H5P</body></html>';
+  const altered=original.replace('<head>','<head><!-- Host changed this HTML -->');
+  const memberPath='runtime-host/h5p.html';
+  const release={
+    webSdkVersion:'0.5.0-alpha.11',toolkitVersion:'0.5.0-alpha.11',
+    files:[{path:memberPath,bytes:encoder.encode(original).byteLength,sha256:await shaText(original)}],
+  };
+  const visited=[];
+  const fetcher=(rawMode)=>async url=>{
+    const href=String(url);visited.push(href);
+    if(href.endsWith('release.json'))return new Response(JSON.stringify(release));
+    if(href.endsWith('.html.raw')){
+      if(rawMode==='missing')return new Response('missing',{status:404});
+      return new Response(rawMode==='corrupt'?altered:original);
+    }
+    if(href.endsWith('.html'))return new Response(rawMode==='missing'?original:altered);
+    return new Response('missing',{status:404});
+  };
+  const document=createP2LRNStudioDocument({title:'Runtime fiable'});
+  const good=await exportOfflineAssignmentBundle(document,{
+    runtimeBaseUrl:'https://static.example/player/current/dist/',fetchImpl:fetcher('valid'),
+  });
+  assert.equal(decoder.decode(storedZipEntries(good.bytes).get('www/player/'+memberPath)),original);
+  assert(visited.some(url=>url.endsWith('.html.raw')));
+  assert(!visited.some(url=>url.endsWith('/h5p.html')),'Do not fetch transformed HTML if mirror is available');
+  await assert.rejects(()=>exportOfflineAssignmentBundle(document,{
+    runtimeBaseUrl:'https://static.example/player/current/dist/',fetchImpl:fetcher('corrupt'),
+  }),/runtime Player cambió|Digest inválido/,'Corrupt raw bytes must be rejected rather than using altered HTML');
+  const compatible=await exportOfflineAssignmentBundle(document,{
+    runtimeBaseUrl:'https://static.example/player/current/dist/',fetchImpl:fetcher('missing'),
+  });
+  assert.equal(decoder.decode(storedZipEntries(compatible.bytes).get('www/player/'+memberPath)),original,
+    'Older self-hosted runtimes remain compatible when original HTML matches the release');
+});
