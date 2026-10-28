@@ -77,6 +77,14 @@ async function verifyGeneratedImportMapCsp(){
  }
 }
 await verifyGeneratedImportMapCsp();
+// Google Search Console ownership files are not regular pages and must not be transformed.
+const googleVerificationFiles=(await readdir(src)).filter(name=>/^google[0-9a-f]+\.html$/i.test(name));
+for(const name of googleVerificationFiles){
+  const original=await readFile(join(src,name),'utf8');
+  const published=await readFile(join(out,name),'utf8').catch(()=>null);
+  if(original!==('google-site-verification: '+name)||published!==original)
+    errors.push('Search Console verification token missing or modified: '+name);
+}
 const result={ok:errors.length===0,sourcePages:sourcePages.length,indexable:indexable.length,aliases:aliases.length,sitemapURLs:xmlUrls.length,quickstartVerified:Boolean(quick&&creator&&quick.equals(creator)),errors};
 console.log(JSON.stringify(result,null,2));
 if(errors.length)process.exitCode=1;
