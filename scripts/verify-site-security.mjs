@@ -6,7 +6,7 @@ const site=join(root,'deploy','netlify','site');
 const headers=readFileSync(join(site,'_headers'),'utf8');
 for(const d of ['X-Content-Type-Options: nosniff','Referrer-Policy:','Permissions-Policy:','X-Frame-Options:','Content-Security-Policy:',"object-src 'none'","base-uri 'none'",'frame-ancestors'])assert.ok(headers.includes(d),'Missing: '+d);
 assert.ok(headers.includes('/player/')===false,'Runtime headers must not inherit restrictive iframe policy');
-assert.ok(headers.includes('/docs/*')&&headers.includes('/studio/*')&&headers.includes('/demo/*'),'Missing protected web sections');
+assert.ok(headers.includes('/docs/*')&&headers.includes('/studio/*')&&headers.includes('/demo/*')&&headers.includes('/analytics/*'),'Missing protected web sections');
 const sections=headers.replaceAll('\r\n','\n').split('\n');
 const cspForRoute=(route)=>{
   const pos=sections.findIndex(line=>line===route);
@@ -21,13 +21,13 @@ for(const route of ['/studio/*','/demo/*']){
   assert.match(connect,/(?:^|\s)blob:(?:\s|$)/u,route+' must allow verified local Blob packages');
   assert.ok(!policy.includes("script-src 'unsafe-inline'"),'Authoring script CSP must remain strict');
 }
-for(const route of ['/','/contacto/*','/docs/*']){
+for(const route of ['/','/contacto/*','/docs/*','/analytics/*']){
   const connect=/connect-src ([^;]+)/u.exec(cspForRoute(route))?.[1]??'';
   assert.ok(!connect.includes('blob:'),'Do not widen Blob connections beyond authoring/player: '+route);
 }
 const scripts=headers.split('script-src ')[1]?.split(';',1)[0]??'';
 assert.ok(scripts.includes("'self'")&&!scripts.includes("'unsafe-inline'")&&!scripts.includes("'unsafe-eval'"),'Script CSP permits unsafe JS');
-for(const [page,marker] of [['studio/index.html','data-studio-status'],['demo/index.html','data-viewer-status']]){
+for(const [page,marker] of [['studio/index.html','data-studio-status'],['demo/index.html','data-viewer-status'],['analytics/index.html','p2lrn-analytics']]){
   const html=readFileSync(join(site,...page.split('/')),'utf8');
   assert.ok(html.includes('data-functional-status'),'Functional status marker missing from '+page);
   assert.ok(html.includes(marker),'Application status element missing from '+page);

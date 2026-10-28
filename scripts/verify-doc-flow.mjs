@@ -15,7 +15,7 @@ const pager=(html)=>{
 };
 
 const primary=[
-  '/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/','/docs/paquetes/multipart/','/docs/toolkit/','/docs/cli/','/docs/player/','/docs/questionnaires/','/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/ordering/','/docs/questionnaires/classification/','/docs/questionnaires/true-false/','/docs/questionnaires/word-search/','/docs/questionnaires/crossword/','/docs/questionnaires/rosco/','/docs/questionnaires/3d/','/docs/juegos-3d/','/docs/ejemplos/','/docs/integracion/','/docs/eventos/','/docs/progresion/','/docs/metricas/','/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'
+  '/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/','/docs/paquetes/multipart/','/docs/toolkit/','/docs/cli/','/docs/player/','/docs/questionnaires/','/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/ordering/','/docs/questionnaires/classification/','/docs/questionnaires/true-false/','/docs/questionnaires/word-search/','/docs/questionnaires/crossword/','/docs/questionnaires/rosco/','/docs/questionnaires/3d/','/docs/juegos-3d/','/docs/ejemplos/','/docs/integracion/','/docs/eventos/','/docs/progresion/','/docs/metricas/','/docs/analytics/','/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'
 ];
 for(let i=0;i<primary.length;i++){
   const route=primary[i];
@@ -58,7 +58,7 @@ for(let i=0;i<foundationalOrder.length;i++)if(foundationalOrder[i]<0)failures.pu
 for(let i=1;i<foundationalOrder.length;i++)if(foundationalOrder[i]<=foundationalOrder[i-1])failures.push('Antes de empezar children are not in mental-model order');
 const flatSidebar=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1] ?? '';
 for(const route of foundationalRoutes)if(flatSidebar.includes("['"+route+"'"))failures.push('foundational route is flat instead of nested under Antes de empezar: '+route);
-for(const route of ['/docs/progresion/','/docs/metricas/']){
+for(const route of ['/docs/progresion/','/docs/metricas/','/docs/analytics/']){
   if(childBlock.includes("['"+route+"'"))failures.push('advanced tracking route remains under Antes de empezar: '+route);
   const seguimiento=flatSidebar.slice(flatSidebar.indexOf("['SEGUIMIENTO', ["),flatSidebar.indexOf("['REFERENCIA', ["));
   if(!seguimiento.includes("['"+route+"'"))failures.push('tracking route missing from SEGUIMIENTO: '+route);
@@ -73,7 +73,7 @@ if(/\bCDN\b|p2lrn\.netlify\.app/u.test(npm))failures.push('NPM article leaks CDN
 if(/\bNPM\b|npm install|\bnpx\b|@p2lrn\//u.test(cdn))failures.push('CDN article leaks NPM instructions');
 
 const richMinimum=new Map([
-  ['/docs/empezar/',6],['/docs/conceptos/',8],['/docs/studio/',7],['/docs/entrega-offline/',10],['/docs/progresion/',8],['/docs/eventos/',9],['/docs/metricas/',12],['/docs/recetas/',4],['/docs/glosario/',5],['/docs/questionnaires/',5]
+  ['/docs/empezar/',6],['/docs/conceptos/',8],['/docs/studio/',7],['/docs/entrega-offline/',10],['/docs/progresion/',8],['/docs/eventos/',9],['/docs/metricas/',12],['/docs/analytics/',10],['/docs/recetas/',4],['/docs/glosario/',5],['/docs/questionnaires/',5]
 ]);
 for(const [route,min] of richMinimum){
   const html=await readFile(routeFile(route),'utf8');
@@ -101,7 +101,7 @@ for(const name of publicHtml){
   const html=await readFile(join(site,name),'utf8');
   if(html.includes('0.5.0-alpha.10'))failures.push('stale alpha.10 reference in public source: '+String(name));
 }
-if(publicHtml.length<57)failures.push('public HTML inventory unexpectedly shrank: '+publicHtml.length);
+if(publicHtml.length<59)failures.push('public HTML inventory unexpectedly shrank: '+publicHtml.length);
 
 const requiredByFile=new Map([
   ['deploy/netlify/site/docs/player/index.html',[
@@ -120,6 +120,10 @@ const requiredByFile=new Map([
   ['deploy/netlify/site/docs/studio/index.html',[
     'author','createdAt','license','copyrightHolder','resourceLibrary',
     'materializeSharedResource','exportOfflineAssignment','reviewOfflineResult'
+  ]],
+  ['deploy/netlify/site/docs/analytics/index.html',[
+    'P2LRN Analytics','@p2lrn/analytics','analytics/current/dist/p2lrn-analytics.js',
+    'authoritative: true','createHttpAnalyticsDataSource','p2lrn-analytics-refresh'
   ]],
   ['deploy/netlify/site/docs/referencia/index.html',[
     'createMcpCapabilityProvider','createOfflineSyncController','createLearningEventStream',

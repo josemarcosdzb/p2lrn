@@ -9,6 +9,7 @@ on:
       - 'integration/lms/**'
       - 'packages/player/**'
       - 'packages/studio/**'
+      - 'packages/analytics/**'
       - 'packages/h5p-libraries/**'
       - 'deploy/netlify/**'
       - 'PUBLISHING.md'
@@ -25,6 +26,7 @@ on:
       - 'integration/lms/**'
       - 'packages/player/**'
       - 'packages/studio/**'
+      - 'packages/analytics/**'
       - 'packages/h5p-libraries/**'
       - 'LICENSE'
       - 'NOTICE.md'
@@ -326,7 +328,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Verify four-package release version alignment
+      - name: Verify five-package release version alignment
         run: node scripts/check-release-alignment.mjs
 
       - name: Verify guarded version bump dry-run cannot modify source
@@ -367,6 +369,14 @@ jobs:
 
       - name: Verify Studio setup CLI
         run: node --test packages/studio/test/*.test.mjs
+
+      - name: Build and test P2LRN Analytics
+        run: |
+          node --check packages/analytics/src/model.js
+          node --check packages/analytics/src/p2lrn-analytics.js
+          node --test packages/analytics/test/*.test.mjs
+          node packages/analytics/scripts/build-dist.mjs
+          node scripts/verify-analytics.mjs
 
       - name: Verify global docs navigation
         run: node scripts/verify-doc-navigation.mjs
@@ -471,7 +481,7 @@ jobs:
           $catalog = Get-Content -Raw .netlify-cdn/examples/catalog.json | ConvertFrom-Json
           if ($catalog.examples.Count -le 1) { throw 'Website catalog must include the canonical and generated examples' }
 
-      - name: Inspect public npm registry for all four P2LRN distributions
+      - name: Inspect public npm registry for all five P2LRN distributions
         run: node scripts/check-public-npm-registry.mjs
 
       - name: Verify local viewer and isolated runtimes

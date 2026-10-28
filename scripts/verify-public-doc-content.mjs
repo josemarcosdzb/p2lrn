@@ -180,6 +180,10 @@ const questionnaireOverviewDocs=article(await readFile(join(root,'deploy/netlify
 if(!questionnaireOverviewDocs.includes('Completar huecos')){
   failures.push('deploy/netlify/site/docs/questionnaires/index.html: fill-blanks game is missing from the overview');
 }
+const analyticsDocs=article(await readFile(join(root,'deploy/netlify/site/docs/analytics/index.html'),'utf8'));
+for(const token of ['P2LRN Analytics','@p2lrn/analytics','authoritative: true','createHttpAnalyticsDataSource','p2lrn-analytics-refresh']){
+  if(!analyticsDocs.includes(token))failures.push('deploy/netlify/site/docs/analytics/index.html: missing Analytics contract '+token);
+}
 const componentMapDocs=article(await readFile(join(root,'deploy/netlify/site/docs/que-usar/index.html'),'utf8'));
 for(const token of ['Componentes nativos','Aviso','línea temporal']){
   if(!componentMapDocs.includes(token)) failures.push('deploy/netlify/site/docs/que-usar/index.html: missing native component map token '+token);

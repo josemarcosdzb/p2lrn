@@ -1,13 +1,14 @@
 # P2LRN npm publishing
 
-The npm distribution consists of four version-aligned packages:
+The npm distribution consists of five version-aligned packages:
 
 - `@p2lrn/player` — browser Player, renderers, isolated runtime hosts, Service Worker and pinned `h5p-standalone` core assets.
 - `@p2lrn/toolkit` — validator, package Reader, lightweight document Reader (`@p2lrn/toolkit/document-reader`), Creator/authoring APIs, conversion tools and CLI.
 - `@p2lrn/h5p-libraries` — pinned reusable third-party H5P library corpus. It contains no user/course packages.
 - `@p2lrn/studio` — browser authoring component and optional Host-backed Save, Reader and Import endpoints.
+- `@p2lrn/analytics` — embeddable learner/course analytics dashboard and aggregation helpers.
 
-All four packages currently use the same release version: `0.5.0-alpha.11`.
+All five packages currently use the same release version: `0.5.0-alpha.11`.
 
 Candidate release notes: `spec/RELEASE-NOTES-0.5.0-alpha.11.md`. The executable acceptance matrix is `spec/E2E-MATRIX-0.5.0-alpha.11.md` plus `scripts/verify-connected-e2e-matrix.mjs`.
 
@@ -34,7 +35,7 @@ node scripts/verify-connected-e2e-matrix.mjs
 
 The connected E2E matrix is also a release gate. It verifies that the current workflow still covers collaboration authoring/round-trip, authenticated production HTTP collaboration, two-Player browser synchronization, resource deduplication, rich analytics, accessibility checks, offline/cache playback, external-format regression, installed npm browser use, all twelve native games, an independent Express Host and npm/CDN identity. CI writes `.connected-e2e-matrix.json` and preserves it with the Windows evidence.
 
-For `0.5.0-alpha.11`, any previously staged candidate from an older commit is stale once source changes land. The staging step must recreate all four tarballs from the exact green `main` SHA. Public-registry publication remains a separate explicit action.
+For `0.5.0-alpha.11`, any previously staged candidate from an older commit is stale once source changes land. The staging step must recreate all five tarballs from the exact green `main` SHA. Public-registry publication remains a separate explicit action.
 
 These readiness commands do not publish packages and do not deploy the Netlify site. Actual publication begins only with the explicit `npm publish` commands in the Publishing order section.
 
@@ -78,7 +79,7 @@ This is a custom source-available, non-commercial license, so the first-party np
 "license": "SEE LICENSE IN LICENSE"
 ```
 
-The root `LICENSE` and `NOTICE.md` are the authorities. Byte-identical copies must be shipped at the top level of both `@p2lrn/player` and `@p2lrn/toolkit`.
+The root `LICENSE` and `NOTICE.md` are the authorities. Byte-identical copies must be shipped at the top level of the first-party Player, Toolkit, Studio and Analytics packages.
 
 `node scripts/check-publish-ready.mjs` verifies the declaration, the package-local license/notice copies, their byte identity and their presence in the npm `files` lists.
 
@@ -104,18 +105,19 @@ gate; do not claim the existing registry tarball contains unshipped fixes.
 
 ## Publishing order
 
-After every gate is green, the license gate passes and the release owner approves publication, publish the **four aligned packages** in dependency order: shared H5P libraries, Toolkit, Player, then Studio. For the current prerelease version use the npm `next` dist-tag, **not** the stable `latest` tag:
+After every gate is green, the license gate passes and the release owner approves publication, publish the **five aligned packages** in dependency order: shared H5P libraries, Toolkit, Player, Studio, then Analytics. For the current prerelease version use the npm `next` dist-tag, **not** the stable `latest` tag:
 
 ```bash
 cd packages/h5p-libraries && npm publish --tag next
 cd ../toolkit && npm publish --tag next
 cd ../player && npm publish --tag next
 cd ../studio && npm publish --tag next
+cd ../analytics && npm publish --tag next
 ```
 
 When a genuinely stable version has passed its release gate, publish with the deliberately selected stable dist-tag; do not promote an alpha by accident. The commands above have **not** been executed as part of this documentation update.
 
-After registry publication, verify `npm view @p2lrn/studio@<version> version` and the equivalent command for all four packages. In a **new empty project**, install their exact versions from the public registry (not local `.tgz` files or the monorepo), then open Studio in a real browser, create, save, reimport and replay a course with Player, verifying optional H5P dependencies. A successful `npm pack` or CI run does not establish that the public registry has the release.
+After registry publication, verify `npm view @p2lrn/studio@<version> version` and the equivalent command for all five packages. In a **new empty project**, install their exact versions from the public registry (not local `.tgz` files or the monorepo), then open Studio in a real browser, create, save, reimport and replay a course with Player, verifying optional H5P dependencies. A successful `npm pack` or CI run does not establish that the public registry has the release.
 
 Host-integrated Studio server routes are **not authenticated automatically**. Every production application must protect Save, Reader and Import using its own server-side identity, authorization and request controls, as documented at `/docs/integracion/`.
 

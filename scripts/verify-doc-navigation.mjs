@@ -82,14 +82,14 @@ if(!sectionChunks.get('EMPEZAR')?.includes("['/docs/empezar-facil/','Empezar fá
 for(const href of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/']){
   if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: before-start child must not remain flat under EMPEZAR: '+href);
 }
-for(const href of ['/docs/progresion/','/docs/metricas/']){
+for(const href of ['/docs/progresion/','/docs/metricas/','/docs/analytics/']){
   if(!sectionChunks.get('SEGUIMIENTO')?.includes("['"+href+"'")) failures.push('p2lrn.js: tracking route must be grouped under SEGUIMIENTO: '+href);
   if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: advanced tracking route must not be under EMPEZAR: '+href);
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==32) failures.push('p2lrn.js: expected 32 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==33) failures.push('p2lrn.js: expected 33 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
-for(const required of ['/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/','/docs/colaboracion/','/docs/progresion/','/docs/metricas/','/docs/compatibilidad/']){
+for(const required of ['/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/','/docs/colaboracion/','/docs/progresion/','/docs/metricas/','/docs/analytics/','/docs/compatibilidad/']){
   if(!hrefs.includes(required)) failures.push('p2lrn.js: missing global sidebar route '+required);
 }
 const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
@@ -120,7 +120,7 @@ if(!js.includes("'/docs/conectores/*'"))
 
 const foundationChildren=childLinks.filter((item)=>['/docs/que-usar/','/docs/conceptos/','/docs/formato/'].includes(item.href));
 if(foundationChildren.length!==3) failures.push('p2lrn.js: expected 3 Antes de empezar child links, found '+foundationChildren.length);
-for(const advanced of ['/docs/progresion/','/docs/metricas/'])if(childLinks.some((item)=>item.href===advanced)) failures.push('p2lrn.js: advanced tracking route must not be nested under Antes de empezar: '+advanced);
+for(const advanced of ['/docs/progresion/','/docs/metricas/','/docs/analytics/'])if(childLinks.some((item)=>item.href===advanced)) failures.push('p2lrn.js: advanced tracking route must not be nested under Antes de empezar: '+advanced);
 const questionnaireChildren=childLinks.filter((item)=>item.href.startsWith('/docs/questionnaires/')&&item.href!=='/docs/questionnaires/');
 if(questionnaireChildren.length!==10) failures.push('p2lrn.js: expected 10 questionnaire child links, found '+questionnaireChildren.length);
 for(const required of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/questionnaires/standard/','/docs/questionnaires/memory/','/docs/questionnaires/matching/','/docs/questionnaires/3d/']){

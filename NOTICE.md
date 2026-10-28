@@ -20,6 +20,7 @@ Salvo aviso específico en contrario, P2LRN-NCSL 1.0 se aplica al material origi
 
 P2LRN-NCSL 1.0 no pretende relicenciar:
 
+- `packages/analytics/`, módulo first-party de analítica y panel embebible;
 - `packages/h5p-libraries/`, cuyo corpus y régimen se documentan en `packages/h5p-libraries/THIRD_PARTY_NOTICES.md`;
 - los archivos y assets de terceros documentados en `packages/player/THIRD_PARTY_NOTICES.md`;
 - cualquier dependencia, biblioteca, estándar, ejemplo, paquete educativo o recurso que contenga su propio copyright o licencia;

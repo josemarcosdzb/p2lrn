@@ -142,3 +142,8 @@ Permite estudiar, usar, modificar y redistribuir P2LRN para Finalidades No Comer
 Toda distribución en Forma No Fuente debe proporcionar el Código Fuente Correspondiente. Las Versiones Modificadas distribuidas deben identificarse como modificadas, mantener la licencia sobre la parte derivada cubierta y proporcionar su fuente completa. Las Versiones Modificadas ofrecidas a terceros mediante Interacción Remota por Red también deben ofrecer el Código Fuente Correspondiente.
 
 El texto jurídico completo y prevalente está en [LICENSE](./LICENSE). [NOTICE.md](./NOTICE.md) delimita el alcance first-party y las exclusiones de terceros. Las contribuciones externas se rigen además por [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## P2LRN Analytics
+
+`@p2lrn/analytics` añade un panel embebible para alumnos, cursos, progreso, actividad, intentos y notas autoritativas. Puede cargarse por NPM o desde `/analytics/current/dist/` en el CDN; los datos permanecen bajo control del Host y no se escriben dentro del paquete `.p2lrn`.
+
