@@ -13,7 +13,7 @@ if(!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/u.test(versi
   console.error('Usage: node scripts/set-version.mjs <semver> [--dry-run] [--expect-current=<semver>]');
   process.exit(2);
 }
-const paths=['h5p-libraries','toolkit','player','studio'];
+const paths=['h5p-libraries','toolkit','player','studio','analytics'];
 const originals=new Map(),pending=new Map();
 async function contents(relative){
   if(pending.has(relative))return pending.get(relative);
@@ -80,6 +80,9 @@ await change('packages/toolkit/web/p2lrn-player.js',
 await change('packages/studio/src/p2lrn-studio.js',
   /export const P2LRN_STUDIO_VERSION='[^']+';/u,
   "export const P2LRN_STUDIO_VERSION='"+version+"';",'Studio runtime version');
+await change('packages/analytics/src/model.js',
+  /export const P2LRN_ANALYTICS_VERSION='[^']+';/u,
+  "export const P2LRN_ANALYTICS_VERSION='"+version+"';",'Analytics runtime version');
 await change('packages/toolkit/web-sdk-src/p2lrn.js',
   /const version = '[^']+';/u,
   "const version = '"+version+"';",'Web loader version');
@@ -99,6 +102,7 @@ await change('packages/toolkit/test/toolkit.test.mjs',
 for(const relative of [
   'README.md','packages/player/README.md','packages/toolkit/README.md',
   'packages/studio/README.md',
+  'packages/analytics/README.md',
 ]){
   const before=await contents(relative);
   // Versionless package READMEs are valid and must remain unchanged.
@@ -111,6 +115,7 @@ for(const relative of [
   'deploy/netlify/site/docs/npm/studio/index.html',
   'deploy/netlify/site/docs/cdn/index.html',
   'deploy/netlify/site/docs/cdn/studio/index.html',
+  'deploy/netlify/site/docs/analytics/index.html',
 ]){
   const before=await contents(relative);
   if(!before.includes(previous))throw Error(relative+': current release marker missing');
@@ -120,9 +125,9 @@ for(const relative of [
 // published immutable prerelease. Do not change that history.
 const publishing='PUBLISHING.md';
 const before=await contents(publishing);
-const needle='All four packages currently use the same release version: \`'+previous+'\`.';
+const needle='All five packages currently use the same release version: \`'+previous+'\`.';
 if(!before.includes(needle))throw Error('PUBLISHING.md current version marker missing');
-pending.set(publishing,before.replace(needle,'All four packages currently use the same release version: \`'+version+'\`.'));
+pending.set(publishing,before.replace(needle,'All five packages currently use the same release version: \`'+version+'\`.'));
 const changes=[...pending.entries()].filter(([path,value])=>value!==originals.get(path));
 if(changes.length!==pending.size)throw Error('Version bump contained unexpected no-op changes');
 if(!dryRun){

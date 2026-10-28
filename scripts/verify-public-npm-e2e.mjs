@@ -13,7 +13,7 @@ const install=join(gate,'install');
 const cache=join(gate,'public-registry-cache');
 const copiedRuntime=join(gate,'copied-runtime');
 const registry='https://registry.npmjs.org';
-const packages=['h5p-libraries','toolkit','player','studio'];
+const packages=['h5p-libraries','toolkit','player','studio','analytics'];
 const output=join(gate,'public-npm-report.json');
 
 async function npmCommand() {
@@ -104,6 +104,10 @@ async function verify(){
     'studio/dist/p2lrn-studio.js',
     'studio/dist/p2lrn-studio.esm.js',
     'studio/server/index.mjs',
+    'analytics/dist/p2lrn-analytics.js',
+    'analytics/dist/p2lrn-analytics.esm.js',
+    'analytics/dist/model.js',
+    'analytics/types/index.d.ts',
     'player/dist/p2lrn.js',
     'player/dist/runtime-host/h5p.html',
     'player/dist/runtime-host/scorm.html',

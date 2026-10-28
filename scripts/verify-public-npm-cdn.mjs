@@ -17,6 +17,9 @@ const pairs=[
   ['H5P JS runtime','player','dist/runtime-host/assets/frame.bundle.js','/player/current/dist/runtime-host/assets/frame.bundle.js'],
   ['Studio classic','studio','dist/p2lrn-studio.js','/studio/current/dist/p2lrn-studio.js'],
   ['Studio ESM','studio','dist/p2lrn-studio.esm.js','/studio/current/dist/p2lrn-studio.esm.js'],
+  ['Analytics classic','analytics','dist/p2lrn-analytics.js','/analytics/current/dist/p2lrn-analytics.js'],
+  ['Analytics ESM','analytics','dist/p2lrn-analytics.esm.js','/analytics/current/dist/p2lrn-analytics.esm.js'],
+  ['Analytics model','analytics','dist/model.js','/analytics/current/dist/model.js'],
   ['H5P shared catalog','h5p-libraries','dist/index.json','/player/current/dist/runtime-host/h5p-libraries/index.json'],
   ['H5P Crossword library','h5p-libraries','dist/H5P.Crossword-0.5/library.json','/player/current/dist/runtime-host/h5p-libraries/H5P.Crossword-0.5/library.json'],
 ];
@@ -36,7 +39,7 @@ async function get(path){
   return Buffer.from(await response.arrayBuffer());
 }
 async function check(){
-  const namespaces=['toolkit','h5p-libraries','player','studio'];
+  const namespaces=['toolkit','h5p-libraries','player','studio','analytics'];
   const packages=[];
   for(const name of namespaces){
     const pkg=JSON.parse(await readFile(join(nodeModules,name,'package.json'),'utf8'));
@@ -50,16 +53,17 @@ async function check(){
   const registry=JSON.parse(await readFile(join(root,'.npm-pack-gate','public-npm-report.json'),'utf8'));
   assert.equal(registry.status,'PASS','Fresh public npm registry installation did not pass');
   assert.equal(registry.version,version,'Public npm install report/version mismatch');
-  assert.equal(registry.packages?.length,4,'Expected four public npm tarballs');
+  assert.equal(registry.packages?.length,5,'Expected five public npm tarballs');
   report.publicRegistry={status:registry.status,version:registry.version,sourceVersion:registry.sourceVersion,packages:registry.packages.map(x=>({name:x.name,version:x.version,resolved:x.resolved,integrity:x.integrity}))};
   for(const entry of report.publicRegistry.packages){
     assert.equal(new URL(entry.resolved).hostname,'registry.npmjs.org','Non-public npm source');
     assert.equal(entry.version,version,'Mixed npm versions');
   }
   const index=JSON.parse((await get('/index.json')).toString('utf8'));
-  report.cdnIndexVersions={player:index.player?.version,studio:index.studio?.version,h5p:index.h5p?.sharedLibraryPackageVersion};
+  report.cdnIndexVersions={player:index.player?.version,studio:index.studio?.version,analytics:index.analytics?.version,h5p:index.h5p?.sharedLibraryPackageVersion};
   assert.equal(index.player.version,version,'Public CDN Player version differs from installed npm');
   assert.equal(index.studio.version,version,'Public CDN Studio version differs from installed npm');
+  assert.equal(index.analytics.version,version,'Public CDN Analytics version differs from installed npm');
   assert.equal(index.h5p.sharedLibraryPackageVersion,version,'Public CDN H5P version differs from installed npm');
 
   for(const [title,name,rel,path] of pairs){

@@ -10,8 +10,8 @@ const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const script=resolve(root,'scripts/set-version.mjs');
 const list=[
   'packages/player/package.json','packages/studio/package.json',
-  'packages/toolkit/package.json','packages/h5p-libraries/package.json',
-  'packages/toolkit/config/capabilities.json','packages/studio/src/p2lrn-studio.js',
+  'packages/toolkit/package.json','packages/h5p-libraries/package.json','packages/analytics/package.json',
+  'packages/toolkit/config/capabilities.json','packages/studio/src/p2lrn-studio.js','packages/analytics/src/model.js',
   'packages/toolkit/web/p2lrn-player.js','packages/toolkit/web-sdk-src/p2lrn.js',
   'packages/player/server/runtime-host.mjs',
   'PUBLISHING.md',
@@ -19,8 +19,9 @@ const list=[
   'deploy/netlify/site/docs/npm/studio/index.html',
   'deploy/netlify/site/docs/cdn/index.html',
   'deploy/netlify/site/docs/cdn/studio/index.html',
+  'deploy/netlify/site/docs/analytics/index.html',
 ];
-test('version bump dry-run validates four packages including Studio without writing any file',async()=>{
+test('version bump dry-run validates five packages including Analytics without writing any file',async()=>{
   const paths=list.map(file=>resolve(root,file));
   const before=await Promise.all(paths.map(path=>readFile(path,'utf8')));
   const version=JSON.parse(before[0]).version;

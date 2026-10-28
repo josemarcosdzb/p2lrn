@@ -35,6 +35,14 @@ const [
 ]);
 
 if (license !== playerLicense || license !== toolkitLicense) throw new Error('First-party LICENSE copies differ.');
+const [studioLicense,analyticsLicense,studioNotice,analyticsNotice,analyticsPackageText]=await Promise.all([
+  text('packages/studio/LICENSE'),text('packages/analytics/LICENSE'),text('packages/studio/NOTICE.md'),text('packages/analytics/NOTICE.md'),text('packages/analytics/package.json'),
+]);
+if(license!==studioLicense||license!==analyticsLicense)throw new Error('Studio/Analytics LICENSE copies differ from root authority.');
+if(notice!==studioNotice||notice!==analyticsNotice)throw new Error('Studio/Analytics NOTICE copies differ from root authority.');
+const analyticsPackage=JSON.parse(analyticsPackageText);
+if(analyticsPackage.license!=='SEE LICENSE IN LICENSE')throw new Error('Analytics license metadata mismatch.');
+for(const item of ['LICENSE','NOTICE.md','src/','types/'])if(!analyticsPackage.files?.includes(item))throw new Error('Analytics npm files missing '+item);
 if (notice !== playerNotice || notice !== toolkitNotice) throw new Error('First-party NOTICE copies differ.');
 requireText(license,'P2LRN-NCSL 1.0','root LICENSE');
 requireText(notice,'P2LRN-NCSL 1.0','root NOTICE');

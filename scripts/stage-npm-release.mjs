@@ -8,7 +8,7 @@ import {promisify} from 'node:util';
 
 const execFileAsync=promisify(execFile);
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
-const names=['h5p-libraries','toolkit','player','studio'];
+const names=['h5p-libraries','toolkit','player','studio','analytics'];
 const dryRun=process.argv.includes('--dry-run');
 const targetTag='next';
 const registry='https://registry.npmjs.org';
@@ -17,7 +17,7 @@ const profile=process.env.USERPROFILE??process.env.HOME;
 if(!profile)throw Error('Release candidate staging needs USERPROFILE or HOME');
 const packages=await Promise.all(names.map(async name=>JSON.parse(await readFile(join(root,'packages',name,'package.json'),'utf8'))));
 const version=packages[0].version;
-assert(packages.every(pkg=>pkg.version===version),'Four release versions differ');
+assert(packages.every(pkg=>pkg.version===version),'Five release versions differ');
 assert.match(version,/^\d+\.\d+\.\d+-[0-9A-Za-z.-]+$/u,'Candidate must be a prerelease, not stable latest');
 assert.equal(packages[2].peerDependencies?.['@p2lrn/h5p-libraries'],version);
 assert.equal(packages[3].dependencies?.['@p2lrn/toolkit'],version);
@@ -56,13 +56,16 @@ for(const pkg of packages){
   else throw Error('Unable to determine registry status of '+pkg.name+': HTTP '+response.status);
 }
 const published=registryItems.filter(entry=>entry.status==='published');
-if(published.length===4){
+if(published.length===packages.length){
   console.log('NPM_RELEASE_STAGE_SKIPPED='+JSON.stringify({version,reason:'already-published',releaseCommit:commit}));
   process.exit(0);
 }
-if(published.length!==0)throw Error('Partial package publication already exists. Refusing an incomplete release candidate: '+JSON.stringify(registryItems));
+const missing=registryItems.filter(entry=>entry.status==='not-published');
+const analyticsBootstrap=published.length===packages.length-1 && missing.length===1 && missing[0].name==='@p2lrn/analytics';
+if(published.length!==0&&!analyticsBootstrap)throw Error('Partial package publication already exists. Refusing an incomplete release candidate: '+JSON.stringify(registryItems));
+const targetIndexes=analyticsBootstrap?missing.map(entry=>packages.findIndex(pkg=>pkg.name===entry.name)):packages.map((_,index)=>index);
 const checks=[];
-for(let i=0;i<expectedPacks.length;i++){
+for(const i of targetIndexes){
   const bytes=await readFile(expectedPacks[i]);
   assert(bytes.length>100,'Empty npm tarball: '+filenames[i]);
   checks.push({name:packages[i].name,filename:filenames[i],bytes:bytes.length,
@@ -78,6 +81,7 @@ await mkdir(out,{recursive:true});
 for(const check of checks)await copyFile(join(root,'.npm-pack-gate','packs',check.filename),join(out,check.filename));
 const manifest={
   schema:'https://p2lrn.org/schema/npm-release-candidate/1',version,tag:targetTag,
+  mode:analyticsBootstrap?'analytics-bootstrap':'full-release',
   status:'STAGED_NOT_PUBLISHED',sourceRepository:repo,sourceCommit:commit,
   assembledAt:new Date().toISOString(),
   packages:checks,publicRegistryBeforeStaging:registryItems,
@@ -117,7 +121,7 @@ const commands=[
   '  npm view ($p.name + "@" + $manifest.version) version',
   '  if ($LASTEXITCODE -ne 0) { throw ("No se pudo verificar el paquete " + $p.name) }',
   '}',
-  'Write-Host "Se publicaron los cuatro paquetes en npm bajo next. Ejecuta la validacion limpia del registro."',
+  'Write-Host "Se publicaron los paquetes pendientes en npm bajo next. Ejecuta la validacion limpia del registro."',
 ];
 await writeFile(join(out,'publicar-next.ps1'),commands.join('\r\n')+'\r\n');
 if(await remoteHead()!==commit)throw Error('main changed after staging. Reject this candidate and re-run CI.');

@@ -7,13 +7,13 @@ import {fileURLToPath} from 'node:url';
 // --require-published to turn missing/unreachable packages into a release gate.
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const registry = 'https://registry.npmjs.org';
-const directories = ['h5p-libraries', 'toolkit', 'player', 'studio'];
+const directories = ['h5p-libraries', 'toolkit', 'player', 'studio', 'analytics'];
 const packages = await Promise.all(directories.map(async (directory) => {
   const pkg = JSON.parse(await readFile(resolve(root, 'packages', directory, 'package.json'), 'utf8'));
   return {name:pkg.name, version:pkg.version};
 }));
 if (new Set(packages.map(pkg=>pkg.version)).size !== 1) {
-  throw new Error('The four P2LRN npm packages do not share one release version.');
+  throw new Error('The five P2LRN npm packages do not share one release version.');
 }
 
 // Native HTTPS requests avoid Windows cmd/npm.cmd launch and quoting failures.

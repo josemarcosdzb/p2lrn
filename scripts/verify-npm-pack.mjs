@@ -103,13 +103,15 @@ const toolkitPackage = JSON.parse(await readFile(join(root,'packages/toolkit/pac
 const playerPackage = JSON.parse(await readFile(join(root,'packages/player/package.json'),'utf8'));
 const h5pPackage = JSON.parse(await readFile(join(root,'packages/h5p-libraries/package.json'),'utf8'));
 const studioPackage = JSON.parse(await readFile(join(root,'packages/studio/package.json'),'utf8'));
-if (toolkitPackage.version !== playerPackage.version || h5pPackage.version !== playerPackage.version || studioPackage.version !== playerPackage.version) {
-  throw new Error(`npm package versions differ: player=${playerPackage.version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}, studio=${studioPackage.version}`);
+const analyticsPackage = JSON.parse(await readFile(join(root,'packages/analytics/package.json'),'utf8'));
+if (toolkitPackage.version !== playerPackage.version || h5pPackage.version !== playerPackage.version || studioPackage.version !== playerPackage.version || analyticsPackage.version !== playerPackage.version) {
+  throw new Error(`npm package versions differ: player=${playerPackage.version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}, studio=${studioPackage.version}, analytics=${analyticsPackage.version}`);
 }
 assertManifestInstallSafety(toolkitPackage,'@p2lrn/toolkit');
 assertManifestInstallSafety(playerPackage,'@p2lrn/player');
 assertManifestInstallSafety(h5pPackage,'@p2lrn/h5p-libraries');
 assertManifestInstallSafety(studioPackage,'@p2lrn/studio');
+assertManifestInstallSafety(analyticsPackage,'@p2lrn/analytics');
 
 await runNpm(['install','--ignore-scripts','--no-audit','--no-fund'], {cwd:join(root,'packages/toolkit')});
 
@@ -117,10 +119,11 @@ const toolkitTgz = await pack('packages/toolkit');
 const h5pTgz = await pack('packages/h5p-libraries');
 const playerTgz = await pack('packages/player');
 const studioTgz = await pack('packages/studio');
+const analyticsTgz = await pack('packages/analytics');
 
 await runNpm(['init','-y'], {cwd:installRoot});
 await runNpm(
-  ['install','--ignore-scripts','--no-audit','--no-fund', toolkitTgz, h5pTgz, playerTgz, studioTgz],
+  ['install','--ignore-scripts','--no-audit','--no-fund', toolkitTgz, h5pTgz, playerTgz, studioTgz, analyticsTgz],
   {cwd:installRoot},
 );
 await runNpm(['audit','--omit=dev','--audit-level=high'], {cwd:installRoot});
@@ -129,6 +132,7 @@ const toolkitRoot = join(installRoot,'node_modules','@p2lrn','toolkit');
 const playerRoot = join(installRoot,'node_modules','@p2lrn','player');
 const h5pRoot = join(installRoot,'node_modules','@p2lrn','h5p-libraries');
 const studioRoot = join(installRoot,'node_modules','@p2lrn','studio');
+const analyticsRoot = join(installRoot,'node_modules','@p2lrn','analytics');
 
 for (const path of [
   join(playerRoot,'source','SOURCE-MANIFEST.json'),
@@ -168,7 +172,7 @@ await assertFile(join(playerRoot,'source','index.html'));
 const rootLicenseText = await readFile(join(root,'LICENSE'),'utf8');
 const rootNoticeText = await readFile(join(root,'NOTICE.md'),'utf8');
 
-for (const packageRoot of [toolkitRoot, playerRoot, studioRoot]) {
+for (const packageRoot of [toolkitRoot, playerRoot, studioRoot, analyticsRoot]) {
   await assertFile(join(packageRoot,'LICENSE'));
   await assertFile(join(packageRoot,'NOTICE.md'));
 
@@ -220,6 +224,10 @@ for (const path of [
   join(studioRoot,'templates','next-reader-route.ts'),
   join(studioRoot,'templates','next-import-route.ts'),
   join(studioRoot,'templates','generic-contract.md'),
+  join(analyticsRoot,'dist','p2lrn-analytics.js'),
+  join(analyticsRoot,'dist','p2lrn-analytics.esm.js'),
+  join(analyticsRoot,'dist','model.js'),
+  join(analyticsRoot,'types','index.d.ts'),
 ]) {
   await assertFile(path);
 }
@@ -242,6 +250,8 @@ await run(node, ['--check', join(playerRoot,'server','collaboration-http.mjs')])
 await run(node, ['--check', join(studioRoot,'dist','p2lrn-studio.esm.js')]);
 await run(node, ['--check', join(studioRoot,'server','index.mjs')]);
 await run(node, ['--check', join(studioRoot,'bin','p2lrn-studio.mjs')]);
+await run(node, ['--check', join(analyticsRoot,'dist','p2lrn-analytics.esm.js')]);
+await run(node, ['--check', join(analyticsRoot,'dist','model.js')]);
 await run(node, [join(toolkitRoot,'dist','cli','main.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','tools','multipart.js'),'--help']);
 await run(node, [join(toolkitRoot,'dist','cli','document-reader.js'),'--help']);
@@ -355,12 +365,14 @@ console.log(JSON.stringify({
     player:playerTgz,
     h5pLibraries:h5pTgz,
     studio:studioTgz,
+    analytics:analyticsTgz,
   },
   installed:{
     toolkit:true,
     player:true,
     h5pLibraries:true,
     studio:true,
+    analytics:true,
     documentReaderSubpath:'@p2lrn/toolkit/document-reader',
   },
   h5pLibraryCount:catalog.libraryCount,

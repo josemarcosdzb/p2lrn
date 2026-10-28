@@ -8,10 +8,11 @@ const playerPackage = JSON.parse(await readFile(join(root,'packages','player','p
 const toolkitPackage = JSON.parse(await readFile(join(root,'packages','toolkit','package.json'),'utf8'));
 const h5pPackage = JSON.parse(await readFile(join(root,'packages','h5p-libraries','package.json'),'utf8'));
 const studioPackage = JSON.parse(await readFile(join(root,'packages','studio','package.json'),'utf8'));
+const analyticsPackage = JSON.parse(await readFile(join(root,'packages','analytics','package.json'),'utf8'));
 const version = playerPackage.version;
 
-if (toolkitPackage.version !== version || h5pPackage.version !== version || studioPackage.version !== version) {
-  throw new Error(`Version mismatch: player=${version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}, studio=${studioPackage.version}`);
+if (toolkitPackage.version !== version || h5pPackage.version !== version || studioPackage.version !== version || analyticsPackage.version !== version) {
+  throw new Error(`Version mismatch: player=${version}, toolkit=${toolkitPackage.version}, h5p=${h5pPackage.version}, studio=${studioPackage.version}, analytics=${analyticsPackage.version}`);
 }
 
 const npmPlayer = join(root,'.npm-pack-gate','install','node_modules','@p2lrn','player','dist');
@@ -20,6 +21,8 @@ const cdnPlayer = join(root,'.netlify-cdn','player',version,'dist');
 const cdnH5p = join(cdnPlayer,'runtime-host','h5p-libraries');
 const npmStudio = join(root,'.npm-pack-gate','install','node_modules','@p2lrn','studio','dist');
 const cdnStudio = join(root,'.netlify-cdn','studio',version,'dist');
+const npmAnalytics = join(root,'.npm-pack-gate','install','node_modules','@p2lrn','analytics','dist');
+const cdnAnalytics = join(root,'.netlify-cdn','analytics',version,'dist');
 
 async function walk(dir, base = dir) {
   const out = [];
@@ -65,10 +68,13 @@ await stat(cdnPlayer);
 await stat(cdnH5p);
 await stat(npmStudio);
 await stat(cdnStudio);
+await stat(npmAnalytics);
+await stat(cdnAnalytics);
 
 const playerFiles = await compareTrees(npmPlayer, cdnPlayer, {ignorePrefix:'runtime-host/h5p-libraries/'});
 const h5pFiles = await compareTrees(npmH5p, cdnH5p);
 const studioFiles = await compareTrees(npmStudio, cdnStudio);
+const analyticsFiles = await compareTrees(npmAnalytics, cdnAnalytics);
 
 const index = JSON.parse(await readFile(join(root,'.netlify-cdn','index.json'),'utf8'));
 if (index.player?.version !== version) throw new Error('CDN index Player version mismatch.');
@@ -76,6 +82,7 @@ if (index.generatedFrom?.toolkitVersion !== toolkitPackage.version) throw new Er
 if (index.h5p?.sharedLibraryPackageVersion !== h5pPackage.version) throw new Error('CDN index H5P package version mismatch.');
 if (index.h5p?.sharedLibraryMode !== 'bundled-npm-artifact') throw new Error('CDN is not using the npm H5P artifact mode.');
 if(index.studio?.version!==studioPackage.version) throw new Error('CDN index Studio version mismatch.');
+if(index.analytics?.version!==analyticsPackage.version) throw new Error('CDN index Analytics version mismatch.');
 
 console.log(JSON.stringify({
   ok:true,
@@ -83,6 +90,7 @@ console.log(JSON.stringify({
   playerFilesCompared:playerFiles,
   h5pFilesCompared:h5pFiles,
   studioFilesCompared:studioFiles,
+  analyticsFilesCompared:analyticsFiles,
   h5pLibraryCount:index.h5p.sharedLibraryCount,
   mode:index.h5p.sharedLibraryMode,
 },null,2));
