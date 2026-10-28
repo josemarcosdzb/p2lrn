@@ -181,6 +181,10 @@ html[data-studio-mode=preview] .studio-toolbar{position:static}
 .studio-offline-fields .studio-offline-check{display:flex;align-items:center;gap:8px}
 .studio-offline-fields input[type=checkbox]{width:18px;height:18px}
 .studio-offline-note{margin:12px 0;color:var(--muted);font-size:.75rem;line-height:1.5}
+.studio-offline-note[data-offline-receipt-prompt]{padding:12px 14px;border:1px solid #b1c3e6;border-radius:8px;background:#f1f5ff;color:#243e67;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+.studio-offline-note[data-offline-receipt-prompt][hidden]{display:none}
+.studio-offline-review-receipt{display:grid;gap:7px;padding:12px 0;font-size:.8rem;font-weight:700}
+.studio-offline-review-receipt input{max-width:100%;font:inherit}
 .studio-offline-error{color:#a32323;white-space:pre-wrap;overflow-wrap:anywhere;font-size:.8rem}
 .studio-offline-error[hidden]{display:none}
 .studio-offline-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
