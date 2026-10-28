@@ -8,6 +8,9 @@ import {
   inspectOfflineAssignmentCompatibility,
   exportOfflineAssignmentBundle,
   parseOfflineAssignmentResult,
+  signOfflineAssignment,
+  verifyOfflineAssignmentSignature,
+  OFFLINE_TEACHER_RECEIPT_SCHEMA,
 } from '../web/studio/offline-assignment.js';
 import {HOST_CAPABILITY_EXTENSION} from '../web/capability-broker.js';
 import {createP2LRNStudioDocument} from '../web/studio/new-document.js';
@@ -204,3 +207,99 @@ test('offline result verifier checks digest and original course identity',async(
   const wrongCourse=await parseOfflineAssignmentResult(result,{expectedContentRoot:'sha256:'+'3'.repeat(64)});
   assert.equal(wrongCourse.courseMatches,false);
 });
+
+test('teacher-signed offline export keeps signing secrets out of learner files and issues a separate receipt',async()=>{
+  const document=createP2LRNStudioDocument({title:'Evaluación firmada'});
+  const bundle=await exportOfflineAssignmentBundle(document,{
+    signAssignment:true,runtimeBaseUrl:'https://runtime.example/player/current/dist/',fetchImpl:runtimeFetch(),
+  });
+  assert(bundle.assignment.signature);
+  assert.equal(bundle.assignment.signature.algorithm,'Ed25519');
+  assert.equal(await verifyOfflineAssignmentSignature(bundle.assignment),true);
+  assert.match(bundle.assignment.signature.keyFingerprint,/^sha256:[a-f0-9]{64}$/);
+  assert.match(bundle.teacherReceipt.filename,/\.p2lrn-assignment\.json$/);
+  const receipt=JSON.parse(decoder.decode(bundle.teacherReceipt.bytes));
+  assert.equal(receipt.schema,OFFLINE_TEACHER_RECEIPT_SCHEMA);
+  assert.deepEqual(receipt.assignment,bundle.assignment);
+  const entries=storedZipEntries(bundle.bytes);
+  assert.equal(entries.has(bundle.teacherReceipt.filename),false,'Teacher receipt must not be packaged for student');
+  const embedded=JSON.parse(decoder.decode(entries.get('www/assignment.json')));
+  assert.equal(await verifyOfflineAssignmentSignature(embedded),true);
+  assert(!JSON.stringify(embedded).toLowerCase().includes('privatekey'));
+  assert(!JSON.stringify(receipt).toLowerCase().includes('privatekey'));
+  const js=decoder.decode(entries.get('www/app.js'));
+  assert.match(js,/async function verifyAssignment/);
+  assert.match(js,/if\(!\(await verifyAssignment\(\)\)\)throw/);
+  assert.match(js,/assignmentProof:assignment\.signature\?assignment:null/);
+  const normal=await exportOfflineAssignmentBundle(document,{
+    runtimeBaseUrl:'https://runtime.example/player/current/dist/',fetchImpl:runtimeFetch(),
+  });
+  assert.equal(normal.teacherReceipt,null);
+  assert.equal(normal.assignment.signature,undefined);
+});
+
+test('result review authenticates the teacher assignment only against the saved receipt',async()=>{
+  const course=await exportOfflineAssignmentBundle(
+    createP2LRNStudioDocument({title:'Control firmado'}),{
+      signAssignment:true,runtimeBaseUrl:'https://runtime.example/player/current/dist/',fetchImpl:runtimeFetch(),
+    });
+  const a=course.assignment,receipt=decoder.decode(course.teacherReceipt.bytes);
+  const base={
+    schema:OFFLINE_RESULT_SCHEMA,version:'1',
+    assignment:{
+      assignmentId:a.assignmentId,packageId:a.packageId,contentRoot:a.contentRoot,
+      participantToken:a.participant.assignmentToken,participantLabel:'Alumno 1',policy:a.policy,
+    },
+    assignmentProof:a,
+    runtime:{playerVersion:a.runtime.playerVersion,runtimeDigest:a.runtime.runtimeDigest},
+    attempt:{id:'test',number:1,elapsedSeconds:45},
+    summary:{latestScore:{normalized:.75}},
+    submission:{states:[],answers:[],scores:[]},
+    analytics:{events:[],activeTimeMs:10000},
+    audit:{anomalies:[],evidenceRoot:await shaText(a.assignmentId+'|'+a.contentRoot)},
+  };
+  const withDigest=async value=>({...value,integrity:{algorithm:'sha256',payloadDigest:await digest(value)}});
+  const signedResult=await withDigest(base);
+  const verified=await parseOfflineAssignmentResult(signedResult,{
+    expectedContentRoot:a.contentRoot,trustedReceipt:receipt,
+  });
+  assert.equal(verified.integrityValid,true);
+  assert.equal(verified.signatureValid,true);
+  assert.equal(verified.proofMatchesResult,true);
+  assert.equal(verified.receiptMatches,true);
+  assert.equal(verified.assignmentAuthenticated,true);
+  assert.equal(verified.evidenceValid,true);
+  const withoutReceipt=await parseOfflineAssignmentResult(signedResult,{expectedContentRoot:a.contentRoot});
+  assert.equal(withoutReceipt.signatureValid,true);
+  assert.equal(withoutReceipt.assignmentAuthenticated,null,'Untrusted student public key cannot authenticate a teacher');
+  const editedAssignment=structuredClone(base);
+  editedAssignment.assignmentProof.policy.maxAttempts=99;
+  const changed=await parseOfflineAssignmentResult(await withDigest(editedAssignment),{trustedReceipt:receipt});
+  assert.equal(changed.integrityValid,true,'A digest can be recomputed by the student');
+  assert.equal(changed.signatureValid,false);
+  assert.equal(changed.assignmentAuthenticated,false);
+  const forgedScore=structuredClone(base);
+  forgedScore.submission.scores=[{id:'fake',type:'score',value:{normalized:1}}];
+  const score=await parseOfflineAssignmentResult(await withDigest(forgedScore),{trustedReceipt:receipt});
+  assert.equal(score.evidenceValid,false,'Evidence root should flag an inconsistent edited submission');
+  assert.equal(score.assignmentAuthenticated,true,'Assignment authenticity does not prove an honest score');
+  const changedIdentity=structuredClone(base);
+  changedIdentity.assignment.contentRoot='sha256:'+'d'.repeat(64);
+  const mismatch=await parseOfflineAssignmentResult(await withDigest(changedIdentity),{
+    expectedContentRoot:a.contentRoot,trustedReceipt:receipt,
+  });
+  assert.equal(mismatch.courseMatches,false);
+  assert.equal(mismatch.proofMatchesResult,false);
+  assert.equal(mismatch.assignmentAuthenticated,false);
+  const different=await signOfflineAssignment({
+    schema:OFFLINE_ASSIGNMENT_SCHEMA,version:'1',assignmentId:'urn:uuid:different',
+  });
+  const wrongReceipt=JSON.stringify({schema:OFFLINE_TEACHER_RECEIPT_SCHEMA,version:'1',assignment:different});
+  const unexpected=await parseOfflineAssignmentResult(signedResult,{trustedReceipt:wrongReceipt});
+  assert.equal(unexpected.receiptMatches,false);
+  assert.equal(unexpected.assignmentAuthenticated,false);
+});
+async function shaText(value){
+  const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(value)));
+  return 'sha256:'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+}
