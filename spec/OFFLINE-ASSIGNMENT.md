@@ -66,6 +66,14 @@ signed launcher
 
 The browser remains the presentation layer. The future signed/protected launcher would own the trusted persistence/export boundary; the current unsigned CMD delegates storage and result export to the browser and must not be described as a trusted evidence boundary.
 
+### Incremento implementado: encargo firmado por el profesor
+
+Studio permite marcar **«Firmar el encargo»** durante la exportación Windows CMD o ZIP. Genera en memoria un par Ed25519 (clave privada no exportable), firma el manifiesto de la tarea y distribuye solamente la firma y la clave pública dentro de la entrega. La copia `.p2lrn-assignment.json` se entrega **por separado al profesor** y debe conservarse fuera de los archivos del alumno.
+
+El runtime offline comprueba la firma del manifiesto antes de permitir el comienzo. Al revisar el archivo `.p2lrn-result` en Studio, el profesor puede adjuntar **su propia copia** del comprobante: Studio verifica Ed25519, identidad del curso, token de asignación y correspondencia del encargo, además de la coherencia de la cadena de evidencias. Sin ese comprobante guardado por el profesor, una firma autocontenida en el archivo del alumno **no acredita quién emitió el encargo**.
+
+**Alcance:** la firma autentica exclusivamente las condiciones originales de la tarea, nunca el contenido de las respuestas o las puntuaciones generado en el PC del alumno. Un atacante con control total puede modificar una entrega y recalcular hashes. Las soluciones que necesitan los juegos para ofrecer corrección inmediata pueden continuar dentro del paquete; **no existe aún modo universal de examen sin soluciones**. No se genera ni firma un ejecutable Windows `.exe`: el lanzador sigue siendo un `.cmd` sin firma de editor. Este incremento no convierte la entrega en una aplicación de examen supervisado.
+
 ## 4. Assignment envelope
 
 The teacher exporter creates a signed assignment manifest outside the Core package.
@@ -101,7 +109,7 @@ Minimum fields:
 
 Dates/limits are optional when the teacher does not need them.
 
-**Required for future protected mode:** the assignment statement should be Ed25519-signed by a trusted teacher/exporter key, reusing existing detached-signature primitives. **Current implementation:** portable Windows CMD/ZIP verifies the embedded ZIP's SHA-256 but does not provide a trusted Ed25519 assignment signature. A learner can recompute an unkeyed result digest after altering a result; treat current integrity as corruption detection, not proof of authorship or cheating resistance.
+**Current implementation:** an optional teacher-issued Ed25519 signature authenticates the manifest when Studio is supplied with the original teacher-kept receipt. The learner's package contains the verification key and the runtime checks its signature; the Windows CMD/ZIP also verifies an embedded SHA-256 checksum. A learner can still recompute an unkeyed result digest after changing answers or scores. Independent trusted result signing, code-signed launchers and platform attestation are **not** implemented.
 
 A student-specific export MAY bind a random opaque assignment token to one learner in the teacher's local roster. The package does not need to contain the learner's personal data.
 
