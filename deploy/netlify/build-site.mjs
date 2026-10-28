@@ -197,6 +197,24 @@ for (const htmlPath of htmlFiles) {
   }
 }
 
+// Detect CDN postprocessing BEFORE publishing. Runtime HTML is hashed in
+// release.json, and its .raw mirrors must contain identical bytes under both
+// versioned and current URLs so offline courses can be exported reliably.
+const playerRelease=JSON.parse(await readFile(join(outputRoot,'player','current','dist','release.json'),'utf8'));
+const runtimeHtmlMembers=playerRelease.files.filter(file=>file.path.endsWith('.html'));
+if(runtimeHtmlMembers.length<3)throw new Error('Player release lacks the expected HTML runtime hosts');
+for(const channel of ['current',productionPublicVersion]){
+  for(const descriptor of runtimeHtmlMembers){
+    for(const suffix of ['', '.raw']){
+      const file=join(outputRoot,'player',channel,'dist',descriptor.path+suffix);
+      const data=await readFile(file);
+      const digest='sha256:'+createHash('sha256').update(data).digest('hex');
+      if(data.length!==descriptor.bytes||digest!==descriptor.sha256)
+        throw new Error('Immutable Player HTML differs from release.json: '+channel+'/'+descriptor.path+suffix);
+    }
+  }
+}
+
 // Never remove stateful UI controls when stripping decorative website metadata.
 const functionalPages=[
   {path:['studio','index.html'],markers:['data-functional-status','data-studio-status','data-player','data-mode-preview','data-mode-edit']},
