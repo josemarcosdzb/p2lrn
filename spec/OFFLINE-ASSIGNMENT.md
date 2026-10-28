@@ -1,6 +1,6 @@
 # P2LRN Offline Assignment / Self-Playing Delivery
 
-Status: design contract for an additive Reading-System/export mode. It does not change P2LRN Core 0.4.0 and does not create a second course graph or a collaboration transport.
+Status: **implementation + roadmap** for an additive Reading-System/export mode. The current Windows CMD/ZIP release supports an optional Ed25519-signed assignment, a separate teacher-kept receipt, and result consistency checks. It does **not** include a signed EXE, system lockdown, TPM, trusted answer grading or verified learner identity. Planned items below must not be advertised as shipped. The core .p2lrn format and Player graph remain unchanged.
 
 ## 1. Goal
 
@@ -8,23 +8,23 @@ A teacher can export an existing `.p2lrn` as a self-playing offline assignment. 
 
 The teacher can then open the returned artifact in Studio/Review to inspect answers, score, progression, attempts, active time and the supported analytics/audit trail.
 
-The same course package remains authoritative. The offline delivery adds a trusted launcher/runtime envelope and an assignment policy around it.
+The same course package remains authoritative. The offline delivery adds a launcher/runtime envelope and an assignment policy; the Windows launcher is not a code-signed or trusted examination application.
 
 ## 2. Security claim
 
 A fully offline assessment executed on a computer controlled by the learner cannot be mathematically cheat-proof. A learner with administrator/root control can ultimately modify software, clocks, memory or the operating system.
 
-P2LRN MUST therefore make a narrower and defensible claim:
+The currently implemented checks have a deliberately limited scope:
 
-- package and policy tampering are cryptographically detectable;
-- post-hoc editing of a normal returned result is detectable;
-- runtime/package/version mismatches are detectable;
-- clock discontinuities, resets, duplicate assignment tokens and abnormal session transitions are recorded;
-- the launcher fails closed on invalid teacher signatures or changed package/runtime bytes;
-- collaboration and remote live capabilities are unavailable in protected offline mode;
-- high-stakes absolute-time or identity guarantees require an external trusted authority and MUST NOT be falsely claimed by an offline-only export.
+- optional Ed25519 signing authenticates the assignment **only when the original teacher-kept receipt is supplied during review**;
+- normal Windows CMD packaging checks its embedded ZIP's SHA-256, but the launcher itself is unsigned;
+- the return file includes an unkeyed SHA-256 digest, an ordered operation chain and checks comparing raw events, states and scores with their summaries;
+- a student with full control can change answers and recompute all unkeyed digests, or replace runtime files; these checks do not prove the result's authorship;
+- absolute deadlines and attempt limits depend on the student's local clock and browser storage;
+- remote collaboration capabilities are disabled, and required remote-only resources block export;
+- high-stakes exams require externally supervised identity, time and machine controls.
 
-The protected launcher raises the cost of manipulation; it does not claim that a learner-controlled machine is a trusted examination appliance.
+Planned options such as durable trusted signing identities, independently authenticated result receipts, executable code signing and system attestation are **not implemented**. The signing key generated for an individual export is not retained or published. Keep the original receipt if you intend to verify its assignment later.
 
 ## 3. Export modes
 
@@ -70,7 +70,7 @@ The browser remains the presentation layer. The future signed/protected launcher
 
 Studio permite marcar **«Firmar el encargo»** durante la exportación Windows CMD o ZIP. Genera en memoria un par Ed25519 (clave privada no exportable), firma el manifiesto de la tarea y distribuye solamente la firma y la clave pública dentro de la entrega. La copia `.p2lrn-assignment.json` se entrega **por separado al profesor** y debe conservarse fuera de los archivos del alumno.
 
-El runtime offline comprueba la firma del manifiesto antes de permitir el comienzo. Al revisar el archivo `.p2lrn-result` en Studio, el profesor puede adjuntar **su propia copia** del comprobante: Studio verifica Ed25519, identidad del curso, token de asignación y correspondencia del encargo, además de la coherencia de la cadena de evidencias. Sin ese comprobante guardado por el profesor, una firma autocontenida en el archivo del alumno **no acredita quién emitió el encargo**.
+El runtime offline comprueba la firma del manifiesto antes de permitir el comienzo y, para una entrega firmada, rechaza la ausencia de firma. Al revisar el archivo `.p2lrn-result` en Studio, el profesor puede adjuntar **su propia copia** del comprobante: Studio verifica Ed25519, identidad del curso, token de asignación y correspondencia del encargo, además de la coherencia de la cadena de evidencias y de los resúmenes. El orden original de eventos, estados y notas se conserva en `audit.recordOrder`; si una entrega antigua mezclaba tipos de operación y no guardó el orden, Studio muestra «no verificable» en lugar de atribuir una manipulación. Sin ese comprobante guardado por el profesor, una firma autocontenida en el archivo del alumno **no acredita quién emitió el encargo**.
 
 **Alcance:** la firma autentica exclusivamente las condiciones originales de la tarea, nunca el contenido de las respuestas o las puntuaciones generado en el PC del alumno. Un atacante con control total puede modificar una entrega y recalcular hashes. Las soluciones que necesitan los juegos para ofrecer corrección inmediata pueden continuar dentro del paquete; **no existe aún modo universal de examen sin soluciones**. No se genera ni firma un ejecutable Windows `.exe`: el lanzador sigue siendo un `.cmd` sin firma de editor. Este incremento no convierte la entrega en una aplicación de examen supervisado.
 
@@ -242,6 +242,8 @@ The result manifest binds:
 - final score/completion summary;
 - final evidence-chain root;
 - hashes of every result payload.
+
+> **Roadmap / future requirements:** sections 11–15 describe proposed verification and supervised operation. Only the capabilities explicitly marked as implemented above are currently available.
 
 ## 11. Teacher verification
 
