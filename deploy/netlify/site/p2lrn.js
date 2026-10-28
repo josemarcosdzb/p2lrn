@@ -995,3 +995,26 @@
   label.textContent=revision?'Web '+revision.slice(0,12):'Web sin revisión';
   label.title='Revisión de los archivos web; la versión npm se muestra por separado';
 })();
+
+/* Accessible navigation landmarks and keyboard-operable horizontal scrolling. */
+(()=>{
+  const boot=()=>{
+    document.querySelectorAll('nav.doc-child-subnav').forEach(nav=>{
+      const label=nav.getAttribute('aria-label') || 'documentación';
+      if(!label.startsWith('Subsecciones de '))nav.setAttribute('aria-label','Subsecciones de '+label);
+    });
+    document.querySelectorAll('nav.resource-links:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Recursos técnicos'));
+    document.querySelectorAll('nav.doc-pager:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Navegación entre guías'));
+    const updateScrollable=()=>{
+      for(const el of document.querySelectorAll('pre,.capability-table-wrap,.capability-matrix')){
+        const overflowing=el.clientWidth>0&&el.scrollWidth>el.clientWidth+1;
+        if(overflowing&&!el.hasAttribute('tabindex')){el.tabIndex=0;el.dataset.p2lrnAddedTabindex='1'}
+        else if(!overflowing&&el.dataset.p2lrnAddedTabindex==='1'){el.removeAttribute('tabindex');delete el.dataset.p2lrnAddedTabindex}
+      }
+    };
+    updateScrollable();
+    window.addEventListener('resize',updateScrollable,{passive:true});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+})();

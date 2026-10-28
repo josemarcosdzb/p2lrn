@@ -1878,3 +1878,20 @@ iframe[src*="netlify"][style*="position: fixed" i],
 /* Keyboard skip-link target and reduced motion. */
 main[id]{scroll-margin-top:84px}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* Accessibility fixes from real axe-core and 320px browser audits. */
+.doc-sidebar>span{color:#4f5865}
+.doc-content code{overflow-wrap:anywhere;word-break:break-word}
+.doc-content pre code{overflow-wrap:normal;word-break:normal;white-space:pre}
+@media(max-width:900px){
+  .doc-breadcrumbs{min-width:0;max-width:100%}
+  .doc-breadcrumbs ol{width:100%;max-width:100%;flex-wrap:wrap}
+  .doc-breadcrumbs li{white-space:normal;min-width:0;overflow-wrap:anywhere}
+}
+
+/* Correction for remaining axe contrast */
+.check-list span{color:#136e43}
+
+/* Prevent long inline tokens from widening mobile document pages; wide tables stay scrollable. */
+.doc-content{overflow-wrap:anywhere}
+.capability-table-wrap{min-width:0;max-width:100%;overflow-x:auto}

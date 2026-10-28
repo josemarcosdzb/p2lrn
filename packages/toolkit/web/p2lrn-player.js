@@ -763,7 +763,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     if(!rightsBox.hidden)shell.append(rightsBox);
 
     if (root.type === 'activity' || root.type === 'resource') {
-      const stage = document.createElement('main'); stage.className = 'p2lrn-stage'; shell.append(stage);
+      const stage = document.createElement('div'); stage.className = 'p2lrn-stage'; shell.append(stage);
       if (root.type === 'activity' && this._progressionModel?.isLocked(root.id, this._progressionState)) {
         this.#stageMessage(stage, this.#progressionLockMessage(root.id));
         return;
@@ -784,7 +784,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       nav.setAttribute('aria-label', 'Contenido P2LRN');
       layout.append(nav);
     }
-    const stage = document.createElement('main'); stage.className = 'p2lrn-stage';
+    const stage = document.createElement('div'); stage.className = 'p2lrn-stage';
     layout.append(stage); shell.append(layout);
     const activities = [];
     const seen = new Set();

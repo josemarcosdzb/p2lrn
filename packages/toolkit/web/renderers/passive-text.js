@@ -68,6 +68,7 @@ export async function render({container, bytes, representation, resolveResourceU
 
     const iframe = document.createElement('iframe');
     iframe.className = 'p2lrn-html';
+    iframe.title = 'Contenido HTML del paquete P2LRN';
     iframe.setAttribute('sandbox', verifiedEntrypointUrl ? 'allow-same-origin' : '');
     iframe.referrerPolicy = 'no-referrer';
 
