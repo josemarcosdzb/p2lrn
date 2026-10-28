@@ -59,14 +59,85 @@ export async function verifyOfflineAssignmentSignature(assignment){
     return await crypto.subtle.verify('Ed25519',key,signatureBytes,encoder.encode(canonicalize(unsignedAssignment(assignment))));
   }catch{return false;}
 }
+// The Host emits state, score and event operations in the order they happened.
+// A result stores them in separate arrays for convenient review. The order map
+// restores their original interleaving without copying the operations twice.
+function orderedResultOperations(result){
+  const groups={
+    state:result.submission?.states??[],
+    score:result.submission?.scores??[],
+    event:result.analytics?.events??[],
+  };
+  if(Object.values(groups).some(records=>!Array.isArray(records)))return false;
+  const total=Object.values(groups).reduce((count,records)=>count+records.length,0);
+  const order=result.audit?.recordOrder;
+  if(order==null){
+    // Older P2LRN results did not save interleaving. Multiple nonempty
+    // groups cannot be reconstructed reliably: show "not verifiable".
+    if(Object.values(groups).filter(records=>records.length>0).length>1)return null;
+    return [...groups.state,...groups.score,...groups.event];
+  }
+  if(!Array.isArray(order)||order.length!==total||order.length>100000)return false;
+  const used=new Set(),records=[];
+  for(const entry of order){
+    if(!Array.isArray(entry)||entry.length!==2||
+      !Object.hasOwn(groups,entry[0])||!Number.isSafeInteger(entry[1])||
+      entry[1]<0||entry[1]>=groups[entry[0]].length)return false;
+    const key=entry[0]+':'+entry[1];
+    if(used.has(key))return false;
+    used.add(key);
+    records.push(groups[entry[0]][entry[1]]);
+  }
+  return records;
+}
 async function verifyResultEvidence(result){
   const declared=result?.audit?.evidenceRoot;
-  if(typeof declared!=='string')return null;
+  if(declared==null)return null;
+  if(!/^sha256:[0-9a-f]{64}$/.test(String(declared)))return false;
+  const records=orderedResultOperations(result);
+  if(records===null)return null;
+  if(records===false)return false;
   const base=String(result.assignment?.assignmentId??'')+'|'+String(result.assignment?.contentRoot??'');
   let current=await sha256Bytes(encoder.encode(base));
-  const records=[...(result.submission?.states??[]),...(result.submission?.scores??[]),...(result.analytics?.events??[])];
   for(const record of records)current=await sha256Bytes(encoder.encode(current+'|'+canonicalize(record)));
   return declared===current;
+}
+function resultAnswers(states){
+  const out=[];
+  for(const record of states){
+    const answers=record?.value?.answers;
+    if(!answers||typeof answers!=='object'||Array.isArray(answers))continue;
+    for(const [questionId,answer] of Object.entries(answers))
+      out.push({entityId:record.context?.entityId??null,questionId,answer});
+  }
+  return out;
+}
+function resultActiveTime(events){
+  let best=0;
+  for(const record of events){
+    if(record?.value?.type==='p2lrn:active-time')
+      best=Math.max(best,Number(record.value?.payload?.totalActiveMs)||0);
+    else if(record?.value?.payload && Number.isFinite(Number(record.value.payload.totalActiveMs)))
+      best=Math.max(best,Number(record.value.payload.totalActiveMs));
+  }
+  return best;
+}
+function verifyResultSummary(result){
+  const states=result.submission?.states,scores=result.submission?.scores,events=result.analytics?.events;
+  if(!Array.isArray(states)||!Array.isArray(scores)||!Array.isArray(events)||
+    !Array.isArray(result.submission?.answers)||!result.summary)return false;
+  const answers=resultAnswers(states);
+  const latest=[...scores].reverse().find(op=>op.type==='score')?.value??null;
+  const activeTime=resultActiveTime(events);
+  try{
+    return result.summary.stateSnapshots===states.length &&
+      result.summary.events===events.length &&
+      result.summary.answers===answers.length &&
+      canonicalize(result.submission.answers)===canonicalize(answers) &&
+      canonicalize(result.summary.latestScore??null)===canonicalize(latest) &&
+      result.summary.activeTimeMs===activeTime &&
+      result.analytics.activeTimeMs===activeTime;
+  }catch{return false;}
 }
 function jsonBytes(value){return encoder.encode(JSON.stringify(value,null,2)+'\n');}
 function textBytes(value){return encoder.encode(String(value).replace(/\r?\n/g,'\r\n'));}
@@ -328,7 +399,8 @@ function assignmentApp(){
     "function answersFromStates(states){const out=[];for(const op of states){const answers=op?.value?.answers;if(!answers||typeof answers!=='object'||Array.isArray(answers))continue;for(const [questionId,answer] of Object.entries(answers))out.push({entityId:op.context?.entityId??null,questionId,answer});}return out;}",
     "function activeMs(events){let best=0;for(const op of events){if(op?.value?.type==='p2lrn:active-time')best=Math.max(best,Number(op.value?.payload?.totalActiveMs)||0);else if(op?.value?.payload&&Number.isFinite(Number(op.value.payload.totalActiveMs)))best=Math.max(best,Number(op.value.payload.totalActiveMs));}return best;}",
     "async function evidenceRoot(records){let root=await sha(assignment.assignmentId+'|'+assignment.contentRoot);for(const record of records)root=await sha(root+'|'+canonical(record));return root;}",
-    "async function buildResult(){if(player?.stopActivityTracking)player.stopActivityTracking();await new Promise(r=>setTimeout(r,20));const ops=await adapter.pending();const states=ops.filter(x=>x.type==='state'),scores=ops.filter(x=>x.type==='score'),events=ops.filter(x=>x.type==='event');const now=new Date().toISOString();const elapsed=Math.max(0,Math.round((Date.now()-attempt.startedWallMs)/1000));const s=state();attempt.finishedAt=now;attempt.elapsedSeconds=elapsed;attempt.status='submitted';s.attempts.push(attempt);s.activeAttempt=null;saveState(s);const body={schema:RESULT_SCHEMA,version:'1',assignment:{assignmentId:assignment.assignmentId,packageId:assignment.packageId,contentRoot:assignment.contentRoot,participantToken:assignment.participant.assignmentToken,participantLabel:s.participantLabel,policy:assignment.policy},assignmentProof:assignment.signature?assignment:null,runtime:{playerVersion:assignment.runtime.playerVersion,runtimeDigest:assignment.runtime.runtimeDigest},attempt:{id:attempt.id,number:attempt.number,startedAt:attempt.startedAt,finishedAt:now,elapsedSeconds:elapsed},summary:{latestScore:latestScore(ops),stateSnapshots:states.length,events:events.length,activeTimeMs:activeMs(events),answers:answersFromStates(states).length},submission:{states,answers:answersFromStates(states),scores},analytics:{events,activeTimeMs:activeMs(events)},audit:{anomalies:attempt.anomalies||[],evidenceRoot:await evidenceRoot(ops),collaborationDisabled:true,networkPolicy:'deny-by-default'}};const digest=await sha(canonical(body));return{...body,integrity:{algorithm:'sha256',payloadDigest:digest}};}",
+    "function recordOrder(ops){const index={state:0,score:0,event:0};return ops.map(op=>{if(!Object.prototype.hasOwnProperty.call(index,op.type))throw new Error('Operación de seguimiento desconocida: '+String(op.type));return[op.type,index[op.type]++];});}",
+    "async function buildResult(){if(player?.stopActivityTracking)player.stopActivityTracking();await new Promise(r=>setTimeout(r,20));const ops=await adapter.pending();const states=ops.filter(x=>x.type==='state'),scores=ops.filter(x=>x.type==='score'),events=ops.filter(x=>x.type==='event');const now=new Date().toISOString();const elapsed=Math.max(0,Math.round((Date.now()-attempt.startedWallMs)/1000));const s=state();attempt.finishedAt=now;attempt.elapsedSeconds=elapsed;attempt.status='submitted';s.attempts.push(attempt);s.activeAttempt=null;saveState(s);const body={schema:RESULT_SCHEMA,version:'1',assignment:{assignmentId:assignment.assignmentId,packageId:assignment.packageId,contentRoot:assignment.contentRoot,participantToken:assignment.participant.assignmentToken,participantLabel:s.participantLabel,policy:assignment.policy},assignmentProof:assignment.signature?assignment:null,runtime:{playerVersion:assignment.runtime.playerVersion,runtimeDigest:assignment.runtime.runtimeDigest},attempt:{id:attempt.id,number:attempt.number,startedAt:attempt.startedAt,finishedAt:now,elapsedSeconds:elapsed},summary:{latestScore:latestScore(ops),stateSnapshots:states.length,events:events.length,activeTimeMs:activeMs(events),answers:answersFromStates(states).length},submission:{states,answers:answersFromStates(states),scores},analytics:{events,activeTimeMs:activeMs(events)},audit:{anomalies:attempt.anomalies||[],recordOrder:recordOrder(ops),evidenceRoot:await evidenceRoot(ops),collaborationDisabled:true,networkPolicy:'deny-by-default'}};const digest=await sha(canonical(body));return{...body,integrity:{algorithm:'sha256',payloadDigest:digest}};}",
     "function downloadResult(result){const blob=new Blob([JSON.stringify(result,null,2)+'\\n'],{type:'application/vnd.p2lrn-result+json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(assignment.filenameBase||'entrega')+'-intento-'+result.attempt.number+'.p2lrn-result';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}",
     "async function finish(){if(timerHandle){clearInterval(timerHandle);timerHandle=null;}$('finish').disabled=true;$('finish').textContent='Preparando entrega…';resultCache=await buildResult();downloadResult(resultCache);$('session').hidden=true;$('finished').hidden=false;}",
     "async function boot(){try{assignment=await fetch('./assignment.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se puede leer assignment.json');return r.json();});if(!(await verifyAssignment()))throw new Error('La firma del encargo no es válida. Solicita una nueva entrega al profesor.');renderGate();$('start').addEventListener('click',()=>start().catch(e=>{$('gate-status').textContent=e.message;$('gate-status').classList.add('error')}));$('finish').addEventListener('click',()=>finish().catch(e=>{$('finish').disabled=false;$('finish').textContent='Finalizar y descargar entrega';alert(e.message)}));$('download-again').addEventListener('click',()=>{if(resultCache)downloadResult(resultCache)});setInterval(()=>{$('clock').textContent=new Date().toLocaleString()},1000);}catch(error){$('title').textContent='No se puede abrir la entrega';$('gate-status').textContent=String(error?.message||error);$('gate-status').classList.add('error');}}",
@@ -483,13 +555,14 @@ export async function parseOfflineAssignmentResult(value,{expectedContentRoot=nu
   const assignmentAuthenticated=receiptMatches==null?null:
     receiptMatches===true && signatureValid===true && proofMatchesResult===true && courseMatches && assignmentMatches;
   const evidenceValid=await verifyResultEvidence(result);
+  const summaryValid=verifyResultSummary(result);
   const answers=Array.isArray(result.submission?.answers)?result.submission.answers:[],
     scores=Array.isArray(result.submission?.scores)?result.submission.scores:[],
     events=Array.isArray(result.analytics?.events)?result.analytics.events:[],
     anomalies=Array.isArray(result.audit?.anomalies)?result.audit.anomalies:[];
   return Object.freeze({
     result:Object.freeze(result),integrityValid,courseMatches,assignmentMatches,calculatedDigest:calculated,
-    signatureValid,proofMatchesResult,receiptMatches,assignmentAuthenticated,evidenceValid,
+    signatureValid,proofMatchesResult,receiptMatches,assignmentAuthenticated,evidenceValid,summaryValid,
     summary:Object.freeze({
       participantLabel:result.assignment?.participantLabel??null,attemptNumber:Number(result.attempt?.number)||null,
       elapsedSeconds:Number(result.attempt?.elapsedSeconds)||0,activeTimeMs:Number(result.analytics?.activeTimeMs)||0,
