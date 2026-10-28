@@ -1,0 +1,62 @@
+{
+  "name": "@p2lrn/analytics",
+  "version": "0.5.0-alpha.11",
+  "description": "Embeddable P2LRN analytics dashboard for learner, course, progress, activity and authoritative grade reporting",
+  "type": "module",
+  "sideEffects": true,
+  "main": "./dist/p2lrn-analytics.esm.js",
+  "module": "./dist/p2lrn-analytics.esm.js",
+  "browser": "./dist/p2lrn-analytics.esm.js",
+  "unpkg": "./dist/p2lrn-analytics.js",
+  "jsdelivr": "./dist/p2lrn-analytics.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/p2lrn-analytics.esm.js",
+      "default": "./dist/p2lrn-analytics.esm.js"
+    },
+    "./model": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/model.js",
+      "default": "./dist/model.js"
+    },
+    "./loader": "./dist/p2lrn-analytics.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/",
+    "types/",
+    "src/",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md",
+    "scripts/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "p2lrn",
+    "analytics",
+    "learning-analytics",
+    "dashboard",
+    "lms",
+    "web-component"
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "scripts": {
+    "build:dist": "node ./scripts/build-dist.mjs",
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build:dist",
+    "prepublishOnly": "node ../../scripts/check-publish-ready.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josemarcosfrodo/p2lrn.git",
+    "directory": "packages/analytics"
+  }
+}

@@ -1,0 +1,291 @@
+# P2LRN Non-Commercial Source License 1.0
+## P2LRN-NCSL 1.0
+
+Versión 1.0 - 1 de octubre de 2026
+
+Copyright (c) 2026 Jose Marcos Diaz Blanes.
+
+La versión contractual original de esta licencia es la versión en español. Las traducciones, si existen, son únicamente informativas salvo acuerdo expreso en contrario.
+
+P2LRN-NCSL 1.0 es una licencia source-available no comercial. No es una licencia Open Source aprobada por OSI porque restringe el uso comercial.
+
+## 1. Naturaleza, alcance y condición de los permisos
+
+Esta licencia regula los derechos de uso, reproducción, modificación y distribución del Software Cubierto.
+
+Los permisos de esta licencia se conceden únicamente para Finalidades No Comerciales y únicamente respecto de los derechos que cada Licenciante pueda conceder válidamente.
+
+La limitación a Finalidades No Comerciales y las obligaciones de fuente, avisos y copyleft establecidas en esta licencia son condiciones de los permisos concedidos. Si no se cumplen, no existe autorización bajo esta licencia para realizar el acto afectado.
+
+Nada de esta licencia convierte en P2LRN ni relicencia material perteneciente a terceros.
+
+El archivo NOTICE.md distribuido junto al Software Cubierto identifica el alcance práctico del repositorio y sus principales exclusiones. Cuando un archivo o componente contenga un aviso de licencia propio, dicho aviso prevalece respecto de ese archivo o componente.
+
+## 2. Definiciones
+
+**Licenciante** significa Jose Marcos Diaz Blanes y cualquier otro titular que aplique válidamente P2LRN-NCSL 1.0 a material sobre el que tenga derechos suficientes.
+
+**Usted** significa la persona física o jurídica que ejerce derechos bajo esta licencia.
+
+**Software Cubierto** significa el material original first-party de P2LRN al que se aplique expresamente P2LRN-NCSL 1.0 mediante el archivo LICENSE, NOTICE.md, metadatos de paquete o un aviso equivalente. No incluye material expresamente identificado como de terceros o excluido en NOTICE.md.
+
+**Código Fuente** significa la forma preferida del Software Cubierto para realizar modificaciones.
+
+**Forma No Fuente** significa cualquier forma distinta del Código Fuente, incluyendo binarios, ejecutables, bundles, código únicamente minificado, paquetes compilados y artefactos generados.
+
+**Modificar** significa adaptar, traducir, transformar o crear una obra derivada del Software Cubierto de una forma que requiera autorización del titular de derechos de autor.
+
+**Versión Modificada** significa una versión del Software Cubierto que haya sido Modificada.
+
+**Distribuir** significa entregar, transmitir, publicar, poner a disposición o facilitar a un tercero una copia del Software Cubierto o de una Versión Modificada, en Código Fuente o en Forma No Fuente. La mera ejecución estrictamente privada sin entrega de copias no constituye Distribución.
+
+**Código Fuente Correspondiente** significa todo el Código Fuente necesario para generar, instalar y modificar la versión concreta distribuida, incluyendo los scripts, manifiestos, definiciones de interfaz, esquemas, configuraciones y archivos específicos razonablemente necesarios para compilar, construir, empaquetar e instalar dicha versión. No incluye herramientas de propósito general, bibliotecas del sistema ni dependencias de terceros sin modificar que estén normalmente disponibles de forma independiente. No es necesario incluir aquello que pueda regenerarse automáticamente a partir del propio Código Fuente Correspondiente.
+
+**Interacción Remota por Red** significa la interacción de terceros con una Versión Modificada que esté diseñada para recibir solicitudes o acciones de usuarios a través de una red y proporcionar resultados o respuestas. La mera administración por SSH, escritorio remoto u otra herramienta genérica de administración no constituye por sí sola Interacción Remota por Red.
+
+**Finalidad Comercial** significa cualquier uso realizado por una entidad con ánimo de lucro, por cuenta de ella o para su beneficio empresarial, así como cualquier uso cuyo propósito sea obtener o facilitar ingresos, contraprestación económica, ventaja comercial o reducción de costes de una actividad comercial.
+
+Constituyen Finalidad Comercial, entre otros:
+
+1. vender, revender, alquilar, sublicenciar o cobrar por el Software Cubierto o una Versión Modificada;
+2. ofrecerlo como SaaS, servicio alojado, servicio gestionado, plataforma de pago o modalidad equivalente;
+3. incorporarlo como parte material de un producto o servicio comercial;
+4. usarlo para prestar consultoría, formación, soporte, integración, hosting u otros servicios remunerados cuando P2LRN sea parte material del servicio;
+5. monetizar su acceso o funcionamiento mediante cuotas, publicidad, patrocinio u otra contraprestación;
+6. utilizarlo internamente en una empresa u otra entidad con ánimo de lucro, aunque el acceso al Software Cubierto no se cobre por separado;
+7. utilizarlo en un proyecto encargado, financiado principalmente o ejecutado por cuenta de una entidad con ánimo de lucro cuando dicha entidad reciba un beneficio comercial material del resultado.
+
+La condición laboral de una persona no convierte por sí sola un proyecto personal e independiente en comercial cuando el proyecto no se realiza por cuenta, con recursos sustanciales ni en beneficio material de su empleador.
+
+**Finalidad No Comercial** significa una finalidad que no sea Finalidad Comercial conforme a esta sección.
+
+## 3. Aceptación y licencia directa a destinatarios
+
+No es necesario aceptar esta licencia para recibir o examinar una copia cuando la ley no requiera permiso para ello.
+
+Al ejercer cualquier derecho que requiera autorización del Licenciante, incluyendo reproducir, Modificar o Distribuir el Software Cubierto, Usted acepta las condiciones aplicables de esta licencia.
+
+La Distribución autorizada bajo esta licencia no constituye una sublicencia. Cada destinatario que reciba legítimamente una copia obtiene sus permisos directamente de los Licenciantes, sujetos a P2LRN-NCSL 1.0.
+
+## 4. Finalidades No Comerciales permitidas
+
+Mientras se cumplan todas las condiciones de esta licencia, el Licenciante concede una licencia mundial, no exclusiva y gratuita para:
+
+1. ejecutar y usar el Software Cubierto con Finalidad No Comercial;
+2. observar, estudiar y evaluar su funcionamiento;
+3. reproducirlo;
+4. Modificarlo y crear Versiones Modificadas;
+5. Distribuir copias originales o Versiones Modificadas conforme a esta licencia.
+
+Son ejemplos de Finalidades No Comerciales, siempre que no se realicen por cuenta ni en beneficio material de una entidad con ánimo de lucro:
+
+- uso personal, experimental o de hobby;
+- docencia por instituciones públicas o sin ánimo de lucro;
+- investigación académica o pública no ejecutada como servicio para una entidad comercial;
+- uso por organizaciones benéficas sin ánimo de lucro;
+- uso por administraciones públicas para funciones públicas no comerciales.
+
+Una donación general a una entidad sin ánimo de lucro no convierte por sí sola el uso en comercial cuando no sea condición para acceder al Software Cubierto ni contraprestación por un producto o servicio basado materialmente en P2LRN.
+
+Cuando un uso tenga una finalidad comercial material y una finalidad no comercial, se considerará Finalidad Comercial.
+
+## 5. Uso comercial no concedido
+
+P2LRN-NCSL 1.0 no concede permiso para ninguna Finalidad Comercial.
+
+El Licenciante puede conceder por separado licencias comerciales, propietarias, duales o con condiciones diferentes sobre los componentes cuyos derechos controle.
+
+La existencia de una modalidad comercial separada no modifica retroactivamente los permisos de una copia recibida válidamente bajo esta licencia ni crea un derecho a exigir una licencia comercial, un precio determinado o unas condiciones concretas.
+
+## 6. Modificaciones privadas
+
+Puede crear y utilizar privadamente Versiones Modificadas para Finalidades No Comerciales sin obligación de publicarlas mientras:
+
+1. no las Distribuya;
+2. no permita a terceros utilizarlas mediante Interacción Remota por Red; y
+3. siga cumpliendo las demás condiciones de esta licencia.
+
+La colaboración interna entre personas que actúan exclusivamente dentro de la misma organización sin ánimo de lucro o institución pública autorizada no se considerará Distribución a terceros a estos efectos, siempre que no exista una Finalidad Comercial y que las copias permanezcan bajo el control de dicha organización.
+
+## 7. Distribución de copias sin modificar
+
+Puede Distribuir copias sin modificar para Finalidades No Comerciales siempre que:
+
+1. entregue esta licencia de forma íntegra;
+2. conserve los avisos de copyright, autoría, licencia, ausencia de garantía y marca;
+3. conserve los avisos y licencias de terceros que deban mantenerse;
+4. no imponga al destinatario una licencia alternativa sobre el Software Cubierto;
+5. no cobre más que el coste directo y razonable de reproducción o entrega material y no obtenga beneficio por la Distribución; y
+6. si Distribuye una Forma No Fuente, cumpla íntegramente la sección 9 sobre Código Fuente Correspondiente.
+
+## 8. Distribución de Versiones Modificadas
+
+Puede Distribuir una Versión Modificada para Finalidades No Comerciales únicamente si cumple todas las condiciones siguientes:
+
+1. la versión indica de forma clara y razonablemente visible que deriva de P2LRN y que ha sido modificada;
+2. indica una fecha relevante de modificación;
+3. conserva esta licencia y los avisos exigidos;
+4. la Versión Modificada, en la medida en que constituya una obra derivada del Software Cubierto, se licencia a todos sus destinatarios bajo P2LRN-NCSL 1.0;
+5. no impone condiciones adicionales que reduzcan los derechos no comerciales concedidos por esta licencia sobre la parte cubierta;
+6. proporciona el Código Fuente Correspondiente completo conforme a la sección 9;
+7. no presenta la Versión Modificada como una versión oficial de P2LRN ni implica patrocinio, aprobación o mantenimiento por el proyecto P2LRN original; y
+8. conserva las licencias y avisos aplicables a los componentes de terceros.
+
+No se exige un archivo separado denominado MODIFICATIONS.md. El aviso de modificación y su fecha pueden incluirse en la documentación principal, una pantalla de información, un fichero de avisos, el encabezado principal del proyecto u otro lugar razonablemente visible para el destinatario.
+
+La mera agregación de una obra independiente junto al Software Cubierto, sin formar una obra derivada conforme a la legislación aplicable, no somete automáticamente dicha obra independiente a esta licencia.
+
+## 9. Código Fuente Correspondiente
+
+### 9.1 Versiones Modificadas
+
+Siempre que Distribuya una Versión Modificada, incluso si la Distribución se realiza ya en Código Fuente, deberá proporcionar el Código Fuente Correspondiente completo de esa versión.
+
+### 9.2 Formas No Fuente, modificadas o no
+
+Siempre que Distribuya el Software Cubierto o una Versión Modificada en Forma No Fuente, deberá:
+
+1. acompañar la Forma No Fuente del Código Fuente Correspondiente en el mismo medio o descarga; o
+2. proporcionar a los mismos destinatarios una URL estable desde la que puedan obtener gratuitamente el Código Fuente Correspondiente mediante un protocolo estándar y sin necesidad de adquirir otro producto.
+
+Si la Forma No Fuente se Distribuye públicamente, el Código Fuente Correspondiente deberá estar igualmente disponible al público, sin pago y sin obligación de aceptar un acuerdo de confidencialidad.
+
+Cuando se utilice una URL, el Código Fuente Correspondiente deberá mantenerse accesible mientras se siga Distribuyendo esa versión y durante al menos tres años desde la última Distribución pública de esa versión.
+
+El Código Fuente Correspondiente deberá permitir a un desarrollador razonablemente cualificado reconstruir la Forma No Fuente utilizando las dependencias de propósito general y de terceros que se identifiquen de forma suficiente.
+
+No podrá sustituirse por código deliberadamente ofuscado, únicamente minificado, generado o incompleto cuando exista una forma fuente preferida para modificarlo.
+
+## 10. Interacción Remota por Red de Versiones Modificadas
+
+Si Usted Modifica el Software Cubierto y permite que terceros interactúen con esa Versión Modificada mediante Interacción Remota por Red, deberá ofrecer a esos usuarios, de forma clara, razonablemente visible y sin coste, acceso al Código Fuente Correspondiente de la versión que esté ejecutando.
+
+Si el servicio es accesible públicamente, la fuente correspondiente también deberá ser accesible públicamente mediante un medio estándar de descarga.
+
+Esta sección no obliga a publicar modificaciones estrictamente privadas que no se Distribuyan ni se pongan a disposición de terceros mediante Interacción Remota por Red.
+
+Nada de esta sección autoriza un servicio comercial. Toda Finalidad Comercial continúa requiriendo una licencia comercial independiente.
+
+## 11. Obras independientes, interfaces e interoperabilidad
+
+Esta licencia se aplica al Software Cubierto y a las obras derivadas de este en la medida en que el derecho de autor exija autorización del Licenciante.
+
+Un programa independiente no pasa a estar sujeto a P2LRN-NCSL 1.0 únicamente por:
+
+1. comunicarse con P2LRN mediante APIs públicas, protocolos o procesos externos;
+2. leer o escribir un formato P2LRN mediante una implementación desarrollada independientemente;
+3. interoperar con P2LRN a través de una interfaz documentada; o
+4. agregarse en el mismo medio de distribución sin incorporar ni derivar del código protegido.
+
+Esta sección no concede derechos adicionales sobre código, documentación, marcas o material protegido que se copie del proyecto P2LRN. Tampoco limita los derechos de interoperabilidad que la legislación aplicable reconozca de forma inderogable.
+
+## 12. Resultados y contenido de usuarios
+
+El uso de P2LRN no transfiere al Licenciante derechos sobre cursos, documentos, datos, medios, paquetes educativos ni otros contenidos originales creados por los usuarios.
+
+Un archivo generado, validado, convertido, empaquetado o reproducido por P2LRN no queda sometido automáticamente a P2LRN-NCSL 1.0 por ese mero hecho.
+
+Si un resultado incorpora código o material del Software Cubierto, únicamente dicho material incorporado conserva la licencia que le corresponda.
+
+## 13. Componentes de terceros
+
+P2LRN puede incluir, distribuir junto a, depender de o interoperar con software y materiales de terceros.
+
+P2LRN-NCSL 1.0 no modifica, sustituye ni reduce los derechos u obligaciones derivados de una licencia válida de terceros.
+
+Cuando un archivo o componente identifique expresamente una licencia diferente, dicha licencia prevalecerá respecto de ese archivo o componente. Los avisos de terceros que deban conservarse no podrán eliminarse.
+
+La inclusión de un componente de terceros no atribuye al Licenciante la titularidad de dicho componente.
+
+## 14. Marcas, nombres y presentación oficial
+
+Esta licencia no concede derechos de marca sobre P2LRN, sus logotipos ni otros signos distintivos.
+
+Puede utilizar el nombre P2LRN de forma descriptiva para indicar compatibilidad, procedencia o que una versión deriva del proyecto, siempre que no exista confusión razonable sobre su origen.
+
+Una Versión Modificada no podrá presentarse como versión oficial ni utilizar marcas, logotipos o imagen comercial de forma que implique patrocinio, aprobación o mantenimiento oficial sin autorización.
+
+## 15. Patentes
+
+Para Finalidades No Comerciales autorizadas por esta licencia, cada Licenciante concede, en la medida en que pueda hacerlo, una licencia de patente mundial, no exclusiva y gratuita sobre las reivindicaciones de patente que resulten necesariamente infringidas por el uso autorizado de su contribución al Software Cubierto.
+
+Esta licencia de patente no cubre combinaciones con tecnología ajena cuando la infracción no resulte necesariamente de la contribución licenciada.
+
+Si Usted inicia una reclamación de patente alegando que el Software Cubierto o una contribución incluida en él infringe una patente suya, la licencia de patente concedida a Usted bajo esta sección terminará respecto de dicha contribución en la medida permitida por la ley.
+
+## 16. Contribuciones al proyecto
+
+La mera existencia de esta licencia no obliga al proyecto a aceptar contribuciones externas.
+
+Las contribuciones externas destinadas a incorporarse al repositorio oficial se regirán además por CONTRIBUTING.md y por el Contributor Grant allí descrito. Dicha política existe para que la aceptación de contribuciones no impida mantener el modelo de licenciamiento dual, incluida la posibilidad de conceder licencias comerciales separadas.
+
+Ninguna disposición de esta sección atribuye al Licenciante derechos sobre una contribución que no haya sido enviada voluntariamente para su incorporación al proyecto.
+
+## 17. Prohibición de restricciones adicionales
+
+No puede Distribuir el Software Cubierto imponiendo a sus destinatarios obligaciones contractuales, técnicas o de licencia que les impidan ejercer los derechos no comerciales que reciben directamente bajo P2LRN-NCSL 1.0.
+
+Esta regla no impide aplicar controles razonables de seguridad ni cumplir obligaciones legales que no tengan por objeto neutralizar los permisos concedidos por esta licencia.
+
+## 18. Derechos legalmente inderogables
+
+Nada de esta licencia pretende excluir o limitar derechos que una norma imperativa reconozca y no permita restringir contractualmente.
+
+Cuando resulten aplicables, se respetarán, entre otros, los derechos inderogables relativos a copias de seguridad, observación, estudio, prueba e interoperabilidad de programas de ordenador.
+
+Cualquier acto de descompilación, ingeniería inversa o reproducción amparado exclusivamente por una excepción legal deberá limitarse a la finalidad y condiciones que establezca la norma aplicable.
+
+## 19. Terminación y subsanación
+
+Los permisos concedidos por esta licencia terminan automáticamente respecto del incumplidor mientras persista un incumplimiento de una condición de esta licencia.
+
+Cuando el incumplimiento cese, los permisos quedarán restablecidos provisionalmente.
+
+El restablecimiento se convertirá en permanente si:
+
+1. el Licenciante no notifica el incumplimiento dentro de los sesenta días siguientes a su cese; o
+2. se trata de la primera notificación de incumplimiento recibida de ese Licenciante y el incumplidor corrige completamente la infracción dentro de los treinta días siguientes a recibirla.
+
+El restablecimiento no elimina responsabilidad por actos anteriores, no impide reclamar daños o medidas legalmente disponibles y no convierte retroactivamente un uso comercial no autorizado en autorizado.
+
+## 20. Ausencia de garantía
+
+En la máxima medida permitida por la legislación aplicable, el Software Cubierto se proporciona "TAL CUAL" y "SEGÚN DISPONIBILIDAD", sin garantías expresas o implícitas de comerciabilidad, idoneidad para una finalidad concreta, ausencia de errores, disponibilidad continua o no infracción, salvo las garantías que legalmente no puedan excluirse.
+
+## 21. Limitación de responsabilidad
+
+En la máxima medida permitida por la ley, el Licenciante no responderá por daños indirectos, especiales, incidentales o consecuenciales, pérdida de beneficios, pérdida de datos, interrupción de actividad o pérdida de oportunidades derivados del uso o imposibilidad de uso del Software Cubierto.
+
+Nada de esta licencia excluye o limita responsabilidad que una norma imperativa prohíba excluir o limitar.
+
+## 22. Legislación aplicable y jurisdicción
+
+Esta licencia se regirá por el Derecho español, sin perjuicio de las normas imperativas de la Unión Europea, del Derecho internacional privado y de cualquier otro régimen obligatorio aplicable.
+
+Las controversias serán conocidas por los juzgados y tribunales que resulten competentes conforme a la legislación procesal aplicable. Esta licencia no pretende imponer una sumisión territorial que resulte legalmente inválida.
+
+## 23. Nulidad parcial
+
+Si una disposición fuera declarada nula, ilegal o inexigible, quedará sin efecto únicamente en la medida necesaria. Las restantes disposiciones continuarán vigentes cuando puedan subsistir de forma coherente.
+
+## 24. Versiones de la licencia
+
+P2LRN-NCSL 1.0 es una versión específica.
+
+El Licenciante puede publicar versiones futuras para nuevas versiones del Software Cubierto. Una versión futura no sustituye automáticamente esta versión respecto de una copia ya recibida, salvo que dicha copia indique expresamente que puede utilizarse una versión posterior.
+
+## 25. No renuncia
+
+La tolerancia, retraso o falta de ejercicio de un derecho no constituye renuncia permanente a dicho derecho.
+
+## 26. Reserva de derechos
+
+Salvo por los derechos expresamente concedidos, todos los derechos permanecen reservados a sus respectivos titulares.
+
+El acceso al código fuente, su publicación en un repositorio o la posibilidad técnica de copiarlo no conceden derechos distintos de los establecidos expresamente en esta licencia.
+
+---
+
+P2LRN Non-Commercial Source License 1.0 - P2LRN-NCSL 1.0
+Versión 1.0 - 1 de octubre de 2026
+Copyright (c) 2026 Jose Marcos Diaz Blanes.
