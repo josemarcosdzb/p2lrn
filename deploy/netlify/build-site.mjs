@@ -142,10 +142,18 @@ function isCorrespondingSourcePath(path) {
   const rel = relative(outputRoot,path).replaceAll('\\','/');
   return /^player\/(?:current|[^/]+)\/source\//u.test(rel);
 }
+// CDN release files are immutable distribution artifacts, not public website
+// pages. Adding brand HTML to them after release.json is generated invalidates
+// their byte counts and SHA-256 digests, breaking offline exports.
+function isImmutableDistributionHtml(path) {
+  const rel=relative(outputRoot,path).replaceAll('\\','/');
+  return /^(?:player|studio|analytics)\/(?:current|[^/]+)\/dist\//u.test(rel);
+}
 const allHtmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
 // Google Search Console HTML ownership tokens must be served byte-for-byte from the root,
 // not rewritten as normal public HTML pages.
 const htmlFiles = allHtmlFiles.filter((path)=>!isCorrespondingSourcePath(path)
+  && !isImmutableDistributionHtml(path)
   && !/^google[0-9a-f]+\.html$/i.test(relative(outputRoot,path).replaceAll('\\','/')));
 
 const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
