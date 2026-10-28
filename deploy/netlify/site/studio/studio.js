@@ -566,23 +566,41 @@ async function reviewOfflineDelivery(file){
   });
   const content=offlineReviewContent;
   content.replaceChildren();
+  const problems=[];
+  if(!parsed.integrityValid)problems.push('SHA-256 del archivo');
+  if(!parsed.courseMatches)problems.push('curso original');
+  if(parsed.evidenceValid===false)problems.push('orden o contenido de los registros');
+  if(parsed.summaryValid===false)problems.push('resumen, respuestas o puntuaciones');
+  if(parsed.assignmentAuthenticated===false)problems.push('firma o comprobante del profesor');
+  if(problems.length){
+    const warning=document.createElement('p');
+    warning.className='studio-offline-review-warning';
+    warning.setAttribute('role','alert');
+    warning.textContent='Revisión necesaria: no coinciden '+problems.join(', ')+
+      '. No utilices la puntuación declarada como una calificación verificada.';
+    content.append(warning);
+  }
   addOfflineReviewRow(content,'Archivo',file.name);
   addOfflineReviewRow(content,'SHA-256 del resultado',parsed.integrityValid?'Coincide':'NO coincide');
   addOfflineReviewRow(content,'Curso original',parsed.courseMatches?'Coincide':'NO coincide');
   addOfflineReviewRow(content,'Firma del encargo',parsed.signatureValid===true
-    ?'Firma Ed25519 válida; falta cotejar el comprobante del profesor'
+    ?(parsed.assignmentAuthenticated===true?'Ed25519 válida y cotejada':'Ed25519 válida; emisor pendiente de cotejo')
     :parsed.signatureValid===false?'NO válida':'Entrega sin firma');
   addOfflineReviewRow(content,'Comprobante del profesor',parsed.assignmentAuthenticated===true
     ?'Coincide: encargo autenticado'
     :parsed.assignmentAuthenticated===false?'NO coincide / firma incorrecta'
     :'No seleccionado: comprobación pendiente');
   addOfflineReviewRow(content,'Cadena de evidencias',parsed.evidenceValid===true
-    ?'Coherente (no demuestra ausencia de manipulación)'
-    :parsed.evidenceValid===false?'NO coincide':'No disponible');
+    ?'Coherente (el alumno puede recalcularla)'
+    :parsed.evidenceValid===false?'NO coincide':'No verificable en esta entrega antigua');
+  addOfflineReviewRow(content,'Coherencia del resumen',parsed.summaryValid
+    ?'Respuestas, eventos y puntuaciones coinciden con los registros'
+    :'NO coincide: revisar datos declarados');
   addOfflineReviewRow(content,'Alumno',parsed.summary.participantLabel||'Sin identificar');
   addOfflineReviewRow(content,'Intento',parsed.summary.attemptNumber);
   const score=parsed.summary.latestScore?.normalized;
-  addOfflineReviewRow(content,'Puntuación',score==null?'Sin puntuación':Math.round(Number(score)*10000)/100+' %');
+  addOfflineReviewRow(content,'Puntuación declarada (no oficial)',score==null
+    ?'Sin puntuación':Math.round(Number(score)*10000)/100+' %');
   addOfflineReviewRow(content,'Respuestas',parsed.summary.answers.length);
   addOfflineReviewRow(content,'Evaluaciones',parsed.summary.scores.length);
   addOfflineReviewRow(content,'Eventos',parsed.summary.events.length);
@@ -593,10 +611,13 @@ async function reviewOfflineDelivery(file){
   note.textContent='La firma solo acredita el encargo del profesor si conservas y seleccionas su comprobante original. Las respuestas y notas se generan en un equipo del alumno y no están autenticadas; los plazos offline dependen de su reloj.';
   content.append(note);
   offlineReviewDialog.showModal();
-  setStatus(parsed.integrityValid&&parsed.courseMatches&&parsed.evidenceValid!==false&&
-    parsed.assignmentAuthenticated!==false
-    ?(parsed.assignmentAuthenticated===true?'Encargo firmado autenticado; revisar respuestas':'Resultado recibido: revisión limitada')
-    :'Resultado offline: hay incidencias de integridad, curso o firma');
+  setStatus(problems.length
+    ?'Resultado offline con incidencias: '+problems.join(', ')
+    :parsed.assignmentAuthenticated===true
+      ?'Encargo del profesor autenticado; respuestas no autenticadas'
+      :parsed.signatureValid===true
+        ?'Firma válida; selecciona el comprobante original del profesor'
+        :'Resultado recibido; puntuación informativa');
 }
 
 async function exportPackage(){
@@ -688,7 +709,15 @@ offlineReceiptButton?.addEventListener('click',()=>{
 });
 offlineReviewReceipt?.addEventListener('change',()=>{
   if(latestOfflineResultFile)void reviewOfflineDelivery(latestOfflineResultFile)
-    .catch((error)=>setStatus('Comprobante inválido: '+error.message));
+    .catch((error)=>{
+      offlineReviewContent.replaceChildren();
+      const message=document.createElement('p');
+      message.className='studio-offline-review-warning';
+      message.setAttribute('role','alert');
+      message.textContent='No se puede verificar el comprobante: '+error.message;
+      offlineReviewContent.append(message);
+      setStatus('Comprobante inválido: '+error.message);
+    });
 });
 offlineResultButton?.addEventListener('click',()=>{
   if(offlineReviewReceipt)offlineReviewReceipt.value='';
