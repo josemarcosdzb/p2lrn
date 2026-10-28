@@ -105,8 +105,13 @@
       <label>Intentos máximos<input name="maxAttempts" type="number" min="1" max="100" step="1" value="1" required></label>
       <label class="studio-offline-check"><input name="allowResume" type="checkbox" checked> Permitir reanudar el intento</label>
       <label class="studio-offline-check"><input name="activityTracking" type="checkbox" checked> Registrar métricas y tiempo activo</label>
+      <label class="studio-offline-check"><input name="signAssignment" type="checkbox"> Firmar el encargo para comprobarlo después (opcional)</label>
     </div>
-    <p class="studio-offline-note">Colaboración desactivada. Sin conexión durante la actividad. Los límites de fecha dependen del reloj del alumno. Este lanzador no está firmado digitalmente.</p>
+    <p class="studio-offline-note">El alumno trabaja sin conexión. Las fechas dependen de su reloj. La firma opcional autentica el encargo del profesor, no el resultado del alumno ni el ejecutable Windows.</p>
+    <div class="studio-offline-note" data-offline-receipt-prompt hidden role="status">
+      <strong>Entrega firmada generada.</strong> Guarda el comprobante del profesor antes de enviar el archivo al alumno. Sin él no podrás cotejar su firma.
+      <button class="button" type="button" data-offline-receipt-download>Descargar comprobante del profesor</button>
+    </div>
     <p class="studio-offline-error" data-offline-error role="alert" hidden></p>
     <footer class="studio-offline-actions"><button class="button primary" type="submit" data-offline-generate>Generar entrega</button></footer>
   </form>
@@ -114,6 +119,9 @@
 <input type="file" data-offline-result-file accept=".p2lrn-result,application/vnd.p2lrn-result+json" hidden>
 <dialog class="studio-offline-dialog" data-offline-review-dialog aria-labelledby="studio-offline-review-title">
   <header class="studio-offline-head"><div><p class="eyebrow">RESULTADOS / REVISIÓN</p><h2 id="studio-offline-review-title">Revisar entrega offline</h2></div><button class="button" type="button" data-offline-review-close>Cerrar</button></header>
+  <label class="studio-offline-review-receipt">Comprobante del profesor (.p2lrn-assignment.json)
+    <input type="file" data-offline-review-receipt accept=".json,.p2lrn-assignment.json,application/json">
+  </label>
   <div class="studio-offline-review-content" data-offline-review-content></div>
 </dialog>
   <div class="studio-warning" data-unsaved-warning hidden role="status">
