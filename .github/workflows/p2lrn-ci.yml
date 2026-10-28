@@ -102,6 +102,28 @@ jobs:
           }
       - name: Verify Studio upload and path security tests
         run: node --test packages/toolkit/test/studio-server-save.test.mjs
+      - name: Verify audited documentation and production site
+        shell: powershell
+        run: |
+          node --check scripts/verify-doc-flow.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-doc-flow.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check deploy/netlify/build-site.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node deploy/netlify/build-site.mjs *> .security-audit-build.log
+          $buildCode = $LASTEXITCODE
+          Get-Content .security-audit-build.log -Tail 160
+          if ($buildCode -ne 0) { exit $buildCode }
+      - name: Upload security audit build log
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: p2lrn-security-audit-build-${{ github.run_id }}
+          path: .security-audit-build.log
+          if-no-files-found: warn
+          retention-days: 7
   public-npm-registry:
     if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
