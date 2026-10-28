@@ -234,6 +234,13 @@ for (const channel of [version, 'current']) {
       `  Content-Security-Policy: ${csp}`,
       '',
     ].join('\n');
+    headers += [
+      `/player/${channel}/dist/runtime-host/${host}.raw`,
+      '  Content-Type: application/octet-stream',
+      '  Access-Control-Allow-Origin: *',
+      '  X-Content-Type-Options: nosniff',
+      '',
+    ].join('\n');
   }
 }
 
