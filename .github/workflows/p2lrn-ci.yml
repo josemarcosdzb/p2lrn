@@ -111,7 +111,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check deploy/netlify/build-site.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node deploy/netlify/build-site.mjs *> .security-audit-build.log
+          cmd /d /c "node deploy\netlify\build-site.mjs > .security-audit-build.log 2>&1"
           $buildCode = $LASTEXITCODE
           Get-Content .security-audit-build.log -Tail 160
           if ($buildCode -ne 0) { exit $buildCode }
@@ -772,7 +772,7 @@ jobs:
         run: |
           node --check deploy/netlify/build-site.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node deploy/netlify/build-site.mjs *> .audit-build.log
+          cmd /d /c "node deploy\netlify\build-site.mjs > .audit-build.log 2>&1"
           $buildCode = $LASTEXITCODE
           Get-Content .audit-build.log -Tail 160
           if ($buildCode -ne 0) { exit $buildCode }
