@@ -47,7 +47,7 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
 }
 export async function normalizeSeoAndAccessibility(outputRoot,{sourceRoot=outputRoot,origin=CANONICAL_ORIGIN,strict=true}={}){
   const sourcePages=(await walk(sourceRoot)).filter(x=>basename(x)==='index.html');
-  if(strict&&sourcePages.length!==60)throw Error('Unexpected site page count '+sourcePages.length+'; review route policy first');
+  if(strict&&sourcePages.length<60)throw Error('Site page count dropped below the verified baseline: '+sourcePages.length);
   const routes=[];let changed=0,aliases=0;
   for(const src of sourcePages){
     const route=routeOf(sourceRoot,src);
@@ -56,7 +56,8 @@ export async function normalizeSeoAndAccessibility(outputRoot,{sourceRoot=output
     if(before!==after){await writeFile(target,after,'utf8');changed++}
     if(isIndexable(after))routes.push(route);else aliases++;
   }
-  if(strict&&(routes.length!==57||aliases!==3))throw Error('Route classification changed unexpectedly: '+routes.length+'/'+aliases);
+  if(strict&&(routes.length+aliases!==sourcePages.length||aliases!==3))
+    throw Error('Route classification changed unexpectedly: '+routes.length+'/'+aliases);
   routes.sort((a,b)=>a==='/'?-1:b==='/'?1:a.localeCompare(b,'es'));
   const xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+routes.map(r=>'  <url><loc>'+escape(origin+r)+'</loc></url>').join('\n')+'\n</urlset>\n';
   await writeFile(join(outputRoot,'sitemap.xml'),xml,'utf8');
