@@ -525,10 +525,11 @@
   if (sidebar) {
     const search = document.createElement('div');
     search.className = 'docs-search';
-    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" placeholder="NPM, Skills, Gemini, LMS…" autocomplete="off"><div class="docs-search-results" hidden></div>';
+    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" aria-controls="docs-search-list" aria-describedby="docs-search-status" placeholder="NPM, Skills, Gemini, LMS…" autocomplete="off"><div class="docs-search-results" id="docs-search-list" hidden></div><div class="sr-only docs-search-status" id="docs-search-status" role="status" aria-live="polite" aria-atomic="true"></div>';
     sidebar.prepend(search);
     const input = search.querySelector('input');
     const results = search.querySelector('.docs-search-results');
+    const resultsStatus = search.querySelector('.docs-search-status');
     let index = null;
     const ensureIndex = async () => {
       if (index) return index;
@@ -537,12 +538,21 @@
       index = await response.json();
       return index;
     };
+    let searchRequestToken = 0;
     input.addEventListener('input', async () => {
+      const token = ++searchRequestToken;
       const query = input.value.trim().toLocaleLowerCase('es');
-      if (query.length < 2) { results.hidden = true; results.replaceChildren(); return; }
+      if (query.length < 2) {
+        results.hidden = true;
+        results.replaceChildren();
+        resultsStatus.textContent = '';
+        return;
+      }
       try {
         const docs = await ensureIndex();
-        const matches = docs.filter((item) => item.search.includes(query)).slice(0, 8);
+        if (token !== searchRequestToken) return;
+        const allMatches = docs.filter((item) => item.search.includes(query));
+        const matches = allMatches.slice(0, 8);
         results.replaceChildren(...matches.map((item) => {
           const a = document.createElement('a');
           a.href = item.url;
@@ -552,8 +562,14 @@
           return a;
         }));
         results.hidden = matches.length === 0;
+        resultsStatus.textContent = allMatches.length === 0 ? 'No hay resultados para esta búsqueda.'
+          : allMatches.length === 1 ? '1 resultado de búsqueda.'
+          : allMatches.length + ' resultados de búsqueda' + (allMatches.length > 8 ? '. Se muestran los primeros 8.' : '.');
       } catch {
+        if (token !== searchRequestToken) return;
+        results.replaceChildren();
         results.hidden = true;
+        resultsStatus.textContent = 'No se ha podido cargar el índice de búsqueda.';
       }
     });
   }

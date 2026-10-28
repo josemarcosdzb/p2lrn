@@ -189,3 +189,6 @@ html[data-studio-mode=preview] .studio-toolbar{position:static}
 .studio-offline-review-content strong{display:inline-block;min-width:180px}
 .studio-offline-review-content .studio-offline-note{padding:10px;border:1px solid var(--line);border-radius:6px;background:#f8fafc}
 @media(max-width:650px){.studio-offline-dialog{padding:14px}.studio-offline-fields{grid-template-columns:1fr}.studio-offline-head{flex-wrap:wrap}.studio-offline-review-content strong{min-width:0;display:block}}
+
+/* Keep keyboard focus visible inside editable text blocks. */
+.studio-title:focus-visible,.studio-description:focus-visible,.studio-wysiwyg:focus-visible{outline:3px solid #2854ff;outline-offset:3px}

@@ -1874,3 +1874,7 @@ netlify-toolbar,
 iframe[title*="Netlify" i],
 iframe[src*="netlify"][style*="position: fixed" i],
 [aria-label*="Netlify" i][style*="position: fixed" i]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+
+/* Keyboard skip-link target and reduced motion. */
+main[id]{scroll-margin-top:84px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}

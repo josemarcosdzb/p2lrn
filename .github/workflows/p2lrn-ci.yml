@@ -776,6 +776,15 @@ jobs:
           $buildCode = $LASTEXITCODE
           Get-Content .audit-build.log -Tail 160
           if ($buildCode -ne 0) { exit $buildCode }
+      - name: Verify SEO and accessibility of generated site
+        run: |
+          node --check deploy/netlify/site-seo-a11y.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-site-seo-a11y.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git diff --exit-code -- deploy/netlify/site/docs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Upload audited Netlify build log
         if: always()
         continue-on-error: true

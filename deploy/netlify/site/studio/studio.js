@@ -22,6 +22,7 @@ setStudioResourceLibrary(connectedResourceLibrary);
 const readerFileInput=document.querySelector('[data-reader-file]');
 const externalFileInput=document.querySelector('[data-external-file]');
 const fileInput=document.querySelector('[data-file]');
+const openFileButton=document.querySelector('[data-open-file]');
 const urlInput=document.querySelector('[data-url]');
 const openUrlButton=document.querySelector('[data-open-url]');
 const toolbar=document.querySelector('[data-toolbar]');
@@ -619,7 +620,8 @@ addDialog?.querySelectorAll('[data-add-kind]').forEach((button)=>button.addEvent
 resourceFileInput?.addEventListener('change',()=>{const file=resourceFileInput.files?.[0];if(file)void addResourceFile(file).catch((error)=>setStatus(error.message));resourceFileInput.value='';});
 readerFileInput?.addEventListener('change',()=>{const file=readerFileInput.files?.[0];if(file)void addReaderFile(file).catch((error)=>setStatus(error.message));readerFileInput.value='';});
 externalFileInput?.addEventListener('change',()=>{const file=externalFileInput.files?.[0];if(file)void importExternalFile(file).catch((error)=>setStatus(error.message));externalFileInput.value='';});
-fileInput.addEventListener('change',()=>{const file=fileInput.files?.[0];if(file)void openLocal(file).catch((error)=>setStatus(error.message));});
+openFileButton?.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',()=>{const file=fileInput.files?.[0];fileInput.value='';if(file)void openLocal(file).catch((error)=>setStatus(error.message));});
 openUrlButton.addEventListener('click',()=>void openRemote().catch((error)=>setStatus(error.message)));
 urlInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();void openRemote().catch((error)=>setStatus(error.message));}});
 editButton.addEventListener('click',()=>void setMode('edit').catch((error)=>setStatus(error.message)));

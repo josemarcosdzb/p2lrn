@@ -6,6 +6,7 @@ import {buildDocExamples} from './build-doc-examples.mjs';
 import {STUDIO_RUNTIME_SHARED_FILES} from './studio-runtime-assets.mjs';
 import {reviseSiteBrowserAssets} from './browser-site-revision.mjs';
 import {renderSiteFooter,SITE_FOOTER_LINKS} from './site-footer.mjs';
+import {normalizeSeoAndAccessibility} from './site-seo-a11y.mjs';
 
 const root = resolve(process.cwd());
 await import('./build-cdn.mjs');
@@ -107,6 +108,13 @@ for (const name of requiredExecutableExamples) {
 }
 const verifiedDefaultViewerExample=canonicalEntries.find((example)=>example.url==='/examples/canonical/creator-course.p2lrn');
 if(!verifiedDefaultViewerExample)throw new Error('The public viewer default must be a verified local playable package.');
+// Preserve the documented quickstart download without editing its documentation page.
+const quickstartPath=join(examplesOutput,'quickstart.p2lrn');
+const quickstartSource=join(canonicalSource,'creator-course.p2lrn');
+await copyFile(quickstartSource,quickstartPath);
+const [quickstartBytes,quickstartOriginal]=await Promise.all([readFile(quickstartPath),readFile(quickstartSource)]);
+if(!quickstartBytes.equals(quickstartOriginal))throw new Error('Quickstart compatibility example differs from verified course');
+await inspectPackage(quickstartPath);
 const catalog = {
   defaultExample:verifiedDefaultViewerExample.url,
   schema:'https://p2lrn.org/schema/docs-example-catalog/1',
@@ -161,6 +169,9 @@ for (const htmlPath of htmlFiles) {
   }
   await writeFile(htmlPath,html);
 }
+// Only mutate outputRoot. Keep all 57 authored documentation pages unchanged.
+const seoAudit=await normalizeSeoAndAccessibility(outputRoot,{sourceRoot:siteRoot});
+console.log('P2LRN_BUILD_SEO='+JSON.stringify(seoAudit));
 const brandAssets=['p2lrn-mark.png','favicon.png','apple-touch-icon.png','site.webmanifest'];
 for (const asset of brandAssets) {
   if (!(await exists(join(outputRoot,asset)))) throw new Error('Missing brand asset: ' + asset);
@@ -198,7 +209,7 @@ for (const htmlPath of docsHtmlFilesForSidebar) {
     sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': expected exactly one .doc-sidebar');
     continue;
   }
-  html = html.replace(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/i,'<aside class="doc-sidebar"></aside>');
+  html = html.replace(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/i,'<aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>');
   await writeFile(htmlPath,html);
 }
 for (const htmlPath of docsHtmlFilesForSidebar) {

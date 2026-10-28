@@ -15,7 +15,7 @@
 <header class="site-header">
   <a class="brand" href="/">P2LRN</a>
   <nav class="nav"><a href="/demo/">Visor</a><a href="/docs/">Documentación</a><a href="/docs/toolkit/">Toolkit</a></nav>
-  <div class="header-meta"><span class="status"><i></i><span data-studio-status data-functional-status>Sin paquete</span></span></div>
+  <div class="header-meta"><span class="status"><i></i><span data-studio-status data-functional-status role="status" aria-live="polite">Sin paquete</span></span></div>
 </header>
 <main class="studio-main">
   <section class="studio-topbar">
@@ -26,7 +26,7 @@
     </div>
     <div class="studio-open">
       <button class="button primary" type="button" data-create-course>Crear curso</button>
-      <label class="button">Abrir archivo<input data-file type="file" accept=".p2lrn,application/vnd.p2lrn+zip" hidden></label>
+      <button class="button" type="button" data-open-file>Abrir archivo</button><input data-file type="file" accept=".p2lrn,application/vnd.p2lrn+zip" aria-label="Seleccionar paquete P2LRN" hidden>
       <label class="studio-url">URL<input data-url type="url" placeholder="https://…/curso.p2lrn"></label>
       <button class="button" type="button" data-open-url>Abrir URL</button>
     </div>
@@ -133,9 +133,9 @@
       </div>
     </section>
   </section>
-  <dialog class="studio-add-dialog" data-add-dialog>
+  <dialog class="studio-add-dialog" data-add-dialog aria-labelledby="studio-add-title">
     <div class="studio-add-panel">
-      <header><div><p class="eyebrow">AÑADIR CONTENIDO</p><h2>¿Qué quieres crear?</h2><p class="studio-add-intro">Elige el tipo de contenido. Pasa el cursor por una opción para ver qué crea y cuándo conviene usarla.</p></div><button class="button" type="button" data-add-close>Cerrar</button></header>
+      <header><div><p class="eyebrow">AÑADIR CONTENIDO</p><h2 id="studio-add-title">¿Qué quieres crear?</h2><p class="studio-add-intro">Elige el tipo de contenido. Pasa el cursor por una opción para ver qué crea y cuándo conviene usarla.</p></div><button class="button" type="button" data-add-close>Cerrar</button></header>
       <section><h3>Contenido</h3><div class="studio-add-grid">
         <button type="button" data-add-kind="lesson" data-help="Crea una lección editable para escribir y dar formato al contenido directamente en Studio.">Lección</button>
         <button type="button" data-add-kind="file" data-help="Añade una imagen, vídeo, audio u otro archivo como recurso dentro del curso.">Archivo / multimedia</button>
