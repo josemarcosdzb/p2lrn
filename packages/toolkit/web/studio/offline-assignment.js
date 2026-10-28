@@ -4,6 +4,7 @@ import {capabilityRequirements} from '../capability-broker.js';
 export const OFFLINE_ASSIGNMENT_SCHEMA='https://p2lrn.org/schema/offline-assignment/1';
 export const OFFLINE_RESULT_SCHEMA='https://p2lrn.org/schema/offline-result/1';
 export const OFFLINE_ASSIGNMENT_VERSION='1';
+export const OFFLINE_TEACHER_RECEIPT_SCHEMA='https://p2lrn.org/schema/offline-teacher-receipt/1';
 
 const encoder=new TextEncoder();
 const decoder=new TextDecoder();
@@ -26,6 +27,47 @@ async function sha256Bytes(bytes){
   return 'sha256:'+Array.from(digest,(byte)=>byte.toString(16).padStart(2,'0')).join('');
 }
 async function sha256Json(value){return sha256Bytes(encoder.encode(canonicalize(value)));}
+
+// Optional teacher signing. No private key is stored, exported or included
+// in the learner's file. Authenticity requires the teacher's saved receipt.
+function base64(bytes){return btoa(Array.from(bytes,byte=>String.fromCharCode(byte)).join(''));}
+function unbase64(value){
+  if(typeof value!=='string'||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)||value.length>4096)
+    throw new TypeError('Firma Ed25519: Base64 inválido.');
+  return Uint8Array.from(atob(value),char=>char.charCodeAt(0));
+}
+function unsignedAssignment(assignment){const payload=clone(assignment);delete payload.signature;return payload;}
+export async function signOfflineAssignment(assignment){
+  if(!assignment||assignment.schema!==OFFLINE_ASSIGNMENT_SCHEMA||assignment.version!==OFFLINE_ASSIGNMENT_VERSION)
+    throw new TypeError('El encargo offline debe ser válido antes de firmarlo.');
+  let pair;
+  try{pair=await crypto.subtle.generateKey({name:'Ed25519'},false,['sign','verify']);}
+  catch{throw new Error('Este navegador no admite Ed25519. Usa Chrome/Edge actualizado o genera una entrega normal.');}
+  const publicKey=new Uint8Array(await crypto.subtle.exportKey('spki',pair.publicKey));
+  const payload=unsignedAssignment(assignment);
+  const value=new Uint8Array(await crypto.subtle.sign('Ed25519',pair.privateKey,encoder.encode(canonicalize(payload))));
+  return {...payload,signature:{algorithm:'Ed25519',publicKey:base64(publicKey),value:base64(value),keyFingerprint:await sha256Bytes(publicKey)}};
+}
+export async function verifyOfflineAssignmentSignature(assignment){
+  if(!assignment?.signature)return false;
+  try{
+    const {algorithm,publicKey,value,keyFingerprint}=assignment.signature;
+    if(algorithm!=='Ed25519')return false;
+    const publicBytes=unbase64(publicKey),signatureBytes=unbase64(value);
+    if(keyFingerprint!==await sha256Bytes(publicBytes)||signatureBytes.length!==64)return false;
+    const key=await crypto.subtle.importKey('spki',publicBytes,{name:'Ed25519'},false,['verify']);
+    return await crypto.subtle.verify('Ed25519',key,signatureBytes,encoder.encode(canonicalize(unsignedAssignment(assignment))));
+  }catch{return false;}
+}
+async function verifyResultEvidence(result){
+  const declared=result?.audit?.evidenceRoot;
+  if(typeof declared!=='string')return null;
+  const base=String(result.assignment?.assignmentId??'')+'|'+String(result.assignment?.contentRoot??'');
+  let current=await sha256Bytes(encoder.encode(base));
+  const records=[...(result.submission?.states??[]),...(result.submission?.scores??[]),...(result.analytics?.events??[])];
+  for(const record of records)current=await sha256Bytes(encoder.encode(current+'|'+canonicalize(record)));
+  return declared===current;
+}
 function jsonBytes(value){return encoder.encode(JSON.stringify(value,null,2)+'\n');}
 function textBytes(value){return encoder.encode(String(value).replace(/\r?\n/g,'\r\n'));}
 function validIso(value,label){
@@ -270,6 +312,8 @@ function assignmentApp(){
     "const storageKey=()=> 'p2lrn:offline-assignment:'+assignment.assignmentId;",
     "function canonical(v){if(v===null||typeof v==='boolean'||typeof v==='string')return JSON.stringify(v);if(typeof v==='number')return JSON.stringify(v);if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';throw new Error('Unsupported JSON');}",
     "async function sha(text){const d=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(text)));return 'sha256:'+Array.from(d,b=>b.toString(16).padStart(2,'0')).join('');}",
+    "function base64ToBytes(value){return Uint8Array.from(atob(value),c=>c.charCodeAt(0));}",
+    "async function verifyAssignment(){if(!assignment.signature)return true;const s=assignment.signature;try{if(s.algorithm!=='Ed25519')return false;const keyBytes=base64ToBytes(s.publicKey),sig=base64ToBytes(s.value);const digestBytes=new Uint8Array(await crypto.subtle.digest('SHA-256',keyBytes));const digest='sha256:'+Array.from(digestBytes,b=>b.toString(16).padStart(2,'0')).join('');if(digest!==s.keyFingerprint)return false;const k=await crypto.subtle.importKey('spki',keyBytes,{name:'Ed25519'},false,['verify']);const bare={...assignment};delete bare.signature;return crypto.subtle.verify('Ed25519',k,sig,enc.encode(canonical(bare)));}catch{return false;}}",
     "function state(){try{return JSON.parse(localStorage.getItem(storageKey())||'null')||{attempts:[],activeAttempt:null,lastWallAt:null,participantLabel:assignment.participant?.label||''};}catch{return{attempts:[],activeAttempt:null,lastWallAt:null,participantLabel:assignment.participant?.label||''};}}",
     "function saveState(s){localStorage.setItem(storageKey(),JSON.stringify(s));}",
     "function fmt(iso){return iso?new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(iso)):'Sin límite';}",
@@ -284,10 +328,10 @@ function assignmentApp(){
     "function answersFromStates(states){const out=[];for(const op of states){const answers=op?.value?.answers;if(!answers||typeof answers!=='object'||Array.isArray(answers))continue;for(const [questionId,answer] of Object.entries(answers))out.push({entityId:op.context?.entityId??null,questionId,answer});}return out;}",
     "function activeMs(events){let best=0;for(const op of events){if(op?.value?.type==='p2lrn:active-time')best=Math.max(best,Number(op.value?.payload?.totalActiveMs)||0);else if(op?.value?.payload&&Number.isFinite(Number(op.value.payload.totalActiveMs)))best=Math.max(best,Number(op.value.payload.totalActiveMs));}return best;}",
     "async function evidenceRoot(records){let root=await sha(assignment.assignmentId+'|'+assignment.contentRoot);for(const record of records)root=await sha(root+'|'+canonical(record));return root;}",
-    "async function buildResult(){if(player?.stopActivityTracking)player.stopActivityTracking();await new Promise(r=>setTimeout(r,20));const ops=await adapter.pending();const states=ops.filter(x=>x.type==='state'),scores=ops.filter(x=>x.type==='score'),events=ops.filter(x=>x.type==='event');const now=new Date().toISOString();const elapsed=Math.max(0,Math.round((Date.now()-attempt.startedWallMs)/1000));const s=state();attempt.finishedAt=now;attempt.elapsedSeconds=elapsed;attempt.status='submitted';s.attempts.push(attempt);s.activeAttempt=null;saveState(s);const body={schema:RESULT_SCHEMA,version:'1',assignment:{assignmentId:assignment.assignmentId,packageId:assignment.packageId,contentRoot:assignment.contentRoot,participantToken:assignment.participant.assignmentToken,participantLabel:s.participantLabel,policy:assignment.policy},runtime:{playerVersion:assignment.runtime.playerVersion,runtimeDigest:assignment.runtime.runtimeDigest},attempt:{id:attempt.id,number:attempt.number,startedAt:attempt.startedAt,finishedAt:now,elapsedSeconds:elapsed},summary:{latestScore:latestScore(ops),stateSnapshots:states.length,events:events.length,activeTimeMs:activeMs(events),answers:answersFromStates(states).length},submission:{states,answers:answersFromStates(states),scores},analytics:{events,activeTimeMs:activeMs(events)},audit:{anomalies:attempt.anomalies||[],evidenceRoot:await evidenceRoot(ops),collaborationDisabled:true,networkPolicy:'deny-by-default'}};const digest=await sha(canonical(body));return{...body,integrity:{algorithm:'sha256',payloadDigest:digest}};}",
+    "async function buildResult(){if(player?.stopActivityTracking)player.stopActivityTracking();await new Promise(r=>setTimeout(r,20));const ops=await adapter.pending();const states=ops.filter(x=>x.type==='state'),scores=ops.filter(x=>x.type==='score'),events=ops.filter(x=>x.type==='event');const now=new Date().toISOString();const elapsed=Math.max(0,Math.round((Date.now()-attempt.startedWallMs)/1000));const s=state();attempt.finishedAt=now;attempt.elapsedSeconds=elapsed;attempt.status='submitted';s.attempts.push(attempt);s.activeAttempt=null;saveState(s);const body={schema:RESULT_SCHEMA,version:'1',assignment:{assignmentId:assignment.assignmentId,packageId:assignment.packageId,contentRoot:assignment.contentRoot,participantToken:assignment.participant.assignmentToken,participantLabel:s.participantLabel,policy:assignment.policy},assignmentProof:assignment.signature?assignment:null,runtime:{playerVersion:assignment.runtime.playerVersion,runtimeDigest:assignment.runtime.runtimeDigest},attempt:{id:attempt.id,number:attempt.number,startedAt:attempt.startedAt,finishedAt:now,elapsedSeconds:elapsed},summary:{latestScore:latestScore(ops),stateSnapshots:states.length,events:events.length,activeTimeMs:activeMs(events),answers:answersFromStates(states).length},submission:{states,answers:answersFromStates(states),scores},analytics:{events,activeTimeMs:activeMs(events)},audit:{anomalies:attempt.anomalies||[],evidenceRoot:await evidenceRoot(ops),collaborationDisabled:true,networkPolicy:'deny-by-default'}};const digest=await sha(canonical(body));return{...body,integrity:{algorithm:'sha256',payloadDigest:digest}};}",
     "function downloadResult(result){const blob=new Blob([JSON.stringify(result,null,2)+'\\n'],{type:'application/vnd.p2lrn-result+json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(assignment.filenameBase||'entrega')+'-intento-'+result.attempt.number+'.p2lrn-result';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}",
     "async function finish(){if(timerHandle){clearInterval(timerHandle);timerHandle=null;}$('finish').disabled=true;$('finish').textContent='Preparando entrega…';resultCache=await buildResult();downloadResult(resultCache);$('session').hidden=true;$('finished').hidden=false;}",
-    "async function boot(){try{assignment=await fetch('./assignment.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se puede leer assignment.json');return r.json();});renderGate();$('start').addEventListener('click',()=>start().catch(e=>{$('gate-status').textContent=e.message;$('gate-status').classList.add('error')}));$('finish').addEventListener('click',()=>finish().catch(e=>{$('finish').disabled=false;$('finish').textContent='Finalizar y descargar entrega';alert(e.message)}));$('download-again').addEventListener('click',()=>{if(resultCache)downloadResult(resultCache)});setInterval(()=>{$('clock').textContent=new Date().toLocaleString()},1000);}catch(error){$('title').textContent='No se puede abrir la entrega';$('gate-status').textContent=String(error?.message||error);$('gate-status').classList.add('error');}}",
+    "async function boot(){try{assignment=await fetch('./assignment.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('No se puede leer assignment.json');return r.json();});if(!(await verifyAssignment()))throw new Error('La firma del encargo no es válida. Solicita una nueva entrega al profesor.');renderGate();$('start').addEventListener('click',()=>start().catch(e=>{$('gate-status').textContent=e.message;$('gate-status').classList.add('error')}));$('finish').addEventListener('click',()=>finish().catch(e=>{$('finish').disabled=false;$('finish').textContent='Finalizar y descargar entrega';alert(e.message)}));$('download-again').addEventListener('click',()=>{if(resultCache)downloadResult(resultCache)});setInterval(()=>{$('clock').textContent=new Date().toLocaleString()},1000);}catch(error){$('title').textContent='No se puede abrir la entrega';$('gate-status').textContent=String(error?.message||error);$('gate-status').classList.add('error');}}",
     "boot();",
     '',
   ].join('\n');
@@ -372,12 +416,17 @@ export async function exportOfflineAssignmentBundle(document,options={}){
   const runtime=await collectRuntime(runtimeBaseUrl,options.fetchImpl??globalThis.fetch.bind(globalThis));
   const title=typeof document.title==='function'?document.title(document.rootId):'Entrega P2LRN';
   const filenameBase=cleanFilename(options.filenameBase??course.filename,'entrega-p2lrn');
-  const assignment={
+  let assignment={
     schema:OFFLINE_ASSIGNMENT_SCHEMA,version:OFFLINE_ASSIGNMENT_VERSION,assignmentId:'urn:uuid:'+crypto.randomUUID(),
     packageId:course.manifest.packageId,contentRoot:course.manifest.integrity.contentRoot,title:String(options.title??title??'Entrega P2LRN'),filenameBase,createdAt:new Date().toISOString(),
     runtime:{playerVersion:String(runtime.release.webSdkVersion),toolkitVersion:String(runtime.release.toolkitVersion??''),runtimeDigest:await sha256Bytes(runtime.releaseBytes)},
     policy,participant:{assignmentToken:crypto.randomUUID(),label:String(options.participantLabel??'').trim()||null},
   };
+  if(options.signAssignment===true)assignment=await signOfflineAssignment(assignment);
+  const teacherReceipt=assignment.signature?Object.freeze({
+    filename:filenameBase+'.p2lrn-assignment.json',
+    bytes:jsonBytes({schema:OFFLINE_TEACHER_RECEIPT_SCHEMA,version:'1',assignment}),
+  }):null;
   const entries=[
     {path:'Abrir P2LRN.cmd',data:textBytes(launcherCmd())},{path:'LEEME.txt',data:textBytes(readmeText(assignment))},{path:'runtime/serve.ps1',data:textBytes(launcherPowerShell())},
     {path:'www/index.html',data:encoder.encode(assignmentHtml())},{path:'www/style.css',data:encoder.encode(assignmentCss())},{path:'www/app.js',data:encoder.encode(assignmentApp())},
@@ -390,26 +439,62 @@ export async function exportOfflineAssignmentBundle(document,options={}){
     filename:filenameBase+'.p2lrn-offline.zip',
     windowsLauncher,
     assignment:Object.freeze(clone(assignment)),
+    teacherReceipt,
     course,
     runtimeRelease:clone(runtime.release),
   });
 }
 
-export async function parseOfflineAssignmentResult(value,{expectedContentRoot=null,expectedAssignmentId=null}={}){
+export async function parseOfflineAssignmentResult(value,{expectedContentRoot=null,expectedAssignmentId=null,trustedReceipt=null}={}){
   let result;
   if(typeof value==='string')result=JSON.parse(value);
   else if(value instanceof Uint8Array||value instanceof ArrayBuffer)result=JSON.parse(decoder.decode(value instanceof Uint8Array?value:new Uint8Array(value)));
   else result=clone(value);
-  if(!result||result.schema!==OFFLINE_RESULT_SCHEMA||result.version!=='1')throw new Error('El archivo no es una entrega offline P2LRN compatible.');
+  if(!result||result.schema!==OFFLINE_RESULT_SCHEMA||result.version!=='1')
+    throw new Error('El archivo no es una entrega offline P2LRN compatible.');
   const body=clone(result);delete body.integrity;
   const calculated=await sha256Json(body),declared=String(result.integrity?.payloadDigest??'').toLowerCase();
   const integrityValid=/^sha256:[0-9a-f]{64}$/.test(declared)&&declared===calculated.toLowerCase();
   const contentRoot=String(result.assignment?.contentRoot??''),assignmentId=String(result.assignment?.assignmentId??'');
-  const courseMatches=expectedContentRoot==null||String(expectedContentRoot)===contentRoot,assignmentMatches=expectedAssignmentId==null||String(expectedAssignmentId)===assignmentId;
-  const answers=Array.isArray(result.submission?.answers)?result.submission.answers:[],scores=Array.isArray(result.submission?.scores)?result.submission.scores:[],events=Array.isArray(result.analytics?.events)?result.analytics.events:[],anomalies=Array.isArray(result.audit?.anomalies)?result.audit.anomalies:[];
-  return Object.freeze({result:Object.freeze(result),integrityValid,courseMatches,assignmentMatches,calculatedDigest:calculated,summary:Object.freeze({
-    participantLabel:result.assignment?.participantLabel??null,attemptNumber:Number(result.attempt?.number)||null,elapsedSeconds:Number(result.attempt?.elapsedSeconds)||0,
-    activeTimeMs:Number(result.analytics?.activeTimeMs)||0,latestScore:result.summary?.latestScore??null,
-    answers:Object.freeze(answers),scores:Object.freeze(scores),events:Object.freeze(events),anomalies:Object.freeze(anomalies),
-  })});
+  const courseMatches=expectedContentRoot==null||String(expectedContentRoot)===contentRoot;
+  const assignmentMatches=expectedAssignmentId==null||String(expectedAssignmentId)===assignmentId;
+  const proof=result.assignmentProof;
+  const signatureValid=proof?.signature?await verifyOfflineAssignmentSignature(proof):null;
+  let proofMatchesResult=null;
+  if(proof?.signature){
+    try{
+      proofMatchesResult=proof.assignmentId===assignmentId && proof.packageId===result.assignment?.packageId &&
+        proof.contentRoot===contentRoot && proof.participant?.assignmentToken===result.assignment?.participantToken &&
+        canonicalize(proof.policy)===canonicalize(result.assignment?.policy) &&
+        proof.runtime?.runtimeDigest===result.runtime?.runtimeDigest;
+    }catch{proofMatchesResult=false;}
+  }
+  let receiptMatches=null;
+  if(trustedReceipt!=null){
+    let receipt=trustedReceipt;
+    if(typeof receipt==='string')receipt=JSON.parse(receipt);
+    else if(receipt instanceof Uint8Array||receipt instanceof ArrayBuffer)
+      receipt=JSON.parse(decoder.decode(receipt instanceof Uint8Array?receipt:new Uint8Array(receipt)));
+    receiptMatches=receipt?.schema===OFFLINE_TEACHER_RECEIPT_SCHEMA && receipt.version==='1' &&
+      Boolean(proof?.signature) && canonicalize(receipt.assignment)===canonicalize(proof);
+  }
+  // This authenticates the original teacher's assignment, NOT the learner's
+  // execution, score or answers on a machine the learner controls.
+  const assignmentAuthenticated=receiptMatches==null?null:
+    receiptMatches===true && signatureValid===true && proofMatchesResult===true && courseMatches && assignmentMatches;
+  const evidenceValid=await verifyResultEvidence(result);
+  const answers=Array.isArray(result.submission?.answers)?result.submission.answers:[],
+    scores=Array.isArray(result.submission?.scores)?result.submission.scores:[],
+    events=Array.isArray(result.analytics?.events)?result.analytics.events:[],
+    anomalies=Array.isArray(result.audit?.anomalies)?result.audit.anomalies:[];
+  return Object.freeze({
+    result:Object.freeze(result),integrityValid,courseMatches,assignmentMatches,calculatedDigest:calculated,
+    signatureValid,proofMatchesResult,receiptMatches,assignmentAuthenticated,evidenceValid,
+    summary:Object.freeze({
+      participantLabel:result.assignment?.participantLabel??null,attemptNumber:Number(result.attempt?.number)||null,
+      elapsedSeconds:Number(result.attempt?.elapsedSeconds)||0,activeTimeMs:Number(result.analytics?.activeTimeMs)||0,
+      latestScore:result.summary?.latestScore??null,answers:Object.freeze(answers),scores:Object.freeze(scores),
+      events:Object.freeze(events),anomalies:Object.freeze(anomalies),
+    }),
+  });
 }
