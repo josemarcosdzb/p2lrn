@@ -46,6 +46,11 @@ const offlineResultButton=document.querySelector('[data-review-offline]');
 const offlineResultInput=document.querySelector('[data-offline-result-file]');
 const offlineReviewDialog=document.querySelector('[data-offline-review-dialog]');
 const offlineReviewContent=document.querySelector('[data-offline-review-content]');
+const offlineReceiptPrompt=document.querySelector('[data-offline-receipt-prompt]');
+const offlineReceiptButton=document.querySelector('[data-offline-receipt-download]');
+const offlineReviewReceipt=document.querySelector('[data-offline-review-receipt]');
+let latestTeacherReceipt=null;
+let latestOfflineResultFile=null;
 const blockSelect=document.querySelector('[data-block]');
 const fontFamily=document.querySelector('[data-font-family]');
 const fontSize=document.querySelector('[data-font-size]');
@@ -522,16 +527,21 @@ async function generateOfflineDelivery(){
     maxAttempts:Number(details.get('maxAttempts')||1),
     allowResume:offlineForm.elements.namedItem('allowResume').checked,
     activityTracking:offlineForm.elements.namedItem('activityTracking').checked,
+    signAssignment:offlineForm.elements.namedItem('signAssignment').checked,
   };
   setStatus('Verificando curso y preparando entrega offline…');
   const bundle=await exportOfflineAssignmentBundle(studio,options);
+  latestTeacherReceipt=bundle.teacherReceipt;
+  if(offlineReceiptPrompt)offlineReceiptPrompt.hidden=!latestTeacherReceipt;
   const selected=deliveryFormat==='windows-single'
     ? bundle.windowsLauncher
     : {filename:bundle.filename,bytes:bundle.bytes};
   downloadStudioBytes(selected.bytes,selected.filename,deliveryFormat==='windows-single'?'application/octet-stream':'application/zip');
   exportedRevision=studio.changeCount;
   updateChanges();
-  setStatus('Entrega offline preparada: '+selected.filename);
+  setStatus(bundle.teacherReceipt
+    ?'Entrega firmada preparada. Descarga y conserva el comprobante del profesor.'
+    :'Entrega offline preparada: '+selected.filename);
   return selected.filename;
 }
 function addOfflineReviewRow(host,label,value){
@@ -542,17 +552,31 @@ function addOfflineReviewRow(host,label,value){
 }
 async function reviewOfflineDelivery(file){
   if(!studio)throw new Error('Abre primero el curso original para comprobar su correspondencia.');
+  latestOfflineResultFile=file;
   if(file.size>32*1024*1024)throw new Error('El archivo de resultados supera 32 MiB.');
   setStatus('Comprobando resultado offline…');
   const exported=await exportP2LRNPackage(studio);
+  const trustedReceipt=offlineReviewReceipt?.files?.[0]
+    ?await offlineReviewReceipt.files[0].text():null;
   const parsed=await parseOfflineAssignmentResult(await file.text(),{
     expectedContentRoot:exported.manifest.integrity.contentRoot,
+    trustedReceipt,
   });
   const content=offlineReviewContent;
   content.replaceChildren();
   addOfflineReviewRow(content,'Archivo',file.name);
   addOfflineReviewRow(content,'SHA-256 del resultado',parsed.integrityValid?'Coincide':'NO coincide');
   addOfflineReviewRow(content,'Curso original',parsed.courseMatches?'Coincide':'NO coincide');
+  addOfflineReviewRow(content,'Firma del encargo',parsed.signatureValid===true
+    ?'Firma Ed25519 válida; falta cotejar el comprobante del profesor'
+    :parsed.signatureValid===false?'NO válida':'Entrega sin firma');
+  addOfflineReviewRow(content,'Comprobante del profesor',parsed.assignmentAuthenticated===true
+    ?'Coincide: encargo autenticado'
+    :parsed.assignmentAuthenticated===false?'NO coincide / firma incorrecta'
+    :'No seleccionado: comprobación pendiente');
+  addOfflineReviewRow(content,'Cadena de evidencias',parsed.evidenceValid===true
+    ?'Coherente (no demuestra ausencia de manipulación)'
+    :parsed.evidenceValid===false?'NO coincide':'No disponible');
   addOfflineReviewRow(content,'Alumno',parsed.summary.participantLabel||'Sin identificar');
   addOfflineReviewRow(content,'Intento',parsed.summary.attemptNumber);
   const score=parsed.summary.latestScore?.normalized;
@@ -564,10 +588,13 @@ async function reviewOfflineDelivery(file){
   addOfflineReviewRow(content,'Incidencias',parsed.summary.anomalies.length
     ? parsed.summary.anomalies.map(item=>item.code||'Incidencia').join(', ') : 'Ninguna registrada');
   const note=document.createElement('p');note.className='studio-offline-note';
-  note.textContent='El SHA-256 detecta cambios sin rehacer el digest, pero el resultado no lleva una firma digital de confianza. Los plazos sin conexión dependen del reloj del alumno.';
+  note.textContent='La firma solo acredita el encargo del profesor si conservas y seleccionas su comprobante original. Las respuestas y notas se generan en un equipo del alumno y no están autenticadas; los plazos offline dependen de su reloj.';
   content.append(note);
   offlineReviewDialog.showModal();
-  setStatus(parsed.integrityValid&&parsed.courseMatches?'Resultado offline comprobado':'Resultado offline: comprobar integridad o curso');
+  setStatus(parsed.integrityValid&&parsed.courseMatches&&parsed.evidenceValid!==false&&
+    parsed.assignmentAuthenticated!==false
+    ?(parsed.assignmentAuthenticated===true?'Encargo firmado autenticado; revisar respuestas':'Resultado recibido: revisión limitada')
+    :'Resultado offline: hay incidencias de integridad, curso o firma');
 }
 
 async function exportPackage(){
@@ -643,9 +670,23 @@ document.querySelector('[data-offline-cancel]')?.addEventListener('click',()=>of
 offlineForm?.addEventListener('submit',(event)=>{
   event.preventDefault();
   offlineError.hidden=true;offlineError.textContent='';offlineGenerate.disabled=true;
-  void generateOfflineDelivery().then(()=>offlineDialog.close()).catch((error)=>{
+  void generateOfflineDelivery().then(()=>{
+    if(!latestTeacherReceipt)offlineDialog.close();
+  }).catch((error)=>{
     offlineError.textContent=String(error?.message||error);offlineError.hidden=false;setStatus('No se pudo generar la entrega offline');
   }).finally(()=>{offlineGenerate.disabled=false;});
+});
+offlineReceiptButton?.addEventListener('click',()=>{
+  if(!latestTeacherReceipt)return;
+  downloadStudioBytes(latestTeacherReceipt.bytes,latestTeacherReceipt.filename,'application/json');
+  latestTeacherReceipt=null;
+  offlineReceiptPrompt.hidden=true;
+  setStatus('Comprobante del profesor descargado. Guárdalo fuera de los archivos del alumno.');
+  offlineDialog.close();
+});
+offlineReviewReceipt?.addEventListener('change',()=>{
+  if(latestOfflineResultFile)void reviewOfflineDelivery(latestOfflineResultFile)
+    .catch((error)=>setStatus('Comprobante inválido: '+error.message));
 });
 offlineResultButton?.addEventListener('click',()=>offlineResultInput.click());
 offlineResultInput?.addEventListener('change',()=>{
