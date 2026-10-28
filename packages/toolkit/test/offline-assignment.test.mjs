@@ -303,3 +303,84 @@ async function shaText(value){
   const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(value)));
   return 'sha256:'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
 }
+
+test('evidence root restores interleaved state, event and score records without false tampering alerts',async()=>{
+  const assignmentId='urn:uuid:11111111-2222-4333-8444-555555555555';
+  const contentRoot='sha256:'+'a'.repeat(64);
+  const state1={type:'state',context:{entityId:'lesson'},value:{answers:{q1:'B'}}};
+  const active={type:'event',value:{type:'p2lrn:active-time',payload:{totalActiveMs:12500}}};
+  const score={type:'score',value:{normalized:0.75}};
+  const state2={type:'state',context:{entityId:'lesson'},value:{answers:{q2:'C'}}};
+  const actual=[state1,active,score,state2];
+  let evidenceRoot=await shaText(assignmentId+'|'+contentRoot);
+  for(const record of actual)evidenceRoot=await shaText(evidenceRoot+'|'+canonical(record));
+  const result={
+    schema:OFFLINE_RESULT_SCHEMA,version:'1',
+    assignment:{assignmentId,contentRoot,packageId:'course'},
+    submission:{
+      states:[state1,state2],scores:[score],
+      answers:[
+        {entityId:'lesson',questionId:'q1',answer:'B'},
+        {entityId:'lesson',questionId:'q2',answer:'C'},
+      ],
+    },
+    analytics:{events:[active],activeTimeMs:12500},
+    summary:{latestScore:{normalized:0.75},stateSnapshots:2,events:1,answers:2,activeTimeMs:12500},
+    audit:{evidenceRoot,recordOrder:[['state',0],['event',0],['score',0],['state',1]],anomalies:[]},
+  };
+  const seal=async body=>({...body,integrity:{algorithm:'sha256',payloadDigest:await digest(body)}});
+  const original=await parseOfflineAssignmentResult(await seal(result),{expectedContentRoot:contentRoot});
+  assert.equal(original.integrityValid,true);
+  assert.equal(original.evidenceValid,true,'Correct interleaving must not trigger a false corruption alert');
+  assert.equal(original.summaryValid,true);
+
+  const shuffled=structuredClone(result);
+  shuffled.audit.recordOrder=[['state',0],['score',0],['event',0],['state',1]];
+  const reordered=await parseOfflineAssignmentResult(await seal(shuffled));
+  assert.equal(reordered.integrityValid,true);
+  assert.equal(reordered.evidenceValid,false);
+
+  const duplicate=structuredClone(result);
+  duplicate.audit.recordOrder=[['state',0],['event',0],['score',0],['state',0]];
+  assert.equal((await parseOfflineAssignmentResult(await seal(duplicate))).evidenceValid,false);
+
+  const forgedSummary=structuredClone(result);
+  forgedSummary.summary.latestScore={normalized:1};
+  const changed=await parseOfflineAssignmentResult(await seal(forgedSummary));
+  assert.equal(changed.integrityValid,true,'SHA-256 alone does not authenticate the student');
+  assert.equal(changed.evidenceValid,true,'The underlying operations were not changed');
+  assert.equal(changed.summaryValid,false,'A reported score must match its operations');
+
+  const forgedAnswers=structuredClone(result);
+  forgedAnswers.submission.answers[0].answer='A';
+  assert.equal((await parseOfflineAssignmentResult(await seal(forgedAnswers))).summaryValid,false);
+  const legacy=structuredClone(result);
+  delete legacy.audit.recordOrder;
+  const old=await parseOfflineAssignmentResult(await seal(legacy));
+  assert.equal(old.evidenceValid,null,'Old mixed-operation results cannot recover original ordering');
+  assert.equal(old.summaryValid,true,'Legacy results remain readable without a misleading rejection');
+
+  const noOps=structuredClone(result);
+  noOps.submission={states:[],scores:[],answers:[]};
+  noOps.analytics={events:[],activeTimeMs:0};
+  noOps.summary={latestScore:null,stateSnapshots:0,events:0,answers:0,activeTimeMs:0};
+  noOps.audit={evidenceRoot:await shaText(assignmentId+'|'+contentRoot),anomalies:[]};
+  const empty=await parseOfflineAssignmentResult(await seal(noOps));
+  assert.equal(empty.evidenceValid,true,'Legacy empty evidence remains verifiable');
+  assert.equal(empty.summaryValid,true);
+});
+
+test('self-playing app saves operation order and verifies signed assignments before enabling start',async()=>{
+  const bundle=await exportOfflineAssignmentBundle(createP2LRNStudioDocument({title:'Revisión offline'}),{
+    signAssignment:true,
+    runtimeBaseUrl:'https://runtime.example/player/current/dist/',
+    fetchImpl:runtimeFetch(),
+  });
+  const entries=storedZipEntries(bundle.bytes);
+  const app=decoder.decode(entries.get('www/app.js'));
+  assert.match(app,/function recordOrder\(ops\)/);
+  assert.match(app,/recordOrder:recordOrder\(ops\)/);
+  assert.match(app,/evidenceRoot:await evidenceRoot\(ops\)/);
+  assert.match(app,/if\(!\(await verifyAssignment\(\)\)\)throw/);
+  assert.doesNotMatch(app,/fetch\(['"]https?:/);
+});
