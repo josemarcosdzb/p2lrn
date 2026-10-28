@@ -373,9 +373,10 @@ function assignmentCss(){
   ].join('\n');
 }
 
-function assignmentApp(){
+function assignmentApp({requireSignature=false}={}){
   return [
     "'use strict';",
+    'const SIGNATURE_REQUIRED='+String(requireSignature)+';',
     "const RESULT_SCHEMA='https://p2lrn.org/schema/offline-result/1';",
     "const $=(id)=>document.getElementById(id);",
     "const enc=new TextEncoder();",
@@ -384,7 +385,7 @@ function assignmentApp(){
     "function canonical(v){if(v===null||typeof v==='boolean'||typeof v==='string')return JSON.stringify(v);if(typeof v==='number')return JSON.stringify(v);if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';throw new Error('Unsupported JSON');}",
     "async function sha(text){const d=new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(text)));return 'sha256:'+Array.from(d,b=>b.toString(16).padStart(2,'0')).join('');}",
     "function base64ToBytes(value){return Uint8Array.from(atob(value),c=>c.charCodeAt(0));}",
-    "async function verifyAssignment(){if(!assignment.signature)return true;const s=assignment.signature;try{if(s.algorithm!=='Ed25519')return false;const keyBytes=base64ToBytes(s.publicKey),sig=base64ToBytes(s.value);const digestBytes=new Uint8Array(await crypto.subtle.digest('SHA-256',keyBytes));const digest='sha256:'+Array.from(digestBytes,b=>b.toString(16).padStart(2,'0')).join('');if(digest!==s.keyFingerprint)return false;const k=await crypto.subtle.importKey('spki',keyBytes,{name:'Ed25519'},false,['verify']);const bare={...assignment};delete bare.signature;return crypto.subtle.verify('Ed25519',k,sig,enc.encode(canonical(bare)));}catch{return false;}}",
+    "async function verifyAssignment(){if(!assignment.signature)return !SIGNATURE_REQUIRED;const s=assignment.signature;try{if(s.algorithm!=='Ed25519')return false;const keyBytes=base64ToBytes(s.publicKey),sig=base64ToBytes(s.value);const digestBytes=new Uint8Array(await crypto.subtle.digest('SHA-256',keyBytes));const digest='sha256:'+Array.from(digestBytes,b=>b.toString(16).padStart(2,'0')).join('');if(digest!==s.keyFingerprint)return false;const k=await crypto.subtle.importKey('spki',keyBytes,{name:'Ed25519'},false,['verify']);const bare={...assignment};delete bare.signature;return crypto.subtle.verify('Ed25519',k,sig,enc.encode(canonical(bare)));}catch{return false;}}",
     "function state(){try{return JSON.parse(localStorage.getItem(storageKey())||'null')||{attempts:[],activeAttempt:null,lastWallAt:null,participantLabel:assignment.participant?.label||''};}catch{return{attempts:[],activeAttempt:null,lastWallAt:null,participantLabel:assignment.participant?.label||''};}}",
     "function saveState(s){localStorage.setItem(storageKey(),JSON.stringify(s));}",
     "function fmt(iso){return iso?new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'}).format(new Date(iso)):'Sin límite';}",
@@ -501,7 +502,7 @@ export async function exportOfflineAssignmentBundle(document,options={}){
   }):null;
   const entries=[
     {path:'Abrir P2LRN.cmd',data:textBytes(launcherCmd())},{path:'LEEME.txt',data:textBytes(readmeText(assignment))},{path:'runtime/serve.ps1',data:textBytes(launcherPowerShell())},
-    {path:'www/index.html',data:encoder.encode(assignmentHtml())},{path:'www/style.css',data:encoder.encode(assignmentCss())},{path:'www/app.js',data:encoder.encode(assignmentApp())},
+    {path:'www/index.html',data:encoder.encode(assignmentHtml())},{path:'www/style.css',data:encoder.encode(assignmentCss())},{path:'www/app.js',data:encoder.encode(assignmentApp({requireSignature:Boolean(assignment.signature)}))},
     {path:'www/assignment.json',data:jsonBytes(assignment)},{path:'www/course.p2lrn',data:courseBytes},...runtime.entries,
   ];
   const bytes=writeStoredZip(entries);
