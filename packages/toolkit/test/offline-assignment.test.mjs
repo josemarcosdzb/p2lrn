@@ -378,9 +378,17 @@ test('self-playing app saves operation order and verifies signed assignments bef
   });
   const entries=storedZipEntries(bundle.bytes);
   const app=decoder.decode(entries.get('www/app.js'));
+  assert.match(app,/const SIGNATURE_REQUIRED=true;/);
+  assert.match(app,/if\(!assignment\.signature\)return !SIGNATURE_REQUIRED/);
   assert.match(app,/function recordOrder\(ops\)/);
   assert.match(app,/recordOrder:recordOrder\(ops\)/);
   assert.match(app,/evidenceRoot:await evidenceRoot\(ops\)/);
   assert.match(app,/if\(!\(await verifyAssignment\(\)\)\)throw/);
   assert.doesNotMatch(app,/fetch\(['"]https?:/);
+  const standard=await exportOfflineAssignmentBundle(createP2LRNStudioDocument({title:'Actividad normal'}),{
+    runtimeBaseUrl:'https://runtime.example/player/current/dist/',
+    fetchImpl:runtimeFetch(),
+  });
+  const standardApp=decoder.decode(storedZipEntries(standard.bytes).get('www/app.js'));
+  assert.match(standardApp,/const SIGNATURE_REQUIRED=false;/);
 });
