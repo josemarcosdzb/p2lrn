@@ -1,4 +1,5 @@
 // Verify the real .netlify-cdn output, never the unbuilt HTML alone.
+import {createHash} from 'node:crypto';
 import {readFile,readdir,stat} from 'node:fs/promises';
 import {join,resolve,relative,basename,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -51,6 +52,31 @@ const studio=await readFile(join(out,'studio/index.html'),'utf8');
 if(!/<button\b[^>]*data-open-file/.test(studio)||!/<dialog\b[^>]*data-add-dialog[^>]*aria-labelledby=/.test(studio))errors.push('Studio accessibility controls missing');
 const js=await readFile(join(out,'p2lrn.js'),'utf8');
 if(!js.includes('docs-search-status')||!js.includes("resultsStatus.textContent"))errors.push('docs search result announcement missing');
+// Ensure the production CSP authorizes exactly the immutable import map on Viewer and Studio.
+async function verifyGeneratedImportMapCsp(){
+ const raw=await readFile(join(out,'_headers'),'utf8');
+ let section='';
+ const policies=new Map();
+ for(const line of raw.split(/\r?\n/)){
+   if(line.startsWith('/'))section=line.trim();
+   else if((section==='/demo/*'||section==='/studio/*')&&line.trim().startsWith('Content-Security-Policy:')){
+     policies.set(section,line.slice(line.indexOf(':')+1).trim());
+   }
+ }
+ for(const name of ['demo','studio']){
+   const html=await readFile(join(out,name,'index.html'),'utf8');
+   const payload=/<script type="importmap">([\s\S]*?)<\/script>/i.exec(html)?.[1];
+   if(!payload){errors.push(name+' generated import map missing');continue}
+   const expected='sha256-'+createHash('sha256').update(payload,'utf8').digest('base64');
+   const policy=policies.get('/'+name+'/*');
+   if(!policy){errors.push(name+' generated CSP missing');continue}
+   const scriptSrc=policy.match(/(?:^|;)\s*script-src\s+([^;]+)/)?.[1]||'';
+   const hashes=[...scriptSrc.matchAll(/'sha256-[A-Za-z0-9+/=]+'/g)].map(m=>m[0]);
+   if(hashes.length!==1||hashes[0]!=="'"+expected+"'")errors.push(name+' CSP hash must match its exact import map');
+   if(scriptSrc.includes("'unsafe-inline'"))errors.push(name+' CSP must not allow arbitrary inline scripts');
+ }
+}
+await verifyGeneratedImportMapCsp();
 const result={ok:errors.length===0,sourcePages:sourcePages.length,indexable:indexable.length,aliases:aliases.length,sitemapURLs:xmlUrls.length,quickstartVerified:Boolean(quick&&creator&&quick.equals(creator)),errors};
 console.log(JSON.stringify(result,null,2));
 if(errors.length)process.exitCode=1;

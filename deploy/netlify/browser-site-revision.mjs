@@ -77,8 +77,29 @@ export async function reviseSiteBrowserAssets({siteRoot, htmlFiles}){
     const uri='/'+rel;
     revisionImports[uri]=uri+'?v='+runtimeRevision;
   }
-  const revisionImportMap='<script type="importmap">'+
-    JSON.stringify({imports:revisionImports}).replaceAll('<','\\u003c')+'</script>';
+  const importMapPayload=JSON.stringify({imports:revisionImports}).replaceAll('<','\\u003c');
+  const revisionImportMap='<script type="importmap">'+importMapPayload+'</script>';
+  // CSP stays restrictive: authorize only this generated, content-addressed import map.
+  const allowedImportMapHash='sha256-'+createHash('sha256').update(importMapPayload,'utf8').digest('base64');
+  const headersPath=join(siteRoot,'_headers');
+  if(await exists(headersPath)){
+    const originalHeaders=await readFile(headersPath,'utf8');
+    let route='';
+    const headerRoutes=new Set();
+    const cspPattern=/script-src 'self' blob: 'wasm-unsafe-eval'(?: 'sha256-[A-Za-z0-9+/=]+')*/;
+    const updatedHeaders=originalHeaders.split('\n').map(line=>{
+      if(line.startsWith('/')){route=line.trim();return line;}
+      if((route==='/demo/*'||route==='/studio/*')&&/^\s+Content-Security-Policy:/.test(line)){
+        if(!cspPattern.test(line))throw new Error('Import map CSP cannot be applied to '+route);
+        headerRoutes.add(route);
+        return line.replace(cspPattern,"script-src 'self' blob: 'wasm-unsafe-eval' '"+allowedImportMapHash+"'");
+      }
+      return line;
+    }).join('\n');
+    if(headerRoutes.size!==2)throw new Error('Missing Studio or Viewer CSP section for revision import map');
+    if(updatedHeaders!==originalHeaders)await writeFile(headersPath,updatedHeaders,'utf8');
+  }
+
   const sharedUiRevision={};
   for(const asset of ['p2lrn.js','p2lrn.css']){
     const path=join(siteRoot,asset);
