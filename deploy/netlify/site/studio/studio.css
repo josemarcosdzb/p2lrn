@@ -190,6 +190,7 @@ html[data-studio-mode=preview] .studio-toolbar{position:static}
 .studio-offline-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 .studio-offline-review-content{display:grid;gap:9px;max-width:100%;padding-top:15px}
 .studio-offline-review-content p{margin:0;overflow-wrap:anywhere;font-size:.84rem;line-height:1.4}
+.studio-offline-review-content .studio-offline-review-warning{padding:12px 14px;border:1px solid #e2a4a4;border-radius:8px;background:#fff2f2;color:#992626;font-weight:700;line-height:1.5}
 .studio-offline-review-content strong{display:inline-block;min-width:180px}
 .studio-offline-review-content .studio-offline-note{padding:10px;border:1px solid var(--line);border-radius:6px;background:#f8fafc}
 @media(max-width:650px){.studio-offline-dialog{padding:14px}.studio-offline-fields{grid-template-columns:1fr}.studio-offline-head{flex-wrap:wrap}.studio-offline-review-content strong{min-width:0;display:block}}
