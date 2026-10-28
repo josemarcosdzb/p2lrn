@@ -77,7 +77,7 @@ const richMinimum=new Map([
 ]);
 for(const [route,min] of richMinimum){
   const html=await readFile(routeFile(route),'utf8');
-  const count=[...article(html).matchAll(/<section class="doc-section">/g)].length;
+  const count=[...article(html).matchAll(/<section\b[^>]*class="doc-section"[^>]*>/g)].length;
   if(count<min)failures.push(`${route}: only ${count} content sections, expected at least ${min}`);
 }
 for(const route of primary.filter(x=>x.startsWith('/docs/questionnaires/')&&x!=='/docs/questionnaires/')){
