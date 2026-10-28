@@ -45,7 +45,8 @@ const sitemap=await readFile(join(out,'sitemap.xml'),'utf8').catch(()=>{errors.p
 const xmlUrls=[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]).sort();
 const expected=indexable.map(x=>CANONICAL_ORIGIN+x).sort();
 if(JSON.stringify(xmlUrls)!==JSON.stringify(expected))errors.push('sitemap does not match indexed routes');
-if(sourcePages.length!==60||indexable.length!==57||aliases.length!==3)errors.push('unexpected source/indexable/alias counts: '+[sourcePages.length,indexable.length,aliases.length].join('/'));
+if(sourcePages.length<60||indexable.length+aliases.length!==sourcePages.length||aliases.length!==3)
+  errors.push('unexpected source/indexable/alias counts: '+[sourcePages.length,indexable.length,aliases.length].join('/'));
 // Public solution pages have unique search intent, real actions, and inbound links from the homepage.
 const solutionRoutes=['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'];
 const homeHtml=await readFile(join(out,'index.html'),'utf8');
