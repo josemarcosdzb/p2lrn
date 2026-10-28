@@ -251,6 +251,20 @@ async function fetchBytes(fetchImpl,url){
   return new Uint8Array(await response.arrayBuffer());
 }
 
+async function fetchRuntimeMember(fetchImpl,base,path){
+  if(!path.endsWith('.html'))return fetchBytes(fetchImpl,new URL(path,base).href);
+  // Raw mirrors are served as data, avoiding HTML rewriting by hosting/CDN
+  // post-processors. The member is still packaged under its original .html
+  // filename and ALWAYS checked against release.json below.
+  const rawUrl=new URL(path+'.raw',base).href;
+  const response=await fetchImpl(rawUrl,{credentials:'same-origin',cache:'no-store'});
+  if(response?.ok)return new Uint8Array(await response.arrayBuffer());
+  // Backwards compatibility for self-hosted runtimes without .raw sidecars.
+  // The original HTML must still match the published release digest.
+  if(response?.status===404)return fetchBytes(fetchImpl,new URL(path,base).href);
+  throw new Error('No se pudo incluir el runtime Player: HTTP '+(response?.status??'?')+' · '+rawUrl);
+}
+
 async function collectRuntime(runtimeBaseUrl,fetchImpl){
   const base=new URL('./',runtimeBaseUrl).href;
   const releaseBytes=await fetchBytes(fetchImpl,new URL('release.json',base).href);
@@ -262,7 +276,7 @@ async function collectRuntime(runtimeBaseUrl,fetchImpl){
   for(const descriptor of release.files){
     const path=safeRuntimePath(descriptor?.path);
     if(path==='release.json')continue;
-    const bytes=await fetchBytes(fetchImpl,new URL(path,base).href);
+    const bytes=await fetchRuntimeMember(fetchImpl,base,path);
     if(Number.isInteger(descriptor.bytes)&&descriptor.bytes!==bytes.byteLength)throw new Error('El runtime Player cambió durante la exportación: '+path);
     if(/^sha256:[0-9a-f]{64}$/i.test(String(descriptor.sha256??''))){
       const digest=await sha256Bytes(bytes);
