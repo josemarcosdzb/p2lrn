@@ -1,4 +1,5 @@
 import {execFile} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {cp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
 import {promisify} from 'node:util';
 import {join, resolve} from 'node:path';
@@ -72,6 +73,22 @@ await cp(
   join(versionedDist, 'runtime-host', 'h5p-libraries'),
   {recursive:true, force:true},
 );
+
+// Netlify and site post-processing may modify responses served as text/html.
+// Offline packaging requires the exact preprocessed bytes listed in release.json.
+// Publish these byte-identical sidecars under a non-HTML extension; keep the
+// original .html files for normal Player iframe navigation.
+const offlineHtmlMirrors=playerBuild.release.files.filter(file=>file.path.endsWith('.html'));
+if(offlineHtmlMirrors.length<3)throw new Error('Expected Player runtime HTML hosts are missing from release.json');
+for(const file of offlineHtmlMirrors){
+  if(!/^runtime-host\/[A-Za-z0-9/_-]+\.html$/.test(file.path))
+    throw new Error('Invalid runtime HTML manifest path: '+file.path);
+  const original=await readFile(join(versionedDist,file.path));
+  const digest='sha256:'+createHash('sha256').update(original).digest('hex');
+  if(original.length!==file.bytes||digest!==file.sha256)
+    throw new Error('Player HTML release manifest does not match built bytes: '+file.path);
+  await writeFile(join(versionedDist,file.path+'.raw'),original);
+}
 
 // Mutable development channel.
 await cp(versionedDist, join(outputRoot, 'player', 'current', 'dist'), {
