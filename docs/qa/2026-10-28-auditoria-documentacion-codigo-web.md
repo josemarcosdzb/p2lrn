@@ -191,13 +191,22 @@ Se mantienen explícitos los límites: no se declara certificación Safari/Firef
 6. **Legal**: aviso legal y privacidad indican expresamente los datos jurídicos del responsable/prestador que todavía deben confirmarse.
 7. **Certificación pública de despliegue**: `deployment-verification.json` debe actualizarse únicamente después de validar el nuevo SHA desplegado mediante navegador/HTTP.
 
-## Criterio de cierre
+## Validación final de la auditoría
 
-La auditoría se considera cerrada cuando el candidato reconciliado con el `main` actual supera:
+Cierre técnico ejecutado sobre `f2554069e8d1d334b3602653501315d2f0011cc2`:
 
-1. `scripts/verify-doc-flow.mjs`;
-2. build completo de `deploy/netlify/build-site.mjs`;
-3. pruebas/types afectadas por Player/Studio/LTI;
-4. validación de enlaces/artefactos del sitio generado;
-5. comprobación HTTP/browser del despliegue público;
-6. actualización del manifiesto de verificación pública sólo si la evidencia corresponde al mismo SHA.
+- `scripts/verify-site-security.mjs`: **OK**, 57 HTML revisados y CSP sin scripts inline inseguros.
+- `scripts/verify-doc-navigation.mjs`: **OK**, 48 páginas de documentación, 32 enlaces globales y sin duplicados.
+- `scripts/verify-doc-installation-paths.mjs`: **OK**, rutas CDN/NPM/Studio coherentes con `0.5.0-alpha.11`.
+- `scripts/verify-doc-professional.mjs`: **OK**, jerarquía, fallback, skip links y sidebars accesibles.
+- `scripts/verify-doc-flow.mjs`: **OK**, auditoría completa de HTML público y documentación alineada con alpha.11.
+- `scripts/verify-doc-questionnaire-examples.mjs`: **OK**, 10 guías y ejemplos compatibles con runtime.
+- `scripts/verify-public-doc-content.mjs`: **OK**, sin lenguaje interno de desarrollo ni referencias ajenas.
+- `deploy/netlify/build-site.mjs`: **OK**. Resultado: 63 páginas generadas, 54 indexables, 45 documentos en búsqueda, enlaces locales validados, 18 ejemplos canónicos, 13 generados, 16 comandos CLI y 4 partes multipart.
+- Seguridad y build también validan las tres rutas heredadas de IA sin JavaScript inline; permanecen como redirecciones `noindex` hacia la guía canónica.
+
+La auditoría de **documentación frente a código** queda cerrada a nivel de repositorio y build local reproducible.
+
+### Evidencia de despliegue público
+
+La actualización de `deployment-verification.json` continúa separada deliberadamente. No debe cambiarse hasta demostrar por HTTP/browser que Netlify está sirviendo exactamente el SHA anterior. Esto evita convertir una validación local en una afirmación falsa sobre producción.
