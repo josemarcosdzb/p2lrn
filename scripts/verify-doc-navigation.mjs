@@ -87,7 +87,7 @@ for(const href of ['/docs/progresion/','/docs/metricas/']){
   if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: advanced tracking route must not be under EMPEZAR: '+href);
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==31) failures.push('p2lrn.js: expected 31 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==32) failures.push('p2lrn.js: expected 32 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
 for(const required of ['/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/','/docs/colaboracion/','/docs/progresion/','/docs/metricas/','/docs/compatibilidad/']){
   if(!hrefs.includes(required)) failures.push('p2lrn.js: missing global sidebar route '+required);
@@ -96,16 +96,24 @@ const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
 if(duplicates.length) failures.push('p2lrn.js: duplicate sidebar hrefs: '+[...new Set(duplicates)].join(', '));
 const childBlock=/const DOC_SIDEBAR_CHILDREN = new Map\(\[([\s\S]*?)\n  \]\);/.exec(js)?.[1] ?? '';
 const childLinks=[...childBlock.matchAll(/\['(\/docs\/[^']+\/)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-const connectorRoutes=['/docs/conectores/ia/','/docs/conectores/local/','/docs/conectores/lms/','/docs/conectores/lti/'];
+const connectorRoutes=['/docs/conectores/ia/','/docs/conectores/lms/','/docs/conectores/lti/'];
+const connectorIaDetailRoutes=['/docs/conectores/gemini/','/docs/conectores/skills/','/docs/conectores/local/'];
 if(!hrefs.includes('/docs/conectores/')) failures.push('p2lrn.js: connector section is missing its overview link');
 const connectorChildRoutes=childLinks.filter(item=>item.href.startsWith('/docs/conectores/')).map(item=>item.href);
 if(JSON.stringify(connectorChildRoutes)!==JSON.stringify(connectorRoutes))
-  failures.push('p2lrn.js: connector child pages must be nested in the requested order: '+JSON.stringify(connectorChildRoutes));
+  failures.push('p2lrn.js: canonical connector child pages must be nested in the requested order: '+JSON.stringify(connectorChildRoutes));
 if(!childBlock.includes("['/docs/conectores/',["))
   failures.push('p2lrn.js: connector submenus must belong to the parent link');
 for(const route of connectorRoutes){
   const parentBreadcrumb="['"+route+"',['/docs/conectores/','Conectores e integración']]";
   if(!js.includes(parentBreadcrumb)) failures.push('p2lrn.js: missing connector breadcrumb: '+route);
+}
+for(const route of connectorIaDetailRoutes){
+  const parentBreadcrumb="['"+route+"',['/docs/conectores/ia/','Conectores para IA']]";
+  if(!js.includes(parentBreadcrumb)) failures.push('p2lrn.js: legacy IA detail breadcrumb must pass through Conectores para IA: '+route);
+}
+for(const route of connectorIaDetailRoutes){
+  if(!js.includes("'"+route+"'")) failures.push('p2lrn.js: legacy IA detail route is not recognized: '+route);
 }
 if(!js.includes("'/docs/conectores/*'"))
   failures.push('p2lrn.js: Integrar main menu must cover connector subpages');
@@ -133,8 +141,9 @@ const docRoutes=pages.map((path)=>{
 for(const route of docRoutes){
   const exact=hrefs.includes(route);
   const child=childLinks.some((item)=>item.href===route);
-  if(!exact && !child) failures.push('sidebar does not cover documentation route: '+route);
+  const iaDetail=connectorIaDetailRoutes.includes(route);
+  if(!exact && !child && !iaDetail) failures.push('sidebar does not cover documentation route: '+route);
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,desktopHoverBridge:true,questionnaireChildrenUseParent:true,beforeStartChildrenUseParent:true,trackingGroupedLater:true,childPageSubmenu:true,connectorSubpages:4,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true,advancedTrackingAfterIntegration:true,easyStartBeforeInstall:true,cdnBeforeNpm:true},null,2));
+console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,desktopHoverBridge:true,questionnaireChildrenUseParent:true,beforeStartChildrenUseParent:true,trackingGroupedLater:true,childPageSubmenu:true,connectorSubpages:3,connectorIaLegacyDetails:3,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true,advancedTrackingAfterIntegration:true,easyStartBeforeInstall:true,cdnBeforeNpm:true},null,2));
