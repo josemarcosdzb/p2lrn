@@ -137,10 +137,11 @@
     },
     {
       label: 'Seguimiento',
-      active: ['/docs/progresion/','/docs/metricas/'],
+      active: ['/docs/progresion/','/docs/metricas/','/docs/analytics/','/analytics/'],
       items: [
         ['/docs/progresion/','Progresión'],
         ['/docs/metricas/','Métricas y analítica'],
+        ['/docs/analytics/','P2LRN Analytics'],
       ],
     },
     {
@@ -372,6 +373,7 @@
     ['SEGUIMIENTO', [
       ['/docs/progresion/','Progresión'],
       ['/docs/metricas/','Métricas y analítica'],
+      ['/docs/analytics/','P2LRN Analytics'],
     ]],
     ['REFERENCIA', [
       ['/docs/compatibilidad/','Compatibilidad'],

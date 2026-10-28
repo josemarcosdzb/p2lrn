@@ -13,6 +13,7 @@ const playerPackagePath = join(root, 'packages', 'player', 'package.json');
 const toolkitPackagePath = join(root, 'packages', 'toolkit', 'package.json');
 const h5pPackagePath = join(root, 'packages', 'h5p-libraries', 'package.json');
 const studioPackagePath = join(root, 'packages', 'studio', 'package.json');
+const analyticsPackagePath = join(root, 'packages', 'analytics', 'package.json');
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
@@ -35,11 +36,12 @@ const playerPackage = await readJson(playerPackagePath);
 const toolkitPackage = await readJson(toolkitPackagePath);
 const h5pPackage = await readJson(h5pPackagePath);
 const studioPackage = await readJson(studioPackagePath);
+const analyticsPackage = await readJson(analyticsPackagePath);
 const version = playerPackage.version;
 
-if (toolkitPackage.version !== version || h5pPackage.version !== version || studioPackage.version !== version) {
+if (toolkitPackage.version !== version || h5pPackage.version !== version || studioPackage.version !== version || analyticsPackage.version !== version) {
   throw new Error(
-    `P2LRN npm versions must align before CDN build: player=${version}, toolkit=${toolkitPackage.version}, h5p-libraries=${h5pPackage.version}, studio=${studioPackage.version}`,
+    `P2LRN npm versions must align before CDN build: player=${version}, toolkit=${toolkitPackage.version}, h5p-libraries=${h5pPackage.version}, studio=${studioPackage.version}, analytics=${analyticsPackage.version}`,
   );
 }
 
@@ -57,6 +59,11 @@ await execFileAsync(process.execPath,[join(root,'packages','studio','scripts','b
 const studioPackageDist=join(root,'packages','studio','dist');
 await cp(studioPackageDist,join(outputRoot,'studio',version,'dist'),{recursive:true,force:true});
 await cp(studioPackageDist,join(outputRoot,'studio','current','dist'),{recursive:true,force:true});
+
+await execFileAsync(process.execPath,[join(root,'packages','analytics','scripts','build-dist.mjs')],{cwd:root,maxBuffer:4*1024*1024});
+const analyticsPackageDist=join(root,'packages','analytics','dist');
+await cp(analyticsPackageDist,join(outputRoot,'analytics',version,'dist'),{recursive:true,force:true});
+await cp(analyticsPackageDist,join(outputRoot,'analytics','current','dist'),{recursive:true,force:true});
 
 const h5pPackageDist = join(root, 'packages', 'h5p-libraries', 'dist');
 const h5pManifest = await buildH5pLibraries({output:h5pPackageDist});
@@ -87,6 +94,8 @@ const index = {
     h5pLibrariesVersion:h5pPackage.version,
     studioPackage:'@p2lrn/studio',
     studioVersion:studioPackage.version,
+    analyticsPackage:'@p2lrn/analytics',
+    analyticsVersion:analyticsPackage.version,
   },
   license:{
     id:'P2LRN-NCSL-1.0',
@@ -124,6 +133,16 @@ const index = {
     physics:'rapier3d',
     rapier3dVersion:RAPIER3D_VERSION,
     vendorBasePath:`/player/${version}/dist/vendor/`,
+  },
+  analytics:{
+    version:analyticsPackage.version,
+    npmPackage:'@p2lrn/analytics',
+    versionedBasePath:`/analytics/${version}/dist/`,
+    currentBasePath:'/analytics/current/dist/',
+    classic:`/analytics/${version}/dist/p2lrn-analytics.js`,
+    module:`/analytics/${version}/dist/p2lrn-analytics.esm.js`,
+    model:`/analytics/${version}/dist/model.js`,
+    release:`/analytics/${version}/dist/release.json`,
   },
   h5p:{
     standaloneVersion:H5P_STANDALONE_VERSION,
@@ -185,6 +204,8 @@ headers += headerBlock(
 headers += headerBlock('/player/current/*', 'no-store', 'no-store');
 headers += headerBlock(`/studio/${version}/*`,'public, max-age=31536000, immutable','public, s-maxage=31536000, immutable');
 headers += headerBlock('/studio/current/*','no-store','no-store');
+headers += headerBlock(`/analytics/${version}/*`,'public, max-age=31536000, immutable','public, s-maxage=31536000, immutable');
+headers += headerBlock('/analytics/current/*','no-store','no-store');
 
 const runtimeCsp = "default-src 'none'; script-src 'self' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";
 const executablePackageCsp = "default-src 'none'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";
@@ -224,6 +245,7 @@ console.log(JSON.stringify({
   toolkitVersion:toolkitPackage.version,
   h5pLibrariesVersion:h5pPackage.version,
   studioVersion:studioPackage.version,
+  analyticsVersion:analyticsPackage.version,
   playerFiles:playerBuild.release.files.length,
   sharedH5pLibraryCount:h5pManifest.libraryCount,
   h5pStandaloneVersion:H5P_STANDALONE_VERSION,

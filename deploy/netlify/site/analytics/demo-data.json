@@ -1,0 +1,2821 @@
+{
+  "schema": "https://p2lrn.org/schema/analytics-dataset/1",
+  "generatedAt": "2026-10-28T20:00:00.000Z",
+  "metadata": {
+    "demo": true,
+    "label": "Datos de demostración P2LRN Analytics"
+  },
+  "learners": [
+    {
+      "id": "ana",
+      "name": "Ana Ruiz",
+      "email": "ana@example.test",
+      "group": "Grupo A",
+      "status": "active"
+    },
+    {
+      "id": "bruno",
+      "name": "Bruno León",
+      "email": "bruno@example.test",
+      "group": "Grupo A",
+      "status": "active"
+    },
+    {
+      "id": "carla",
+      "name": "Carla Soto",
+      "email": "carla@example.test",
+      "group": "Grupo A",
+      "status": "active"
+    },
+    {
+      "id": "diego",
+      "name": "Diego Núñez",
+      "email": "diego@example.test",
+      "group": "Grupo B",
+      "status": "active"
+    },
+    {
+      "id": "elena",
+      "name": "Elena Gil",
+      "email": "elena@example.test",
+      "group": "Grupo B",
+      "status": "active"
+    },
+    {
+      "id": "fabio",
+      "name": "Fabio Vega",
+      "email": "fabio@example.test",
+      "group": "Grupo B",
+      "status": "active"
+    },
+    {
+      "id": "gabriela",
+      "name": "Gabriela Rey",
+      "email": "gabriela@example.test",
+      "group": "Grupo C",
+      "status": "active"
+    },
+    {
+      "id": "hugo",
+      "name": "Hugo Vidal",
+      "email": "hugo@example.test",
+      "group": "Grupo C",
+      "status": "active"
+    },
+    {
+      "id": "ines",
+      "name": "Inés Cano",
+      "email": "ines@example.test",
+      "group": "Grupo C",
+      "status": "active"
+    },
+    {
+      "id": "javier",
+      "name": "Javier Mora",
+      "email": "javier@example.test",
+      "group": "Grupo D",
+      "status": "active"
+    },
+    {
+      "id": "laura",
+      "name": "Laura Ríos",
+      "email": "laura@example.test",
+      "group": "Grupo D",
+      "status": "active"
+    },
+    {
+      "id": "marcos",
+      "name": "Marcos Sanz",
+      "email": "marcos@example.test",
+      "group": "Grupo D",
+      "status": "active"
+    }
+  ],
+  "courses": [
+    {
+      "id": "matematicas",
+      "title": "Matemáticas aplicadas",
+      "code": "MAT-101"
+    },
+    {
+      "id": "ciencias",
+      "title": "Ciencias y laboratorio",
+      "code": "CIE-204"
+    },
+    {
+      "id": "historia",
+      "title": "Historia contemporánea",
+      "code": "HIS-110"
+    }
+  ],
+  "enrollments": [
+    {
+      "learnerId": "ana",
+      "courseId": "matematicas",
+      "progress": 0.78,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-20T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "ana",
+      "courseId": "ciencias",
+      "progress": 0.62,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-20T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "ana",
+      "courseId": "historia",
+      "progress": 0.84,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-20T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "bruno",
+      "courseId": "matematicas",
+      "progress": 0.24,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-21T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "bruno",
+      "courseId": "ciencias",
+      "progress": 0.18,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-21T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "bruno",
+      "courseId": "historia",
+      "progress": 0.31,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-21T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "carla",
+      "courseId": "matematicas",
+      "progress": 1,
+      "status": "completed",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-22T09:00:00Z",
+      "completedAt": "2026-10-22T12:00:00Z"
+    },
+    {
+      "learnerId": "carla",
+      "courseId": "ciencias",
+      "progress": 0.96,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-22T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "carla",
+      "courseId": "historia",
+      "progress": 1,
+      "status": "completed",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-22T09:00:00Z",
+      "completedAt": "2026-10-22T12:00:00Z"
+    },
+    {
+      "learnerId": "diego",
+      "courseId": "matematicas",
+      "progress": 0.45,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-23T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "diego",
+      "courseId": "ciencias",
+      "progress": 0.52,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-23T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "diego",
+      "courseId": "historia",
+      "progress": 0.38,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-23T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "elena",
+      "courseId": "matematicas",
+      "progress": 0.12,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-24T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "elena",
+      "courseId": "ciencias",
+      "progress": 0.08,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-24T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "elena",
+      "courseId": "historia",
+      "progress": 0.2,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-24T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "fabio",
+      "courseId": "matematicas",
+      "progress": 1,
+      "status": "completed",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-25T09:00:00Z",
+      "completedAt": "2026-10-25T12:00:00Z"
+    },
+    {
+      "learnerId": "fabio",
+      "courseId": "ciencias",
+      "progress": 0.82,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-25T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "fabio",
+      "courseId": "historia",
+      "progress": 0.76,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-25T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "gabriela",
+      "courseId": "matematicas",
+      "progress": 0.7,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-26T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "gabriela",
+      "courseId": "ciencias",
+      "progress": 0.66,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-26T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "gabriela",
+      "courseId": "historia",
+      "progress": 0.72,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-26T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "hugo",
+      "courseId": "matematicas",
+      "progress": 0.58,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-27T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "hugo",
+      "courseId": "ciencias",
+      "progress": 0.51,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-27T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "hugo",
+      "courseId": "historia",
+      "progress": 0.47,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-27T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "ines",
+      "courseId": "matematicas",
+      "progress": 0.92,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-20T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "ines",
+      "courseId": "ciencias",
+      "progress": 1,
+      "status": "completed",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-20T09:00:00Z",
+      "completedAt": "2026-10-22T12:00:00Z"
+    },
+    {
+      "learnerId": "ines",
+      "courseId": "historia",
+      "progress": 0.88,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-20T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "javier",
+      "courseId": "matematicas",
+      "progress": 0.35,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-21T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "javier",
+      "courseId": "ciencias",
+      "progress": 0.28,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-21T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "javier",
+      "courseId": "historia",
+      "progress": 0.44,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-21T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "laura",
+      "courseId": "matematicas",
+      "progress": 0.96,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-22T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "laura",
+      "courseId": "ciencias",
+      "progress": 0.91,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-22T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "laura",
+      "courseId": "historia",
+      "progress": 1,
+      "status": "completed",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-22T09:00:00Z",
+      "completedAt": "2026-10-24T12:00:00Z"
+    },
+    {
+      "learnerId": "marcos",
+      "courseId": "matematicas",
+      "progress": 0.54,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-23T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "marcos",
+      "courseId": "ciencias",
+      "progress": 0.61,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-23T09:00:00Z",
+      "completedAt": null
+    },
+    {
+      "learnerId": "marcos",
+      "courseId": "historia",
+      "progress": 0.49,
+      "status": "active",
+      "enrolledAt": "2026-09-15T08:00:00Z",
+      "startedAt": "2026-09-23T09:00:00Z",
+      "completedAt": null
+    }
+  ],
+  "attempts": [
+    {
+      "id": "ana-matematicas-1",
+      "learnerId": "ana",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.78,
+      "startedAt": "2026-10-23T09:00:00Z",
+      "updatedAt": "2026-10-24T18:00:00Z",
+      "activeTimeMs": 2100000
+    },
+    {
+      "id": "ana-ciencias-1",
+      "learnerId": "ana",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.62,
+      "startedAt": "2026-10-23T09:00:00Z",
+      "updatedAt": "2026-10-24T18:00:00Z",
+      "activeTimeMs": 2520000
+    },
+    {
+      "id": "ana-historia-1",
+      "learnerId": "ana",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.84,
+      "startedAt": "2026-10-23T09:00:00Z",
+      "updatedAt": "2026-10-24T18:00:00Z",
+      "activeTimeMs": 2940000
+    },
+    {
+      "id": "bruno-matematicas-1",
+      "learnerId": "bruno",
+      "courseId": "matematicas",
+      "status": "failed",
+      "progress": 0.24,
+      "startedAt": "2026-10-04T09:00:00Z",
+      "updatedAt": "2026-10-05T18:00:00Z",
+      "activeTimeMs": 780000
+    },
+    {
+      "id": "bruno-matematicas-2",
+      "learnerId": "bruno",
+      "courseId": "matematicas",
+      "status": "failed",
+      "progress": 0.24,
+      "startedAt": "2026-10-03T09:00:00Z",
+      "updatedAt": "2026-10-05T18:00:00Z",
+      "activeTimeMs": 780000
+    },
+    {
+      "id": "bruno-matematicas-3",
+      "learnerId": "bruno",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.24,
+      "startedAt": "2026-10-02T09:00:00Z",
+      "updatedAt": "2026-10-05T18:00:00Z",
+      "activeTimeMs": 780000
+    },
+    {
+      "id": "bruno-ciencias-1",
+      "learnerId": "bruno",
+      "courseId": "ciencias",
+      "status": "failed",
+      "progress": 0.18,
+      "startedAt": "2026-10-04T09:00:00Z",
+      "updatedAt": "2026-10-05T18:00:00Z",
+      "activeTimeMs": 920000
+    },
+    {
+      "id": "bruno-ciencias-2",
+      "learnerId": "bruno",
+      "courseId": "ciencias",
+      "status": "failed",
+      "progress": 0.18,
+      "startedAt": "2026-10-03T09:00:00Z",
+      "updatedAt": "2026-10-05T18:00:00Z",
+      "activeTimeMs": 920000
+    },
+    {
+      "id": "bruno-ciencias-3",
+      "learnerId": "bruno",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.18,
+      "startedAt": "2026-10-02T09:00:00Z",
+      "updatedAt": "2026-10-05T18:00:00Z",
+      "activeTimeMs": 920000
+    },
+    {
+      "id": "bruno-historia-1",
+      "learnerId": "bruno",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.31,
+      "startedAt": "2026-10-04T09:00:00Z",
+      "updatedAt": "2026-10-05T18:00:00Z",
+      "activeTimeMs": 1590000
+    },
+    {
+      "id": "bruno-historia-2",
+      "learnerId": "bruno",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.31,
+      "startedAt": "2026-10-03T09:00:00Z",
+      "updatedAt": "2026-10-05T18:00:00Z",
+      "activeTimeMs": 1590000
+    },
+    {
+      "id": "carla-matematicas-1",
+      "learnerId": "carla",
+      "courseId": "matematicas",
+      "status": "completed",
+      "progress": 1,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-26T18:00:00Z",
+      "activeTimeMs": 2580000
+    },
+    {
+      "id": "carla-ciencias-1",
+      "learnerId": "carla",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.96,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-26T18:00:00Z",
+      "activeTimeMs": 3000000
+    },
+    {
+      "id": "carla-historia-1",
+      "learnerId": "carla",
+      "courseId": "historia",
+      "status": "completed",
+      "progress": 1,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-26T18:00:00Z",
+      "activeTimeMs": 3420000
+    },
+    {
+      "id": "diego-matematicas-1",
+      "learnerId": "diego",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.45,
+      "startedAt": "2026-10-26T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 1410000
+    },
+    {
+      "id": "diego-matematicas-2",
+      "learnerId": "diego",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.45,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 1410000
+    },
+    {
+      "id": "diego-ciencias-1",
+      "learnerId": "diego",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.52,
+      "startedAt": "2026-10-26T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 1620000
+    },
+    {
+      "id": "diego-ciencias-2",
+      "learnerId": "diego",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.52,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 1620000
+    },
+    {
+      "id": "diego-historia-1",
+      "learnerId": "diego",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.38,
+      "startedAt": "2026-10-26T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 1830000
+    },
+    {
+      "id": "diego-historia-2",
+      "learnerId": "diego",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.38,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 1830000
+    },
+    {
+      "id": "elena-matematicas-1",
+      "learnerId": "elena",
+      "courseId": "matematicas",
+      "status": "failed",
+      "progress": 0.12,
+      "startedAt": "2026-10-07T09:00:00Z",
+      "updatedAt": "2026-10-08T18:00:00Z",
+      "activeTimeMs": 1020000
+    },
+    {
+      "id": "elena-matematicas-2",
+      "learnerId": "elena",
+      "courseId": "matematicas",
+      "status": "failed",
+      "progress": 0.12,
+      "startedAt": "2026-10-06T09:00:00Z",
+      "updatedAt": "2026-10-08T18:00:00Z",
+      "activeTimeMs": 1020000
+    },
+    {
+      "id": "elena-matematicas-3",
+      "learnerId": "elena",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.12,
+      "startedAt": "2026-10-05T09:00:00Z",
+      "updatedAt": "2026-10-08T18:00:00Z",
+      "activeTimeMs": 1020000
+    },
+    {
+      "id": "elena-ciencias-1",
+      "learnerId": "elena",
+      "courseId": "ciencias",
+      "status": "failed",
+      "progress": 0.08,
+      "startedAt": "2026-10-07T09:00:00Z",
+      "updatedAt": "2026-10-08T18:00:00Z",
+      "activeTimeMs": 1160000
+    },
+    {
+      "id": "elena-ciencias-2",
+      "learnerId": "elena",
+      "courseId": "ciencias",
+      "status": "failed",
+      "progress": 0.08,
+      "startedAt": "2026-10-06T09:00:00Z",
+      "updatedAt": "2026-10-08T18:00:00Z",
+      "activeTimeMs": 1160000
+    },
+    {
+      "id": "elena-ciencias-3",
+      "learnerId": "elena",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.08,
+      "startedAt": "2026-10-05T09:00:00Z",
+      "updatedAt": "2026-10-08T18:00:00Z",
+      "activeTimeMs": 1160000
+    },
+    {
+      "id": "elena-historia-1",
+      "learnerId": "elena",
+      "courseId": "historia",
+      "status": "failed",
+      "progress": 0.2,
+      "startedAt": "2026-10-07T09:00:00Z",
+      "updatedAt": "2026-10-08T18:00:00Z",
+      "activeTimeMs": 1300000
+    },
+    {
+      "id": "elena-historia-2",
+      "learnerId": "elena",
+      "courseId": "historia",
+      "status": "failed",
+      "progress": 0.2,
+      "startedAt": "2026-10-06T09:00:00Z",
+      "updatedAt": "2026-10-08T18:00:00Z",
+      "activeTimeMs": 1300000
+    },
+    {
+      "id": "elena-historia-3",
+      "learnerId": "elena",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.2,
+      "startedAt": "2026-10-05T09:00:00Z",
+      "updatedAt": "2026-10-08T18:00:00Z",
+      "activeTimeMs": 1300000
+    },
+    {
+      "id": "fabio-matematicas-1",
+      "learnerId": "fabio",
+      "courseId": "matematicas",
+      "status": "completed",
+      "progress": 1,
+      "startedAt": "2026-10-24T09:00:00Z",
+      "updatedAt": "2026-10-25T18:00:00Z",
+      "activeTimeMs": 3300000
+    },
+    {
+      "id": "fabio-ciencias-1",
+      "learnerId": "fabio",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.82,
+      "startedAt": "2026-10-24T09:00:00Z",
+      "updatedAt": "2026-10-25T18:00:00Z",
+      "activeTimeMs": 3720000
+    },
+    {
+      "id": "fabio-historia-1",
+      "learnerId": "fabio",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.76,
+      "startedAt": "2026-10-24T09:00:00Z",
+      "updatedAt": "2026-10-25T18:00:00Z",
+      "activeTimeMs": 4140000
+    },
+    {
+      "id": "gabriela-matematicas-1",
+      "learnerId": "gabriela",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.7,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-26T18:00:00Z",
+      "activeTimeMs": 3540000
+    },
+    {
+      "id": "gabriela-ciencias-1",
+      "learnerId": "gabriela",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.66,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-26T18:00:00Z",
+      "activeTimeMs": 3960000
+    },
+    {
+      "id": "gabriela-historia-1",
+      "learnerId": "gabriela",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.72,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-26T18:00:00Z",
+      "activeTimeMs": 4380000
+    },
+    {
+      "id": "hugo-matematicas-1",
+      "learnerId": "hugo",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.58,
+      "startedAt": "2026-10-26T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 1890000
+    },
+    {
+      "id": "hugo-matematicas-2",
+      "learnerId": "hugo",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.58,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 1890000
+    },
+    {
+      "id": "hugo-ciencias-1",
+      "learnerId": "hugo",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.51,
+      "startedAt": "2026-10-26T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 2100000
+    },
+    {
+      "id": "hugo-ciencias-2",
+      "learnerId": "hugo",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.51,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 2100000
+    },
+    {
+      "id": "hugo-historia-1",
+      "learnerId": "hugo",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.47,
+      "startedAt": "2026-10-26T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 2310000
+    },
+    {
+      "id": "hugo-historia-2",
+      "learnerId": "hugo",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.47,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 2310000
+    },
+    {
+      "id": "ines-matematicas-1",
+      "learnerId": "ines",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.92,
+      "startedAt": "2026-10-23T09:00:00Z",
+      "updatedAt": "2026-10-24T18:00:00Z",
+      "activeTimeMs": 4020000
+    },
+    {
+      "id": "ines-ciencias-1",
+      "learnerId": "ines",
+      "courseId": "ciencias",
+      "status": "completed",
+      "progress": 1,
+      "startedAt": "2026-10-23T09:00:00Z",
+      "updatedAt": "2026-10-24T18:00:00Z",
+      "activeTimeMs": 4440000
+    },
+    {
+      "id": "ines-historia-1",
+      "learnerId": "ines",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.88,
+      "startedAt": "2026-10-23T09:00:00Z",
+      "updatedAt": "2026-10-24T18:00:00Z",
+      "activeTimeMs": 4860000
+    },
+    {
+      "id": "javier-matematicas-1",
+      "learnerId": "javier",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.35,
+      "startedAt": "2026-10-12T09:00:00Z",
+      "updatedAt": "2026-10-13T18:00:00Z",
+      "activeTimeMs": 2130000
+    },
+    {
+      "id": "javier-matematicas-2",
+      "learnerId": "javier",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.35,
+      "startedAt": "2026-10-11T09:00:00Z",
+      "updatedAt": "2026-10-13T18:00:00Z",
+      "activeTimeMs": 2130000
+    },
+    {
+      "id": "javier-ciencias-1",
+      "learnerId": "javier",
+      "courseId": "ciencias",
+      "status": "failed",
+      "progress": 0.28,
+      "startedAt": "2026-10-12T09:00:00Z",
+      "updatedAt": "2026-10-13T18:00:00Z",
+      "activeTimeMs": 1560000
+    },
+    {
+      "id": "javier-ciencias-2",
+      "learnerId": "javier",
+      "courseId": "ciencias",
+      "status": "failed",
+      "progress": 0.28,
+      "startedAt": "2026-10-11T09:00:00Z",
+      "updatedAt": "2026-10-13T18:00:00Z",
+      "activeTimeMs": 1560000
+    },
+    {
+      "id": "javier-ciencias-3",
+      "learnerId": "javier",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.28,
+      "startedAt": "2026-10-10T09:00:00Z",
+      "updatedAt": "2026-10-13T18:00:00Z",
+      "activeTimeMs": 1560000
+    },
+    {
+      "id": "javier-historia-1",
+      "learnerId": "javier",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.44,
+      "startedAt": "2026-10-12T09:00:00Z",
+      "updatedAt": "2026-10-13T18:00:00Z",
+      "activeTimeMs": 2550000
+    },
+    {
+      "id": "javier-historia-2",
+      "learnerId": "javier",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.44,
+      "startedAt": "2026-10-11T09:00:00Z",
+      "updatedAt": "2026-10-13T18:00:00Z",
+      "activeTimeMs": 2550000
+    },
+    {
+      "id": "laura-matematicas-1",
+      "learnerId": "laura",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.96,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-26T18:00:00Z",
+      "activeTimeMs": 4500000
+    },
+    {
+      "id": "laura-ciencias-1",
+      "learnerId": "laura",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.91,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-26T18:00:00Z",
+      "activeTimeMs": 4920000
+    },
+    {
+      "id": "laura-historia-1",
+      "learnerId": "laura",
+      "courseId": "historia",
+      "status": "completed",
+      "progress": 1,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-26T18:00:00Z",
+      "activeTimeMs": 5340000
+    },
+    {
+      "id": "marcos-matematicas-1",
+      "learnerId": "marcos",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.54,
+      "startedAt": "2026-10-26T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 2370000
+    },
+    {
+      "id": "marcos-matematicas-2",
+      "learnerId": "marcos",
+      "courseId": "matematicas",
+      "status": "started",
+      "progress": 0.54,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 2370000
+    },
+    {
+      "id": "marcos-ciencias-1",
+      "learnerId": "marcos",
+      "courseId": "ciencias",
+      "status": "started",
+      "progress": 0.61,
+      "startedAt": "2026-10-26T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 5160000
+    },
+    {
+      "id": "marcos-historia-1",
+      "learnerId": "marcos",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.49,
+      "startedAt": "2026-10-26T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 2790000
+    },
+    {
+      "id": "marcos-historia-2",
+      "learnerId": "marcos",
+      "courseId": "historia",
+      "status": "started",
+      "progress": 0.49,
+      "startedAt": "2026-10-25T09:00:00Z",
+      "updatedAt": "2026-10-27T18:00:00Z",
+      "activeTimeMs": 2790000
+    }
+  ],
+  "grades": [
+    {
+      "id": "grade-ana-matematicas",
+      "learnerId": "ana",
+      "courseId": "matematicas",
+      "value": 82,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-24T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-ana-ciencias",
+      "learnerId": "ana",
+      "courseId": "ciencias",
+      "value": 74,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-24T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "browser-score",
+      "learnerId": "ana",
+      "courseId": "ciencias",
+      "value": 98,
+      "maxValue": 100,
+      "authoritative": false,
+      "updatedAt": "2026-10-27T12:00:00Z",
+      "source": "player"
+    },
+    {
+      "id": "grade-ana-historia",
+      "learnerId": "ana",
+      "courseId": "historia",
+      "value": 88,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-24T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-bruno-matematicas",
+      "learnerId": "bruno",
+      "courseId": "matematicas",
+      "value": 48,
+      "maxValue": 100,
+      "passed": false,
+      "authoritative": true,
+      "updatedAt": "2026-10-05T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-bruno-ciencias",
+      "learnerId": "bruno",
+      "courseId": "ciencias",
+      "value": 55,
+      "maxValue": 100,
+      "passed": false,
+      "authoritative": true,
+      "updatedAt": "2026-10-05T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-bruno-historia",
+      "learnerId": "bruno",
+      "courseId": "historia",
+      "value": 52,
+      "maxValue": 100,
+      "passed": false,
+      "authoritative": true,
+      "updatedAt": "2026-10-05T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-carla-matematicas",
+      "learnerId": "carla",
+      "courseId": "matematicas",
+      "value": 94,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-26T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-carla-ciencias",
+      "learnerId": "carla",
+      "courseId": "ciencias",
+      "value": 91,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-26T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-carla-historia",
+      "learnerId": "carla",
+      "courseId": "historia",
+      "value": 96,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-26T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-diego-matematicas",
+      "learnerId": "diego",
+      "courseId": "matematicas",
+      "value": 63,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-27T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-diego-ciencias",
+      "learnerId": "diego",
+      "courseId": "ciencias",
+      "value": 68,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-27T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-diego-historia",
+      "learnerId": "diego",
+      "courseId": "historia",
+      "value": 61,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-27T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-elena-historia",
+      "learnerId": "elena",
+      "courseId": "historia",
+      "value": 58,
+      "maxValue": 100,
+      "passed": false,
+      "authoritative": true,
+      "updatedAt": "2026-10-08T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-fabio-matematicas",
+      "learnerId": "fabio",
+      "courseId": "matematicas",
+      "value": 78,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-25T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-fabio-ciencias",
+      "learnerId": "fabio",
+      "courseId": "ciencias",
+      "value": 81,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-25T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-fabio-historia",
+      "learnerId": "fabio",
+      "courseId": "historia",
+      "value": 76,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-25T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-gabriela-matematicas",
+      "learnerId": "gabriela",
+      "courseId": "matematicas",
+      "value": 72,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-26T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-gabriela-ciencias",
+      "learnerId": "gabriela",
+      "courseId": "ciencias",
+      "value": 75,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-26T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-gabriela-historia",
+      "learnerId": "gabriela",
+      "courseId": "historia",
+      "value": 70,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-26T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-hugo-matematicas",
+      "learnerId": "hugo",
+      "courseId": "matematicas",
+      "value": 58,
+      "maxValue": 100,
+      "passed": false,
+      "authoritative": true,
+      "updatedAt": "2026-10-27T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-hugo-ciencias",
+      "learnerId": "hugo",
+      "courseId": "ciencias",
+      "value": 62,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-27T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-hugo-historia",
+      "learnerId": "hugo",
+      "courseId": "historia",
+      "value": 57,
+      "maxValue": 100,
+      "passed": false,
+      "authoritative": true,
+      "updatedAt": "2026-10-27T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-ines-matematicas",
+      "learnerId": "ines",
+      "courseId": "matematicas",
+      "value": 89,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-24T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-ines-ciencias",
+      "learnerId": "ines",
+      "courseId": "ciencias",
+      "value": 92,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-24T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-ines-historia",
+      "learnerId": "ines",
+      "courseId": "historia",
+      "value": 86,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-24T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-javier-matematicas",
+      "learnerId": "javier",
+      "courseId": "matematicas",
+      "value": 65,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-13T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-javier-ciencias",
+      "learnerId": "javier",
+      "courseId": "ciencias",
+      "value": 59,
+      "maxValue": 100,
+      "passed": false,
+      "authoritative": true,
+      "updatedAt": "2026-10-13T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-javier-historia",
+      "learnerId": "javier",
+      "courseId": "historia",
+      "value": 67,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-13T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-laura-matematicas",
+      "learnerId": "laura",
+      "courseId": "matematicas",
+      "value": 96,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-26T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-laura-ciencias",
+      "learnerId": "laura",
+      "courseId": "ciencias",
+      "value": 93,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-26T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-laura-historia",
+      "learnerId": "laura",
+      "courseId": "historia",
+      "value": 98,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-26T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-marcos-matematicas",
+      "learnerId": "marcos",
+      "courseId": "matematicas",
+      "value": 69,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-27T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-marcos-ciencias",
+      "learnerId": "marcos",
+      "courseId": "ciencias",
+      "value": 71,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-27T18:15:00Z",
+      "source": "host"
+    },
+    {
+      "id": "grade-marcos-historia",
+      "learnerId": "marcos",
+      "courseId": "historia",
+      "value": 66,
+      "maxValue": 100,
+      "passed": true,
+      "authoritative": true,
+      "updatedAt": "2026-10-27T18:15:00Z",
+      "source": "host"
+    }
+  ],
+  "events": [
+    {
+      "id": "ev-ana-matematicas-1",
+      "sequence": 1,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-24T10:00:00Z",
+      "learnerId": "ana",
+      "courseId": "matematicas",
+      "attemptId": "ana-matematicas-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-ana-matematicas-2",
+      "sequence": 2,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-24T10:12:00Z",
+      "learnerId": "ana",
+      "courseId": "matematicas",
+      "attemptId": "ana-matematicas-1",
+      "payload": {
+        "progress": 0.78
+      }
+    },
+    {
+      "id": "ev-ana-matematicas-3",
+      "sequence": 3,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-24T10:15:00Z",
+      "learnerId": "ana",
+      "courseId": "matematicas",
+      "attemptId": "ana-matematicas-1",
+      "payload": {
+        "totalActiveMs": 2100000
+      }
+    },
+    {
+      "id": "ev-ana-ciencias-1",
+      "sequence": 4,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-24T10:00:00Z",
+      "learnerId": "ana",
+      "courseId": "ciencias",
+      "attemptId": "ana-ciencias-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-ana-ciencias-2",
+      "sequence": 5,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-24T10:12:00Z",
+      "learnerId": "ana",
+      "courseId": "ciencias",
+      "attemptId": "ana-ciencias-1",
+      "payload": {
+        "progress": 0.62
+      }
+    },
+    {
+      "id": "ev-ana-ciencias-3",
+      "sequence": 6,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-24T10:15:00Z",
+      "learnerId": "ana",
+      "courseId": "ciencias",
+      "attemptId": "ana-ciencias-1",
+      "payload": {
+        "totalActiveMs": 2520000
+      }
+    },
+    {
+      "id": "ev-ana-historia-1",
+      "sequence": 7,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-24T10:00:00Z",
+      "learnerId": "ana",
+      "courseId": "historia",
+      "attemptId": "ana-historia-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-ana-historia-2",
+      "sequence": 8,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-24T10:12:00Z",
+      "learnerId": "ana",
+      "courseId": "historia",
+      "attemptId": "ana-historia-1",
+      "payload": {
+        "progress": 0.84
+      }
+    },
+    {
+      "id": "ev-ana-historia-3",
+      "sequence": 9,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-24T10:15:00Z",
+      "learnerId": "ana",
+      "courseId": "historia",
+      "attemptId": "ana-historia-1",
+      "payload": {
+        "totalActiveMs": 2940000
+      }
+    },
+    {
+      "id": "ev-bruno-matematicas-1",
+      "sequence": 10,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-05T10:00:00Z",
+      "learnerId": "bruno",
+      "courseId": "matematicas",
+      "attemptId": "bruno-matematicas-3",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-bruno-matematicas-2",
+      "sequence": 11,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-05T10:12:00Z",
+      "learnerId": "bruno",
+      "courseId": "matematicas",
+      "attemptId": "bruno-matematicas-3",
+      "payload": {
+        "progress": 0.24
+      }
+    },
+    {
+      "id": "ev-bruno-matematicas-3",
+      "sequence": 12,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-05T10:15:00Z",
+      "learnerId": "bruno",
+      "courseId": "matematicas",
+      "attemptId": "bruno-matematicas-3",
+      "payload": {
+        "totalActiveMs": 2340000
+      }
+    },
+    {
+      "id": "ev-bruno-ciencias-1",
+      "sequence": 13,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-05T10:00:00Z",
+      "learnerId": "bruno",
+      "courseId": "ciencias",
+      "attemptId": "bruno-ciencias-3",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-bruno-ciencias-2",
+      "sequence": 14,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-05T10:12:00Z",
+      "learnerId": "bruno",
+      "courseId": "ciencias",
+      "attemptId": "bruno-ciencias-3",
+      "payload": {
+        "progress": 0.18
+      }
+    },
+    {
+      "id": "ev-bruno-ciencias-3",
+      "sequence": 15,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-05T10:15:00Z",
+      "learnerId": "bruno",
+      "courseId": "ciencias",
+      "attemptId": "bruno-ciencias-3",
+      "payload": {
+        "totalActiveMs": 2760000
+      }
+    },
+    {
+      "id": "ev-bruno-historia-1",
+      "sequence": 16,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-05T10:00:00Z",
+      "learnerId": "bruno",
+      "courseId": "historia",
+      "attemptId": "bruno-historia-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-bruno-historia-2",
+      "sequence": 17,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-05T10:12:00Z",
+      "learnerId": "bruno",
+      "courseId": "historia",
+      "attemptId": "bruno-historia-2",
+      "payload": {
+        "progress": 0.31
+      }
+    },
+    {
+      "id": "ev-bruno-historia-3",
+      "sequence": 18,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-05T10:15:00Z",
+      "learnerId": "bruno",
+      "courseId": "historia",
+      "attemptId": "bruno-historia-2",
+      "payload": {
+        "totalActiveMs": 3180000
+      }
+    },
+    {
+      "id": "ev-carla-matematicas-1",
+      "sequence": 19,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-26T10:00:00Z",
+      "learnerId": "carla",
+      "courseId": "matematicas",
+      "attemptId": "carla-matematicas-1",
+      "payload": {
+        "action": "submitted"
+      }
+    },
+    {
+      "id": "ev-carla-matematicas-2",
+      "sequence": 20,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-26T10:12:00Z",
+      "learnerId": "carla",
+      "courseId": "matematicas",
+      "attemptId": "carla-matematicas-1",
+      "payload": {
+        "progress": 1
+      }
+    },
+    {
+      "id": "ev-carla-matematicas-3",
+      "sequence": 21,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-26T10:15:00Z",
+      "learnerId": "carla",
+      "courseId": "matematicas",
+      "attemptId": "carla-matematicas-1",
+      "payload": {
+        "totalActiveMs": 2580000
+      }
+    },
+    {
+      "id": "ev-carla-ciencias-1",
+      "sequence": 22,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-26T10:00:00Z",
+      "learnerId": "carla",
+      "courseId": "ciencias",
+      "attemptId": "carla-ciencias-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-carla-ciencias-2",
+      "sequence": 23,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-26T10:12:00Z",
+      "learnerId": "carla",
+      "courseId": "ciencias",
+      "attemptId": "carla-ciencias-1",
+      "payload": {
+        "progress": 0.96
+      }
+    },
+    {
+      "id": "ev-carla-ciencias-3",
+      "sequence": 24,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-26T10:15:00Z",
+      "learnerId": "carla",
+      "courseId": "ciencias",
+      "attemptId": "carla-ciencias-1",
+      "payload": {
+        "totalActiveMs": 3000000
+      }
+    },
+    {
+      "id": "ev-carla-historia-1",
+      "sequence": 25,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-26T10:00:00Z",
+      "learnerId": "carla",
+      "courseId": "historia",
+      "attemptId": "carla-historia-1",
+      "payload": {
+        "action": "submitted"
+      }
+    },
+    {
+      "id": "ev-carla-historia-2",
+      "sequence": 26,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-26T10:12:00Z",
+      "learnerId": "carla",
+      "courseId": "historia",
+      "attemptId": "carla-historia-1",
+      "payload": {
+        "progress": 1
+      }
+    },
+    {
+      "id": "ev-carla-historia-3",
+      "sequence": 27,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-26T10:15:00Z",
+      "learnerId": "carla",
+      "courseId": "historia",
+      "attemptId": "carla-historia-1",
+      "payload": {
+        "totalActiveMs": 3420000
+      }
+    },
+    {
+      "id": "ev-diego-matematicas-1",
+      "sequence": 28,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-27T10:00:00Z",
+      "learnerId": "diego",
+      "courseId": "matematicas",
+      "attemptId": "diego-matematicas-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-diego-matematicas-2",
+      "sequence": 29,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-27T10:12:00Z",
+      "learnerId": "diego",
+      "courseId": "matematicas",
+      "attemptId": "diego-matematicas-2",
+      "payload": {
+        "progress": 0.45
+      }
+    },
+    {
+      "id": "ev-diego-matematicas-3",
+      "sequence": 30,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-27T10:15:00Z",
+      "learnerId": "diego",
+      "courseId": "matematicas",
+      "attemptId": "diego-matematicas-2",
+      "payload": {
+        "totalActiveMs": 2820000
+      }
+    },
+    {
+      "id": "ev-diego-ciencias-1",
+      "sequence": 31,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-27T10:00:00Z",
+      "learnerId": "diego",
+      "courseId": "ciencias",
+      "attemptId": "diego-ciencias-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-diego-ciencias-2",
+      "sequence": 32,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-27T10:12:00Z",
+      "learnerId": "diego",
+      "courseId": "ciencias",
+      "attemptId": "diego-ciencias-2",
+      "payload": {
+        "progress": 0.52
+      }
+    },
+    {
+      "id": "ev-diego-ciencias-3",
+      "sequence": 33,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-27T10:15:00Z",
+      "learnerId": "diego",
+      "courseId": "ciencias",
+      "attemptId": "diego-ciencias-2",
+      "payload": {
+        "totalActiveMs": 3240000
+      }
+    },
+    {
+      "id": "ev-diego-historia-1",
+      "sequence": 34,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-27T10:00:00Z",
+      "learnerId": "diego",
+      "courseId": "historia",
+      "attemptId": "diego-historia-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-diego-historia-2",
+      "sequence": 35,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-27T10:12:00Z",
+      "learnerId": "diego",
+      "courseId": "historia",
+      "attemptId": "diego-historia-2",
+      "payload": {
+        "progress": 0.38
+      }
+    },
+    {
+      "id": "ev-diego-historia-3",
+      "sequence": 36,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-27T10:15:00Z",
+      "learnerId": "diego",
+      "courseId": "historia",
+      "attemptId": "diego-historia-2",
+      "payload": {
+        "totalActiveMs": 3660000
+      }
+    },
+    {
+      "id": "ev-elena-matematicas-1",
+      "sequence": 37,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-08T10:00:00Z",
+      "learnerId": "elena",
+      "courseId": "matematicas",
+      "attemptId": "elena-matematicas-3",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-elena-matematicas-2",
+      "sequence": 38,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-08T10:12:00Z",
+      "learnerId": "elena",
+      "courseId": "matematicas",
+      "attemptId": "elena-matematicas-3",
+      "payload": {
+        "progress": 0.12
+      }
+    },
+    {
+      "id": "ev-elena-matematicas-3",
+      "sequence": 39,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-08T10:15:00Z",
+      "learnerId": "elena",
+      "courseId": "matematicas",
+      "attemptId": "elena-matematicas-3",
+      "payload": {
+        "totalActiveMs": 3060000
+      }
+    },
+    {
+      "id": "ev-elena-ciencias-1",
+      "sequence": 40,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-08T10:00:00Z",
+      "learnerId": "elena",
+      "courseId": "ciencias",
+      "attemptId": "elena-ciencias-3",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-elena-ciencias-2",
+      "sequence": 41,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-08T10:12:00Z",
+      "learnerId": "elena",
+      "courseId": "ciencias",
+      "attemptId": "elena-ciencias-3",
+      "payload": {
+        "progress": 0.08
+      }
+    },
+    {
+      "id": "ev-elena-ciencias-3",
+      "sequence": 42,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-08T10:15:00Z",
+      "learnerId": "elena",
+      "courseId": "ciencias",
+      "attemptId": "elena-ciencias-3",
+      "payload": {
+        "totalActiveMs": 3480000
+      }
+    },
+    {
+      "id": "ev-elena-historia-1",
+      "sequence": 43,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-08T10:00:00Z",
+      "learnerId": "elena",
+      "courseId": "historia",
+      "attemptId": "elena-historia-3",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-elena-historia-2",
+      "sequence": 44,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-08T10:12:00Z",
+      "learnerId": "elena",
+      "courseId": "historia",
+      "attemptId": "elena-historia-3",
+      "payload": {
+        "progress": 0.2
+      }
+    },
+    {
+      "id": "ev-elena-historia-3",
+      "sequence": 45,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-08T10:15:00Z",
+      "learnerId": "elena",
+      "courseId": "historia",
+      "attemptId": "elena-historia-3",
+      "payload": {
+        "totalActiveMs": 3900000
+      }
+    },
+    {
+      "id": "ev-fabio-matematicas-1",
+      "sequence": 46,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-25T10:00:00Z",
+      "learnerId": "fabio",
+      "courseId": "matematicas",
+      "attemptId": "fabio-matematicas-1",
+      "payload": {
+        "action": "submitted"
+      }
+    },
+    {
+      "id": "ev-fabio-matematicas-2",
+      "sequence": 47,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-25T10:12:00Z",
+      "learnerId": "fabio",
+      "courseId": "matematicas",
+      "attemptId": "fabio-matematicas-1",
+      "payload": {
+        "progress": 1
+      }
+    },
+    {
+      "id": "ev-fabio-matematicas-3",
+      "sequence": 48,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-25T10:15:00Z",
+      "learnerId": "fabio",
+      "courseId": "matematicas",
+      "attemptId": "fabio-matematicas-1",
+      "payload": {
+        "totalActiveMs": 3300000
+      }
+    },
+    {
+      "id": "ev-fabio-ciencias-1",
+      "sequence": 49,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-25T10:00:00Z",
+      "learnerId": "fabio",
+      "courseId": "ciencias",
+      "attemptId": "fabio-ciencias-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-fabio-ciencias-2",
+      "sequence": 50,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-25T10:12:00Z",
+      "learnerId": "fabio",
+      "courseId": "ciencias",
+      "attemptId": "fabio-ciencias-1",
+      "payload": {
+        "progress": 0.82
+      }
+    },
+    {
+      "id": "ev-fabio-ciencias-3",
+      "sequence": 51,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-25T10:15:00Z",
+      "learnerId": "fabio",
+      "courseId": "ciencias",
+      "attemptId": "fabio-ciencias-1",
+      "payload": {
+        "totalActiveMs": 3720000
+      }
+    },
+    {
+      "id": "ev-fabio-historia-1",
+      "sequence": 52,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-25T10:00:00Z",
+      "learnerId": "fabio",
+      "courseId": "historia",
+      "attemptId": "fabio-historia-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-fabio-historia-2",
+      "sequence": 53,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-25T10:12:00Z",
+      "learnerId": "fabio",
+      "courseId": "historia",
+      "attemptId": "fabio-historia-1",
+      "payload": {
+        "progress": 0.76
+      }
+    },
+    {
+      "id": "ev-fabio-historia-3",
+      "sequence": 54,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-25T10:15:00Z",
+      "learnerId": "fabio",
+      "courseId": "historia",
+      "attemptId": "fabio-historia-1",
+      "payload": {
+        "totalActiveMs": 4140000
+      }
+    },
+    {
+      "id": "ev-gabriela-matematicas-1",
+      "sequence": 55,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-26T10:00:00Z",
+      "learnerId": "gabriela",
+      "courseId": "matematicas",
+      "attemptId": "gabriela-matematicas-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-gabriela-matematicas-2",
+      "sequence": 56,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-26T10:12:00Z",
+      "learnerId": "gabriela",
+      "courseId": "matematicas",
+      "attemptId": "gabriela-matematicas-1",
+      "payload": {
+        "progress": 0.7
+      }
+    },
+    {
+      "id": "ev-gabriela-matematicas-3",
+      "sequence": 57,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-26T10:15:00Z",
+      "learnerId": "gabriela",
+      "courseId": "matematicas",
+      "attemptId": "gabriela-matematicas-1",
+      "payload": {
+        "totalActiveMs": 3540000
+      }
+    },
+    {
+      "id": "ev-gabriela-ciencias-1",
+      "sequence": 58,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-26T10:00:00Z",
+      "learnerId": "gabriela",
+      "courseId": "ciencias",
+      "attemptId": "gabriela-ciencias-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-gabriela-ciencias-2",
+      "sequence": 59,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-26T10:12:00Z",
+      "learnerId": "gabriela",
+      "courseId": "ciencias",
+      "attemptId": "gabriela-ciencias-1",
+      "payload": {
+        "progress": 0.66
+      }
+    },
+    {
+      "id": "ev-gabriela-ciencias-3",
+      "sequence": 60,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-26T10:15:00Z",
+      "learnerId": "gabriela",
+      "courseId": "ciencias",
+      "attemptId": "gabriela-ciencias-1",
+      "payload": {
+        "totalActiveMs": 3960000
+      }
+    },
+    {
+      "id": "ev-gabriela-historia-1",
+      "sequence": 61,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-26T10:00:00Z",
+      "learnerId": "gabriela",
+      "courseId": "historia",
+      "attemptId": "gabriela-historia-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-gabriela-historia-2",
+      "sequence": 62,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-26T10:12:00Z",
+      "learnerId": "gabriela",
+      "courseId": "historia",
+      "attemptId": "gabriela-historia-1",
+      "payload": {
+        "progress": 0.72
+      }
+    },
+    {
+      "id": "ev-gabriela-historia-3",
+      "sequence": 63,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-26T10:15:00Z",
+      "learnerId": "gabriela",
+      "courseId": "historia",
+      "attemptId": "gabriela-historia-1",
+      "payload": {
+        "totalActiveMs": 4380000
+      }
+    },
+    {
+      "id": "ev-hugo-matematicas-1",
+      "sequence": 64,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-27T10:00:00Z",
+      "learnerId": "hugo",
+      "courseId": "matematicas",
+      "attemptId": "hugo-matematicas-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-hugo-matematicas-2",
+      "sequence": 65,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-27T10:12:00Z",
+      "learnerId": "hugo",
+      "courseId": "matematicas",
+      "attemptId": "hugo-matematicas-2",
+      "payload": {
+        "progress": 0.58
+      }
+    },
+    {
+      "id": "ev-hugo-matematicas-3",
+      "sequence": 66,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-27T10:15:00Z",
+      "learnerId": "hugo",
+      "courseId": "matematicas",
+      "attemptId": "hugo-matematicas-2",
+      "payload": {
+        "totalActiveMs": 3780000
+      }
+    },
+    {
+      "id": "ev-hugo-ciencias-1",
+      "sequence": 67,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-27T10:00:00Z",
+      "learnerId": "hugo",
+      "courseId": "ciencias",
+      "attemptId": "hugo-ciencias-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-hugo-ciencias-2",
+      "sequence": 68,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-27T10:12:00Z",
+      "learnerId": "hugo",
+      "courseId": "ciencias",
+      "attemptId": "hugo-ciencias-2",
+      "payload": {
+        "progress": 0.51
+      }
+    },
+    {
+      "id": "ev-hugo-ciencias-3",
+      "sequence": 69,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-27T10:15:00Z",
+      "learnerId": "hugo",
+      "courseId": "ciencias",
+      "attemptId": "hugo-ciencias-2",
+      "payload": {
+        "totalActiveMs": 4200000
+      }
+    },
+    {
+      "id": "ev-hugo-historia-1",
+      "sequence": 70,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-27T10:00:00Z",
+      "learnerId": "hugo",
+      "courseId": "historia",
+      "attemptId": "hugo-historia-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-hugo-historia-2",
+      "sequence": 71,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-27T10:12:00Z",
+      "learnerId": "hugo",
+      "courseId": "historia",
+      "attemptId": "hugo-historia-2",
+      "payload": {
+        "progress": 0.47
+      }
+    },
+    {
+      "id": "ev-hugo-historia-3",
+      "sequence": 72,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-27T10:15:00Z",
+      "learnerId": "hugo",
+      "courseId": "historia",
+      "attemptId": "hugo-historia-2",
+      "payload": {
+        "totalActiveMs": 4620000
+      }
+    },
+    {
+      "id": "ev-ines-matematicas-1",
+      "sequence": 73,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-24T10:00:00Z",
+      "learnerId": "ines",
+      "courseId": "matematicas",
+      "attemptId": "ines-matematicas-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-ines-matematicas-2",
+      "sequence": 74,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-24T10:12:00Z",
+      "learnerId": "ines",
+      "courseId": "matematicas",
+      "attemptId": "ines-matematicas-1",
+      "payload": {
+        "progress": 0.92
+      }
+    },
+    {
+      "id": "ev-ines-matematicas-3",
+      "sequence": 75,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-24T10:15:00Z",
+      "learnerId": "ines",
+      "courseId": "matematicas",
+      "attemptId": "ines-matematicas-1",
+      "payload": {
+        "totalActiveMs": 4020000
+      }
+    },
+    {
+      "id": "ev-ines-ciencias-1",
+      "sequence": 76,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-24T10:00:00Z",
+      "learnerId": "ines",
+      "courseId": "ciencias",
+      "attemptId": "ines-ciencias-1",
+      "payload": {
+        "action": "submitted"
+      }
+    },
+    {
+      "id": "ev-ines-ciencias-2",
+      "sequence": 77,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-24T10:12:00Z",
+      "learnerId": "ines",
+      "courseId": "ciencias",
+      "attemptId": "ines-ciencias-1",
+      "payload": {
+        "progress": 1
+      }
+    },
+    {
+      "id": "ev-ines-ciencias-3",
+      "sequence": 78,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-24T10:15:00Z",
+      "learnerId": "ines",
+      "courseId": "ciencias",
+      "attemptId": "ines-ciencias-1",
+      "payload": {
+        "totalActiveMs": 4440000
+      }
+    },
+    {
+      "id": "ev-ines-historia-1",
+      "sequence": 79,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-24T10:00:00Z",
+      "learnerId": "ines",
+      "courseId": "historia",
+      "attemptId": "ines-historia-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-ines-historia-2",
+      "sequence": 80,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-24T10:12:00Z",
+      "learnerId": "ines",
+      "courseId": "historia",
+      "attemptId": "ines-historia-1",
+      "payload": {
+        "progress": 0.88
+      }
+    },
+    {
+      "id": "ev-ines-historia-3",
+      "sequence": 81,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-24T10:15:00Z",
+      "learnerId": "ines",
+      "courseId": "historia",
+      "attemptId": "ines-historia-1",
+      "payload": {
+        "totalActiveMs": 4860000
+      }
+    },
+    {
+      "id": "ev-javier-matematicas-1",
+      "sequence": 82,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-13T10:00:00Z",
+      "learnerId": "javier",
+      "courseId": "matematicas",
+      "attemptId": "javier-matematicas-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-javier-matematicas-2",
+      "sequence": 83,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-13T10:12:00Z",
+      "learnerId": "javier",
+      "courseId": "matematicas",
+      "attemptId": "javier-matematicas-2",
+      "payload": {
+        "progress": 0.35
+      }
+    },
+    {
+      "id": "ev-javier-matematicas-3",
+      "sequence": 84,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-13T10:15:00Z",
+      "learnerId": "javier",
+      "courseId": "matematicas",
+      "attemptId": "javier-matematicas-2",
+      "payload": {
+        "totalActiveMs": 4260000
+      }
+    },
+    {
+      "id": "ev-javier-ciencias-1",
+      "sequence": 85,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-13T10:00:00Z",
+      "learnerId": "javier",
+      "courseId": "ciencias",
+      "attemptId": "javier-ciencias-3",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-javier-ciencias-2",
+      "sequence": 86,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-13T10:12:00Z",
+      "learnerId": "javier",
+      "courseId": "ciencias",
+      "attemptId": "javier-ciencias-3",
+      "payload": {
+        "progress": 0.28
+      }
+    },
+    {
+      "id": "ev-javier-ciencias-3",
+      "sequence": 87,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-13T10:15:00Z",
+      "learnerId": "javier",
+      "courseId": "ciencias",
+      "attemptId": "javier-ciencias-3",
+      "payload": {
+        "totalActiveMs": 4680000
+      }
+    },
+    {
+      "id": "ev-javier-historia-1",
+      "sequence": 88,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-13T10:00:00Z",
+      "learnerId": "javier",
+      "courseId": "historia",
+      "attemptId": "javier-historia-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-javier-historia-2",
+      "sequence": 89,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-13T10:12:00Z",
+      "learnerId": "javier",
+      "courseId": "historia",
+      "attemptId": "javier-historia-2",
+      "payload": {
+        "progress": 0.44
+      }
+    },
+    {
+      "id": "ev-javier-historia-3",
+      "sequence": 90,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-13T10:15:00Z",
+      "learnerId": "javier",
+      "courseId": "historia",
+      "attemptId": "javier-historia-2",
+      "payload": {
+        "totalActiveMs": 5100000
+      }
+    },
+    {
+      "id": "ev-laura-matematicas-1",
+      "sequence": 91,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-26T10:00:00Z",
+      "learnerId": "laura",
+      "courseId": "matematicas",
+      "attemptId": "laura-matematicas-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-laura-matematicas-2",
+      "sequence": 92,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-26T10:12:00Z",
+      "learnerId": "laura",
+      "courseId": "matematicas",
+      "attemptId": "laura-matematicas-1",
+      "payload": {
+        "progress": 0.96
+      }
+    },
+    {
+      "id": "ev-laura-matematicas-3",
+      "sequence": 93,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-26T10:15:00Z",
+      "learnerId": "laura",
+      "courseId": "matematicas",
+      "attemptId": "laura-matematicas-1",
+      "payload": {
+        "totalActiveMs": 4500000
+      }
+    },
+    {
+      "id": "ev-laura-ciencias-1",
+      "sequence": 94,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-26T10:00:00Z",
+      "learnerId": "laura",
+      "courseId": "ciencias",
+      "attemptId": "laura-ciencias-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-laura-ciencias-2",
+      "sequence": 95,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-26T10:12:00Z",
+      "learnerId": "laura",
+      "courseId": "ciencias",
+      "attemptId": "laura-ciencias-1",
+      "payload": {
+        "progress": 0.91
+      }
+    },
+    {
+      "id": "ev-laura-ciencias-3",
+      "sequence": 96,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-26T10:15:00Z",
+      "learnerId": "laura",
+      "courseId": "ciencias",
+      "attemptId": "laura-ciencias-1",
+      "payload": {
+        "totalActiveMs": 4920000
+      }
+    },
+    {
+      "id": "ev-laura-historia-1",
+      "sequence": 97,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-26T10:00:00Z",
+      "learnerId": "laura",
+      "courseId": "historia",
+      "attemptId": "laura-historia-1",
+      "payload": {
+        "action": "submitted"
+      }
+    },
+    {
+      "id": "ev-laura-historia-2",
+      "sequence": 98,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-26T10:12:00Z",
+      "learnerId": "laura",
+      "courseId": "historia",
+      "attemptId": "laura-historia-1",
+      "payload": {
+        "progress": 1
+      }
+    },
+    {
+      "id": "ev-laura-historia-3",
+      "sequence": 99,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-26T10:15:00Z",
+      "learnerId": "laura",
+      "courseId": "historia",
+      "attemptId": "laura-historia-1",
+      "payload": {
+        "totalActiveMs": 5340000
+      }
+    },
+    {
+      "id": "ev-marcos-matematicas-1",
+      "sequence": 100,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-27T10:00:00Z",
+      "learnerId": "marcos",
+      "courseId": "matematicas",
+      "attemptId": "marcos-matematicas-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-marcos-matematicas-2",
+      "sequence": 101,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-27T10:12:00Z",
+      "learnerId": "marcos",
+      "courseId": "matematicas",
+      "attemptId": "marcos-matematicas-2",
+      "payload": {
+        "progress": 0.54
+      }
+    },
+    {
+      "id": "ev-marcos-matematicas-3",
+      "sequence": 102,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-27T10:15:00Z",
+      "learnerId": "marcos",
+      "courseId": "matematicas",
+      "attemptId": "marcos-matematicas-2",
+      "payload": {
+        "totalActiveMs": 4740000
+      }
+    },
+    {
+      "id": "ev-marcos-ciencias-1",
+      "sequence": 103,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-27T10:00:00Z",
+      "learnerId": "marcos",
+      "courseId": "ciencias",
+      "attemptId": "marcos-ciencias-1",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-marcos-ciencias-2",
+      "sequence": 104,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-27T10:12:00Z",
+      "learnerId": "marcos",
+      "courseId": "ciencias",
+      "attemptId": "marcos-ciencias-1",
+      "payload": {
+        "progress": 0.61
+      }
+    },
+    {
+      "id": "ev-marcos-ciencias-3",
+      "sequence": 105,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-27T10:15:00Z",
+      "learnerId": "marcos",
+      "courseId": "ciencias",
+      "attemptId": "marcos-ciencias-1",
+      "payload": {
+        "totalActiveMs": 5160000
+      }
+    },
+    {
+      "id": "ev-marcos-historia-1",
+      "sequence": 106,
+      "type": "p2lrn:attempt",
+      "category": "lifecycle",
+      "timestamp": "2026-10-27T10:00:00Z",
+      "learnerId": "marcos",
+      "courseId": "historia",
+      "attemptId": "marcos-historia-2",
+      "payload": {
+        "action": "resumed"
+      }
+    },
+    {
+      "id": "ev-marcos-historia-2",
+      "sequence": 107,
+      "type": "p2lrn:progress",
+      "category": "progress",
+      "timestamp": "2026-10-27T10:12:00Z",
+      "learnerId": "marcos",
+      "courseId": "historia",
+      "attemptId": "marcos-historia-2",
+      "payload": {
+        "progress": 0.49
+      }
+    },
+    {
+      "id": "ev-marcos-historia-3",
+      "sequence": 108,
+      "type": "p2lrn:active-time",
+      "category": "attention",
+      "timestamp": "2026-10-27T10:15:00Z",
+      "learnerId": "marcos",
+      "courseId": "historia",
+      "attemptId": "marcos-historia-2",
+      "payload": {
+        "totalActiveMs": 5580000
+      }
+    }
+  ]
+}

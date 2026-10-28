@@ -59,8 +59,7 @@ const css=`:host{
 *{box-sizing:border-box}button,input,select{font:inherit}button{cursor:pointer}
 .shell{min-height:720px;border:1px solid #d9dee7;border-radius:16px;overflow:hidden;background:var(--pa-bg);box-shadow:0 18px 50px rgba(16,24,40,.08)}
 .topbar{display:flex;align-items:center;gap:18px;padding:18px 20px;background:#0d1117;color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
-.brand{display:flex;align-items:center;gap:11px;min-width:max-content}.mark{position:relative;width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,#4266e8,#24b7c7);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
-.mark::before{content:"2";position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:18px;letter-spacing:-.08em;color:#fff}
+.brand{display:flex;align-items:center;gap:11px;min-width:max-content}.mark{display:block;flex:none;width:5px;height:30px;border-radius:999px;background:linear-gradient(180deg,#20b9c8,#4568e8);box-shadow:0 0 0 1px rgba(255,255,255,.06)}
 .brand-copy strong{display:block;font-size:14px;letter-spacing:.02em}.brand-copy span{display:block;margin-top:2px;color:#98a2b3;font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
 .top-status{margin-left:auto;display:flex;align-items:center;gap:9px;color:#d0d5dd;font-size:12px}.live-dot{width:7px;height:7px;border-radius:50%;background:#12b76a;box-shadow:0 0 0 4px rgba(18,183,106,.12)}
 .toolbar{display:grid;grid-template-columns:minmax(200px,1.5fr) minmax(160px,.8fr) minmax(130px,.6fr) minmax(120px,.5fr) auto;gap:9px;padding:14px 16px;border-bottom:1px solid var(--pa-line);background:#fff}

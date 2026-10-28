@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 const here=dirname(fileURLToPath(import.meta.url));
 const root=resolve(here,'..');
 const out=join(root,'dist');
+const pkg=JSON.parse(await readFile(join(root,'package.json'),'utf8'));
 await rm(out,{recursive:true,force:true});
 await mkdir(out,{recursive:true});
 await cp(join(root,'src','model.js'),join(out,'model.js'));
@@ -16,7 +17,7 @@ for(const file of ['model.js','p2lrn-analytics.esm.js','p2lrn-analytics.js']){
 }
 await writeFile(join(out,'release.json'),JSON.stringify({
   package:'@p2lrn/analytics',
-  version:'0.5.0-alpha.11',
+  version:pkg.version,
   entrypoints:{classic:'p2lrn-analytics.js',module:'p2lrn-analytics.esm.js',model:'model.js'},
 },null,2)+'\n');
 console.log(JSON.stringify({ok:true,output:out,files:4},null,2));
