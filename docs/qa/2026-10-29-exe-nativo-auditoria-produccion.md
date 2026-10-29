@@ -25,6 +25,12 @@ Sustituir el archivo Windows CMD de una sola pieza por un ejecutable PE de 64 bi
 4. Al reiniciar la misma entrega, la dirección local resultó idéntica. Este comportamiento preserva el origen de `localStorage` para intentos reanudables.
 5. Se incorporaron pruebas de empaquetado nativo PE/ZIP en el conjunto Node y una workflow Windows dedicada con checkout aislado para evitar el conflicto histórico de `.git/config`.
 
+## Firma Authenticode del ejecutable final
+
+La firma se añade **después** de empaquetar el ZIP del curso. El lector nativo ahora localiza el pie P2LRN tanto al final de un EXE unsigned como antes de la tabla `WIN_CERTIFICATE` declarada en el encabezado PE32+, tolerando el relleno de alineación habitual. Se incorporó una prueba unitaria con un PE simulado que contiene una tabla de certificado posterior al pie del ZIP. **Esta prueba no sustituye una firma real con una CA confiable.**
+
+El script `scripts/sign-offline-exe.ps1` recibe la ruta final y la huella de un certificado presente en el almacén de Windows, valida su EKU de firma de código, utiliza `signtool sign /fd SHA256 /tr /td SHA256`, comprueba `signtool verify /pa` y exige estado de firma válido. No exporta claves privadas ni guarda certificados en GitHub o Studio.
+
 ## Requisitos para declarar la versión oficialmente lista para producción
 
 **Bloqueantes:**
