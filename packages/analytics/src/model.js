@@ -209,8 +209,10 @@ function latestAuthoritativeGrade(grades,courseId){
   });
   return sorted[0]??null;
 }
-function attemptCompleted(attempt){
-  return Boolean(attempt.completedAt)||['completed','passed','failed','submitted'].includes(String(attempt.status).toLowerCase());
+function courseAttemptCompleted(attempt){
+  if(attempt?.entityId)return false;
+  const status=String(attempt?.status??'').toLowerCase();
+  return Boolean(attempt?.completedAt)||['completed','passed','submitted'].includes(status);
 }
 function courseProgress(enrollment,attempts){
   if(enrollment?.completedAt||String(enrollment?.status).toLowerCase()==='completed')return 1;
@@ -242,7 +244,7 @@ function createAnalyticsIndex(dataset){
     if(!pair){
       pair={
         learnerId,courseId,enrollment:null,attempts:0,failedAttempts:0,
-        attemptProgress:null,attemptCompleted:false,hasStarted:false,
+        attemptProgress:null,courseAttemptCompleted:false,hasStarted:false,
         grade:null,gradeUpdatedMs:-1,lastActivityMs:-1,activeTimeMs:0,
       };
       pairs.set(pairKey,pair);
@@ -261,7 +263,7 @@ function createAnalyticsIndex(dataset){
     pair.attempts++;
     pair.hasStarted=true;
     if(String(attempt.status).toLowerCase()==='failed')pair.failedAttempts++;
-    if(attemptCompleted(attempt))pair.attemptCompleted=true;
+    if(courseAttemptCompleted(attempt))pair.courseAttemptCompleted=true;
     const progress=ratio(attempt.progress,null);
     if(progress!=null)pair.attemptProgress=Math.max(pair.attemptProgress??0,progress);
     for(const value of [attempt.updatedAt,attempt.completedAt,attempt.submittedAt,attempt.startedAt]){
@@ -302,7 +304,7 @@ function createAnalyticsIndex(dataset){
     if(pair)pair.activeTimeMs+=item.ms;
   }
   for(const pair of pairs.values()){
-    if(pair.enrollment?.completedAt||String(pair.enrollment?.status).toLowerCase()==='completed'||pair.attemptCompleted){
+    if(pair.enrollment?.completedAt||String(pair.enrollment?.status).toLowerCase()==='completed'||pair.courseAttemptCompleted||(pair.attemptProgress??0)>=1){
       pair.progress=1;
     }else{
       pair.progress=Math.max(ratio(pair.enrollment?.progress,0)??0,pair.attemptProgress??0);

@@ -46,3 +46,34 @@ test('root component module exposes datasource and store helpers',async()=>{
   assert.equal(typeof mod.createAnalyticsStore,'function');
   assert.equal(typeof mod.createMemoryAnalyticsDataSource,'function');
 });
+
+test('failed attempts never complete a course by status alone',()=>{
+  const snap=computeAnalyticsSnapshot({
+    learners:[{id:'u',name:'U'}],courses:[{id:'c',title:'C'}],
+    enrollments:[{learnerId:'u',courseId:'c',progress:.2}],
+    attempts:[{id:'a',learnerId:'u',courseId:'c',status:'failed',progress:.2}],
+    grades:[],events:[]
+  });
+  assert.equal(snap.learners[0].progress,.2);
+  assert.equal(snap.courses[0].completed,0);
+});
+test('completed activity attempts do not complete the whole course',()=>{
+  const snap=computeAnalyticsSnapshot({
+    learners:[{id:'u',name:'U'}],courses:[{id:'c',title:'C'}],
+    enrollments:[{learnerId:'u',courseId:'c',progress:.4}],
+    attempts:[{id:'a',learnerId:'u',courseId:'c',entityId:'quiz-1',status:'completed'}],
+    grades:[],events:[]
+  });
+  assert.equal(snap.learners[0].progress,.4);
+  assert.equal(snap.courses[0].completed,0);
+});
+test('course-level completed attempts may complete a course',()=>{
+  const snap=computeAnalyticsSnapshot({
+    learners:[{id:'u',name:'U'}],courses:[{id:'c',title:'C'}],
+    enrollments:[{learnerId:'u',courseId:'c',progress:.4}],
+    attempts:[{id:'a',learnerId:'u',courseId:'c',status:'completed'}],
+    grades:[],events:[]
+  });
+  assert.equal(snap.learners[0].progress,1);
+  assert.equal(snap.courses[0].completed,1);
+});
