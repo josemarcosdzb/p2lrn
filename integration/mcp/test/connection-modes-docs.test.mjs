@@ -18,7 +18,7 @@ const legacy=new Map([
   ['gemini','gemini'],['skills','crear-cursos'],['local','conectar-ordenador'],
 ]);
 
-test('overview has only three clear destinations in the same order as sidebar',()=>{
+test('overview keeps three connection modes and exposes Skills as a separate resource',()=>{
   const index=read('deploy/netlify/site/docs/conectores/index.html');
   const nav=read('deploy/netlify/site/p2lrn.js');
   const cardGroup=/<div class="docs-path-grid">([\s\S]*?)<\/div>/.exec(index)?.[1];
@@ -28,8 +28,15 @@ test('overview has only three clear destinations in the same order as sidebar',(
   const childGroup=/\['\/docs\/conectores\/',\[([\s\S]*?)\]\],/.exec(nav)?.[1];
   assert(childGroup,'Connector sidebar links missing');
   const children=[...childGroup.matchAll(/\['([^']+)','([^']+)'\]/g)].map(x=>[x[1],x[2]]);
-  assert.deepEqual(children,routes.slice(1));
+  assert.deepEqual(children,[
+    routes[1],
+    ['/docs/skills/','Skills P2LRN para IA'],
+    routes[2],
+    routes[3],
+  ]);
   assert(index.includes('Qué necesitas conectar'));
+  assert(index.includes('href="/skills/"'));
+  assert(index.includes('href="/docs/skills/"'));
   assert(!index.includes('IA local'));
   assert(!index.includes('Skills sin MCP'));
   assert(!index.includes('href="/docs/conectores/local/"'));
