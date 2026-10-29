@@ -370,7 +370,9 @@ func run() error {
 func main() {
 	if err := run(); err != nil {
 		log.Print(err)
-		showError("P2LRN · Entrega offline", err.Error())
+		if os.Getenv("P2LRN_OFFLINE_LAUNCH_TEST") != "1" {
+			showError("P2LRN · Entrega offline", err.Error())
+		}
 		os.Exit(1)
 	}
 }

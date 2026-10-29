@@ -49,7 +49,7 @@ for(const [route,prev,next] of connectorFlow){
 const js=await read('deploy/netlify/site/p2lrn.js');
 const css=await read('deploy/netlify/site/p2lrn.css');
 for(const token of ["['EMPEZAR'","['CREAR'","['INSTALAR'","['REPRODUCIR'","['INTEGRAR'","['SEGUIMIENTO'","['REFERENCIA'"])if(!js.includes(token))failures.push('p2lrn.js missing sidebar group '+token);
-const order=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','SEGUIMIENTO','REFERENCIA'].map(x=>js.indexOf("['"+x+"'"));
+const order=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','SEGUIMIENTO','ANALYTICS','REFERENCIA'].map(x=>js.indexOf("['"+x+"'"));
 for(let i=1;i<order.length;i++)if(order[i]<=order[i-1])failures.push('sidebar groups are not in product-flow order');
 const childBlock=/const DOC_SIDEBAR_CHILDREN = new Map\(\[([\s\S]*?)\n  \]\);/.exec(js)?.[1] ?? '';
 const foundationalRoutes=['/docs/que-usar/','/docs/conceptos/','/docs/formato/'];
@@ -58,17 +58,23 @@ for(let i=0;i<foundationalOrder.length;i++)if(foundationalOrder[i]<0)failures.pu
 for(let i=1;i<foundationalOrder.length;i++)if(foundationalOrder[i]<=foundationalOrder[i-1])failures.push('Antes de empezar children are not in mental-model order');
 const flatSidebar=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1] ?? '';
 for(const route of foundationalRoutes)if(flatSidebar.includes("['"+route+"'"))failures.push('foundational route is flat instead of nested under Antes de empezar: '+route);
-for(const route of ['/docs/progresion/','/docs/metricas/','/docs/analytics/']){
+for(const route of ['/docs/progresion/','/docs/metricas/']){
   if(childBlock.includes("['"+route+"'"))failures.push('advanced tracking route remains under Antes de empezar: '+route);
-  const seguimiento=flatSidebar.slice(flatSidebar.indexOf("['SEGUIMIENTO', ["),flatSidebar.indexOf("['REFERENCIA', ["));
+  const seguimiento=flatSidebar.slice(flatSidebar.indexOf("['SEGUIMIENTO', ["),flatSidebar.indexOf("['ANALYTICS', ["));
   if(!seguimiento.includes("['"+route+"'"))failures.push('tracking route missing from SEGUIMIENTO: '+route);
 }
+if(childBlock.includes("['/docs/analytics/'"))failures.push('Analytics route remains nested under Antes de empezar');
+const analyticsSection=flatSidebar.slice(flatSidebar.indexOf("['ANALYTICS', ["),flatSidebar.indexOf("['REFERENCIA', ["));
+for(const route of ['/docs/analytics/','/analytics/'])if(!analyticsSection.includes("['"+route+"'"))failures.push('Analytics route missing from ANALYTICS: '+route);
+if(flatSidebar.slice(flatSidebar.indexOf("['SEGUIMIENTO', ["),flatSidebar.indexOf("['ANALYTICS', [")).includes("['/docs/analytics/'"))failures.push('Analytics docs still grouped under SEGUIMIENTO');
 for(const token of ['docs-sidebar-toggle','doc-page-toc','doc-page-toc-toggle','doc-page-toc-nav','doc-child-subnav','DOC_SIDEBAR_CHILDREN','doc-breadcrumbs','Migas de pan','requestAnimationFrame(revealCurrent)','syncToggleHeight','mobileIndexCurrent.textContent=pageTitle','aria-current\',\'location','Índice de documentación'])if(!js.includes(token))failures.push('p2lrn.js missing documentation UX hook '+token);
 for(const token of ['.doc-sidebar.is-open','.docs-sidebar-toggle{display:flex','.docs-sidebar-toggle{position:sticky;top:64px','.doc-sidebar.is-open{position:sticky!important;top:calc(64px + var(--docs-index-toggle-height,52px))!important','.doc-breadcrumbs{','.doc-page-toc{grid-column:3','.doc-page-toc ol','.doc-toc{display:none!important','.doc-child-subnav{','.doc-child-subnav a[aria-current="page"]','max-height:calc(100vh - 124px)'])if(!css.includes(token))failures.push('p2lrn.css missing documentation UX rule '+token);
 
 const easy=article(await read('deploy/netlify/site/docs/empezar-facil/index.html'));
 const npm=article(await read('deploy/netlify/site/docs/npm/index.html'));
 const cdn=article(await read('deploy/netlify/site/docs/cdn/index.html'));
+const docsHome=article(await read('deploy/netlify/site/docs/index.html'));
+for(const token of ['<h2>Analytics</h2>','href="/docs/analytics/"','href="/analytics/"'])if(!docsHome.includes(token))failures.push('docs home missing Analytics discovery token '+token);
 if(/\bCDN\b|p2lrn\.netlify\.app/u.test(npm))failures.push('NPM article leaks CDN instructions');
 if(/\bNPM\b|npm install|\bnpx\b|@p2lrn\//u.test(cdn))failures.push('CDN article leaks NPM instructions');
 
@@ -171,4 +177,4 @@ if(connectorBuild.includes('Pendiente: registro confiable de LMS, OIDC/JWKS/laun
   failures.push('downloadable LTI README still describes implemented provider as pending');
 
 if(failures.length)throw new Error('Documentation flow audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,connectorFlowPages:connectorFlow.length,easyStartBeforeInstall:true,defaultInstallPath:'CDN',cdnBeforeNpm:true,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,childPageSubmenu:true,samePageSectionsInSidebar:false,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,beforeStartOwnsFoundationalDocs:true,progressionAndMetricsGroupedUnderTracking:true,trackingAfterIntegration:true,longPageToc:true,questionnaireExperienceGuides:10,offlineDeliveryGuide:true,fullPublicHtmlAudit:true,currentVersion:currentPlayerVersion,noVagueMinimumExamples:true},null,2));
+console.log(JSON.stringify({ok:true,primaryFlowPages:primary.length,branchFlows:branches.length,connectorFlowPages:connectorFlow.length,easyStartBeforeInstall:true,defaultInstallPath:'CDN',cdnBeforeNpm:true,installBeforeCreate:true,mobileNavigation:'sticky-collapsed-index',breadcrumbs:true,childPageSubmenu:true,samePageSectionsInSidebar:false,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,beforeStartOwnsFoundationalDocs:true,progressionAndMetricsGroupedUnderTracking:true,analyticsOwnSection:true,trackingAfterIntegration:true,longPageToc:true,questionnaireExperienceGuides:10,offlineDeliveryGuide:true,fullPublicHtmlAudit:true,currentVersion:currentPlayerVersion,noVagueMinimumExamples:true},null,2));

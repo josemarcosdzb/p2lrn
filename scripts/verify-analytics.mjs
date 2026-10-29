@@ -22,7 +22,9 @@ for(const token of ['p2lrn-analytics','Alumnos','Cursos','Notas','Actividad','au
 assert(!component.includes('content:"2"'),'Analytics must not reintroduce the retired square P2 badge');
 for(const token of ['P2LRNAnalyticsElement','createHttpAnalyticsDataSource','exportCsv'])assert(types.includes(token),'Analytics types missing '+token);
 for(const token of ["analyticsPackage:'@p2lrn/analytics'","/analytics/current/dist/","p2lrn-analytics.esm.js"])assert(cdn.includes(token),'CDN build missing Analytics '+token);
-assert(nav.includes("['/docs/analytics/','P2LRN Analytics']"),'Analytics missing from Seguimiento navigation');
+assert(nav.includes("['ANALYTICS', ["),'Analytics sidebar section missing');
+assert(nav.includes("label: 'Analytics'"),'Analytics top navigation section missing');
+assert(nav.includes("['/docs/analytics/','P2LRN Analytics']"),'Analytics documentation route missing from Analytics section');
 for(const token of ['@p2lrn/analytics','analytics/current/dist/p2lrn-analytics.js','authoritative: true'])assert(docs.includes(token),'Analytics docs missing '+token);
 assert(demo.includes('<p2lrn-analytics src="/analytics/demo-data.json"></p2lrn-analytics>'),'Analytics demo is not wired to the component');
 for(const file of ['model.js','p2lrn-analytics.esm.js','p2lrn-analytics.js','release.json'])assert((await stat(join(root,'packages','analytics','dist',file))).isFile(),'Analytics dist missing '+file);

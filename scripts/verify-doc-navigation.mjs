@@ -62,7 +62,7 @@ for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(','doc-page-subn
   if(js.includes(forbidden)) failures.push('p2lrn.js: legacy logic remains: '+forbidden);
 }
 
-const expectedSections=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','CONECTORES','SEGUIMIENTO','REFERENCIA','RECURSOS'];
+const expectedSections=['EMPEZAR','INSTALAR','CREAR','REPRODUCIR','INTEGRAR','CONECTORES','SEGUIMIENTO','ANALYTICS','REFERENCIA','RECURSOS'];
 const sidebarBlock=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1] ?? '';
 const sectionNames=[...sidebarBlock.matchAll(/\['([^']+)', \[/g)].map((match)=>match[1]);
 if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections)){
@@ -82,12 +82,16 @@ if(!sectionChunks.get('EMPEZAR')?.includes("['/docs/empezar-facil/','Empezar fá
 for(const href of ['/docs/que-usar/','/docs/conceptos/','/docs/formato/']){
   if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: before-start child must not remain flat under EMPEZAR: '+href);
 }
-for(const href of ['/docs/progresion/','/docs/metricas/','/docs/analytics/']){
+for(const href of ['/docs/progresion/','/docs/metricas/']){
   if(!sectionChunks.get('SEGUIMIENTO')?.includes("['"+href+"'")) failures.push('p2lrn.js: tracking route must be grouped under SEGUIMIENTO: '+href);
   if(sectionChunks.get('EMPEZAR')?.includes("['"+href+"'")) failures.push('p2lrn.js: advanced tracking route must not be under EMPEZAR: '+href);
 }
+for(const href of ['/docs/analytics/','/analytics/']){
+  if(!sectionChunks.get('ANALYTICS')?.includes("['"+href+"'")) failures.push('p2lrn.js: Analytics route must be grouped under ANALYTICS: '+href);
+}
+if(sectionChunks.get('SEGUIMIENTO')?.includes("['/docs/analytics/'")) failures.push('p2lrn.js: Analytics docs must not remain under SEGUIMIENTO');
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==33) failures.push('p2lrn.js: expected 33 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==34) failures.push('p2lrn.js: expected 34 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
 for(const required of ['/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/','/docs/colaboracion/','/docs/progresion/','/docs/metricas/','/docs/analytics/','/docs/compatibilidad/']){
   if(!hrefs.includes(required)) failures.push('p2lrn.js: missing global sidebar route '+required);
@@ -146,4 +150,4 @@ for(const route of docRoutes){
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,desktopHoverBridge:true,questionnaireChildrenUseParent:true,beforeStartChildrenUseParent:true,trackingGroupedLater:true,childPageSubmenu:true,connectorSubpages:3,connectorIaLegacyDetails:3,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true,advancedTrackingAfterIntegration:true,easyStartBeforeInstall:true,cdnBeforeNpm:true},null,2));
+console.log(JSON.stringify({ok:true,pages:pages.length,sidebarAuthority:'/p2lrn.js',legacySidebarHtml:false,sections:expectedSections,links:sidebarLinks.length,duplicateLinks:0,desktopHoverBridge:true,questionnaireChildrenUseParent:true,beforeStartChildrenUseParent:true,trackingGroupedLater:true,analyticsOwnSection:true,childPageSubmenu:true,connectorSubpages:3,connectorIaLegacyDetails:3,samePageSectionsInSidebar:false,breadcrumbs:true,mobileIndexSticky:true,mobileIndexRevealsCurrentPage:true,mobileIndexUsesPageTitle:true,mobileIndexDynamicOffset:true,foundationalDocsBeforeInstall:true,advancedTrackingAfterIntegration:true,easyStartBeforeInstall:true,cdnBeforeNpm:true},null,2));

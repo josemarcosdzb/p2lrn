@@ -49,6 +49,7 @@ if(sourcePages.length<60||indexable.length+aliases.length!==sourcePages.length||
   errors.push('unexpected source/indexable/alias counts: '+[sourcePages.length,indexable.length,aliases.length].join('/'));
 // Public solution pages have unique search intent, real actions, and inbound links from the homepage.
 const solutionRoutes=['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'];
+const analyticsRoutes=['/docs/analytics/','/analytics/'];
 const homeHtml=await readFile(join(out,'index.html'),'utf8');
 for(const route of solutionRoutes){
   if(!indexable.includes(route))errors.push('Solution route is not indexable: '+route);
@@ -57,6 +58,12 @@ for(const route of solutionRoutes){
   if(!html||!html.includes('class="landing-hero"')||!html.includes('class="landing-steps"')||!html.includes('class="landing-card-grid"'))
     errors.push('Missing actionable solution content: '+route);
 }
+for(const route of analyticsRoutes){if(!indexable.includes(route))errors.push('Analytics route is not indexable: '+route);if(!homeHtml.includes('href="/docs/analytics/"'))errors.push('Homepage must link to Analytics documentation');}
+const analyticsDocs=await readFile(join(out,'docs/analytics/index.html'),'utf8');
+for(const term of ['analítica educativa','learning analytics','seguimiento de alumnos','progreso de cursos','calificaciones'])if(!analyticsDocs.toLowerCase().includes(term.toLowerCase()))errors.push('Analytics SEO topic missing: '+term);
+const analyticsDemo=await readFile(join(out,'analytics/index.html'),'utf8');
+if(!analyticsDemo.includes('"@type":"WebApplication"'))errors.push('Analytics WebApplication structured data missing');
+if(!analyticsDocs.includes('"@type":"TechArticle"'))errors.push('Analytics TechArticle structured data missing');
 const schemaScripts=[...homeHtml.matchAll(/<script\s+type="application\/ld\+json"\s*>([\s\S]*?)<\/script>/gi)];
 const siteSchemas=schemaScripts.map(m=>{try{return JSON.parse(m[1])}catch{return null}}).filter(s=>s&&s['@type']==='WebSite');
 if(siteSchemas.length!==1||siteSchemas[0].name!=='P2LRN'||siteSchemas[0].url!==CANONICAL_ORIGIN+'/')

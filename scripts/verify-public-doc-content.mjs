@@ -184,6 +184,7 @@ const analyticsDocs=article(await readFile(join(root,'deploy/netlify/site/docs/a
 for(const token of ['P2LRN Analytics','@p2lrn/analytics','authoritative: true','createHttpAnalyticsDataSource','p2lrn-analytics-refresh']){
   if(!analyticsDocs.includes(token))failures.push('deploy/netlify/site/docs/analytics/index.html: missing Analytics contract '+token);
 }
+if(!analyticsDocs.includes('<p class="eyebrow">ANALYTICS / PANEL</p>'))failures.push('deploy/netlify/site/docs/analytics/index.html: Analytics must be its own documentation section');
 const componentMapDocs=article(await readFile(join(root,'deploy/netlify/site/docs/que-usar/index.html'),'utf8'));
 for(const token of ['Componentes nativos','Aviso','línea temporal']){
   if(!componentMapDocs.includes(token)) failures.push('deploy/netlify/site/docs/que-usar/index.html: missing native component map token '+token);
@@ -193,4 +194,4 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
-console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true,trackingInformationArchitecture:true,editorNeutralLocalServer:true},null,2));
+console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true,trackingInformationArchitecture:true,analyticsInformationArchitecture:true,editorNeutralLocalServer:true},null,2));

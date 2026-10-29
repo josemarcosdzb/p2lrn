@@ -137,11 +137,18 @@
     },
     {
       label: 'Seguimiento',
-      active: ['/docs/progresion/','/docs/metricas/','/docs/analytics/','/analytics/'],
+      active: ['/docs/progresion/','/docs/metricas/'],
       items: [
         ['/docs/progresion/','Progresión'],
         ['/docs/metricas/','Métricas y analítica'],
-        ['/docs/analytics/','P2LRN Analytics'],
+      ],
+    },
+    {
+      label: 'Analytics',
+      active: ['/docs/analytics/','/analytics/'],
+      items: [
+        ['/docs/analytics/','Guía de Analytics'],
+        ['/analytics/','Abrir Analytics'],
       ],
     },
     {
@@ -373,7 +380,10 @@
     ['SEGUIMIENTO', [
       ['/docs/progresion/','Progresión'],
       ['/docs/metricas/','Métricas y analítica'],
+    ]],
+    ['ANALYTICS', [
       ['/docs/analytics/','P2LRN Analytics'],
+      ['/analytics/','Abrir panel demo ↗'],
     ]],
     ['REFERENCIA', [
       ['/docs/compatibilidad/','Compatibilidad'],
