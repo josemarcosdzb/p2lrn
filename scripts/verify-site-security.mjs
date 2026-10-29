@@ -49,6 +49,7 @@ function scan(dir){
       const allow=new Map([
         ['index.html',{type:'WebSite',name:'P2LRN',url:'https://p2lrn.netlify.app/'}],
         ['analytics/index.html',{type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.netlify.app/analytics/'}],
+        ['docs/analytics/index.html',{type:'TechArticle',headline:'P2LRN Analytics:',url:'https://p2lrn.netlify.app/docs/analytics/'}],
         ['skills/index.html',{type:'CollectionPage',name:'Descargar Skills P2LRN para asistentes de IA',url:'https://p2lrn.netlify.app/skills/'}]
       ]);
       assert.ok(allow.has(rel),'JSON-LD outside approved public pages: '+rel);
@@ -62,13 +63,16 @@ function scan(dir){
       const expected=allow.get(rel);
       assert.equal(schema['@context'],'https://schema.org');
       assert.equal(schema['@type'],expected.type);
-      assert.equal(schema.name,expected.name);
+      if(expected.name)assert.equal(schema.name,expected.name);
+      if(expected.headline)assert.ok(schema.headline?.startsWith(expected.headline),'Unrelated article schema on '+rel);
       assert.equal(schema.url,expected.url);
       const validKeys=rel==='index.html'
         ? ['@context','@type','@id','name','url','inLanguage','description']
         : rel==='analytics/index.html'
           ? ['@context','@type','name','url','applicationCategory','operatingSystem','inLanguage','description']
-          : ['@context','@type','name','description','url','inLanguage','isPartOf','mainEntity'];
+          : rel==='docs/analytics/index.html'
+            ? ['@context','@type','headline','description','url','inLanguage','about']
+            : ['@context','@type','name','description','url','inLanguage','isPartOf','mainEntity'];
       assert.ok(Object.keys(schema).every(key=>validKeys.includes(key)),'Unrecognized schema field: '+rel);
       if(rel==='skills/index.html'){
         assert.equal(schema.mainEntity?.['@type'],'ItemList');
