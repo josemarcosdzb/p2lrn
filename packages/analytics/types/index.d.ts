@@ -27,6 +27,7 @@ export declare class P2LRNAnalyticsElement extends HTMLElement {
   courseId:string;
   period:string;
   locale:string;
+  pageSize:number;
   refresh():Promise<P2LRNAnalyticsDataset>;
   setView(view:string):void;
   selectLearner(id:string):void;
