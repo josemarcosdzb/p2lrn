@@ -7,6 +7,7 @@ import {
   normalizeOfflineAssignmentPolicy,
   inspectOfflineAssignmentCompatibility,
   exportOfflineAssignmentBundle,
+  buildWindowsOfflineExecutable,
   parseOfflineAssignmentResult,
   signOfflineAssignment,
   verifyOfflineAssignmentSignature,
@@ -427,4 +428,41 @@ test('CDN HTML post-processing cannot silently corrupt exported Player runtime',
   });
   assert.equal(decoder.decode(storedZipEntries(compatible.bytes).get('www/player/'+memberPath)),original,
     'Older self-hosted runtimes remain compatible when original HTML matches the release');
+});
+
+test('native Windows EXE envelope is an x64 PE with the exact course ZIP and digest',async()=>{
+  const base=new Uint8Array(4096);
+  base[0]=77;base[1]=90;
+  new DataView(base.buffer).setUint32(60,128,true);
+  base.set([0x50,0x45,0,0,0x64,0x86],128);
+  const course=await exportOfflineAssignmentBundle(createP2LRNStudioDocument({title:'EXE QA'}),{
+    signAssignment:true,
+    runtimeBaseUrl:'https://runtime.example/player/current/dist/',fetchImpl:runtimeFetch(),
+    windowsExecutableBytes:base,
+  });
+  const exe=course.windowsExecutable,archive=course.bytes;
+  assert(exe.filename.endsWith('.p2lrn-offline.exe'));
+  assert.equal(exe.publisherSigned,false);
+  assert.deepEqual(exe.bytes.slice(0,base.length),base);
+  assert.deepEqual(exe.bytes.slice(base.length,base.length+archive.length),archive);
+  const tail=base.length+archive.length,view=new DataView(exe.bytes.buffer);
+  assert.equal(decoder.decode(exe.bytes.slice(tail,tail+12)),'P2LRN-EXE-V1');
+  assert.equal(view.getBigUint64(tail+16,true),BigInt(archive.length));
+  const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',archive));
+  assert.deepEqual(exe.bytes.slice(tail+24,tail+56),hash);
+  assert.equal(exe.bytes.length,base.length+archive.length+56);
+  assert(course.teacherReceipt,'Native format keeps the separate teacher receipt');
+});
+test('invalid or mismatched native templates fail closed, not replaced by CMD',async()=>{
+  const base=new Uint8Array(4096);
+  base.set([0x4d,0x5a]);new DataView(base.buffer).setUint32(60,128,true);
+  base.set([0x50,0x45,0,0,0x64,0x86],128);
+  const archive=Uint8Array.from([80,75,3,4, ...Array(32).fill(0)]);
+  await assert.rejects(()=>buildWindowsOfflineExecutable(archive,new Uint8Array(3)),/Tamaño no válido/);
+  const invalid=new Uint8Array(base);
+  invalid[128]=0;
+  await assert.rejects(()=>buildWindowsOfflineExecutable(archive,invalid),/plantilla no es un ejecutable PE/);
+  const wrongCpu=new Uint8Array(base);
+  wrongCpu[132]=0x4c;wrongCpu[133]=0x01;
+  await assert.rejects(()=>buildWindowsOfflineExecutable(archive,wrongCpu),/Windows x64/);
 });
