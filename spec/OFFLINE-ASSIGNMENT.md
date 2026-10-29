@@ -1,6 +1,6 @@
 # P2LRN Offline Assignment / Self-Playing Delivery
 
-Status: **implementation + roadmap** for an additive Reading-System/export mode. The current Windows CMD/ZIP release supports an optional Ed25519-signed assignment, a separate teacher-kept receipt, and result consistency checks. It does **not** include a signed EXE, system lockdown, TPM, trusted answer grading or verified learner identity. Planned items below must not be advertised as shipped. The core .p2lrn format and Player graph remain unchanged.
+Status: **implementation + roadmap** for an additive Reading-System/export mode. The current Windows EXE/CMD/ZIP release supports a native single-file x64 EXE, optional Ed25519 signing of the assignment, a teacher-kept receipt, and result consistency checks. The EXE is **not Authenticode-signed**; no system lockdown, TPM, independently authenticated scores or verified learner identity is provided. Planned items below must not be advertised as shipped. The core .p2lrn format and Player graph remain unchanged.
 
 ## 1. Goal
 
@@ -17,7 +17,8 @@ A fully offline assessment executed on a computer controlled by the learner cann
 The currently implemented checks have a deliberately limited scope:
 
 - optional Ed25519 signing authenticates the assignment **only when the original teacher-kept receipt is supplied during review**;
-- normal Windows CMD packaging checks its embedded ZIP's SHA-256, but the launcher itself is unsigned;
+- Windows EXE packaging now checks its appended ZIP with SHA-256, serves local content via a restricted Go loopback server, and uses a stable loopback origin for browser resume; it is still not code-signed;
+- legacy CMD packaging also checks the embedded ZIP SHA-256;
 - the return file includes an unkeyed SHA-256 digest, an ordered operation chain and checks comparing raw events, states and scores with their summaries;
 - a student with full control can change answers and recompute all unkeyed digests, or replace runtime files; these checks do not prove the result's authorship;
 - absolute deadlines and attempt limits depend on the student's local clock and browser storage;
@@ -25,6 +26,12 @@ The currently implemented checks have a deliberately limited scope:
 - high-stakes exams require externally supervised identity, time and machine controls.
 
 Planned options such as durable trusted signing identities, independently authenticated result receipts, executable code signing and system attestation are **not implemented**. The signing key generated for an individual export is not retained or published. Keep the original receipt if you intend to verify its assignment later.
+
+### Native Windows executable (implemented; publisher signing pending)
+
+The Windows x64 launcher is built from `native/offline-launcher` using Go's standard library, with no PowerShell requirement. Studio downloads the site's prebuilt PE executable and checks its SHA-256 against the build manifest before appending the existing ZIP and a fixed 56-byte trailer. The trailer contains `P2LRN-EXE-V1`, the ZIP length and SHA-256. On launch, the EXE verifies the ZIP, rejects traversal, duplicates, symlinks and oversized entries, extracts to a private temp directory, serves resources exclusively on `127.0.0.1` with strict Host validation and opens the system browser. A deterministic per-delivery loopback port maintains the same localStorage origin across restarts.
+
+The hash alone is not an authenticated signature: a malicious student could repack and recalculate it. Ed25519 authenticates the assignment **only after comparison with the teacher's saved original receipt**. Browser results remain untrusted. The Windows code publisher cannot be authenticated until the **final course-specific EXE is Authenticode-signed** with an approved certificate by an external trusted signing service or by the publisher. Browser-side generation does not have, and must never receive, a private publisher key. Tests and internal use are distinct from a fully signed public production release.
 
 ## 3. Export modes
 
@@ -42,7 +49,7 @@ It is convenient but MUST be labelled as tamper-evident rather than high-assuran
 
 ### Protected offline delivery
 
-**Planned protected mode (not yet delivered):** recommended for assessed work needing strong authenticity, with a signed launcher and verified teacher signature. The current Windows delivery is an unsigned `.p2lrn-offline.cmd` with embedded ZIP SHA-256 verification; the portable ZIP has a CMD launcher after extraction. Both are suitable for ordinary offline learning but are not authenticated examination applications. Equivalent signed launchers can be developed for other platforms without changing the P2LRN course or result schemas.
+**Planned protected mode (not yet delivered):** recommended for assessed work needing strong authenticity, with a signed launcher and verified teacher signature. The current Windows delivery can be a native unsigned `.p2lrn-offline.exe` with ZIP SHA-256 verification, or a legacy `.p2lrn-offline.cmd`; the portable ZIP retains the older CMD launcher for backward compatibility. Both are suitable for ordinary offline learning but are not authenticated examination applications. Equivalent signed launchers can be developed for other platforms without changing the P2LRN course or result schemas.
 
 Double-click flow:
 
@@ -72,7 +79,7 @@ Studio permite marcar **«Firmar el encargo»** durante la exportación Windows 
 
 El runtime offline comprueba la firma del manifiesto antes de permitir el comienzo y, para una entrega firmada, rechaza la ausencia de firma. Al revisar el archivo `.p2lrn-result` en Studio, el profesor puede adjuntar **su propia copia** del comprobante: Studio verifica Ed25519, identidad del curso, token de asignación y correspondencia del encargo, además de la coherencia de la cadena de evidencias y de los resúmenes. El orden original de eventos, estados y notas se conserva en `audit.recordOrder`; si una entrega antigua mezclaba tipos de operación y no guardó el orden, Studio muestra «no verificable» en lugar de atribuir una manipulación. Sin ese comprobante guardado por el profesor, una firma autocontenida en el archivo del alumno **no acredita quién emitió el encargo**.
 
-**Alcance:** la firma autentica exclusivamente las condiciones originales de la tarea, nunca el contenido de las respuestas o las puntuaciones generado en el PC del alumno. Un atacante con control total puede modificar una entrega y recalcular hashes. Las soluciones que necesitan los juegos para ofrecer corrección inmediata pueden continuar dentro del paquete; **no existe aún modo universal de examen sin soluciones**. No se genera ni firma un ejecutable Windows `.exe`: el lanzador sigue siendo un `.cmd` sin firma de editor. Este incremento no convierte la entrega en una aplicación de examen supervisado.
+**Alcance:** la firma autentica exclusivamente las condiciones originales de la tarea, nunca el contenido de las respuestas o las puntuaciones generado en el PC del alumno. Un atacante con control total puede modificar una entrega y recalcular hashes. Las soluciones que necesitan los juegos para ofrecer corrección inmediata pueden continuar dentro del paquete; **no existe aún modo universal de examen sin soluciones**. Studio genera un ejecutable Windows `.exe` nativo; el archivo final sigue sin firma Authenticode de editor y puede ser bloqueado por las políticas de Windows. Para publicación oficial, la firma debe aplicarse al EXE final, después de añadir el curso. Este incremento no convierte la entrega en una aplicación de examen supervisado.
 
 ## 4. Assignment envelope
 
@@ -109,7 +116,7 @@ Minimum fields:
 
 Dates/limits are optional when the teacher does not need them.
 
-**Current implementation:** an optional teacher-issued Ed25519 signature authenticates the manifest when Studio is supplied with the original teacher-kept receipt. The learner's package contains the verification key and the runtime checks its signature; the Windows CMD/ZIP also verifies an embedded SHA-256 checksum. A learner can still recompute an unkeyed result digest after changing answers or scores. Independent trusted result signing, code-signed launchers and platform attestation are **not** implemented.
+**Current implementation:** an optional teacher-issued Ed25519 signature authenticates the manifest when Studio is supplied with the original teacher-kept receipt. The learner's package contains the verification key and the runtime checks its signature; the Windows CMD/ZIP also verifies an embedded SHA-256 checksum. A learner can still recompute an unkeyed result digest after changing answers or scores. Independent trusted result signing, Authenticode signing of the final launcher and platform attestation are **not** implemented. The Go native EXE itself is functional but remains unsigned.
 
 A student-specific export MAY bind a random opaque assignment token to one learner in the teacher's local roster. The package does not need to contain the learner's personal data.
 
