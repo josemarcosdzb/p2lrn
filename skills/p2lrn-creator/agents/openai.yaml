@@ -1,0 +1,12 @@
+interface:
+  display_name: P2LRN - Crear y descargar
+  short_description: Genera y verifica cursos .p2lrn, con juegos y evaluaciones
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

@@ -1,0 +1,32 @@
+{
+  "title": "El sistema solar — curso de demostración",
+  "description": "Curso de ejemplo para generar archivos P2LRN directamente desde ChatGPT, sin túneles.",
+  "language": "es",
+  "units": [
+    {
+      "title": "Conocer el sistema solar",
+      "role": "module",
+      "lessons": [
+        {"type":"lesson", "title":"Introducción", "html":"<h1>El sistema solar</h1><p>El Sol es una estrella. Ocho planetas orbitan a su alrededor.</p><p>Exploraremos sus características y pondremos a prueba lo aprendido.</p>"},
+        {"type":"quiz", "title":"Preguntas iniciales", "questions":[
+          {"id":"q1","type":"single-choice","prompt":"¿Cuál es la estrella del sistema solar?","points":1,
+           "choices":[{"id":"a","text":"El Sol"},{"id":"b","text":"La Luna"},{"id":"c","text":"La Tierra"}],"solution":{"choiceIds":["a"]}},
+          {"id":"q2","type":"true-false","prompt":"La Tierra gira alrededor del Sol.","points":1,
+           "choices":[{"id":"v","text":"Verdadero"},{"id":"f","text":"Falso"}],"solution":{"choiceIds":["v"]}}
+        ]},
+        {"type":"game","kind":"matching","title":"Relacionar planetas", "questions":[
+          {"id":"match-1","type":"matching","prompt":"Relaciona el astro con su característica","points":3,
+           "left":[{"id":"l1","text":"Tierra"},{"id":"l2","text":"Marte"},{"id":"l3","text":"Júpiter"}],
+           "right":[{"id":"r1","text":"Planeta donde vivimos"},{"id":"r2","text":"El planeta rojo"},{"id":"r3","text":"Gigante gaseoso"}],
+           "solution":{"pairs":[{"left":"l1","right":"r1"},{"left":"l2","right":"r2"},{"left":"l3","right":"r3"}]}}
+        ]},
+        {"type":"game","kind":"3d-ordering","title":"Ordenar el ciclo del agua (3D)","questions":[
+          {"id":"order-1","type":"ordering","prompt":"Ordena las etapas del ciclo del agua","points":4,
+           "items":[{"id":"s1","text":"Evaporación"},{"id":"s2","text":"Condensación"},{"id":"s3","text":"Precipitación"},{"id":"s4","text":"Acumulación"}],
+           "solution":{"order":["s1","s2","s3","s4"]}}
+        ]},
+        {"type":"component","title":"Consejo para el alumno","heading":"Recuerda","text":"Lee cada pregunta y consulta la lección antes de responder.","tone":"note"}
+      ]
+    }
+  ]
+}
