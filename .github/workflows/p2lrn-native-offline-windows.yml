@@ -1,0 +1,69 @@
+name: P2LRN Native Offline Windows
+on:
+  push:
+    branches: [main]
+    paths:
+      - native/offline-launcher/**
+      - packages/toolkit/web/studio/offline-assignment.js
+      - packages/toolkit/test/offline-assignment.test.mjs
+      - deploy/netlify/build-offline-executable.mjs
+      - .github/workflows/p2lrn-native-offline-windows.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p2lrn-native-offline-windows-main
+  cancel-in-progress: true
+jobs:
+  native-windows-exe:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Test native offline launcher
+        working-directory: native/offline-launcher
+        shell: pwsh
+        run: |
+          go test -count=1 ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go vet ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build native Windows GUI and console test executables
+        working-directory: native/offline-launcher
+        shell: pwsh
+        run: |
+          $env:GOOS = 'windows'
+          $env:GOARCH = 'amd64'
+          $env:CGO_ENABLED = '0'
+          go build -trimpath -ldflags="-s -w" -o "$env:RUNNER_TEMP\p2lrn-offline-console.exe" .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go build -trimpath -ldflags="-s -w -H windowsgui" -o "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe" .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Exercise both executables on real Windows
+        shell: pwsh
+        run: |
+          python native/offline-launcher/smoke.py "$env:RUNNER_TEMP\p2lrn-offline-console.exe"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python native/offline-launcher/smoke.py "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe" --gui
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Assert code signing still requires a publisher certificate
+        shell: pwsh
+        run: |
+          $signature = Get-AuthenticodeSignature "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe"
+          if ($signature.Status -ne 'NotSigned') { throw 'Unexpected launcher code-signing status' }
+          Write-Output 'Code signing required for public consumer production release.'
+          Copy-Item "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe" native/offline-launcher/unsigned-template.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p2lrn-native-windows-unsigned
+          path: native/offline-launcher/unsigned-template.exe
+          retention-days: 14
