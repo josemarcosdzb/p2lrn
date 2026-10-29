@@ -1,5 +1,5 @@
 import {readFileSync,readdirSync} from 'node:fs';
-import {join,resolve} from 'node:path';
+import {join,resolve,relative} from 'node:path';
 import assert from 'node:assert/strict';
 const root=resolve(import.meta.dirname,'..');
 const site=join(root,'deploy','netlify','site');
@@ -42,20 +42,45 @@ function scan(dir){
     const h=readFileSync(f,'utf8');
     for(const m of h.matchAll(/<script\b([^>]*)>/gi)){
       if(/\bsrc\s*=/i.test(m[1]))continue;
-      // Google site-name JSON-LD is inert data, not executable JavaScript.
-      // Accept it only in the homepage and validate its exact schema identity.
-      assert.ok(f===join(site,'index.html')&&/^\s*type=["']application\/ld\+json["']\s*$/i.test(m[1]),'Inline script: '+f);
+      // application/ld+json is inert structured data, never executable JS.
+      // Validate allowed public URLs and schema identity instead of widening script-src.
+      assert.match(m[1],/^\s*type=["']application\/ld\+json["']\s*$/i,'Forbidden inline script: '+f);
+      const rel=relative(site,f).replaceAll('\\','/');
+      const allow=new Map([
+        ['index.html',{type:'WebSite',name:'P2LRN',url:'https://p2lrn.netlify.app/'}],
+        ['analytics/index.html',{type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.netlify.app/analytics/'}],
+        ['skills/index.html',{type:'CollectionPage',name:'Descargar Skills P2LRN para asistentes de IA',url:'https://p2lrn.netlify.app/skills/'}]
+      ]);
+      assert.ok(allow.has(rel),'JSON-LD outside approved public pages: '+rel);
       const trailing=h.slice(m.index+m[0].length);
       const close=trailing.toLowerCase().indexOf('</script>');
-      assert.ok(close>=0,'Unclosed JSON-LD script: '+f);
+      assert.ok(close>=0,'Unclosed JSON-LD: '+rel);
+      const text=trailing.slice(0,close);
+      assert.ok(!text.includes('<'),'JSON-LD must not embed markup: '+rel);
       let schema;
-      try{schema=JSON.parse(trailing.slice(0,close))}catch{assert.fail('Invalid JSON-LD on '+f)}
-      const allowedKeys=new Set(['@context','@type','@id','name','url','inLanguage','description']);
-      assert.ok(Object.keys(schema).every(k=>allowedKeys.has(k)),'Unexpected JSON-LD fields on '+f);
+      try{schema=JSON.parse(text)}catch{assert.fail('Invalid JSON-LD: '+rel)}
+      const expected=allow.get(rel);
       assert.equal(schema['@context'],'https://schema.org');
-      assert.equal(schema['@type'],'WebSite');
-      assert.equal(schema.name,'P2LRN');
-      assert.equal(schema.url,'https://p2lrn.netlify.app/');
+      assert.equal(schema['@type'],expected.type);
+      assert.equal(schema.name,expected.name);
+      assert.equal(schema.url,expected.url);
+      const validKeys=rel==='index.html'
+        ? ['@context','@type','@id','name','url','inLanguage','description']
+        : rel==='analytics/index.html'
+          ? ['@context','@type','name','url','applicationCategory','operatingSystem','inLanguage','description']
+          : ['@context','@type','name','description','url','inLanguage','isPartOf','mainEntity'];
+      assert.ok(Object.keys(schema).every(key=>validKeys.includes(key)),'Unrecognized schema field: '+rel);
+      if(rel==='skills/index.html'){
+        assert.equal(schema.mainEntity?.['@type'],'ItemList');
+        const links=schema.mainEntity?.itemListElement;
+        assert.ok(Array.isArray(links)&&links.length===4,'Expected four Skill packages in JSON-LD');
+        const expectedFiles=['p2lrn-chatgpt-plugin.zip','p2lrn-claude-skill.zip','p2lrn-gemini-skill.zip','p2lrn-grok-skill.zip'];
+        for(let i=0;i<expectedFiles.length;i++){
+          assert.equal(links[i].position,i+1);
+          assert.equal(links[i].url,'https://p2lrn.netlify.app/downloads/skills/'+expectedFiles[i]);
+          assert.equal(links[i]['@type'],'ListItem');
+        }
+      }
     }
     // Preserve the prohibition of all inline event handlers.
     assert.ok(!/\son(?:load|error|click|submit|change|input)\s*=/i.test(h),'Inline handler: '+f);
