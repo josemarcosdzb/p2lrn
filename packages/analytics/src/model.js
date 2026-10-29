@@ -220,144 +220,157 @@ function courseProgress(enrollment,attempts){
   ].filter((value)=>value!=null);
   return values.length?Math.max(...values):0;
 }
-function activeTimeMsFor(dataset,learnerId=null,courseId=null){
-  const grouped=new Map();
+
+function maxTimestampMs(current,value){
+  if(!value)return current;
+  const ms=new Date(value).getTime();
+  return Number.isFinite(ms)&&ms>current?ms:current;
+}
+function ensureSet(map,id){
+  let set=map.get(id);
+  if(!set){set=new Set();map.set(id,set);}
+  return set;
+}
+function createAnalyticsIndex(dataset){
+  const pairs=new Map();
+  const courseIdsByLearner=new Map();
+  const learnerIdsByCourse=new Map();
+  const activeGroups=new Map();
+  const ensurePair=(learnerId,courseId)=>{
+    const pairKey=key(learnerId,courseId);
+    let pair=pairs.get(pairKey);
+    if(!pair){
+      pair={
+        learnerId,courseId,enrollment:null,attempts:0,failedAttempts:0,
+        attemptProgress:null,attemptCompleted:false,hasStarted:false,
+        grade:null,gradeUpdatedMs:-1,lastActivityMs:-1,activeTimeMs:0,
+      };
+      pairs.set(pairKey,pair);
+      ensureSet(courseIdsByLearner,learnerId).add(courseId);
+      ensureSet(learnerIdsByCourse,courseId).add(learnerId);
+    }
+    return pair;
+  };
+  for(const enrollment of dataset.enrollments){
+    const pair=ensurePair(enrollment.learnerId,enrollment.courseId);
+    pair.enrollment=enrollment;
+    if(enrollment.startedAt||ratio(enrollment.progress,null)>0)pair.hasStarted=true;
+  }
   for(const attempt of dataset.attempts){
-    if(learnerId&&attempt.learnerId!==learnerId)continue;
-    if(courseId&&attempt.courseId!==courseId)continue;
-    grouped.set(key(attempt.learnerId,attempt.courseId,attempt.id),Math.max(0,attempt.activeTimeMs||0));
+    const pair=ensurePair(attempt.learnerId,attempt.courseId);
+    pair.attempts++;
+    pair.hasStarted=true;
+    if(String(attempt.status).toLowerCase()==='failed')pair.failedAttempts++;
+    if(attemptCompleted(attempt))pair.attemptCompleted=true;
+    const progress=ratio(attempt.progress,null);
+    if(progress!=null)pair.attemptProgress=Math.max(pair.attemptProgress??0,progress);
+    for(const value of [attempt.updatedAt,attempt.completedAt,attempt.submittedAt,attempt.startedAt]){
+      pair.lastActivityMs=maxTimestampMs(pair.lastActivityMs,value);
+    }
+    const group=key(attempt.learnerId,attempt.courseId,attempt.id);
+    activeGroups.set(group,{
+      pairKey:key(attempt.learnerId,attempt.courseId),
+      ms:Math.max(activeGroups.get(group)?.ms??0,Math.max(0,attempt.activeTimeMs||0)),
+    });
+  }
+  for(const grade of dataset.grades){
+    const pair=ensurePair(grade.learnerId,grade.courseId);
+    if(!isCourseGrade(grade,grade.courseId))continue;
+    const updatedMs=new Date(grade.updatedAt??0).getTime();
+    const comparable=Number.isFinite(updatedMs)?updatedMs:0;
+    if(pair.grade==null||comparable>pair.gradeUpdatedMs){
+      pair.grade=grade;
+      pair.gradeUpdatedMs=comparable;
+    }
   }
   for(const event of dataset.events){
-    if(learnerId&&event.learnerId!==learnerId)continue;
-    if(courseId&&event.courseId!==courseId)continue;
+    if(!event.learnerId||!event.courseId)continue;
+    const pair=ensurePair(event.learnerId,event.courseId);
+    pair.hasStarted=true;
+    pair.lastActivityMs=maxTimestampMs(pair.lastActivityMs,event.timestamp);
     if(!['p2lrn:attention','p2lrn:active-time'].includes(event.type))continue;
     const total=finite(event.payload?.totalActiveMs,null);
     if(total==null||total<0)continue;
     const group=key(event.learnerId,event.courseId,event.attemptId||'event-session');
-    grouped.set(group,Math.max(grouped.get(group)??0,total));
+    activeGroups.set(group,{
+      pairKey:key(event.learnerId,event.courseId),
+      ms:Math.max(activeGroups.get(group)?.ms??0,total),
+    });
   }
-  return sum([...grouped.values()]);
+  for(const item of activeGroups.values()){
+    const pair=pairs.get(item.pairKey);
+    if(pair)pair.activeTimeMs+=item.ms;
+  }
+  for(const pair of pairs.values()){
+    if(pair.enrollment?.completedAt||String(pair.enrollment?.status).toLowerCase()==='completed'||pair.attemptCompleted){
+      pair.progress=1;
+    }else{
+      pair.progress=Math.max(ratio(pair.enrollment?.progress,0)??0,pair.attemptProgress??0);
+    }
+    pair.gradeRatio=authoritativeGradeRatio(pair.grade);
+    pair.lastActivity=pair.lastActivityMs>=0?new Date(pair.lastActivityMs).toISOString():null;
+  }
+  return {pairs,courseIdsByLearner,learnerIdsByCourse};
 }
-function lastActivityFor(dataset,learnerId=null,courseId=null){
-  const values=[];
-  for(const attempt of dataset.attempts){
-    if(learnerId&&attempt.learnerId!==learnerId)continue;
-    if(courseId&&attempt.courseId!==courseId)continue;
-    values.push(attempt.updatedAt,attempt.completedAt,attempt.submittedAt,attempt.startedAt);
-  }
-  for(const event of dataset.events){
-    if(learnerId&&event.learnerId!==learnerId)continue;
-    if(courseId&&event.courseId!==courseId)continue;
-    values.push(event.timestamp);
-  }
-  return latest(values);
-}
-function signalRisk({progress,gradeRatio,lastActivity,failedAttempts,hasStarted,completed},rules,nowMs){
-  const reasons=[];
-  if(!completed&&lastActivity){
-    const days=(nowMs-new Date(lastActivity).getTime())/DAY_MS;
-    if(Number.isFinite(days)&&days>=rules.inactiveDays)reasons.push({code:'inactive',label:'Sin actividad reciente',value:Math.floor(days)});
-  }
-  if(!completed&&hasStarted&&progress<rules.lowProgress)reasons.push({code:'low-progress',label:'Progreso bajo',value:progress});
-  if(gradeRatio!=null&&gradeRatio<rules.lowGrade)reasons.push({code:'low-grade',label:'Nota baja',value:gradeRatio});
-  if(failedAttempts>=rules.failedAttempts)reasons.push({code:'repeated-attempts',label:'Intentos fallidos repetidos',value:failedAttempts});
-  const level=reasons.length>=2?'high':reasons.length===1?'watch':'none';
-  return Object.freeze({level,reasons:Object.freeze(reasons)});
-}
-
-function learnerMetrics(dataset,learner,rules,nowMs){
-  const enrollments=dataset.enrollments.filter((item)=>item.learnerId===learner.id);
-  const courseIds=new Set(enrollments.map((item)=>item.courseId));
-  const attempts=dataset.attempts.filter((item)=>item.learnerId===learner.id);
-  for(const attempt of attempts)courseIds.add(attempt.courseId);
-  const grades=dataset.grades.filter((item)=>item.learnerId===learner.id);
-  for(const grade of grades)courseIds.add(grade.courseId);
-  let completedCourses=0;
-  const progresses=[];
-  const officialGrades=[];
-  let failedAttempts=0;
-  let hasStarted=false;
+function learnerMetrics(index,learner,rules,nowMs){
+  const courseIds=index.courseIdsByLearner.get(learner.id)??new Set();
+  let completedCourses=0,failedAttempts=0,attempts=0,activeTimeMs=0,lastActivityMs=-1,hasStarted=false;
+  const progresses=[],officialGrades=[];
   for(const courseId of courseIds){
-    const enrollment=enrollments.find((item)=>item.courseId===courseId)??null;
-    const courseAttempts=attempts.filter((item)=>item.courseId===courseId);
-    const progress=courseProgress(enrollment,courseAttempts);
-    progresses.push(progress);
-    if(progress>=1)completedCourses++;
-    if(courseAttempts.length||enrollment?.startedAt||progress>0)hasStarted=true;
-    failedAttempts+=courseAttempts.filter((item)=>String(item.status).toLowerCase()==='failed').length;
-    const grade=latestAuthoritativeGrade(grades.filter((item)=>item.courseId===courseId),courseId);
-    const gradeRatio=authoritativeGradeRatio(grade);
-    if(gradeRatio!=null)officialGrades.push(gradeRatio);
+    const pair=index.pairs.get(key(learner.id,courseId));
+    if(!pair)continue;
+    progresses.push(pair.progress);
+    if(pair.progress>=1)completedCourses++;
+    if(pair.hasStarted||pair.progress>0)hasStarted=true;
+    failedAttempts+=pair.failedAttempts;
+    attempts+=pair.attempts;
+    activeTimeMs+=pair.activeTimeMs;
+    lastActivityMs=Math.max(lastActivityMs,pair.lastActivityMs);
+    if(pair.gradeRatio!=null)officialGrades.push(pair.gradeRatio);
   }
   const progress=average(progresses)??0;
   const gradeRatio=average(officialGrades);
-  const lastActivity=lastActivityFor(dataset,learner.id,null);
+  const lastActivity=lastActivityMs>=0?new Date(lastActivityMs).toISOString():null;
   const completed=courseIds.size>0&&completedCourses===courseIds.size;
   const risk=signalRisk({progress,gradeRatio,lastActivity,failedAttempts,hasStarted,completed},rules,nowMs);
   return Object.freeze({
-    id:learner.id,
-    learner,
-    courses:courseIds.size,
-    completedCourses,
+    id:learner.id,learner,courses:courseIds.size,completedCourses,
     completionRate:courseIds.size?completedCourses/courseIds.size:0,
-    progress,
-    gradeRatio,
-    attempts:attempts.length,
-    activeTimeMs:activeTimeMsFor(dataset,learner.id,null),
-    lastActivity,
-    failedAttempts,
-    risk,
+    progress,gradeRatio,attempts,activeTimeMs,lastActivity,failedAttempts,risk,
   });
 }
-
-function courseMetrics(dataset,course,rules,nowMs){
-  const enrollments=dataset.enrollments.filter((item)=>item.courseId===course.id);
-  const learnerIds=new Set(enrollments.map((item)=>item.learnerId));
-  const attempts=dataset.attempts.filter((item)=>item.courseId===course.id);
-  for(const attempt of attempts)learnerIds.add(attempt.learnerId);
-  const grades=dataset.grades.filter((item)=>item.courseId===course.id);
-  for(const grade of grades)learnerIds.add(grade.learnerId);
+function courseMetrics(index,course,rules,nowMs){
+  const learnerIds=index.learnerIdsByCourse.get(course.id)??new Set();
   const progresses=[],gradeRatios=[];
-  let completed=0,started=0,passed=0,graded=0,riskCount=0;
+  let completed=0,started=0,passed=0,graded=0,riskCount=0,attempts=0,activeTimeMs=0,lastActivityMs=-1;
   for(const learnerId of learnerIds){
-    const enrollment=enrollments.find((item)=>item.learnerId===learnerId)??null;
-    const learnerAttempts=attempts.filter((item)=>item.learnerId===learnerId);
-    const progress=courseProgress(enrollment,learnerAttempts);
-    progresses.push(progress);
-    if(progress>=1)completed++;
-    if(progress>0||learnerAttempts.length||enrollment?.startedAt)started++;
-    const grade=latestAuthoritativeGrade(grades.filter((item)=>item.learnerId===learnerId),course.id);
-    const gradeRatio=authoritativeGradeRatio(grade);
-    if(gradeRatio!=null){
-      gradeRatios.push(gradeRatio);
+    const pair=index.pairs.get(key(learnerId,course.id));
+    if(!pair)continue;
+    progresses.push(pair.progress);
+    if(pair.progress>=1)completed++;
+    if(pair.progress>0||pair.hasStarted)started++;
+    if(pair.gradeRatio!=null){
+      gradeRatios.push(pair.gradeRatio);
       graded++;
-      const didPass=grade.passed==null?gradeRatio>=rules.lowGrade:grade.passed;
+      const didPass=pair.grade?.passed==null?pair.gradeRatio>=rules.lowGrade:pair.grade.passed;
       if(didPass)passed++;
     }
-    const failedAttempts=learnerAttempts.filter((item)=>String(item.status).toLowerCase()==='failed').length;
+    attempts+=pair.attempts;
+    activeTimeMs+=pair.activeTimeMs;
+    lastActivityMs=Math.max(lastActivityMs,pair.lastActivityMs);
     const risk=signalRisk({
-      progress,gradeRatio,lastActivity:lastActivityFor(dataset,learnerId,course.id),
-      failedAttempts,hasStarted:progress>0||learnerAttempts.length>0,completed:progress>=1,
+      progress:pair.progress,gradeRatio:pair.gradeRatio,lastActivity:pair.lastActivity,
+      failedAttempts:pair.failedAttempts,hasStarted:pair.hasStarted||pair.progress>0,completed:pair.progress>=1,
     },rules,nowMs);
     if(risk.level!=='none')riskCount++;
   }
   return Object.freeze({
-    id:course.id,
-    course,
-    enrolled:learnerIds.size,
-    started,
-    completed,
+    id:course.id,course,enrolled:learnerIds.size,started,completed,
     completionRate:learnerIds.size?completed/learnerIds.size:0,
-    averageProgress:average(progresses)??0,
-    averageGrade:average(gradeRatios),
-    graded,
-    passed,
-    passRate:graded?passed/graded:null,
-    attempts:attempts.length,
-    averageAttempts:learnerIds.size?attempts.length/learnerIds.size:0,
-    activeTimeMs:activeTimeMsFor(dataset,null,course.id),
-    riskCount,
-    lastActivity:lastActivityFor(dataset,null,course.id),
+    averageProgress:average(progresses)??0,averageGrade:average(gradeRatios),
+    graded,passed,passRate:graded?passed/graded:null,attempts,
+    averageAttempts:learnerIds.size?attempts/learnerIds.size:0,
+    activeTimeMs,riskCount,lastActivity:lastActivityMs>=0?new Date(lastActivityMs).toISOString():null,
   });
 }
 
@@ -403,16 +416,11 @@ export function computeAnalyticsSnapshot(input={},options={}){
   const dataset=input?.schema===ANALYTICS_DATASET_SCHEMA?input:normalizeAnalyticsDataset(input);
   const rules=Object.freeze({...DEFAULT_ANALYTICS_RISK_RULES,...record(options.riskRules)});
   const nowMs=Number.isFinite(Number(options.now))?Number(options.now):Date.now();
-  const learners=dataset.learners.map((learner)=>learnerMetrics(dataset,learner,rules,nowMs)).sort((a,b)=>sortByName(a.learner,b.learner));
-  const courses=dataset.courses.map((course)=>courseMetrics(dataset,course,rules,nowMs)).sort((a,b)=>sortByName(a.course,b.course));
-  const courseGradeRatios=[];
-  const gradeKeys=new Set(dataset.grades.map((grade)=>key(grade.learnerId,grade.courseId)));
-  for(const gradeKey of gradeKeys){
-    const [learnerId,courseId]=gradeKey.split('::');
-    const grade=latestAuthoritativeGrade(dataset.grades.filter((item)=>item.learnerId===learnerId&&item.courseId===courseId),courseId);
-    const value=authoritativeGradeRatio(grade);
-    if(value!=null)courseGradeRatios.push(value);
-  }
+  const index=createAnalyticsIndex(dataset);
+  const learners=dataset.learners.map((learner)=>learnerMetrics(index,learner,rules,nowMs)).sort((a,b)=>sortByName(a.learner,b.learner));
+  const courses=dataset.courses.map((course)=>courseMetrics(index,course,rules,nowMs)).sort((a,b)=>sortByName(a.course,b.course));
+  const courseGrades=[...index.pairs.values()].map((pair)=>pair.grade).filter(Boolean);
+  const courseGradeRatios=courseGrades.map(authoritativeGradeRatio).filter((value)=>value!=null);
   const activeLearners=learners.filter((item)=>{
     if(!item.lastActivity)return false;
     return nowMs-new Date(item.lastActivity).getTime()<=30*DAY_MS;
@@ -428,7 +436,7 @@ export function computeAnalyticsSnapshot(input={},options={}){
     attempts:dataset.attempts.length,
     completionRate:enrolled?completed/enrolled:0,
     averageGrade:average(courseGradeRatios),
-    activeTimeMs:activeTimeMsFor(dataset),
+    activeTimeMs:sum([...index.pairs.values()].map((pair)=>pair.activeTimeMs)),
     atRisk,
     events:dataset.events.length,
   });
@@ -441,7 +449,7 @@ export function computeAnalyticsSnapshot(input={},options={}){
     overview,
     learners:Object.freeze(learners),
     courses:Object.freeze(courses),
-    gradeDistribution:gradeDistribution(dataset.grades.filter((grade)=>isCourseGrade(grade,grade.courseId))),
+    gradeDistribution:gradeDistribution(courseGrades),
     activity:activitySeries(dataset,Number(options.activityDays??14),nowMs),
     recentEvents:Object.freeze(recentEvents),
   });
@@ -572,12 +580,16 @@ export function analyticsToCsv(snapshotOrDataset,{kind='learners',locale='es-ES'
       ])];
   }else if(kind==='grades'){
     rows=[['id','alumno','curso','valor','maximo','porcentaje','aprobado','autoritativa','actualizada'],
-      ...snapshot.dataset.grades.map((grade)=>{
-        const learner=snapshot.dataset.learners.find((item)=>item.id===grade.learnerId);
-        const course=snapshot.dataset.courses.find((item)=>item.id===grade.courseId);
-        return [grade.id,learner?.name??grade.learnerId,course?.title??grade.courseId,grade.value,grade.maxValue,
-          percent(authoritativeGradeRatio(grade)),grade.passed,grade.authoritative,grade.updatedAt];
-      })];
+      ...(()=>{
+        const learnersById=new Map(snapshot.dataset.learners.map((item)=>[item.id,item]));
+        const coursesById=new Map(snapshot.dataset.courses.map((item)=>[item.id,item]));
+        return snapshot.dataset.grades.map((grade)=>{
+          const learner=learnersById.get(grade.learnerId);
+          const course=coursesById.get(grade.courseId);
+          return [grade.id,learner?.name??grade.learnerId,course?.title??grade.courseId,grade.value,grade.maxValue,
+            percent(authoritativeGradeRatio(grade)),grade.passed,grade.authoritative,grade.updatedAt];
+        });
+      })()];
   }else{
     rows=[['id','alumno','email','grupo','cursos','completados','progreso','nota','intentos','horas_activas','ultima_actividad','senal'],
       ...snapshot.learners.map((item)=>[
