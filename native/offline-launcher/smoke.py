@@ -6,6 +6,7 @@ import pathlib
 import struct
 import subprocess
 import sys
+import time
 import tempfile
 import urllib.error
 import urllib.request
@@ -14,6 +15,7 @@ import zipfile
 MAGIC=b"P2LRN-EXE-V1"+bytes(4)
 base=pathlib.Path(sys.argv[1]).resolve()
 assert base.is_file(), "Pass the compiled launcher path"
+GUI_MODE='--gui' in sys.argv[2:]
 
 def pack(exe,content):
     return exe+content+MAGIC+struct.pack("<Q",len(content))+hashlib.sha256(content).digest()
@@ -46,6 +48,18 @@ with tempfile.TemporaryDirectory(prefix="p2lrn-native-smoke-") as temporary:
     def launch():
         process=subprocess.Popen([str(target)],env={**os.environ,"P2LRN_OFFLINE_LAUNCH_TEST":"1"},
                                  stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        if GUI_MODE:
+            digest=hashlib.sha256(zip_bytes).digest()
+            port=20000+int.from_bytes(digest[:2],"big")%30000
+            url=f"http://127.0.0.1:{port}/index.html"
+            for _ in range(150):
+                if process.poll() is not None:raise AssertionError("GUI EXE exited early")
+                try:
+                    with urllib.request.urlopen(url,timeout=1) as response:
+                        if response.status==200:break
+                except Exception:time.sleep(0.1)
+            else:raise AssertionError("GUI EXE did not start")
+            return process,url
         line=process.stdout.readline().strip()
         assert line.startswith("P2LRN_TEST_URL=http://127.0.0.1:"),line
         return process,line.split("=",1)[1]
@@ -70,6 +84,10 @@ with tempfile.TemporaryDirectory(prefix="p2lrn-native-smoke-") as temporary:
     try:assert again==address,(address,again)
     finally:process.terminate();process.wait(timeout=10)
     print("NATIVE_STABLE_RESUME_ORIGIN_PASS")
+
+    if GUI_MODE:
+        print("NATIVE_GUI_EXE_LAUNCH_PASS")
+        sys.exit(0)
 
     tampered=bytearray(pack(binary,zip_bytes))
     tampered[-57]^=1
