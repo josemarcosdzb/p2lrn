@@ -4,6 +4,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  GO_VERSION = "1.26"
 
 # Historical IA documentation paths now point to the corresponding section
 # in the single canonical guide. Force redirects even when legacy HTML exists,
