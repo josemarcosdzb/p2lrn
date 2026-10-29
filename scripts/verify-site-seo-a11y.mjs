@@ -108,6 +108,56 @@ for(const name of googleVerificationFiles){
   if(original!==('google-site-verification: '+name)||published!==original)
     errors.push('Search Console verification token missing or modified: '+name);
 }
+// New public Skills pages must remain indexable, crawlable and connected to documentation.
+for(const route of ['/skills/','/docs/skills/']){
+  if(!indexable.includes(route))errors.push('Skills page must be indexable: '+route);
+  if(!xmlUrls.includes(CANONICAL_ORIGIN+route))errors.push('Skills URL missing from sitemap: '+route);
+}
+if(!homeHtml.includes('href="/skills/"'))errors.push('Skills landing page missing from home navigation');
+for(const route of ['docs/index.html','docs/conectores/ia/index.html','docs/conectores/index.html']){
+  const html=await readFile(join(out,route),'utf8').catch(()=>null);
+  if(!html||!html.includes('href="/skills/"')||!html.includes('href="/docs/skills/"'))
+    errors.push('Skills integration link absent from '+route);
+}
+const landing=await readFile(join(out,'skills/index.html'),'utf8').catch(()=>null);
+const guide=await readFile(join(out,'docs/skills/index.html'),'utf8').catch(()=>null);
+if(!landing||!guide)errors.push('Skills landing or installation guide missing');
+const skillManifest=JSON.parse(await readFile(join(out,'downloads/skills/manifest.json'),'utf8').catch(()=>'{"packages":[]}'));
+const expectedPlatforms=new Map([
+ ['chatgpt','skills/p2lrn-creator/'],
+ ['claude','p2lrn-creator/'],
+ ['gemini',''],
+ ['grok','.grok/skills/p2lrn-creator/']
+]);
+if(skillManifest.packages.length!==4)errors.push('Skill download manifest must contain four packages');
+function zipEntries(bytes){
+  const paths=[];let pos=0;
+  while(pos+30<=bytes.length&&bytes.readUInt32LE(pos)===0x04034b50){
+    const nameLen=bytes.readUInt16LE(pos+26),extraLen=bytes.readUInt16LE(pos+28);
+    const size=bytes.readUInt32LE(pos+18),start=pos+30;
+    paths.push(bytes.subarray(start,start+nameLen).toString('utf8'));
+    pos=start+nameLen+extraLen+size;
+  }
+  return paths;
+}
+for(const [platform,prefix] of expectedPlatforms){
+  const item=skillManifest.packages.find(x=>x.platform===platform);
+  if(!item){errors.push('Missing '+platform+' Skill package');continue}
+  if(!/^p2lrn-[a-z-]+\.zip$/.test(item.filename)||item.url!=='/downloads/skills/'+item.filename)
+    errors.push('Unsafe filename or URL for '+platform);
+  const bytes=await readFile(join(out,'downloads/skills',item.filename)).catch(()=>null);
+  if(!bytes||bytes.length<10000||bytes.length>25*1024*1024){errors.push(platform+' Skill ZIP not published correctly');continue}
+  const digest=createHash('sha256').update(bytes).digest('hex');
+  if(item.sha256!==digest||item.bytes!==bytes.length)errors.push('Skill ZIP integrity mismatch for '+platform);
+  const members=zipEntries(bytes);
+  if(!members.includes(prefix+'SKILL.md')||!members.includes(prefix+'scripts/p2lrn_package.py')||
+     !members.includes(prefix+'scripts/test_p2lrn_package.py')||members.some(n=>/__pycache__|\.pyc$/i.test(n)))
+    errors.push('Skill archive missing entrypoint, package writer, tests or includes bytecode: '+platform);
+  if(!landing?.includes('href="'+item.url+'"')||!guide?.includes('href="'+item.url+'"'))
+    errors.push('Skill ZIP not linked from landing and guide: '+platform);
+}
+if(!landing?.includes('"@type":"CollectionPage"'))errors.push('Skills collection structured data missing');
+
 const result={ok:errors.length===0,sourcePages:sourcePages.length,indexable:indexable.length,aliases:aliases.length,sitemapURLs:xmlUrls.length,quickstartVerified:Boolean(quick&&creator&&quick.equals(creator)),errors};
 console.log(JSON.stringify(result,null,2));
 if(errors.length)process.exitCode=1;

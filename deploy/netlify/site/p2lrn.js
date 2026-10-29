@@ -124,7 +124,7 @@
     },
     {
       label: 'Integrar',
-      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*'],
+      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
       items: [
         ['/docs/integracion/','Integración'],
         ['/docs/colaboracion/','Colaboración'],
@@ -407,6 +407,7 @@
     ]],
     ['/docs/conectores/',[
       ['/docs/conectores/ia/','Conectores para IA'],
+      ['/docs/skills/','Skills P2LRN para IA'],
       ['/docs/conectores/lms/','Plataformas LMS'],
       ['/docs/conectores/lti/','Módulo LTI 1.3'],
     ]],
@@ -455,6 +456,7 @@
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
     ['/docs/conectores/ia/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/skills/',['/docs/conectores/','Conectores e integración']],
     ['/docs/conectores/gemini/',['/docs/conectores/ia/','Conectores para IA']],
     ['/docs/conectores/skills/',['/docs/conectores/ia/','Conectores para IA']],
     ['/docs/conectores/local/',['/docs/conectores/ia/','Conectores para IA']],
