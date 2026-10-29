@@ -312,6 +312,19 @@ function createAnalyticsIndex(dataset){
   }
   return {pairs,courseIdsByLearner,learnerIdsByCourse};
 }
+function signalRisk({progress,gradeRatio,lastActivity,failedAttempts,hasStarted,completed},rules,nowMs){
+  const reasons=[];
+  if(!completed&&lastActivity){
+    const days=(nowMs-new Date(lastActivity).getTime())/DAY_MS;
+    if(Number.isFinite(days)&&days>=rules.inactiveDays)reasons.push({code:'inactive',label:'Sin actividad reciente',value:Math.floor(days)});
+  }
+  if(!completed&&hasStarted&&progress<rules.lowProgress)reasons.push({code:'low-progress',label:'Progreso bajo',value:progress});
+  if(gradeRatio!=null&&gradeRatio<rules.lowGrade)reasons.push({code:'low-grade',label:'Nota baja',value:gradeRatio});
+  if(failedAttempts>=rules.failedAttempts)reasons.push({code:'repeated-attempts',label:'Intentos fallidos repetidos',value:failedAttempts});
+  const level=reasons.length>=2?'high':reasons.length===1?'watch':'none';
+  return Object.freeze({level,reasons:Object.freeze(reasons)});
+}
+
 function learnerMetrics(index,learner,rules,nowMs){
   const courseIds=index.courseIdsByLearner.get(learner.id)??new Set();
   let completedCourses=0,failedAttempts=0,attempts=0,activeTimeMs=0,lastActivityMs=-1,hasStarted=false;
