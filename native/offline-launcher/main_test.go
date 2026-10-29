@@ -72,3 +72,32 @@ func TestServerRestrictions(t *testing.T){
  b,_:=io.ReadAll(w.Body);if !strings.Contains(string(b),"P2LRN offline"){t.Fatal("Wrong response")}
  if w.Header().Get("X-Content-Type-Options")!="nosniff"{t.Fatal("Missing nosniff header")}
 }
+
+func TestSignerCertificateAppendedAfterZipTrailer(t *testing.T){
+  archive:=testZip(t,nil)
+  exe:=make([]byte,512)
+  exe[0],exe[1]='M','Z'
+  binary.LittleEndian.PutUint32(exe[0x3c:0x40],0x80)
+  copy(exe[0x80:],[]byte{'P','E',0,0})
+  binary.LittleEndian.PutUint16(exe[0x80+20:0x80+22],240)
+  optional:=0x80+24
+  binary.LittleEndian.PutUint16(exe[optional:optional+2],0x20b)
+  footer:=make([]byte,envelopeBytes)
+  copy(footer,envelopeMagic)
+  binary.LittleEndian.PutUint64(footer[16:24],uint64(len(archive)))
+  digest:=sha256.Sum256(archive)
+  copy(footer[24:],digest[:])
+  pad:=make([]byte,3)
+  cert:=make([]byte,32)
+  offset:=len(exe)+len(archive)+len(footer)+len(pad)
+  binary.LittleEndian.PutUint32(exe[optional+144:optional+148],uint32(offset))
+  binary.LittleEndian.PutUint32(exe[optional+148:optional+152],uint32(len(cert)))
+  file,err:=os.CreateTemp(t.TempDir(),"authenticode-example-*.exe");if err!=nil{t.Fatal(err)}
+  file.Write(exe);file.Write(archive);file.Write(footer);file.Write(pad);file.Write(cert);file.Close()
+  payload,err:=readPayload(file.Name())
+  if err!=nil{t.Fatalf("A signed final EXE must retain ZIP support: %v",err)}
+  defer payload.reader.Close()
+  root,err:=extract(payload,t.TempDir());if err!=nil{t.Fatal(err)}
+  defer os.RemoveAll(root)
+  if _,err:=os.Stat(filepath.Join(root,"www","index.html"));err!=nil{t.Fatal(err)}
+}
