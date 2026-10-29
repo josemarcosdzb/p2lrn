@@ -44,6 +44,36 @@ type payload struct {
 	hash   [sha256.Size]byte
 }
 
+// Authenticode appends WIN_CERTIFICATE after the regular executable contents.
+// IMAGE_DIRECTORY_ENTRY_SECURITY stores its file offset (not an RVA). A
+// signer may insert 0-7 alignment bytes before the certificate table.
+// Reading the P2LRN trailer before this table lets us sign the FINAL EXE
+// without breaking embedded ZIP verification.
+func envelopeOffsets(file *os.File, size int64) []int64 {
+	fallback := []int64{size - envelopeBytes}
+	if size < 256 { return fallback }
+	header := make([]byte, 64)
+	if _, err := file.ReadAt(header, 0); err != nil || string(header[:2]) != "MZ" { return fallback }
+	pe := int64(binary.LittleEndian.Uint32(header[60:64]))
+	if pe < 64 || pe+24+152 > size { return fallback }
+	coff := make([]byte, 24)
+	if _, err := file.ReadAt(coff, pe); err != nil || string(coff[:4]) != "PE\x00\x00" { return fallback }
+	optionSize := int64(binary.LittleEndian.Uint16(coff[20:22]))
+	opt := pe + 24
+	if optionSize < 152 || opt+optionSize > size { return fallback }
+	magic := make([]byte, 2)
+	if _, err := file.ReadAt(magic, opt); err != nil || binary.LittleEndian.Uint16(magic) != 0x20b { return fallback }
+	sec := make([]byte, 8)
+	if _, err := file.ReadAt(sec, opt+144); err != nil { return fallback }
+	offset := int64(binary.LittleEndian.Uint32(sec[:4]))
+	length := int64(binary.LittleEndian.Uint32(sec[4:]))
+	if offset == 0 || length == 0 { return fallback }
+	if offset < envelopeBytes+22 || offset+length > size { return fallback }
+	positions := make([]int64, 0, 8)
+	for pad := int64(0); pad < 8; pad++ { positions = append(positions, offset-envelopeBytes-pad) }
+	return positions
+}
+
 func readPayload(exePath string) (_ payload, err error) {
 	file, err := os.Open(exePath)
 	if err != nil {
@@ -62,17 +92,21 @@ func readPayload(exePath string) (_ payload, err error) {
 		return payload{}, errBundle
 	}
 	footer := make([]byte, envelopeBytes)
-	if _, err = file.ReadAt(footer, st.Size()-envelopeBytes); err != nil {
-		return payload{}, err
+	footerOffset := int64(-1)
+	for _, candidate := range envelopeOffsets(file, st.Size()) {
+		if candidate < 0 { continue }
+		if _, err = file.ReadAt(footer, candidate); err != nil { continue }
+		if string(footer[:16]) == envelopeMagic {
+			footerOffset = candidate
+			break
+		}
 	}
-	if string(footer[:16]) != envelopeMagic {
-		return payload{}, errBundle
-	}
+	if footerOffset < 0 { return payload{}, errBundle }
 	size := binary.LittleEndian.Uint64(footer[16:24])
-	if size < 22 || size > maxZipBytes || size > uint64(st.Size()-envelopeBytes) {
+	if size < 22 || size > maxZipBytes || size > uint64(footerOffset) {
 		return payload{}, errBundle
 	}
-	off := st.Size() - envelopeBytes - int64(size)
+	off := footerOffset - int64(size)
 	hash := sha256.Sum256(nil)
 	copy(hash[:], footer[24:])
 	read := io.NewSectionReader(file, off, int64(size))
