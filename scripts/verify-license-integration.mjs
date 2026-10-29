@@ -65,9 +65,8 @@ for (const item of ['LICENSE','NOTICE.md','src/','tsconfig.json']) {
 requireText(playerPackage.scripts?.prepack ?? '','prepare-source-snapshot.mjs','Player prepack');
 
 for (const item of [
-  "'LICENSE'","'NOTICE.md'","'CONTRIBUTING.md'","'scripts/check-publish-ready.mjs'",
-  "'scripts/verify-license-integration.mjs'","node scripts/check-publish-ready.mjs",
-  "node scripts/verify-license-integration.mjs","p2lrn-windows"
+  "'LICENSE'","'NOTICE.md'","'CONTRIBUTING.md'","'scripts/**'",
+  "node scripts/check-publish-ready.mjs","node scripts/verify-license-integration.mjs","p2lrn-windows"
 ]) requireText(workflow,item,'CI workflow');
 
 requireText(publishing,'node scripts/check-publish-ready.mjs','PUBLISHING');
