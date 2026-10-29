@@ -641,7 +641,7 @@ try{
   q('.surface').dispatchEvent(new Event('input',{bubbles:true}));
   const studioVersion=(await window.P2LRNStudioReady)?.P2LRN_STUDIO_VERSION||'unknown';
   const imageFeatureExpected=studioVersion!=='0.5.0-alpha.10';
-  let imageTop=null;
+  let imagePosition=null;
   if(imageFeatureExpected){
   const png=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg=='),c=>c.charCodeAt(0));
   const imageTransfer=new DataTransfer();imageTransfer.items.add(new File([png],'e2e-image.png',{type:'image/png'}));
@@ -650,12 +650,12 @@ try{
   const placed=await wait(()=>q('.surface img[data-p2lrn-lesson-image]'),'inline image inserted',8000);
   if(!placed.src.startsWith('data:image/png;base64,'))throw new Error('Lesson image was not embedded as raster data');
   await wait(()=>placed.complete&&placed.naturalWidth===2,'inline image decodes in Studio',8000);
-  const surface=q('.surface'),before=parseInt(placed.style.top,10),p=placed.getBoundingClientRect();
+  const surface=q('.surface'),beforeY=placed.dataset.p2lrnImageY,p=placed.getBoundingClientRect();
   placed.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1,clientX:p.left+1,clientY:p.top+1}));
   surface.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:1,clientX:p.left+31,clientY:p.top+31}));
   surface.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1,clientX:p.left+31,clientY:p.top+31}));
-  if(parseInt(placed.style.top,10)===before)throw new Error('Dragging an image did not update its saved position');
-  imageTop=placed.style.top;
+  if(!placed.dataset.p2lrnImageY||placed.dataset.p2lrnImageY===beforeY)throw new Error('Dragging an image did not update its saved flow position');
+  imagePosition={x:placed.dataset.p2lrnImageX,y:placed.dataset.p2lrnImageY};
   }
   // The tree is fully recreated on every selection. Identify a newly added
   // activity from the real outline children, not from stale DOM node identity
@@ -765,8 +765,11 @@ try{
   if(!authoredLesson?.id)throw new Error('Exported graph is missing the authored lesson');
   const authoredRep=pkg.entities.get(authoredLesson.resource)?.representations?.[0];
   const authoredHtml=new TextDecoder().decode(await pkg.payload(authoredRep.location.path).read());
-  if(imageFeatureExpected&&(!authoredHtml.includes('data:image/png;base64,')||!authoredHtml.includes('top: '+imageTop)))
-    throw new Error('Export lost embedded lesson image or dragged position');
+  const exportedLessonDoc=new DOMParser().parseFromString(authoredHtml,'text/html');
+  const exportedLessonImage=exportedLessonDoc.querySelector('img[data-p2lrn-lesson-image]');
+  if(imageFeatureExpected&&(!exportedLessonImage||!exportedLessonImage.src.startsWith('data:image/png;base64,')||
+    exportedLessonImage.dataset.p2lrnImageX!==imagePosition.x||exportedLessonImage.dataset.p2lrnImageY!==imagePosition.y))
+    throw new Error('Export lost embedded lesson image or dragged flow position');
   const titleText=(entity)=>Object.values(entity?.title??{}).map(value=>String(value)).join(' | ');
   // External SCORM import creates an actual UNIT wrapper. The SCORM activity
   // lives among its descendants and keeps the imported package's own title.
@@ -865,7 +868,9 @@ try{
     if(!lessonAfterReopen)throw new Error('Reopened lesson is missing from Studio tree');
     lessonAfterReopen.click();
     const restored=await wait(()=>q('.surface img[data-p2lrn-lesson-image]'),'reopened embedded lesson image',5000);
-    if(restored.style.top!==imageTop||restored.naturalWidth!==2)throw new Error('Imported lesson image lost position or raster data');
+    if(restored.dataset.p2lrnImageX!==imagePosition.x||restored.dataset.p2lrnImageY!==imagePosition.y||
+      restored.style.position!=='relative'||restored.naturalWidth!==2)
+      throw new Error('Imported lesson image lost flow position or raster data');
   }
   finish(visualDefects.length?'DEGRADED':'PASS',{
     channel:'installed-npm-tarballs',
@@ -891,7 +896,7 @@ try{
     verifiedAllAddedActivitiesInExport:true,
     verifiedAllAddedActivitiesAfterReopen:true,
     verifiedByPlayer:true,
-    embeddedImage:imageFeatureExpected?{status:'PASS',studioVersion,inserted:true,decoded:true,dragged:true,restored:true,top:imageTop}:{status:'NOT_AVAILABLE_IN_PUBLIC_LEGACY_RELEASE',studioVersion},
+    embeddedImage:imageFeatureExpected?{status:'PASS',studioVersion,inserted:true,decoded:true,dragged:true,restored:true,position:imagePosition,layout:'flow'}:{status:'NOT_AVAILABLE_IN_PUBLIC_LEGACY_RELEASE',studioVersion},
     reopenedFromFile:true,
     lessonId:authoredLesson.id,
     scormActivityId:importedScormActivity.id,
