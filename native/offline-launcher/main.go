@@ -297,7 +297,10 @@ func run() error {
 		return err
 	}
 	defer os.RemoveAll(root)
-	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	// Stable loopback origin is required for browser localStorage-based resume.
+	// The same offline assignment always reuses the same local port.
+	port := 20000 + int(binary.BigEndian.Uint16(p.hash[:2]))%30000
+	listener, err := net.Listen("tcp4", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return fmt.Errorf("no se puede abrir el servidor local: %w", err)
 	}
