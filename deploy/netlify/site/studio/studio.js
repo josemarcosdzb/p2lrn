@@ -512,11 +512,38 @@ function downloadStudioBytes(bytes,filename,type){
   anchor.href=url;anchor.download=filename;document.body.append(anchor);anchor.click();anchor.remove();
   setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
+// Only use the native launcher published by this site. Never accept a URL
+// from a course, the student or external input. Verify bytes against the
+// build-generated manifest before packing the Windows executable.
+async function loadNativeOfflineLauncher(){
+  const manifestUrl=new URL('/downloads/p2lrn-offline-launcher.json',document.baseURI);
+  const response=await fetch(manifestUrl,{cache:'no-store',credentials:'same-origin'});
+  if(!response.ok)throw new Error('Lanzador Windows nativo no disponible. Elige ZIP o consulta el estado del despliegue.');
+  const info=await response.json();
+  if(info.schema!=='https://p2lrn.org/schema/native-offline-launcher/1'||
+    info.platform!=='windows'||info.architecture!=='amd64'||
+    info.envelope!=='P2LRN-EXE-V1'||info.version!=='1'||
+    !Number.isSafeInteger(info.bytes)||info.bytes<1024*1024||info.bytes>64*1024*1024||
+    !/^sha256:[0-9a-f]{64}$/.test(info.sha256)||
+    info.filename!=='p2lrn-offline-launcher-windows-amd64.exe')
+    throw new Error('Manifiesto del lanzador Windows no válido.');
+  const url=new URL('/downloads/p2lrn-offline-launcher-windows-amd64.exe',document.baseURI);
+  const exeResponse=await fetch(url,{cache:'no-store',credentials:'same-origin'});
+  if(!exeResponse.ok)throw new Error('No se pudo descargar el lanzador Windows desde P2LRN.');
+  const bytes=new Uint8Array(await exeResponse.arrayBuffer());
+  if(bytes.length!==info.bytes)throw new Error('El tamaño del lanzador Windows no coincide con su manifiesto.');
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+  const actual='sha256:'+Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
+  if(actual!==info.sha256)throw new Error('Falló la verificación SHA-256 del lanzador Windows.');
+  return bytes;
+}
+
 async function generateOfflineDelivery(){
   if(!studio)throw new Error('Crea o abre un curso antes de generar una entrega.');
   const details=new FormData(offlineForm);
-  const deliveryFormat=String(details.get('deliveryFormat')||'windows-single');
-  if(!['windows-single','portable-zip'].includes(deliveryFormat))throw new Error('Formato de entrega no reconocido.');
+  const deliveryFormat=String(details.get('deliveryFormat')||'windows-exe');
+  if(!['windows-exe','windows-single','portable-zip'].includes(deliveryFormat))
+    throw new Error('Formato de entrega no reconocido.');
   const minutes=String(details.get('durationMinutes')||'').trim();
   const options={
     runtimeBaseUrl:new URL('/player/current/dist/',document.baseURI).href,
@@ -530,13 +557,17 @@ async function generateOfflineDelivery(){
     signAssignment:offlineForm.elements.namedItem('signAssignment').checked,
   };
   setStatus('Verificando curso y preparando entrega offline…');
+  if(deliveryFormat==='windows-exe')options.windowsExecutableBytes=await loadNativeOfflineLauncher();
   const bundle=await exportOfflineAssignmentBundle(studio,options);
   latestTeacherReceipt=bundle.teacherReceipt;
   if(offlineReceiptPrompt)offlineReceiptPrompt.hidden=!latestTeacherReceipt;
-  const selected=deliveryFormat==='windows-single'
-    ? bundle.windowsLauncher
-    : {filename:bundle.filename,bytes:bundle.bytes};
-  downloadStudioBytes(selected.bytes,selected.filename,deliveryFormat==='windows-single'?'application/octet-stream':'application/zip');
+  const selected=deliveryFormat==='windows-exe'
+    ?bundle.windowsExecutable
+    :deliveryFormat==='windows-single'
+      ?bundle.windowsLauncher
+      :{filename:bundle.filename,bytes:bundle.bytes};
+  if(!selected?.bytes)throw new Error('No se pudo preparar el formato de entrega solicitado.');
+  downloadStudioBytes(selected.bytes,selected.filename,deliveryFormat==='portable-zip'?'application/zip':'application/octet-stream');
   exportedRevision=studio.changeCount;
   updateChanges();
   setStatus(bundle.teacherReceipt
