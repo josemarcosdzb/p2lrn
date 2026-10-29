@@ -16,12 +16,13 @@ concurrency:
   cancel-in-progress: true
 jobs:
   native-windows-exe:
-    runs-on: windows-latest
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          path: native-offline-isolated
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26'
@@ -30,7 +31,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Test native offline launcher
-        working-directory: native/offline-launcher
+        working-directory: native-offline-isolated/native/offline-launcher
         shell: pwsh
         run: |
           go test -count=1 ./...
@@ -38,7 +39,7 @@ jobs:
           go vet ./...
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build native Windows GUI and console test executables
-        working-directory: native/offline-launcher
+        working-directory: native-offline-isolated/native/offline-launcher
         shell: pwsh
         run: |
           $env:GOOS = 'windows'
@@ -51,9 +52,9 @@ jobs:
       - name: Exercise both executables on real Windows
         shell: pwsh
         run: |
-          python native/offline-launcher/smoke.py "$env:RUNNER_TEMP\p2lrn-offline-console.exe"
+          python native-offline-isolated/native/offline-launcher/smoke.py "$env:RUNNER_TEMP\p2lrn-offline-console.exe"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python native/offline-launcher/smoke.py "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe" --gui
+          python native-offline-isolated/native/offline-launcher/smoke.py "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe" --gui
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Assert code signing still requires a publisher certificate
         shell: pwsh
@@ -61,9 +62,9 @@ jobs:
           $signature = Get-AuthenticodeSignature "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe"
           if ($signature.Status -ne 'NotSigned') { throw 'Unexpected launcher code-signing status' }
           Write-Output 'Code signing required for public consumer production release.'
-          Copy-Item "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe" native/offline-launcher/unsigned-template.exe
+          Copy-Item "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe" native-offline-isolated/native/offline-launcher/unsigned-template.exe
       - uses: actions/upload-artifact@v4
         with:
           name: p2lrn-native-windows-unsigned
-          path: native/offline-launcher/unsigned-template.exe
+          path: native-offline-isolated/native/offline-launcher/unsigned-template.exe
           retention-days: 14
