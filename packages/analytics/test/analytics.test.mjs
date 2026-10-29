@@ -33,3 +33,16 @@ test('activity grades do not alter course-level averages',()=>{
   assert(Math.abs(snap.overview.averageGrade-.73)<.001);
   assert.equal(snap.gradeDistribution.reduce((sum,x)=>sum+x.count,0),2);
 });
+
+test('CSV neutralizes spreadsheet formulas',()=>{
+  const csv=analyticsToCsv({...seed,learners:[{id:'evil',name:'=2+2',email:'@cmd',group:'+group'}]},{kind:'learners'});
+  assert.match(csv,/'=2\+2/);
+  assert.match(csv,/'@cmd/);
+  assert.match(csv,/'\+group/);
+});
+test('root component module exposes datasource and store helpers',async()=>{
+  const mod=await import('../src/p2lrn-analytics.js');
+  assert.equal(typeof mod.createHttpAnalyticsDataSource,'function');
+  assert.equal(typeof mod.createAnalyticsStore,'function');
+  assert.equal(typeof mod.createMemoryAnalyticsDataSource,'function');
+});

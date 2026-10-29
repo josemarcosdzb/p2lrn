@@ -555,7 +555,8 @@ export function createHttpAnalyticsDataSource({
 }
 
 function csvCell(value){
-  const text=String(value??'');
+  let text=String(value??'');
+  if(/^[=+\-@]/u.test(text))text="'"+text;
   return /[",\n\r]/.test(text)?'"'+text.replaceAll('"','""')+'"':text;
 }
 export function analyticsToCsv(snapshotOrDataset,{kind='learners',locale='es-ES'}={}){

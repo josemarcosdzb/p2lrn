@@ -17,7 +17,7 @@ const [pkg,player,model,component,types,cdn,nav,docs,demo]=await Promise.all([
 assert.equal(pkg.name,'@p2lrn/analytics');
 assert.equal(pkg.version,player.version,'Analytics must share the P2LRN release version');
 for(const token of ['P2LRN_ANALYTICS_VERSION','computeAnalyticsSnapshot','createHttpAnalyticsDataSource','analyticsToCsv'])assert(model.includes(token),'Analytics model missing '+token);
-for(const token of ['p2lrn-analytics','Alumnos','Cursos','Notas','Actividad','authoritative'])assert(component.includes(token),'Analytics component missing '+token);
+for(const token of ['p2lrn-analytics','Alumnos','Cursos','Notas','Actividad','authoritative','export * from \'./model.js\'','for=\"pa-search\"'])assert(component.includes(token),'Analytics component missing '+token);
 assert(!component.includes('content:"2"'),'Analytics must not reintroduce the retired square P2 badge');
 for(const token of ['P2LRNAnalyticsElement','createHttpAnalyticsDataSource','exportCsv'])assert(types.includes(token),'Analytics types missing '+token);
 for(const token of ["analyticsPackage:'@p2lrn/analytics'","/analytics/current/dist/","p2lrn-analytics.esm.js"])assert(cdn.includes(token),'CDN build missing Analytics '+token);
