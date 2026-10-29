@@ -38,12 +38,17 @@ async function sha256(path) {
   return createHash('sha256').update(await readFile(path)).digest('hex');
 }
 
-async function compareTrees(leftRoot,rightRoot,{ignorePrefix=null}={}) {
+async function compareTrees(leftRoot,rightRoot,{ignorePrefix=null,ignorePaths=[]}={}) {
   let left = await walk(leftRoot);
   let right = await walk(rightRoot);
   if (ignorePrefix) {
     left = left.filter((path)=>!path.startsWith(ignorePrefix));
     right = right.filter((path)=>!path.startsWith(ignorePrefix));
+  }
+  const ignored=new Set(ignorePaths);
+  if(ignored.size){
+    left=left.filter((path)=>!ignored.has(path));
+    right=right.filter((path)=>!ignored.has(path));
   }
   if (JSON.stringify(left) !== JSON.stringify(right)) {
     const leftSet=new Set(left),rightSet=new Set(right);
@@ -71,7 +76,18 @@ await stat(cdnStudio);
 await stat(npmAnalytics);
 await stat(cdnAnalytics);
 
-const playerFiles = await compareTrees(npmPlayer, cdnPlayer, {ignorePrefix:'runtime-host/h5p-libraries/'});
+const playerRelease=JSON.parse(await readFile(join(cdnPlayer,'release.json'),'utf8'));
+const cdnHtmlMirrors=playerRelease.files.filter((file)=>file.path.endsWith('.html')).map((file)=>file.path+'.raw').sort();
+if(cdnHtmlMirrors.length<3)throw new Error('CDN release lacks the expected runtime HTML mirrors.');
+for(const mirror of cdnHtmlMirrors){
+  const html=mirror.slice(0,-'.raw'.length);
+  const [htmlHash,mirrorHash]=await Promise.all([sha256(join(cdnPlayer,...html.split('/'))),sha256(join(cdnPlayer,...mirror.split('/')))]);
+  if(htmlHash!==mirrorHash)throw new Error('CDN raw HTML mirror differs from its release HTML: '+mirror);
+}
+const playerFiles = await compareTrees(npmPlayer, cdnPlayer, {
+  ignorePrefix:'runtime-host/h5p-libraries/',
+  ignorePaths:cdnHtmlMirrors,
+});
 const h5pFiles = await compareTrees(npmH5p, cdnH5p);
 const studioFiles = await compareTrees(npmStudio, cdnStudio);
 const analyticsFiles = await compareTrees(npmAnalytics, cdnAnalytics);
@@ -88,6 +104,7 @@ console.log(JSON.stringify({
   ok:true,
   version,
   playerFilesCompared:playerFiles,
+  cdnHtmlMirrors,
   h5pFilesCompared:h5pFiles,
   studioFilesCompared:studioFiles,
   analyticsFilesCompared:analyticsFiles,
