@@ -12,6 +12,8 @@ Salvo aviso específico en contrario, P2LRN-NCSL 1.0 se aplica al material origi
 
 - `packages/player/`, excluyendo los componentes de terceros identificados en sus avisos;
 - `packages/toolkit/`;
+- `packages/studio/`;
+- `packages/analytics/`;
 - scripts y herramientas first-party del repositorio;
 - código de construcción y publicación first-party;
 - documentación, integración, esquemas, perfiles, especificación y ejemplos first-party en la medida en que sean originales de P2LRN y no incorporen material de terceros con otra licencia.
@@ -47,12 +49,14 @@ Las Versiones Modificadas ofrecidas a terceros mediante Interacción Remota por 
 
 ## Paquetes npm first-party
 
-Los paquetes first-party principales son:
+Los paquetes npm first-party principales son:
 
 - `@p2lrn/player`;
-- `@p2lrn/toolkit`.
+- `@p2lrn/toolkit`;
+- `@p2lrn/studio`;
+- `@p2lrn/analytics`.
 
-Ambos declaran:
+Todos ellos declaran:
 
 ```json
 "license": "SEE LICENSE IN LICENSE"

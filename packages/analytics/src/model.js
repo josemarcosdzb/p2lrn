@@ -198,8 +198,11 @@ function authoritativeGradeRatio(grade){
   if(value==null||maxValue==null||maxValue<=0)return null;
   return clamp(value/maxValue,0,1);
 }
-function latestAuthoritativeGrade(grades){
-  const sorted=grades.filter((grade)=>grade.authoritative).sort((a,b)=>{
+function isCourseGrade(grade,courseId){
+  return grade?.authoritative===true && (!grade.entityId || grade.entityId===courseId);
+}
+function latestAuthoritativeGrade(grades,courseId){
+  const sorted=grades.filter((grade)=>isCourseGrade(grade,courseId)).sort((a,b)=>{
     const left=new Date(a.updatedAt??0).getTime();
     const right=new Date(b.updatedAt??0).getTime();
     return right-left;
@@ -282,7 +285,7 @@ function learnerMetrics(dataset,learner,rules,nowMs){
     if(progress>=1)completedCourses++;
     if(courseAttempts.length||enrollment?.startedAt||progress>0)hasStarted=true;
     failedAttempts+=courseAttempts.filter((item)=>String(item.status).toLowerCase()==='failed').length;
-    const grade=latestAuthoritativeGrade(grades.filter((item)=>item.courseId===courseId));
+    const grade=latestAuthoritativeGrade(grades.filter((item)=>item.courseId===courseId),courseId);
     const gradeRatio=authoritativeGradeRatio(grade);
     if(gradeRatio!=null)officialGrades.push(gradeRatio);
   }
@@ -323,7 +326,7 @@ function courseMetrics(dataset,course,rules,nowMs){
     progresses.push(progress);
     if(progress>=1)completed++;
     if(progress>0||learnerAttempts.length||enrollment?.startedAt)started++;
-    const grade=latestAuthoritativeGrade(grades.filter((item)=>item.learnerId===learnerId));
+    const grade=latestAuthoritativeGrade(grades.filter((item)=>item.learnerId===learnerId),course.id);
     const gradeRatio=authoritativeGradeRatio(grade);
     if(gradeRatio!=null){
       gradeRatios.push(gradeRatio);
@@ -346,7 +349,7 @@ function courseMetrics(dataset,course,rules,nowMs){
     completed,
     completionRate:learnerIds.size?completed/learnerIds.size:0,
     averageProgress:average(progresses)??0,
-    averageGrade:average(gradeRatios),
+    averageGrade:average(courseGradeRatios),
     graded,
     passed,
     passRate:graded?passed/graded:null,
@@ -402,8 +405,14 @@ export function computeAnalyticsSnapshot(input={},options={}){
   const nowMs=Number.isFinite(Number(options.now))?Number(options.now):Date.now();
   const learners=dataset.learners.map((learner)=>learnerMetrics(dataset,learner,rules,nowMs)).sort((a,b)=>sortByName(a.learner,b.learner));
   const courses=dataset.courses.map((course)=>courseMetrics(dataset,course,rules,nowMs)).sort((a,b)=>sortByName(a.course,b.course));
-  const officialGrades=dataset.grades.filter((grade)=>grade.authoritative&&authoritativeGradeRatio(grade)!=null);
-  const gradeRatios=officialGrades.map(authoritativeGradeRatio);
+  const courseGradeRatios=[];
+  const gradeKeys=new Set(dataset.grades.map((grade)=>key(grade.learnerId,grade.courseId)));
+  for(const gradeKey of gradeKeys){
+    const [learnerId,courseId]=gradeKey.split('::');
+    const grade=latestAuthoritativeGrade(dataset.grades.filter((item)=>item.learnerId===learnerId&&item.courseId===courseId),courseId);
+    const value=authoritativeGradeRatio(grade);
+    if(value!=null)courseGradeRatios.push(value);
+  }
   const activeLearners=learners.filter((item)=>{
     if(!item.lastActivity)return false;
     return nowMs-new Date(item.lastActivity).getTime()<=30*DAY_MS;
@@ -432,7 +441,7 @@ export function computeAnalyticsSnapshot(input={},options={}){
     overview,
     learners:Object.freeze(learners),
     courses:Object.freeze(courses),
-    gradeDistribution:gradeDistribution(dataset.grades),
+    gradeDistribution:gradeDistribution(dataset.grades.filter((grade)=>isCourseGrade(grade,grade.courseId))),
     activity:activitySeries(dataset,Number(options.activityDays??14),nowMs),
     recentEvents:Object.freeze(recentEvents),
   });
@@ -452,8 +461,22 @@ export function filterAnalyticsDataset(input={},filters={}){
     if(!Number.isFinite(time))return false;
     return (!from||time>=from)&&(!to||time<=to);
   };
-  const learnerIds=new Set(dataset.learners.filter((item)=>acceptLearner(item.id)).map((item)=>item.id));
-  const courseIds=new Set(dataset.courses.filter((item)=>acceptCourse(item.id)).map((item)=>item.id));
+  let learnerIds=new Set(dataset.learners.filter((item)=>acceptLearner(item.id)).map((item)=>item.id));
+  let courseIds=new Set(dataset.courses.filter((item)=>acceptCourse(item.id)).map((item)=>item.id));
+  const linkedPairs=[
+    ...dataset.enrollments.map((item)=>[item.learnerId,item.courseId]),
+    ...dataset.attempts.map((item)=>[item.learnerId,item.courseId]),
+    ...dataset.grades.map((item)=>[item.learnerId,item.courseId]),
+    ...dataset.events.filter((item)=>item.learnerId&&item.courseId).map((item)=>[item.learnerId,item.courseId]),
+  ];
+  if(courseId&&!learnerId){
+    const linkedLearners=new Set(linkedPairs.filter(([,cid])=>courseIds.has(cid)).map(([lid])=>lid));
+    learnerIds=new Set([...learnerIds].filter((id)=>linkedLearners.has(id)));
+  }
+  if(learnerId&&!courseId){
+    const linkedCourses=new Set(linkedPairs.filter(([lid])=>learnerIds.has(lid)).map(([,cid])=>cid));
+    courseIds=new Set([...courseIds].filter((id)=>linkedCourses.has(id)));
+  }
   return normalizeAnalyticsDataset({
     generatedAt:dataset.generatedAt,
     learners:dataset.learners.filter((item)=>learnerIds.has(item.id)),
