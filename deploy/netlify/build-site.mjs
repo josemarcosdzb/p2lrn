@@ -14,6 +14,8 @@ await import('./build-cdn.mjs');
 const siteRoot = join(root,'deploy','netlify','site');
 const outputRoot = join(root,'.netlify-cdn');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
+// Publish the same native executable reviewed by the Windows offline exporter.
+await import('./build-offline-executable.mjs');
 // The web build publishes real, inspectable connector ZIPs from this same source.
 await import('./build-connector-downloads.mjs');
 await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));
