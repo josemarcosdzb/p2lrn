@@ -18,6 +18,8 @@ await cp(siteRoot,outputRoot,{recursive:true,force:true});
 await import('./build-offline-executable.mjs');
 // The web build publishes real, inspectable connector ZIPs from this same source.
 await import('./build-connector-downloads.mjs');
+// Deterministic downloadable P2LRN Skills for four AI platforms.
+await import('./build-skill-downloads.mjs');
 await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));
 await cp(join(root,'packages','toolkit','web','studio'),join(outputRoot,'studio','runtime'),{recursive:true,force:true});
 for(const file of STUDIO_RUNTIME_SHARED_FILES){
