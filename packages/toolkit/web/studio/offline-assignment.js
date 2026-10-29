@@ -464,6 +464,34 @@ async function windowsSingleFileLauncher(zipBytes,filenameBase){
     payloadDigest:digest,
   });
 }
+// A Windows PE launcher is built once from the audited Go source. Studio
+// appends a ZIP payload and a fixed trailer; it does not need PowerShell.
+// SHA-256 checks corruption, not publisher identity or student authorship.
+export async function buildWindowsOfflineExecutable(zipBytes,baseExeBytes,filenameBase='entrega-p2lrn'){
+  const zip=zipBytes instanceof Uint8Array?zipBytes:new Uint8Array(zipBytes);
+  const exe=baseExeBytes instanceof Uint8Array?baseExeBytes:new Uint8Array(baseExeBytes);
+  if(exe.length<4096||exe.length>64*1024*1024||zip.length<22||zip.length>512*1024*1024)
+    throw new Error('Tamaño no válido para la entrega EXE.');
+  const view=new DataView(exe.buffer,exe.byteOffset,exe.byteLength);
+  if(exe[0]!==77||exe[1]!==90||exe.length<64)throw new Error('Lanzador Windows no válido: cabecera MZ.');
+  const peOffset=view.getUint32(60,true);
+  if(peOffset<64||peOffset+24>exe.length||view.getUint32(peOffset,true)!==0x00004550
+    ||view.getUint16(peOffset+4,true)!==0x8664)
+    throw new Error('La plantilla no es un ejecutable PE de Windows x64.');
+  const end=exe.length+zip.length,bytes=new Uint8Array(end+56);
+  bytes.set(exe);bytes.set(zip,exe.length);
+  bytes.set(encoder.encode('P2LRN-EXE-V1'),end); // remaining four magic bytes remain zero
+  new DataView(bytes.buffer).setBigUint64(end+16,BigInt(zip.length),true);
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',zip));
+  bytes.set(digest,end+24);
+  return Object.freeze({
+    filename:cleanFilename(filenameBase,'entrega-p2lrn')+'.p2lrn-offline.exe',
+    bytes,
+    payloadDigest:await sha256Bytes(zip),
+    publisherSigned:false,
+  });
+}
+
 function readmeText(assignment){
   return [
     'P2LRN · Entrega offline autorreproducible','',
@@ -521,10 +549,13 @@ export async function exportOfflineAssignmentBundle(document,options={}){
   ];
   const bytes=writeStoredZip(entries);
   const windowsLauncher=await windowsSingleFileLauncher(bytes,filenameBase);
+  const windowsExecutable=options.windowsExecutableBytes
+    ?await buildWindowsOfflineExecutable(bytes,options.windowsExecutableBytes,filenameBase):null;
   return Object.freeze({
     bytes,
     filename:filenameBase+'.p2lrn-offline.zip',
     windowsLauncher,
+    windowsExecutable,
     assignment:Object.freeze(clone(assignment)),
     teacherReceipt,
     course,
