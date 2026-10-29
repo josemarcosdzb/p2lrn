@@ -39,11 +39,14 @@ Do not use the ESM file directly in plain HTML unless your environment resolves 
 
 ## Entrega offline autorreproducible
 
-Studio puede exportar el curso abierto como una entrega offline autocontenida. La opción **Entrega offline** ofrece dos formatos que comparten exactamente el mismo curso, Player, política y formato de resultados:
+Studio puede exportar el curso abierto como una entrega offline autocontenida. **Windows 64 bits · ejecutable EXE (un archivo)** es la opción principal: genera `.p2lrn-offline.exe`, con el curso y el Player incluidos. El alumno hace doble clic, sin instalar P2LRN ni usar CMD o PowerShell. El lanzador nativo verifica el SHA-256 del contenido incorporado, lo extrae a una carpeta temporal privada, sirve la interfaz sólo en `127.0.0.1` y abre el navegador predeterminado. No incluye un navegador propio.
 
-- **Windows · un archivo (doble clic)**: genera `.p2lrn-offline.cmd`. El alumno hace doble clic, el archivo verifica el SHA-256 de la entrega embebida, la extrae en una carpeta local aislada, inicia un servidor sólo en `127.0.0.1` y abre el navegador.
-- **ZIP portable · extraer y abrir**: genera `.p2lrn-offline.zip` con `Abrir P2LRN.cmd`, útil para inspección, archivo o distribución portable.
+Los formatos anteriores siguen disponibles para compatibilidad:
 
+- **ZIP portable**: `.p2lrn-offline.zip` con `Abrir P2LRN.cmd`; requiere extraer el ZIP y utiliza PowerShell.
+- **Windows CMD legado**: `.p2lrn-offline.cmd` de un solo archivo; utiliza PowerShell y no es la opción principal.
+
+La firma opcional Ed25519 autentica el **encargo del profesor**, no el ejecutable ni las respuestas. Para distribución pública de confianza, el EXE de cada curso debe firmarse con Authenticode **después** de incorporar el curso. Por ahora el EXE generado en Studio no tiene firma Authenticode y Windows puede mostrar advertencias. La firma válida tampoco garantiza reputación SmartScreen inmediata.
 El profesor puede configurar disponibilidad, fecha límite, duración máxima por intento, número de intentos, reanudación e identificación opcional del alumno. La colaboración y los servicios externos quedan desactivados en este modo. El Player utiliza persistencia offline local y conserva estados, respuestas, puntuaciones, eventos y tiempo activo.
 
 Al finalizar, el alumno descarga un único `.p2lrn-result` y lo devuelve al profesor. Studio incluye **Revisar entrega** para comprobar integridad, coincidencia con el curso, puntuación, respuestas, duración, tiempo activo, eventos y anomalías registradas.

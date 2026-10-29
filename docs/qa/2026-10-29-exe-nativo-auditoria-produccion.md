@@ -51,3 +51,9 @@ El script `scripts/sign-offline-exe.ps1` recibe la ruta final y la huella de un 
 En `/studio/`: abre un curso, entra en `Entrega offline`, elige **Windows 64 bits · ejecutable .exe (un archivo)** y, si necesitas autenticar las condiciones, marca `Firmar el encargo`. Conserva fuera del archivo del alumno el comprobante del profesor. El archivo EXE es para pruebas internas hasta completar el gate de firma y validación real de Windows.
 
 Este informe describe únicamente lo comprobado. La presencia de código o de una workflow en GitHub por sí sola no certifica un despliegue ni un sistema de evaluación antifraude.
+
+## Prueba real adicional de Windows (29 de octubre de 2026)
+
+En revision 82c8515 pasaron 12/12 pruebas Node del exportador y las pruebas Go. Se genero un EXE GUI de 15.187.624 bytes con curso Studio y Player 0.5.0-alpha.11. El EXE sirvio index.html, app.js, assignment.json, course.p2lrn y player/release.json con HTTP 200. Chrome inicio un intento, lo reanudo tras cerrar y abrir, y descargo .p2lrn-result. El resultado cotejado con el comprobante original obtuvo integrityValid, assignmentAuthenticated, courseMatches, evidenceValid y summaryValid iguales a true. Se registraron 17 eventos.
+
+Alcance: cero respuestas, estados y puntuaciones en el curso utilizado. La prueba permitio Internet; no verifica aislamiento offline. Quedan pendientes pruebas de preguntas puntuadas, firma Authenticode y SmartScreen.
