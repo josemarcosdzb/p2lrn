@@ -944,7 +944,7 @@ async function verifyStudioComponentUI(cdp,chromePath){
     throw new Error('Offline assignment dialog did not open.');
   })()`);
   invariant(offlineDialog.open===true,'Offline assignment dialog is not open.');
-  invariant(offlineDialog.labels.includes('Formato de entrega')&&offlineDialog.labels.includes('Disponible desde')&&offlineDialog.labels.includes('Fecha límite')&&offlineDialog.labels.includes('Tiempo máximo desde que empieza (minutos)')&&offlineDialog.labels.includes('Intentos máximos'),'Offline assignment policy controls are incomplete: '+JSON.stringify(offlineDialog));
+  invariant(offlineDialog.labels.includes('Quién entrega este curso')&&offlineDialog.labels.includes('Formato de entrega')&&offlineDialog.labels.includes('Disponible desde')&&offlineDialog.labels.includes('Fecha límite')&&offlineDialog.labels.includes('Tiempo máximo desde que empieza (minutos)')&&offlineDialog.labels.includes('Caduca tras la primera apertura (días)')&&offlineDialog.labels.includes('Intentos máximos'),'Offline assignment policy controls are incomplete: '+JSON.stringify(offlineDialog));
   invariant(offlineDialog.formatValue==='windows-single','Offline assignment must default to the one-file Windows delivery: '+JSON.stringify(offlineDialog));
   invariant(offlineDialog.formatOptions.some((item)=>item.value==='windows-single')&&offlineDialog.formatOptions.some((item)=>item.value==='portable-zip'),'Offline assignment format selector is incomplete: '+JSON.stringify(offlineDialog));
   invariant(offlineDialog.fixed.includes('Colaboración')&&offlineDialog.fixed.includes('Desactivada'),'Offline assignment UI does not make collaboration disabled explicit.');
@@ -958,6 +958,7 @@ async function verifyStudioComponentUI(cdp,chromePath){
     const offlineExport=await evalTop(cdp,`(async()=>{
       const studio=document.getElementById('studio');
       const doc=await studio.createCourse({title:'Prueba doble clic real',language:'es'});
+      doc.setCourseRights({author:'Equipo docente QA',copyrightHolder:'Centro P2LRN QA',license:'Uso educativo de prueba'});
       const unit=doc.children(doc.rootId)[0];
       if(!unit)throw new Error('Studio did not create its initial unit.');
       const starter=doc.children(unit.id)[0];
@@ -969,11 +970,13 @@ async function verifyStudioComponentUI(cdp,chromePath){
       questionnaire.payload.questions[0].choices[1].text='Respuesta incorrecta';
       doc.setQuestionnaire(activity.id,questionnaire.payload);
       studio.offlineRuntimeBaseUrl='${APP_ORIGIN}/player/current/dist/';
-      const exported=await studio.downloadOfflineAssignment({deliveryFormat:'windows-single',participantLabel:'Alumno visual real',maxAttempts:1,activityTracking:true});
-      return {downloadedFilename:exported.downloadedFilename,assignmentId:exported.assignment.assignmentId,contentRoot:exported.assignment.contentRoot,payloadDigest:exported.windowsLauncher.payloadDigest,courseBytes:exported.course.bytes.byteLength,bundleBytes:exported.bytes.byteLength};
+      const exported=await studio.downloadOfflineAssignment({deliveryFormat:'windows-single',issuerName:'Profesor QA',participantLabel:'Alumno visual real',expiresAfterFirstOpenDays:30,maxAttempts:1,activityTracking:true});
+      return {downloadedFilename:exported.downloadedFilename,assignmentId:exported.assignment.assignmentId,contentRoot:exported.assignment.contentRoot,payloadDigest:exported.windowsLauncher.payloadDigest,courseBytes:exported.course.bytes.byteLength,bundleBytes:exported.bytes.byteLength,provenance:exported.assignment.provenance,expiryDays:exported.assignment.policy.expiresAfterFirstOpenDays};
     })()`);
     invariant(offlineExport?.downloadedFilename?.endsWith('.p2lrn-offline.cmd'),'Studio did not download the one-file Windows offline delivery: '+JSON.stringify(offlineExport));
     invariant(offlineExport.courseBytes>500,'Studio exported an implausibly small P2LRN course.');
+    invariant(offlineExport.provenance?.issuerName==='Profesor QA'&&offlineExport.provenance?.author==='Equipo docente QA'&&offlineExport.provenance?.copyrightHolder==='Centro P2LRN QA','Offline export lost declared provenance: '+JSON.stringify(offlineExport.provenance));
+    invariant(offlineExport.expiryDays===30,'Offline export lost first-open expiry: '+JSON.stringify(offlineExport));
     const launcherPath=await waitForDownloadedFile(launcherDownloads,'.p2lrn-offline.cmd',25000);
     const executed=await runOfflineDoubleClickE2E({launcherPath,chromePath,exportMeta:offlineExport});
     const parsed=await parseOfflineAssignmentResult(executed.resultText,{expectedContentRoot:offlineExport.contentRoot,expectedAssignmentId:offlineExport.assignmentId});
