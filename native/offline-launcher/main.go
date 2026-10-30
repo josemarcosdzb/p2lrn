@@ -2,9 +2,11 @@ package main
 
 import (
 	"archive/zip"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -42,6 +44,107 @@ type payload struct {
 	offset int64
 	length int64
 	hash   [sha256.Size]byte
+}
+
+type assignmentPolicy struct {
+	ExpiresAfterFirstOpenDays int `json:"expiresAfterFirstOpenDays"`
+}
+type assignmentDocument struct {
+	AssignmentID string           `json:"assignmentId"`
+	Policy       assignmentPolicy `json:"policy"`
+}
+type launchRecord struct {
+	ID       string `json:"id"`
+	OpenedAt string `json:"openedAt"`
+	Source   string `json:"source"`
+}
+type launchState struct {
+	Schema          string         `json:"schema"`
+	AssignmentID    string         `json:"assignmentId"`
+	PayloadDigest   string         `json:"payloadDigest"`
+	DeviceBindingID string         `json:"deviceBindingId"`
+	FirstOpenedAt   string         `json:"firstOpenedAt"`
+	LastOpenedAt    string         `json:"lastOpenedAt"`
+	OpenCount       int            `json:"openCount"`
+	ExpiresAt       string         `json:"expiresAt,omitempty"`
+	Launches        []launchRecord `json:"launches"`
+}
+
+func randomBindingID() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil { return "", err }
+	return hex.EncodeToString(b), nil
+}
+func readAssignment(root string) (assignmentDocument, error) {
+	var out assignmentDocument
+	data, err := os.ReadFile(filepath.Join(root, "www", "assignment.json"))
+	if err != nil { return out, err }
+	if len(data) == 0 || len(data) > 1<<20 { return out, errors.New("assignment.json no tiene un tamaño válido") }
+	if err := json.Unmarshal(data, &out); err != nil { return out, errors.New("assignment.json no contiene JSON válido") }
+	if strings.TrimSpace(out.AssignmentID) == "" { return out, errors.New("assignment.json no contiene assignmentId") }
+	if out.Policy.ExpiresAfterFirstOpenDays < 0 || out.Policy.ExpiresAfterFirstOpenDays > 3650 {
+		return out, errors.New("la caducidad de la entrega no es válida")
+	}
+	return out, nil
+}
+func launchStateFile(hash [sha256.Size]byte) (string, error) {
+	base, err := os.UserConfigDir()
+	if err != nil { return "", err }
+	dir := filepath.Join(base, "P2LRN", "OfflineState")
+	if err := os.MkdirAll(dir, 0700); err != nil { return "", err }
+	return filepath.Join(dir, hex.EncodeToString(hash[:])+".json"), nil
+}
+func registerLaunch(root string, p payload) (launchState, error) {
+	assignment, err := readAssignment(root)
+	if err != nil { return launchState{}, err }
+	statePath, err := launchStateFile(p.hash)
+	if err != nil { return launchState{}, err }
+	now := time.Now().UTC()
+	state := launchState{
+		Schema:"https://p2lrn.org/schema/offline-launch-state/1",
+		AssignmentID:assignment.AssignmentID,
+		PayloadDigest:"sha256:"+hex.EncodeToString(p.hash[:]),
+		Launches:[]launchRecord{},
+	}
+	if data, readErr := os.ReadFile(statePath); readErr == nil {
+		if len(data) > 1<<20 || json.Unmarshal(data, &state) != nil {
+			return launchState{}, errors.New("el historial local de aperturas está dañado")
+		}
+	} else if !errors.Is(readErr, os.ErrNotExist) {
+		return launchState{}, readErr
+	}
+	if state.AssignmentID != assignment.AssignmentID || state.PayloadDigest != "sha256:"+hex.EncodeToString(p.hash[:]) {
+		return launchState{}, errors.New("el historial local no corresponde a esta entrega")
+	}
+	if state.DeviceBindingID == "" {
+		state.DeviceBindingID, err = randomBindingID()
+		if err != nil { return launchState{}, err }
+	}
+	if state.FirstOpenedAt == "" {
+		state.FirstOpenedAt = now.Format(time.RFC3339Nano)
+	}
+	if assignment.Policy.ExpiresAfterFirstOpenDays > 0 && state.ExpiresAt == "" {
+		first, parseErr := time.Parse(time.RFC3339Nano, state.FirstOpenedAt)
+		if parseErr != nil { return launchState{}, errors.New("la primera apertura registrada no es válida") }
+		state.ExpiresAt = first.Add(time.Duration(assignment.Policy.ExpiresAfterFirstOpenDays)*24*time.Hour).Format(time.RFC3339Nano)
+	}
+	if state.ExpiresAt != "" {
+		expires, parseErr := time.Parse(time.RFC3339Nano, state.ExpiresAt)
+		if parseErr != nil { return launchState{}, errors.New("la fecha de caducidad local no es válida") }
+		if !now.Before(expires) {
+			return launchState{}, fmt.Errorf("esta entrega caducó el %s y ya no puede abrirse en este equipo", expires.Local().Format("02/01/2006 15:04"))
+		}
+	}
+	sessionID, err := randomBindingID()
+	if err != nil { return launchState{}, err }
+	state.OpenCount++
+	state.LastOpenedAt = now.Format(time.RFC3339Nano)
+	state.Launches = append(state.Launches, launchRecord{ID:sessionID, OpenedAt:state.LastOpenedAt, Source:"windows-native"})
+	if len(state.Launches) > 256 { state.Launches = state.Launches[len(state.Launches)-256:] }
+	encoded, err := json.MarshalIndent(state, "", "  ")
+	if err != nil { return launchState{}, err }
+	if err := os.WriteFile(statePath, append(encoded, '\n'), 0600); err != nil { return launchState{}, err }
+	return state, nil
 }
 
 // Authenticode appends WIN_CERTIFICATE after the regular executable contents.
@@ -229,9 +332,10 @@ func extract(p payload, base string) (string, error) {
 }
 
 type localHandler struct {
-	webRoot    string
-	host       string
-	lastActive atomic.Int64
+	webRoot     string
+	host        string
+	launchState launchState
+	lastActive  atomic.Int64
 }
 
 func (h *localHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -246,6 +350,12 @@ func (h *localHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" && r.Method != "HEAD" {
 		w.Header().Set("Allow", "GET, HEAD")
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.URL.Path == "/__p2lrn/launch-state" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		if r.Method == "HEAD" { w.WriteHeader(http.StatusOK); return }
+		_ = json.NewEncoder(w).Encode(h.launchState)
 		return
 	}
 	raw := r.URL.EscapedPath()
@@ -331,6 +441,10 @@ func run() error {
 		return err
 	}
 	defer os.RemoveAll(root)
+	launch, err := registerLaunch(root, p)
+	if err != nil {
+		return err
+	}
 	// Stable loopback origin is required for browser localStorage-based resume.
 	// The same offline assignment always reuses the same local port.
 	port := 20000 + int(binary.BigEndian.Uint16(p.hash[:2]))%30000
@@ -339,7 +453,7 @@ func run() error {
 		return fmt.Errorf("no se puede abrir el servidor local: %w", err)
 	}
 	defer listener.Close()
-	h := &localHandler{webRoot: filepath.Join(root, "www"), host: listener.Addr().String()}
+	h := &localHandler{webRoot: filepath.Join(root, "www"), host: listener.Addr().String(), launchState: launch}
 	h.lastActive.Store(time.Now().Unix())
 	srv := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 2 * time.Minute, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 8192}
 	errCh := make(chan error, 1)
