@@ -53,6 +53,7 @@ jobs:
         shell: powershell
         run: |
           $env:P2LRN_SMOKE_ROOT = (Resolve-Path "native-offline-isolated/native/offline-launcher").Path
+          $env:P2LRN_SMOKE_INPLACE = '1'
           python native-offline-isolated/native/offline-launcher/smoke.py "$env:RUNNER_TEMP\p2lrn-offline-console.exe"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python native-offline-isolated/native/offline-launcher/smoke.py "$env:RUNNER_TEMP\p2lrn-offline-launcher.exe" --gui
