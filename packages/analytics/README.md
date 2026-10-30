@@ -23,6 +23,17 @@ panel.data = datasetCurso;
 <p2lrn-analytics id="analytics-curso"></p2lrn-analytics>
 \`\`\`
 
+## Abrir resultados offline
+
+Analytics puede abrir directamente un archivo `.p2lrn-result` generado por una entrega autorreproducible:
+
+```js
+const panel = document.querySelector('p2lrn-analytics');
+await panel.importOfflineResult(archivo);
+```
+
+El resultado se convierte en un dataset de Analytics con alumno, curso, intento, actividad, aperturas, sesiones, tiempo activo e incidencias registradas. Las puntuaciones offline se mantienen como información de seguimiento y **no** se convierten automáticamente en calificaciones oficiales.
+
 ## Frontera de confianza
 
 El paquete no guarda identidades ni historial del alumno dentro de \`.p2lrn\`. El Host entrega el dataset del panel. Una nota sólo se trata como oficial cuando \`grades[].authoritative === true\`. Los scores de navegador, progreso, actividad e intentos se muestran como evidencia separada.
