@@ -777,7 +777,7 @@ offlineAnalyticsButton?.addEventListener('click',()=>{
   if(!latestOfflineParsedResult)return;
   try{
     sessionStorage.setItem('p2lrn:analytics:offline-result',JSON.stringify(latestOfflineParsedResult));
-    window.open('/analytics/?import=offline-result','_blank','noopener');
+    window.open('/analytics/?import=offline-result','_blank');
     setStatus('Resultado enviado a P2LRN Analytics');
   }catch(error){
     setStatus('No se pudo abrir Analytics: '+String(error?.message||error));
