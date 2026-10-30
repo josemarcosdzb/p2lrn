@@ -15,6 +15,7 @@ export declare const P2LRN_OFFLINE_RESULT_SCHEMA:string;
 export declare const DEFAULT_ANALYTICS_RISK_RULES:Readonly<Required<P2LRNAnalyticsRiskRules>>;
 export declare function normalizeAnalyticsDataset(input?:Partial<P2LRNAnalyticsDataset>):Readonly<P2LRNAnalyticsDataset>;
 export declare function analyticsDatasetFromOfflineResult(input:unknown,options?:{courseTitle?:string|null}):Readonly<P2LRNAnalyticsDataset>;
+export declare function verifyOfflineResultIntegrity(input:unknown):Promise<Readonly<{result:unknown;valid:boolean;declared:string;calculated:string}>>;
 export declare function computeAnalyticsSnapshot(input?:Partial<P2LRNAnalyticsDataset>|P2LRNAnalyticsDataset,options?:{riskRules?:P2LRNAnalyticsRiskRules;activityDays?:number;now?:number}):any;
 export declare function filterAnalyticsDataset(input:P2LRNAnalyticsDataset,filters?:{courseId?:string;learnerId?:string;from?:string|Date;to?:string|Date}):P2LRNAnalyticsDataset;
 export declare function createAnalyticsStore(seed?:Partial<P2LRNAnalyticsDataset>):P2LRNAnalyticsStore;
