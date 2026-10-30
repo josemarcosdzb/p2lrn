@@ -51,6 +51,8 @@ const bannedEverywhere=[
 ];
 
 const publicBanned=[
+  /first-party/iu,
+  /\bcheckout\b/iu,
   /\bcors\b/iu,
   /service worker/iu,
   /\bmcp\b/iu,
