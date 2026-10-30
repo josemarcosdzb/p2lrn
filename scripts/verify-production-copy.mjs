@@ -55,6 +55,13 @@ const bannedEverywhere=[
   /publicaci[oó]n oficial de ejecutables windows/iu,
   /signtool\s+verify/iu,
   /requiere firma authenticode posterior/iu,
+  /\bpendiente(?:s)?\b/iu,
+  /todav[ií]a\s+no/iu,
+  /\broadmap\b/iu,
+  /\bcommit\b/iu,
+  /\bbranch\b/iu,
+  /\brepositorio\b/iu,
+  /\bproducci[oó]n\b/iu,
 ];
 
 const publicBanned=[
