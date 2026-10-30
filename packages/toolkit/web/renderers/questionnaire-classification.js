@@ -46,7 +46,7 @@ export async function render(options) {
         body.replaceChildren();
         trial.objects.filter((item)=>values[item.id]===category.id).forEach((item)=>{
           const placed=el('button',{type:'button','data-p2lrn-placed':item.id,'aria-label':`Cambiar categoría de ${item.text}`},item.text);
-          placed.addEventListener('click',()=>{delete values[item.id];selected=item.id;refresh();status.textContent='Elige otra categoría para la ficha.';});
+          placed.addEventListener('click',()=>{delete values[item.id];runtime.replaceAnswer(trial.questionId,{classifications:{...values}});selected=item.id;refresh();status.textContent='Elige otra categoría para la ficha.';});
           body.append(placed);
         });
       }
@@ -59,7 +59,7 @@ export async function render(options) {
       if(busy || !trial.categories.some((category)=>category.id===categoryId)) return false;
       busy=true;
       values[itemId]=categoryId;
-      runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId});
+      runtime.replaceAnswer(trial.questionId,{classifications:{...values}});
       selected=null;
       busy=false;
       refresh();
