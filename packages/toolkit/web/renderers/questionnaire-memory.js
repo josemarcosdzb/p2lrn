@@ -73,7 +73,7 @@ export async function render(options) {
         refresh();
         if(solved.size===pairs.length){
           status.textContent='Memoria completada.';
-          void runtime.finish().then((score)=>{const reveal=(runtime.payload.presentation?.showFeedback??'after-submit')!=='never';if(score&&reveal)status.textContent=`Memoria completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`;else status.textContent='Memoria completada. Actividad enviada.';});
+          void runtime.finish().then((score)=>{const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';if(score&&reveal)status.textContent=`Memoria completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`;else status.textContent='Memoria completada. Actividad enviada.';});
         }else status.textContent=`Pareja correcta. ${solved.size}/${pairs.length} parejas.`;
       },350);
       return;
