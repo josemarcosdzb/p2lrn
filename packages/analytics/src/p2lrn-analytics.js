@@ -5,6 +5,7 @@ import {
   computeAnalyticsSnapshot,
   filterAnalyticsDataset,
   analyticsToCsv,
+  analyticsDatasetFromOfflineResult,
 } from './model.js';
 
 const HTMLElementBase=globalThis.HTMLElement??class{};
@@ -188,6 +189,21 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
     this.dispatchEvent(new CustomEvent('p2lrn-analytics-export',{detail:{kind},bubbles:true,composed:true}));
     return csv;
   }
+  async importOfflineResult(value){
+    const raw=value&&typeof value.text==='function'?await value.text():value;
+    const dataset=analyticsDatasetFromOfflineResult(raw);
+    this.#dataset=dataset;
+    this.#error='';
+    this.#selected=null;
+    this.#query='';
+    this.#risk='all';
+    this.#learnerPage=1;
+    this.#gradePage=1;
+    if(this.hasAttribute?.('course-id'))this.removeAttribute('course-id');
+    if(this.view!=='overview')this.view='overview';else this.#recompute();
+    this.dispatchEvent(new CustomEvent('p2lrn-analytics-import',{detail:{kind:'offline-result',dataset},bubbles:true,composed:true}));
+    return dataset;
+  }
 
   #recompute(render=true){
     const selectedCourse=this.courseId;
@@ -202,6 +218,7 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
     if(button.matches('[data-view]')){this.view=button.dataset.view;return;}
     if(button.matches('[data-page-kind]')){const kind=button.dataset.pageKind,dir=Number(button.dataset.pageDir)||0;if(kind==='learners')this.#learnerPage=Math.max(1,this.#learnerPage+dir);if(kind==='grades')this.#gradePage=Math.max(1,this.#gradePage+dir);this.#render();return;}
     if(button.matches('[data-refresh]')){this.refresh().catch(()=>{});return;}
+    if(button.matches('[data-import-offline]')){this.#root?.querySelector('[data-offline-file]')?.click();return;}
     if(button.matches('[data-export]')){this.exportCsv(button.dataset.export||'learners');return;}
     if(button.matches('[data-learner]')){this.selectLearner(button.dataset.learner);this.#emitSelection('learner',button.dataset.learner);return;}
     if(button.matches('[data-course]')){this.selectCourse(button.dataset.course);this.#emitSelection('course',button.dataset.course);return;}
@@ -209,7 +226,11 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   }
   #onInput(event){
     const target=event.target;
-    if(target.matches?.('[data-query]')){this.#query=target.value;this.#learnerPage=1;this.#render();}
+    if(target.matches?.('[data-offline-file]')){
+      const file=target.files?.[0];target.value='';
+      if(file)this.importOfflineResult(file).catch((error)=>{this.#error=String(error?.message??error);this.#render();});
+    }
+    else if(target.matches?.('[data-query]')){this.#query=target.value;this.#learnerPage=1;this.#render();}
     else if(target.matches?.('[data-course-filter]')){this.#learnerPage=1;this.#gradePage=1;this.courseId=target.value;}
     else if(target.matches?.('[data-risk-filter]')){this.#risk=target.value;this.#learnerPage=1;this.#render();}
     else if(target.matches?.('[data-period]'))this.period=target.value;
@@ -319,7 +340,8 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   #render(){
     if(!this.#root)return;
     const updated=this.#dataset.generatedAt?dateText(this.#dataset.generatedAt,this.locale):'—';
-    this.#root.innerHTML='<style>'+css+'</style><div class="shell '+(this.#loading?'loading':'')+'"><div class="topbar"><div class="brand"><span class="mark" aria-hidden="true"></span><span class="brand-copy"><strong>P2LRN Analytics</strong><span>Centro de analítica</span></span></div><div class="top-status"><span class="live-dot"></span><span>Datos del Host · actualizado '+esc(updated)+'</span></div></div><div class="toolbar"><div class="control"><label for="pa-search">Buscar alumno</label><input id="pa-search" data-query type="search" placeholder="Nombre, correo, grupo..." value="'+attr(this.#query)+'"></div><div class="control"><label for="pa-course">Curso</label><select id="pa-course" data-course-filter>'+this.#courseOptions()+'</select></div><div class="control"><label for="pa-risk">Señal</label><select id="pa-risk" data-risk-filter><option value="all" '+(this.#risk==='all'?'selected':'')+'>Todas</option><option value="none" '+(this.#risk==='none'?'selected':'')+'>Normal</option><option value="watch" '+(this.#risk==='watch'?'selected':'')+'>Revisar</option><option value="high" '+(this.#risk==='high'?'selected':'')+'>Atención alta</option></select></div><div class="control"><label for="pa-period">Actividad</label><select id="pa-period" data-period><option value="7" '+(this.period==='7'?'selected':'')+'>7 días</option><option value="14" '+(this.period==='14'?'selected':'')+'>14 días</option><option value="30" '+(this.period==='30'?'selected':'')+'>30 días</option><option value="90" '+(this.period==='90'?'selected':'')+'>90 días</option></select></div><div class="action-row"><button class="icon-button" type="button" data-refresh>Actualizar</button><button class="export-button" type="button" data-export="learners">Exportar</button></div></div><nav class="tabs" aria-label="Vistas de Analytics">'+this.#tabs()+'</nav>'+(this.#error?'<div class="error">'+esc(this.#error)+'</div>':'')+'<main class="main">'+this.#content()+this.#detail()+'</main><div class="footer-note"><span>Notas oficiales: únicamente registros autoritativos del Host.</span><span>P2LRN Analytics '+esc(P2LRN_ANALYTICS_VERSION)+'</span></div></div>';
+    const sourceLabel=this.#dataset.metadata?.offlineResult?'Resultado offline':'Datos del Host';
+    this.#root.innerHTML='<style>'+css+'</style><div class="shell '+(this.#loading?'loading':'')+'"><div class="topbar"><div class="brand"><span class="mark" aria-hidden="true"></span><span class="brand-copy"><strong>P2LRN Analytics</strong><span>Centro de analítica</span></span></div><div class="top-status"><span class="live-dot"></span><span>'+esc(sourceLabel)+' · actualizado '+esc(updated)+'</span></div></div><div class="toolbar"><div class="control"><label for="pa-search">Buscar alumno</label><input id="pa-search" data-query type="search" placeholder="Nombre, correo, grupo..." value="'+attr(this.#query)+'"></div><div class="control"><label for="pa-course">Curso</label><select id="pa-course" data-course-filter>'+this.#courseOptions()+'</select></div><div class="control"><label for="pa-risk">Señal</label><select id="pa-risk" data-risk-filter><option value="all" '+(this.#risk==='all'?'selected':'')+'>Todas</option><option value="none" '+(this.#risk==='none'?'selected':'')+'>Normal</option><option value="watch" '+(this.#risk==='watch'?'selected':'')+'>Revisar</option><option value="high" '+(this.#risk==='high'?'selected':'')+'>Atención alta</option></select></div><div class="control"><label for="pa-period">Actividad</label><select id="pa-period" data-period><option value="7" '+(this.period==='7'?'selected':'')+'>7 días</option><option value="14" '+(this.period==='14'?'selected':'')+'>14 días</option><option value="30" '+(this.period==='30'?'selected':'')+'>30 días</option><option value="90" '+(this.period==='90'?'selected':'')+'>90 días</option></select></div><div class="action-row"><input data-offline-file type="file" accept=".p2lrn-result,application/vnd.p2lrn-result+json,.json,application/json" hidden><button class="icon-button" type="button" data-import-offline>Abrir resultado</button><button class="icon-button" type="button" data-refresh>Actualizar</button><button class="export-button" type="button" data-export="learners">Exportar</button></div></div><nav class="tabs" aria-label="Vistas de Analytics">'+this.#tabs()+'</nav>'+(this.#error?'<div class="error">'+esc(this.#error)+'</div>':'')+'<main class="main">'+this.#content()+this.#detail()+'</main><div class="footer-note"><span>Las puntuaciones importadas de una entrega offline son informativas salvo que un Host autoritativo las confirme.</span><span>P2LRN Analytics '+esc(P2LRN_ANALYTICS_VERSION)+'</span></div></div>';
   }
 }
 
