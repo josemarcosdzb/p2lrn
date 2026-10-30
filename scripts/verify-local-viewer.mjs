@@ -1267,7 +1267,6 @@ async function verifyStudioSiteUI(cdp){
       return true;
     })()`);
     invariant(rightsFilled===true,'Standalone Studio could not set course authorship before offline export.');
-    await evalTop(cdp,"(()=>{const fields=[...document.querySelectorAll('.studio-rights-field')];for(const [part,value] of [['Autor del contenido','Autor QA'],['Titular de los derechos','Laboratorio P2LRN']]){const field=fields.find(item=>item.textContent.includes(part));if(!field)throw new Error('Missing course rights field '+part);const input=field.querySelector('input');input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}));}return true;})()");
     const options=await evalTop(cdp,`(()=>{
       const button=document.querySelector('[data-export-offline]'),review=document.querySelector('[data-review-offline]');
       if(!button||!review)throw new Error('Standalone Studio offline controls missing');
