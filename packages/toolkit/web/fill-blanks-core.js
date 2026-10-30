@@ -21,6 +21,10 @@ export function fillBlankTemplate(question){
     if(!id)continue;
     const token='{{'+id+'}}';
     if(template.includes(token))continue;
+    // Legacy authored prompts frequently use ___ instead of named tokens.
+    // Place the drop target at that position, never at the end of the phrase.
+    const underscore=template.match(/_{2,}/);
+    if(underscore){template=template.slice(0,underscore.index)+token+template.slice(underscore.index+underscore[0].length);continue;}
     const answer=fillBlankPrimaryAnswer(question,id);
     if(answer){
       const match=new RegExp(escapeRegExp(answer),'i').exec(template);
