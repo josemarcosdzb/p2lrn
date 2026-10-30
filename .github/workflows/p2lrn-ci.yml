@@ -122,6 +122,8 @@ jobs:
           $buildCode = $LASTEXITCODE
           Get-Content .security-audit-build.log -Tail 160
           if ($buildCode -ne 0) { exit $buildCode }
+          node scripts/verify-production-copy.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload security audit build log
         if: always()
         continue-on-error: true
