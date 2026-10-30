@@ -6,7 +6,7 @@ import {
   OFFLINE_RESULT_SCHEMA,
   normalizeOfflineAssignmentPolicy,
   inspectOfflineAssignmentCompatibility,
-  exportOfflineAssignmentBundle,
+  exportOfflineAssignmentBundle as exportOfflineAssignmentBundleRaw,
   buildWindowsOfflineExecutable,
   parseOfflineAssignmentResult,
   signOfflineAssignment,
@@ -14,12 +14,24 @@ import {
   OFFLINE_TEACHER_RECEIPT_SCHEMA,
 } from '../web/studio/offline-assignment.js';
 import {HOST_CAPABILITY_EXTENSION} from '../web/capability-broker.js';
-import {createP2LRNStudioDocument} from '../web/studio/new-document.js';
+import {createP2LRNStudioDocument as createP2LRNStudioDocumentRaw} from '../web/studio/new-document.js';
 
 if(!globalThis.crypto)globalThis.crypto=webcrypto;
 
 const encoder=new TextEncoder();
 const decoder=new TextDecoder();
+
+function createP2LRNStudioDocument(options={}){
+  return createP2LRNStudioDocumentRaw({
+    author:'Autor de prueba',
+    copyrightHolder:'Titular de prueba',
+    license:'Uso de prueba',
+    ...options,
+  });
+}
+function exportOfflineAssignmentBundle(document,options={}){
+  return exportOfflineAssignmentBundleRaw(document,{issuerName:'Centro de pruebas',...options});
+}
 
 function canonical(value){
   if(value===null||typeof value==='boolean'||typeof value==='string')return JSON.stringify(value);
@@ -56,6 +68,7 @@ function fakeDocument(entities=[]){
     graph:{entities,relations:[]},
     rootId:'urn:test:course',
     title:()=> 'Curso offline',
+    getCourseRights:()=>({author:'Autor de prueba',copyrightHolder:'Titular de prueba',license:'Uso de prueba'}),
   };
 }
 const truncatedPackageExporter=async()=>({
@@ -79,6 +92,32 @@ function runtimeFetch(){
     return new Response('missing',{status:404});
   };
 }
+
+test('offline exporter requires declared issuer, author and rights holder',async()=>{
+  const noRights=createP2LRNStudioDocumentRaw({title:'Sin autoría'});
+  await assert.rejects(
+    ()=>exportOfflineAssignmentBundleRaw(noRights,{issuerName:'Centro de pruebas',runtimeBaseUrl:'https://runtime.example/player/current/dist/',fetchImpl:runtimeFetch()}),
+    (error)=>error?.code==='P2LRN_OFFLINE_PROVENANCE_REQUIRED',
+  );
+  const withRights=createP2LRNStudioDocument({title:'Con autoría'});
+  await assert.rejects(
+    ()=>exportOfflineAssignmentBundleRaw(withRights,{runtimeBaseUrl:'https://runtime.example/player/current/dist/',fetchImpl:runtimeFetch()}),
+    (error)=>error?.code==='P2LRN_OFFLINE_PROVENANCE_REQUIRED',
+  );
+  const valid=await exportOfflineAssignmentBundle(withRights,{runtimeBaseUrl:'https://runtime.example/player/current/dist/',fetchImpl:runtimeFetch()});
+  assert.deepEqual(valid.assignment.provenance,{
+    issuerName:'Centro de pruebas',
+    author:'Autor de prueba',
+    copyrightHolder:'Titular de prueba',
+    license:'Uso de prueba',
+    createdAt:valid.assignment.provenance.createdAt,
+  });
+  assert(valid.assignment.provenance.createdAt);
+  const app=decoder.decode(storedZipEntries(valid.bytes).get('www/app.js'));
+  assert.match(app,/course-author/);
+  assert.match(app,/rights-holder/);
+  assert.match(app,/provenanceOk/);
+});
 
 test('offline assignment policy validates dates, duration and attempts',()=>{
   const policy=normalizeOfflineAssignmentPolicy({
@@ -260,7 +299,7 @@ test('result review authenticates the teacher assignment only against the saved 
     schema:OFFLINE_RESULT_SCHEMA,version:'1',
     assignment:{
       assignmentId:a.assignmentId,packageId:a.packageId,contentRoot:a.contentRoot,
-      participantToken:a.participant.assignmentToken,participantLabel:'Alumno 1',policy:a.policy,
+      participantToken:a.participant.assignmentToken,participantLabel:'Alumno 1',policy:a.policy,provenance:a.provenance,
     },
     assignmentProof:a,
     runtime:{playerVersion:a.runtime.playerVersion,runtimeDigest:a.runtime.runtimeDigest},
