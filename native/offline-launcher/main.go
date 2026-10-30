@@ -116,6 +116,13 @@ func registerLaunch(root string, p payload) (launchState, error) {
 	if state.AssignmentID != assignment.AssignmentID || state.PayloadDigest != "sha256:"+hex.EncodeToString(p.hash[:]) {
 		return launchState{}, errors.New("el historial local no corresponde a esta entrega")
 	}
+	if state.LastOpenedAt != "" {
+		last, parseErr := time.Parse(time.RFC3339Nano, state.LastOpenedAt)
+		if parseErr != nil { return launchState{}, errors.New("la última apertura registrada no es válida") }
+		if now.Before(last.Add(-5 * time.Minute)) {
+			return launchState{}, errors.New("el reloj del equipo ha retrocedido respecto a la última apertura registrada; no se puede abrir la entrega hasta corregir la fecha y la hora")
+		}
+	}
 	if state.DeviceBindingID == "" {
 		state.DeviceBindingID, err = randomBindingID()
 		if err != nil { return launchState{}, err }
