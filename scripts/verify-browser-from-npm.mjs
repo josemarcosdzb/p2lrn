@@ -996,17 +996,17 @@ async function runChromePageGateOnce(chrome, url, profileHint, {timeoutMs=35000,
     const browserWs=await devtools;
     const endpoint=new URL(browserWs);
     const jsonOrigin=`http://${endpoint.hostname}:${endpoint.port}`;
-    let target=null;
+    let target=null,fallbackTarget=null;
     const targetDeadline=Date.now()+10000;
     while(Date.now()<targetDeadline&&!target){
       try{
         const targets=await (await fetch(jsonOrigin+'/json/list')).json();
-        target=targets.find((item)=>item.type==='page'&&item.url===url)
-          ?? targets.find((item)=>item.type==='page'&&!item.url.startsWith('devtools://'))
-          ?? null;
+        target=targets.find((item)=>item.type==='page'&&item.url===url)??null;
+        fallbackTarget=targets.find((item)=>item.type==='page'&&!item.url.startsWith('devtools://'))??fallbackTarget;
       }catch{}
       if(!target)await sleep(100);
     }
+    target=target??fallbackTarget;
     if(!target?.webSocketDebuggerUrl)throw new Error('Chrome page target was not available.');
 
     socket=new WebSocket(target.webSocketDebuggerUrl);
@@ -1078,7 +1078,7 @@ async function runChromePageGateOnce(chrome, url, profileHint, {timeoutMs=35000,
     });
     const initialUrl=firstLocation.result?.value??null;
     if(initialUrl!==url){
-      const navigation=await send('Page.navigate',{url});
+      const navigation=await send('Page.navigate',{url},null,15000);
       if(navigation.errorText)throw Error('Chromium could not open expected test page: '+navigation.errorText);
       console.log('CHROME_QA_TARGET_RECOVERED='+JSON.stringify({requested:url,initial:initialUrl}));
     }
