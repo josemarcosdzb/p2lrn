@@ -407,7 +407,7 @@ export class QuestionnaireRuntime {
     if (this.state.completionReason === 'time-limit' || this.state.completionReason === 'question-time-limit') {
       wrap.append(el('p', {class: 'p2lrn-q-notice'}, 'La actividad se cerró al agotarse el tiempo declarado por el paquete.'));
     }
-    const reveal=(this.payload.presentation?.showFeedback ?? 'after-submit') !== 'never';
+    const reveal=(this.payload.presentation?.showFeedback ?? 'never') !== 'never';
     if (score.graded && reveal) {
       wrap.append(el('p', {class: 'p2lrn-q-score'}, `${score.raw} / ${score.max} puntos`));
     } else {
