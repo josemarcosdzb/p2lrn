@@ -48,6 +48,13 @@ const bannedEverywhere=[
   /durante el build del portal/iu,
   /build auditado/iu,
   /pruebas realizadas con el exe/iu,
+  /cmd anterior/iu,
+  /cmd heredado/iu,
+  /el anterior\s+\.cmd/iu,
+  /para distribuir exe oficiales en producci[oó]n/iu,
+  /publicaci[oó]n oficial de ejecutables windows/iu,
+  /signtool\s+verify/iu,
+  /requiere firma authenticode posterior/iu,
 ];
 
 const publicBanned=[
