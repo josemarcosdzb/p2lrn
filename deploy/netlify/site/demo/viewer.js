@@ -54,7 +54,8 @@
 
   function normalizeSource(value){const raw=String(value||'').trim();if(!raw)throw new Error('Introduce una URL de paquete.');let url;try{url=new URL(raw,location.href);}catch{throw new Error('La URL no es válida.');}if(!['http:','https:'].includes(url.protocol))throw new Error('Sólo se admiten URLs http/https.');return url.href;}
   const setField=(key,value)=>{if(fields[key])fields[key].textContent=value==null||value===''?'—':String(value);};
-  const stateLabels={ERROR:'ERROR',LOADING:'CARGANDO',READY:'LISTO',RENDERED:'MOSTRANDO',BRIDGE:'PREPARANDO'};\n  const setState=(value,text)=>{const label=stateLabels[value]||value;state.textContent=label;state.dataset.state=value.toLowerCase();if(status)status.textContent=text||label;};
+  const stateLabels={ERROR:'ERROR',LOADING:'CARGANDO',READY:'LISTO',RENDERED:'MOSTRANDO',BRIDGE:'PREPARANDO'};
+  const setState=(value,text)=>{const label=stateLabels[value]||value;state.textContent=label;state.dataset.state=value.toLowerCase();if(status)status.textContent=text||label;};
   const renderLog=()=>{log.textContent=records.map((item)=>'['+item.time+'] '+item.name+item.suffix).join('\n')||'[viewer] sin eventos';log.scrollTop=log.scrollHeight;};
   const write=(name,detail)=>{if(paused)return;let suffix='';if(detail!==undefined){try{suffix=' '+JSON.stringify(detail,null,2);}catch{suffix=' '+String(detail);}}records.push({time:new Date().toLocaleTimeString(),name,suffix});if(records.length>MAX_EVENTS)records=records.slice(-MAX_EVENTS);renderLog();};
   const categoryLabel=(value)=>value==='generated-questionnaire'?'Cuestionarios y juegos':value==='generated-multipart'?'Multipart':value==='generated-external'?'Formatos externos':value==='canonical-external'?'Formatos externos':value==='canonical-reader'?'Ejemplos de Reader':'Ejemplos P2LRN';
