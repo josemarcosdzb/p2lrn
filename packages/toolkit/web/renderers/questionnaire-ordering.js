@@ -96,9 +96,8 @@ export async function render(options){
   const check=el('button',{type:'button',class:'p2lrn-game-button'},'Comprobar');
   const reshuffle=el('button',{type:'button',class:'p2lrn-game-button'},'Mezclar de nuevo');
   check.addEventListener('click',()=>{
-    const correct=sequence().items.every((item,pos)=>current[pos]?.id===item.id);
-    status.textContent=correct?'Orden correcto.':'Todavía hay elementos fuera de posición.';
-    if(correct&&sequences.length===1)void runtime.finish().then((score)=>{if(score)status.textContent=`Orden correcto: ${score.pointsEarned}/${score.pointsPossible} puntos.`;});
+    sync();
+    status.textContent='Orden registrado. La corrección se realizará al finalizar la actividad.';
   });
   reshuffle.addEventListener('click',()=>{
     let next=current;
