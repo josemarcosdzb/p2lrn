@@ -110,7 +110,7 @@ export async function reviseSiteBrowserAssets({siteRoot, htmlFiles}){
   for(const htmlPath of htmlFiles){
     let html=await readFile(htmlPath,'utf8');
     const previous=html;
-    if(sharedUiRevision['p2lrn.js']){
+    html=html.replace(/<div class="header-meta">([\s\S]*?)<\/div>/giu,(block,inner)=>\n      inner.includes('data-functional-status')?block:'');\n    if(sharedUiRevision['p2lrn.js']){
       html=html.replace(/src=["']\/p2lrn\.js(?:\?[^"']*)?["']/gi,'src="/p2lrn.js?v='+sharedUiRevision['p2lrn.js']+'"');
     }
     if(sharedUiRevision['p2lrn.css']){
