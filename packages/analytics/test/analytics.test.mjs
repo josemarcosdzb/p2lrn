@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeAnalyticsDataset,computeAnalyticsSnapshot,filterAnalyticsDataset,createAnalyticsStore,createHttpAnalyticsDataSource,analyticsToCsv} from '../src/model.js';
+import {normalizeAnalyticsDataset,computeAnalyticsSnapshot,filterAnalyticsDataset,createAnalyticsStore,createHttpAnalyticsDataSource,analyticsToCsv,analyticsDatasetFromOfflineResult} from '../src/model.js';
 
 const seed={
   generatedAt:'2026-10-28T10:00:00Z',
@@ -76,4 +76,28 @@ test('course-level completed attempts may complete a course',()=>{
   });
   assert.equal(snap.learners[0].progress,1);
   assert.equal(snap.courses[0].completed,1);
+});
+
+test('offline results become Analytics datasets with openings and informative grades',()=>{
+  const result={
+    schema:'https://p2lrn.org/schema/offline-result/1',version:'1',
+    assignment:{assignmentId:'urn:uuid:a',packageId:'course-offline',contentRoot:'sha256:'+'a'.repeat(64),title:'Curso entregado',participantToken:'learner-token',participantLabel:'Alumno 1',policy:{expiresAfterFirstOpenDays:30}},
+    attempt:{id:'attempt-1',number:1,status:'submitted',startedAt:'2026-10-01T09:00:00Z',finishedAt:'2026-10-01T10:00:00Z',elapsedSeconds:3600},
+    usage:{firstOpenedAt:'2026-10-01T08:55:00Z',lastOpenedAt:'2026-10-02T08:55:00Z',openCount:2,expiresAt:'2026-10-31T08:55:00Z',deviceBindingId:'device-abc',sessions:[{id:'s1',openedAt:'2026-10-01T08:55:00Z',source:'windows-native'},{id:'s2',openedAt:'2026-10-02T08:55:00Z',source:'windows-native'}]},
+    summary:{latestScore:{normalized:.8},activeTimeMs:1800000,openings:2},
+    analytics:{activeTimeMs:1800000,events:[{type:'event',value:{type:'p2lrn:active-time',payload:{totalActiveMs:1800000}},timestamp:'2026-10-01T09:30:00Z'}]},
+    audit:{anomalies:[]},integrity:{algorithm:'sha256',payloadDigest:'sha256:'+'b'.repeat(64)},
+  };
+  const dataset=analyticsDatasetFromOfflineResult(result);
+  assert.equal(dataset.metadata.offlineResult,true);
+  assert.equal(dataset.learners[0].name,'Alumno 1');
+  assert.equal(dataset.courses[0].title,'Curso entregado');
+  assert.equal(dataset.attempts[0].metadata.openings,2);
+  assert.equal(dataset.attempts[0].metadata.deviceBindingId,'device-abc');
+  assert.equal(dataset.events.filter(event=>event.type==='p2lrn:offline-open').length,2);
+  assert.equal(dataset.grades.length,1);
+  assert.equal(dataset.grades[0].authoritative,false);
+  const snapshot=computeAnalyticsSnapshot(dataset,{now:Date.parse('2026-10-02T12:00:00Z')});
+  assert.equal(snapshot.overview.learners,1);
+  assert.equal(snapshot.overview.averageGrade,null,'offline informational scores must not become official grades');
 });
