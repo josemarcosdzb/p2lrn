@@ -86,14 +86,18 @@ test('offline assignment policy validates dates, duration and attempts',()=>{
     dueAt:'2026-10-30T20:00:00Z',
     attemptDurationSeconds:3600,
     maxAttempts:2,
+    expiresAfterFirstOpenDays:30,
     allowResume:true,
   });
   assert.equal(policy.collaboration,'disabled');
   assert.equal(policy.network,'deny-by-default');
   assert.equal(policy.attemptDurationSeconds,3600);
   assert.equal(policy.maxAttempts,2);
+  assert.equal(policy.expiresAfterFirstOpenDays,30);
   assert.throws(()=>normalizeOfflineAssignmentPolicy({availableFrom:'2026-10-31T00:00:00Z',dueAt:'2026-10-30T00:00:00Z'}),/posterior/i);
   assert.throws(()=>normalizeOfflineAssignmentPolicy({attemptDurationSeconds:10}),/entero/i);
+  assert.throws(()=>normalizeOfflineAssignmentPolicy({expiresAfterFirstOpenDays:0}),/entero/i);
+  assert.throws(()=>normalizeOfflineAssignmentPolicy({expiresAfterFirstOpenDays:3651}),/entero/i);
 });
 
 test('offline compatibility rejects required collaboration and remote-only resources',()=>{
@@ -126,6 +130,7 @@ test('offline exporter creates a self-playing ZIP with a real Studio course, loc
     availableFrom:'2026-10-27T08:00:00Z',
     dueAt:'2026-10-30T20:00:00Z',
     attemptDurationSeconds:1800,
+    expiresAfterFirstOpenDays:30,
     maxAttempts:1,
   });
   assert.match(result.filename,/\.p2lrn-offline\.zip$/);
@@ -133,6 +138,7 @@ test('offline exporter creates a self-playing ZIP with a real Studio course, loc
   assert.match(result.windowsLauncher.payloadDigest,/^sha256:[0-9a-f]{64}$/);
   assert.equal(result.assignment.schema,OFFLINE_ASSIGNMENT_SCHEMA);
   assert.equal(result.assignment.policy.collaboration,'disabled');
+  assert.equal(result.assignment.policy.expiresAfterFirstOpenDays,30);
   assert.equal(result.assignment.participant.label,'Alumno 7');
 
   const entries=storedZipEntries(result.bytes);
@@ -144,6 +150,11 @@ test('offline exporter creates a self-playing ZIP with a real Studio course, loc
   const app=decoder.decode(entries.get('www/app.js'));
   assert.match(app,/createOfflineHostAdapter/);
   assert.match(app,/online:\(\)=>false/);
+  assert.match(app,/loadNativeLaunchInfo/);
+  assert.match(app,/__p2lrn\/launch-state/);
+  assert.match(app,/openCount/);
+  assert.match(app,/DELIVERY_EXPIRED/);
+  assert.match(app,/Comprueba el origen antes de abrir/);
   assert.doesNotMatch(app,/createHttpCollaborationProvider|createMemoryCollaborationHub/);
   const launcher=decoder.decode(entries.get('runtime/serve.ps1'));
   assert.match(launcher,/IPAddress\]::Loopback/);
