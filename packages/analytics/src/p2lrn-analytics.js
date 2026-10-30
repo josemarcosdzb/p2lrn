@@ -6,6 +6,7 @@ import {
   filterAnalyticsDataset,
   analyticsToCsv,
   analyticsDatasetFromOfflineResult,
+  verifyOfflineResultIntegrity,
 } from './model.js';
 
 const HTMLElementBase=globalThis.HTMLElement??class{};
@@ -196,8 +197,10 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   async importOfflineResult(value){
     const generation=++this.#loadGeneration;
     const raw=value&&typeof value.text==='function'?await value.text():value;
+    const integrity=await verifyOfflineResultIntegrity(raw);
     if(generation!==this.#loadGeneration)return this.#dataset;
-    const dataset=analyticsDatasetFromOfflineResult(raw);
+    if(!integrity.valid)throw new Error('El resultado offline ha sido modificado o su SHA-256 no coincide.');
+    const dataset=analyticsDatasetFromOfflineResult(integrity.result);
     this.#loading=false;
     this.#dataSource=null;
     if(this.hasAttribute?.('src'))this.removeAttribute('src');
