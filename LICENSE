@@ -289,3 +289,34 @@ El acceso al código fuente, su publicación en un repositorio o la posibilidad 
 P2LRN Non-Commercial Source License 1.0 - P2LRN-NCSL 1.0
 Versión 1.0 - 1 de octubre de 2026
 Copyright (c) 2026 Jose Marcos Diaz Blanes.
+
+
+---
+
+## Anexo A — Permisos adicionales de interoperabilidad y uso educativo comercial (30 de octubre de 2026)
+
+**Este anexo es una concesión adicional vinculante del titular del copyright sobre su propio código.** Se aplica a las versiones de P2LRN que lo incluyan. En caso de conflicto, prevalece este anexo para los actos expresamente autorizados; las demás cláusulas de P2LRN-NCSL 1.0 siguen vigentes en lo no modificado. No concede derechos sobre código de terceros ni sobre aportaciones de las que el licenciante no sea titular.
+
+### A.1 Formato, especificación e interoperabilidad
+
+Se concede a cualquier persona o entidad permiso mundial, gratuito, no exclusivo, irrevocable respecto de las copias recibidas bajo esta versión y sin obligación de solicitar autorización para leer, implementar, validar, generar, convertir, distribuir y comercializar documentos en formato `.p2lrn`, así como para implementar lectores o escritores propios compatibles basados en las especificaciones y esquemas originales publicados por P2LRN. Este permiso alcanza los derechos de copyright que controle el licenciante sobre dichas especificaciones y esquemas; no implica concesión de patentes ni de marcas.
+
+### A.2 Player, Toolkit y herramientas esenciales
+
+Para los componentes first-party originales de `packages/player/` y `packages/toolkit/`, sus interfaces, utilidades de conversión y validación, y el lanzador de cursos `native/offline-launcher/`, el licenciante concede permiso mundial, gratuito, no exclusivo y perpetuo para utilizarlos en enseñanza pública y privada, cursos gratuitos o de pago, empresas, LMS, aplicaciones y servicios comerciales; copiarlos, integrarlos, modificarlos y redistribuirlos (incluidos sus binarios y el runtime incorporado en un EXE de curso).
+
+Estas autorizaciones prevalecen sobre la prohibición de finalidad comercial de las secciones 1, 2, 4, 5, 7 y 8 respecto de los componentes enumerados. Quien redistribuya componentes cubiertos conservará sus avisos de autoría, esta licencia, los avisos de terceros y las obligaciones de entrega de fuente correspondiente de la sección 9 mientras no se acuerden otros términos por escrito. Las versiones modificadas deberán identificarse como tales y no presentarse como oficiales. Esta autorización no alcanza al código de Studio ni Analytics por su mera dependencia del Player o Toolkit.
+
+### A.3 Studio y Analytics: licencia institucional gratuita de uso no modificativo
+
+Para las versiones oficiales **sin modificar** de `@p2lrn/studio` y `@p2lrn/analytics`, y sus componentes first-party correspondientes, se autoriza gratuitamente a personas, academias, centros de formación, universidades, organizaciones e instituciones públicas o privadas a ejecutarlas, alojarlas internamente y utilizarlas en actividades educativas y de gestión, **aunque cobren matrícula, vendan sus propios cursos o sean entidades con ánimo de lucro**. Se permite configurar sus opciones públicas, conectarlas a fuentes de datos o servicios mediante integraciones documentadas y administrar usuarios y cursos en la propia institución, siempre que el código cubierto permanezca sin modificar.
+
+**Requieren autorización previa y expresa del titular:** modificar, crear derivados o redistribuir versiones modificadas de Studio o Analytics; incorporarlos, empaquetarlos, revenderlos o ponerlos a disposición como parte de una plataforma SaaS comercial, un LMS comercial, un servicio gestionado o cualquier producto o servicio de pago ofrecido a terceros; sublicenciar el código o vender acceso a Studio/Analytics como producto independiente. El uso interno de una institución que cobra por sus propios cursos NO constituye por sí solo un servicio comercial de Studio/Analytics a terceros.
+
+Se permite distribuir cursos y resultados generados con Studio o Analytics y cobrar por ellos: son contenido del autor, no software cubierto. La exportación de un curso con Player/Toolkit o el lanzador nativo no hereda estas restricciones de Studio/Analytics.
+
+### A.4 Contenido, marca, terceros y vigencia
+
+Los creadores conservan los derechos sobre sus cursos, cuestionarios, contenidos y resultados, pudiendo licenciarlos y venderlos libremente. Los componentes y dependencias de terceros conservan sus licencias propias. El uso de P2LRN como marca, logotipo o signo de certificación no está autorizado salvo para identificar verazmente compatibilidad y origen. Los permisos otorgados a copias legítimamente recibidas bajo este anexo no se revocarán retroactivamente por cambios de licencia en versiones futuras. El software se proporciona sin garantía en el máximo permitido por ley.
+
+**Nota:** esta concesión adicional no convierte al conjunto P2LRN, ni a Studio/Analytics, en software Open Source aprobado por OSI. Las condiciones de fuente correspondiente de NCSL se conservan para las redistribuciones del código cubierto.
