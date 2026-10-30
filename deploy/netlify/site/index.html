@@ -24,7 +24,7 @@
       <a href="/docs/toolkit/">Toolkit</a>
       <a href="/docs/integracion/">Integración</a>
     </nav>
-    <div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span class="site-release-label">npm <span data-player-version>0.5.0-alpha.11</span></span><span class="site-build-label" data-site-build>Web local</span></div>
+    
     <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
   </header>
 
@@ -43,8 +43,8 @@
       <div class="hero-center">
         <p class="eyebrow"><span class="hero-eyebrow-mark" aria-hidden="true"></span> FORMAT / PLAYER / STUDIO / TOOLKIT</p>
         <h1>P2LRN</h1>
-        <h2 class="hero-title" id="hero-title">Crea, empaqueta, reproduce y comparte<br>contenido formativo <em>en cualquier plataforma</em>.</h2>
-        <p class="hero-lead">Un formato abierto y portable para que tus cursos, actividades e interacciones funcionen en tu web, en tu LMS y en cualquier entorno, sin quedar atados a una sola plataforma o formato.</p>
+        <h2 class="hero-title" id="hero-title">Crea, empaqueta, reproduce y comparte<br>contenido formativo <em>sin depender de una sola plataforma</em>.</h2>
+        <p class="hero-lead">Un formato portable y documentado para crear cursos, actividades y experiencias interactivas que puedas utilizar en web, LMS y otros entornos compatibles.</p>
         <div class="hero-actions">
           <a class="button primary" href="/docs/paquetes/">Crear un paquete</a>
           <a class="button" href="/studio/">Abrir Studio</a>
@@ -114,12 +114,12 @@
         <div class="bridge-targets">
           <span>WEB</span><span>LMS</span><span>APP</span><span>OTROS</span>
         </div>
-        <div class="bridge-runtime">Runtimes desde <strong>CDN</strong> o <strong>NPM</strong></div>
+        <div class="bridge-runtime">Una experiencia coherente para <strong>web</strong>, <strong>LMS</strong> y aplicaciones compatibles</div>
       </div>
       <div class="cdn-minimal bridge-cdn">
-        <div class="cdn-minimal-head"><strong>CDN · MÍNIMO</strong><span>HTML</span></div>
-        <pre><code>&lt;script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
-&lt;p2lrn-player src="./curso.p2lrn"&gt;&lt;/p2lrn-player&gt;</code></pre>
+        <div class="cdn-minimal-head"><strong>INTEGRACIÓN WEB</strong><span>PLAYER</span></div>
+        <p>Incorpora el Player en tu plataforma y conserva el curso como un paquete <code>.p2lrn</code> independiente.</p>
+        <p><a class="button" href="/docs/integracion/">Ver opciones de integración</a></p>
       </div>
     </section>
 
@@ -153,10 +153,10 @@
         <p class="lead reveal-item" style="--reveal-order:2">P2LRN integra dentro de un mismo paquete cualquier formato compatible —SCORM, H5P, cmi5, xAPI, QTI, HTML y otros— junto con sus recursos, estructura y metadatos. El mismo paquete puede utilizarse en web, LMS, aplicaciones y otros entornos sin tener que rehacer la integración para cada formato.</p>
         <div class="steps compact format-flow">
           <article class="reveal-item" style="--reveal-order:3"><span class="step-no">1</span><div><h3>PACKAGE</h3><p>El archivo .p2lrn conserva el curso y los formatos incorporados como parte de un único paquete portable.</p></div></article>
-          <article class="reveal-item" style="--reveal-order:4"><span class="step-no">2</span><div><h3>RUNTIME</h3><p>El visor identifica cada formato y carga el runtime necesario desde el CDN de P2LRN o desde los paquetes NPM instalados en la aplicación.</p></div></article>
-          <article class="reveal-item" style="--reveal-order:5"><span class="step-no">3</span><div><h3>RENDER</h3><p>Player reproduce cada contenido en el entorno adecuado y lo presenta dentro del curso como una experiencia unificada.</p></div></article>
+          <article class="reveal-item" style="--reveal-order:4"><span class="step-no">2</span><div><h3>COMPATIBILIDAD</h3><p>Player identifica el tipo de contenido y utiliza la capacidad adecuada para reproducirlo dentro del curso.</p></div></article>
+          <article class="reveal-item" style="--reveal-order:5"><span class="step-no">3</span><div><h3>EXPERIENCIA</h3><p>El alumno accede a las lecciones y actividades desde una experiencia unificada, aunque el curso combine distintos formatos.</p></div></article>
         </div>
-        <div class="host-boundary reveal-item format-runtime-note" style="--reveal-order:6"><strong>Una integración</strong><span>Un solo Player para web, LMS, aplicaciones y otros entornos. El visor resuelve desde CDN o NPM los runtimes que necesita para leer cada formato, reduciendo la integración a un flujo común y sin complicaciones innecesarias.</span></div>
+        <div class="host-boundary reveal-item format-runtime-note" style="--reveal-order:6"><strong>Una integración</strong><span>Un solo Player para web, LMS y aplicaciones compatibles. Los detalles técnicos de instalación quedan en la documentación para que la experiencia principal siga siendo clara.</span></div>
       </div>
     </section>
 
@@ -169,7 +169,7 @@
           <a class="doc-card" href="/docs/formato/"><span>01</span><h3>Formato P2LRN</h3><p>Identidad, estructura del paquete, manifiestos, contentRoot, proyecto de autoría y fronteras del formato.</p><b>Abrir documentación →</b></a>
           <a class="doc-card" href="/docs/player/"><span>02</span><h3>Player web</h3><p>NPM o CDN, Web Component, atributos, eventos, runtime aislado, Service Worker y ejemplos de integración.</p><b>Abrir documentación →</b></a>
           <a class="doc-card" href="/docs/toolkit/"><span>03</span><h3>Toolkit</h3><p>Reader, Creator, autoría, validación, conversión, repack, comandos CLI y flujo de trabajo.</p><b>Abrir documentación →</b></a>
-          <a class="doc-card" href="/docs/entrega-offline/"><span>04</span><h3>Entrega offline</h3><p>Envía un curso sin LMS: doble clic en Windows, trabajo en navegador, métricas y devolución <code>.p2lrn-result</code>.</p><b>Ver flujo completo →</b></a><a class="doc-card" href="/docs/compatibilidad/"><span>05</span><h3>Compatibilidad</h3><p>P2RLN Alpha15, H5P, SCORM, cmi5, QTI, Common Cartridge, IMS CP y límites de ejecución.</p><b>Abrir documentación →</b></a>
+          <a class="doc-card" href="/docs/entrega-offline/"><span>04</span><h3>Entrega offline</h3><p>Envía un curso sin LMS: doble clic en Windows, trabajo en navegador, métricas y devolución <code>.p2lrn-result</code>.</p><b>Ver flujo completo →</b></a><a class="doc-card" href="/docs/compatibilidad/"><span>05</span><h3>Compatibilidad</h3><p>H5P, SCORM, cmi5, QTI, Common Cartridge, IMS Content Package y límites de compatibilidad.</p><b>Abrir documentación →</b></a>
         </div>
       </div>
     </section>
