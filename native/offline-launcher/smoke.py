@@ -28,7 +28,10 @@ def expect_error(url,status,headers=None,method="GET"):
     except urllib.error.HTTPError as exc:
         assert exc.code==status,(exc.code,status)
 
-smoke_parent=os.environ.get("P2LRN_SMOKE_ROOT") or None\nif smoke_parent:pathlib.Path(smoke_parent).mkdir(parents=True,exist_ok=True)\nwith tempfile.TemporaryDirectory(prefix="p2lrn-native-smoke-",dir=smoke_parent) as temporary:
+smoke_parent=os.environ.get("P2LRN_SMOKE_ROOT") or None
+if smoke_parent:
+    pathlib.Path(smoke_parent).mkdir(parents=True,exist_ok=True)
+with tempfile.TemporaryDirectory(prefix="p2lrn-native-smoke-",dir=smoke_parent) as temporary:
     root=pathlib.Path(temporary)
     data=io.BytesIO()
     with zipfile.ZipFile(data,"w",zipfile.ZIP_STORED) as archive:
