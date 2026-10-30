@@ -140,7 +140,7 @@ const requiredByFile=new Map([
     '/lti/deep-link','/lti/jwks','NRPS','self-hosted'
   ]],
   ['deploy/netlify/site/docs/conectores/lms/index.html',[
-    'proveedor LTI 1.3 universal self-hosted','binding manual autorizado',
+    'La integración LTI 1.3 puede desplegarse en infraestructura propia','binding manual autorizado',
     'Implementado no equivale a certificado en todos los LMS'
   ]]
 ]);
