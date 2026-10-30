@@ -133,4 +133,12 @@ test('direct Analytics import detects post-generation tampering',async()=>{
   const rejected=await verifyOfflineResultIntegrity(tampered);
   assert.equal(rejected.valid,false);
   assert.notEqual(rejected.declared,rejected.calculated);
+
+  const {P2LRNAnalyticsElement}=await import('../src/p2lrn-analytics.js');
+  const analytics=new P2LRNAnalyticsElement();
+  await assert.rejects(
+    ()=>analytics.importOfflineResult(tampered),
+    /modificado|SHA-256/,
+    'direct Analytics import must reject a result whose payloadDigest no longer matches',
+  );
 });
