@@ -166,6 +166,11 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   ground.receiveShadow=true;
   scene.add(ground);
   physicsWorld.createGround?.({position:[0,-0.15,0],halfExtents:[12,0.15,13]});
+  // Invisible perimeter colliders stop movable boxes falling beyond the floor.
+  for(const [position,halfExtents] of [
+    [[-12,2,0],[0.3,2,13]],[[12,2,0],[0.3,2,13]],
+    [[0,2,-13],[12,2,0.3]],[[0,2,13],[12,2,0.3]],
+  ])physicsWorld.createGround?.({position,halfExtents});
 
   const stage=new THREE.Group();
   scene.add(stage);
