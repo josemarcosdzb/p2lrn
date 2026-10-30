@@ -11,6 +11,7 @@ export const DEFAULT_ANALYTICS_RISK_RULES=Object.freeze({
 });
 
 const DAY_MS=86_400_000;
+const offlineEncoder=new TextEncoder();
 const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
 const asArray=(value)=>Array.isArray(value)?value:[];
 const clone=(value)=>{
@@ -172,6 +173,45 @@ function compactMap(values,mapper){
   return out;
 }
 
+function canonicalizeOfflineJson(value){
+  if(value===null||typeof value==='boolean'||typeof value==='string')return JSON.stringify(value);
+  if(typeof value==='number'){
+    if(!Number.isFinite(value))throw new TypeError('El resultado contiene un número JSON no finito.');
+    if(Number.isInteger(value)&&!Number.isSafeInteger(value))throw new TypeError('El resultado contiene un entero JSON fuera de rango.');
+    return JSON.stringify(value);
+  }
+  if(Array.isArray(value))return '['+value.map(canonicalizeOfflineJson).join(',')+']';
+  if(value&&typeof value==='object')
+    return '{'+Object.keys(value).sort().map((key)=>JSON.stringify(key)+':'+canonicalizeOfflineJson(value[key])).join(',')+'}';
+  throw new TypeError('El resultado contiene un valor JSON no compatible.');
+}
+function parseOfflineResultValue(input){
+  let result=input;
+  if(typeof result==='string')result=JSON.parse(result);
+  else if(result instanceof Uint8Array)result=JSON.parse(new TextDecoder().decode(result));
+  else if(result instanceof ArrayBuffer)result=JSON.parse(new TextDecoder().decode(new Uint8Array(result)));
+  else result=clone(result);
+  if(!result||result.schema!==P2LRN_OFFLINE_RESULT_SCHEMA||String(result.version)!=='1')
+    throw new TypeError('El archivo no es un resultado offline P2LRN compatible.');
+  return result;
+}
+async function sha256OfflineJson(value){
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',offlineEncoder.encode(canonicalizeOfflineJson(value))));
+  return 'sha256:'+Array.from(digest,(byte)=>byte.toString(16).padStart(2,'0')).join('');
+}
+export async function verifyOfflineResultIntegrity(input){
+  const result=parseOfflineResultValue(input);
+  const body=clone(result);delete body.integrity;
+  const calculated=await sha256OfflineJson(body);
+  const declared=String(result.integrity?.payloadDigest??'').toLowerCase();
+  return Object.freeze({
+    result:Object.freeze(result),
+    valid:/^sha256:[0-9a-f]{64}$/.test(declared)&&declared===calculated.toLowerCase(),
+    declared,
+    calculated,
+  });
+}
+
 export function normalizeAnalyticsDataset(input={}){
   const source=record(input);
   const learners=compactMap(asArray(source.learners),normalizeLearner);
@@ -194,13 +234,7 @@ export function normalizeAnalyticsDataset(input={}){
 }
 
 export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
-  let result=input;
-  if(typeof result==='string')result=JSON.parse(result);
-  else if(result instanceof Uint8Array)result=JSON.parse(new TextDecoder().decode(result));
-  else if(result instanceof ArrayBuffer)result=JSON.parse(new TextDecoder().decode(new Uint8Array(result)));
-  else result=clone(result);
-  if(!result||result.schema!==P2LRN_OFFLINE_RESULT_SCHEMA||String(result.version)!=='1')
-    throw new TypeError('El archivo no es un resultado offline P2LRN compatible.');
+  const result=parseOfflineResultValue(input);
   const assignment=record(result.assignment);
   const attempt=record(result.attempt);
   const usage=record(result.usage);
