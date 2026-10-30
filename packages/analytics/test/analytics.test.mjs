@@ -45,6 +45,8 @@ test('root component module exposes datasource and store helpers',async()=>{
   assert.equal(typeof mod.createHttpAnalyticsDataSource,'function');
   assert.equal(typeof mod.createAnalyticsStore,'function');
   assert.equal(typeof mod.createMemoryAnalyticsDataSource,'function');
+  assert.equal(typeof mod.analyticsDatasetFromOfflineResult,'function');
+  assert.equal(typeof mod.P2LRNAnalyticsElement.prototype.importOfflineResult,'function');
 });
 
 test('failed attempts never complete a course by status alone',()=>{
