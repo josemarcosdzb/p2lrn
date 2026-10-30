@@ -25,6 +25,13 @@ export async function render(options) {
   const status = statusNode('Selecciona un elemento de la izquierda y después su pareja de la derecha.');
   let selected = null;
   const links = new Map();
+  for(const entry of pairs){
+    if(entry.patch.kind!=='pair-set')continue;
+    const answer=runtime.answer(entry.questionId);
+    const target=(answer.pairs||{})[entry.patch.leftId];
+    const right=pairs.find(candidate=>candidate.patch.kind==='pair-set'&&candidate.patch.rightId===target);
+    if(right)links.set(entry.id,right.id);
+  }
   const leftButtons = new Map();
   const rightButtons = new Map();
   let resizeObserver = null;
@@ -97,10 +104,20 @@ export async function render(options) {
     for(const [id,target] of [...links])if(target===pair.id&&id!==source.id){
       links.delete(id);
       const previous=pairs.find(item=>item.id===id);
-      if(previous)runtime.applyPatch(previous.questionId,{kind:'pair-set',leftId:previous.patch.leftId,rightId:''});
+      if(previous?.patch?.kind==='pair-set'){
+        const current=runtime.answer(previous.questionId);
+        const next={...(current.pairs||{})};
+        delete next[previous.patch.leftId];
+        runtime.replaceAnswer(previous.questionId,{...current,pairs:next});
+      }
     }
     links.set(source.id,pair.id);
-    runtime.applyPatch(source.questionId,{kind:'pair-set',leftId:source.patch.leftId,rightId:pair.patch.rightId});
+    let patch=source.patch;
+    if(patch.kind==='pair-set')patch={kind:'pair-set',leftId:patch.leftId,rightId:pair.patch.rightId};
+    else if(patch.kind==='text')patch={kind:'text',text:pair.right};
+    else if(patch.kind==='blank-set')patch={kind:'blank-set',blankId:patch.blankId,value:pair.right};
+    else if(patch.kind==='choice-add'||patch.kind==='choice-set')patch={kind:'choice-set',choiceId:pair.patch.choiceId};
+    runtime.applyPatch(source.questionId,patch);
     selected=null;
     leftButtons.forEach(node=>node.classList.remove('is-selected'));
     refreshLinks();
@@ -137,7 +154,7 @@ export async function render(options) {
     rightButtons.forEach((node) => resizeObserver.observe(node));
   }
   globalThis.addEventListener?.('resize', redraw);
-  redraw();
+  refreshLinks();
 
   const originalDestroy = runtime.destroy.bind(runtime);
   runtime.destroy = () => {
