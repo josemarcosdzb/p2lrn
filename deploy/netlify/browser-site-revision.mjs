@@ -125,7 +125,8 @@ export async function reviseSiteBrowserAssets({siteRoot, htmlFiles}){
         '<a href="/contacto/">Contacto</a>'+
       '</nav>';
       html=html.replace(/<nav class="nav" id="nav"(?:\s[^>]*)?>[\s\S]*?<\/nav>/iu,publicFallbackNav);
-    }\n    if(sharedUiRevision['p2lrn.js']){
+    }
+    if(sharedUiRevision['p2lrn.js']){
       html=html.replace(/src=["']\/p2lrn\.js(?:\?[^"']*)?["']/gi,'src="/p2lrn.js?v='+sharedUiRevision['p2lrn.js']+'"');
     }
     if(sharedUiRevision['p2lrn.css']){
