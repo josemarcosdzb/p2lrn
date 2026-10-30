@@ -1,6 +1,7 @@
 export const P2LRN_ANALYTICS_VERSION='0.5.0-alpha.11';
 export const ANALYTICS_DATASET_SCHEMA='https://p2lrn.org/schema/analytics-dataset/1';
 export const ANALYTICS_SNAPSHOT_SCHEMA='https://p2lrn.org/schema/analytics-snapshot/1';
+export const P2LRN_OFFLINE_RESULT_SCHEMA='https://p2lrn.org/schema/offline-result/1';
 
 export const DEFAULT_ANALYTICS_RISK_RULES=Object.freeze({
   inactiveDays:14,
@@ -189,6 +190,108 @@ export function normalizeAnalyticsDataset(input={}){
     grades:freezeList(grades),
     events:freezeList(events),
     metadata:Object.freeze(record(clone(source.metadata))),
+  });
+}
+
+export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
+  let result=input;
+  if(typeof result==='string')result=JSON.parse(result);
+  else if(result instanceof Uint8Array)result=JSON.parse(new TextDecoder().decode(result));
+  else if(result instanceof ArrayBuffer)result=JSON.parse(new TextDecoder().decode(new Uint8Array(result)));
+  else result=clone(result);
+  if(!result||result.schema!==P2LRN_OFFLINE_RESULT_SCHEMA||String(result.version)!=='1')
+    throw new TypeError('El archivo no es un resultado offline P2LRN compatible.');
+  const assignment=record(result.assignment);
+  const attempt=record(result.attempt);
+  const usage=record(result.usage);
+  const summary=record(result.summary);
+  const analytics=record(result.analytics);
+  const participantLabel=text(assignment.participantLabel,'Alumno offline');
+  const learnerId=semantic(assignment.participantToken||participantLabel,'offline-learner');
+  const courseId=semantic(assignment.packageId||assignment.contentRoot||assignment.assignmentId,'offline-course');
+  const attemptId=semantic(attempt.id,key(learnerId,courseId,'offline-attempt',attempt.number??1));
+  const title=text(courseTitle??assignment.title??record(result.assignmentProof).title,'Curso offline P2LRN');
+  const startedAt=timestamp(attempt.startedAt??usage.firstOpenedAt);
+  const finishedAt=timestamp(attempt.finishedAt??usage.lastOpenedAt);
+  const activeTimeMs=Math.max(0,finite(analytics.activeTimeMs,summary.activeTimeMs)??0);
+  const latestScore=record(summary.latestScore);
+  const normalizedScore=ratio(latestScore.normalized,null);
+  const scoreMax=finite(latestScore.maxValue??latestScore.maxScore,normalizedScore==null?null:1);
+  const scoreValue=finite(latestScore.value??latestScore.score,normalizedScore==null?null:normalizedScore*(scoreMax??1));
+  const events=asArray(analytics.events).map((operation,index)=>{
+    const op=record(operation);
+    const value=record(op.value);
+    const context={...record(clone(op.context)),learnerId,courseId,attemptId};
+    const eventType=text(value.type??op.eventType,'p2lrn:interaction');
+    const eventPayload=record(clone(value.payload??op.payload??{}));
+    return {
+      id:semantic(op.id,key(attemptId,'event',index+1)),
+      sequence:Number.isSafeInteger(Number(op.sequence))?Number(op.sequence):index+1,
+      type:eventType,
+      category:text(value.category??op.category,'offline'),
+      timestamp:timestamp(op.timestamp??value.timestamp??op.observedAt??startedAt)??startedAt??new Date(0).toISOString(),
+      learnerId,courseId,attemptId,context,payload:eventPayload,
+    };
+  });
+  const launchEvents=asArray(usage.sessions).map((session,index)=>{
+    const item=record(session);
+    return {
+      id:key(attemptId,'open',index+1),
+      sequence:events.length+index+1,
+      type:'p2lrn:offline-open',
+      category:'offline',
+      timestamp:timestamp(item.openedAt)??startedAt??new Date(0).toISOString(),
+      learnerId,courseId,attemptId,
+      context:{learnerId,courseId,attemptId},
+      payload:{
+        source:text(item.source,'offline'),
+        sessionId:semantic(item.id,''),
+        openNumber:index+1,
+        deviceBindingId:semantic(usage.deviceBindingId,''),
+      },
+    };
+  });
+  if(normalizedScore!=null){
+    events.push({
+      id:key(attemptId,'offline-score'),sequence:events.length+launchEvents.length+1,type:'p2lrn:score',category:'assessment',
+      timestamp:finishedAt??startedAt??new Date(0).toISOString(),learnerId,courseId,attemptId,
+      context:{learnerId,courseId,attemptId},payload:{normalized:normalizedScore,authoritative:false,source:'offline-result'},
+    });
+  }
+  const grades=scoreValue!=null&&scoreMax!=null&&scoreMax>0?[{
+    id:key(attemptId,'grade'),learnerId,courseId,value:scoreValue,maxValue:scoreMax,
+    authoritative:false,updatedAt:finishedAt,source:'offline-result',
+    metadata:{informational:true,reason:'Resultado generado fuera de un Host autoritativo'},
+  }]:[];
+  return normalizeAnalyticsDataset({
+    generatedAt:finishedAt??timestamp(usage.lastOpenedAt)??new Date().toISOString(),
+    learners:[{id:learnerId,name:participantLabel,status:'active',metadata:{offline:true}}],
+    courses:[{id:courseId,title,status:'active',metadata:{offline:true,contentRoot:assignment.contentRoot??null}}],
+    enrollments:[{
+      id:key(learnerId,courseId,'offline-enrollment'),learnerId,courseId,status:'active',
+      startedAt:timestamp(usage.firstOpenedAt??attempt.startedAt),dueAt:timestamp(record(assignment.policy).dueAt),
+      metadata:{offline:true,assignmentId:assignment.assignmentId??null},
+    }],
+    attempts:[{
+      id:attemptId,learnerId,courseId,status:text(attempt.status,finishedAt?'submitted':'started'),
+      startedAt,submittedAt:finishedAt,updatedAt:finishedAt??startedAt,score:scoreValue,maxScore:scoreMax,activeTimeMs,
+      metadata:{
+        offline:true,attemptNumber:finite(attempt.number,null),elapsedSeconds:finite(attempt.elapsedSeconds,0),
+        openings:Math.max(0,finite(usage.openCount,summary.openings)??0),
+        firstOpenedAt:timestamp(usage.firstOpenedAt),lastOpenedAt:timestamp(usage.lastOpenedAt),
+        expiresAt:timestamp(usage.expiresAt),deviceBindingId:text(usage.deviceBindingId,''),
+        sessions:clone(asArray(usage.sessions)),anomalies:clone(asArray(record(result.audit).anomalies)),
+      },
+    }],
+    grades,
+    events:[...events,...launchEvents],
+    metadata:{
+      source:'p2lrn-result',offlineResult:true,assignmentId:assignment.assignmentId??null,
+      contentRoot:assignment.contentRoot??null,openCount:Math.max(0,finite(usage.openCount,summary.openings)??0),
+      firstOpenedAt:timestamp(usage.firstOpenedAt),lastOpenedAt:timestamp(usage.lastOpenedAt),
+      expiresAt:timestamp(usage.expiresAt),deviceBindingId:text(usage.deviceBindingId,''),
+      integrity:clone(record(result.integrity)),anomalies:clone(asArray(record(result.audit).anomalies)),
+    },
   });
 }
 
