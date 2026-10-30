@@ -14,7 +14,7 @@ export async function render(options){
   const redraw=()=>{
     card.replaceChildren();
     if(finished){
-      const reveal=(runtime.payload.presentation?.showFeedback??'after-submit')!=='never';
+      const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
       card.append(el('h3',{},reveal?`Ronda completada: ${correctCount}/${items.length} aciertos.`:'Ronda enviada. El profesor no ha habilitado mostrar la corrección.'));
       const retry=el('button',{type:'button',class:'p2lrn-game-button'},'Repetir ronda');
       retry.addEventListener('click',()=>{
