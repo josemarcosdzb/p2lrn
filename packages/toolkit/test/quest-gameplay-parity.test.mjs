@@ -17,7 +17,7 @@ test('Quest 2D gameplay mirrors AulaP2P flow while staying standalone',async()=>
   assert.match(memory,/700/);
   assert.match(ordering,/dragstart/);
   assert.match(ordering,/Mezclar de nuevo/);
-  assert.match(ordering,/Todavía hay elementos fuera de posición/);
+  assert.match(ordering,/Orden registrado/);
   assert.match(trueFalse,/Incorrecto: era/);
   assert.match(trueFalse,/Repetir ronda/);
   assert.match(crossword,/casillas correctas/);
