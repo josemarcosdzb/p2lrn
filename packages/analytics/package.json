@@ -22,7 +22,11 @@
       "default": "./dist/model.js"
     },
     "./loader": "./dist/p2lrn-analytics.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./course": {
+      "import": "./dist/course-data-source.js",
+      "default": "./dist/course-data-source.js"
+    }
   },
   "files": [
     "dist/",
