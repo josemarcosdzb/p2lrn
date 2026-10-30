@@ -47,7 +47,7 @@ const eventLabel=(event)=>{
     'p2lrn:answer':'Respuesta','p2lrn:attempt':'Intento','p2lrn:interaction':'Interacción',
     'p2lrn:progress':'Progreso','p2lrn:score':'Puntuación','p2lrn:complete':'Completado',
     'p2lrn:timeout':'Tiempo agotado','p2lrn:active-time':'Tiempo activo','p2lrn:attention':'Atención',
-    'p2lrn:error':'Error','p2lrn:xapi':'xAPI','p2lrn:capability':'Capacidad',
+    'p2lrn:error':'Error','p2lrn:xapi':'xAPI','p2lrn:capability':'Capacidad','p2lrn:offline-open':'Apertura offline',
   };
   return labels[event.type]??event.type;
 };
