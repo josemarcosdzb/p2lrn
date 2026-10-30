@@ -57,3 +57,14 @@ test('fill blanks rejects unknown interaction modes',()=>{
   const payload=base({inputMode:'select'});
   assert.throws(()=>validateQuestionnaire(payload),/inputMode/);
 });
+
+test('underscore placeholders place draggable answers inline, not after the sentence',()=>{
+  const q=base({
+    prompt:'El ___ es una estrella y la ___ es un planeta.',
+    inputMode:'drag',
+    solution:{answers:{b1:['Sol'],b2:['Tierra']}},
+  }).questions[0];
+  const built=fillBlankTemplate(q);
+  assert.equal(built.template,'El {{b1}} es una estrella y la {{b2}} es un planeta.');
+  assert.deepEqual(fillBlankParts(q).parts.filter(item=>item.type==='blank').map(item=>item.id),['b1','b2']);
+});
