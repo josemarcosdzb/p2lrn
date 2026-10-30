@@ -25,14 +25,14 @@
 <a href="/docs/toolkit/">Toolkit</a>
 <a href="/contacto/">Contacto</a>
 </nav>
-<div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
+
 <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
 </header>
 <main class="legal-main" id="top">
 <header class="legal-hero">
 <p class="eyebrow">LEGAL / STORAGE</p>
 <h1>Política de cookies</h1>
-<p>Inventario técnico de cookies y tecnologías equivalentes observado en el código actual de la web.</p>
+<p>Información sobre cookies y almacenamiento local utilizados por P2LRN para prestar las funciones de la web.</p>
 <p class="legal-updated">Última actualización: 1 de octubre de 2026</p>
 </header>
 <div class="legal-layout">
@@ -41,18 +41,18 @@
 <a href="#resultado">Resultado de la auditoría</a><a href="#inventario">Inventario</a><a href="#localstorage">Local Storage</a><a href="#serviceworker">Service Worker y Cache Storage</a><a href="#terceros">Terceros</a><a href="#consentimiento">Consentimiento</a><a href="#configuracion">Configurar</a><a href="#navegador">Gestión en el navegador</a>
 </aside>
 <article class="legal-article">
-<section id="resultado"><h2>1. Resultado de la auditoría</h2>
-<div class="legal-status legal-ok"><strong>No se han detectado cookies de analítica, publicidad o marketing en el código auditado.</strong><p>Tampoco se ha detectado código propio que escriba <code>document.cookie</code>, ni uso del sitio de <code>sessionStorage</code> o <code>IndexedDB</code>.</p></div>
+<section id="resultado"><h2>1. Cookies utilizadas</h2>
+<div class="legal-status legal-ok"><strong>P2LRN no utiliza actualmente cookies propias de analítica, publicidad o marketing.</strong><p>La web utiliza almacenamiento local y caché sólo cuando es necesario para funciones concretas, como el visor o la protección básica del formulario de contacto.</p></div>
 <p>La web sí utiliza almacenamiento técnico distinto de cookies para funciones concretas. Por ese motivo esta política documenta Local Storage, Service Worker y Cache Storage por separado.</p></section>
 <section id="inventario"><h2>2. Inventario comprobado</h2>
 <div class="capability-table-wrap"><table class="capability-table"><thead><tr><th>Nombre / tecnología</th><th>Proveedor</th><th>Finalidad</th><th>Tipo</th><th>Duración</th><th>Categoría</th></tr></thead><tbody>
 <tr><td><code>p2lrn-contact-last</code></td><td>P2LRN / navegador</td><td>Evitar reenvíos inmediatos del formulario durante 30 segundos en el mismo navegador.</td><td>Local Storage</td><td>Sin caducidad automática; se sobrescribe tras un envío correcto y permanece hasta que el usuario borra el almacenamiento.</td><td>Técnica</td></tr>
 <tr><td>Registro de rutas P2LRN</td><td>P2LRN / navegador</td><td>Permitir que el Service Worker resuelva recursos virtuales verificados del Player/visor.</td><td>Cache Storage</td><td>Persistente mientras el navegador conserve los datos del sitio; sólo se persisten configuraciones de fuente sin query, credenciales ni fragmento.</td><td>Técnica</td></tr>
 </tbody></table></div></section>
-<section id="localstorage"><h2>3. Local Storage</h2><p>El formulario de contacto guarda un timestamp bajo la clave <code>p2lrn-contact-last</code> después de un envío correcto. El código lo usa únicamente como limitación local de 30 segundos. No constituye por sí solo un control de abuso del servidor.</p></section>
-<section id="serviceworker"><h2>4. Service Worker y Cache Storage</h2><p>El visor instala un Service Worker P2LRN para exponer recursos verificados mediante rutas virtuales. El Service Worker puede guardar configuraciones de ruta en Cache Storage para resolver esos recursos. Las respuestas de contenido virtual se sirven con <code>Cache-Control: private, no-store</code>.</p><p>La auditoría del código no muestra que ese registro técnico se utilice con fines de perfilado, analítica o publicidad.</p></section>
-<section id="terceros"><h2>5. Servicios de terceros</h2><p>La web se construye para Netlify y el formulario de contacto envía datos a un proyecto de Supabase. No se han detectado Google Analytics, Google Tag Manager, Plausible, Matomo, YouTube, Vimeo ni fuentes remotas añadidas por la web legal.</p><p>Los registros técnicos que puedan generar las infraestructuras de hosting fuera del código del repositorio no pueden determinarse únicamente mediante esta auditoría y deben confirmarse contractualmente por el responsable del sitio.</p></section>
-<section id="consentimiento"><h2>6. Consentimiento</h2><p>Con el código auditado no existe una categoría opcional de analítica, marketing o preferencias que justifique mostrar un banner ficticio de “Aceptar/Rechazar”. Por ello no se implementa un CMP ni se cargan nuevos rastreadores.</p><p>Si en el futuro se incorporan tecnologías no necesarias, deberán bloquearse hasta obtener una decisión válida y ofrecer aceptar y rechazar al mismo nivel.</p></section>
+<section id="localstorage"><h2>3. Almacenamiento local</h2><p>El formulario de contacto puede guardar temporalmente en el navegador la hora del último envío para evitar repeticiones inmediatas. Esta información permanece en el dispositivo del usuario.</p></section>
+<section id="serviceworker"><h2>4. Funcionamiento offline y caché</h2><p>El visor puede utilizar un Service Worker y Cache Storage para abrir recursos del curso y mejorar determinadas funciones offline. Estos mecanismos se utilizan con fines funcionales, no para publicidad o elaboración de perfiles.</p></section>
+<section id="terceros"><h2>5. Servicios de terceros</h2><p>La web utiliza proveedores de infraestructura para alojamiento y recepción de mensajes. Estos proveedores pueden generar registros técnicos necesarios para seguridad y operación conforme a sus propias políticas y condiciones.</p></section>
+<section id="consentimiento"><h2>6. Consentimiento</h2><p>Actualmente P2LRN no carga categorías opcionales de analítica, publicidad o marketing que requieran un panel de consentimiento propio. Si en el futuro se incorporan tecnologías opcionales, esta política y los controles de consentimiento se actualizarán antes de activarlas.</p></section>
 <section id="configuracion"><h2>7. Configurar cookies y almacenamiento</h2><p>Actualmente no hay categorías opcionales que activar o desactivar desde P2LRN. El enlace “Configurar cookies” del footer vuelve a esta sección para explicar el estado real en lugar de mostrar interruptores sin función.</p></section>
 <section id="navegador"><h2>8. Gestión desde el navegador</h2><p>El usuario puede borrar Local Storage, Cache Storage y el registro del Service Worker desde las herramientas o ajustes de datos del sitio de su navegador. Al hacerlo, el visor puede necesitar registrar de nuevo el Service Worker cuando vuelva a utilizarse.</p>
 <p>Referencia oficial sobre consentimiento de cookies: <a href="https://www.aepd.es/guias/guia-cookies.pdf">Guía de cookies de la AEPD</a>.</p></section>
