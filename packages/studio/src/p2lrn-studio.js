@@ -125,34 +125,34 @@ export class P2LRNStudioElement extends HTMLElement{
   }
   connectedCallback(){
     const q=(s)=>this.shadowRoot.querySelector(s);
-    q('[data-create]').addEventListener('click',()=>this.createCourse().catch((e)=>this.#status(e.message)));
+    q('[data-create]').addEventListener('click',()=>this.createCourse().catch((e)=>this.setStatus(e.message)));
     q('[data-open]').addEventListener('click',()=>q('[data-file]').click());
     q('[data-file]').addEventListener('change',()=>{const f=q('[data-file]').files?.[0];if(f)this.openFile(f);});
-    q('[data-add-menu]').querySelectorAll('[data-add-kind]').forEach((button)=>button.addEventListener('click',()=>this.addContent(button.dataset.addKind).catch((e)=>this.#status(e.message))));
+    q('[data-add-menu]').querySelectorAll('[data-add-kind]').forEach((button)=>button.addEventListener('click',()=>this.addContent(button.dataset.addKind).catch((e)=>this.setStatus(e.message))));
     const help=q('[data-add-help]');
     const hideHelp=()=>{if(!help)return;help.dataset.visible='false';help.hidden=true;};
     const showHelp=(button)=>{if(!help||!button?.dataset.help)return;help.textContent=button.dataset.help;help.hidden=false;help.dataset.visible='true';requestAnimationFrame(()=>{const rect=button.getBoundingClientRect(),tip=help.getBoundingClientRect(),pad=10,gap=8;let left=rect.left+rect.width/2-tip.width/2;left=Math.max(pad,Math.min(left,window.innerWidth-tip.width-pad));let top=rect.bottom+gap;if(top+tip.height>window.innerHeight-pad)top=rect.top-tip.height-gap;help.style.left=Math.round(Math.max(pad,left))+'px';help.style.top=Math.round(Math.max(pad,top))+'px';});};
     q('[data-add-menu]').querySelectorAll('[data-add-kind][data-help]').forEach((button)=>{button.addEventListener('pointerenter',()=>showHelp(button));button.addEventListener('pointerleave',hideHelp);button.addEventListener('focus',()=>showHelp(button));button.addEventListener('blur',hideHelp);});
     q('[data-add-menu]').addEventListener('toggle',()=>{if(!q('[data-add-menu]').open)hideHelp();});
-    q('[data-resource-file]').addEventListener('change',()=>{const f=q('[data-resource-file]').files?.[0];if(f)this.addResourceFile(f).catch((e)=>this.#status(e.message));q('[data-resource-file]').value='';});
-    q('[data-reader-file]').addEventListener('change',()=>{const f=q('[data-reader-file]').files?.[0];if(f)this.importDocument(f).catch((e)=>this.#status(e.message));q('[data-reader-file]').value='';});
-    q('[data-external-file]').addEventListener('change',()=>{const f=q('[data-external-file]').files?.[0];if(f)this.importExternalPackage(f).catch((e)=>this.#status(e.message));q('[data-external-file]').value='';});
+    q('[data-resource-file]').addEventListener('change',()=>{const f=q('[data-resource-file]').files?.[0];if(f)this.addResourceFile(f).catch((e)=>this.setStatus(e.message));q('[data-resource-file]').value='';});
+    q('[data-reader-file]').addEventListener('change',()=>{const f=q('[data-reader-file]').files?.[0];if(f)this.importDocument(f).catch((e)=>this.setStatus(e.message));q('[data-reader-file]').value='';});
+    q('[data-external-file]').addEventListener('change',()=>{const f=q('[data-external-file]').files?.[0];if(f)this.importExternalPackage(f).catch((e)=>this.setStatus(e.message));q('[data-external-file]').value='';});
     q('[data-edit]').addEventListener('click',()=>this.setMode('edit'));
     q('[data-preview]').addEventListener('click',()=>this.setMode('preview'));
     q('[data-download]').addEventListener('click',()=>this.download());
     q('[data-offline]').addEventListener('click',()=>this.showOfflineExportDialog());
     q('[data-review-result]').addEventListener('click',()=>q('[data-result-file]').click());
-    q('[data-result-file]').addEventListener('change',()=>{const file=q('[data-result-file]').files?.[0];if(file)this.reviewOfflineResult(file).catch((e)=>this.#status(e.message));q('[data-result-file]').value='';});
+    q('[data-result-file]').addEventListener('change',()=>{const file=q('[data-result-file]').files?.[0];if(file)this.reviewOfflineResult(file).catch((e)=>this.setStatus(e.message));q('[data-result-file]').value='';});
     q('[data-save]').addEventListener('click',()=>this.saveCourse());
     this.#syncSaveButton();
     this.#syncResourceLibraryButton();
-    if(this.src&&!this.#studio)this.openUrl(this.src).catch((e)=>this.#status(e.message));
+    if(this.src&&!this.#studio)this.openUrl(this.src).catch((e)=>this.setStatus(e.message));
   }
   disconnectedCallback(){this.#revoke();}
   attributeChangedCallback(name,oldValue,newValue){
     if(oldValue===newValue)return;
     if(name==='save-endpoint')this.#syncSaveButton();
-    if(name==='src'&&this.isConnected&&newValue)this.openUrl(newValue).catch((e)=>this.#status(e.message));
+    if(name==='src'&&this.isConnected&&newValue)this.openUrl(newValue).catch((e)=>this.setStatus(e.message));
   }
   set resourceLibrary(value){
     if(value!=null&&(typeof value.list!=='function'||typeof value.get!=='function'))throw new TypeError('resourceLibrary must expose list() and get().');
@@ -204,8 +204,8 @@ export class P2LRNStudioElement extends HTMLElement{
   #renderTree(){
     const nav=this.shadowRoot.querySelector('[data-tree]');nav.replaceChildren();
     const actions=document.createElement('div');actions.className='tree-actions';
-    const unit=document.createElement('button');unit.type='button';unit.textContent='+ Unidad';unit.onclick=()=>this.addUnit().catch((error)=>this.#status(error.message));
-    const lesson=document.createElement('button');lesson.type='button';lesson.textContent='+ Lección';lesson.onclick=()=>this.addLesson().catch((error)=>this.#status(error.message));
+    const unit=document.createElement('button');unit.type='button';unit.textContent='+ Unidad';unit.onclick=()=>this.addUnit().catch((error)=>this.setStatus(error.message));
+    const lesson=document.createElement('button');lesson.type='button';lesson.textContent='+ Lección';lesson.onclick=()=>this.addLesson().catch((error)=>this.setStatus(error.message));
     actions.append(unit,lesson);nav.append(actions);
     const seen=new Set();
     const walk=(entity,depth=0)=>{
@@ -230,7 +230,7 @@ export class P2LRNStudioElement extends HTMLElement{
     const copy=document.createElement('div');const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=subtitle;copy.append(h,p);
     const close=document.createElement('button');close.type='button';close.textContent='Cerrar';close.onclick=()=>dialog.close();head.append(copy,close);shell.append(head);
     const grid=document.createElement('div');grid.className='studio-choice-grid';
-    for(const item of items){const b=document.createElement('button');b.type='button';b.className='studio-choice-card';const strong=document.createElement('strong');strong.textContent=item.label;const small=document.createElement('small');small.textContent=item.description||'';b.append(strong,small);b.onclick=()=>Promise.resolve(onChoose(item)).then(()=>dialog.close()).catch((error)=>this.#status(error.message));grid.append(b);}
+    for(const item of items){const b=document.createElement('button');b.type='button';b.className='studio-choice-card';const strong=document.createElement('strong');strong.textContent=item.label;const small=document.createElement('small');small.textContent=item.description||'';b.append(strong,small);b.onclick=()=>Promise.resolve(onChoose(item)).then(()=>dialog.close()).catch((error)=>this.setStatus(error.message));grid.append(b);}
     shell.append(grid);dialog.append(shell);this.shadowRoot.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
   }
   async #chooseSharedResource(){
@@ -338,7 +338,7 @@ export class P2LRNStudioElement extends HTMLElement{
         input.setAttribute('aria-label',COURSE_RIGHTS_LABELS[key]);
         input.addEventListener('change',()=>{
           try{this.#studio.setCourseRights({[key]:input.value});this.#updateState();}
-          catch(error){this.#status(error.message);}
+          catch(error){this.setStatus(error.message);}
         });
         field.append(caption,input);fields.append(field);
       }
@@ -348,12 +348,12 @@ export class P2LRNStudioElement extends HTMLElement{
       const questionnaire=await this.#studio.readQuestionnaire(entity.id);
       if(questionnaire){
         const renderer=entity.extensions?.['https://p2lrn.org/ext/renderer-preference/1']?.preferred??'https://p2lrn.org/renderer/questionnaire/standard';
-        renderQuestionnaireVisualEditor(sheet,{model:this.#studio,activityId:entity.id,payload:questionnaire.payload,renderer,onChange:()=>this.#updateState(),onStatus:(message)=>this.#status(message)});
+        renderQuestionnaireVisualEditor(sheet,{model:this.#studio,activityId:entity.id,payload:questionnaire.payload,renderer,onChange:()=>this.#updateState(),onStatus:(message)=>this.setStatus(message)});
         stage.append(sheet);return;
       }
       const structured=await this.#studio.readStructuredJson(entity.id);
       if(structured){
-        renderStructuredVisualEditor(sheet,{model:this.#studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>this.#updateState(),onStructureChange:()=>{this.#renderTree();this.#updateState();},onStatus:(message)=>this.#status(message),onSelectActivity:(id)=>{this.#selected=id;this.#renderTree();void this.#renderEditor();},onCreateChild:(id)=>{this.#selected=id;this.#renderTree();const menu=this.shadowRoot.querySelector('[data-add-menu]');if(menu)menu.open=true;}});
+        renderStructuredVisualEditor(sheet,{model:this.#studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>this.#updateState(),onStructureChange:()=>{this.#renderTree();this.#updateState();},onStatus:(message)=>this.setStatus(message),onSelectActivity:(id)=>{this.#selected=id;this.#renderTree();void this.#renderEditor();},onCreateChild:(id)=>{this.#selected=id;this.#renderTree();const menu=this.shadowRoot.querySelector('[data-add-menu]');if(menu)menu.open=true;}});
         stage.append(sheet);return;
       }
       const editable=await this.#studio.readEditableText(entity.id);
@@ -370,7 +370,7 @@ export class P2LRNStudioElement extends HTMLElement{
           const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');
           this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);
           this.#updateState();
-        },onStatus:(message)=>this.#status(message)});
+        },onStatus:(message)=>this.setStatus(message)});
         else sheet.append(surface);
       }else{
         const n=document.createElement('div');n.className='notice';n.textContent='Esta actividad se previsualiza con el Player y su paquete interno permanece encapsulado.';sheet.append(n);
@@ -402,7 +402,7 @@ export class P2LRNStudioElement extends HTMLElement{
     this.dispatchEvent(new CustomEvent('p2lrn-studio-download',{detail:{filename:exported.filename},bubbles:true,composed:true}));
   }
   showOfflineExportDialog(){
-    if(!this.#studio){this.#status('Crea o abre un curso primero.');return;}
+    if(!this.#studio){this.setStatus('Crea o abre un curso primero.');return;}
     const dialog=document.createElement('dialog');dialog.className='studio-choice-dialog';
     const shell=document.createElement('div');shell.className='studio-choice-shell offline-form';
     const head=document.createElement('div');head.className='studio-choice-head';
@@ -522,9 +522,9 @@ export class P2LRNStudioElement extends HTMLElement{
     this.dispatchEvent(new CustomEvent('p2lrn-studio-save',{detail:{filename:exported.filename,coursePath:this.coursePath,result},bubbles:true,composed:true}));
     return result;
   }
-  #status(text){this.shadowRoot.querySelector('[data-meta]').textContent=text}
+  setStatus(text){this.shadowRoot.querySelector('[data-meta]').textContent=text}
   #updateState(){
-    const changes=this.#studio?.changeCount??0;this.#status(changes?changes+' cambio sin guardar'+(changes===1?'':'s'):'Listo');
+    const changes=this.#studio?.changeCount??0;this.setStatus(changes?changes+' cambio sin guardar'+(changes===1?'':'s'):'Listo');
     this.shadowRoot.querySelector('[data-warn]').hidden=!changes;
   }
   #syncSaveButton(){if(this.shadowRoot)this.shadowRoot.querySelector('[data-save]').hidden=!this.saveEndpoint}
