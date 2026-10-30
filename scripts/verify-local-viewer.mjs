@@ -329,9 +329,16 @@ async function runOfflineDoubleClickE2E({launcherPath,chromePath,exportMeta}){
     await waitForEval(offlineCdp,`(()=>{const p=document.querySelector('#player p2lrn-player'),r=p?.shadowRoot;if(!r)return false;if(r.querySelector('.p2lrn-q-card'))return true;const target=[...r.querySelectorAll('button')].find((button)=>button.textContent.includes('Pregunta offline real'));if(target)target.click();return Boolean(r.querySelector('.p2lrn-q-card'));})()`,'the questionnaire rendered from the extracted P2LRN',45000);
     const answered=await evalTop(offlineCdp,`(()=>{const p=document.querySelector('#player p2lrn-player'),r=p?.shadowRoot,input=r?.querySelector('input[type="radio"]:not(:disabled)');if(!input)return false;input.checked=true;input.dispatchEvent(new Event('change',{bubbles:true}));const finish=[...r.querySelectorAll('button:not(:disabled)')].find((button)=>button.textContent.trim()==='Finalizar');if(!finish)return false;finish.click();return true;})()`);
     invariant(answered,'The real offline questionnaire could not be answered and submitted.');
-    const scoreText=await waitForEval(offlineCdp,`(()=>document.querySelector('#player p2lrn-player')?.shadowRoot?.querySelector('.p2lrn-q-score')?.textContent||'')()`,'the questionnaire score');
-    invariant(/1\s*\/\s*1/u.test(scoreText),`Unexpected score from the real offline questionnaire: ${scoreText}`);
-    const interactionScreenshot=await captureVisualEvidence(offlineCdp,'studio-offline-double-click-real-score');
+    const submitted=await waitForEval(offlineCdp,`(()=>{
+      const r=document.querySelector('#player p2lrn-player')?.shadowRoot;
+      const result=r?.querySelector('.p2lrn-q-result');
+      if(!result)return null;
+      return {text:result.textContent||'',scoreVisible:Boolean(result.querySelector('.p2lrn-q-score'))};
+    })()`,'the questionnaire submission result');
+    invariant(submitted.scoreVisible===false&&submitted.text.includes('La corrección se mostrará únicamente cuando lo permita el profesor.'),
+      'Offline questionnaire leaked the score despite deferred feedback: '+JSON.stringify(submitted));
+    const scoreText='oculto al alumno';
+    const interactionScreenshot=await captureVisualEvidence(offlineCdp,'studio-offline-double-click-real-submitted');
     invariant(await evalTop(offlineCdp,`(()=>{const b=document.getElementById('finish');if(!b||b.disabled)return false;b.click();return true;})()`),'The outer offline submission button is unavailable.');
     await waitForEval(offlineCdp,`Boolean(document.querySelector('#finished:not([hidden])'))`,'the final offline submission screen');
     const finalScreenshot=await captureVisualEvidence(offlineCdp,'studio-offline-double-click-real-result');
