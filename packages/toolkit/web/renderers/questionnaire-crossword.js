@@ -139,27 +139,22 @@ export async function render(options){
   }
 
   const actions=el('div',{class:'p2lrn-game-actions'});
-  const check=el('button',{type:'button',class:'p2lrn-game-button'},'Comprobar');
+  const check=el('button',{type:'button',class:'p2lrn-game-button'},'Finalizar actividad');
   const reset=el('button',{type:'button',class:'p2lrn-game-button'},'Reiniciar');
-  check.addEventListener('click',()=>{
-    let total=0,correct=0;
-    grid.forEach((row,r)=>row.forEach((letter,c)=>{
-      if(!letter)return;
-      total+=1;
-      if(normalizeWord(inputs.get(cellKey(r,c))?.value??'')===letter)correct+=1;
-    }));
-    if(correct===total&&!completed){
-      completed=true;
-      for(const entry of entries)runtime.applyPatch(entry.questionId,entry.patch);
-      inputs.forEach(input=>{input.readOnly=true;input.parentElement?.classList.add('is-solved');});
-      check.disabled=true;
-      status.textContent='Crucigrama completado correctamente.';
-      void runtime.finish().then(score=>{
-        if(score)status.textContent='Crucigrama completado: '+score.pointsEarned+'/'+score.pointsPossible+' puntos.';
-      });
-    }else if(correct===total){
-      status.textContent='Crucigrama completado correctamente.';
-    }else status.textContent=correct+' de '+total+' casillas correctas. Revisa las pistas y continúa.';
+  check.addEventListener('click',async()=>{
+    if(completed)return;
+    completed=true;
+    for(const entry of entries){
+      const typed=(entryCells.get(entry.id)??[]).map(key=>normalizeWord(inputs.get(key)?.value??'')).join('');
+      if(typed===entry.word)runtime.applyPatch(entry.questionId,entry.patch);
+    }
+    inputs.forEach(input=>{input.readOnly=true;});
+    check.disabled=true;
+    const score=await runtime.finish({allowMissingRequired:true});
+    const reveal=(runtime.payload.presentation?.showFeedback??'after-submit')!=='never';
+    status.textContent=score&&reveal
+      ?'Crucigrama entregado: '+score.pointsEarned+'/'+score.pointsPossible+' puntos.'
+      :'Crucigrama entregado. La corrección no está disponible para el alumno.';
   });
   reset.addEventListener('click',()=>{
     if(completed&&runtime.reset()===false){
