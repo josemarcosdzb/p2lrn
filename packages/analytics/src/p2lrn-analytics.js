@@ -199,6 +199,8 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
     if(generation!==this.#loadGeneration)return this.#dataset;
     const dataset=analyticsDatasetFromOfflineResult(raw);
     this.#loading=false;
+    this.#dataSource=null;
+    if(this.hasAttribute?.('src'))this.removeAttribute('src');
     this.#dataset=dataset;
     this.#error='';
     this.#selected=null;
