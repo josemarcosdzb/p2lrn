@@ -446,7 +446,6 @@ export class P2LRNStudioElement extends HTMLElement{
           expiresAfterFirstOpenDays:String(expiry.value||'').trim()?Number(expiry.value):null,
           maxAttempts:Number(attempts.value||1),allowResume:resume.checked,activityTracking:metrics.checked,
           participantLabel:participant.value,
-          issuerName:issuer.value.trim(),
         });
         status.textContent='Paquete offline creado.';dialog.close();
       }catch(error){status.textContent=String(error?.message??error);generate.disabled=false;}
