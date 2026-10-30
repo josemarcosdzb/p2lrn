@@ -74,7 +74,10 @@ export function finishPanel(runtime, shell, {label = 'Finalizar actividad'} = {}
       status.textContent = 'Faltan respuestas obligatorias.';
       return;
     }
-    status.textContent = `Resultado: ${score.pointsEarned} / ${score.pointsPossible} puntos (${Math.round((score.normalized ?? 0) * 100)}%).`;
+    const reveal=(runtime.payload?.presentation?.showFeedback ?? 'after-submit') !== 'never';
+    status.textContent = reveal && score.graded !== false
+      ? `Resultado: ${score.pointsEarned} / ${score.pointsPossible} puntos (${Math.round((score.normalized ?? 0) * 100)}%).`
+      : 'Actividad entregada. La corrección no está disponible para el alumno.';
     finish.disabled = true;
   });
   actions.append(finish);
