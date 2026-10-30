@@ -503,7 +503,7 @@ export class P2LRNStudioDocument{
   }
 
   addQuestionnaire(parentId=this.rootId,{title='Cuestionario',language='es',renderer='https://p2lrn.org/renderer/questionnaire/standard',payload=null}={}){
-    const data=payload??{schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Cuestionario'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'after-submit'},questions:[{id:'q1',type:'single-choice',prompt:'Escribe aquí la pregunta',points:1,choices:[{id:'a',text:'Respuesta correcta'},{id:'b',text:'Otra respuesta'}],solution:{choiceIds:['a']}}]};
+    const data=payload??{schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Cuestionario'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'never'},questions:[{id:'q1',type:'single-choice',prompt:'Escribe aquí la pregunta',points:1,choices:[{id:'a',text:'Respuesta correcta'},{id:'b',text:'Otra respuesta'}],solution:{choiceIds:['a']}}]};
     return this.addEmbeddedResource(parentId,{title,language,filename:'questionnaire.json',mediaType:'application/vnd.p2lrn.questionnaire+json',bytes:encoder.encode(JSON.stringify(data,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-questionnaire',activityType:'https://p2lrn.org/type/assessment',renderer});
   }
 
@@ -511,7 +511,7 @@ export class P2LRNStudioDocument{
     const threeDKind={'3d':'ordering','3d-matching':'matching','3d-classification':'classification'}[kind]??null;
     const questionKind=threeDKind??kind;
     const renderers={memory:'https://p2lrn.org/renderer/questionnaire/memory',matching:'https://p2lrn.org/renderer/questionnaire/matching',ordering:'https://p2lrn.org/renderer/questionnaire/ordering',classification:'https://p2lrn.org/renderer/questionnaire/classification','true-false':'https://p2lrn.org/renderer/questionnaire/true-false','fill-blanks':'https://p2lrn.org/renderer/questionnaire/fill-blanks','word-search':'https://p2lrn.org/renderer/questionnaire/word-search',crossword:'https://p2lrn.org/renderer/questionnaire/crossword',rosco:'https://p2lrn.org/renderer/questionnaire/rosco','3d':'https://p2lrn.org/renderer/questionnaire/3d-order-match',standard:'https://p2lrn.org/renderer/questionnaire/standard'};
-    const common={schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Juego'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'after-submit'}};
+    const common={schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Juego'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'never'}};
     let questions;
     if(questionKind==='ordering')questions=[{id:'q1',type:'ordering',prompt:'Ordena los elementos',points:1,items:[{id:'i1',text:'Primero'},{id:'i2',text:'Segundo'},{id:'i3',text:'Tercero'}],solution:{order:['i1','i2','i3']}}];
     else if(questionKind==='classification')questions=[{id:'q1',type:'classification',prompt:'Clasifica los elementos',points:1,items:[{id:'i1',text:'Elemento A'},{id:'i2',text:'Elemento B'}],categories:[{id:'c1',text:'Grupo 1'},{id:'c2',text:'Grupo 2'}],solution:{assignments:[{item:'i1',category:'c1'},{item:'i2',category:'c2'}]}}];
