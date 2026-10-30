@@ -1,6 +1,6 @@
 # P2LRN Offline Assignment / Self-Playing Delivery
 
-Status: **implementation + roadmap** for an additive Reading-System/export mode. The current Windows EXE/CMD/ZIP release supports a native single-file x64 EXE, optional Ed25519 signing of the assignment, a teacher-kept receipt, and result consistency checks. The EXE is **not Authenticode-signed**; no system lockdown, TPM, independently authenticated scores or verified learner identity is provided. Planned items below must not be advertised as shipped. The core .p2lrn format and Player graph remain unchanged.
+Status: **implemented baseline + explicitly marked future assurance work** for an additive Reading-System/export mode. The current Windows EXE/ZIP/CMD delivery supports a native single-file x64 EXE, optional Ed25519 signing of the assignment, a teacher-kept receipt, result consistency checks, persistent native launch history, a teacher-configurable expiry measured from first opening, and direct `.p2lrn-result` import into P2LRN Analytics. The EXE is **not Authenticode-signed**; no system lockdown, TPM, independently authenticated scores or verified learner identity is provided. The core `.p2lrn` format and Player graph remain unchanged.
 
 ## 1. Goal
 
@@ -21,7 +21,7 @@ The currently implemented checks have a deliberately limited scope:
 - legacy CMD packaging also checks the embedded ZIP SHA-256;
 - the return file includes an unkeyed SHA-256 digest, an ordered operation chain and checks comparing raw events, states and scores with their summaries;
 - a student with full control can change answers and recompute all unkeyed digests, or replace runtime files; these checks do not prove the result's authorship;
-- absolute deadlines and attempt limits depend on the student's local clock and browser storage;
+- absolute deadlines depend on the student's local clock; attempt state has browser persistence, while the native Windows launcher additionally persists first/last opening, open count, device binding and first-open expiry outside the extracted course directory;
 - remote collaboration capabilities are disabled, and required remote-only resources block export;
 - high-stakes exams require externally supervised identity, time and machine controls.
 
@@ -29,7 +29,7 @@ Planned options such as durable trusted signing identities, independently authen
 
 ### Native Windows executable (implemented; publisher signing pending)
 
-The Windows x64 launcher is built from `native/offline-launcher` using Go's standard library, with no PowerShell requirement. Studio downloads the site's prebuilt PE executable and checks its SHA-256 against the build manifest before appending the existing ZIP and a fixed 56-byte trailer. The trailer contains `P2LRN-EXE-V1`, the ZIP length and SHA-256. On launch, the EXE verifies the ZIP, rejects traversal, duplicates, symlinks and oversized entries, extracts to a private temp directory, serves resources exclusively on `127.0.0.1` with strict Host validation and opens the system browser. A deterministic per-delivery loopback port maintains the same localStorage origin across restarts.
+The Windows x64 launcher is built from `native/offline-launcher` using Go's standard library, with no PowerShell requirement. Studio downloads the site's prebuilt PE executable and checks its SHA-256 against the build manifest before appending the existing ZIP and a fixed 56-byte trailer. The trailer contains `P2LRN-EXE-V1`, the ZIP length and SHA-256. On launch, the EXE verifies the ZIP, rejects traversal, duplicates, symlinks and oversized entries, extracts to a private temp directory, serves resources exclusively on `127.0.0.1` with strict Host validation and opens the system browser. A deterministic per-delivery loopback port maintains the same localStorage origin across restarts. The launcher also stores a per-delivery state record under the user's configuration directory, including first/last opening, opening count, a pseudonymous local device binding ID, recent launch sessions and the computed expiry. When `expiresAfterFirstOpenDays` is configured, the native launcher refuses to serve the course on that Windows profile after expiry.
 
 The hash alone is not an authenticated signature: a malicious student could repack and recalculate it. Ed25519 authenticates the assignment **only after comparison with the teacher's saved original receipt**. Browser results remain untrusted. The Windows code publisher cannot be authenticated until the **final course-specific EXE is Authenticode-signed** with an approved certificate by an external trusted signing service or by the publisher. Browser-side generation does not have, and must never receive, a private publisher key. Tests and internal use are distinct from a fully signed public production release.
 
@@ -103,6 +103,7 @@ Minimum fields:
     "dueAt": "2026-10-30T20:00:00Z",
     "attemptDurationSeconds": 7200,
     "maxAttempts": 1,
+    "expiresAfterFirstOpenDays": 30,
     "allowResume": true,
     "collaboration": "disabled",
     "network": "deny-by-default",
@@ -128,6 +129,7 @@ Therefore:
 
 - `attemptDurationSeconds` can be enforced locally with monotonic time;
 - `availableFrom` and `dueAt` can be checked and clock anomalies can be recorded;
+- `expiresAfterFirstOpenDays` starts at the first locally recorded opening; the native Windows launcher persists and enforces it on the same Windows user/device;
 - wall-clock rollback/large jumps MUST be included as audit anomalies;
 - the UI MUST NOT describe offline due-date enforcement as trusted absolute time;
 - an optional connected trusted-time token can strengthen absolute dates without changing the offline result format.
@@ -152,6 +154,8 @@ Reuse Host Adapter v1 and the existing runtime-event envelope.
 
 The protected local host persists:
 
+- opening history (first/last opening, count and recent sessions) and first-open expiry state where supported by the launcher;
+- a pseudonymous local device binding ID for comparing returned evidence;
 - activity/progression resume state;
 - normalized score reports;
 - questionnaire attempt lifecycle;
@@ -240,6 +244,7 @@ signature/
 The result manifest binds:
 
 - assignment ID;
+- recorded opening count, first/last opening, expiry, pseudonymous device binding and recent launch sessions when available;
 - original package ID/contentRoot;
 - runtime version/digest;
 - opaque participant assignment token;
@@ -288,6 +293,7 @@ The export dialog should remain simple:
 - Disponible desde
 - Fecha limite
 - Tiempo maximo desde que empieza
+- Caduca N días desde la primera apertura (optional)
 - Intentos maximos
 - Permitir continuar tras cerrar
 - Asignar a alumno (optional opaque token)
@@ -336,3 +342,5 @@ The UI and documentation MUST distinguish:
 - `Verified connected`: optional trusted identity/time/server receipt for higher-stakes assessments.
 
 No level should claim impossibility of cheating on a learner-controlled device.
+
+A completely offline delivery also cannot guarantee that the original file was not copied before first opening or moved to a different computer. The current native expiry is deliberately described as same-device/local enforcement. Strict cross-device single-use or revocation requires a trusted external activation/time service or platform-backed credential.
