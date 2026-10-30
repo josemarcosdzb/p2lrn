@@ -45,7 +45,9 @@ export async function render(options) {
         const body=box.querySelector('.p2lrn-classification-box-items');
         body.replaceChildren();
         trial.objects.filter((item)=>values[item.id]===category.id).forEach((item)=>{
-          const placed=el('button',{type:'button','data-p2lrn-placed':item.id,'aria-label':`Cambiar categoría de ${item.text}`},item.text);
+          const placed=el('button',{type:'button',draggable:'true','data-p2lrn-placed':item.id,'aria-label':`Cambiar categoría de ${item.text}`},item.text);
+          placed.addEventListener('dragstart',(event)=>{event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',item.id);selected=item.id;});
+          placed.addEventListener('dragend',()=>{selected=null;refresh();});
           placed.addEventListener('click',()=>{delete values[item.id];runtime.replaceAnswer(trial.questionId,{classifications:{...values}});selected=item.id;refresh();status.textContent='Elige otra categoría para la ficha.';});
           body.append(placed);
         });
