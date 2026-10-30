@@ -48,7 +48,7 @@ export async function render(options) {
           const placed=el('button',{type:'button',draggable:'true','data-p2lrn-placed':item.id,'aria-label':`Cambiar categoría de ${item.text}`},item.text);
           placed.addEventListener('dragstart',(event)=>{event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',item.id);selected=item.id;});
           placed.addEventListener('dragend',()=>{selected=null;refresh();});
-          placed.addEventListener('click',()=>{delete values[item.id];runtime.replaceAnswer(trial.questionId,{classifications:{...values}});selected=item.id;refresh();status.textContent='Elige otra categoría para la ficha.';});
+          placed.addEventListener('click',()=>{if(runtime.state.completed)return;delete values[item.id];runtime.replaceAnswer(trial.questionId,{classifications:{...values}});selected=item.id;refresh();status.textContent='Elige otra categoría para la ficha.';});
           body.append(placed);
         });
       }
@@ -58,7 +58,7 @@ export async function render(options) {
     };
 
     const place=(itemId,categoryId)=>{
-      if(busy || !trial.categories.some((category)=>category.id===categoryId)) return false;
+      if(runtime.state.completed||busy || !trial.categories.some((category)=>category.id===categoryId)) return false;
       busy=true;
       values[itemId]=categoryId;
       runtime.replaceAnswer(trial.questionId,{classifications:{...values}});
@@ -87,7 +87,7 @@ export async function render(options) {
       },item.text);
       let pointerStart=null;
       button.addEventListener('click',()=>{
-        if(values[item.id]) return;
+        if(runtime.state.completed||values[item.id]) return;
         selected=selected===item.id?null:item.id;
         refresh();
       });
