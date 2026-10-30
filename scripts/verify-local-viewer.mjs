@@ -1243,22 +1243,35 @@ async function verifyStudioSiteUI(cdp){
     await cdp.send('Page.setDownloadBehavior',{behavior:'allow',downloadPath:offlineExportsDir});
     await evalTop(cdp,"document.querySelector('[data-create-course]').click();true");
     await waitForEval(cdp,"document.querySelector('[data-studio-status]')?.textContent==='Curso nuevo listo para editar'",'fresh standalone Studio course');
+    const rightsFilled=await evalTop(cdp,`(()=>{
+      const set=(label,value)=>{
+        const input=document.querySelector('[aria-label="'+label+'"]');
+        if(!input)throw new Error('Missing course rights field '+label);
+        input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}));
+      };
+      set('Autor del contenido','Equipo docente web QA');
+      set('Derechos de autor · Titular de los derechos','Centro web QA');
+      set('Licencia · Condiciones de uso y distribución','Uso educativo QA');
+      return true;
+    })()`);
+    invariant(rightsFilled===true,'Standalone Studio could not set course authorship before offline export.');
     const options=await evalTop(cdp,`(()=>{
       const button=document.querySelector('[data-export-offline]'),review=document.querySelector('[data-review-offline]');
       if(!button||!review)throw new Error('Standalone Studio offline controls missing');
       button.click();
       const dialog=document.querySelector('[data-offline-dialog]'),form=document.querySelector('[data-offline-form]');
       return {open:dialog?.open,formats:[...(form?.elements.namedItem('deliveryFormat')?.options??[])].map(option=>option.value),
-        tries:form?.elements.namedItem('maxAttempts')?.value,reviewInput:!!document.querySelector('[data-offline-result-file]')};
+        tries:form?.elements.namedItem('maxAttempts')?.value,hasIssuer:!!form?.elements.namedItem('issuerName'),
+        hasExpiry:!!form?.elements.namedItem('expiresAfterFirstOpenDays'),reviewInput:!!document.querySelector('[data-offline-result-file]')};
     })()`);
-    invariant(options.open&&options.formats.includes('windows-single')&&options.formats.includes('portable-zip')&&options.reviewInput,'Web Studio offline options are missing: '+JSON.stringify(options));
+    invariant(options.open&&options.formats.includes('windows-single')&&options.formats.includes('portable-zip')&&options.hasIssuer&&options.hasExpiry&&options.reviewInput,'Web Studio offline options are missing: '+JSON.stringify(options));
     const offlineWebScreenshot=await captureElementVisualEvidence(cdp,'studio-web-offline-export-dialog',"document.querySelector('[data-offline-dialog]')",{maxHeight:1200});
-    await evalTop(cdp,"(()=>{const form=document.querySelector('[data-offline-form]');form.elements.namedItem('deliveryFormat').value='portable-zip';form.elements.namedItem('participantLabel').value='Alumno web';form.requestSubmit();return true})()");
+    await evalTop(cdp,"(()=>{const form=document.querySelector('[data-offline-form]');form.elements.namedItem('deliveryFormat').value='portable-zip';form.elements.namedItem('issuerName').value='Profesor web QA';form.elements.namedItem('expiresAfterFirstOpenDays').value='30';form.elements.namedItem('participantLabel').value='Alumno web';form.requestSubmit();return true})()");
     const zipFile=await waitForDownloadedFile(offlineExportsDir,'.p2lrn-offline.zip',90000);
     const zip=await readFile(zipFile);
     invariant(zip.byteLength>100000&&zip[0]===0x50&&zip[1]===0x4b,'Standalone Studio offline ZIP is invalid or incomplete.');
     await waitForEval(cdp,"!document.querySelector('[data-offline-dialog]').open",'standalone ZIP export completed');
-    await evalTop(cdp,"(()=>{document.querySelector('[data-export-offline]').click();const form=document.querySelector('[data-offline-form]');form.elements.namedItem('deliveryFormat').value='windows-single';form.requestSubmit();return true})()");
+    await evalTop(cdp,"(()=>{document.querySelector('[data-export-offline]').click();const form=document.querySelector('[data-offline-form]');form.elements.namedItem('deliveryFormat').value='windows-single';form.elements.namedItem('issuerName').value='Profesor web QA';form.elements.namedItem('expiresAfterFirstOpenDays').value='30';form.requestSubmit();return true})()");
     const cmdFile=await waitForDownloadedFile(offlineExportsDir,'.p2lrn-offline.cmd',90000);
     const cmdText=(await readFile(cmdFile)).toString('utf8');
     invariant(cmdText.startsWith('@echo off')&&cmdText.includes('__P2LRN_PAYLOAD__')&&cmdText.includes('powershell.exe')&&cmdText.length>100000,'Standalone Studio single-file Windows delivery is missing its embedded runtime.');
@@ -1278,17 +1291,24 @@ async function verifyStudioSiteUI(cdp){
       throw new Error('Missing real ZIP entry '+name);
     }
     const exportedAssignment=JSON.parse(storedEntry(zip,'www/assignment.json').toString('utf8'));
+    invariant(exportedAssignment.provenance?.issuerName==='Profesor web QA'&&exportedAssignment.provenance?.author==='Equipo docente web QA'&&exportedAssignment.provenance?.copyrightHolder==='Centro web QA',
+      'Standalone Studio offline ZIP lost provenance: '+JSON.stringify(exportedAssignment.provenance));
+    invariant(exportedAssignment.policy?.expiresAfterFirstOpenDays===30,'Standalone Studio offline ZIP lost first-open expiry: '+JSON.stringify(exportedAssignment.policy));
     const canonical=(v)=>{
       if(v===null||typeof v==='boolean'||typeof v==='string'||typeof v==='number')return JSON.stringify(v);
       if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';
       return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';
     };
+    const scoreOp={type:'score',value:{normalized:.75},timestamp:'2026-10-30T09:01:00Z',context:{entityId:'quiz-1'}};
+    const activeOp={type:'event',value:{type:'p2lrn:active-time',payload:{totalActiveMs:10000}},timestamp:'2026-10-30T09:02:00Z',context:{entityId:'quiz-1'}};
     const resultBody={schema:'https://p2lrn.org/schema/offline-result/1',version:'1',
-      assignment:{assignmentId:exportedAssignment.assignmentId,contentRoot:exportedAssignment.contentRoot,participantLabel:'Alumno web'},
-      runtime:{playerVersion:exportedAssignment.runtime.playerVersion},
-      attempt:{number:1,elapsedSeconds:27},summary:{latestScore:{normalized:.75}},
-      submission:{answers:[{entityId:'a',questionId:'q1',answer:{choiceIds:['choice-a']}}],scores:[]},
-      analytics:{events:[{type:'p2lrn:ready'}],activeTimeMs:10000},audit:{anomalies:[]}};
+      assignment:{assignmentId:exportedAssignment.assignmentId,packageId:exportedAssignment.packageId,contentRoot:exportedAssignment.contentRoot,title:exportedAssignment.title,provenance:exportedAssignment.provenance,participantToken:exportedAssignment.participant.assignmentToken,participantLabel:'Alumno web',policy:exportedAssignment.policy},
+      runtime:{playerVersion:exportedAssignment.runtime.playerVersion,runtimeDigest:exportedAssignment.runtime.runtimeDigest},
+      attempt:{id:'attempt-web',number:1,status:'submitted',startedAt:'2026-10-30T09:00:00Z',finishedAt:'2026-10-30T09:03:00Z',elapsedSeconds:180},
+      usage:{firstOpenedAt:'2026-10-30T08:59:00Z',lastOpenedAt:'2026-10-30T09:03:00Z',openCount:2,expiresAt:'2026-11-29T08:59:00Z',deviceBindingId:'qa-device',sessions:[{id:'open-1',openedAt:'2026-10-30T08:59:00Z',source:'windows-native'},{id:'open-2',openedAt:'2026-10-30T09:00:00Z',source:'windows-native'}]},
+      summary:{latestScore:{normalized:.75},stateSnapshots:0,events:1,activeTimeMs:10000,answers:0,openings:2},
+      submission:{states:[],answers:[],scores:[scoreOp]},
+      analytics:{events:[activeOp],activeTimeMs:10000},audit:{anomalies:[],recordOrder:[['score',0],['event',0]]}};
     const validResult={...resultBody,integrity:{algorithm:'sha256',payloadDigest:'sha256:'+createHash('sha256').update(canonical(resultBody)).digest('hex')}};
     async function openReview(data){
       const payload=JSON.stringify(JSON.stringify(data));
@@ -1297,14 +1317,16 @@ async function verifyStudioSiteUI(cdp){
       return waitForEval(cdp,"(()=>{const dialog=document.querySelector('[data-offline-review-dialog]');return dialog?.open?dialog.querySelector('[data-offline-review-content]')?.textContent:null})()",'standalone Studio result-review dialog',16000);
     }
     const validText=await openReview(validResult);
-    invariant(validText.includes('SHA-256 del resultadoCoincide')&&validText.includes('Curso originalCoincide')&&validText.includes('Alumno web')&&validText.includes('75 %'),
-      'Standalone Studio did not accept a matching integrity-valid offline result: '+validText);
+    const validAnalyticsEnabled=await evalTop(cdp,"!document.querySelector('[data-offline-open-analytics]')?.disabled");
+    invariant(validText.includes('SHA-256 del resultadoCoincide')&&validText.includes('Curso originalCoincide')&&validText.includes('Alumno web')&&validText.includes('75 %')&&validText.includes('Aperturas registradas2')&&validAnalyticsEnabled,
+      'Standalone Studio did not accept a matching integrity-valid offline result or enable Analytics: '+validText);
     const reviewScreenshot=await captureElementVisualEvidence(cdp,'studio-web-offline-result-review-valid',"document.querySelector('[data-offline-review-dialog]')",{maxHeight:1000});
     await evalTop(cdp,"document.querySelector('[data-offline-review-dialog]').close()");
     const tampered=structuredClone(validResult);tampered.attempt.elapsedSeconds=71;
     const invalidText=await openReview(tampered);
-    invariant(invalidText.includes('SHA-256 del resultadoNO coincide')&&invalidText.includes('Curso originalCoincide'),
-      'Standalone Studio failed to flag a deliberately tampered offline result: '+invalidText);
+    const invalidAnalyticsBlocked=await evalTop(cdp,"document.querySelector('[data-offline-open-analytics]')?.disabled===true");
+    invariant(invalidText.includes('SHA-256 del resultadoNO coincide')&&invalidText.includes('Curso originalCoincide')&&invalidAnalyticsBlocked,
+      'Standalone Studio failed to flag a deliberately tampered offline result or block Analytics: '+invalidText);
     await evalTop(cdp,"document.querySelector('[data-offline-review-dialog]').close()");
     offlineWeb={formats:options.formats,zip:{name:basename(zipFile),bytes:zip.byteLength},windowsSingle:{name:basename(cmdFile),bytes:Buffer.byteLength(cmdText)},
       reviewAvailable:webReview.fileInput,matchingResultAccepted:true,tamperedResultRejected:true,screenshot:offlineWebScreenshot,reviewScreenshot};
