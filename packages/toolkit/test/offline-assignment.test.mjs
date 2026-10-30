@@ -193,7 +193,10 @@ test('offline exporter creates a self-playing ZIP with a real Studio course, loc
   assert.match(app,/__p2lrn\/launch-state/);
   assert.match(app,/openCount/);
   assert.match(app,/DELIVERY_EXPIRED/);
-  assert.match(app,/Comprueba el origen antes de abrir/);
+  const page=decoder.decode(entries.get('www/index.html'));
+  assert.match(page,/Comprueba el origen antes de abrir/);
+  assert.match(page,/course-author/);
+  assert.match(page,/rights-holder/);
   assert.doesNotMatch(app,/createHttpCollaborationProvider|createMemoryCollaborationHub/);
   const launcher=decoder.decode(entries.get('runtime/serve.ps1'));
   assert.match(launcher,/IPAddress\]::Loopback/);
