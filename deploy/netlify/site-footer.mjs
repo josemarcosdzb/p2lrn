@@ -9,10 +9,7 @@ export const SITE_FOOTER_GROUPS = Object.freeze([
       ['/crear-cursos-interactivos/', 'Crear cursos interactivos'],
       ['/juegos-educativos-3d/', 'Juegos educativos 3D'],
       ['/cursos-offline/', 'Cursos sin LMS'],
-      ['/docs/paquetes/', 'Crear paquetes'],
       ['/demo/', 'Player y visor'],
-      ['/docs/questionnaires/', 'Cuestionarios y juegos'],
-      ['/docs/ejemplos/', 'Ejemplos'],
     ],
   },
   {
@@ -27,11 +24,10 @@ export const SITE_FOOTER_GROUPS = Object.freeze([
   {
     label: 'Recursos',
     links: [
-      ['/docs/toolkit/', 'Toolkit'],
-      ['/docs/cli/', 'Herramientas CLI'],
+      ['/analytics/', 'P2LRN Analytics'],
+      ['/skills/', 'Skills para IA'],
       ['/docs/troubleshooting/', 'Solución de problemas'],
       ['/contacto/', 'Contacto'],
-      ['/index.json', 'Índice técnico (JSON)'],
     ],
   },
 ]);
