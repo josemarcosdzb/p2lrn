@@ -97,6 +97,7 @@
   <form data-offline-form>
     <header class="studio-offline-head"><div><p class="eyebrow">ENTREGA SIN LMS</p><h2 id="studio-offline-title">Entrega offline autorreproducible</h2><p>Incluye este curso y el Player. El alumno lo abre en su navegador y devuelve un archivo <code>.p2lrn-result</code>. <a href="/docs/entrega-offline/" target="_blank" rel="noopener">Ver cómo funciona</a>.</p></div><button type="button" class="button" data-offline-cancel>Cerrar</button></header>
     <div class="studio-offline-fields">
+      <label>Quién entrega este curso<input name="issuerName" type="text" maxlength="300" required placeholder="Profesor, centro u organización"></label>
       <label>Formato de entrega<select name="deliveryFormat" required><option value="windows-exe">Windows 64 bits · ejecutable .exe (un archivo)</option><option value="portable-zip">ZIP portable · extraer y abrir</option><option value="windows-single">Windows · CMD (alternativa)</option></select></label>
       <label>Identificador del alumno (opcional)<input name="participantLabel" type="text" maxlength="160" placeholder="Se puede indicar al abrir la entrega"></label>
       <label>Disponible desde (opcional)<input name="availableFrom" type="datetime-local"></label>
