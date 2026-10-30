@@ -25,14 +25,14 @@
 <a href="/docs/toolkit/">Toolkit</a>
 <a href="/contacto/">Contacto</a>
 </nav>
-<div class="header-meta"><span class="status"><i></i><span data-health>Build CDN</span></span><span data-player-version>0.5.0-alpha.11</span></div>
+
 <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
 </header>
 <main class="legal-main" id="top">
 <header class="legal-hero">
 <p class="eyebrow">LEGAL / PRIVACIDAD</p>
 <h1>Política de privacidad</h1>
-<p>Información basada en los tratamientos de datos que pueden comprobarse en el código y en la configuración de base de datos auditada.</p>
+<p>Información sobre los datos que se tratan al utilizar el formulario de contacto y los servicios necesarios para que funcione la web.</p>
 <p class="legal-updated">Última actualización: 1 de octubre de 2026</p>
 </header>
 <div class="legal-layout">
@@ -41,17 +41,14 @@
 <a href="#responsable">Responsable</a><a href="#datos">Datos tratados</a><a href="#finalidad">Finalidad</a><a href="#base">Base jurídica</a><a href="#destinatarios">Destinatarios</a><a href="#seguridad">Seguridad</a><a href="#conservacion">Conservación</a><a href="#derechos">Derechos</a><a href="#automatizadas">Decisiones automatizadas</a><a href="#actualizaciones">Actualizaciones</a>
 </aside>
 <article class="legal-article">
-<section id="responsable"><h2>1. Responsable del tratamiento</h2>
-<div class="legal-status"><strong>Documento no definitivo en este punto.</strong><p>El repositorio no permite determinar con seguridad la identidad jurídica y los datos de contacto del responsable del tratamiento. Esta política no publica un nombre, NIF, domicilio o correo legal no confirmados y debe completarse antes de considerarse información de privacidad definitiva.</p></div></section>
-<section id="datos"><h2>2. Datos tratados</h2><p>El único flujo de recogida directa de datos personales observado en la web pública es el formulario de contacto.</p>
-<ul><li><strong>Datos enviados por el usuario:</strong> nombre, email, asunto y mensaje.</li><li><strong>Dato técnico enviado por la web:</strong> ruta de la página desde la que se realiza el envío.</li><li><strong>Datos añadidos por la base de datos:</strong> identificador UUID, fecha/hora de creación, <code>source=website</code> y estado inicial <code>new</code>.</li></ul>
-<p>La tabla auditada no contiene columnas específicas de IP o user-agent.</p></section>
-<section id="finalidad"><h2>3. Finalidad observada</h2><p>El formulario está diseñado para recibir y gestionar consultas técnicas sobre P2LRN. No se ha detectado en el código auditado una suscripción a newsletter, elaboración de perfiles o utilización del formulario para publicidad.</p></section>
-<section id="base"><h2>4. Base jurídica</h2><p>La finalidad técnica puede comprobarse en el código, pero la base jurídica concreta debe ser confirmada por el responsable atendiendo a la naturaleza de cada consulta y a su relación con el interesado. El repositorio no permite fijarla de forma segura sin esa información.</p></section>
-<section id="destinatarios"><h2>5. Proveedores y destinatarios técnicos</h2><p>El repositorio confirma que el sitio se prepara para su publicación mediante Netlify y que el formulario envía los mensajes a Supabase. El código no permite determinar por sí solo las condiciones contractuales, ubicación efectiva del tratamiento, subencargados o transferencias internacionales aplicables; esos extremos deben confirmarse por el responsable.</p></section>
-<section id="seguridad"><h2>6. Controles comprobados</h2><p>La tabla <code>contact_messages</code> tiene RLS activado. La política auditada permite únicamente <code>INSERT</code> a los roles públicos <code>anon</code> y <code>authenticated</code>, con validaciones de longitud, email, <code>source=website</code> y estado inicial <code>new</code>. No se han observado permisos <code>SELECT</code>, <code>UPDATE</code> o <code>DELETE</code> concedidos a esos roles.</p><p>La clave utilizada en el navegador es una clave publicable. No se ha observado una clave <code>service_role</code> en el frontend auditado.</p></section>
-<section id="conservacion"><h2>7. Conservación</h2><p>El esquema de base de datos no define un periodo automático de conservación de los mensajes. El responsable debe establecer y documentar un plazo o criterio de conservación antes de considerar esta política completa.</p></section>
-<section id="derechos"><h2>8. Derechos</h2><p>Cuando resulte aplicable el RGPD, el interesado puede ejercer los derechos que correspondan sobre sus datos, incluido acceso, rectificación, supresión, limitación, oposición y portabilidad en los casos previstos legalmente. También puede presentar una reclamación ante la autoridad de control competente.</p><p>El canal jurídico para ejercer estos derechos debe ser confirmado por el responsable; no se inventa un email distinto del formulario técnico existente.</p><p>Referencia normativa: <a href="https://eur-lex.europa.eu/legal-content/ES/TXT/?uri=CELEX:32016R0679">Reglamento (UE) 2016/679</a>.</p></section>
+<section id="responsable"><h2>1. Responsable y contacto</h2><p>Las comunicaciones enviadas mediante esta web se gestionan en el marco del proyecto P2LRN. Para consultas sobre privacidad o ejercicio de derechos, utiliza la <a href="/contacto/">página de contacto</a> e indica <strong>Privacidad</strong> en el asunto.</p></section>
+<section id="datos"><h2>2. Datos tratados</h2><p>El formulario solicita nombre, dirección de correo electrónico, asunto y mensaje. También puede registrarse la ruta desde la que se envía la consulta y la información técnica estrictamente necesaria para prevenir abuso y prestar el servicio.</p></section>
+<section id="finalidad"><h2>3. Finalidad</h2><p>Los datos se utilizan para recibir, organizar y responder consultas sobre P2LRN, sus herramientas, licencias e integraciones. El formulario no suscribe al usuario a comunicaciones comerciales ni crea un perfil publicitario.</p></section>
+<section id="base"><h2>4. Base jurídica</h2><p>El tratamiento se realiza para atender la solicitud iniciada por la persona que contacta y, cuando corresponda, para gestionar medidas previas a una relación contractual o intereses legítimos vinculados a la seguridad y funcionamiento del sitio.</p></section>
+<section id="destinatarios"><h2>5. Proveedores de servicio</h2><p>La web utiliza proveedores de infraestructura para alojar el sitio y recibir los mensajes del formulario. En el despliegue actual se utilizan servicios de Netlify y Supabase. Estos proveedores pueden tratar datos técnicos conforme a sus propias condiciones y a los acuerdos aplicables.</p></section>
+<section id="seguridad"><h2>6. Seguridad</h2><p>El formulario aplica validaciones de entrada y controles de acceso para evitar que los mensajes queden expuestos públicamente. También se aplican medidas de limitación de abuso. Ningún sistema puede garantizar un riesgo cero, por lo que las medidas se revisan conforme evoluciona el servicio.</p></section>
+<section id="conservacion"><h2>7. Conservación</h2><p>Los mensajes se conservan durante el tiempo necesario para gestionar la consulta y atender las obligaciones legales o de seguridad que puedan resultar aplicables. Cuando dejan de ser necesarios, deben eliminarse o anonimizarse de acuerdo con los criterios de conservación del servicio.</p></section>
+<section id="derechos"><h2>8. Derechos</h2><p>Cuando resulte aplicable el RGPD, puedes solicitar acceso, rectificación, supresión, limitación, oposición o portabilidad en los casos previstos legalmente. Envía la solicitud desde <a href="/contacto/">Contacto</a> indicando <strong>Privacidad</strong> en el asunto. También puedes reclamar ante la autoridad de control competente.</p></section>
 <section id="automatizadas"><h2>9. Decisiones automatizadas</h2><p>No se ha observado en el flujo de contacto código de perfilado ni decisiones automatizadas con efectos jurídicos sobre el usuario.</p></section>
 <section id="actualizaciones"><h2>10. Actualizaciones</h2><p>Esta política deberá revisarse si cambian los formularios, proveedores, permisos de base de datos, finalidades o tecnologías de almacenamiento.</p></section>
 <p class="legal-back"><a href="#top">Volver arriba ↑</a></p>
