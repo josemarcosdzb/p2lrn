@@ -24,7 +24,7 @@ export async function render(options) {
   const right = el('div', {class: 'p2lrn-match-column'});
   const status = statusNode('Selecciona un elemento de la izquierda y después su pareja de la derecha.');
   let selected = null;
-  const solved = new Set();
+  const links = new Map();
   const leftButtons = new Map();
   const rightButtons = new Map();
   let resizeObserver = null;
@@ -37,9 +37,9 @@ export async function render(options) {
       if (!rect.width || !rect.height) return;
       svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
       svg.replaceChildren();
-      for (const id of solved) {
+      for (const [id, target] of links) {
         const l = leftButtons.get(id);
-        const r = rightButtons.get(id);
+        const r = rightButtons.get(target);
         if (!l || !r) continue;
         const lr = l.getBoundingClientRect();
         const rr = r.getBoundingClientRect();
@@ -53,6 +53,7 @@ export async function render(options) {
         line.setAttribute('x2', String(x2));
         line.setAttribute('y2', String(y2));
         line.setAttribute('class', 'p2lrn-match-line');
+        line.setAttribute('stroke', ['#2563eb','#a855f7','#059669','#d97706','#db2777'][pairs.findIndex(item=>item.id===id)%5]);
         const c1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         c1.setAttribute('cx', String(x1));
         c1.setAttribute('cy', String(y1));
@@ -68,39 +69,42 @@ export async function render(options) {
     });
   };
 
-  const chooseLeft = (pair) => {
-    if (solved.has(pair.id)) return;
-    selected = pair;
-    leftButtons.forEach((node, id) => node.classList.toggle('is-selected', id === pair.id));
-    status.textContent = 'Origen seleccionado. Elige su pareja.';
-  };
-
-  const chooseRight = (pair) => {
-    if (!selected) {
-      status.textContent = 'Selecciona primero un elemento de la izquierda.';
-      return;
-    }
-    if (selected.id !== pair.id) {
-      status.textContent = 'Esa relación no es correcta. Inténtalo de nuevo.';
-      return;
-    }
-    solved.add(pair.id);
-    runtime.applyPatch(pair.questionId, pair.patch);
-    const l = leftButtons.get(pair.id);
-    const r = rightButtons.get(pair.id);
-    if (l) { l.classList.add('is-solved'); l.disabled = true; }
-    if (r) { r.classList.add('is-solved'); r.disabled = true; }
-    selected = null;
-    leftButtons.forEach((node) => node.classList.remove('is-selected'));
+  const refreshLinks = () => {
+    const colors=['#2563eb','#a855f7','#059669','#d97706','#db2777'];
+    leftButtons.forEach((node,id)=>{
+      const linked=links.has(id),color=colors[pairs.findIndex(item=>item.id===id)%colors.length];
+      node.classList.toggle('is-solved',linked);
+      node.style.borderColor=linked?color:'';
+      node.style.backgroundColor=linked?color+'18':'';
+    });
+    rightButtons.forEach((node,id)=>{
+      const owner=[...links].find(([,target])=>target===id)?.[0];
+      const linked=Boolean(owner),color=colors[pairs.findIndex(item=>item.id===owner)%colors.length];
+      node.classList.toggle('is-solved',linked);
+      node.style.borderColor=linked?color:'';
+      node.style.backgroundColor=linked?color+'18':'';
+    });
     redraw();
-    status.textContent = `Relación correcta. ${solved.size}/${pairs.length}.`;
-    if (solved.size === pairs.length) {
-      void runtime.finish().then((score) => {
-        status.textContent = score
-          ? `Emparejamiento completado: ${score.pointsEarned}/${score.pointsPossible} puntos.`
-          : 'Emparejamiento completado.';
-      });
+  };
+  const chooseLeft = (pair) => {
+    selected = pair;
+    leftButtons.forEach((node,id)=>node.classList.toggle('is-selected',id===pair.id));
+    status.textContent='Selecciona su pareja. Puedes cambiar la relación antes de finalizar.';
+  };
+  const chooseRight = (pair) => {
+    if(!selected){status.textContent='Selecciona primero un elemento de la izquierda.';return;}
+    const source=selected;
+    for(const [id,target] of [...links])if(target===pair.id&&id!==source.id){
+      links.delete(id);
+      const previous=pairs.find(item=>item.id===id);
+      if(previous)runtime.applyPatch(previous.questionId,{kind:'pair-set',leftId:previous.patch.leftId,rightId:''});
     }
+    links.set(source.id,pair.id);
+    runtime.applyPatch(source.questionId,{kind:'pair-set',leftId:source.patch.leftId,rightId:pair.patch.rightId});
+    selected=null;
+    leftButtons.forEach(node=>node.classList.remove('is-selected'));
+    refreshLinks();
+    status.textContent=`Relaciones establecidas: ${links.size} de ${pairs.length}. Puedes modificarlas sin conocer la corrección.`;
   };
 
   for (const pair of pairs) {
@@ -118,9 +122,13 @@ export async function render(options) {
     right.append(button);
   }
 
+  const actions=el('div',{class:'p2lrn-game-actions'});
+  const finish=el('button',{type:'button',class:'p2lrn-game-button'},'Finalizar actividad');
+  finish.addEventListener('click',async()=>{if(links.size!==pairs.length){status.textContent='Relaciona todos los elementos antes de finalizar.';return;}const score=await runtime.finish();if(score){status.textContent='Actividad enviada.';finish.disabled=true;}});
+  actions.append(finish);
   columns.append(left, right);
   board.append(svg, columns);
-  shell.append(board, status);
+  shell.append(board, status, actions);
 
   if (typeof ResizeObserver !== 'undefined') {
     resizeObserver = new ResizeObserver(redraw);
