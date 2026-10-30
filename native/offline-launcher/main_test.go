@@ -130,6 +130,15 @@ func TestLaunchStatePersistsOpeningsAndExpiry(t *testing.T) {
 
   statePath, err := launchStateFile(p.hash)
   if err != nil { t.Fatal(err) }
+  rollback := second
+  rollback.LastOpenedAt = time.Now().UTC().Add(2 * time.Hour).Format(time.RFC3339Nano)
+  rollbackData, err := json.Marshal(rollback)
+  if err != nil { t.Fatal(err) }
+  if err := os.WriteFile(statePath, rollbackData, 0600); err != nil { t.Fatal(err) }
+  if _, err := registerLaunch(root, p); err == nil || !strings.Contains(strings.ToLower(err.Error()), "reloj") {
+    t.Fatalf("clock rollback was not blocked: %v", err)
+  }
+
   expired := second
   expired.FirstOpenedAt = time.Now().UTC().Add(-48 * time.Hour).Format(time.RFC3339Nano)
   expired.ExpiresAt = time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339Nano)
