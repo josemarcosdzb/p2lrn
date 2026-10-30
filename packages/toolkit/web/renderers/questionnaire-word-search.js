@@ -67,9 +67,10 @@ export async function render(options) {
     status.textContent=`Respuesta encontrada. ${found.size}/${words.length}.`;
     if(found.size===words.length){
       void runtime.finish().then((score)=>{
-        status.textContent=score
+        const reveal=(runtime.payload.presentation?.showFeedback??'after-submit')!=='never';
+        status.textContent=score&&reveal
           ? `Sopa completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`
-          : 'Sopa completada.';
+          : 'Sopa completada. Actividad enviada.';
       });
     }
   };
