@@ -122,6 +122,7 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   #selected=null;
   #learnerPage=1;
   #gradePage=1;
+  #loadGeneration=0;
 
   constructor(){
     super();
@@ -161,6 +162,7 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   set dataSource(value){this.#dataSource=value??null;}
 
   async refresh(){
+    const generation=++this.#loadGeneration;
     this.#loading=true;this.#error='';this.#render();
     try{
       let next;
@@ -170,15 +172,17 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
         if(!response.ok)throw new Error('No se pudo cargar Analytics (HTTP '+response.status+').');
         next=await response.json();
       }else next=this.#dataset;
+      if(generation!==this.#loadGeneration)return this.#dataset;
       this.#dataset=normalizeAnalyticsDataset(next);
       this.#recompute(false);
       this.dispatchEvent(new CustomEvent('p2lrn-analytics-refresh',{detail:{dataset:this.#dataset},bubbles:true,composed:true}));
       return this.#dataset;
     }catch(error){
+      if(generation!==this.#loadGeneration)return this.#dataset;
       this.#error=String(error?.message??error);
       this.dispatchEvent(new CustomEvent('p2lrn-analytics-error',{detail:{error},bubbles:true,composed:true}));
       throw error;
-    }finally{this.#loading=false;this.#render();}
+    }finally{if(generation===this.#loadGeneration){this.#loading=false;this.#render();}}
   }
   setView(view){this.view=view;}
   selectLearner(id){this.#selected={type:'learner',id:String(id)};this.#render();}
@@ -190,8 +194,11 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
     return csv;
   }
   async importOfflineResult(value){
+    const generation=++this.#loadGeneration;
     const raw=value&&typeof value.text==='function'?await value.text():value;
+    if(generation!==this.#loadGeneration)return this.#dataset;
     const dataset=analyticsDatasetFromOfflineResult(raw);
+    this.#loading=false;
     this.#dataset=dataset;
     this.#error='';
     this.#selected=null;
