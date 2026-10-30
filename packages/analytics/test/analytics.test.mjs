@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeAnalyticsDataset,computeAnalyticsSnapshot,filterAnalyticsDataset,createAnalyticsStore,createHttpAnalyticsDataSource,analyticsToCsv,analyticsDatasetFromOfflineResult} from '../src/model.js';
+import {createHash} from 'node:crypto';
+import {normalizeAnalyticsDataset,computeAnalyticsSnapshot,filterAnalyticsDataset,createAnalyticsStore,createHttpAnalyticsDataSource,analyticsToCsv,analyticsDatasetFromOfflineResult,verifyOfflineResultIntegrity} from '../src/model.js';
 
 const seed={
   generatedAt:'2026-10-28T10:00:00Z',
@@ -102,4 +103,34 @@ test('offline results become Analytics datasets with openings and informative gr
   const snapshot=computeAnalyticsSnapshot(dataset,{now:Date.parse('2026-10-02T12:00:00Z')});
   assert.equal(snapshot.overview.learners,1);
   assert.equal(snapshot.overview.averageGrade,null,'offline informational scores must not become official grades');
+});
+
+function canonicalJson(value){
+  if(value===null||typeof value==='boolean'||typeof value==='string'||typeof value==='number')return JSON.stringify(value);
+  if(Array.isArray(value))return '['+value.map(canonicalJson).join(',')+']';
+  return '{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonicalJson(value[key])).join(',')+'}';
+}
+function signedOfflineResult(body){
+  return {...body,integrity:{algorithm:'sha256',payloadDigest:'sha256:'+createHash('sha256').update(canonicalJson(body)).digest('hex')}};
+}
+
+test('direct Analytics import detects post-generation tampering',async()=>{
+  const body={
+    schema:'https://p2lrn.org/schema/offline-result/1',version:'1',
+    assignment:{assignmentId:'urn:uuid:qa',packageId:'course-qa',contentRoot:'sha256:'+'1'.repeat(64),title:'Curso QA',participantToken:'qa-user',participantLabel:'Alumno QA',policy:{}},
+    attempt:{id:'attempt-qa',number:1,status:'submitted',startedAt:'2026-10-30T08:00:00Z',finishedAt:'2026-10-30T08:30:00Z',elapsedSeconds:1800},
+    usage:{firstOpenedAt:'2026-10-30T07:55:00Z',lastOpenedAt:'2026-10-30T08:30:00Z',openCount:1,sessions:[{id:'s1',openedAt:'2026-10-30T07:55:00Z',source:'windows-native'}]},
+    summary:{latestScore:{normalized:.75},activeTimeMs:900000,openings:1},
+    submission:{states:[],answers:[],scores:[]},
+    analytics:{events:[],activeTimeMs:900000},
+    audit:{anomalies:[]},
+  };
+  const valid=signedOfflineResult(body);
+  const checked=await verifyOfflineResultIntegrity(valid);
+  assert.equal(checked.valid,true);
+  const tampered=structuredClone(valid);
+  tampered.attempt.elapsedSeconds=9999;
+  const rejected=await verifyOfflineResultIntegrity(tampered);
+  assert.equal(rejected.valid,false);
+  assert.notEqual(rejected.declared,rejected.calculated);
 });
