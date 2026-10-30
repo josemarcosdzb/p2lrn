@@ -549,6 +549,7 @@ async function generateOfflineDelivery(){
   const minutes=String(details.get('durationMinutes')||'').trim();
   const options={
     runtimeBaseUrl:new URL('/player/current/dist/',document.baseURI).href,
+    issuerName:String(details.get('issuerName')||'').trim(),
     participantLabel:String(details.get('participantLabel')||'').trim(),
     availableFrom:String(details.get('availableFrom')||'').trim()||null,
     dueAt:String(details.get('dueAt')||'').trim()||null,
