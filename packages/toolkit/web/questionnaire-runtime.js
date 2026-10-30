@@ -407,12 +407,13 @@ export class QuestionnaireRuntime {
     if (this.state.completionReason === 'time-limit' || this.state.completionReason === 'question-time-limit') {
       wrap.append(el('p', {class: 'p2lrn-q-notice'}, 'La actividad se cerró al agotarse el tiempo declarado por el paquete.'));
     }
-    if (score.graded) {
+    const reveal=(this.payload.presentation?.showFeedback ?? 'after-submit') !== 'never';
+    if (score.graded && reveal) {
       wrap.append(el('p', {class: 'p2lrn-q-score'}, `${score.raw} / ${score.max} puntos`));
     } else {
-      wrap.append(el('p', {}, 'Este cuestionario usa corrección del host. El paquete no inventa una nota local.'));
+      wrap.append(el('p', {}, 'Respuestas entregadas. La corrección se mostrará únicamente cuando lo permita el profesor.'));
     }
-    if ((this.payload.presentation?.showFeedback ?? 'after-submit') !== 'never') {
+    if (reveal) {
       const resultById = new Map(score.questions.map((result) => [result.questionId, result]));
       const list = el('ol', {class: 'p2lrn-q-results'});
       this.session.questionsInOrder().forEach((q) => {
