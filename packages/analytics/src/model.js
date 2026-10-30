@@ -211,6 +211,7 @@ export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
   const courseId=semantic(assignment.packageId||assignment.contentRoot||assignment.assignmentId,'offline-course');
   const attemptId=semantic(attempt.id,key(learnerId,courseId,'offline-attempt',attempt.number??1));
   const title=text(courseTitle??assignment.title??record(result.assignmentProof).title,'Curso offline P2LRN');
+  const provenance=record(assignment.provenance);
   const startedAt=timestamp(attempt.startedAt??usage.firstOpenedAt);
   const finishedAt=timestamp(attempt.finishedAt??usage.lastOpenedAt);
   const activeTimeMs=Math.max(0,finite(analytics.activeTimeMs,summary.activeTimeMs)??0);
@@ -266,7 +267,7 @@ export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
   return normalizeAnalyticsDataset({
     generatedAt:finishedAt??timestamp(usage.lastOpenedAt)??new Date().toISOString(),
     learners:[{id:learnerId,name:participantLabel,status:'active',metadata:{offline:true}}],
-    courses:[{id:courseId,title,status:'active',metadata:{offline:true,contentRoot:assignment.contentRoot??null}}],
+    courses:[{id:courseId,title,status:'active',metadata:{offline:true,contentRoot:assignment.contentRoot??null,issuerName:text(provenance.issuerName,''),author:text(provenance.author,''),copyrightHolder:text(provenance.copyrightHolder,''),license:text(provenance.license,'')}}],
     enrollments:[{
       id:key(learnerId,courseId,'offline-enrollment'),learnerId,courseId,status:'active',
       startedAt:timestamp(usage.firstOpenedAt??attempt.startedAt),dueAt:timestamp(record(assignment.policy).dueAt),
@@ -290,7 +291,7 @@ export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
       contentRoot:assignment.contentRoot??null,openCount:Math.max(0,finite(usage.openCount,summary.openings)??0),
       firstOpenedAt:timestamp(usage.firstOpenedAt),lastOpenedAt:timestamp(usage.lastOpenedAt),
       expiresAt:timestamp(usage.expiresAt),deviceBindingId:text(usage.deviceBindingId,''),
-      integrity:clone(record(result.integrity)),anomalies:clone(asArray(record(result.audit).anomalies)),
+      provenance:clone(provenance),integrity:clone(record(result.integrity)),anomalies:clone(asArray(record(result.audit).anomalies)),
     },
   });
 }
