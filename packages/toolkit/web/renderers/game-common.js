@@ -79,6 +79,7 @@ export function finishPanel(runtime, shell, {label = 'Finalizar actividad'} = {}
       ? `Resultado: ${score.pointsEarned} / ${score.pointsPossible} puntos (${Math.round((score.normalized ?? 0) * 100)}%).`
       : 'Actividad entregada. La corrección no está disponible para el alumno.';
     finish.disabled = true;
+    shell.querySelectorAll('button,input,textarea,select').forEach(control=>{control.disabled=true;});
   });
   actions.append(finish);
   shell.append(actions, status);
