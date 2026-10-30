@@ -416,9 +416,11 @@ export class P2LRNStudioElement extends HTMLElement{
     const format=document.createElement('select');
     format.innerHTML='<option value="windows-single">Windows · un archivo (doble clic)</option><option value="portable-zip">ZIP portable · extraer y abrir</option>';
     formatWrap.append(formatLabel,format);grid.append(formatWrap);
+    const issuer=field('Quién entrega este curso','text');issuer.maxLength=300;issuer.required=true;issuer.placeholder='Profesor, centro u organización';
     const available=field('Disponible desde','datetime-local');
     const due=field('Fecha límite','datetime-local');
     const duration=field('Tiempo máximo desde que empieza (minutos)','number');duration.min='1';duration.step='1';duration.placeholder='Sin límite';
+    const expiry=field('Caduca tras la primera apertura (días)','number');expiry.min='1';expiry.max='3650';expiry.step='1';expiry.placeholder='Ej. 30';
     const attempts=field('Intentos máximos','number','1');attempts.min='1';attempts.max='100';attempts.step='1';
     const participant=field('Alumno / identificador (opcional)','text');participant.maxLength=160;participant.placeholder='Si se deja vacío, lo escribirá el alumno';
     shell.append(grid);
@@ -427,7 +429,7 @@ export class P2LRNStudioElement extends HTMLElement{
     const fixed=document.createElement('div');fixed.className='offline-fixed';
     const collaboration=document.createElement('div');collaboration.innerHTML='<strong>Colaboración</strong><span>Desactivada en la entrega offline</span>';
     const network=document.createElement('div');network.innerHTML='<strong>Servicios externos</strong><span>Denegados; Player, curso y métricas viajan dentro de la entrega</span>';fixed.append(collaboration,network);shell.append(fixed);
-    const note=document.createElement('p');note.className='offline-note';note.textContent='Las fechas se aplican localmente. Sin una autoridad externa, la hora absoluta depende del reloj del equipo del alumno.';shell.append(note);
+    const note=document.createElement('p');note.className='offline-note';note.textContent='La entrega sólo se genera si el curso identifica autor y titular de derechos. El alumno verá esos datos y quién entrega el curso antes de comenzar. La caducidad desde la primera apertura se aplica localmente; sin una autoridad externa no impide de forma absoluta copiar el archivo a otro equipo.';shell.append(note);
     const status=document.createElement('div');status.className='offline-status';status.setAttribute('role','status');shell.append(status);
     const actions=document.createElement('div');actions.className='offline-actions';const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancelar';cancel.onclick=()=>dialog.close();
     const generate=document.createElement('button');generate.type='button';generate.className='primary';generate.textContent='Crear paquete offline';
@@ -438,8 +440,10 @@ export class P2LRNStudioElement extends HTMLElement{
         const minutes=String(duration.value||'').trim();
         await this.downloadOfflineAssignment({
           deliveryFormat:format.value,
+          issuerName:String(issuer.value||'').trim(),
           availableFrom:toIso(available),dueAt:toIso(due),
           attemptDurationSeconds:minutes?Math.round(Number(minutes)*60):null,
+          expiresAfterFirstOpenDays:String(expiry.value||'').trim()?Number(expiry.value):null,
           maxAttempts:Number(attempts.value||1),allowResume:resume.checked,activityTracking:metrics.checked,
           participantLabel:participant.value,
         });
