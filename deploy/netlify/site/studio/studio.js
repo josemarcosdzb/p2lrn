@@ -49,8 +49,10 @@ const offlineReviewContent=document.querySelector('[data-offline-review-content]
 const offlineReceiptPrompt=document.querySelector('[data-offline-receipt-prompt]');
 const offlineReceiptButton=document.querySelector('[data-offline-receipt-download]');
 const offlineReviewReceipt=document.querySelector('[data-offline-review-receipt]');
+const offlineAnalyticsButton=document.querySelector('[data-offline-open-analytics]');
 let latestTeacherReceipt=null;
 let latestOfflineResultFile=null;
+let latestOfflineParsedResult=null;
 const blockSelect=document.querySelector('[data-block]');
 const fontFamily=document.querySelector('[data-font-family]');
 const fontSize=document.querySelector('[data-font-size]');
@@ -551,6 +553,7 @@ async function generateOfflineDelivery(){
     availableFrom:String(details.get('availableFrom')||'').trim()||null,
     dueAt:String(details.get('dueAt')||'').trim()||null,
     attemptDurationSeconds:minutes?Number(minutes)*60:null,
+    expiresAfterFirstOpenDays:String(details.get('expiresAfterFirstOpenDays')||'').trim()?Number(details.get('expiresAfterFirstOpenDays')):null,
     maxAttempts:Number(details.get('maxAttempts')||1),
     allowResume:offlineForm.elements.namedItem('allowResume').checked,
     activityTracking:offlineForm.elements.namedItem('activityTracking').checked,
@@ -584,6 +587,8 @@ function addOfflineReviewRow(host,label,value){
 async function reviewOfflineDelivery(file){
   if(!studio)throw new Error('Abre primero el curso original para comprobar su correspondencia.');
   latestOfflineResultFile=file;
+  latestOfflineParsedResult=null;
+  if(offlineAnalyticsButton)offlineAnalyticsButton.disabled=true;
   if(file.size>32*1024*1024)throw new Error('El archivo de resultados supera 32 MiB.');
   setStatus('Comprobando resultado offline…');
   const exported=await exportP2LRNPackage(studio);
@@ -595,6 +600,8 @@ async function reviewOfflineDelivery(file){
     expectedContentRoot:exported.manifest.integrity.contentRoot,
     trustedReceipt,
   });
+  latestOfflineParsedResult=parsed.result;
+  if(offlineAnalyticsButton)offlineAnalyticsButton.disabled=false;
   const content=offlineReviewContent;
   content.replaceChildren();
   const problems=[];
@@ -629,6 +636,12 @@ async function reviewOfflineDelivery(file){
     :'NO coincide: revisar datos declarados');
   addOfflineReviewRow(content,'Alumno',parsed.summary.participantLabel||'Sin identificar');
   addOfflineReviewRow(content,'Intento',parsed.summary.attemptNumber);
+  addOfflineReviewRow(content,'Aperturas registradas',parsed.summary.openings);
+  addOfflineReviewRow(content,'Primera apertura',parsed.summary.firstOpenedAt?new Date(parsed.summary.firstOpenedAt).toLocaleString():'No registrada');
+  addOfflineReviewRow(content,'Última apertura',parsed.summary.lastOpenedAt?new Date(parsed.summary.lastOpenedAt).toLocaleString():'No registrada');
+  addOfflineReviewRow(content,'Caducidad local',parsed.summary.expiresAt?new Date(parsed.summary.expiresAt).toLocaleString():'Sin caducidad por primera apertura');
+  addOfflineReviewRow(content,'Sesiones registradas',parsed.summary.sessions.length);
+  addOfflineReviewRow(content,'Identificador local del dispositivo',parsed.summary.deviceBindingId||'No disponible');
   const score=parsed.summary.latestScore?.normalized;
   addOfflineReviewRow(content,'Puntuación declarada (no oficial)',score==null
     ?'Sin puntuación':Math.round(Number(score)*10000)/100+' %');
@@ -759,6 +772,16 @@ offlineResultInput?.addEventListener('change',()=>{
   if(file)void reviewOfflineDelivery(file).catch((error)=>setStatus('No se pudo revisar la entrega: '+error.message));
 });
 document.querySelector('[data-offline-review-close]')?.addEventListener('click',()=>offlineReviewDialog.close());
+offlineAnalyticsButton?.addEventListener('click',()=>{
+  if(!latestOfflineParsedResult)return;
+  try{
+    sessionStorage.setItem('p2lrn:analytics:offline-result',JSON.stringify(latestOfflineParsedResult));
+    window.open('/analytics/?import=offline-result','_blank','noopener');
+    setStatus('Resultado enviado a P2LRN Analytics');
+  }catch(error){
+    setStatus('No se pudo abrir Analytics: '+String(error?.message||error));
+  }
+});
 saveDraftButton?.addEventListener('click',()=>void persistDraft().catch((error)=>setStatus('No se pudo guardar el borrador local: '+error.message)));
 recoverDraftButton?.addEventListener('click',()=>void recoverLatestDraft().catch((error)=>setStatus(error.message)));
 clearDraftButton?.addEventListener('click',()=>void discardLocalDraft().catch((error)=>setStatus(error.message)));
