@@ -16,7 +16,6 @@ export async function render(options) {
     dragGhost?.remove();
     dragGhost=null;
     const trial=game.data.trials[trialIndex];
-    const expected=new Map(trial.assignments.map((item)=>[item.itemId,item.categoryId]));
     const values={...runtime.answer(trial.questionId).classifications};
     let selected=null;
     let busy=false;
@@ -46,31 +45,25 @@ export async function render(options) {
         const body=box.querySelector('.p2lrn-classification-box-items');
         body.replaceChildren();
         trial.objects.filter((item)=>values[item.id]===category.id).forEach((item)=>{
-          body.append(el('span',{'data-p2lrn-placed':item.id},item.text));
+          const placed=el('button',{type:'button','data-p2lrn-placed':item.id,'aria-label':`Cambiar categoría de ${item.text}`},item.text);
+          placed.addEventListener('click',()=>{delete values[item.id];selected=item.id;refresh();status.textContent='Elige otra categoría para la ficha.';});
+          body.append(placed);
         });
       }
       if(solvedCount===trial.objects.length){
-        status.textContent='Todos los conceptos están en su categoría correcta.';
+        status.textContent='Has colocado todas las fichas. Finaliza para entregar tus respuestas.';
       }
     };
 
     const place=(itemId,categoryId)=>{
-      if(busy || values[itemId]) return false;
-      if(expected.get(itemId)!==categoryId){
-        status.textContent='Esa categoría no es correcta. Prueba otra.';
-        selected=itemId;
-        refresh();
-        return false;
-      }
+      if(busy || !trial.categories.some((category)=>category.id===categoryId)) return false;
       busy=true;
       values[itemId]=categoryId;
       runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId});
       selected=null;
       busy=false;
       refresh();
-      status.textContent=classificationIsCorrect(values,expected)
-        ? 'Clasificación completada correctamente.'
-        : 'Ficha colocada correctamente.';
+      status.textContent='Ficha colocada. Puedes cambiarla de categoría antes de finalizar.';
       return true;
     };
 
