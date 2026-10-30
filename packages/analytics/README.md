@@ -10,18 +10,17 @@ npm install @p2lrn/analytics@0.5.0-alpha.11
 
 \`\`\`js
 import '@p2lrn/analytics';
-import {createHttpAnalyticsDataSource} from '@p2lrn/analytics';
-
 const panel=document.querySelector('p2lrn-analytics');
-panel.dataSource=createHttpAnalyticsDataSource({url:'/api/p2lrn/analytics/snapshot'});
-await panel.refresh();
+// Datos del curso seleccionado: métricas de Player y resultados validados.
+// No se obtienen del contenido .p2lrn ni requieren un endpoint HTTP.
+panel.data = datasetCurso;
 \`\`\`
 
 ## CDN
 
 \`\`\`html
 <script src="https://p2lrn.netlify.app/analytics/current/dist/p2lrn-analytics.js"></script>
-<p2lrn-analytics src="/api/p2lrn/analytics/snapshot"></p2lrn-analytics>
+<p2lrn-analytics id="analytics-curso"></p2lrn-analytics>
 \`\`\`
 
 ## Frontera de confianza
@@ -29,3 +28,7 @@ await panel.refresh();
 El paquete no guarda identidades ni historial del alumno dentro de \`.p2lrn\`. El Host entrega el dataset del panel. Una nota sólo se trata como oficial cuando \`grades[].authoritative === true\`. Los scores de navegador, progreso, actividad e intentos se muestran como evidencia separada.
 
 Las señales de seguimiento son reglas transparentes de inactividad, progreso, nota e intentos; no son un modelo predictivo opaco.
+
+## Métricas del curso frente a contenido del curso
+
+El archivo `.p2lrn` define actividades y estructura, no almacena por sí solo el historial de todos los estudiantes. Para un curso concreto, reúne los eventos y estados que Player registre y los resultados `.p2lrn-result` validados, forma un dataset compatible (`learners`, `courses`, `enrollments`, `attempts`, `grades`, `events`) y asígnalo con `panel.data = datasetCurso`. El dataset debe corresponder al curso seleccionado. El origen HTTP es opcional cuando una plataforma necesita consultar varios alumnos y notas oficiales autorizadas. No se debe atribuir una nota oficial a una puntuación local sin `authoritative: true` desde una fuente de confianza.
