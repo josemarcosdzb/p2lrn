@@ -74,7 +74,7 @@ export function finishPanel(runtime, shell, {label = 'Finalizar actividad'} = {}
       status.textContent = 'Faltan respuestas obligatorias.';
       return;
     }
-    const reveal=(runtime.payload?.presentation?.showFeedback ?? 'after-submit') !== 'never';
+    const reveal=(runtime.payload?.presentation?.showFeedback ?? 'never') !== 'never';
     status.textContent = reveal && score.graded !== false
       ? `Resultado: ${score.pointsEarned} / ${score.pointsPossible} puntos (${Math.round((score.normalized ?? 0) * 100)}%).`
       : 'Actividad entregada. La corrección no está disponible para el alumno.';
