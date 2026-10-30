@@ -417,7 +417,6 @@ export class P2LRNStudioElement extends HTMLElement{
     format.innerHTML='<option value="windows-single">Windows · un archivo (doble clic)</option><option value="portable-zip">ZIP portable · extraer y abrir</option>';
     formatWrap.append(formatLabel,format);grid.append(formatWrap);
     const issuer=field('Quién entrega este curso','text');issuer.maxLength=300;issuer.required=true;issuer.placeholder='Profesor, centro u organización';
-    const issuer=field('Quién entrega este curso','text');issuer.maxLength=300;issuer.required=true;issuer.placeholder='Profesor, centro u organización';
     const available=field('Disponible desde','datetime-local');
     const due=field('Fecha límite','datetime-local');
     const duration=field('Tiempo máximo desde que empieza (minutos)','number');duration.min='1';duration.step='1';duration.placeholder='Sin límite';
