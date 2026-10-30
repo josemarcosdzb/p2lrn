@@ -5,12 +5,23 @@
 
 - El resultado pedido es un **archivo `.p2lrn` real adjunto a esta conversación**, no explicaciones, JSON sin empaquetar, ni promesas de conexión local.
 - No necesitas ni debes solicitar túnel, URL pública, MCP, contraseñas, acceso al PC ni instalación de software en Windows. Esta habilidad utiliza únicamente los archivos y las herramientas de ejecución disponibles en el entorno de ChatGPT.
-- Utiliza `scripts/p2lrn_package.py` **de este paquete** para crear y verificar el ZIP P2LRN Core 0.4.0, vigente como contrato de formato en Toolkit 0.5.0-alpha.11 según auditoría de 2026-10-27. No escribas de memoria un ZIP sin verificar y no inventes rutas de descarga.
+- Cuando no haya Toolkit oficial disponible y sólo se necesiten cursos nuevos sencillos, utiliza `scripts/p2lrn_package.py` **de este paquete** para crear y verificar el ZIP P2LRN Core 0.4.0, vigente como contrato de formato en Toolkit 0.5.0-alpha.11 según la matriz verificada de 2026-10-30. No escribas de memoria un ZIP sin verificar y no inventes rutas de descarga.
 - Si el entorno no tiene herramienta para ejecutar Python o entregar archivos, informa de esa limitación; no declares un curso generado sin ejecutar y verificar el script.
 - No confundas esta habilidad con la integración MCP: **no** abre cursos del PC, edita cuentas LMS, publica en npm ni sincroniza AulaP2P; recibe solicitudes por chat y entrega paquetes.
 - El script es un empaquetador autocontenido para nuevas creaciones en un subconjunto de Core 0.4.0; no afirmes equivalencia completa con `@p2lrn/toolkit`, ni pruebas visuales del Player. Para importación/edición sin pérdida de un `.p2lrn` arbitrario necesitas el Creator oficial; no sobrescribas un original.
 
-## Flujo para crear un curso
+
+## Prioridad: APIs oficiales cuando el entorno dispone de ellas (30-10-2026)
+
+- Antes de crear, editar, abrir, importar, validar o leer documentos, consultar `references/official-runtime.md`, `references/official-packages.json` y detectar `Node >=22` y `@p2lrn/toolkit` con `node scripts/p2lrn_official.mjs capabilities --root <proyecto>`. No instalar nada ni iniciar conexiones automáticamente.
+- Cuando Toolkit oficial esté **instalado, autorizado y en la versión exacta probada**, ejecutar `scripts/p2lrn_official.mjs` para `create`, `verify`, `inspect`, `open`, `edit`, `build` y `read-document`. Usa P2LRNAuthoringWorkspace, Reader y Document Reader oficiales: no duplica motores.
+- Para importar/editar un curso previo, usar `open` en proyecto separado, `edit`, `build` a salida nueva y `verify`. Nunca modificar el archivo original. Si el Toolkit está ausente o no coincide la versión, no simular edición mediante Python.
+- Para Studio (WYSIWYG, importaciones, exportación ejecutable Windows), Player (juegos y reproducción visual) y Analytics (Host autorizado), utilizar los **componentes oficiales**, no prometer que un ZIP de Skill incluye sus binarios. Antes de afirmar que funcionan, ejecutarlos realmente en el navegador o entorno autorizado.
+- Para MCP y LMS/LTI: requerir herramientas, permisos y credenciales autorizadas; una Skill importada no habilita conexión ni publicación.
+- **Alternativa limitada**: si Node o el Toolkit no están disponibles pero hay Python, `scripts/p2lrn_package.py` sigue admitido **solo para cursos nuevos simples** en el subconjunto Core 0.4.0, siempre con validación. No declarar cobertura total.
+- La licencia base es NCSL; su Anexo A del 30-10-2026 permite ciertos usos comerciales del formato, Toolkit, Player y cursos, y define condiciones específicas de Studio/Analytics sin modificar. Leer NOTICE y LICENSE; no afirmar que todo el conjunto sea Open Source OSI.
+
+## Flujo alternativo Python para nuevos cursos simples
 
 1. Interpreta la petición y elige un título, idioma y estructura didáctica apropiados. Si faltan detalles no esenciales, avanza con valores razonables y explícitos.
 2. Incluye únicamente los metadatos de autoría solicitados por el usuario: `author`, `createdAt`, `license` y `copyrightHolder`.
@@ -40,11 +51,11 @@
 - Para **validar** un `.p2lrn` proporcionado: `python <SKILL_ROOT>/scripts/p2lrn_package.py verify archivo.p2lrn`. No ejecuta JavaScript ni recursos remotos.
 - Si el usuario aporta un paquete y pide **editarlo**, inspecciónalo antes de cambiar nada. Esta edición offline no tiene implementado el round-trip universal de todos los perfiles P2LRN. Si no puedes garantizar la preservación completa, ofrece crear un **archivo nuevo** con el contenido explícitamente aportado, preservando intacto el original; no lo presentes como edición sin pérdidas.
 - Para funcionalidades adicionales no implementadas (SCORM/cmi5, LMS/LTI, colaboración, firma digital de evaluaciones, proyectos 3D que requieran ejecución propia) informa de la capacidad pendiente sin inventar compatibilidad.
-- **Paquetes autorreproducibles**: este empaquetador solo entrega `.p2lrn`. Para crear `.p2lrn-offline.cmd`, `.p2lrn-offline.zip` y revisar `.p2lrn-result`, dirigir a Studio/Player oficiales. No intentes crear un lanzador con un script ad hoc ni lo presentes como firmado criptográficamente.
+- **Paquetes autorreproducibles**: este empaquetador solo entrega `.p2lrn`. Para crear `.p2lrn-offline.exe`, `.p2lrn-offline.cmd`, `.p2lrn-offline.zip` y revisar `.p2lrn-result`, dirigir a Studio/Player oficiales. No intentes crear un lanzador con un script ad hoc ni lo presentes como firmado criptográficamente.
 - **Conexión MCP**: si el usuario necesita leer sus cursos locales, crear borradores persistentes o conectar un cliente de IA, usar el servidor P2LRN MCP del repositorio solo si realmente está instalado/autorizado. Esta Skill no instala ni inicia ese MCP, no puede afirmar herramientas conectadas y no representa sus permisos. La matriz y las 23 herramientas actuales están en `references/toolkit-parity.md`.
 
 ## Resultado mínimo verificable
 
-El script `scripts/test_p2lrn_package.py` es la regresión del empaquetador; antes de publicar cambios en esta Skill, ejecutar `python -m unittest discover -s scripts -p "test_*.py"`. Los límites de ZIP (miembro, total y cantidad) son deliberados para esta versión offline y no límites normativos de P2LRN.
+El empaquetador Python tiene regresiones en `scripts/test_p2lrn_package.py` y el adaptador oficial se prueba con `scripts/test_p2lrn_official_real.mjs` contra Toolkit compilado; antes de publicar cambios en esta Skill, ejecutar `python -m unittest discover -s scripts -p "test_*.py"`. Los límites de ZIP (miembro, total y cantidad) son deliberados para esta versión offline y no límites normativos de P2LRN.
 
 La carpeta `assets/ejemplo-curso.json` contiene un blueprint de muestra con lección, examen, juego de relacionar y ordenar 3D. Cuando un usuario pida «prueba el plugin», úsalo para crear un paquete demostrativo distinto y devuelve el `.p2lrn` generado.

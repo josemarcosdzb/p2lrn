@@ -150,7 +150,9 @@ for(const [platform,prefix] of expectedPlatforms){
   const digest=createHash('sha256').update(bytes).digest('hex');
   if(item.sha256!==digest||item.bytes!==bytes.length)errors.push('Skill ZIP integrity mismatch for '+platform);
   const members=zipEntries(bytes);
-  if(!members.includes(prefix+'SKILL.md')||!members.includes(prefix+'scripts/p2lrn_package.py')||
+  if(!members.includes(prefix+'SKILL.md')||!members.includes(prefix+'scripts/p2lrn_official.mjs')||
+     !members.includes(prefix+'references/official-packages.json')||
+     !members.includes(prefix+'references/official-runtime.md')||!members.includes(prefix+'scripts/p2lrn_package.py')||
      !members.includes(prefix+'scripts/test_p2lrn_package.py')||members.some(n=>/__pycache__|\.pyc$/i.test(n)))
     errors.push('Skill archive missing entrypoint, package writer, tests or includes bytecode: '+platform);
   if(!landing?.includes('href="'+item.url+'"')||!guide?.includes('href="'+item.url+'"'))

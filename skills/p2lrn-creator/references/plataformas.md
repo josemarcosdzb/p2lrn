@@ -1,9 +1,11 @@
-# Instalación de la Skill P2LRN por plataforma
+# P2LRN: instalación por plataforma
 
-- **ChatGPT / Codex:** paquete de plugin Skills only para subir al portal de OpenAI, sujeto a su revisión. Se necesita ejecución de Python y entrega de archivos.
-- **Claude:** importar la carpeta comprimida `p2lrn-creator/SKILL.md` donde la cuenta admita Skills; en Claude Code, disponer de Python 3.10+. Importación personal no significa publicación global.
-- **Gemini:** la disponibilidad de Skills web depende de la cuenta; Gemini CLI utiliza `.gemini/skills/p2lrn-creator/` y Python 3.10+. La importación web no garantiza ejecución Python.
-- **Grok:** Grok Build puede descubrir `.grok/skills/p2lrn-creator/` en el proyecto; Grok web es una modalidad distinta y sus capacidades deben confirmarse.
-- **MCP:** instalación y autorización separadas. Estas Skills no acceden a carpetas locales, equipos ni LMS sin herramientas adicionales.
+- **ChatGPT y Codex:** plugin Skills only, importación o revisión pública independientes. Para usar el Toolkit oficial debe haber Node 22+, proyecto con `@p2lrn/toolkit` instalado y herramientas de ejecución. Python por sí solo tiene funciones limitadas.
+- **Claude / Claude Code:** importar la Skill cuando esté disponible; Claude Code puede ejecutar la API Node en un proyecto autorizado. No implica publicación pública ni concesión automática de permisos.
+- **Gemini / Gemini CLI:** Skills de Gemini CLI bajo `.gemini/skills/p2lrn-creator/`. La versión web puede tener límites distintos y no garantizar Node/Python.
+- **Grok / Grok Build:** directorio `.grok/skills/p2lrn-creator/`. Grok web no es lo mismo y la importación no certifica ejecución.
+- **MCP:** servidor separado. Instalar esta Skill no conecta un MCP ni permite escritura. LMS/LTI requiere contexto, credenciales y Host autorizados.
 
-Los ZIP no incluyen Player visual, juegos 3D ejecutables, conectores LMS, firma antifraude ni exportación autoejecutable Windows: se utilizan Studio, Player y Toolkit para esas capacidades.
+Todas las distribuciones contienen `scripts/p2lrn_official.mjs` para el Toolkit real, versión de compatibilidad en `references/official-packages.json`, referencias para Player, Studio, Analytics y alternativa Python. No prometer funcionalidades que el entorno no ejecuta.
+
+**Licencia:** desde el Anexo A del 30-10-2026 ciertos usos comerciales de formatos/Toolkit/Player están permitidos. Studio/Analytics tienen condiciones distintas. Consultar `NOTICE.md` y LICENSE, no usar una declaración legal genérica del conjunto.

@@ -1,0 +1,14 @@
+{
+  "schema": "https://p2lrn.org/schema/skill-toolkit-compatibility/1",
+  "apiVersion": 1,
+  "format": "0.4.0",
+  "packages": {
+    "toolkit": "0.5.0-alpha.11",
+    "player": "0.5.0-alpha.11",
+    "studio": "0.5.0-alpha.11",
+    "analytics": "0.5.0-alpha.11"
+  },
+  "requireNode": ">=22",
+  "checkedOn": "2026-10-30",
+  "source": "https://github.com/josemarcosfrodo/p2lrn"
+}

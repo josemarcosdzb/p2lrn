@@ -1,6 +1,6 @@
 # Matriz de cobertura — Skill instalada, Toolkit, MCP y Studio
 
-Verificado contra `josemarcosfrodo/p2lrn/main`, 27-10-2026; Toolkit `0.5.0-alpha.11`, P2LRN Core `0.4.0`, MCP Node `0.1.0`.
+Verificado contra `josemarcosfrodo/p2lrn/main`, 30-10-2026; Toolkit `0.5.0-alpha.11`, P2LRN Core `0.4.0`, MCP Node `0.1.0`.
 
 **Regla:** no equiparar una Skill instalada con un conector MCP conectado; no anunciar funcionamiento visual sin pruebas del Player. Si cambian las versiones, volver a comprobar fuentes y tests de `main`.
 
@@ -22,6 +22,10 @@ Verificado contra `josemarcosfrodo/p2lrn/main`, 27-10-2026; Toolkit `0.5.0-alpha
 | Leer/editar cursos del PC | No; archivos de chat únicamente | Sí, tras configurar carpeta explícita y permisos | Studio/Reader local |
 | Firma digital de resultados anti-manipulación | No | No | El SHA-256 del resultado offline no es firma de confianza |
 
+## Adaptador oficial de Authoring en esta Skill
+
+Cuando Toolkit oficial 0.5.0-alpha.11 esté instalado y autorizado, `scripts/p2lrn_official.mjs` ejecuta operaciones reales `create`, `verify`, `inspect`, `open`, `edit`, `build`, `read-document`. `P2LRNAuthoringWorkspace` se invoca con métodos tipados y exportación nueva; se bloquean versiones no verificadas, sustituciones de archivo y `force`. `Player`, `Studio`, `Analytics` precisan componentes de navegador/Host y no vienen incluidos como binarios en el ZIP. Consultar `references/official-runtime.md` y `official-packages.json`.
+
 ## Contrato del MCP real
 
 Se registran 23 herramientas en `integration/mcp/server.mjs`: ocho de lectura (`p2lrn_list_courses`, `p2lrn_read_course`, `p2lrn_read_entity`, `p2lrn_read_plan`, `p2lrn_validate_course`, `p2lrn_read_text_member`, `p2lrn_list_game_renderers`, `p2lrn_search_metadata`) y quince de escritura **solo si está activada**: `p2lrn_draft_new`, `p2lrn_draft_create`, `p2lrn_draft_read`, `p2lrn_draft_set_text`, `p2lrn_draft_set_rights`, `p2lrn_draft_add_unit`, `p2lrn_draft_set_children`, `p2lrn_draft_add_file`, `p2lrn_draft_add_web_content`, `p2lrn_draft_add_url`, `p2lrn_draft_add_native_activity`, `p2lrn_draft_edit_native_activity`, `p2lrn_draft_add_composite`, `p2lrn_draft_set_progression`, `p2lrn_draft_export`.
@@ -41,3 +45,7 @@ Las extensiones más recientes del repositorio incluyen eventos de aprendizaje, 
 3. En el repositorio, construir Toolkit y ejecutar `integration/mcp/npm run check`, después el CI Windows de `main`. Revisar el catálogo MCP y actualizar esta matriz si se añaden/eliminan herramientas.
 4. Para un curso con lanzamiento offline o firma, usar Studio/exportador oficial y las pruebas de Windows; esta Skill genera únicamente `.p2lrn`.
 5. Actualizar o volver a instalar el bundle de Skill para reflejar cambios. Modificar el repositorio GitHub no actualiza automáticamente una Skill ya registrada en la cuenta.
+
+## Permisos actualizados (30-10-2026)
+
+La licencia mantiene el nombre P2LRN-NCSL 1.0 pero el Anexo A concede permisos adicionales para formato, Toolkit, Player y lanzador, incluidos determinados usos educativos comerciales. Studio y Analytics sin modificar disponen de autorización institucional delimitada; su redistribución en SaaS comercial sigue restringida. No describir la licencia como Open Source OSI. Consultar `LICENSE` y `NOTICE.md` vigentes.

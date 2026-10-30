@@ -506,6 +506,9 @@ jobs:
       - name: Inspect public npm registry for all five P2LRN distributions
         run: node scripts/check-public-npm-registry.mjs
 
+      - name: Verify official P2LRN Skill adapter against compiled Toolkit
+        run: node skills/p2lrn-creator/scripts/test_p2lrn_official_real.mjs --root .
+
       - name: Verify local viewer and isolated runtimes
         run: node scripts/verify-local-viewer.mjs
 
