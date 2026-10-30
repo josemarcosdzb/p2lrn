@@ -94,11 +94,13 @@ export async function render(options) {
     redraw();
   };
   const chooseLeft = (pair) => {
+    if(runtime.state.completed)return;
     selected = pair;
     leftButtons.forEach((node,id)=>node.classList.toggle('is-selected',id===pair.id));
     status.textContent='Selecciona su pareja. Puedes cambiar la relación antes de finalizar.';
   };
   const chooseRight = (pair) => {
+    if(runtime.state.completed)return;
     if(!selected){status.textContent='Selecciona primero un elemento de la izquierda.';return;}
     const source=selected;
     for(const [id,target] of [...links])if(target===pair.id&&id!==source.id){
@@ -141,7 +143,18 @@ export async function render(options) {
 
   const actions=el('div',{class:'p2lrn-game-actions'});
   const finish=el('button',{type:'button',class:'p2lrn-game-button'},'Finalizar actividad');
-  finish.addEventListener('click',async()=>{if(links.size!==pairs.length){status.textContent='Relaciona todos los elementos antes de finalizar.';return;}const score=await runtime.finish();if(score){status.textContent='Actividad enviada.';finish.disabled=true;}});
+  finish.addEventListener('click',async()=>{
+    if(links.size!==pairs.length){status.textContent='Relaciona todos los elementos antes de finalizar.';return;}
+    const score=await runtime.finish();
+    if(score){
+      const reveal=(runtime.payload.presentation?.showFeedback??'never')==='after-submit';
+      status.textContent=reveal&&score.graded!==false
+        ?`Resultado: ${score.pointsEarned}/${score.pointsPossible} puntos.`
+        :'Actividad enviada. La corrección no está disponible para el alumno.';
+      finish.disabled=true;
+      for(const node of [...leftButtons.values(),...rightButtons.values()])node.disabled=true;
+    }
+  });
   actions.append(finish);
   columns.append(left, right);
   board.append(svg, columns);
