@@ -6,6 +6,7 @@ export {stylesheets};
 export async function render(options){
   const {game,runtime,shell}=await setupGame({...options,rendererId:ROSCO_RENDERER});
   const elements=game.data.elements;
+  const showFeedback=(runtime.payload.presentation?.showFeedback??'after-submit')!=='never';
   let index=0,locked=false,ended=false;
   const states=new Map(),timers=new Set(),letterNodes=new Map();
   const layout=el('div',{class:'p2lrn-rosco-layout'});
@@ -46,16 +47,18 @@ export async function render(options){
     const correct=[...states.values()].filter(state=>state==='correct').length;
     const wrong=[...states.values()].filter(state=>state==='wrong').length;
     progress.textContent=states.size+' / '+elements.length;
-    stats.textContent=correct+' aciertos · '+wrong+' fallos · '+(elements.length-states.size)+' pendientes';
+    stats.textContent=ended&&showFeedback
+      ?correct+' aciertos · '+wrong+' fallos'
+      :'Respondidas: '+states.size+' de '+elements.length;
   };
   const finishIfDone=()=>{
     if(ended||states.size!==elements.length)return ended;
     ended=true;
     input.disabled=true;check.disabled=true;pass.disabled=true;
     const correct=[...states.values()].filter(state=>state==='correct').length;
-    status.textContent='Rosco completado: '+correct+' aciertos de '+elements.length+'.';
+    status.textContent=showFeedback?'Rosco completado: '+correct+' aciertos de '+elements.length+'.':'Rosco completado. Respuestas enviadas.';
     void runtime.finish({allowMissingRequired:true}).then(score=>{
-      if(score)status.textContent='Rosco completado: '+correct+' aciertos de '+elements.length+' · '+score.pointsEarned+'/'+score.pointsPossible+' puntos.';
+      if(score&&showFeedback)status.textContent='Rosco completado: '+correct+' aciertos de '+elements.length+' · '+score.pointsEarned+'/'+score.pointsPossible+' puntos.';
     });
     return true;
   };
@@ -63,11 +66,11 @@ export async function render(options){
     tally();
     letterNodes.forEach((node,id)=>{
       const state=states.get(id);
-      node.classList.toggle('is-solved',state==='correct');
-      node.classList.toggle('is-wrong',state==='wrong');
+      node.classList.toggle('is-solved',ended&&showFeedback&&state==='correct');
+      node.classList.toggle('is-wrong',ended&&showFeedback&&state==='wrong');
       node.classList.toggle('is-current',!state&&elements[index]?.id===id);
       node.disabled=Boolean(state)||locked;
-      node.setAttribute('aria-label','Letra '+node.textContent+(state==='correct'?', acertada':state==='wrong'?', fallada':!state&&elements[index]?.id===id?', actual':', pendiente'));
+      node.setAttribute('aria-label','Letra '+node.textContent+(state?(ended&&showFeedback?(state==='correct'?', acertada':', fallada'):', respondida'):elements[index]?.id===id?', actual':', pendiente'));
       if(!state&&elements[index]?.id===id)node.setAttribute('aria-current','true');
       else node.removeAttribute('aria-current');
     });
@@ -104,7 +107,7 @@ export async function render(options){
     const correct=normalizeWord(input.value)===item.word;
     states.set(item.id,correct?'correct':'wrong');
     if(correct)runtime.applyPatch(item.questionId,item.patch);
-    status.textContent=correct?'Respuesta correcta.':'Respuesta incorrecta. La respuesta era: '+(item.answer??item.word)+'.';
+    status.textContent='Respuesta registrada. La corrección se mostrará al terminar, si está habilitada.';
     locked=true;redraw();
     schedule(()=>{
       locked=false;
