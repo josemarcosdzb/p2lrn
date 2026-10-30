@@ -37,3 +37,15 @@ test('3D retains its own accessible renderer without WebGL2, without weakening h
     if(oldHTMLElement===undefined)delete globalThis.HTMLElement;else globalThis.HTMLElement=oldHTMLElement;
   }
 });
+
+test('fallback room prevents dynamic boxes from leaving playable floor',async()=>{
+  const world=await createNoPhysicsWorld();
+  world.createBox({id:'bounded',position:[10,0.7,10],halfExtents:[0.75,0.45,0.75]});
+  for(let i=0;i<20;i++)world.applyImpulse('bounded',[100,0,100]);
+  let pos=world.transform('bounded').translation;
+  assert.ok(pos.x<=11&&pos.z<=12,'box stayed inside perimeter');
+  world.setTranslation('bounded',[999,-20,-999]);
+  pos=world.transform('bounded').translation;
+  assert.ok(pos.x<=11&&pos.z>=-12&&pos.y>=0.45,'teleport stays confined');
+  world.destroy();
+});
