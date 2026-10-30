@@ -63,3 +63,13 @@ test('wrong answers can subtract from the questionnaire total without going belo
   const floor=scoreQuestionnaire(payload,{q1:{choiceIds:['b']},q2:{choiceIds:['b2']}});
   assert.equal(floor.raw,0);
 });
+
+test('new Studio questionnaires and games default to hidden student feedback',async()=>{
+  const doc=createP2LRNStudioDocument({title:'Privacidad de la evaluación',language:'es'});
+  const questionnaire=doc.addQuestionnaire(doc.rootId,{title:'Prueba'});
+  const q=await doc.readQuestionnaire(questionnaire.id);
+  assert.equal(q.payload.presentation.showFeedback,'never');
+  const game=doc.addGame(doc.rootId,{kind:'matching',title:'Juego'});
+  const g=await doc.readQuestionnaire(game.id);
+  assert.equal(g.payload.presentation.showFeedback,'never');
+});
