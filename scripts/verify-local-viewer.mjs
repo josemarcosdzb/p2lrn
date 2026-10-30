@@ -970,7 +970,6 @@ async function verifyStudioComponentUI(cdp,chromePath){
     const offlineExport=await evalTop(cdp,`(async()=>{
       const studio=document.getElementById('studio');
       const doc=await studio.createCourse({title:'Prueba doble clic real',language:'es'});
-      doc.setCourseRights({author:'Autor de prueba P2LRN',copyrightHolder:'Laboratorio P2LRN',license:'Uso educativo de prueba'});
       doc.setCourseRights({author:'Equipo docente QA',copyrightHolder:'Centro P2LRN QA',license:'Uso educativo de prueba'});
       const unit=doc.children(doc.rootId)[0];
       if(!unit)throw new Error('Studio did not create its initial unit.');
@@ -1280,7 +1279,7 @@ async function verifyStudioSiteUI(cdp){
     })()`);
     invariant(options.open&&options.formats.includes('windows-single')&&options.formats.includes('portable-zip')&&options.hasIssuer&&options.hasExpiry&&options.reviewInput,'Web Studio offline options are missing: '+JSON.stringify(options));
     const offlineWebScreenshot=await captureElementVisualEvidence(cdp,'studio-web-offline-export-dialog',"document.querySelector('[data-offline-dialog]')",{maxHeight:1200});
-    await evalTop(cdp,"(()=>{const form=document.querySelector('[data-offline-form]');form.elements.namedItem('deliveryFormat').value='portable-zip';form.elements.namedItem('issuerName').value='Profesor web QA';form.elements.namedItem('expiresAfterFirstOpenDays').value='30';form.elements.namedItem('participantLabel').value='Alumno web';form.elements.namedItem('issuerName').value='Laboratorio P2LRN';form.requestSubmit();return true})()");
+    await evalTop(cdp,"(()=>{const form=document.querySelector('[data-offline-form]');form.elements.namedItem('deliveryFormat').value='portable-zip';form.elements.namedItem('issuerName').value='Profesor web QA';form.elements.namedItem('expiresAfterFirstOpenDays').value='30';form.elements.namedItem('participantLabel').value='Alumno web';form.requestSubmit();return true})()");
     const zipFile=await waitForDownloadedFile(offlineExportsDir,'.p2lrn-offline.zip',90000);
     const zip=await readFile(zipFile);
     invariant(zip.byteLength>100000&&zip[0]===0x50&&zip[1]===0x4b,'Standalone Studio offline ZIP is invalid or incomplete.');
