@@ -417,6 +417,7 @@ export class P2LRNStudioElement extends HTMLElement{
     format.innerHTML='<option value="windows-single">Windows · un archivo (doble clic)</option><option value="portable-zip">ZIP portable · extraer y abrir</option>';
     formatWrap.append(formatLabel,format);grid.append(formatWrap);
     const issuer=field('Quién entrega este curso','text');issuer.maxLength=300;issuer.required=true;issuer.placeholder='Profesor, centro u organización';
+    const issuer=field('Quién entrega este curso','text');issuer.maxLength=300;issuer.required=true;issuer.placeholder='Profesor, centro u organización';
     const available=field('Disponible desde','datetime-local');
     const due=field('Fecha límite','datetime-local');
     const duration=field('Tiempo máximo desde que empieza (minutos)','number');duration.min='1';duration.step='1';duration.placeholder='Sin límite';
@@ -446,6 +447,7 @@ export class P2LRNStudioElement extends HTMLElement{
           expiresAfterFirstOpenDays:String(expiry.value||'').trim()?Number(expiry.value):null,
           maxAttempts:Number(attempts.value||1),allowResume:resume.checked,activityTracking:metrics.checked,
           participantLabel:participant.value,
+          issuerName:issuer.value.trim(),
         });
         status.textContent='Paquete offline creado.';dialog.close();
       }catch(error){status.textContent=String(error?.message??error);generate.disabled=false;}
