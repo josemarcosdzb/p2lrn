@@ -11,8 +11,10 @@ export interface P2LRNAnalyticsStore {readonly data:P2LRNAnalyticsDataset;replac
 export declare const P2LRN_ANALYTICS_VERSION:string;
 export declare const ANALYTICS_DATASET_SCHEMA:string;
 export declare const ANALYTICS_SNAPSHOT_SCHEMA:string;
+export declare const P2LRN_OFFLINE_RESULT_SCHEMA:string;
 export declare const DEFAULT_ANALYTICS_RISK_RULES:Readonly<Required<P2LRNAnalyticsRiskRules>>;
 export declare function normalizeAnalyticsDataset(input?:Partial<P2LRNAnalyticsDataset>):Readonly<P2LRNAnalyticsDataset>;
+export declare function analyticsDatasetFromOfflineResult(input:unknown,options?:{courseTitle?:string|null}):Readonly<P2LRNAnalyticsDataset>;
 export declare function computeAnalyticsSnapshot(input?:Partial<P2LRNAnalyticsDataset>|P2LRNAnalyticsDataset,options?:{riskRules?:P2LRNAnalyticsRiskRules;activityDays?:number;now?:number}):any;
 export declare function filterAnalyticsDataset(input:P2LRNAnalyticsDataset,filters?:{courseId?:string;learnerId?:string;from?:string|Date;to?:string|Date}):P2LRNAnalyticsDataset;
 export declare function createAnalyticsStore(seed?:Partial<P2LRNAnalyticsDataset>):P2LRNAnalyticsStore;
@@ -33,5 +35,6 @@ export declare class P2LRNAnalyticsElement extends HTMLElement {
   selectLearner(id:string):void;
   selectCourse(id:string):void;
   exportCsv(kind?:'learners'|'courses'|'grades'):string;
+  importOfflineResult(value:unknown):Promise<P2LRNAnalyticsDataset>;
 }
 declare global {interface HTMLElementTagNameMap {'p2lrn-analytics':P2LRNAnalyticsElement;} var P2LRNAnalyticsReady:Promise<unknown>|undefined; var P2LRNAnalytics:Record<string,unknown>|undefined;}
