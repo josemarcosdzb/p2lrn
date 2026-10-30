@@ -151,7 +151,7 @@ export async function render(options){
     inputs.forEach(input=>{input.readOnly=true;});
     check.disabled=true;
     const score=await runtime.finish({allowMissingRequired:true});
-    const reveal=(runtime.payload.presentation?.showFeedback??'after-submit')!=='never';
+    const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
     status.textContent=score&&reveal
       ?'Crucigrama entregado: '+score.pointsEarned+'/'+score.pointsPossible+' puntos.'
       :'Crucigrama entregado. La corrección no está disponible para el alumno.';
