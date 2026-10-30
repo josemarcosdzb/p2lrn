@@ -29,7 +29,9 @@ test('one footer supplies clear product, documentation and resource groups',()=>
   }
   assert(footer.includes('href="/studio/"'));
   assert(footer.includes('href="/docs/conectores/"'));
-  assert(footer.includes('href="/index.json"'));
+  assert(footer.includes('href="/analytics/"'));
+  assert(footer.includes('href="/skills/"'));
+  assert(!footer.includes('href="/index.json"'));
   assert(footer.includes('href="/contacto/"'));
   assert(!footer.includes('http://')&&!footer.includes('https://'));
 });
