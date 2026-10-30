@@ -722,16 +722,21 @@ async function verifyGameLayout(cdp,kind){
       const next=root.querySelector('.p2lrn-rosco-letter.is-current')?.textContent;
       const input=root.querySelector('.p2lrn-rosco-challenge input');input.value='INCORRECTO';
       button('Comprobar')?.click();
-      const wrong=root.querySelectorAll('.p2lrn-rosco-letter.is-wrong').length;
+      const progressAfterCheck=root.querySelector('.p2lrn-rosco-progress')?.textContent??'';
+      const statusAfterCheck=root.querySelector('.p2lrn-game-status')?.textContent??'';
+      const revealedWrong=root.querySelectorAll('.p2lrn-rosco-letter.is-wrong').length;
+      const revealedSolved=root.querySelectorAll('.p2lrn-rosco-letter.is-solved').length;
+      const correctionHidden=revealedWrong===0&&revealedSolved===0;
+      const registered=progressAfterCheck.startsWith('1 /')&&statusAfterCheck.includes('Respuesta registrada');
       button('Reiniciar')?.click();
-      const restarted=root.querySelectorAll('.p2lrn-rosco-letter.is-wrong').length===0
+      const restarted=root.querySelectorAll('.p2lrn-rosco-letter.is-wrong,.p2lrn-rosco-letter.is-solved').length===0
         &&root.querySelector('.p2lrn-rosco-progress')?.textContent.startsWith('0 /');
       return {count:letters.length,spreadX:Math.max(...xs)-Math.min(...xs),
-        spreadY:Math.max(...ys)-Math.min(...ys),initial,next,wrong,restarted};
+        spreadY:Math.max(...ys)-Math.min(...ys),initial,next,registered,correctionHidden,revealedWrong,revealedSolved,restarted};
     }
     behavior=await evalTop(cdp,'('+roscoScenario.toString()+')()');
     invariant(behavior.count>=4&&behavior.spreadX>80&&behavior.spreadY>80,kind+': expected circle, not horizontal letters '+JSON.stringify(behavior));
-    invariant(behavior.initial!==behavior.next&&behavior.wrong===1&&behavior.restarted,kind+': pass, check or reset failed '+JSON.stringify(behavior));
+    invariant(behavior.initial!==behavior.next&&behavior.registered&&behavior.correctionHidden&&behavior.restarted,kind+': pass, deferred correction or reset failed '+JSON.stringify(behavior));
   }
   const desktop=await captureElementVisualEvidence(cdp,'game-'+kind+'-desktop',"document.getElementById('demo-player')",{maxHeight:1300});
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:840,deviceScaleFactor:1,mobile:true});
