@@ -50,6 +50,24 @@ const bannedEverywhere=[
   /pruebas realizadas con el exe/iu,
 ];
 
+const publicBanned=[
+  /\bcors\b/iu,
+  /service worker/iu,
+  /\bmcp\b/iu,
+  /\bpython\b/iu,
+  /\bcli\b/iu,
+  /sha-?256/iu,
+  /\bnpm\b/iu,
+  /\bcdn\b/iu,
+  /\bfixture\b/iu,
+  /\bcommit\b/iu,
+  /\bbranch\b/iu,
+  /\bmonorepo\b/iu,
+  /\bstaged\b/iu,
+  /\blocalhost\b/iu,
+  /127\.0\.0\.1/iu,
+];
+
 const homeBanned=[
   /\bcontentroot\b/iu,
   /web component/iu,
@@ -81,6 +99,9 @@ for(const sourcePath of sourcePages){
   const isDoc=rel.startsWith('docs/');
   if(!isDoc){
     publicPages++;
+    for(const pattern of publicBanned){
+      if(pattern.test(text))errors.push(rel+': public page exposes implementation jargon matching '+pattern);
+    }
     const hasSiteHeader=/class=["'][^"']*site-header/iu.test(html);
     if(hasSiteHeader){
       if(!/href=["']\/contacto\//iu.test(html))errors.push(rel+': public navigation is missing Contacto');
