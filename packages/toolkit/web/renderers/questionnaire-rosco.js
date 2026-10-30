@@ -6,7 +6,7 @@ export {stylesheets};
 export async function render(options){
   const {game,runtime,shell}=await setupGame({...options,rendererId:ROSCO_RENDERER});
   const elements=game.data.elements;
-  const showFeedback=(runtime.payload.presentation?.showFeedback??'after-submit')!=='never';
+  const showFeedback=(runtime.payload.presentation?.showFeedback??'never')!=='never';
   let index=0,locked=false,ended=false;
   const states=new Map(),timers=new Set(),letterNodes=new Map();
   const layout=el('div',{class:'p2lrn-rosco-layout'});
