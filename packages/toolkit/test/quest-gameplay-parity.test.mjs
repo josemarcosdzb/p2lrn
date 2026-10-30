@@ -20,12 +20,12 @@ test('Quest 2D gameplay mirrors AulaP2P flow while staying standalone',async()=>
   assert.match(ordering,/Orden registrado/);
   assert.match(trueFalse,/Respuesta registrada/);
   assert.match(trueFalse,/Repetir ronda/);
-  assert.match(crossword,/casillas correctas/);
+  assert.match(crossword,/Crucigrama entregado/);
   assert.match(crossword,/selectEntry\(entry,true\)/);
   assert.match(crossword,/ArrowLeft/);
   assert.match(crossword,/p2lrn-crossword-clue/);
   assert.match(crossword,/Crucigrama reiniciado/);
-  assert.match(rosco,/Respuesta incorrecta\. La respuesta era/);
+  assert.match(rosco,/Respuesta registrada/);
   assert.match(rosco,/p2lrn-rosco-progress/);
   assert.match(rosco,/allowMissingRequired:true/);
   assert.match(rosco,/Letra aplazada/);
