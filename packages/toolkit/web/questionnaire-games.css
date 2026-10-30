@@ -193,3 +193,22 @@
 .p2lrn-match-column .p2lrn-game-card.is-selected{outline:3px solid #2563eb;outline-offset:2px}
 .p2lrn-match-line{stroke-width:3.5;opacity:1}
 .p2lrn-classification-box-items button{border:1px solid #cbd5e1;border-radius:.5rem;padding:.4rem .55rem;background:#f8fafc;cursor:pointer;font:inherit}
+
+/* Shared visual language for standard questionnaires and 2D games. */
+.p2lrn-game-shell{width:100%;max-width:900px;margin-inline:auto;min-width:0;gap:14px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111827}
+.p2lrn-game-header h2{font-size:24px;line-height:1.3;font-weight:750}
+.p2lrn-game-header .p2lrn-game-kicker{font-size:11px;color:#64748b;letter-spacing:.05em}
+.p2lrn-game-shell>.p2lrn-game-board,
+.p2lrn-game-shell>.p2lrn-match-board,
+.p2lrn-game-shell>.p2lrn-classification-board,
+.p2lrn-game-shell>.p2lrn-vf-card{border:1px solid #d9dee5;border-radius:10px;background:#fff;padding:18px;min-width:0}
+.p2lrn-game-button,.p2lrn-game-card,.p2lrn-game-choice{border-color:#cbd5e1;border-radius:8px;min-height:42px;transition:border-color .12s,background .12s}
+.p2lrn-game-button:focus-visible,.p2lrn-game-card:focus-visible,.p2lrn-game-choice:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.p2lrn-game-status{font-size:14px;line-height:1.5;color:#475569;min-height:20px}
+.p2lrn-game-actions{align-items:center;gap:10px}
+.p2lrn-match-column .p2lrn-game-card{font-weight:500;min-height:48px;text-align:left}
+.p2lrn-order-row{padding:0;margin:0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
+.p2lrn-order-row>.p2lrn-game-card{border:0;border-radius:0;text-align:left;min-height:47px}
+.p2lrn-order-controls{padding-inline:6px}
+.p2lrn-classification-box{background:#fff;border-color:#cbd5e1}
+@media(max-width:700px){.p2lrn-game-shell>.p2lrn-game-board,.p2lrn-game-shell>.p2lrn-match-board,.p2lrn-game-shell>.p2lrn-classification-board,.p2lrn-game-shell>.p2lrn-vf-card{padding:12px}.p2lrn-order-row{grid-template-columns:minmax(0,1fr) auto}.p2lrn-match-column .p2lrn-game-card{font-size:13px}}
