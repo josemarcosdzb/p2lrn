@@ -97,17 +97,18 @@
   <form data-offline-form>
     <header class="studio-offline-head"><div><p class="eyebrow">ENTREGA SIN LMS</p><h2 id="studio-offline-title">Entrega offline autorreproducible</h2><p>Incluye este curso y el Player. El alumno lo abre en su navegador y devuelve un archivo <code>.p2lrn-result</code>. <a href="/docs/entrega-offline/" target="_blank" rel="noopener">Ver cómo funciona</a>.</p></div><button type="button" class="button" data-offline-cancel>Cerrar</button></header>
     <div class="studio-offline-fields">
-      <label>Formato de entrega<select name="deliveryFormat" required><option value="windows-exe">Windows 64 bits · ejecutable .exe (un archivo)</option><option value="portable-zip">ZIP portable · extraer y abrir</option><option value="windows-single">Windows · .cmd antiguo (compatibilidad)</option></select></label>
+      <label>Formato de entrega<select name="deliveryFormat" required><option value="windows-exe">Windows 64 bits · ejecutable .exe (un archivo)</option><option value="portable-zip">ZIP portable · extraer y abrir</option><option value="windows-single">Windows · CMD (alternativa)</option></select></label>
       <label>Identificador del alumno (opcional)<input name="participantLabel" type="text" maxlength="160" placeholder="Se puede indicar al abrir la entrega"></label>
       <label>Disponible desde (opcional)<input name="availableFrom" type="datetime-local"></label>
       <label>Fecha límite (opcional)<input name="dueAt" type="datetime-local"></label>
       <label>Tiempo máximo por intento (minutos)<input name="durationMinutes" type="number" min="1" max="44640" step="1" placeholder="Sin límite"></label>
+      <label>Caduca tras la primera apertura (días)<input name="expiresAfterFirstOpenDays" type="number" min="1" max="3650" step="1" placeholder="Ej. 30"></label>
       <label>Intentos máximos<input name="maxAttempts" type="number" min="1" max="100" step="1" value="1" required></label>
       <label class="studio-offline-check"><input name="allowResume" type="checkbox" checked> Permitir reanudar el intento</label>
       <label class="studio-offline-check"><input name="activityTracking" type="checkbox" checked> Registrar métricas y tiempo activo</label>
       <label class="studio-offline-check"><input name="signAssignment" type="checkbox"> Firmar el encargo para comprobarlo después (opcional)</label>
     </div>
-    <p class="studio-offline-note">El ejecutable .exe abre el mismo Player sin PowerShell, pero <strong>todavía no tiene firma Authenticode de editor</strong>: Windows puede mostrar un aviso o bloquearlo. Para una distribución pública de confianza es necesario firmar cada EXE generado con un certificado válido. La firma opcional Ed25519 solo autentica las condiciones del encargo, no las respuestas del alumno.</p>
+    <p class="studio-offline-note"><strong>Seguridad de la entrega.</strong> El alumno debe abrir el archivo sólo si conoce al profesor, centro u organización que se lo ha enviado y esperaba recibir ese curso. Si Windows muestra una advertencia de procedencia, no debe ignorarla ante un archivo de origen desconocido. La entrega puede registrar aperturas y aplicar una caducidad local desde la primera apertura. En modo completamente offline estas medidas reducen la reutilización casual, pero no pueden impedir de forma absoluta que alguien conserve o copie el archivo antes de abrirlo por primera vez.</p>
     <div class="studio-offline-note" data-offline-receipt-prompt hidden role="status">
       <strong>Entrega firmada generada.</strong> Guarda el comprobante del profesor antes de enviar el archivo al alumno. Sin él no podrás cotejar su firma.
       <button class="button" type="button" data-offline-receipt-download>Descargar comprobante del profesor</button>
@@ -123,6 +124,7 @@
     <input type="file" data-offline-review-receipt accept=".json,.p2lrn-assignment.json,application/json">
   </label>
   <div class="studio-offline-review-content" data-offline-review-content></div>
+  <footer class="studio-offline-actions"><button class="button" type="button" data-offline-open-analytics disabled>Abrir en Analytics</button></footer>
 </dialog>
   <div class="studio-warning" data-unsaved-warning hidden role="status">
     <strong>Cambios sin guardar.</strong>
