@@ -601,8 +601,10 @@ async function reviewOfflineDelivery(file){
     expectedContentRoot:exported.manifest.integrity.contentRoot,
     trustedReceipt,
   });
-  latestOfflineParsedResult=parsed.result;
-  if(offlineAnalyticsButton)offlineAnalyticsButton.disabled=false;
+  const analyticsEligible=parsed.integrityValid===true && parsed.courseMatches===true &&
+    parsed.evidenceValid!==false && parsed.summaryValid!==false && parsed.assignmentAuthenticated!==false;
+  latestOfflineParsedResult=analyticsEligible?parsed.result:null;
+  if(offlineAnalyticsButton)offlineAnalyticsButton.disabled=!analyticsEligible;
   const content=offlineReviewContent;
   content.replaceChildren();
   const problems=[];
@@ -657,7 +659,7 @@ async function reviewOfflineDelivery(file){
   content.append(note);
   offlineReviewDialog.showModal();
   setStatus(problems.length
-    ?'Resultado offline con incidencias: '+problems.join(', ')
+    ?'Resultado offline con incidencias: '+problems.join(', ')+(analyticsEligible?'':' · Analytics bloqueado hasta disponer de un resultado coherente')
     :parsed.assignmentAuthenticated===true
       ?'Encargo del profesor autenticado; respuestas no autenticadas'
       :parsed.signatureValid===true
