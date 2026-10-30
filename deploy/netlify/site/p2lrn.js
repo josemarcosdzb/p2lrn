@@ -61,6 +61,23 @@
   };
   cleanProductionChrome();
 
+  const PUBLIC_NAV = [
+    { label: 'Studio', href: '/studio/', active: ['/studio/'] },
+    {
+      label: 'Soluciones',
+      active: ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'],
+      items: [
+        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
+        ['/juegos-educativos-3d/','Juegos educativos 3D'],
+        ['/cursos-offline/','Cursos offline sin LMS'],
+      ],
+    },
+    { label: 'Analytics', href: '/analytics/', active: ['/analytics/'] },
+    { label: 'Skills para IA', href: '/skills/', active: ['/skills/'] },
+    { label: 'Documentación', href: '/docs/', active: ['/docs/'] },
+    { label: 'Contacto', href: '/contacto/', active: ['/contacto/'] },
+  ];
+
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
@@ -183,7 +200,8 @@
     const current = normalizePath(window.location.pathname);
     const fragment = document.createDocumentFragment();
 
-    for (const entry of GLOBAL_NAV) {
+    const navigationEntries = current.startsWith('/docs/') ? GLOBAL_NAV : PUBLIC_NAV;
+    for (const entry of navigationEntries) {
       const active = (entry.active || []).some((path) => path.endsWith('*') ? current.startsWith(normalizePath(path.slice(0,-1))) : current === normalizePath(path));
       if (entry.href) {
         const link = document.createElement('a');
