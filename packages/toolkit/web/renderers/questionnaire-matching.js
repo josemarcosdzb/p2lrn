@@ -60,17 +60,20 @@ export async function render(options) {
         line.setAttribute('x2', String(x2));
         line.setAttribute('y2', String(y2));
         line.setAttribute('class', 'p2lrn-match-line');
-        line.setAttribute('stroke', ['#2563eb','#a855f7','#059669','#d97706','#db2777'][pairs.findIndex(item=>item.id===id)%5]);
+        const lineColor=['#2563eb','#a855f7','#059669','#d97706','#db2777'][pairs.findIndex(item=>item.id===id)%5];
+        line.style.stroke=lineColor;
         const c1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         c1.setAttribute('cx', String(x1));
         c1.setAttribute('cy', String(y1));
         c1.setAttribute('r', '4');
         c1.setAttribute('class', 'p2lrn-match-dot');
+        c1.style.fill=lineColor;
         const c2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         c2.setAttribute('cx', String(x2));
         c2.setAttribute('cy', String(y2));
         c2.setAttribute('r', '4');
         c2.setAttribute('class', 'p2lrn-match-dot');
+        c2.style.fill=lineColor;
         svg.append(line, c1, c2);
       }
     });
