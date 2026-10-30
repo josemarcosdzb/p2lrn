@@ -265,6 +265,56 @@ func TestLaunchStatePersistsOpeningsAndExpiry(t *testing.T) {
 	}
 }
 
+func TestCopiedDeliverySharesStateWithinProfileButNotAcrossProfiles(t *testing.T) {
+	profileA := t.TempDir()
+	t.Setenv("APPDATA", profileA)
+	t.Setenv("XDG_CONFIG_HOME", profileA)
+
+	makeRoot := func() string {
+		root := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(root, "www"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		assignment := []byte(`{"assignmentId":"urn:uuid:copied-assignment","policy":{"expiresAfterFirstOpenDays":30}}`)
+		if err := os.WriteFile(filepath.Join(root, "www", "assignment.json"), assignment, 0600); err != nil {
+			t.Fatal(err)
+		}
+		return root
+	}
+	p := payload{hash: sha256.Sum256([]byte("same-delivery-bytes"))}
+	originalRoot := makeRoot()
+	copiedRoot := makeRoot()
+
+	first, err := registerLaunch(originalRoot, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := registerLaunch(copiedRoot, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.OpenCount != 2 {
+		t.Fatalf("copy/rename in same profile reset openings: got %d want 2", second.OpenCount)
+	}
+	if second.DeviceBindingID != first.DeviceBindingID || second.FirstOpenedAt != first.FirstOpenedAt || second.ExpiresAt != first.ExpiresAt {
+		t.Fatalf("copy/rename in same profile did not reuse expiry state: first=%+v second=%+v", first, second)
+	}
+
+	profileB := t.TempDir()
+	t.Setenv("APPDATA", profileB)
+	t.Setenv("XDG_CONFIG_HOME", profileB)
+	otherProfile, err := registerLaunch(copiedRoot, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if otherProfile.OpenCount != 1 {
+		t.Fatalf("new Windows profile should have independent local state: got %d", otherProfile.OpenCount)
+	}
+	if otherProfile.DeviceBindingID == first.DeviceBindingID {
+		t.Fatal("different local profile unexpectedly reused the same device binding")
+	}
+}
+
 func TestLaunchStateEndpoint(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "index.html"), []byte("offline"), 0600); err != nil {
