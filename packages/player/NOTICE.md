@@ -6,6 +6,12 @@ Los componentes originales first-party de P2LRN cuyos derechos correspondan a Jo
 
 P2LRN-NCSL 1.0 es una licencia **source-available no comercial**. No es una licencia Open Source aprobada por OSI porque restringe el uso comercial.
 
+## Permisos ampliados desde el 30 de octubre de 2026
+
+**Lea el Anexo A de LICENSE.** Permite usar, implementar y comercializar cursos `.p2lrn` y utilizar Player/Toolkit en instituciones y servicios comerciales, conservando las condiciones de atribución y fuente correspondiente. Studio y Analytics oficiales **sin modificar** pueden utilizarse gratuitamente dentro de academias e instituciones, incluso para impartir cursos de pago. Modificar Studio/Analytics o integrarlos en un SaaS, plataforma o servicio comercial ofrecido a terceros requiere autorización expresa.
+
+El uso libre del formato y la venta de cursos **no implican** autorización para revender Studio ni Analytics. Esta es una ampliación de permisos sobre código first-party, no una relicencia de dependencias ajenas ni una declaración OSI.
+
 ## Alcance first-party
 
 Salvo aviso específico en contrario, P2LRN-NCSL 1.0 se aplica al material original first-party de P2LRN contenido en:
