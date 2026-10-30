@@ -5,12 +5,14 @@ import (
   "bytes"
   "crypto/sha256"
   "encoding/binary"
+  "encoding/json"
   "io"
   "net/http/httptest"
   "os"
   "path/filepath"
   "strings"
   "testing"
+  "time"
 )
 func testZip(t *testing.T, extra map[string][]byte) []byte {
   t.Helper()
@@ -100,4 +102,59 @@ func TestSignerCertificateAppendedAfterZipTrailer(t *testing.T){
   root,err:=extract(payload,t.TempDir());if err!=nil{t.Fatal(err)}
   defer os.RemoveAll(root)
   if _,err:=os.Stat(filepath.Join(root,"www","index.html"));err!=nil{t.Fatal(err)}
+}
+
+func TestLaunchStatePersistsOpeningsAndExpiry(t *testing.T) {
+  config := t.TempDir()
+  t.Setenv("APPDATA", config)
+  t.Setenv("XDG_CONFIG_HOME", config)
+
+  root := t.TempDir()
+  if err := os.MkdirAll(filepath.Join(root, "www"), 0700); err != nil { t.Fatal(err) }
+  assignment := []byte(`{"assignmentId":"urn:uuid:test-assignment","policy":{"expiresAfterFirstOpenDays":30}}`)
+  if err := os.WriteFile(filepath.Join(root, "www", "assignment.json"), assignment, 0600); err != nil { t.Fatal(err) }
+
+  p := payload{hash: sha256.Sum256([]byte("stable-delivery"))}
+  first, err := registerLaunch(root, p)
+  if err != nil { t.Fatal(err) }
+  if first.OpenCount != 1 || first.FirstOpenedAt == "" || first.LastOpenedAt == "" || first.ExpiresAt == "" {
+    t.Fatalf("unexpected first launch state: %+v", first)
+  }
+  if first.DeviceBindingID == "" || len(first.Launches) != 1 { t.Fatalf("missing device/session identity: %+v", first) }
+
+  second, err := registerLaunch(root, p)
+  if err != nil { t.Fatal(err) }
+  if second.OpenCount != 2 { t.Fatalf("open count=%d, want 2", second.OpenCount) }
+  if second.DeviceBindingID != first.DeviceBindingID { t.Fatal("device binding changed between openings") }
+  if len(second.Launches) != 2 { t.Fatalf("sessions=%d, want 2", len(second.Launches)) }
+
+  statePath, err := launchStateFile(p.hash)
+  if err != nil { t.Fatal(err) }
+  expired := second
+  expired.FirstOpenedAt = time.Now().UTC().Add(-48 * time.Hour).Format(time.RFC3339Nano)
+  expired.ExpiresAt = time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339Nano)
+  data, err := json.Marshal(expired)
+  if err != nil { t.Fatal(err) }
+  if err := os.WriteFile(statePath, data, 0600); err != nil { t.Fatal(err) }
+  if _, err := registerLaunch(root, p); err == nil || !strings.Contains(strings.ToLower(err.Error()), "caduc") {
+    t.Fatalf("expired delivery was not blocked: %v", err)
+  }
+}
+
+func TestLaunchStateEndpoint(t *testing.T) {
+  root := t.TempDir()
+  if err := os.WriteFile(filepath.Join(root, "index.html"), []byte("offline"), 0600); err != nil { t.Fatal(err) }
+  h := &localHandler{
+    webRoot: root,
+    host: "127.0.0.1:8769",
+    launchState: launchState{Schema:"https://p2lrn.org/schema/offline-launch-state/1", AssignmentID:"a", OpenCount:3},
+  }
+  r := httptest.NewRequest("GET", "http://127.0.0.1:8769/__p2lrn/launch-state", nil)
+  r.Host = "127.0.0.1:8769"
+  w := httptest.NewRecorder()
+  h.ServeHTTP(w, r)
+  if w.Code != 200 { t.Fatalf("status=%d", w.Code) }
+  var got launchState
+  if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil { t.Fatal(err) }
+  if got.OpenCount != 3 || got.AssignmentID != "a" { t.Fatalf("unexpected launch state: %+v", got) }
 }
