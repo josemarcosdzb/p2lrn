@@ -263,6 +263,7 @@ for(const file of htmlFiles){
   $('script[type="application/ld+json"]').each((_,el)=>{try{$(el).text(JSON.stringify(translateJson(JSON.parse($(el).text()))));}catch{}});
   $('a[href]').each((_,el)=>$(el).attr('href',rewriteHref($(el).attr('href'),routes)));
   $('form[action]').each((_,el)=>$(el).attr('action',rewriteHref($(el).attr('action'),routes)));
+  $('link[rel~="manifest"]').each((_,el)=>$(el).attr('href','/en/site.webmanifest'));
   $('meta[http-equiv]').each((_,el)=>{
     if(String($(el).attr('http-equiv')??'').toLowerCase()!=='refresh')return;
     const content=String($(el).attr('content')??'');
@@ -278,6 +279,15 @@ for(const file of htmlFiles){
   await mkdir(dirname(dest),{recursive:true});
   await writeFile(dest,$.html(),'utf8');
 }
+
+const sourceManifestPath=join(siteRoot,'site.webmanifest');
+try{
+  const manifest=JSON.parse(await readFile(sourceManifestPath,'utf8'));
+  manifest.lang='en';
+  manifest.start_url='/en/';
+  manifest.scope='/en/';
+  await writeFile(join(englishRoot,'site.webmanifest'),JSON.stringify(manifest,null,2)+'\n','utf8');
+}catch{}
 
 for(const [rel,source] of jsSources){
   const edits=[];
