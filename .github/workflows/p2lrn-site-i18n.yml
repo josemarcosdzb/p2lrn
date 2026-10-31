@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   generate-english-site:
+    if: ${{ false }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
