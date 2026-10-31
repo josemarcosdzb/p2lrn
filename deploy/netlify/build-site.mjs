@@ -230,6 +230,18 @@ for (const htmlPath of htmlFiles) {
   if (html.includes('/p2lrn.css') && !html.includes('/p2lrn.css?v=p2lrn-brand-20261027-v3')) {
     throw new Error('Unversioned brand stylesheet in ' + relative(outputRoot,htmlPath));
   }
+  if(bilingualSite){
+    const route=pageUrl(htmlPath);
+    const english=route==='/en/'||route.startsWith('/en/');
+    const esRoute=english?spanishRouteFor(route):route;
+    const enRoute=english?route:englishRouteFor(route);
+    if(!html.includes('data-language-switch'))throw new Error('Missing ES EN language switch in '+route);
+    const esLink='href="'+esRoute+'" lang="es" hreflang="es"';
+    const enLink='href="'+enRoute+'" lang="en" hreflang="en"';
+    if(!html.includes(esLink)||!html.includes(enLink))throw new Error('Broken paired language links in '+route);
+    const currentNeedle=english?enLink+' aria-current="page"':esLink+' aria-current="page"';
+    if(!html.includes(currentNeedle))throw new Error('Language switch does not mark the active locale in '+route);
+  }
 }
 
 // Detect CDN postprocessing BEFORE publishing. Runtime HTML is hashed in
