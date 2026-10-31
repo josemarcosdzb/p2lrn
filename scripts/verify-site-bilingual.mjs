@@ -95,7 +95,28 @@ for(const file of enHtml){
     const path=href.split(/[?#]/,1)[0];
     if(routes.has(normalizeRoute(path)))errors.push(rel+': English page links to Spanish route '+href);
   });
+  $('script:not([src])').each((_,el)=>{
+    const type=String($(el).attr('type')??'').toLowerCase();
+    if(type==='application/ld+json'||type==='importmap'||type==='application/json')return;
+    const source=$(el).text();
+    if(!source.trim())return;
+    let ast;
+    try{ast=parseJs(source);}catch{return;}
+    walkAst(ast,(node,parent)=>{
+      let value=null;
+      if(node.type==='Literal'&&typeof node.value==='string'&&!node.regex)value=node.value;
+      if(node.type==='TemplateElement')value=node.value?.cooked??node.value?.raw??'';
+      if(value===null||skipJsValue(value,parent,node))return;
+      if(isVisibleSpanish(value))errors.push(rel+': Spanish inline runtime string: '+JSON.stringify(String(value).slice(0,180)));
+    });
+  });
 }
+
+try{
+  const manifest=JSON.parse(await readFile(join(enRoot,'site.webmanifest'),'utf8'));
+  if(manifest.lang!=='en')errors.push('English manifest lang is not en.');
+  if(manifest.start_url!=='/en/'||manifest.scope!=='/en/')errors.push('English manifest does not stay inside /en/.');
+}catch{errors.push('Missing or invalid English site.webmanifest.');}
 
 for(const rel of ['p2lrn.js','studio/studio.js','demo/viewer.js','analytics/demo.js']){
   const path=join(enRoot,...rel.split('/'));
