@@ -217,8 +217,9 @@ const brandAssets=['p2lrn-mark.png','favicon.png','apple-touch-icon.png','site.w
 for (const asset of brandAssets) {
   if (!(await exists(join(outputRoot,asset)))) throw new Error('Missing brand asset: ' + asset);
 }
-if(bilingualSite&&!(await exists(join(outputRoot,'en','site.webmanifest')))
+if(bilingualSite&&!(await exists(join(outputRoot,'en','site.webmanifest')))){
   throw new Error('Missing English web app manifest: /en/site.webmanifest');
+}
 for (const htmlPath of htmlFiles) {
   const rel=relative(outputRoot,htmlPath).replaceAll('\\','/');
   const html=await readFile(htmlPath,'utf8');
