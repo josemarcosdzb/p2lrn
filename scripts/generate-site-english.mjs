@@ -175,6 +175,23 @@ for(const rel of JS_FILES){
     }
   });
 }
+for(const file of htmlFiles){
+  const $=load(await readFile(file,'utf8'),{decodeEntities:false});
+  $('script:not([src])').each((_,el)=>{
+    const type=String($(el).attr('type')??'').toLowerCase();
+    if(type==='application/ld+json'||type==='importmap'||type==='application/json')return;
+    const source=$(el).text();
+    if(!source.trim())return;
+    let ast;
+    try{ast=parseJs(source);}catch{return;}
+    walkAst(ast,(node,parent)=>{
+      if(node.type==='Literal'&&typeof node.value==='string'&&!node.regex&&!structuralLiteral(node,parent)){
+        if(node.value.includes('<')&&node.value.includes('>'))registerHtmlFragment(node.value);
+        else register(node.value);
+      }
+    });
+  });
+}
 
 let translator=null;
 async function getTranslator(){if(!translator)translator=await pipeline('translation',MODEL,{dtype:'q8'});return translator;}
@@ -280,6 +297,23 @@ function translateHtmlFragment(fragment){
     $('['+attr+']').each((_,el)=>$(el).attr(attr,translatePlain($(el).attr(attr))));
   return $('body').html()??fragment;
 }
+function translateJavaScriptSource(source){
+  let ast;
+  try{ast=parseJs(source);}catch{return source;}
+  const edits=[];
+  walkAst(ast,(node,parent)=>{
+    if(node.type!=='Literal'||typeof node.value!=='string'||node.regex||structuralLiteral(node,parent))return;
+    let next=node.value.includes('<')&&node.value.includes('>')
+      ?translateHtmlFragment(node.value)
+      :translatePlain(node.value);
+    next=rewriteHref(next,routes);
+    if(next!==node.value)edits.push({start:node.start,end:node.end,text:JSON.stringify(next)});
+  });
+  let generated=source;
+  for(const edit of edits.sort((a,b)=>b.start-a.start))
+    generated=generated.slice(0,edit.start)+edit.text+generated.slice(edit.end);
+  return generated;
+}
 function translateJson(value,key=''){
   if(Array.isArray(value))return value.map(item=>translateJson(item,key));
   if(value&&typeof value==='object'){
@@ -307,6 +341,12 @@ for(const file of htmlFiles){
   $('meta[property="og:url"]').each((_,el)=>$(el).attr('content',rewriteAbsoluteUrl($(el).attr('content')??'',routes)));
   $('link[rel~="canonical"][href]').each((_,el)=>$(el).attr('href',rewriteAbsoluteUrl($(el).attr('href')??'',routes)));
   $('script[type="application/ld+json"]').each((_,el)=>{try{$(el).text(JSON.stringify(translateJson(JSON.parse($(el).text()))));}catch{}});
+  $('script:not([src])').each((_,el)=>{
+    const type=String($(el).attr('type')??'').toLowerCase();
+    if(type==='application/ld+json'||type==='importmap'||type==='application/json')return;
+    const source=$(el).text();
+    if(source.trim())$(el).text(translateJavaScriptSource(source));
+  });
   $('a[href]').each((_,el)=>$(el).attr('href',rewriteHref($(el).attr('href'),routes)));
   $('form[action]').each((_,el)=>$(el).attr('action',rewriteHref($(el).attr('action'),routes)));
   $('link[rel~="manifest"]').each((_,el)=>$(el).attr('href','/en/site.webmanifest'));
@@ -336,17 +376,7 @@ try{
 }catch{}
 
 for(const [rel,source] of jsSources){
-  const edits=[];
-  walkAst(parseJs(source),(node,parent)=>{
-    if(node.type!=='Literal'||typeof node.value!=='string'||node.regex||structuralLiteral(node,parent))return;
-    let next=node.value.includes('<')&&node.value.includes('>')
-      ?translateHtmlFragment(node.value)
-      :translatePlain(node.value);
-    next=rewriteHref(next,routes);
-    if(next!==node.value)edits.push({start:node.start,end:node.end,text:JSON.stringify(next)});
-  });
-  let generated=source;
-  for(const edit of edits.sort((a,b)=>b.start-a.start))generated=generated.slice(0,edit.start)+edit.text+generated.slice(edit.end);
+  const generated=translateJavaScriptSource(source);
   const dest=join(englishRoot,...rel.split('/'));
   await mkdir(dirname(dest),{recursive:true});
   await writeFile(dest,generated,'utf8');
