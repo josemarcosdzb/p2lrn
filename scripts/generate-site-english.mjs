@@ -68,7 +68,34 @@ const MANUAL=new Map(Object.entries({
   'Finalización y puntuación':'Completion and scoring',
   'Referencia técnica del componente':'Component technical reference',
   'Toolkit para creación por código':'Toolkit for programmatic authoring',
-  'Abrir visor':'Open viewer','Vista alumno':'Learner view'
+  'Abrir visor':'Open viewer','Vista alumno':'Learner view',
+  'Objeto':'Purpose','Terceros':'Third parties','Responsabilidad':'Liability','Cambios':'Changes',
+  'Nombre':'Name','Asunto':'Subject','Mensaje':'Message','Empresa':'Company','Resumen':'Summary',
+  'Consentimiento':'Consent','Proveedor':'Provider','Finalidad':'Purpose','Tipo':'Type',
+  'Emparejar':'Match','Recargar':'Reload','Pausar':'Pause','Copiar':'Copy','Limpiar':'Clear',
+  'RECURSO':'RESOURCE','Notas':'Notes','Inactividad':'Inactivity','Localiza':'Locate','Consulta':'Query',
+  'Carga.':'Load.','Salida.':'Output.','expone':'exposes','Identidad':'Identity','Permisos':'Permissions',
+  'Nativo':'Native','Leer':'Read','Conservar':'Preserve','Perfil':'Profile','representaciones':'representations',
+  'renderizador':'renderer','Ejecuta':'Run','ejecuta':'runs','Administrador:':'Administrator:','Notas:':'Notes:',
+  'Requisitos':'Requirements','Servidor':'Server','Reintentos':'Retries','Demuestra':'Demonstrates',
+  'Origen':'Origin','Metadatos':'Metadata','Contactar':'Contact','Preparar':'Prepare','Entregar':'Deliver',
+  'Realizar':'Complete','Devolver':'Return','Analizar':'Analyze','informativas':'informational',
+  'Pulsa':'Click','Comportamiento':'Behavior','Autorreproducible':'Self-running','Incluye':'Includes',
+  'Conserva':'Preserves','publicados.':'published.','Fases':'Phases','INSTALAR':'INSTALL',
+  'exporta':'exports','Configura':'Configure','Usa':'Use','ESTADO':'STATUS','PRIVADO':'PRIVATE',
+  'selecciona':'selects','Estado':'Status','Nota:':'Note:','Interacciones':'Interactions',
+  'Objetivos':'Objectives','Deriva':'Derives','Puntuaciones':'Scores','proporciona':'provides',
+  'Instala':'Install','Cada':'Each','Conecta':'Connect','Acepta':'Accepts','Renderizado.':'Rendering.',
+  'Reglas.':'Rules.','Persistencia.':'Persistence.','Emite':'Emits','Secuencias':'Sequences',
+  'DOCUMENTOS':'DOCUMENTS','PRUEBA':'TEST','Devuelve':'Returns','Requisitos:':'Requirements:',
+  'Unidad.':'Unit.','Guarda':'Save','DOCUMENTO':'DOCUMENT','estructura':'structure','responde.':'responds.',
+  'Comprueba':'Check','Escucha':'Listen','Si':'If','Interactivo':'Interactive','Nativos':'Native',
+  'Interactivas':'Interactive','Componentes':'Components','OTROS':'OTHER','independiente.':'independent.',
+  'EXPERIENCIA':'EXPERIENCE','Responsable':'Controller','Destinatarios':'Recipients',
+  'Actualizaciones':'Updates','indicando':'specifying','Editar':'Edit','Componente':'Component',
+  'Fuente':'Font','Negrita':'Bold','Cursiva':'Italic','Subrayado':'Underline','Tachado':'Strikethrough',
+  'Centrar':'Center','Color':'Color','Obligaciones':'Obligations','Versiones':'Versions',
+  'Disponibilidad':'Availability'
 }));
 
 const SPANISH_RE=/[áéíóúñü¿¡]|\b(?:el|la|los|las|una?|unos|unas|de|del|al|para|por|con|sin|desde|hasta|como|cómo|que|qué|quién|cuál|cuando|cuándo|donde|dónde|este|esta|estos|estas|ese|esa|esos|esas|su|sus|tu|tus|nuestro|nuestra|puede|puedes|pueden|crear|crea|curso|cursos|juego|juegos|alumno|alumnos|profesor|profesores|docente|lección|lecciones|actividad|actividades|abrir|cerrar|guardar|descargar|seleccionar|eliminar|añadir|nuevo|nueva|documentación|integración|colaboración|seguimiento|métricas|analítica|progresión|referencia|recursos|paquete|paquetes|formato|formatos|compatible|compatibilidad|resultado|resultados|respuesta|respuestas|pregunta|preguntas|intento|intentos|autor|derechos|titular|licencia|privacidad|términos|aviso|contacto|solución|problemas|antes|empezar|instalación|reproducir|disponible|fecha|contenido|puntuación|archivo|archivos|herramientas|plataforma|plataformas|navegador|compartir|revisión|primera|después|todo|toda|todos|todas|más|menos|también|sólo|solo|ningún|ninguna|memoria|relacionar|ordenar|clasificar|verdadero|falso|crucigrama|rosco|visor|inicio|menú|anterior|siguiente|configurar|página|páginas|datos|calificaciones|ejemplos|ejemplo|seguridad)\b/i;
@@ -126,7 +153,7 @@ function shouldTranslate(value){
   if(/^(?:application|text|image|audio|video)\//i.test(text))return false;
   if(/^(?:\\[nrt])+$/i.test(text))return false;
   if(/^[\w.-]+\.(?:js|mjs|css|json|html|xml|png|jpe?g|svg|webp|zip|p2lrn|md|txt|wasm)$/i.test(text))return false;
-  return true;
+  return looksSpanish(text);
 }
 
 let cache={};
@@ -140,8 +167,9 @@ function register(value){
 function registerJson(value,key=''){
   if(Array.isArray(value)){for(const item of value)registerJson(item,key);return;}
   if(value&&typeof value==='object'){for(const [k,v] of Object.entries(value))registerJson(v,k);return;}
-  if(typeof value!=='string'||['url','@id','@context','sameAs','image','inLanguage'].includes(key))return;
-  register(value);
+  if(typeof value!=='string')return;
+  if(['url','@id','@context','@type','sameAs','image','inLanguage','applicationCategory','operatingSystem','position'].includes(key))return;
+  if(['name','headline','description','alternateName','text'].includes(key))register(value);
 }
 function registerHtmlFragment(fragment){
   const $=load('<body>'+fragment+'</body>',{decodeEntities:false},false);
@@ -389,8 +417,9 @@ function translateJson(value,key=''){
   if(typeof value!=='string')return value;
   if(key==='inLanguage')return 'en';
   if(['url','@id','sameAs','image'].includes(key))return rewriteAbsoluteUrl(value,routes);
-  if(key==='@context')return value;
-  return translatePlain(value);
+  if(['@context','@type','applicationCategory','operatingSystem','position'].includes(key))return value;
+  if(['name','headline','description','alternateName','text'].includes(key))return translatePlain(value);
+  return value;
 }
 
 console.log('P2LRN_I18N_PHASE=generate-html cache='+Object.keys(cache).length);
