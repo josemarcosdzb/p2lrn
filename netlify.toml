@@ -26,3 +26,22 @@
   to = "/docs/conectores/ia/#conectar-ordenador"
   status = 301
   force = true
+
+# English mirrors of the historical AI documentation redirects.
+[[redirects]]
+  from = "/en/docs/conectores/gemini/"
+  to = "/en/docs/conectores/ia/#gemini"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/en/docs/conectores/skills/"
+  to = "/en/docs/conectores/ia/#crear-cursos"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/en/docs/conectores/local/"
+  to = "/en/docs/conectores/ia/#conectar-ordenador"
+  status = 301
+  force = true
