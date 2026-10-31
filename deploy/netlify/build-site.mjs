@@ -258,19 +258,15 @@ for (const htmlPath of docsHtmlFilesForSidebar) {
 for (const htmlPath of docsHtmlFilesForSidebar) {
   const html = await readFile(htmlPath,'utf8');
   const sidebar = /<aside\s+class=["']doc-sidebar["'][^>]*>([\s\S]*?)<\/aside>/i.exec(html);
-  if (!sidebar) {
-    sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': sidebar missing after normalization');
-  } else if (/<a\b|<span\b|P2LRN_EXTRA_DOC_LINKS/i.test(sidebar[1])) {
-    sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': legacy sidebar content survived normalization');
-  }
   const rel=relative(outputRoot,htmlPath).replaceAll('\\','/');
-  const expectedScript=rel.startsWith('en/')?'/en/p2lrn.js':'/p2lrn.js';
-  const escaped=expectedScript.replace(/[.*+?^{}()|[\]\\]/g,'\\  if (!/<script[^>]+src=["']\/p2lrn\.js["']/i.test(html)) {
-    sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': shared /p2lrn.js missing');
-  }');
-  if (!new RegExp('<script[^>]+src=["\\\']'+escaped+'(?:\\?[^"\\\']*)?["\\\']','i').test(html)) {
-    sidebarProblems.push(rel + ': shared '+expectedScript+' missing');
+  if (!sidebar) {
+    sidebarProblems.push(rel + ': sidebar missing after normalization');
+  } else if (/<a\b|<span\b|P2LRN_EXTRA_DOC_LINKS/i.test(sidebar[1])) {
+    sidebarProblems.push(rel + ': legacy sidebar content survived normalization');
   }
+  const expectedScript=rel.startsWith('en/')?'/en/p2lrn.js':'/p2lrn.js';
+  const hasScript=html.includes('src="'+expectedScript)||html.includes("src='"+expectedScript);
+  if (!hasScript) sidebarProblems.push(rel + ': shared '+expectedScript+' missing');
 }
 if (sidebarProblems.length) {
   throw new Error('Documentation sidebar normalization failed:\n' + sidebarProblems.join('\n'));
