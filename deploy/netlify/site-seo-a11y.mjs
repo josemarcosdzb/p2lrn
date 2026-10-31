@@ -26,7 +26,7 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
     for(const [type,name,value] of [
       ['property','og:type',route.startsWith('/docs/')?'article':'website'],
       ['property','og:title',title],['property','og:description',description],
-      ['property','og:url',url],['property','og:locale','es_ES'],['property','og:site_name','P2LRN'],
+      ['property','og:url',url],['property','og:locale','en_US'],['property','og:site_name','P2LRN'],
       ['name','twitter:card','summary'],['name','twitter:title',title],['name','twitter:description',description]
     ]){
       const existing=tagList(result,'meta').filter(x=>(attr(x,type)||'').toLowerCase()===name.toLowerCase());
@@ -36,12 +36,12 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
   }
   const main=/<main\b[^>]*>/i.exec(result);if(!main)throw Error('Missing main landmark: '+route);
   let mainTag=main[0];let mainId=attr(mainTag,'id');
-  if(!mainId){mainId='contenido';mainTag=mainTag.replace(/>$/,' id="contenido">')}
+  if(!mainId){mainId='content';mainTag=mainTag.replace(/>$/,' id="content">')}
   if(attr(mainTag,'tabindex')===null)mainTag=mainTag.replace(/>$/,' tabindex="-1">');
   result=result.slice(0,main.index)+mainTag+result.slice(main.index+main[0].length);
   if(!/<a\b[^>]*class=["'][^"']*\bskip-link\b/i.test(result)){
     if(!/<body\b[^>]*>/i.test(result))throw Error('Missing body: '+route);
-    result=result.replace(/<body\b[^>]*>/i,x=>x+'<a class="skip-link" href="#'+escape(mainId)+'">Saltar al contenido</a>');
+    result=result.replace(/<body\b[^>]*>/i,x=>x+'<a class="skip-link" href="#'+escape(mainId)+'">Skip to content</a>');
   }
   return result;
 }
@@ -58,7 +58,7 @@ export async function normalizeSeoAndAccessibility(outputRoot,{sourceRoot=output
   }
   if(strict&&(routes.length+aliases!==sourcePages.length||aliases!==3))
     throw Error('Route classification changed unexpectedly: '+routes.length+'/'+aliases);
-  routes.sort((a,b)=>a==='/'?-1:b==='/'?1:a.localeCompare(b,'es'));
+  routes.sort((a,b)=>a==='/'?-1:b==='/'?1:a.localeCompare(b,'en'));
   const xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+routes.map(r=>'  <url><loc>'+escape(origin+r)+'</loc></url>').join('\n')+'\n</urlset>\n';
   await writeFile(join(outputRoot,'sitemap.xml'),xml,'utf8');
   return {total:sourcePages.length,indexable:routes.length,redirects:aliases,changed,sitemapUrls:routes.length};
