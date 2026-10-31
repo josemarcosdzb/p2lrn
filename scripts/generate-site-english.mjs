@@ -99,6 +99,19 @@ function registerJson(value,key=''){
   if(typeof value!=='string'||['url','@id','@context','sameAs','image','inLanguage'].includes(key))return;
   register(value);
 }
+function registerHtmlFragment(fragment){
+  const $=load('<body>'+fragment+'</body>',{decodeEntities:false},false);
+  const blocked=new Set(['code','pre','script','style','kbd','samp','svg','path']);
+  const visit=(node,ancestorBlocked=false)=>{
+    const tag=node.type==='tag'?String(node.name||'').toLowerCase():'';
+    const nextBlocked=ancestorBlocked||blocked.has(tag);
+    if(node.type==='text'&&!nextBlocked)register(node.data);
+    for(const child of node.children??[])visit(child,nextBlocked);
+  };
+  for(const node of $('body').get(0)?.children??[])visit(node,false);
+  for(const attr of ['aria-label','aria-description','alt','placeholder','title'])
+    $('['+attr+']').each((_,el)=>register($(el).attr(attr)));
+}
 
 const files=await walk(siteRoot);
 const htmlFiles=files.filter(file=>extname(file).toLowerCase()==='.html'&&!relative(siteRoot,file).replaceAll('\\','/').startsWith('en/'));
@@ -152,7 +165,10 @@ for(const rel of JS_FILES){
   const source=await readFile(join(siteRoot,...rel.split('/')),'utf8');
   jsSources.set(rel,source);
   walkAst(parseJs(source),(node,parent)=>{
-    if(node.type==='Literal'&&typeof node.value==='string'&&!node.regex&&!structuralLiteral(node,parent))register(node.value);
+    if(node.type==='Literal'&&typeof node.value==='string'&&!node.regex&&!structuralLiteral(node,parent)){
+      if(node.value.includes('<')&&node.value.includes('>'))registerHtmlFragment(node.value);
+      else register(node.value);
+    }
   });
 }
 
@@ -204,6 +220,20 @@ function translatePlain(value){
   if(!shouldTranslate(text))return original;
   return preserveWhitespace(original,MANUAL.get(text)??cache[text]??text);
 }
+function translateHtmlFragment(fragment){
+  const $=load('<body>'+fragment+'</body>',{decodeEntities:false},false);
+  const blocked=new Set(['code','pre','script','style','kbd','samp','svg','path']);
+  const visit=(node,ancestorBlocked=false)=>{
+    const tag=node.type==='tag'?String(node.name||'').toLowerCase():'';
+    const nextBlocked=ancestorBlocked||blocked.has(tag);
+    if(node.type==='text'&&!nextBlocked)node.data=translatePlain(node.data);
+    for(const child of node.children??[])visit(child,nextBlocked);
+  };
+  for(const node of $('body').get(0)?.children??[])visit(node,false);
+  for(const attr of ['aria-label','aria-description','alt','placeholder','title'])
+    $('['+attr+']').each((_,el)=>$(el).attr(attr,translatePlain($(el).attr(attr))));
+  return $('body').html()??fragment;
+}
 function translateJson(value,key=''){
   if(Array.isArray(value))return value.map(item=>translateJson(item,key));
   if(value&&typeof value==='object'){
@@ -228,6 +258,8 @@ for(const file of htmlFiles){
   for(const attr of ['aria-label','aria-description','alt','placeholder','title'])$('['+attr+']').each((_,el)=>$(el).attr(attr,translatePlain($(el).attr(attr))));
   $('input[type="button"][value],input[type="submit"][value]').each((_,el)=>$(el).attr('value',translatePlain($(el).attr('value'))));
   $('meta[name="description"],meta[property="og:title"],meta[property="og:description"],meta[name="twitter:title"],meta[name="twitter:description"]').each((_,el)=>$(el).attr('content',translatePlain($(el).attr('content'))));
+  $('meta[property="og:url"]').each((_,el)=>$(el).attr('content',rewriteAbsoluteUrl($(el).attr('content')??'',routes)));
+  $('link[rel~="canonical"][href]').each((_,el)=>$(el).attr('href',rewriteAbsoluteUrl($(el).attr('href')??'',routes)));
   $('script[type="application/ld+json"]').each((_,el)=>{try{$(el).text(JSON.stringify(translateJson(JSON.parse($(el).text()))));}catch{}});
   $('a[href]').each((_,el)=>$(el).attr('href',rewriteHref($(el).attr('href'),routes)));
   $('form[action]').each((_,el)=>$(el).attr('action',rewriteHref($(el).attr('action'),routes)));
@@ -251,7 +283,9 @@ for(const [rel,source] of jsSources){
   const edits=[];
   walkAst(parseJs(source),(node,parent)=>{
     if(node.type!=='Literal'||typeof node.value!=='string'||node.regex||structuralLiteral(node,parent))return;
-    let next=translatePlain(node.value);
+    let next=node.value.includes('<')&&node.value.includes('>')
+      ?translateHtmlFragment(node.value)
+      :translatePlain(node.value);
     next=rewriteHref(next,routes);
     if(next!==node.value)edits.push({start:node.start,end:node.end,text:JSON.stringify(next)});
   });
