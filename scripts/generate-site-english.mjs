@@ -206,7 +206,10 @@ async function translateGoogle(text){
   const endpoint='https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&dt=t&q='+encodeURIComponent(text);
   for(let attempt=0;attempt<6;attempt++){
     try{
-      const response=await fetch(endpoint,{headers:{'User-Agent':'P2LRN-site-i18n/1.0'}});
+      const response=await fetch(endpoint,{
+        headers:{'User-Agent':'P2LRN-site-i18n/1.0'},
+        signal:AbortSignal.timeout(15000),
+      });
       if(!response.ok)throw new Error('HTTP '+response.status);
       const payload=await response.json();
       const translated=Array.isArray(payload?.[0])
