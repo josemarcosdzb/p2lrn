@@ -164,14 +164,30 @@ function unwrap(item){
 const missing=[...pending].filter(text=>!MANUAL.has(text)&&!cache[text]);
 if(missing.length){
   const pipe=await getTranslator();
-  for(let i=0;i<missing.length;i++){
-    const source=missing[i];
-    let result;
-    try{result=await pipe(source,{max_new_tokens:512});}
-    catch(error){throw new Error('Translation failed for '+JSON.stringify(source)+': '+String(error?.message??error));}
-    const translated=unwrap(result);
-    cache[source]=translated||source;
-    if((i+1)%50===0||i===missing.length-1)console.log('P2LRN_I18N_PROGRESS='+(i+1)+'/'+missing.length);
+  const batchSize=Math.max(1,Number(process.env.P2LRN_I18N_BATCH_SIZE)||16);
+  for(let offset=0;offset<missing.length;offset+=batchSize){
+    const batch=missing.slice(offset,offset+batchSize);
+    let results;
+    try{
+      results=await pipe(batch,{max_new_tokens:512});
+      if(!Array.isArray(results)||results.length!==batch.length)throw new Error('Unexpected batch output shape.');
+      for(let index=0;index<batch.length;index++){
+        const translated=unwrap(results[index]);
+        cache[batch[index]]=translated||batch[index];
+      }
+    }catch(batchError){
+      console.warn('P2LRN_I18N_BATCH_FALLBACK='+offset+': '+String(batchError?.message??batchError));
+      for(const source of batch){
+        let result;
+        try{result=await pipe(source,{max_new_tokens:512});}
+        catch(error){throw new Error('Translation failed for '+JSON.stringify(source)+': '+String(error?.message??error));}
+        const translated=unwrap(result);
+        cache[source]=translated||source;
+      }
+    }
+    const done=Math.min(offset+batch.length,missing.length);
+    if(done%80===0||done===missing.length)console.log('P2LRN_I18N_PROGRESS='+done+'/'+missing.length);
+    if(done%320===0)await writeFile(cachePath,JSON.stringify(cache,null,2)+'\n','utf8');
   }
 }
 await writeFile(cachePath,JSON.stringify(cache,null,2)+'\n','utf8');
