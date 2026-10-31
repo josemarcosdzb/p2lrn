@@ -1,6 +1,5 @@
 import {mkdir,readFile,readdir,rm,writeFile} from 'node:fs/promises';
 import {dirname,extname,join,relative,resolve} from 'node:path';
-import {pipeline} from '@huggingface/transformers';
 import * as acorn from 'acorn';
 import {load} from 'cheerio';
 
@@ -194,7 +193,13 @@ for(const file of htmlFiles){
 }
 
 let translator=null;
-async function getTranslator(){if(!translator)translator=await pipeline('translation',MODEL,{dtype:'q8'});return translator;}
+async function getTranslator(){
+  if(!translator){
+    const {pipeline}=await import('@huggingface/transformers');
+    translator=await pipeline('translation',MODEL,{dtype:'q8'});
+  }
+  return translator;
+}
 function unwrap(item){
   const value=Array.isArray(item)?item[0]:item;
   return String(value?.translation_text??value?.generated_text??'').trim();
