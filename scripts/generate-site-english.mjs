@@ -114,7 +114,11 @@ function registerHtmlFragment(fragment){
 }
 
 const files=await walk(siteRoot);
-const htmlFiles=files.filter(file=>extname(file).toLowerCase()==='.html'&&!relative(siteRoot,file).replaceAll('\\','/').startsWith('en/'));
+const htmlFiles=files.filter(file=>{
+  if(extname(file).toLowerCase()!=='.html')return false;
+  const rel=relative(siteRoot,file).replaceAll('\\','/');
+  return !rel.startsWith('en/')&&routeFromRelative(rel)!==null;
+});
 const routes=new Set();
 for(const file of htmlFiles){
   const route=routeFromRelative(relative(siteRoot,file).replaceAll('\\','/'));
