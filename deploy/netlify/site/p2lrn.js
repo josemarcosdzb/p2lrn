@@ -67,24 +67,24 @@
       label: 'Soluciones',
       active: ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'],
       items: [
-        ['/crear-cursos-interactivos/','Create interactive courses'],
+        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
         ['/juegos-educativos-3d/','Juegos educativos 3D'],
         ['/cursos-offline/','Cursos offline sin LMS'],
       ],
     },
     { label: 'Analytics', href: '/analytics/', active: ['/analytics/'] },
     { label: 'Skills para IA', href: '/skills/', active: ['/skills/'] },
-    { label: 'Documentation', href: '/docs/', active: ['/docs/'] },
-    { label: 'Contact', href: '/contacto/', active: ['/contacto/'] },
+    { label: 'Documentación', href: '/docs/', active: ['/docs/'] },
+    { label: 'Contacto', href: '/contacto/', active: ['/contacto/'] },
   ];
 
   const GLOBAL_NAV = [
     {
-      label: 'Documentation',
+      label: 'Documentación',
       active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/'],
       items: [
-        ['/docs/','Home'],
-        ['/docs/empezar/','Before you start'],
+        ['/docs/','Inicio'],
+        ['/docs/empezar/','Antes de empezar'],
         ['/docs/que-usar/','Mapa de componentes'],
         ['/docs/conceptos/','Conceptos'],
         ['/docs/formato/','Formato P2LRN'],
@@ -94,7 +94,7 @@
       label: 'Instalar',
       active: ['/docs/instalar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*'],
       items: [
-        ['/docs/instalar/','Choose installation'],
+        ['/docs/instalar/','Elegir instalación'],
         ['/docs/npm/','NPM'],
         ['/docs/npm/studio/','Studio con NPM'],
         ['/docs/cdn/','CDN'],
@@ -102,62 +102,62 @@
       ],
     },
     {
-      label: 'Create',
+      label: 'Crear',
       active: ['/studio/','/crear-cursos-interactivos/','/cursos-offline/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
       items: [
-        ['/studio/','Open Studio'],
-        ['/crear-cursos-interactivos/','Create interactive courses'],
+        ['/studio/','Abrir Studio'],
+        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
         ['/cursos-offline/','Cursos offline sin LMS'],
-        ['/docs/studio/','Studio guide'],
+        ['/docs/studio/','Guía de Studio'],
         ['/docs/entrega-offline/','Entrega offline'],
-        ['/docs/paquetes/','Create packages'],
+        ['/docs/paquetes/','Crear paquetes'],
         ['/docs/paquetes/multipart/','Multipart'],
         ['/docs/toolkit/','Toolkit'],
         ['/docs/cli/','CLI'],
       ],
     },
     {
-      label: 'Play',
+      label: 'Reproducir',
       active: ['/docs/player/','/demo/','/juegos-educativos-3d/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],
       wide: true,
       items: [
         ['/docs/player/','Player'],
-        ['/demo/','Viewer'],
+        ['/demo/','Visor'],
         ['/juegos-educativos-3d/','Juegos educativos 3D'],
         ['/docs/questionnaires/','Cuestionarios y juegos'],
-        ['/docs/questionnaires/standard/','Standard questionnaire'],
-        ['/docs/questionnaires/memory/','Memory'],
-        ['/docs/questionnaires/matching/','Matching'],
-        ['/docs/questionnaires/ordering/','Ordering'],
-        ['/docs/questionnaires/classification/','Classification'],
-        ['/docs/questionnaires/true-false/','True / False'],
-        ['/docs/questionnaires/word-search/','Word search'],
-        ['/docs/questionnaires/crossword/','Crossword'],
-        ['/docs/questionnaires/rosco/','Word Wheel'],
-        ['/docs/questionnaires/3d/','3D game'],
+        ['/docs/questionnaires/standard/','Cuestionario estándar'],
+        ['/docs/questionnaires/memory/','Memoria'],
+        ['/docs/questionnaires/matching/','Relacionar'],
+        ['/docs/questionnaires/ordering/','Ordenar'],
+        ['/docs/questionnaires/classification/','Clasificar'],
+        ['/docs/questionnaires/true-false/','Verdadero / Falso'],
+        ['/docs/questionnaires/word-search/','Sopa de letras'],
+        ['/docs/questionnaires/crossword/','Crucigrama'],
+        ['/docs/questionnaires/rosco/','Rosco'],
+        ['/docs/questionnaires/3d/','Juego 3D'],
         ['/docs/juegos-3d/','Arquitectura 3D'],
         ['/docs/ejemplos/','Ejemplos'],
       ],
     },
     {
-      label: 'Integrate',
+      label: 'Integrar',
       active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
       items: [
-        ['/docs/integracion/','Integration'],
-        ['/docs/colaboracion/','Collaboration'],
+        ['/docs/integracion/','Integración'],
+        ['/docs/colaboracion/','Colaboración'],
         ['/docs/eventos/','Eventos'],
-        ['/docs/conectores/','Connectors overview'],
-        ['/docs/conectores/ia/','AI connectors'],
+        ['/docs/conectores/','Conectores: visión general'],
+        ['/docs/conectores/ia/','Conectores para IA'],
         ['/docs/conectores/lms/','Plataformas LMS'],
         ['/docs/conectores/lti/','LTI 1.3'],
       ],
     },
     {
-      label: 'Tracking',
+      label: 'Seguimiento',
       active: ['/docs/progresion/','/docs/metricas/'],
       items: [
-        ['/docs/progresion/','Progress'],
-        ['/docs/metricas/','Metrics and analytics'],
+        ['/docs/progresion/','Progresión'],
+        ['/docs/metricas/','Métricas y analítica'],
       ],
     },
     {
@@ -165,18 +165,18 @@
       active: ['/docs/analytics/','/analytics/'],
       items: [
         ['/docs/analytics/','Guía de Analytics'],
-        ['/analytics/','Open Analytics'],
+        ['/analytics/','Abrir Analytics'],
       ],
     },
     {
-      label: 'Reference',
+      label: 'Referencia',
       active: ['/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
       items: [
         ['/docs/compatibilidad/','Compatibilidad'],
         ['/docs/recetas/','Recetas'],
         ['/docs/glosario/','Glosario'],
-        ['/docs/referencia/','Technical reference'],
-        ['/docs/troubleshooting/','Troubleshooting'],
+        ['/docs/referencia/','Referencia técnica'],
+        ['/docs/troubleshooting/','Solución de problemas'],
       ],
     },
   ];
@@ -196,7 +196,7 @@
       header.querySelector('.brand')?.after(nav);
     }
     nav.id = 'nav';
-    nav.setAttribute('aria-label','Main navigation');
+    nav.setAttribute('aria-label','Navegación principal');
     const current = normalizePath(window.location.pathname);
     const fragment = document.createDocumentFragment();
 
@@ -239,7 +239,7 @@
       menuButton.className = 'menu';
       menuButton.type = 'button';
       menuButton.dataset.menu = '';
-      menuButton.textContent = 'Menu';
+      menuButton.textContent = 'Menú';
       header.append(menuButton);
     }
     menuButton.setAttribute('aria-controls','nav');
@@ -310,14 +310,14 @@
     if (!menu || !nav) return;
     nav.classList.remove('is-open');
     menu.setAttribute('aria-expanded', 'false');
-    menu.textContent = 'Menu';
+    menu.textContent = 'Menú';
   };
 
   if (menu && nav) {
     menu.addEventListener('click', () => {
       const open = nav.classList.toggle('is-open');
       menu.setAttribute('aria-expanded', String(open));
-      menu.textContent = open ? 'Close' : 'Menu';
+      menu.textContent = open ? 'Cerrar' : 'Menú';
     });
     nav.addEventListener('click', (event) => {
       if (event.target.closest('a')) closeMenu();
@@ -341,79 +341,79 @@
 
   const copied = (button) => {
     const previous = button.textContent;
-    button.textContent = 'Copied';
-    announce('Code copied to clipboard');
+    button.textContent = 'Copiado';
+    announce('Código copiado al portapapeles');
     window.setTimeout(() => { button.textContent = previous; }, 1200);
   };
 
   document.querySelectorAll('[data-copy]').forEach((button) => {
     button.addEventListener('click', async () => {
       const code = button.closest('.codebox')?.querySelector('code')?.innerText || '';
-      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('The code could not be copied'); }
+      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('No se pudo copiar el código'); }
     });
   });
 
   document.querySelectorAll('[data-copy-inline]').forEach((button) => {
     button.addEventListener('click', async () => {
       const code = button.parentElement?.querySelector('code')?.innerText || '';
-      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('The code could not be copied'); }
+      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('No se pudo copiar el código'); }
     });
   });
 
   const GLOBAL_SIDEBAR = [
-    ['GET STARTED', [
-      ['/docs/','Documentation'],
-      ['/docs/empezar/','Before you start'],
-      ['/docs/empezar-facil/','Easy start'],
+    ['EMPEZAR', [
+      ['/docs/','Documentación'],
+      ['/docs/empezar/','Antes de empezar'],
+      ['/docs/empezar-facil/','Empezar fácil'],
     ]],
-    ['INSTALL', [
-      ['/docs/instalar/','Installation'],
+    ['INSTALAR', [
+      ['/docs/instalar/','Instalación'],
       ['/docs/cdn/','CDN'],
       ['/docs/cdn/studio/','Studio mediante CDN'],
       ['/docs/npm/','NPM'],
       ['/docs/npm/studio/','Studio con NPM'],
     ]],
-    ['CREATE', [
+    ['CREAR', [
       ['/docs/studio/','Studio visual'],
       ['/docs/entrega-offline/','Entrega offline'],
-      ['/docs/paquetes/','Create packages'],
+      ['/docs/paquetes/','Crear paquetes'],
       ['/docs/paquetes/multipart/','Multipart'],
       ['/docs/toolkit/','Toolkit'],
       ['/docs/cli/','CLI'],
     ]],
-    ['PLAY', [
+    ['REPRODUCIR', [
       ['/docs/player/','Player'],
       ['/docs/questionnaires/','Cuestionarios y juegos'],
       ['/docs/juegos-3d/','Juegos 3D'],
       ['/docs/ejemplos/','Ejemplos'],
     ]],
-    ['INTEGRATE', [
-      ['/docs/integracion/','Integration'],
-      ['/docs/colaboracion/','Collaboration'],
+    ['INTEGRAR', [
+      ['/docs/integracion/','Integración'],
+      ['/docs/colaboracion/','Colaboración'],
       ['/docs/eventos/','Eventos'],
     ]],
-    ['CONNECTORS', [
-      ['/docs/conectores/','Connectors and integration'],
+    ['CONECTORES', [
+      ['/docs/conectores/','Conectores e integración'],
     ]],
-    ['TRACKING', [
-      ['/docs/progresion/','Progress'],
-      ['/docs/metricas/','Metrics and analytics'],
+    ['SEGUIMIENTO', [
+      ['/docs/progresion/','Progresión'],
+      ['/docs/metricas/','Métricas y analítica'],
     ]],
     ['ANALYTICS', [
       ['/docs/analytics/','P2LRN Analytics'],
-      ['/analytics/','Open demo dashboard ↗'],
+      ['/analytics/','Abrir panel demo ↗'],
     ]],
-    ['REFERENCE', [
+    ['REFERENCIA', [
       ['/docs/compatibilidad/','Compatibilidad'],
       ['/docs/recetas/','Recetas'],
       ['/docs/glosario/','Glosario'],
-      ['/docs/referencia/','Technical reference'],
-      ['/docs/troubleshooting/','Troubleshooting'],
+      ['/docs/referencia/','Referencia técnica'],
+      ['/docs/troubleshooting/','Solución de problemas'],
     ]],
-    ['RESOURCES', [
-      ['/studio/','Open Studio ↗'],
-      ['/demo/','Viewer ↗'],
-      ['/examples/catalog.json','Example catalog ↗'],
+    ['RECURSOS', [
+      ['/studio/','Abrir Studio ↗'],
+      ['/demo/','Visor ↗'],
+      ['/examples/catalog.json','Catálogo de ejemplos ↗'],
     ]],
   ];
 
@@ -424,62 +424,62 @@
       ['/docs/formato/','Formato P2LRN'],
     ]],
     ['/docs/conectores/',[
-      ['/docs/conectores/ia/','AI connectors'],
+      ['/docs/conectores/ia/','Conectores para IA'],
       ['/docs/skills/','Skills P2LRN para IA'],
       ['/docs/conectores/lms/','Plataformas LMS'],
-      ['/docs/conectores/lti/','LTI 1.3 module'],
+      ['/docs/conectores/lti/','Módulo LTI 1.3'],
     ]],
     ['/docs/questionnaires/',[
-      ['/docs/questionnaires/standard/','Standard questionnaire'],
-      ['/docs/questionnaires/memory/','Memory'],
-      ['/docs/questionnaires/matching/','Matching'],
-      ['/docs/questionnaires/ordering/','Ordering'],
-      ['/docs/questionnaires/classification/','Classification'],
-      ['/docs/questionnaires/true-false/','True / False'],
-      ['/docs/questionnaires/word-search/','Word search'],
-      ['/docs/questionnaires/crossword/','Crossword'],
-      ['/docs/questionnaires/rosco/','Word Wheel'],
-      ['/docs/questionnaires/3d/','3D game'],
+      ['/docs/questionnaires/standard/','Cuestionario estándar'],
+      ['/docs/questionnaires/memory/','Memoria'],
+      ['/docs/questionnaires/matching/','Relacionar'],
+      ['/docs/questionnaires/ordering/','Ordenar'],
+      ['/docs/questionnaires/classification/','Clasificar'],
+      ['/docs/questionnaires/true-false/','Verdadero / Falso'],
+      ['/docs/questionnaires/word-search/','Sopa de letras'],
+      ['/docs/questionnaires/crossword/','Crucigrama'],
+      ['/docs/questionnaires/rosco/','Rosco'],
+      ['/docs/questionnaires/3d/','Juego 3D'],
     ]],
   ]);
 
   // IA topics are part of a single guide. They are anchors, not extra pages.
   const DOC_AI_TOPICS = Object.freeze([
-    ['para-que','What you can do'],
-    ['crear-cursos','Create courses'],
+    ['para-que','Qué puedes hacer'],
+    ['crear-cursos','Crear cursos'],
     ['chatgpt','ChatGPT'],
     ['claude','Claude'],
     ['gemini','Gemini'],
     ['grok','Grok'],
-    ['conectar-ordenador','Connect your computer'],
-    ['servicios-web','Web access'],
-    ['comprobar','Checks'],
+    ['conectar-ordenador','Conectar tu ordenador'],
+    ['servicios-web','Acceso desde la web'],
+    ['comprobar','Comprobaciones'],
   ]);
 
   const DOC_SECTION_LABELS = Object.freeze({
-    GET STARTED:'Get started',
-    INSTALL:'Instalar',
-    CREATE:'Create',
-    PLAY:'Play',
-    INTEGRATE:'Integrate',
-    CONNECTORS:'Connectors',
-    TRACKING:'Tracking',
-    REFERENCE:'Reference',
+    EMPEZAR:'Empezar',
+    INSTALAR:'Instalar',
+    CREAR:'Crear',
+    REPRODUCIR:'Reproducir',
+    INTEGRAR:'Integrar',
+    CONECTORES:'Conectores',
+    SEGUIMIENTO:'Seguimiento',
+    REFERENCIA:'Referencia',
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
-    ['/docs/que-usar/',['/docs/empezar/','Before you start']],
-    ['/docs/conceptos/',['/docs/empezar/','Before you start']],
-    ['/docs/formato/',['/docs/empezar/','Before you start']],
+    ['/docs/que-usar/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/conceptos/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/formato/',['/docs/empezar/','Antes de empezar']],
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
-    ['/docs/paquetes/multipart/',['/docs/paquetes/','Create packages']],
-    ['/docs/conectores/ia/',['/docs/conectores/','Connectors and integration']],
-    ['/docs/skills/',['/docs/conectores/','Connectors and integration']],
-    ['/docs/conectores/gemini/',['/docs/conectores/ia/','AI connectors']],
-    ['/docs/conectores/skills/',['/docs/conectores/ia/','AI connectors']],
-    ['/docs/conectores/local/',['/docs/conectores/ia/','AI connectors']],
-    ['/docs/conectores/lms/',['/docs/conectores/','Connectors and integration']],
-    ['/docs/conectores/lti/',['/docs/conectores/','Connectors and integration']],
+    ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
+    ['/docs/conectores/ia/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/skills/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/gemini/',['/docs/conectores/ia/','Conectores para IA']],
+    ['/docs/conectores/skills/',['/docs/conectores/ia/','Conectores para IA']],
+    ['/docs/conectores/local/',['/docs/conectores/ia/','Conectores para IA']],
+    ['/docs/conectores/lms/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/lti/',['/docs/conectores/','Conectores e integración']],
   ]);
   // Keep legacy detail URLs reachable without advertising a separate IA
   // navigation entry for every provider or installation method.
@@ -540,7 +540,7 @@
               const topics=document.createElement('div');
               topics.className='doc-ai-topics';
               topics.setAttribute('role','group');
-              topics.setAttribute('aria-label','AI connectors sections');
+              topics.setAttribute('aria-label','Apartados de Conectores para IA');
               for (const [id,label] of DOC_AI_TOPICS) {
                 const topic=document.createElement('a');
                 topic.href='/docs/conectores/ia/#'+id;
@@ -597,14 +597,14 @@
           return a;
         }));
         results.hidden = matches.length === 0;
-        resultsStatus.textContent = allMatches.length === 0 ? 'No results found for this search.'
-          : allMatches.length === 1 ? '1 search result.'
-          : allMatches.length + ' search results' + (allMatches.length > 8 ? '. Se muestran los primeros 8.' : '.');
+        resultsStatus.textContent = allMatches.length === 0 ? 'No hay resultados para esta búsqueda.'
+          : allMatches.length === 1 ? '1 resultado de búsqueda.'
+          : allMatches.length + ' resultados de búsqueda' + (allMatches.length > 8 ? '. Se muestran los primeros 8.' : '.');
       } catch {
         if (token !== searchRequestToken) return;
         results.replaceChildren();
         results.hidden = true;
-        resultsStatus.textContent = 'The search index could not be loaded.';
+        resultsStatus.textContent = 'No se ha podido cargar el índice de búsqueda.';
       }
     });
   }
@@ -619,8 +619,8 @@
     toggle.className = 'docs-sidebar-toggle';
     toggle.setAttribute('aria-controls','docs-sidebar');
     toggle.setAttribute('aria-expanded','false');
-    toggle.innerHTML = '<span>Documentation index</span><strong></strong>';
-    toggle.querySelector('strong').textContent = currentLink?.textContent || 'Open';
+    toggle.innerHTML = '<span>Índice de documentación</span><strong></strong>';
+    toggle.querySelector('strong').textContent = currentLink?.textContent || 'Abrir';
     main?.insertBefore(toggle, sidebar);
     const media = window.matchMedia('(min-width: 901px)');
     const syncToggleHeight = () => {
@@ -636,7 +636,7 @@
       syncToggleHeight();
       sidebar.classList.toggle('is-open',open);
       toggle.setAttribute('aria-expanded',String(open));
-      toggle.querySelector('span').textContent = open ? 'Close index' : 'Documentation index';
+      toggle.querySelector('span').textContent = open ? 'Cerrar índice' : 'Índice de documentación';
       if (open && !media.matches) requestAnimationFrame(revealCurrent);
     };
     toggle.addEventListener('click',()=>setOpen(!sidebar.classList.contains('is-open')));
@@ -678,7 +678,7 @@
       used.add(id); heading.id=id;
     });
 
-    const pageTitle = docArticle.querySelector('.doc-hero h1')?.textContent?.trim() || document.title.split('—')[0].trim() || 'This page';
+    const pageTitle = docArticle.querySelector('.doc-hero h1')?.textContent?.trim() || document.title.split('—')[0].trim() || 'Esta página';
     const mobileIndexCurrent=document.querySelector('.docs-sidebar-toggle strong');
     if (mobileIndexCurrent) {
       mobileIndexCurrent.textContent=pageTitle;
@@ -703,7 +703,7 @@
         if (current) span.setAttribute('aria-current','page');
         li.append(span);list.append(li);
       };
-      addLink('/docs/','Documentation');
+      addLink('/docs/','Documentación');
       if (location?.section && DOC_SECTION_LABELS[location.section]) addText(DOC_SECTION_LABELS[location.section]);
       const explicitParent=DOC_BREADCRUMB_PARENTS.get(currentPath);
       if (explicitParent) addLink(explicitParent[0],explicitParent[1]);
@@ -718,20 +718,20 @@
     if (headings.length >= 2 && docMain && !docMain.querySelector('.doc-page-toc')) {
       const aside=document.createElement('aside');
       aside.className='doc-page-toc';
-      aside.setAttribute('aria-label','On this page');
+      aside.setAttribute('aria-label','En esta página');
 
       const toggle=document.createElement('button');
       toggle.type='button';
       toggle.className='doc-page-toc-toggle';
       toggle.setAttribute('aria-expanded','false');
-      toggle.innerHTML='<span>On this page</span><strong></strong>';
+      toggle.innerHTML='<span>En esta página</span><strong></strong>';
       toggle.querySelector('strong').textContent=headings[0]?.textContent || '';
 
       const nav=document.createElement('nav');
       nav.className='doc-page-toc-nav';
-      nav.setAttribute('aria-label','On this page');
+      nav.setAttribute('aria-label','En esta página');
       const title=document.createElement('strong');
-      title.textContent='On this page';
+      title.textContent='En esta página';
       const list=document.createElement('ol');
       const links=[];
 
@@ -827,7 +827,7 @@
       const now = Date.now();
       const last = Number(localStorage.getItem('p2lrn-contact-last') || 0);
       if (now - last < 30000) {
-        if (status) status.textContent = 'Wait a few seconds before sending another message.';
+        if (status) status.textContent = 'Espera unos segundos antes de enviar otro mensaje.';
         return;
       }
 
@@ -858,7 +858,7 @@
         form.reset();
         if (status) status.textContent = 'Mensaje enviado. Gracias por contactar.';
       } catch (error) {
-        if (status) status.textContent = error?.message === 'contact_rate_limited' ? 'Submission limit reached. Try again later.' : 'The message could not be sent. Try again.';
+        if (status) status.textContent = error?.message === 'contact_rate_limited' ? 'Límite de envíos alcanzado. Inténtalo más tarde.' : 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
       } finally {
         if (button) button.disabled = false;
       }
@@ -873,7 +873,7 @@
     const version = release.webSdkVersion || health.playerVersion || index?.player?.version;
     if (version) document.querySelectorAll('[data-player-version],[data-footer-version]').forEach((n) => n.textContent = version);
     const node = document.querySelector('[data-health]');
-    if (node) node.textContent = health.ok && release.webSdkVersion === version ? 'CDN available' : 'CDN';
+    if (node) node.textContent = health.ok && release.webSdkVersion === version ? 'CDN disponible' : 'CDN';
   }).catch(() => {});
 })();
 
@@ -1027,19 +1027,19 @@
     return url.origin===location.origin&&url.pathname==='/p2lrn.js';
   });
   const revision=entry?new URL(entry.src).searchParams.get('v'):null;
-  label.textContent=revision?'Web '+revision.slice(0,12):'Web files pending review';
-  label.title='Review of the web files; the npm version is shown separately';
+  label.textContent=revision?'Web '+revision.slice(0,12):'Web sin revisión';
+  label.title='Revisión de los archivos web; la versión npm se muestra por separado';
 })();
 
 /* Accessible navigation landmarks and keyboard-operable horizontal scrolling. */
 (()=>{
   const boot=()=>{
     document.querySelectorAll('nav.doc-child-subnav').forEach(nav=>{
-      const label=nav.getAttribute('aria-label') || 'documentation';
+      const label=nav.getAttribute('aria-label') || 'documentación';
       if(!label.startsWith('Subsecciones de '))nav.setAttribute('aria-label','Subsecciones de '+label);
     });
-    document.querySelectorAll('nav.resource-links:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Technical resources'));
-    document.querySelectorAll('nav.doc-pager:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Navigation between guides'));
+    document.querySelectorAll('nav.resource-links:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Recursos técnicos'));
+    document.querySelectorAll('nav.doc-pager:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Navegación entre guías'));
     const updateScrollable=()=>{
       for(const el of document.querySelectorAll('pre,.capability-table-wrap,.capability-matrix')){
         const overflowing=el.clientWidth>0&&el.scrollWidth>el.clientWidth+1;
