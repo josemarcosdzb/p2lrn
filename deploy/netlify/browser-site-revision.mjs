@@ -56,8 +56,8 @@ export async function reviseSiteBrowserAssets({siteRoot, htmlFiles}){
     }
   }
   for(const rel of [
-    'demo/viewer.js','studio/studio.js','studio/studio.css','analytics/demo.js',
-    'en/demo/viewer.js','en/studio/studio.js','en/analytics/demo.js',
+    'demo/viewer.js','studio/studio.js','studio/studio.css',
+    'en/demo/viewer.js','en/studio/studio.js',
   ]){
     const path=join(siteRoot,...rel.split('/'));
     if(await exists(path))mutablePaths.push(path);
@@ -104,7 +104,7 @@ export async function reviseSiteBrowserAssets({siteRoot, htmlFiles}){
   }
 
   const sharedUiRevision={};
-  for(const asset of ['p2lrn.js','p2lrn.css','en/p2lrn.js']){
+  for(const asset of ['p2lrn.js','p2lrn.css','en/p2lrn.js','analytics/demo.js','en/analytics/demo.js']){
     const path=join(siteRoot,asset);
     if(!await exists(path))continue;
     sharedUiRevision[asset]=createHash('sha256').update(await readFile(path)).digest('hex').slice(0,12);
@@ -151,9 +151,15 @@ export async function reviseSiteBrowserAssets({siteRoot, htmlFiles}){
     if(sharedUiRevision['p2lrn.css']){
       html=html.replace(/href=["']\/p2lrn\.css(?:\?[^"']*)?["']/gi,'href="/p2lrn.css?v='+sharedUiRevision['p2lrn.css']+'"');
     }
-    if(/(?:src|href)=["']\/(?:player\/current\/dist\/p2lrn\.js|studio\/studio\.(?:js|css)|demo\/viewer\.js|analytics\/demo\.js|en\/(?:studio\/studio\.js|demo\/viewer\.js|analytics\/demo\.js))/iu.test(html)){
+    if(sharedUiRevision['analytics/demo.js']){
+      html=html.replace(/src=["']\/analytics\/demo\.js(?:\?[^"']*)?["']/gi,'src="/analytics/demo.js?v='+sharedUiRevision['analytics/demo.js']+'"');
+    }
+    if(sharedUiRevision['en/analytics/demo.js']){
+      html=html.replace(/src=["']\/en\/analytics\/demo\.js(?:\?[^"']*)?["']/gi,'src="/en/analytics/demo.js?v='+sharedUiRevision['en/analytics/demo.js']+'"');
+    }
+    if(/(?:src|href)=["']\/(?:player\/current\/dist\/p2lrn\.js|studio\/studio\.(?:js|css)|demo\/viewer\.js|en\/(?:studio\/studio\.js|demo\/viewer\.js))/iu.test(html)){
       html=html.replace(
-        /\b(src|href)=(["'])(\/(?:player\/current\/dist\/p2lrn\.js|studio\/studio\.(?:js|css)|demo\/viewer\.js|analytics\/demo\.js|en\/(?:studio\/studio\.js|demo\/viewer\.js|analytics\/demo\.js)))(?:\?[^"']*)?\2/giu,
+        /\b(src|href)=(["'])(\/(?:player\/current\/dist\/p2lrn\.js|studio\/studio\.(?:js|css)|demo\/viewer\.js|en\/(?:studio\/studio\.js|demo\/viewer\.js)))(?:\?[^"']*)?\2/giu,
         (_,kind,quote,asset)=>kind+'='+quote+asset+'?v='+runtimeRevision+quote,
       );
       const oldMap=generatedImportMap(html);
