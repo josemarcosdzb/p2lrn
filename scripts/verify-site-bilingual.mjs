@@ -45,8 +45,15 @@ function skipJsValue(value,parent,node){
   return /^[/#.\[]/.test(text)||/^https?:\/\//i.test(text)||/^(?:application|text|image|audio|video)\//i.test(text);
 }
 
-const sourceHtml=(await walk(siteRoot)).filter(file=>file.endsWith('.html')&&!relative(siteRoot,file).replaceAll('\\','/').startsWith('en/'));
-const enHtml=(await walk(enRoot)).filter(file=>file.endsWith('.html'));
+const sourceHtml=(await walk(siteRoot)).filter(file=>{
+  if(!file.endsWith('.html'))return false;
+  const rel=relative(siteRoot,file).replaceAll('\\','/');
+  return !rel.startsWith('en/')&&routeFromRelative(rel)!==null;
+});
+const enHtml=(await walk(enRoot)).filter(file=>{
+  if(!file.endsWith('.html'))return false;
+  return routeFromRelative(relative(enRoot,file).replaceAll('\\','/'))!==null;
+});
 const errors=[];
 if(sourceHtml.length!==enHtml.length)errors.push('English page count '+enHtml.length+' does not match Spanish source count '+sourceHtml.length+'.');
 
