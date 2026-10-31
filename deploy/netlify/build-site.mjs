@@ -398,6 +398,20 @@ for (const [slug,expectedTitle] of requiredLegalRoutes) {
   if (!html.includes('property="og:title"') || !html.includes('property="og:description"')) legalProblems.push('/' + slug + '/ OpenGraph');
   if (forbiddenLegalPlaceholders.test(html)) legalProblems.push('/' + slug + '/ placeholder');
 }
+if(bilingualSite){
+  for(const [slug] of requiredLegalRoutes){
+    const path=join(outputRoot,'en',slug,'index.html');
+    if(!(await exists(path))){legalProblems.push('/en/'+slug+'/ missing');continue;}
+    const html=await readFile(path,'utf8');
+    if(!/<html\b[^>]*\blang=["']en["']/i.test(html))legalProblems.push('/en/'+slug+'/ lang');
+    if(!/<title>[^<]+<\/title>/i.test(html))legalProblems.push('/en/'+slug+'/ title');
+    if(!/<meta\s+name="description"\s+content="[^"]+"/i.test(html))legalProblems.push('/en/'+slug+'/ description');
+    if(!html.includes('<link rel="canonical" href="https://p2lrn.netlify.app/en/'+slug+'/">'))legalProblems.push('/en/'+slug+'/ canonical');
+    if(!/<meta\s+name="robots"\s+content="index,follow"/i.test(html))legalProblems.push('/en/'+slug+'/ robots');
+    if(!html.includes('property="og:title"')||!html.includes('property="og:description"'))legalProblems.push('/en/'+slug+'/ OpenGraph');
+    if(forbiddenLegalPlaceholders.test(html))legalProblems.push('/en/'+slug+'/ placeholder');
+  }
+}
 if (legalProblems.length) {
   throw new Error('Legal publication gate failed:\\n' + legalProblems.join('\\n'));
 }
@@ -594,29 +608,45 @@ for(const [slug,filename] of expectedDownloads){
 if((connectorHome.match(/<div class="docs-path-grid">[\s\S]*?<\/div>/)?.[0].match(/<a href=/g)||[]).length!==3)
   throw new Error('Connector overview must contain only IA, LMS and LTI choices');
 
-const docsFiles = htmlFiles.filter((path)=>{
-  const relativePath=relative(outputRoot,path).replaceAll('\\','/');
-  if(!relativePath.startsWith('docs/'))return false;
-  return ![...legacyConnectorSections.keys()].some(slug=>
-    relativePath==='docs/conectores/'+slug+'/index.html');
+const isLegacyConnectorDoc=(rel,prefix='')=>[...legacyConnectorSections.keys()].some(slug=>
+  rel===prefix+'docs/conectores/'+slug+'/index.html');
+const spanishDocsFiles=htmlFiles.filter((path)=>{
+  const rel=relative(outputRoot,path).replaceAll('\\','/');
+  return rel.startsWith('docs/')&&!isLegacyConnectorDoc(rel);
 });
-const searchIndex = [];
-for (const path of docsFiles) {
-  const html = await readFile(path,'utf8');
-  const title = stripTags(/<title>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? '');
-  const description = /<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i.exec(html)?.[1] ?? '';
-  const headings = [...html.matchAll(/<(h[1-3])\b[^>]*>([\s\S]*?)<\/\1>/gi)].map((match)=>stripTags(match[2])).filter(Boolean);
-  const code = [...html.matchAll(/<code\b[^>]*>([\s\S]*?)<\/code>/gi)].map((match)=>stripTags(match[1])).join(' ');
-  searchIndex.push({
-    title:title.replace(/\s*[—-]\s*P2LRN\s*$/i,'') || headings[0] || pageUrl(path),
-    description,
-    section:headings.slice(0,4).join(' · '),
-    url:pageUrl(path),
-    search:[title,description,headings.join(' '),code].join(' ').toLocaleLowerCase('es'),
-  });
+const englishDocsFiles=htmlFiles.filter((path)=>{
+  const rel=relative(outputRoot,path).replaceAll('\\','/');
+  return rel.startsWith('en/docs/')&&!isLegacyConnectorDoc(rel,'en/');
+});
+const docsFiles=[...spanishDocsFiles,...englishDocsFiles];
+
+async function buildSearchIndex(paths,locale){
+  const searchIndex=[];
+  for(const path of paths){
+    const html=await readFile(path,'utf8');
+    const title=stripTags(/<title>([\s\S]*?)<\/title>/i.exec(html)?.[1]??'');
+    const description=/<meta\s+name=["']description["']\s+content=["']([^"']*)["']/i.exec(html)?.[1]??'';
+    const headings=[...html.matchAll(/<(h[1-3])\b[^>]*>([\s\S]*?)<\/\1>/gi)].map(match=>stripTags(match[2])).filter(Boolean);
+    const code=[...html.matchAll(/<code\b[^>]*>([\s\S]*?)<\/code>/gi)].map(match=>stripTags(match[1])).join(' ');
+    searchIndex.push({
+      title:title.replace(/\s*[—-]\s*P2LRN\s*$/i,'')||headings[0]||pageUrl(path),
+      description,
+      section:headings.slice(0,4).join(' · '),
+      url:pageUrl(path),
+      search:[title,description,headings.join(' '),code].join(' ').toLocaleLowerCase(locale),
+    });
+  }
+  searchIndex.sort((a,b)=>a.title.localeCompare(b.title,locale));
+  return searchIndex;
 }
-searchIndex.sort((a,b)=>a.title.localeCompare(b.title,'es'));
-await writeFile(join(outputRoot,'search-index.json'),JSON.stringify(searchIndex,null,2)+'\n');
+const spanishSearchIndex=await buildSearchIndex(spanishDocsFiles,'es');
+await writeFile(join(outputRoot,'search-index.json'),JSON.stringify(spanishSearchIndex,null,2)+'\n');
+let englishSearchIndex=[];
+if(bilingualSite){
+  englishSearchIndex=await buildSearchIndex(englishDocsFiles,'en');
+  await mkdir(join(outputRoot,'en'),{recursive:true});
+  await writeFile(join(outputRoot,'en','search-index.json'),JSON.stringify(englishSearchIndex,null,2)+'\n');
+}
 
 async function exists(path) {
   try { return (await stat(path)).isFile(); }
@@ -649,7 +679,7 @@ console.log(JSON.stringify({
   ok:true,
   site:'P2LRN documentation portal',
   pages:htmlFiles.length,
-  searchableDocs:searchIndex.length,
+  searchableDocs:docsFiles.length,\n  spanishSearchableDocs:spanishSearchIndex.length,\n  englishSearchableDocs:englishSearchIndex.length,
   linksValidated:true,
   canonicalExamples:canonicalEntries.length,
   generatedExamples:generatedEntries.length,
