@@ -5,7 +5,7 @@ import {openP2LRNPackageBytes} from '../../packages/toolkit/web/p2lrn-player.js'
 import {buildDocExamples} from './build-doc-examples.mjs';
 import {STUDIO_RUNTIME_SHARED_FILES} from './studio-runtime-assets.mjs';
 import {reviseSiteBrowserAssets} from './browser-site-revision.mjs';
-import {renderSiteFooter,SITE_FOOTER_LINKS} from './site-footer.mjs';
+import {renderSiteFooter,getSiteFooterLinks} from './site-footer.mjs';
 import {normalizeSeoAndAccessibility} from './site-seo-a11y.mjs';
 
 const root = resolve(process.cwd());
@@ -159,6 +159,7 @@ const allHtmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.htm
 const htmlFiles = allHtmlFiles.filter((path)=>!isCorrespondingSourcePath(path)
   && !isImmutableDistributionHtml(path)
   && !/^google[0-9a-f]+\.html$/i.test(relative(outputRoot,path).replaceAll('\\','/')));
+const bilingualSite=htmlFiles.some(path=>relative(outputRoot,path).replaceAll('\\','/').startsWith('en/'));
 
 const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
 const brandHead = [
@@ -224,6 +225,10 @@ const functionalPages=[
   {path:['studio','index.html'],markers:['data-functional-status','data-studio-status','data-player','data-mode-preview','data-mode-edit']},
   {path:['demo','index.html'],markers:['data-functional-status','data-viewer-status','data-runtime-state','id="demo-player"']},
 ];
+if(bilingualSite)functionalPages.push(
+  {path:['en','studio','index.html'],markers:['data-functional-status','data-studio-status','data-player','data-mode-preview','data-mode-edit']},
+  {path:['en','demo','index.html'],markers:['data-functional-status','data-viewer-status','data-runtime-state','id="demo-player"']},
+);
 for(const page of functionalPages){
   const built=await readFile(join(outputRoot,...page.path),'utf8');
   for(const marker of page.markers)if(!built.includes(marker))
@@ -233,7 +238,10 @@ for(const page of functionalPages){
 // Normalize every documentation sidebar in the generated site. Source articles
 // may contain historical fallback links, but published HTML must have one empty
 // placeholder so p2lrn.js is the sole navigation authority.
-const docsHtmlFilesForSidebar = htmlFiles.filter((path)=>relative(outputRoot,path).replaceAll('\\','/').startsWith('docs/'));
+const docsHtmlFilesForSidebar = htmlFiles.filter((path)=>{
+  const rel=relative(outputRoot,path).replaceAll('\\','/');
+  return rel.startsWith('docs/')||rel.startsWith('en/docs/');
+});
 const sidebarProblems = [];
 for (const htmlPath of docsHtmlFilesForSidebar) {
   let html = await readFile(htmlPath,'utf8');
@@ -242,7 +250,9 @@ for (const htmlPath of docsHtmlFilesForSidebar) {
     sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': expected exactly one .doc-sidebar');
     continue;
   }
-  html = html.replace(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/i,'<aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>');
+  const english=relative(outputRoot,htmlPath).replaceAll('\\','/').startsWith('en/');
+  const label=english?'Documentation navigation':'Navegación de documentación';
+  html = html.replace(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/i,'<aside class="doc-sidebar" aria-label="'+label+'"></aside>');
   await writeFile(htmlPath,html);
 }
 for (const htmlPath of docsHtmlFilesForSidebar) {
@@ -253,8 +263,13 @@ for (const htmlPath of docsHtmlFilesForSidebar) {
   } else if (/<a\b|<span\b|P2LRN_EXTRA_DOC_LINKS/i.test(sidebar[1])) {
     sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': legacy sidebar content survived normalization');
   }
-  if (!/<script[^>]+src=["']\/p2lrn\.js["']/i.test(html)) {
+  const rel=relative(outputRoot,htmlPath).replaceAll('\\','/');
+  const expectedScript=rel.startsWith('en/')?'/en/p2lrn.js':'/p2lrn.js';
+  const escaped=expectedScript.replace(/[.*+?^{}()|[\]\\]/g,'\\  if (!/<script[^>]+src=["']\/p2lrn\.js["']/i.test(html)) {
     sidebarProblems.push(relative(outputRoot,htmlPath).replaceAll('\\','/') + ': shared /p2lrn.js missing');
+  }');
+  if (!new RegExp('<script[^>]+src=["\\\']'+escaped+'(?:\\?[^"\\\']*)?["\\\']','i').test(html)) {
+    sidebarProblems.push(rel + ': shared '+expectedScript+' missing');
   }
 }
 if (sidebarProblems.length) {
@@ -415,9 +430,9 @@ for (const htmlPath of htmlFiles) {
   const rel = relative(outputRoot,htmlPath).replaceAll('\\','/');
   const html = await readFile(htmlPath,'utf8');
   for (const match of html.matchAll(/<form\b[^>]*>/gi)) {
-    if (rel === 'contacto/index.html') continue;
+    if (rel === 'contacto/index.html'||rel === 'en/contacto/index.html') continue;
     // Studio's offline assignment form is local-only and has no network action.
-    if (rel === 'studio/index.html' && /\bdata-offline-form(?:\s|>)/i.test(match[0]) && !/\baction\s*=/i.test(match[0])) continue;
+    if ((rel === 'studio/index.html'||rel === 'en/studio/index.html') && /\bdata-offline-form(?:\s|>)/i.test(match[0]) && !/\baction\s*=/i.test(match[0])) continue;
     repeatedForms.push(rel);
   }
 }
