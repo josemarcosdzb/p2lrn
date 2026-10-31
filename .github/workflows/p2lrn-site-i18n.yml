@@ -40,6 +40,18 @@ jobs:
           npm install --no-save --package-lock=false @huggingface/transformers@4.3.2 cheerio@1.2.0 acorn@8.19.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Check bilingual build scripts
+        shell: powershell
+        run: |
+          node --check deploy/netlify/build-site.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check deploy/netlify/browser-site-revision.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/generate-site-english.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/verify-site-bilingual.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Generate complete English mirror
         shell: powershell
         env:
