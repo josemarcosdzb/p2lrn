@@ -6,6 +6,11 @@ on:
     paths:
       - 'deploy/netlify/site/**'
       - '!deploy/netlify/site/en/**'
+      - 'deploy/netlify/build-site.mjs'
+      - 'deploy/netlify/browser-site-revision.mjs'
+      - 'deploy/netlify/site-footer.mjs'
+      - 'deploy/netlify/site-seo-a11y.mjs'
+      - 'netlify.toml'
       - 'scripts/generate-site-english.mjs'
       - 'scripts/verify-site-bilingual.mjs'
       - '.github/workflows/p2lrn-site-i18n.yml'
