@@ -338,12 +338,15 @@ function preserveWhitespace(original,replacement){
   const trailing=String(original).match(/\s*$/)?.[0]??'';
   return leading+replacement+trailing;
 }
+function normalizeEnglishCopy(value){
+  return String(value).replace(/\bRosco\b/g,'Word Wheel').replace(/\brosco\b/g,'word wheel');
+}
 function translatePlain(value){
   const original=String(value??'');
   const text=original.trim();
-  if(MANUAL.has(text))return preserveWhitespace(original,MANUAL.get(text));
+  if(MANUAL.has(text))return preserveWhitespace(original,normalizeEnglishCopy(MANUAL.get(text)));
   if(!shouldTranslate(text))return original;
-  return preserveWhitespace(original,cache[text]??text);
+  return preserveWhitespace(original,normalizeEnglishCopy(cache[text]??text));
 }
 function translateHtmlFragment(fragment){
   const $=load('<body>'+fragment+'</body>',{decodeEntities:false},false);
