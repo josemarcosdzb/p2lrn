@@ -332,42 +332,50 @@ if (!revisionedStudioHtml.includes(JSON.stringify('/studio/runtime/authoring-doc
 // Render one consistent public footer into every site page. Only replace a
 // footer after </main>: Studio also contains a form's <footer> INSIDE <main>,
 // which must keep its buttons and must NEVER receive legal/navigation links.
-const publicFooter=renderSiteFooter();
-if (publicFooter.includes('site-footer__brand-mark" aria-hidden="true">P2</span>')) {
-  throw new Error('Shared footer still contains the legacy P2 badge');
-}
-if (!publicFooter.includes('<span class="site-footer__brand-mark" aria-hidden="true"></span>')) {
-  throw new Error('Shared footer is missing the unified P2LRN brand mark slot');
+const footerSamples=[renderSiteFooter('es'),renderSiteFooter('en')];
+for(const footer of footerSamples){
+  if(footer.includes('site-footer__brand-mark" aria-hidden="true">P2</span>'))
+    throw new Error('Shared footer still contains the legacy P2 badge');
+  if(!footer.includes('<span class="site-footer__brand-mark" aria-hidden="true"></span>'))
+    throw new Error('Shared footer is missing the unified P2LRN brand mark slot');
 }
 let publicFooterPages=0;
-for (const htmlPath of htmlFiles) {
+for(const htmlPath of htmlFiles){
   let html=await readFile(htmlPath,'utf8');
+  const rel=relative(outputRoot,htmlPath).replaceAll('\\','/');
+  const locale=rel.startsWith('en/')?'en':'es';
+  const publicFooter=renderSiteFooter(locale);
   const mainEnd=html.toLowerCase().lastIndexOf('</main>');
   if(mainEnd<0)continue;
   const footers=[...html.matchAll(/<footer\b[^>]*>[\s\S]*?<\/footer>/gi)];
   if(!footers.length)continue;
   const pageFooters=footers.filter(match=>match.index>mainEnd);
   if(pageFooters.length!==1)
-    throw new Error('Expected exactly one page footer after </main>: '+
-      relative(outputRoot,htmlPath));
+    throw new Error('Expected exactly one page footer after </main>: '+rel);
   const target=pageFooters[0];
   html=html.slice(0,target.index)+publicFooter+html.slice(target.index+target[0].length);
   if((html.match(/class="site-footer"/g)||[]).length!==1)
-    throw new Error('Duplicate or missing shared page footer: '+relative(outputRoot,htmlPath));
+    throw new Error('Duplicate or missing shared page footer: '+rel);
+  for(const href of getSiteFooterLinks(locale)){
+    if(!publicFooter.includes('href="'+href+'"'))
+      throw new Error('Shared '+locale+' footer is missing an expected destination: '+href);
+  }
   await writeFile(htmlPath,html);
   publicFooterPages++;
 }
-if(publicFooterPages<40)throw new Error(
-  'Shared website footer not installed on enough public pages: '+publicFooterPages);
-const studioFooterHtml=await readFile(join(outputRoot,'studio','index.html'),'utf8');
-const studioActionFooter=/<footer\s+class="studio-offline-actions"[^>]*>[\s\S]*?<\/footer>/i.exec(studioFooterHtml)?.[0];
-if(!studioActionFooter||!studioActionFooter.includes('data-offline-generate')||
-   studioActionFooter.includes('data-legal-links')||
-   (studioFooterHtml.match(/class="site-footer"/g)||[]).length!==1)
-  throw new Error('Studio actions footer was modified or the public footer is missing');
-for(const href of SITE_FOOTER_LINKS){
-  if(!publicFooter.includes('href="'+href+'"'))
-    throw new Error('Shared footer is missing an expected destination: '+href);
+const minimumFooterPages=bilingualSite?80:40;
+if(publicFooterPages<minimumFooterPages)throw new Error(
+  'Shared website footer not installed on enough public pages: '+publicFooterPages+' < '+minimumFooterPages);
+
+const studioFooterPaths=[['studio','index.html']];
+if(bilingualSite)studioFooterPaths.push(['en','studio','index.html']);
+for(const pathParts of studioFooterPaths){
+  const studioFooterHtml=await readFile(join(outputRoot,...pathParts),'utf8');
+  const studioActionFooter=/<footer\s+class="studio-offline-actions"[^>]*>[\s\S]*?<\/footer>/i.exec(studioFooterHtml)?.[0];
+  if(!studioActionFooter||!studioActionFooter.includes('data-offline-generate')||
+     studioActionFooter.includes('data-legal-links')||
+     (studioFooterHtml.match(/class="site-footer"/g)||[]).length!==1)
+    throw new Error('Studio actions footer was modified or the public footer is missing: '+pathParts.join('/'));
 }
 
 const requiredLegalRoutes = [
