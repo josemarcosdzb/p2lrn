@@ -95,7 +95,20 @@ const MANUAL=new Map(Object.entries({
   'Actualizaciones':'Updates','indicando':'specifying','Editar':'Edit','Componente':'Component',
   'Fuente':'Font','Negrita':'Bold','Cursiva':'Italic','Subrayado':'Underline','Tachado':'Strikethrough',
   'Centrar':'Center','Color':'Color','Obligaciones':'Obligations','Versiones':'Versions',
-  'Disponibilidad':'Availability'
+  'Disponibilidad':'Availability',
+  'y':'and','Y':'AND','o':'or','O':'OR','En':'In','en':'in',
+  'INTEGRIDAD':'INTEGRITY','ORIGEN':'ORIGIN','PERFILES':'PROFILES',
+  'Usar CDN':'Use CDN','Usar NPM':'Use NPM','Ver eventos':'View events',
+  'exige perfiles completos.':'requires complete profiles.',
+  '7. Eventos y tiempo activo':'7. Events and active time','8. API y eventos':'8. API and events',
+  '5. Perfiles (profiles): reglas adicionales':'5. Profiles: additional rules',
+  'Eventos — P2LRN':'Events — P2LRN','Glosario — P2LRN':'Glossary — P2LRN',
+  'eventos / Host Adapter':'events / Host Adapter','servidor y persistencia':'server and persistence',
+  'Identidad y permisos':'Identity and permissions','Almacenamiento y procesamiento':'Storage and processing',
+  'Identidad y notas':'Identity and grades','estado / notas / eventos / LRS':'state / grades / events / LRS',
+  '9. Eventos':'9. Events','Arquitectura 3D':'3D architecture','Recetas — P2LRN':'Recipes — P2LRN',
+  'EVENTOS':'EVENTS','educational analytics y learning analytics':'educational analytics and learning analytics',
+  'Entrega offline':'Offline delivery'
 }));
 
 const SPANISH_RE=/[áéíóúñü¿¡]|\b(?:el|la|los|las|una?|unos|unas|de|del|al|para|por|con|sin|desde|hasta|como|cómo|que|qué|quién|cuál|cuando|cuándo|donde|dónde|este|esta|estos|estas|ese|esa|esos|esas|su|sus|tu|tus|nuestro|nuestra|puede|puedes|pueden|crear|crea|curso|cursos|juego|juegos|alumno|alumnos|profesor|profesores|docente|lección|lecciones|actividad|actividades|abrir|cerrar|guardar|descargar|seleccionar|eliminar|añadir|nuevo|nueva|documentación|integración|colaboración|seguimiento|métricas|analítica|progresión|referencia|recursos|paquete|paquetes|formato|formatos|compatible|compatibilidad|resultado|resultados|respuesta|respuestas|pregunta|preguntas|intento|intentos|autor|derechos|titular|licencia|privacidad|términos|aviso|contacto|solución|problemas|antes|empezar|instalación|reproducir|disponible|fecha|contenido|puntuación|archivo|archivos|herramientas|plataforma|plataformas|navegador|compartir|revisión|primera|después|todo|toda|todos|todas|más|menos|también|sólo|solo|ningún|ninguna|memoria|relacionar|ordenar|clasificar|verdadero|falso|crucigrama|rosco|visor|inicio|menú|anterior|siguiente|configurar|página|páginas|datos|calificaciones|ejemplos|ejemplo|seguridad)\b/i;
@@ -169,13 +182,13 @@ function registerJson(value,key=''){
   if(value&&typeof value==='object'){for(const [k,v] of Object.entries(value))registerJson(v,k);return;}
   if(typeof value!=='string')return;
   if(['url','@id','@context','@type','sameAs','image','inLanguage','applicationCategory','operatingSystem','position'].includes(key))return;
-  if(['name','headline','description','alternateName','text'].includes(key))register(value);
+  if(['name','headline','description','alternateName','text','about','keywords'].includes(key))register(value);
 }
 function registerHtmlFragment(fragment){
   const $=load('<body>'+fragment+'</body>',{decodeEntities:false},false);
   const blocked=new Set(['code','pre','script','style','kbd','samp','svg','path']);
   const visit=(node,ancestorBlocked=false)=>{
-    const tag=node.type==='tag'?String(node.name||'').toLowerCase():'';
+    const tag=String(node.name||'').toLowerCase();
     const nextBlocked=ancestorBlocked||blocked.has(tag);
     if(node.type==='text'&&!nextBlocked)register(node.data);
     for(const child of node.children??[])visit(child,nextBlocked);
@@ -201,7 +214,7 @@ for(const file of htmlFiles){
 function visitTextNodes($,registerOnly=true){
   const blockedTags=new Set(['code','pre','script','style','kbd','samp','svg','path']);
   const visit=(node,blocked=false)=>{
-    const tag=node.type==='tag'?String(node.name||'').toLowerCase():'';
+    const tag=String(node.name||'').toLowerCase();
     const nextBlocked=blocked||blockedTags.has(tag);
     if(node.type==='text'&&!nextBlocked){
       if(registerOnly)register(node.data);
@@ -380,7 +393,7 @@ function translateHtmlFragment(fragment){
   const $=load('<body>'+fragment+'</body>',{decodeEntities:false},false);
   const blocked=new Set(['code','pre','script','style','kbd','samp','svg','path']);
   const visit=(node,ancestorBlocked=false)=>{
-    const tag=node.type==='tag'?String(node.name||'').toLowerCase():'';
+    const tag=String(node.name||'').toLowerCase();
     const nextBlocked=ancestorBlocked||blocked.has(tag);
     if(node.type==='text'&&!nextBlocked)node.data=translatePlain(node.data);
     for(const child of node.children??[])visit(child,nextBlocked);
@@ -418,7 +431,7 @@ function translateJson(value,key=''){
   if(key==='inLanguage')return 'en';
   if(['url','@id','sameAs','image'].includes(key))return rewriteAbsoluteUrl(value,routes);
   if(['@context','@type','applicationCategory','operatingSystem','position'].includes(key))return value;
-  if(['name','headline','description','alternateName','text'].includes(key))return translatePlain(value);
+  if(['name','headline','description','alternateName','text','about','keywords'].includes(key))return translatePlain(value);
   return value;
 }
 
