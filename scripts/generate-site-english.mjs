@@ -118,6 +118,7 @@ const htmlFiles=files.filter(file=>{
   const rel=relative(siteRoot,file).replaceAll('\\','/');
   return !rel.startsWith('en/')&&routeFromRelative(rel)!==null;
 });
+console.log('P2LRN_I18N_PHASE=scan-source-html pages='+htmlFiles.length);
 const routes=new Set();
 for(const file of htmlFiles){
   const route=routeFromRelative(relative(siteRoot,file).replaceAll('\\','/'));
@@ -147,6 +148,7 @@ for(const file of htmlFiles){
   $('script[type="application/ld+json"]').each((_,el)=>{try{registerJson(JSON.parse($(el).text()));}catch{}});
 }
 
+console.log('P2LRN_I18N_PHASE=registered-html pending='+pending.size);
 const jsSources=new Map();
 function parseJs(source){try{return acorn.parse(source,{ecmaVersion:'latest',sourceType:'module'});}catch{return acorn.parse(source,{ecmaVersion:'latest',sourceType:'script'});}}
 function walkAst(node,fn,parent=null){
@@ -192,6 +194,7 @@ for(const file of htmlFiles){
   });
 }
 
+console.log('P2LRN_I18N_PHASE=registered-js pending='+pending.size+' cache='+Object.keys(cache).length);
 let translator=null;
 async function getTranslator(){
   if(!translator){
@@ -205,6 +208,7 @@ function unwrap(item){
   return String(value?.translation_text??value?.generated_text??'').trim();
 }
 const missing=[...pending].filter(text=>!MANUAL.has(text)&&!cache[text]);
+console.log('P2LRN_I18N_PHASE=translate missing='+missing.length+' provider='+(process.env.P2LRN_I18N_PROVIDER||'local'));
 const translationProvider=String(process.env.P2LRN_I18N_PROVIDER||'local').toLowerCase();
 const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function translateGoogle(text){
@@ -336,6 +340,7 @@ function translateJson(value,key=''){
   return translatePlain(value);
 }
 
+console.log('P2LRN_I18N_PHASE=generate-html cache='+Object.keys(cache).length);
 await rm(englishRoot,{recursive:true,force:true});
 await mkdir(englishRoot,{recursive:true});
 for(const file of htmlFiles){
@@ -374,6 +379,7 @@ for(const file of htmlFiles){
   await writeFile(dest,$.html(),'utf8');
 }
 
+console.log('P2LRN_I18N_PHASE=html-generated pages='+htmlFiles.length);
 const sourceManifestPath=join(siteRoot,'site.webmanifest');
 try{
   const manifest=JSON.parse(await readFile(sourceManifestPath,'utf8'));
@@ -383,6 +389,7 @@ try{
   await writeFile(join(englishRoot,'site.webmanifest'),JSON.stringify(manifest,null,2)+'\n','utf8');
 }catch{}
 
+console.log('P2LRN_I18N_PHASE=generate-js files='+jsSources.size);
 for(const [rel,source] of jsSources){
   const generated=translateJavaScriptSource(source);
   const dest=join(englishRoot,...rel.split('/'));
