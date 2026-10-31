@@ -27,7 +27,48 @@ const MANUAL=new Map(Object.entries({
   'Resultado':'Result','Actividad':'Activity','Actividades':'Activities','Curso':'Course','Cursos':'Courses',
   'Unidad':'Unit','Unidades':'Units','Lección':'Lesson','Puntuación':'Score','Intentos':'Attempts',
   'Contenido':'Content','Formato':'Format','Formatos':'Formats','Ejemplos':'Examples','Ejemplo':'Example',
-  'Configuración':'Settings','Seguridad':'Security','Cookies':'Cookies'
+  'Configuración':'Settings','Seguridad':'Security','Cookies':'Cookies',
+  'Perfiles':'Profiles','Glosario':'Glossary','Arquitectura':'Architecture','Eventos':'Events','Recetas':'Recipes',
+  'curso.p2lrn':'course.p2lrn','curso-split.p2lrn':'course-split.p2lrn',
+  'https://…/curso.p2lrn':'https://…/course.p2lrn','https://content.example.com/courses/curso/':'https://content.example.com/courses/course/',
+  'P2LRN Analytics | Analítica educativa y seguimiento de alumnos':'P2LRN Analytics | Learning analytics and learner tracking',
+  '1. Qué muestra':'1. What it shows',
+  '2. Manifiesto (manifest): identidad, capacidades e integridad':'2. Manifest: identity, capabilities and integrity',
+  'Recorrido común del proveedor':'Common provider flow',
+  'NRPS: roles y matrículas (opcional)':'NRPS: roles and enrollments (optional)',
+  'Estado actual del proveedor':'Current provider status',
+  'Flujo docente y alumno implementado':'Implemented teacher and learner flow',
+  'Catálogo procesable':'Machine-readable catalog',
+  'Empezar fácil con P2LRN — P2LRN':'Quick start with P2LRN — P2LRN',
+  'Empezar fácil':'Quick start',
+  'Antes de empezar':'Before you start',
+  'Entrega offline y paquetes autorreproducibles — P2LRN':'Offline delivery and self-running packages — P2LRN',
+  'Entrega offline y cursos autorreproducibles':'Offline delivery and self-running courses',
+  '5. Qué registra una entrega autorreproducible':'5. What a self-running delivery records',
+  '9. Firma del encargo y procedencia':'9. Assignment signature and provenance',
+  'Recursos compartidos verificados':'Verified shared resources',
+  'Ejemplo ejecutable':'Runnable example','Limitaciones':'Limitations',
+  'Player web — P2LRN':'Web Player — P2LRN','Player web':'Web Player',
+  'API pública':'Public API','Integridad y transporte':'Integrity and transport',
+  'Relacionar — P2LRN':'Matching — P2LRN','Ordenar — P2LRN':'Ordering — P2LRN','Rosco — P2LRN':'Word Wheel — P2LRN',
+  'Studio visual — P2LRN':'P2LRN Studio — Visual editor',
+  '6. Comprobar la vista del alumno':'6. Check the learner view',
+  '9. Referencia técnica del componente':'9. Component technical reference',
+  '2. Recorrido habitual':'2. Typical workflow',
+  '8. Host autoritativo de referencia':'8. Authoritative reference host',
+  'Descarga P2LRN para crear cursos educativos con IA.':'Download P2LRN Skills to create educational courses with AI.',
+  'Entrega offline autorreproducible':'Self-running offline delivery',
+  'Revisar entrega offline':'Review offline delivery',
+  '1. Objeto':'1. Purpose',
+  '¿Necesitas seguimiento de alumnos y resultados?':'Need learner and result tracking?',
+  'De la primera lección a la experiencia del alumno.':'From the first lesson to the learner experience.',
+  'Qué vas a conseguir':'What you will get','Qué componente necesitas':'Which component you need',
+  'Comprobación final':'Final check','Accesibilidad y alternativa':'Accessibility and alternative mode',
+  'Probar un paquete':'Test a package','Probar el ejemplo':'Try the example',
+  'Finalización y puntuación':'Completion and scoring',
+  'Referencia técnica del componente':'Component technical reference',
+  'Toolkit para creación por código':'Toolkit for programmatic authoring',
+  'Abrir visor':'Open viewer','Vista alumno':'Learner view'
 }));
 
 const SPANISH_RE=/[áéíóúñü¿¡]|\b(?:el|la|los|las|una?|unos|unas|de|del|al|para|por|con|sin|desde|hasta|como|cómo|que|qué|quién|cuál|cuando|cuándo|donde|dónde|este|esta|estos|estas|ese|esa|esos|esas|su|sus|tu|tus|nuestro|nuestra|puede|puedes|pueden|crear|crea|curso|cursos|juego|juegos|alumno|alumnos|profesor|profesores|docente|lección|lecciones|actividad|actividades|abrir|cerrar|guardar|descargar|seleccionar|eliminar|añadir|nuevo|nueva|documentación|integración|colaboración|seguimiento|métricas|analítica|progresión|referencia|recursos|paquete|paquetes|formato|formatos|compatible|compatibilidad|resultado|resultados|respuesta|respuestas|pregunta|preguntas|intento|intentos|autor|derechos|titular|licencia|privacidad|términos|aviso|contacto|solución|problemas|antes|empezar|instalación|reproducir|disponible|fecha|contenido|puntuación|archivo|archivos|herramientas|plataforma|plataformas|navegador|compartir|revisión|primera|después|todo|toda|todos|todas|más|menos|también|sólo|solo|ningún|ninguna|memoria|relacionar|ordenar|clasificar|verdadero|falso|crucigrama|rosco|visor|inicio|menú|anterior|siguiente|configurar|página|páginas|datos|calificaciones|ejemplos|ejemplo|seguridad)\b/i;
@@ -80,11 +121,12 @@ function shouldTranslate(value){
   if(text.startsWith('{')||text.startsWith('[')){
     try{JSON.parse(text);return false;}catch{}
   }
-  if(/^https?:\/\//i.test(text)||/^mailto:/i.test(text)||/^tel:/i.test(text)||/^[/#.\[]/.test(text))return false;
+  if(/^https?:\/\//i.test(text)||/^mailto:/i.test(text)||/^tel:/i.test(text)||/^[/#\[]/.test(text))return false;
+  if(/^\.[A-Za-z0-9_-]+(?:[./:#?]|$)/.test(text))return false;
   if(/^(?:application|text|image|audio|video)\//i.test(text))return false;
+  if(/^(?:\\[nrt])+$/i.test(text))return false;
   if(/^[\w.-]+\.(?:js|mjs|css|json|html|xml|png|jpe?g|svg|webp|zip|p2lrn|md|txt|wasm)$/i.test(text))return false;
-  if(/^[a-z0-9_.:@/-]+$/i.test(text)&&!looksSpanish(text))return false;
-  return looksSpanish(text);
+  return true;
 }
 
 let cache={};
@@ -299,8 +341,9 @@ function preserveWhitespace(original,replacement){
 function translatePlain(value){
   const original=String(value??'');
   const text=original.trim();
+  if(MANUAL.has(text))return preserveWhitespace(original,MANUAL.get(text));
   if(!shouldTranslate(text))return original;
-  return preserveWhitespace(original,MANUAL.get(text)??cache[text]??text);
+  return preserveWhitespace(original,cache[text]??text);
 }
 function translateHtmlFragment(fragment){
   const $=load('<body>'+fragment+'</body>',{decodeEntities:false},false);
