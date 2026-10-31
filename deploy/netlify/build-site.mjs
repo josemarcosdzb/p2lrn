@@ -188,6 +188,29 @@ for (const htmlPath of htmlFiles) {
 // Only mutate outputRoot. Keep all 57 authored documentation pages unchanged.
 const seoAudit=await normalizeSeoAndAccessibility(outputRoot,{sourceRoot:siteRoot});
 console.log('P2LRN_BUILD_SEO='+JSON.stringify(seoAudit));
+
+const englishRouteFor=(route)=>route==='/'?'/en/':'/en'+route;
+const spanishRouteFor=(route)=>route==='/en/'?'/':route.replace(/^\/en/,'')||'/';
+const routeFile=(route)=>route==='/'?join(outputRoot,'index.html'):join(outputRoot,...route.slice(1).split('/').filter(Boolean),'index.html');
+if(bilingualSite){
+  for(const htmlPath of htmlFiles){
+    let html=await readFile(htmlPath,'utf8');
+    if(html.includes('data-language-switch'))continue;
+    const route=pageUrl(htmlPath);
+    const english=route==='/en/'||route.startsWith('/en/');
+    const esRoute=english?spanishRouteFor(route):route;
+    const enRoute=english?route:englishRouteFor(route);
+    const counterpart=english?routeFile(esRoute):routeFile(enRoute);
+    if(!(await exists(counterpart)))throw new Error('Missing language counterpart for '+route);
+    const languageSwitch='<nav class="language-switch" data-language-switch aria-label="'+(english?'Language':'Idioma')+'">'+
+      '<a href="'+esRoute+'" lang="es" hreflang="es"'+(english?'':' aria-current="page"')+'>ES</a>'+
+      '<a href="'+enRoute+'" lang="en" hreflang="en"'+(english?' aria-current="page"':'')+'>EN</a>'+
+      '</nav>';
+    if(/<\/header>/i.test(html))html=html.replace(/<\/header>/i,languageSwitch+'</header>');
+    else html=html.replace(/<body\b[^>]*>/i,tag=>tag+languageSwitch);
+    await writeFile(htmlPath,html,'utf8');
+  }
+}
 const brandAssets=['p2lrn-mark.png','favicon.png','apple-touch-icon.png','site.webmanifest'];
 for (const asset of brandAssets) {
   if (!(await exists(join(outputRoot,asset)))) throw new Error('Missing brand asset: ' + asset);
