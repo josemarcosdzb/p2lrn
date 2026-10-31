@@ -183,7 +183,49 @@ function unwrap(item){
   return String(value?.translation_text??value?.generated_text??'').trim();
 }
 const missing=[...pending].filter(text=>!MANUAL.has(text)&&!cache[text]);
-if(missing.length){
+const translationProvider=String(process.env.P2LRN_I18N_PROVIDER||'local').toLowerCase();
+const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+async function translateGoogle(text){
+  const endpoint='https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&dt=t&q='+encodeURIComponent(text);
+  for(let attempt=0;attempt<6;attempt++){
+    try{
+      const response=await fetch(endpoint,{headers:{'User-Agent':'P2LRN-site-i18n/1.0'}});
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const payload=await response.json();
+      const translated=Array.isArray(payload?.[0])
+        ?payload[0].map(part=>String(part?.[0]??'')).join('').trim()
+        :'';
+      if(!translated)throw new Error('Empty translation');
+      return translated;
+    }catch(error){
+      if(attempt===5)throw error;
+      await sleep((attempt+1)*750);
+    }
+  }
+}
+if(missing.length&&translationProvider==='google'){
+  const concurrency=Math.max(1,Math.min(8,Number(process.env.P2LRN_I18N_CONCURRENCY)||4));
+  let cursor=0,done=0;
+  const failures=[];
+  async function worker(){
+    while(true){
+      const index=cursor++;
+      if(index>=missing.length)return;
+      const source=missing[index];
+      try{cache[source]=await translateGoogle(source);}
+      catch(error){failures.push({source,error:String(error?.message??error)});}
+      done++;
+      if(done%80===0||done===missing.length){
+        console.log('P2LRN_I18N_PROGRESS='+done+'/'+missing.length+' failures='+failures.length);
+        await writeFile(cachePath,JSON.stringify(cache,null,2)+'\n','utf8');
+      }
+    }
+  }
+  await Promise.all(Array.from({length:concurrency},()=>worker()));
+  if(failures.length){
+    throw new Error('Remote translation left '+failures.length+' unresolved string(s): '+JSON.stringify(failures.slice(0,12)));
+  }
+}else if(missing.length){
   const pipe=await getTranslator();
   const batchSize=Math.max(1,Number(process.env.P2LRN_I18N_BATCH_SIZE)||16);
   for(let offset=0;offset<missing.length;offset+=batchSize){
