@@ -1,0 +1,74 @@
+name: P2LRN Bilingual Website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/netlify/site/**'
+      - '!deploy/netlify/site/en/**'
+      - 'scripts/generate-site-english.mjs'
+      - 'scripts/verify-site-bilingual.mjs'
+      - '.github/workflows/p2lrn-site-i18n.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: p2lrn-site-i18n-main
+  cancel-in-progress: true
+
+jobs:
+  generate-english-site:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: false
+
+      - name: Install isolated translation tooling
+        shell: powershell
+        run: |
+          if (-not (Test-Path package.json)) {
+            '{"private":true,"type":"module"}' | Set-Content -Encoding UTF8 package.json
+          }
+          npm install --no-save --package-lock=false @huggingface/transformers@4.3.2 cheerio@1.2.0 acorn@8.19.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Generate complete English mirror
+        shell: powershell
+        env:
+          HF_HOME: ${{ runner.temp }}\p2lrn-huggingface
+        run: |
+          node scripts/generate-site-english.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-site-bilingual.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Commit generated English site
+        shell: powershell
+        run: |
+          git add -- deploy/netlify/site/en scripts/site-en-translations.json
+          $changes = git diff --cached --name-only
+          if (-not $changes) {
+            Write-Output 'English mirror already matches the Spanish source.'
+            exit 0
+          }
+          git fetch origin main
+          $head = git rev-parse HEAD
+          $remote = git rev-parse origin/main
+          if ($head -ne $remote) {
+            throw 'main advanced while the English mirror was generated; the next main run must regenerate from the new source.'
+          }
+          git config user.name 'p2lrn-i18n-bot'
+          git config user.email 'p2lrn-i18n-bot@users.noreply.github.com'
+          git commit -m 'site(i18n): refresh complete English mirror [skip i18n]'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git push origin HEAD:main
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
