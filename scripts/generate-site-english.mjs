@@ -209,6 +209,10 @@ function unwrap(item){
 }
 const missing=[...pending].filter(text=>!MANUAL.has(text)&&!cache[text]);
 console.log('P2LRN_I18N_PHASE=translate missing='+missing.length+' provider='+(process.env.P2LRN_I18N_PROVIDER||'local'));
+if(process.env.P2LRN_I18N_REPORT_MISSING==='1'){
+  console.log('P2LRN_I18N_MISSING_JSON='+JSON.stringify(missing));
+  process.exit(missing.length?2:0);
+}
 const translationProvider=String(process.env.P2LRN_I18N_PROVIDER||'local').toLowerCase();
 const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function translateGoogle(text){
