@@ -77,6 +77,9 @@ function looksSpanish(value){return MANUAL.has(String(value).trim())||SPANISH_RE
 function shouldTranslate(value){
   const text=String(value??'').trim();
   if(!text||TECH_EXACT.has(text)||!/[A-Za-zÁÉÍÓÚÑÜáéíóúñü]/.test(text))return false;
+  if(text.startsWith('{')||text.startsWith('[')){
+    try{JSON.parse(text);return false;}catch{}
+  }
   if(/^https?:\/\//i.test(text)||/^mailto:/i.test(text)||/^tel:/i.test(text)||/^[/#.\[]/.test(text))return false;
   if(/^(?:application|text|image|audio|video)\//i.test(text))return false;
   if(/^[\w.-]+\.(?:js|mjs|css|json|html|xml|png|jpe?g|svg|webp|zip|p2lrn|md|txt|wasm)$/i.test(text))return false;
