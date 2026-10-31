@@ -6,7 +6,7 @@ import * as acorn from 'acorn';
 const root=resolve(process.cwd());
 const siteRoot=join(root,'deploy','netlify','site');
 const enRoot=join(siteRoot,'en');
-const SPANISH_RE=/[áéíóúñü¿¡]|\b(?:el|la|los|las|una?|unos|unas|de|del|al|para|por|con|sin|desde|hasta|cómo|qué|quién|cuál|cuándo|dónde|este|esta|estos|estas|su|sus|tu|tus|puede|puedes|pueden|crear|crea|curso|cursos|juego|juegos|alumno|alumnos|profesor|profesores|docente|lección|lecciones|actividad|actividades|abrir|cerrar|guardar|descargar|seleccionar|eliminar|añadir|nuevo|nueva|documentación|integración|colaboración|seguimiento|métricas|analítica|progresión|referencia|recursos|paquete|paquetes|formato|formatos|compatible|compatibilidad|resultado|resultados|respuesta|respuestas|pregunta|preguntas|intento|intentos|autor|derechos|titular|licencia|privacidad|términos|aviso|contacto|solución|problemas|antes|empezar|instalación|reproducir|disponible|fecha|contenido|puntuación|archivo|archivos|herramientas|plataforma|plataformas|navegador|compartir|revisión|primera|después|todo|toda|todos|todas|más|también|sólo|ningún|ninguna|memoria|relacionar|ordenar|clasificar|verdadero|falso|crucigrama|rosco|visor|inicio|menú|anterior|siguiente|configurar|página|páginas|datos|calificaciones|ejemplos|ejemplo|seguridad)\b/i;
+const SPANISH_RE=/[áéíóúñü¿¡]|\b(?:el|la|los|las|una?|unos|unas|de|del|al|para|por|con|sin|desde|hasta|cómo|qué|quién|cuál|cuándo|dónde|este|esta|estos|estas|su|sus|tu|tus|puede|puedes|pueden|crear|crea|curso|cursos|juego|juegos|alumno|alumnos|profesor|profesores|docente|lección|lecciones|actividad|actividades|abrir|cerrar|guardar|descargar|seleccionar|eliminar|añadir|nuevo|nueva|documentación|integración|colaboración|seguimiento|métricas|analítica|progresión|referencia|recursos|paquete|paquetes|formato|formatos|compatibilidad|resultado|resultados|respuesta|respuestas|pregunta|preguntas|intento|intentos|autor|derechos|titular|licencia|privacidad|términos|aviso|contacto|solución|problemas|antes|empezar|instalación|reproducir|disponible|fecha|contenido|puntuación|archivo|archivos|herramientas|plataforma|plataformas|navegador|compartir|revisión|primera|después|todo|toda|todos|todas|más|también|sólo|ningún|ninguna|memoria|relacionar|ordenar|clasificar|verdadero|falso|crucigrama|rosco|visor|inicio|menú|anterior|siguiente|configurar|página|páginas|datos|calificaciones|ejemplos|ejemplo|seguridad|perfiles|arquitectura|eventos|recetas|glosario|limitaciones)\b/i;
 
 async function walk(dir){
   const out=[];
@@ -64,6 +64,52 @@ for(const file of sourceHtml){
   if(route)routes.add(route);
   const counterpart=join(enRoot,...rel.split('/'));
   try{await readFile(counterpart,'utf8');}catch{errors.push('Missing English counterpart for '+rel);}
+}
+
+const PARITY_SELECTORS=['h1','h2','h3','a','button','input','select','textarea','form','img','video','iframe','details','summary','table','thead','tbody','tr','th','td','code','pre'];
+function expectedEnglishHref(href){
+  if(!href.startsWith('/')||href.startsWith('//')||href.startsWith('/en/'))return href;
+  const match=/^([^?#]*)([?#].*)?$/.exec(href);
+  const path=match?.[1]??href,suffix=match?.[2]??'';
+  if(path==='/search-index.json')return '/en/search-index.json'+suffix;
+  const normalized=normalizeRoute(path);
+  if(!routes.has(normalized))return href;
+  return (normalized==='/'?'/en/':'/en'+normalized)+suffix;
+}
+function idsOf($){return $('[id]').map((_,el)=>$(el).attr('id')).get().sort();}
+function dataContract($){
+  return $('*').map((_,el)=>{
+    const attrs=el.attribs??{};
+    const data=Object.keys(attrs).filter(key=>key.startsWith('data-')).sort().map(key=>key+'='+attrs[key]);
+    const role=attrs.role?['role='+attrs.role]:[];
+    const name=attrs.name?['name='+attrs.name]:[];
+    const type=attrs.type?['type='+attrs.type]:[];
+    return [...data,...role,...name,...type].join('|');
+  }).get().filter(Boolean);
+}
+for(const file of sourceHtml){
+  const rel=relative(siteRoot,file).replaceAll('\\','/');
+  const counterpart=join(enRoot,...rel.split('/'));
+  let esHtml,enHtmlText;
+  try{[esHtml,enHtmlText]=await Promise.all([readFile(file,'utf8'),readFile(counterpart,'utf8')]);}
+  catch{continue;}
+  const es=load(esHtml,{decodeEntities:false}),en=load(enHtmlText,{decodeEntities:false});
+  for(const selector of PARITY_SELECTORS){
+    const a=es(selector).length,b=en(selector).length;
+    if(a!==b)errors.push(rel+': structural parity mismatch for '+selector+' ('+a+' ES vs '+b+' EN).');
+  }
+  const esIds=idsOf(es),enIds=idsOf(en);
+  if(JSON.stringify(esIds)!==JSON.stringify(enIds))errors.push(rel+': id set differs between ES and EN.');
+  const esContract=dataContract(es),enContract=dataContract(en);
+  if(JSON.stringify(esContract)!==JSON.stringify(enContract))errors.push(rel+': functional data/name/type contract differs between ES and EN.');
+  const esLinks=es('a[href]').map((_,el)=>es(el).attr('href')??'').get();
+  const enLinks=en('a[href]').map((_,el)=>en(el).attr('href')??'').get();
+  if(esLinks.length===enLinks.length){
+    for(let i=0;i<esLinks.length;i++){
+      const expected=expectedEnglishHref(esLinks[i]);
+      if(enLinks[i]!==expected)errors.push(rel+': link '+i+' expected '+expected+' but found '+enLinks[i]+'.');
+    }
+  }
 }
 
 for(const file of enHtml){
