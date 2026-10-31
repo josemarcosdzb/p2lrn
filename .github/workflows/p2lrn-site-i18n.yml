@@ -1,4 +1,5 @@
 name: P2LRN Bilingual Website
+# The generated translation cache is versioned but does not retrigger this workflow.
 
 on:
   push:
