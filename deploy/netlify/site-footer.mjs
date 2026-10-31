@@ -4,41 +4,41 @@
  */
 export const SITE_FOOTER_GROUPS = Object.freeze([
   {
-    label: 'Create and explore',
+    label: 'Crear y explorar',
     links: [
-      ['/crear-cursos-interactivos/', 'Create interactive courses'],
+      ['/crear-cursos-interactivos/', 'Crear cursos interactivos'],
       ['/juegos-educativos-3d/', 'Juegos educativos 3D'],
       ['/cursos-offline/', 'Cursos sin LMS'],
-      ['/demo/', 'Player and viewer'],
+      ['/demo/', 'Player y visor'],
     ],
   },
   {
-    label: 'Documentation',
+    label: 'Documentación',
     links: [
-      ['/docs/', 'Documentation center'],
-      ['/docs/empezar/', 'Before you start'],
-      ['/docs/instalar/', 'Installation'],
-      ['/docs/conectores/', 'Connectors and integration'],
+      ['/docs/', 'Centro de documentación'],
+      ['/docs/empezar/', 'Antes de empezar'],
+      ['/docs/instalar/', 'Instalación'],
+      ['/docs/conectores/', 'Conectores e integración'],
     ],
   },
   {
-    label: 'Resources',
+    label: 'Recursos',
     links: [
       ['/analytics/', 'P2LRN Analytics'],
       ['/skills/', 'Skills para IA'],
-      ['/docs/troubleshooting/', 'Troubleshooting'],
-      ['/contacto/', 'Contact'],
+      ['/docs/troubleshooting/', 'Solución de problemas'],
+      ['/contacto/', 'Contacto'],
     ],
   },
 ]);
 
 export const SITE_FOOTER_LEGAL_LINKS = Object.freeze([
-  ['/licencia/', 'License'],
-  ['/privacidad/', 'Privacy'],
-  ['/terminos/', 'Terms'],
-  ['/aviso-legal/', 'Legal notice'],
+  ['/licencia/', 'Licencia'],
+  ['/privacidad/', 'Privacidad'],
+  ['/terminos/', 'Términos'],
+  ['/aviso-legal/', 'Aviso legal'],
   ['/cookies/', 'Cookies'],
-  ['/cookies/#configuracion', 'Cookie settings'],
+  ['/cookies/#configuracion', 'Configurar cookies'],
 ]);
 
 export const SITE_FOOTER_LINKS = Object.freeze([
@@ -58,21 +58,21 @@ export function renderSiteFooter() {
     '</nav>').join('');
   const legal=SITE_FOOTER_LEGAL_LINKS.map(([href,text])=>
     '<a href="'+href+'">'+text+'</a>').join('');
-  return '<footer class="site-footer" aria-label="P2LRN footer">'+
+  return '<footer class="site-footer" aria-label="Pie de página de P2LRN">'+
     '<div class="site-footer__inner">'+
       '<div class="site-footer__main">'+
         '<div class="site-footer__intro">'+
-          '<a class="site-footer__brand" href="/" aria-label="P2LRN — Home">'+
+          '<a class="site-footer__brand" href="/" aria-label="P2LRN — Inicio">'+
             '<span class="site-footer__brand-mark" aria-hidden="true"></span>'+
             '<span class="site-footer__brand-text">P2LRN</span>'+
           '</a>'+
-          '<p class="site-footer__description">Create, play, and share interactive learning content in a portable format.</p>'+
-          '<a class="site-footer__primary-link" href="/studio/">Open Studio <span aria-hidden="true">→</span></a>'+
+          '<p class="site-footer__description">Crea, reproduce y comparte contenidos educativos interactivos en un formato portable.</p>'+
+          '<a class="site-footer__primary-link" href="/studio/">Abrir Studio <span aria-hidden="true">→</span></a>'+
         '</div>'+menus+
       '</div>'+
       '<div class="site-footer__bottom">'+
-        '<p class="site-footer__signature">P2LRN <span aria-hidden="true">·</span> Resources y documentación</p>'+
-        '<nav class="site-footer__legal" data-legal-links aria-label="Legal information">'+legal+'</nav>'+
+        '<p class="site-footer__signature">P2LRN <span aria-hidden="true">·</span> Recursos y documentación</p>'+
+        '<nav class="site-footer__legal" data-legal-links aria-label="Información legal">'+legal+'</nav>'+
       '</div>'+
     '</div>'+
   '</footer>';
