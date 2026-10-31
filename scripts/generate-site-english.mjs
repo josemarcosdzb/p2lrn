@@ -65,6 +65,7 @@ function rewriteHref(value,routes){
   if(!value||value.startsWith('#')||value.startsWith('//')||/^[a-z][a-z0-9+.-]*:/i.test(value)||!value.startsWith('/'))return value;
   const {path,suffix}=splitHref(value);
   if(path.startsWith('/en/'))return value;
+  if(path==='/search-index.json')return '/en/search-index.json'+suffix;
   const normalized=normalizeRoute(path);
   return routes.has(normalized)?englishRoute(normalized)+suffix:value;
 }
@@ -230,6 +231,12 @@ for(const file of htmlFiles){
   $('script[type="application/ld+json"]').each((_,el)=>{try{$(el).text(JSON.stringify(translateJson(JSON.parse($(el).text()))));}catch{}});
   $('a[href]').each((_,el)=>$(el).attr('href',rewriteHref($(el).attr('href'),routes)));
   $('form[action]').each((_,el)=>$(el).attr('action',rewriteHref($(el).attr('action'),routes)));
+  $('meta[http-equiv]').each((_,el)=>{
+    if(String($(el).attr('http-equiv')??'').toLowerCase()!=='refresh')return;
+    const content=String($(el).attr('content')??'');
+    const match=/^(\s*\d+\s*;\s*url=)([\s\S]+)$/i.exec(content);
+    if(match)$(el).attr('content',match[1]+rewriteHref(match[2].trim(),routes));
+  });
   const scriptMap=[['/p2lrn.js','/en/p2lrn.js'],['/studio/studio.js','/en/studio/studio.js'],['/demo/viewer.js','/en/demo/viewer.js'],['/analytics/demo.js','/en/analytics/demo.js']];
   $('script[src]').each((_,el)=>{
     const src=$(el).attr('src')??'';
