@@ -2,7 +2,7 @@
 import {readFile,readdir,writeFile} from 'node:fs/promises';
 import {join,relative,basename} from 'node:path';
 
-export const CANONICAL_ORIGIN='https://p2lrn.netlify.app';
+export const CANONICAL_ORIGIN='https://p2lrn.org';
 
 async function walk(dir){
   const found=[];

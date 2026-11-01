@@ -26,7 +26,7 @@ async function fetchBytes(url,headers={}){
   const res=await fetch(url,{cache:'no-store',headers:{'Cache-Control':'no-cache',...headers},signal:AbortSignal.timeout(22000)});
   return {status:res.status,bytes:Buffer.from(await res.arrayBuffer()),headers:res.headers};
 }
-for(const origin of ['http://127.0.0.1:4183','https://p2lrn.netlify.app']){
+for(const origin of ['http://127.0.0.1:4183','https://p2lrn.org']){
   const deployment={origin,assets:[],versions:null};
   report.deployments.push(deployment);
   for(const [route,r] of Object.entries(expected)){

@@ -285,7 +285,7 @@ function rewriteHref(value,routes){
   return routes.has(normalized)?englishRoute(normalized)+suffix:value;
 }
 function rewriteAbsoluteUrl(value,routes){
-  const origin='https://p2lrn.netlify.app';
+  const origin='https://p2lrn.org';
   if(!value.startsWith(origin+'/'))return value;
   return origin+rewriteHref(value.slice(origin.length),routes);
 }

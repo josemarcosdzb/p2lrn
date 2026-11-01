@@ -7,7 +7,7 @@ import {basename,join} from 'node:path';
 import {findChrome} from './verify-browser-from-npm.mjs';
 import {openP2LRNPackageBytes} from '../packages/toolkit/web/p2lrn-player.js';
 
-const origin=(process.env.P2LRN_PUBLIC_ORIGIN||'https://p2lrn.netlify.app').replace(/\/+$/,'');
+const origin=(process.env.P2LRN_PUBLIC_ORIGIN||'https://p2lrn.org').replace(/\/+$/,'');
 const release='p2lrn-0.5.0-alpha.10-2026-10-19';
 const output=join(process.env.USERPROFILE||homedir(),'Downloads','p2lrn-public-validation',String(process.env.GITHUB_RUN_ID||'manual'));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -40,7 +40,7 @@ async function waitForDeploy(){
     if(attempts%3===1)console.log('PUBLIC_DEPLOY_WAIT',JSON.stringify({attempts,last}));
     await sleep(15000);
   }
-  throw new Error('Public Netlify deployment not verified after 9 minutes: '+last);
+  throw new Error('Public P2LRN deployment not verified after 9 minutes: '+last);
 }
 
 async function validateDownloadedPackage(path){

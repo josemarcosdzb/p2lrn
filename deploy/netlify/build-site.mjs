@@ -167,8 +167,8 @@ const brandHeadFor=(locale='es')=>[
   '<link rel="shortcut icon" type="image/png" href="/favicon.png?v=p2lrn-brand-20261027-v3">',
   '<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=p2lrn-brand-20261027-v3">',
   '<link rel="manifest" href="'+(locale==='en'?'/en/site.webmanifest':'/site.webmanifest')+'">',
-  '<meta property="og:image" content="https://p2lrn.netlify.app/p2lrn-mark.png?v=p2lrn-brand-20261027-v3">',
-  '<meta name="twitter:image" content="https://p2lrn.netlify.app/p2lrn-mark.png?v=p2lrn-brand-20261027-v3">'
+  '<meta property="og:image" content="https://p2lrn.org/p2lrn-mark.png?v=p2lrn-brand-20261027-v3">',
+  '<meta name="twitter:image" content="https://p2lrn.org/p2lrn-mark.png?v=p2lrn-brand-20261027-v3">'
 ].join('');
 for (const htmlPath of htmlFiles) {
   const pageRelative=relative(outputRoot,htmlPath).replaceAll('\\','/');
@@ -412,7 +412,7 @@ for (const [slug,expectedTitle] of requiredLegalRoutes) {
   const html = await readFile(path,'utf8');
   if (!html.includes('<title>' + expectedTitle + '</title>')) legalProblems.push('/' + slug + '/ title');
   if (!/<meta\s+name="description"\s+content="[^"]+"/i.test(html)) legalProblems.push('/' + slug + '/ description');
-  if (!html.includes('<link rel="canonical" href="https://p2lrn.netlify.app/' + slug + '/">')) legalProblems.push('/' + slug + '/ canonical');
+  if (!html.includes('<link rel="canonical" href="https://p2lrn.org/' + slug + '/">')) legalProblems.push('/' + slug + '/ canonical');
   if (!/<meta\s+name="robots"\s+content="index,follow"/i.test(html)) legalProblems.push('/' + slug + '/ robots');
   if (!html.includes('property="og:title"') || !html.includes('property="og:description"')) legalProblems.push('/' + slug + '/ OpenGraph');
   if (forbiddenLegalPlaceholders.test(html)) legalProblems.push('/' + slug + '/ placeholder');
@@ -425,7 +425,7 @@ if(bilingualSite){
     if(!/<html\b[^>]*\blang=["']en["']/i.test(html))legalProblems.push('/en/'+slug+'/ lang');
     if(!/<title>[^<]+<\/title>/i.test(html))legalProblems.push('/en/'+slug+'/ title');
     if(!/<meta\s+name="description"\s+content="[^"]+"/i.test(html))legalProblems.push('/en/'+slug+'/ description');
-    if(!html.includes('<link rel="canonical" href="https://p2lrn.netlify.app/en/'+slug+'/">'))legalProblems.push('/en/'+slug+'/ canonical');
+    if(!html.includes('<link rel="canonical" href="https://p2lrn.org/en/'+slug+'/">'))legalProblems.push('/en/'+slug+'/ canonical');
     if(!/<meta\s+name="robots"\s+content="index,follow"/i.test(html))legalProblems.push('/en/'+slug+'/ robots');
     if(!html.includes('property="og:title"')||!html.includes('property="og:description"'))legalProblems.push('/en/'+slug+'/ OpenGraph');
     if(forbiddenLegalPlaceholders.test(html))legalProblems.push('/en/'+slug+'/ placeholder');
@@ -588,7 +588,7 @@ for(const [slug,required] of connectorDocs) {
     throw new Error('Sidebar must include '+route);
   if(slug && !connectorHome.includes('href="'+route+'"'))
     throw new Error('Connector overview missing '+route);
-  if(!connectorSitemap.includes('https://p2lrn.netlify.app'+route))
+  if(!connectorSitemap.includes('https://p2lrn.org'+route))
     throw new Error('Canonical connector sitemap route missing '+route);
 }
 const netlifyRedirects=netlifyConfig.split('[[redirects]]').slice(1);
@@ -603,7 +603,7 @@ for(const [slug,section] of legacyConnectorSections){
       block.includes('to = "'+target+'"') && block.includes('status = 301') &&
       block.includes('force = true')))
     throw new Error('Netlify redirect to canonical AI section missing: '+route);
-  if(connectorSitemap.includes('https://p2lrn.netlify.app'+route))
+  if(connectorSitemap.includes('https://p2lrn.org'+route))
     throw new Error('Obsolete guide must not remain in sitemap: '+route);
   if(connectorNavigation.includes("['"+route+"','"))
     throw new Error('Obsolete guide must not be shown as its own sidebar item: '+route);

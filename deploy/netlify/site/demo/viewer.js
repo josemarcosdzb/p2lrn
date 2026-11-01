@@ -23,10 +23,13 @@
   const automaticRuntime=params.get('runtime')!=='isolated';
   let paused=false,records=[],catalog=[],catalogDefault=null;
   const MAX_EVENTS=200;
-  const RUNTIME_ORIGINS=Object.freeze([
-    'https://main--p2lrn.netlify.app',
-    'https://p2lrn.netlify.app',
-  ]);
+  // Keep the default opaque sandbox. A separate HTTPS runtime is opt-in.
+  const RUNTIME_ORIGINS=Object.freeze([...new Set([
+    params.get('runtimeOrigin'),
+    globalThis.P2LRN_RUNTIME_ORIGIN,
+  ].filter(Boolean).map((value)=>{
+    try{return new URL(String(value)).origin;}catch{return null;}
+  }).filter((origin)=>origin&&origin.startsWith('https://')&&origin!==location.origin))]);
 
   async function configureIsolatedRuntime(api){
     let lastError=null;

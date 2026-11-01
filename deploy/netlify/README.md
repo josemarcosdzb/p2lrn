@@ -50,13 +50,13 @@ The canonical integration URL is stable and does not change on every alpha/minor
 release:
 
 ```html
-<script src="https://p2lrn.netlify.app/player/current/dist/p2lrn.js"></script>
+<script src="https://p2lrn.org/player/current/dist/p2lrn.js"></script>
 ```
 
 Applications should normally keep that exact URL. The Player, runtime hosts and
 shared H5P libraries move together behind the `current` channel.
 
-The executable H5P/SCORM/cmi5/package runtime must still be hosted on an origin different from the embedding application. The public viewer runs on `https://p2lrn.netlify.app` and uses `https://main--p2lrn.netlify.app/player/current/dist/runtime-host/` as its isolated runtime origin; the viewer verifies `/health.json` and the Player version before playback.
+The executable H5P/SCORM/cmi5/package runtime must still be hosted on an origin different from the embedding application. The public viewer runs on `https://p2lrn.org` and defaults to the Player's opaque sandbox. Optional `runtime=isolated` requires a distinct HTTPS `runtimeOrigin` (or `P2LRN_RUNTIME_ORIGIN` configured by the host), with `/health.json` and Player-version verification before playback.
 
 Exact numbered paths are still emitted internally:
 

@@ -47,14 +47,14 @@ function scan(dir){
       assert.match(m[1],/^\s*type=["']application\/ld\+json["']\s*$/i,'Forbidden inline script: '+f);
       const rel=relative(site,f).replaceAll('\\','/');
       const allow=new Map([
-        ['index.html',{kind:'root',type:'WebSite',name:'P2LRN',url:'https://p2lrn.netlify.app/'}],
-        ['en/index.html',{kind:'root',type:'WebSite',name:'P2LRN',url:'https://p2lrn.netlify.app/en/'}],
-        ['analytics/index.html',{kind:'analytics',type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.netlify.app/analytics/'}],
-        ['en/analytics/index.html',{kind:'analytics',type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.netlify.app/en/analytics/'}],
-        ['docs/analytics/index.html',{kind:'article',type:'TechArticle',headline:'P2LRN Analytics:',url:'https://p2lrn.netlify.app/docs/analytics/'}],
-        ['en/docs/analytics/index.html',{kind:'article',type:'TechArticle',headline:'P2LRN Analytics:',url:'https://p2lrn.netlify.app/en/docs/analytics/'}],
-        ['skills/index.html',{kind:'skills',type:'CollectionPage',name:'Descargar Skills P2LRN para asistentes de IA',url:'https://p2lrn.netlify.app/skills/'}],
-        ['en/skills/index.html',{kind:'skills',type:'CollectionPage',name:'Download P2LRN Skills for AI Assistants',url:'https://p2lrn.netlify.app/en/skills/'}]
+        ['index.html',{kind:'root',type:'WebSite',name:'P2LRN',url:'https://p2lrn.org/'}],
+        ['en/index.html',{kind:'root',type:'WebSite',name:'P2LRN',url:'https://p2lrn.org/en/'}],
+        ['analytics/index.html',{kind:'analytics',type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.org/analytics/'}],
+        ['en/analytics/index.html',{kind:'analytics',type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.org/en/analytics/'}],
+        ['docs/analytics/index.html',{kind:'article',type:'TechArticle',headline:'P2LRN Analytics:',url:'https://p2lrn.org/docs/analytics/'}],
+        ['en/docs/analytics/index.html',{kind:'article',type:'TechArticle',headline:'P2LRN Analytics:',url:'https://p2lrn.org/en/docs/analytics/'}],
+        ['skills/index.html',{kind:'skills',type:'CollectionPage',name:'Descargar Skills P2LRN para asistentes de IA',url:'https://p2lrn.org/skills/'}],
+        ['en/skills/index.html',{kind:'skills',type:'CollectionPage',name:'Download P2LRN Skills for AI Assistants',url:'https://p2lrn.org/en/skills/'}]
       ]);
       assert.ok(allow.has(rel),'JSON-LD outside approved public pages: '+rel);
       const trailing=h.slice(m.index+m[0].length);
@@ -85,7 +85,7 @@ function scan(dir){
         const expectedFiles=['p2lrn-chatgpt-plugin.zip','p2lrn-claude-skill.zip','p2lrn-gemini-skill.zip','p2lrn-grok-skill.zip'];
         for(let i=0;i<expectedFiles.length;i++){
           assert.equal(links[i].position,i+1);
-          assert.equal(links[i].url,'https://p2lrn.netlify.app/downloads/skills/'+expectedFiles[i]);
+          assert.equal(links[i].url,'https://p2lrn.org/downloads/skills/'+expectedFiles[i]);
           assert.equal(links[i]['@type'],'ListItem');
         }
       }

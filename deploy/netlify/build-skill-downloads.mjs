@@ -95,7 +95,7 @@ for(const [platform,info] of Object.entries(platforms)){
   const plugin={$schema:'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',name:'p2lrn-crear-descargar',version:'0.2.0',
    description:'Crear y editar cursos P2LRN con el Toolkit oficial; alternativa Python limitada.',
    author:{name:'P2LRN',url:'https://github.com/josemarcosfrodo/p2lrn'},
-   homepage:'https://p2lrn.netlify.app/skills/',repository:'https://github.com/josemarcosfrodo/p2lrn',
+   homepage:'https://p2lrn.org/skills/',repository:'https://github.com/josemarcosfrodo/p2lrn',
    license:'P2LRN-NCSL-1.0',keywords:['p2lrn','cursos','educacion','quizzes','games'],
    extensions:{'com.openai':{interface:{displayName:'P2LRN – Crear y descargar',shortDescription:'Crear cursos .p2lrn con IA',
     longDescription:'Usa Toolkit oficial instalado para crear, importar, editar y validar cursos. Mantiene Python como alternativa limitada. Las funciones visuales usan Studio y Player; Analytics, MCP y LMS requieren sus entornos y permisos.',

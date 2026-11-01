@@ -6,7 +6,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const nodeModules=join(root,'.npm-pack-gate','install','node_modules','@p2lrn');
-const origin=(process.env.P2LRN_PUBLIC_ORIGIN||'https://p2lrn.netlify.app').replace(/\/+$/,'');
+const origin=(process.env.P2LRN_PUBLIC_ORIGIN||'https://p2lrn.org').replace(/\/+$/,'');
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const output=join(root,'.npm-pack-gate','public-npm-cdn-report.json');
 const pairs=[
