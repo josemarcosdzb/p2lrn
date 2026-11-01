@@ -1,0 +1,1055 @@
+(() => {
+  const SUPABASE_URL = 'https://yurtnmtesugykrqtujdx.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_cmC0leUeJtwzXrZb7nUn1Q_xdYoAKfH';
+
+  const removeInjectedNetlifyBranding = () => {
+    const removeCandidate = (node) => {
+      if (!(node instanceof Element)) return;
+      const tag = node.tagName.toLowerCase();
+      const id = String(node.id || '').toLowerCase();
+      const cls = String(node.className || '').toLowerCase();
+      const aria = String(node.getAttribute?.('aria-label') || '').toLowerCase();
+      const title = String(node.getAttribute?.('title') || '').toLowerCase();
+      const src = String(node.getAttribute?.('src') || '').toLowerCase();
+      const marker = tag === 'netlify-toolbar' || id === 'netlify-toolbar' || node.hasAttribute?.('data-netlify-toolbar');
+      const netlifyFrame = tag === 'iframe' && (title.includes('netlify') || src.includes('netlify'));
+      const toolbarLike = (id.includes('netlify') || cls.includes('netlify') || aria.includes('netlify')) && (() => {
+        const style = window.getComputedStyle(node);
+        return style.position === 'fixed' || style.position === 'sticky';
+      })();
+      if (marker || netlifyFrame || toolbarLike) {
+        node.remove();
+        return;
+      }
+      const ownText = String(node.textContent || '').replace(/\s+/g,' ').trim();
+      if (ownText === 'Powered by Netlify') {
+        let target = node;
+        for (let i=0;i<5 && target.parentElement;i++) {
+          const parent = target.parentElement;
+          const style = window.getComputedStyle(parent);
+          const rect = parent.getBoundingClientRect();
+          target = parent;
+          if ((style.position === 'fixed' || style.position === 'sticky') && rect.width < 360 && rect.height < 140) break;
+        }
+        target.remove();
+      }
+    };
+    document.querySelectorAll('netlify-toolbar,#netlify-toolbar,[data-netlify-toolbar],iframe,[aria-label*="Netlify" i],[id*="netlify" i],[class*="netlify" i]').forEach(removeCandidate);
+    document.querySelectorAll('a,button,div,span').forEach((node) => {
+      if (String(node.textContent || '').replace(/\s+/g,' ').trim() === 'Powered by Netlify') removeCandidate(node);
+    });
+  };
+
+  removeInjectedNetlifyBranding();
+  const netlifyBrandingObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (!(node instanceof Element)) continue;
+        removeInjectedNetlifyBranding();
+        return;
+      }
+    }
+  });
+  netlifyBrandingObserver.observe(document.documentElement,{childList:true,subtree:true});
+
+  const cleanProductionChrome = () => {
+    // Keep functional Studio controls; remove only obsolete decorative release metadata.
+    document.querySelectorAll('.header-meta').forEach((node)=>{
+      if(!node.querySelector('[data-functional-status]'))node.remove();
+    });
+    document.querySelectorAll('[data-footer-version],.site-release-label,.site-build-label').forEach((node)=>node.remove());
+  };
+  cleanProductionChrome();
+
+  const PUBLIC_NAV = [
+    { label: 'Studio', href: '/studio/', active: ['/studio/'] },
+    {
+      label: 'Soluciones',
+      active: ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'],
+      items: [
+        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
+        ['/juegos-educativos-3d/','Juegos educativos 3D'],
+        ['/cursos-offline/','Cursos offline sin LMS'],
+      ],
+    },
+    { label: 'Analytics', href: '/analytics/', active: ['/analytics/'] },
+    { label: 'Skills para IA', href: '/skills/', active: ['/skills/'] },
+    { label: 'Documentación', href: '/docs/', active: ['/docs/'] },
+    { label: 'Contacto', href: '/contacto/', active: ['/contacto/'] },
+  ];
+
+  const GLOBAL_NAV = [
+    {
+      label: 'Documentación',
+      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/'],
+      items: [
+        ['/docs/','Inicio'],
+        ['/docs/empezar/','Antes de empezar'],
+        ['/docs/que-usar/','Mapa de componentes'],
+        ['/docs/conceptos/','Conceptos'],
+        ['/docs/formato/','Formato P2LRN'],
+      ],
+    },
+    {
+      label: 'Instalar',
+      active: ['/docs/instalar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*'],
+      items: [
+        ['/docs/instalar/','Elegir instalación'],
+        ['/docs/npm/','NPM'],
+        ['/docs/npm/studio/','Studio con NPM'],
+        ['/docs/cdn/','CDN'],
+        ['/docs/cdn/studio/','Studio mediante CDN'],
+      ],
+    },
+    {
+      label: 'Crear',
+      active: ['/studio/','/crear-cursos-interactivos/','/cursos-offline/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
+      items: [
+        ['/studio/','Abrir Studio'],
+        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
+        ['/cursos-offline/','Cursos offline sin LMS'],
+        ['/docs/studio/','Guía de Studio'],
+        ['/docs/entrega-offline/','Entrega offline'],
+        ['/docs/paquetes/','Crear paquetes'],
+        ['/docs/paquetes/multipart/','Multipart'],
+        ['/docs/toolkit/','Toolkit'],
+        ['/docs/cli/','CLI'],
+      ],
+    },
+    {
+      label: 'Reproducir',
+      active: ['/docs/player/','/demo/','/juegos-educativos-3d/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],
+      wide: true,
+      items: [
+        ['/docs/player/','Player'],
+        ['/demo/','Visor'],
+        ['/juegos-educativos-3d/','Juegos educativos 3D'],
+        ['/docs/questionnaires/','Cuestionarios y juegos'],
+        ['/docs/questionnaires/standard/','Cuestionario estándar'],
+        ['/docs/questionnaires/memory/','Memoria'],
+        ['/docs/questionnaires/matching/','Relacionar'],
+        ['/docs/questionnaires/ordering/','Ordenar'],
+        ['/docs/questionnaires/classification/','Clasificar'],
+        ['/docs/questionnaires/true-false/','Verdadero / Falso'],
+        ['/docs/questionnaires/word-search/','Sopa de letras'],
+        ['/docs/questionnaires/crossword/','Crucigrama'],
+        ['/docs/questionnaires/rosco/','Rosco'],
+        ['/docs/questionnaires/3d/','Juego 3D'],
+        ['/docs/juegos-3d/','Arquitectura 3D'],
+        ['/docs/ejemplos/','Ejemplos'],
+      ],
+    },
+    {
+      label: 'Integrar',
+      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
+      items: [
+        ['/docs/integracion/','Integración'],
+        ['/docs/colaboracion/','Colaboración'],
+        ['/docs/eventos/','Eventos'],
+        ['/docs/conectores/','Conectores: visión general'],
+        ['/docs/conectores/ia/','Conectores para IA'],
+        ['/docs/conectores/lms/','Plataformas LMS'],
+        ['/docs/conectores/lti/','LTI 1.3'],
+      ],
+    },
+    {
+      label: 'Seguimiento',
+      active: ['/docs/progresion/','/docs/metricas/'],
+      items: [
+        ['/docs/progresion/','Progresión'],
+        ['/docs/metricas/','Métricas y analítica'],
+      ],
+    },
+    {
+      label: 'Analytics',
+      active: ['/docs/analytics/','/analytics/'],
+      items: [
+        ['/docs/analytics/','Guía de Analytics'],
+        ['/analytics/','Abrir Analytics'],
+      ],
+    },
+    {
+      label: 'Referencia',
+      active: ['/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
+      items: [
+        ['/docs/compatibilidad/','Compatibilidad'],
+        ['/docs/recetas/','Recetas'],
+        ['/docs/glosario/','Glosario'],
+        ['/docs/referencia/','Referencia técnica'],
+        ['/docs/troubleshooting/','Solución de problemas'],
+      ],
+    },
+  ];
+
+  const normalizePath = (value) => {
+    const pathname = String(value || '/').split(/[?#]/, 1)[0].replace(/\/index\.html$/u, '/');
+    return pathname.endsWith('/') ? pathname : pathname + '/';
+  };
+
+  const renderGlobalNavigation = () => {
+    const header = document.querySelector('.site-header');
+    if (!header) return;
+    let nav = header.querySelector('.nav');
+    if (!nav) {
+      nav = document.createElement('nav');
+      nav.className = 'nav';
+      header.querySelector('.brand')?.after(nav);
+    }
+    nav.id = 'nav';
+    nav.setAttribute('aria-label','Navegación principal');
+    const current = normalizePath(window.location.pathname);
+    const fragment = document.createDocumentFragment();
+
+    const navigationEntries = current.startsWith('/docs/') ? GLOBAL_NAV : PUBLIC_NAV;
+    for (const entry of navigationEntries) {
+      const active = (entry.active || []).some((path) => path.endsWith('*') ? current.startsWith(normalizePath(path.slice(0,-1))) : current === normalizePath(path));
+      if (entry.href) {
+        const link = document.createElement('a');
+        link.className = 'nav-direct';
+        link.href = entry.href;
+        link.textContent = entry.label;
+        if (active) link.setAttribute('aria-current','page');
+        fragment.append(link);
+        continue;
+      }
+      const group = document.createElement('details');
+      group.className = 'nav-group' + (entry.wide ? ' nav-group-wide' : '');
+      if (active) group.classList.add('is-active');
+      const summary = document.createElement('summary');
+      summary.innerHTML = '<span></span><i aria-hidden="true">⌄</i>';
+      summary.querySelector('span').textContent = entry.label;
+      summary.setAttribute('aria-label',entry.label);
+      const dropdown = document.createElement('div');
+      dropdown.className = 'nav-dropdown';
+      for (const [href,label] of entry.items) {
+        const link = document.createElement('a');
+        link.href = href;
+        link.textContent = label;
+        if (current === normalizePath(href)) link.setAttribute('aria-current','page');
+        dropdown.append(link);
+      }
+      group.append(summary,dropdown);
+      fragment.append(group);
+    }
+    nav.replaceChildren(fragment);
+
+    let menuButton = header.querySelector('[data-menu]');
+    if (!menuButton) {
+      menuButton = document.createElement('button');
+      menuButton.className = 'menu';
+      menuButton.type = 'button';
+      menuButton.dataset.menu = '';
+      menuButton.textContent = 'Menú';
+      header.append(menuButton);
+    }
+    menuButton.setAttribute('aria-controls','nav');
+    menuButton.setAttribute('aria-expanded','false');
+
+    const hoverCapable = window.matchMedia?.('(hover:hover) and (pointer:fine)').matches;
+    const hoverOpenTimers = new WeakMap();
+    const hoverCloseTimers = new WeakMap();
+    const clearHoverOpen = (group) => {
+      const timer=hoverOpenTimers.get(group);
+      if (timer) window.clearTimeout(timer);
+      hoverOpenTimers.delete(group);
+    };
+    const clearHoverClose = (group) => {
+      const timer=hoverCloseTimers.get(group);
+      if (timer) window.clearTimeout(timer);
+      hoverCloseTimers.delete(group);
+    };
+    const openHoverGroup = (currentGroup) => {
+      nav.querySelectorAll('.nav-group[open]').forEach((group)=>{
+        if (group!==currentGroup) {
+          clearHoverOpen(group);
+          clearHoverClose(group);
+          group.open=false;
+        }
+      });
+      currentGroup.open=true;
+    };
+    nav.querySelectorAll('.nav-group').forEach((group) => {
+      if (hoverCapable) {
+        group.addEventListener('pointerenter',()=>{
+          clearHoverOpen(group);
+          clearHoverClose(group);
+          if (group.open) return;
+          const anotherOpen=[...nav.querySelectorAll('.nav-group[open]')].some((item)=>item!==group);
+          if (!anotherOpen) {
+            openHoverGroup(group);
+            return;
+          }
+          hoverOpenTimers.set(group,window.setTimeout(()=>{
+            hoverOpenTimers.delete(group);
+            openHoverGroup(group);
+          },140));
+        });
+        group.addEventListener('pointerleave',()=>{
+          clearHoverOpen(group);
+          if (!group.open) return;
+          clearHoverClose(group);
+          hoverCloseTimers.set(group,window.setTimeout(()=>{
+            hoverCloseTimers.delete(group);
+            group.open=false;
+          },240));
+        });
+      }
+    });
+    document.addEventListener('click',(event)=>{
+      if (event.target.closest('.nav-group')) return;
+      nav.querySelectorAll('.nav-group[open]').forEach((group)=>{group.open=false;});
+    });
+  };
+
+  renderGlobalNavigation();
+
+  const menu = document.querySelector('[data-menu]');
+  const nav = document.getElementById('nav');
+
+  const closeMenu = () => {
+    if (!menu || !nav) return;
+    nav.classList.remove('is-open');
+    menu.setAttribute('aria-expanded', 'false');
+    menu.textContent = 'Menú';
+  };
+
+  if (menu && nav) {
+    menu.addEventListener('click', () => {
+      const open = nav.classList.toggle('is-open');
+      menu.setAttribute('aria-expanded', String(open));
+      menu.textContent = open ? 'Cerrar' : 'Menú';
+    });
+    nav.addEventListener('click', (event) => {
+      if (event.target.closest('a')) closeMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        nav.querySelectorAll('.nav-group[open]').forEach((group)=>{group.open=false;});
+        closeMenu();
+        menu.focus();
+      }
+    });
+  }
+
+  const announce = (() => {
+    const node = document.createElement('span');
+    node.className = 'sr-only';
+    node.setAttribute('aria-live', 'polite');
+    document.body.append(node);
+    return (message) => { node.textContent = ''; requestAnimationFrame(() => { node.textContent = message; }); };
+  })();
+
+  const copied = (button) => {
+    const previous = button.textContent;
+    button.textContent = 'Copiado';
+    announce('Código copiado al portapapeles');
+    window.setTimeout(() => { button.textContent = previous; }, 1200);
+  };
+
+  document.querySelectorAll('[data-copy]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const code = button.closest('.codebox')?.querySelector('code')?.innerText || '';
+      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('No se pudo copiar el código'); }
+    });
+  });
+
+  document.querySelectorAll('[data-copy-inline]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const code = button.parentElement?.querySelector('code')?.innerText || '';
+      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('No se pudo copiar el código'); }
+    });
+  });
+
+  const GLOBAL_SIDEBAR = [
+    ['EMPEZAR', [
+      ['/docs/','Documentación'],
+      ['/docs/empezar/','Antes de empezar'],
+      ['/docs/empezar-facil/','Empezar fácil'],
+    ]],
+    ['INSTALAR', [
+      ['/docs/instalar/','Instalación'],
+      ['/docs/cdn/','CDN'],
+      ['/docs/cdn/studio/','Studio mediante CDN'],
+      ['/docs/npm/','NPM'],
+      ['/docs/npm/studio/','Studio con NPM'],
+    ]],
+    ['CREAR', [
+      ['/docs/studio/','Studio visual'],
+      ['/docs/entrega-offline/','Entrega offline'],
+      ['/docs/paquetes/','Crear paquetes'],
+      ['/docs/paquetes/multipart/','Multipart'],
+      ['/docs/toolkit/','Toolkit'],
+      ['/docs/cli/','CLI'],
+    ]],
+    ['REPRODUCIR', [
+      ['/docs/player/','Player'],
+      ['/docs/questionnaires/','Cuestionarios y juegos'],
+      ['/docs/juegos-3d/','Juegos 3D'],
+      ['/docs/ejemplos/','Ejemplos'],
+    ]],
+    ['INTEGRAR', [
+      ['/docs/integracion/','Integración'],
+      ['/docs/colaboracion/','Colaboración'],
+      ['/docs/eventos/','Eventos'],
+    ]],
+    ['CONECTORES', [
+      ['/docs/conectores/','Conectores e integración'],
+    ]],
+    ['SEGUIMIENTO', [
+      ['/docs/progresion/','Progresión'],
+      ['/docs/metricas/','Métricas y analítica'],
+    ]],
+    ['ANALYTICS', [
+      ['/docs/analytics/','P2LRN Analytics'],
+      ['/analytics/','Abrir panel demo ↗'],
+    ]],
+    ['REFERENCIA', [
+      ['/docs/compatibilidad/','Compatibilidad'],
+      ['/docs/recetas/','Recetas'],
+      ['/docs/glosario/','Glosario'],
+      ['/docs/referencia/','Referencia técnica'],
+      ['/docs/troubleshooting/','Solución de problemas'],
+    ]],
+    ['RECURSOS', [
+      ['/studio/','Abrir Studio ↗'],
+      ['/demo/','Visor ↗'],
+      ['/examples/catalog.json','Catálogo de ejemplos ↗'],
+    ]],
+  ];
+
+  const DOC_SIDEBAR_CHILDREN = new Map([
+    ['/docs/empezar/',[
+      ['/docs/que-usar/','Mapa de componentes'],
+      ['/docs/conceptos/','Conceptos fundamentales'],
+      ['/docs/formato/','Formato P2LRN'],
+    ]],
+    ['/docs/conectores/',[
+      ['/docs/conectores/ia/','Conectores para IA'],
+      ['/docs/skills/','Skills P2LRN para IA'],
+      ['/docs/conectores/lms/','Plataformas LMS'],
+      ['/docs/conectores/lti/','Módulo LTI 1.3'],
+    ]],
+    ['/docs/questionnaires/',[
+      ['/docs/questionnaires/standard/','Cuestionario estándar'],
+      ['/docs/questionnaires/memory/','Memoria'],
+      ['/docs/questionnaires/matching/','Relacionar'],
+      ['/docs/questionnaires/ordering/','Ordenar'],
+      ['/docs/questionnaires/classification/','Clasificar'],
+      ['/docs/questionnaires/true-false/','Verdadero / Falso'],
+      ['/docs/questionnaires/word-search/','Sopa de letras'],
+      ['/docs/questionnaires/crossword/','Crucigrama'],
+      ['/docs/questionnaires/rosco/','Rosco'],
+      ['/docs/questionnaires/3d/','Juego 3D'],
+    ]],
+  ]);
+
+  // IA topics are part of a single guide. They are anchors, not extra pages.
+  const DOC_AI_TOPICS = Object.freeze([
+    ['para-que','Qué puedes hacer'],
+    ['crear-cursos','Crear cursos'],
+    ['chatgpt','ChatGPT'],
+    ['claude','Claude'],
+    ['gemini','Gemini'],
+    ['grok','Grok'],
+    ['conectar-ordenador','Conectar tu ordenador'],
+    ['servicios-web','Acceso desde la web'],
+    ['comprobar','Comprobaciones'],
+  ]);
+
+  const DOC_SECTION_LABELS = Object.freeze({
+    EMPEZAR:'Empezar',
+    INSTALAR:'Instalar',
+    CREAR:'Crear',
+    REPRODUCIR:'Reproducir',
+    INTEGRAR:'Integrar',
+    CONECTORES:'Conectores',
+    SEGUIMIENTO:'Seguimiento',
+    REFERENCIA:'Referencia',
+  });
+  const DOC_BREADCRUMB_PARENTS = new Map([
+    ['/docs/que-usar/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/conceptos/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/formato/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/npm/studio/',['/docs/npm/','NPM']],
+    ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
+    ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
+    ['/docs/conectores/ia/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/skills/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/gemini/',['/docs/conectores/ia/','Conectores para IA']],
+    ['/docs/conectores/skills/',['/docs/conectores/ia/','Conectores para IA']],
+    ['/docs/conectores/local/',['/docs/conectores/ia/','Conectores para IA']],
+    ['/docs/conectores/lms/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/conectores/lti/',['/docs/conectores/','Conectores e integración']],
+  ]);
+  // Keep legacy detail URLs reachable without advertising a separate IA
+  // navigation entry for every provider or installation method.
+  const CONNECTOR_IA_DETAIL_ROUTES=new Set([
+    '/docs/conectores/gemini/',
+    '/docs/conectores/skills/',
+    '/docs/conectores/local/',
+  ]);
+  const sidebarPath=(path)=>CONNECTOR_IA_DETAIL_ROUTES.has(path)
+    ?'/docs/conectores/ia/':path;
+  const sidebarLocation = (current) => {
+    const selected=sidebarPath(current);
+    for (const [section,items] of GLOBAL_SIDEBAR) {
+      for (const [href,label] of items) {
+        const normalized=normalizePath(href);
+        if (selected===normalized) return {section,href,label};
+        const children=DOC_SIDEBAR_CHILDREN.get(href) || [];
+        if (children.some(([childHref])=>selected===normalizePath(childHref))) {
+          return {section,href,label,child:true};
+        }
+      }
+    }
+    return null;
+  };
+
+  const sidebar = document.querySelector('.doc-sidebar');
+  if (sidebar) {
+    const current = normalizePath(window.location.pathname);
+    const selected = sidebarPath(current);
+    const fragment = document.createDocumentFragment();
+    for (const [section,items] of GLOBAL_SIDEBAR) {
+      const label=document.createElement('span');
+      label.textContent=section;
+      fragment.append(label);
+      for (const [href,textValue] of items) {
+        const normalized=normalizePath(href);
+        const children=DOC_SIDEBAR_CHILDREN.get(href) || [];
+        const currentChild=children.find(([childHref])=>selected===normalizePath(childHref));
+        const a=document.createElement('a');
+        a.href=href;
+        a.textContent=textValue;
+        if (current===normalized) a.setAttribute('aria-current','page');
+        else if (currentChild) a.setAttribute('aria-current','location');
+        fragment.append(a);
+
+        if (current===normalized || currentChild) {
+          const childNav=document.createElement('nav');
+          childNav.className='doc-child-subnav';
+          childNav.setAttribute('aria-label',textValue);
+          for (const [childHref,childLabel] of children) {
+            const childLink=document.createElement('a');
+            childLink.href=childHref;
+            childLink.textContent=childLabel;
+            if (current===normalizePath(childHref)) childLink.setAttribute('aria-current','page');
+            else if (selected===normalizePath(childHref)) childLink.setAttribute('aria-current','location');
+            childNav.append(childLink);
+            if (childHref==='/docs/conectores/ia/' && selected===normalizePath(childHref)) {
+              const topics=document.createElement('div');
+              topics.className='doc-ai-topics';
+              topics.setAttribute('role','group');
+              topics.setAttribute('aria-label','Apartados de Conectores para IA');
+              for (const [id,label] of DOC_AI_TOPICS) {
+                const topic=document.createElement('a');
+                topic.href='/docs/conectores/ia/#'+id;
+                topic.dataset.targetId=id;
+                topic.textContent=label;
+                topics.append(topic);
+              }
+              childNav.append(topics);
+            }
+          }
+          fragment.append(childNav);
+        }
+      }
+    }
+    sidebar.replaceChildren(fragment);
+  }
+  if (sidebar) {
+    const search = document.createElement('div');
+    search.className = 'docs-search';
+    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" aria-controls="docs-search-list" aria-describedby="docs-search-status" placeholder="NPM, Skills, Gemini, LMS…" autocomplete="off"><div class="docs-search-results" id="docs-search-list" hidden></div><div class="sr-only docs-search-status" id="docs-search-status" role="status" aria-live="polite" aria-atomic="true"></div>';
+    sidebar.prepend(search);
+    const input = search.querySelector('input');
+    const results = search.querySelector('.docs-search-results');
+    const resultsStatus = search.querySelector('.docs-search-status');
+    let index = null;
+    const ensureIndex = async () => {
+      if (index) return index;
+      const response = await fetch('/search-index.json', {cache:'no-store'});
+      if (!response.ok) throw new Error('search-index');
+      index = await response.json();
+      return index;
+    };
+    let searchRequestToken = 0;
+    input.addEventListener('input', async () => {
+      const token = ++searchRequestToken;
+      const query = input.value.trim().toLocaleLowerCase('es');
+      if (query.length < 2) {
+        results.hidden = true;
+        results.replaceChildren();
+        resultsStatus.textContent = '';
+        return;
+      }
+      try {
+        const docs = await ensureIndex();
+        if (token !== searchRequestToken) return;
+        const allMatches = docs.filter((item) => item.search.includes(query));
+        const matches = allMatches.slice(0, 8);
+        results.replaceChildren(...matches.map((item) => {
+          const a = document.createElement('a');
+          a.href = item.url;
+          a.innerHTML = '<strong></strong><span></span>';
+          a.querySelector('strong').textContent = item.title;
+          a.querySelector('span').textContent = item.section || item.description || '';
+          return a;
+        }));
+        results.hidden = matches.length === 0;
+        resultsStatus.textContent = allMatches.length === 0 ? 'No hay resultados para esta búsqueda.'
+          : allMatches.length === 1 ? '1 resultado de búsqueda.'
+          : allMatches.length + ' resultados de búsqueda' + (allMatches.length > 8 ? '. Se muestran los primeros 8.' : '.');
+      } catch {
+        if (token !== searchRequestToken) return;
+        results.replaceChildren();
+        results.hidden = true;
+        resultsStatus.textContent = 'No se ha podido cargar el índice de búsqueda.';
+      }
+    });
+  }
+
+
+  if (sidebar) {
+    sidebar.id = 'docs-sidebar';
+    const main = sidebar.closest('.doc-main');
+    const currentLink = sidebar.querySelector('a[aria-current="page"]');
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'docs-sidebar-toggle';
+    toggle.setAttribute('aria-controls','docs-sidebar');
+    toggle.setAttribute('aria-expanded','false');
+    toggle.innerHTML = '<span>Índice de documentación</span><strong></strong>';
+    toggle.querySelector('strong').textContent = currentLink?.textContent || 'Abrir';
+    main?.insertBefore(toggle, sidebar);
+    const media = window.matchMedia('(min-width: 901px)');
+    const syncToggleHeight = () => {
+      main?.style.setProperty('--docs-index-toggle-height',toggle.offsetHeight+'px');
+    };
+    const revealCurrent = () => {
+      const target=sidebar.querySelector('a[aria-current="page"]') || sidebar.querySelector('a[aria-current="location"]');
+      if (!target) return;
+      const targetTop=target.offsetTop;
+      sidebar.scrollTop=Math.max(0,targetTop-Math.max(70,sidebar.clientHeight*.28));
+    };
+    const setOpen = (open) => {
+      syncToggleHeight();
+      sidebar.classList.toggle('is-open',open);
+      toggle.setAttribute('aria-expanded',String(open));
+      toggle.querySelector('span').textContent = open ? 'Cerrar índice' : 'Índice de documentación';
+      if (open && !media.matches) requestAnimationFrame(revealCurrent);
+    };
+    toggle.addEventListener('click',()=>setOpen(!sidebar.classList.contains('is-open')));
+    sidebar.addEventListener('click',(event)=>{
+      if (!media.matches && event.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown',(event)=>{
+      if (event.key==='Escape' && !media.matches && sidebar.classList.contains('is-open')) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+    const syncSidebar = () => {
+      if (media.matches) {
+        sidebar.classList.remove('is-open');
+        toggle.setAttribute('aria-expanded','false');
+      } else {
+        setOpen(false);
+      }
+    };
+    media.addEventListener?.('change',syncSidebar);
+    window.addEventListener('resize',()=>{
+      if (!media.matches && sidebar.classList.contains('is-open')) syncToggleHeight();
+    },{passive:true});
+    syncSidebar();
+  }
+
+  const docArticle = document.querySelector('.doc-content');
+  if (docArticle) {
+    const headings = [...docArticle.querySelectorAll('.doc-section > h2')];
+    const slugify = (value) => String(value || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    const used = new Set();
+    headings.forEach((heading,index) => {
+      if (heading.id) { used.add(heading.id); return; }
+      const base = slugify(heading.textContent) || 'seccion-'+(index+1);
+      let id=base,n=2; while(used.has(id))id=base+'-'+n++;
+      used.add(id); heading.id=id;
+    });
+
+    const pageTitle = docArticle.querySelector('.doc-hero h1')?.textContent?.trim() || document.title.split('—')[0].trim() || 'Esta página';
+    const mobileIndexCurrent=document.querySelector('.docs-sidebar-toggle strong');
+    if (mobileIndexCurrent) {
+      mobileIndexCurrent.textContent=pageTitle;
+      mobileIndexCurrent.title=pageTitle;
+    }
+    const currentPath=normalizePath(window.location.pathname);
+    if (currentPath!=='/docs/' && !docArticle.querySelector('.doc-breadcrumbs')) {
+      const location=sidebarLocation(currentPath);
+      const breadcrumb=document.createElement('nav');
+      breadcrumb.className='doc-breadcrumbs';
+      breadcrumb.setAttribute('aria-label','Migas de pan');
+      const list=document.createElement('ol');
+      const addLink=(href,label)=>{
+        const li=document.createElement('li');
+        const a=document.createElement('a');
+        a.href=href;a.textContent=label;li.append(a);list.append(li);
+      };
+      const addText=(label,current=false)=>{
+        const li=document.createElement('li');
+        const span=document.createElement('span');
+        span.textContent=label;
+        if (current) span.setAttribute('aria-current','page');
+        li.append(span);list.append(li);
+      };
+      addLink('/docs/','Documentación');
+      if (location?.section && DOC_SECTION_LABELS[location.section]) addText(DOC_SECTION_LABELS[location.section]);
+      const explicitParent=DOC_BREADCRUMB_PARENTS.get(currentPath);
+      if (explicitParent) addLink(explicitParent[0],explicitParent[1]);
+      else if (location?.href==='/docs/questionnaires/' && currentPath!==normalizePath(location.href)) addLink(location.href,location.label);
+      addText(pageTitle,true);
+      breadcrumb.append(list);
+      docArticle.querySelector('.doc-hero')?.before(breadcrumb);
+    }
+    const docMain=docArticle.closest('.doc-main');
+    const legacyToc=docArticle.querySelector('.doc-toc');
+    legacyToc?.remove();
+    if (headings.length >= 2 && docMain && !docMain.querySelector('.doc-page-toc')) {
+      const aside=document.createElement('aside');
+      aside.className='doc-page-toc';
+      aside.setAttribute('aria-label','En esta página');
+
+      const toggle=document.createElement('button');
+      toggle.type='button';
+      toggle.className='doc-page-toc-toggle';
+      toggle.setAttribute('aria-expanded','false');
+      toggle.innerHTML='<span>En esta página</span><strong></strong>';
+      toggle.querySelector('strong').textContent=headings[0]?.textContent || '';
+
+      const nav=document.createElement('nav');
+      nav.className='doc-page-toc-nav';
+      nav.setAttribute('aria-label','En esta página');
+      const title=document.createElement('strong');
+      title.textContent='En esta página';
+      const list=document.createElement('ol');
+      const links=[];
+
+      headings.forEach((heading,index)=>{
+        const li=document.createElement('li');
+        const a=document.createElement('a');
+        a.href='#'+heading.id;
+        a.textContent=heading.textContent;
+        a.dataset.targetId=heading.id;
+        if (index===0) a.setAttribute('aria-current','location');
+        li.append(a);
+        list.append(li);
+        links.push(a);
+      });
+
+      nav.append(title,list);
+      aside.append(toggle,nav);
+      docArticle.after(aside);
+
+      const setActive=(heading)=>{
+        if (!heading) return;
+        links.forEach((link)=>{
+          const active=link.dataset.targetId===heading.id;
+          if (active) link.setAttribute('aria-current','location');
+          else link.removeAttribute('aria-current');
+        });
+        const sectionId=heading.closest('.doc-section')?.id || '';
+        document.querySelectorAll('.doc-ai-topics a[data-target-id]').forEach((link)=>{
+          if (link.dataset.targetId===sectionId)link.setAttribute('aria-current','location');
+          else link.removeAttribute('aria-current');
+        });
+        toggle.querySelector('strong').textContent=heading.textContent;
+      };
+
+      let frame=0;
+      const syncActive=()=>{
+        frame=0;
+        // The IA sidebar identifies a section once its title enters the
+        // reading area, not only after it reaches the very top. This keeps
+        // deep-link redirects and smooth anchor scrolling understandable.
+        const line=Math.max(104,window.innerHeight*(
+          currentPath==='/docs/conectores/ia/' ? .58 : .2));
+        let active=headings[0];
+        for (const heading of headings) {
+          if (heading.getBoundingClientRect().top<=line) active=heading;
+          else break;
+        }
+        setActive(active);
+      };
+      const requestSync=()=>{
+        if (frame) return;
+        frame=requestAnimationFrame(syncActive);
+      };
+
+      window.addEventListener('scroll',requestSync,{passive:true});
+      window.addEventListener('resize',requestSync,{passive:true});
+      links.forEach((link)=>link.addEventListener('click',()=>{
+        const target=document.getElementById(link.dataset.targetId);
+        if (target) setActive(target);
+        if (window.matchMedia('(max-width: 1180px)').matches) {
+          aside.classList.remove('is-open');
+          toggle.setAttribute('aria-expanded','false');
+        }
+      }));
+
+      const setTocOpen=(open)=>{
+        aside.classList.toggle('is-open',open);
+        toggle.setAttribute('aria-expanded',String(open));
+      };
+      toggle.addEventListener('click',()=>setTocOpen(!aside.classList.contains('is-open')));
+      document.addEventListener('keydown',(event)=>{
+        if (event.key==='Escape' && aside.classList.contains('is-open')) {
+          setTocOpen(false);
+          toggle.focus();
+        }
+      });
+      const desktop=window.matchMedia('(min-width: 1181px)');
+      const syncMode=()=>{
+        if (desktop.matches) setTocOpen(false);
+      };
+      desktop.addEventListener?.('change',syncMode);
+      syncMode();
+      syncActive();
+    }
+  }
+
+  document.querySelectorAll('[data-contact-form]').forEach((form) => {
+    const status = form.querySelector('[data-form-status]');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (form.elements.company?.value) return;
+
+      const now = Date.now();
+      const last = Number(localStorage.getItem('p2lrn-contact-last') || 0);
+      if (now - last < 30000) {
+        if (status) status.textContent = 'Espera unos segundos antes de enviar otro mensaje.';
+        return;
+      }
+
+      const button = form.querySelector('button[type="submit"]');
+      const payload = {
+        name: form.elements.name.value.trim(),
+        email: form.elements.email.value.trim(),
+        subject: form.elements.subject.value.trim(),
+        message: form.elements.message.value.trim(),
+        page: window.location.pathname,
+      };
+
+      if (button) button.disabled = true;
+      if (status) status.textContent = 'Enviando…';
+
+      try {
+        const response = await fetch(SUPABASE_URL + '/functions/v1/p2lrn-contact', {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+        if (response.status === 429) throw new Error('contact_rate_limited');
+        if (!response.ok) throw new Error('contact_failed');
+        localStorage.setItem('p2lrn-contact-last', String(now));
+        form.reset();
+        if (status) status.textContent = 'Mensaje enviado. Gracias por contactar.';
+      } catch (error) {
+        if (status) status.textContent = error?.message === 'contact_rate_limited' ? 'Límite de envíos alcanzado. Inténtalo más tarde.' : 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
+      } finally {
+        if (button) button.disabled = false;
+      }
+    });
+  });
+
+  Promise.all([
+    fetch('/health.json', {cache:'no-store'}).then((r) => r.ok ? r.json() : Promise.reject()),
+    fetch('/index.json', {cache:'no-store'}).then((r) => r.ok ? r.json() : Promise.reject()),
+    fetch('/player/current/dist/release.json', {cache:'no-store'}).then((r) => r.ok ? r.json() : Promise.reject()),
+  ]).then(([health,index,release]) => {
+    const version = release.webSdkVersion || health.playerVersion || index?.player?.version;
+    if (version) document.querySelectorAll('[data-player-version],[data-footer-version]').forEach((n) => n.textContent = version);
+    const node = document.querySelector('[data-health]');
+    if (node) node.textContent = health.ok && release.webSdkVersion === version ? 'CDN disponible' : 'CDN';
+  }).catch(() => {});
+})();
+
+
+
+// P2LRN homepage media carousel
+(()=>{
+  const root=document.querySelector('[data-hero-carousel-root]');
+  if(!root)return;
+  const slides=[...root.querySelectorAll('[data-hero-slide]')];
+  const viewport=root.querySelector('[data-hero-viewport]');
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let index=Math.min(2,slides.length-1);
+  let locked=false;
+  let unlockTimer=null;
+  let startX=null;
+
+  slides.forEach(slide=>{
+    slide.querySelectorAll('img').forEach(img=>{img.draggable=false});
+  });
+  root.addEventListener('dragstart',event=>event.preventDefault());
+  root.addEventListener('selectstart',event=>event.preventDefault());
+
+  const normalizeDistance=(value)=>{
+    const n=slides.length;
+    let d=value;
+    while(d>n/2)d-=n;
+    while(d<-n/2)d+=n;
+    return d;
+  };
+  const slotFor=(d)=>{
+    if(d===0)return 'center';
+    if(d===-1)return 'left1';
+    if(d===1)return 'right1';
+    if(d===-2)return 'left2';
+    if(d===2)return 'right2';
+    return d<0?'left3':'right3';
+  };
+  const syncVideo=()=>{
+    slides.forEach((slide,i)=>{
+      const video=slide.querySelector('video');
+      if(!video)return;
+      const centered=i===index;
+      video.controls=centered;
+      if(!centered){
+        video.pause();
+        try{video.currentTime=0}catch{}
+      }
+    });
+  };
+  const render=()=>{
+    slides.forEach((slide,i)=>{
+      const slot=slotFor(normalizeDistance(i-index));
+      slide.dataset.slot=slot;
+      slide.classList.toggle('is-active',slot==='center');
+      slide.setAttribute('aria-hidden','false');
+      slide.style.pointerEvents='auto';
+    });
+    syncVideo();
+  };
+  const unlock=()=>{
+    locked=false;
+    root.classList.remove('is-moving');
+    slides.forEach(s=>s.classList.remove('is-moving'));
+  };
+  const goTo=(targetIndex)=>{
+    if(locked||targetIndex===index)return;
+    locked=true;
+    root.classList.add('is-moving');
+    slides.forEach(s=>s.classList.add('is-moving'));
+    index=(targetIndex+slides.length)%slides.length;
+    render();
+    if(unlockTimer)clearTimeout(unlockTimer);
+    unlockTimer=setTimeout(unlock,reduce?40:620);
+  };
+  const move=(direction)=>{
+    if(!direction)return;
+    goTo(index+direction);
+  };
+
+  slides.forEach((slide,i)=>{
+    slide.addEventListener('click',(event)=>{
+      if(locked||i===index)return;
+      goTo(i);
+    });
+  });
+
+  root.addEventListener('keydown',(event)=>{
+    if(event.key==='ArrowLeft'){event.preventDefault();move(-1)}
+    if(event.key==='ArrowRight'){event.preventDefault();move(1)}
+  });
+
+  viewport?.addEventListener('pointerdown',(event)=>{
+    if(locked)return;
+    startX=event.clientX;
+  });
+  viewport?.addEventListener('pointerup',(event)=>{
+    if(startX===null||locked)return;
+    const delta=event.clientX-startX;
+    startX=null;
+    if(Math.abs(delta)>48)move(delta<0?1:-1);
+  });
+  viewport?.addEventListener('pointercancel',()=>{startX=null});
+
+  root.tabIndex=0;
+  render();
+})();
+
+
+// Scroll reveal for the integrated-formats section
+(()=>{
+  const items=[...document.querySelectorAll('[data-scroll-reveal] .reveal-item')];
+  if(!items.length)return;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce||!('IntersectionObserver' in window)){
+    items.forEach(item=>item.classList.add('is-visible'));
+    return;
+  }
+
+  const bridgeBottomMargin=(item)=>{
+    if(!item.closest('.platform-bridge'))return 18;
+    const order=Number.parseInt(getComputedStyle(item).getPropertyValue('--reveal-order'),10)||0;
+    if(order<=1)return 18;
+    if(order===2)return 28;
+    if(order===3)return 60;
+    return 30;
+  };
+
+  items.forEach(item=>{
+    const bottom=bridgeBottomMargin(item);
+    const observer=new IntersectionObserver(entries=>{
+      entries.forEach(entry=>{
+        entry.target.classList.toggle('is-visible',entry.isIntersecting);
+      });
+    },{
+      threshold:.01,
+      rootMargin:'-7% 0px -'+bottom+'% 0px'
+    });
+    observer.observe(item);
+  });
+})();
+
+// The npm release and the rebuilt web revision are different identifiers.
+// Keep both visible; never pretend unreleased site changes are a new npm tag.
+(()=>{
+  const label=document.querySelector('[data-site-build]');
+  if(!label)return;
+  const entry=[...document.scripts].find((script)=>{
+    if(!script.src)return false;
+    const url=new URL(script.src,document.baseURI);
+    return url.origin===location.origin&&url.pathname==='/p2lrn.js';
+  });
+  const revision=entry?new URL(entry.src).searchParams.get('v'):null;
+  label.textContent=revision?'Web '+revision.slice(0,12):'Web sin revisión';
+  label.title='Revisión de los archivos web; la versión npm se muestra por separado';
+})();
+
+/* Accessible navigation landmarks and keyboard-operable horizontal scrolling. */
+(()=>{
+  const boot=()=>{
+    document.querySelectorAll('nav.doc-child-subnav').forEach(nav=>{
+      const label=nav.getAttribute('aria-label') || 'documentación';
+      if(!label.startsWith('Subsecciones de '))nav.setAttribute('aria-label','Subsecciones de '+label);
+    });
+    document.querySelectorAll('nav.resource-links:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Recursos técnicos'));
+    document.querySelectorAll('nav.doc-pager:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Navegación entre guías'));
+    const updateScrollable=()=>{
+      for(const el of document.querySelectorAll('pre,.capability-table-wrap,.capability-matrix')){
+        const overflowing=el.clientWidth>0&&el.scrollWidth>el.clientWidth+1;
+        if(overflowing&&!el.hasAttribute('tabindex')){el.tabIndex=0;el.dataset.p2lrnAddedTabindex='1'}
+        else if(!overflowing&&el.dataset.p2lrnAddedTabindex==='1'){el.removeAttribute('tabindex');delete el.dataset.p2lrnAddedTabindex}
+      }
+    };
+    updateScrollable();
+    window.addEventListener('resize',updateScrollable,{passive:true});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+})();

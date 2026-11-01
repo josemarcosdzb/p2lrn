@@ -1,0 +1,126 @@
+<!DOCTYPE html><html lang="en" class="doc-instant-anchor"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1117"><meta name="description" content="P2LRN Guide for ChatGPT, Claude, Gemini and Grok: Create courses with Skills and connect computer files using MCP.">
+<title>Connectors for AI — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/en/p2lrn.js" defer=""></script></head>
+<body><a class="skip-link" href="#contenido">Skip to content</a>
+<header class="site-header"><a class="brand" href="/en/">P2LRN</a><nav class="nav" id="nav" aria-label="Main navigation"><a class="nav-direct" href="/en/docs/">Documentation</a><a class="nav-direct" href="/en/docs/instalar/">Install</a><a class="nav-direct" href="/en/docs/studio/">Create</a><a class="nav-direct" href="/en/docs/player/">Play</a><a class="nav-direct" href="/en/docs/integracion/">Integrate</a><a class="nav-direct" href="/en/docs/analytics/">Analytics</a><a class="nav-direct" href="/en/docs/referencia/">Reference</a></nav>
+<div class="header-meta"><span class="status"><i></i><span data-health="">CDN</span></span><span data-player-version="">0.5.0-alpha.11</span></div>
+<button class="menu" type="button" data-menu="" aria-expanded="false" aria-controls="nav">Menu</button></header>
+<main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Documentation navigation"></aside>
+<article class="doc-content">
+<header class="doc-hero">
+<p class="eyebrow">DOCUMENTATION / CONNECTORS / AI</p>
+<h1>Connectors for AI</h1>
+<p>Use P2LRN with ChatGPT, Claude, Gemini or Grok. Here you will find how to create a course from a conversation or how to work with files you already have on your computer, with specific instructions for each platform.</p>
+</header>
+
+<section class="doc-section" id="para-que">
+<h2>What do you want to do?</h2>
+<div class="reference-table">
+<div><strong>Create a new course</strong><p>Use a <a href="#crear-cursos">Skill</a> so that the AI ​​prepares the content and, if you have the necessary tools, generates a file <code>.p2lrn</code> downloadable. It does not need to access your folders.</p></div>
+<div><strong>Consult or modify existing courses</strong><p>Use a <a href="#conectar-ordenador">conector MCP</a> to give access to a specific folder and authorized tools. You can start with read permissions and enable drafts later.</p></div>
+</div>
+<p><strong>Son mecanismos diferentes.</strong> A Skill provides instructions and scripts for a task; MCP allows an application to invoke P2LRN tools. None replaces the Player or the visual Studio editor. First choose the platform; Then only the corresponding installation follows.</p>
+</section>
+
+<section class="doc-section" id="crear-cursos">
+<span id="skills-sin-mcp" class="doc-anchor-alias" aria-hidden="true"></span>
+<h2>Create and download a course with a Skill</h2>
+<p>The Skill <strong>«P2LRN – Create and download»</strong> can generate and verify new packages from the Core 0.4.0 subset. There are now downloadable versions for ChatGPT, Claude, Gemini CLI and Grok Build. To create the file, each environment must allow Python to run; The download does not imply installation or publication in the official catalogs.</p>
+<div class="example-actions"><a class="button primary" href="/en/skills/">Download P2LRN Skills</a><a class="button" href="/en/docs/skills/">Installation guide by platform</a><a class="button" href="/downloads/skills/manifest.json">SHA-256 integrity</a></div>
+<ol class="doc-list">
+<li>In your AI app, open the Skills feature and check that you have a P2LRN-compatible version installed.</li>
+<li>Indicates the title, language, structure, questions and games. Ask that the result be a <strong>actual file</strong> and not just a content outline.</li>
+<li>Verify that the packager and validator have been run. Download the <code>.p2lrn</code> and try it on <a href="/en/demo/">Player</a> or <a href="/en/studio/">Studio</a>.</li>
+</ol>
+<div class="codebox"><div class="codebox-head"><span>Example for an AI with the P2LRN Skill installed</span><button type="button" data-copy="">Copy</button></div><pre><code>Create a P2LRN course in English about digital safety:
+3 units, 6 lessons, 10 questions, and 2 games.
+Run the P2LRN packager and validate the result.
+Give me the downloadable .p2lrn file.</code></pre></div>
+<p>If your application cannot run the packager, it can help you style the content, but it should not claim to have generated a valid package. The complete visual creation is still available at <a href="/en/studio/">Studio</a>.</p>
+</section>
+
+<section class="doc-section" id="chatgpt">
+<h2>ChatGPT</h2>
+<h3>Create courses</h3>
+<p>With the “P2LRN – Create and Download” Skill installed and enabled, write the order in the conversation and request the verified file. Skill availability depends on the settings and permissions of your account or workspace. <a href="https://help.openai.com/es-es/articles/20001066-skills-in-chatgpt">Official Skills Help</a>.</p>
+<h3>Work with local courses</h3>
+<p>ChatGPT in the browser cannot open directly <code>localhost</code>. To use the private connector from ChatGPT, check the option <a href="#servicios-web">safe tunnel</a> when it is enabled in your account. There are also MCP servers accessible via HTTPS with authentication. The connection is not installed automatically and is not equivalent to an approved public plugin.</p>
+<p><strong>Testing:</strong> asks “List my authorized P2LRN courses and validate the one I choose.” You must see a real invocation of <code>p2lrn_list_courses</code> and <code>p2lrn_validate_course</code>, not a made up answer.</p>
+</section>
+
+<section class="doc-section" id="claude">
+<h2>Claude</h2>
+<h3>Create courses</h3>
+<p>Claude supports Custom Skills in environments that have that feature enabled. Review the Skill before importing it and confirm that its scripts can run and deliver files. <strong>The existing P2LRN Skill in ChatGPT is not automatically certified for Claude.</strong> <a href="https://support.claude.com/es/articles/12512180-usar-habilidades-en-claude">Official Claude Skills Guide</a>.</p>
+<h3>Work with local courses</h3>
+<p>In <strong>Claude Desktop</strong>, you can use the <a href="#conectar-ordenador">conector local</a>- Select Claude in the wizard, authorize a folder and start reading. In Claude web, external connections depend on the plan and the custom connectors supported.</p>
+<p><strong>Testing:</strong> asks «Read the index of this course and prepare proposals for improvement; do not modify the originals. Verify that the client accesses the authorized course and respects the permissions.</p>
+</section>
+
+<section class="doc-section" id="gemini">
+<h2>Gemini</h2>
+<h3>Gemini in the browser</h3>
+<p>Gemini web has customization functions such as <a href="https://support.google.com/gemini/answer/15146780?hl=es">Gems</a> and, depending on account, region and deployment, <a href="https://support.google.com/gemini/answer/17094296">Skills</a>. These options can prepare the course content, but to download a <code>.p2lrn</code> the session must be able to run and verify a supported packager. The P2LRN Skill in Gemini web has not been certified here.</p>
+<h3>Gemini CLI</h3>
+<p>Gemini CLI supports Agent Skills using files <code>SKILL.md</code>. You can check them from the console with <code>gemini skills list</code> and link an authorized Skill folder. To consult courses on your computer you can also configure the <a href="#conectar-ordenador">conector P2LRN</a> seleccionando Gemini CLI. Son opciones distintas.</p>
+<div class="codebox"><div class="codebox-head"><span>PowerShell · connect Gemini CLI to your courses</span><button type="button" data-copy="">Copy</button></div><pre><code>.\integration\mcp\Conectar-P2LRN.cmd --root C:\MisCursos --clients gemini --install --verify</code></pre></div>
+<p><code>C:\MisCursos</code> is an example route that must exist. Run the command from the folder where you have extracted the MCP kit. <strong>Testing:</strong> asks Gemini CLI to list and validate an authorized course, and verifies that MCP calls appear.</p>
+</section>
+
+<section class="doc-section" id="grok">
+<h2>Grok</h2>
+<h3>Create content</h3>
+<p>It offers a <a href="/en/skills/">Skill for Grok Build</a> You need Python to create and validate files <code>.p2lrn</code>. This is not equivalent to a certified Skill for Grok web. If your environment does not run the packager, complete the course at <a href="/en/studio/">Studio</a>.</p>
+<h3>Connect courses</h3>
+<p>When your account supports custom MCP connectors, see the configuration options. <a href="https://grok.com/connectors">Grok Connectors</a> and register a securely accessible server. The P2LRN kit allows you to generate connection descriptors; it does not install the connector in your account or prove that it has been approved.</p>
+<p><strong>Testing:</strong> asks "List my authorized P2LRN courses and validate one without editing it." Check that Grok really uses the tools and respects the allowed folder.</p>
+</section>
+
+<section class="doc-section" id="conectar-ordenador">
+<span id="conexion-local" class="doc-anchor-alias" aria-hidden="true"></span>
+<h2>Install the connector on your computer</h2>
+<p>The connector allows a compatible application to work with courses saved in a folder on your PC. Works with clients such as Claude Desktop, Gemini CLI, Cursor, Windsurf and VS Code. <strong>You don't need to have a website or buy a domain.</strong></p>
+<div class="example-actions"><a class="button primary" href="/downloads/p2lrn-conector-mcp.zip" download="">Download P2LRN connector (.zip)</a><a class="button" href="/downloads/manifest.json">Verify SHA-256</a></div>
+<ol class="doc-list">
+<li>Install Node.js 22 or later and unzip the ZIP to a folder on your computer.</li>
+<li>Run <code>integration\mcp\Conectar-P2LRN.cmd</code>. Choose the installed AI application you want to use.</li>
+<li>Select a course folder and start with read permissions (<code>P2LRN_MCP_WRITE=0</code>). Authorize writing only when you need it.</li>
+<li>Restart the application if prompted and test that it can list and validate one of your courses.</li>
+</ol>
+<div class="codebox"><div class="codebox-head"><span>Windows · from the folder where you extracted P2LRN</span><button type="button" data-copy="">Copy</button></div><pre><code>cd C:\P2LRN-MCP
+.\integration\mcp\Conectar-P2LRN.cmd</code></pre></div>
+<p><code>C:\P2LRN-MCP</code> It is an example route. The wizard configures compatible clients after asking for authorization; The ZIP is not a Skill or a public plugin.</p>
+</section>
+
+<section class="doc-section" id="servicios-web">
+<span id="chatgpt-pc" class="doc-anchor-alias" aria-hidden="true"></span>
+<span id="conexion-remota" class="doc-anchor-alias" aria-hidden="true"></span>
+<h2>Connect from a web service</h2>
+<p>When you use AI from its website, the service cannot directly read the files on your PC. You need an authorized private connection or a server accessible via HTTPS. Only prepare this connection if you are going to work with existing courses from a remote service.</p>
+<div class="reference-table">
+<div><strong>ChatGPT: private tunnel</strong><p><a href="https://developers.openai.com/api/docs/guides/secure-mcp-tunnels">Secure MCP Tunnel</a> Allows you to connect a local MCP server to ChatGPT if your account and workspace have access. The tunnel client is installed and authorized separately; It is not part of the P2LRN ZIP.</p></div>
+<div><strong>HTTPS server</strong><p>For providers that support remote MCP connectors, configure the P2LRN server behind an authenticated HTTPS proxy. Never directly expose the local port or share credentials in packets.</p></div>
+</div>
+<div class="codebox"><div class="codebox-head"><span>MCP HTTP Server · advanced example</span><button type="button" data-copy="">Copy</button></div><pre><code>$env:P2LRN_MCP_ROOT = 'C:\CursosP2LRN'
+$env:P2LRN_MCP_WRITE = '0'
+$env:P2LRN_MCP_TOKEN = '&lt;token-aleatorio-seguro&gt;'
+$env:P2LRN_MCP_PUBLIC_ORIGIN = 'https://tu-endpoint.example'
+node .\integration\mcp\server.mjs --http</code></pre></div>
+<p><code>https://tu-endpoint.example</code> It is a bookmark and not a published service. The local server listens on <code>127.0.0.1:37871/mcp</code>; for a public URL you need to configure and secure the proxy. A private ChatGPT tunnel requires its own configuration and testing.</p>
+</section>
+
+<section class="doc-section" id="comprobar">
+<span id="solucion-problemas" class="doc-anchor-alias" aria-hidden="true"></span>
+<span id="ejemplos" class="doc-anchor-alias" aria-hidden="true"></span>
+<h2>Common checks and problems</h2>
+<ul class="doc-list">
+<li><strong>The AI ​​does not deliver the file:</strong> checks that the skill runs a packer and returns a <code>.p2lrn</code> valid. A text or JSON response is not enough.</li>
+<li><strong>Your courses do not appear:</strong> check the authorized folder, the MCP client and that the application has loaded the configuration.</li>
+<li><strong>The website does not connect to your PC:</strong> check HTTPS tunnel or endpoint availability and your account permissions; <code>localhost</code> It is not accessible from an external website.</li>
+<li><strong>The application cannot edit:</strong> check permissions. Reading is the initial mode; drafts require explicit authorization.</li>
+<li><strong>Minimum test:</strong> runs <code>p2lrn_list_courses</code> and <code>p2lrn_validate_course</code>, checks for rejection of unauthorized paths and confirms that the original file does not change.</li>
+</ul>
+<p>If you want to create or edit a course manually, you can use <a href="/en/studio/">Studio</a>. To play it and check its activities, use <a href="/en/demo/">Player</a>.</p>
+</section>
+<nav class="doc-pager"><a class="prev" href="/en/docs/conectores/"><span>← Previous</span><strong>Connectors and integration</strong></a><a class="next" href="/en/docs/conectores/lms/"><span>Next →</span><strong>LMS platforms</strong></a></nav>
+</article></main><footer><strong>P2LRN</strong><span>Technical documentation</span><div><span data-footer-version="">0.5.0-alpha.11</span><a href="/en/contacto/">Contact</a></div></footer></body></html>

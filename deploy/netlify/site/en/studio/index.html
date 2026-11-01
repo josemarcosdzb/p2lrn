@@ -1,0 +1,193 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="Create interactive courses with P2LRN Studio: edit lessons, add quizzes and games, test the learner view, and export .p2lrn packages.">
+  <title>P2LRN Studio | Visual editor to create interactive courses</title>
+  <link rel="stylesheet" href="/p2lrn.css">
+  <link rel="stylesheet" href="/studio/studio.css?v=studio-sync-20261021">
+  <script src="/en/p2lrn.js" defer=""></script><script src="/player/current/dist/p2lrn.js" defer=""></script>
+  <script type="module" src="/en/studio/studio.js?v=studio-sync-20261021"></script>
+</head>
+<body class="studio-page">
+<header class="site-header">
+  <a class="brand" href="/en/">P2LRN</a>
+  <nav class="nav"><a href="/en/demo/">Viewfinder</a><a href="/en/docs/">Documentation</a><a href="/en/docs/toolkit/">Toolkit</a></nav>
+  <div class="header-meta"><span class="status"><i></i><span data-studio-status="" data-functional-status="" role="status" aria-live="polite">Without package</span></span></div>
+</header>
+<main class="studio-main">
+  <section class="studio-topbar">
+    <div>
+      <p class="eyebrow">AUTHORSHIP / VISUAL EDITOR</p>
+      <h1>Studio</h1>
+      <p>Create a course or open a <code>.p2lrn</code>, edit it visually, check the learner View, and export the result when ready.</p>
+    </div>
+    <div class="studio-open">
+      <button class="button primary" type="button" data-create-course="">Create course</button>
+      <button class="button" type="button" data-open-file="">Open file</button><input data-file="" type="file" accept=".p2lrn,application/vnd.p2lrn+zip" aria-label="Select P2LRN package" hidden="">
+      <label class="studio-url">URL<input data-url="" type="url" placeholder="https://…/course.p2lrn"></label>
+      <button class="button" type="button" data-open-url="">Open URL</button>
+    </div>
+  </section>
+
+  <section class="studio-toolbar" data-toolbar="" hidden="">
+    <div class="studio-mode">
+      <button type="button" class="button primary" data-mode-edit="" aria-pressed="true">Edit</button>
+      <button type="button" class="button" data-mode-preview="" aria-pressed="false">Learner view</button>
+    </div>
+    <div class="studio-structure" aria-label="Course structure">
+      <button type="button" class="button primary" data-add-content="">Add content</button>
+      <button type="button" class="button" data-add-unit="">+ New unit</button>
+      <button type="button" class="button" data-add-lesson="">+ New lesson</button>
+    </div>
+    <div class="studio-format" role="toolbar" aria-label="Text format">
+      <div class="format-group format-selects">
+        <select data-block="" aria-label="Block type" title="Block type"><option value="p">Paragraph</option><option value="h1">Title 1</option><option value="h2">Title 2</option><option value="h3">Title 3</option></select>
+        <select data-font-family="" aria-label="Font" title="Font"><option value="Arial">Arial</option><option value="Calibri" selected="">Calibri</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times New Roman</option><option value="Verdana">Verdana</option></select>
+        <select data-font-size="" aria-label="Text size" title="Text size"><option value="12">12</option><option value="14">14</option><option value="16">16</option><option value="18">18</option><option value="20" selected="">20</option><option value="24">24</option><option value="28">28</option><option value="32">32</option><option value="40">40</option><option value="48">48</option></select>
+      </div>
+      <span class="format-separator" aria-hidden="true"></span>
+      <div class="format-group" aria-label="Emphasis">
+        <button class="format-icon-button" type="button" data-command="bold" aria-label="Bold" title="Bold"><strong>B</strong></button>
+        <button class="format-icon-button" type="button" data-command="italic" aria-label="Italic" title="Italic"><em>I</em></button>
+        <button class="format-icon-button" type="button" data-command="underline" aria-label="Underline" title="Underline"><u>U</u></button>
+        <button class="format-icon-button" type="button" data-command="strikeThrough" aria-label="Strikethrough" title="Strikethrough"><span class="strike-icon">S</span></button>
+      </div>
+      <span class="format-separator" aria-hidden="true"></span>
+      <div class="format-group" aria-label="Alignment">
+        <button class="format-icon-button" type="button" data-command="justifyLeft" aria-label="Align left" title="Align left"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 10h11M4 14h16M4 18h11"></path></svg></button>
+        <button class="format-icon-button" type="button" data-command="justifyCenter" aria-label="Center" title="Center"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M6.5 10h11M4 14h16M6.5 18h11"></path></svg></button>
+        <button class="format-icon-button" type="button" data-command="justifyRight" aria-label="Align right" title="Align right"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M9 10h11M4 14h16M9 18h11"></path></svg></button>
+      </div>
+      <span class="format-separator" aria-hidden="true"></span>
+      <div class="format-group" aria-label="Color">
+        <label class="format-color-button" title="Text color" aria-label="Text color">
+          <span class="format-letter">A</span><span class="format-color-bar"></span>
+          <input data-fore-color="" type="color" value="#111827" aria-label="Text color">
+        </label>
+        <label class="format-color-button format-background-button" title="background color" aria-label="background color">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="1.5"></rect><path d="M7 17 17 7M10 19 19 10M5 14 14 5"></path></svg><span class="format-color-bar"></span>
+          <input data-back-color="" type="color" value="#ffffff" aria-label="background color">
+        </label>
+      </div>
+    </div>
+    <div class="studio-save">
+      <div class="studio-save-state">
+        <strong data-save-state="">No guardado</strong>
+        <span data-change-count="">No changes</span>
+      </div>
+      <button class="button" type="button" data-save-draft="">Save draft</button>
+      <details class="studio-draft-menu" data-draft-menu="" hidden="">
+        <summary class="button">Local draft</summary>
+        <div class="studio-draft-popover">
+          <p>This draft is saved only on this browser and device.</p>
+          <button class="button" type="button" data-recover-draft="">Restore draft</button>
+          <button class="button danger" type="button" data-clear-draft="">Delete draft…</button>
+        </div>
+      </details>
+      <button class="button primary" type="button" data-export="">Export .p2lrn</button>
+      <button class="button" type="button" data-export-offline="">Offline delivery</button>
+      <button class="button" type="button" data-review-offline="">Review delivery</button>
+    </div>
+  </section>
+
+<dialog class="studio-offline-dialog" data-offline-dialog="" aria-labelledby="studio-offline-title">
+  <form data-offline-form="">
+    <header class="studio-offline-head"><div><p class="eyebrow">DELIVERY WITHOUT LMS</p><h2 id="studio-offline-title">Self-running offline delivery</h2><p>Includes this course and the Player. The learner opens it in his browser and returns a file <code>.p2lrn-result</code>. <a href="/en/docs/entrega-offline/" target="_blank" rel="noopener">See how it works</a>.</p></div><button type="button" class="button" data-offline-cancel="">Close</button></header>
+    <div class="studio-offline-fields">
+      <label>Who delivers this course<input name="issuerName" type="text" maxlength="300" required="" placeholder="Teacher, center or organization"></label>
+      <label>Delivery format<select name="deliveryFormat" required=""><option value="windows-exe">Windows 64 bit · executable .exe (one file)</option><option value="portable-zip">ZIP portable · extract and open</option><option value="windows-single">Windows · CMD (alternative)</option></select></label>
+      <label>learner ID (optional)<input name="participantLabel" type="text" maxlength="160" placeholder="It can be indicated when opening the delivery"></label>
+      <label>Available from (optional)<input name="availableFrom" type="datetime-local"></label>
+      <label>Deadline (optional)<input name="dueAt" type="datetime-local"></label>
+      <label>Maximum time per attempt (minutes)<input name="durationMinutes" type="number" min="1" max="44640" step="1" placeholder="No limit"></label>
+      <label>Expires after first opening (days)<input name="expiresAfterFirstOpenDays" type="number" min="1" max="3650" step="1" placeholder="Ej. 30"></label>
+      <label>Maximum Attempts<input name="maxAttempts" type="number" min="1" max="100" step="1" value="1" required=""></label>
+      <label class="studio-offline-check"><input name="allowResume" type="checkbox" checked=""> Allow attempt to be resumed</label>
+      <label class="studio-offline-check"><input name="activityTracking" type="checkbox" checked=""> Record metrics and active time</label>
+      <label class="studio-offline-check"><input name="signAssignment" type="checkbox"> Sign the assignment for later verification (optional)</label>
+    </div>
+    <p class="studio-offline-note"><strong>Authorship and provenance.</strong> Delivery is only generated if the course has <strong>Author</strong> and <strong>Rights holder</strong> informed in their authorship data. These data and “Who delivers this course” are shown to the learner before starting.<br><br><strong>Delivery security.</strong> The learner should open the file only if they know the teacher, center or organization that sent it to them and expected to receive that course. If Windows displays a source warning, you should not ignore it when faced with a file of unknown origin. Delivery can register openings and apply a local expiration from the first opening. In completely offline mode these measures reduce casual reuse, but cannot absolutely prevent someone from keeping or copying the file before opening it for the first time.</p>
+    <div class="studio-offline-note" data-offline-receipt-prompt="" hidden="" role="status">
+      <strong>Signed delivery generated.</strong> Save the teacher's receipt before sending the file to the learner. Without it you will not be able to match his signature.
+      <button class="button" type="button" data-offline-receipt-download="">Download teacher's receipt</button>
+    </div>
+    <p class="studio-offline-error" data-offline-error="" role="alert" hidden=""></p>
+    <footer class="studio-offline-actions"><button class="button primary" type="submit" data-offline-generate="">Generate delivery</button></footer>
+  </form>
+</dialog>
+<input type="file" data-offline-result-file="" accept=".p2lrn-result,application/vnd.p2lrn-result+json" hidden="">
+<dialog class="studio-offline-dialog" data-offline-review-dialog="" aria-labelledby="studio-offline-review-title">
+  <header class="studio-offline-head"><div><p class="eyebrow">RESULTS / REVIEW</p><h2 id="studio-offline-review-title">Review offline delivery</h2></div><button class="button" type="button" data-offline-review-close="">Close</button></header>
+  <label class="studio-offline-review-receipt">Teacher's receipt (.p2lrn-assignment.json)
+    <input type="file" data-offline-review-receipt="" accept=".json,.p2lrn-assignment.json,application/json">
+  </label>
+  <div class="studio-offline-review-content" data-offline-review-content=""></div>
+  <footer class="studio-offline-actions"><button class="button" type="button" data-offline-open-analytics="" disabled="">Open in Analytics</button></footer>
+</dialog>
+  <div class="studio-warning" data-unsaved-warning="" hidden="" role="status">
+    <strong>Unsaved changes.</strong>
+    <span>Studio works in memory. If you close or reload this page before saving a draft or exporting the <code>.p2lrn</code>, you will lose those changes.</span>
+  </div>
+
+  <section class="studio-workspace" data-workspace="" hidden="">
+    <aside class="studio-outline">
+      <div class="studio-outline-head"><span>COURSE</span><strong data-package-name="">—</strong></div>
+      <nav data-tree="" aria-label="Course structure"></nav>
+    </aside>
+    <section class="studio-canvas">
+      <div data-editor-stage="" class="studio-editor-stage"></div>
+      <div data-preview-stage="" class="studio-preview-stage" hidden="">
+        <p2lrn-player data-player="" navigation="external"></p2lrn-player>
+      </div>
+    </section>
+  </section>
+  <dialog class="studio-add-dialog" data-add-dialog="" aria-labelledby="studio-add-title">
+    <div class="studio-add-panel">
+      <header><div><p class="eyebrow">ADD CONTENT</p><h2 id="studio-add-title">What do you want to create?</h2><p class="studio-add-intro">Choose the type of content. Hover over an option to see what it creates and when to use it.</p></div><button class="button" type="button" data-add-close="">Close</button></header>
+      <section><h3>Content</h3><div class="studio-add-grid">
+        <button type="button" data-add-kind="lesson" data-help="Create an editable lesson to write and format content directly in Studio.">Lesson</button>
+        <button type="button" data-add-kind="file" data-help="Add an image, video, audio, or another file as a course resource.">File / media</button>
+        <button type="button" data-add-kind="url" data-help="Link an external page or web resource by URL without copying it into the package.">URL</button>
+        <button type="button" data-add-kind="shared-resource" data-help="Reference a single verifiable copy using a logical URL and SHA-256 digest.">Shared resource</button>
+        <button type="button" data-add-kind="shared-library" data-shared-library="" hidden="" data-help="Select a SHA-256 verified resource from the shared library connected by the host.">Shared library</button>
+        <button type="button" data-add-kind="reader" data-help="Import documents such as PDF, DOCX, PPTX, EPUB, TXT, or Markdown and convert them into usable course content.">Reader / document</button>
+        <button type="button" data-add-kind="external" data-help="Import an existing learning package such as SCORM, H5P, cmi5, QTI, Common Cartridge, or IMS Content Package.">Educational package</button>
+      </div></section>
+      <section><h3>Assessment</h3><div class="studio-add-grid">
+        <button type="button" data-add-kind="questionnaire" data-help="Create a flexible assessment combining single choice, multiple choice, true/false, text, fill-in-the-blank, ordering, matching, and classification.">Questionnaire</button>
+      </div></section>
+      <section><h3>Games</h3><div class="studio-add-grid">
+        <button type="button" data-add-kind="memory" data-help="Pair-based memory game. The learner reveals cards and finds the matching pairs.">Memory</button>
+        <button type="button" data-add-kind="matching" data-help="Match items from two columns, such as countries with capitals or concepts with definitions.">Matching</button>
+        <button type="button" data-add-kind="ordering" data-help="Place items in the correct order, such as steps, dates, or stages of a process.">Ordering</button>
+        <button type="button" data-add-kind="classification" data-help="Drag or assign items to the correct category.">Classification</button>
+        <button type="button" data-add-kind="true-false" data-help="Statements that the learner must mark as true or false.">True / False</button>
+        <button type="button" data-add-kind="fill-blanks" data-help="Fill one or more blanks with the correct answers.">Fill in the blanks</button>
+        <button type="button" data-add-kind="word-search" data-help="Generate a word search from text answers that the learner must find.">Word search</button>
+        <button type="button" data-add-kind="crossword" data-help="Generate a crossword from clues and text answers.">Crossword</button>
+        <button type="button" data-add-kind="rosco" data-help="Word Wheel game: a series of clues with text answers, usually associated with letters.">Word Wheel</button>
+        <button type="button" data-add-kind="3d" data-help="Create a 3D object-ordering game. You can switch to Matching or Classification in each question’s Type field.">3D game (sort)</button>
+        <button type="button" data-add-kind="3d-matching" data-help="Create a 3D matching game that connects items and their pairs using the same Player physics engine.">Relate 3D</button>
+        <button type="button" data-add-kind="3d-classification" data-help="Create a 3D classification game using the same Player physics engine.">Classify 3D</button>
+      </div></section>
+      <section><h3>Collaboration</h3><p class="studio-add-section-help">Collaborative activities connected through the platform where P2LRN is integrated. The course does not need to save users or credentials within the package.</p><div class="studio-add-grid">
+        <button type="button" data-add-kind="live-poll" data-help="Create a synchronized poll with an individual fallback.">Live voting</button>
+        <button type="button" data-add-kind="shared-board" data-help="Create a lightweight shared notes board.">Shared board</button>
+        <button type="button" data-add-kind="peer-review" data-help="Let participants share a contribution and comment on contributions from others.">Peer review</button>
+      </div></section>
+      <section class="studio-add-advanced"><h3>Advanced structure</h3><p class="studio-add-section-help">Add native components or group several activities in the same tour. To organize the course into sections use <strong>+ New unit</strong> in the top bar.</p><div class="studio-add-grid">
+        <button type="button" data-add-kind="component" data-help="Add callouts, timelines, and other native components registered in P2LRN."><span>Component</span><small>Announcements, timelines and other native blocks</small></button>
+        <button type="button" data-add-kind="composite" data-help="Create a group containing real activities and define how learners navigate and complete them."><span>Activity group</span><small>Group several activities in the same route</small></button>
+      </div></section>
+    </div>
+    <div class="studio-add-tooltip" data-add-help="" role="tooltip" hidden=""></div>
+  </dialog>
+  <input data-resource-file="" type="file" hidden="">
+  <input data-reader-file="" type="file" accept=".pdf,.docx,.pptx,.txt,.md,.markdown,.html,.htm,.rtf,.tex,.xml,.yaml,.yml,.odt,.epub" hidden="">
+  <input data-external-file="" type="file" accept=".zip,.h5p,application/zip,application/vnd.h5p" hidden="">
+</main>
+<footer><strong>P2LRN Studio</strong><span>Create, test and export P2LRN courses from the browser.</span><div><a href="/en/demo/">Open viewer</a></div></footer>
+
+
+</body></html>

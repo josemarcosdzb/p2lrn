@@ -108,12 +108,147 @@ const MANUAL=new Map(Object.entries({
   'Identidad y notas':'Identity and grades','estado / notas / eventos / LRS':'state / grades / events / LRS',
   '9. Eventos':'9. Events','Arquitectura 3D':'3D architecture','Recetas — P2LRN':'Recipes — P2LRN',
   'EVENTOS':'EVENTS','educational analytics y learning analytics':'educational analytics and learning analytics',
-  'Entrega offline':'Offline delivery'
+  'Entrega offline':'Offline delivery',
+  '4. Acceso y uso correcto':'4. Access and proper use','8. Responsabilidad':'8. Liability',
+  'Enviar mensaje':'Send message','1. Cookies utilizadas':'1. Cookies used','2. Inventario comprobado':'2. Verified inventory',
+  '3. Almacenamiento local':'3. Local storage','6. Consentimiento':'6. Consent',
+  'Ver proceso completo':'View the full process','Comprueba la vista alumno':'Check the learner view',
+  'El alumno trabaja en su navegador':'The learner works in their browser','Probar un juego en el visor':'Test a game in the viewer',
+  'Qué incluye el flujo':'What is included in the workflow?','¿Ya tienes un curso preparado?':'Already have a course ready?',
+  'Caducidad desde primera apertura':'Expiration after first opening',
+  '3. Cargar Studio':'3. Load Studio','Analytics mediante CDN':'Analytics via CDN','Studio mediante CDN':'Studio via CDN',
+  'Studio mediante CDN — P2LRN':'Studio via CDN — P2LRN','1. Cargar Studio':'1. Load Studio',
+  '1. Requisito previo':'1. Prerequisite','6. Convertir, reempaquetar y extraer':'6. Convert, repackage, and extract',
+  '8. Cambios incrementales (Delta)':'8. Incremental changes (Delta)','9. Firma y confianza (Trust)':'9. Signing and trust',
+  '2. Contrato portable':'2. Portable contract','Conceptos — P2LRN':'Concepts — P2LRN','Conceptos fundamentales':'Fundamental concepts',
+  'Integridad SHA-256':'SHA-256 integrity','Comprobar SHA-256':'Verify SHA-256','Descargas relacionadas':'Related downloads',
+  'Ver integridad SHA-256':'View SHA-256 integrity','Ver despliegue y estado':'View deployment and status',
+  'Descargar fuente LTI (.zip)':'Download LTI source (.zip)','Verificar SHA-256':'Verify SHA-256',
+  'Ver entrega offline':'View offline delivery','12. Elegir entre .p2lrn y entrega offline':'12. Choose between .p2lrn and offline delivery',
+  '6. H5P y xAPI':'6. H5P and xAPI','7. Errores':'7. Errors','Identificadores principales':'Primary identifiers',
+  'Recorrido recomendado':'Recommended path','Studio alojado':'Hosted Studio','Studio mediante CDN':'Studio via CDN',
+  'Capacidades en vivo: Capability Broker':'Live capabilities: Capability Broker','Runtime externo opcional':'Optional external runtime',
+  '13. Reintentos, duplicados e idempotencia':'13. Retries, duplicates, and idempotency',
+  '3. Instalar Studio':'3. Install Studio','5. Instalar Analytics':'5. Install Analytics',
+  'SCORM y otros subpaquetes':'SCORM and other subpackages','Varios payloads grandes':'Multiple large payloads',
+  'Ver metadatos y hashes':'View metadata and hashes','Componente web':'Web component','Service Worker y cache verificado':'Service Worker and verified cache',
+  'Servicios conectados':'Connected services','1. Modelo mental':'1. Mental model','2. Propiedades disponibles':'2. Available properties',
+  '3. Obligatoriedad y bloqueo no son lo mismo':'3. Required and blocked are not the same',
+  '2. Componentes principales':'2. Main components','Conectado y offline':'Connected and offline',
+  'Rutas CDN':'CDN routes','Multipart ejecutable':'Executable multipart',
+  'Claude: Skill personalizada y Claude Code':'Claude: Custom Skill and Claude Code','Gemini: interfaz web y Gemini CLI':'Gemini: web interface and Gemini CLI',
+  'Integrar Studio':'Integrate Studio','Componentes nativos':'Native components',
+  'Player no carga':'Player does not load','SCORM no arranca':'SCORM does not start',
+  '3. Finalidad':'3. Purpose','9. Decisiones automatizadas':'9. Automated decision-making','10. Actualizaciones':'10. Updates',
+  'Verifica y reproduce':'Verify and play','Editar y exportar visualmente':'Edit and export visually',
+  'Estructura avanzada':'Advanced structure','Recuperar borrador':'Restore draft','Exportar .p2lrn':'Export .p2lrn',
+  'Revisar entrega':'Review delivery','Generar entrega':'Generate delivery','Recurso compartido':'Shared resource',
+  'Biblioteca compartida':'Shared library','Reader / documento':'Reader / document','Rellenar huecos':'Fill in the blanks',
+  'Pizarra compartida':'Shared board','Borrador local':'Local draft','Windows · CMD (alternativa)':'Windows · CMD (alternative)',
+  '1. Objeto':'1. Purpose','7. Usos prohibidos':'7. Prohibited uses','12. Cambios y marco aplicable':'12. Changes and applicable framework',
+  'Usos prohibidos':'Prohibited uses','Cambios y marco aplicable':'Changes and applicable framework',
+  'Fuente de datos de una plataforma':'Platform data source','Funciones auxiliares de servidor':'Server helper functions',
+  'Clasificar — P2LRN':'Classification — P2LRN','Proyecto de autoría':'Authoring project',
+  'Empezar fácil con CDN':'Quick start with CDN','Responsable y contacto':'Controller and contact','Conservación':'Data retention',
+  'Firma del encargo y procedencia':'Assignment signature and provenance','Firmar el encargo para comprobarlo después (opcional)':'Sign the assignment for later verification (optional)',
+  'Archivo / multimedia':'File / media','Fuente LTI':'LTI source',
+  '12. Elegir entre':'12. Choose between','y entrega offline':'and offline delivery',
+  'Puedes usar una ruta del propio sitio o una URL web. Si el paquete está alojado en otro dominio, ese servidor debe permitir su carga desde el visor.':'You can use a path from this site or a web URL. If the package is hosted on another domain, that server must allow the viewer to load it.'
+,
+  'Crea una lección editable para escribir y dar formato al contenido directamente en Studio.':'Create an editable lesson to write and format content directly in Studio.',
+  'Añade una imagen, vídeo, audio u otro archivo como recurso dentro del curso.':'Add an image, video, audio, or another file as a course resource.',
+  'Enlaza una página o recurso web externo mediante su URL, sin copiar el contenido al paquete.':'Link an external page or web resource by URL without copying it into the package.',
+  'Referencia una única copia verificable mediante URL lógica y digest SHA-256.':'Reference a single verifiable copy using a logical URL and SHA-256 digest.',
+  'Selecciona un recurso verificado por SHA-256 de la biblioteca compartida conectada por el host.':'Select a SHA-256 verified resource from the shared library connected by the host.',
+  'Importa documentos como PDF, DOCX, PPTX, EPUB, TXT o Markdown y los convierte en contenido utilizable en el curso.':'Import documents such as PDF, DOCX, PPTX, EPUB, TXT, or Markdown and convert them into usable course content.',
+  'Importa un paquete educativo ya creado, por ejemplo SCORM, H5P, cmi5, QTI, Common Cartridge o IMS Content Package.':'Import an existing learning package such as SCORM, H5P, cmi5, QTI, Common Cartridge, or IMS Content Package.',
+  'Crea una evaluación flexible donde puedes combinar elección única, múltiple, verdadero/falso, texto, huecos, ordenar, relacionar y clasificar.':'Create a flexible assessment combining single choice, multiple choice, true/false, text, fill-in-the-blank, ordering, matching, and classification.',
+  'Juego de memoria basado en parejas. El alumno descubre cartas y debe encontrar las correspondencias.':'Pair-based memory game. The learner reveals cards and finds the matching pairs.',
+  'Juego para relacionar elementos de dos columnas, por ejemplo países con capitales o conceptos con definiciones.':'Match items from two columns, such as countries with capitals or concepts with definitions.',
+  'Juego para colocar elementos en el orden correcto, como pasos, fechas o fases de un proceso.':'Place items in the correct order, such as steps, dates, or stages of a process.',
+  'Juego para arrastrar o asignar elementos a la categoría correcta.':'Drag or assign items to the correct category.',
+  'Juego de afirmaciones que el alumno debe marcar como verdaderas o falsas.':'Statements that the learner must mark as true or false.',
+  'Juego para completar uno o varios huecos con las respuestas correctas.':'Fill one or more blanks with the correct answers.',
+  'Genera una sopa de letras a partir de respuestas de texto que el alumno debe localizar.':'Generate a word search from text answers that the learner must find.',
+  'Genera un crucigrama usando pistas y respuestas de texto.':'Generate a crossword from clues and text answers.',
+  'Juego tipo rosco: una serie de pistas con respuestas de texto, normalmente asociadas a letras.':'Word Wheel game: a series of clues with text answers, usually associated with letters.',
+  'Crea un juego 3D de ordenar objetos. Puedes cambiar a Relacionar o Clasificar en el campo Tipo de cada pregunta.':'Create a 3D object-ordering game. You can switch to Matching or Classification in each question’s Type field.',
+  'Crea un juego 3D para conectar elementos y sus parejas con el mismo motor físico del Player.':'Create a 3D matching game that connects items and their pairs using the same Player physics engine.',
+  'Crea un juego 3D para clasificar objetos en categorías con el mismo motor físico del Player.':'Create a 3D classification game using the same Player physics engine.',
+  'Crea una votación sincronizada con fallback individual.':'Create a synchronized poll with an individual fallback.',
+  'Crea una pizarra ligera de notas compartidas.':'Create a lightweight shared notes board.',
+  'Permite compartir una aportación y comentar las de otros participantes.':'Let participants share a contribution and comment on contributions from others.',
+  'Añade avisos, líneas temporales y otros componentes nativos registrados en P2LRN.':'Add callouts, timelines, and other native components registered in P2LRN.',
+  'Crea un grupo que contiene actividades reales y define cómo se recorren y completan.':'Create a group containing real activities and define how learners navigate and complete them.',
+  'Acceso y uso':'Access and use','y en':'and in','Player · Entrega portable':'Player · Portable delivery',
+  'En Analytics pulsa':'In Analytics, click','Identidad visible autorizada: id, nombre, correo opcional, grupo, cohorte y etiquetas.':'Authorized visible identity: ID, name, optional email, group, cohort, and tags.',
+  'Procesa documentos importados mediante Reader.':'Processes imported documents through Reader.','. En':'. In',
+  'SCORM 1.2 y SCORM 2004:':'SCORM 1.2 and SCORM 2004:','cmi5 y HTML:':'cmi5 and HTML:','npm y CDN':'npm and CDN','LMS y LTI':'LMS and LTI',
+  'Player verifica y renderiza.':'Player verifies and renders.','Host conserva identidad y estado.':'Host preserves identity and state.',
+  'Servidor HTTPS':'HTTPS server','Moodle, Canvas, Sakai, Chamilo y Open edX':'Moodle, Canvas, Sakai, Chamilo, and Open edX','En Host Adapter':'In Host Adapter',
+  'y binding autorizado.':'and authorized binding.','y entidad.':'and entity.','NRPS sigue siendo opcional y':'NRPS remains optional and',
+  'Implementado: proveedor y persistencia':'Implemented: provider and persistence','Implementado: OIDC, JWKS y Deep Linking':'Implemented: OIDC, JWKS, and Deep Linking','Implementado: Player, estado y AGS':'Implemented: Player, state, and AGS',
+  'Conectar progreso y usuarios':'Connect progress and users','y pulsa':'and click','Aperturas, sesiones y tiempo activo':'Openings, sessions, and active time',
+  'Credenciales y secretos.':'Credentials and secrets.','Renderer / renderizador':'Renderer','Recurso verificado':'Verified resource',
+  'Panel y vistas':'Dashboard and views','CDN y NPM':'CDN and NPM','entrega offline autorreproducible':'self-running offline delivery',
+  '. Estado:':'. Status:','en 1.2.':'in 1.2.','Estado actual':'Current status','Mantiene secuencia y, opcionalmente,':'Preserves sequence and, optionally,',
+  'indicado en':'specified in','JavaScript / TypeScript · biblioteca':'JavaScript / TypeScript · library','Recurso muy grande':'Very large resource',
+  'y elige':'and choose','Entra en':'Go to','Parejas y asociaciones':'Pairs and associations','Vocabulario y escritura':'Vocabulary and writing','Completar huecos':'Fill in the blanks',
+  '; admite language, description y force.':'; supports language, description, and force.','Devuelve versiones, projectId, rutas y contadores.':'Returns versions, projectId, paths, and counters.',
+  'Reordena hijos y rechaza claves duplicadas.':'Reorders children and rejects duplicate keys.','Integridad y confianza son distintas.':'Integrity and trust are different concepts.',
+  ', scripts y referencias.':', scripts and references.','+ Unidad':'+ Unit','recurso compartido':'shared resource','Firma y confianza (Trust)':'Signing and trust',
+  'y Network.':'and Network.','SCORM y H5P:':'SCORM and H5P:','Experiencias interactivas':'Interactive experiences','y aplicaciones compatibles':'and compatible applications',
+  'Explorar entrega':'Explore delivery','Player y Toolkit':'Player and Toolkit','Studio y Analytics':'Studio and Analytics','o en':'or in','Entrega firmada generada.':'Signed delivery generated.',
+  '6. Fuente de datos de una plataforma':'6. Platform data source','Salida exitosa':'Successful output',
+  'Relacionar en 3D':'Match in 3D','1. Responsable y contacto':'1. Controller and contact','7. Conservación':'7. Data retention',
+  'Publicación correcta':'Publishing correctly','2. Recorrido normal para crear un curso':'2. Typical course creation workflow',
+  'Trabajar con cursos del ordenador':'Work with local courses','Conectar cursos del ordenador':'Connect local courses',
+  '3. Profesor → alumno → profesor':'3. Teacher → learner → teacher flow','Si quieres enviarlo al alumno sin LMS':'If you want to send it to a learner without an LMS',
+  '1. Qué hace y ve el alumno':'1. What the learner does and sees','Llevar la especificación a un paquete real':'Turn the specification into a real package',
+  'Crear un paquete por código':'Create a package programmatically','Verificar el ZIP y generar un curso de prueba':'Verify the ZIP and generate a sample course',
+  '8. Volver a trabajar con un curso':'8. Reopen and edit a course','Alumno / identificador (opcional)':'Learner ID (optional)',
+  'Trabajar con los cursos del ordenador':'Work with local courses','8. Volver a trabajar sobre un curso':'8. Reopen and edit a course'
 }));
 
 const SPANISH_RE=/[áéíóúñü¿¡]|\b(?:el|la|los|las|una?|unos|unas|de|del|al|para|por|con|sin|desde|hasta|como|cómo|que|qué|quién|cuál|cuando|cuándo|donde|dónde|este|esta|estos|estas|ese|esa|esos|esas|su|sus|tu|tus|nuestro|nuestra|puede|puedes|pueden|crear|crea|curso|cursos|juego|juegos|alumno|alumnos|profesor|profesores|docente|lección|lecciones|actividad|actividades|abrir|cerrar|guardar|descargar|seleccionar|eliminar|añadir|nuevo|nueva|documentación|integración|colaboración|seguimiento|métricas|analítica|progresión|referencia|recursos|paquete|paquetes|formato|formatos|compatible|compatibilidad|resultado|resultados|respuesta|respuestas|pregunta|preguntas|intento|intentos|autor|derechos|titular|licencia|privacidad|términos|aviso|contacto|solución|problemas|antes|empezar|instalación|reproducir|disponible|fecha|contenido|puntuación|archivo|archivos|herramientas|plataforma|plataformas|navegador|compartir|revisión|primera|después|todo|toda|todos|todas|más|menos|también|sólo|solo|ningún|ninguna|memoria|relacionar|ordenar|clasificar|verdadero|falso|crucigrama|rosco|visor|inicio|menú|anterior|siguiente|configurar|página|páginas|datos|calificaciones|ejemplos|ejemplo|seguridad)\b/i;
 
 const TECH_EXACT=new Set(['P2LRN','Player','Studio','Toolkit','Analytics','SCORM','H5P','cmi5','xAPI','QTI','LTI','LMS','HTML','CSS','JavaScript','TypeScript','Node','Node.js','NPM','npm','CDN','API','MCP','JSON','JSON-LD','SHA-256','Ed25519','WebRTC','URL','HTTP','HTTPS','ChatGPT','Claude','Gemini','Grok','Windows','Linux','macOS','ZIP','CSV','EPUB','DOCX','PPTX','PDF','RTF','ODT','Markdown','.p2lrn','.p2lrn-result','P2LRN-NCSL 1.0','Apache-2.0','MIT']);
+
+const EMBEDDED_REPLACEMENTS=Object.freeze([
+  ['datasetCurso','courseDataset'],['analytics-curso','course-analytics'],
+  ['// datasetCurso contiene métricas reales de este curso, obtenidas de Player','// courseDataset contains real metrics for this course, obtained from Player'],
+  ['// o de resultados .p2lrn-result ya validados; no es el archivo .p2lrn.','// or from already validated .p2lrn-result files; it is not the .p2lrn course file.'],
+  ['// datos reales del curso y resultados de sus alumnos','// real course data and learner results'],
+  ['// refresh() sólo es necesario cuando se ha configurado un dataSource o src.','// refresh() is only needed when a dataSource or src has been configured.'],
+  ['Matemáticas','Mathematics'],['Curso de seguridad básica','Basic digital safety course'],['Curso de seguridad','Digital safety course'],
+  ['Unidad 1 · Fundamentos','Unit 1 · Fundamentals'],['Fundamentos','Fundamentals'],['Introducción','Introduction'],
+  ['Crea un curso P2LRN en español sobre seguridad digital:','Create a P2LRN course in English about digital safety:'],
+  ['3 unidades, 6 lecciones, 10 preguntas y 2 juegos.','3 units, 6 lessons, 10 questions, and 2 games.'],
+  ['Ejecuta el empaquetador P2LRN y valida el resultado.','Run the P2LRN packager and validate the result.'],
+  ['Entrégame el archivo .p2lrn descargable.','Give me the downloadable .p2lrn file.'],
+  ['Clasifica los elementos por su naturaleza.','Classify the items by type.'],['perro','dog'],['Perro','Dog'],['roble','oak'],['Roble','Oak'],['planta','plant'],['Planta','Plant'],
+  ['Ordenar el ciclo del agua','Order the water cycle'],['Ordena las fases','Order the stages'],['Evaporación','Evaporation'],['Condensación','Condensation'],['Precipitación','Precipitation'],
+  ['Clasificar seres vivos','Classify living things'],['Clasifica cada elemento','Classify each item'],
+  ['Crucigrama','Crossword'],['Lugar donde se vive','Place where people live'],['CASA','HOME'],['Anfibio que salta','Amphibian that jumps'],['SAPO','TOAD'],['Ave acuática','Water bird'],['PATO','DUCK'],['Recipiente con asa','Container with a handle'],['TAZA','CUP'],
+  ['Relacionar países y capitales','Match countries and capitals'],['Relaciona cada país con su capital','Match each country with its capital'],['España','Spain'],['Francia','France'],['Italia','Italy'],['París','Paris'],['Roma','Rome'],
+  ['Rosco de vocabulario','Vocabulary Word Wheel'],['Vivienda','Home'],['Animal doméstico que ladra','Domestic animal that barks'],['PERRO','DOG'],['Mueble para comer o trabajar','Furniture used for eating or working'],['MESA','TABLE'],['Satélite natural de la Tierra',"Earth's natural satellite"],['LUNA','MOON'],
+  ['Comprobación rápida','Quick check'],['Capital de Portugal','Capital of Portugal'],['Lisboa','Lisbon'],['Cuestionario estándar','Standard questionnaire'],
+  ['Verdadero o falso','True or false'],['La Tierra orbita alrededor del Sol','Earth orbits the Sun'],['Verdadero','True'],['Falso','False'],['Marte es una estrella','Mars is a star'],
+  ['Planetas','Planets'],['Planeta más cercano al Sol','Closest planet to the Sun'],['MERCURIO','MERCURY'],['Segundo planeta del Sistema Solar','Second planet in the Solar System'],['Nuestro planeta','Our planet'],['TIERRA','EARTH'],
+  ['curso-multipart.p2lrn','course-multipart.p2lrn'],['curso-split.p2lrn','course-split.p2lrn'],['curso-stage1.p2lrn','course-stage1.p2lrn'],['curso-final.p2lrn','course-final.p2lrn'],['curso-prueba.p2lrn','test-course.p2lrn'],['curso.p2lrn','course.p2lrn'],['curso.sig','course.sig'],
+  ['curso-split.part','course-split.part'],['/courses/curso/','/courses/course/'],['unidad-1','unit-1'],['video-principal','main-video'],['scorm-grande','large-scorm'],['assets/ejemplo-curso.json','assets/example-course.json'],
+  ["language: 'es'","language: 'en'"],["\"language\": \"es\"","\"language\": \"en\""],['--language es','--language en'],
+  ['curso-actual','current-course'],['clasifica','classify'],['nuevo.p2lrn','new.p2lrn'],['cambio.p2lrn-delta','change.p2lrn-delta'],['resultado.p2lrn','result.p2lrn'],
+  ['Nombre del autor','Author name'],['Titular de los derechos','Rights holder'],['actividad-avanzada','advanced-activity'],['actividad-intro','intro-activity'],['actividad-1','activity-1'],
+  ['--title "Juego 3D"','--title "3D Game"'],['--title "Clasificar"','--title "Classification"'],['--title "Relacionar"','--title "Matching"'],['--title "Memoria"','--title "Memory"'],['--title "Ordenar"','--title "Ordering"'],['--title "Rosco"','--title "Word Wheel"'],['--title "Sopa de letras"','--title "Word Search"'],
+  ['[viewer] esperando al Player…','[viewer] waiting for Player…']
+]);
+function translateEmbeddedCode(value){
+  let out=String(value);
+  for(const [from,to] of [...EMBEDDED_REPLACEMENTS].sort((a,b)=>b[0].length-a[0].length))out=out.split(from).join(to);
+  return out;
+}
+
 
 async function walk(dir){
   const out=[];
@@ -194,7 +329,7 @@ function registerHtmlFragment(fragment){
     for(const child of node.children??[])visit(child,nextBlocked);
   };
   for(const node of $('body').get(0)?.children??[])visit(node,false);
-  for(const attr of ['aria-label','aria-description','alt','placeholder','title'])
+  for(const attr of ['aria-label','aria-description','alt','placeholder','title','data-help'])
     $('['+attr+']').each((_,el)=>register($(el).attr(attr)));
 }
 
@@ -228,7 +363,7 @@ function visitTextNodes($,registerOnly=true){
 for(const file of htmlFiles){
   const $=load(await readFile(file,'utf8'),{decodeEntities:false});
   visitTextNodes($,true);
-  for(const attr of ['aria-label','aria-description','alt','placeholder','title'])$('['+attr+']').each((_,el)=>register($(el).attr(attr)));
+  for(const attr of ['aria-label','aria-description','alt','placeholder','title','data-help'])$('['+attr+']').each((_,el)=>register($(el).attr(attr)));
   $('input[type="button"][value],input[type="submit"][value]').each((_,el)=>register($(el).attr('value')));
   $('meta[name="description"],meta[property="og:title"],meta[property="og:description"],meta[name="twitter:title"],meta[name="twitter:description"]').each((_,el)=>register($(el).attr('content')));
   $('script[type="application/ld+json"]').each((_,el)=>{try{registerJson(JSON.parse($(el).text()));}catch{}});
@@ -380,7 +515,7 @@ function preserveWhitespace(original,replacement){
   return leading+replacement+trailing;
 }
 function normalizeEnglishCopy(value){
-  return String(value).replace(/\bRosco\b/g,'Word Wheel').replace(/\brosco\b/g,'word wheel');
+  return String(value).replace(/\bRosco\b/g,'Word Wheel').replace(/\brosco\b/g,'word wheel').replace(/\bstudents\b/gi,'learners').replace(/\bstudent's\b/gi,"learner's").replace(/\bstudent\b/gi,'learner');
 }
 function translatePlain(value){
   const original=String(value??'');
@@ -399,7 +534,7 @@ function translateHtmlFragment(fragment){
     for(const child of node.children??[])visit(child,nextBlocked);
   };
   for(const node of $('body').get(0)?.children??[])visit(node,false);
-  for(const attr of ['aria-label','aria-description','alt','placeholder','title'])
+  for(const attr of ['aria-label','aria-description','alt','placeholder','title','data-help'])
     $('['+attr+']').each((_,el)=>$(el).attr(attr,translatePlain($(el).attr(attr))));
   return $('body').html()??fragment;
 }
@@ -443,7 +578,8 @@ for(const file of htmlFiles){
   const $=load(await readFile(file,'utf8'),{decodeEntities:false});
   $('html').attr('lang','en');
   visitTextNodes($,false);
-  for(const attr of ['aria-label','aria-description','alt','placeholder','title'])$('['+attr+']').each((_,el)=>$(el).attr(attr,translatePlain($(el).attr(attr))));
+  $('pre code').each((_,el)=>$(el).text(translateEmbeddedCode($(el).text())));
+  for(const attr of ['aria-label','aria-description','alt','placeholder','title','data-help'])$('['+attr+']').each((_,el)=>$(el).attr(attr,translatePlain($(el).attr(attr))));
   $('input[type="button"][value],input[type="submit"][value]').each((_,el)=>$(el).attr('value',translatePlain($(el).attr('value'))));
   $('meta[name="description"],meta[property="og:title"],meta[property="og:description"],meta[name="twitter:title"],meta[name="twitter:description"]').each((_,el)=>$(el).attr('content',translatePlain($(el).attr('content'))));
   $('meta[property="og:url"]').each((_,el)=>$(el).attr('content',rewriteAbsoluteUrl($(el).attr('content')??'',routes)));

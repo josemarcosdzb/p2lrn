@@ -7,6 +7,7 @@ const root=resolve(process.cwd());
 const siteRoot=join(root,'deploy','netlify','site');
 const enRoot=join(siteRoot,'en');
 const SPANISH_RE=/[áéíóúñü¿¡]|\b(?:el|la|los|las|una?|unos|unas|de|del|al|para|por|con|sin|desde|hasta|cómo|qué|quién|cuál|cuándo|dónde|este|esta|estos|estas|su|sus|tu|tus|puede|puedes|pueden|crear|crea|curso|cursos|juego|juegos|alumno|alumnos|profesor|profesores|docente|lección|lecciones|actividad|actividades|abrir|cerrar|guardar|descargar|seleccionar|eliminar|añadir|nuevo|nueva|documentación|integración|colaboración|seguimiento|métricas|analítica|progresión|referencia|recursos|paquete|paquetes|formato|formatos|compatibilidad|resultado|resultados|respuesta|respuestas|pregunta|preguntas|intento|intentos|autor|derechos|titular|licencia|privacidad|términos|aviso|contacto|solución|problemas|antes|empezar|instalación|reproducir|disponible|fecha|contenido|puntuación|archivo|archivos|herramientas|plataforma|plataformas|navegador|compartir|revisión|primera|después|todo|toda|todos|todas|más|también|sólo|ningún|ninguna|memoria|relacionar|ordenar|clasificar|verdadero|falso|crucigrama|rosco|visor|inicio|menú|anterior|siguiente|configurar|página|páginas|datos|calificaciones|ejemplos|ejemplo|seguridad|perfiles|arquitectura|eventos|recetas|glosario|limitaciones)\b/i;
+const EXTRA_SPANISH_RE=/\b(?:y|en|de|del|al|el|la|los|las|un|una|unos|unas|para|por|con|sin|desde|hasta|este|esta|estos|estas|que|como|curso|cursos|unidad|unidades|leccion|lecciones|pregunta|preguntas|respuesta|respuestas|archivo|archivos|alumno|alumnos|docente|profesor|profesores|juego|juegos|verdadero|falso|ordenar|relacionar|clasificar|clasifica|rellenar|huecos|sopa|letras|pizarra|compartida|borrador|entrega|integridad|origen|perfiles|eventos|recetas|glosario|arquitectura|instalar|cargar|comprobar|verificar|descargar|guardar|editar|generar|revisar|recurso|biblioteca|documento|documentos|seguridad|derechos|titular|autor|licencia|privacidad|terminos|aviso|responsabilidad|finalidad|actualizaciones|obligaciones|disponibilidad|servidor|persistencia|notas|estado|metadatos|representaciones|renderizador|reintentos|duplicados|idempotencia|secuencias|estructura|interactivo|nativos|interactivas|componentes)\b/i;
 
 async function walk(dir){
   const out=[];
@@ -26,7 +27,7 @@ function routeFromRelative(rel){
 function normalizeRoute(pathname){return pathname==='/'?'/':(pathname.endsWith('/')?pathname:pathname+'/');}
 function isVisibleSpanish(value){
   const text=String(value??'').replace(/\s+/g,' ').trim();
-  return text&&SPANISH_RE.test(text);
+  return text&&(SPANISH_RE.test(text)||EXTRA_SPANISH_RE.test(text));
 }
 function parseJs(source){try{return acorn.parse(source,{ecmaVersion:'latest',sourceType:'module'});}catch{return acorn.parse(source,{ecmaVersion:'latest',sourceType:'script'});}}
 function walkAst(node,fn,parent=null){
@@ -80,7 +81,7 @@ function idsOf($){return $('[id]').map((_,el)=>$(el).attr('id')).get().sort();}
 function dataContract($){
   return $('*').map((_,el)=>{
     const attrs=el.attribs??{};
-    const data=Object.keys(attrs).filter(key=>key.startsWith('data-')).sort().map(key=>key+'='+attrs[key]);
+    const data=Object.keys(attrs).filter(key=>key.startsWith('data-')).sort().map(key=>key==='data-help'?key:key+'='+attrs[key]);
     const role=attrs.role?['role='+attrs.role]:[];
     const name=attrs.name?['name='+attrs.name]:[];
     const type=attrs.type?['type='+attrs.type]:[];
@@ -119,13 +120,13 @@ for(const file of enHtml){
   if(String($('html').attr('lang')??'').toLowerCase()!=='en')errors.push(rel+': html lang is not en.');
   const blocked=new Set(['code','pre','script','style','kbd','samp','svg','path']);
   const visit=(node,ancestorBlocked=false)=>{
-    const tag=node.type==='tag'?String(node.name||'').toLowerCase():'';
+    const tag=String(node.name||'').toLowerCase();
     const nextBlocked=ancestorBlocked||blocked.has(tag);
     if(node.type==='text'&&!nextBlocked&&isVisibleSpanish(node.data))errors.push(rel+': Spanish visible text: '+JSON.stringify(String(node.data).trim().slice(0,180)));
     for(const child of node.children??[])visit(child,nextBlocked);
   };
   for(const node of $.root().get(0)?.children??[])visit(node,false);
-  for(const attr of ['aria-label','aria-description','alt','placeholder','title']){
+  for(const attr of ['aria-label','aria-description','alt','placeholder','title','data-help']){
     $('['+attr+']').each((_,el)=>{
       const value=$(el).attr(attr);
       if(isVisibleSpanish(value))errors.push(rel+': Spanish '+attr+': '+JSON.stringify(value));
@@ -134,6 +135,23 @@ for(const file of enHtml){
   $('meta[name="description"],meta[property="og:title"],meta[property="og:description"],meta[name="twitter:title"],meta[name="twitter:description"]').each((_,el)=>{
     const value=$(el).attr('content');
     if(isVisibleSpanish(value))errors.push(rel+': Spanish metadata: '+JSON.stringify(value));
+  });
+  $('pre code').each((_,el)=>{
+    const raw=$(el).text();
+    const inspect=raw.replace(/https?:\/\/\S+/g,'').replace(/application\/[A-Za-z0-9.+-]+/g,'');
+    if(SPANISH_RE.test(inspect))errors.push(rel+': Spanish human text inside code example: '+JSON.stringify(inspect.slice(0,220)));
+  });
+  $('script[type="application/ld+json"]').each((_,el)=>{
+    try{
+      const value=JSON.parse($(el).text());
+      const inspect=(node,key='')=>{
+        if(Array.isArray(node)){for(const item of node)inspect(item,key);return;}
+        if(node&&typeof node==='object'){for(const [k,v] of Object.entries(node))inspect(v,k);return;}
+        if(typeof node==='string'&&['name','headline','description','alternateName','text','about','keywords'].includes(key)&&isVisibleSpanish(node))
+          errors.push(rel+': Spanish JSON-LD human field '+key+': '+JSON.stringify(node));
+      };
+      inspect(value);
+    }catch{}
   });
   $('a[href]').each((_,el)=>{
     const href=$(el).attr('href')??'';
