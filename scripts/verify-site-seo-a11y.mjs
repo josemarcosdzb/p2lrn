@@ -24,7 +24,9 @@ for(const file of sourcePages){
  const id=attr(main,'id');
  const jumps=tags(html,'a').filter(t=>(attr(t,'class')||'').split(/\s+/).includes('skip-link'));
  const canonical=tags(head,'link').filter(t=>(attr(t,'rel')||'').toLowerCase()==='canonical');
- if(!/<html\b[^>]*lang=["']es["']/i.test(html))errors.push(route+' missing Spanish lang');
+ const locale=route==='/en/'||route.startsWith('/en/')?'en':'es';
+ const langPattern=new RegExp('<html\\b[^>]*lang=["\\\']'+locale+'["\\\']','i');
+ if(!langPattern.test(html))errors.push(route+' missing '+locale+' lang');
  if(!/<title\b[^>]*>[^<]+<\/title>/i.test(head))errors.push(route+' missing title');
  if(named(head,'meta','name','description').length!==1)errors.push(route+' missing description');
  if((html.match(/<h1\b/gi)||[]).length!==1)errors.push(route+' invalid h1 count');
@@ -36,7 +38,7 @@ for(const file of sourcePages){
   for(const [key,value] of [['property','og:title'],['property','og:description'],['property','og:url'],['property','og:type'],['name','twitter:card']])if(named(head,'meta',key,value).length!==1)errors.push(route+' metadata '+value+' missing/repeated');
   if(attr(named(head,'meta','property','og:url')[0]||'','content')!==url)errors.push(route+' og:url mismatched');
  }else if(!/noindex/.test(attr(named(head,'meta','name','robots')[0]||'','content')||''))errors.push(route+' alias missing noindex');
- if(route.startsWith('/docs/')&&!aliases.includes(route)){
+ if((route.startsWith('/docs/')||route.startsWith('/en/docs/'))&&!aliases.includes(route)){
   const sidebar=tags(html,'aside').find(x=>(attr(x,'class')||'').includes('doc-sidebar'));
   if(!sidebar||!attr(sidebar,'aria-label'))errors.push(route+' sidebar not labelled');
  }
@@ -45,36 +47,76 @@ const sitemap=await readFile(join(out,'sitemap.xml'),'utf8').catch(()=>{errors.p
 const xmlUrls=[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]).sort();
 const expected=indexable.map(x=>CANONICAL_ORIGIN+x).sort();
 if(JSON.stringify(xmlUrls)!==JSON.stringify(expected))errors.push('sitemap does not match indexed routes');
-if(sourcePages.length<60||indexable.length+aliases.length!==sourcePages.length||aliases.length!==3)
-  errors.push('unexpected source/indexable/alias counts: '+[sourcePages.length,indexable.length,aliases.length].join('/'));
-// Public solution pages have unique search intent, real actions, and inbound links from the homepage.
-const solutionRoutes=['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'];
-const analyticsRoutes=['/docs/analytics/','/analytics/'];
+const englishSourcePages=sourcePages.filter(p=>relative(src,p).replaceAll('\\','/').startsWith('en/'));
+const spanishSourcePages=sourcePages.filter(p=>!relative(src,p).replaceAll('\\','/').startsWith('en/'));
+const englishAliases=aliases.filter(route=>route==='/en/'||route.startsWith('/en/'));
+const spanishAliases=aliases.filter(route=>!(route==='/en/'||route.startsWith('/en/')));
+if(spanishSourcePages.length<60||englishSourcePages.length<60||
+   spanishSourcePages.length!==englishSourcePages.length||
+   indexable.length+aliases.length!==sourcePages.length||
+   spanishAliases.length!==englishAliases.length||aliases.length!==6)
+  errors.push('unexpected bilingual source/indexable/alias counts: '+[
+    sourcePages.length,indexable.length,aliases.length,
+    spanishSourcePages.length,englishSourcePages.length,
+    spanishAliases.length,englishAliases.length
+  ].join('/'));
+// Public solution pages have unique search intent, real actions, and inbound links from each locale homepage.
+const solutionSlugs=['crear-cursos-interactivos','juegos-educativos-3d','cursos-offline'];
 const homeHtml=await readFile(join(out,'index.html'),'utf8');
-for(const route of solutionRoutes){
-  if(!indexable.includes(route))errors.push('Solution route is not indexable: '+route);
-  if(!homeHtml.includes('href="'+route+'"'))errors.push('No discoverable home link to '+route);
-  const html=await readFile(join(out,route.slice(1),'index.html'),'utf8').catch(()=>null);
-  if(!html||!html.includes('class="landing-hero"')||!html.includes('class="landing-steps"')||!html.includes('class="landing-card-grid"'))
-    errors.push('Missing actionable solution content: '+route);
+const englishHomeHtml=await readFile(join(out,'en','index.html'),'utf8');
+for(const [prefix,home] of [['/',homeHtml],['/en/',englishHomeHtml]]){
+  for(const slug of solutionSlugs){
+    const route=prefix+slug+'/';
+    if(!indexable.includes(route))errors.push('Solution route is not indexable: '+route);
+    if(!home.includes('href="'+route+'"'))errors.push('No discoverable home link to '+route);
+    const html=await readFile(join(out,...route.slice(1).split('/').filter(Boolean),'index.html'),'utf8').catch(()=>null);
+    if(!html||!html.includes('class="landing-hero"')||!html.includes('class="landing-steps"')||!html.includes('class="landing-card-grid"'))
+      errors.push('Missing actionable solution content: '+route);
+  }
 }
-for(const route of analyticsRoutes){if(!indexable.includes(route))errors.push('Analytics route is not indexable: '+route);if(!homeHtml.includes('href="/docs/analytics/"'))errors.push('Homepage must link to Analytics documentation');}
+for(const [route,home,docsHref] of [
+  ['/docs/analytics/',homeHtml,'/docs/analytics/'],
+  ['/analytics/',homeHtml,'/docs/analytics/'],
+  ['/en/docs/analytics/',englishHomeHtml,'/en/docs/analytics/'],
+  ['/en/analytics/',englishHomeHtml,'/en/docs/analytics/'],
+]){
+  if(!indexable.includes(route))errors.push('Analytics route is not indexable: '+route);
+  if(!home.includes('href="'+docsHref+'"'))errors.push('Homepage must link to Analytics documentation: '+docsHref);
+}
 const analyticsDocs=await readFile(join(out,'docs/analytics/index.html'),'utf8');
-for(const term of ['analítica educativa','learning analytics','seguimiento de alumnos','progreso de cursos','calificaciones'])if(!analyticsDocs.toLowerCase().includes(term.toLowerCase()))errors.push('Analytics SEO topic missing: '+term);
+const englishAnalyticsDocs=await readFile(join(out,'en/docs/analytics/index.html'),'utf8');
+for(const term of ['analítica educativa','learning analytics','seguimiento de alumnos','progreso de cursos','calificaciones'])
+  if(!analyticsDocs.toLowerCase().includes(term.toLowerCase()))errors.push('Spanish Analytics SEO topic missing: '+term);
+for(const term of ['educational analytics','learning analytics','learner tracking','course progress','grades'])
+  if(!englishAnalyticsDocs.toLowerCase().includes(term.toLowerCase()))errors.push('English Analytics SEO topic missing: '+term);
 const analyticsDemo=await readFile(join(out,'analytics/index.html'),'utf8');
-if(!analyticsDemo.includes('"@type":"WebApplication"'))errors.push('Analytics WebApplication structured data missing');
-if(!analyticsDocs.includes('"@type":"TechArticle"'))errors.push('Analytics TechArticle structured data missing');
-const schemaScripts=[...homeHtml.matchAll(/<script\s+type="application\/ld\+json"\s*>([\s\S]*?)<\/script>/gi)];
-const siteSchemas=schemaScripts.map(m=>{try{return JSON.parse(m[1])}catch{return null}}).filter(s=>s&&s['@type']==='WebSite');
-if(siteSchemas.length!==1||siteSchemas[0].name!=='P2LRN'||siteSchemas[0].url!==CANONICAL_ORIGIN+'/')
-  errors.push('Missing or inconsistent P2LRN WebSite identity structured data');
-if(named(homeHtml,'meta','property','og:site_name').length!==1)errors.push('Missing site identity in home OpenGraph');
+const englishAnalyticsDemo=await readFile(join(out,'en/analytics/index.html'),'utf8');
+if(!analyticsDemo.includes('"@type":"WebApplication"')||!englishAnalyticsDemo.includes('"@type":"WebApplication"'))
+  errors.push('Analytics WebApplication structured data missing in one locale');
+if(!analyticsDocs.includes('"@type":"TechArticle"')||!englishAnalyticsDocs.includes('"@type":"TechArticle"'))
+  errors.push('Analytics TechArticle structured data missing in one locale');
+for(const [home,expectedUrl,label] of [
+  [homeHtml,CANONICAL_ORIGIN+'/','Spanish'],
+  [englishHomeHtml,CANONICAL_ORIGIN+'/en/','English'],
+]){
+  const schemaScripts=[...home.matchAll(/<script\s+type="application\/ld\+json"\s*>([\s\S]*?)<\/script>/gi)];
+  const siteSchemas=schemaScripts.map(m=>{try{return JSON.parse(m[1])}catch{return null}}).filter(s=>s&&s['@type']==='WebSite');
+  if(siteSchemas.length!==1||siteSchemas[0].name!=='P2LRN'||siteSchemas[0].url!==expectedUrl)
+    errors.push('Missing or inconsistent '+label+' P2LRN WebSite identity structured data');
+  if(named(home,'meta','property','og:site_name').length!==1)errors.push('Missing '+label+' site identity in home OpenGraph');
+}
 const [quick,creator]=await Promise.all(['quickstart.p2lrn','canonical/creator-course.p2lrn'].map(p=>readFile(join(out,'examples',p)).catch(()=>null)));
 if(!quick||!creator||!quick.equals(creator))errors.push('compatibility quickstart package missing or not identical to verified creator-course');
-const studio=await readFile(join(out,'studio/index.html'),'utf8');
-if(!/<button\b[^>]*data-open-file/.test(studio)||!/<dialog\b[^>]*data-add-dialog[^>]*aria-labelledby=/.test(studio))errors.push('Studio accessibility controls missing');
-const js=await readFile(join(out,'p2lrn.js'),'utf8');
-if(!js.includes('docs-search-status')||!js.includes("resultsStatus.textContent"))errors.push('docs search result announcement missing');
+for(const [path,label] of [['studio/index.html','Spanish'],['en/studio/index.html','English']]){
+  const studio=await readFile(join(out,...path.split('/')),'utf8');
+  if(!/<button\b[^>]*data-open-file/.test(studio)||!/<dialog\b[^>]*data-add-dialog[^>]*aria-labelledby=/.test(studio))
+    errors.push(label+' Studio accessibility controls missing');
+}
+for(const [path,label] of [['p2lrn.js','Spanish'],['en/p2lrn.js','English']]){
+  const js=await readFile(join(out,...path.split('/')),'utf8');
+  if(!js.includes('docs-search-status')||!js.includes("resultsStatus.textContent"))
+    errors.push(label+' docs search result announcement missing');
+}
 // Ensure the production CSP authorizes exactly the immutable import map on Viewer and Studio.
 async function verifyGeneratedImportMapCsp(){
  const raw=await readFile(join(out,'_headers'),'utf8');
@@ -108,20 +150,30 @@ for(const name of googleVerificationFiles){
   if(original!==('google-site-verification: '+name)||published!==original)
     errors.push('Search Console verification token missing or modified: '+name);
 }
-// New public Skills pages must remain indexable, crawlable and connected to documentation.
-for(const route of ['/skills/','/docs/skills/']){
+// Public Skills pages must remain indexable, crawlable and connected to documentation in both locales.
+for(const route of ['/skills/','/docs/skills/','/en/skills/','/en/docs/skills/']){
   if(!indexable.includes(route))errors.push('Skills page must be indexable: '+route);
   if(!xmlUrls.includes(CANONICAL_ORIGIN+route))errors.push('Skills URL missing from sitemap: '+route);
 }
-if(!homeHtml.includes('href="/skills/"'))errors.push('Skills landing page missing from home navigation');
-for(const route of ['docs/index.html','docs/conectores/ia/index.html','docs/conectores/index.html']){
-  const html=await readFile(join(out,route),'utf8').catch(()=>null);
-  if(!html||!html.includes('href="/skills/"')||!html.includes('href="/docs/skills/"'))
+if(!homeHtml.includes('href="/skills/"'))errors.push('Spanish Skills landing page missing from home navigation');
+if(!englishHomeHtml.includes('href="/en/skills/"'))errors.push('English Skills landing page missing from home navigation');
+for(const [route,landingHref,guideHref] of [
+  ['docs/index.html','/skills/','/docs/skills/'],
+  ['docs/conectores/ia/index.html','/skills/','/docs/skills/'],
+  ['docs/conectores/index.html','/skills/','/docs/skills/'],
+  ['en/docs/index.html','/en/skills/','/en/docs/skills/'],
+  ['en/docs/conectores/ia/index.html','/en/skills/','/en/docs/skills/'],
+  ['en/docs/conectores/index.html','/en/skills/','/en/docs/skills/'],
+]){
+  const html=await readFile(join(out,...route.split('/')),'utf8').catch(()=>null);
+  if(!html||!html.includes('href="'+landingHref+'"')||!html.includes('href="'+guideHref+'"'))
     errors.push('Skills integration link absent from '+route);
 }
 const landing=await readFile(join(out,'skills/index.html'),'utf8').catch(()=>null);
 const guide=await readFile(join(out,'docs/skills/index.html'),'utf8').catch(()=>null);
-if(!landing||!guide)errors.push('Skills landing or installation guide missing');
+const englishLanding=await readFile(join(out,'en/skills/index.html'),'utf8').catch(()=>null);
+const englishGuide=await readFile(join(out,'en/docs/skills/index.html'),'utf8').catch(()=>null);
+if(!landing||!guide||!englishLanding||!englishGuide)errors.push('Skills landing or installation guide missing in one locale');
 const skillManifest=JSON.parse(await readFile(join(out,'downloads/skills/manifest.json'),'utf8').catch(()=>'{"packages":[]}'));
 const expectedPlatforms=new Map([
  ['chatgpt','skills/p2lrn-creator/'],
@@ -155,10 +207,12 @@ for(const [platform,prefix] of expectedPlatforms){
      !members.includes(prefix+'references/official-runtime.md')||!members.includes(prefix+'scripts/p2lrn_package.py')||
      !members.includes(prefix+'scripts/test_p2lrn_package.py')||members.some(n=>/__pycache__|\.pyc$/i.test(n)))
     errors.push('Skill archive missing entrypoint, package writer, tests or includes bytecode: '+platform);
-  if(!landing?.includes('href="'+item.url+'"')||!guide?.includes('href="'+item.url+'"'))
-    errors.push('Skill ZIP not linked from landing and guide: '+platform);
+  if(!landing?.includes('href="'+item.url+'"')||!guide?.includes('href="'+item.url+'"')||
+     !englishLanding?.includes('href="'+item.url+'"')||!englishGuide?.includes('href="'+item.url+'"'))
+    errors.push('Skill ZIP not linked from both locale landing and guide pages: '+platform);
 }
-if(!landing?.includes('"@type":"CollectionPage"'))errors.push('Skills collection structured data missing');
+if(!landing?.includes('"@type":"CollectionPage"')||!englishLanding?.includes('"@type":"CollectionPage"'))
+  errors.push('Skills collection structured data missing in one locale');
 
 const result={ok:errors.length===0,sourcePages:sourcePages.length,indexable:indexable.length,aliases:aliases.length,sitemapURLs:xmlUrls.length,quickstartVerified:Boolean(quick&&creator&&quick.equals(creator)),errors};
 console.log(JSON.stringify(result,null,2));
