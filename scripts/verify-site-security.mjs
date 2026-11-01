@@ -47,10 +47,14 @@ function scan(dir){
       assert.match(m[1],/^\s*type=["']application\/ld\+json["']\s*$/i,'Forbidden inline script: '+f);
       const rel=relative(site,f).replaceAll('\\','/');
       const allow=new Map([
-        ['index.html',{type:'WebSite',name:'P2LRN',url:'https://p2lrn.netlify.app/'}],
-        ['analytics/index.html',{type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.netlify.app/analytics/'}],
-        ['docs/analytics/index.html',{type:'TechArticle',headline:'P2LRN Analytics:',url:'https://p2lrn.netlify.app/docs/analytics/'}],
-        ['skills/index.html',{type:'CollectionPage',name:'Descargar Skills P2LRN para asistentes de IA',url:'https://p2lrn.netlify.app/skills/'}]
+        ['index.html',{kind:'root',type:'WebSite',name:'P2LRN',url:'https://p2lrn.netlify.app/'}],
+        ['en/index.html',{kind:'root',type:'WebSite',name:'P2LRN',url:'https://p2lrn.netlify.app/en/'}],
+        ['analytics/index.html',{kind:'analytics',type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.netlify.app/analytics/'}],
+        ['en/analytics/index.html',{kind:'analytics',type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.netlify.app/en/analytics/'}],
+        ['docs/analytics/index.html',{kind:'article',type:'TechArticle',headline:'P2LRN Analytics:',url:'https://p2lrn.netlify.app/docs/analytics/'}],
+        ['en/docs/analytics/index.html',{kind:'article',type:'TechArticle',headline:'P2LRN Analytics:',url:'https://p2lrn.netlify.app/en/docs/analytics/'}],
+        ['skills/index.html',{kind:'skills',type:'CollectionPage',name:'Descargar Skills P2LRN para asistentes de IA',url:'https://p2lrn.netlify.app/skills/'}],
+        ['en/skills/index.html',{kind:'skills',type:'CollectionPage',name:'Download P2LRN Skills for AI Assistants',url:'https://p2lrn.netlify.app/en/skills/'}]
       ]);
       assert.ok(allow.has(rel),'JSON-LD outside approved public pages: '+rel);
       const trailing=h.slice(m.index+m[0].length);
@@ -66,15 +70,15 @@ function scan(dir){
       if(expected.name)assert.equal(schema.name,expected.name);
       if(expected.headline)assert.ok(schema.headline?.startsWith(expected.headline),'Unrelated article schema on '+rel);
       assert.equal(schema.url,expected.url);
-      const validKeys=rel==='index.html'
+      const validKeys=expected.kind==='root'
         ? ['@context','@type','@id','name','url','inLanguage','description']
-        : rel==='analytics/index.html'
+        : expected.kind==='analytics'
           ? ['@context','@type','name','url','applicationCategory','operatingSystem','inLanguage','description']
-          : rel==='docs/analytics/index.html'
+          : expected.kind==='article'
             ? ['@context','@type','headline','description','url','inLanguage','about']
             : ['@context','@type','name','description','url','inLanguage','isPartOf','mainEntity'];
       assert.ok(Object.keys(schema).every(key=>validKeys.includes(key)),'Unrecognized schema field: '+rel);
-      if(rel==='skills/index.html'){
+      if(expected.kind==='skills'){
         assert.equal(schema.mainEntity?.['@type'],'ItemList');
         const links=schema.mainEntity?.itemListElement;
         assert.ok(Array.isArray(links)&&links.length===4,'Expected four Skill packages in JSON-LD');
