@@ -36,6 +36,18 @@ test('one footer supplies clear product, documentation and resource groups',()=>
   assert(!footer.includes('http://')&&!footer.includes('https://'));
 });
 
+test('English footer mirrors the Spanish navigation with localized routes',()=>{
+  const footer=renderSiteFooter('en');
+  assert(footer.includes('aria-label="P2LRN footer"'));
+  assert(footer.includes('href="/en/" aria-label="P2LRN — Home"'));
+  assert(footer.includes('href="/en/studio/"'));
+  assert(footer.includes('href="/en/docs/"'));
+  assert(footer.includes('href="/en/contacto/"'));
+  assert(footer.includes('href="/en/cookies/#configuracion"'));
+  assert(footer.includes('>Documentation</'));
+  assert(footer.includes('>Contact</'));
+});
+
 test('legal links remain complete and the cookies link points to the actual explanation',()=>{
   const footer=renderSiteFooter();
   assert(footer.includes('data-legal-links aria-label="Información legal"'));
@@ -73,6 +85,6 @@ test('the build selects page footer after main and protects Studio inner form ac
   assert(build.includes("html.toLowerCase().lastIndexOf('</main>')"));
   assert(build.includes('match.index>mainEnd'));
   assert(build.includes("studioActionFooter.includes('data-legal-links')"));
-  assert(build.includes('renderSiteFooter()'));
+  assert(build.includes('renderSiteFooter(locale)'));
   assert(build.includes('publicFooterPages<40'));
 });
