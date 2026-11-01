@@ -492,7 +492,7 @@ for (const htmlPath of htmlFiles) {
   for (const match of html.matchAll(/<form\b[^>]*>/gi)) {
     if (rel === 'contacto/index.html'||rel === 'en/contacto/index.html') continue;
     // Studio's offline assignment form is local-only and has no network action.
-    if ((rel === 'studio/index.html'||rel === 'en/studio/index.html') && /\bdata-offline-form(?:\s|>)/i.test(match[0]) && !/\baction\s*=/i.test(match[0])) continue;
+    if ((rel === 'studio/index.html'||rel === 'en/studio/index.html') && /\bdata-offline-form(?:\s|=|>)/i.test(match[0]) && !/\baction\s*=/i.test(match[0])) continue;
     repeatedForms.push(rel);
   }
 }
