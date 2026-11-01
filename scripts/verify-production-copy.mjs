@@ -113,7 +113,8 @@ for(const sourcePath of sourcePages){
   for(const pattern of bannedEverywhere){
     if(pattern.test(text))errors.push(rel+': internal/development wording matches '+pattern);
   }
-  const isDoc=rel.startsWith('docs/');
+  const english=rel.startsWith('en/');
+  const isDoc=rel.startsWith('docs/')||rel.startsWith('en/docs/');
   if(!isDoc){
     publicPages++;
     for(const pattern of publicBanned){
@@ -121,8 +122,12 @@ for(const sourcePath of sourcePages){
     }
     const hasSiteHeader=/class=["'][^"']*site-header/iu.test(html);
     if(hasSiteHeader){
-      if(!/href=["']\/contacto\//iu.test(html))errors.push(rel+': public navigation is missing Contacto');
-      if(!/href=["']\/docs\//iu.test(html))errors.push(rel+': public navigation is missing Documentación');
+      const contactHref=english?'/en/contacto/':'/contacto/';
+      const docsHref=english?'/en/docs/':'/docs/';
+      if(!html.includes('href="'+contactHref+'"')&&!html.includes("href='"+contactHref+"'"))
+        errors.push(rel+': public navigation is missing '+(english?'Contact':'Contacto'));
+      if(!html.includes('href="'+docsHref+'"')&&!html.includes("href='"+docsHref+"'"))
+        errors.push(rel+': public navigation is missing '+(english?'Documentation':'Documentación'));
     }
     const metaBlocks=[...html.matchAll(/<div class=["']header-meta["'][^>]*>([\s\S]*?)<\/div>/giu)];
     for(const block of metaBlocks){
@@ -130,9 +135,9 @@ for(const sourcePath of sourcePages){
         errors.push(rel+': non-functional build/version header metadata is still visible');
     }
   }
-  if(rel==='index.html'){
+  if(rel==='index.html'||rel==='en/index.html'){
     for(const pattern of homeBanned){
-      if(pattern.test(text))errors.push('index.html: homepage exposes implementation jargon matching '+pattern);
+      if(pattern.test(text))errors.push(rel+': homepage exposes implementation jargon matching '+pattern);
     }
   }
 }
