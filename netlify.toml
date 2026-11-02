@@ -6,6 +6,19 @@
   NODE_VERSION = "22"
   GO_VERSION = "1.26"
 
+# Public legacy hostname always redirects to the primary P2LRN domain.
+[[redirects]]
+  from = "https://p2lrn.netlify.app/*"
+  to = "https://p2lrn.org/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://p2lrn.netlify.app/*"
+  to = "https://p2lrn.org/:splat"
+  status = 301
+  force = true
+
 # Historical IA documentation paths now point to the corresponding section
 # in the single canonical guide. Force redirects even when legacy HTML exists,
 # and preserve working links shared before the navigation was reorganized.

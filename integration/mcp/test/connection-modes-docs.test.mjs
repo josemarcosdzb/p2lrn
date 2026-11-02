@@ -108,10 +108,10 @@ test('legacy links redirect to canonical section and are excluded from navigatio
     assert(redirectBlocks.some(block=>block.includes('from = "'+route+'"')&&
       block.includes('to = "'+destination+'"')&&block.includes('status = 301')&&
       block.includes('force = true')),'Production redirect missing '+slug);
-    assert(!sitemap.includes('https://p2lrn.netlify.app'+route));
+    assert(!sitemap.includes('https://p2lrn.org'+route));
     assert(!nav.includes("['"+route+"','"),'Orphan route advertised in navigation: '+slug);
   }
-  for(const [route] of routes)assert(sitemap.includes('https://p2lrn.netlify.app'+route));
+  for(const [route] of routes)assert(sitemap.includes('https://p2lrn.org'+route));
   const lms=read('deploy/netlify/site/docs/conectores/lms/index.html');
   assert(lms.includes('class="prev" href="/docs/conectores/ia/"'));
 });

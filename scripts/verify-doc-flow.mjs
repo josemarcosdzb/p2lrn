@@ -96,7 +96,7 @@ const offlineGuide=article(await read('deploy/netlify/site/docs/entrega-offline/
 for(const term of ['Entrega offline y cursos autorreproducibles','Windows 64 bits · EXE','ZIP portable','Windows · CMD','.p2lrn-result','No abras un curso ejecutable de procedencia desconocida.','Caducidad desde la primera apertura','aperturas registradas','Abrir en Analytics','Colaboración en directo','Revisar entrega'])if(!offlineGuide.includes(term))failures.push('offline delivery guide missing '+term);
 for(const source of ['deploy/netlify/site/index.html','deploy/netlify/site/docs/index.html','deploy/netlify/site/docs/empezar/index.html','deploy/netlify/site/docs/studio/index.html','deploy/netlify/site/studio/index.html']){const html=await read(source);if(!html.includes('href="/docs/entrega-offline/"'))failures.push(source+': missing offline delivery discovery link');}
 if(!js.includes("['/docs/entrega-offline/','Entrega offline']"))failures.push('documentation navigation missing offline delivery route');
-const sitemap=await read('deploy/netlify/site/sitemap.xml');if(!sitemap.includes('https://p2lrn.netlify.app/docs/entrega-offline/'))failures.push('sitemap missing offline delivery route');
+const sitemap=await read('deploy/netlify/site/sitemap.xml');if(!sitemap.includes('https://p2lrn.org/docs/entrega-offline/'))failures.push('sitemap missing offline delivery route');
 
 // Full public-source currentness audit. The generated build has additional
 // artifact checks, but source documentation must also remain truthful/readable.

@@ -139,7 +139,7 @@ jobs:
     timeout-minutes: 45
     env:
       P2LRN_PUBLIC_NPM_VERSION: 0.5.0-alpha.11
-      P2LRN_PUBLIC_ORIGIN: https://p2lrn.netlify.app
+      P2LRN_PUBLIC_ORIGIN: https://p2lrn.org
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -168,7 +168,7 @@ jobs:
       - name: Visually exercise real CDN Studio, Player, H5P and SCORM
         if: always()
         env:
-          P2LRN_PUBLIC_CDN_NO_WAIT: '1'
+          P2LRN_PUBLIC_CDN_NO_WAIT: '0'
         run: node scripts/verify-public-cdn.mjs
       - name: Independent native-game visual matrix from public npm
         if: always()
@@ -322,7 +322,7 @@ jobs:
         run: node scripts/verify-local-viewer.mjs
 
   toolkit-and-cdn:
-    if: ${{ !contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !contains(github.event.head_commit.message, '[verify live CDN]') && !contains(github.event.head_commit.message, '[lms design]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
+    if: ${{ !contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !contains(github.event.head_commit.message, '[lms design]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
@@ -705,7 +705,7 @@ jobs:
         run: node --check scripts/verify-public-cdn.mjs
       - name: Download live .p2lrn and exercise published Studio and Player with Chrome
         env:
-          P2LRN_PUBLIC_ORIGIN: https://p2lrn.netlify.app
+          P2LRN_PUBLIC_ORIGIN: https://p2lrn.org
           P2LRN_PUBLIC_CDN_NO_WAIT: '1'
         run: node scripts/verify-public-cdn.mjs
 
