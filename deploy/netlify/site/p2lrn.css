@@ -1989,12 +1989,16 @@ main[id]{scroll-margin-top:84px}
 
 body>.language-switch{position:fixed;top:12px;right:12px;z-index:1200}
 
-/* Contrast fix: integration card has a dark surface, but inherited ink was also dark. */
+/* CDN embed remains readable against the dark integration card. */
 .bridge-cdn{color:#edf3ff}
-.bridge-cdn > p{margin:0;padding:17px 20px 0;color:#e1eaf8;font-size:1rem;line-height:1.65;overflow-wrap:anywhere}
-.bridge-cdn > p:last-child{padding:16px 20px 22px}
-.bridge-cdn > p .button{color:#f7faff;border-color:#95b9fa;background:#1a3659;text-decoration:none}
-.bridge-cdn > p .button:hover{color:#fff;background:#244b79}
-.bridge-cdn > p .button:focus-visible{outline:3px solid #b8d4ff;outline-offset:3px}
-.bridge-cdn > p code{color:#f7faff}
-@media(max-width:620px){.bridge-cdn > p{padding-left:17px;padding-right:17px}.bridge-cdn > p:last-child{padding-left:17px;padding-right:17px}.bridge-cdn > p .button{max-width:100%;white-space:normal;text-align:center}}
+.bridge-cdn pre{max-width:100%;color:#edf3ff}
+.bridge-cdn pre code{color:inherit}
+@media(max-width:720px){
+  .bridge-cdn pre{
+    padding:18px 17px 22px;
+    font-size:.78rem;
+    white-space:pre-wrap;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+}

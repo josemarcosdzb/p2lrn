@@ -91,22 +91,32 @@ test('the build selects page footer after main and protects Studio inner form ac
 
 });
 
-test('mobile integration card maintains readable text and button contrast',()=>{
-  const css=contentAt('deploy/netlify/site/p2lrn.css');
-  const html=contentAt('deploy/netlify/site/index.html');
-  assert(html.includes('class="cdn-minimal bridge-cdn"'));
-  for(const selector of ['.bridge-cdn','.bridge-cdn > p','.bridge-cdn > p .button','.bridge-cdn > p .button:focus-visible']){
-    assert(css.includes(selector+'{'),'Missing contrast rule: '+selector);
+test('both homepages show the original Player CDN script and Web Component example',()=>{
+  const es=contentAt('deploy/netlify/site/index.html');
+  const en=contentAt('deploy/netlify/site/en/index.html');
+  const cdn='https://p2lrn.org/player/current/dist/p2lrn.js';
+  const embed='&lt;script src="'+cdn+'"&gt;&lt;/script&gt;\\n&lt;p2lrn-player src="./course.p2lrn"&gt;&lt;/p2lrn-player&gt;'.replace('\\n','\n');
+  for(const [locale,html,label] of [['es',es,'CDN · MÍNIMO'],['en',en,'MINIMAL CDN']]){
+    assert(html.includes('class="cdn-minimal bridge-cdn"'),locale+': missing CDN card');
+    assert(html.includes('<strong>'+label+'</strong><span>HTML</span>'),locale+': missing original heading');
+    assert(html.includes('<pre><code>'+embed+'</code></pre>'),locale+': missing exact script and player tag');
+    assert.equal((html.match(/player\/current\/dist\/p2lrn\.js/g)||[]).length,1,locale+': duplicate homepage CDN examples');
   }
-  const background='#0d1117';
-  const foreground='#e1eaf8';
-  const luminance=(color)=>{
-    const rgb=color.slice(1).match(/../g).map(v=>parseInt(v,16)/255)
+  assert(!es.includes('Incorpora el Player en tu plataforma'));
+  assert(!en.includes('Incorporate the Player into your platform'));
+});
+test('mobile CDN snippet stays readable, contained and keyboard selectable',()=>{
+  const css=contentAt('deploy/netlify/site/p2lrn.css');
+  assert(css.includes('.cdn-minimal pre{'));
+  assert(css.includes('.bridge-cdn pre{'));
+  assert(css.includes('max-width:100%;color:#edf3ff'));
+  assert(css.includes('white-space:pre-wrap;'));
+  assert(css.includes('overflow-wrap:anywhere;'));
+  assert(css.includes('word-break:break-word;'));
+  const luminance=color=>{
+    const rgb=color.slice(1).match(/../g).map(x=>parseInt(x,16)/255)
       .map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
     return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
   };
-  const ratio=(luminance(foreground)+.05)/(luminance(background)+.05);
-  assert(ratio>=7,'Integration card body text must meet WCAG AAA contrast: '+ratio);
-  assert(css.includes('color:#e1eaf8;'));
-  assert(css.includes('border-color:#95b9fa;'));
+  assert((luminance('#edf3ff')+.05)/(luminance('#0d1117')+.05)>=7);
 });
