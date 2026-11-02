@@ -6,6 +6,13 @@
   NODE_VERSION = "22"
   GO_VERSION = "1.26"
 
+# Conventional favicon endpoint for crawlers and browsers.
+[[redirects]]
+  from = "/favicon.ico"
+  to = "/favicon.png"
+  status = 301
+  force = true
+
 # Public legacy hostname always redirects to the primary P2LRN domain.
 [[redirects]]
   from = "https://p2lrn.netlify.app/*"

@@ -163,12 +163,12 @@ const bilingualSite=htmlFiles.some(path=>relative(outputRoot,path).replaceAll('\
 
 const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
 const brandHeadFor=(locale='es')=>[
-  '<link rel="icon" type="image/png" sizes="96x96" href="/favicon.png?v=p2lrn-brand-20261027-v3">',
-  '<link rel="shortcut icon" type="image/png" href="/favicon.png?v=p2lrn-brand-20261027-v3">',
-  '<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=p2lrn-brand-20261027-v3">',
+  '<link rel="icon" type="image/png" sizes="96x96" href="/favicon.png">',
+  '<link rel="shortcut icon" type="image/png" href="/favicon.png">',
+  '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
   '<link rel="manifest" href="'+(locale==='en'?'/en/site.webmanifest':'/site.webmanifest')+'">',
-  '<meta property="og:image" content="https://p2lrn.org/p2lrn-mark.png?v=p2lrn-brand-20261027-v3">',
-  '<meta name="twitter:image" content="https://p2lrn.org/p2lrn-mark.png?v=p2lrn-brand-20261027-v3">'
+  '<meta property="og:image" content="https://p2lrn.org/p2lrn-mark.png">',
+  '<meta name="twitter:image" content="https://p2lrn.org/p2lrn-mark.png">'
 ].join('');
 for (const htmlPath of htmlFiles) {
   const pageRelative=relative(outputRoot,htmlPath).replaceAll('\\','/');
@@ -182,7 +182,7 @@ for (const htmlPath of htmlFiles) {
   html = html.replace(/<span\s+[^>]*data-footer-version(?:=["'][^"']*["'])?[^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-release-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-build-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
-  if (!html.includes('/favicon.png?v=p2lrn-brand-20261027-v3')) {
+  if (!html.includes('href="/favicon.png"')) {
     html = html.replace(/<\/head>/i,brandHeadFor(pageLocale) + '</head>');
   }
   await writeFile(htmlPath,html);
@@ -224,7 +224,7 @@ for (const htmlPath of htmlFiles) {
   const rel=relative(outputRoot,htmlPath).replaceAll('\\','/');
   const html=await readFile(htmlPath,'utf8');
   const manifest=rel.startsWith('en/')?'/en/site.webmanifest':'/site.webmanifest';
-  for (const required of ['/favicon.png?v=p2lrn-brand-20261027-v3','/apple-touch-icon.png?v=p2lrn-brand-20261027-v3',manifest]) {
+  for (const required of ['/favicon.png','/apple-touch-icon.png',manifest]) {
     if (!html.includes(required)) throw new Error('Missing brand metadata in ' + rel + ': ' + required);
   }
   if (html.includes('/p2lrn.css') && !html.includes('/p2lrn.css?v=p2lrn-brand-20261027-v3')) {

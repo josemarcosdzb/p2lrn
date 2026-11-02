@@ -101,7 +101,7 @@ for(const [home,expectedUrl,label] of [
 ]){
   const schemaScripts=[...home.matchAll(/<script\s+type="application\/ld\+json"\s*>([\s\S]*?)<\/script>/gi)];
   const siteSchemas=schemaScripts.map(m=>{try{return JSON.parse(m[1])}catch{return null}}).filter(s=>s&&s['@type']==='WebSite');
-  if(siteSchemas.length!==1||siteSchemas[0].name!=='P2LRN'||siteSchemas[0].url!==expectedUrl)
+  if(siteSchemas.length!==1||siteSchemas[0].name!=='P2LRN'||siteSchemas[0].alternateName!=='p2lrn.org'||siteSchemas[0].url!==expectedUrl)
     errors.push('Missing or inconsistent '+label+' P2LRN WebSite identity structured data');
   if(named(home,'meta','property','og:site_name').length!==1)errors.push('Missing '+label+' site identity in home OpenGraph');
 }

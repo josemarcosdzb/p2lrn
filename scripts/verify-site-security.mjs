@@ -71,7 +71,7 @@ function scan(dir){
       if(expected.headline)assert.ok(schema.headline?.startsWith(expected.headline),'Unrelated article schema on '+rel);
       assert.equal(schema.url,expected.url);
       const validKeys=expected.kind==='root'
-        ? ['@context','@type','@id','name','url','inLanguage','description']
+        ? ['@context','@type','@id','name','alternateName','url','inLanguage','description']
         : expected.kind==='analytics'
           ? ['@context','@type','name','url','applicationCategory','operatingSystem','inLanguage','description']
           : expected.kind==='article'
