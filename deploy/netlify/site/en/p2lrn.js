@@ -423,6 +423,7 @@
       ['/docs/que-usar/','Mapa de componentes'],
       ['/docs/conceptos/','Conceptos fundamentales'],
       ['/docs/formato/','Formato P2LRN'],
+      ['/docs/formato-portable-cursos-interactivos/','Portability guide'],
     ]],
     ['/docs/conectores/',[
       ['/docs/conectores/ia/','Conectores para IA'],
@@ -471,6 +472,7 @@
     ['/docs/que-usar/',['/docs/empezar/','Antes de empezar']],
     ['/docs/conceptos/',['/docs/empezar/','Antes de empezar']],
     ['/docs/formato/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/formato-portable-cursos-interactivos/',['/docs/formato/','Formato P2LRN']],
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],

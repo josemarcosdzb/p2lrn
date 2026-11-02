@@ -651,7 +651,11 @@ try{
 
 console.log('P2LRN_I18N_PHASE=generate-js files='+jsSources.size);
 for(const [rel,source] of jsSources){
-  const generated=translateJavaScriptSource(source);
+  const generated=rel==='p2lrn.js'
+    ?translateJavaScriptSource(source).replace(
+      "['/docs/formato-portable-cursos-interactivos/','Guía de portabilidad']",
+      "['/docs/formato-portable-cursos-interactivos/','Portability guide']")
+    :translateJavaScriptSource(source);
   const dest=join(englishRoot,...rel.split('/'));
   await mkdir(dirname(dest),{recursive:true});
   await writeFile(dest,generated,'utf8');
