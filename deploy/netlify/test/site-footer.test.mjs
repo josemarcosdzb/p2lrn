@@ -86,5 +86,27 @@ test('the build selects page footer after main and protects Studio inner form ac
   assert(build.includes('match.index>mainEnd'));
   assert(build.includes("studioActionFooter.includes('data-legal-links')"));
   assert(build.includes('renderSiteFooter(locale)'));
-  assert(build.includes('publicFooterPages<40'));
+  assert(build.includes('const minimumFooterPages=bilingualSite?80:40;'));
+  assert(build.includes('publicFooterPages<minimumFooterPages'));
+
+});
+
+test('mobile integration card maintains readable text and button contrast',()=>{
+  const css=contentAt('deploy/netlify/site/p2lrn.css');
+  const html=contentAt('deploy/netlify/site/index.html');
+  assert(html.includes('class="cdn-minimal bridge-cdn"'));
+  for(const selector of ['.bridge-cdn','.bridge-cdn > p','.bridge-cdn > p .button','.bridge-cdn > p .button:focus-visible']){
+    assert(css.includes(selector+'{'),'Missing contrast rule: '+selector);
+  }
+  const background='#0d1117';
+  const foreground='#e1eaf8';
+  const luminance=(color)=>{
+    const rgb=color.slice(1).match(/../g).map(v=>parseInt(v,16)/255)
+      .map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
+    return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
+  };
+  const ratio=(luminance(foreground)+.05)/(luminance(background)+.05);
+  assert(ratio>=7,'Integration card body text must meet WCAG AAA contrast: '+ratio);
+  assert(css.includes('color:#e1eaf8;'));
+  assert(css.includes('border-color:#95b9fa;'));
 });
