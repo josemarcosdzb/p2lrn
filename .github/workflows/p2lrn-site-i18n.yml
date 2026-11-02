@@ -5,16 +5,19 @@ on:
   push:
     branches: [main]
     paths:
-      - 'deploy/netlify/site/**'
+      # Only authored source files actually read by the Spanish-to-English generator.
+      # SEO/build scripts, styles, binaries, and generated /en pages are not translation inputs.
+      - 'deploy/netlify/site/index.html'
+      - 'deploy/netlify/site/**/index.html'
+      - 'deploy/netlify/site/p2lrn.js'
+      - 'deploy/netlify/site/studio/studio.js'
+      - 'deploy/netlify/site/demo/viewer.js'
+      - 'deploy/netlify/site/analytics/demo.js'
+      - 'deploy/netlify/site/site.webmanifest'
       - '!deploy/netlify/site/en/**'
-      - 'deploy/netlify/build-site.mjs'
-      - 'deploy/netlify/browser-site-revision.mjs'
-      - 'deploy/netlify/site-footer.mjs'
-      - 'deploy/netlify/site-seo-a11y.mjs'
-      - 'netlify.toml'
       - 'scripts/generate-site-english.mjs'
       - 'scripts/verify-site-bilingual.mjs'
-      - '.github/workflows/p2lrn-site-i18n.yml'
+      # Workflow-only edits can be checked via workflow_dispatch without regenerating English.
   workflow_dispatch:
 
 permissions:
