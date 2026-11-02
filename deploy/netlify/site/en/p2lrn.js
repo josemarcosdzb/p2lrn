@@ -81,13 +81,14 @@
   const GLOBAL_NAV = [
     {
       label: 'Documentación',
-      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/'],
+      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/formato-portable-cursos-interactivos/'],
       items: [
         ['/docs/','Inicio'],
         ['/docs/empezar/','Antes de empezar'],
         ['/docs/que-usar/','Mapa de componentes'],
         ['/docs/conceptos/','Conceptos'],
         ['/docs/formato/','Formato P2LRN'],
+        ['/docs/formato-portable-cursos-interactivos/','Portability guide'],
       ],
     },
     {
