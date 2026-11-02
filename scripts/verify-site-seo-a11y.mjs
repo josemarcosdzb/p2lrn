@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {readFile,readdir,stat} from 'node:fs/promises';
 import {join,resolve,relative,basename,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {CANONICAL_ORIGIN,routeOf,isIndexable} from '../deploy/netlify/site-seo-a11y.mjs';
+import {CANONICAL_ORIGIN,SEO_PAGE_METADATA,routeOf,isIndexable} from '../deploy/netlify/site-seo-a11y.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const src=join(root,'deploy/netlify/site');
 const out=join(root,'.netlify-cdn');
@@ -20,6 +20,27 @@ for(const file of sourcePages){
  if(!html)continue;
  const pageIndexable=isIndexable(html);if(pageIndexable)indexable.push(route);else aliases.push(route);
  const head=html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1]||'';
+ // Parse the complete JSON-LD in the compiled HTML and verify each guide's schema.
+ const structured=[];
+ for(const script of head.matchAll(/<script\b[^>]*type\s*=\s*(["'])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script>/gi)){
+   try{structured.push(JSON.parse(script[2]));}
+   catch{errors.push(route+' contains invalid JSON-LD');}
+ }
+ if(pageIndexable&&(route.startsWith('/docs/')||route.startsWith('/en/docs/'))){
+   const articles=structured.filter(s=>s&&s['@type']==='TechArticle');
+   if(articles.length!==1)errors.push(route+' expected exactly one TechArticle');
+   else if(articles[0].url!==CANONICAL_ORIGIN+route||articles[0].inLanguage!==(route.startsWith('/en/')?'en':'es'))
+     errors.push(route+' TechArticle URL or language mismatched');
+ }
+ const customSeo=SEO_PAGE_METADATA[route];
+ if(pageIndexable&&customSeo){
+   const pageTitle=(head.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'').trim();
+   const pageDescription=attr(named(head,'meta','name','description')[0]||'','content');
+   if(pageTitle!==customSeo.title||pageDescription!==customSeo.description)
+     errors.push(route+' SEO search-intent metadata does not match its locale');
+   if(customSeo.description.length<95||customSeo.description.length>180)
+     errors.push(route+' SEO description falls outside its quality bounds');
+ }
  const main=tags(html,'main')[0]||'';
  const id=attr(main,'id');
  const jumps=tags(html,'a').filter(t=>(attr(t,'class')||'').split(/\s+/).includes('skip-link'));

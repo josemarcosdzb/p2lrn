@@ -4,6 +4,106 @@ import {join,relative,basename} from 'node:path';
 
 export const CANONICAL_ORIGIN='https://p2lrn.org';
 
+// Search-intent copy is applied only to compiled pages; the authored guides remain unchanged.
+export const SEO_PAGE_METADATA=Object.freeze({
+  "/docs/": {
+    "title": "Documentación para crear cursos interactivos | P2LRN",
+    "description": "Aprende a crear cursos interactivos con P2LRN: usa Studio y Player, prepara paquetes .p2lrn, integra tu LMS y revisa progreso y analítica."
+  },
+  "/en/docs/": {
+    "title": "P2LRN documentation: create interactive courses",
+    "description": "Learn to build interactive courses with P2LRN: use Studio and Player, prepare .p2lrn packages, integrate with your LMS and track learning progress."
+  },
+  "/docs/paquetes/": {
+    "title": "Cómo crear y exportar paquetes .p2lrn | P2LRN",
+    "description": "Aprende a crear y exportar paquetes .p2lrn: organiza lecciones, actividades y recursos, comprueba su integridad y ábrelos con P2LRN Player."
+  },
+  "/en/docs/paquetes/": {
+    "title": "How to create and export .p2lrn packages | P2LRN",
+    "description": "Learn to build and export .p2lrn packages: organize lessons, activities and resources, check their integrity and open them with P2LRN Player."
+  },
+  "/docs/que-usar/": {
+    "title": "Studio, Player, Toolkit y Analytics: qué usar | P2LRN",
+    "description": "Compara Studio, Player, Toolkit y Analytics de P2LRN: descubre qué hace cada herramienta y cómo combinarlas para crear y reproducir cursos."
+  },
+  "/en/docs/que-usar/": {
+    "title": "Studio, Player, Toolkit and Analytics: choose tools",
+    "description": "Compare P2LRN Studio, Player, Toolkit and Analytics: learn what each tool does and how to combine them to create and deliver courses."
+  },
+  "/docs/conceptos/": {
+    "title": "Conceptos básicos de P2LRN: cursos y paquetes",
+    "description": "Entiende cómo funcionan los cursos P2LRN: paquete .p2lrn, manifiesto, lecciones, recursos, Player y conexión con tu plataforma educativa."
+  },
+  "/en/docs/conceptos/": {
+    "title": "P2LRN basics: interactive courses and packages",
+    "description": "Understand P2LRN courses: the .p2lrn package, manifest, lessons, resources, Player and integration with your learning platform."
+  },
+  "/docs/juegos-3d/": {
+    "title": "Juegos educativos 3D: actividades y ejemplos | P2LRN",
+    "description": "Descubre cómo crear y reproducir juegos educativos 3D con P2LRN, incluyendo actividades de ordenar, relacionar y clasificar en tus cursos."
+  },
+  "/en/docs/juegos-3d/": {
+    "title": "3D educational games: activities and examples | P2LRN",
+    "description": "Explore how to create and play 3D educational games with P2LRN, including ordering, matching and classification activities in your courses."
+  },
+  "/docs/formato/": {
+    "title": "Formato .p2lrn: estructura de un curso | P2LRN",
+    "description": "Conoce qué contiene un archivo .p2lrn: manifiesto, lecciones, actividades, recursos y comprobaciones de integridad para cursos portables."
+  },
+  "/en/docs/formato/": {
+    "title": "The .p2lrn file format: course structure | P2LRN",
+    "description": "Learn what a .p2lrn file contains: a manifest, lessons, activities, resources and integrity checks for portable learning courses."
+  },
+  "/docs/referencia/": {
+    "title": "Referencia de P2LRN: API, Player e integración",
+    "description": "Consulta la referencia técnica de P2LRN: API de creación, Player, integración con LMS, eventos, seguimiento del alumno y herramientas de desarrollo."
+  },
+  "/en/docs/referencia/": {
+    "title": "P2LRN reference: Player API and integration",
+    "description": "Explore P2LRN technical references: authoring API, Player, LMS integration, events, learner progress and developer tools."
+  },
+  "/docs/recetas/": {
+    "title": "Ejemplos para crear e integrar cursos | P2LRN",
+    "description": "Sigue ejemplos prácticos para crear, validar, reproducir e integrar cursos interactivos con P2LRN Studio, Player y Toolkit."
+  },
+  "/en/docs/recetas/": {
+    "title": "How to build and integrate courses | P2LRN",
+    "description": "Follow practical examples to create, validate, play and integrate interactive courses with P2LRN Studio, Player and Toolkit."
+  },
+  "/docs/empezar/": {
+    "title": "Cómo empezar con P2LRN y crear tu primer curso",
+    "description": "Empieza con P2LRN: descubre qué herramienta necesitas para crear un curso interactivo, probarlo en Player y compartirlo en una web o LMS."
+  },
+  "/en/docs/empezar/": {
+    "title": "Get started with P2LRN interactive courses",
+    "description": "Get started with P2LRN: choose a tool to create an interactive course, test it in Player and share it on a website or learning platform."
+  },
+  "/docs/instalar/": {
+    "title": "Instalar P2LRN Player y Studio: CDN y npm",
+    "description": "Instala P2LRN Player, Studio y Toolkit en tu web o LMS con guías para CDN y npm, o crea cursos directamente con Studio online."
+  },
+  "/en/docs/instalar/": {
+    "title": "Install P2LRN Player and Studio: CDN and npm",
+    "description": "Install P2LRN Player, Studio and Toolkit on your website or LMS using CDN or npm, or create courses directly in the online Studio."
+  },
+  "/docs/player/": {
+    "title": "P2LRN Player: reproducir cursos en web y LMS",
+    "description": "Integra P2LRN Player en tu web o LMS y reproduce cursos .p2lrn: consulta su API, eventos, seguimiento del alumno y requisitos de ejecución."
+  },
+  "/en/docs/player/": {
+    "title": "P2LRN Player: run courses on web and LMS",
+    "description": "Integrate P2LRN Player with your website or LMS and play .p2lrn courses: explore its API, events, learner tracking and runtime requirements."
+  },
+  "/docs/toolkit/": {
+    "title": "P2LRN Toolkit: crear y validar paquetes",
+    "description": "Aprende a crear, inspeccionar, validar y transformar paquetes .p2lrn con P2LRN Toolkit para Node.js y TypeScript, con comandos y ejemplos."
+  },
+  "/en/docs/toolkit/": {
+    "title": "P2LRN Toolkit: build and validate course packages",
+    "description": "Learn to create, inspect, validate and transform .p2lrn packages with P2LRN Toolkit for Node.js and TypeScript, with practical examples."
+  }
+});
+
 async function walk(dir){
   const found=[];
   for(const e of await readdir(dir,{withFileTypes:true})){
@@ -41,10 +141,21 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
   if(!/<html\b/i.test(html)||!/<\/head>/i.test(html))throw Error('Invalid HTML: '+route);
   const language=languageOfRoute(route);
   const english=language==='en';
-  const title=decode((html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'').replace(/<[^>]*>/g,'').trim());
-  const description=decode(attr(metaTag(html,'name','description')||'','content')||'').trim();
-  if(!title||!description)throw Error('Missing original title or description: '+route);
+  // Preserve guide content while replacing only search snippets in the deploy output.
   let result=html;
+  const seoCopy=SEO_PAGE_METADATA[route];
+  if(seoCopy){
+    result=result.replace(/<title\b[^>]*>[\s\S]*?<\/title>/i,'<title>'+escape(seoCopy.title)+'</title>');
+    const descriptionTag=metaTag(result,'name','description');
+    if(!descriptionTag)throw Error('Missing meta description: '+route);
+    const updatedDescription=descriptionTag.replace(/\bcontent\s*=\s*(["'])([\s\S]*?)\1/i,
+      'content="'+escape(seoCopy.description)+'"');
+    if(updatedDescription===descriptionTag)throw Error('Unable to set meta description: '+route);
+    result=result.replace(descriptionTag,updatedDescription);
+  }
+  const title=decode((result.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'').replace(/<[^>]*>/g,'').trim());
+  const description=decode(attr(metaTag(result,'name','description')||'','content')||'').trim();
+  if(!title||!description)throw Error('Missing original title or description: '+route);
   const url=origin+route;
 
   if(isIndexable(result)){
@@ -63,6 +174,33 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
     }
 
     const contentRoute=stripEnglishPrefix(route);
+    // Every indexable technical guide receives one valid, localized TechArticle.
+    if(contentRoute.startsWith('/docs/')){
+      const scripts=[...result.matchAll(/<script\b[^>]*type\s*=\s*(["'])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script>/gi)];
+      let articleCount=0;
+      for(const entry of scripts){
+        let payload;
+        try{payload=JSON.parse(entry[2]);}
+        catch{throw Error('Invalid JSON-LD in '+route);}
+        const types=Array.isArray(payload['@type'])?payload['@type']:[payload['@type']];
+        if(types.includes('TechArticle'))articleCount++;
+      }
+      if(articleCount>1)throw Error('Multiple TechArticle schemas in '+route);
+      if(!articleCount){
+        const article={
+          '@context':'https://schema.org',
+          '@type':'TechArticle',
+          '@id':url+'#article',
+          headline:title,
+          description,
+          url,
+          inLanguage:language,
+          mainEntityOfPage:url,
+          isPartOf:{'@type':'WebSite',name:'P2LRN',url:origin+'/'}
+        };
+        result=insertHead(result,'<script type="application/ld+json">'+JSON.stringify(article).replaceAll('<','\\u003c')+'</script>');
+      }
+    }
     for(const [type,name,value] of [
       ['property','og:type',contentRoute.startsWith('/docs/')?'article':'website'],
       ['property','og:title',title],

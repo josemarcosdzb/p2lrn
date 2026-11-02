@@ -70,12 +70,10 @@ const publicBanned=[
   /\bcheckout\b/iu,
   /\bcors\b/iu,
   /service worker/iu,
-  /\bmcp\b/iu,
   /\bpython\b/iu,
   /\bcli\b/iu,
   /sha-?256/iu,
   /\bnpm\b/iu,
-  /\bcdn\b/iu,
   /\bfixture\b/iu,
   /\bcommit\b/iu,
   /\bbranch\b/iu,
@@ -83,6 +81,13 @@ const publicBanned=[
   /\bstaged\b/iu,
   /\blocalhost\b/iu,
   /127\.0\.0\.1/iu,
+];
+
+// Essential product terms are allowed only on the pages that actually explain them.
+// The same terms remain prohibited as unexplained jargon on other public pages.
+const contextualPublicBanned=[
+  {pattern:/\bmcp\b/iu,allowed:new Set(['skills/index.html','en/skills/index.html'])},
+  {pattern:/\bcdn\b/iu,allowed:new Set(['index.html','en/index.html'])},
 ];
 
 const homeBanned=[
@@ -119,6 +124,9 @@ for(const sourcePath of sourcePages){
     publicPages++;
     for(const pattern of publicBanned){
       if(pattern.test(text))errors.push(rel+': public page exposes implementation jargon matching '+pattern);
+    }
+    for(const {pattern,allowed} of contextualPublicBanned){
+      if(!allowed.has(rel)&&pattern.test(text))errors.push(rel+': misplaced public implementation jargon matching '+pattern);
     }
     const hasSiteHeader=/class=["'][^"']*site-header/iu.test(html);
     if(hasSiteHeader){
