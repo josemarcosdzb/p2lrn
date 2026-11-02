@@ -214,6 +214,37 @@ for(const [platform,prefix] of expectedPlatforms){
 if(!landing?.includes('"@type":"CollectionPage"')||!englishLanding?.includes('"@type":"CollectionPage"'))
   errors.push('Skills collection structured data missing in one locale');
 
+
+for(const [locale,home,expectedSnippet,expectedHeading] of [
+  ['es',homeHtml,"Crea cursos interactivos y juegos educativos en Studio. Exporta paquetes .p2lrn para web y LMS compatibles y trabaja con contenido SCORM y H5P compatible.","Paquetes .p2lrn para web y LMS compatibles"],
+  ['en',englishHomeHtml,"Create interactive courses and educational games in Studio. Export .p2lrn packages for compatible web and LMS use, with supported SCORM and H5P content.","Portable .p2lrn packages for websites and LMSs"],
+]){
+  const description=/<meta\s+name="description"\s+content="([^"]+)"/i.exec(home)?.[1];
+  if(description!==expectedSnippet||(description?.length??0)<130||(description?.length??0)>180)
+    errors.push('Homepage SEO description is missing or does not reflect the portable course format: '+locale);
+  if(!home.includes(expectedHeading))
+    errors.push('Homepage does not explain portable course packages: '+locale);
+}
+for(const [route,locale] of [['studio/index.html','es'],['en/studio/index.html','en']]){
+  const html=await readFile(join(out,...route.split('/')),'utf8').catch(()=>null);
+  const scripts=html?[...html.matchAll(/<script\s+type="application\/ld\+json"\s*>([\s\S]*?)<\/script>/gi)]:[];
+  const apps=scripts.map(match=>{try{return JSON.parse(match[1])}catch{return null}})
+    .filter(schema=>schema?.['@type']==='WebApplication'&&schema.name==='P2LRN Studio');
+  const expectedUrl=CANONICAL_ORIGIN+(locale==='en'?'/en/studio/':'/studio/');
+  if(apps.length!==1||apps[0].url!==expectedUrl||apps[0].inLanguage!==locale||
+     apps[0].applicationCategory!=='EducationalApplication'||apps[0].operatingSystem!=='Web'||
+     'aggregateRating' in apps[0]||'review' in apps[0]||'offers' in apps[0])
+    errors.push('Invalid or unsupported Studio software schema: '+route);
+}
+for(const [route,heading] of [
+  ['docs/compatibilidad/index.html','¿Qué es un paquete .p2lrn y en qué se diferencia de SCORM y H5P?'],
+  ['en/docs/compatibilidad/index.html','What is a .p2lrn package and how does it differ from SCORM and H5P?'],
+]){
+  const html=await readFile(join(out,...route.split('/')),'utf8').catch(()=>null);
+  if(!html?.includes(heading)||!html.includes('id="formato-p2lrn-vs-scorm"'))
+    errors.push('Missing substantive package compatibility explanation: '+route);
+}
+
 const result={ok:errors.length===0,sourcePages:sourcePages.length,indexable:indexable.length,aliases:aliases.length,sitemapURLs:xmlUrls.length,quickstartVerified:Boolean(quick&&creator&&quick.equals(creator)),errors};
 console.log(JSON.stringify(result,null,2));
 if(errors.length)process.exitCode=1;

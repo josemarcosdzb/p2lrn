@@ -49,6 +49,8 @@ function scan(dir){
       const allow=new Map([
         ['index.html',{kind:'root',type:'WebSite',name:'P2LRN',url:'https://p2lrn.org/'}],
         ['en/index.html',{kind:'root',type:'WebSite',name:'P2LRN',url:'https://p2lrn.org/en/'}],
+        ['studio/index.html',{kind:'studio',type:'WebApplication',name:'P2LRN Studio',url:'https://p2lrn.org/studio/'}],
+        ['en/studio/index.html',{kind:'studio',type:'WebApplication',name:'P2LRN Studio',url:'https://p2lrn.org/en/studio/'}],
         ['analytics/index.html',{kind:'analytics',type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.org/analytics/'}],
         ['en/analytics/index.html',{kind:'analytics',type:'WebApplication',name:'P2LRN Analytics',url:'https://p2lrn.org/en/analytics/'}],
         ['docs/analytics/index.html',{kind:'article',type:'TechArticle',headline:'P2LRN Analytics:',url:'https://p2lrn.org/docs/analytics/'}],
@@ -70,8 +72,16 @@ function scan(dir){
       if(expected.name)assert.equal(schema.name,expected.name);
       if(expected.headline)assert.ok(schema.headline?.startsWith(expected.headline),'Unrelated article schema on '+rel);
       assert.equal(schema.url,expected.url);
+      if(expected.kind==='studio'){
+        assert.equal(schema.applicationCategory,'EducationalApplication');
+        assert.equal(schema.operatingSystem,'Web');
+        assert.equal(schema.inLanguage,rel.startsWith('en/')?'en':'es');
+        assert.ok(!('aggregateRating' in schema)&&!('review' in schema)&&!('offers' in schema),'Do not invent prices or reviews');
+      }
       const validKeys=expected.kind==='root'
         ? ['@context','@type','@id','name','alternateName','url','inLanguage','description']
+        : expected.kind==='studio'
+          ? ['@context','@type','name','url','applicationCategory','operatingSystem','inLanguage','description']
         : expected.kind==='analytics'
           ? ['@context','@type','name','url','applicationCategory','operatingSystem','inLanguage','description']
           : expected.kind==='article'

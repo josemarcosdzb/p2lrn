@@ -3599,5 +3599,17 @@
   "También puedes": "You can also",
   ", consultar la": ", review",
   "Integrar cursos interactivos en LMS y sitios web | P2LRN": "Integrate interactive courses into LMSs and websites | P2LRN",
-  "Integra Player, progreso, calificaciones y recursos de cursos interactivos con Moodle, otros LMS y aplicaciones web mediante las guías de P2LRN.": "Integrate Player, progress, grades and interactive course resources with Moodle, other LMSs and websites using the P2LRN guides."
+  "Integra Player, progreso, calificaciones y recursos de cursos interactivos con Moodle, otros LMS y aplicaciones web mediante las guías de P2LRN.": "Integrate Player, progress, grades and interactive course resources with Moodle, other LMSs and websites using the P2LRN guides.",
+  "Crea cursos interactivos y juegos educativos en Studio. Exporta paquetes .p2lrn para web y LMS compatibles y trabaja con contenido SCORM y H5P compatible.": "Create interactive courses and educational games in Studio. Export .p2lrn packages for compatible web and LMS use, with supported SCORM and H5P content.",
+  "Paquetes .p2lrn para web y LMS compatibles": "Portable .p2lrn packages for websites and LMSs",
+  "¿Qué es un paquete .p2lrn y en qué se diferencia de SCORM y H5P?": "What is a .p2lrn package and how does it differ from SCORM and H5P?",
+  "reúne el manifiesto, la estructura del curso, las actividades y los recursos en un paquete portable. Player reproduce los contenidos compatibles; el archivo no necesita incluir cuentas de alumnos ni calificaciones oficiales.": "file brings together the manifest, course structure, activities and resources in a portable package. Player plays compatible content; the file does not need to contain learner accounts or official grades.",
+  "establece especificaciones para empaquetar contenido y comunicarse con un LMS.": "defines specifications for packaging content and communicating with an LMS.",
+  "utiliza sus propias estructuras y bibliotecas para actividades interactivas. Son formatos distintos, aunque P2LRN puede conservar y reproducir contenidos externos compatibles cuando se cumplen sus requisitos.": "uses its own structures and libraries for interactive activities. They are different formats, although P2LRN can preserve and play compatible external content when its requirements are met.",
+  "¿Es una alternativa directa a SCORM o H5P?": "Is it a direct alternative to SCORM or H5P?",
+  "No es una conversión automática entre formatos. La reproducción, la edición, la exportación y el envío de notas requieren capacidades diferentes. Consulta la": "It is not an automatic conversion between formats. Playback, editing, exporting and reporting grades require different capabilities. Check the",
+  "guía del formato .p2lrn": ".p2lrn format guide",
+  "y la matriz de compatibilidad de esta página antes de migrar contenido a": "and the compatibility matrix on this page before migrating content to",
+  "Moodle u otro LMS": "Moodle or another LMS",
+  "Un paquete portable": "A portable"
 }
