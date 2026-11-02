@@ -6,11 +6,16 @@ import {load} from 'cheerio';
 const root=resolve(process.cwd());
 const siteRoot=join(root,'deploy','netlify','site');
 const englishRoot=join(siteRoot,'en');
+// Pages translated by an editor, rather than a machine, must survive a full mirror rebuild.
+const handAuthoredEnglishPages=new Set(['docs/formato-portable-cursos-interactivos/index.html']);
 const cachePath=join(root,'scripts','site-en-translations.json');
 const MODEL='Xenova/opus-mt-es-en';
 const JS_FILES=['p2lrn.js','studio/studio.js','demo/viewer.js','analytics/demo.js'];
 
 const MANUAL=new Map(Object.entries({
+  'Guía de portabilidad':'Portability guide',
+  'Una explicación práctica para comparar formatos, reproducción y entrega de contenidos. Consulta la':'A practical guide to comparing formats, playback and course delivery. Read the',
+  'guía del formato portable de cursos interactivos':'portable interactive course format guide',
   'Menú':'Menu','Cerrar':'Close','Abrir':'Open','Inicio':'Home','Anterior':'Previous','Siguiente':'Next',
   'Documentación':'Documentation','Integración':'Integration','Colaboración':'Collaboration','Contacto':'Contact',
   'Privacidad':'Privacy','Licencia':'License','Términos':'Terms','Aviso legal':'Legal notice','Recursos':'Resources',
@@ -334,15 +339,34 @@ function registerHtmlFragment(fragment){
 }
 
 const files=await walk(siteRoot);
-const htmlFiles=files.filter(file=>{
+const allSourceHtmlFiles=files.filter(file=>{
   if(extname(file).toLowerCase()!=='.html')return false;
   const rel=relative(siteRoot,file).replaceAll('\\','/');
   return !rel.startsWith('en/')&&routeFromRelative(rel)!==null;
 });
-console.log('P2LRN_I18N_PHASE=scan-source-html pages='+htmlFiles.length);
+// Do not ask a machine translator to rewrite the manually localized editorial guide.
+const htmlFiles=allSourceHtmlFiles.filter(file=>{
+  const rel=relative(siteRoot,file).replaceAll(String.fromCharCode(92),'/');
+  return !handAuthoredEnglishPages.has(rel);
+});
+const preservedEnglishPages=new Map();
+for(const rel of handAuthoredEnglishPages){
+  if(!allSourceHtmlFiles.some(file=>relative(siteRoot,file).replaceAll(String.fromCharCode(92),'/')===rel))
+    throw Error('Missing authored Spanish editorial source: '+rel);
+  const englishPath=join(englishRoot,...rel.split('/'));
+  const english=await readFile(englishPath,'utf8').catch(()=>null);
+  if(!english||!/<html\s+lang="en"/i.test(english))
+    throw Error('Missing manually reviewed English editorial source: '+rel);
+  preservedEnglishPages.set(rel,english);
+}
+console.log('P2LRN_I18N_PHASE=scan-source-html pages='+allSourceHtmlFiles.length+' translated='+htmlFiles.length+' authored='+preservedEnglishPages.size);
 const routes=new Set();
 for(const file of htmlFiles){
   const route=routeFromRelative(relative(siteRoot,file).replaceAll('\\','/'));
+  if(route)routes.add(route);
+}
+for(const rel of handAuthoredEnglishPages){
+  const route=routeFromRelative(rel);
   if(route)routes.add(route);
 }
 
@@ -610,7 +634,12 @@ for(const file of htmlFiles){
   await writeFile(dest,$.html(),'utf8');
 }
 
-console.log('P2LRN_I18N_PHASE=html-generated pages='+htmlFiles.length);
+for(const [rel,english] of preservedEnglishPages){
+  const dest=join(englishRoot,...rel.split('/'));
+  await mkdir(dirname(dest),{recursive:true});
+  await writeFile(dest,english,'utf8');
+}
+console.log('P2LRN_I18N_PHASE=html-generated pages='+(htmlFiles.length+preservedEnglishPages.size));
 const sourceManifestPath=join(siteRoot,'site.webmanifest');
 try{
   const manifest=JSON.parse(await readFile(sourceManifestPath,'utf8'));

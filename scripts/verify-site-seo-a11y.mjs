@@ -12,6 +12,28 @@ const attr=(tag,key)=>new RegExp('\\b'+key+'\\s*=\\s*(["\\\'])([\\s\\S]*?)\\1','
 const tags=(html,tag)=>[...html.matchAll(new RegExp('<'+tag+'\\b[^>]*>','gi'))].map(x=>x[0]);
 const named=(html,tag,key,val)=>tags(html,tag).filter(t=>(attr(t,key)||'').toLowerCase()===val.toLowerCase());
 const errors=[];const indexable=[];const aliases=[];
+// Fact-checked SEO guide must stay substantial, readable and symmetric in both languages.
+for(const [rel,language,faqTitle] of [
+ ['docs/formato-portable-cursos-interactivos/index.html','es','Preguntas frecuentes'],
+ ['en/docs/formato-portable-cursos-interactivos/index.html','en','Frequently asked questions']
+]){
+ const html=await readFile(join(out,...rel.split('/')),'utf8').catch(()=>null);
+ if(!html){errors.push(rel+' missing editorial article');continue}
+ const article=html.match(/<article\b[^>]*class=["'][^"']*doc-content[^"']*["'][^>]*>([\s\S]*?)<\/article>/i)?.[1]||'';
+ const readable=article.replace(/<[^>]+>/g,' ').replace(/&(?:amp|quot|lt|gt|nbsp);/g,' ').trim();
+ const wordCount=readable.split(/\s+/).filter(Boolean).length;
+ if(wordCount<1200||wordCount>1800)errors.push(rel+' article word count outside 1200-1800: '+wordCount);
+ const meta=html.match(/<meta\b[^>]*name=["']description["'][^>]*content=["']([^"']*)/i)?.[1]||'';
+ if(!meta||meta.length>155)errors.push(rel+' missing or overlong meta description');
+ const h2=[...article.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)];
+ const faqAt=article.indexOf('>'+faqTitle+'</h2>');
+ const faqHeadings=faqAt<0?0:(article.slice(faqAt).match(/<h3\b/g)||[]).length;
+ if(h2.length<7||faqHeadings!==5)errors.push(rel+' lacks well-structured sections or five FAQs');
+ const links=[...article.matchAll(/<a\b[^>]*href=["']([^"']+)/gi)].map(m=>m[1]);
+ if(links.length<5)errors.push(rel+' missing relevant internal links');
+ if(!html.includes('<html lang="'+language+'"'))errors.push(rel+' wrong locale');
+}
+
 const sourcePages=(await walk(src)).filter(p=>basename(p)==='index.html');
 for(const file of sourcePages){
  const route=routeOf(src,file);
