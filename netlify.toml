@@ -19,6 +19,55 @@
   status = 301
   force = true
 
+# Consolidated SEO pages: redirect permanently to the existing guides.
+[[redirects]]
+  from = "/crear-cuestionarios-interactivos/"
+  to = "/docs/questionnaires/standard/#crear-cuestionarios-online"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/en/crear-cuestionarios-interactivos/"
+  to = "/en/docs/questionnaires/standard/#crear-cuestionarios-online"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/actividades-educativas-interactivas/"
+  to = "/docs/questionnaires/#juegos-educativos-2d"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/en/actividades-educativas-interactivas/"
+  to = "/en/docs/questionnaires/#juegos-educativos-2d"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/crear-cursos-con-ia/"
+  to = "/skills/#guia-ia"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/en/crear-cursos-con-ia/"
+  to = "/en/skills/#guia-ia"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/scorm-moodle-lms/"
+  to = "/docs/compatibilidad/#scorm-lms"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/en/scorm-moodle-lms/"
+  to = "/en/docs/compatibilidad/#scorm-lms"
+  status = 301
+  force = true
+
 # Historical IA documentation paths now point to the corresponding section
 # in the single canonical guide. Force redirects even when legacy HTML exists,
 # and preserve working links shared before the navigation was reorganized.
