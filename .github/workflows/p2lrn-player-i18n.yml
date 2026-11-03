@@ -1,0 +1,67 @@
+name: P2LRN Player ES-EN Functional QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/toolkit/web/**'
+      - 'packages/toolkit/test/player-ui-i18n.test.mjs'
+      - 'packages/toolkit/test/questionnaire-all-types-audit.test.mjs'
+      - 'deploy/netlify/site/p2lrn.js'
+      - 'deploy/netlify/site/en/p2lrn.js'
+      - 'scripts/browser-smoke-p2lrn-i18n.mjs'
+      - '.github/workflows/p2lrn-player-i18n.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-player-i18n-main
+  cancel-in-progress: true
+
+jobs:
+  player-localization:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+
+      - name: Syntax-check Player and browser QA files
+        shell: powershell
+        run: |
+          Get-ChildItem packages/toolkit/web -Filter *.js -Recurse | ForEach-Object {
+            node --check $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw ('Invalid JavaScript syntax: ' + $_.FullName) }
+          }
+          foreach ($path in @('deploy/netlify/site/p2lrn.js', 'deploy/netlify/site/en/p2lrn.js', 'scripts/browser-smoke-p2lrn-i18n.mjs')) {
+            node --check $path
+            if ($LASTEXITCODE -ne 0) { throw ('Invalid JavaScript syntax: ' + $path) }
+          }
+
+      - name: Test ES-EN UI, quiz scoring and 3D regressions
+        shell: powershell
+        run: |
+          node --test packages/toolkit/test/player-ui-i18n.test.mjs packages/toolkit/test/questionnaire-all-types-audit.test.mjs packages/toolkit/test/questionnaire-classification.test.mjs packages/toolkit/test/quest-3d-player-physics.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Install browser automation without downloading a browser
+        shell: powershell
+        run: |
+          npm install --prefix .p2lrn-i18n-ci --no-save --package-lock=false playwright-core@1.64.1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test ES-EN site, language switch, standard quiz and game in Chrome
+        shell: powershell
+        run: |
+          node scripts/browser-smoke-p2lrn-i18n.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Clear temporary browser testing dependencies
+        if: always()
+        shell: powershell
+        run: |
+          if (Test-Path .p2lrn-i18n-ci) { Remove-Item .p2lrn-i18n-ci -Recurse -Force }
