@@ -625,13 +625,14 @@ export async function parseOfflineAssignmentResult(value,{expectedContentRoot=nu
     receiptMatches===true && signatureValid===true && proofMatchesResult===true && courseMatches && assignmentMatches;
   const evidenceValid=await verifyResultEvidence(result);
   const summaryValid=verifyResultSummary(result);
+  const inProgress=result.attempt?.status==='in_progress';
   const answers=Array.isArray(result.submission?.answers)?result.submission.answers:[],
     scores=Array.isArray(result.submission?.scores)?result.submission.scores:[],
     events=Array.isArray(result.analytics?.events)?result.analytics.events:[],
     anomalies=Array.isArray(result.audit?.anomalies)?result.audit.anomalies:[];
   return Object.freeze({
     result:Object.freeze(result),integrityValid,courseMatches,assignmentMatches,calculatedDigest:calculated,
-    signatureValid,proofMatchesResult,receiptMatches,assignmentAuthenticated,evidenceValid,summaryValid,
+    signatureValid,proofMatchesResult,receiptMatches,assignmentAuthenticated,evidenceValid,summaryValid,inProgress,
     summary:Object.freeze({
       participantLabel:result.assignment?.participantLabel??null,attemptNumber:Number(result.attempt?.number)||null,
       elapsedSeconds:Number(result.attempt?.elapsedSeconds)||0,activeTimeMs:Number(result.analytics?.activeTimeMs)||0,
