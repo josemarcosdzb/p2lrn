@@ -6,6 +6,7 @@ import {join, resolve} from 'node:path';
 import {buildPlayerDistribution, H5P_STANDALONE_VERSION, THREE_VERSION, RAPIER3D_VERSION} from '../../packages/player/scripts/build-dist.mjs';
 import {cleanPlayerSourceSnapshot, preparePlayerSourceSnapshot} from '../../packages/player/scripts/prepare-source-snapshot.mjs';
 import {buildH5pLibraries, LUMI_H5P_LIBRARY_COMMIT} from '../../packages/h5p-libraries/scripts/build.mjs';
+import {publishPackageCorrespondingSource,verifyPackageCorrespondingSource} from './corresponding-source.mjs';
 
 const execFileAsync=promisify(execFile);
 const root = resolve(process.cwd());
@@ -66,6 +67,22 @@ const analyticsPackageDist=join(root,'packages','analytics','dist');
 await cp(analyticsPackageDist,join(outputRoot,'analytics',version,'dist'),{recursive:true,force:true});
 await cp(analyticsPackageDist,join(outputRoot,'analytics','current','dist'),{recursive:true,force:true});
 
+// Publish inspectable, version-matched corresponding source for every first-party
+// npm/CDN component. Player already has its own full source snapshot above.
+const correspondingSource={};
+for(const name of ['toolkit','studio','analytics']){
+  const result=await publishPackageCorrespondingSource({
+    root,outputRoot,name,version,sourceRef:preparedSource.manifest.sourceRef,
+  });
+  const checked=await verifyPackageCorrespondingSource({outputRoot,name,version});
+  await cp(result.targetRoot,join(outputRoot,name,'current','source'),{recursive:true,force:true});
+  correspondingSource[name]={
+    package:'@p2lrn/'+name,
+    manifest:'/'+name+'/'+version+'/source/SOURCE-MANIFEST.json',
+    verifiedFiles:checked.fileCount,
+  };
+}
+
 const h5pPackageDist = join(root, 'packages', 'h5p-libraries', 'dist');
 const h5pManifest = await buildH5pLibraries({output:h5pPackageDist});
 await cp(
@@ -120,6 +137,7 @@ const index = {
     url:'/LICENSE',
     notice:'/NOTICE.md',
   },
+  correspondingSource,
   source:{
     sourceRef:preparedSource.manifest.sourceRef,
     versionedBasePath:`/player/${version}/source/`,
