@@ -1,3 +1,4 @@
+import {playerUiText} from './ui-i18n.js';
 import {CLASSIFICATION_RENDERER} from '../renderer-registry.js';
 import {classificationIsCorrect} from '../game-3d-mechanics.js';
 import {el, finishPanel, setupGame, statusNode, stylesheets} from './game-common.js';
@@ -7,7 +8,7 @@ export {stylesheets};
 export async function render(options) {
   const {game,runtime,shell}=await setupGame({...options,rendererId:CLASSIFICATION_RENDERER});
   const board=el('div',{class:'p2lrn-classification-board'});
-  const status=statusNode('Arrastra cada ficha a su categoría. También puedes seleccionar una ficha y pulsar una categoría.');
+  const status=statusNode(playerUiText('Arrastra cada ficha a su categoría. También puedes seleccionar una ficha y pulsar una categoría.'));
   let trialIndex=0;
   let dragGhost=null;
 
@@ -48,12 +49,12 @@ export async function render(options) {
           const placed=el('button',{type:'button',draggable:'true','data-p2lrn-placed':item.id,'aria-label':`Cambiar categoría de ${item.text}`},item.text);
           placed.addEventListener('dragstart',(event)=>{event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',item.id);selected=item.id;});
           placed.addEventListener('dragend',()=>{selected=null;refresh();});
-          placed.addEventListener('click',()=>{if(runtime.state.completed)return;delete values[item.id];runtime.replaceAnswer(trial.questionId,{classifications:{...values}});selected=item.id;refresh();status.textContent='Elige otra categoría para la ficha.';});
+          placed.addEventListener('click',()=>{if(runtime.state.completed)return;delete values[item.id];runtime.replaceAnswer(trial.questionId,{classifications:{...values}});selected=item.id;refresh();status.textContent=playerUiText('Elige otra categoría para la ficha.');});
           body.append(placed);
         });
       }
       if(solvedCount===trial.objects.length){
-        status.textContent='Has colocado todas las fichas. Finaliza para entregar tus respuestas.';
+        status.textContent=playerUiText('Has colocado todas las fichas. Finaliza para entregar tus respuestas.');
       }
     };
 
@@ -65,7 +66,7 @@ export async function render(options) {
       selected=null;
       busy=false;
       refresh();
-      status.textContent='Ficha colocada. Puedes cambiarla de categoría antes de finalizar.';
+      status.textContent=playerUiText('Ficha colocada. Puedes cambiarla de categoría antes de finalizar.');
       return true;
     };
 
@@ -175,16 +176,16 @@ export async function render(options) {
     }
 
     const nav=el('div',{class:'p2lrn-game-actions'});
-    const previous=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},'Anterior');
-    const next=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===game.data.trials.length-1},'Siguiente');
-    const restart=el('button',{type:'button',class:'p2lrn-game-button'},'Reiniciar clasificación');
+    const previous=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},playerUiText('Anterior'));
+    const next=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===game.data.trials.length-1},playerUiText('Siguiente'));
+    const restart=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Reiniciar clasificación'));
     previous.addEventListener('click',()=>{trialIndex-=1;renderTrial();});
     next.addEventListener('click',()=>{trialIndex+=1;renderTrial();});
     restart.addEventListener('click',()=>{
       for(const key of Object.keys(values)) delete values[key];
       selected=null;
       refresh();
-      status.textContent='Clasificación reiniciada.';
+      status.textContent=playerUiText('Clasificación reiniciada.');
     });
     nav.append(previous,next,restart);
 
