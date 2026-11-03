@@ -91,10 +91,13 @@ for(const href of ['/docs/analytics/','/analytics/']){
 }
 if(sectionChunks.get('SEGUIMIENTO')?.includes("['/docs/analytics/'")) failures.push('p2lrn.js: Analytics docs must not remain under SEGUIMIENTO');
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map((match)=>({href:match[1],label:match[2]}));
-if(sidebarLinks.length!==34) failures.push('p2lrn.js: expected 34 global sidebar links, found '+sidebarLinks.length);
+if(sidebarLinks.length!==36) failures.push('p2lrn.js: expected 36 global sidebar links, found '+sidebarLinks.length);
 const hrefs=sidebarLinks.map((item)=>item.href);
 for(const required of ['/docs/empezar-facil/','/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/','/docs/colaboracion/','/docs/progresion/','/docs/metricas/','/docs/analytics/','/docs/compatibilidad/']){
   if(!hrefs.includes(required)) failures.push('p2lrn.js: missing global sidebar route '+required);
+}
+for(const required of ['/docs/cdn/analytics/','/docs/npm/analytics/']){
+  if(!hrefs.includes(required))failures.push('p2lrn.js: missing Analytics CDN/NPM sidebar route '+required);
 }
 const duplicates=hrefs.filter((href,index)=>hrefs.indexOf(href)!==index);
 if(duplicates.length) failures.push('p2lrn.js: duplicate sidebar hrefs: '+[...new Set(duplicates)].join(', '));
