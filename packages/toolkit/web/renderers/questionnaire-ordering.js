@@ -1,6 +1,7 @@
 import {ORDERING_RENDERER} from '../renderer-registry.js';
 
 import {el, finishPanel, setupGame, statusNode, stylesheets} from './game-common.js';
+import {playerUiText} from './ui-i18n.js';
 export {stylesheets};
 
 function mixed(items,variant=0){
@@ -29,7 +30,7 @@ export async function render(options){
   let dragging=null;
   let pointerStart=null;
   const board=el('div',{class:'p2lrn-game-board'});
-  const tabs=el('div',{class:'p2lrn-game-actions',role:'tablist','aria-label':'Secuencias de ordenación'});
+  const tabs=el('div',{class:'p2lrn-game-actions',role:'tablist','aria-label':playerUiText('Secuencias de ordenación')});
   const list=el('div');
   const status=statusNode('Arrastra y suelta los elementos hasta reconstruir el orden correcto.');
 
@@ -39,18 +40,18 @@ export async function render(options){
     mixVariant=0;
     current=mixed(sequence().items,0);
     dragging=null;pointerStart=null;sync();redraw();
-    status.textContent='Arrastra y suelta los elementos hasta reconstruir el orden correcto.';
+    status.textContent=playerUiText('Arrastra y suelta los elementos hasta reconstruir el orden correcto.');
   };
   const performMove=(from,to)=>{
     if(from===to||from<0||to<0)return;
     current=move(current,from,to);
     sync();redraw();
-    status.textContent='Orden modificado. Sigue arrastrando o comprueba el resultado.';
+    status.textContent=playerUiText('Orden modificado. Sigue arrastrando o comprueba el resultado.');
   };
   const redrawTabs=()=>{
     tabs.replaceChildren();
     sequences.forEach((item,itemIndex)=>{
-      const button=el('button',{type:'button',class:'p2lrn-game-button',role:'tab','aria-selected':itemIndex===index},`Reto ${itemIndex+1}`);
+      const button=el('button',{type:'button',class:'p2lrn-game-button',role:'tab','aria-selected':itemIndex===index},playerUiText(`Reto ${itemIndex+1}`));
       if(itemIndex===index)button.classList.add('is-selected');
       button.addEventListener('click',()=>{index=itemIndex;resetForIndex();redrawTabs();});
       tabs.append(button);
@@ -60,10 +61,10 @@ export async function render(options){
     list.replaceChildren();
     current.forEach((item,itemIndex)=>{
       const row=el('div',{class:'p2lrn-order-row',draggable:'true','data-order-index':itemIndex});
-      const handle=el('button',{type:'button',class:'p2lrn-game-card','aria-label':`Mover ${item.text}`},item.text);
+      const handle=el('button',{type:'button',class:'p2lrn-game-card','aria-label':playerUiText('Mover ')+item.text},item.text);
       const controls=el('div',{class:'p2lrn-order-controls'});
-      const up=el('button',{type:'button',class:'p2lrn-game-button',disabled:itemIndex===0,'aria-label':`Subir ${item.text}`},'↑');
-      const down=el('button',{type:'button',class:'p2lrn-game-button',disabled:itemIndex===current.length-1,'aria-label':`Bajar ${item.text}`},'↓');
+      const up=el('button',{type:'button',class:'p2lrn-game-button',disabled:itemIndex===0,'aria-label':playerUiText('Subir ')+item.text},'↑');
+      const down=el('button',{type:'button',class:'p2lrn-game-button',disabled:itemIndex===current.length-1,'aria-label':playerUiText('Bajar ')+item.text},'↓');
       up.addEventListener('click',()=>performMove(itemIndex,itemIndex-1));
       down.addEventListener('click',()=>performMove(itemIndex,itemIndex+1));
       row.addEventListener('dragstart',(event)=>{dragging=item.id;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',item.id);});
@@ -78,7 +79,7 @@ export async function render(options){
         if(event.pointerType==='mouse'&&event.button!==0)return;
         pointerStart={id:item.id,y:event.clientY};
         handle.setPointerCapture?.(event.pointerId);
-        status.textContent='Arrastrando. Suelta el elemento en la posición deseada.';
+        status.textContent=playerUiText('Arrastrando. Suelta el elemento en la posición deseada.');
       });
       handle.addEventListener('pointermove',(event)=>{
         if(!pointerStart||event.pointerType==='mouse')return;
@@ -93,11 +94,11 @@ export async function render(options){
   };
 
   const actions=el('div',{class:'p2lrn-game-actions'});
-  const check=el('button',{type:'button',class:'p2lrn-game-button'},'Comprobar');
-  const reshuffle=el('button',{type:'button',class:'p2lrn-game-button'},'Mezclar de nuevo');
+  const check=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Comprobar'));
+  const reshuffle=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Mezclar de nuevo'));
   check.addEventListener('click',()=>{
     sync();
-    status.textContent='Orden registrado. La corrección se realizará al finalizar la actividad.';
+    status.textContent=playerUiText('Orden registrado. La corrección se realizará al finalizar la actividad.');
   });
   reshuffle.addEventListener('click',()=>{
     let next=current;
@@ -108,7 +109,7 @@ export async function render(options){
       if(!candidate.every((item,pos)=>item.id===current[pos]?.id)){next=candidate;break;}
     }
     current=next;dragging=null;pointerStart=null;sync();redraw();
-    status.textContent='Elementos mezclados de nuevo. Arrástralos para ordenar.';
+    status.textContent=playerUiText('Elementos mezclados de nuevo. Arrástralos para ordenar.');
   });
   actions.append(check,reshuffle);
   redrawTabs();sync();redraw();board.append(tabs,list,actions);shell.append(board,status);finishPanel(runtime,shell);return runtime;
