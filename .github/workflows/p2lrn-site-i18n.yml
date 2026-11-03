@@ -19,6 +19,7 @@ on:
       - 'scripts/verify-site-bilingual.mjs'
       - 'scripts/site-i18n-ast.mjs'
       - 'scripts/test-site-i18n-ast.mjs'
+      - 'scripts/test-site-ui-locales.mjs'
       - 'scripts/site-en-runtime-reviewed.json'
       - 'packages/toolkit/web/studio/**'
       - 'packages/analytics/src/locale.js'
@@ -73,6 +74,8 @@ jobs:
           node --check scripts/site-i18n-ast.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --test scripts/test-site-i18n-ast.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test scripts/test-site-ui-locales.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Generate complete English mirror
