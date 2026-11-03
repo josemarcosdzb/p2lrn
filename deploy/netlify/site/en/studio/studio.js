@@ -382,7 +382,7 @@ async function addReaderFile(file){
   let result;
   const endpoint=document.body.dataset.readerEndpoint||'/api/p2lrn/studio/read';
   const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
-  if(!response.ok)throw new Error('Reader no disponible: HTTP '+response.status+". Configure the @p2lrn/toolkit/document-reader endpoint.");
+  if(!response.ok)throw new Error("Reader unavailable: HTTP "+response.status+". Configure the @p2lrn/toolkit/document-reader endpoint.");
   result=await response.json();
   const title=result.metadata?.detectedTitle||file.name.replace(/\.[^.]+$/,'');
   const activity=studio.addEmbeddedResource(insertionParent(),{title,filename:'reader.html',mediaType:'text/html',bytes:new TextEncoder().encode(extractedDocumentHtml(result))});await selectCreated(activity,"Document imported with Reader");
@@ -446,7 +446,7 @@ async function addContentKind(kind){
   if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'en'});return selectCreated(a,"Live poll added");}
   if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'en'});return selectCreated(a,"Shared board added");}
   if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'en'});return selectCreated(a,"Peer review added");}
-  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const names={memory:"Memory",matching:"Matching",ordering:"Ordering",classification:"Classification",'true-false':"True / false",'fill-blanks':"Fill in the blanks",'word-search':"Word search",crossword:"Crossword",rosco:"Word wheel",'3d':"3D game",'3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});return selectCreated(a,names[kind]+" added");}
+  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const names={memory:"Memory",matching:"Matching",ordering:"Ordering",classification:"Classification",'true-false':"True / false",'fill-blanks':"Fill in the blanks",'word-search':"Word search",crossword:"Crossword",rosco:"Word wheel",'3d':"3D game",'3d-matching':"3D matching",'3d-classification':"3D classification"};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});return selectCreated(a,names[kind]+" added");}
   if(kind==='component'){chooseComponent();return;}
   if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:"Activity group",language:'en',mode:'free',completion:'all'});return selectCreated(activity,"Activity group added");}
 }
@@ -632,29 +632,29 @@ async function reviewOfflineDelivery(file){
     ?'Coincide: encargo autenticado'
     :parsed.assignmentAuthenticated===false?"MISMATCH / invalid signature"
     :"Not selected: verification pending");
-  addOfflineReviewRow(content,'Cadena de evidencias',parsed.evidenceValid===true
+  addOfflineReviewRow(content,"Evidence chain",parsed.evidenceValid===true
     ?"Consistent (the learner can recalculate it)"
     :parsed.evidenceValid===false?'NO coincide':"Cannot be verified in this older delivery");
-  addOfflineReviewRow(content,'Coherencia del resumen',parsed.summaryValid
+  addOfflineReviewRow(content,"Summary consistency",parsed.summaryValid
     ?"Answers, events and scores match the records"
     :"MISMATCH: review the reported data");
-  addOfflineReviewRow(content,"Learner",parsed.summary.participantLabel||'Sin identificar');
-  addOfflineReviewRow(content,'Intento',parsed.summary.attemptNumber);
+  addOfflineReviewRow(content,"Learner",parsed.summary.participantLabel||"Unidentified");
+  addOfflineReviewRow(content,"Attempt",parsed.summary.attemptNumber);
   addOfflineReviewRow(content,'Aperturas registradas',parsed.summary.openings);
-  addOfflineReviewRow(content,'Primera apertura',parsed.summary.firstOpenedAt?new Date(parsed.summary.firstOpenedAt).toLocaleString():'No registrada');
+  addOfflineReviewRow(content,"First opening",parsed.summary.firstOpenedAt?new Date(parsed.summary.firstOpenedAt).toLocaleString():'No registrada');
   addOfflineReviewRow(content,"Last opening",parsed.summary.lastOpenedAt?new Date(parsed.summary.lastOpenedAt).toLocaleString():'No registrada');
-  addOfflineReviewRow(content,'Caducidad local',parsed.summary.expiresAt?new Date(parsed.summary.expiresAt).toLocaleString():'Sin caducidad por primera apertura');
+  addOfflineReviewRow(content,'Caducidad local',parsed.summary.expiresAt?new Date(parsed.summary.expiresAt).toLocaleString():"No first-open expiration");
   addOfflineReviewRow(content,'Sesiones registradas',parsed.summary.sessions.length);
-  addOfflineReviewRow(content,'Identificador local del dispositivo',parsed.summary.deviceBindingId||'No disponible');
+  addOfflineReviewRow(content,"Local device identifier",parsed.summary.deviceBindingId||"Unavailable");
   const score=parsed.summary.latestScore?.normalized;
   addOfflineReviewRow(content,"Reported score (not official)",score==null
     ?"No score":Math.round(Number(score)*10000)/100+' %');
-  addOfflineReviewRow(content,'Respuestas',parsed.summary.answers.length);
+  addOfflineReviewRow(content,"Answers",parsed.summary.answers.length);
   addOfflineReviewRow(content,'Evaluaciones',parsed.summary.scores.length);
   addOfflineReviewRow(content,"Events",parsed.summary.events.length);
   addOfflineReviewRow(content,'Tiempo activo',Math.round(parsed.summary.activeTimeMs/1000)+' s');
   addOfflineReviewRow(content,'Incidencias',parsed.summary.anomalies.length
-    ? parsed.summary.anomalies.map(item=>item.code||'Incidencia').join(', ') : 'Ninguna registrada');
+    ? parsed.summary.anomalies.map(item=>item.code||'Incidencia').join(', ') : "None recorded");
   const note=document.createElement('p');note.className='studio-offline-note';
   note.textContent="The signature only authenticates the teacher's assignment when its original receipt is retained and selected. Answers and grades are generated on the learner's device and are not authenticated; offline deadlines depend on that device's clock.";
   content.append(note);
@@ -670,12 +670,12 @@ async function reviewOfflineDelivery(file){
 
 async function exportPackage(){
   if(!studio)return;
-  setStatus('Construyendo paquete…');
+  setStatus("Building package…");
   const exported=await buildVerifiedPreview();
   downloadStudioBytes(exported.bytes,exported.filename,'application/vnd.p2lrn+zip');
   exportedRevision=studio.changeCount;
   updateChanges();
-  setStatus('Paquete exportado y verificado');
+  setStatus("Package exported and verified");
 }
 
 function hideAddHelp(){
