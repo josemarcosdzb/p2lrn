@@ -360,6 +360,8 @@ export class P2LRNPlayerElement extends HTMLElement {
   static readonly p2lrnVersion: "0.5.0-alpha.11";
   /** @deprecated Compatibility alias for Alpha15 integrations. */
   static readonly p2rlnVersion: "0.5.0-alpha.11";
+  startResultCapture(options:P2LRNResultOptions):P2LRNResultRecorder;
+  readonly resultRecorder:P2LRNResultRecorder|null;
   adapter: P2LRNHostAdapter | null;
   capabilityBroker: CapabilityBroker | null;
   packageCache: P2LRNPackageCache | null;
