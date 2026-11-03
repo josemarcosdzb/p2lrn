@@ -153,6 +153,16 @@ The installer generates technical integration, **not application authorization**
 The npm save helper fixes the configured server directory by default. The browser's `X-P2LRN-Path` header is ignored unless the integrator explicitly enables `allowClientPath: true`.
 
 
+## Reanudar un curso offline en otro dispositivo
+
+El progreso **no debe depender de copiar el almacenamiento del navegador**. Al trabajar en una entrega offline con reanudación habilitada, el alumno puede pulsar **Guardar progreso para otro dispositivo**. Se descarga un `.p2lrn-result` con `attempt.status='in_progress'`, código del alumno, identificador de intento y estado de las actividades.
+
+Para continuar en otro ordenador, el alumno transporta **la misma entrega `.p2lrn-offline.exe` o `.p2lrn-offline.zip` y su fichero de progreso `.p2lrn-result`**. El curso y su firma no se alteran. En el nuevo equipo abre la entrega, utiliza **Importar progreso y continuar** para elegir el resultado y después **Continuar intento**. Se recuperan el mismo código e intento, junto con los estados, respuestas y eventos pendientes.
+
+La importación rechaza resultados corruptos, de otra entrega o versión del curso, de otro alumno o ya finalizados, y no sobrescribe intentos locales. Si el profesor desactiva `allowResume`, no se permite esta transferencia de un intento pendiente. El archivo debe copiarse antes de abandonar el dispositivo y conservarse con privacidad; ni una descarga ni un código declarado constituyen prueba de autoría.
+
+Al finalizar, la entrega genera un `.p2lrn-result` definitivo con estado `submitted`. Analytics puede identificar el archivo intermedio como `in_progress`, pero **no lo convierte en una nota o entrega final**. No hay fusión automática de dos copias editadas simultáneamente. La transferencia por archivos funciona sin conexión ni base de datos.
+
 ## Identificación del alumno y resultados compatibles con Analytics
 
 Las entregas offline creadas desde Studio generan un fichero `.p2lrn-result` al finalizar el intento. Para no confundir alumnos que comparten el mismo paquete de entrega, el alumno debe introducir el **código individual asignado por el profesor** antes de comenzar. La entrega incluye el código, el alumno, el curso y el intento en el resultado; Analytics puede agruparlos sin una base de datos.
