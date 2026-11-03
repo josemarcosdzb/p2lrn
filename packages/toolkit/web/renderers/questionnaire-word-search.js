@@ -65,12 +65,12 @@ export async function render(options) {
     const input=clueInputs.get(word.id);
     if(input&&!input.value) input.value=word.answer??word.word;
     redraw();
-    status.textContent=`Respuesta encontrada. ${found.size}/${words.length}.`;
+    status.textContent=playerUiText(`Respuesta encontrada. ${found.size}/${words.length}.`);
     if(found.size===words.length){
       void runtime.finish().then((score)=>{
         const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
         status.textContent=score&&reveal
-          ? `Sopa completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`
+          ? playerUiText(`Sopa completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`)
           : 'Sopa completada. Actividad enviada.';
       });
     }
@@ -173,7 +173,7 @@ export async function render(options) {
       class:'p2lrn-game-input p2lrn-word-answer',
       autocomplete:'off',
       spellcheck:'false',
-      'aria-label':`Respuesta: ${word.clue}`,
+      'aria-label':playerUiText(`Respuesta: ${word.clue}`),
     });
     input.addEventListener('input',()=>{
       const typed=normalizeWord(input.value);
