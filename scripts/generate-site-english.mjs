@@ -601,7 +601,7 @@ function translateHtmlFragment(fragment){
     $('['+attr+']').each((_,el)=>$(el).attr(attr,translatePlain($(el).attr(attr))));
   return $('body').html()??fragment;
 }
-function translateJavaScriptSource(source){
+function translateJavaScriptSource(source,{rewriteRoutes=true}={}){
   let ast;
   try{ast=parseJs(source);}catch{return source;}
   const edits=[];
@@ -618,7 +618,7 @@ function translateJavaScriptSource(source){
     let next=node.value.includes('<')&&node.value.includes('>')
       ?translateHtmlFragment(node.value)
       :translatePlain(node.value);
-    next=rewriteHref(next,routes);
+    if(rewriteRoutes)next=rewriteHref(next,routes);
     if(next!==node.value)edits.push({start:node.start,end:node.end,text:JSON.stringify(next)});
   });
   let generated=source;
@@ -699,7 +699,7 @@ try{
 
 console.log('P2LRN_I18N_PHASE=generate-js files='+jsSources.size);
 for(const [rel,source] of jsSources){
-  let generated=translateJavaScriptSource(source);
+  let generated=translateJavaScriptSource(source,{rewriteRoutes:rel!=='p2lrn.js'});
   // The English Studio entrypoint uses the same tested shared runtime modules.
   // A relative ./runtime/ import from /en/studio/ otherwise returns HTTP 404.
   if(rel==='studio/studio.js'){
