@@ -59,3 +59,11 @@
 El empaquetador Python tiene regresiones en `scripts/test_p2lrn_package.py` y el adaptador oficial se prueba con `scripts/test_p2lrn_official_real.mjs` contra Toolkit compilado; antes de publicar cambios en esta Skill, ejecutar `python -m unittest discover -s scripts -p "test_*.py"`. Los límites de ZIP (miembro, total y cantidad) son deliberados para esta versión offline y no límites normativos de P2LRN.
 
 La carpeta `assets/ejemplo-curso.json` contiene un blueprint de muestra con lección, examen, juego de relacionar y ordenar 3D. Cuando un usuario pida «prueba el plugin», úsalo para crear un paquete demostrativo distinto y devuelve el `.p2lrn` generado.
+
+## Multipart, continuidad y fuentes web
+
+- Dividir cursos `.p2lrn` en fragmentos transportables con `python scripts/multipart.py split curso.p2lrn carpeta --size 5242880`. Entregar `multipart.json` y **todos** los `part-XXXX.bin`. Para reconstruir: `python scripts/multipart.py join carpeta/multipart.json curso.p2lrn`. Verificar SHA-256 individual y global; nunca afirmar reconstrucción si falta una parte.
+- Para crear unidades en conversaciones distintas, conservar un proyecto `p2lrn-course-project/1` con referencias a archivos `p2lrn-course-part/1`, `projectId`, `partId` y SHA-256; ensamblar con `python scripts/multipart.py assemble proyecto.json curso.p2lrn`. Consultar `references/multipart-research.md`.
+- Cada conversación debe entregar el archivo de unidad y el manifiesto actualizado como archivos reales. En otra conversación recuperar los archivos mediante las herramientas autorizadas o solicitar que se adjunten; nunca presumir que los binarios persisten en el historial.
+- Buscar información e imágenes en Internet cuando existan herramientas de búsqueda. Contrastar fuentes, registrar URL, autor, licencia y atribución; no incorporar imágenes con licencia incompatible ni afirmar que están embebidas sin verificar el paquete y el Player.
+- No generar ejecutables Windows mediante multipart. El empaquetado multipart es independiente de la exportación offline de Studio.
