@@ -23,6 +23,13 @@ function chromeBinary(){
 async function fileFor(urlPath){
   const clean=decodeURIComponent(urlPath.split('?')[0]);
   if(clean.includes('\\')||clean.split('/').includes('..'))return null;
+  // Serve exactly the immutable open-source assets copied by the CDN build.
+  const vendor={
+    '/toolkit-web/vendor/three.module.js':join(repo,'.p2lrn-i18n-ci','node_modules','three','build','three.module.js'),
+    '/toolkit-web/vendor/three.core.js':join(repo,'.p2lrn-i18n-ci','node_modules','three','build','three.core.js'),
+    '/toolkit-web/vendor/rapier3d.mjs':join(repo,'.p2lrn-i18n-ci','node_modules','@dimforge','rapier3d-compat','dist','rapier.mjs')
+  };
+  if(Object.hasOwn(vendor,clean))return existsSync(vendor[clean])?vendor[clean]:null;
   const routes=[
     ['/toolkit-web/',toolkit],
     ['/studio/runtime/',join(toolkit,'studio')],
