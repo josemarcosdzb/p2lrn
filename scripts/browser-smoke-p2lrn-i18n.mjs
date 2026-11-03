@@ -212,8 +212,8 @@ async function additionalGameRenderers(language){
       const bytes=new TextEncoder().encode(JSON.stringify(pkg));
       const runtime=await render({container,bytes,
         decodeJson:(input)=>JSON.parse(new TextDecoder().decode(input)),context:{}});
-      const status=[...container.querySelectorAll('.p2lrn-game-status')].at(-1)?.textContent
-        ??container.querySelector('.p2lrn-q-progress')?.textContent??'';
+      const status=[...container.querySelectorAll('.p2lrn-game-status')].map(x=>x.textContent).filter(Boolean).join(' | ')
+        ||container.querySelector('.p2lrn-q-progress')?.textContent||'';
       const buttons=[...container.querySelectorAll('button')].slice(0,16).map(x=>x.textContent.trim());
       const header=container.querySelector('.p2lrn-game-header h2,.p2lrn-q-header h2')?.textContent;
       const hasShell=Boolean(container.querySelector('.p2lrn-game-shell,.p2lrn-q-shell'));
