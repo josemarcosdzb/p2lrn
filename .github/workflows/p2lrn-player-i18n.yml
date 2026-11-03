@@ -48,10 +48,10 @@ jobs:
           node --test packages/toolkit/test/player-ui-i18n.test.mjs packages/toolkit/test/questionnaire-all-types-audit.test.mjs packages/toolkit/test/questionnaire-classification.test.mjs packages/toolkit/test/quest-3d-player-physics.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Install browser automation without downloading a browser
+      - name: Install pinned browser automation and open-source 3D runtime
         shell: powershell
         run: |
-          npm install --prefix .p2lrn-i18n-ci --no-save --package-lock=false playwright-core@1.64.1
+          npm install --prefix .p2lrn-i18n-ci --no-save --package-lock=false playwright-core@1.64.1 three@0.186.1 @dimforge/rapier3d-compat@0.21.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test ES-EN site, language switch, standard quiz and game in Chrome
