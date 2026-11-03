@@ -254,6 +254,12 @@ const MANUAL=new Map(Object.entries({
   'Trabajar con los cursos del ordenador':'Work with local courses','8. Volver a trabajar sobre un curso':'8. Reopen and edit a course'
 }));
 
+// Human-reviewed runtime and editor strings override machine translation cache.
+const reviewedRuntime=JSON.parse(await readFile(join(root,'scripts','site-en-runtime-reviewed.json'),'utf8'));
+for(const [source,english] of Object.entries(reviewedRuntime)){
+  if(!source.trim()||!english.trim())throw Error('Invalid reviewed runtime translation');
+  MANUAL.set(source,english);
+}
 const SPANISH_RE=/[áéíóúñü¿¡]|\b(?:el|la|los|las|una?|unos|unas|de|del|al|para|por|con|sin|desde|hasta|como|cómo|que|qué|quién|cuál|cuando|cuándo|donde|dónde|este|esta|estos|estas|ese|esa|esos|esas|su|sus|tu|tus|nuestro|nuestra|puede|puedes|pueden|crear|crea|curso|cursos|juego|juegos|alumno|alumnos|profesor|profesores|docente|lección|lecciones|actividad|actividades|abrir|cerrar|guardar|descargar|seleccionar|eliminar|añadir|nuevo|nueva|documentación|integración|colaboración|seguimiento|métricas|analítica|progresión|referencia|recursos|paquete|paquetes|formato|formatos|compatible|compatibilidad|resultado|resultados|respuesta|respuestas|pregunta|preguntas|intento|intentos|autor|derechos|titular|licencia|privacidad|términos|aviso|contacto|solución|problemas|antes|empezar|instalación|reproducir|disponible|fecha|contenido|puntuación|archivo|archivos|herramientas|plataforma|plataformas|navegador|compartir|revisión|primera|después|todo|toda|todos|todas|más|menos|también|sólo|solo|ningún|ninguna|memoria|relacionar|ordenar|clasificar|verdadero|falso|crucigrama|rosco|visor|inicio|menú|anterior|siguiente|configurar|página|páginas|datos|calificaciones|ejemplos|ejemplo|seguridad)\b/i;
 
 const TECH_EXACT=new Set(['P2LRN','Player','Studio','Toolkit','Analytics','SCORM','H5P','cmi5','xAPI','QTI','LTI','LMS','HTML','CSS','JavaScript','TypeScript','Node','Node.js','NPM','npm','CDN','API','MCP','JSON','JSON-LD','SHA-256','Ed25519','WebRTC','URL','HTTP','HTTPS','ChatGPT','Claude','Gemini','Grok','Windows','Linux','macOS','ZIP','CSV','EPUB','DOCX','PPTX','PDF','RTF','ODT','Markdown','.p2lrn','.p2lrn-result','P2LRN-NCSL 1.0','Apache-2.0','MIT']);
