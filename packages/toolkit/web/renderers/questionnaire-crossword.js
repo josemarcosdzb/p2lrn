@@ -9,7 +9,7 @@ const cellsFor=(entry)=>Array.from({length:entry.word.length},(_,index)=>({
   row:entry.row+(entry.direction==='V'?index:0),
   col:entry.col+(entry.direction==='H'?index:0),
 }));
-const labelFor=(entry)=>(entry.direction==='H'?'Horizontal ':'Vertical ')+entry.number+': '+entry.clue;
+const labelFor=(entry)=>playerUiText(entry.direction==='H'?'Horizontal ':'Vertical ')+entry.number+': '+entry.clue;
 
 export async function render(options){
   const {game,runtime,shell}=await setupGame({...options,rendererId:CROSSWORD_RENDERER});
@@ -43,7 +43,7 @@ export async function render(options){
       if(number)cell.append(el('span',{class:'p2lrn-crossword-number','aria-hidden':'true'},number));
       const input=el('input',{
         type:'text',maxlength:'1',autocomplete:'off',autocapitalize:'characters',spellcheck:'false',
-        'aria-label':'Casilla fila '+(r+1)+', columna '+(c+1)+(number?', número '+number:''),
+        'aria-label':playerUiText('Casilla fila ')+(r+1)+playerUiText(', columna ')+(c+1)+(number?playerUiText(', número ')+number:''),
       });
       inputs.set(key,input);cells.set(key,cell);
       cell.append(input);td.append(cell);tr.append(td);
@@ -154,7 +154,7 @@ export async function render(options){
     const score=await runtime.finish({allowMissingRequired:true});
     const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
     status.textContent=score&&reveal
-      ?'Crucigrama entregado: '+score.pointsEarned+'/'+score.pointsPossible+playerUiText(' puntos.')
+      ?playerUiText('Crucigrama entregado: ')+score.pointsEarned+'/'+score.pointsPossible+playerUiText(' puntos.')
       :playerUiText('Crucigrama entregado. La corrección no está disponible para el alumno.');
   });
   reset.addEventListener('click',()=>{
@@ -163,7 +163,7 @@ export async function render(options){
     }
     inputs.forEach(input=>{input.value='';input.readOnly=false;input.parentElement?.classList.remove('is-solved');});
     completed=false;check.disabled=false;
-    status.textContent='Crucigrama reiniciado.';
+    status.textContent=playerUiText('Crucigrama reiniciado.');
     if(entries[0])selectEntry(entries[0],true);
   });
   actions.append(check,reset);
