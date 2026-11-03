@@ -183,7 +183,12 @@
   ];
 
   const normalizePath = (value) => {
-    const pathname = String(value || '/').split(/[?#]/, 1)[0].replace(/\/index\.html$/u, '/');
+    // Route comparisons use the same logical path for both languages.
+    // English pages keep their /en/ URL, while the navigation config remains
+    // independent of the locale and therefore preserves active links/sidebars.
+    let pathname = String(value || '/').split(/[?#]/, 1)[0].replace(/\/index\.html$/u, '/');
+    if(/^en(?:-|$)/i.test(document.documentElement.lang||'')&&pathname.startsWith('/en/'))
+      pathname=pathname.slice(3)||'/';
     return pathname.endsWith('/') ? pathname : pathname + '/';
   };
 
@@ -1027,7 +1032,7 @@
   const entry=[...document.scripts].find((script)=>{
     if(!script.src)return false;
     const url=new URL(script.src,document.baseURI);
-    return url.origin===location.origin&&url.pathname==='/p2lrn.js';
+    return url.origin===location.origin&&['/p2lrn.js','/en/p2lrn.js'].includes(url.pathname);
   });
   const revision=entry?new URL(entry.src).searchParams.get('v'):null;
   label.textContent=revision?'Web '+revision.slice(0,12):'Web sin revisión';
