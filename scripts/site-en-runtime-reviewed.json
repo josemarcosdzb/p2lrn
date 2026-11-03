@@ -471,5 +471,10 @@
   "P2LRN Analytics listo · datos cargados.": "P2LRN Analytics ready · data loaded.",
   "Resultado offline abierto en Analytics.": "Offline result opened in Analytics.",
   "No se pudieron cargar los datos de Analytics.": "Could not load Analytics data.",
-  "No se pudo abrir el resultado offline: ": "Could not open the offline result: "
+  "No se pudo abrir el resultado offline: ": "Could not open the offline result: ",
+  "Idioma del sitio": "Site language",
+  "Cambiar a español": "Switch to Spanish",
+  "Cambiar a inglés": "Switch to English",
+  "Sitio en español": "Spanish website",
+  "Sitio en inglés": "English website"
 }
