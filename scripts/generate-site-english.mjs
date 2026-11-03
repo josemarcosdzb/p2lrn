@@ -346,10 +346,10 @@ function rewriteAbsoluteUrl(value,routes){
 }
 function looksSpanish(value){return MANUAL.has(String(value).trim())||SPANISH_RE.test(String(value));}
 // These string literals are stable section IDs, not language-dependent labels.
-const STRUCTURAL_JS_TOKENS=new Set(['para-que','crear-cursos']);
+const STRUCTURAL_JS_TOKENS=new Set(['para-que','crear-cursos','en','es','en-US','es-ES','en-GB','es-MX']);
 function shouldTranslate(value){
   const text=String(value??'').trim();
-  if(!text||STRUCTURAL_JS_TOKENS.has(text)||TECH_EXACT.has(text)||!/[A-Za-zÁÉÍÓÚÑÜáéíóúñü]/.test(text))return false;
+  if(!text||STRUCTURAL_JS_TOKENS.has(text)||/^[a-z]{2}(?:-[A-Za-z]{2})?$/.test(text)||TECH_EXACT.has(text)||!/[A-Za-zÁÉÍÓÚÑÜáéíóúñü]/.test(text))return false;
   if(text.startsWith('{')||text.startsWith('[')){
     try{JSON.parse(text);return false;}catch{}
   }
