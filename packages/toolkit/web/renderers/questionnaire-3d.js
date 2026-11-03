@@ -1,3 +1,4 @@
+import {playerUiText} from './ui-i18n.js';
 import {THREE_D_RENDERER} from '../renderer-registry.js';
 import {
   appendUniqueConnection,
@@ -115,7 +116,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
   });
 
   const panel=el('div',{class:'p2lrn-3d-accessible'});
-  const title=el('p',{class:'p2lrn-game-description'},'Selecciona un objeto y después una posición. También puedes usar los selectores accesibles.');
+  const title=el('p',{class:'p2lrn-game-description'},playerUiText('Selecciona un objeto y después una posición. También puedes usar los selectores accesibles.'));
   const rows=el('div',{class:'p2lrn-q-fields'});
   const selects=new Map();
 
@@ -145,7 +146,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
   }
 
   function place(itemId,slotIndex) {
-    if (!itemId) { setText(status,'Selecciona primero un objeto.'); return false; }
+    if (!itemId) { setText(status,playerUiText('Selecciona primero un objeto.')); return false; }
     const current=placed.indexOf(itemId);
     const occupied=placed[slotIndex];
     if (occupied && occupied!==itemId) {
@@ -162,7 +163,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     persistPlacement();
     const order=currentOrder();
     if (order) {
-      setText(status,orderingIsCorrect(order,trial.correctOrder)?'Orden correcto.':'Orden completo; puedes seguir ajustándolo.');
+      setText(status,orderingIsCorrect(order,trial.correctOrder)?playerUiText('Orden correcto.'):playerUiText('Orden completo; puedes seguir ajustándolo.'));
     } else {
       setText(status,`Objeto colocado en la posición ${slotIndex+1}.`);
     }
@@ -173,7 +174,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     const row=el('label',{class:'p2lrn-q-field'});
     row.append(el('span',{},item.text));
     const select=el('select');
-    select.append(el('option',{value:''},'Sin colocar'));
+    select.append(el('option',{value:''},playerUiText('Sin colocar')));
     placed.forEach((_,index)=>select.append(el('option',{value:String(index)},`Posición ${index+1}`)));
     select.addEventListener('change',()=>{
       if(select.value===''){
@@ -185,7 +186,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
         syncObject(item.id);
         refreshSelects();
         persistPlacement();
-        setText(status,'Objeto devuelto a la zona de salida.');
+        setText(status,playerUiText('Objeto devuelto a la zona de salida.'));
         return;
       }
       place(item.id,Number(select.value));
@@ -208,7 +209,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
         selected=meta.id;
         scene.carry(`order:${meta.id}`,false);
         scene.highlight(`order:${meta.id}`,true);
-        setText(status,'Arrastra el bloque hasta una posición.');
+        setText(status,playerUiText('Arrastra el bloque hasta una posición.'));
         return true;
       }
       if(phase==='move'){if(position)scene.setTranslation(`order:${meta.id}`,position);return true;}
@@ -217,7 +218,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
         if(!success){
           syncObject(meta.id);
           scene.highlight(`order:${meta.id}`,false);
-          setText(status,'Suelta el bloque sobre una posición disponible.');
+          setText(status,playerUiText('Suelta el bloque sobre una posición disponible.'));
         }
         selected=null;
         return true;
@@ -231,18 +232,18 @@ function buildOrderingControls({trial,runtime,scene,status}) {
       return false;
     },
     interact(meta) {
-      if(runtime.state.completed){setText(status,'Esta actividad ya está finalizada.');return true;}
+      if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='ordering-object'){
-        if(scene.playerDistanceTo(`order:${meta.id}`)>3.15){setText(status,'Acércate al bloque para cogerlo.');return true;}
-        if(selected&&selected!==meta.id){setText(status,'Ya llevas un objeto. Colócalo antes de coger otro.');return true;}
+        if(scene.playerDistanceTo(`order:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque para cogerlo.'));return true;}
+        if(selected&&selected!==meta.id){setText(status,playerUiText('Ya llevas un objeto. Colócalo antes de coger otro.'));return true;}
         selected=meta.id;
         scene.highlight(`order:${selected}`,true);
         scene.carry(`order:${selected}`,true);
-        setText(status,'Objeto seleccionado. Elige una posición.');
+        setText(status,playerUiText('Objeto seleccionado. Elige una posición.'));
         return true;
       }
       if(meta.kind==='ordering-slot'){
-        if(scene.playerDistanceTo(`order-slot:${meta.index}`)>3.15){setText(status,'Acércate al pedestal para colocar el bloque.');return true;}
+        if(scene.playerDistanceTo(`order-slot:${meta.index}`)>3.15){setText(status,playerUiText('Acércate al pedestal para colocar el bloque.'));return true;}
         const placedOk=place(selected,meta.index);
         if(placedOk && selected){
           scene.highlight(`order:${selected}`,false);
@@ -295,13 +296,13 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   }
 
   function chooseRight(id) {
-    if(!selected){setText(status,'Selecciona primero un elemento de la izquierda.');return false;}
+    if(!selected){setText(status,playerUiText('Selecciona primero un elemento de la izquierda.'));return false;}
     const validation=validateConnection(selected,id,expected,solved);
     if(!validation.ok){
       if(activeRope){scene.disconnect(activeRope);activeRope=null;}
       scene.highlight(`left:${selected}`,false);
       selected=null;leftButtons.forEach((button)=>button.classList.remove('is-selected'));
-      setText(status,'Esa relación no es correcta. Busca otra pareja.');return false;
+      setText(status,playerUiText('Esa relación no es correcta. Busca otra pareja.'));return false;
     }
     const key=connectionKey(selected,id);
     if(!validation.alreadyExists){
@@ -361,26 +362,26 @@ function buildMatchingControls({trial,runtime,scene,status}) {
         if(activeRope){scene.disconnect(activeRope);activeRope=null;}
         activeRope=scene.connectToPointer(`left:${meta.id}`);
         if(position)scene.setPointerTarget(position);
-        setText(status,'Lleva la cuerda hasta la pareja en la escena.');
+        setText(status,playerUiText('Lleva la cuerda hasta la pareja en la escena.'));
         return true;
       }
       if(phase==='move'){if(position)scene.setPointerTarget(position);return true;}
       if(phase==='end'){
         if(target?.kind==='matching-right')chooseRight(target.id);
-        else {clearSelection();setText(status,'Suelta la cuerda encima de su pareja.');}
+        else {clearSelection();setText(status,playerUiText('Suelta la cuerda encima de su pareja.'));}
         return true;
       }
       if(phase==='cancel'){clearSelection();return true;}
       return false;
     },
     interact(meta) {
-      if(runtime.state.completed){setText(status,'Esta actividad ya está finalizada.');return true;}
+      if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='matching-left'){
-        if(scene.playerDistanceTo(`left:${meta.id}`)>3.15){setText(status,'Acércate al bloque de origen para coger la cuerda.');return true;}
+        if(scene.playerDistanceTo(`left:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque de origen para coger la cuerda.'));return true;}
         chooseLeft(meta.id);return true;
       }
       if(meta.kind==='matching-right'){
-        if(scene.playerDistanceTo(`right:${meta.id}`)>3.15){setText(status,'Acércate al bloque de destino para enganchar la cuerda.');return true;}
+        if(scene.playerDistanceTo(`right:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque de destino para enganchar la cuerda.'));return true;}
         chooseRight(meta.id);return true;
       }
       return false;
@@ -431,7 +432,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
   function moveToCategory(itemId,categoryId) {
     const expectedCategory=expected.get(itemId);
     if(expectedCategory!==categoryId){
-      setText(status,'Esa categoría no es correcta.');
+      setText(status,playerUiText('Esa categoría no es correcta.'));
       return false;
     }
     values[itemId]=categoryId;
@@ -441,7 +442,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
     runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId});
     syncClassifiedPosition(itemId,categoryId);
     selects.get(itemId).value=categoryId;
-    setText(status,classificationIsCorrect(values,expected)?'Clasificación completada correctamente.':'Objeto clasificado correctamente.');
+    setText(status,classificationIsCorrect(values,expected)?playerUiText('Clasificación completada correctamente.'):'Objeto clasificado correctamente.');
     return true;
   }
 
@@ -449,7 +450,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
     const row=el('label',{class:'p2lrn-q-field'});
     row.append(el('span',{},item.text));
     const select=el('select');
-    select.append(el('option',{value:''},'Selecciona categoría…'));
+    select.append(el('option',{value:''},playerUiText('Selecciona categoría…')));
     trial.categories.forEach((category)=>select.append(el('option',{value:category.id},category.text)));
     select.addEventListener('change',()=>{
       if(!select.value){select.value=values[item.id]??'';return;}
@@ -476,7 +477,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
         selected=meta.id;
         scene.carry(`classify:${meta.id}`,false);
         scene.highlight(`classify:${meta.id}`,true);
-        setText(status,'Arrastra el objeto hasta su categoría.');
+        setText(status,playerUiText('Arrastra el objeto hasta su categoría.'));
         return true;
       }
       if(phase==='move'){if(position)scene.setTranslation(`classify:${meta.id}`,position);return true;}
@@ -485,7 +486,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
         if(!ok){
           scene.setTranslation(`classify:${meta.id}`,staging.get(meta.id));
           scene.highlight(`classify:${meta.id}`,false);
-          if(target?.kind!=='classification-category')setText(status,'Suelta el bloque sobre una categoría.');
+          if(target?.kind!=='classification-category')setText(status,playerUiText('Suelta el bloque sobre una categoría.'));
         }
         selected=null;
         return true;
@@ -499,19 +500,19 @@ function buildClassificationControls({trial,runtime,scene,status}) {
       return false;
     },
     interact(meta) {
-      if(runtime.state.completed){setText(status,'Esta actividad ya está finalizada.');return true;}
+      if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='classification-object'){
-        if(scene.playerDistanceTo(`classify:${meta.id}`)>3.15){setText(status,'Acércate al bloque para cogerlo.');return true;}
-        if(selected&&selected!==meta.id){setText(status,'Ya llevas un objeto. Deposítalo antes de coger otro.');return true;}
+        if(scene.playerDistanceTo(`classify:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque para cogerlo.'));return true;}
+        if(selected&&selected!==meta.id){setText(status,playerUiText('Ya llevas un objeto. Deposítalo antes de coger otro.'));return true;}
         selected=meta.id;
         scene.highlight(`classify:${selected}`,true);
         scene.carry(`classify:${selected}`,true);
-        setText(status,'Objeto seleccionado. Elige una categoría.');
+        setText(status,playerUiText('Objeto seleccionado. Elige una categoría.'));
         return true;
       }
       if(meta.kind==='classification-category'){
-        if(scene.playerDistanceTo(`category:${meta.id}`)>3.25){setText(status,'Acércate a la categoría para colocar el bloque.');return true;}
-        if(!selected){setText(status,'Selecciona primero un objeto.');return true;}
+        if(scene.playerDistanceTo(`category:${meta.id}`)>3.25){setText(status,playerUiText('Acércate a la categoría para colocar el bloque.'));return true;}
+        if(!selected){setText(status,playerUiText('Selecciona primero un objeto.'));return true;}
         const ok=moveToCategory(selected,meta.id);
         if(ok){
           scene.highlight(`classify:${selected}`,false);
@@ -545,7 +546,7 @@ export async function render(options) {
     class:'p2lrn-3d-canvas',
     width:'960',
     height:'540',
-    'aria-label':'Escena 3D interactiva del ejercicio',
+    'aria-label':playerUiText('Escena 3D interactiva del ejercicio'),
   });
   const controls=el('div',{class:'p2lrn-3d-controls'});
   const status=statusNode('Preparando escena 3D…');
@@ -567,22 +568,22 @@ export async function render(options) {
     canvas.style.display='none';
     layout.style.gridTemplateColumns='minmax(0,1fr)';
     layout.append(el('p',{class:'p2lrn-game-description',role:'status'},
-      'La escena 3D no está disponible en este dispositivo. Puedes completar las mismas preguntas con los controles accesibles.'));
+      playerUiText('La escena 3D no está disponible en este dispositivo. Puedes completar las mismas preguntas con los controles accesibles.')));
   }
 
   const technology=el('p',{class:'p2lrn-3d-runtime'},accessibleOnly
-    ?'Escena 3D no disponible · modo accesible'
+    ?playerUiText('Escena 3D no disponible · modo accesible')
     :`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`);
   const help=el('p',{class:'p2lrn-game-description'},accessibleOnly
-    ?'Elige las respuestas usando los botones y selectores de cada prueba.'
+    ?playerUiText('Elige las respuestas usando los botones y selectores de cada prueba.')
     :'Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.');
-  const movePad=el('div',{class:'p2lrn-3d-move-pad','aria-label':'Controles de movimiento'});
+  const movePad=el('div',{class:'p2lrn-3d-move-pad','aria-label':playerUiText('Controles de movimiento')});
   for(const [label,direction] of [['▲','forward'],['◀','left'],['▼','back'],['▶','right']]){
     const button=el('button',{type:'button',class:'p2lrn-game-button','aria-label':direction},label);
     button.addEventListener('click',()=>scene.nudgePlayer(direction));
     movePad.append(button);
   }
-  const resetView=el('button',{type:'button',class:'p2lrn-game-button'},'Recentrar jugador');
+  const resetView=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Recentrar jugador'));
   resetView.addEventListener('click',()=>scene.resetPlayer());
   if(accessibleOnly){movePad.style.display='none';resetView.style.display='none';}
   controls.append(technology,help,movePad,resetView);
@@ -608,14 +609,14 @@ export async function render(options) {
     wrap.append(controller.panel);
 
     const nav=el('div',{class:'p2lrn-game-actions'});
-    const previous=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},'Anterior');
-    const next=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===game.data.trials.length-1},'Siguiente');
+    const previous=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},playerUiText('Anterior'));
+    const next=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===game.data.trials.length-1},playerUiText('Siguiente'));
     previous.addEventListener('click',()=>{trialIndex-=1;renderTrial();});
     next.addEventListener('click',()=>{trialIndex+=1;renderTrial();});
     nav.append(previous,next);
     wrap.append(nav);
     controls.append(wrap);
-    setText(status,controller.summary??'Selecciona elementos en la escena o utiliza los controles accesibles.');
+    setText(status,controller.summary??playerUiText('Selecciona elementos en la escena o utiliza los controles accesibles.'));
   };
 
   renderTrial();
