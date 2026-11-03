@@ -16,7 +16,7 @@ export async function render(options){
     card.replaceChildren();
     if(finished){
       const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
-      card.append(el('h3',{},reveal?`Ronda completada: ${correctCount}/${items.length} aciertos.`:playerUiText('Ronda enviada. El profesor no ha habilitado mostrar la corrección.')));
+      card.append(el('h3',{},reveal?playerUiText(`Ronda completada: ${correctCount}/${items.length} aciertos.`):playerUiText('Ronda enviada. El profesor no ha habilitado mostrar la corrección.')));
       const retry=el('button',{type:'button',class:'p2lrn-game-button'},'Repetir ronda');
       retry.addEventListener('click',()=>{
         if(!runtime.reset()){status.textContent=playerUiText('No quedan intentos disponibles.');return;}
