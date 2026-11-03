@@ -602,6 +602,11 @@ test('portable cross-device checkpoint keeps identity and attempt, restores pend
   assert.equal(checkpoint.attempt.finishedAt,null);
   assert.equal(checkpoint.transfer.completedAttempts.length,0);
   assert.equal(checkpoint.submission.states.length,1);
+  const inspectedCheckpoint=await parseOfflineAssignmentResult(checkpoint,{expectedContentRoot:assignment.contentRoot,expectedAssignmentId:assignment.assignmentId});
+  assert.equal(inspectedCheckpoint.inProgress,true);
+  assert.equal(inspectedCheckpoint.integrityValid,true);
+  assert.equal(inspectedCheckpoint.evidenceValid,true);
+  assert.equal(inspectedCheckpoint.summaryValid,true);
   assert.equal(runInContext('state().activeAttempt.id',source.context),'same-attempt-id');
 
   const transfer=environment({files:[{size:JSON.stringify(checkpoint).length,
