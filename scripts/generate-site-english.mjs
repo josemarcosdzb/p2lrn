@@ -259,6 +259,11 @@ const reviewedRuntime=JSON.parse(await readFile(join(root,'scripts','site-en-run
 for(const [source,english] of Object.entries(reviewedRuntime)){
   if(!source.trim()||!english.trim())throw Error('Invalid reviewed runtime translation');
   MANUAL.set(source,english);
+  // The scanner normalizes whitespace before querying the reviewed catalog.
+  // Also index full multiword labels without their surrounding whitespace,
+  // preserving spaces on output via preserveWhitespace().
+  const normalized=source.trim();
+  if(normalized!==source&&normalized.length>=6)MANUAL.set(normalized,english.trim());
 }
 const SPANISH_RE=/[áéíóúñü¿¡]|\b(?:el|la|los|las|una?|unos|unas|de|del|al|para|por|con|sin|desde|hasta|como|cómo|que|qué|quién|cuál|cuando|cuándo|donde|dónde|este|esta|estos|estas|ese|esa|esos|esas|su|sus|tu|tus|nuestro|nuestra|puede|puedes|pueden|crear|crea|curso|cursos|juego|juegos|alumno|alumnos|profesor|profesores|docente|lección|lecciones|actividad|actividades|abrir|cerrar|guardar|descargar|seleccionar|eliminar|añadir|nuevo|nueva|documentación|integración|colaboración|seguimiento|métricas|analítica|progresión|referencia|recursos|paquete|paquetes|formato|formatos|compatible|compatibilidad|resultado|resultados|respuesta|respuestas|pregunta|preguntas|intento|intentos|autor|derechos|titular|licencia|privacidad|términos|aviso|contacto|solución|problemas|antes|empezar|instalación|reproducir|disponible|fecha|contenido|puntuación|archivo|archivos|herramientas|plataforma|plataformas|navegador|compartir|revisión|primera|después|todo|toda|todos|todas|más|menos|también|sólo|solo|ningún|ninguna|memoria|relacionar|ordenar|clasificar|verdadero|falso|crucigrama|rosco|visor|inicio|menú|anterior|siguiente|configurar|página|páginas|datos|calificaciones|ejemplos|ejemplo|seguridad)\b/i;
 
@@ -340,9 +345,11 @@ function rewriteAbsoluteUrl(value,routes){
   return origin+rewriteHref(value.slice(origin.length),routes);
 }
 function looksSpanish(value){return MANUAL.has(String(value).trim())||SPANISH_RE.test(String(value));}
+// These string literals are stable section IDs, not language-dependent labels.
+const STRUCTURAL_JS_TOKENS=new Set(['para-que','crear-cursos']);
 function shouldTranslate(value){
   const text=String(value??'').trim();
-  if(!text||TECH_EXACT.has(text)||!/[A-Za-zÁÉÍÓÚÑÜáéíóúñü]/.test(text))return false;
+  if(!text||STRUCTURAL_JS_TOKENS.has(text)||TECH_EXACT.has(text)||!/[A-Za-zÁÉÍÓÚÑÜáéíóúñü]/.test(text))return false;
   if(text.startsWith('{')||text.startsWith('[')){
     try{JSON.parse(text);return false;}catch{}
   }
