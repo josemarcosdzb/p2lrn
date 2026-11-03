@@ -1,3 +1,4 @@
+import {playerUiText} from './ui-i18n.js';
 import {CROSSWORD_RENDERER} from '../renderer-registry.js';
 import {normalizeWord} from '../questionnaire-games-core.js';
 import {el, setupGame, statusNode, stylesheets} from './game-common.js';
@@ -13,7 +14,7 @@ const labelFor=(entry)=>(entry.direction==='H'?'Horizontal ':'Vertical ')+entry.
 export async function render(options){
   const {game,runtime,shell}=await setupGame({...options,rendererId:CROSSWORD_RENDERER});
   const {grid,entries,numbers}=game.data;
-  const status=statusNode('Elige una pista y completa sus casillas. Usa las flechas para moverte.');
+  const status=statusNode(playerUiText('Elige una pista y completa sus casillas. Usa las flechas para moverte.'));
   const inputs=new Map(),cells=new Map(),clueButtons=new Map(),entryCells=new Map();
   let activeEntry=null,completed=false;
   const memberships=new Map();
@@ -24,7 +25,7 @@ export async function render(options){
   }
 
   const scroll=el('div',{class:'p2lrn-grid-scroll p2lrn-crossword-wrap'});
-  const board=el('table',{class:'p2lrn-crossword-grid','aria-label':'Tablero del crucigrama'});
+  const board=el('table',{class:'p2lrn-crossword-grid','aria-label':playerUiText('Tablero del crucigrama')});
   board.style.setProperty('--p2lrn-crossword-columns',String(grid[0]?.length??1));
   const body=document.createElement('tbody');
   grid.forEach((row,r)=>{
@@ -139,8 +140,8 @@ export async function render(options){
   }
 
   const actions=el('div',{class:'p2lrn-game-actions'});
-  const check=el('button',{type:'button',class:'p2lrn-game-button'},'Finalizar actividad');
-  const reset=el('button',{type:'button',class:'p2lrn-game-button'},'Reiniciar');
+  const check=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Finalizar actividad'));
+  const reset=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Reiniciar'));
   check.addEventListener('click',async()=>{
     if(completed)return;
     completed=true;
@@ -153,12 +154,12 @@ export async function render(options){
     const score=await runtime.finish({allowMissingRequired:true});
     const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
     status.textContent=score&&reveal
-      ?'Crucigrama entregado: '+score.pointsEarned+'/'+score.pointsPossible+' puntos.'
-      :'Crucigrama entregado. La corrección no está disponible para el alumno.';
+      ?'Crucigrama entregado: '+score.pointsEarned+'/'+score.pointsPossible+playerUiText(' puntos.')
+      :playerUiText('Crucigrama entregado. La corrección no está disponible para el alumno.');
   });
   reset.addEventListener('click',()=>{
     if(completed&&runtime.reset()===false){
-      status.textContent='No quedan intentos para reiniciar este crucigrama.';return;
+      status.textContent=playerUiText('No quedan intentos para reiniciar este crucigrama.');return;
     }
     inputs.forEach(input=>{input.value='';input.readOnly=false;input.parentElement?.classList.remove('is-solved');});
     completed=false;check.disabled=false;
