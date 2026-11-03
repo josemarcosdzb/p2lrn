@@ -192,6 +192,17 @@
     return pathname.endsWith('/') ? pathname : pathname + '/';
   };
 
+  // Every route still uses one canonical logic tree; only outbound page links
+  // receive the /en prefix. Technical and downloadable paths remain shared.
+  const siteHref=(href)=>{
+    const value=String(href||'');
+    if(!/^en(?:-|$)/i.test(document.documentElement.lang||'')||!value.startsWith('/')||value.startsWith('/en/'))return value;
+    if(/^\/(?:assets|downloads|examples|player|api|_next|\.netlify)\//.test(value))return value;
+    if(/^\/(?:p2lrn\.|favicon\.|apple-touch-icon\.|index\.json|robots\.txt|search-index\.json)/.test(value))return value;
+    if(value.startsWith('/studio/runtime/')||value.startsWith('/analytics/current/'))return value;
+    return '/en'+value;
+  };
+
   const renderGlobalNavigation = () => {
     const header = document.querySelector('.site-header');
     if (!header) return;
@@ -212,7 +223,7 @@
       if (entry.href) {
         const link = document.createElement('a');
         link.className = 'nav-direct';
-        link.href = entry.href;
+        link.href = siteHref(entry.href);
         link.textContent = entry.label;
         if (active) link.setAttribute('aria-current','page');
         fragment.append(link);
@@ -229,7 +240,7 @@
       dropdown.className = 'nav-dropdown';
       for (const [href,label] of entry.items) {
         const link = document.createElement('a');
-        link.href = href;
+        link.href = siteHref(href);
         link.textContent = label;
         if (current === normalizePath(href)) link.setAttribute('aria-current','page');
         dropdown.append(link);
@@ -527,7 +538,7 @@
         const children=DOC_SIDEBAR_CHILDREN.get(href) || [];
         const currentChild=children.find(([childHref])=>selected===normalizePath(childHref));
         const a=document.createElement('a');
-        a.href=href;
+        a.href=siteHref(href);
         a.textContent=textValue;
         if (current===normalized) a.setAttribute('aria-current','page');
         else if (currentChild) a.setAttribute('aria-current','location');
@@ -539,7 +550,7 @@
           childNav.setAttribute('aria-label',textValue);
           for (const [childHref,childLabel] of children) {
             const childLink=document.createElement('a');
-            childLink.href=childHref;
+            childLink.href=siteHref(childHref);
             childLink.textContent=childLabel;
             if (current===normalizePath(childHref)) childLink.setAttribute('aria-current','page');
             else if (selected===normalizePath(childHref)) childLink.setAttribute('aria-current','location');
@@ -551,7 +562,7 @@
               topics.setAttribute('aria-label','Apartados de Conectores para IA');
               for (const [id,label] of DOC_AI_TOPICS) {
                 const topic=document.createElement('a');
-                topic.href='/docs/conectores/ia/#'+id;
+                topic.href=siteHref('/docs/conectores/ia/#'+id);
                 topic.dataset.targetId=id;
                 topic.textContent=label;
                 topics.append(topic);
@@ -598,7 +609,7 @@
         const matches = allMatches.slice(0, 8);
         results.replaceChildren(...matches.map((item) => {
           const a = document.createElement('a');
-          a.href = item.url;
+          a.href = siteHref(item.url);
           a.innerHTML = '<strong></strong><span></span>';
           a.querySelector('strong').textContent = item.title;
           a.querySelector('span').textContent = item.section || item.description || '';
@@ -702,7 +713,7 @@
       const addLink=(href,label)=>{
         const li=document.createElement('li');
         const a=document.createElement('a');
-        a.href=href;a.textContent=label;li.append(a);list.append(li);
+        a.href=siteHref(href);a.textContent=label;li.append(a);list.append(li);
       };
       const addText=(label,current=false)=>{
         const li=document.createElement('li');
