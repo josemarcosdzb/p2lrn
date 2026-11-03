@@ -151,3 +151,12 @@ The generated `p2lrn-setup/README.md` always contains the three endpoint attribu
 The installer generates technical integration, **not application authorization**. Each Host must protect the generated Save, Reader and external-import routes using its own authenticated identities and per-course/per-tenant teacher/editor/admin permissions, plus CSRF/origin checks where appropriate, request and archive limits, quotas, and rate limiting. Access checks must be on the server, before invoking P2LRN helpers; hidden UI controls or a generated route do not enforce permissions.
 
 The npm save helper fixes the configured server directory by default. The browser's `X-P2LRN-Path` header is ignored unless the integrator explicitly enables `allowClientPath: true`.
+
+
+## Identificación del alumno y resultados compatibles con Analytics
+
+Las entregas offline creadas desde Studio generan un fichero `.p2lrn-result` al finalizar el intento. Para no confundir alumnos que comparten el mismo paquete de entrega, el alumno debe introducir el **código individual asignado por el profesor** antes de comenzar. La entrega incluye el código, el alumno, el curso y el intento en el resultado; Analytics puede agruparlos sin una base de datos.
+
+El código se conserva en `result.identity` como `{mode:'code', issuer, code, label}`. **No es una prueba de identidad**: un alumno podría introducir el código de otro. Cuando el curso se reproduce en una plataforma con usuario autenticado, `@p2lrn/player` ofrece el modo `{mode:'platform',issuer,subjectId,label}`, proporcionado por el host autorizado.
+
+La ruta `src` de `@p2lrn/analytics` debe apuntar al archivo **`.p2lrn-result`**, no al curso `.p2lrn`. Para varios estudiantes puede utilizarse un índice estático `index.p2lrn-results.json` o seleccionar varios archivos locales desde el panel. Studio no necesita instalar una base de datos para estas entregas ni convierte resultados a un formato propietario.
