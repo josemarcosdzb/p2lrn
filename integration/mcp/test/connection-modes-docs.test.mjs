@@ -91,6 +91,33 @@ test('one AI guide explains concepts once and documents all four platforms',()=>
   assert(css.includes('html.doc-instant-anchor{scroll-behavior:auto}'));
 });
 
+test('LTI bilingual docs have a real deployment workflow and distinguish implemented features',()=>{
+  const guides=[
+    {path:'deploy/netlify/site/docs/conectores/lti/index.html',language:'es',title:'Guía práctica: conectar P2LRN con un LMS'},
+    {path:'deploy/netlify/site/en/docs/conectores/lti/index.html',language:'en',title:'Practical guide: connect P2LRN to an LMS'}
+  ];
+  for(const guide of guides){
+    const html=read(guide.path);
+    assert(html.includes(guide.title),'Missing actionable LTI guide: '+guide.language);
+    for(const endpoint of ['/lti/login','/lti/launch','/lti/jwks','/lti/deep-link',
+      '/lti/admin/platforms','/lti/admin/catalog','/lti/admin/bindings',
+      '/lti/admin/grades','/lti/admin/ags/pending','/lti/health']){
+      assert(html.includes(endpoint),'LTI endpoint undocumented: '+endpoint+' ('+guide.language+')');
+    }
+    for(const item of ['P2LRN_LTI_BASE_URL','P2LRN_LTI_ADMIN_TOKEN_FILE',
+      'P2LRN_LTI_KEY_FILE','P2LRN_LTI_DATA_DIR','packageId','contentRoot',
+      'issuer','clientId','deploymentId','JWKS','Deep Linking','AGS','NRPS']){
+      assert(html.includes(item),'LTI configuration missing: '+item+' ('+guide.language+')');
+    }
+    assert(html.includes('rel="canonical"'),'Missing canonical: '+guide.language);
+    assert(html.includes('hreflang="en"')&&html.includes('hreflang="es"'),
+      'Missing bilingual alternates: '+guide.language);
+    assert(!/NRPS is implemented/i.test(html),'NRPS must not be marked as implemented');
+    assert(html.includes('<section class="doc-section" id="lti-')&&html.includes('class="codebox"'),
+      'LTI guide must have readable sections and copyable examples');
+  }
+});
+
 test('legacy links redirect to canonical section and are excluded from navigation',()=>{
   const nav=read('deploy/netlify/site/p2lrn.js');
   const sitemap=read('deploy/netlify/site/sitemap.xml');
