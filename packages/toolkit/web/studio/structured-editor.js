@@ -85,7 +85,7 @@ export function renderStructuredVisualEditor(container,options={}){
       root.append(labeled('Contenido',body));
       renderPreview();root.append(preview);
     }else if(editor==='timeline'){
-      payload.data.items=Array.isArray(payload.data.items)&&payload.data.items.length?payload.data.items:[{id:'item-1',date:'',title:'Primer acontecimiento',body:''}];
+      payload.data.items=Array.isArray(payload.data.items)&&payload.data.items.length?payload.data.items:[{id:'item-1',date:'',title:studioUiText('Primer acontecimiento'),body:''}];
       const list=node('div','q-list timeline-editor');
       const save=()=>{model.setStructuredJson(activityId,payload);onChange?.();};
       const move=(from,to)=>{if(to<0||to>=payload.data.items.length||from===to)return;const [item]=payload.data.items.splice(from,1);payload.data.items.splice(to,0,item);save();rerender();};
@@ -94,7 +94,7 @@ export function renderStructuredVisualEditor(container,options={}){
         card.addEventListener('dragstart',(event)=>event.dataTransfer?.setData('text/plain',String(index)));
         card.addEventListener('dragover',(event)=>event.preventDefault());
         card.addEventListener('drop',(event)=>{event.preventDefault();const from=Number(event.dataTransfer?.getData('text/plain'));if(Number.isInteger(from))move(from,index);});
-        const cardHead=node('div','q-card-head');cardHead.append(node('strong',null,'Acontecimiento '+(index+1)));
+        const cardHead=node('div','q-card-head');cardHead.append(node('strong',null,studioUiText('Acontecimiento '+(index+1))));
         const actions=node('div','q-card-actions');
         actions.append(
           button('↑',()=>move(index,index-1)),
@@ -116,7 +116,7 @@ export function renderStructuredVisualEditor(container,options={}){
       root.append(list,button('+ Añadir acontecimiento',()=>{
         let n=payload.data.items.length+1,id='item-'+n;const ids=new Set(payload.data.items.map((item)=>item.id));
         while(ids.has(id)){n+=1;id='item-'+n;}
-        payload.data.items.push({id,date:'',title:'Nuevo acontecimiento',body:''});save();rerender();
+        payload.data.items.push({id,date:'',title:studioUiText('Nuevo acontecimiento'),body:''});save();rerender();
       },'q-mini q-add-primary'));
     }else if(editor==='collaboration'){
       const mode=select(payload.data.mode||'poll',[['poll','Votación en directo'],['board','Pizarra compartida'],['peer-review','Revisión entre pares']]);
@@ -138,7 +138,7 @@ export function renderStructuredVisualEditor(container,options={}){
           delete payload.data.options;delete payload.data.allowChange;delete payload.data.showResults;
         }
         model.setStructuredJson(activityId,payload);
-        model.setHostCapabilities(activityId,[{id:'collaboration.room',required:required.checked,operations:['join','send','listen','snapshot','leave'],context:['component.input'],description:'Sala colaborativa resuelta por el host.',fallback:'individual'}]);
+        model.setHostCapabilities(activityId,[{id:'collaboration.room',required:required.checked,operations:['join','send','listen','snapshot','leave'],context:['component.input'],description:studioUiText('Sala colaborativa resuelta por el host.'),fallback:'individual'}]);
         onChange?.();
       };
       const drawOptions=()=>{
@@ -150,7 +150,7 @@ export function renderStructuredVisualEditor(container,options={}){
           const remove=button('Eliminar',()=>{if(payload.data.options.length<=2){report('La votación necesita al menos dos opciones.');return;}payload.data.options.splice(index,1);save();drawOptions();},'q-mini q-danger');
           text.addEventListener('input',()=>{option.label=text.value;save();});row.append(node('span','q-label',String(index+1)),text,remove);optionList.append(row);
         });
-        optionList.append(button('+ Añadir opción',()=>{const used=new Set(payload.data.options.map((o)=>o.id));let n=payload.data.options.length+1,id='option-'+n;while(used.has(id)){n+=1;id='option-'+n;}payload.data.options.push({id,label:'Opción '+n});save();drawOptions();},'q-mini q-add-primary'));
+        optionList.append(button('+ Añadir opción',()=>{const used=new Set(payload.data.options.map((o)=>o.id));let n=payload.data.options.length+1,id='option-'+n;while(used.has(id)){n+=1;id='option-'+n;}payload.data.options.push({id,label:studioUiText('Opción '+n)});save();drawOptions();},'q-mini q-add-primary'));
       };
       mode.addEventListener('change',()=>{save();rerender();});room.addEventListener('change',save);prompt.addEventListener('input',save);fallback.addEventListener('input',save);required.addEventListener('change',save);allowChange.addEventListener('change',save);showResults.addEventListener('change',save);
       settings.append(labeled('Tipo',mode),labeled('Sala lógica',room),labeled('Obligatoria',required));
@@ -181,7 +181,7 @@ export function renderStructuredVisualEditor(container,options={}){
         if(requestedContext.some((value)=>!token.test(value))){report('Las claves de contexto deben ser identificadores semánticos, no URLs.');return;}
         payload.data.capability=cap;payload.data.operation=op;payload.data.instruction=instruction.value;payload.data.buttonLabel=buttonLabel.value.trim()||'Ejecutar';payload.data.fallbackText=fallback.value;payload.data.required=required.checked;payload.data.context=requestedContext;payload.data.restrictions={revealAnswer:revealAnswer.checked,allowExternalKnowledge:externalKnowledge.checked,maxOutputChars:Math.max(1,Math.min(50000,Number(maxOutput.value)||8000))};
         model.setStructuredJson(activityId,payload);
-        model.setHostCapabilities(activityId,[{id:cap,required:required.checked,operations:[op],context:requestedContext,description:'Operación solicitada por un componente conectado.'}]);
+        model.setHostCapabilities(activityId,[{id:cap,required:required.checked,operations:[op],context:requestedContext,description:studioUiText('Operación solicitada por un componente conectado.')}]);
         onChange?.();
       };
       capability.addEventListener('change',save);operation.addEventListener('change',save);instruction.addEventListener('input',save);buttonLabel.addEventListener('input',save);fallback.addEventListener('input',save);contextKeys.addEventListener('input',save);maxOutput.addEventListener('input',save);revealAnswer.addEventListener('change',save);externalKnowledge.addEventListener('change',save);required.addEventListener('change',save);
