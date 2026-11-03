@@ -504,6 +504,16 @@ main{max-width:1220px;margin:0 auto;padding:0 24px}
   line-height:1.65;
 }
 .site-footer__signature span{margin:0 5px;color:#75869c}
+.site-footer__credit{
+  margin:0;
+  padding:14px 0 20px;
+  border-top:1px solid rgba(181,196,223,.15);
+  color:#b7c4d7;
+  font-size:.77rem;
+  text-align:center;
+  line-height:1.6;
+}
+.site-footer__credit strong{color:#f5f7fd;font-weight:700}
 .site-footer__legal{
   display:flex;
   flex-wrap:wrap;
