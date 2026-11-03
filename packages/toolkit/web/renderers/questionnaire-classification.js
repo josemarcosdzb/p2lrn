@@ -28,7 +28,7 @@ export async function render(options) {
       el('strong',{},trial.prompt),
       el('span',{},playerUiText(`Prueba ${trialIndex+1} de ${game.data.trials.length}`)),
     );
-    const pool=el('div',{class:'p2lrn-classification-pool',role:'group','aria-label':'Fichas pendientes'});
+    const pool=el('div',{class:'p2lrn-classification-pool',role:'group','aria-label':playerUiText('Fichas pendientes')});
     const categories=el('div',{class:'p2lrn-classification-categories'});
 
     const refresh=()=>{
