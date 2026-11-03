@@ -117,7 +117,34 @@ const EN={
   "respuestas": "answers",
   "puntos": "points",
   "verdadero": "true",
-  "falso": "false"
+  "falso": "false",
+  " no puede representar fielmente este cuestionario completo. ": " cannot faithfully represent this entire questionnaire. ",
+  "Mover ": "Move ",
+  "Subir ": "Move up ",
+  "Bajar ": "Move down ",
+  " aciertos · ": " correct · ",
+  " fallos": " incorrect",
+  "Respondidas: ": "Answered: ",
+  " de ": " of ",
+  "Rosco completado: ": "Word wheel completed: ",
+  " aciertos de ": " correct out of ",
+  " puntos.": " points.",
+  "Letra ": "Letter ",
+  ", acertada": ", correct",
+  ", fallada": ", incorrect",
+  ", respondida": ", answered",
+  ", actual": ", current",
+  ", pendiente": ", pending",
+  "Empieza por ": "Starts with ",
+  "Contiene la ": "Contains ",
+  "Letra seleccionada: ": "Selected letter: ",
+  "Memoria": "Memory",
+  "Relacionar": "Matching",
+  "Ordenar": "Ordering",
+  "Clasificar": "Classification",
+  "Rosco": "Word wheel",
+  "True / False": "True / False",
+  "Rellenar huecos": "Fill in the blanks"
 };
 export function playerUiText(value,doc=globalThis.document){
   const source=String(value??'');
@@ -143,4 +170,4 @@ export function playerUiText(value,doc=globalThis.document){
   if((match=/^Reto (\d+) de (\d+)$/.exec(source)))return 'Challenge '+match[1]+' of '+match[2];
   return source;
 }
-export const PLAYER_UI_TRANSLATIONS=117;
+export const PLAYER_UI_TRANSLATIONS=144;
