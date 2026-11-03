@@ -584,7 +584,7 @@ const connectorDocs = [
   ['', ['Conectores e integración', 'Conectores para IA', 'Plataformas LMS', 'LTI 1.3']],
   ['ia', ['Conectores para IA', 'ChatGPT', 'Claude', 'Gemini', 'Grok', 'P2LRN – Crear y descargar', 'p2lrn_list_courses']],
   ['lms', ['Moodle', 'Canvas', 'Sakai', 'Chamilo', 'Open edX']],
-  ['lti', ['OIDC', 'JWKS', 'Deep Linking', 'AGS', 'NRPS no incluido', 'Comprobación antes del despliegue', 'instalación y versión']],
+  ['lti', ['OIDC', 'JWKS', 'Deep Linking', 'AGS', 'NRPS 2.0', '/lti/runtime/nrps/memberships', 'Comprobación antes del despliegue', 'instalación y versión']],
 ];
 const legacyConnectorSections = new Map([
   ['gemini','gemini'],
