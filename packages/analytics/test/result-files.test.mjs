@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {createResultRecorder} from '../../toolkit/web/result-recorder.js';
 import {analyticsDatasetFromResultFiles,loadAnalyticsResultSource,verifyOfflineResultIntegrity} from '../src/model.js';
 
@@ -63,4 +64,27 @@ test('Analytics rejects modified files and cross-origin result references',async
   await assert.rejects(()=>analyticsDatasetFromResultFiles([changed]),/SHA-256/);
   const fetcher=async()=>({ok:true,json:async()=>({schema:'https://p2lrn.org/schema/analytics-results-index/1',results:['https://outside.example/steal.p2lrn-result']})});
   await assert.rejects(()=>loadAnalyticsResultSource('https://school.example/data/index.p2lrn-results.json',{fetcher}),/otro origen/);
+});
+
+test('Portable progress checkpoints remain in_progress and do not become grades',async()=>{
+  const finished=await make({code:'ALU-17',attemptId:'transfer-1'});
+  const checkpoint=structuredClone(finished);
+  checkpoint.attempt.status='in_progress';
+  checkpoint.attempt.finishedAt=null;
+  checkpoint.transfer={schema:'https://p2lrn.org/schema/offline-progress-transfer/1',completedAttempts:[]};
+  const body={...checkpoint};
+  delete body.integrity;
+  const canonical=value=>value===null||typeof value!=='object'
+    ?JSON.stringify(value)
+    :Array.isArray(value)?'['+value.map(canonical).join(',')+']'
+    :'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')+'}';
+  checkpoint.integrity={algorithm:'sha256',
+    payloadDigest:'sha256:'+createHash('sha256').update(canonical(body)).digest('hex')};
+  const dataset=await analyticsDatasetFromResultFiles([checkpoint]);
+  assert.equal(dataset.learners.length,1);
+  assert.equal(dataset.attempts.length,1);
+  assert.equal(dataset.attempts[0].status,'in_progress');
+  assert.equal(dataset.attempts[0].submittedAt,null);
+  assert.equal(dataset.attempts[0].metadata.portableCheckpoint,true);
+  assert.equal(dataset.grades.length,0);
 });
