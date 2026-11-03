@@ -19,6 +19,10 @@ on:
       - 'scripts/verify-site-bilingual.mjs'
       - 'scripts/site-i18n-ast.mjs'
       - 'scripts/test-site-i18n-ast.mjs'
+      - 'scripts/site-en-runtime-reviewed.json'
+      - 'packages/toolkit/web/studio/**'
+      - 'packages/analytics/src/locale.js'
+      - 'packages/analytics/src/p2lrn-analytics.js'
       # Workflow-only edits can be checked via workflow_dispatch without regenerating English.
   workflow_dispatch:
 
