@@ -257,7 +257,8 @@ export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
   const title=text(courseTitle??assignment.title??record(result.assignmentProof).title,'Curso offline P2LRN');
   const provenance=record(assignment.provenance);
   const startedAt=timestamp(attempt.startedAt??usage.firstOpenedAt);
-  const finishedAt=timestamp(attempt.finishedAt??usage.lastOpenedAt);
+  const pendingTransfer=attempt.status==='in_progress'&&result.transfer?.schema==='https://p2lrn.org/schema/offline-progress-transfer/1';
+  const finishedAt=pendingTransfer?null:timestamp(attempt.finishedAt??usage.lastOpenedAt);
   const activeTimeMs=Math.max(0,finite(analytics.activeTimeMs,summary.activeTimeMs)??0);
   const latestScore=record(summary.latestScore);
   const normalizedScore=ratio(latestScore.normalized,null);
@@ -303,7 +304,7 @@ export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
       context:{learnerId,courseId,attemptId},payload:{normalized:normalizedScore,authoritative:false,source:'offline-result'},
     });
   }
-  const grades=scoreValue!=null&&scoreMax!=null&&scoreMax>0?[{
+  const grades=!pendingTransfer&&scoreValue!=null&&scoreMax!=null&&scoreMax>0?[{
     id:key(attemptId,'grade'),learnerId,courseId,value:scoreValue,maxValue:scoreMax,
     authoritative:false,updatedAt:finishedAt,source:'offline-result',
     metadata:{informational:true,reason:'Resultado generado fuera de un Host autoritativo'},
@@ -318,10 +319,10 @@ export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
       metadata:{offline:true,assignmentId:assignment.assignmentId??null},
     }],
     attempts:[{
-      id:attemptId,learnerId,courseId,status:text(attempt.status,finishedAt?'submitted':'started'),
+      id:attemptId,learnerId,courseId,status:pendingTransfer?'in_progress':text(attempt.status,finishedAt?'submitted':'started'),
       startedAt,submittedAt:finishedAt,updatedAt:finishedAt??startedAt,score:scoreValue,maxScore:scoreMax,activeTimeMs,
       metadata:{
-        offline:true,attemptNumber:finite(attempt.number,null),elapsedSeconds:finite(attempt.elapsedSeconds,0),
+        offline:true,portableCheckpoint:pendingTransfer,attemptNumber:finite(attempt.number,null),elapsedSeconds:finite(attempt.elapsedSeconds,0),
         openings:Math.max(0,finite(usage.openCount,summary.openings)??0),
         firstOpenedAt:timestamp(usage.firstOpenedAt),lastOpenedAt:timestamp(usage.lastOpenedAt),
         expiresAt:timestamp(usage.expiresAt),deviceBindingId:text(usage.deviceBindingId,''),
