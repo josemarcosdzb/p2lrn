@@ -58,6 +58,8 @@ jobs:
         run: |
           node deploy/netlify/build-site.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/browser-license-footer-qa.mjs --built
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --input-type=module -e "import {readFile} from 'node:fs/promises'; for(const language of ['', 'en/']) {const html=await readFile('.netlify-cdn/'+language+'licencia/index.html','utf8'); if(!html.includes('site-footer__credit')||!html.includes('https://github.com/josemarcosdzb/p2lrn'))throw Error('Missing footer '+language);} console.log('P2LRN_BUILT_FOOTER_QA=PASS')"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Remove isolated browser test dependencies
