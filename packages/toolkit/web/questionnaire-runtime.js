@@ -1,5 +1,6 @@
 import {fillBlankInputMode,fillBlankParts,fillBlankPromptLeaksAnswer,fillBlankWordBank} from './fill-blanks-core.js';
 import {answerIsMeaningful, QuestionnaireSession} from './questionnaire-session.js';
+import {playerUiText} from './renderers/ui-i18n.js';
 
 function el(tag, attrs = {}, text = null) {
   const node = document.createElement(tag);
@@ -86,7 +87,7 @@ export class QuestionnaireRuntime {
     if (!score) {
       const expired = new Set(this.state.timing?.expiredQuestions ?? []);
       const missing = this.payload.questions.filter((question) => question.required && !expired.has(question.id) && !answerIsMeaningful(question, this.state.answers[question.id]));
-      this.notice = missing.length ? `Faltan ${missing.length} pregunta${missing.length === 1 ? '' : 's'} obligatoria${missing.length === 1 ? '' : 's'}.` : 'No se pudo finalizar la actividad.';
+      this.notice = playerUiText(missing.length ? `Faltan ${missing.length} pregunta${missing.length === 1 ? '' : 's'} obligatoria${missing.length === 1 ? '' : 's'}.` : 'No se pudo finalizar la actividad.');
     } else {
       this.notice = null;
     }
@@ -111,8 +112,8 @@ export class QuestionnaireRuntime {
     const timing = this.session.timingSnapshot();
     if (!this.state.completed && (timing.attemptRemainingSeconds !== null || timing.questionRemainingSeconds !== null)) {
       const parts = [];
-      if (timing.attemptRemainingSeconds !== null) parts.push(`Actividad: ${timing.attemptRemainingSeconds}s`);
-      if (timing.questionRemainingSeconds !== null) parts.push(`Pregunta: ${timing.questionRemainingSeconds}s`);
+      if (timing.attemptRemainingSeconds !== null) parts.push(playerUiText('Actividad: ')+`${timing.attemptRemainingSeconds}s`);
+      if (timing.questionRemainingSeconds !== null) parts.push(playerUiText('Pregunta: ')+`${timing.questionRemainingSeconds}s`);
       header.append(el('p', {class: 'p2lrn-q-timer', role: 'timer', 'aria-live': 'polite'}, parts.join(' · ')));
     }
     shell.append(header);
@@ -135,12 +136,12 @@ export class QuestionnaireRuntime {
       const index = this.state.currentQuestion;
       const question = this.session.questionsInOrder()[index];
       const progress = el('div', {class: 'p2lrn-q-progress'});
-      progress.append(el('strong', {}, `Pregunta ${index + 1} de ${this.payload.questions.length}`));
+      progress.append(el('strong', {}, playerUiText(`Pregunta ${index + 1} de ${this.payload.questions.length}`)));
       const meter = el('progress', {
         class: 'p2lrn-q-progress-meter',
         max: this.payload.questions.length,
         value: index + 1,
-        'aria-label': `Progreso: pregunta ${index + 1} de ${this.payload.questions.length}`,
+        'aria-label': playerUiText(`Progreso: pregunta ${index + 1} de ${this.payload.questions.length}`),
       });
       progress.append(meter);
       shell.append(progress, this.#renderQuestion(question, index), this.#navigation());
@@ -152,12 +153,12 @@ export class QuestionnaireRuntime {
     const card = el('article', {class: 'p2lrn-q-card'});
     const meta = el('div', {class: 'p2lrn-q-meta'}, `${index + 1}. ${question.type} · ${question.points} pt${Number(question.points) === 1 ? '' : 's'}`);
     const fill = question.type === 'fill-blanks' ? fillBlankParts(question) : null;
-    const visiblePrompt = fill && (fill.usesPrompt || fillBlankPromptLeaksAnswer(question)) ? 'Completa los huecos' : question.prompt;
+    const visiblePrompt = fill && (fill.usesPrompt || fillBlankPromptLeaksAnswer(question)) ? playerUiText('Completa los huecos') : question.prompt;
     card.append(meta, el('h3', {class: 'p2lrn-q-prompt'}, visiblePrompt));
     if (question.type !== 'fill-blanks' && question.body) card.append(el('p', {class: 'p2lrn-q-body'}, question.body));
     const input = this.#renderInput(question);
     if (this.session.isQuestionExpired(question.id)) {
-      card.append(el('p', {class: 'p2lrn-q-notice', role: 'status'}, 'Tiempo agotado para esta pregunta.'));
+      card.append(el('p', {class: 'p2lrn-q-notice', role: 'status'}, playerUiText('Tiempo agotado para esta pregunta.')));
       disableControls(input);
     }
     card.append(input);
@@ -183,7 +184,7 @@ export class QuestionnaireRuntime {
             next[statement.id] = value;
             this.setAnswer(question, {booleans: next});
           });
-          label.append(input, el('span', {}, labelText));
+          label.append(input, el('span', {}, playerUiText(labelText)));
           actions.append(label);
         }
         row.append(actions);group.append(row);
@@ -219,7 +220,7 @@ export class QuestionnaireRuntime {
     }
 
     if (question.type === 'text') {
-      const textarea = el('textarea', {class: 'p2lrn-q-text', 'aria-label': 'Respuesta escrita'});
+      const textarea = el('textarea', {class: 'p2lrn-q-text', 'aria-label': playerUiText('Respuesta escrita')});
       textarea.value = answer.text ?? '';
       textarea.addEventListener('input', () => this.setAnswer(question, {text: textarea.value}));
       return textarea;
@@ -237,7 +238,7 @@ export class QuestionnaireRuntime {
         for (const part of details.parts) {
           if (part.type === 'text') { template.append(document.createTextNode(part.text)); continue; }
           const info=blankById.get(part.id);if(!info)continue;
-          const input=el('input',{type:'text',class:'p2lrn-fill-input','aria-label':info.blank.label||`Hueco ${info.index+1}`});
+          const input=el('input',{type:'text',class:'p2lrn-fill-input','aria-label':info.blank.label||playerUiText(`Hueco ${info.index+1}`)});
           input.value=values[part.id]??'';
           input.addEventListener('input',()=>{values[part.id]=input.value;write();});
           template.append(input);
@@ -247,7 +248,7 @@ export class QuestionnaireRuntime {
       }
 
       const bank=fillBlankWordBank(question);
-      const bankNode=el('div',{class:'p2lrn-fill-bank','aria-label':'Palabras disponibles'});
+      const bankNode=el('div',{class:'p2lrn-fill-bank','aria-label':playerUiText('Palabras disponibles')});
       const slots=new Map();
       const chips=[];
       let selectedId=null;
@@ -256,10 +257,10 @@ export class QuestionnaireRuntime {
       const refresh=()=>{
         for(const [id,slot] of slots){
           const value=String(values[id]??'').trim();
-          slot.textContent=value||'Arrastra o selecciona';
+          slot.textContent=value||playerUiText('Arrastra o selecciona');
           slot.classList.toggle('is-filled',Boolean(value));
           slot.classList.toggle('is-target',Boolean(selectedId&&!value));
-          slot.setAttribute('aria-label',value?`${slot.dataset.label}: ${value}. Pulsa para quitarlo.`:`${slot.dataset.label}. ${selectedId?'Pulsa para colocar la palabra seleccionada.':'Arrastra o selecciona una palabra.'}`);
+          slot.setAttribute('aria-label',value?`${slot.dataset.label}: ${value}. ${playerUiText('Pulsa para quitarlo.')}`:`${slot.dataset.label}. ${playerUiText(selectedId?'Pulsa para colocar la palabra seleccionada.':'Arrastra o selecciona una palabra.')}`);
         }
         const used=new Map();for(const value of Object.values(values)){const key=norm(value);if(key)used.set(key,(used.get(key)??0)+1);}
         const occurrence=new Map();
@@ -308,8 +309,8 @@ export class QuestionnaireRuntime {
         const item = el('li', {class: 'p2lrn-q-order-item'});
         item.append(el('span', {}, byId.get(id)?.text ?? id));
         const controls = el('span', {class: 'p2lrn-q-order-controls'});
-        const up = el('button', {type: 'button', disabled: index === 0, 'aria-label': 'Mover arriba'}, '↑');
-        const down = el('button', {type: 'button', disabled: index === order.length - 1, 'aria-label': 'Mover abajo'}, '↓');
+        const up = el('button', {type: 'button', disabled: index === 0, 'aria-label': playerUiText('Mover arriba')}, '↑');
+        const down = el('button', {type: 'button', disabled: index === order.length - 1, 'aria-label': playerUiText('Mover abajo')}, '↓');
         up.addEventListener('click', () => this.#moveOrder(question, order, index, index - 1));
         down.addEventListener('click', () => this.#moveOrder(question, order, index, index + 1));
         controls.append(up, down);
@@ -326,7 +327,7 @@ export class QuestionnaireRuntime {
         const row = el('label', {class: 'p2lrn-q-field'});
         row.append(el('span', {}, item.text));
         const select = el('select');
-        select.append(el('option', {value: ''}, 'Selecciona categoría…'));
+        select.append(el('option', {value: ''}, playerUiText('Selecciona categoría…')));
         question.categories.forEach((category) => select.append(el('option', {value: category.id}, category.text)));
         select.value = classifications[item.id] ?? '';
         select.addEventListener('change', () => {
@@ -347,7 +348,7 @@ export class QuestionnaireRuntime {
         const row = el('label', {class: 'p2lrn-q-field'});
         row.append(el('span', {}, left.text));
         const select = el('select');
-        select.append(el('option', {value: ''}, 'Selecciona…'));
+        select.append(el('option', {value: ''}, playerUiText('Selecciona…')));
         question.right.forEach((right) => select.append(el('option', {value: right.id}, right.text)));
         select.value = pairs[left.id] ?? '';
         select.addEventListener('change', () => {
@@ -361,7 +362,7 @@ export class QuestionnaireRuntime {
       return fields;
     }
 
-    return el('p', {}, 'Tipo de pregunta no soportado.');
+    return el('p', {}, playerUiText('Tipo de pregunta no soportado.'));
   }
 
   #moveOrder(question, order, from, to) {
@@ -375,14 +376,14 @@ export class QuestionnaireRuntime {
 
   #navigation() {
     const nav = el('div', {class: 'p2lrn-q-actions'});
-    const previous = el('button', {type: 'button', disabled: this.state.currentQuestion === 0}, 'Anterior');
+    const previous = el('button', {type: 'button', disabled: this.state.currentQuestion === 0}, playerUiText('Anterior'));
     previous.addEventListener('click', () => {
       this.session.setCurrentQuestion(this.state.currentQuestion - 1);
       this.render();
     });
     nav.append(previous);
     if (this.state.currentQuestion < this.payload.questions.length - 1) {
-      const next = el('button', {type: 'button', class: 'primary'}, 'Siguiente');
+      const next = el('button', {type: 'button', class: 'primary'}, playerUiText('Siguiente'));
       next.addEventListener('click', () => {
         this.session.setCurrentQuestion(this.state.currentQuestion + 1);
         this.render();
@@ -395,7 +396,7 @@ export class QuestionnaireRuntime {
   }
 
   #finishButton() {
-    const button = el('button', {type: 'button', class: 'primary'}, 'Finalizar');
+    const button = el('button', {type: 'button', class: 'primary'}, playerUiText('Finalizar'));
     button.addEventListener('click', () => void this.finish());
     return button;
   }
@@ -403,15 +404,15 @@ export class QuestionnaireRuntime {
   #renderResult() {
     const score = this.state.score;
     const wrap = el('div', {class: 'p2lrn-q-result'});
-    wrap.append(el('h3', {}, score.graded ? 'Resultado' : 'Respuestas enviadas'));
+    wrap.append(el('h3', {}, playerUiText(score.graded ? 'Resultado' : 'Respuestas enviadas')));
     if (this.state.completionReason === 'time-limit' || this.state.completionReason === 'question-time-limit') {
-      wrap.append(el('p', {class: 'p2lrn-q-notice'}, 'La actividad se cerró al agotarse el tiempo declarado por el paquete.'));
+      wrap.append(el('p', {class: 'p2lrn-q-notice'}, playerUiText('La actividad se cerró al agotarse el tiempo declarado por el paquete.')));
     }
     const reveal=(this.payload.presentation?.showFeedback ?? 'never') !== 'never';
     if (score.graded && reveal) {
-      wrap.append(el('p', {class: 'p2lrn-q-score'}, `${score.raw} / ${score.max} puntos`));
+      wrap.append(el('p', {class: 'p2lrn-q-score'}, playerUiText(`${score.raw} / ${score.max} puntos`)));
     } else {
-      wrap.append(el('p', {}, 'Respuestas entregadas. La corrección se mostrará únicamente cuando lo permita el profesor.'));
+      wrap.append(el('p', {}, playerUiText('Respuestas entregadas. La corrección se mostrará únicamente cuando lo permita el profesor.')));
     }
     if (reveal) {
       const resultById = new Map(score.questions.map((result) => [result.questionId, result]));
@@ -419,8 +420,8 @@ export class QuestionnaireRuntime {
       this.session.questionsInOrder().forEach((q) => {
         const result = resultById.get(q.id);
         const item = el('li');
-        let status = 'Sin corrección local';
-        if (result?.graded) status = result.correct ? 'Correcta' : `${result.pointsAwarded} / ${result.pointsPossible} pts`;
+        let status = playerUiText('Sin corrección local');
+        if (result?.graded) status = result.correct ? playerUiText('Correcta') : `${result.pointsAwarded} / ${result.pointsPossible} pts`;
         item.append(el('strong', {}, q.prompt), el('span', {}, status));
         if (q.explanation) item.append(el('p', {}, q.explanation));
         list.append(item);
@@ -430,11 +431,11 @@ export class QuestionnaireRuntime {
     const maxAttempts = this.payload.attemptPolicy?.maxAttempts;
     const completed = Number(this.state.attemptsCompleted ?? 0);
     if (!Number.isInteger(maxAttempts) || completed < maxAttempts) {
-      const repeat = el('button', {type: 'button'}, 'Repetir');
+      const repeat = el('button', {type: 'button'}, playerUiText('Repetir'));
       repeat.addEventListener('click', () => this.reset());
       wrap.append(repeat);
     } else {
-      wrap.append(el('p', {class: 'p2lrn-q-attempts'}, `Intentos agotados (${completed}/${maxAttempts}).`));
+      wrap.append(el('p', {class: 'p2lrn-q-attempts'}, playerUiText(`Intentos agotados (${completed}/${maxAttempts}).`)));
     }
     return wrap;
   }
