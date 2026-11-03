@@ -656,7 +656,13 @@ for(const [rel,source] of jsSources){
   let generated=translateJavaScriptSource(source);
   // The English Studio entrypoint uses the same tested shared runtime modules.
   // A relative ./runtime/ import from /en/studio/ otherwise returns HTTP 404.
-  if(rel==='studio/studio.js')generated=generated.replace(/(from\s+['"])\.\/runtime\//g,'$1/studio/runtime/');
+  if(rel==='studio/studio.js'){
+    // Share the canonical Studio runtime and create English-language content by default.
+    // Do not change language tags inside imported courses or serialized data.
+    generated=generated.replace(/(from\s+['"])\.\/runtime\//g,'$1/studio/runtime/');
+    generated=generated.replaceAll("language:'es'","language:'en'");
+  }
+  if(rel==='p2lrn.js')generated=generated.replace("toLocaleLowerCase('es')","toLocaleLowerCase('en')");
 
   const dest=join(englishRoot,...rel.split('/'));
   await mkdir(dirname(dest),{recursive:true});
