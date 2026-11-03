@@ -497,6 +497,8 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     return this._resultRecorder;
   }
   get resultRecorder() { return this._resultRecorder; }
+  get packageId() { return this._package?.manifest?.packageId ?? null; }
+  get contentRoot() { return this._package?.manifest?.integrity?.contentRoot ?? null; }
   set adapter(value) { this._adapter = normalizeHostAdapter(value); }
   get adapter() { return this._adapter; }
   set capabilityBroker(value) { this._capabilityBroker = normalizeCapabilityBroker(value); }
