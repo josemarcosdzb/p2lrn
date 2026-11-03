@@ -29,7 +29,7 @@ const intro = workspace.addFile({
   parent: 'unit-1',
   mediaType: 'text/html',
 });</code></pre></div><p>For documents that must first be analyzed, see <a href="/en/docs/toolkit/">Reader documental</a>.</p></section>
-<section class="doc-section"><h2>5. Add optional rules</h2><p>If the course requires mandatory, blocking or prerequisites, define those rules before the build. The guide <a href="/en/docs/progresion/">Progress</a> explains the difference between completing an activity and blocking further navigation.</p></section>
+<section class="doc-section"><h2>5. Add optional rules</h2><p>If the course requires mandatory, blocking or prerequisites, define those rules before the build. The guide <a href="/en/docs/progresion/">Progression</a> explains the difference between completing an activity and blocking further navigation.</p></section>
 <section class="doc-section"><h2>6. Build the package</h2><p>When the structure and resources are ready, build the portable file that the Player will consume.</p><div class="codebox"><div class="codebox-head"><span>TypeScript</span><button type="button" data-copy="">Copy</button></div><pre><code>workspace.build('./course.p2lrn', {
   strictProfiles: true,
 });</code></pre></div><p>The build converts the editable project into the portable package that the Player must consume.</p></section>
@@ -37,6 +37,6 @@ const intro = workspace.addFile({
 p2lrn-inspect course.p2lrn
 p2lrn-reader course.p2lrn</code></pre></div><p><code>validate</code> Please check the package contract. <code>inspect</code> shows its structure. <code>reader</code> allows you to review the content from the Toolkit tools. Correct any validation errors before delivering the package.</p></section>
 <section class="doc-section"><h2>8. Large resources</h2><p>If a large resource should not travel within the main file, use <a href="/en/docs/paquetes/multipart/">Multipart</a>. The descriptor maintains the hashes and allows the Player to verify the parts it needs.</p></section>
-<section class="doc-section"><h2>9. Next step</h2><p>Continue with <a href="/en/docs/formato/">P2LRN format</a> to understand in more detail manifest, graph, profiles and integrity. Then you can add <a href="/en/docs/progresion/">Progress</a> and test the result with <a href="/en/docs/player/">Player</a>.</p></section>
+<section class="doc-section"><h2>9. Next step</h2><p>Continue with <a href="/en/docs/formato/">P2LRN format</a> to understand in more detail manifest, graph, profiles and integrity. Then you can add <a href="/en/docs/progresion/">Progression</a> and test the result with <a href="/en/docs/player/">Player</a>.</p></section>
 <nav class="doc-pager"><a class="prev" href="/en/docs/entrega-offline/"><span>← Previous</span><strong>Offline delivery</strong></a><a class="next" href="/en/docs/paquetes/multipart/"><span>Next →</span><strong>Multipart</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Technical documentation</span><div><span data-footer-version="">0.5.0-alpha.11</span><a href="/en/contacto/">Contact</a></div></footer>
 </body></html>

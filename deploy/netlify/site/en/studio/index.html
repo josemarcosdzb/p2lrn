@@ -4,7 +4,7 @@
   <meta name="theme-color" content="#0d1117">
   <meta name="description" content="Create interactive courses with P2LRN Studio: edit lessons, add quizzes and games, test the learner view, and export .p2lrn packages.">
   <title>P2LRN Studio | Visual editor to create interactive courses</title>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"P2LRN Studio","url":"https://p2lrn.org/en/studio/","applicationCategory":"EducationalApplication","operatingSystem":"Web","inLanguage":"en","description":"Create interactive courses with P2LRN Studio: edit lessons, add quizzes and games, test the student view, and export .p2lrn packages."}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"P2LRN Studio","url":"https://p2lrn.org/en/studio/","applicationCategory":"EducationalApplication","operatingSystem":"Web","inLanguage":"en","description":"Create interactive courses with P2LRN Studio: edit lessons, add quizzes and games, test the learner view, and export .p2lrn packages."}</script>
   <link rel="stylesheet" href="/p2lrn.css">
   <link rel="stylesheet" href="/studio/studio.css?v=studio-sync-20261021">
   <script src="/en/p2lrn.js" defer=""></script><script src="/player/current/dist/p2lrn.js" defer=""></script>
@@ -13,7 +13,7 @@
 <body class="studio-page">
 <header class="site-header">
   <a class="brand" href="/en/">P2LRN</a>
-  <nav class="nav"><a href="/en/demo/">Viewfinder</a><a href="/en/docs/">Documentation</a><a href="/en/docs/toolkit/">Toolkit</a></nav>
+  <nav class="nav"><a href="/en/demo/">Viewer</a><a href="/en/docs/">Documentation</a><a href="/en/docs/toolkit/">Toolkit</a></nav>
   <div class="header-meta"><span class="status"><i></i><span data-studio-status="" data-functional-status="" role="status" aria-live="polite">Without package</span></span></div>
 </header>
 <main class="studio-main">
@@ -34,7 +34,7 @@
   <section class="studio-toolbar" data-toolbar="" hidden="">
     <div class="studio-mode">
       <button type="button" class="button primary" data-mode-edit="" aria-pressed="true">Edit</button>
-      <button type="button" class="button" data-mode-preview="" aria-pressed="false">Learner view</button>
+      <button type="button" class="button" data-mode-preview="" aria-pressed="false">Learner preview</button>
     </div>
     <div class="studio-structure" aria-label="Course structure">
       <button type="button" class="button primary" data-add-content="">Add content</button>
@@ -74,7 +74,7 @@
     </div>
     <div class="studio-save">
       <div class="studio-save-state">
-        <strong data-save-state="">No guardado</strong>
+        <strong data-save-state="">Not saved</strong>
         <span data-change-count="">No changes</span>
       </div>
       <button class="button" type="button" data-save-draft="">Save draft</button>
@@ -163,17 +163,17 @@
         <button type="button" data-add-kind="matching" data-help="Match items from two columns, such as countries with capitals or concepts with definitions.">Matching</button>
         <button type="button" data-add-kind="ordering" data-help="Place items in the correct order, such as steps, dates, or stages of a process.">Ordering</button>
         <button type="button" data-add-kind="classification" data-help="Drag or assign items to the correct category.">Classification</button>
-        <button type="button" data-add-kind="true-false" data-help="Statements that the learner must mark as true or false.">True / False</button>
+        <button type="button" data-add-kind="true-false" data-help="Statements that the learner must mark as true or false.">True / false</button>
         <button type="button" data-add-kind="fill-blanks" data-help="Fill one or more blanks with the correct answers.">Fill in the blanks</button>
         <button type="button" data-add-kind="word-search" data-help="Generate a word search from text answers that the learner must find.">Word search</button>
         <button type="button" data-add-kind="crossword" data-help="Generate a crossword from clues and text answers.">Crossword</button>
-        <button type="button" data-add-kind="rosco" data-help="Word Wheel game: a series of clues with text answers, usually associated with letters.">Word Wheel</button>
+        <button type="button" data-add-kind="rosco" data-help="Word Wheel game: a series of clues with text answers, usually associated with letters.">Word wheel</button>
         <button type="button" data-add-kind="3d" data-help="Create a 3D object-ordering game. You can switch to Matching or Classification in each question’s Type field.">3D game (sort)</button>
-        <button type="button" data-add-kind="3d-matching" data-help="Create a 3D matching game that connects items and their pairs using the same Player physics engine.">Relate 3D</button>
-        <button type="button" data-add-kind="3d-classification" data-help="Create a 3D classification game using the same Player physics engine.">Classify 3D</button>
+        <button type="button" data-add-kind="3d-matching" data-help="Create a 3D matching game that connects items and their pairs using the same Player physics engine.">3D matching</button>
+        <button type="button" data-add-kind="3d-classification" data-help="Create a 3D classification game using the same Player physics engine.">3D classification</button>
       </div></section>
       <section><h3>Collaboration</h3><p class="studio-add-section-help">Collaborative activities connected through the platform where P2LRN is integrated. The course does not need to save users or credentials within the package.</p><div class="studio-add-grid">
-        <button type="button" data-add-kind="live-poll" data-help="Create a synchronized poll with an individual fallback.">Live voting</button>
+        <button type="button" data-add-kind="live-poll" data-help="Create a synchronized poll with an individual fallback.">Live poll</button>
         <button type="button" data-add-kind="shared-board" data-help="Create a lightweight shared notes board.">Shared board</button>
         <button type="button" data-add-kind="peer-review" data-help="Let participants share a contribution and comment on contributions from others.">Peer review</button>
       </div></section>

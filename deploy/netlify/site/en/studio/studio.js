@@ -263,11 +263,11 @@ async function renderEditor(){
   const surface=document.createElement('article');surface.className='studio-wysiwyg';surface.innerHTML=source.body.innerHTML;
   bindEditable(surface,()=>{
     source.body.innerHTML=surface.innerHTML;
-    studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
+    studio.setPayloadText(editable.path,"\n"+source.documentElement.outerHTML);
   });
   mountLessonImageEditor({host:content,surface,onChange:()=>{
     source.body.innerHTML=surface.innerHTML;
-    studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
+    studio.setPayloadText(editable.path,"\n"+source.documentElement.outerHTML);
     updateChanges();
   },onStatus:setStatus});
 }
@@ -357,7 +357,7 @@ async function openRemote(){
   if(!['http:','https:'].includes(new URL(url).protocol))throw new Error("Studio only opens HTTP/HTTPS URLs.");
   const api=await window.P2LRNReady;
   const pkg=await api.openPackageURL(url);
-  await openPackage(pkg,{name:new URL(url).pathname.split('/').filter(Boolean).at(-1)||"course.p2lrn",url});
+  await openPackage(pkg,{name:new URL(url).pathname.split("/en/").filter(Boolean).at(-1)||"course.p2lrn",url});
 }
 function insertionParent(){
   const current=studio?.entity(selectedId);if(!current)return studio?.rootId??null;
@@ -367,7 +367,7 @@ function insertionParent(){
 async function selectCreated(activity,statusText){selectedId=activity.id;renderTree();await renderEditor();updateChanges();setStatus(statusText);addDialog?.close();}
 function mediaTypeForFile(file){return file.type||({'md':'text/markdown','markdown':'text/markdown','txt':'text/plain','html':'text/html','htm':'text/html','json':'application/json','mp4':'video/mp4','webm':'video/webm','mp3':'audio/mpeg','wav':'audio/wav','png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','gif':'image/gif','webp':'image/webp','svg':'image/svg+xml'}[file.name.split('.').pop().toLowerCase()]||'application/octet-stream');}
 async function addResourceFile(file){const activity=studio.addEmbeddedResource(insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:mediaTypeForFile(file),bytes:new Uint8Array(await file.arrayBuffer())});await selectCreated(activity,"File added");}
-function extractedDocumentHtml(result){const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');return '<!doctype html><html><head><meta charset="utf-8"></head><body>'+result.blocks.map((b)=>b.type==='TITLE'?'<h2>'+esc(b.text)+'</h2>':b.type==='LIST'?'<li>'+esc(b.text)+'</li>':b.type==='SEPARATOR'?'<hr>':'<p>'+esc(b.text)+'</p>').join('')+'</body></html>';}
+function extractedDocumentHtml(result){const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');return "<meta charset=\"utf-8\">"+result.blocks.map((b)=>b.type==='TITLE'?"<h2></h2>"+esc(b.text)+"":b.type==='LIST'?"<li></li>"+esc(b.text)+"":b.type==='SEPARATOR'?'<hr>':"<p></p>"+esc(b.text)+"<p></p>").join('')+"";}
 async function importExternalFile(file){
   if(studio.isCompositeActivity(insertionParent()))throw new Error("Imported educational packages create units. Select a unit to import them.");
   const endpoint=document.body.dataset.importEndpoint||'/api/p2lrn/studio/import';
@@ -401,7 +401,7 @@ async function chooseSharedResource(){
   const library=connectedResourceLibrary;
   if(!library||typeof library.list!=='function'||typeof library.get!=='function')throw new Error("No shared resource library is connected to Studio.");
   const listed=await library.list();
-  const items=(listed??[]).filter((entry)=>entry?.digest&&entry?.href).map((entry)=>({...entry,id:entry.digest,label:entry.href.split('/').filter(Boolean).at(-1)||entry.digest,description:(entry.mediaType||'application/octet-stream')+' · '+entry.digest.slice(0,22)+'…'}));
+  const items=(listed??[]).filter((entry)=>entry?.digest&&entry?.href).map((entry)=>({...entry,id:entry.digest,label:entry.href.split("/en/").filter(Boolean).at(-1)||entry.digest,description:(entry.mediaType||'application/octet-stream')+' · '+entry.digest.slice(0,22)+'…'}));
   if(!items.length)throw new Error("The library has no resources with a source URL and a verifiable digest.");
   showStudioChoice("Shared library","The resource is referenced by URL and SHA-256.",items,async(item)=>{const activity=studio.addSharedResource(insertionParent(),{title:item.label,href:item.href,digest:item.digest,mediaType:item.mediaType||'application/octet-stream',language:'en'});await selectCreated(activity,"Shared resource added");});
 }
@@ -413,7 +413,7 @@ async function materializeSelectedSharedResource(activityId=selectedId){
   if(!remote)throw new Error("The selected activity is not a shared resource pinned by digest.");
   const entry=await connectedResourceLibrary.get(remote.location.expectedDigest);
   if(!entry?.bytes)throw new Error("The resource is not available locally for materialization.");
-  const filename=entry.href?.split('/').filter(Boolean).at(-1)||'resource.bin';
+  const filename=entry.href?.split("/en/").filter(Boolean).at(-1)||'resource.bin';
   const representation=studio.materializeSharedResource(activityId,{bytes:new Uint8Array(entry.bytes),filename,mediaType:entry.mediaType});
   await renderEditor();updateChanges();setStatus('Fallback embebido materializado');return representation;
 }
@@ -446,7 +446,7 @@ async function addContentKind(kind){
   if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'en'});return selectCreated(a,"Live poll added");}
   if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'en'});return selectCreated(a,"Shared board added");}
   if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'en'});return selectCreated(a,"Peer review added");}
-  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const names={memory:"Memory",matching:"Matching",ordering:"Ordering",classification:"Classification",'true-false':"True / false",'fill-blanks':"Fill in the blanks",'word-search':"Word search",crossword:"Crossword",rosco:"Word wheel",'3d':"3D game",'3d-matching':"3D matching",'3d-classification':"3D classification"};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});return selectCreated(a,names[kind]+" added");}
+  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword',"word wheel",'3d','3d-matching','3d-classification'].includes(kind)){const names={memory:"Memory",matching:"Matching",ordering:"Ordering",classification:"Classification",'true-false':"True / false",'fill-blanks':"Fill in the blanks",'word-search':"Word search",crossword:"Crossword",rosco:"Word wheel",'3d':"3D game",'3d-matching':"3D matching",'3d-classification':"3D classification"};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});return selectCreated(a,names[kind]+" added");}
   if(kind==='component'){chooseComponent();return;}
   if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:"Activity group",language:'en',mode:'free',completion:'all'});return selectCreated(activity,"Activity group added");}
 }
@@ -780,7 +780,7 @@ offlineAnalyticsButton?.addEventListener('click',()=>{
   if(!latestOfflineParsedResult)return;
   try{
     sessionStorage.setItem('p2lrn:analytics:offline-result',JSON.stringify(latestOfflineParsedResult));
-    window.open('/analytics/?import=offline-result','_blank');
+    window.open("/en/analytics/?import=offline-result",'_blank');
     setStatus("Result sent to P2LRN Analytics");
   }catch(error){
     setStatus("Could not open Analytics: "+String(error?.message||error));

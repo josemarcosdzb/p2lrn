@@ -12,10 +12,10 @@
     const enHref=path==='/'?'/en/':'/en'+path;
     const switcher=document.createElement('nav');
     switcher.className='language-switch';
-    switcher.setAttribute('aria-label',english?'Site language':'Site language');
+    switcher.setAttribute('aria-label',english?'Site language':"Site language");
     for(const [lang,href,desc] of [
-      ['es',esHref,english?'Switch to Spanish':'Switch to Spanish'],
-      ['en',enHref,english?'Switch to English':'Switch to English']
+      ['es',esHref,english?'Switch to Spanish':"Switch to Spanish"],
+      ['en',enHref,english?'Switch to English':"Switch to English"]
     ]){
       const a=document.createElement('a');a.href=href;a.hreflang=lang;a.lang=lang;
       a.textContent=lang.toUpperCase();a.title=desc;
@@ -172,7 +172,7 @@
       ],
     },
     {
-      label: 'Integrar',
+      label: "Integrate",
       active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
       items: [
         ['/docs/integracion/',"Integration"],
@@ -181,7 +181,7 @@
         ['/docs/conectores/',"Connectors: overview"],
         ['/docs/conectores/ia/',"AI connectors"],
         ['/docs/conectores/lms/',"LMS platforms"],
-        ['/docs/conectores/lti/',"LTI 1.3"],
+        ['/docs/conectores/lti/','LTI 1.3'],
       ],
     },
     {
@@ -510,7 +510,7 @@
     INSTALAR:"Install",
     CREAR:"Create",
     REPRODUCIR:"Play",
-    INTEGRAR:'Integrar',
+    INTEGRAR:"Integrate",
     CONECTORES:"Connectors",
     SEGUIMIENTO:"Tracking",
     REFERENCIA:"Reference",
@@ -610,7 +610,7 @@
   if (sidebar) {
     const search = document.createElement('div');
     search.className = 'docs-search';
-    search.innerHTML = '<label for="docs-search-input">Search documentation</label><input id="docs-search-input" type="search" aria-controls="docs-search-list" aria-describedby="docs-search-status" placeholder="NPM, Skills, Gemini, LMS…" autocomplete="off"><div class="docs-search-results" id="docs-search-list" hidden></div><div class="sr-only docs-search-status" id="docs-search-status" role="status" aria-live="polite" aria-atomic="true"></div>';
+    search.innerHTML = "<label for=\"docs-search-input\">Search documentation</label><input id=\"docs-search-input\" type=\"search\" aria-controls=\"docs-search-list\" aria-describedby=\"docs-search-status\" placeholder=\"NPM, Skills, Gemini, LMS…\" autocomplete=\"off\"><div class=\"docs-search-results\" id=\"docs-search-list\" hidden=\"\"></div><div class=\"sr-only docs-search-status\" id=\"docs-search-status\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"></div>";
     sidebar.prepend(search);
     const input = search.querySelector('input');
     const results = search.querySelector('.docs-search-results');
