@@ -1,5 +1,5 @@
 import {fillBlankDistractors,fillBlankInputMode,fillBlankTemplate} from '../fill-blanks-core.js';
-import {studioUiText,studioNewDefaults} from './studio-ui-i18n.js';
+import {studioUiText,studioNewDefaults,studioLanguage} from './studio-ui-i18n.js';
 const TYPE_LABELS={
   'single-choice':'Elección única','multiple-choice':'Elección múltiple','true-false':'Verdadero / falso','text':'Respuesta de texto','fill-blanks':'Completar huecos','ordering':'Ordenar','matching':'Relacionar','classification':'Clasificar',
 };
@@ -55,18 +55,18 @@ function ensureSolution(question){
     question.trueFalseMode=question.trueFalseMode==='multiple'?'multiple':'single';
     if(question.trueFalseMode==='multiple'){
       question.statements=Array.isArray(question.statements)?question.statements:[];
-      while(question.statements.length<2)question.statements.push({id:uid('tf'),text:`Afirmación ${question.statements.length+1}`});
+      while(question.statements.length<2)question.statements.push({id:uid('tf'),text:studioUiText(`Afirmación ${question.statements.length+1}`)});
       const old=question.solution?.answers??{};
       question.solution={answers:Object.fromEntries(question.statements.map((statement,index)=>[statement.id,typeof old[statement.id]==='boolean'?old[statement.id]:index===0]))};
       return;
     }
-    question.choices=Array.isArray(question.choices)&&question.choices.length===2?question.choices:[{id:uid('t'),text:'Verdadero'},{id:uid('f'),text:'Falso'}];
+    question.choices=Array.isArray(question.choices)&&question.choices.length===2?question.choices:[{id:uid('t'),text:studioUiText('Verdadero')},{id:uid('f'),text:studioUiText('Falso')}];
     const choiceIds=(question.solution?.choiceIds??[]).filter((id)=>question.choices.some((choice)=>choice.id===id));
     question.solution={choiceIds:choiceIds.length?[choiceIds[0]]:[question.choices[0].id]};
   }
   else if(['single-choice','multiple-choice'].includes(question.type)){question.choices??=[];question.solution={choiceIds:(question.solution?.choiceIds??[]).filter((id)=>question.choices.some((c)=>c.id===id))};if(!question.solution.choiceIds.length&&question.choices[0])question.solution.choiceIds=[question.choices[0].id];}
-  else if(question.type==='text'){question.solution={acceptedAnswers:question.solution?.acceptedAnswers?.length?question.solution.acceptedAnswers:['Respuesta']};}
-  else if(question.type==='fill-blanks'){question.blanks??=[];const old=question.solution?.answers??{};question.solution={answers:Object.fromEntries(question.blanks.map((b)=>[b.id,old[b.id]?.length?old[b.id]:['Respuesta']]))};}
+  else if(question.type==='text'){question.solution={acceptedAnswers:question.solution?.acceptedAnswers?.length?question.solution.acceptedAnswers:[studioUiText('Respuesta')]};}
+  else if(question.type==='fill-blanks'){question.blanks??=[];const old=question.solution?.answers??{};question.solution={answers:Object.fromEntries(question.blanks.map((b)=>[b.id,old[b.id]?.length?old[b.id]:[studioUiText('Respuesta')]]))};}
   else if(question.type==='ordering'){question.items??=[];question.solution={order:question.items.map((x)=>x.id)};}
   else if(question.type==='matching'){question.left??=[];question.right??=[];question.solution={pairs:question.left.map((left,index)=>({left:left.id,right:question.right[index]?.id??question.right[0]?.id})).filter((p)=>p.right)};}
   else if(question.type==='classification'){question.items??=[];question.categories??=[];const fallback=question.categories[0]?.id;question.solution={assignments:question.items.map((item)=>({item:item.id,category:question.solution?.assignments?.find((x)=>x.item===item.id)?.category??fallback})).filter((x)=>x.category)};}
@@ -74,7 +74,7 @@ function ensureSolution(question){
 
 function switchType(question,type){
   const next=defaultQuestion(type);
-  const defaults={ordering:'Ordena los elementos',matching:'Relaciona cada elemento',classification:'Clasifica los elementos'};
+  const defaults={ordering:studioUiText('Ordena los elementos'),matching:studioUiText('Relaciona cada elemento'),classification:studioUiText('Clasifica los elementos')};
   const prompt=question.prompt===defaults[question.type]&&defaults[type] ? defaults[type] : question.prompt;
   const {id,points,timeLimitSeconds,scoring,penalty}=question;
   Object.keys(question).forEach((k)=>delete question[k]);
@@ -85,7 +85,7 @@ function switchType(question,type){
   ensureSolution(question);
 }
 function rowButton(text,handler,danger=false){const b=node('button',danger?'q-mini q-danger':'q-mini',text);b.type='button';b.addEventListener('click',handler);return b;}
-function guardedDelete(handler,enabled,reason){const b=rowButton('Eliminar',handler,true);b.disabled=!enabled;if(!enabled)b.title=reason;return b;}
+function guardedDelete(handler,enabled,reason){const b=rowButton('Eliminar',handler,true);b.disabled=!enabled;if(!enabled)b.title=studioUiText(reason);return b;}
 
 function setTrueFalseMode(question,mode){
   ensureSolution(question);
@@ -96,10 +96,10 @@ function setTrueFalseMode(question,mode){
     const correctId=question.solution?.choiceIds?.[0];
     const firstValue=Boolean(trueChoice&&correctId===trueChoice.id);
     const firstId=uid('tf'),secondId=uid('tf');
-    const firstText=String(question.prompt||'').trim()||'Afirmación 1';
+    const firstText=String(question.prompt||'').trim()||studioUiText('Afirmación 1');
     question.trueFalseMode='multiple';
-    question.prompt='Indica si cada afirmación es verdadera o falsa';
-    question.statements=[{id:firstId,text:firstText},{id:secondId,text:'Afirmación 2'}];
+    question.prompt=studioUiText('Indica si cada afirmación es verdadera o falsa');
+    question.statements=[{id:firstId,text:firstText},{id:secondId,text:studioUiText('Afirmación 2')}];
     delete question.choices;
     question.solution={answers:{[firstId]:firstValue,[secondId]:false}};
     return;
@@ -108,8 +108,8 @@ function setTrueFalseMode(question,mode){
   const firstValue=first?question.solution?.answers?.[first.id]!==false:true;
   const trueId=uid('t'),falseId=uid('f');
   question.trueFalseMode='single';
-  question.prompt=first?.text||'Escribe una afirmación';
-  question.choices=[{id:trueId,text:'Verdadero'},{id:falseId,text:'Falso'}];
+  question.prompt=first?.text||studioUiText('Escribe una afirmación');
+  question.choices=[{id:trueId,text:studioUiText('Verdadero')},{id:falseId,text:studioUiText('Falso')}];
   delete question.statements;
   question.solution={choiceIds:[firstValue?trueId:falseId]};
 }
@@ -136,7 +136,7 @@ function renderTrueFalseEditor(box,question,commit,rerender){
     const remove=guardedDelete(()=>{question.statements.splice(index,1);ensureSolution(question);commit();rerender();},question.statements.length>2,'Se necesitan al menos dos afirmaciones.');
     row.append(node('span','q-tf-number',String(index+1)),text,answers,remove);box.append(row);
   });
-  box.append(rowButton('+ Añadir afirmación',()=>{const id=uid('tf');question.statements.push({id,text:'Nueva afirmación'});question.solution.answers[id]=true;commit();rerender();}));
+  box.append(rowButton('+ Añadir afirmación',()=>{const id=uid('tf');question.statements.push({id,text:studioUiText('Nueva afirmación')});question.solution.answers[id]=true;commit();rerender();}));
 }
 
 function renderChoiceEditor(box,question,commit,rerender){
@@ -157,7 +157,7 @@ function renderChoiceEditor(box,question,commit,rerender){
     const del=guardedDelete(()=>{question.choices.splice(index,1);ensureSolution(question);commit();rerender();},question.choices.length>2,'La pregunta necesita al menos dos respuestas.');
     row.append(correct,input,del);box.append(row);
   });
-  if(!trueFalse)box.append(rowButton('+ Añadir respuesta',()=>{question.choices.push({id:uid('a'),text:'Nueva respuesta'});ensureSolution(question);commit();rerender();}));
+  if(!trueFalse)box.append(rowButton('+ Añadir respuesta',()=>{question.choices.push({id:uid('a'),text:studioUiText('Nueva respuesta')});ensureSolution(question);commit();rerender();}));
 }
 
 function renderTextEditor(box,question,commit){
@@ -228,7 +228,7 @@ function renderBlankEditor(box,question,commit,rerender){
     const current=String(question.body??template.value);
     const cursor=template.selectionStart??current.length;
     question.body=current.slice(0,cursor)+token+current.slice(cursor);
-    question.blanks.push({id});question.solution.answers[id]=['Respuesta'];syncDragOptions();commit();rerender();
+    question.blanks.push({id});question.solution.answers[id]=[studioUiText('Respuesta')];syncDragOptions();commit();rerender();
   }));
 
   if(question.inputMode==='drag'){
@@ -294,7 +294,7 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
     hero.append(copy);root.append(hero);
     const settings=node('div','q-settings');
     const title=textInput(payload.title,'Título');title.addEventListener('input',()=>{payload.title=title.value;save(model,activityId,payload,onChange);hero.querySelector('h2').textContent=title.value||'Cuestionario';});
-    const language=textInput(payload.language||'es','es');language.addEventListener('input',()=>{payload.language=language.value;save(model,activityId,payload,onChange);});
+    const language=textInput(payload.language||studioLanguage(),studioLanguage());language.addEventListener('input',()=>{payload.language=language.value;save(model,activityId,payload,onChange);});
     const mode=selectInput(payload.presentation?.questionMode??'one-at-a-time',[['one-at-a-time','Una pregunta cada vez'],['all','Todas a la vez']]);mode.addEventListener('change',()=>{payload.presentation??={};payload.presentation.questionMode=mode.value;save(model,activityId,payload,onChange);});
     const feedback=selectInput(payload.presentation?.showFeedback??'never',[['never','No mostrar autocorrección ni soluciones al alumno'],['after-submit','Mostrar autocorrección solo al finalizar']]);feedback.addEventListener('change',()=>{payload.presentation??={};payload.presentation.showFeedback=feedback.value;save(model,activityId,payload,onChange);});
     const shuffle=document.createElement('input');shuffle.type='checkbox';shuffle.checked=Boolean(payload.presentation?.shuffleQuestions);shuffle.addEventListener('change',()=>{payload.presentation??={};payload.presentation.shuffleQuestions=shuffle.checked;save(model,activityId,payload,onChange);});
