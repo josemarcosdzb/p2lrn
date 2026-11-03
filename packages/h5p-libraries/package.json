@@ -1,6 +1,6 @@
 {
   "name": "@p2lrn/h5p-libraries",
-  "version": "0.5.0-alpha.11",
+  "version": "0.5.0-alpha.12",
   "description": "Pinned shared H5P library corpus for P2LRN runtimes",
   "type": "module",
   "license": "SEE LICENSE IN THIRD_PARTY_NOTICES.md",

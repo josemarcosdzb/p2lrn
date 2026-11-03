@@ -1,4 +1,4 @@
-# P2LRN Node.js / TypeScript 0.5.0-alpha.11
+# P2LRN Node.js / TypeScript 0.5.0-alpha.12
 
 Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeScript**. Python ya no es una dependencia del toolkit principal: se conserva únicamente en `reference-python-alpha15/` para comparación y conformidad con Alpha15. La auditoría final no encuentra archivos Python ejecutables ni comandos operativos Python fuera de esa carpeta.
 
@@ -15,7 +15,7 @@ Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeS
 
 ## Identidad P2LRN
 
-La distribución `0.5.0-alpha.11` alinea `@p2lrn/player`, `@p2lrn/toolkit` y `@p2lrn/h5p-libraries` y `@p2lrn/studio`. El Reader documental forma parte del Toolkit como subpath `@p2lrn/toolkit/document-reader`.
+La distribución `0.5.0-alpha.12` alinea `@p2lrn/player`, `@p2lrn/toolkit` y `@p2lrn/h5p-libraries` y `@p2lrn/studio`. El Reader documental forma parte del Toolkit como subpath `@p2lrn/toolkit/document-reader`.
 
 La salida nueva usa:
 

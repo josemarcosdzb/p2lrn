@@ -5,7 +5,7 @@ Panel analítico embebible de P2LRN para alumnos, cursos, progreso, actividad, i
 ## NPM
 
 \`\`\`bash
-npm install @p2lrn/analytics@0.5.0-alpha.11
+npm install @p2lrn/analytics@0.5.0-alpha.12
 \`\`\`
 
 \`\`\`js

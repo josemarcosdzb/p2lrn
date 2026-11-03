@@ -4,7 +4,7 @@ import {basename, extname, join, resolve, sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createH5PSessionRegistry, h5pSessionEtag, h5pMediaType} from './h5p-session.mjs';
 
-const VERSION='0.5.0-alpha.11';
+const VERSION='0.5.0-alpha.12';
 const MAX_UPLOAD_BYTES_DEFAULT=256*1024*1024;
 const MAX_SESSION_CREATES_PER_MINUTE_DEFAULT=60;
 const ASSETS = new Map([

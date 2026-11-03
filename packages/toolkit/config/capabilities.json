@@ -1,7 +1,7 @@
 {
   "product": {
     "name": "P2LRN Reading System",
-    "version": "0.5.0-alpha.11"
+    "version": "0.5.0-alpha.12"
   },
   "roles": [
     "validator",

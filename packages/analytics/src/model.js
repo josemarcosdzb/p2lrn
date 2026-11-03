@@ -1,4 +1,4 @@
-export const P2LRN_ANALYTICS_VERSION='0.5.0-alpha.11';
+export const P2LRN_ANALYTICS_VERSION='0.5.0-alpha.12';
 export const ANALYTICS_DATASET_SCHEMA='https://p2lrn.org/schema/analytics-dataset/1';
 export const ANALYTICS_SNAPSHOT_SCHEMA='https://p2lrn.org/schema/analytics-snapshot/1';
 export const P2LRN_OFFLINE_RESULT_SCHEMA='https://p2lrn.org/schema/offline-result/1';

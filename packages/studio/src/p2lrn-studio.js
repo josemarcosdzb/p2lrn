@@ -17,7 +17,7 @@ import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
 import {exportOfflineAssignmentBundle, parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
 
-export const P2LRN_STUDIO_VERSION='0.5.0-alpha.11';
+export const P2LRN_STUDIO_VERSION='0.5.0-alpha.12';
 
 const css=`
 :host{display:block;min-height:640px;font-family:Inter,system-ui,sans-serif;color:#111827}

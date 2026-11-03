@@ -8,7 +8,7 @@ The npm distribution consists of five version-aligned packages:
 - `@p2lrn/studio` — browser authoring component and optional Host-backed Save, Reader and Import endpoints.
 - `@p2lrn/analytics` — embeddable learner/course analytics dashboard and aggregation helpers.
 
-All five packages currently use the same release version: `0.5.0-alpha.11`.
+All five packages currently use the same release version: `0.5.0-alpha.12`.
 
 Candidate release notes: `spec/RELEASE-NOTES-0.5.0-alpha.11.md`. The executable acceptance matrix is `spec/E2E-MATRIX-0.5.0-alpha.11.md` plus `scripts/verify-connected-e2e-matrix.mjs`.
 
