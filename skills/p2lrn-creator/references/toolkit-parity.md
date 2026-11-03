@@ -2,7 +2,7 @@
 
 Verificado en `josemarcosdzb/p2lrn` (rama de diseño), 03-11-2026; Toolkit `0.5.0-alpha.12`, P2LRN Core `0.4.0`, MCP Node `0.1.0`.
 
-**Regla:** no equiparar una Skill instalada con un conector MCP conectado; no anunciar funcionamiento visual sin pruebas del Player. Si cambian las versiones, volver a comprobar fuentes y tests de `main`.
+**Regla:** no equiparar una Skill instalada con un conector MCP conectado; no anunciar funcionamiento visual sin pruebas del Player. Si cambian las versiones, volver a comprobar las fuentes, pruebas oficiales y el estado de `main`.
 
 | Capacidad | Esta Skill offline | MCP de P2LRN (configurado aparte) | Toolkit / Studio / Player |
 | --- | --- | --- | --- |
@@ -24,7 +24,7 @@ Verificado en `josemarcosdzb/p2lrn` (rama de diseño), 03-11-2026; Toolkit `0.5.
 
 ## Adaptador oficial de Authoring en esta Skill
 
-Cuando Toolkit oficial 0.5.0-alpha.11 esté instalado y autorizado, `scripts/p2lrn_official.mjs` ejecuta operaciones reales `create`, `verify`, `inspect`, `open`, `edit`, `build`, `read-document`. `P2LRNAuthoringWorkspace` se invoca con métodos tipados y exportación nueva; se bloquean versiones no verificadas, sustituciones de archivo y `force`. `Player`, `Studio`, `Analytics` precisan componentes de navegador/Host y no vienen incluidos como binarios en el ZIP. Consultar `references/official-runtime.md` y `official-packages.json`.
+Cuando Toolkit oficial 0.5.0-alpha.12 esté instalado y autorizado, `scripts/p2lrn_official.mjs` ejecuta operaciones reales `create`, `verify`, `inspect`, `open`, `edit`, `build`, `read-document`. `P2LRNAuthoringWorkspace` se invoca con métodos tipados y exportación nueva; se bloquean versiones no verificadas, sustituciones de archivo y `force`. `Player`, `Studio`, `Analytics` precisan componentes de navegador/Host y no vienen incluidos como binarios en el ZIP. Consultar `references/official-runtime.md` y `official-packages.json`.
 
 ## Contrato del MCP real
 
