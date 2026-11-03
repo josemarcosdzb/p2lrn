@@ -13,26 +13,31 @@ function slug(value){const text=String(value??'curso').normalize('NFD').replace(
 function fileDescriptor(path,mediaType){return{path,mediaType,size:0,byteDigest:ZERO_DIGEST,contentDigest:ZERO_DIGEST};}
 function lessonHtml(title,language){
   const escaped=String(title).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-  return `<!doctype html>\n<html lang="${language}">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escaped}</title></head>\n<body><h1>${escaped}</h1><p>Empieza a escribir aquí.</p></body>\n</html>\n`;
+  const starter=language==='en'?'Start writing here.':'Empieza a escribir aquí.';
+  return `<!doctype html>\n<html lang="${language}">\n<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escaped}</title></head>\n<body><h1>${escaped}</h1><p>${starter}</p></body>\n</html>\n`;
 }
 
 export function createP2LRNStudioDocument({title='Curso nuevo',language='es',description='',author,createdAt,license,copyrightHolder}={}){
   const lang=safeLanguage(language),courseId=id(),unitId=id(),resourceId=id(),activityId=id(),representationId=id();
+  const english=lang==='en';
+  const newTitle=english&&title==='Curso nuevo'?'New course':title;
+  const firstLesson=english?'First lesson':'Primera lección';
+  const firstUnit=english?'Unit 1':'Unidad 1';
   const path='content/lesson-1.html';
-  const payloads=new Map([[path,encoder.encode(lessonHtml('Primera lección',lang))]]);
-  const course={id:courseId,type:'course',revision:0,title:{[lang]:String(title||'Curso nuevo')},languages:[lang],children:[unitId]};
+  const payloads=new Map([[path,encoder.encode(lessonHtml(firstLesson,lang))]]);
+  const course={id:courseId,type:'course',revision:0,title:{[lang]:String(newTitle|| (english?'New course':'Curso nuevo'))},languages:[lang],children:[unitId]};
   if(String(description||'').trim())course.description={[lang]:String(description).trim()};
   setCourseRights(course,{createdAt:currentCreationDate(),...Object.fromEntries(Object.entries({author,createdAt,license,copyrightHolder}).filter(([,v])=>v!==undefined))});
   const graph={graphVersion:FORMAT_VERSION,entities:[
     course,
-    {id:unitId,type:'unit',role:'module',title:{[lang]:'Unidad 1'},children:[activityId]},
-    {id:resourceId,type:'resource',title:{[lang]:'Primera lección'},representations:[{id:representationId,role:'primary',location:{type:'embedded',path},originalName:'lesson-1.html',mediaType:'text/html'}]},
-    {id:activityId,type:'activity',activityType:'https://p2lrn.org/type/resource',title:{[lang]:'Primera lección'},resource:resourceId},
+    {id:unitId,type:'unit',role:'module',title:{[lang]:firstUnit},children:[activityId]},
+    {id:resourceId,type:'resource',title:{[lang]:firstLesson},representations:[{id:representationId,role:'primary',location:{type:'embedded',path},originalName:'lesson-1.html',mediaType:'text/html'}]},
+    {id:activityId,type:'activity',activityType:'https://p2lrn.org/type/resource',title:{[lang]:firstLesson},resource:resourceId},
   ],relations:[]};
   const manifest={format:'P2LRN',formatVersion:FORMAT_VERSION,packageId:id(),entrypoints:[{id:courseId,type:'course',role:'primary'}],graph:{path:'content/graph.json',schema:GRAPH_SCHEMA,mediaType:'application/json',size:0,byteDigest:ZERO_DIGEST,contentDigest:ZERO_DIGEST},profiles:[{id:COURSE_PROFILE,version:FORMAT_VERSION,requirement:'required'}],files:[fileDescriptor(path,'text/html')],integrity:{algorithm:'sha256',contentRoot:ZERO_DIGEST}};
   const zip={read:async(path)=>{const bytes=payloads.get(String(path));if(!bytes)throw new Error('New Studio payload not found: '+path);return bytes;}};
   const pkg={manifest,graph,entities:new Map(graph.entities.map((entity)=>[entity.id,entity])),zip,payload:(path)=>({read:()=>zip.read(path)})};
-  const document=new P2LRNStudioDocument(pkg,{sourceName:slug(title)+'.p2lrn',sourceUrl:null,createdFromScratch:true});
+  const document=new P2LRNStudioDocument(pkg,{sourceName:slug(newTitle)+'.p2lrn',sourceUrl:null,createdFromScratch:true});
   document.changeCount=1;
   return document;
 }
