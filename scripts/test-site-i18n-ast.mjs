@@ -24,3 +24,12 @@ test('includes template quasis but does not follow non-AST data',()=>{
   });
   assert.deepEqual(chunks,['Revisando ','... resultado']);
 });
+
+test('visits nested object navigation labels while preserving their technical keys',()=>{
+  const tree=parseJs("const nav=[{label:'Soluciones',items:[['/docs/','Documentación']]}];");
+  const values=[];
+  walkAst(tree,(node,parent)=>{
+    if(node.type==='Literal'&&typeof node.value==='string'&&!structuralLiteral(node,parent))values.push(node.value);
+  });
+  assert.deepEqual(values,['Soluciones','/docs/','Documentación']);
+});
