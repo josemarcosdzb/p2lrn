@@ -587,7 +587,7 @@
     let index = null;
     const ensureIndex = async () => {
       if (index) return index;
-      const response = await fetch('/search-index.json', {cache:'no-store'});
+      const response = await fetch(/^en(?:-|$)/i.test(document.documentElement.lang||'')?'/en/search-index.json':'/search-index.json', {cache:'no-store'});
       if (!response.ok) throw new Error('search-index');
       index = await response.json();
       return index;
