@@ -107,7 +107,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     const p=orderingSlotPosition(index,placed.length);
     scene.addZone({
       id:`order-slot:${index}`,
-      text:`Posición ${index+1}`,
+      text:playerUiText(`Posición ${index+1}`),
       position:p,
       size:[2.35,0.22,1.85],
       color:'#1d4ed8',
@@ -150,7 +150,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     const current=placed.indexOf(itemId);
     const occupied=placed[slotIndex];
     if (occupied && occupied!==itemId) {
-      setText(status,`La posición ${slotIndex+1} ya está ocupada.`);
+      setText(status,playerUiText(`La posición ${slotIndex+1} ya está ocupada.`));
       return false;
     }
     if (current>=0) placed[current]=null;
@@ -165,7 +165,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     if (order) {
       setText(status,orderingIsCorrect(order,trial.correctOrder)?playerUiText('Orden correcto.'):playerUiText('Orden completo; puedes seguir ajustándolo.'));
     } else {
-      setText(status,`Objeto colocado en la posición ${slotIndex+1}.`);
+      setText(status,playerUiText(`Objeto colocado en la posición ${slotIndex+1}.`));
     }
     return true;
   }
@@ -175,7 +175,7 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     row.append(el('span',{},item.text));
     const select=el('select');
     select.append(el('option',{value:''},playerUiText('Sin colocar')));
-    placed.forEach((_,index)=>select.append(el('option',{value:String(index)},`Posición ${index+1}`)));
+    placed.forEach((_,index)=>select.append(el('option',{value:String(index)},playerUiText(`Posición ${index+1}`))));
     select.addEventListener('change',()=>{
       if(select.value===''){
         const current=placed.indexOf(item.id);
@@ -317,7 +317,7 @@ function buildMatchingControls({trial,runtime,scene,status}) {
     scene.highlight(`left:${selected}`,false);
     selected=null;
     leftButtons.forEach((button)=>button.classList.remove('is-selected'));
-    setText(status,`Conexión correcta · ${connections.length}/${trial.connections.length}`);
+    setText(status,playerUiText(`Conexión correcta · ${connections.length}/${trial.connections.length}`));
     return true;
   }
 
@@ -573,7 +573,7 @@ export async function render(options) {
 
   const technology=el('p',{class:'p2lrn-3d-runtime'},accessibleOnly
     ?playerUiText('Escena 3D no disponible · modo accesible')
-    :`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`);
+    :playerUiText(`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`));
   const help=el('p',{class:'p2lrn-game-description'},accessibleOnly
     ?playerUiText('Elige las respuestas usando los botones y selectores de cada prueba.')
     :'Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.');
@@ -594,7 +594,7 @@ export async function render(options) {
     const trial=game.data.trials[trialIndex];
     const wrap=el('div',{class:'p2lrn-3d-trial'});
     wrap.append(
-      el('p',{class:'p2lrn-game-description'},`Prueba ${trialIndex+1} de ${game.data.trials.length}`),
+      el('p',{class:'p2lrn-game-description'},playerUiText(`Prueba ${trialIndex+1} de ${game.data.trials.length}`)),
       el('h3',{},trial.prompt),
     );
 
