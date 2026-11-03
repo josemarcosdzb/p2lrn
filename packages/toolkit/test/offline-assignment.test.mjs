@@ -584,7 +584,7 @@ test('portable cross-device checkpoint keeps identity and attempt, restores pend
       document:{getElementById:el},localStorage:{
         getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v),
       },P2LRNReady:Promise.resolve(api),crypto:webcrypto,TextEncoder,TextDecoder,
-      Date,Math,JSON,URL,Blob,Promise,setInterval:()=>1,clearInterval:()=>{},
+      Date,Math,JSON,URL,Blob,Promise,setInterval:()=>1,clearInterval:()=>{},setTimeout:callback=>{callback();return 1;},
       Intl,console,
     };
     sandbox.globalThis=sandbox;
