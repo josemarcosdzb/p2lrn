@@ -7,7 +7,8 @@ import {renderSiteFooter} from '../deploy/netlify/site-footer.mjs';
 import {existsSync} from 'node:fs';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
-const source=join(root,'deploy','netlify','site');
+const built=process.argv.includes('--built');
+const source=built?join(root,'.netlify-cdn'):join(root,'deploy','netlify','site');
 const playwrightPath=join(root,'.license-browser-qa','node_modules','playwright-core','index.mjs');
 const {chromium}=await import(pathToFileURL(playwrightPath).href);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.md':'text/markdown'};
@@ -33,7 +34,7 @@ const server=createServer(async(req,res)=>{
     const requested=url.pathname==='/LICENSE'?join(root,'LICENSE'):url.pathname==='/NOTICE.md'?join(root,'NOTICE.md'):await responseFile(url.pathname);
     if(!requested){res.writeHead(404);res.end('Not found');return;}
     let bytes=await readFile(requested);
-    if(extname(requested)==='.html'){
+    if(extname(requested)==='.html'&&!built){
       const rel=url.pathname,lang=rel.startsWith('/en/')?'en':'es';
       let html=bytes.toString('utf8');
       const main=html.toLowerCase().lastIndexOf('</main>');
@@ -51,7 +52,7 @@ await new Promise((done,reject)=>{server.once('error',reject);server.listen(0,'1
 const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({headless:true,executablePath:findChrome(),args:['--no-first-run']});
 const page=await browser.newPage();
-const result={ok:false,viewports:[],routes:[],footerLinks:0,commercialForm:true};
+const result={ok:false,mode:built?'compiled-site':'source-with-shared-footer',viewports:[],routes:[],footerLinks:0,commercialForm:true};
 try{
   for(const width of [320,390,768,1280]){
     await page.setViewportSize({width,height:840});
