@@ -136,7 +136,7 @@
         ['/docs/questionnaires/crossword/',"Crossword"],
         ['/docs/questionnaires/rosco/',"Word wheel"],
         ['/docs/questionnaires/3d/',"3D game"],
-        ['/docs/juegos-3d/','Arquitectura 3D'],
+        ['/docs/juegos-3d/',"3D architecture"],
         ['/docs/ejemplos/',"Examples"],
       ],
     },
@@ -154,7 +154,7 @@
       ],
     },
     {
-      label: 'Seguimiento',
+      label: "Tracking",
       active: ['/docs/progresion/','/docs/metricas/'],
       items: [
         ['/docs/progresion/',"Progression"],
@@ -166,7 +166,7 @@
       active: ['/docs/analytics/','/analytics/'],
       items: [
         ['/docs/analytics/',"Analytics guide"],
-        ['/analytics/','Abrir Analytics'],
+        ['/analytics/',"Open Analytics"],
       ],
     },
     {
@@ -398,7 +398,7 @@
       ['/docs/toolkit/','Toolkit'],
       ['/docs/cli/','CLI'],
     ]],
-    ['REPRODUCIR', [
+    ["PLAY", [
       ['/docs/player/','Player'],
       ['/docs/questionnaires/',"Quizzes and games"],
       ['/docs/juegos-3d/',"3D games"],
@@ -412,13 +412,13 @@
     ["CONNECTORS", [
       ['/docs/conectores/',"Connectors and integration"],
     ]],
-    ['SEGUIMIENTO', [
+    ["TRACKING", [
       ['/docs/progresion/',"Progression"],
       ['/docs/metricas/',"Metrics and analytics"],
     ]],
     ['ANALYTICS', [
       ['/docs/analytics/','P2LRN Analytics'],
-      ['/analytics/','Abrir panel demo ↗'],
+      ['/analytics/',"Open demo dashboard ↗"],
     ]],
     ["REFERENCE", [
       ['/docs/compatibilidad/',"Compatibility"],
@@ -428,7 +428,7 @@
       ['/docs/troubleshooting/',"Troubleshooting"],
     ]],
     ["RESOURCES", [
-      ['/studio/','Abrir Studio ↗'],
+      ['/studio/',"Open Studio ↗"],
       ['/demo/',"Viewer ↗"],
       ['/examples/catalog.json',"Examples catalog ↗"],
     ]],
@@ -481,7 +481,7 @@
     REPRODUCIR:"Play",
     INTEGRAR:'Integrar',
     CONECTORES:"Connectors",
-    SEGUIMIENTO:'Seguimiento',
+    SEGUIMIENTO:"Tracking",
     REFERENCIA:"Reference",
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
@@ -892,7 +892,7 @@
     const version = release.webSdkVersion || health.playerVersion || index?.player?.version;
     if (version) document.querySelectorAll('[data-player-version],[data-footer-version]').forEach((n) => n.textContent = version);
     const node = document.querySelector('[data-health]');
-    if (node) node.textContent = health.ok && release.webSdkVersion === version ? 'CDN disponible' : 'CDN';
+    if (node) node.textContent = health.ok && release.webSdkVersion === version ? "CDN available" : 'CDN';
   }).catch(() => {});
 })();
 
