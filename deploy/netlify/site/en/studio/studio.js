@@ -1,11 +1,12 @@
-import {P2LRNStudioDocument} from './runtime/authoring-document.js';
-import {exportP2LRNPackage} from './runtime/package-export.js';
-import {exportOfflineAssignmentBundle,parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
-import {createP2LRNStudioDocument} from './runtime/new-document.js';
-import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
-import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
-import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
-import {mountLessonImageEditor} from './runtime/lesson-images.js';
+import {P2LRNStudioDocument} from '/studio/runtime/authoring-document.js';
+import {exportP2LRNPackage} from '/studio/runtime/package-export.js';
+import {exportOfflineAssignmentBundle,parseOfflineAssignmentResult} from '/studio/runtime/offline-assignment.js';
+import {createP2LRNStudioDocument} from '/studio/runtime/new-document.js';
+import {renderQuestionnaireVisualEditor} from '/studio/runtime/questionnaire-editor.js';
+import {renderStructuredVisualEditor} from '/studio/runtime/structured-editor.js';
+import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from '/studio/runtime/browser-drafts.js';
+import {mountLessonImageEditor} from '/studio/runtime/lesson-images.js';
+import {studioUiText} from '/studio/runtime/studio-ui-i18n.js';
 
 const createCourseButton=document.querySelector('[data-create-course]');
 const addUnitButton=document.querySelector('[data-add-unit]');
@@ -77,28 +78,28 @@ let savedRevision=0;
 let exportedRevision=0;
 
 const titleOf=(entity)=>studio?.title(entity.id)??entity.id;
-const setStatus=(value)=>{status.textContent=value;};
+const setStatus=(value)=>{status.textContent=studioUiText(value);};
 const hasUnsavedChanges=()=>Boolean(studio&&studio.changeCount>savedRevision&&studio.changeCount>exportedRevision);
 const updateChanges=()=>{
   if(!studio){
-    changeCount.textContent='Sin cambios';
-    saveState.textContent='No guardado';
+    changeCount.textContent="No changes";
+    saveState.textContent="Not saved";
     if(unsavedWarning)unsavedWarning.hidden=true;
     return;
   }
-  changeCount.textContent=studio.changeCount?`${studio.changeCount} cambio${studio.changeCount===1?'':'s'}`:'Sin cambios';
+  changeCount.textContent=studio.changeCount?`${studio.changeCount} cambio${studio.changeCount===1?'':'s'}`:"No changes";
   const unsaved=hasUnsavedChanges();
   if(saveState){
-    if(unsaved)saveState.textContent='No guardado';
-    else if(studio.changeCount&&exportedRevision>=studio.changeCount)saveState.textContent='Exportado';
-    else if(studio.changeCount&&savedRevision>=studio.changeCount)saveState.textContent='Guardado en este navegador';
-    else saveState.textContent='Sin cambios';
+    if(unsaved)saveState.textContent="Not saved";
+    else if(studio.changeCount&&exportedRevision>=studio.changeCount)saveState.textContent="Exported";
+    else if(studio.changeCount&&savedRevision>=studio.changeCount)saveState.textContent="Saved in this browser";
+    else saveState.textContent="No changes";
   }
   if(unsavedWarning)unsavedWarning.hidden=!unsaved;
 };
 async function persistDraft(){
   if(!studio)return;
-  setStatus('Guardando borrador local…');
+  setStatus("Saving local draft…");
   const exported=await exportP2LRNPackage(studio);
   draftMetadata=await saveLatestDraft({
     name:exported.filename,
@@ -109,7 +110,7 @@ async function persistDraft(){
   savedRevision=studio.changeCount;
   if(draftMenu)draftMenu.hidden=false;
   updateChanges();
-  setStatus('Borrador guardado sólo en este navegador');
+  setStatus("Draft saved in this browser only");
 }
 
 function revokeUrls(){
@@ -192,10 +193,10 @@ async function renderEditor(){
   const head=document.createElement('header');head.className='studio-sheet-head';
   const type=document.createElement('span');type.className='studio-entity-type';type.textContent=entity.type;
   const title=document.createElement('h1');title.className='studio-title';title.textContent=titleOf(entity);
-  title.setAttribute('role','textbox');title.setAttribute('aria-label','Título');title.setAttribute('aria-multiline','true');
+  title.setAttribute('role','textbox');title.setAttribute('aria-label',"Title");title.setAttribute('aria-multiline','true');
   bindEditable(title,()=>{try{studio.setTitle(entity.id,title.textContent||'');renderTree();}catch(error){setStatus(error.message);}});
   const description=document.createElement('p');description.className='studio-description';description.textContent=entity.description?.es??entity.description?.en??'';
-  description.dataset.placeholder='Descripción';description.setAttribute('role','textbox');description.setAttribute('aria-label','Descripción');description.setAttribute('aria-multiline','true');
+  description.dataset.placeholder="Description";description.setAttribute('role','textbox');description.setAttribute('aria-label',"Description");description.setAttribute('aria-multiline','true');
   bindEditable(description,()=>studio.setDescription(entity.id,description.textContent||''));
   head.append(type,title,description);sheet.append(head);
   const content=document.createElement('div');content.className='studio-content';sheet.append(content);
@@ -296,7 +297,7 @@ async function setMode(next){
   editorStage.hidden=preview;previewStage.hidden=!preview;
   editButton.setAttribute('aria-pressed',String(!preview));previewButton.setAttribute('aria-pressed',String(preview));
   editButton.classList.toggle('primary',!preview);previewButton.classList.toggle('primary',preview);
-  if(preview)await refreshPreview();else setStatus('Editando curso');
+  if(preview)await refreshPreview();else setStatus("Editing course");
 }
 async function activateStudio(document,{name,recoveredSelectedId=null}={}){
   studio=document;
@@ -311,9 +312,9 @@ async function openPackage(pkg,{name,url,recoveredSelectedId=null}){
 }
 async function createNewCourse(){
   revokeUrls();
-  const document=createP2LRNStudioDocument({title:'Curso nuevo',language:'es'});
+  const document=createP2LRNStudioDocument({title:"New course",language:'en'});
   await activateStudio(document,{name:document.sourceName});
-  setStatus('Curso nuevo listo para editar');
+  setStatus("New course ready to edit");
 }
 function compositeContext(){
   const current=studio?.entity(selectedId);if(!current)return null;
@@ -332,13 +333,13 @@ function structureParent(){
 async function addUnit(){
   if(!studio)return;
   if(studio.isCompositeActivity(insertionParent()))throw new Error('Un compuesto admite actividades, no unidades. Selecciona el curso o una unidad.');
-  const created=studio.addUnit(structureParent(),{title:'Nueva unidad',language:'es'});selectedId=created.id;
-  renderTree();await renderEditor();updateChanges();setStatus('Unidad añadida');
+  const created=studio.addUnit(structureParent(),{title:"New unit",language:'en'});selectedId=created.id;
+  renderTree();await renderEditor();updateChanges();setStatus("Unit added");
 }
 async function addLesson(){
   if(!studio)return;
-  const created=studio.addLesson(insertionParent(),{title:'Nueva lección',language:'es'});selectedId=created.id;
-  renderTree();await renderEditor();updateChanges();setStatus('Lección añadida');
+  const created=studio.addLesson(insertionParent(),{title:"New lesson",language:'en'});selectedId=created.id;
+  renderTree();await renderEditor();updateChanges();setStatus("Lesson added");
 }
 async function openLocal(file){
   revokeUrls();
@@ -402,7 +403,7 @@ async function chooseSharedResource(){
   const listed=await library.list();
   const items=(listed??[]).filter((entry)=>entry?.digest&&entry?.href).map((entry)=>({...entry,id:entry.digest,label:entry.href.split('/').filter(Boolean).at(-1)||entry.digest,description:(entry.mediaType||'application/octet-stream')+' · '+entry.digest.slice(0,22)+'…'}));
   if(!items.length)throw new Error('La biblioteca no contiene recursos con URL de origen y digest verificable.');
-  showStudioChoice('Biblioteca compartida','El recurso se referencia por URL y SHA-256.',items,async(item)=>{const activity=studio.addSharedResource(insertionParent(),{title:item.label,href:item.href,digest:item.digest,mediaType:item.mediaType||'application/octet-stream',language:'es'});await selectCreated(activity,'Recurso compartido añadido');});
+  showStudioChoice('Biblioteca compartida','El recurso se referencia por URL y SHA-256.',items,async(item)=>{const activity=studio.addSharedResource(insertionParent(),{title:item.label,href:item.href,digest:item.digest,mediaType:item.mediaType||'application/octet-stream',language:'en'});await selectCreated(activity,"Shared resource added");});
 }
 async function materializeSelectedSharedResource(activityId=selectedId){
   if(!studio||!activityId)throw new Error('No hay un recurso seleccionado.');
@@ -420,34 +421,34 @@ globalThis.P2LRNStudioMaterializeSharedResource=materializeSelectedSharedResourc
 
 function chooseComponent(){
   const items=studio.componentCatalog().map((entry)=>({id:entry.id,label:entry.authoring.label,description:entry.authoring.description}));
-  showStudioChoice('Añadir componente','Elige el bloque nativo que quieres crear.',items,async(item)=>{const activity=studio.addNativeComponent(insertionParent(),{componentId:item.id,language:'es'});await selectCreated(activity,item.label+' añadido');});
+  showStudioChoice('Añadir componente','Elige el bloque nativo que quieres crear.',items,async(item)=>{const activity=studio.addNativeComponent(insertionParent(),{componentId:item.id,language:'en'});await selectCreated(activity,item.label+' añadido');});
 }
 async function addContentKind(kind){
   if(!studio)throw new Error('Crea o abre un curso primero.');
-  if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:'Nueva lección',language:'es'});return selectCreated(a,'Lección añadida');}
+  if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:"New lesson",language:'en'});return selectCreated(a,"Lesson added");}
   if(kind==='file'){resourceFileInput.click();return;}
   if(kind==='reader'){readerFileInput.click();return;}
   if(kind==='external'){
     if(studio.isCompositeActivity(insertionParent()))throw new Error('Los paquetes educativos completos se importan como unidades, no como actividades hijas. Selecciona una unidad.');
     externalFileInput.click();return;
   }
-  if(kind==='url'){const url=prompt('URL del recurso');if(!url)return;const title=prompt('Título','Recurso web')||'Recurso web';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL añadida');}
+  if(kind==='url'){const url=prompt('URL del recurso');if(!url)return;const title=prompt("Title",'Recurso web')||'Recurso web';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL añadida');}
   if(kind==='shared-library'){await chooseSharedResource();return;}
   if(kind==='shared-resource'){
     const url=prompt('URL lógica del recurso compartido');if(!url)return;
     const expectedDigest=prompt('SHA-256 esperado (sha256:...)');if(!expectedDigest)return;
     const mediaType=prompt('Tipo MIME','video/mp4')||'application/octet-stream';
-    const title=prompt('Título','Recurso compartido')||'Recurso compartido';
+    const title=prompt("Title","Shared resource")||"Shared resource";
     const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType,expectedDigest});
-    return selectCreated(a,'Recurso compartido añadido');
+    return selectCreated(a,"Shared resource added");
   }
-  if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:'Cuestionario',language:'es'});return selectCreated(a,'Cuestionario añadido');}
-  if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'es'});return selectCreated(a,'Votación en directo añadida');}
-  if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'es'});return selectCreated(a,'Pizarra compartida añadida');}
-  if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'es'});return selectCreated(a,'Revisión entre pares añadida');}
-  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const names={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','fill-blanks':'Rellenar huecos','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D','3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'es'});return selectCreated(a,names[kind]+' añadido');}
+  if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:"Questionnaire",language:'en'});return selectCreated(a,"Questionnaire added");}
+  if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'en'});return selectCreated(a,'Votación en directo añadida');}
+  if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'en'});return selectCreated(a,'Pizarra compartida añadida');}
+  if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'en'});return selectCreated(a,'Revisión entre pares añadida');}
+  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const names={memory:"Memory",matching:"Matching",ordering:"Ordering",classification:"Classification",'true-false':"True / false",'fill-blanks':"Fill in the blanks",'word-search':"Word search",crossword:"Crossword",rosco:"Word wheel",'3d':"3D game",'3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});return selectCreated(a,names[kind]+' añadido');}
   if(kind==='component'){chooseComponent();return;}
-  if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:'Grupo de actividades',language:'es',mode:'free',completion:'all'});return selectCreated(activity,'Grupo de actividades añadido');}
+  if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:"Activity group",language:'en',mode:'free',completion:'all'});return selectCreated(activity,"Activity group added");}
 }
 function emitFormatInput(name){
   captureSelection();
