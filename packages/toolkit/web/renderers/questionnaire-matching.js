@@ -1,5 +1,6 @@
 import {MATCHING_RENDERER} from '../renderer-registry.js';
 import {el, setupGame, statusNode, stylesheets} from './game-common.js';
+import {playerUiText} from './ui-i18n.js';
 export {stylesheets};
 
 function derange(items) {
@@ -100,11 +101,11 @@ export async function render(options) {
     if(runtime.state.completed)return;
     selected = pair;
     leftButtons.forEach((node,id)=>node.classList.toggle('is-selected',id===pair.id));
-    status.textContent='Selecciona su pareja. Puedes cambiar la relación antes de finalizar.';
+    status.textContent=playerUiText('Selecciona su pareja. Puedes cambiar la relación antes de finalizar.');
   };
   const chooseRight = (pair) => {
     if(runtime.state.completed)return;
-    if(!selected){status.textContent='Selecciona primero un elemento de la izquierda.';return;}
+    if(!selected){status.textContent=playerUiText('Selecciona primero un elemento de la izquierda.');return;}
     const source=selected;
     for(const [id,target] of [...links])if(target===pair.id&&id!==source.id){
       links.delete(id);
@@ -126,7 +127,7 @@ export async function render(options) {
     selected=null;
     leftButtons.forEach(node=>node.classList.remove('is-selected'));
     refreshLinks();
-    status.textContent=`Relaciones establecidas: ${links.size} de ${pairs.length}. Puedes modificarlas sin conocer la corrección.`;
+    status.textContent=playerUiText(`Relaciones establecidas: ${links.size} de ${pairs.length}. Puedes modificarlas sin conocer la corrección.`);
   };
 
   for (const pair of pairs) {
@@ -145,15 +146,15 @@ export async function render(options) {
   }
 
   const actions=el('div',{class:'p2lrn-game-actions'});
-  const finish=el('button',{type:'button',class:'p2lrn-game-button'},'Finalizar actividad');
+  const finish=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Finalizar actividad'));
   finish.addEventListener('click',async()=>{
-    if(links.size!==pairs.length){status.textContent='Relaciona todos los elementos antes de finalizar.';return;}
+    if(links.size!==pairs.length){status.textContent=playerUiText('Relaciona todos los elementos antes de finalizar.');return;}
     const score=await runtime.finish();
     if(score){
       const reveal=(runtime.payload.presentation?.showFeedback??'never')==='after-submit';
-      status.textContent=reveal&&score.graded!==false
+      status.textContent=playerUiText(reveal&&score.graded!==false
         ?`Resultado: ${score.pointsEarned}/${score.pointsPossible} puntos.`
-        :'Actividad enviada. La corrección no está disponible para el alumno.';
+        :'Actividad enviada. La corrección no está disponible para el alumno.');
       finish.disabled=true;
       for(const node of [...leftButtons.values(),...rightButtons.values()])node.disabled=true;
     }
