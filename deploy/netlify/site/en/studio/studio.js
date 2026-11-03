@@ -287,7 +287,7 @@ async function refreshPreview(){
   previewObjectUrl=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
   player.setAttribute('src',previewObjectUrl);player.setAttribute('node',selectedId);
   await player.reload?.();
-  setStatus('Vista alumno');
+  setStatus("Learner preview");
 }
 async function setMode(next){
   if(!studio)return;
@@ -303,7 +303,7 @@ async function activateStudio(document,{name,recoveredSelectedId=null}={}){
   studio=document;
   selectedId=recoveredSelectedId&&studio.entity(recoveredSelectedId)?recoveredSelectedId:studio.rootId;
   savedRevision=0;exportedRevision=0;
-  packageName.textContent=name||studio.sourceName||'curso.p2lrn';
+  packageName.textContent=name||studio.sourceName||"course.p2lrn";
   toolbar.hidden=false;workspace.hidden=false;
   renderTree();await renderEditor();updateChanges();await setMode('edit');
 }
@@ -323,7 +323,7 @@ function compositeContext(){
 }
 function updateStructureActions(){
   if(!addUnitButton)return;const blocked=Boolean(studio&&compositeContext());
-  addUnitButton.disabled=blocked;addUnitButton.title=blocked?'Las unidades se crean fuera de un grupo de actividades.':'';
+  addUnitButton.disabled=blocked;addUnitButton.title=blocked?"Units must be created outside an activity group.":'';
 }
 function structureParent(){
   const current=studio?.entity(selectedId);if(!current)return studio?.rootId??null;
@@ -332,7 +332,7 @@ function structureParent(){
 }
 async function addUnit(){
   if(!studio)return;
-  if(studio.isCompositeActivity(insertionParent()))throw new Error('Un compuesto admite actividades, no unidades. Selecciona el curso o una unidad.');
+  if(studio.isCompositeActivity(insertionParent()))throw new Error("A composite contains activities, not units. Select the course or a unit.");
   const created=studio.addUnit(structureParent(),{title:"New unit",language:'en'});selectedId=created.id;
   renderTree();await renderEditor();updateChanges();setStatus("Unit added");
 }
@@ -348,7 +348,7 @@ async function openLocal(file){
   const api=await window.P2LRNReady;
   const pkg=await api.openPackageBytes(bytes);
   sourceObjectUrl=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.p2lrn+zip'}));
-  await openPackage(pkg,{name:file.name||'curso.p2lrn',url:sourceObjectUrl});
+  await openPackage(pkg,{name:file.name||"course.p2lrn",url:sourceObjectUrl});
 }
 async function openRemote(){
   const raw=urlInput.value.trim();if(!raw)return;
@@ -357,7 +357,7 @@ async function openRemote(){
   if(!['http:','https:'].includes(new URL(url).protocol))throw new Error("Studio only opens HTTP/HTTPS URLs.");
   const api=await window.P2LRNReady;
   const pkg=await api.openPackageURL(url);
-  await openPackage(pkg,{name:new URL(url).pathname.split('/').filter(Boolean).at(-1)||'curso.p2lrn',url});
+  await openPackage(pkg,{name:new URL(url).pathname.split('/').filter(Boolean).at(-1)||"course.p2lrn",url});
 }
 function insertionParent(){
   const current=studio?.entity(selectedId);if(!current)return studio?.rootId??null;
@@ -403,7 +403,7 @@ async function chooseSharedResource(){
   const listed=await library.list();
   const items=(listed??[]).filter((entry)=>entry?.digest&&entry?.href).map((entry)=>({...entry,id:entry.digest,label:entry.href.split('/').filter(Boolean).at(-1)||entry.digest,description:(entry.mediaType||'application/octet-stream')+' · '+entry.digest.slice(0,22)+'…'}));
   if(!items.length)throw new Error("The library has no resources with a source URL and a verifiable digest.");
-  showStudioChoice('Biblioteca compartida',"The resource is referenced by URL and SHA-256.",items,async(item)=>{const activity=studio.addSharedResource(insertionParent(),{title:item.label,href:item.href,digest:item.digest,mediaType:item.mediaType||'application/octet-stream',language:'en'});await selectCreated(activity,"Shared resource added");});
+  showStudioChoice("Shared library","The resource is referenced by URL and SHA-256.",items,async(item)=>{const activity=studio.addSharedResource(insertionParent(),{title:item.label,href:item.href,digest:item.digest,mediaType:item.mediaType||'application/octet-stream',language:'en'});await selectCreated(activity,"Shared resource added");});
 }
 async function materializeSelectedSharedResource(activityId=selectedId){
   if(!studio||!activityId)throw new Error("No resource is selected.");
@@ -421,7 +421,7 @@ globalThis.P2LRNStudioMaterializeSharedResource=materializeSelectedSharedResourc
 
 function chooseComponent(){
   const items=studio.componentCatalog().map((entry)=>({id:entry.id,label:entry.authoring.label,description:entry.authoring.description}));
-  showStudioChoice("Add component","Choose the native block you want to create.",items,async(item)=>{const activity=studio.addNativeComponent(insertionParent(),{componentId:item.id,language:'en'});await selectCreated(activity,item.label+' añadido');});
+  showStudioChoice("Add component","Choose the native block you want to create.",items,async(item)=>{const activity=studio.addNativeComponent(insertionParent(),{componentId:item.id,language:'en'});await selectCreated(activity,item.label+" added");});
 }
 async function addContentKind(kind){
   if(!studio)throw new Error("Create or open a course first.");
@@ -446,7 +446,7 @@ async function addContentKind(kind){
   if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'en'});return selectCreated(a,"Live poll added");}
   if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'en'});return selectCreated(a,"Shared board added");}
   if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'en'});return selectCreated(a,"Peer review added");}
-  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const names={memory:"Memory",matching:"Matching",ordering:"Ordering",classification:"Classification",'true-false':"True / false",'fill-blanks':"Fill in the blanks",'word-search':"Word search",crossword:"Crossword",rosco:"Word wheel",'3d':"3D game",'3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});return selectCreated(a,names[kind]+' añadido');}
+  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const names={memory:"Memory",matching:"Matching",ordering:"Ordering",classification:"Classification",'true-false':"True / false",'fill-blanks':"Fill in the blanks",'word-search':"Word search",crossword:"Crossword",rosco:"Word wheel",'3d':"3D game",'3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});return selectCreated(a,names[kind]+" added");}
   if(kind==='component'){chooseComponent();return;}
   if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:"Activity group",language:'en',mode:'free',completion:'all'});return selectCreated(activity,"Activity group added");}
 }
@@ -487,7 +487,7 @@ async function recoverLatestDraft(){
   const pkg=await api.openPackageBytes(bytes);
   sourceObjectUrl=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.p2lrn+zip'}));
   draftMetadata=record;
-  await openPackage(pkg,{name:record.name||'borrador.p2lrn',url:sourceObjectUrl,recoveredSelectedId:record.selectedId});
+  await openPackage(pkg,{name:record.name||"draft.p2lrn",url:sourceObjectUrl,recoveredSelectedId:record.selectedId});
   savedRevision=studio.changeCount;
   updateChanges();
   setStatus("Local draft restored");
@@ -577,7 +577,7 @@ async function generateOfflineDelivery(){
   updateChanges();
   setStatus(bundle.teacherReceipt
     ?"Signed delivery prepared. Download and retain the teacher's receipt."
-    :'Entrega offline preparada: '+selected.filename);
+    :"Offline delivery ready: "+selected.filename);
   return selected.filename;
 }
 function addOfflineReviewRow(host,label,value){
@@ -618,37 +618,37 @@ async function reviewOfflineDelivery(file){
     const warning=document.createElement('p');
     warning.className='studio-offline-review-warning';
     warning.setAttribute('role','alert');
-    warning.textContent='Revisión necesaria: no coinciden '+problems.join(', ')+
+    warning.textContent="Review required: mismatches in "+problems.join(', ')+
       ". Do not treat the reported score as a verified grade.";
     content.append(warning);
   }
-  addOfflineReviewRow(content,'Archivo',file.name);
-  addOfflineReviewRow(content,'SHA-256 del resultado',parsed.integrityValid?'Coincide':'NO coincide');
-  addOfflineReviewRow(content,'Curso original',parsed.courseMatches?'Coincide':'NO coincide');
-  addOfflineReviewRow(content,'Firma del encargo',parsed.signatureValid===true
-    ?(parsed.assignmentAuthenticated===true?'Ed25519 válida y cotejada':'Ed25519 válida; emisor pendiente de cotejo')
-    :parsed.signatureValid===false?'NO válida':'Entrega sin firma');
-  addOfflineReviewRow(content,'Comprobante del profesor',parsed.assignmentAuthenticated===true
+  addOfflineReviewRow(content,"File",file.name);
+  addOfflineReviewRow(content,"Result SHA-256",parsed.integrityValid?'Coincide':'NO coincide');
+  addOfflineReviewRow(content,"Original course",parsed.courseMatches?'Coincide':'NO coincide');
+  addOfflineReviewRow(content,"Assignment signature",parsed.signatureValid===true
+    ?(parsed.assignmentAuthenticated===true?"Ed25519 signature valid and verified":"Ed25519 signature valid; issuer not yet verified")
+    :parsed.signatureValid===false?"INVALID":"Unsigned delivery");
+  addOfflineReviewRow(content,"Teacher's receipt",parsed.assignmentAuthenticated===true
     ?'Coincide: encargo autenticado'
-    :parsed.assignmentAuthenticated===false?'NO coincide / firma incorrecta'
-    :'No seleccionado: comprobación pendiente');
+    :parsed.assignmentAuthenticated===false?"MISMATCH / invalid signature"
+    :"Not selected: verification pending");
   addOfflineReviewRow(content,'Cadena de evidencias',parsed.evidenceValid===true
-    ?'Coherente (el alumno puede recalcularla)'
-    :parsed.evidenceValid===false?'NO coincide':'No verificable en esta entrega antigua');
+    ?"Consistent (the learner can recalculate it)"
+    :parsed.evidenceValid===false?'NO coincide':"Cannot be verified in this older delivery");
   addOfflineReviewRow(content,'Coherencia del resumen',parsed.summaryValid
-    ?'Respuestas, eventos y puntuaciones coinciden con los registros'
-    :'NO coincide: revisar datos declarados');
-  addOfflineReviewRow(content,'Alumno',parsed.summary.participantLabel||'Sin identificar');
+    ?"Answers, events and scores match the records"
+    :"MISMATCH: review the reported data");
+  addOfflineReviewRow(content,"Learner",parsed.summary.participantLabel||'Sin identificar');
   addOfflineReviewRow(content,'Intento',parsed.summary.attemptNumber);
   addOfflineReviewRow(content,'Aperturas registradas',parsed.summary.openings);
   addOfflineReviewRow(content,'Primera apertura',parsed.summary.firstOpenedAt?new Date(parsed.summary.firstOpenedAt).toLocaleString():'No registrada');
-  addOfflineReviewRow(content,'Última apertura',parsed.summary.lastOpenedAt?new Date(parsed.summary.lastOpenedAt).toLocaleString():'No registrada');
+  addOfflineReviewRow(content,"Last opening",parsed.summary.lastOpenedAt?new Date(parsed.summary.lastOpenedAt).toLocaleString():'No registrada');
   addOfflineReviewRow(content,'Caducidad local',parsed.summary.expiresAt?new Date(parsed.summary.expiresAt).toLocaleString():'Sin caducidad por primera apertura');
   addOfflineReviewRow(content,'Sesiones registradas',parsed.summary.sessions.length);
   addOfflineReviewRow(content,'Identificador local del dispositivo',parsed.summary.deviceBindingId||'No disponible');
   const score=parsed.summary.latestScore?.normalized;
-  addOfflineReviewRow(content,'Puntuación declarada (no oficial)',score==null
-    ?'Sin puntuación':Math.round(Number(score)*10000)/100+' %');
+  addOfflineReviewRow(content,"Reported score (not official)",score==null
+    ?"No score":Math.round(Number(score)*10000)/100+' %');
   addOfflineReviewRow(content,'Respuestas',parsed.summary.answers.length);
   addOfflineReviewRow(content,'Evaluaciones',parsed.summary.scores.length);
   addOfflineReviewRow(content,"Events",parsed.summary.events.length);
@@ -656,16 +656,16 @@ async function reviewOfflineDelivery(file){
   addOfflineReviewRow(content,'Incidencias',parsed.summary.anomalies.length
     ? parsed.summary.anomalies.map(item=>item.code||'Incidencia').join(', ') : 'Ninguna registrada');
   const note=document.createElement('p');note.className='studio-offline-note';
-  note.textContent='La firma solo acredita el encargo del profesor si conservas y seleccionas su comprobante original. Las respuestas y notas se generan en un equipo del alumno y no están autenticadas; los plazos offline dependen de su reloj.';
+  note.textContent="The signature only authenticates the teacher's assignment when its original receipt is retained and selected. Answers and grades are generated on the learner's device and are not authenticated; offline deadlines depend on that device's clock.";
   content.append(note);
   offlineReviewDialog.showModal();
   setStatus(problems.length
-    ?'Resultado offline con incidencias: '+problems.join(', ')+(analyticsEligible?'':' · Analytics bloqueado hasta disponer de un resultado coherente')
+    ?"Offline result with issues: "+problems.join(', ')+(analyticsEligible?'':" · Analytics blocked until the result is consistent")
     :parsed.assignmentAuthenticated===true
-      ?'Encargo del profesor autenticado; respuestas no autenticadas'
+      ?"Teacher's assignment authenticated; answers not authenticated"
       :parsed.signatureValid===true
-        ?'Firma válida; selecciona el comprobante original del profesor'
-        :'Resultado recibido; puntuación informativa');
+        ?"Valid signature; select the original teacher receipt"
+        :"Result received; informational score");
 }
 
 async function exportPackage(){
@@ -712,7 +712,7 @@ addDialog?.addEventListener('scroll',hideAddHelp,{passive:true});
 createCourseButton?.addEventListener('click',()=>void createNewCourse().catch((error)=>setStatus(error.message)));
 addUnitButton?.addEventListener('click',()=>void addUnit().catch((error)=>setStatus(error.message)));
 addLessonButton?.addEventListener('click',()=>void addLesson().catch((error)=>setStatus(error.message)));
-addContentButton?.addEventListener('click',()=>{if(!studio){setStatus('Crea o abre un curso primero');return;}addDialog?.showModal();});
+addContentButton?.addEventListener('click',()=>{if(!studio){setStatus("Create or open a course first");return;}addDialog?.showModal();});
 addDialog?.querySelector('[data-add-close]')?.addEventListener('click',()=>addDialog.close());
 addDialog?.querySelectorAll('[data-add-kind]').forEach((button)=>button.addEventListener('click',()=>void addContentKind(button.dataset.addKind).catch((error)=>setStatus(error.message))));
 resourceFileInput?.addEventListener('change',()=>{const file=resourceFileInput.files?.[0];if(file)void addResourceFile(file).catch((error)=>setStatus(error.message));resourceFileInput.value='';});
@@ -744,7 +744,7 @@ offlineForm?.addEventListener('submit',(event)=>{
   void generateOfflineDelivery().then(()=>{
     if(!latestTeacherReceipt)offlineDialog.close();
   }).catch((error)=>{
-    offlineError.textContent=String(error?.message||error);offlineError.hidden=false;setStatus('No se pudo generar la entrega offline');
+    offlineError.textContent=String(error?.message||error);offlineError.hidden=false;setStatus("Could not generate the offline delivery");
   }).finally(()=>{offlineGenerate.disabled=false;});
 });
 offlineReceiptButton?.addEventListener('click',()=>{
@@ -752,7 +752,7 @@ offlineReceiptButton?.addEventListener('click',()=>{
   downloadStudioBytes(latestTeacherReceipt.bytes,latestTeacherReceipt.filename,'application/json');
   latestTeacherReceipt=null;
   offlineReceiptPrompt.hidden=true;
-  setStatus('Comprobante del profesor descargado. Guárdalo fuera de los archivos del alumno.');
+  setStatus("Teacher's receipt downloaded. Keep it separate from the learner's files.");
   offlineDialog.close();
 });
 offlineReviewReceipt?.addEventListener('change',()=>{
@@ -762,9 +762,9 @@ offlineReviewReceipt?.addEventListener('change',()=>{
       const message=document.createElement('p');
       message.className='studio-offline-review-warning';
       message.setAttribute('role','alert');
-      message.textContent='No se puede verificar el comprobante: '+error.message;
+      message.textContent="Cannot verify the receipt: "+error.message;
       offlineReviewContent.append(message);
-      setStatus('Comprobante inválido: '+error.message);
+      setStatus("Invalid receipt: "+error.message);
     });
 });
 offlineResultButton?.addEventListener('click',()=>{
@@ -773,7 +773,7 @@ offlineResultButton?.addEventListener('click',()=>{
 });
 offlineResultInput?.addEventListener('change',()=>{
   const file=offlineResultInput.files?.[0];offlineResultInput.value='';
-  if(file)void reviewOfflineDelivery(file).catch((error)=>setStatus('No se pudo revisar la entrega: '+error.message));
+  if(file)void reviewOfflineDelivery(file).catch((error)=>setStatus("Could not review the delivery: "+error.message));
 });
 document.querySelector('[data-offline-review-close]')?.addEventListener('click',()=>offlineReviewDialog.close());
 offlineAnalyticsButton?.addEventListener('click',()=>{
@@ -781,12 +781,12 @@ offlineAnalyticsButton?.addEventListener('click',()=>{
   try{
     sessionStorage.setItem('p2lrn:analytics:offline-result',JSON.stringify(latestOfflineParsedResult));
     window.open('/analytics/?import=offline-result','_blank');
-    setStatus('Resultado enviado a P2LRN Analytics');
+    setStatus("Result sent to P2LRN Analytics");
   }catch(error){
-    setStatus('No se pudo abrir Analytics: '+String(error?.message||error));
+    setStatus("Could not open Analytics: "+String(error?.message||error));
   }
 });
-saveDraftButton?.addEventListener('click',()=>void persistDraft().catch((error)=>setStatus('No se pudo guardar el borrador local: '+error.message)));
+saveDraftButton?.addEventListener('click',()=>void persistDraft().catch((error)=>setStatus("Could not save the local draft: "+error.message)));
 recoverDraftButton?.addEventListener('click',()=>void recoverLatestDraft().catch((error)=>setStatus(error.message)));
 clearDraftButton?.addEventListener('click',()=>void discardLocalDraft().catch((error)=>setStatus(error.message)));
 void refreshDraftAvailability();
