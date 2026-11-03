@@ -1,0 +1,39 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0d1117"><meta name="description" content="Instala @p2lrn/analytics y @p2lrn/player, lee .p2lrn-result mediante src e identifica alumnos por cuenta o código del profesor."><title>Analytics con NPM — P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Saltar al contenido</a><header class="site-header"><a class="brand" href="/">P2LRN</a><nav class="nav" id="nav" aria-label="Navegación principal"><a class="nav-direct" href="/docs/">Documentación</a><a class="nav-direct" href="/docs/instalar/">Instalar</a><a class="nav-direct" href="/docs/studio/">Crear</a><a class="nav-direct" href="/docs/player/">Reproducir</a><a class="nav-direct" href="/docs/integracion/">Integrar</a><a class="nav-direct" href="/docs/analytics/">Analytics</a><a class="nav-direct" href="/docs/referencia/">Referencia</a></nav><div class="header-meta"><span class="status"><i></i><span data-health>CDN</span></span><span data-player-version>0.5.0-alpha.12</span></div><button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Navegación de documentación"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">NPM / ANALYTICS</p><h1>Analytics con NPM</h1><p>Lee directamente archivos .p2lrn-result sin base de datos ni API obligatoria. Genera los resultados con Player y relaciónalos con una cuenta autenticada o un código individual del profesor.</p></header>
+
+<section class="doc-section"><h2>1. Instalar los paquetes NPM</h2><p>Instala Player y Analytics con versiones compatibles. Ambos utilizan el mismo contrato de resultados <code>.p2lrn-result</code>.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy>Copiar</button></div><pre><code>npm install @p2lrn/player@0.5.0-alpha.12 @p2lrn/analytics@0.5.0-alpha.12</code></pre></div></section>
+<section class="doc-section"><h2>2. Leer resultados mediante src</h2><p>El atributo <code>src</code> de Analytics apunta directamente a un <strong>archivo .p2lrn-result</strong>, no al paquete del curso. Analytics verifica el SHA-256 y obtiene las métricas automáticamente, sin conversores propios ni servidor.</p><div class="codebox"><div class="codebox-head"><span>JavaScript / TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import '@p2lrn/analytics';
+// HTML: &lt;p2lrn-analytics id="panel.analytics"&gt;&lt;/p2lrn-analytics&gt;
+const panel = document.getElementById('panel.analytics');
+panel.src = '/resultados/ana.p2lrn-result';</code></pre></div></section>
+<section class="doc-section"><h2>3. Leer varios alumnos sin base de datos</h2><p>Guarda los archivos en una carpeta estática protegida y crea un pequeño índice JSON. El navegador puede leer la lista de archivos, pero no descubrir por sí solo todos los ficheros de una carpeta remota. También puedes importar varios archivos locales desde Analytics.</p><div class="codebox"><div class="codebox-head"><span>index.p2lrn-results.json</span><button type="button" data-copy>Copiar</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/analytics-results-index/1",
+  "results": ["ana.p2lrn-result", "luis.p2lrn-result"]
+}</code></pre></div><div class="codebox"><div class="codebox-head"><span>JavaScript / TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import '@p2lrn/analytics';
+import {loadAnalyticsResultSource} from '@p2lrn/analytics/results';
+// Reads a SHA-256-verified result or index, without manual conversion.
+const dataset = await loadAnalyticsResultSource('/resultados/index.p2lrn-results.json');
+document.getElementById('panel.analytics').data = dataset;</code></pre></div><p><strong>Privacidad:</strong> permite acceder a esos archivos únicamente a usuarios autorizados. No publiques resultados identificables en un alojamiento estático abierto.</p></section>
+<section class="doc-section"><h2>4. Generar el resultado con código individual</h2><p>Sin cuentas, asigna un código distinto a cada alumno, preferiblemente vinculado a tu centro. Configura la captura antes de las actividades y, al terminar, llama a <code>download</code> desde una acción del usuario para guardar el archivo.</p><div class="codebox"><div class="codebox-head"><span>JavaScript / TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>import {mountP2LRN} from '@p2lrn/player';
+const player = await mountP2LRN('#player', {
+  src: '/cursos/curso.p2lrn',
+  resultIdentity: {
+    mode: 'code',
+    issuer: 'centro-educativo',
+    code: codigoIndividualAsignado,
+    label: nombreAlumno
+  }
+});
+document.getElementById('download-result').addEventListener('click', () =&gt;
+  player.resultRecorder.download('alumno.p2lrn-result')
+);</code></pre></div><p>El código permite agrupar intentos, pero no demuestra quién los realizó. Descargar el archivo no significa que llegue automáticamente al profesor.</p></section>
+<section class="doc-section"><h2>5. Generar el resultado con una plataforma autenticada</h2><p>Si el LMS o la web ya autenticó al alumno, proporciona el emisor y su identificador verificado desde la sesión de confianza. No los obtengas de un campo modificable por el usuario.</p><div class="codebox"><div class="codebox-head"><span>JavaScript / TypeScript</span><button type="button" data-copy>Copiar</button></div><pre><code>const player = await mountP2LRN('#player', {
+  src: '/cursos/curso.p2lrn',
+  resultIdentity: {
+    mode: 'platform',
+    issuer: sesionAutenticada.issuer,
+    subjectId: sesionAutenticada.userId,
+    label: sesionAutenticada.nombre
+  }
+});</code></pre></div><p>El hash SHA-256 protege la integridad, no demuestra la identidad. Las notas oficiales requieren validación por una plataforma autorizada.</p></section>
+<section class="doc-section"><h2>6. Integración avanzada (opcional)</h2><p>Si una institución ya dispone de un origen JSON de métricas autenticado, <code>src</code> puede seguir apuntando a ese documento autorizado, o puede utilizar <code>panel.data</code>/<code>panel.dataSource</code>. Es una integración avanzada opcional, no un requisito para los archivos de resultados.</p><p>Consulta <a href="/docs/cdn/analytics/">Analytics mediante CDN</a>, la <a href="/docs/analytics/">guía completa</a> y la <a href="/docs/entrega-offline/">entrega offline</a>.</p></section>
+ <nav class="doc-pager"><a class="prev" href="/docs/npm/"><span>← Anterior</span><strong>NPM</strong></a><a class="next" href="/docs/analytics/"><span>Siguiente →</span><strong>Guía de Analytics</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span></footer></body></html>
