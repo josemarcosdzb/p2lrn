@@ -442,7 +442,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
     runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId});
     syncClassifiedPosition(itemId,categoryId);
     selects.get(itemId).value=categoryId;
-    setText(status,classificationIsCorrect(values,expected)?playerUiText('Clasificación completada correctamente.'):'Objeto clasificado correctamente.');
+    setText(status,classificationIsCorrect(values,expected)?playerUiText('Clasificación completada correctamente.'):playerUiText('Objeto clasificado correctamente.'));
     return true;
   }
 
@@ -549,7 +549,7 @@ export async function render(options) {
     'aria-label':playerUiText('Escena 3D interactiva del ejercicio'),
   });
   const controls=el('div',{class:'p2lrn-3d-controls'});
-  const status=statusNode('Preparando escena 3D…');
+  const status=statusNode(playerUiText('Preparando escena 3D…'));
   let trialIndex=0;
   let currentInteraction=()=>false;
   let currentDrag=()=>false;
@@ -576,7 +576,7 @@ export async function render(options) {
     :playerUiText(`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`));
   const help=el('p',{class:'p2lrn-game-description'},accessibleOnly
     ?playerUiText('Elige las respuestas usando los botones y selectores de cada prueba.')
-    :'Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.');
+    :playerUiText('Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.'));
   const movePad=el('div',{class:'p2lrn-3d-move-pad','aria-label':playerUiText('Controles de movimiento')});
   for(const [label,direction] of [['▲','forward'],['◀','left'],['▼','back'],['▶','right']]){
     const button=el('button',{type:'button',class:'p2lrn-game-button','aria-label':direction},label);
