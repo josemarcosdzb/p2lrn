@@ -238,7 +238,7 @@ async function additionalGameRenderers(language){
         'word-search':/Drag across a word/,
         crossword:/Choose a clue/,
         rosco:/Type your answer/,
-        '3d':/Select an object/
+        '3d':/Select items in the scene|Choose answers|Select an object/
       };
       if(uiMarker[cfg.slug])assert.match(snapshot.status,uiMarker[cfg.slug],'Untranslated game instructions: '+cfg.slug);
     }
