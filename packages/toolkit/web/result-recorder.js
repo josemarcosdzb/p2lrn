@@ -42,7 +42,7 @@ function asJSON(value){
   try{return JSON.parse(JSON.stringify(value??{}));}catch{return {};}
 }
 function pickScore(detail){
-  const value=detail?.score??detail?.value??detail?.payload??detail;
+  const value=(detail?.value&&typeof detail.value==='object')?detail.value:(detail?.payload&&typeof detail.payload==='object')?detail.payload:detail;
   const number=Number(value?.score??value?.value??NaN);
   const max=Number(value?.maxScore??value?.maxValue??NaN);
   if(Number.isFinite(number)&&Number.isFinite(max)&&max>0)return {score:number,maxScore:max};
