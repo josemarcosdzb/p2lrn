@@ -17,6 +17,11 @@ for (const item of packages) {
   loaded.push({...item,pkg});
 }
 
+const canonicalRepository='git+https://github.com/josemarcosdzb/p2lrn.git';
+for(const item of loaded){
+  if(item.pkg.repository?.url!==canonicalRepository)throw new Error(`${item.name} contains stale GitHub repository metadata`);
+}
+
 const versions = new Set(loaded.map((item)=>item.pkg.version));
 if (versions.size !== 1) {
   throw new Error('P2LRN packages must publish with one aligned version: ' + loaded.map((x)=>`${x.name}=${x.pkg.version}`).join(', '));
