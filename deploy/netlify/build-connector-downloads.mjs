@@ -144,7 +144,7 @@ const lti=[
   note('LEEME-PRIMERO.md',`# Proveedor LTI 1.3 P2LRN · fuente para desarrolladores
 
 Este ZIP contiene el código actual de integration/lms: proveedor OIDC/JWT, servidor,
-SQLite, catálogo y bindings, Deep Linking, Host Adapter, AGS y sus pruebas.
+SQLite, catálogo y bindings, Deep Linking, Host Adapter, AGS, NRPS 2.0 y sus pruebas.
 No es un plugin específico de Moodle/Canvas/Sakai/Chamilo/Open edX ni un binario listo
 para doble clic.
 
@@ -155,12 +155,17 @@ Desde un checkout completo de P2LRN:
   node --test integration/lms/lti-provider.test.mjs
   node --test integration/lms/lti-store.test.mjs
   node --test integration/lms/lti-ags.test.mjs
+  node --test integration/lms/lti-nrps.test.mjs
+  node --test integration/lms/lti-nrps-server.test.mjs
   node --test integration/lms/lti-server.test.mjs
   node integration/lms/lti-server.mjs
 
 Producción exige HTTPS y registros LMS reales. No se suministran claves, tokens,
-cuentas ni URLs públicas preconfiguradas. NRPS no está implementado. La matriz E2E
-contra versiones reales de los cinco LMS sigue siendo una validación separada.
+cuentas ni URLs públicas preconfiguradas. NRPS 2.0 permite consultar matrículas
+por curso con OAuth2 y el scope contextmembership.readonly, si el LMS lo habilita.
+No se almacenan listados de alumnos. La lectura real NRPS en los LMS de AulaP2P
+aún no está certificada: primero deben funcionar el registro OAuth y los lanzamientos
+LTI firmados. El código fuente y las pruebas se incluyen en este ZIP.
 
 La guía completa está en /docs/conectores/lti/ y /docs/conectores/lms/.
 `)
