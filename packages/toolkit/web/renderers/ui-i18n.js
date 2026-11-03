@@ -144,7 +144,80 @@ const EN={
   "Clasificar": "Classification",
   "Rosco": "Word wheel",
   "True / False": "True / False",
-  "Rellenar huecos": "Fill in the blanks"
+  "Rellenar huecos": "Fill in the blanks",
+  "No se pudo finalizar la actividad.": "Could not finish the activity.",
+  "Actividad: ": "Activity: ",
+  "Pregunta: ": "Question: ",
+  "Completa los huecos": "Fill in the blanks",
+  "Tiempo agotado para esta pregunta.": "Time expired for this question.",
+  "Verdadero": "True",
+  "Falso": "False",
+  "Respuesta escrita": "Written answer",
+  "Palabras disponibles": "Available words",
+  "Arrastra o selecciona": "Drag or select",
+  "Pulsa para quitarlo.": "Select to remove it.",
+  "Pulsa para colocar la palabra seleccionada.": "Select to place the chosen word.",
+  "Arrastra o selecciona una palabra.": "Drag or select a word.",
+  "Hueco ": "Blank ",
+  "Mover arriba": "Move up",
+  "Mover abajo": "Move down",
+  "Selecciona…": "Select…",
+  "Tipo de pregunta no soportado.": "Unsupported question type.",
+  "Finalizar": "Finish",
+  "Respuestas enviadas": "Answers submitted",
+  "Respuestas entregadas. La corrección se mostrará únicamente cuando lo permita el profesor.": "Answers submitted. Feedback will appear only when the teacher allows it.",
+  "La actividad se cerró al agotarse el tiempo declarado por el paquete.": "The activity ended when the package time limit expired.",
+  "Sin corrección local": "No local marking",
+  "Correcta": "Correct",
+  "Repetir": "Retry",
+  "Sin intentos": "No attempts",
+  "ver": "view",
+  "aprobar": "pass",
+  "completar": "complete",
+  "Debes ": "You must ",
+  " antes de continuar.": " before continuing.",
+  "Para acceder debes ": "To access this, you must ",
+  " o ": " or ",
+  " y ": " and ",
+  "Este contenido está bloqueado por una regla de progresión.": "This content is locked by a progression rule.",
+  "Completa los requisitos previos para continuar.": "Complete the prerequisites to continue.",
+  " · Obligatorio": " · Required",
+  "Contenido obligatorio": "Required content",
+  "Cargando contenido educativo.": "Loading educational content.",
+  "Manifest/grafo verificados · payload bajo demanda": "Manifest and graph verified · content loaded on demand",
+  "Integridad válida": "Integrity verified",
+  "Contenido P2LRN": "P2LRN content",
+  "La actividad no tiene un recurso directo.": "This activity has no direct resource.",
+  "El recurso no existe o no es reproducible.": "The resource does not exist or cannot be played.",
+  "Esta actividad requiere capacidades del host no disponibles: ": "This activity requires unavailable host capabilities: ",
+  "El reproductor web no abre representaciones remotas sin un adaptador compatible.": "This web player cannot open remote representations without a compatible adapter.",
+  "El recurso no contiene representaciones.": "This resource has no representations.",
+  "Este reproductor web todavía no tiene un renderer instalado compatible con las representaciones de esta actividad.": "This web player has no installed renderer compatible with this activity.",
+  "No existe el nodo solicitado: ": "The requested node does not exist: ",
+  "desconocido": "unknown",
+  " no implementa límites de tiempo por pregunta.": " does not support per-question time limits.",
+  "Tipo MIME no válido para cuestionario nativo: ": "Invalid MIME type for a native questionnaire: ",
+  "Tipo MIME no válido para ": "Invalid MIME type for ",
+  "Representación multimedia no soportada: ": "Unsupported media representation: ",
+  "Representación textual no soportada: ": "Unsupported text representation: ",
+  "Contenido HTML del paquete P2LRN": "P2LRN package HTML content",
+  "Pareja correcta.": "Correct match.",
+  "Carta oculta": "Hidden card",
+  " parejas.": " pairs.",
+  "Descubre dos cartas y forma parejas. ": "Turn over two cards and find matching pairs. ",
+  "Elige verdadero o falso.": "Choose true or false.",
+  "Ronda terminada. Respuestas enviadas.": "Round finished. Answers submitted.",
+  "Repetir ronda": "Repeat round",
+  "Horizontal ": "Across ",
+  "Vertical ": "Down ",
+  "Casilla fila ": "Cell row ",
+  ", columna ": ", column ",
+  ", número ": ", number ",
+  "Crucigrama entregado: ": "Crossword submitted: ",
+  "Crucigrama reiniciado.": "Crossword restarted.",
+  "Nota individual": "Individual note",
+  "Enviar voto": "Submit vote",
+  "Eliminar": "Delete"
 };
 export function playerUiText(value,doc=globalThis.document){
   const source=String(value??'');
@@ -153,6 +226,21 @@ export function playerUiText(value,doc=globalThis.document){
   if(Object.hasOwn(EN,source))return EN[source];
   // Counted statuses use fixed machine-readable numbers, never learner prose.
   let match;
+  if((match=/^Faltan (\d+) preguntas? obligatorias?\.$/.exec(source)))
+    return match[1]==='1'?'1 required question is missing.':match[1]+' required questions are missing.';
+  if((match=/^Pregunta (\d+) de (\d+)$/.exec(source)))return 'Question '+match[1]+' of '+match[2];
+  if((match=/^Progreso: pregunta (\d+) de (\d+)$/.exec(source)))return 'Progress: question '+match[1]+' of '+match[2];
+  if((match=/^Intentos agotados \((\d+)\/(\d+)\)\.$/.exec(source)))return 'Attempts exhausted ('+match[1]+'/'+match[2]+').';
+  if((match=/^Hueco (\d+)$/.exec(source)))return 'Blank '+match[1];
+  if((match=/^completar con al menos un (\d+)%$/.exec(source)))return 'complete with at least '+match[1]+'%';
+  if((match=/^aprobar con al menos un (\d+)%$/.exec(source)))return 'pass with at least '+match[1]+'%';
+  if((match=/^\d+ \/ \d+ puntos$/.exec(source)))return source.replace(' puntos',' points');
+  if((match=/^Pareja correcta\. (\d+)\/(\d+) parejas\.$/.exec(source)))
+    return 'Correct match. '+match[1]+'/'+match[2]+' pairs.';
+  if((match=/^Descubre dos cartas y forma parejas\. (\d+)\/(\d+) parejas\.$/.exec(source)))
+    return 'Turn over two cards and find matching pairs. '+match[1]+'/'+match[2]+' pairs.';
+  if((match=/^Crucigrama entregado: ([\d.]+)\/([\d.]+) puntos\.$/.exec(source)))
+    return 'Crossword submitted: '+match[1]+'/'+match[2]+' points.';
   if((match=/^Reto (\d+)$/.exec(source)))return 'Challenge '+match[1];
   if((match=/^Prueba (\d+) de (\d+)$/.exec(source)))return 'Trial '+match[1]+' of '+match[2];
   if((match=/^Tiempo restante: (\d+)s$/.exec(source)))return 'Time remaining: '+match[1]+'s';
@@ -177,4 +265,4 @@ export function playerUiText(value,doc=globalThis.document){
     return 'Three.js · physics: '+(match[1]==='fallback sin físicas'?'fallback without physics':match[1]);
   return source;
 }
-export const PLAYER_UI_TRANSLATIONS=144;
+export const PLAYER_UI_TRANSLATIONS=217;
