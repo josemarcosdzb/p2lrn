@@ -1,3 +1,4 @@
+import {playerUiText} from './ui-i18n.js';
 import {TRUE_FALSE_RENDERER} from '../renderer-registry.js';
 import {el, setupGame, statusNode, stylesheets} from './game-common.js';
 export {stylesheets};
@@ -15,10 +16,10 @@ export async function render(options){
     card.replaceChildren();
     if(finished){
       const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
-      card.append(el('h3',{},reveal?`Ronda completada: ${correctCount}/${items.length} aciertos.`:'Ronda enviada. El profesor no ha habilitado mostrar la corrección.'));
+      card.append(el('h3',{},reveal?`Ronda completada: ${correctCount}/${items.length} aciertos.`:playerUiText('Ronda enviada. El profesor no ha habilitado mostrar la corrección.')));
       const retry=el('button',{type:'button',class:'p2lrn-game-button'},'Repetir ronda');
       retry.addEventListener('click',()=>{
-        if(!runtime.reset()){status.textContent='No quedan intentos disponibles.';return;}
+        if(!runtime.reset()){status.textContent=playerUiText('No quedan intentos disponibles.');return;}
         index=0;correctCount=0;finished=false;locked=false;
         status.textContent='Elige verdadero o falso.';
         redraw();
@@ -34,7 +35,7 @@ export async function render(options){
       locked=true;
       runtime.applyPatch(item.questionId,value?item.truePatch:item.falsePatch);
       if(item.correct===value)correctCount+=1;
-      status.textContent='Respuesta registrada. La corrección se mostrará al terminar, si está habilitada.';
+      status.textContent=playerUiText('Respuesta registrada. La corrección se mostrará al terminar, si está habilitada.');
       actions.querySelectorAll('button').forEach((button)=>button.disabled=true);
       if(index>=items.length-1){
         finished=true;
