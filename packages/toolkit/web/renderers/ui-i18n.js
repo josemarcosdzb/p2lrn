@@ -168,6 +168,13 @@ export function playerUiText(value,doc=globalThis.document){
   if((match=/^Objeto colocado en la posición (\d+)\.$/.exec(source)))return 'Object placed in position '+match[1]+'.';
   if((match=/^Conexión correcta · (\d+)\/(\d+)$/.exec(source)))return 'Correct connection · '+match[1]+'/'+match[2];
   if((match=/^Reto (\d+) de (\d+)$/.exec(source)))return 'Challenge '+match[1]+' of '+match[2];
+  if((match=/^Sopa completada: ([\d.]+)\/([\d.]+) puntos\.$/.exec(source)))
+    return 'Word search completed: '+match[1]+'/'+match[2]+' points.';
+  if((match=/^Respuesta: (.*)$/.exec(source)))return 'Answer: '+match[1];
+  if((match=/^Cambiar categoría de (.*)$/.exec(source)))return 'Change category of '+match[1];
+  if((match=/^Categoría (.*)$/.exec(source)))return 'Category '+match[1];
+  if((match=/^Three\.js · física: (.*)$/.exec(source)))
+    return 'Three.js · physics: '+(match[1]==='fallback sin físicas'?'fallback without physics':match[1]);
   return source;
 }
 export const PLAYER_UI_TRANSLATIONS=144;
