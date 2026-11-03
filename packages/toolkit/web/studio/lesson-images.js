@@ -1,3 +1,4 @@
+import {studioUiText} from './studio-ui-i18n.js';
 // Shared by the website Studio and npm Studio. Images remain inside the
 // portable HTML payload; the passive-text Player's CSP permits img-src data:.
 export const MAX_LESSON_IMAGE_BYTES=8*1024*1024;
@@ -31,7 +32,7 @@ export async function lessonImageData(file){
   for(let offset=0;offset<bytes.length;offset+=16384)
     pieces.push(String.fromCharCode(...bytes.subarray(offset,offset+16384)));
   const src='data:'+mediaType+';base64,'+btoa(pieces.join(''));
-  const alt=String(file.name||'Imagen').replace(/\.[^.]+$/,'').slice(0,160)||'Imagen';
+  const alt=String(file.name||studioUiText('Imagen')).replace(/\.[^.]+$/,'').slice(0,160)||studioUiText('Imagen');
   return {src,alt,mediaType,bytes:bytes.byteLength};
 }
 
@@ -68,23 +69,24 @@ export function lessonImageFlowLayout({x=0,y=0,width=280,height=180},canvasWidth
 
 const STYLES=".p2lrn-lesson-image-editor{display:grid;gap:8px;min-width:0;max-width:100%}\n.p2lrn-lesson-image-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-height:34px}\n.p2lrn-lesson-image-toolbar button{min-height:32px;padding:6px 10px;border:1px solid #cfd8e4;border-radius:7px;background:#fff;color:#172033;font:600 12px/1.2 system-ui,sans-serif;cursor:pointer}\n.p2lrn-lesson-image-toolbar button:hover:not(:disabled){background:#eef3f9}\n.p2lrn-lesson-image-toolbar button:disabled{opacity:.45;cursor:default}\n.p2lrn-lesson-image-toolbar span{color:#64748b;font:11px/1.35 system-ui,sans-serif}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]{cursor:grab;touch-action:none;user-select:none;object-fit:contain}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:hover,.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:focus-visible{outline:2px solid #437ddd;outline-offset:2px}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:active{cursor:grabbing}\n.p2lrn-lesson-image-editor .surface img,.p2lrn-lesson-image-editor .studio-wysiwyg img{height:auto}";
 
-export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus=()=>{}}){
+export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:reportStatus=()=>{}}){
+  const onStatus=(message)=>reportStatus(studioUiText(message,surface?.ownerDocument));
   if(!host||!surface||surface.contentEditable!=='true')
-    throw new TypeError('Se requiere una superficie HTML editable.');
+    throw new TypeError(studioUiText('Se requiere una superficie HTML editable.',surface?.ownerDocument));
   const doc=surface.ownerDocument;
   const wrapper=doc.createElement('div');wrapper.className='p2lrn-lesson-image-editor';
   const style=doc.createElement('style');style.textContent=STYLES;
   const toolbar=doc.createElement('div');toolbar.className='p2lrn-lesson-image-toolbar';
-  toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','Imágenes de la lección');
+  toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label',studioUiText('Imágenes de la lección',doc));
   const button=(text,attr)=>{
-    const b=doc.createElement('button');b.type='button';b.textContent=text;b.setAttribute(attr,'');
+    const b=doc.createElement('button');b.type='button';b.textContent=studioUiText(text,doc);b.setAttribute(attr,'');
     toolbar.append(b);return b;
   };
   const add=button('Insertar imagen','data-insert-lesson-image');
   const smaller=button('− Tamaño','data-lesson-image-smaller');
   const bigger=button('+ Tamaño','data-lesson-image-bigger');
   const remove=button('Eliminar imagen','data-lesson-image-remove');
-  const hint=doc.createElement('span');hint.textContent='Arrastra o cambia el tamaño de las imágenes: el texto se recoloca automáticamente.';
+  const hint=doc.createElement('span');hint.textContent=studioUiText('Arrastra o cambia el tamaño de las imágenes: el texto se recoloca automáticamente.',doc);
   toolbar.append(hint);
   const picker=doc.createElement('input');picker.type='file';picker.multiple=true;
   picker.accept='image/png,image/jpeg,image/gif,image/webp,image/avif';
@@ -180,7 +182,7 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus=()
     const img=doc.createElement('img');
     img.dataset.p2lrnLessonImage='1';img.alt=data.alt;img.src=data.src;
     img.setAttribute('contenteditable','false');img.setAttribute('draggable','false');
-    img.tabIndex=0;img.title='Arrastra para colocar esta imagen en la lección';
+    img.tabIndex=0;img.title=studioUiText('Arrastra para colocar esta imagen en la lección',doc);
     img.style.cssText='position:relative;float:left;clear:both;width:280px;max-width:calc(100% - 12px);height:auto;';
     box.prepend(img);place(img,box,point?point.x:0,top);
     img.addEventListener('load',()=>{if(box.isConnected){reflow(box);changed();}},{once:true});
