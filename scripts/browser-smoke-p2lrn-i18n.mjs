@@ -152,7 +152,9 @@ async function trueFalseGame(language){
     const payload={schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',
       title:'Juego privado de clase',grading:{mode:'embedded-key'},questions:[
         {id:'t1',type:'true-false',prompt:'¿Es verdadera?',points:1,
-        choices:[{id:'t',text:'Verdadero'},{id:'f',text:'Falso'}],solution:{choiceIds:['t']}}
+        choices:[{id:'t',text:'Verdadero'},{id:'f',text:'Falso'}],solution:{choiceIds:['t']}},
+        {id:'t2',type:'true-false',prompt:'¿Es falsa?',points:1,
+        choices:[{id:'t',text:'Verdadero'},{id:'f',text:'Falso'}],solution:{choiceIds:['f']}}
       ]};
     await render({container:document.getElementById('test-game'),bytes:new TextEncoder().encode(JSON.stringify(payload)),
       decodeJson:(bytes)=>JSON.parse(new TextDecoder().decode(bytes)),context:{}});
