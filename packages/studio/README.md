@@ -47,7 +47,7 @@ Los formatos anteriores siguen disponibles para compatibilidad:
 - **Windows CMD legado**: `.p2lrn-offline.cmd` de un solo archivo; utiliza PowerShell y no es la opción principal.
 
 La firma opcional Ed25519 autentica el **encargo del profesor**, no el ejecutable ni las respuestas. Para distribución pública de confianza, el EXE de cada curso debe firmarse con Authenticode **después** de incorporar el curso. Por ahora el EXE generado en Studio no tiene firma Authenticode y Windows puede mostrar advertencias. La firma válida tampoco garantiza reputación SmartScreen inmediata.
-El profesor puede configurar disponibilidad, fecha límite, duración máxima por intento, número de intentos, reanudación e identificación opcional del alumno. La colaboración y los servicios externos quedan desactivados en este modo. El Player utiliza persistencia offline local y conserva estados, respuestas, puntuaciones, eventos y tiempo activo.
+El profesor puede configurar disponibilidad, fecha límite, duración máxima por intento, número de intentos, reanudación e identificación del alumno mediante un código individual que se solicita al comenzar la entrega. La colaboración y los servicios externos quedan desactivados en este modo. El Player utiliza persistencia offline local y conserva estados, respuestas, puntuaciones, eventos y tiempo activo.
 
 Al finalizar, el alumno descarga un único `.p2lrn-result` y lo devuelve al profesor. Studio incluye **Revisar entrega** para comprobar integridad, coincidencia con el curso, puntuación, respuestas, duración, tiempo activo, eventos y anomalías registradas.
 
