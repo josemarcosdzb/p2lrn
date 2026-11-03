@@ -1,3 +1,4 @@
+import {playerUiText} from './ui-i18n.js';
 import {FILL_BLANKS_RENDERER} from '../renderer-registry.js';
 import {NATIVE_QUESTIONNAIRE_MEDIA_TYPE, validateQuestionnaire} from '../questionnaire-core.js';
 import {renderQuestionnaire} from '../questionnaire-runtime.js';
@@ -6,6 +7,6 @@ export async function render({container,bytes,representation,decodeJson,eventTar
   const media=String(representation.mediaType??'').split(';',1)[0].trim().toLowerCase();
   if(media!==NATIVE_QUESTIONNAIRE_MEDIA_TYPE)throw new Error(`Tipo MIME no válido para ${FILL_BLANKS_RENDERER}: ${representation.mediaType}`);
   const payload=decodeJson(bytes,'fill blanks game');validateQuestionnaire(payload);
-  if(payload.questions.some((q)=>q.type!=='fill-blanks'))throw new Error('El juego Rellenar huecos sólo admite preguntas fill-blanks.');
+  if(payload.questions.some((q)=>q.type!=='fill-blanks'))throw new Error(playerUiText('El juego Rellenar huecos sólo admite preguntas fill-blanks.'));
   return renderQuestionnaire(container,payload,{eventTarget,adapter,context});
 }
