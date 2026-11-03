@@ -1,5 +1,6 @@
 import {renderCourseRights} from './course-rights.js';
 import {playerUiText} from './renderers/ui-i18n.js';
+import {createResultRecorder} from './result-recorder.js';
 import {createDefaultDependencyRegistry} from './dependency-registry.js';
 import {RendererRegistry} from './renderer-registry.js';
 import {registerBuiltInRenderers} from './built-in-renderers.js';
@@ -456,6 +457,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     this._packageCache = null;
     this._resourceResolver = null;
     this._activityTracker = null;
+    this._resultRecorder = null;
     this._learningEventObserver = null;
     this._package = null;
     this._runtimeByContainer = new Map();
@@ -490,6 +492,14 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
     void this.reload();
   }
+  startResultCapture(options = {}) {
+    this._resultRecorder?.stop();
+    this._resultRecorder = createResultRecorder(this, options);
+    return this._resultRecorder;
+  }
+  get resultRecorder() { return this._resultRecorder; }
+  get packageId() { return this._package?.manifest?.packageId ?? null; }
+  get contentRoot() { return this._package?.manifest?.integrity?.contentRoot ?? null; }
   set adapter(value) { this._adapter = normalizeHostAdapter(value); }
   get adapter() { return this._adapter; }
   set capabilityBroker(value) { this._capabilityBroker = normalizeCapabilityBroker(value); }
@@ -1079,7 +1089,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
-  disconnectedCallback() { this.#cleanupRuntime(); this.stopActivityTracking(); this.stopLearningEventTracking(); }
+  disconnectedCallback() { this.#cleanupRuntime(); this.stopActivityTracking(); this.stopLearningEventTracking(); this._resultRecorder?.stop(); }
 }
 
 export async function mountP2LRN(target, options = {}) {
@@ -1099,6 +1109,7 @@ export async function mountP2LRN(target, options = {}) {
     if (options.renderer) player.setAttribute('renderer', options.renderer);
     if (Object.prototype.hasOwnProperty.call(options, 'runtimeBaseUrl')) player.runtimeBaseUrl = options.runtimeBaseUrl;
     if (!existing) host.replaceChildren(player);
+    if (options.resultIdentity) player.startResultCapture({identity:options.resultIdentity,courseId:options.courseId,courseTitle:options.courseTitle});
     if (options.activityTracking) player.startActivityTracking(options.activityTracking === true ? {} : options.activityTracking);
     if (options.learningEvents) player.startLearningEventTracking(options.learningEvents === true ? {} : options.learningEvents);
   } finally {
@@ -1158,6 +1169,7 @@ if (!existingP2LRNApi) {
     dependencies: () => defaultDependencyRegistry.list(),
     setPermissionPolicy: (policy) => defaultRendererRegistry.setPermissionPolicy(policy),
     createHostAdapter,
+    createResultRecorder,
     createCapabilityBroker,
     createToolCapabilityProvider,
     createMcpCapabilityProvider,

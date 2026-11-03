@@ -208,4 +208,20 @@ Ejecutar los tests en Windows con el job lms-contracts-windows de P2LRN CI, o de
 
 Los tests HTTP automatizados usan una plataforma de ensayo que firma JWT reales, un paquete auténtico y una respuesta OAuth/AGS simulada. **No certifican** que Moodle, Chamilo o Sakai ya tengan la herramienta P2LRN registrada. Para verificar cada instancia real, completar registro bidireccional, HTTPS, selección profesor, lanzamiento alumno, reanudación y recepción de nota AGS en esa plataforma.
 
-SQLite WAL está orientado a un único servidor; escalar a varios procesos/servidores requiere una base de datos compartida. NRPS es optativo y no está implementado en este módulo. Los navegadores que bloqueen por completo las cookies de terceros pueden requerir un flujo de almacenamiento o postMessage específico de LTI que se debe comprobar en E2E.
+SQLite WAL está orientado a un único servidor; escalar a varios procesos/servidores requiere una base de datos compartida. NRPS 2.0 está implementado como lectura opcional de matrículas, pero las instalaciones LMS reales aún requieren pruebas. Los navegadores que bloqueen por completo las cookies de terceros pueden requerir un flujo de almacenamiento o postMessage específico de LTI que se debe comprobar en E2E.
+
+
+### NRPS 2.0: matrícula y roles por curso
+
+El proveedor de P2LRN incorpora `integration/lms/lti-nrps.mjs`, que consulta el listado de alumnos y docentes sin modificar matriculaciones. Obtiene la URL del servicio únicamente del claim `namesroleservice` de un lanzamiento LTI 1.3 validado, y solicita el scope `https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly` mediante OAuth2 `client_credentials` y JWT RS256.
+
+- `GET /lti/runtime/nrps/memberships`: la sesión del profesor consulta exclusivamente el contexto autorizado del lanzamiento. Un alumno recibe HTTP 403.
+- `GET /lti/admin/nrps/contexts?tenantId=...`: el administrador ve los contextos previamente identificados, sin listado de personas.
+- `GET /lti/admin/nrps/memberships?tenantId=...&registrationId=...&deploymentId=...&contextId=...`: el administrador, con Bearer privado, consulta una lista concreta, ligada a institución, registro, despliegue y contexto.
+- Los miembros se consultan directamente desde el LMS. Se devuelven `userId`, `roles`, `status` y campos opcionales permitidos. No se conserva una copia permanente del listado; las tablas SQLite adicionales contienen solamente la URL de servicio validada, su contexto, las autorizaciones de roles y los orígenes de confianza.
+- Si la API NRPS reside en un origen HTTPS diferente al del issuer o token endpoint, el administrador debe añadir ese origen a `nrpsAllowedOrigins` de la plataforma registrada. No se aceptan URLs proporcionadas por el navegador.
+- El cliente limita 25 páginas, 5.000 miembros y 2 MiB por página, valida contenido y contexto, prohíbe redirecciones y rechaza destinos no autorizados.
+
+Pruebas automáticas: `node --test integration/lms/lti-nrps.test.mjs integration/lms/lti-nrps-server.test.mjs`.
+
+**Pruebas con AulaP2P, 3 de noviembre de 2026:** Moodle tiene el endpoint OAuth registrado inaccesible (`ECONNREFUSED`). Sakai también tiene mal el puerto del endpoint registrado; al probar el puerto 8080 sin modificar el registro, responde `invalid_scope` para NRPS. Chamilo responde `invalid_client`. Canvas y Open edX aparecen arrancados, pero no están registrados en el proveedor LTI de pruebas. La lectura de matrículas NRPS todavía **no se ha podido confirmar** frente a estas instalaciones. Falta corregir la configuración del LMS y completar un lanzamiento firmado con scope NRPS. NRPS no sustituye los archivos `.p2lrn-result` utilizados por Analytics.

@@ -7,7 +7,11 @@ const root=resolve(process.cwd());
 const siteRoot=join(root,'deploy','netlify','site');
 const englishRoot=join(siteRoot,'en');
 // Pages translated by an editor, rather than a machine, must survive a full mirror rebuild.
-const handAuthoredEnglishPages=new Set(['docs/formato-portable-cursos-interactivos/index.html']);
+const handAuthoredEnglishPages=new Set([
+  'docs/formato-portable-cursos-interactivos/index.html',
+  // Legal summaries are manually reviewed and must not be rewritten by machine translation.
+  'licencia/index.html',
+]);
 const cachePath=join(root,'scripts','site-en-translations.json');
 const MODEL='Xenova/opus-mt-es-en';
 const JS_FILES=['p2lrn.js','studio/studio.js','demo/viewer.js','analytics/demo.js'];

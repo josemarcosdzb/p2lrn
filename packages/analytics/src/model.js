@@ -240,14 +240,25 @@ export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
   const usage=record(result.usage);
   const summary=record(result.summary);
   const analytics=record(result.analytics);
-  const participantLabel=text(assignment.participantLabel,'Alumno offline');
-  const learnerId=semantic(assignment.participantToken||participantLabel,'offline-learner');
+  // The legacy assignment token may be shared by multiple learners using one delivery.
+  // Explicit identity from a result is only a grouping claim, not proof of who answered.
+  const identity=record(result.identity);
+  const participantLabel=text(identity.label??assignment.participantLabel,'Alumno offline');
+  const identityMode=identity.mode==='platform'||identity.mode==='code'?identity.mode:'legacy';
+  const identityValue=identityMode==='platform'
+    ? semantic(identity.subjectId,'')
+    : identityMode==='code'?semantic(identity.code,''):null;
+  const identityIssuer=semantic(identity.issuer,'');
+  const learnerId=identityValue
+    ? identityMode+':'+(identityIssuer||'unspecified')+':'+identityValue
+    : semantic(assignment.participantToken||participantLabel,'offline-learner');
   const courseId=semantic(assignment.packageId||assignment.contentRoot||assignment.assignmentId,'offline-course');
   const attemptId=semantic(attempt.id,key(learnerId,courseId,'offline-attempt',attempt.number??1));
   const title=text(courseTitle??assignment.title??record(result.assignmentProof).title,'Curso offline P2LRN');
   const provenance=record(assignment.provenance);
   const startedAt=timestamp(attempt.startedAt??usage.firstOpenedAt);
-  const finishedAt=timestamp(attempt.finishedAt??usage.lastOpenedAt);
+  const pendingTransfer=attempt.status==='in_progress';
+  const finishedAt=pendingTransfer?null:timestamp(attempt.finishedAt??usage.lastOpenedAt);
   const activeTimeMs=Math.max(0,finite(analytics.activeTimeMs,summary.activeTimeMs)??0);
   const latestScore=record(summary.latestScore);
   const normalizedScore=ratio(latestScore.normalized,null);
@@ -293,14 +304,14 @@ export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
       context:{learnerId,courseId,attemptId},payload:{normalized:normalizedScore,authoritative:false,source:'offline-result'},
     });
   }
-  const grades=scoreValue!=null&&scoreMax!=null&&scoreMax>0?[{
+  const grades=!pendingTransfer&&scoreValue!=null&&scoreMax!=null&&scoreMax>0?[{
     id:key(attemptId,'grade'),learnerId,courseId,value:scoreValue,maxValue:scoreMax,
     authoritative:false,updatedAt:finishedAt,source:'offline-result',
     metadata:{informational:true,reason:'Resultado generado fuera de un Host autoritativo'},
   }]:[];
   return normalizeAnalyticsDataset({
     generatedAt:finishedAt??timestamp(usage.lastOpenedAt)??new Date().toISOString(),
-    learners:[{id:learnerId,name:participantLabel,status:'active',metadata:{offline:true}}],
+    learners:[{id:learnerId,name:participantLabel,status:'active',metadata:{offline:true,identityMode,identityVerified:false,identityIssuer:identityIssuer||null}}],
     courses:[{id:courseId,title,status:'active',metadata:{offline:true,contentRoot:assignment.contentRoot??null,issuerName:text(provenance.issuerName,''),author:text(provenance.author,''),copyrightHolder:text(provenance.copyrightHolder,''),license:text(provenance.license,'')}}],
     enrollments:[{
       id:key(learnerId,courseId,'offline-enrollment'),learnerId,courseId,status:'active',
@@ -308,10 +319,10 @@ export function analyticsDatasetFromOfflineResult(input,{courseTitle=null}={}){
       metadata:{offline:true,assignmentId:assignment.assignmentId??null},
     }],
     attempts:[{
-      id:attemptId,learnerId,courseId,status:text(attempt.status,finishedAt?'submitted':'started'),
+      id:attemptId,learnerId,courseId,status:pendingTransfer?'in_progress':text(attempt.status,finishedAt?'submitted':'started'),
       startedAt,submittedAt:finishedAt,updatedAt:finishedAt??startedAt,score:scoreValue,maxScore:scoreMax,activeTimeMs,
       metadata:{
-        offline:true,attemptNumber:finite(attempt.number,null),elapsedSeconds:finite(attempt.elapsedSeconds,0),
+        offline:true,portableCheckpoint:pendingTransfer,attemptNumber:finite(attempt.number,null),elapsedSeconds:finite(attempt.elapsedSeconds,0),
         openings:Math.max(0,finite(usage.openCount,summary.openings)??0),
         firstOpenedAt:timestamp(usage.firstOpenedAt),lastOpenedAt:timestamp(usage.lastOpenedAt),
         expiresAt:timestamp(usage.expiresAt),deviceBindingId:text(usage.deviceBindingId,''),
@@ -751,4 +762,92 @@ export function analyticsToCsv(snapshotOrDataset,{kind='learners',locale='es-ES'
       ])];
   }
   return rows.map((row)=>row.map(csvCell).join(',')).join('\r\n')+'\r\n';
+}
+
+
+// A static results index is a list of files, not an API or a database.
+// Every result is verified before any metric is shown; integrity is not identity proof.
+export const P2LRN_RESULTS_INDEX_SCHEMA='https://p2lrn.org/schema/analytics-results-index/1';
+
+export async function analyticsDatasetFromResultFiles(files){
+  if(!Array.isArray(files)||files.length===0)throw new TypeError('Selecciona al menos un archivo .p2lrn-result.');
+  if(files.length>500)throw new RangeError('Máximo 500 resultados por importación.');
+  const datasets=[];
+  const seenDigests=new Set();
+  for(const file of files){
+    const value=file&&typeof file.text==='function'?await file.text():file;
+    const check=await verifyOfflineResultIntegrity(value);
+    if(!check.valid)throw new Error('Un archivo .p2lrn-result no supera la comprobación SHA-256.');
+    if(seenDigests.has(check.declared))continue;
+    seenDigests.add(check.declared);
+    datasets.push(analyticsDatasetFromOfflineResult(check.result));
+  }
+  return mergeAnalyticsResultDatasets(datasets);
+}
+
+export function mergeAnalyticsResultDatasets(datasets){
+  if(!Array.isArray(datasets))throw new TypeError('Se esperaba una lista de datasets.');
+  const sources=datasets.map((data)=>normalizeAnalyticsDataset(data));
+  const merged={learners:[],courses:[],enrollments:[],attempts:[],grades:[],events:[]};
+  const kinds=['learners','courses','enrollments','attempts','grades','events'];
+  for(const kind of kinds){
+    const records=new Map();
+    for(const source of sources){
+      for(const item of source[kind]){
+        const composite=kind==='enrollments'
+          ?item.learnerId+'::'+item.courseId
+          :kind==='grades'
+            ?item.learnerId+'::'+item.courseId+'::'+(item.entityId||'')+'::'+(item.id||'')
+            :kind==='events'
+              ?item.courseId+'::'+(item.attemptId||'')+'::'+item.id
+              :kind==='attempts'
+                ?item.courseId+'::'+item.id
+                :item.id;
+        const key=String(composite);
+        const before=records.get(key);
+        if(!before){records.set(key,item);continue;}
+        if(kind==='learners'||kind==='courses'){
+          // Same identity/course across attempts: first stable label wins.
+          continue;
+        }
+        if(kind==='enrollments')continue;
+        if(JSON.stringify(before)!==JSON.stringify(item))
+          throw new Error('Conflicto entre resultados: identificadores repetidos con datos distintos ('+kind+').');
+      }
+    }
+    merged[kind]=[...records.values()];
+  }
+  return normalizeAnalyticsDataset(merged);
+}
+
+export async function loadAnalyticsResultSource(src,{fetcher=globalThis.fetch,baseURL=globalThis.location?.href}={}){
+  if(typeof src!=='string'||!src.trim())throw new TypeError('Indica una ruta de resultados.');
+  if(typeof fetcher!=='function')throw new TypeError('No hay función fetch disponible.');
+  const request=async(url)=>{
+    const response=await fetcher(url,{credentials:'same-origin',headers:{accept:'application/json, application/vnd.p2lrn-result+json'}});
+    if(!response?.ok)throw new Error('No se pudo abrir el archivo de resultados (HTTP '+(response?.status??'desconocido')+').');
+    return response.json();
+  };
+  const mainURL=baseURL?new URL(src,baseURL).href:src;
+  const main=await request(mainURL);
+  if(main?.schema===P2LRN_OFFLINE_RESULT_SCHEMA)return analyticsDatasetFromResultFiles([main]);
+  if(main?.schema===P2LRN_RESULTS_INDEX_SCHEMA){
+    const links=main.results;
+    if(!Array.isArray(links)||links.length>500||links.some(x=>typeof x!=='string'||!x.trim()))
+      throw new TypeError('El índice de resultados debe incluir entre 1 y 500 rutas válidas.');
+    if(links.length===0)return normalizeAnalyticsDataset({});
+    const parent=new URL(mainURL,baseURL||'https://p2lrn.org/');
+    const contents=[];
+    // Limit concurrency and reject remote redirects to prevent cross-origin result disclosure.
+    for(const entry of links){
+      const url=new URL(entry,parent);
+      if(url.origin!==parent.origin)throw new Error('El índice no puede incluir resultados de otro origen.');
+      contents.push(await request(url.href));
+    }
+    return analyticsDatasetFromResultFiles(contents);
+  }
+  if(main?.schema===ANALYTICS_DATASET_SCHEMA||(
+    Array.isArray(main?.learners)&&Array.isArray(main?.courses)))
+    return normalizeAnalyticsDataset(main);
+  throw new TypeError('La ruta src debe apuntar a un .p2lrn-result, un índice de resultados o un JSON de métricas compatible.');
 }

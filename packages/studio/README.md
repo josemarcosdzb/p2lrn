@@ -47,7 +47,7 @@ Los formatos anteriores siguen disponibles para compatibilidad:
 - **Windows CMD legado**: `.p2lrn-offline.cmd` de un solo archivo; utiliza PowerShell y no es la opción principal.
 
 La firma opcional Ed25519 autentica el **encargo del profesor**, no el ejecutable ni las respuestas. Para distribución pública de confianza, el EXE de cada curso debe firmarse con Authenticode **después** de incorporar el curso. Por ahora el EXE generado en Studio no tiene firma Authenticode y Windows puede mostrar advertencias. La firma válida tampoco garantiza reputación SmartScreen inmediata.
-El profesor puede configurar disponibilidad, fecha límite, duración máxima por intento, número de intentos, reanudación e identificación opcional del alumno. La colaboración y los servicios externos quedan desactivados en este modo. El Player utiliza persistencia offline local y conserva estados, respuestas, puntuaciones, eventos y tiempo activo.
+El profesor puede configurar disponibilidad, fecha límite, duración máxima por intento, número de intentos, reanudación e identificación del alumno mediante un código individual que se solicita al comenzar la entrega. La colaboración y los servicios externos quedan desactivados en este modo. El Player utiliza persistencia offline local y conserva estados, respuestas, puntuaciones, eventos y tiempo activo.
 
 Al finalizar, el alumno descarga un único `.p2lrn-result` y lo devuelve al profesor. Studio incluye **Revisar entrega** para comprobar integridad, coincidencia con el curso, puntuación, respuestas, duración, tiempo activo, eventos y anomalías registradas.
 
@@ -151,3 +151,22 @@ The generated `p2lrn-setup/README.md` always contains the three endpoint attribu
 The installer generates technical integration, **not application authorization**. Each Host must protect the generated Save, Reader and external-import routes using its own authenticated identities and per-course/per-tenant teacher/editor/admin permissions, plus CSRF/origin checks where appropriate, request and archive limits, quotas, and rate limiting. Access checks must be on the server, before invoking P2LRN helpers; hidden UI controls or a generated route do not enforce permissions.
 
 The npm save helper fixes the configured server directory by default. The browser's `X-P2LRN-Path` header is ignored unless the integrator explicitly enables `allowClientPath: true`.
+
+
+## Reanudar un curso offline en otro dispositivo
+
+El progreso **no debe depender de copiar el almacenamiento del navegador**. Al trabajar en una entrega offline con reanudación habilitada, el alumno puede pulsar **Guardar progreso para otro dispositivo**. Se descarga un `.p2lrn-result` con `attempt.status='in_progress'`, código del alumno, identificador de intento y estado de las actividades.
+
+Para continuar en otro ordenador, el alumno transporta **la misma entrega `.p2lrn-offline.exe` o `.p2lrn-offline.zip` y su fichero de progreso `.p2lrn-result`**. El curso y su firma no se alteran. En el nuevo equipo abre la entrega, utiliza **Importar progreso y continuar** para elegir el resultado y después **Continuar intento**. Se recuperan el mismo código e intento, junto con los estados, respuestas y eventos pendientes.
+
+La importación rechaza resultados corruptos, de otra entrega o versión del curso, de otro alumno o ya finalizados, y no sobrescribe intentos locales. Si el profesor desactiva `allowResume`, no se permite esta transferencia de un intento pendiente. El archivo debe copiarse antes de abandonar el dispositivo y conservarse con privacidad; ni una descarga ni un código declarado constituyen prueba de autoría.
+
+Al finalizar, la entrega genera un `.p2lrn-result` definitivo con estado `submitted`. Analytics puede identificar el archivo intermedio como `in_progress`, pero **no lo convierte en una nota o entrega final**. No hay fusión automática de dos copias editadas simultáneamente. La transferencia por archivos funciona sin conexión ni base de datos.
+
+## Identificación del alumno y resultados compatibles con Analytics
+
+Las entregas offline creadas desde Studio generan un fichero `.p2lrn-result` al finalizar el intento. Para no confundir alumnos que comparten el mismo paquete de entrega, el alumno debe introducir el **código individual asignado por el profesor** antes de comenzar. La entrega incluye el código, el alumno, el curso y el intento en el resultado; Analytics puede agruparlos sin una base de datos.
+
+El código se conserva en `result.identity` como `{mode:'code', issuer, code, label}`. **No es una prueba de identidad**: un alumno podría introducir el código de otro. Cuando el curso se reproduce en una plataforma con usuario autenticado, `@p2lrn/player` ofrece el modo `{mode:'platform',issuer,subjectId,label}`, proporcionado por el host autorizado.
+
+La ruta `src` de `@p2lrn/analytics` debe apuntar al archivo **`.p2lrn-result`**, no al curso `.p2lrn`. Para varios estudiantes puede utilizarse un índice estático `index.p2lrn-results.json` o seleccionar varios archivos locales desde el panel. Studio no necesita instalar una base de datos para estas entregas ni convierte resultados a un formato propietario.

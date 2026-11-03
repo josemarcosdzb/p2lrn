@@ -14,6 +14,8 @@ import {
   openCachedP2LRNPackage,
 } from './p2lrn-player.js';
 import {createHostAdapter, HOST_ADAPTER_VERSION} from './host-adapter.js';
+import {createResultRecorder} from './result-recorder.js';
+import {createPlayerAnalyticsSession,createHttpResultHost,P2LRN_RESULT_HOST_VERSION} from './result-bridge.js';
 import {CapabilityBroker, createCapabilityBroker, createToolCapabilityProvider, createMcpCapabilityProvider, capabilityRequirements, mergeCapabilityRequirements, capabilityOperationAllowed, projectCapabilityContext, validateCapabilityGraph, HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION} from './capability-broker.js';
 import {createOfflineHostAdapter, createMemoryOfflineStore, createIndexedDbOfflineStore, createOfflineSyncController, OFFLINE_HOST_ADAPTER_VERSION, DEFAULT_OFFLINE_DB_NAME} from './offline-host-adapter.js';
 import {createActivityTracker, DEFAULT_ACTIVITY_IDLE_AFTER_MS} from './activity-tracker.js';
@@ -54,6 +56,10 @@ export {
   P2LRNPlayerElement,
   HOST_ADAPTER_VERSION,
   createHostAdapter,
+  createResultRecorder,
+  createPlayerAnalyticsSession,
+  createHttpResultHost,
+  P2LRN_RESULT_HOST_VERSION,
   CapabilityBroker,
   createCapabilityBroker,
   createToolCapabilityProvider,

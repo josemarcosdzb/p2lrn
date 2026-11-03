@@ -9,10 +9,12 @@ import {fileURLToPath} from 'node:url';
 import {createP2LRNLtiProvider} from './lti-provider.mjs';
 import {createLtiStore} from './lti-store.mjs';
 import {createLtiAgsClient} from './lti-ags.mjs';
+import {createLtiNrpsClient,validateNrpsClaim,NRPS_CLAIM} from './lti-nrps.mjs';
 import {validatePackageBytes} from '../../packages/toolkit/dist/core/validator.js';
 
 const ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 const AGS_CLAIM='https://purl.imsglobal.org/spec/lti-ags/claim/endpoint';
+const ROLES_CLAIM='https://purl.imsglobal.org/spec/lti/claim/roles';
 const DL_CLAIM='https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings';
 const digest=s=>createHash('sha256').update(s).digest('hex');
 const nonce=(len=32)=>randomBytes(len).toString('base64url');
@@ -143,6 +145,15 @@ function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
   throw new Error('LTI launch URL must match this independent P2LRN server or its registered LMS-origin local proxy');
  for(const v of [reg.issuer,reg.authUrl,reg.tokenUrl,...(reg.deepLinkReturnOrigins||[])])
   if(!(new URL(v).protocol==='https:'||(allowInsecureLocal&&new URL(v).protocol==='http:'&&/^(localhost|127\.0\.0\.1|(?:[a-z0-9-]+\.)+localhost)$/.test(new URL(v).hostname))))throw new Error('LTI platform endpoints must use HTTPS outside the local test lab');
+ const extra=reg.nrpsAllowedOrigins??[];
+ if(!Array.isArray(extra)||extra.length>12)throw new Error('Invalid additional NRPS origins');
+ for(const origin of extra){
+  let u;try{u=new URL(origin);}catch{throw new Error('Invalid additional NRPS origin');}
+  if(origin!==u.origin||u.username||u.password||u.hash||
+     !(u.protocol==='https:'||(allowInsecureLocal&&u.protocol==='http:'&&
+       /^(localhost|127\.0\.0\.1|(?:[a-z0-9-]+\.)+localhost)$/.test(u.hostname))))
+    throw new Error('Untrusted additional NRPS origin');
+ }
  return reg;
 }
 export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindHost='127.0.0.1',
@@ -184,6 +195,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   transactions:store.transactions,getBinding:store.getBinding,tool,allowInsecureLocal:allowInsecureLoopback
  });
  const ags=createLtiAgsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
+ const nrps=createLtiNrpsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
  const sessionCookie=secure?'__Host-p2lrn-session':'p2lrn_session';
  const oidcCookie=secure?'__Host-p2lrn-oidc':'p2lrn_oidc';
  const playerDist=resolve(ROOT,'packages/player/dist');
@@ -270,7 +282,18 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     const agsClaim=claims[AGS_CLAIM];
     const agsData=agsClaim&&typeof agsClaim==='object'&&!Array.isArray(agsClaim)?
       {lineitem:agsClaim.lineitem,lineitems:agsClaim.lineitems,scope:agsClaim.scope}:null;
-    store.attachLaunch({launch:verified.launch,ags:agsData,tokenHash:digest(token),
+    let nrpsService=null;
+     if(claims[NRPS_CLAIM]!==undefined){
+      try{nrpsService=validateNrpsClaim(claims[NRPS_CLAIM],inspected.registration,{allowInsecureLoopback});}
+      catch{nrpsService=null;} // NRPS is optional; invalid data cannot stop a standard launch.
+     }
+     if(verified.launch.contextId)store.saveNrpsContext({
+      registrationId:verified.launch.registrationId,tenantId:verified.launch.tenantId,
+      deploymentId:verified.launch.deploymentId,contextId:verified.launch.contextId,service:nrpsService});
+     const roles=claims[ROLES_CLAIM];
+     const canReadRoster=Array.isArray(roles)&&roles.some(role=>
+      typeof role==='string'&&/#(Instructor|Administrator|TeachingAssistant)$/i.test(role));
+     store.attachLaunch({launch:verified.launch,ags:agsData,canReadRoster,tokenHash:digest(token),
       csrfHash:digest(csrf),expiresAt:time()+3600});
     const cspNonce=nonce(16);
     const body=playerHtml({entityId:verified.launch.entityId,csrf,
@@ -312,7 +335,18 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     res.writeHead(200,{'Content-Type':type,'X-Content-Type-Options':'nosniff','Cache-Control':'public,max-age=60'});
     return createReadStream(absolute).pipe(res);
    }
-   if(method==='GET'&&path==='/lti/runtime/package'){
+   if(method==='GET'&&path==='/lti/runtime/nrps/memberships'){
+     const session=requireSession(req);
+     if(!session.canReadRoster)throw new Error('NRPS_ROLE_DENIED');
+     const registration=store.getRegistrationById(session.registrationId);
+     if(!registration||registration.status!=='ACTIVE'||registration.tenantId!==session.tenantId)
+      throw new Error('NRPS_PLATFORM_REVOKED');
+     const service=store.getNrpsContext({registrationId:session.registrationId,
+      tenantId:session.tenantId,deploymentId:session.deploymentId,contextId:session.contextId});
+     if(!service)return sendJson(res,404,{error:'NRPS_NOT_AVAILABLE'});
+     return sendJson(res,200,await nrps.listMembers({registration,service,contextId:session.contextId}));
+    }
+    if(method==='GET'&&path==='/lti/runtime/package'){
     const session=requireSession(req),file=resolve(packages,session.filename);
     if(!file.startsWith(packages+sep)||!existsSync(file))return sendJson(res,503,{error:'PACKAGE_NOT_AVAILABLE'});
     res.writeHead(200,{'Content-Type':'application/vnd.p2lrn+zip','Content-Length':session.bytes,
@@ -354,7 +388,23 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    }
    if(path.startsWith('/lti/admin/')){
     requireAdmin(req);
-    if(method==='GET'&&path==='/lti/admin/platforms')
+    if(method==='GET'&&path==='/lti/admin/nrps/contexts'){
+      const tenantId=valid(incoming.searchParams.get('tenantId'),'tenantId',128);
+      return sendJson(res,200,{contexts:store.listNrpsContexts(tenantId)});
+     }
+     if(method==='GET'&&path==='/lti/admin/nrps/memberships'){
+      const tenantId=valid(incoming.searchParams.get('tenantId'),'tenantId',128);
+      const registrationId=valid(incoming.searchParams.get('registrationId'),'registrationId',128);
+      const deploymentId=valid(incoming.searchParams.get('deploymentId'),'deploymentId',256);
+      const contextId=valid(incoming.searchParams.get('contextId'),'contextId',1024);
+      const registration=store.getRegistrationById(registrationId);
+      if(!registration||registration.status!=='ACTIVE'||registration.tenantId!==tenantId||
+         !registration.deployments.includes(deploymentId))throw new Error('NRPS_UNAUTHORIZED_CONTEXT');
+      const service=store.getNrpsContext({registrationId,tenantId,deploymentId,contextId});
+      if(!service)return sendJson(res,404,{error:'NRPS_NOT_AVAILABLE'});
+      return sendJson(res,200,await nrps.listMembers({registration,service,contextId}));
+     }
+     if(method==='GET'&&path==='/lti/admin/platforms')
      return sendJson(res,200,{platforms:store.listPlatforms()});
     if(method==='POST'&&path==='/lti/admin/platforms'){
      const reg=assertTrustedReg(input(await readBody(req,131072),req),canonicalBase,allowInsecureLoopback);
@@ -425,7 +475,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    return sendJson(res,404,{error:'NOT_FOUND'});
   }catch(error){
    const message=String(error?.message||error).slice(0,300);
-   const forbidden=/ADMIN_DENIED|UNAUTHORIZED|CROSS_SITE|INVALID_CSRF|SESSION_EXPIRED|PICKER_EXPIRED|LTI|JWT|OIDC|issuer|audience|nonce|binding|deployment|registered|registration|platform|signature|token|key|origin|P2LRN content authorization/i.test(message);
+   const forbidden=/NRPS_ROLE_DENIED|NRPS_UNAUTHORIZED_CONTEXT|NRPS_PLATFORM_REVOKED|ADMIN_DENIED|UNAUTHORIZED|CROSS_SITE|INVALID_CSRF|SESSION_EXPIRED|PICKER_EXPIRED|LTI|JWT|OIDC|issuer|audience|nonce|binding|deployment|registered|registration|platform|signature|token|key|origin|P2LRN content authorization/i.test(message);
    const status=message==='REQUEST_TOO_LARGE'?413:forbidden?403:400;
    // Do not reflect secrets, JWTs, filesystem paths or untrusted form values.
    return sendJson(res,status,{error:status===403?'FORBIDDEN':status===413?'TOO_LARGE':'INVALID_REQUEST'});

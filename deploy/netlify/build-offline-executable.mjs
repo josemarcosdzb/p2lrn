@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {promisify} from 'node:util';
+import {publishNativeCorrespondingSource} from './native-corresponding-source.mjs';
 
 const exec=promisify(execFile);
 const root=resolve(process.cwd());
@@ -11,6 +12,9 @@ const output=join(root,'.netlify-cdn','downloads');
 await mkdir(output,{recursive:true});
 const filename='p2lrn-offline-launcher-windows-amd64.exe';
 const file=join(output,filename);
+const playerPackage=JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8'));
+const sourceAudit=await publishNativeCorrespondingSource({root,outputRoot:join(root,'.netlify-cdn'),version:playerPackage.version,
+  sourceRef:process.env.P2LRN_SOURCE_REF??process.env.GITHUB_SHA??process.env.COMMIT_REF??null});
 
 async function go(args,env={}){
   try{
@@ -33,6 +37,8 @@ const manifest={
   schema:'https://p2lrn.org/schema/native-offline-launcher/1',
   version:'1',filename,platform:'windows',architecture:'amd64',
   envelope:'P2LRN-EXE-V1',bytes:bytes.length,sha256,
+  license:{id:'P2LRN-NCSL-1.0',url:'/LICENSE',notice:'/NOTICE.md'},
+  correspondingSource:{manifest:sourceAudit.manifestUrl,archive:sourceAudit.archive.url,archiveBytes:sourceAudit.archive.bytes,archiveSha256:sourceAudit.archive.sha256},
   signedByPublisher:false,
   note:'El EXE generado en el navegador no posee firma Authenticode. La firma Ed25519 autentica solo el encargo del profesor.',
 };

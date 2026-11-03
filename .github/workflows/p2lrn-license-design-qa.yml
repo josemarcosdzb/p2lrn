@@ -1,0 +1,97 @@
+name: P2LRN License Design QA
+
+on:
+  push:
+    branches: [redesign/home-sections-2026-11]
+    paths:
+      - 'deploy/netlify/**'
+      - 'scripts/verify-license-page.mjs'
+      - 'scripts/audit-third-party-licenses.mjs'
+      - 'scripts/browser-license-footer-qa.mjs'
+      - 'scripts/check-publish-ready.mjs'
+      - 'packages/*/package.json'
+      - 'packages/h5p-libraries/**'
+      - 'docs/engineering/licensing-*'
+      - '.github/workflows/p2lrn-license-design-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  design-and-build:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: '1.26'
+      - name: Install required Toolkit and browser dependencies
+        shell: powershell
+        run: |
+          Push-Location packages/toolkit
+          try {
+            npm install --ignore-scripts --no-audit --no-fund
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally { Pop-Location }
+          if (-not (Test-Path .license-browser-qa)) {
+            New-Item -ItemType Directory -Path .license-browser-qa | Out-Null
+          }
+          Set-Content -Path .license-browser-qa/package.json -Value '{"name":"p2lrn-license-browser-qa","private":true,"version":"0.0.0"}' -Encoding UTF8
+          Push-Location .license-browser-qa
+          try {
+            npm install --no-save --package-lock=false --no-audit --no-fund playwright-core@1.64.1
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally { Pop-Location }
+      - name: Verify static licensing, package ownership and footer
+        shell: powershell
+        run: |
+          node scripts/check-publish-ready.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-license-integration.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test deploy/netlify/test/site-footer.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test deploy/netlify/test/corresponding-source.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Exercise bilingual commercial-license workflow in Chrome
+        shell: powershell
+        run: |
+          node scripts/browser-license-footer-qa.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build complete website, native executable and CDN
+        shell: powershell
+        run: |
+          node deploy/netlify/build-site.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/browser-license-footer-qa.mjs --built
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --input-type=module -e "import {readFile} from 'node:fs/promises'; for(const language of ['', 'en/']) {const html=await readFile('.netlify-cdn/'+language+'licencia/index.html','utf8'); if(!html.includes('site-footer__credit')||!html.includes('https://github.com/josemarcosdzb/p2lrn'))throw Error('Missing footer '+language);} console.log('P2LRN_BUILT_FOOTER_QA=PASS')"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Remove isolated browser test dependencies
+        if: always()
+        shell: powershell
+        run: |
+          if (Test-Path .license-browser-qa) { Remove-Item .license-browser-qa -Recurse -Force }
+
+  third-party-compliance-gate:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Audit all pinned third-party runtime license statements
+        shell: powershell
+        run: |
+          node packages/h5p-libraries/scripts/build.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node packages/player/scripts/build-dist.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/audit-third-party-licenses.mjs --strict
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

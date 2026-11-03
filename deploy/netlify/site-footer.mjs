@@ -20,6 +20,7 @@ const ES_GROUPS=Object.freeze([
     ['/skills/','Skills para IA'],
     ['/docs/troubleshooting/','Solución de problemas'],
     ['/contacto/','Contacto'],
+    ['https://github.com/josemarcosdzb/p2lrn','GitHub · Repositorio'],
   ]},
 ]);
 const EN_GROUPS=Object.freeze([
@@ -40,6 +41,7 @@ const EN_GROUPS=Object.freeze([
     ['/skills/','AI Skills'],
     ['/docs/troubleshooting/','Troubleshooting'],
     ['/contacto/','Contact'],
+    ['https://github.com/josemarcosdzb/p2lrn','GitHub · Repository'],
   ]},
 ]);
 const ES_LEGAL=Object.freeze([
@@ -83,7 +85,7 @@ export function getSiteFooterLinks(locale='es'){
 }
 export const SITE_FOOTER_LINKS=getSiteFooterLinks('es');
 
-const listItem=([href,text])=>'<li><a href="'+href+'">'+text+'</a></li>';
+const listItem=([href,text])=>'<li><a href="'+href+'"'+(href.startsWith('https://')?' target="_blank" rel="noopener noreferrer"':'')+'>'+text+'</a></li>';
 
 export function renderSiteFooter(locale='es'){
   const english=locale==='en';
@@ -115,6 +117,7 @@ export function renderSiteFooter(locale='es'){
         '<p class="site-footer__signature">P2LRN <span aria-hidden="true">·</span> '+(english?'Resources and documentation':'Recursos y documentación')+'</p>'+
         '<nav class="site-footer__legal" data-legal-links aria-label="'+(english?'Legal information':'Información legal')+'">'+legal+'</nav>'+
       '</div>'+
+      '<p class="site-footer__credit">'+(english?'Created by':'Creado por')+' <strong>Jose Marcos Diaz</strong></p>'+
     '</div>'+
   '</footer>';
 }

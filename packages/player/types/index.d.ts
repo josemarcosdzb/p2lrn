@@ -1,5 +1,5 @@
-export const version: "0.5.0-alpha.11";
-export const toolkitVersion: "0.5.0-alpha.11";
+export const version: "0.5.0-alpha.12";
+export const toolkitVersion: "0.5.0-alpha.12";
 export const coreVersion: "0.4.0";
 export const HOST_ADAPTER_VERSION: "1";
 
@@ -24,6 +24,62 @@ export interface P2LRNResolvedResourceUrl {
   verified: true;
   seekable?: boolean;
 }
+
+
+export type P2LRNResultIdentity =
+  | {mode:'platform';issuer:string;subjectId:string;label?:string}
+  | {mode:'code';code:string;issuer?:string;label?:string};
+export interface P2LRNResultRecorder {
+  readonly identity:P2LRNResultIdentity;
+  readonly attemptId:string;
+  readonly count:number;
+  record(event:{type:string;detail?:unknown}):void;
+  checkpoint():Promise<Record<string,unknown>>;
+  restore(previous:Record<string,unknown>):Promise<{attemptId:string;restoredEvents:number}>;
+  finish():Promise<Record<string,unknown>>;
+  download(filename?:string):Promise<Record<string,unknown>>;
+  stop():void;
+}
+export interface P2LRNResultOptions {
+  identity:P2LRNResultIdentity;
+  courseId?:string;
+  courseTitle?:string;
+  attemptId?:string;
+  attemptNumber?:number;
+  onResult?:(result:Record<string,unknown>)=>unknown|Promise<unknown>;
+}
+export declare function createResultRecorder(player:EventTarget,options:P2LRNResultOptions):P2LRNResultRecorder;
+
+export const P2LRN_RESULT_HOST_VERSION: '1';
+export interface P2LRNResultHost {
+  loadCurrent(context:{courseId:string}):Promise<Record<string,unknown>|null>;
+  saveResult(result:Record<string,unknown>):Promise<{saved?:boolean;[key:string]:unknown}>;
+}
+export interface P2LRNPlayerAnalyticsSession {
+  readonly version:'1';
+  readonly identity:P2LRNResultIdentity;
+  readonly attemptId:string;
+  readonly resumed:boolean;
+  readonly lastSaveError:Error|null;
+  checkpoint():Promise<Record<string,unknown>>;
+  finish():Promise<Record<string,unknown>>;
+  stop():void;
+}
+export function createPlayerAnalyticsSession(player:EventTarget,options:{
+  identity:P2LRNResultIdentity;
+  courseId:string;
+  courseTitle?:string;
+  host:P2LRNResultHost;
+  autoSaveDelayMs?:number;
+  onSaveError?:(error:Error)=>void;
+}):Promise<P2LRNPlayerAnalyticsSession>;
+export function createHttpResultHost(options?:{
+  baseUrl?:string;
+  fetchImpl?:typeof fetch;
+  csrfToken?:string|(()=>string|Promise<string>);
+  pageURL?:string;
+}):P2LRNResultHost & {version:'1';indexUrl(courseId:string):string};
+
 
 export interface P2LRNHostContext {
   packageId?: string | null;
@@ -269,6 +325,9 @@ export interface P2LRNMountOptions {
   capabilityBroker?: CapabilityBroker | null;
   packageCache?: P2LRNPackageCache | null;
   activityTracking?: boolean | P2LRNActivityTrackerOptions;
+  resultIdentity?:P2LRNResultIdentity;
+  courseTitle?:string;
+  courseId?:string;
 }
 
 export interface P2LRNServiceWorkerOptions {
@@ -277,10 +336,11 @@ export interface P2LRNServiceWorkerOptions {
 }
 
 export interface P2LRNPublicAPI {
-  readonly version: "0.5.0-alpha.11";
-  readonly toolkitVersion: "0.5.0-alpha.11";
+  readonly version: "0.5.0-alpha.12";
+  readonly toolkitVersion: "0.5.0-alpha.12";
   readonly coreVersion: "0.4.0";
   readonly mount: typeof mountP2LRN;
+  readonly createResultRecorder:typeof createResultRecorder;
   readonly PlayerElement: typeof P2LRNPlayerElement;
   readonly openPackageBytes: typeof openP2LRNPackageBytes;
   readonly openPackageURL: typeof openP2LRNPackageURL;
@@ -335,9 +395,13 @@ export interface P2LRNPublicAPI {
 }
 
 export class P2LRNPlayerElement extends HTMLElement {
-  static readonly p2lrnVersion: "0.5.0-alpha.11";
+  static readonly p2lrnVersion: "0.5.0-alpha.12";
   /** @deprecated Compatibility alias for Alpha15 integrations. */
-  static readonly p2rlnVersion: "0.5.0-alpha.11";
+  static readonly p2rlnVersion: "0.5.0-alpha.12";
+  startResultCapture(options:P2LRNResultOptions):P2LRNResultRecorder;
+  readonly resultRecorder:P2LRNResultRecorder|null;
+  readonly packageId:string|null;
+  readonly contentRoot:string|null;
   adapter: P2LRNHostAdapter | null;
   capabilityBroker: CapabilityBroker | null;
   packageCache: P2LRNPackageCache | null;

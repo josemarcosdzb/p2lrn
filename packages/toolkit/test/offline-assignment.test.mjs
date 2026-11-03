@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {webcrypto} from 'node:crypto';
+import {createContext,runInContext} from 'node:vm';
 import {
   OFFLINE_ASSIGNMENT_SCHEMA,
   OFFLINE_RESULT_SCHEMA,
@@ -518,4 +519,125 @@ test('invalid or mismatched native templates fail closed, not replaced by CMD',a
   const wrongCpu=new Uint8Array(base);
   wrongCpu[132]=0x4c;wrongCpu[133]=0x01;
   await assert.rejects(()=>buildWindowsOfflineExecutable(archive,wrongCpu),/Windows x64/);
+});
+
+test('portable cross-device checkpoint keeps identity and attempt, restores pending state, and rejects mismatched or edited files',async()=>{
+  const document=createP2LRNStudioDocument({title:'Continuidad entre dispositivos'});
+  const output=await exportOfflineAssignmentBundle(document,{
+    runtimeBaseUrl:'https://runtime.example/player/current/dist/',
+    fetchImpl:runtimeFetch(),allowResume:true,maxAttempts:2,
+  });
+  const entries=storedZipEntries(output.bytes);
+  const app=decoder.decode(entries.get('www/app.js'));
+  const page=decoder.decode(entries.get('www/index.html'));
+  assert.doesNotThrow(()=>new Function(app));
+  assert.match(page,/id="save-progress"/);
+  assert.match(page,/id="transfer-file"/);
+  assert.match(page,/id="import-progress"/);
+  assert.match(app,/portableOperations\(/);
+  assert.match(app,/buildResult\(true\)/);
+  assert.match(app,/store\.setState/);
+
+  const assignment=JSON.parse(decoder.decode(entries.get('www/assignment.json')));
+  const now=Date.now();
+  const ops=[
+    {id:'state-1',type:'state',sequence:1,queuedAt:new Date(now-30000).toISOString(),
+     context:{entityId:'question-1',scope:'lesson'},value:{answers:{q1:'respuesta'}},coalesceKey:'state:question-1'},
+    {id:'score-1',type:'score',sequence:2,queuedAt:new Date(now-20000).toISOString(),
+     context:{entityId:'question-1'},value:{score:3,maxScore:5},coalesceKey:null},
+    {id:'event-1',type:'event',sequence:3,queuedAt:new Date(now-10000).toISOString(),
+     context:{entityId:'question-1'},value:{type:'p2lrn:interaction',payload:{answered:true}},coalesceKey:null},
+  ];
+  function environment({operations=[],files=[]}={}){
+    const map=new Map();
+    const fields=new Map();
+    const el=id=>{
+      if(!fields.has(id))fields.set(id,{
+        id,value:'',textContent:'',hidden:false,disabled:false,
+        files:[],classList:{add(){},remove(){},toggle(){}},addEventListener(){},
+      });
+      return fields.get(id);
+    };
+    el('transfer-file').files=files;
+    const records=new Map(),stateRecords=new Map();
+    const api={
+      createOfflineHostAdapter({storageNamespace}){
+        if(!records.has(storageNamespace))records.set(storageNamespace,[]);
+        return {
+          async pending(){return [...records.get(storageNamespace)];},
+          async clearLocal(){records.set(storageNamespace,[]);stateRecords.clear();},
+          store:{
+            async setState(key,value){stateRecords.set(storageNamespace+':'+key,value);},
+            async enqueue(operation){records.get(storageNamespace).push(operation);},
+          },
+        };
+      },
+      async mount(){return {style:{},stopActivityTracking(){}};},
+    };
+    const sandbox={
+      assignmentData:assignment,attemptData:{
+        id:'same-attempt-id',number:1,startedAt:new Date(now-60000).toISOString(),
+        startedWallMs:now-60000,lastWallMs:now,anomalies:[],
+      },
+      adapterTest:{async pending(){return operations;}},
+      playerTest:{stopActivityTracking(){throw new Error('Checkpoint must not finalize player');}},
+      document:{getElementById:el},localStorage:{
+        getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v),
+      },P2LRNReady:Promise.resolve(api),crypto:webcrypto,TextEncoder,TextDecoder,
+      Date,Math,JSON,URL,Blob,Promise,setInterval:()=>1,clearInterval:()=>{},setTimeout:callback=>{callback();return 1;},
+      Intl,console,
+    };
+    sandbox.globalThis=sandbox;
+    const context=createContext(sandbox);
+    runInContext(app.replace(/\bboot\(\);\s*$/u,''),context);
+    runInContext('assignment=assignmentData;',context);
+    return {context,el,records,stateRecords,map};
+  }
+  const source=environment({operations:ops});
+  runInContext('attempt=attemptData;adapter=adapterTest;player=playerTest;',source.context);
+  runInContext("localStorage.setItem(storageKey(),JSON.stringify({...blankState(),participantCode:'ALU-017',participantLabel:'ALU-017',activeAttempt:attemptData}))",source.context);
+  const checkpoint=await runInContext('buildResult(true)',source.context);
+  assert.equal(checkpoint.attempt.id,'same-attempt-id');
+  assert.equal(checkpoint.attempt.status,'in_progress');
+  assert.equal(checkpoint.attempt.finishedAt,null);
+  assert.equal(checkpoint.transfer.completedAttempts.length,0);
+  assert.equal(checkpoint.submission.states.length,1);
+  const inspectedCheckpoint=await parseOfflineAssignmentResult(checkpoint,{expectedContentRoot:assignment.contentRoot,expectedAssignmentId:assignment.assignmentId});
+  assert.equal(inspectedCheckpoint.inProgress,true);
+  assert.equal(inspectedCheckpoint.integrityValid,true);
+  assert.equal(inspectedCheckpoint.evidenceValid,true);
+  assert.equal(inspectedCheckpoint.summaryValid,true);
+  assert.equal(runInContext('state().activeAttempt.id',source.context),'same-attempt-id');
+
+  const transfer=environment({files:[{size:JSON.stringify(checkpoint).length,
+    text:async()=>JSON.stringify(checkpoint)}]});
+  await runInContext('importProgress()',transfer.context);
+  assert.equal(runInContext('state().participantCode',transfer.context),'ALU-017');
+  assert.equal(runInContext('state().activeAttempt.id',transfer.context),'same-attempt-id');
+  assert.equal(transfer.records.get(assignment.assignmentId+':same-attempt-id').length,3);
+  await runInContext('start()',transfer.context);
+  assert.equal(runInContext('attempt.id',transfer.context),'same-attempt-id');
+  assert.equal(runInContext('state().attempts.length',transfer.context),0);
+
+  const altered=structuredClone(checkpoint);
+  altered.identity.code='OTRO-ALUMNO';
+  const changed=environment({files:[{size:JSON.stringify(altered).length,
+    text:async()=>JSON.stringify(altered)}]});
+  await assert.rejects(()=>runInContext('importProgress()',changed.context),/SHA-256/);
+  assert.equal(changed.records.size,0);
+
+  const otherCourse=structuredClone(checkpoint);
+  otherCourse.assignment.contentRoot='sha256:'+'c'.repeat(64);
+  const body={...otherCourse};delete body.integrity;
+  otherCourse.integrity.payloadDigest=await digest(body);
+  const mismatch=environment({files:[{size:JSON.stringify(otherCourse).length,
+    text:async()=>JSON.stringify(otherCourse)}]});
+  await assert.rejects(()=>runInContext('importProgress()',mismatch.context),/otra entrega|otra versión/);
+  assert.equal(mismatch.records.size,0);
+
+  const submitted=structuredClone(checkpoint);
+  submitted.attempt.status='submitted';
+  const completed=environment({files:[{size:JSON.stringify(submitted).length,
+    text:async()=>JSON.stringify(submitted)}]});
+  await assert.rejects(()=>runInContext('importProgress()',completed.context),/pendiente/);
 });

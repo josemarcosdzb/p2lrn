@@ -73,24 +73,56 @@ test('one AI guide explains concepts once and documents all four platforms',()=>
   assert(!ai.includes('href="/docs/conectores/local/"'));
   assert(!/<h2>.*sin MCP/i.test(ai),'MCP status must not dominate headings');
   assert((ai.match(/class="codebox"/g)||[]).length>=4);
-  const sidebar=read('deploy/netlify/site/p2lrn.js');
+  const spanishNav=read('deploy/netlify/site/p2lrn.js');
+  const englishNav=read('deploy/netlify/site/en/p2lrn.js');
   const css=read('deploy/netlify/site/p2lrn.css');
-  for(const [id,label] of sections){
-    assert(sidebar.includes("['"+id+"','"+({
-      'para-que':'Qué puedes hacer',
-      'crear-cursos':'Crear cursos',
-      'conectar-ordenador':'Conectar tu ordenador',
-      'servicios-web':'Acceso desde la web',
-      'comprobar':'Comprobaciones',
-    }[id]||label)+"']"),'Sidebar missing topic '+id);
+  for(const nav of [spanishNav,englishNav]){
+    // Sections stay in the content and in the right-hand in-page table of
+    // contents. They must not also appear under the left connector menu.
+    assert(!nav.includes('DOC_AI_TOPICS'),'Legacy left-side IA topic list must not be present');
+    assert(!nav.includes('doc-ai-topics'),'The left menu must not duplicate the page TOC');
+    assert(nav.includes("aside.className='doc-page-toc'"),'Right-hand page index must remain');
+    assert(nav.includes("a.href='#'+heading.id"),'In-page section links must remain');
+    assert(nav.includes("a.setAttribute('aria-current','location')"),'Keyboard/screen-reader current-section semantics must remain');
   }
-  assert(sidebar.includes("topics.setAttribute('aria-label','Apartados de Conectores para IA')"));
-  assert(sidebar.includes("link.dataset.targetId===sectionId"),'Scroll position is not reflected in sidebar');
-  assert(css.includes('.doc-sidebar .doc-ai-topics a[aria-current="location"]'));
+  assert(!css.includes('.doc-sidebar .doc-ai-topics'),'Dead duplicate-sidebar styles must be removed');
   assert(css.includes('.doc-section[id],.doc-anchor-alias[id]'));
-  assert(ai.includes('<html lang="es" class="doc-instant-anchor">'),
-    'AI guide needs instant anchors to keep its active sidebar in sync');
+  assert(ai.includes('<html lang="es" class="doc-instant-anchor">'));
   assert(css.includes('html.doc-instant-anchor{scroll-behavior:auto}'));
+});
+
+test('LTI bilingual docs have a real deployment workflow and distinguish implemented features',()=>{
+  const guides=[
+    {path:'deploy/netlify/site/docs/conectores/lti/index.html',language:'es',title:'Guía práctica: conectar P2LRN con un LMS'},
+    {path:'deploy/netlify/site/en/docs/conectores/lti/index.html',language:'en',title:'Practical guide: connect P2LRN to an LMS'}
+  ];
+  for(const guide of guides){
+    const html=read(guide.path);
+    assert(html.includes(guide.title),'Missing actionable LTI guide: '+guide.language);
+    for(const endpoint of ['/lti/login','/lti/launch','/lti/jwks','/lti/deep-link',
+      '/lti/admin/platforms','/lti/admin/catalog','/lti/admin/bindings',
+      '/lti/admin/grades','/lti/admin/ags/pending','/lti/health']){
+      assert(html.includes(endpoint),'LTI endpoint undocumented: '+endpoint+' ('+guide.language+')');
+    }
+    for(const item of ['P2LRN_LTI_BASE_URL','P2LRN_LTI_ADMIN_TOKEN_FILE',
+      'P2LRN_LTI_KEY_FILE','P2LRN_LTI_DATA_DIR','packageId','contentRoot',
+      'issuer','clientId','deploymentId','JWKS','Deep Linking','AGS','NRPS']){
+      assert(html.includes(item),'LTI configuration missing: '+item+' ('+guide.language+')');
+    }
+    assert(html.includes('rel="canonical"'),'Missing canonical: '+guide.language);
+    assert(html.includes('hreflang="en"')&&html.includes('hreflang="es"'),
+      'Missing bilingual alternates: '+guide.language);
+    for(const endpoint of ['/lti/runtime/nrps/memberships',
+      '/lti/admin/nrps/contexts','/lti/admin/nrps/memberships']){
+      assert(html.includes(endpoint),'Missing NRPS API documentation: '+endpoint+' ('+guide.language+')');
+    }
+    assert(html.includes('contextmembership.readonly'),'NRPS OAuth scope not documented');
+    assert(html.includes('id="lti-nrps"'),'Missing accessible NRPS guide section');
+    assert(!/NRPS (?:no está implementado|is not (?:currently )?implemented|is not part of this module)/i.test(html),
+      'Outdated NRPS implementation status in the public documentation');
+    assert(html.includes('<section class="doc-section" id="lti-')&&html.includes('class="codebox"'),
+      'LTI guide must have readable sections and copyable examples');
+  }
 });
 
 test('legacy links redirect to canonical section and are excluded from navigation',()=>{

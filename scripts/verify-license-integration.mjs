@@ -1,6 +1,8 @@
 import {readFile, stat} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+// Ensure the public ES/EN explanation tracks the binding Annex A grant.
+import './verify-license-page.mjs';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 

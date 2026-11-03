@@ -188,3 +188,61 @@ Commercial use is not granted. See [LICENSE](./LICENSE) for the complete terms a
 ### Verified offline package cache
 
 Persistent course bytes are opt-in and separate from learner state. Use P2LRN.createCacheStoragePackageCache(), P2LRN.cachePackageURL() and player.packageCache/player.loadCachedPackage(contentRoot). Packages are verified before storage and again when reopened; see spec/PACKAGE-CACHE.md.
+
+## Resultados comunes de Player (.p2lrn-result)
+
+Los modos web e integrados pueden registrar los eventos y puntuaciones del curso en el mismo formato de resultados que las entregas offline. La identidad se configura **antes de realizar las actividades** y el archivo se descarga o conserva explícitamente, nunca se sube automáticamente.
+
+```js
+import {mountP2LRN} from '@p2lrn/player';
+
+const player = await mountP2LRN('#player', {
+  src: '/cursos/curso.p2lrn',
+  resultIdentity: {
+    mode: 'code',
+    issuer: 'mi-centro',
+    code: codigoAsignadoPorProfesor,
+    label: nombreAlumno
+  }
+});
+
+document.getElementById('descargar').addEventListener('click', () =>
+  player.resultRecorder.download('alumno.p2lrn-result')
+);
+```
+
+Cuando existe una plataforma que **ya ha autenticado al usuario**, sustituye `resultIdentity` por `{mode:'platform',issuer:sesion.issuer,subjectId:sesion.userId,label:sesion.nombre}`. Los datos deben proceder del host de confianza, no de parámetros editables en la URL.
+
+También puedes llamar a `createResultRecorder(player,{identity})` o `player.startResultCapture({identity})` con el componente montado. `finish()` entrega el resultado estructurado y `download()` crea el archivo `.p2lrn-result` en el navegador. La operación mantiene `packageId`, identidad, intento, eventos, puntuaciones informativas y SHA-256. No convierte puntuaciones locales en notas oficiales.
+
+`@p2lrn/analytics` puede leer directamente estos archivos desde su atributo `src`, o importar varios resultados. No requiere base de datos. **Importante:** el archivo no llega al profesor automáticamente: en web hay que guardar y entregar los ficheros o proporcionar acceso autorizado a sus rutas. El SHA-256 no prueba la identidad real del alumno.
+
+
+## Contrato Player ? Analytics en una plataforma propia
+
+El export NPM/CDN crea sesiones de resultados autom?ticas con
+createPlayerAnalyticsSession, createHttpResultHost y el fichero com?n
+.p2lrn-result. Se guarda in_progress durante las actividades y submitted
+al finalizar. Al entrar en otro dispositivo con la misma cuenta, se
+recupera el mismo intento. No necesita que los alumnos descarguen nada.
+
+~~~js
+import {createPlayerAnalyticsSession,createHttpResultHost} from '@p2lrn/player';
+const host=createHttpResultHost({baseUrl:'/api/p2lrn/results',csrfToken:()=>plataforma.csrf()});
+const player=document.createElement('p2lrn-player');
+const session=await createPlayerAnalyticsSession(player,{
+  identity:{mode:'platform',issuer:usuario.issuer,subjectId:usuario.id},
+  courseId:'curso-1',host
+});
+// Link the result Host before loading the course.
+player.setAttribute('src','/cursos/curso-1.p2lrn');
+document.querySelector('#player').replaceChildren(player);
+await session.checkpoint(); // opcional, forzar guardado
+await session.finish();     // cuando finaliza el curso
+~~~
+
+El backend debe verificar el usuario, la pertenencia al curso y el CSRF.
+La implementaci?n privada de archivos es @p2lrn/player/server/results
+y exige callbacks authenticate, authorize y checkCsrf. Analytics usa el
+?ndice protegido /api/p2lrn/results/index?courseId=..., no el .p2lrn.
+Consultar spec/RESULTS-ANALYTICS.md.

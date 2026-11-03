@@ -243,6 +243,10 @@ if (catalog.packageVersion !== h5pPackage.version || catalog.libraryCount !== 14
   throw new Error(`Packed H5P catalog mismatch: version=${catalog.packageVersion}, count=${catalog.libraryCount}`);
 }
 
+// Release blocker: inspect upstream third-party metadata in the actual built archives,
+// including all pinned H5P library.json entries and Player vendor license files.
+console.log(await run(node,[join(root,'scripts','audit-third-party-licenses.mjs'),'--strict']));
+
 await run(node, ['--check', join(playerRoot,'dist','p2lrn.js')]);
 await run(node, ['--check', join(playerRoot,'dist','runtime-host','h5p-host.js')]);
 await run(node, ['--check', join(playerRoot,'server','runtime-host.mjs')]);

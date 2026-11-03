@@ -26,6 +26,11 @@
     "./course": {
       "import": "./dist/course-data-source.js",
       "default": "./dist/course-data-source.js"
+    },
+    "./results": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/model.js",
+      "default": "./dist/model.js"
     }
   },
   "files": [
@@ -60,7 +65,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/josemarcosfrodo/p2lrn.git",
+    "url": "git+https://github.com/josemarcosdzb/p2lrn.git",
     "directory": "packages/analytics"
   }
 }

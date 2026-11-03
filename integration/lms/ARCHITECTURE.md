@@ -1,6 +1,6 @@
 # Diseño de integración universal P2LRN con LMS — v0.2
 
-Fecha de revisión: 28 de octubre de 2026. Estado: **proveedor LTI 1.3 self-hosted implementado; validación por LMS real y NRPS todavía pendientes**.
+Fecha de revisión: 3 de noviembre de 2026. Estado: **proveedor LTI 1.3 y NRPS 2.0 implementados y probados localmente; lectura NRPS real de LMS pendiente**.
 
 ## Decisión principal
 
@@ -48,7 +48,7 @@ localmente, pero debe reutilizar el mismo Player y el mismo contrato de datos.
 | OIDC/JWT, JWKS, catálogo y Deep Linking | Implementados y cubiertos por pruebas automatizadas |
 | AGS OAuth2, lineitems, outbox y reintentos | Implementados; la nota requiere decisión autoritativa del servidor |
 | Binding administrativo para LMS sin Deep Linking | Implementado |
-| NRPS | No implementado |
+| NRPS 2.0 | Implementado: lectura OAuth2, aislamiento por contexto y control de roles; interoperabilidad real pendiente |
 | Actividad/plugin nativo .p2lrn específico de cada LMS | No necesario para LTI; opcional si un producto quiere integración propia |
 | Matriz E2E en Moodle/Canvas/Sakai/Chamilo/Open edX reales | Pendiente por versión/instancia |
 
@@ -174,8 +174,8 @@ A. **Contrato y pruebas — implementado:** enlace estable, aislamiento
    multi-tenant, intento/revisión, parámetros AGS y Host Adapter.
 B. **Proveedor LTI — implementado:** registro, OIDC/JWKS, launch, Deep Linking,
    catálogo/bindings y SQLite persistente.
-C. **Seguimiento — implementado salvo NRPS:** sesión, reanudación, eventos,
-   decisión de nota, outbox AGS y reintentos. NRPS continúa pendiente.
+C. **Seguimiento — implementado con NRPS opcional:** sesión, reanudación, eventos,
+   decisión de nota, outbox AGS y reintentos. La validación NRPS en instalaciones reales de LMS sigue pendiente.
 D. **Matriz E2E por plataforma — pendiente:** Moodle, Canvas, Sakai, Chamilo y Open edX,
    dos usuarios y varios intentos; publicación, launch, reanudación,
    calificación en LMS, duplicado de curso, acceso denegado, replay,
@@ -195,3 +195,14 @@ un npm nuevo antes de la validación funcional correspondiente.
   https://github.com/openedx/xblock-lti-consumer
 - P2LRN: `integration/README.md`, `spec/HOST-CAPABILITIES.md`,
   `profiles/lti-0.4.0/profile.json`.
+
+
+### NRPS 2.0: separación y límites
+
+Un lanzamiento LTI verificado anuncia un contexto y una URL `context_memberships_url`. El proveedor valida ambas antes de conservar **solo** el enlace, registro, despliegue y contexto en `nrps_contexts`. `nrps_instructor_attempts` conserva si el rol LTI firmado autoriza la consulta; `nrps_registration_origins` registra los orígenes HTTPS adicionales permitidos por un administrador.
+
+El cliente `lti-nrps.mjs` solicita OAuth2 `client_credentials` con el scope `contextmembership.readonly` y consulta alumnos y roles directamente al LMS. No almacena listados de personas, no crea matrículas y no interfiere con los archivos `.p2lrn-result` de Analytics.
+
+El acceso está limitado por institución, registro, despliegue, contexto y rol. Comprueba origen HTTPS, DNS y URL permitidos, paginación y tamaño, y no sigue redirecciones. Un alumno recibe 403 y el docente solo puede consultar su contexto autorizado.
+
+**Evidencia:** pruebas unitarias `lti-nrps.test.mjs` y HTTP `lti-nrps-server.test.mjs` con firmas OAuth2, varias páginas, denegación de alumnado, aislamiento y errores. Las instalaciones reales de AulaP2P aún no han superado lectura NRPS: los endpoints OAuth registrados de Moodle tiene su endpoint OAuth inaccesible; Sakai utiliza un puerto incorrecto en el registro y, al probar el puerto 8080, devuelve `invalid_scope` para NRPS. Chamilo devuelve `invalid_client`. Canvas y Open edX no están registrados en ese proveedor de pruebas. No declarar conformidad NRPS verificada con un LMS real hasta completar una consulta autorizada.

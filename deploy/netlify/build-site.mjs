@@ -6,6 +6,7 @@ import {buildDocExamples} from './build-doc-examples.mjs';
 import {STUDIO_RUNTIME_SHARED_FILES} from './studio-runtime-assets.mjs';
 import {reviseSiteBrowserAssets} from './browser-site-revision.mjs';
 import {renderSiteFooter,getSiteFooterLinks} from './site-footer.mjs';
+import {verifyPackageCorrespondingSource} from './corresponding-source.mjs';
 import {normalizeSeoAndAccessibility} from './site-seo-a11y.mjs';
 
 const root = resolve(process.cwd());
@@ -14,8 +15,29 @@ await import('./build-cdn.mjs');
 const siteRoot = join(root,'deploy','netlify','site');
 const outputRoot = join(root,'.netlify-cdn');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
+// Validate every published versioned source snapshot before HTML transformations.
+const correspondingVersion=JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
+for(const component of ['toolkit','studio','analytics']){
+  await verifyPackageCorrespondingSource({outputRoot,name:component,version:correspondingVersion});
+}
+
 // Publish the same native executable reviewed by the Windows offline exporter.
 await import('./build-offline-executable.mjs');
+const offlineExecutable=JSON.parse(await readFile(join(outputRoot,'downloads','p2lrn-offline-launcher.json'),'utf8'));
+const nativeSource=JSON.parse(await readFile(join(outputRoot,'downloads','source','SOURCE-MANIFEST.json'),'utf8'));
+if(nativeSource.version!==correspondingVersion||offlineExecutable.correspondingSource?.manifest!=='/downloads/source/SOURCE-MANIFEST.json')
+  throw new Error('Offline launcher has no matching corresponding source manifest');
+for(const entry of nativeSource.files??[]){
+  if(entry.path.split('/').includes('..'))throw new Error('Unsafe native source path');
+  const buf=await readFile(join(outputRoot,'downloads','source',...entry.path.split('/')));
+  const digest='sha256:'+createHash('sha256').update(buf).digest('hex');
+  if(buf.length!==entry.bytes||digest!==entry.sha256)
+    throw new Error('Offline launcher source hash mismatch: '+entry.path);
+}
+const nativeArchive=await readFile(join(outputRoot,'downloads','p2lrn-offline-launcher-source.tar.gz'));
+if(offlineExecutable.correspondingSource.archiveSha256!=='sha256:'+createHash('sha256').update(nativeArchive).digest('hex'))
+  throw new Error('Native source archive hash mismatch');
+
 // The web build publishes real, inspectable connector ZIPs from this same source.
 await import('./build-connector-downloads.mjs');
 // Deterministic downloadable P2LRN Skills for four AI platforms.
@@ -144,7 +166,7 @@ function pageUrl(path) {
 }
 function isCorrespondingSourcePath(path) {
   const rel = relative(outputRoot,path).replaceAll('\\','/');
-  return /^player\/(?:current|[^/]+)\/source\//u.test(rel);
+  return /^(?:player|toolkit|studio|analytics)\/(?:current|[^/]+)\/source\//u.test(rel);
 }
 // CDN release files are immutable distribution artifacts, not public website
 // pages. Adding brand HTML to them after release.json is generated invalidates
@@ -447,7 +469,7 @@ if (repositoryLicense !== publishedLicense) {
 if (!publishedNotice.includes('P2LRN-NCSL 1.0')) {
   throw new Error('Published NOTICE.md does not identify P2LRN-NCSL 1.0.');
 }
-for (const required of ['P2LRN-NCSL 1.0','versión 1.0','href="/LICENSE"','/player/current/source/']) {
+for (const required of ['P2LRN-NCSL 1.0','Anexo A','href="/LICENSE"','/player/current/source/']) {
   if (!licensePageHtml.includes(required)) {
     throw new Error('License page is missing required authority/source marker: ' + required);
   }
@@ -562,7 +584,7 @@ const connectorDocs = [
   ['', ['Conectores e integración', 'Conectores para IA', 'Plataformas LMS', 'LTI 1.3']],
   ['ia', ['Conectores para IA', 'ChatGPT', 'Claude', 'Gemini', 'Grok', 'P2LRN – Crear y descargar', 'p2lrn_list_courses']],
   ['lms', ['Moodle', 'Canvas', 'Sakai', 'Chamilo', 'Open edX']],
-  ['lti', ['OIDC', 'JWKS', 'Deep Linking', 'AGS', 'NRPS no incluido', 'Comprobación antes del despliegue', 'instalación y versión']],
+  ['lti', ['OIDC', 'JWKS', 'Deep Linking', 'AGS', 'NRPS 2.0', '/lti/runtime/nrps/memberships', 'Comprobación antes del despliegue', 'instalación y versión']],
 ];
 const legacyConnectorSections = new Map([
   ['gemini','gemini'],
@@ -610,10 +632,13 @@ for(const [slug,section] of legacyConnectorSections){
   if(!connectorAiPage.includes('id="'+section+'"'))
     throw new Error('Obsolete guide redirect target missing from canonical AI guide: '+section);
 }
+// Documentation headings and page TOC are now derived from real H2 elements at runtime.
+if(!connectorNavigation.includes("const headings = [...docArticle.querySelectorAll('.doc-section > h2')]") ||
+   !connectorNavigation.includes("a.href='#'+heading.id"))
+  throw new Error('Dynamic documentation table of contents is missing');
 for(const section of ['para-que','crear-cursos','chatgpt','claude','gemini','grok','conectar-ordenador','servicios-web','comprobar'])
-  if(!connectorAiPage.includes('id="'+section+'"') ||
-     !connectorNavigation.includes("['"+section+"','"))
-    throw new Error('AI topic must exist in content and sidebar: '+section);
+  if(!connectorAiPage.includes('<section class="doc-section" id="'+section+'"'))
+    throw new Error('Canonical AI guide is missing the real section: '+section);
 const expectedDownloads=[
   ['ia','p2lrn-conector-mcp.zip'],
   ['lms','p2lrn-lti-contratos.zip'],

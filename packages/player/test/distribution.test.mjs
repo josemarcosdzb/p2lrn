@@ -9,6 +9,7 @@ import {spawnSync} from 'node:child_process';
 
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const DIST=join(ROOT,'dist');
+const CURRENT=JSON.parse(readFileSync(join(ROOT,'package.json'),'utf8')).version;
 const PACKAGES=resolve(ROOT,'..');
 const TOOLKIT_WEB=join(PACKAGES,'toolkit','web');
 const sha256=(data)=>'sha256:'+createHash('sha256').update(data).digest('hex');
@@ -32,7 +33,7 @@ test('release manifest authenticates the exact distributed runtime tree',()=>{
   const release=JSON.parse(readFileSync(join(DIST,'release.json'),'utf8'));
   assert.equal(release.schema,'https://p2lrn.org/schema/web-sdk-release/1');
   assert.equal(release.version,'1');
-  assert.equal(release.webSdkVersion,'0.5.0-alpha.11');
+  assert.equal(release.webSdkVersion,CURRENT);
   const declared=new Map(release.files.map((x)=>[x.path,x]));
   const actual=walk(DIST).filter((p)=>p!==join(DIST,'release.json'));
   assert.deepEqual(new Set(declared.keys()),new Set(actual.map((p)=>relative(DIST,p).replaceAll('\\','/'))));
@@ -79,7 +80,7 @@ test('ESM package registers canonical and Alpha15 custom elements and public API
     const registry=new Map();
     globalThis.customElements={get:(n)=>registry.get(n),define:(n,v)=>{if(registry.has(n))throw new Error('duplicate '+n);registry.set(n,v);}};
     const mod=await import(${JSON.stringify(entry)}+'?element-contract=1');
-    if(mod.version!=='0.5.0-alpha.11')process.exit(2);
+    if(mod.version!==${JSON.stringify(CURRENT)})process.exit(2);
     if(globalThis.P2LRN?.version!==mod.version)process.exit(3);
     if(registry.get('p2lrn-player')!==mod.P2LRNPlayerElement)process.exit(4);
     const legacy=registry.get('p2rln-player');
@@ -100,7 +101,7 @@ test('classic loader derives its module URL and exposes one reusable ready promi
     await import(process.argv[1]+'?loader-contract=1');
     const first=globalThis.P2LRNReady;const api=await first;
     const state=globalThis.__P2LRN_CDN_LOADER__;
-    if(api.version!=='0.5.0-alpha.11'||!state||state.version!==api.version)process.exit(2);
+    if(api.version!==${JSON.stringify(CURRENT)}||!state||state.version!==api.version)process.exit(2);
     if(state.moduleUrl!==new URL('./p2lrn.esm.js',process.argv[1]).href)process.exit(3);
     await import(process.argv[1]+'?loader-contract=2');
     if(globalThis.P2LRNReady!==first)process.exit(4);
@@ -125,7 +126,7 @@ test('packed player installs offline and imports by package name',()=>{
   try{
     const packed=run('npm',['pack',ROOT,'--pack-destination',tmp,'--json'],{cwd:tmp});assert.equal(packed.status,0,packed.stderr||packed.stdout);const tar=join(tmp,JSON.parse(packed.stdout)[0].filename),app=join(tmp,'app');mkdirSync(app);writeFileSync(join(app,'package.json'),'{"type":"module"}\n');
     const installed=run('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund',tar],{cwd:app});assert.equal(installed.status,0,installed.stderr||installed.stdout);
-    const probe=`globalThis.HTMLElement=class {};const r=new Map();globalThis.customElements={get:n=>r.get(n),define:(n,v)=>r.set(n,v)};const m=await import('@p2lrn/player');if(m.version!=='0.5.0-alpha.11'||!r.get('p2lrn-player')||!r.get('p2rln-player'))process.exit(2);`;
+    const probe=`globalThis.HTMLElement=class {};const r=new Map();globalThis.customElements={get:n=>r.get(n),define:(n,v)=>r.set(n,v)};const m=await import('@p2lrn/player');if(m.version!==${JSON.stringify(CURRENT)}||!r.get('p2lrn-player')||!r.get('p2rln-player'))process.exit(2);`;
     const loaded=node(probe,[],app);assert.equal(loaded.status,0,loaded.stderr||loaded.stdout);
     const serverProbe=`import {startP2LRNRuntimeHost} from '@p2lrn/player/server';const h=await startP2LRNRuntimeHost({basePath:'/runtime',allowedParentOrigins:['https://app.example.invalid']});try{const r=await fetch(h.baseUrl+'health');const j=await r.json();if(r.status!==200||j.runtime!=='p2lrn-runtime')process.exit(2);}finally{await h.close();}`;
     const serverLoaded=node(serverProbe,[],app);assert.equal(serverLoaded.status,0,serverLoaded.stderr||serverLoaded.stdout);
@@ -150,7 +151,7 @@ player.capabilityBroker=broker;
 const offline=createOfflineHostAdapter({remote:player.adapter}); player.adapter=offline; void offline.sync();
 const tracker=createActivityTracker({target:document,idleAfterMs:30000}); tracker.stop();
 const legacy=document.createElement('p2rln-player'); legacy.setAttribute('src','/legacy.p2rln');
-const v:'0.5.0-alpha.11'=version; void P2LRN; void v;
+const v:typeof version=version; void P2LRN; void v;
 `);
     const r=run('tsc',['--noEmit','--strict','--target','ES2022','--module','NodeNext','--moduleResolution','NodeNext','--lib','ES2022,DOM',source],{cwd:tmp});assert.equal(r.status,0,r.stderr||r.stdout);
   }finally{rmSync(tmp,{recursive:true,force:true});}

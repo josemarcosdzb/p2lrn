@@ -33,7 +33,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/josemarcosfrodo/p2lrn.git",
+    "url": "git+https://github.com/josemarcosdzb/p2lrn.git",
     "directory": "packages/h5p-libraries"
   },
   "keywords": [

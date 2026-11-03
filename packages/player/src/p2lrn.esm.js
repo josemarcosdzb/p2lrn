@@ -12,6 +12,8 @@ import {
   openP2LRNPackageURL,
 } from './p2lrn-player.js';
 import {createHostAdapter, HOST_ADAPTER_VERSION} from './host-adapter.js';
+import {createResultRecorder} from './result-recorder.js';
+import {createPlayerAnalyticsSession,createHttpResultHost,P2LRN_RESULT_HOST_VERSION} from './result-bridge.js';
 import {installP2LRNServiceWorker} from './static-resource-bridge.js';
 import {configureRuntimeHost, getRuntimeHostConfig, normalizeRuntimeBaseUrl, resolveScormRuntimeUrl, resolveH5pRuntimeUrl} from './runtime-host-config.js';
 
@@ -42,6 +44,10 @@ export {
   P2LRNPlayerElement,
   HOST_ADAPTER_VERSION,
   createHostAdapter,
+  createResultRecorder,
+  createPlayerAnalyticsSession,
+  createHttpResultHost,
+  P2LRN_RESULT_HOST_VERSION,
   mountP2LRN,
   openP2LRNPackageBytes,
   openP2LRNPackageURL,
