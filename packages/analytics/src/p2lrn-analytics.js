@@ -173,6 +173,7 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
       else if(this.src)next=await loadAnalyticsResultSource(this.src);else next=this.#dataset;
       if(generation!==this.#loadGeneration)return this.#dataset;
       this.#dataset=normalizeAnalyticsDataset(next);
+      if(this.src)this.#importedResults=[];
       this.#recompute(false);
       this.dispatchEvent(new CustomEvent('p2lrn-analytics-refresh',{detail:{dataset:this.#dataset},bubbles:true,composed:true}));
       return this.#dataset;
@@ -228,7 +229,7 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
     this.#gradePage=1;
     if(this.hasAttribute?.('course-id'))this.removeAttribute('course-id');
     if(this.view!=='overview')this.view='overview';else this.#recompute();
-    this.dispatchEvent(new CustomEvent('p2lrn-analytics-import',{detail:{kind:'offline-results',count:unique.length,dataset},bubbles:true,composed:true}));
+    this.dispatchEvent(new CustomEvent('p2lrn-analytics-import',{detail:{kind:entries.length===1?'offline-result':'offline-results',count:unique.length,dataset},bubbles:true,composed:true}));
     return dataset;
   }
 
