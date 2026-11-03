@@ -1,4 +1,5 @@
 import {fillBlankDistractors,fillBlankInputMode,fillBlankTemplate} from '../fill-blanks-core.js';
+import {studioUiText,studioNewDefaults} from './studio-ui-i18n.js';
 const TYPE_LABELS={
   'single-choice':'Elección única','multiple-choice':'Elección múltiple','true-false':'Verdadero / falso','text':'Respuesta de texto','fill-blanks':'Completar huecos','ordering':'Ordenar','matching':'Relacionar','classification':'Clasificar',
 };
@@ -29,15 +30,16 @@ const RENDERER_TYPES={
   'https://p2lrn.org/renderer/questionnaire/3d-order-match':['ordering','matching','classification'],
 };
 const uid=(prefix='id')=>prefix+'-'+crypto.randomUUID().slice(0,8);
-const node=(tag,className,text)=>{const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;};
+const node=(tag,className,text)=>{const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=studioUiText(text);return el;};
 const labeled=(label,control)=>{const wrap=node('label','q-field');wrap.append(node('span','q-label',label),control);return wrap;};
-const textInput=(value='',placeholder='')=>{const input=document.createElement('input');input.type='text';input.value=value??'';input.placeholder=placeholder;return input;};
-const textAreaInput=(value='',placeholder='',rows=4)=>{const area=document.createElement('textarea');area.value=value??'';area.placeholder=placeholder;area.rows=rows;return area;};
+const textInput=(value='',placeholder='')=>{const input=document.createElement('input');input.type='text';input.value=value??'';input.placeholder=studioUiText(placeholder);return input;};
+const textAreaInput=(value='',placeholder='',rows=4)=>{const area=document.createElement('textarea');area.value=value??'';area.placeholder=studioUiText(placeholder);area.rows=rows;return area;};
 const numberInput=(value=1,min=0,step='0.25')=>{const input=document.createElement('input');input.type='number';input.min=String(min);input.step=String(step);input.value=value===null||value===undefined?'':String(value);return input;};
-const selectInput=(value,options)=>{const select=document.createElement('select');for(const [key,label] of options){const option=document.createElement('option');option.value=key;option.textContent=label;if(key===value)option.selected=true;select.append(option);}return select;};
+const selectInput=(value,options)=>{const select=document.createElement('select');for(const [key,label] of options){const option=document.createElement('option');option.value=key;option.textContent=studioUiText(label);if(key===value)option.selected=true;select.append(option);}return select;};
 const save=(model,activityId,payload,onChange)=>{model.setQuestionnaire(activityId,payload);onChange?.(payload);};
 
-function defaultQuestion(type='single-choice'){
+function defaultQuestion(type='single-choice'){return studioNewDefaults(createSpanishDefaultQuestion(type));}
+function createSpanishDefaultQuestion(type='single-choice'){
   const id=uid('q');
   if(type==='single-choice')return{id,type,prompt:'Escribe aquí la pregunta',points:1,choices:[{id:uid('a'),text:'Respuesta correcta'},{id:uid('a'),text:'Otra respuesta'}],solution:{choiceIds:[]}};
   if(type==='multiple-choice')return{id,type,prompt:'Selecciona todas las respuestas correctas',points:1,choices:[{id:uid('a'),text:'Opción 1'},{id:uid('a'),text:'Opción 2'},{id:uid('a'),text:'Opción 3'}],solution:{choiceIds:[]}};
@@ -141,7 +143,7 @@ function renderChoiceEditor(box,question,commit,rerender){
   const multiple=question.type==='multiple-choice';const trueFalse=question.type==='true-false';ensureSolution(question);
   question.choices.forEach((choice,index)=>{
     const row=node('div','q-option-row');const correct=document.createElement('input');
-    correct.type=multiple?'checkbox':'radio';correct.name='correct-'+question.id;correct.checked=question.solution.choiceIds.includes(choice.id);correct.title='Respuesta correcta';
+    correct.type=multiple?'checkbox':'radio';correct.name='correct-'+question.id;correct.checked=question.solution.choiceIds.includes(choice.id);correct.title=studioUiText('Respuesta correcta');
     correct.addEventListener('change',()=>{
       if(multiple){
         const set=new Set(question.solution.choiceIds);
@@ -160,11 +162,11 @@ function renderChoiceEditor(box,question,commit,rerender){
 
 function renderTextEditor(box,question,commit){
   ensureSolution(question);
-  const area=document.createElement('textarea');area.className='q-answer-list';area.value=question.solution.acceptedAnswers.join('\n');area.placeholder='Una respuesta aceptada por línea';
+  const area=document.createElement('textarea');area.className='q-answer-list';area.value=question.solution.acceptedAnswers.join('\n');area.placeholder=studioUiText('Una respuesta aceptada por línea');
   area.addEventListener('input',()=>{
     const answers=area.value.split(/\r?\n/).map((x)=>x.trim()).filter(Boolean);
     question.solution.acceptedAnswers=answers;
-    area.setCustomValidity(answers.length?'':'Añade al menos una respuesta aceptada.');
+    area.setCustomValidity(answers.length?'':studioUiText('Añade al menos una respuesta aceptada.'));
     commit();
   });
   box.append(labeled('Respuestas aceptadas',area));
@@ -283,6 +285,7 @@ function renderClassificationEditor(box,question,commit,rerender){
   items.append(rowButton('+ Añadir elemento',()=>{question.items.push({id:uid('i'),text:'Nuevo elemento'});ensureSolution(question);commit();rerender();}));box.append(items);
 }
 export function renderQuestionnaireVisualEditor(container,{model,activityId,payload,renderer,onChange,onStatus}={}){
+  const report=(message)=>onStatus?.(studioUiText(message));
   const render=()=>{
     container.replaceChildren();
     const root=node('div','questionnaire-visual-editor');
@@ -299,7 +302,7 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
     const progressionMode=progression?.gateFollowing===true?(progression.completionRequirement==='passed'?'passed':'completed'):'none';
     const continueMode=selectInput(progressionMode,[['none','Libre'],['completed','Completar'],['passed','Superar']]);
     const minScore=numberInput(Number.isFinite(Number(progression?.minScore))?Number(progression.minScore):80,0,1);minScore.max='100';minScore.disabled=continueMode.value!=='passed';
-    const attempts=numberInput(payload.attemptPolicy?.maxAttempts??null,1,1);attempts.placeholder='Ilimitados';
+    const attempts=numberInput(payload.attemptPolicy?.maxAttempts??null,1,1);attempts.placeholder=studioUiText('Ilimitados');
     const saveProgression=()=>{const selected=continueMode.value;minScore.disabled=selected!=='passed';model.setActivityProgression?.(activityId,{mode:selected,minScore:Number(minScore.value)||0});onChange?.(payload);};
     continueMode.addEventListener('change',saveProgression);minScore.addEventListener('input',saveProgression);
     attempts.addEventListener('input',()=>{const value=attempts.value.trim();if(!value){if(payload.attemptPolicy){delete payload.attemptPolicy.maxAttempts;if(Object.keys(payload.attemptPolicy).length===0)delete payload.attemptPolicy;}}else{payload.attemptPolicy??={};payload.attemptPolicy.maxAttempts=Math.max(1,Math.floor(Number(value)||1));}save(model,activityId,payload,onChange);});
@@ -308,12 +311,12 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
     payload.questions.forEach((question,index)=>{
       ensureSolution(question);
       const card=node('section','q-card');
-      const top=node('div','q-card-head');top.append(node('strong',null,'Pregunta '+(index+1)));const actions=node('div','q-card-actions');actions.append(rowButton('Duplicar',()=>{const copy=structuredClone(question);copy.id=uid('q');payload.questions.splice(index+1,0,copy);save(model,activityId,payload,onChange);render();}),rowButton('Eliminar',()=>{if(payload.questions.length<=1){onStatus?.('El cuestionario necesita al menos una pregunta');return;}payload.questions.splice(index,1);save(model,activityId,payload,onChange);render();},true));top.append(actions);card.append(top);
-      const basic=node('div','q-basic-grid');const prompt=textAreaInput(question.prompt,'Escribe el enunciado completo de la pregunta',4);prompt.className='q-prompt-input';prompt.addEventListener('input',()=>{question.prompt=prompt.value;save(model,activityId,payload,onChange);});const promptField=labeled('Enunciado',prompt);promptField.classList.add('q-field--prompt');const allowed=RENDERER_TYPES[renderer]??Object.keys(TYPE_LABELS);let typeControl;if(allowed.length===1){typeControl=node('div','q-fixed-type',TYPE_LABELS[allowed[0]]??allowed[0]);if(question.type!==allowed[0]){switchType(question,allowed[0]);save(model,activityId,payload,onChange);}}else{typeControl=selectInput(question.type,allowed.map((key)=>[key,TYPE_LABELS[key]??key]));typeControl.title='Cambiar de modalidad reemplaza los elementos y soluciones de esta pregunta, conservando título, tiempo y puntuación.';typeControl.addEventListener('change',()=>{switchType(question,typeControl.value);save(model,activityId,payload,onChange);render();});}
+      const top=node('div','q-card-head');top.append(node('strong',null,'Pregunta '+(index+1)));const actions=node('div','q-card-actions');actions.append(rowButton('Duplicar',()=>{const copy=structuredClone(question);copy.id=uid('q');payload.questions.splice(index+1,0,copy);save(model,activityId,payload,onChange);render();}),rowButton('Eliminar',()=>{if(payload.questions.length<=1){report('El cuestionario necesita al menos una pregunta');return;}payload.questions.splice(index,1);save(model,activityId,payload,onChange);render();},true));top.append(actions);card.append(top);
+      const basic=node('div','q-basic-grid');const prompt=textAreaInput(question.prompt,'Escribe el enunciado completo de la pregunta',4);prompt.className='q-prompt-input';prompt.addEventListener('input',()=>{question.prompt=prompt.value;save(model,activityId,payload,onChange);});const promptField=labeled('Enunciado',prompt);promptField.classList.add('q-field--prompt');const allowed=RENDERER_TYPES[renderer]??Object.keys(TYPE_LABELS);let typeControl;if(allowed.length===1){typeControl=node('div','q-fixed-type',TYPE_LABELS[allowed[0]]??allowed[0]);if(question.type!==allowed[0]){switchType(question,allowed[0]);save(model,activityId,payload,onChange);}}else{typeControl=selectInput(question.type,allowed.map((key)=>[key,TYPE_LABELS[key]??key]));typeControl.title=studioUiText('Cambiar de modalidad reemplaza los elementos y soluciones de esta pregunta, conservando título, tiempo y puntuación.');typeControl.addEventListener('change',()=>{switchType(question,typeControl.value);save(model,activityId,payload,onChange);render();});}
       const points=numberInput(question.points,0);points.addEventListener('input',()=>{question.points=Math.max(0,Number(points.value)||0);save(model,activityId,payload,onChange);});
-      const questionTime=numberInput(question.timeLimitSeconds??null,1,1);questionTime.placeholder='Sin límite';questionTime.addEventListener('input',()=>{const value=questionTime.value.trim();if(!value)delete question.timeLimitSeconds;else question.timeLimitSeconds=Math.max(1,Math.floor(Number(value)||1));save(model,activityId,payload,onChange);});
+      const questionTime=numberInput(question.timeLimitSeconds??null,1,1);questionTime.placeholder=studioUiText('Sin límite');questionTime.addEventListener('input',()=>{const value=questionTime.value.trim();if(!value)delete question.timeLimitSeconds;else question.timeLimitSeconds=Math.max(1,Math.floor(Number(value)||1));save(model,activityId,payload,onChange);});
       const subtract=document.createElement('input');subtract.type='checkbox';subtract.checked=question.scoring==='partial-with-penalty';
-      const penalty=numberInput(subtract.checked?(question.penalty??0.25):null,0,'0.25');penalty.placeholder='0.25';penalty.disabled=!subtract.checked;
+      const penalty=numberInput(subtract.checked?(question.penalty??0.25):null,0,'0.25');penalty.placeholder=studioUiText('0.25');penalty.disabled=!subtract.checked;
       const savePenalty=()=>{if(subtract.checked){question.scoring='partial-with-penalty';question.penalty=Math.max(0,Number(penalty.value)||0);}else{if(question.scoring==='partial-with-penalty')delete question.scoring;delete question.penalty;}penalty.disabled=!subtract.checked;save(model,activityId,payload,onChange);};
       subtract.addEventListener('change',()=>{if(subtract.checked&&!penalty.value)penalty.value='0.25';savePenalty();});penalty.addEventListener('input',savePenalty);
       basic.append(promptField,labeled('Tipo',typeControl),labeled('Tiempo (s)',questionTime),labeled('Puntos',points),labeled('El fallo resta',subtract),labeled('Penalización',penalty));card.append(basic);
@@ -328,7 +331,7 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
       card.append(body);list.append(card);
     });
     const add=node('div','q-add-row');const allowed=RENDERER_TYPES[renderer]??Object.keys(TYPE_LABELS);const addType=allowed.length===1?null:selectInput(allowed[0],allowed.map((key)=>[key,TYPE_LABELS[key]??key]));const addButton=rowButton('+ Añadir pregunta',()=>{const q=defaultQuestion(addType?.value??allowed[0]);ensureSolution(q);payload.questions.push(q);save(model,activityId,payload,onChange);render();});if(addType)add.append(addType);add.append(addButton);list.append(add);root.append(list);
-    const advanced=document.createElement('details');advanced.className='q-advanced';const summary=document.createElement('summary');summary.textContent='Avanzado: ver JSON';const area=document.createElement('textarea');area.value=JSON.stringify(payload,null,2);area.spellcheck=false;area.addEventListener('change',()=>{try{const parsed=JSON.parse(area.value);Object.keys(payload).forEach((k)=>delete payload[k]);Object.assign(payload,parsed);save(model,activityId,payload,onChange);onStatus?.('Modelo avanzado actualizado');render();}catch(error){onStatus?.('JSON avanzado no válido: '+error.message);}});advanced.append(summary,area);root.append(advanced);
+    const advanced=document.createElement('details');advanced.className='q-advanced';const summary=document.createElement('summary');summary.textContent=studioUiText('Avanzado: ver JSON');const area=document.createElement('textarea');area.value=JSON.stringify(payload,null,2);area.spellcheck=false;area.addEventListener('change',()=>{try{const parsed=JSON.parse(area.value);Object.keys(payload).forEach((k)=>delete payload[k]);Object.assign(payload,parsed);save(model,activityId,payload,onChange);report('Modelo avanzado actualizado');render();}catch(error){report('JSON avanzado no válido: '+error.message);}});advanced.append(summary,area);root.append(advanced);
     container.append(root);
   };
   render();
