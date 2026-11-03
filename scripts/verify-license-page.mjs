@@ -5,12 +5,15 @@ import {resolve,join} from 'node:path';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const read=(path)=>readFile(join(root,path),'utf8');
-const [license,notice,es,en,css,generator]=await Promise.all([
+const [license,notice,es,en,css,generator,contactEs,contactEn,footer]=await Promise.all([
   read('LICENSE'),read('NOTICE.md'),
   read('deploy/netlify/site/licencia/index.html'),
   read('deploy/netlify/site/en/licencia/index.html'),
   read('deploy/netlify/site/p2lrn.css'),
   read('scripts/generate-site-english.mjs'),
+  read('deploy/netlify/site/contacto/index.html'),
+  read('deploy/netlify/site/en/contacto/index.html'),
+  read('deploy/netlify/site-footer.mjs'),
 ]);
 const routeId='licencia/index.html';
 assert.match(generator,/handAuthoredEnglishPages[\s\S]*?['"]licencia\/index\.html['"]/,
@@ -76,7 +79,7 @@ for(let i=0;i<esLinks.length;i++){
   const url=esLinks[i];
   const expected=url==='/'?'/en/':[
     '/docs/','/docs/empezar/','/docs/player/','/docs/toolkit/','/docs/npm/','/contacto/'
-  ].includes(url)?'/en'+url:url;
+  ].some(prefix=>url.startsWith(prefix))?'/en'+url:url;
   assert.equal(enLinks[i],expected,'English href counterpart at index '+i);
 }
 assert.match(es,/No es una licencia <em>open source<\/em> aprobada por OSI/);
@@ -89,6 +92,26 @@ assert.match(en,/Annex A\.2/);
 assert.match(en,/Annex A\.3/);
 assert.ok(!en.includes('Volver arriba'),'English retained Spanish UI text');
 assert.match(en,/Back to top/);
+for(const [lang,licensePage,contact] of [['es',es,contactEs],['en',en,contactEn]]){
+  const localePrefix=lang==='en'?'/en':'';
+  assert.ok(licensePage.includes('href="'+localePrefix+'/contacto/#solicitar-licencia"'),
+    'Commercial license CTA must open the contact form in '+lang);
+  assert.match(contact,/id="solicitar-licencia" data-contact-form/);
+  assert.match(contact,/name="subject"[^>]+required/);
+  if(lang==='es'){
+    assert.match(licensePage,/El medio de contacto para solicitarla es el formulario de esta web/);
+    assert.match(licensePage,/acuerdo expreso por escrito/);
+    assert.match(contact,/Solicitud de licencia comercial P2LRN/);
+  }else{
+    assert.match(licensePage,/Use the contact form on this website to request it/);
+    assert.match(licensePage,/express written agreement/);
+    assert.match(contact,/P2LRN commercial license request/);
+  }
+}
+assert.match(footer,/https:\/\/github\.com\/josemarcosdzb\/p2lrn/);
+assert.match(footer,/site-footer__credit/);
+assert.ok(!footer.includes('github.com/josemarcosfrodo/p2lrn'));
+
 console.log(JSON.stringify({ok:true,localePages:2,sections:requirements.length,
   licenseAnnex:'A.1-A.4',componentRows:5,faqPerLanguage:6,linksVerified:esLinks.length,
-  englishMirrorProtected:true,sourceAndNoticesLinked:true},null,2));
+  englishMirrorProtected:true,sourceAndNoticesLinked:true,commercialContactForm:true,repositoryOwner:'josemarcosdzb'},null,2));
