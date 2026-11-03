@@ -1,4 +1,5 @@
 // Canonical course authorship and rights metadata, shared by Studio and Player.
+import {playerUiText} from './renderers/ui-i18n.js';
 export const COURSE_RIGHTS_EXTENSION = 'https://p2lrn.org/ext/course-rights/1';
 export const COURSE_RIGHTS_FIELDS = Object.freeze(['author','createdAt','license','copyrightHolder']);
 export const COURSE_RIGHTS_LABELS = Object.freeze({
@@ -74,10 +75,10 @@ export function renderCourseRights(container,course,{heading='Autoría y derecho
   container.replaceChildren();
   container.hidden=rows.length===0;
   if(!rows.length)return;
-  const h=document.createElement('strong');h.textContent=heading;
+  const h=document.createElement('strong');h.textContent=playerUiText(heading);
   const dl=document.createElement('dl');
   for(const row of rows){
-    const dt=document.createElement('dt');dt.textContent=row.label;
+    const dt=document.createElement('dt');dt.textContent=playerUiText(row.label);
     const dd=document.createElement('dd');dd.textContent=row.value;
     dl.append(dt,dd);
   }
