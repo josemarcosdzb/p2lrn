@@ -212,6 +212,16 @@ const MANUAL=new Map(Object.entries({
   '1. Qué hace y ve el alumno':'1. What the learner does and sees','Llevar la especificación a un paquete real':'Turn the specification into a real package',
   'Crear un paquete por código':'Create a package programmatically','Verificar el ZIP y generar un curso de prueba':'Verify the ZIP and generate a sample course',
   '8. Volver a trabajar con un curso':'8. Reopen and edit a course','Alumno / identificador (opcional)':'Learner ID (optional)',
+  "Ver flujo completo →":"View the full workflow →",
+  "Ver Studio →":"View Studio →",
+  "Ver Analytics →":"View Analytics →",
+  "Ver opciones":"View options",
+  "Ver entregas offline":"View offline deliveries",
+  "CONECTORES / LMS":"CONNECTORS / LMS",
+  "CONECTORES / LTI 1.3":"CONNECTORS / LTI 1.3",
+  "Conectores LMS":"LMS connectors",
+  "Player integrado directamente":"Directly embedded Player",
+  "Herramienta externa LTI 1.3":"External LTI 1.3 tool",
   'Trabajar con los cursos del ordenador':'Work with local courses','8. Volver a trabajar sobre un curso':'8. Reopen and edit a course'
 }));
 
