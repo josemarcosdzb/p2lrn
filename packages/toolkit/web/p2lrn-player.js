@@ -421,7 +421,7 @@ export async function openCachedP2LRNPackage(contentRoot, options = {}) {
 
 function titleOf(entity) {
   const title = entity?.title ?? {};
-  return title.es ?? title.en ?? title.und ?? Object.values(title)[0] ?? entity?.id ?? 'P2LRN';
+  return (/^en(?:-|$)/i.test(document.documentElement?.lang??'') ? (title.en ?? title.es) : (title.es ?? title.en)) ?? title.und ?? Object.values(title)[0] ?? entity?.id ?? 'P2LRN';
 }
 
 function roleRank(rep) { return ROLE_SCORE[rep.role] ?? 0; }
