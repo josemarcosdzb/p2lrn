@@ -1,7 +1,7 @@
 import {readFile,readdir} from 'node:fs/promises';
 import {join,relative,resolve} from 'node:path';
 import {load} from 'cheerio';
-import * as acorn from 'acorn';
+import {parseJs,walkAst} from './site-i18n-ast.mjs';
 
 const root=resolve(process.cwd());
 const siteRoot=join(root,'deploy','netlify','site');
@@ -28,16 +28,6 @@ function normalizeRoute(pathname){return pathname==='/'?'/':(pathname.endsWith('
 function isVisibleSpanish(value){
   const text=String(value??'').replace(/\s+/g,' ').trim();
   return text&&(SPANISH_RE.test(text)||EXTRA_SPANISH_RE.test(text));
-}
-function parseJs(source){try{return acorn.parse(source,{ecmaVersion:'latest',sourceType:'module'});}catch{return acorn.parse(source,{ecmaVersion:'latest',sourceType:'script'});}}
-function walkAst(node,fn,parent=null){
-  if(!node||typeof node!=='object')return;
-  fn(node,parent);
-  for(const [key,val] of Object.entries(node)){
-    if(['start','end','loc','range','raw','value'].includes(key))continue;
-    if(Array.isArray(val))for(const child of val)if(child&&typeof child==='object'&&child.type)walkAst(child,fn,node);
-    else if(val&&typeof val==='object'&&val.type)walkAst(val,fn,node);
-  }
 }
 function skipJsValue(value,parent,node){
   if((parent?.type==='ImportDeclaration'||parent?.type==='ExportNamedDeclaration'||parent?.type==='ExportAllDeclaration')&&parent.source===node)return true;

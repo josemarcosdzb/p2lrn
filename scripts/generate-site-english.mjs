@@ -1,6 +1,6 @@
 import {mkdir,readFile,readdir,rm,writeFile} from 'node:fs/promises';
 import {dirname,extname,join,relative,resolve} from 'node:path';
-import * as acorn from 'acorn';
+import {parseJs,walkAst,structuralLiteral} from './site-i18n-ast.mjs';
 import {load} from 'cheerio';
 
 const root=resolve(process.cwd());
@@ -395,22 +395,6 @@ for(const file of htmlFiles){
 
 console.log('P2LRN_I18N_PHASE=registered-html pending='+pending.size);
 const jsSources=new Map();
-function parseJs(source){try{return acorn.parse(source,{ecmaVersion:'latest',sourceType:'module'});}catch{return acorn.parse(source,{ecmaVersion:'latest',sourceType:'script'});}}
-function walkAst(node,fn,parent=null){
-  if(!node||typeof node!=='object')return;
-  fn(node,parent);
-  for(const [key,val] of Object.entries(node)){
-    if(['start','end','loc','range','raw','value'].includes(key))continue;
-    if(Array.isArray(val))for(const child of val)if(child&&typeof child==='object'&&child.type)walkAst(child,fn,node);
-    else if(val&&typeof val==='object'&&val.type)walkAst(val,fn,node);
-  }
-}
-function structuralLiteral(node,parent){
-  if(!parent)return false;
-  if((parent.type==='ImportDeclaration'||parent.type==='ExportNamedDeclaration'||parent.type==='ExportAllDeclaration')&&parent.source===node)return true;
-  if(parent.type==='Property'&&parent.key===node&&!parent.computed)return true;
-  return false;
-}
 for(const rel of JS_FILES){
   const source=await readFile(join(siteRoot,...rel.split('/')),'utf8');
   jsSources.set(rel,source);
@@ -418,6 +402,11 @@ for(const rel of JS_FILES){
     if(node.type==='Literal'&&typeof node.value==='string'&&!node.regex&&!structuralLiteral(node,parent)){
       if(node.value.includes('<')&&node.value.includes('>'))registerHtmlFragment(node.value);
       else register(node.value);
+    }
+    if(node.type==='TemplateElement'){
+      const value=node.value?.cooked??node.value?.raw??'';
+      if(value.includes('<')&&value.includes('>'))registerHtmlFragment(value);
+      else register(value);
     }
   });
 }
@@ -434,6 +423,11 @@ for(const file of htmlFiles){
       if(node.type==='Literal'&&typeof node.value==='string'&&!node.regex&&!structuralLiteral(node,parent)){
         if(node.value.includes('<')&&node.value.includes('>'))registerHtmlFragment(node.value);
         else register(node.value);
+      }
+      if(node.type==='TemplateElement'){
+        const value=node.value?.cooked??node.value?.raw??'';
+        if(value.includes('<')&&value.includes('>'))registerHtmlFragment(value);
+        else register(value);
       }
     });
   });
@@ -567,6 +561,14 @@ function translateJavaScriptSource(source){
   try{ast=parseJs(source);}catch{return source;}
   const edits=[];
   walkAst(ast,(node,parent)=>{
+    if(node.type==='TemplateElement'){
+      // Raw quasis exclude ${...} expressions. Editing only the quasi keeps
+      // interpolation, identifiers and executable behavior unchanged.
+      const raw=source.slice(node.start,node.end);
+      const next=raw.includes('<')&&raw.includes('>')?translateHtmlFragment(raw):translatePlain(raw);
+      if(next!==raw)edits.push({start:node.start,end:node.end,text:next.replaceAll('`','\\`').replaceAll('${','\\${')});
+      return;
+    }
     if(node.type!=='Literal'||typeof node.value!=='string'||node.regex||structuralLiteral(node,parent))return;
     let next=node.value.includes('<')&&node.value.includes('>')
       ?translateHtmlFragment(node.value)
@@ -651,11 +653,11 @@ try{
 
 console.log('P2LRN_I18N_PHASE=generate-js files='+jsSources.size);
 for(const [rel,source] of jsSources){
-  const generated=rel==='p2lrn.js'
-    ?translateJavaScriptSource(source).replace(
-      "['/docs/formato-portable-cursos-interactivos/','Guía de portabilidad']",
-      "['/docs/formato-portable-cursos-interactivos/','Portability guide']")
-    :translateJavaScriptSource(source);
+  let generated=translateJavaScriptSource(source);
+  // The English Studio entrypoint uses the same tested shared runtime modules.
+  // A relative ./runtime/ import from /en/studio/ otherwise returns HTTP 404.
+  if(rel==='studio/studio.js')generated=generated.replace(/(from\s+['"])\.\/runtime\//g,'$1/studio/runtime/');
+
   const dest=join(englishRoot,...rel.split('/'));
   await mkdir(dirname(dest),{recursive:true});
   await writeFile(dest,generated,'utf8');

@@ -17,6 +17,8 @@ on:
       - '!deploy/netlify/site/en/**'
       - 'scripts/generate-site-english.mjs'
       - 'scripts/verify-site-bilingual.mjs'
+      - 'scripts/site-i18n-ast.mjs'
+      - 'scripts/test-site-i18n-ast.mjs'
       # Workflow-only edits can be checked via workflow_dispatch without regenerating English.
   workflow_dispatch:
 
@@ -59,6 +61,14 @@ jobs:
           node --check scripts/generate-site-english.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/verify-site-bilingual.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test JavaScript i18n walker
+        shell: powershell
+        run: |
+          node --check scripts/site-i18n-ast.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test scripts/test-site-i18n-ast.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Generate complete English mirror
