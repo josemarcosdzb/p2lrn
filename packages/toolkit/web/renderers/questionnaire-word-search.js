@@ -1,3 +1,4 @@
+import {playerUiText} from './ui-i18n.js';
 import {WORD_SEARCH_RENDERER} from '../renderer-registry.js';
 import {normalizeWord} from '../questionnaire-games-core.js';
 import {el, setupGame, statusNode, stylesheets} from './game-common.js';
@@ -34,8 +35,8 @@ export async function render(options) {
   let dragEnd = null;
   let dragging = false;
 
-  const status = statusNode('Arrastra sobre una palabra, o pulsa la primera y la última letra. También puedes escribir la respuesta en su pista.');
-  const table = el('table', {class: 'p2lrn-word-grid', 'aria-label': 'Sopa de letras'});
+  const status = statusNode(playerUiText('Arrastra sobre una palabra, o pulsa la primera y la última letra. También puedes escribir la respuesta en su pista.'));
+  const table = el('table', {class: 'p2lrn-word-grid', 'aria-label': playerUiText('Sopa de letras')});
   const body = document.createElement('tbody');
 
   const redraw = () => {
@@ -81,7 +82,7 @@ export async function render(options) {
     const reverse=[...cells].reverse();
     const match=words.find((word)=>!found.has(word.id)&&(sameCells(cells,word.cells)||sameCells(reverse,word.cells)));
     if(!match){
-      status.textContent='Ese tramo no corresponde a una respuesta completa.';
+      status.textContent=playerUiText('Ese tramo no corresponde a una respuesta completa.');
       return false;
     }
     solveWord(match);
@@ -146,7 +147,7 @@ export async function render(options) {
       resolveSegment(first,end);
     }else{
       anchor=end;
-      status.textContent='Primera letra seleccionada. Pulsa la última o arrastra hasta ella.';
+      status.textContent=playerUiText('Primera letra seleccionada. Pulsa la última o arrastra hasta ella.');
     }
     redraw();
   });
@@ -161,7 +162,7 @@ export async function render(options) {
   scroll.append(table);
   const clues = el('div', {class: 'p2lrn-clues'});
   const group = document.createElement('div');
-  group.append(el('h3', {}, 'Pistas'));
+  group.append(el('h3', {}, playerUiText('Pistas')));
   const ol = document.createElement('ol');
   words.forEach((word) => {
     const li = el('li',{class:'p2lrn-word-clue'});
