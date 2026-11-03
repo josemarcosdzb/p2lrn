@@ -469,7 +469,7 @@ if (repositoryLicense !== publishedLicense) {
 if (!publishedNotice.includes('P2LRN-NCSL 1.0')) {
   throw new Error('Published NOTICE.md does not identify P2LRN-NCSL 1.0.');
 }
-for (const required of ['P2LRN-NCSL 1.0','versión 1.0','href="/LICENSE"','/player/current/source/']) {
+for (const required of ['P2LRN-NCSL 1.0','Anexo A','href="/LICENSE"','/player/current/source/']) {
   if (!licensePageHtml.includes(required)) {
     throw new Error('License page is missing required authority/source marker: ' + required);
   }
