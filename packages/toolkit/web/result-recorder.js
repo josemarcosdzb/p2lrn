@@ -54,7 +54,7 @@ export function createP2LRNResultRecorder(player,{identity,courseId='',courseTit
   if(!player||typeof player.addEventListener!=='function')throw new TypeError('Se necesita una instancia de P2LRN Player.');
   const person=normalizeIdentity(identity);
   const attempt=clean(attemptId)||uuid();
-  let packageId=clean(courseId),contentRoot='',startedAt=new Date().toISOString();
+  let packageId=clean(courseId)||clean(player.packageId),contentRoot=clean(player.contentRoot),startedAt=new Date().toISOString();
   let completedAt=null,finalResult=null,stopped=false;
   const observations=[],scores=[],states=[];
   const types=['p2lrn:ready','p2lrn:rendered','p2lrn:score','p2lrn:statechange','p2lrn:complete','p2lrn:interaction','p2lrn:progressionchange','p2lrn:learning','p2lrn:activity'];
@@ -85,7 +85,9 @@ export function createP2LRNResultRecorder(player,{identity,courseId='',courseTit
     record(event){capture({type:clean(event?.type)||'p2lrn:interaction',detail:event?.detail??{}});},
     async finish(){
       if(finalResult)return finalResult;
-      if(!packageId)throw new Error('No se ha identificado el paquete. Espera al evento p2lrn:ready o indica courseId.');
+      packageId=packageId||clean(player.packageId);
+      contentRoot=contentRoot||clean(player.contentRoot);
+      if(!packageId)throw new Error('No se ha identificado el paquete. Espera a que Player cargue el curso.');
       if(!stopped){stopped=true;for(const type of types)player.removeEventListener(type,capture);}
       const finishedAt=completedAt||new Date().toISOString();
       const elapsedSeconds=Math.max(0,Math.round((Date.parse(finishedAt)-Date.parse(startedAt))/1000));
