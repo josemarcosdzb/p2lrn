@@ -62,122 +62,122 @@
   cleanProductionChrome();
 
   const PUBLIC_NAV = [
-    { label: 'Studio', href: "/en/studio/", active: ["/en/studio/"] },
+    { label: 'Studio', href: '/studio/', active: ['/studio/'] },
     {
       label: "Solutions",
-      active: ["/en/crear-cursos-interactivos/","/en/juegos-educativos-3d/","/en/cursos-offline/"],
+      active: ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'],
       items: [
-        ["/en/crear-cursos-interactivos/","Create interactive courses"],
-        ["/en/juegos-educativos-3d/","3D educational games"],
-        ["/en/cursos-offline/","Offline courses without an LMS"],
+        ['/crear-cursos-interactivos/',"Create interactive courses"],
+        ['/juegos-educativos-3d/',"3D educational games"],
+        ['/cursos-offline/',"Offline courses without an LMS"],
       ],
     },
-    { label: 'Analytics', href: "/en/analytics/", active: ["/en/analytics/"] },
-    { label: "AI Skills", href: "/en/skills/", active: ["/en/skills/"] },
-    { label: "Documentation", href: "/en/docs/", active: ["/en/docs/"] },
-    { label: "Contact", href: "/en/contacto/", active: ["/en/contacto/"] },
+    { label: 'Analytics', href: '/analytics/', active: ['/analytics/'] },
+    { label: "AI Skills", href: '/skills/', active: ['/skills/'] },
+    { label: "Documentation", href: '/docs/', active: ['/docs/'] },
+    { label: "Contact", href: '/contacto/', active: ['/contacto/'] },
   ];
 
   const GLOBAL_NAV = [
     {
       label: "Documentation",
-      active: ["/en/docs/","/en/docs/empezar/","/en/docs/que-usar/","/en/docs/conceptos/","/en/docs/formato/","/en/docs/formato-portable-cursos-interactivos/"],
+      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/formato-portable-cursos-interactivos/'],
       items: [
-        ["/en/docs/","Home"],
-        ["/en/docs/empezar/","Before you start"],
-        ["/en/docs/que-usar/","Component map"],
-        ["/en/docs/conceptos/","Concepts"],
-        ["/en/docs/formato/","P2LRN format"],
-        ["/en/docs/formato-portable-cursos-interactivos/",'Portability guide'],
+        ['/docs/',"Home"],
+        ['/docs/empezar/',"Before you start"],
+        ['/docs/que-usar/',"Component map"],
+        ['/docs/conceptos/',"Concepts"],
+        ['/docs/formato/',"P2LRN format"],
+        ['/docs/formato-portable-cursos-interactivos/',"Portability guide"],
       ],
     },
     {
       label: "Install",
-      active: ["/en/docs/instalar/","/en/docs/npm/","/en/docs/npm/*","/en/docs/cdn/","/en/docs/cdn/*"],
+      active: ['/docs/instalar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*'],
       items: [
-        ["/en/docs/instalar/","Choose an installation"],
-        ["/en/docs/npm/",'NPM'],
-        ["/en/docs/npm/studio/","Studio with npm"],
-        ["/en/docs/cdn/",'CDN'],
-        ["/en/docs/cdn/studio/","Studio via CDN"],
+        ['/docs/instalar/',"Choose an installation"],
+        ['/docs/npm/','NPM'],
+        ['/docs/npm/studio/',"Studio with npm"],
+        ['/docs/cdn/','CDN'],
+        ['/docs/cdn/studio/',"Studio via CDN"],
       ],
     },
     {
       label: "Create",
-      active: ["/en/studio/","/en/crear-cursos-interactivos/","/en/cursos-offline/","/en/docs/studio/","/en/docs/entrega-offline/","/en/docs/paquetes/*","/en/docs/toolkit/","/en/docs/cli/"],
+      active: ['/studio/','/crear-cursos-interactivos/','/cursos-offline/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
       items: [
-        ["/en/studio/","Open Studio"],
-        ["/en/crear-cursos-interactivos/","Create interactive courses"],
-        ["/en/cursos-offline/","Offline courses without an LMS"],
-        ["/en/docs/studio/","Studio guide"],
-        ["/en/docs/entrega-offline/",'Entrega offline'],
-        ["/en/docs/paquetes/","Create packages"],
-        ["/en/docs/paquetes/multipart/",'Multipart'],
-        ["/en/docs/toolkit/",'Toolkit'],
-        ["/en/docs/cli/",'CLI'],
+        ['/studio/',"Open Studio"],
+        ['/crear-cursos-interactivos/',"Create interactive courses"],
+        ['/cursos-offline/',"Offline courses without an LMS"],
+        ['/docs/studio/',"Studio guide"],
+        ['/docs/entrega-offline/','Entrega offline'],
+        ['/docs/paquetes/',"Create packages"],
+        ['/docs/paquetes/multipart/','Multipart'],
+        ['/docs/toolkit/','Toolkit'],
+        ['/docs/cli/','CLI'],
       ],
     },
     {
       label: "Play",
-      active: ["/en/docs/player/","/en/demo/","/en/juegos-educativos-3d/","/en/docs/questionnaires/*","/en/docs/juegos-3d/","/en/docs/ejemplos/"],
+      active: ['/docs/player/','/demo/','/juegos-educativos-3d/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],
       wide: true,
       items: [
-        ["/en/docs/player/",'Player'],
-        ["/en/demo/",'Visor'],
-        ["/en/juegos-educativos-3d/","3D educational games"],
-        ["/en/docs/questionnaires/","Quizzes and games"],
-        ["/en/docs/questionnaires/standard/","Standard questionnaire"],
-        ["/en/docs/questionnaires/memory/","Memory"],
-        ["/en/docs/questionnaires/matching/","Matching"],
-        ["/en/docs/questionnaires/ordering/","Ordering"],
-        ["/en/docs/questionnaires/classification/","Classification"],
-        ["/en/docs/questionnaires/true-false/","True / false"],
-        ["/en/docs/questionnaires/word-search/","Word search"],
-        ["/en/docs/questionnaires/crossword/","Crossword"],
-        ["/en/docs/questionnaires/rosco/","Word wheel"],
-        ["/en/docs/questionnaires/3d/","3D game"],
-        ["/en/docs/juegos-3d/",'Arquitectura 3D'],
-        ["/en/docs/ejemplos/","Examples"],
+        ['/docs/player/','Player'],
+        ['/demo/','Visor'],
+        ['/juegos-educativos-3d/',"3D educational games"],
+        ['/docs/questionnaires/',"Quizzes and games"],
+        ['/docs/questionnaires/standard/',"Standard questionnaire"],
+        ['/docs/questionnaires/memory/',"Memory"],
+        ['/docs/questionnaires/matching/',"Matching"],
+        ['/docs/questionnaires/ordering/',"Ordering"],
+        ['/docs/questionnaires/classification/',"Classification"],
+        ['/docs/questionnaires/true-false/',"True / false"],
+        ['/docs/questionnaires/word-search/',"Word search"],
+        ['/docs/questionnaires/crossword/',"Crossword"],
+        ['/docs/questionnaires/rosco/',"Word wheel"],
+        ['/docs/questionnaires/3d/',"3D game"],
+        ['/docs/juegos-3d/','Arquitectura 3D'],
+        ['/docs/ejemplos/',"Examples"],
       ],
     },
     {
       label: 'Integrar',
-      active: ["/en/docs/integracion/","/en/docs/colaboracion/","/en/docs/eventos/","/en/docs/conectores/*","/en/docs/skills/"],
+      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
       items: [
-        ["/en/docs/integracion/","Integration"],
-        ["/en/docs/colaboracion/","Collaboration"],
-        ["/en/docs/eventos/",'Eventos'],
-        ["/en/docs/conectores/","Connectors: overview"],
-        ["/en/docs/conectores/ia/","AI connectors"],
-        ["/en/docs/conectores/lms/",'Plataformas LMS'],
-        ["/en/docs/conectores/lti/",'LTI 1.3'],
+        ['/docs/integracion/',"Integration"],
+        ['/docs/colaboracion/',"Collaboration"],
+        ['/docs/eventos/','Eventos'],
+        ['/docs/conectores/',"Connectors: overview"],
+        ['/docs/conectores/ia/',"AI connectors"],
+        ['/docs/conectores/lms/','Plataformas LMS'],
+        ['/docs/conectores/lti/',"LTI 1.3"],
       ],
     },
     {
       label: 'Seguimiento',
-      active: ["/en/docs/progresion/","/en/docs/metricas/"],
+      active: ['/docs/progresion/','/docs/metricas/'],
       items: [
-        ["/en/docs/progresion/","Progression"],
-        ["/en/docs/metricas/","Metrics and analytics"],
+        ['/docs/progresion/',"Progression"],
+        ['/docs/metricas/',"Metrics and analytics"],
       ],
     },
     {
       label: 'Analytics',
-      active: ["/en/docs/analytics/","/en/analytics/"],
+      active: ['/docs/analytics/','/analytics/'],
       items: [
-        ["/en/docs/analytics/","Analytics guide"],
-        ["/en/analytics/",'Abrir Analytics'],
+        ['/docs/analytics/',"Analytics guide"],
+        ['/analytics/','Abrir Analytics'],
       ],
     },
     {
       label: "Reference",
-      active: ["/en/docs/compatibilidad/","/en/docs/recetas/","/en/docs/glosario/","/en/docs/referencia/","/en/docs/troubleshooting/"],
+      active: ['/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
       items: [
-        ["/en/docs/compatibilidad/",'Compatibilidad'],
-        ["/en/docs/recetas/",'Recetas'],
-        ["/en/docs/glosario/",'Glosario'],
-        ["/en/docs/referencia/","Technical reference"],
-        ["/en/docs/troubleshooting/","Troubleshooting"],
+        ['/docs/compatibilidad/','Compatibilidad'],
+        ['/docs/recetas/','Recetas'],
+        ['/docs/glosario/','Glosario'],
+        ['/docs/referencia/',"Technical reference"],
+        ['/docs/troubleshooting/',"Troubleshooting"],
       ],
     },
   ];
@@ -186,10 +186,21 @@
     // Route comparisons use the same logical path for both languages.
     // English pages keep their /en/ URL, while the navigation config remains
     // independent of the locale and therefore preserves active links/sidebars.
-    let pathname = String(value || "/en/").split(/[?#]/, 1)[0].replace(/\/index\.html$/u, "/en/");
+    let pathname = String(value || '/').split(/[?#]/, 1)[0].replace(/\/index\.html$/u, '/');
     if(/^en(?:-|$)/i.test(document.documentElement.lang||'')&&pathname.startsWith('/en/'))
-      pathname=pathname.slice(3)||"/en/";
-    return pathname.endsWith("/en/") ? pathname : pathname + "/en/";
+      pathname=pathname.slice(3)||'/';
+    return pathname.endsWith('/') ? pathname : pathname + '/';
+  };
+
+  // Every route still uses one canonical logic tree; only outbound page links
+  // receive the /en prefix. Technical and downloadable paths remain shared.
+  const siteHref=(href)=>{
+    const value=String(href||'');
+    if(!/^en(?:-|$)/i.test(document.documentElement.lang||'')||!value.startsWith('/')||value.startsWith('/en/'))return value;
+    if(/^\/(?:assets|downloads|examples|player|api|_next|\.netlify)\//.test(value))return value;
+    if(/^\/(?:p2lrn\.|favicon\.|apple-touch-icon\.|index\.json|robots\.txt|search-index\.json)/.test(value))return value;
+    if(value.startsWith('/studio/runtime/')||value.startsWith('/analytics/current/'))return value;
+    return '/en'+value;
   };
 
   const renderGlobalNavigation = () => {
@@ -206,13 +217,13 @@
     const current = normalizePath(window.location.pathname);
     const fragment = document.createDocumentFragment();
 
-    const navigationEntries = current.startsWith("/en/docs/") ? GLOBAL_NAV : PUBLIC_NAV;
+    const navigationEntries = current.startsWith('/docs/') ? GLOBAL_NAV : PUBLIC_NAV;
     for (const entry of navigationEntries) {
       const active = (entry.active || []).some((path) => path.endsWith('*') ? current.startsWith(normalizePath(path.slice(0,-1))) : current === normalizePath(path));
       if (entry.href) {
         const link = document.createElement('a');
         link.className = 'nav-direct';
-        link.href = entry.href;
+        link.href = siteHref(entry.href);
         link.textContent = entry.label;
         if (active) link.setAttribute('aria-current','page');
         fragment.append(link);
@@ -229,7 +240,7 @@
       dropdown.className = 'nav-dropdown';
       for (const [href,label] of entry.items) {
         const link = document.createElement('a');
-        link.href = href;
+        link.href = siteHref(href);
         link.textContent = label;
         if (current === normalizePath(href)) link.setAttribute('aria-current','page');
         dropdown.append(link);
@@ -368,85 +379,85 @@
 
   const GLOBAL_SIDEBAR = [
     ["GET STARTED", [
-      ["/en/docs/","Documentation"],
-      ["/en/docs/empezar/","Before you start"],
-      ["/en/docs/empezar-facil/","Quick start"],
+      ['/docs/',"Documentation"],
+      ['/docs/empezar/',"Before you start"],
+      ['/docs/empezar-facil/',"Quick start"],
     ]],
     ["INSTALL", [
-      ["/en/docs/instalar/","Installation"],
-      ["/en/docs/cdn/",'CDN'],
-      ["/en/docs/cdn/studio/","Studio via CDN"],
-      ["/en/docs/npm/",'NPM'],
-      ["/en/docs/npm/studio/","Studio with npm"],
+      ['/docs/instalar/',"Installation"],
+      ['/docs/cdn/','CDN'],
+      ['/docs/cdn/studio/',"Studio via CDN"],
+      ['/docs/npm/','NPM'],
+      ['/docs/npm/studio/',"Studio with npm"],
     ]],
     ["CREATE", [
-      ["/en/docs/studio/",'Studio visual'],
-      ["/en/docs/entrega-offline/",'Entrega offline'],
-      ["/en/docs/paquetes/","Create packages"],
-      ["/en/docs/paquetes/multipart/",'Multipart'],
-      ["/en/docs/toolkit/",'Toolkit'],
-      ["/en/docs/cli/",'CLI'],
+      ['/docs/studio/','Studio visual'],
+      ['/docs/entrega-offline/','Entrega offline'],
+      ['/docs/paquetes/',"Create packages"],
+      ['/docs/paquetes/multipart/','Multipart'],
+      ['/docs/toolkit/','Toolkit'],
+      ['/docs/cli/','CLI'],
     ]],
     ['REPRODUCIR', [
-      ["/en/docs/player/",'Player'],
-      ["/en/docs/questionnaires/","Quizzes and games"],
-      ["/en/docs/juegos-3d/","3D games"],
-      ["/en/docs/ejemplos/","Examples"],
+      ['/docs/player/','Player'],
+      ['/docs/questionnaires/',"Quizzes and games"],
+      ['/docs/juegos-3d/',"3D games"],
+      ['/docs/ejemplos/',"Examples"],
     ]],
     ['INTEGRAR', [
-      ["/en/docs/integracion/","Integration"],
-      ["/en/docs/colaboracion/","Collaboration"],
-      ["/en/docs/eventos/",'Eventos'],
+      ['/docs/integracion/',"Integration"],
+      ['/docs/colaboracion/',"Collaboration"],
+      ['/docs/eventos/','Eventos'],
     ]],
     ["CONNECTORS", [
-      ["/en/docs/conectores/","Connectors and integration"],
+      ['/docs/conectores/',"Connectors and integration"],
     ]],
     ['SEGUIMIENTO', [
-      ["/en/docs/progresion/","Progression"],
-      ["/en/docs/metricas/","Metrics and analytics"],
+      ['/docs/progresion/',"Progression"],
+      ['/docs/metricas/',"Metrics and analytics"],
     ]],
     ['ANALYTICS', [
-      ["/en/docs/analytics/",'P2LRN Analytics'],
-      ["/en/analytics/",'Abrir panel demo ↗'],
+      ['/docs/analytics/','P2LRN Analytics'],
+      ['/analytics/','Abrir panel demo ↗'],
     ]],
     ["REFERENCE", [
-      ["/en/docs/compatibilidad/",'Compatibilidad'],
-      ["/en/docs/recetas/",'Recetas'],
-      ["/en/docs/glosario/",'Glosario'],
-      ["/en/docs/referencia/","Technical reference"],
-      ["/en/docs/troubleshooting/","Troubleshooting"],
+      ['/docs/compatibilidad/','Compatibilidad'],
+      ['/docs/recetas/','Recetas'],
+      ['/docs/glosario/','Glosario'],
+      ['/docs/referencia/',"Technical reference"],
+      ['/docs/troubleshooting/',"Troubleshooting"],
     ]],
     ["RESOURCES", [
-      ["/en/studio/",'Abrir Studio ↗'],
-      ["/en/demo/",'Visor ↗'],
+      ['/studio/','Abrir Studio ↗'],
+      ['/demo/','Visor ↗'],
       ['/examples/catalog.json',"Examples catalog ↗"],
     ]],
   ];
 
   const DOC_SIDEBAR_CHILDREN = new Map([
-    ["/en/docs/empezar/",[
-      ["/en/docs/que-usar/","Component map"],
-      ["/en/docs/conceptos/",'Conceptos fundamentales'],
-      ["/en/docs/formato/","P2LRN format"],
-      ["/en/docs/formato-portable-cursos-interactivos/",'Portability guide'],
+    ['/docs/empezar/',[
+      ['/docs/que-usar/',"Component map"],
+      ['/docs/conceptos/','Conceptos fundamentales'],
+      ['/docs/formato/',"P2LRN format"],
+      ['/docs/formato-portable-cursos-interactivos/',"Portability guide"],
     ]],
-    ["/en/docs/conectores/",[
-      ["/en/docs/conectores/ia/","AI connectors"],
-      ["/en/docs/skills/","P2LRN AI Skills"],
-      ["/en/docs/conectores/lms/",'Plataformas LMS'],
-      ["/en/docs/conectores/lti/","LTI 1.3 module"],
+    ['/docs/conectores/',[
+      ['/docs/conectores/ia/',"AI connectors"],
+      ['/docs/skills/',"P2LRN AI Skills"],
+      ['/docs/conectores/lms/','Plataformas LMS'],
+      ['/docs/conectores/lti/',"LTI 1.3 module"],
     ]],
-    ["/en/docs/questionnaires/",[
-      ["/en/docs/questionnaires/standard/","Standard questionnaire"],
-      ["/en/docs/questionnaires/memory/","Memory"],
-      ["/en/docs/questionnaires/matching/","Matching"],
-      ["/en/docs/questionnaires/ordering/","Ordering"],
-      ["/en/docs/questionnaires/classification/","Classification"],
-      ["/en/docs/questionnaires/true-false/","True / false"],
-      ["/en/docs/questionnaires/word-search/","Word search"],
-      ["/en/docs/questionnaires/crossword/","Crossword"],
-      ["/en/docs/questionnaires/rosco/","Word wheel"],
-      ["/en/docs/questionnaires/3d/","3D game"],
+    ['/docs/questionnaires/',[
+      ['/docs/questionnaires/standard/',"Standard questionnaire"],
+      ['/docs/questionnaires/memory/',"Memory"],
+      ['/docs/questionnaires/matching/',"Matching"],
+      ['/docs/questionnaires/ordering/',"Ordering"],
+      ['/docs/questionnaires/classification/',"Classification"],
+      ['/docs/questionnaires/true-false/',"True / false"],
+      ['/docs/questionnaires/word-search/',"Word search"],
+      ['/docs/questionnaires/crossword/',"Crossword"],
+      ['/docs/questionnaires/rosco/',"Word wheel"],
+      ['/docs/questionnaires/3d/',"3D game"],
     ]],
   ]);
 
@@ -474,30 +485,30 @@
     REFERENCIA:"Reference",
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
-    ["/en/docs/que-usar/",["/en/docs/empezar/","Before you start"]],
-    ["/en/docs/conceptos/",["/en/docs/empezar/","Before you start"]],
-    ["/en/docs/formato/",["/en/docs/empezar/","Before you start"]],
-    ["/en/docs/formato-portable-cursos-interactivos/",["/en/docs/formato/","P2LRN format"]],
-    ["/en/docs/npm/studio/",["/en/docs/npm/",'NPM']],
-    ["/en/docs/cdn/studio/",["/en/docs/cdn/",'CDN']],
-    ["/en/docs/paquetes/multipart/",["/en/docs/paquetes/","Create packages"]],
-    ["/en/docs/conectores/ia/",["/en/docs/conectores/","Connectors and integration"]],
-    ["/en/docs/skills/",["/en/docs/conectores/","Connectors and integration"]],
-    ["/en/docs/conectores/gemini/",["/en/docs/conectores/ia/","AI connectors"]],
-    ["/en/docs/conectores/skills/",["/en/docs/conectores/ia/","AI connectors"]],
-    ["/en/docs/conectores/local/",["/en/docs/conectores/ia/","AI connectors"]],
-    ["/en/docs/conectores/lms/",["/en/docs/conectores/","Connectors and integration"]],
-    ["/en/docs/conectores/lti/",["/en/docs/conectores/","Connectors and integration"]],
+    ['/docs/que-usar/',['/docs/empezar/',"Before you start"]],
+    ['/docs/conceptos/',['/docs/empezar/',"Before you start"]],
+    ['/docs/formato/',['/docs/empezar/',"Before you start"]],
+    ['/docs/formato-portable-cursos-interactivos/',['/docs/formato/',"P2LRN format"]],
+    ['/docs/npm/studio/',['/docs/npm/','NPM']],
+    ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
+    ['/docs/paquetes/multipart/',['/docs/paquetes/',"Create packages"]],
+    ['/docs/conectores/ia/',['/docs/conectores/',"Connectors and integration"]],
+    ['/docs/skills/',['/docs/conectores/',"Connectors and integration"]],
+    ['/docs/conectores/gemini/',['/docs/conectores/ia/',"AI connectors"]],
+    ['/docs/conectores/skills/',['/docs/conectores/ia/',"AI connectors"]],
+    ['/docs/conectores/local/',['/docs/conectores/ia/',"AI connectors"]],
+    ['/docs/conectores/lms/',['/docs/conectores/',"Connectors and integration"]],
+    ['/docs/conectores/lti/',['/docs/conectores/',"Connectors and integration"]],
   ]);
   // Keep legacy detail URLs reachable without advertising a separate IA
   // navigation entry for every provider or installation method.
   const CONNECTOR_IA_DETAIL_ROUTES=new Set([
-    "/en/docs/conectores/gemini/",
-    "/en/docs/conectores/skills/",
-    "/en/docs/conectores/local/",
+    '/docs/conectores/gemini/',
+    '/docs/conectores/skills/',
+    '/docs/conectores/local/',
   ]);
   const sidebarPath=(path)=>CONNECTOR_IA_DETAIL_ROUTES.has(path)
-    ?"/en/docs/conectores/ia/":path;
+    ?'/docs/conectores/ia/':path;
   const sidebarLocation = (current) => {
     const selected=sidebarPath(current);
     for (const [section,items] of GLOBAL_SIDEBAR) {
@@ -527,7 +538,7 @@
         const children=DOC_SIDEBAR_CHILDREN.get(href) || [];
         const currentChild=children.find(([childHref])=>selected===normalizePath(childHref));
         const a=document.createElement('a');
-        a.href=href;
+        a.href=siteHref(href);
         a.textContent=textValue;
         if (current===normalized) a.setAttribute('aria-current','page');
         else if (currentChild) a.setAttribute('aria-current','location');
@@ -539,19 +550,19 @@
           childNav.setAttribute('aria-label',textValue);
           for (const [childHref,childLabel] of children) {
             const childLink=document.createElement('a');
-            childLink.href=childHref;
+            childLink.href=siteHref(childHref);
             childLink.textContent=childLabel;
             if (current===normalizePath(childHref)) childLink.setAttribute('aria-current','page');
             else if (selected===normalizePath(childHref)) childLink.setAttribute('aria-current','location');
             childNav.append(childLink);
-            if (childHref==="/en/docs/conectores/ia/" && selected===normalizePath(childHref)) {
+            if (childHref==='/docs/conectores/ia/' && selected===normalizePath(childHref)) {
               const topics=document.createElement('div');
               topics.className='doc-ai-topics';
               topics.setAttribute('role','group');
               topics.setAttribute('aria-label',"AI connector sections");
               for (const [id,label] of DOC_AI_TOPICS) {
                 const topic=document.createElement('a');
-                topic.href='/docs/conectores/ia/#'+id;
+                topic.href=siteHref('/docs/conectores/ia/#'+id);
                 topic.dataset.targetId=id;
                 topic.textContent=label;
                 topics.append(topic);
@@ -576,7 +587,7 @@
     let index = null;
     const ensureIndex = async () => {
       if (index) return index;
-      const response = await fetch("/en/search-index.json", {cache:'no-store'});
+      const response = await fetch('/search-index.json', {cache:'no-store'});
       if (!response.ok) throw new Error('search-index');
       index = await response.json();
       return index;
@@ -598,7 +609,7 @@
         const matches = allMatches.slice(0, 8);
         results.replaceChildren(...matches.map((item) => {
           const a = document.createElement('a');
-          a.href = item.url;
+          a.href = siteHref(item.url);
           a.innerHTML = '<strong></strong><span></span>';
           a.querySelector('strong').textContent = item.title;
           a.querySelector('span').textContent = item.section || item.description || '';
@@ -693,7 +704,7 @@
       mobileIndexCurrent.title=pageTitle;
     }
     const currentPath=normalizePath(window.location.pathname);
-    if (currentPath!=="/en/docs/" && !docArticle.querySelector('.doc-breadcrumbs')) {
+    if (currentPath!=='/docs/' && !docArticle.querySelector('.doc-breadcrumbs')) {
       const location=sidebarLocation(currentPath);
       const breadcrumb=document.createElement('nav');
       breadcrumb.className='doc-breadcrumbs';
@@ -702,7 +713,7 @@
       const addLink=(href,label)=>{
         const li=document.createElement('li');
         const a=document.createElement('a');
-        a.href=href;a.textContent=label;li.append(a);list.append(li);
+        a.href=siteHref(href);a.textContent=label;li.append(a);list.append(li);
       };
       const addText=(label,current=false)=>{
         const li=document.createElement('li');
@@ -711,11 +722,11 @@
         if (current) span.setAttribute('aria-current','page');
         li.append(span);list.append(li);
       };
-      addLink("/en/docs/","Documentation");
+      addLink('/docs/',"Documentation");
       if (location?.section && DOC_SECTION_LABELS[location.section]) addText(DOC_SECTION_LABELS[location.section]);
       const explicitParent=DOC_BREADCRUMB_PARENTS.get(currentPath);
       if (explicitParent) addLink(explicitParent[0],explicitParent[1]);
-      else if (location?.href==="/en/docs/questionnaires/" && currentPath!==normalizePath(location.href)) addLink(location.href,location.label);
+      else if (location?.href==='/docs/questionnaires/' && currentPath!==normalizePath(location.href)) addLink(location.href,location.label);
       addText(pageTitle,true);
       breadcrumb.append(list);
       docArticle.querySelector('.doc-hero')?.before(breadcrumb);
@@ -781,7 +792,7 @@
         // reading area, not only after it reaches the very top. This keeps
         // deep-link redirects and smooth anchor scrolling understandable.
         const line=Math.max(104,window.innerHeight*(
-          currentPath==="/en/docs/conectores/ia/" ? .58 : .2));
+          currentPath==='/docs/conectores/ia/' ? .58 : .2));
         let active=headings[0];
         for (const heading of headings) {
           if (heading.getBoundingClientRect().top<=line) active=heading;
