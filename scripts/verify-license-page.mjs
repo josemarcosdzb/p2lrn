@@ -54,6 +54,14 @@ for(const [lang,html] of [['es',es],['en',en]]){
   assert.match(html,/href="\/LICENSE"/);
   assert.match(html,/href="\/NOTICE\.md"/);
   assert.match(html,/href="\/player\/current\/source\/SOURCE-MANIFEST\.json"/);
+  for(const src of [
+    '/toolkit/current/source/SOURCE-MANIFEST.json',
+    '/studio/current/source/SOURCE-MANIFEST.json',
+    '/analytics/current/source/SOURCE-MANIFEST.json',
+    '/downloads/source/SOURCE-MANIFEST.json',
+    '/downloads/p2lrn-offline-launcher-source.tar.gz'
+  ])assert.ok(html.includes('href="'+src+'"'),'Missing corresponding source link: '+src);
+
   assert.match(html,new RegExp('href="'+prefix+'\\/contacto\\/"'));
   assert.match(html,new RegExp('href="'+prefix+'\\/docs\\/npm\\/"'));
   assert.ok(!html.includes('github.com/josemarcosfrodo/p2lrn/blob/main/LICENSE'),
@@ -114,4 +122,4 @@ assert.ok(!footer.includes('github.com/josemarcosfrodo/p2lrn'));
 
 console.log(JSON.stringify({ok:true,localePages:2,sections:requirements.length,
   licenseAnnex:'A.1-A.4',componentRows:5,faqPerLanguage:6,linksVerified:esLinks.length,
-  englishMirrorProtected:true,sourceAndNoticesLinked:true,commercialContactForm:true,repositoryOwner:'josemarcosdzb'},null,2));
+  englishMirrorProtected:true,sourceAndNoticesLinked:true,commercialContactForm:true,repositoryOwner:'josemarcosdzb',correspondingSourceLinks:6},null,2));
