@@ -320,14 +320,14 @@
     if (!menu || !nav) return;
     nav.classList.remove('is-open');
     menu.setAttribute('aria-expanded', 'false');
-    menu.textContent = 'Menú';
+    menu.textContent = 'Menu';
   };
 
   if (menu && nav) {
     menu.addEventListener('click', () => {
       const open = nav.classList.toggle('is-open');
       menu.setAttribute('aria-expanded', String(open));
-      menu.textContent = open ? 'Cerrar' : 'Menú';
+      menu.textContent = open ? 'Close' : 'Menu';
     });
     nav.addEventListener('click', (event) => {
       if (event.target.closest('a')) closeMenu();
@@ -352,21 +352,21 @@
   const copied = (button) => {
     const previous = button.textContent;
     button.textContent = 'Copiado';
-    announce('Código copiado al portapapeles');
+    announce('Code copied to clipboard');
     window.setTimeout(() => { button.textContent = previous; }, 1200);
   };
 
   document.querySelectorAll('[data-copy]').forEach((button) => {
     button.addEventListener('click', async () => {
       const code = button.closest('.codebox')?.querySelector('code')?.innerText || '';
-      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('No se pudo copiar el código'); }
+      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('Could not copy the code'); }
     });
   });
 
   document.querySelectorAll('[data-copy-inline]').forEach((button) => {
     button.addEventListener('click', async () => {
       const code = button.parentElement?.querySelector('code')?.innerText || '';
-      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('No se pudo copiar el código'); }
+      try { await navigator.clipboard.writeText(code); copied(button); } catch { announce('Could not copy the code'); }
     });
   });
 
@@ -576,7 +576,7 @@
   if (sidebar) {
     const search = document.createElement('div');
     search.className = 'docs-search';
-    search.innerHTML = '<label for="docs-search-input">Buscar en docs</label><input id="docs-search-input" type="search" aria-controls="docs-search-list" aria-describedby="docs-search-status" placeholder="NPM, Skills, Gemini, LMS…" autocomplete="off"><div class="docs-search-results" id="docs-search-list" hidden></div><div class="sr-only docs-search-status" id="docs-search-status" role="status" aria-live="polite" aria-atomic="true"></div>';
+    search.innerHTML = '<label for="docs-search-input">Search documentation</label><input id="docs-search-input" type="search" aria-controls="docs-search-list" aria-describedby="docs-search-status" placeholder="NPM, Skills, Gemini, LMS…" autocomplete="off"><div class="docs-search-results" id="docs-search-list" hidden></div><div class="sr-only docs-search-status" id="docs-search-status" role="status" aria-live="polite" aria-atomic="true"></div>';
     sidebar.prepend(search);
     const input = search.querySelector('input');
     const results = search.querySelector('.docs-search-results');
@@ -613,14 +613,14 @@
           return a;
         }));
         results.hidden = matches.length === 0;
-        resultsStatus.textContent = allMatches.length === 0 ? 'No hay resultados para esta búsqueda.'
-          : allMatches.length === 1 ? '1 resultado de búsqueda.'
-          : allMatches.length + ' resultados de búsqueda' + (allMatches.length > 8 ? '. Se muestran los primeros 8.' : '.');
+        resultsStatus.textContent = allMatches.length === 0 ? 'No results found for this search.'
+          : allMatches.length === 1 ? '1 search result.'
+          : allMatches.length + ' search results' + (allMatches.length > 8 ? '. Se muestran los primeros 8.' : '.');
       } catch {
         if (token !== searchRequestToken) return;
         results.replaceChildren();
         results.hidden = true;
-        resultsStatus.textContent = 'No se ha podido cargar el índice de búsqueda.';
+        resultsStatus.textContent = 'Could not load the search index.';
       }
     });
   }
@@ -635,8 +635,8 @@
     toggle.className = 'docs-sidebar-toggle';
     toggle.setAttribute('aria-controls','docs-sidebar');
     toggle.setAttribute('aria-expanded','false');
-    toggle.innerHTML = '<span>Índice de documentación</span><strong></strong>';
-    toggle.querySelector('strong').textContent = currentLink?.textContent || 'Abrir';
+    toggle.innerHTML = '<span>Documentation index</span><strong></strong>';
+    toggle.querySelector('strong').textContent = currentLink?.textContent || 'Open';
     main?.insertBefore(toggle, sidebar);
     const media = window.matchMedia('(min-width: 901px)');
     const syncToggleHeight = () => {
@@ -652,7 +652,7 @@
       syncToggleHeight();
       sidebar.classList.toggle('is-open',open);
       toggle.setAttribute('aria-expanded',String(open));
-      toggle.querySelector('span').textContent = open ? 'Cerrar índice' : 'Índice de documentación';
+      toggle.querySelector('span').textContent = open ? 'Close index' : 'Documentation index';
       if (open && !media.matches) requestAnimationFrame(revealCurrent);
     };
     toggle.addEventListener('click',()=>setOpen(!sidebar.classList.contains('is-open')));
@@ -694,7 +694,7 @@
       used.add(id); heading.id=id;
     });
 
-    const pageTitle = docArticle.querySelector('.doc-hero h1')?.textContent?.trim() || document.title.split('—')[0].trim() || 'Esta página';
+    const pageTitle = docArticle.querySelector('.doc-hero h1')?.textContent?.trim() || document.title.split('—')[0].trim() || 'This page';
     const mobileIndexCurrent=document.querySelector('.docs-sidebar-toggle strong');
     if (mobileIndexCurrent) {
       mobileIndexCurrent.textContent=pageTitle;
@@ -740,14 +740,14 @@
       toggle.type='button';
       toggle.className='doc-page-toc-toggle';
       toggle.setAttribute('aria-expanded','false');
-      toggle.innerHTML='<span>En esta página</span><strong></strong>';
+      toggle.innerHTML='<span>On this page</span><strong></strong>';
       toggle.querySelector('strong').textContent=headings[0]?.textContent || '';
 
       const nav=document.createElement('nav');
       nav.className='doc-page-toc-nav';
-      nav.setAttribute('aria-label','En esta página');
+      nav.setAttribute('aria-label','On this page');
       const title=document.createElement('strong');
-      title.textContent='En esta página';
+      title.textContent='On this page';
       const list=document.createElement('ol');
       const links=[];
 
@@ -874,7 +874,7 @@
         form.reset();
         if (status) status.textContent = 'Mensaje enviado. Gracias por contactar.';
       } catch (error) {
-        if (status) status.textContent = error?.message === 'contact_rate_limited' ? 'Límite de envíos alcanzado. Inténtalo más tarde.' : 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
+        if (status) status.textContent = error?.message === 'contact_rate_limited' ? 'Message limit reached. Try again later.' : 'Could not send the message. Try again.';
       } finally {
         if (button) button.disabled = false;
       }
@@ -1043,8 +1043,8 @@
     return url.origin===location.origin&&url.pathname==='/p2lrn.js';
   });
   const revision=entry?new URL(entry.src).searchParams.get('v'):null;
-  label.textContent=revision?'Web '+revision.slice(0,12):'Web sin revisión';
-  label.title='Revisión de los archivos web; la versión npm se muestra por separado';
+  label.textContent=revision?'Web '+revision.slice(0,12):'Website not verified';
+  label.title='Website files checked; the npm package version is displayed separately';
 })();
 
 /* Accessible navigation landmarks and keyboard-operable horizontal scrolling. */
@@ -1054,8 +1054,8 @@
       const label=nav.getAttribute('aria-label') || 'documentación';
       if(!label.startsWith('Subsecciones de '))nav.setAttribute('aria-label','Subsecciones de '+label);
     });
-    document.querySelectorAll('nav.resource-links:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Recursos técnicos'));
-    document.querySelectorAll('nav.doc-pager:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Navegación entre guías'));
+    document.querySelectorAll('nav.resource-links:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Technical resources'));
+    document.querySelectorAll('nav.doc-pager:not([aria-label])').forEach(nav=>nav.setAttribute('aria-label','Guide navigation'));
     const updateScrollable=()=>{
       for(const el of document.querySelectorAll('pre,.capability-table-wrap,.capability-matrix')){
         const overflowing=el.clientWidth>0&&el.scrollWidth>el.clientWidth+1;
