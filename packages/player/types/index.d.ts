@@ -25,6 +25,28 @@ export interface P2LRNResolvedResourceUrl {
   seekable?: boolean;
 }
 
+
+export type P2LRNResultIdentity =
+  | {mode:'platform';issuer:string;subjectId:string;label?:string}
+  | {mode:'code';code:string;issuer?:string;label?:string};
+export interface P2LRNResultRecorder {
+  readonly identity:P2LRNResultIdentity;
+  readonly attemptId:string;
+  readonly count:number;
+  record(event:{type:string;detail?:unknown}):void;
+  finish():Promise<Record<string,unknown>>;
+  download(filename?:string):Promise<Record<string,unknown>>;
+  stop():void;
+}
+export interface P2LRNResultOptions {
+  identity:P2LRNResultIdentity;
+  courseId?:string;
+  courseTitle?:string;
+  attemptId?:string;
+  onResult?:(result:Record<string,unknown>)=>unknown|Promise<unknown>;
+}
+export declare function createResultRecorder(player:EventTarget,options:P2LRNResultOptions):P2LRNResultRecorder;
+
 export interface P2LRNHostContext {
   packageId?: string | null;
   contentRoot?: string | null;
