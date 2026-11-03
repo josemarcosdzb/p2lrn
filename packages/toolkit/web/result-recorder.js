@@ -50,7 +50,7 @@ function pickScore(detail){
   if(Number.isFinite(normalized)&&normalized>=0&&normalized<=1)return {score:normalized,maxScore:1};
   return null;
 }
-export function createP2LRNResultRecorder(player,{identity,courseId='',courseTitle='',attemptId='',onResult=null}={}){
+export function createResultRecorder(player,{identity,courseId='',courseTitle='',attemptId='',onResult=null}={}){
   if(!player||typeof player.addEventListener!=='function')throw new TypeError('Se necesita una instancia de P2LRN Player.');
   const person=normalizeIdentity(identity);
   const attempt=clean(attemptId)||uuid();
