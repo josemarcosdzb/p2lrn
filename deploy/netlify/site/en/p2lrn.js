@@ -456,19 +456,6 @@
     ]],
   ]);
 
-  // IA topics are part of a single guide. They are anchors, not extra pages.
-  const DOC_AI_TOPICS = Object.freeze([
-    ['para-que','What you can do'],
-    ['crear-cursos','Create courses'],
-    ['chatgpt','ChatGPT'],
-    ['claude','Claude'],
-    ['gemini','Gemini'],
-    ['grok','Grok'],
-    ['conectar-ordenador','Connect your computer'],
-    ['servicios-web','Access from the web'],
-    ['comprobar','Checks'],
-  ]);
-
   const DOC_SECTION_LABELS = Object.freeze({
     EMPEZAR:'Empezar',
     INSTALAR:'Install',
@@ -552,20 +539,6 @@
             if (current===normalizePath(childHref)) childLink.setAttribute('aria-current','page');
             else if (selected===normalizePath(childHref)) childLink.setAttribute('aria-current','location');
             childNav.append(childLink);
-            if (childHref==='/docs/conectores/ia/' && selected===normalizePath(childHref)) {
-              const topics=document.createElement('div');
-              topics.className='doc-ai-topics';
-              topics.setAttribute('role','group');
-              topics.setAttribute('aria-label','Apartados de Conectores para IA');
-              for (const [id,label] of DOC_AI_TOPICS) {
-                const topic=document.createElement('a');
-                topic.href='/en/docs/conectores/ia/#'+id;
-                topic.dataset.targetId=id;
-                topic.textContent=label;
-                topics.append(topic);
-              }
-              childNav.append(topics);
-            }
           }
           fragment.append(childNav);
         }
@@ -774,20 +747,12 @@
           if (active) link.setAttribute('aria-current','location');
           else link.removeAttribute('aria-current');
         });
-        const sectionId=heading.closest('.doc-section')?.id || '';
-        document.querySelectorAll('.doc-ai-topics a[data-target-id]').forEach((link)=>{
-          if (link.dataset.targetId===sectionId)link.setAttribute('aria-current','location');
-          else link.removeAttribute('aria-current');
-        });
         toggle.querySelector('strong').textContent=heading.textContent;
       };
 
       let frame=0;
       const syncActive=()=>{
         frame=0;
-        // The IA sidebar identifies a section once its title enters the
-        // reading area, not only after it reaches the very top. This keeps
-        // deep-link redirects and smooth anchor scrolling understandable.
         const line=Math.max(104,window.innerHeight*(
           currentPath==='/docs/conectores/ia/' ? .58 : .2));
         let active=headings[0];
