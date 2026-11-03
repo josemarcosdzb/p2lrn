@@ -65,3 +65,39 @@ SHA-256 detecta modificaciones accidentales o discordancias del archivo respecto
 ## 6. Publicación y compatibilidad
 
 Antes de publicar paquetes y CDN: reconstruir los artefactos de Player y Analytics, pasar las pruebas de identidad, lectura de URL, múltiples alumnos, rechazo de manipulaciones, compatibilidad con datos heredados, rutas npm/exports y QA visual ES/EN. Mantener `main` sin modificar mientras el PR esté en borrador.
+
+## 7. Índice estático: creación y actualización
+
+Para consultar múltiples alumnos mediante `src`, reúne los `.p2lrn-result` en una carpeta de resultados de acceso autorizado. Crea `index.p2lrn-results.json` en esa carpeta:
+
+```json
+{
+  "schema": "https://p2lrn.org/schema/analytics-results-index/1",
+  "results": ["resultado-001.p2lrn-result", "resultado-002.p2lrn-result"]
+}
+```
+
+Los nombres se resuelven **respecto a la URL del índice**, nunca respecto a la ruta del curso. La lectura de cada resultado exige SHA-256 válido; las entradas de un índice no pueden apuntar a otro origen. Límite: 500 resultados por importación.
+
+Cuando llega un resultado nuevo:
+1. Conservar el archivo con un nombre único sin sobrescribir intentos anteriores.
+2. Añadir su nombre al array `results` o regenerar el índice completo.
+3. Actualizar los archivos y el índice en el alojamiento autorizado.
+4. Refrescar Analytics y comprobar la caché del índice.
+
+Para automatizar el segundo paso, descargar `/examples/p2lrn-results-index.mjs` y ejecutar `node p2lrn-results-index.mjs ./resultados`. El script valida los resultados locales, reconstruye el índice sin conexiones de red y no reemplaza el índice existente si alguno falla. No convierte datos ni genera una base de datos.
+
+## 8. Cómo llegan los archivos al profesor
+
+**Sin plataforma:** el alumno completa la entrega y descarga su archivo `.p2lrn-result`. Debe entregarlo por un canal acordado (USB, correo, carpeta compartida autorizada). El profesor lo importa junto a los demás, sin índice ni red. El archivo no viaja automáticamente entre ordenadores.
+
+**Con plataforma autenticada:** el host aporta su identidad de usuario al capturador, y una función autorizada de la propia plataforma puede recibir y guardar el archivo completo en almacenamiento privado de ficheros. La plataforma debe autenticar la sesión, autorizar el acceso a los datos, conservar los archivos y poner los resultados a disposición del profesor (por importación o por un índice protegido). No se requiere una base de datos, pero **sí un mecanismo real de entrega y control de acceso** cuando los alumnos trabajan en equipos distintos.
+
+Una web estática pública no proporciona autenticación de resultados por sí sola. Si no existe una ruta privada de descarga, se debe utilizar la importación local.
+
+## 9. Documentación de integración y pruebas
+
+- Guía CDN español: `/docs/cdn/analytics/`; inglés: `/en/docs/cdn/analytics/`.
+- Guía NPM español: `/docs/npm/analytics/`; inglés: `/en/docs/npm/analytics/`.
+- Ambas guías documentan las dos identidades, `src`, creación y actualización del índice, entrega al profesor, privacidad, solución de errores y disponibilidad de versiones.
+- Prueba `packages/analytics/test/results-index-script.test.mjs`: genera el índice, lo actualiza cuando llega otro alumno y evita sobrescribirlo con un resultado inválido.
