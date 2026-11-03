@@ -17,7 +17,7 @@
 <h2>What do you want to do?</h2>
 <div class="reference-table">
 <div><strong>Create a new course</strong><p>Use a <a href="#crear-cursos">Skill</a> so that the AI ​​prepares the content and, if you have the necessary tools, generates a file <code>.p2lrn</code> downloadable. It does not need to access your folders.</p></div>
-<div><strong>Consult or modify existing courses</strong><p>Use a <a href="#conectar-ordenador">conector MCP</a> to give access to a specific folder and authorized tools. You can start with read permissions and enable drafts later.</p></div>
+<div><strong>Consult or modify existing courses</strong><p>Use a <a href="#conectar-ordenador">MCP connector</a> to give access to a specific folder and authorized tools. You can start with read permissions and enable drafts later.</p></div>
 </div>
 <p><strong>These are different mechanisms.</strong> A Skill provides instructions and scripts for a task; MCP allows an application to invoke P2LRN tools. None replaces the Player or the visual Studio editor. Choose your platform first, then follow the installation steps for that environment.</p>
 </section>
@@ -32,11 +32,11 @@
 <li>Specify the title, language, structure, quizzes and games. Ask for an <strong>actual file</strong> and not just a content outline.</li>
 <li>Verify that the packager and validator have been run. Download the <code>.p2lrn</code> and try it on <a href="/en/demo/">Player</a> or <a href="/en/studio/">Studio</a>.</li>
 </ol>
-<div class="codebox"><div class="codebox-head"><span>Example for an AI with the P2LRN Skill installed</span><button type="button" data-copy="">Copy</button></div><pre><code>Create a P2LRN course in English about digital safety:
+<div class="codebox"><div class="codebox-head"><span>Example for an AI with the P2LRN Skill installed</span><button type="button" data-copy="">Copy</button></div><pre><code>Create a P2LRN introductory science course in English:
 3 units, 6 lessons, 10 questions, and 2 games.
 Run the P2LRN packager and validate the result.
 Give me the downloadable .p2lrn file.</code></pre></div>
-<p>If your application cannot run the packager, it can help you plan and structure the content, but it should not claim to have generated a valid package. The complete visual creation is still available at <a href="/en/studio/">Studio</a>.</p>
+<p>If your application cannot run the packager, it may help plan the course, but it must not claim to have generated a valid package. You can also create and edit the course visually in <a href="/en/studio/">Studio</a>.</p>
 </section>
 
 <section class="doc-section" id="chatgpt">
@@ -45,7 +45,7 @@ Give me the downloadable .p2lrn file.</code></pre></div>
 <p>With the “P2LRN – Create and Download” Skill installed and enabled, describe the course you want in the conversation and request the verified file. Skill availability depends on the settings and permissions of your account or workspace. <a href="https://help.openai.com/es-es/articles/20001066-skills-in-chatgpt">Official Skills Help</a>.</p>
 <h3>Work with local courses</h3>
 <p>ChatGPT in the browser cannot open directly <code>localhost</code>. To use the private connector from ChatGPT, check the option <a href="#servicios-web">safe tunnel</a> when it is enabled in your account. There are also MCP servers accessible via HTTPS with authentication. The connection is not installed automatically and is not equivalent to an approved public plugin.</p>
-<p><strong>Testing:</strong> asks “List my authorized P2LRN courses and validate the one I choose.” You must see a real invocation of <code>p2lrn_list_courses</code> and <code>p2lrn_validate_course</code>, not a fabricated response.</p>
+<p><strong>Test:</strong> ask “List my authorized P2LRN courses and validate one I choose.” You must see a real invocation of <code>p2lrn_list_courses</code> and <code>p2lrn_validate_course</code>, not a fabricated response.</p>
 </section>
 
 <section class="doc-section" id="claude">
@@ -53,8 +53,8 @@ Give me the downloadable .p2lrn file.</code></pre></div>
 <h3>Create courses</h3>
 <p>Claude supports Custom Skills in environments that have that feature enabled. Review the Skill before importing it and confirm that its scripts can run and deliver files. <strong>The existing P2LRN Skill in ChatGPT is not automatically certified for Claude.</strong> <a href="https://support.claude.com/es/articles/12512180-usar-habilidades-en-claude">Official Claude Skills Guide</a>.</p>
 <h3>Work with local courses</h3>
-<p>In <strong>Claude Desktop</strong>, you can use the <a href="#conectar-ordenador">conector local</a>- Select Claude in the wizard, authorize a folder and start reading. In Claude web, external connections depend on the plan and the custom connectors supported.</p>
-<p><strong>Testing:</strong> asks «Read the index of this course and propose improvements without changing the original files. Verify that the client accesses the authorized course and respects the permissions.</p>
+<p>In <strong>Claude Desktop</strong>, you can use the <a href="#conectar-ordenador">local connector</a>: select Claude in the wizard, authorize a folder and start reading. In Claude web, external connections depend on the plan and the custom connectors supported.</p>
+<p><strong>Test:</strong> ask “Read the outline of an authorized course and suggest improvements without modifying it.” Confirm that the client really accesses only the permitted course and respects read-only permissions.</p>
 </section>
 
 <section class="doc-section" id="gemini">
@@ -62,18 +62,18 @@ Give me the downloadable .p2lrn file.</code></pre></div>
 <h3>Gemini in the browser</h3>
 <p>Gemini web has customization functions such as <a href="https://support.google.com/gemini/answer/15146780?hl=es">Gems</a> and, depending on account, region and deployment, <a href="https://support.google.com/gemini/answer/17094296">Skills</a>. These options can prepare the course content, but to download a <code>.p2lrn</code> the session must be able to run and verify a supported packager. The P2LRN Skill in Gemini web has not been certified here.</p>
 <h3>Gemini CLI</h3>
-<p>Gemini CLI supports Agent Skills using files <code>SKILL.md</code>. You can check them from the console with <code>gemini skills list</code> and link an authorized Skill folder. To consult courses on your computer you can also configure the <a href="#conectar-ordenador">conector P2LRN</a> seleccionando Gemini CLI. Son opciones distintas.</p>
+<p>Gemini CLI supports Agent Skills using files <code>SKILL.md</code>. You can check them from the console with <code>gemini skills list</code> and link an authorized Skill folder. To consult courses on your computer you can also configure the <a href="#conectar-ordenador">P2LRN connector</a> by selecting Gemini CLI in the setup assistant. These are separate options.</p>
 <div class="codebox"><div class="codebox-head"><span>PowerShell · connect Gemini CLI to your courses</span><button type="button" data-copy="">Copy</button></div><pre><code>.\integration\mcp\Conectar-P2LRN.cmd --root C:\MyCourses --clients gemini --install --verify</code></pre></div>
-<p><code>C:\MyCourses</code> is an example route that must exist. Run the command from the folder where you have extracted the MCP kit. <strong>Testing:</strong> asks Gemini CLI to list and validate an authorized course, and verifies that MCP calls appear.</p>
+<p><code>C:\MyCourses</code> is an example path that must exist. Run this command from the extracted MCP kit folder. <strong>Test:</strong> ask Gemini CLI to list and validate an authorized course and confirm actual MCP tool calls.</p>
 </section>
 
 <section class="doc-section" id="grok">
 <h2>Grok</h2>
 <h3>Create content</h3>
-<p>It offers a <a href="/en/skills/">Skill for Grok Build</a> You need Python to create and validate files <code>.p2lrn</code>. This is not equivalent to a certified Skill for Grok web. If your environment does not run the packager, complete the course at <a href="/en/studio/">Studio</a>.</p>
+<p>A <a href="/en/skills/">Skill for Grok Build</a> is available. Its packager requires Python to create and validate files <code>.p2lrn</code>. This is not equivalent to a certified Skill for Grok web. If your environment does not run the packager, complete the course at <a href="/en/studio/">Studio</a>.</p>
 <h3>Connect courses</h3>
 <p>When your account supports custom MCP connectors, see the configuration options. <a href="https://grok.com/connectors">Grok Connectors</a> and register an authenticated, securely accessible server. The P2LRN kit allows you to generate connection descriptors; it does not install the connector in your account or prove that it has been approved.</p>
-<p><strong>Testing:</strong> asks "List my authorized P2LRN courses and validate one without editing it." Check that Grok really uses the tools and respects the allowed folder.</p>
+<p><strong>Test:</strong> ask "List my authorized P2LRN courses and validate one without editing it." Check that Grok really uses the tools and respects the allowed folder.</p>
 </section>
 
 <section class="doc-section" id="conectar-ordenador">
@@ -89,7 +89,7 @@ Give me the downloadable .p2lrn file.</code></pre></div>
 </ol>
 <div class="codebox"><div class="codebox-head"><span>Windows · from the folder where you extracted P2LRN</span><button type="button" data-copy="">Copy</button></div><pre><code>cd C:\P2LRN-MCP
 .\integration\mcp\Conectar-P2LRN.cmd</code></pre></div>
-<p><code>C:\P2LRN-MCP</code> It is an example path. The wizard configures compatible clients after asking for authorization; The ZIP is not a Skill or a public plugin.</p>
+<p><code>C:\P2LRN-MCP</code> is an example installation path. The wizard asks permission before configuring supported clients. The ZIP is neither a Skill nor a public plugin.</p>
 </section>
 
 <section class="doc-section" id="servicios-web">
