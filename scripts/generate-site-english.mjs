@@ -377,7 +377,8 @@ function registerJson(value,key=''){
   if(['name','headline','description','alternateName','text','about','keywords'].includes(key))register(value);
 }
 function registerHtmlFragment(fragment){
-  const $=load('<body>'+fragment+'</body>',{decodeEntities:false},false);
+  // Cheerio fragment mode drops the special <body> wrapper; use a normal node.
+  const $=load('<div id="p2lrn-i18n-fragment">'+fragment+'</div>',{decodeEntities:false},false);
   const blocked=new Set(['code','pre','script','style','kbd','samp','svg','path']);
   const visit=(node,ancestorBlocked=false)=>{
     const tag=String(node.name||'').toLowerCase();
@@ -385,7 +386,7 @@ function registerHtmlFragment(fragment){
     if(node.type==='text'&&!nextBlocked)register(node.data);
     for(const child of node.children??[])visit(child,nextBlocked);
   };
-  for(const node of $('body').get(0)?.children??[])visit(node,false);
+  for(const node of $('#p2lrn-i18n-fragment').get(0)?.children??[])visit(node,false);
   for(const attr of ['aria-label','aria-description','alt','placeholder','title','data-help'])
     $('['+attr+']').each((_,el)=>register($(el).attr(attr)));
 }
@@ -595,7 +596,8 @@ function translatePlain(value){
   return preserveWhitespace(original,normalizeEnglishCopy(cache[text]??text));
 }
 function translateHtmlFragment(fragment){
-  const $=load('<body>'+fragment+'</body>',{decodeEntities:false},false);
+  // Cheerio fragment mode drops the special <body> wrapper; use a normal node.
+  const $=load('<div id="p2lrn-i18n-fragment">'+fragment+'</div>',{decodeEntities:false},false);
   const blocked=new Set(['code','pre','script','style','kbd','samp','svg','path']);
   const visit=(node,ancestorBlocked=false)=>{
     const tag=String(node.name||'').toLowerCase();
@@ -603,10 +605,10 @@ function translateHtmlFragment(fragment){
     if(node.type==='text'&&!nextBlocked)node.data=translatePlain(node.data);
     for(const child of node.children??[])visit(child,nextBlocked);
   };
-  for(const node of $('body').get(0)?.children??[])visit(node,false);
+  for(const node of $('#p2lrn-i18n-fragment').get(0)?.children??[])visit(node,false);
   for(const attr of ['aria-label','aria-description','alt','placeholder','title','data-help'])
     $('['+attr+']').each((_,el)=>$(el).attr(attr,translatePlain($(el).attr(attr))));
-  return $('body').html()??fragment;
+  return $('#p2lrn-i18n-fragment').html()??fragment;
 }
 function translateJavaScriptSource(source,{rewriteRoutes=true}={}){
   let ast;
