@@ -8,6 +8,7 @@ import {
   analyticsDatasetFromOfflineResult,
   verifyOfflineResultIntegrity,
 } from './model.js';
+import {localizeAnalyticsInterface} from './locale.js';
 
 const HTMLElementBase=globalThis.HTMLElement??class{};
 const esc=(value)=>String(value??'').replace(/[&<>"']/g,(char)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -153,7 +154,7 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   set courseId(value){if(value)this.setAttribute('course-id',value);else this.removeAttribute('course-id');}
   get period(){return this.getAttribute?.('period')||'14';}
   set period(value){this.setAttribute('period',String(value||'14'));}
-  get locale(){return this.getAttribute?.('locale')||'es-ES';}
+  get locale(){return this.getAttribute?.('locale')||(/^en(?:-|$)/i.test(String(this.ownerDocument?.documentElement?.lang??''))?'en-US':'es-ES');}
   set locale(value){this.setAttribute('locale',String(value||'es-ES'));}
   get pageSize(){return Math.max(10,Math.min(200,Math.floor(Number(this.getAttribute?.('page-size'))||50)));}
   set pageSize(value){this.setAttribute('page-size',String(Math.max(10,Math.min(200,Math.floor(Number(value)||50)))));}
@@ -358,6 +359,7 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
     const updated=this.#dataset.generatedAt?dateText(this.#dataset.generatedAt,this.locale):'—';
     const sourceLabel=this.#dataset.metadata?.offlineResult?'Resultado offline':'Datos del Host';
     this.#root.innerHTML='<style>'+css+'</style><div class="shell '+(this.#loading?'loading':'')+'"><div class="topbar"><div class="brand"><span class="mark" aria-hidden="true"></span><span class="brand-copy"><strong>P2LRN Analytics</strong><span>Centro de analítica</span></span></div><div class="top-status"><span class="live-dot"></span><span>'+esc(sourceLabel)+' · actualizado '+esc(updated)+'</span></div></div><div class="toolbar"><div class="control"><label for="pa-search">Buscar alumno</label><input id="pa-search" data-query type="search" placeholder="Nombre, correo, grupo..." value="'+attr(this.#query)+'"></div><div class="control"><label for="pa-course">Curso</label><select id="pa-course" data-course-filter>'+this.#courseOptions()+'</select></div><div class="control"><label for="pa-risk">Señal</label><select id="pa-risk" data-risk-filter><option value="all" '+(this.#risk==='all'?'selected':'')+'>Todas</option><option value="none" '+(this.#risk==='none'?'selected':'')+'>Normal</option><option value="watch" '+(this.#risk==='watch'?'selected':'')+'>Revisar</option><option value="high" '+(this.#risk==='high'?'selected':'')+'>Atención alta</option></select></div><div class="control"><label for="pa-period">Actividad</label><select id="pa-period" data-period><option value="7" '+(this.period==='7'?'selected':'')+'>7 días</option><option value="14" '+(this.period==='14'?'selected':'')+'>14 días</option><option value="30" '+(this.period==='30'?'selected':'')+'>30 días</option><option value="90" '+(this.period==='90'?'selected':'')+'>90 días</option></select></div><div class="action-row"><input data-offline-file type="file" accept=".p2lrn-result,application/vnd.p2lrn-result+json,.json,application/json" hidden><button class="icon-button" type="button" data-import-offline>Abrir resultado</button><button class="icon-button" type="button" data-refresh>Actualizar</button><button class="export-button" type="button" data-export="learners">Exportar</button></div></div><nav class="tabs" aria-label="Vistas de Analytics">'+this.#tabs()+'</nav>'+(this.#error?'<div class="error">'+esc(this.#error)+'</div>':'')+'<main class="main">'+this.#content()+this.#detail()+'</main><div class="footer-note"><span>Las puntuaciones importadas de una entrega offline son informativas salvo que un Host autoritativo las confirme.</span><span>P2LRN Analytics '+esc(P2LRN_ANALYTICS_VERSION)+'</span></div></div>';
+    localizeAnalyticsInterface(this.#root,this.locale);
   }
 }
 
