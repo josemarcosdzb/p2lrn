@@ -98,6 +98,7 @@
         ['/docs/instalar/','Elegir instalación'],
         ['/docs/npm/','NPM'],
         ['/docs/npm/studio/','Studio con NPM'],
+        ['/docs/npm/analytics/','Analytics with NPM'],
         ['/docs/cdn/','CDN'],
         ['/docs/cdn/studio/','Studio mediante CDN'],
         ['/docs/cdn/analytics/','Analytics mediante CDN'],
@@ -375,6 +376,7 @@
         ['/docs/cdn/analytics/','Analytics mediante CDN'],
       ['/docs/npm/','NPM'],
       ['/docs/npm/studio/','Studio con NPM'],
+        ['/docs/npm/analytics/','Analytics with NPM'],
     ]],
     ['CREAR', [
       ['/docs/studio/','Studio visual'],
@@ -476,6 +478,7 @@
     ['/docs/formato/',['/docs/empezar/','Antes de empezar']],
     ['/docs/formato-portable-cursos-interactivos/',['/docs/formato/','Formato P2LRN']],
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
+    ['/docs/npm/analytics/',['/docs/npm/','NPM']],
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
     ['/docs/cdn/analytics/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
