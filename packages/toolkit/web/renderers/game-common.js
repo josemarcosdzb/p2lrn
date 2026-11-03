@@ -1,6 +1,7 @@
 import {buildQuestionnaireGame} from '../questionnaire-games-core.js';
 import {createQuestionnaireGameRuntime} from '../questionnaire-game-runtime.js';
 import {validateQuestionnaire} from '../questionnaire-core.js';
+import {playerUiText} from './ui-i18n.js';
 
 const gameStyleUrl = new URL('../questionnaire-games.css', import.meta.url);
 gameStyleUrl.search = new URL(import.meta.url).search;
@@ -24,14 +25,14 @@ export function el(tag, attrs = {}, text = null) {
 export async function setupGame({container, bytes, decodeJson, rendererId, eventTarget, adapter, context}) {
   const payload = decodeJson(bytes, 'native questionnaire');
   validateQuestionnaire(payload);
-  if(payload.questions.some((question)=>Number.isInteger(question.timeLimitSeconds))){const error=new Error('El renderer de juego no implementa tiempo por pregunta; se requiere el renderer estándar.');error.code='P2LRN_TIMING_UNSUPPORTED';throw error;}
+  if(payload.questions.some((question)=>Number.isInteger(question.timeLimitSeconds))){const error=new Error(playerUiText('El renderer de juego no implementa tiempo por pregunta; se requiere el renderer estándar.'));error.code='P2LRN_TIMING_UNSUPPORTED';throw error;}
   const game = buildQuestionnaireGame(payload, rendererId, {seedSource: context?.contentRoot ?? ''});
-  if (!game.compatible) { const error = new Error(`${game.name} no puede representar fielmente este cuestionario completo. ${game.reasons.join(' ')}`); error.code = 'P2LRN_RENDERER_INCOMPATIBLE'; throw error; }
+  if (!game.compatible) { const error = new Error(playerUiText(game.name)+(playerUiText(' no puede representar fielmente este cuestionario completo. '))+game.reasons.join(' ')); error.code = 'P2LRN_RENDERER_INCOMPATIBLE'; throw error; }
   const runtime = await createQuestionnaireGameRuntime(container, payload, {rendererId, eventTarget, adapter, context});
   container.replaceChildren();
   const shell = el('section', {class: 'p2lrn-game-shell'});
   const header = el('header', {class: 'p2lrn-game-header'});
-  header.append(el('p', {class: 'p2lrn-game-kicker'}, game.name), el('h2', {}, payload.title));
+  header.append(el('p', {class: 'p2lrn-game-kicker'}, playerUiText(game.name)), el('h2', {}, payload.title));
   if (payload.description) header.append(el('p', {class: 'p2lrn-game-description'}, payload.description));
   const initialTiming = runtime.timingSnapshot();
   let timingNode = null;
@@ -40,11 +41,11 @@ export async function setupGame({container, bytes, decodeJson, rendererId, event
     const updateTiming = (timing) => {
       if (!timingNode) return;
       if (runtime.state.completed && runtime.state.completionReason === 'time-limit') {
-        timingNode.textContent = 'Tiempo agotado · actividad finalizada';
+        timingNode.textContent = playerUiText('Tiempo agotado · actividad finalizada');
         shell.querySelectorAll('button, input, textarea, select').forEach((control) => { control.disabled = true; });
         return;
       }
-      timingNode.textContent = `Tiempo restante: ${timing.attemptRemainingSeconds ?? 0}s`;
+      timingNode.textContent = playerUiText(`Tiempo restante: ${timing.attemptRemainingSeconds ?? 0}s`);
     };
     runtime.session.onTimingChange = updateTiming;
     updateTiming(initialTiming);
@@ -56,11 +57,11 @@ export async function setupGame({container, bytes, decodeJson, rendererId, event
 }
 
 export function statusNode(initial = '') {
-  return el('p', {class: 'p2lrn-game-status', role: 'status', 'aria-live': 'polite'}, initial);
+  return el('p', {class: 'p2lrn-game-status', role: 'status', 'aria-live': 'polite'}, playerUiText(initial));
 }
 
 export function actionButton(text, onClick, className = 'p2lrn-game-button') {
-  const button = el('button', {type: 'button', class: className}, text);
+  const button = el('button', {type: 'button', class: className}, playerUiText(text));
   button.addEventListener('click', onClick);
   return button;
 }
@@ -71,13 +72,13 @@ export function finishPanel(runtime, shell, {label = 'Finalizar actividad'} = {}
   const finish = actionButton(label, async () => {
     const score = await runtime.finish();
     if (!score) {
-      status.textContent = 'Faltan respuestas obligatorias.';
+      status.textContent = playerUiText('Faltan respuestas obligatorias.');
       return;
     }
     const reveal=(runtime.payload?.presentation?.showFeedback ?? 'never') !== 'never';
-    status.textContent = reveal && score.graded !== false
+    status.textContent = playerUiText(reveal && score.graded !== false
       ? `Resultado: ${score.pointsEarned} / ${score.pointsPossible} puntos (${Math.round((score.normalized ?? 0) * 100)}%).`
-      : 'Actividad entregada. La corrección no está disponible para el alumno.';
+      : 'Actividad entregada. La corrección no está disponible para el alumno.');
     finish.disabled = true;
     shell.querySelectorAll('button,input,textarea,select').forEach(control=>{control.disabled=true;});
   });
