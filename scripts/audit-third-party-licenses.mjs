@@ -20,7 +20,7 @@ const playerNotice=await read('packages/player/THIRD_PARTY_NOTICES.md');
 const h5pNotice=await read('packages/h5p-libraries/THIRD_PARTY_NOTICES.md');
 for(const [name,notice,needles] of [
   ['player',playerNotice,['Three.js','0.186.1','MIT','Rapier 3D','0.21.0','Apache-2.0','h5p-standalone','3.8.2']],
-  ['h5p-libraries',h5pNotice,[LUMI_H5P_LIBRARY_COMMIT,'AGPL-3.0','library']],
+  ['h5p-libraries',h5pNotice,[LUMI_H5P_LIBRARY_COMMIT,'AGPL-3.0','libraries']],
 ]){
   for(const text of needles)if(!notice.includes(text))errors.push(name+' notice missing '+text);
 }
