@@ -100,6 +100,7 @@
         ['/docs/npm/studio/','Studio con NPM'],
         ['/docs/cdn/','CDN'],
         ['/docs/cdn/studio/','Studio mediante CDN'],
+        ['/docs/cdn/analytics/','Analytics mediante CDN'],
       ],
     },
     {
@@ -371,6 +372,7 @@
       ['/docs/instalar/','Instalación'],
       ['/docs/cdn/','CDN'],
       ['/docs/cdn/studio/','Studio mediante CDN'],
+        ['/docs/cdn/analytics/','Analytics mediante CDN'],
       ['/docs/npm/','NPM'],
       ['/docs/npm/studio/','Studio con NPM'],
     ]],
@@ -475,6 +477,7 @@
     ['/docs/formato-portable-cursos-interactivos/',['/docs/formato/','Formato P2LRN']],
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
+    ['/docs/cdn/analytics/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
     ['/docs/conectores/ia/',['/docs/conectores/','Conectores e integración']],
     ['/docs/skills/',['/docs/conectores/','Conectores e integración']],
