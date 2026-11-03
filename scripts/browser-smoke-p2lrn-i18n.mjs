@@ -163,6 +163,82 @@ async function trueFalseGame(language){
   assert.equal(await page.getByRole('button',{name:language==='en'?'False':'Falso'}).count(),1);
   console.log('BROWSER_GAME_TF_'+language.toUpperCase()+'=pass');
 }
+
+async function additionalGameRenderers(language){
+  const mk=(type,id,prompt,extra)=>({id,type,prompt,points:1,...extra});
+  const matching=mk('matching','m1','Pregunta privada de emparejar',{
+    left:[{id:'l1',text:'Red'},{id:'l2',text:'Blue'},{id:'l3',text:'Green'}],
+    right:[{id:'r1',text:'Rojo'},{id:'r2',text:'Azul'},{id:'r3',text:'Verde'}],
+    solution:{pairs:[{left:'l1',right:'r1'},{left:'l2',right:'r2'},{left:'l3',right:'r3'}]}
+  });
+  const ordering=mk('ordering','o1','Pregunta privada de ordenar',{
+    items:[{id:'o1',text:'First'},{id:'o2',text:'Second'},{id:'o3',text:'Third'}],
+    solution:{order:['o1','o2','o3']}
+  });
+  const classification=mk('classification','c1','Pregunta privada de clasificar',{
+    items:[{id:'i1',text:'Cat'},{id:'i2',text:'Sparrow'}],
+    categories:[{id:'a',text:'Mammal'},{id:'b',text:'Bird'}],
+    solution:{assignments:[{item:'i1',category:'a'},{item:'i2',category:'b'}]}
+  });
+  const lexical=(words)=>words.map((w,i)=>mk('text','word-'+i,'Clue '+(i+1),{solution:{acceptedAnswers:[w]}}));
+  const fillBlanks=mk('fill-blanks','fill1','Complete the sentence',{
+    body:'The capital is {{b1}}',inputMode:'text',blanks:[{id:'b1'}],
+    solution:{answers:{b1:['Madrid']}}
+  });
+  const fixture=[
+    {slug:'memory',questions:[matching]},
+    {slug:'matching',questions:[matching]},
+    {slug:'ordering',questions:[ordering]},
+    {slug:'classification',questions:[classification]},
+    {slug:'word-search',questions:lexical(['TREE','BEAR','EARTH'])},
+    {slug:'crossword',questions:lexical(['TREE','TEAR','RATE','EAT'])},
+    {slug:'rosco',questions:lexical(['APPLE','BANANA','CARROT'])},
+    {slug:'fill-blanks',questions:[fillBlanks]},
+    {slug:'3d',questions:[ordering,matching,classification]}
+  ];
+  for(const cfg of fixture){
+    await page.goto(base+(language==='en'?'/en/':'/'),{waitUntil:'domcontentloaded'});
+    const snapshot=await page.evaluate(async({cfg})=>{
+      document.body.replaceChildren(Object.assign(document.createElement('div'),{id:'game-mount'}));
+      const {render}=await import('/toolkit-web/renderers/questionnaire-'+cfg.slug+'.js');
+      const pkg={
+        schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',
+        version:'0.4.0',title:'Título redactado por el profesor',
+        grading:{mode:'embedded-key'},
+        presentation:{showFeedback:'after-submit'},
+        questions:cfg.questions
+      };
+      const container=document.getElementById('game-mount');
+      const bytes=new TextEncoder().encode(JSON.stringify(pkg));
+      const runtime=await render({container,bytes,
+        decodeJson:(input)=>JSON.parse(new TextDecoder().decode(input)),context:{}});
+      const status=container.querySelector('.p2lrn-game-status')?.textContent
+        ??container.querySelector('.p2lrn-q-progress')?.textContent??'';
+      const buttons=[...container.querySelectorAll('button')].slice(0,16).map(x=>x.textContent.trim());
+      const header=container.querySelector('.p2lrn-game-header h2,.p2lrn-q-header h2')?.textContent;
+      const hasShell=Boolean(container.querySelector('.p2lrn-game-shell,.p2lrn-q-shell'));
+      return {status,buttons,header,hasShell,hasInteractive:container.querySelectorAll('button,input,select,textarea').length>0};
+    },{cfg});
+    assert.equal(snapshot.hasShell,true,'Missing game UI shell: '+cfg.slug+' '+language);
+    assert.equal(snapshot.hasInteractive,true,'No active controls: '+cfg.slug+' '+language);
+    assert.equal(snapshot.header,'Título redactado por el profesor','Course-authored titles must not be translated');
+    if(language==='en'){
+      const uiMarker={
+        memory:/Memorize the cards/,
+        matching:/Select an item on the left/,
+        ordering:/Drag and drop/,
+        classification:/Drag each card/,
+        'word-search':/Drag across a word/,
+        crossword:/Choose a clue/,
+        rosco:/Type your answer/,
+        '3d':/Select an object/
+      };
+      if(uiMarker[cfg.slug])assert.match(snapshot.status,uiMarker[cfg.slug],'Untranslated game instructions: '+cfg.slug);
+    }
+    console.log('BROWSER_GAME_'+cfg.slug.toUpperCase()+'_'+language.toUpperCase()+'=pass');
+  }
+}
+
 try{
   await siteParity();
   await browserNavigation();
@@ -170,6 +246,8 @@ try{
   await standardQuiz('es');
   await trueFalseGame('en');
   await trueFalseGame('es');
+  await additionalGameRenderers('en');
+  await additionalGameRenderers('es');
   assert.deepEqual(exceptions,[],'Browser uncaught errors: '+exceptions.join('; '));
   console.log('P2LRN_BROWSER_I18N_SUITE=PASS');
 }finally{
