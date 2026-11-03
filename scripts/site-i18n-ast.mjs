@@ -11,7 +11,9 @@ export function walkAst(node,visit,parent=null) {
   if(!node||typeof node!=='object'||typeof node.type!=='string')return;
   visit(node,parent);
   for(const [key,value] of Object.entries(node)){
-    if(['start','end','loc','range','raw','value'].includes(key))continue;
+    // AST Property.value can be an expression node. Skipping it silently
+    // drops navigation labels and strings inside object-valued fields.
+    if(['start','end','loc','range','raw'].includes(key))continue;
     if(Array.isArray(value)){
       for(const child of value){
         if(child&&typeof child==='object'&&typeof child.type==='string')walkAst(child,visit,node);
