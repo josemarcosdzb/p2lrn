@@ -112,7 +112,14 @@ test('LTI bilingual docs have a real deployment workflow and distinguish impleme
     assert(html.includes('rel="canonical"'),'Missing canonical: '+guide.language);
     assert(html.includes('hreflang="en"')&&html.includes('hreflang="es"'),
       'Missing bilingual alternates: '+guide.language);
-    assert(!/NRPS is implemented/i.test(html),'NRPS must not be marked as implemented');
+    for(const endpoint of ['/lti/runtime/nrps/memberships',
+      '/lti/admin/nrps/contexts','/lti/admin/nrps/memberships']){
+      assert(html.includes(endpoint),'Missing NRPS API documentation: '+endpoint+' ('+guide.language+')');
+    }
+    assert(html.includes('contextmembership.readonly'),'NRPS OAuth scope not documented');
+    assert(html.includes('id="lti-nrps"'),'Missing accessible NRPS guide section');
+    assert(!/NRPS (?:no está implementado|is not (?:currently )?implemented|is not part of this module)/i.test(html),
+      'Outdated NRPS implementation status in the public documentation');
     assert(html.includes('<section class="doc-section" id="lti-')&&html.includes('class="codebox"'),
       'LTI guide must have readable sections and copyable examples');
   }
