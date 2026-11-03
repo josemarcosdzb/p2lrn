@@ -23,6 +23,21 @@ for(const component of ['toolkit','studio','analytics']){
 
 // Publish the same native executable reviewed by the Windows offline exporter.
 await import('./build-offline-executable.mjs');
+const offlineExecutable=JSON.parse(await readFile(join(outputRoot,'downloads','p2lrn-offline-launcher.json'),'utf8'));
+const nativeSource=JSON.parse(await readFile(join(outputRoot,'downloads','source','SOURCE-MANIFEST.json'),'utf8'));
+if(nativeSource.version!==correspondingVersion||offlineExecutable.correspondingSource?.manifest!=='/downloads/source/SOURCE-MANIFEST.json')
+  throw new Error('Offline launcher has no matching corresponding source manifest');
+for(const entry of nativeSource.files??[]){
+  if(entry.path.split('/').includes('..'))throw new Error('Unsafe native source path');
+  const buf=await readFile(join(outputRoot,'downloads','source',...entry.path.split('/')));
+  const digest='sha256:'+createHash('sha256').update(buf).digest('hex');
+  if(buf.length!==entry.bytes||digest!==entry.sha256)
+    throw new Error('Offline launcher source hash mismatch: '+entry.path);
+}
+const nativeArchive=await readFile(join(outputRoot,'downloads','p2lrn-offline-launcher-source.tar.gz'));
+if(offlineExecutable.correspondingSource.archiveSha256!=='sha256:'+createHash('sha256').update(nativeArchive).digest('hex'))
+  throw new Error('Native source archive hash mismatch');
+
 // The web build publishes real, inspectable connector ZIPs from this same source.
 await import('./build-connector-downloads.mjs');
 // Deterministic downloadable P2LRN Skills for four AI platforms.
