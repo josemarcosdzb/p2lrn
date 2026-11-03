@@ -21,7 +21,7 @@ function hasCapability(capabilities){
 function fallback(container,data,eventTarget,adapter,context){
   const shell=el('section','p2lrn-collaboration p2lrn-collaboration-fallback');
   if(data.heading)shell.append(el('h3',null,data.heading));
-  shell.append(el('p','p2lrn-collaboration-prompt',data.prompt||'Actividad colaborativa'));
+  shell.append(el('p','p2lrn-collaboration-prompt',data.prompt||playerUiText('Actividad colaborativa')));
   const status=el('p','p2lrn-collaboration-status',data.fallbackText||playerUiText('La colaboración no está disponible. Puedes continuar de forma individual.'));
   status.setAttribute('role','status');shell.append(status);
   if(data.mode==='poll'){
