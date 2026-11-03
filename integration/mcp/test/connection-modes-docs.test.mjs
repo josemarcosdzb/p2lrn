@@ -73,23 +73,21 @@ test('one AI guide explains concepts once and documents all four platforms',()=>
   assert(!ai.includes('href="/docs/conectores/local/"'));
   assert(!/<h2>.*sin MCP/i.test(ai),'MCP status must not dominate headings');
   assert((ai.match(/class="codebox"/g)||[]).length>=4);
-  const sidebar=read('deploy/netlify/site/p2lrn.js');
+  const spanishNav=read('deploy/netlify/site/p2lrn.js');
+  const englishNav=read('deploy/netlify/site/en/p2lrn.js');
   const css=read('deploy/netlify/site/p2lrn.css');
-  for(const [id,label] of sections){
-    assert(sidebar.includes("['"+id+"','"+({
-      'para-que':'Qué puedes hacer',
-      'crear-cursos':'Crear cursos',
-      'conectar-ordenador':'Conectar tu ordenador',
-      'servicios-web':'Acceso desde la web',
-      'comprobar':'Comprobaciones',
-    }[id]||label)+"']"),'Sidebar missing topic '+id);
+  for(const nav of [spanishNav,englishNav]){
+    // Sections stay in the content and in the right-hand in-page table of
+    // contents. They must not also appear under the left connector menu.
+    assert(!nav.includes('DOC_AI_TOPICS'),'Legacy left-side IA topic list must not be present');
+    assert(!nav.includes('doc-ai-topics'),'The left menu must not duplicate the page TOC');
+    assert(nav.includes("aside.className='doc-page-toc'"),'Right-hand page index must remain');
+    assert(nav.includes("a.href='#'+heading.id"),'In-page section links must remain');
+    assert(nav.includes("a.setAttribute('aria-current','location')"),'Keyboard/screen-reader current-section semantics must remain');
   }
-  assert(sidebar.includes("topics.setAttribute('aria-label','Apartados de Conectores para IA')"));
-  assert(sidebar.includes("link.dataset.targetId===sectionId"),'Scroll position is not reflected in sidebar');
-  assert(css.includes('.doc-sidebar .doc-ai-topics a[aria-current="location"]'));
+  assert(!css.includes('.doc-sidebar .doc-ai-topics'),'Dead duplicate-sidebar styles must be removed');
   assert(css.includes('.doc-section[id],.doc-anchor-alias[id]'));
-  assert(ai.includes('<html lang="es" class="doc-instant-anchor">'),
-    'AI guide needs instant anchors to keep its active sidebar in sync');
+  assert(ai.includes('<html lang="es" class="doc-instant-anchor">'));
   assert(css.includes('html.doc-instant-anchor{scroll-behavior:auto}'));
 });
 
