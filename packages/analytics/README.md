@@ -16,12 +16,50 @@ const panel=document.querySelector('p2lrn-analytics');
 panel.data = datasetCurso;
 \`\`\`
 
-## CDN
+## CDN — resultados por ruta, sin endpoint
 
-\`\`\`html
-<script src="https://p2lrn.netlify.app/analytics/current/dist/p2lrn-analytics.js"></script>
-<p2lrn-analytics id="analytics-curso"></p2lrn-analytics>
-\`\`\`
+```html
+<script src="https://p2lrn.org/analytics/current/dist/p2lrn-analytics.js"></script>
+<p2lrn-analytics id="panel.analytics" src="/resultados/ana.p2lrn-result"></p2lrn-analytics>
+```
+
+**`src` apunta a `.p2lrn-result`**, no al archivo del curso. Analytics comprueba el SHA-256 y obtiene el dataset del alumno automáticamente.
+
+Para agregar varios alumnos, usa un índice estático `index.p2lrn-results.json`:
+
+```json
+{
+  "schema": "https://p2lrn.org/schema/analytics-results-index/1",
+  "results": ["ana.p2lrn-result", "luis.p2lrn-result"]
+}
+```
+
+```html
+<p2lrn-analytics id="panel.analytics" src="/resultados/index.p2lrn-results.json"></p2lrn-analytics>
+```
+
+No se requiere base de datos. Si sirves resultados identificables desde una web, **protege las rutas mediante autorizaciones del alojamiento**; no los publiques abiertamente.
+
+## NPM — lectura y archivos locales
+
+```bash
+npm install @p2lrn/analytics@0.5.0-alpha.12 @p2lrn/player@0.5.0-alpha.12
+```
+
+```js
+import '@p2lrn/analytics';
+const panel = document.getElementById('panel.analytics');
+panel.src = '/resultados/ana.p2lrn-result';
+```
+
+También se exportan `loadAnalyticsResultSource` y `analyticsDatasetFromResultFiles` desde `@p2lrn/analytics/results`. El método `panel.importOfflineResults(files)` admite varios archivos seleccionados o una carpeta local y los agrupa sin convertirlos manualmente. Los duplicados idénticos se descartan; los archivos alterados se rechazan.
+
+## Identidad del alumno
+
+- **Plataforma:** el host autenticado entrega `{mode:'platform',issuer,subjectId,label}` al generador de resultados de Player.
+- **Sin plataforma:** el profesor asigna un código individual y se usa `{mode:'code',issuer,code,label}`. El alumno introduce su código en la entrega offline.
+
+Ambas opciones producen el mismo esquema `.p2lrn-result`. `assignment.packageId` vincula el resultado con el curso, `attempt.id` distingue intentos y `identity` permite relacionarlos con un alumno. Un código declarado no demuestra identidad real; el hash SHA-256 confirma integridad del archivo, no autenticidad ni notas oficiales.
 
 ## Abrir resultados offline
 
