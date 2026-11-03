@@ -294,4 +294,46 @@ export function playerUiText(value,doc=globalThis.document){
     return 'Three.js · physics: '+(match[1]==='fallback sin físicas'?'fallback without physics':match[1]);
   return source;
 }
+// Compatibility reasons are error diagnostics emitted by questionnaire-games-core.
+// Keep the original Spanish reasons and machine IDs in the model; localize only
+// their presentation. Never rewrite user-authored question prompts or answers.
+const EN_DIAGNOSTICS={
+  "no tiene una respuesta textual inequívoca compatible.":"does not have an unambiguous compatible text answer.",
+  "el rosco necesita exactamente un reto por pregunta.":"the word wheel requires exactly one challenge per question.",
+  "el crucigrama necesita pistas no vacías.":"the crossword requires non-empty clues.",
+  "Todas las respuestas deben tener entre 3 y 17 caracteres y una pista inequívoca.":"All answers must be 3 to 17 characters long and have an unambiguous clue.",
+  "Admite como máximo 80 respuestas; no se eliminan preguntas para forzarlo.":"Up to 80 answers are supported; questions are not dropped to force compatibility.",
+  "Las respuestas no comparten letras suficientes para formar un único crucigrama conectado.":"The answers do not share enough letters to form a connected crossword.",
+  "No se encontró una disposición completa válida; no se genera una versión parcial.":"No valid complete layout was found; a partial version is not generated.",
+  "no se puede expresar como pareja inequívoca.":"cannot be represented as an unambiguous pair.",
+  "Hay pistas repetidas que harían ambiguas las parejas.":"Duplicate clues would make the matches ambiguous.",
+  "Hay respuestas repetidas que harían ambiguas las parejas.":"Duplicate answers would make the matches ambiguous.",
+  "sólo se admiten secuencias completas de al menos 3 elementos.":"only complete sequences of at least 3 items are supported.",
+  "necesita huecos y respuestas.":"requires blanks and answers.",
+  "necesita objetos, categorías y una solución completa.":"requires objects, categories and a complete solution.",
+  "ordenar 3D necesita una solución completa.":"3D ordering requires a complete solution.",
+  "orden 3D inválido.":"invalid 3D order.",
+  "relacionar 3D necesita al menos dos elementos por lado y relaciones.":"3D matching requires at least two items on each side and matching connections.",
+  "hay textos duplicados no distinguibles físicamente.":"duplicate texts cannot be distinguished physically.",
+  "relación 3D apunta a elemento inexistente.":"a 3D connection points to a missing item.",
+  "clasificar 3D necesita objetos, categorías y una asignación completa.":"3D classification requires objects, categories and a complete assignment.",
+  "clasificar 3D necesita textos distinguibles.":"3D classification requires distinct item texts.",
+  "asignación 3D inválida o duplicada.":"invalid or duplicate 3D assignment.",
+  "la representación 3D admite ordenar, relacionar y clasificar.":"the 3D renderer supports ordering, matching and classification."
+};
+export function playerDiagnosticText(value,doc=globalThis.document){
+  const source=String(value??'');
+  if(!/^en(?:-|$)/i.test(String(doc?.documentElement?.lang??'es')))return source;
+  const pivot=source.lastIndexOf(': ');
+  const prefix=pivot<0?'':source.slice(0,pivot+2);
+  const explanation=pivot<0?source:source.slice(pivot+2);
+  const known=EN_DIAGNOSTICS[explanation];
+  if(known)return prefix+known;
+  let match;
+  if((match=/^Sólo se pudieron colocar (\d+) de (\d+) respuestas; no se genera una versión parcial\.$/.exec(explanation)))
+    return prefix+'Only '+match[1]+' of '+match[2]+' answers could be placed; a partial version is not generated.';
+  if((match=/^Hay más retos \((\d+)\) que letras distintas disponibles \((\d+)\)\.$/.exec(explanation)))
+    return prefix+'There are more challenges ('+match[1]+') than available distinct letters ('+match[2]+').';
+  return source;
+}
 export const PLAYER_UI_TRANSLATIONS=242;
