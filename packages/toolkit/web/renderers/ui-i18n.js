@@ -217,7 +217,21 @@ const EN={
   "Crucigrama reiniciado.": "Crossword restarted.",
   "Nota individual": "Individual note",
   "Enviar voto": "Submit vote",
-  "Eliminar": "Delete"
+  "Eliminar": "Delete",
+  "Descubre dos cartas y forma parejas.": "Turn over two cards and find matching pairs.",
+  "Objeto clasificado correctamente.": "Object classified correctly.",
+  "Preparando escena 3D…": "Preparing 3D scene…",
+  "Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.": "Move using WASD or arrow keys. Drag the background to rotate the camera; drag a block directly to a position or category, or connect two matching objects with a rope. You can also select the blocks and use the accessible controls.",
+  "Resultados": "Results",
+  "Aportación ": "Contribution ",
+  "Comentario para la aportación ": "Comment on contribution ",
+  "Enviar comentario": "Submit comment",
+  "Documento": "Document",
+  "Autoría y derechos": "Authorship and rights",
+  "Autor del contenido": "Content author",
+  "Fecha de creación": "Creation date",
+  "Licencia · Condiciones de uso y distribución": "License · Terms of use and distribution",
+  "Derechos de autor · Titular de los derechos": "Copyright · Rights holder"
 };
 export function playerUiText(value,doc=globalThis.document){
   const source=String(value??'');
@@ -241,6 +255,8 @@ export function playerUiText(value,doc=globalThis.document){
     return 'Turn over two cards and find matching pairs. '+match[1]+'/'+match[2]+' pairs.';
   if((match=/^Crucigrama entregado: ([\d.]+)\/([\d.]+) puntos\.$/.exec(source)))
     return 'Crossword submitted: '+match[1]+'/'+match[2]+' points.';
+  if((match=/^Aportación (\d+)$/.exec(source)))return 'Contribution '+match[1];
+  if((match=/^Comentario para la aportación (\d+)$/.exec(source)))return 'Comment on contribution '+match[1];
   if((match=/^Reto (\d+)$/.exec(source)))return 'Challenge '+match[1];
   if((match=/^Prueba (\d+) de (\d+)$/.exec(source)))return 'Trial '+match[1]+' of '+match[2];
   if((match=/^Tiempo restante: (\d+)s$/.exec(source)))return 'Time remaining: '+match[1]+'s';
@@ -265,4 +281,4 @@ export function playerUiText(value,doc=globalThis.document){
     return 'Three.js · physics: '+(match[1]==='fallback sin físicas'?'fallback without physics':match[1]);
   return source;
 }
-export const PLAYER_UI_TRANSLATIONS=217;
+export const PLAYER_UI_TRANSLATIONS=231;
