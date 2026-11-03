@@ -122,7 +122,7 @@ export function analyticsUiText(value,locale='es-ES'){
   // Count and period labels contain dynamic numbers; translate only their
   // known interface prefixes and suffixes.
   let result=text;
-  result=result.replace(/Mostrando (?=\d)/g,'Showing ').replace(/ (\d[\d,.]*) de (?=\d)/g,' $1 of ');
+  result=result.replace(/Mostrando (?=\d)/g,'Showing ').replace(/\sde\s(?=\d)/g,' of ');
   result=result.replace(/Página (?=\d)/g,'Page ');
   result=result.replace(/ (activos \(30 días\)|matrículas|intentos|eventos normalizados|eventos|registros visibles)$/g,(_m,k)=>' '+(EN[k]??k));
   result=result.replace(/ calificaciones · oficiales e informativas diferenciadas$/g,' grades · official and informational shown separately');
