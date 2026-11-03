@@ -1,6 +1,7 @@
 import {ROSCO_RENDERER} from '../renderer-registry.js';
 import {normalizeWord} from '../questionnaire-games-core.js';
 import {el, setupGame, statusNode, stylesheets} from './game-common.js';
+import {playerUiText} from './ui-i18n.js';
 export {stylesheets};
 
 export async function render(options){
@@ -10,26 +11,26 @@ export async function render(options){
   let index=0,locked=false,ended=false;
   const states=new Map(),timers=new Set(),letterNodes=new Map();
   const layout=el('div',{class:'p2lrn-rosco-layout'});
-  const board=el('section',{class:'p2lrn-rosco-board','aria-label':'Progreso del rosco'});
-  const ring=el('div',{class:'p2lrn-rosco',role:'group','aria-label':'Letras del rosco'});
+  const board=el('section',{class:'p2lrn-rosco-board','aria-label':playerUiText('Progreso del rosco')});
+  const ring=el('div',{class:'p2lrn-rosco',role:'group','aria-label':playerUiText('Letras del rosco')});
   const center=el('div',{class:'p2lrn-rosco-center','aria-live':'polite'});
   const progress=el('strong',{class:'p2lrn-rosco-progress'},'0 / '+elements.length);
-  center.append(progress,el('span',{},'respondidas'));
+  center.append(progress,el('span',{},playerUiText('respondidas')));
   ring.append(center);
-  const legend=el('p',{class:'p2lrn-rosco-legend'},'Selecciona una letra para responder o usa «Pasar».');
+  const legend=el('p',{class:'p2lrn-rosco-legend'},playerUiText('Selecciona una letra para responder o usa «Pasar».'));
   board.append(ring,legend);
   const challenge=el('section',{class:'p2lrn-rosco-challenge'});
   const label=el('p',{class:'p2lrn-rosco-prompt'});
   const clue=el('h3');
   const input=el('input',{
     type:'text',class:'p2lrn-game-input',autocomplete:'off',spellcheck:'false',
-    'aria-label':'Respuesta del rosco',placeholder:'Escribe tu respuesta',
+    'aria-label':playerUiText('Respuesta del rosco'),placeholder:playerUiText('Escribe tu respuesta'),
   });
   const status=statusNode('Escribe la respuesta o pasa a otra letra.');
   const actions=el('div',{class:'p2lrn-game-actions'});
-  const check=el('button',{type:'button',class:'p2lrn-game-button'},'Comprobar');
-  const pass=el('button',{type:'button',class:'p2lrn-game-button'},'Pasar');
-  const reset=el('button',{type:'button',class:'p2lrn-game-button'},'Reiniciar');
+  const check=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Comprobar'));
+  const pass=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Pasar'));
+  const reset=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Reiniciar'));
   const stats=el('p',{class:'p2lrn-rosco-stats','aria-live':'polite'});
   const schedule=(fn,ms)=>{
     const id=window.setTimeout(()=>{timers.delete(id);fn();},ms);
@@ -48,17 +49,17 @@ export async function render(options){
     const wrong=[...states.values()].filter(state=>state==='wrong').length;
     progress.textContent=states.size+' / '+elements.length;
     stats.textContent=ended&&showFeedback
-      ?correct+' aciertos · '+wrong+' fallos'
-      :'Respondidas: '+states.size+' de '+elements.length;
+      ?correct+playerUiText(' aciertos · ')+wrong+playerUiText(' fallos')
+      :playerUiText('Respondidas: ')+states.size+playerUiText(' de ')+elements.length;
   };
   const finishIfDone=()=>{
     if(ended||states.size!==elements.length)return ended;
     ended=true;
     input.disabled=true;check.disabled=true;pass.disabled=true;
     const correct=[...states.values()].filter(state=>state==='correct').length;
-    status.textContent=showFeedback?'Rosco completado: '+correct+' aciertos de '+elements.length+'.':'Rosco completado. Respuestas enviadas.';
+    status.textContent=showFeedback?playerUiText('Rosco completado: ')+correct+playerUiText(' aciertos de ')+elements.length+'.':playerUiText('Rosco completado. Respuestas enviadas.');
     void runtime.finish({allowMissingRequired:true}).then(score=>{
-      if(score&&showFeedback)status.textContent='Rosco completado: '+correct+' aciertos de '+elements.length+' · '+score.pointsEarned+'/'+score.pointsPossible+' puntos.';
+      if(score&&showFeedback)status.textContent=playerUiText('Rosco completado: ')+correct+playerUiText(' aciertos de ')+elements.length+' · '+score.pointsEarned+'/'+score.pointsPossible+playerUiText(' puntos.');
     });
     return true;
   };
@@ -70,13 +71,13 @@ export async function render(options){
       node.classList.toggle('is-wrong',ended&&showFeedback&&state==='wrong');
       node.classList.toggle('is-current',!state&&elements[index]?.id===id);
       node.disabled=Boolean(state)||locked;
-      node.setAttribute('aria-label','Letra '+node.textContent+(state?(ended&&showFeedback?(state==='correct'?', acertada':', fallada'):', respondida'):elements[index]?.id===id?', actual':', pendiente'));
+      node.setAttribute('aria-label',playerUiText('Letra ')+node.textContent+(state?(ended&&showFeedback?(state==='correct'?playerUiText(', acertada'):playerUiText(', fallada')):playerUiText(', respondida')):elements[index]?.id===id?playerUiText(', actual'):playerUiText(', pendiente')));
       if(!state&&elements[index]?.id===id)node.setAttribute('aria-current','true');
       else node.removeAttribute('aria-current');
     });
     if(finishIfDone())return;
     const item=elements[index];
-    label.textContent=item.mode==='starts'?'Empieza por '+item.letter:'Contiene la '+item.letter;
+    label.textContent=(item.mode==='starts'?playerUiText('Empieza por '):playerUiText('Contiene la '))+item.letter;
     clue.textContent=item.clue;
     input.value='';
     input.disabled=locked||states.has(item.id);
@@ -86,7 +87,7 @@ export async function render(options){
   };
 
   elements.forEach((item,itemIndex)=>{
-    const node=el('button',{type:'button',class:'p2lrn-rosco-letter','aria-label':'Letra '+item.letter},item.letter);
+    const node=el('button',{type:'button',class:'p2lrn-rosco-letter','aria-label':playerUiText('Letra ')+item.letter},item.letter);
     // Every question gets one position on the circumference; six questions
     // form a six-point rosco, rather than inventing missing alphabet entries.
     const theta=-Math.PI/2+(Math.PI*2*itemIndex/Math.max(1,elements.length));
@@ -95,7 +96,7 @@ export async function render(options){
     node.addEventListener('click',()=>{
       if(locked||states.has(item.id))return;
       index=itemIndex;
-      status.textContent='Letra seleccionada: '+item.letter+'.';
+      status.textContent=playerUiText('Letra seleccionada: ')+item.letter+'.';
       redraw();
     });
     letterNodes.set(item.id,node);ring.append(node);
@@ -107,7 +108,7 @@ export async function render(options){
     const correct=normalizeWord(input.value)===item.word;
     states.set(item.id,correct?'correct':'wrong');
     if(correct)runtime.applyPatch(item.questionId,item.patch);
-    status.textContent='Respuesta registrada. La corrección se mostrará al terminar, si está habilitada.';
+    status.textContent=playerUiText('Respuesta registrada. La corrección se mostrará al terminar, si está habilitada.');
     locked=true;redraw();
     schedule(()=>{
       locked=false;
@@ -118,15 +119,15 @@ export async function render(options){
   pass.addEventListener('click',()=>{
     if(locked||ended)return;
     index=nextPending(index);
-    status.textContent='Letra aplazada. Puedes volver cuando quieras.';
+    status.textContent=playerUiText('Letra aplazada. Puedes volver cuando quieras.');
     redraw();
   });
   reset.addEventListener('click',()=>{
     if(runtime.reset()===false){
-      status.textContent='No quedan intentos para reiniciar el rosco.';return;
+      status.textContent=playerUiText('No quedan intentos para reiniciar el rosco.');return;
     }
     clearTimers();states.clear();index=0;locked=false;ended=false;
-    status.textContent='Rosco reiniciado.';
+    status.textContent=playerUiText('Rosco reiniciado.');
     redraw();
   });
   input.addEventListener('keydown',event=>{
