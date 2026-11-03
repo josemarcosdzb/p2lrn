@@ -14,26 +14,36 @@ La base se declara *source-available* y no aprobada como open source por OSI. El
 - **A.3:** Studio y Analytics **oficiales y sin modificar**, de uso propio dentro de instituciones públicas/privadas y academias, incluso cursos de pago. Configuraciones e integraciones documentadas permitidas; modificación, reventa, SaaS/LMS/servicio comercial para terceros requiere autorización previa y expresa.
 - **A.4:** los autores conservan derechos sobre contenidos y resultados; terceros, marcas y derechos independientes quedan fuera de la concesión.
 
-## Cambios implementados
+## Cambios incorporados y verificados (3 de noviembre de 2026)
 
-- `deploy/netlify/site/licencia/index.html`: explicación en español, actualización de jerarquía visual, diez secciones, tabla semántica de cinco componentes, cinco verificaciones de redistribución, seis preguntas frecuentes, enlace al contrato `/LICENSE`, `/NOTICE.md`, y el manifiesto de fuente del Player.
-- `deploy/netlify/site/en/licencia/index.html`: versión inglesa editorialmente revisada, estructuralmente equivalente, con aviso de prevalencia del contrato español; corrige el anterior `Volver arriba` residual.
-- `deploy/netlify/site/p2lrn.css`: estilos limitados a `.license-page`, adaptación a móvil, tabla desplazable con teclado, estados de foco, FAQ nativas con `details/summary` y control de movimiento reducido.
-- `scripts/generate-site-english.mjs`: retiene la página jurídica inglesa como documento revisado para no sobrescribirla al regenerar todo `/en/`.
-- `scripts/verify-license-page.mjs`: verificación de referencias al Anexo A, paridad ES/EN de estructura, enlaces y anclas, cinco filas, seis FAQ, cobertura de fuente, avisos y adaptación.
-- `scripts/verify-license-integration.mjs`: incorpora la comprobación anterior al flujo de integración ya usado en CI.
+- Pie de página: repositorio `https://github.com/josemarcosdzb/p2lrn` en Recursos y crédito final «Creado por Jose Marcos Diaz» / «Created by Jose Marcos Diaz». Se aplica al footer compartido, sin alterar los pies internos de formularios.
+- Metadatos `repository.url` corregidos en los cinco paquetes npm; `scripts/check-publish-ready.mjs` impide reintroducir el antiguo propietario.
+- Página bilingüe de licencias con tabla, obligaciones, FAQ, enlaces a `LICENSE` y `NOTICE.md`, y seis enlaces a los manifiestos de fuente de Player, Toolkit, Studio, Analytics y lanzador Windows, incluida descarga `.tar.gz`.
+- Licencias comerciales especiales: las peticiones se realizan exclusivamente por el formulario de `/contacto/#solicitar-licencia` o `/en/contacto/#solicitar-licencia`; el formulario explica qué información enviar y que solo un acuerdo expreso por escrito puede autorizar el uso.
+- Generadores de código fuente correspondientes por versión para Toolkit/Studio/Analytics y para el lanzador nativo, con SHA-256. El build de CDN publica snapshots de fuente por versión además de `current`.
+- Auditoría H5P real sobre el snapshot fijado de Lumi: 144 bibliotecas, 4722 archivos, 96 MIT declarados, 11 MIT por texto completo del README, 2 MPL, 1 GPL3, 2 dominio público y **32 sin evidencia individual suficiente**.
+- El control estricto `scripts/audit-third-party-licenses.mjs --strict` está integrado en `verify-npm-pack` y **bloquea intencionadamente la publicación** hasta resolver esos 32 casos. Consulta `docs/engineering/licensing-third-party-audit-2026-11-03.md`.
+- CI nueva en la rama: `.github/workflows/p2lrn-license-design-qa.yml` con Windows self-hosted, Go 1.26, Chrome, build y gate de licencias.
 
-Los ejemplos y la tabla son resúmenes informativos; la autoridad sigue siendo LICENSE. **No se ha habilitado un sistema de compra, cobro o concesión automática de licencias.**
+## Resultado de las pruebas ejecutadas
 
-## Qué falta antes de dar por completa la sección
+- `node scripts/check-publish-ready.mjs` y `node scripts/verify-license-integration.mjs`: correctas.
+- `node --test deploy/netlify/test/site-footer.test.mjs deploy/netlify/test/corresponding-source.test.mjs`: **9/9 correctas**; los tests modifican un archivo de prueba para demostrar que la verificación SHA detecta corrupción.
+- `node scripts/browser-license-footer-qa.mjs`: **8/8** combinaciones ES/EN × 320, 390, 768 y 1280 px correctas; sin scroll horizontal, con enlaces y crédito en su posición.
+- Fuente con hashes validada localmente: Toolkit **181 archivos**, Studio **51**, Analytics **10**, y el código nativo Go en archivo verificable.
+- `node packages/player/scripts/build-dist.mjs` produjo 131 archivos con textos de licencias de Three.js, Rapier y H5P Standalone.
+- `node packages/h5p-libraries/scripts/build.mjs` produjo 144 bibliotecas. La auditoría estricta falló por los 32 casos sin prueba de licencia; no se han ocultado o eliminado.
+- `node deploy/netlify/build-site.mjs`: preparación de CDN completada, compilación completa interrumpida porque el equipo de pruebas no disponía de Go. El workflow sí establece Go 1.26; ejecución de CI final no confirmada.
 
-1. **Revisión jurídica formal** de la versión 1.0 y del Anexo A, especialmente el alcance de uso interno vs SaaS/servicios a terceros, responsabilidad, marcas y patentes. La revisión técnica no certifica suficiencia legal.
-2. **Prueba de navegador sobre despliegue de la rama**: comprobar rutas, indexación, hreflang, focus/teclado, enlaces públicos, móviles (320, 390 y 768 px) y escritorio. Validar el menú global, las FAQ y el desbordamiento de la tabla.
-3. **Comprobación de descargas reales**: `/LICENSE`, `/NOTICE.md`, manifiesto `/player/current/source/SOURCE-MANIFEST.json`, paquetes npm publicados y sus licencias/avisos. El enlace de manifiesto actual documenta Player; faltan verificaciones de fuente por versión para todas las distribuciones cubiertas.
-4. **Inventario verificable de terceros** en las distribuciones finales (incluidas bibliotecas H5P, assets y licencias de dependencias), no solo ejemplos principales.
-5. **Proceso de licencias comerciales especiales** para modificaciones o uso SaaS de Studio/Analytics: canal de solicitud, evaluación y contrato autorizado, sin publicar tarifas ni condiciones no aprobadas.
-6. **Trazabilidad de versiones**: correlacionar edición de LICENSE/NOTICE, versión npm, CDN, binarios, manifiestos y archivo de condiciones aplicables a cada versión.
-7. **Integración de rama**: la rama de diseño está divergida respecto de `main`; resolver los conflictos de publicación y del generador bilingüe antes de integrar, sin perder funcionalidades posteriores.
+## Qué falta para considerar cerrada la entrega
+
+1. **Revisión jurídica formal** de la licencia y del Anexo A por un especialista, especialmente patentes en integraciones comerciales, límites de uso institucional y compatibilidad con obligaciones copyleft.
+2. **Acreditar los derechos de 32 bibliotecas H5P** mediante licencia original/revisión/autorización. No suprimir funciones ni desactivar `--strict` para forzar una aprobación.
+3. **Build Netlify final con Go** y descarga real de versiones, código fuente y ejecutable; contrastar tarballs npm y rutas CDN públicas con los hashes y la versión exacta.
+4. **Validación operativa del formulario comercial** y proceso de autorización contractual revisado; enviar el formulario no otorga licencia.
+5. **Reconciliar con `main`**: la rama de diseño está divergida, por lo que no debe realizarse fusión ni `force push` hasta resolver diferencias con el trabajo más reciente del Player y la internacionalización.
+
+Los documentos técnicos anteriores son evidencia de desarrollo; **no sustituyen una auditoría jurídica ni certifican un despliegue en producción**.
 
 ## Aceptación de la sección
 
