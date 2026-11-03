@@ -6,6 +6,7 @@ import {buildDocExamples} from './build-doc-examples.mjs';
 import {STUDIO_RUNTIME_SHARED_FILES} from './studio-runtime-assets.mjs';
 import {reviseSiteBrowserAssets} from './browser-site-revision.mjs';
 import {renderSiteFooter,getSiteFooterLinks} from './site-footer.mjs';
+import {verifyPackageCorrespondingSource} from './corresponding-source.mjs';
 import {normalizeSeoAndAccessibility} from './site-seo-a11y.mjs';
 
 const root = resolve(process.cwd());
@@ -14,6 +15,12 @@ await import('./build-cdn.mjs');
 const siteRoot = join(root,'deploy','netlify','site');
 const outputRoot = join(root,'.netlify-cdn');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
+// Validate every published versioned source snapshot before HTML transformations.
+const correspondingVersion=JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
+for(const component of ['toolkit','studio','analytics']){
+  await verifyPackageCorrespondingSource({outputRoot,name:component,version:correspondingVersion});
+}
+
 // Publish the same native executable reviewed by the Windows offline exporter.
 await import('./build-offline-executable.mjs');
 // The web build publishes real, inspectable connector ZIPs from this same source.
@@ -144,7 +151,7 @@ function pageUrl(path) {
 }
 function isCorrespondingSourcePath(path) {
   const rel = relative(outputRoot,path).replaceAll('\\','/');
-  return /^player\/(?:current|[^/]+)\/source\//u.test(rel);
+  return /^(?:player|toolkit|studio|analytics)\/(?:current|[^/]+)\/source\//u.test(rel);
 }
 // CDN release files are immutable distribution artifacts, not public website
 // pages. Adding brand HTML to them after release.json is generated invalidates
