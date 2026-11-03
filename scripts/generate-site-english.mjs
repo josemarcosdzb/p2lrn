@@ -250,6 +250,7 @@ const MANUAL=new Map(Object.entries({
   "Error preparando el visor":"Error preparing the viewer",
   "Player preparado":"Player ready",
   "Contenido renderizado":"Content rendered",
+  "Cargando P2LRN Analytics…":"Loading P2LRN Analytics…",
   'Trabajar con los cursos del ordenador':'Work with local courses','8. Volver a trabajar sobre un curso':'8. Reopen and edit a course'
 }));
 
@@ -641,6 +642,7 @@ for(const file of htmlFiles){
   const rel=relative(siteRoot,file).replaceAll('\\','/');
   const $=load(await readFile(file,'utf8'),{decodeEntities:false});
   $('html').attr('lang','en');
+  if(rel==='analytics/index.html')$('p2lrn-analytics').attr('locale','en-US');
   visitTextNodes($,false);
   $('pre code').each((_,el)=>$(el).text(translateEmbeddedCode($(el).text())));
   for(const attr of ['aria-label','aria-description','alt','placeholder','title','data-help'])$('['+attr+']').each((_,el)=>$(el).attr(attr,translatePlain($(el).attr(attr))));
