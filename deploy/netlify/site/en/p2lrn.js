@@ -12,10 +12,10 @@
     const enHref=path==='/'?'/en/':'/en'+path;
     const switcher=document.createElement('nav');
     switcher.className='language-switch';
-    switcher.setAttribute('aria-label',english?'Site language':'Idioma del sitio');
+    switcher.setAttribute('aria-label',english?'Site language':'Site language');
     for(const [lang,href,desc] of [
-      ['es',esHref,english?'Switch to Spanish':'Cambiar a español'],
-      ['en',enHref,english?'Switch to English':'Cambiar a inglés']
+      ['es',esHref,english?'Switch to Spanish':'Switch to Spanish'],
+      ['en',enHref,english?'Switch to English':'Switch to English']
     ]){
       const a=document.createElement('a');a.href=href;a.hreflang=lang;a.lang=lang;
       a.textContent=lang.toUpperCase();a.title=desc;
