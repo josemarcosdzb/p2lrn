@@ -291,6 +291,9 @@ export interface P2LRNMountOptions {
   capabilityBroker?: CapabilityBroker | null;
   packageCache?: P2LRNPackageCache | null;
   activityTracking?: boolean | P2LRNActivityTrackerOptions;
+  resultIdentity?:P2LRNResultIdentity;
+  courseTitle?:string;
+  courseId?:string;
 }
 
 export interface P2LRNServiceWorkerOptions {
@@ -303,6 +306,7 @@ export interface P2LRNPublicAPI {
   readonly toolkitVersion: "0.5.0-alpha.11";
   readonly coreVersion: "0.4.0";
   readonly mount: typeof mountP2LRN;
+  readonly createResultRecorder:typeof createResultRecorder;
   readonly PlayerElement: typeof P2LRNPlayerElement;
   readonly openPackageBytes: typeof openP2LRNPackageBytes;
   readonly openPackageURL: typeof openP2LRNPackageURL;
@@ -362,6 +366,8 @@ export class P2LRNPlayerElement extends HTMLElement {
   static readonly p2rlnVersion: "0.5.0-alpha.11";
   startResultCapture(options:P2LRNResultOptions):P2LRNResultRecorder;
   readonly resultRecorder:P2LRNResultRecorder|null;
+  readonly packageId:string|null;
+  readonly contentRoot:string|null;
   adapter: P2LRNHostAdapter | null;
   capabilityBroker: CapabilityBroker | null;
   packageCache: P2LRNPackageCache | null;
