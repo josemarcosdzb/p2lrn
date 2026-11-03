@@ -632,10 +632,13 @@ for(const [slug,section] of legacyConnectorSections){
   if(!connectorAiPage.includes('id="'+section+'"'))
     throw new Error('Obsolete guide redirect target missing from canonical AI guide: '+section);
 }
+// Documentation headings and page TOC are now derived from real H2 elements at runtime.
+if(!connectorNavigation.includes("const headings = [...docArticle.querySelectorAll('.doc-section > h2')]") ||
+   !connectorNavigation.includes("a.href='#'+heading.id"))
+  throw new Error('Dynamic documentation table of contents is missing');
 for(const section of ['para-que','crear-cursos','chatgpt','claude','gemini','grok','conectar-ordenador','servicios-web','comprobar'])
-  if(!connectorAiPage.includes('id="'+section+'"') ||
-     !connectorNavigation.includes("['"+section+"','"))
-    throw new Error('AI topic must exist in content and sidebar: '+section);
+  if(!connectorAiPage.includes('<section class="doc-section" id="'+section+'"'))
+    throw new Error('Canonical AI guide is missing the real section: '+section);
 const expectedDownloads=[
   ['ia','p2lrn-conector-mcp.zip'],
   ['lms','p2lrn-lti-contratos.zip'],
