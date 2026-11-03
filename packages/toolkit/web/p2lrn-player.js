@@ -1,4 +1,5 @@
 import {renderCourseRights} from './course-rights.js';
+import {playerUiText} from './renderers/ui-i18n.js';
 import {createDefaultDependencyRegistry} from './dependency-registry.js';
 import {RendererRegistry} from './renderer-registry.js';
 import {registerBuiltInRenderers} from './built-in-renderers.js';
@@ -622,19 +623,19 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   }
 
   #progressionRequirementText(status, minScore = null) {
-    if (status === 'viewed') return 'ver';
-    if (status === 'passed') return minScore == null ? 'aprobar' : `aprobar con al menos un ${minScore}%`;
-    return minScore == null ? 'completar' : `completar con al menos un ${minScore}%`;
+    if (status === 'viewed') return playerUiText('ver');
+    if (status === 'passed') return playerUiText(minScore == null ? 'aprobar' : `aprobar con al menos un ${minScore}%`);
+    return playerUiText(minScore == null ? 'completar' : `completar con al menos un ${minScore}%`);
   }
 
   #progressionLockMessage(entityId) {
     const reasons = this._progressionModel?.lockReasons(entityId, this._progressionState) ?? [];
     const reason = reasons[0];
-    if (!reason) return 'Este contenido está bloqueado por una regla de progresión.';
+    if (!reason) return playerUiText('Este contenido está bloqueado por una regla de progresión.');
     if (reason.kind === 'gateFollowing') {
       const source = this._package.entities.get(reason.entityId);
       const title = source ? titleOf(source) : reason.entityId;
-      return `Debes ${this.#progressionRequirementText(reason.status, reason.minScore)} “${title}” antes de continuar.`;
+      return playerUiText('Debes ')+this.#progressionRequirementText(reason.status, reason.minScore)+` “${title}”`+playerUiText(' antes de continuar.');
     }
     const conditions = reason.conditions ?? [];
     const names = conditions.slice(0, 3).map((condition) => {
@@ -643,8 +644,8 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       const status = condition.status ?? 'completed';
       return `${this.#progressionRequirementText(status, condition.minScore ?? null)} “${title}”`;
     });
-    const joiner = reason.mode === 'any' ? ' o ' : ' y ';
-    return names.length ? `Para acceder debes ${names.join(joiner)}.` : 'Completa los requisitos previos para continuar.';
+    const joiner = playerUiText(reason.mode === 'any' ? ' o ' : ' y ');
+    return names.length ? playerUiText('Para acceder debes ')+names.join(joiner)+'.' : playerUiText('Completa los requisitos previos para continuar.');
   }
 
   #refreshProgressionNav() {
@@ -656,9 +657,9 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       button.classList.toggle('p2lrn-locked', locked);
       button.classList.toggle('p2lrn-required', required);
       if (entity.type === 'activity') button.setAttribute('aria-disabled', locked ? 'true' : 'false');
-      const requiredLabel = required ? ' · Obligatorio' : '';
+      const requiredLabel = required ? playerUiText(' · Obligatorio') : '';
       button.textContent = `${locked ? '🔒 ' : ''}${baseTitle}${requiredLabel}`;
-      button.title = locked ? this.#progressionLockMessage(entityId) : (required ? 'Contenido obligatorio' : '');
+      button.title = locked ? this.#progressionLockMessage(entityId) : (required ? playerUiText('Contenido obligatorio') : '');
     }
   }
 
@@ -721,7 +722,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const status = document.createElement('span'); status.className = 'p2lrn-status'; status.textContent = 'Verificando paquete…';
     head.append(strong, status);
     const stage = document.createElement('div'); stage.className = 'p2lrn-stage';
-    const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = 'Cargando contenido educativo.';
+    const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = playerUiText('Cargando contenido educativo.');
     stage.append(message); shell.append(head, stage);
   }
 
@@ -742,7 +743,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const requested = this.getAttribute('node');
     const entrypoint = requested ? {id: requested} : (pkg.manifest.entrypoints.find((item) => item.role === 'primary') ?? pkg.manifest.entrypoints[0]);
     const root = pkg.entities.get(entrypoint.id);
-    if (!root) throw new Error(`No existe el nodo solicitado: ${entrypoint.id}`);
+    if (!root) throw new Error(playerUiText('No existe el nodo solicitado: ')+entrypoint.id);
     const primaryCourseEntrypoint = pkg.manifest.entrypoints.find((item) => item.role === 'primary' && item.type === 'course')
       ?? pkg.manifest.entrypoints.find((item) => item.type === 'course');
     const progressionRoot = primaryCourseEntrypoint ? pkg.entities.get(primaryCourseEntrypoint.id) : root;
@@ -753,7 +754,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const strong = document.createElement('strong'); strong.textContent = titleOf(root);
     const status = document.createElement('span');
     status.className = 'p2lrn-status';
-    const integrityLabel = pkg.verification?.mode === 'lazy' ? 'Manifest/grafo verificados · payload bajo demanda' : 'Integridad válida';
+    const integrityLabel = pkg.verification?.mode === 'lazy' ? playerUiText('Manifest/grafo verificados · payload bajo demanda') : playerUiText('Integridad válida');
     const transportLabel = pkg.verification?.transport === 'range' ? ' · HTTP Range' : '';
     const zip64Label = pkg.verification?.zip64 ? ' · ZIP64' : '';
     status.textContent = `${integrityLabel} · Formato Core ${pkg.manifest.formatVersion} · Player ${P2LRN_WEB_SDK_VERSION}${transportLabel}${zip64Label}`;
@@ -781,7 +782,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const nav = externalNavigation ? null : document.createElement('nav');
     if (nav) {
       nav.className = 'p2lrn-nav';
-      nav.setAttribute('aria-label', 'Contenido P2LRN');
+      nav.setAttribute('aria-label', playerUiText('Contenido P2LRN'));
       layout.append(nav);
     }
     const stage = document.createElement('div'); stage.className = 'p2lrn-stage';
@@ -865,14 +866,14 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
     let resource = entity;
     if (entity.type === 'activity') {
-      if (!entity.resource) { this.#stageMessage(stage, 'La actividad no tiene un recurso directo.'); return null; }
+      if (!entity.resource) { this.#stageMessage(stage, playerUiText('La actividad no tiene un recurso directo.')); return null; }
       resource = this._package.entities.get(entity.resource);
     }
-    if (!resource || resource.type !== 'resource') { this.#stageMessage(stage, 'El recurso no existe o no es reproducible.'); return null; }
+    if (!resource || resource.type !== 'resource') { this.#stageMessage(stage, playerUiText('El recurso no existe o no es reproducible.')); return null; }
 
     const capabilityState = await this.#negotiateHostCapabilities(entity, resource);
     if (capabilityState.blocked.length) {
-      this.#stageMessage(stage, 'Esta actividad requiere capacidades del host no disponibles: ' + capabilityState.blocked.map((item)=>item.id).join(', '));
+      this.#stageMessage(stage, playerUiText('Esta actividad requiere capacidades del host no disponibles: ') + capabilityState.blocked.map((item)=>item.id).join(', '));
       return null;
     }
     const declaredCapabilityIds = new Set(capabilityState.requests.map((request)=>request.id));
@@ -885,7 +886,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         && (this._resourceResolver != null || typeof this._adapter?.resolveResourceUrl === 'function');
     });
     if (!representations.length) {
-      this.#stageMessage(stage, allRepresentations.length ? 'El reproductor web no abre representaciones remotas sin un adaptador compatible.' : 'El recurso no contiene representaciones.');
+      this.#stageMessage(stage, allRepresentations.length ? playerUiText('El reproductor web no abre representaciones remotas sin un adaptador compatible.') : playerUiText('El recurso no contiene representaciones.'));
       return null;
     }
 
@@ -901,7 +902,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         excludeRendererIds: [...excluded],
       });
       if (!candidate) {
-        this.#stageMessage(stage, 'Este reproductor web todavía no tiene un renderer instalado compatible con las representaciones de esta actividad.');
+        this.#stageMessage(stage, playerUiText('Este reproductor web todavía no tiene un renderer instalado compatible con las representaciones de esta actividad.'));
         return null;
       }
 
