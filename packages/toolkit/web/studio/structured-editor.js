@@ -1,15 +1,17 @@
 import {compositeNavigationForMode} from '../native-composite-core.js';
+import {studioUiText} from './studio-ui-i18n.js';
 
-const node=(tag,className,text)=>{const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;};
+const node=(tag,className,text)=>{const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=studioUiText(text);return el;};
 const labeled=(label,control)=>{const wrap=node('label','q-field');wrap.append(node('span','q-label',label),control);return wrap;};
 const input=(value='')=>{const el=document.createElement('input');el.type='text';el.value=value??'';return el;};
 const textarea=(value='')=>{const el=document.createElement('textarea');el.value=value??'';return el;};
-const select=(value,options)=>{const el=document.createElement('select');for(const [v,label] of options){const o=document.createElement('option');o.value=v;o.textContent=label;o.selected=v===value;el.append(o);}return el;};
+const select=(value,options)=>{const el=document.createElement('select');for(const [v,label] of options){const o=document.createElement('option');o.value=v;o.textContent=studioUiText(label);o.selected=v===value;el.append(o);}return el;};
 const button=(label,action,className='q-mini')=>{const el=node('button',className,label);el.type='button';el.addEventListener('click',action);return el;};
 const titleOf=(model,id)=>model?.title?.(id)??model?.entity?.(id)?.id??id;
 
 export function renderStructuredVisualEditor(container,options={}){
   const {model,activityId,mediaType,payload,onChange,onStatus,onStructureChange,onSelectActivity,onCreateChild}=options;
+  const report=(message)=>onStatus?.(studioUiText(message));
   container.replaceChildren();
   const isComponent=mediaType==='application/vnd.p2lrn.component+json';
   const isComposite=mediaType==='application/vnd.p2lrn.composite+json';
@@ -24,7 +26,7 @@ export function renderStructuredVisualEditor(container,options={}){
         payload.navigation=navigation;
         model.setStructuredJson(activityId,payload);
         onChange?.();
-        onStatus?.('Navegación del grupo ajustada a su recorrido.');
+        report('Navegación del grupo ajustada a su recorrido.');
       }
     }
   }
@@ -54,7 +56,7 @@ export function renderStructuredVisualEditor(container,options={}){
         payload.data??={};payload.data.heading=value;model.setStructuredJson(activityId,payload);
       }
       onChange?.();onStructureChange?.();
-    }catch(error){onStatus?.(String(error?.message??error));}
+    }catch(error){report(String(error?.message??error));}
   };
   title.addEventListener('input',saveTitle);
   settings.append(labeled('Título',title));
@@ -78,7 +80,7 @@ export function renderStructuredVisualEditor(container,options={}){
       };
       tone.addEventListener('change',()=>{payload.data.tone=tone.value;model.setStructuredJson(activityId,payload);onChange?.();renderPreview();});
       settings.append(labeled('Estilo',tone));
-      const body=textarea(payload.data.body||'');body.className='q-answer-list';body.placeholder='Contenido del aviso';
+      const body=textarea(payload.data.body||'');body.className='q-answer-list';body.placeholder=studioUiText('Contenido del aviso');
       body.addEventListener('input',()=>{payload.data.body=body.value;model.setStructuredJson(activityId,payload);onChange?.();renderPreview();});
       root.append(labeled('Contenido',body));
       renderPreview();root.append(preview);
@@ -98,14 +100,14 @@ export function renderStructuredVisualEditor(container,options={}){
           button('↑',()=>move(index,index-1)),
           button('↓',()=>move(index,index+1)),
           button('Eliminar',()=>{
-            if(payload.data.items.length<=1){onStatus?.('La línea temporal debe conservar al menos un acontecimiento.');return;}
+            if(payload.data.items.length<=1){report('La línea temporal debe conservar al menos un acontecimiento.');return;}
             payload.data.items.splice(index,1);save();rerender();
           },'q-mini q-danger')
         );
         cardHead.append(actions);card.append(cardHead);
-        const date=input(item.date||'');date.placeholder='Fecha o periodo';
-        const itemTitle=input(item.title||'');itemTitle.placeholder='Título del acontecimiento';
-        const body=textarea(item.body||'');body.className='q-answer-list';body.placeholder='Descripción';
+        const date=input(item.date||'');date.placeholder=studioUiText('Fecha o periodo');
+        const itemTitle=input(item.title||'');itemTitle.placeholder=studioUiText('Título del acontecimiento');
+        const body=textarea(item.body||'');body.className='q-answer-list';body.placeholder=studioUiText('Descripción');
         date.addEventListener('input',()=>{item.date=date.value;save();});
         itemTitle.addEventListener('input',()=>{item.title=itemTitle.value;save();});
         body.addEventListener('input',()=>{item.body=body.value;save();});
@@ -118,7 +120,7 @@ export function renderStructuredVisualEditor(container,options={}){
       },'q-mini q-add-primary'));
     }else if(editor==='collaboration'){
       const mode=select(payload.data.mode||'poll',[['poll','Votación en directo'],['board','Pizarra compartida'],['peer-review','Revisión entre pares']]);
-      const room=input(payload.data.room||'main');room.placeholder='main';
+      const room=input(payload.data.room||'main');room.placeholder=studioUiText('main');
       const prompt=textarea(payload.data.prompt||'');prompt.className='q-answer-list';
       const fallback=textarea(payload.data.fallbackText||'');fallback.className='q-answer-list';
       const required=document.createElement('input');required.type='checkbox';required.checked=payload.data.required===true;
@@ -127,11 +129,11 @@ export function renderStructuredVisualEditor(container,options={}){
       const optionList=node('div','q-list collaboration-options');
       const save=()=>{
         const roomValue=room.value.trim()||'main';
-        if(!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(roomValue)){onStatus?.('La sala debe ser un identificador portable, por ejemplo main o equipo-1.');return;}
+        if(!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(roomValue)){report('La sala debe ser un identificador portable, por ejemplo main o equipo-1.');return;}
         payload.data.mode=mode.value;payload.data.room=roomValue;payload.data.prompt=prompt.value;payload.data.fallbackText=fallback.value;payload.data.required=required.checked;
         if(mode.value==='poll'){
           payload.data.allowChange=allowChange.checked;payload.data.showResults=showResults.checked;
-          if(!Array.isArray(payload.data.options)||payload.data.options.length<2)payload.data.options=[{id:'a',label:'Opción A'},{id:'b',label:'Opción B'}];
+          if(!Array.isArray(payload.data.options)||payload.data.options.length<2)payload.data.options=[{id:'a',label:studioUiText('Opción A')},{id:'b',label:studioUiText('Opción B')}];
         }else{
           delete payload.data.options;delete payload.data.allowChange;delete payload.data.showResults;
         }
@@ -142,10 +144,10 @@ export function renderStructuredVisualEditor(container,options={}){
       const drawOptions=()=>{
         optionList.replaceChildren();
         if(mode.value!=='poll')return;
-        payload.data.options=(payload.data.options??[]).length>=2?payload.data.options:[{id:'a',label:'Opción A'},{id:'b',label:'Opción B'}];
+        payload.data.options=(payload.data.options??[]).length>=2?payload.data.options:[{id:'a',label:studioUiText('Opción A')},{id:'b',label:studioUiText('Opción B')}];
         payload.data.options.forEach((option,index)=>{
           const row=node('div','q-option-row');const text=input(option.label||'');
-          const remove=button('Eliminar',()=>{if(payload.data.options.length<=2){onStatus?.('La votación necesita al menos dos opciones.');return;}payload.data.options.splice(index,1);save();drawOptions();},'q-mini q-danger');
+          const remove=button('Eliminar',()=>{if(payload.data.options.length<=2){report('La votación necesita al menos dos opciones.');return;}payload.data.options.splice(index,1);save();drawOptions();},'q-mini q-danger');
           text.addEventListener('input',()=>{option.label=text.value;save();});row.append(node('span','q-label',String(index+1)),text,remove);optionList.append(row);
         });
         optionList.append(button('+ Añadir opción',()=>{const used=new Set(payload.data.options.map((o)=>o.id));let n=payload.data.options.length+1,id='option-'+n;while(used.has(id)){n+=1;id='option-'+n;}payload.data.options.push({id,label:'Opción '+n});save();drawOptions();},'q-mini q-add-primary'));
@@ -161,12 +163,12 @@ export function renderStructuredVisualEditor(container,options={}){
       root.append(labeled('Fallback sin servicio',fallback));
       root.append(node('div','studio-readonly','El curso sólo guarda la actividad y la sala lógica. El host aporta identidad, permisos, transporte y persistencia. Si no hay servicio, se usa el fallback individual.'));
     }else if(editor==='capability-action'){
-      const capability=input(payload.data.capability||'ai.tutor');capability.placeholder='ai.tutor';
-      const operation=input(payload.data.operation||'hint');operation.placeholder='hint';
-      const instruction=textarea(payload.data.instruction||'');instruction.className='q-answer-list';instruction.placeholder='Qué debe hacer el proveedor conectado';
+      const capability=input(payload.data.capability||'ai.tutor');capability.placeholder=studioUiText('ai.tutor');
+      const operation=input(payload.data.operation||'hint');operation.placeholder=studioUiText('hint');
+      const instruction=textarea(payload.data.instruction||'');instruction.className='q-answer-list';instruction.placeholder=studioUiText('Qué debe hacer el proveedor conectado');
       const buttonLabel=input(payload.data.buttonLabel||'Ejecutar');
-      const fallback=textarea(payload.data.fallbackText||'');fallback.className='q-answer-list';fallback.placeholder='Texto cuando la capacidad no está disponible';
-      const contextKeys=textarea((payload.data.context??[]).join('\n'));contextKeys.className='q-answer-list';contextKeys.placeholder='activity.objectives\ncurrent_question';
+      const fallback=textarea(payload.data.fallbackText||'');fallback.className='q-answer-list';fallback.placeholder=studioUiText('Texto cuando la capacidad no está disponible');
+      const contextKeys=textarea((payload.data.context??[]).join('\n'));contextKeys.className='q-answer-list';contextKeys.placeholder=studioUiText('activity.objectives\ncurrent_question');
       const revealAnswer=document.createElement('input');revealAnswer.type='checkbox';revealAnswer.checked=payload.data.restrictions?.revealAnswer===true;
       const externalKnowledge=document.createElement('input');externalKnowledge.type='checkbox';externalKnowledge.checked=payload.data.restrictions?.allowExternalKnowledge===true;
       const maxOutput=input(String(payload.data.restrictions?.maxOutputChars??8000));maxOutput.type='number';maxOutput.min='1';maxOutput.max='50000';
@@ -174,9 +176,9 @@ export function renderStructuredVisualEditor(container,options={}){
       const token=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
       const save=()=>{
         const cap=capability.value.trim(),op=operation.value.trim();
-        if(!token.test(cap)||!token.test(op)){onStatus?.('Capacidad y operación deben ser identificadores semánticos, por ejemplo ai.tutor / hint.');return;}
+        if(!token.test(cap)||!token.test(op)){report('Capacidad y operación deben ser identificadores semánticos, por ejemplo ai.tutor / hint.');return;}
         const requestedContext=[...new Set(contextKeys.value.split(/[\s,]+/).map((value)=>value.trim()).filter(Boolean))];
-        if(requestedContext.some((value)=>!token.test(value))){onStatus?.('Las claves de contexto deben ser identificadores semánticos, no URLs.');return;}
+        if(requestedContext.some((value)=>!token.test(value))){report('Las claves de contexto deben ser identificadores semánticos, no URLs.');return;}
         payload.data.capability=cap;payload.data.operation=op;payload.data.instruction=instruction.value;payload.data.buttonLabel=buttonLabel.value.trim()||'Ejecutar';payload.data.fallbackText=fallback.value;payload.data.required=required.checked;payload.data.context=requestedContext;payload.data.restrictions={revealAnswer:revealAnswer.checked,allowExternalKnowledge:externalKnowledge.checked,maxOutputChars:Math.max(1,Math.min(50000,Number(maxOutput.value)||8000))};
         model.setStructuredJson(activityId,payload);
         model.setHostCapabilities(activityId,[{id:cap,required:required.checked,operations:[op],context:requestedContext,description:'Operación solicitada por un componente conectado.'}]);
@@ -225,7 +227,7 @@ export function renderStructuredVisualEditor(container,options={}){
           button('↑',()=>{model.reorderChild(activityId,child.id,index-1);onStructureChange?.();rerender();}),
           button('↓',()=>{model.reorderChild(activityId,child.id,index+1);onStructureChange?.();rerender();}),
           button('Sacar',()=>{model.removeActivityFromComposite(activityId,child.id);onStructureChange?.();rerender();}),
-          button('Eliminar',()=>{if(confirm('¿Eliminar esta actividad del curso?')){model.removeActivity(child.id);onStructureChange?.();rerender();}},'q-mini q-danger')
+          button('Eliminar',()=>{if(confirm(studioUiText('¿Eliminar esta actividad del curso?'))){model.removeActivity(child.id);onStructureChange?.();rerender();}},'q-mini q-danger')
         );
         row.append(meta,actions);list.append(row);
       });
@@ -239,8 +241,8 @@ export function renderStructuredVisualEditor(container,options={}){
         if(!chooser.value)return;
         try{
           const entity=model.moveActivityToComposite(chooser.value,activityId);
-          onStructureChange?.();onStatus?.('Actividad añadida al grupo: '+titleOf(model,entity.id));rerender();
-        }catch(error){onStatus?.('No se pudo mover la actividad: '+String(error?.message??error));}
+          onStructureChange?.();report('Actividad añadida al grupo: '+titleOf(model,entity.id));rerender();
+        }catch(error){report('No se pudo mover la actividad: '+String(error?.message??error));}
       });
       move.disabled=true;chooser.addEventListener('change',()=>{move.disabled=!chooser.value;});
       const actions=node('div','q-settings composite-existing');actions.append(labeled('Actividad existente',chooser),move);section.append(actions);
@@ -260,8 +262,8 @@ export function renderStructuredVisualEditor(container,options={}){
         const next=model.setStructuredTitle(activityId,parsed.title,payload);
         Object.keys(payload).forEach((key)=>delete payload[key]);Object.assign(payload,next);
       }else model.setStructuredJson(activityId,payload);
-      onChange?.();onStructureChange?.();onStatus?.('Modelo avanzado actualizado');rerender();
-    }catch(error){onStatus?.('JSON avanzado no válido: '+String(error?.message??error));}
+      onChange?.();onStructureChange?.();report('Modelo avanzado actualizado');rerender();
+    }catch(error){report('JSON avanzado no válido: '+String(error?.message??error));}
   });
   advanced.append(summary,area);root.append(advanced);container.append(root);
 }
