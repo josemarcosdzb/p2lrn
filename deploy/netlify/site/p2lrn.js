@@ -1,3 +1,34 @@
+// Always expose both site languages from every page, including embedded tools.
+// The language switch keeps the same logical route and never carries form data,
+// authentication parameters or package URLs across languages.
+(()=>{
+  const install=()=>{
+    if(document.body.querySelector(':scope > .language-switch'))return;
+    const english=/^en(?:-|$)/i.test(document.documentElement.lang||'');
+    const current=location.pathname.replace(/\/index\.html$/i,'/');
+    const logical=english?(current==='/en/'?'/':current.replace(/^\/en(?=\/)/,'')):current;
+    const path=logical.startsWith('/')?logical:'/'+logical;
+    const esHref=path;
+    const enHref=path==='/'?'/en/':'/en'+path;
+    const switcher=document.createElement('nav');
+    switcher.className='language-switch';
+    switcher.setAttribute('aria-label',english?'Site language':'Idioma del sitio');
+    for(const [lang,href,desc] of [
+      ['es',esHref,english?'Switch to Spanish':'Cambiar a español'],
+      ['en',enHref,english?'Switch to English':'Cambiar a inglés']
+    ]){
+      const a=document.createElement('a');a.href=href;a.hreflang=lang;a.lang=lang;
+      a.textContent=lang.toUpperCase();a.title=desc;
+      a.setAttribute('aria-label',desc);
+      if(lang===(english?'en':'es'))a.setAttribute('aria-current','page');
+      switcher.append(a);
+    }
+    document.body.append(switcher);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
+  else install();
+})();
+
 (() => {
   const SUPABASE_URL = 'https://yurtnmtesugykrqtujdx.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_cmC0leUeJtwzXrZb7nUn1Q_xdYoAKfH';
