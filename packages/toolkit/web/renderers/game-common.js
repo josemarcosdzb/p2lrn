@@ -1,7 +1,7 @@
 import {buildQuestionnaireGame} from '../questionnaire-games-core.js';
 import {createQuestionnaireGameRuntime} from '../questionnaire-game-runtime.js';
 import {validateQuestionnaire} from '../questionnaire-core.js';
-import {playerUiText} from './ui-i18n.js';
+import {playerUiText,playerDiagnosticText} from './ui-i18n.js';
 
 const gameStyleUrl = new URL('../questionnaire-games.css', import.meta.url);
 gameStyleUrl.search = new URL(import.meta.url).search;
@@ -27,7 +27,7 @@ export async function setupGame({container, bytes, decodeJson, rendererId, event
   validateQuestionnaire(payload);
   if(payload.questions.some((question)=>Number.isInteger(question.timeLimitSeconds))){const error=new Error(playerUiText('El renderer de juego no implementa tiempo por pregunta; se requiere el renderer estándar.'));error.code='P2LRN_TIMING_UNSUPPORTED';throw error;}
   const game = buildQuestionnaireGame(payload, rendererId, {seedSource: context?.contentRoot ?? ''});
-  if (!game.compatible) { const error = new Error(playerUiText(game.name)+(playerUiText(' no puede representar fielmente este cuestionario completo. '))+game.reasons.join(' ')); error.code = 'P2LRN_RENDERER_INCOMPATIBLE'; throw error; }
+  if (!game.compatible) { const error = new Error(playerUiText(game.name)+(playerUiText(' no puede representar fielmente este cuestionario completo. '))+game.reasons.map((reason)=>playerDiagnosticText(reason)).join(' ')); error.code = 'P2LRN_RENDERER_INCOMPATIBLE'; throw error; }
   const runtime = await createQuestionnaireGameRuntime(container, payload, {rendererId, eventTarget, adapter, context});
   container.replaceChildren();
   const shell = el('section', {class: 'p2lrn-game-shell'});
