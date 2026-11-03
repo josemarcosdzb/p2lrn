@@ -299,6 +299,7 @@ export function playerUiText(value,doc=globalThis.document){
 // their presentation. Never rewrite user-authored question prompts or answers.
 const EN_DIAGNOSTICS={
   "no tiene una respuesta textual inequívoca compatible.":"does not have an unambiguous compatible text answer.",
+  "Necesita al menos 2 afirmaciones.":"At least 2 statements are required.",
   "el rosco necesita exactamente un reto por pregunta.":"the word wheel requires exactly one challenge per question.",
   "el crucigrama necesita pistas no vacías.":"the crossword requires non-empty clues.",
   "Todas las respuestas deben tener entre 3 y 17 caracteres y una pista inequívoca.":"All answers must be 3 to 17 characters long and have an unambiguous clue.",
