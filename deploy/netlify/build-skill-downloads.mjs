@@ -11,7 +11,8 @@ const names=['NOTICE.md','CORE-INSTRUCTIONS.md','scripts/p2lrn_package.py','scri
  'references/blueprint.md','references/toolkit-parity.md','references/plataformas.md','assets/ejemplo-curso.json',
  'assets/icon.svg','agents/openai.yaml',
  'scripts/p2lrn_official.mjs','scripts/test_p2lrn_official_real.mjs',
- 'references/official-packages.json','references/official-runtime.md'];
+ 'references/official-packages.json','references/official-runtime.md',
+ 'scripts/multipart.py','references/multipart-research.md'];
 const assets=new Map();
 for(const name of names){
  const path=join(src,...name.split('/'));
@@ -76,6 +77,7 @@ const common=['NOTICE.md','scripts/p2lrn_package.py','scripts/test_p2lrn_package
  'scripts/p2lrn_official.mjs','scripts/test_p2lrn_official_real.mjs',
  'references/blueprint.md','references/toolkit-parity.md','references/plataformas.md',
  'references/official-packages.json','references/official-runtime.md',
+ 'scripts/multipart.py','references/multipart-research.md',
  'assets/ejemplo-curso.json','assets/icon.svg'];
 const logo=await readFile(join(root,'deploy/netlify/site/favicon.png'));
 await mkdir(dest,{recursive:true});
