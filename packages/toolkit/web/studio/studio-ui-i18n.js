@@ -217,7 +217,20 @@ const EN={
   "No se pudo abrir IndexedDB.": "Could not open IndexedDB.",
   "Error de IndexedDB.": "IndexedDB error.",
   "Operación de IndexedDB cancelada.": "IndexedDB operation cancelled.",
-  "No se pudo leer el borrador local.": "Could not read the local draft."
+  "No se pudo leer el borrador local.": "Could not read the local draft.",
+  "Verdadero": "True",
+  "Falso": "False",
+  "Relaciona cada elemento": "Match each item",
+  "Pareja A": "Pair A",
+  "Pareja B": "Pair B",
+  "La pregunta necesita al menos dos respuestas.": "A question needs at least two answers.",
+  "Permitir cambiar voto": "Allow vote changes",
+  "Mostrar resultados": "Show results",
+  "Sala": "Room",
+  "Opción": "Option",
+  "La actividad necesita al menos una pregunta": "The activity needs at least one question.",
+  "Imagen": "Image",
+  "Escribe aquí el texto y selecciona la palabra que quieras ocultar. {{": "Write the text here and select the word you want to hide. {{"
 };
 export function studioLanguage(doc=globalThis.document){
   return /^en(?:-|$)/i.test(String(doc?.documentElement?.lang??'es'))?'en':'es';
@@ -226,6 +239,12 @@ export function studioUiText(value,doc=globalThis.document){
   const text=String(value??'');
   if(studioLanguage(doc)!=='en')return text;
   if(Object.hasOwn(EN,text))return EN[text];
+  const blankStarter='Escribe aquí el texto y selecciona la palabra que quieras ocultar. {{';
+  if(text.startsWith(blankStarter))return EN[blankStarter]+text.slice(blankStarter.length);
+  const numberedOption=/^Opción (\d+)$/.exec(text);
+  if(numberedOption)return 'Option '+numberedOption[1];
+  const letteredPair=/^Pareja ([A-Z])$/.exec(text);
+  if(letteredPair)return 'Pair '+letteredPair[1];
   const question=/^Pregunta (\d+)$/.exec(text);
   if(question)return 'Question '+question[1];
   const statement=/^Afirmación (\d+)$/.exec(text);
@@ -247,4 +266,4 @@ export function studioNewDefaults(value,doc=globalThis.document){
   );
   return value;
 }
-export const STUDIO_UI_TRANSLATION_COUNT=217;
+export const STUDIO_UI_TRANSLATION_COUNT=230;
