@@ -1,4 +1,5 @@
 import {WEB_CONTENT_PROFILE, webContentMapping, webEntrypointDirectory} from '../web-content-core.js';
+import {playerUiText} from './ui-i18n.js';
 
 const decoder = new TextDecoder('utf-8', {fatal: true});
 
@@ -68,7 +69,7 @@ export async function render({container, bytes, representation, resolveResourceU
 
     const iframe = document.createElement('iframe');
     iframe.className = 'p2lrn-html';
-    iframe.title = 'Contenido HTML del paquete P2LRN';
+    iframe.title = playerUiText('Contenido HTML del paquete P2LRN');
     iframe.setAttribute('sandbox', verifiedEntrypointUrl ? 'allow-same-origin' : '');
     iframe.referrerPolicy = 'no-referrer';
 
@@ -91,5 +92,5 @@ export async function render({container, bytes, representation, resolveResourceU
       },
     };
   }
-  throw new Error(`Representación textual no soportada: ${representation.mediaType}`);
+  throw new Error(playerUiText('Representación textual no soportada: ')+representation.mediaType);
 }
