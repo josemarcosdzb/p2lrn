@@ -6,6 +6,7 @@ import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
+import {studioUiText} from './runtime/studio-ui-i18n.js';
 
 const createCourseButton=document.querySelector('[data-create-course]');
 const addUnitButton=document.querySelector('[data-add-unit]');
@@ -77,22 +78,22 @@ let savedRevision=0;
 let exportedRevision=0;
 
 const titleOf=(entity)=>studio?.title(entity.id)??entity.id;
-const setStatus=(value)=>{status.textContent=value;};
+const setStatus=(value)=>{status.textContent=studioUiText(value);};
 const hasUnsavedChanges=()=>Boolean(studio&&studio.changeCount>savedRevision&&studio.changeCount>exportedRevision);
 const updateChanges=()=>{
   if(!studio){
-    changeCount.textContent='Sin cambios';
-    saveState.textContent='No guardado';
+    changeCount.textContent=studioUiText('Sin cambios');
+    saveState.textContent=studioUiText('No guardado');
     if(unsavedWarning)unsavedWarning.hidden=true;
     return;
   }
-  changeCount.textContent=studio.changeCount?`${studio.changeCount} cambio${studio.changeCount===1?'':'s'}`:'Sin cambios';
+  changeCount.textContent=studioUiText(studio.changeCount?`${studio.changeCount} cambio${studio.changeCount===1?'':'s'}`:'Sin cambios');
   const unsaved=hasUnsavedChanges();
   if(saveState){
-    if(unsaved)saveState.textContent='No guardado';
-    else if(studio.changeCount&&exportedRevision>=studio.changeCount)saveState.textContent='Exportado';
-    else if(studio.changeCount&&savedRevision>=studio.changeCount)saveState.textContent='Guardado en este navegador';
-    else saveState.textContent='Sin cambios';
+    if(unsaved)saveState.textContent=studioUiText('No guardado');
+    else if(studio.changeCount&&exportedRevision>=studio.changeCount)saveState.textContent=studioUiText('Exportado');
+    else if(studio.changeCount&&savedRevision>=studio.changeCount)saveState.textContent=studioUiText('Guardado en este navegador');
+    else saveState.textContent=studioUiText('Sin cambios');
   }
   if(unsavedWarning)unsavedWarning.hidden=!unsaved;
 };
