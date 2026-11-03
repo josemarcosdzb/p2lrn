@@ -29,10 +29,14 @@ function isVisibleSpanish(value){
   const text=String(value??'').replace(/\s+/g,' ').trim();
   return text&&(SPANISH_RE.test(text)||EXTRA_SPANISH_RE.test(text));
 }
+// Route fragment IDs, locale codes and game-mode identifiers are protocol values,
+// not visible labels. They must stay identical across both languages.
+const JS_PROTOCOL_VALUES=new Set(['en','es','rosco','para-que','crear-cursos','comprobar']);
 function skipJsValue(value,parent,node){
   if((parent?.type==='ImportDeclaration'||parent?.type==='ExportNamedDeclaration'||parent?.type==='ExportAllDeclaration')&&parent.source===node)return true;
   if(parent?.type==='Property'&&parent.key===node&&!parent.computed)return true;
   const text=String(value??'');
+  if(JS_PROTOCOL_VALUES.has(text))return true;
   return /^[/#.\[]/.test(text)||/^https?:\/\//i.test(text)||/^(?:application|text|image|audio|video)\//i.test(text);
 }
 
