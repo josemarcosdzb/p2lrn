@@ -45,7 +45,7 @@ for(const [path,signature] of [
   }else (strict?errors:warnings).push('Missing built Player third-party license text: '+full);
 }
 const manifestPath='packages/h5p-libraries/dist/index.json';
-let libraryCount=0,metadataMissing=[],metadataMismatches=[],catalogVerified=false;
+let libraryCount=0,metadataMissing=[],metadataMismatches=[],catalogVerified=false,missingFromMetadata=0,readmeLicenseEvidence=[];
 if(await status(manifestPath)){
   const manifest=JSON.parse(await read(manifestPath));
   if(manifest.source?.commit!==LUMI_H5P_LIBRARY_COMMIT)errors.push('H5P archive does not match pinned Lumi source commit');
@@ -65,8 +65,22 @@ if(await status(manifestPath)){
       metadataMismatches.push(lib.folder+': id/version');
     if((json.license??null)!==(lib.license??null))metadataMismatches.push(lib.folder+': license');
     const declared=String(lib.license??'').trim();
-    if(!declared||/^unknown|none|unspecified|n\/a$/i.test(declared))metadataMissing.push(lib.folder);
-    else licenseSummary[declared]=(licenseSummary[declared]??0)+1;
+    if(!declared||/^(?:unknown|none|unspecified|n\/a)$/i.test(declared)){
+      missingFromMetadata++;
+      let resolvedByFullReadme=false;
+      if(lib.files.includes('README.md')){
+        const readme=await read('packages/h5p-libraries/dist/'+lib.folder+'/README.md');
+        if(/## License[\s\S]{0,80}\(The MIT License\)/i.test(readme)
+           && /Copyright \(c\)/i.test(readme)
+           && /Permission is hereby granted/i.test(readme)
+           && /THE SOFTWARE IS PROVIDED/i.test(readme)){
+          resolvedByFullReadme=true;
+          readmeLicenseEvidence.push({folder:lib.folder,license:'MIT',evidence:lib.folder+'/README.md'});
+          licenseSummary['MIT (original README)']=(licenseSummary['MIT (original README)']??0)+1;
+        }
+      }
+      if(!resolvedByFullReadme)metadataMissing.push(lib.folder);
+    }else licenseSummary[declared]=(licenseSummary[declared]??0)+1;
     if(!Array.isArray(lib.files)||!lib.files.includes('library.json'))errors.push(lib.folder+': missing original file list');
   }
   if(metadataMismatches.length)errors.push('H5P license metadata differs from upstream library.json for '+metadataMismatches.length+' entries');
@@ -79,7 +93,7 @@ const report={
   source:{name:'Lumieducation/Lumi',commit:LUMI_H5P_LIBRARY_COMMIT},
   auditMode:strict?'release-strict':'local-inventory',
   evidence:{playerLicenseFiles:playerAssets,h5pLibraries:libraryCount,expectedH5pLibraries:EXPECTED_LIBRARY_COUNT,catalogVerified},
-  licenseSummary,manualReviewRequired:metadataMissing,
+  licenseSummary,missingLicenseField:missingFromMetadata,readmeLicenseEvidence,manualReviewRequired:metadataMissing,
   errors,warnings,
   ok:errors.length===0,
   note:'This mechanical inventory does not replace a legal review of AGPL, GPL, CC or mixed-license dependencies.'
