@@ -33,7 +33,11 @@ test('one footer supplies clear product, documentation and resource groups',()=>
   assert(footer.includes('href="/skills/"'));
   assert(!footer.includes('href="/index.json"'));
   assert(footer.includes('href="/contacto/"'));
-  assert(!footer.includes('http://')&&!footer.includes('https://'));
+  assert(!footer.includes('http://'));
+  assert(footer.includes('href="https://github.com/josemarcosdzb/p2lrn" target="_blank" rel="noopener noreferrer"'));
+  assert(!footer.includes('github.com/josemarcosfrodo/p2lrn'));
+  assert(footer.includes('<p class="site-footer__credit">Creado por <strong>Jose Marcos Diaz</strong></p>'));
+  assert.equal((footer.match(/https:\/\/github\.com\/josemarcosdzb\/p2lrn/g)||[]).length,1);
 });
 
 test('English footer mirrors the Spanish navigation with localized routes',()=>{
@@ -46,6 +50,9 @@ test('English footer mirrors the Spanish navigation with localized routes',()=>{
   assert(footer.includes('href="/en/cookies/#configuracion"'));
   assert(footer.includes('>Documentation</'));
   assert(footer.includes('>Contact</'));
+  assert(footer.includes('href="https://github.com/josemarcosdzb/p2lrn"'));
+  assert(footer.includes('<p class="site-footer__credit">Created by <strong>Jose Marcos Diaz</strong></p>'));
+  assert(!footer.includes('/en/https://'));
 });
 
 test('legal links remain complete and the cookies link points to the actual explanation',()=>{
@@ -69,6 +76,7 @@ test('footer markup is accessible and all styling is scoped to the public footer
   assert(footer.includes('aria-hidden="true"'));
   assert(footer.includes('class="site-footer__primary-link"'));
   assert(css.includes('.site-footer__main{'));
+  assert(css.includes('.site-footer__credit{'));
   assert(css.includes('grid-template-columns:minmax(255px,1.6fr) repeat(3,minmax(0,1fr))'));
   assert(css.includes('@media(max-width:960px)'));
   assert(css.includes('@media(max-width:620px)'));
