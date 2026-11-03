@@ -231,7 +231,18 @@ const EN={
   "Autor del contenido": "Content author",
   "Fecha de creación": "Creation date",
   "Licencia · Condiciones de uso y distribución": "License · Terms of use and distribution",
-  "Derechos de autor · Titular de los derechos": "Copyright · Rights holder"
+  "Derechos de autor · Titular de los derechos": "Copyright · Rights holder",
+  "Fichas pendientes": "Unplaced cards",
+  "Actividad colaborativa": "Collaborative activity",
+  "Compartir": "Share",
+  "Comentarios recibidos": "Comments received",
+  " participante": " participant",
+  " participantes": " participants",
+  " conectado": " connected",
+  " conectados": " connected",
+  "no hay palabras": "no words",
+  "Sin datos": "No data",
+  "Curso sin actividades": "Course has no activities"
 };
 export function playerUiText(value,doc=globalThis.document){
   const source=String(value??'');
@@ -255,6 +266,8 @@ export function playerUiText(value,doc=globalThis.document){
     return 'Turn over two cards and find matching pairs. '+match[1]+'/'+match[2]+' pairs.';
   if((match=/^Crucigrama entregado: ([\d.]+)\/([\d.]+) puntos\.$/.exec(source)))
     return 'Crossword submitted: '+match[1]+'/'+match[2]+' points.';
+  if((match=/^(\d+) participantes? conectados?$/.exec(source)))
+    return match[1]+' participant'+(match[1]==='1'?'':'s')+' connected';
   if((match=/^Aportación (\d+)$/.exec(source)))return 'Contribution '+match[1];
   if((match=/^Comentario para la aportación (\d+)$/.exec(source)))return 'Comment on contribution '+match[1];
   if((match=/^Reto (\d+)$/.exec(source)))return 'Challenge '+match[1];
@@ -281,4 +294,4 @@ export function playerUiText(value,doc=globalThis.document){
     return 'Three.js · physics: '+(match[1]==='fallback sin físicas'?'fallback without physics':match[1]);
   return source;
 }
-export const PLAYER_UI_TRANSLATIONS=231;
+export const PLAYER_UI_TRANSLATIONS=242;
