@@ -22,6 +22,9 @@ export function createLtiStore(filename){
  'CREATE TABLE IF NOT EXISTS events(attempt_id TEXT NOT NULL,event_id TEXT NOT NULL,entity_id TEXT NOT NULL,event_json TEXT NOT NULL,received_at INTEGER NOT NULL,PRIMARY KEY(attempt_id,event_id))',
  'CREATE TABLE IF NOT EXISTS assessments(attempt_id TEXT PRIMARY KEY,normalized REAL NOT NULL,completed INTEGER NOT NULL,approved INTEGER NOT NULL,approved_at INTEGER,updated_at INTEGER NOT NULL)',
  'CREATE TABLE IF NOT EXISTS ags_outbox(id TEXT PRIMARY KEY,attempt_id TEXT NOT NULL,score_hash TEXT NOT NULL,payload_json TEXT NOT NULL,status TEXT NOT NULL,tries INTEGER NOT NULL DEFAULT 0,last_error TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,UNIQUE(attempt_id,score_hash))'
+ ,'CREATE TABLE IF NOT EXISTS nrps_contexts(registration_id TEXT NOT NULL,tenant_id TEXT NOT NULL,deployment_id TEXT NOT NULL,context_id TEXT NOT NULL,membership_url TEXT NOT NULL,versions_json TEXT NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(registration_id,deployment_id,context_id))'
+ ,'CREATE TABLE IF NOT EXISTS nrps_instructor_attempts(attempt_id TEXT PRIMARY KEY,allowed INTEGER NOT NULL,FOREIGN KEY(attempt_id) REFERENCES attempts(id))'
+ ,'CREATE TABLE IF NOT EXISTS nrps_registration_origins(registration_id TEXT PRIMARY KEY,origins_json TEXT NOT NULL,FOREIGN KEY(registration_id) REFERENCES platforms(id))'
  ].join(';\n')+';');
  const sql=q=>db.prepare(q);
  function upsertPlatform(r){
@@ -30,13 +33,46 @@ export function createLtiStore(filename){
      !Array.isArray(r.jwks?.keys)||!r.jwks.keys.length||!Array.isArray(r.deepLinkReturnOrigins))
     throw new TypeError('Invalid trusted platform registration');
   sql('INSERT INTO platforms VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET tenant_id=excluded.tenant_id,issuer=excluded.issuer,client_id=excluded.client_id,auth_url=excluded.auth_url,launch_url=excluded.launch_url,deep_link_launch_url=excluded.deep_link_launch_url,token_url=excluded.token_url,jwks_json=excluded.jwks_json,deployments_json=excluded.deployments_json,origins_json=excluded.origins_json,status=excluded.status').run(r.id,r.tenantId,r.issuer,r.clientId,r.authUrl,r.launchUrl,r.deepLinkLaunchUrl??null,r.tokenUrl,J(r.jwks),J(r.deployments),J(r.deepLinkReturnOrigins),r.status);
+  const extra=r.nrpsAllowedOrigins??[];
+  if(!Array.isArray(extra)||extra.length>12||extra.some(v=>typeof v!=='string'||!v.trim()||v.length>512))
+   throw new TypeError('Invalid NRPS service-origin allowlist');
+  sql('INSERT INTO nrps_registration_origins VALUES(?,?) ON CONFLICT(registration_id) DO UPDATE SET origins_json=excluded.origins_json').run(r.id,J(extra));
   return r.id;
  }
- const decodeReg=r=>r?{id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url??undefined,tokenUrl:r.token_url,jwks:P(r.jwks_json),deployments:P(r.deployments_json),deepLinkReturnOrigins:P(r.origins_json),status:r.status}:null;
+ const decodeReg=r=>r?{id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url??undefined,tokenUrl:r.token_url,jwks:P(r.jwks_json),deployments:P(r.deployments_json),deepLinkReturnOrigins:P(r.origins_json),nrpsAllowedOrigins:P(sql('SELECT origins_json FROM nrps_registration_origins WHERE registration_id=?').get(r.id)?.origins_json??'[]'),status:r.status}:null;
  const getRegistration=({issuer,clientId})=>decodeReg(sql('SELECT * FROM platforms WHERE issuer=? AND client_id=?').get(issuer,clientId));
  const getRegistrationById=id=>decodeReg(sql('SELECT * FROM platforms WHERE id=?').get(id));
  const getRegistrationByIssuer=issuer=>{const rows=sql("SELECT * FROM platforms WHERE issuer=? AND status='ACTIVE' LIMIT 2").all(issuer);return rows.length===1?decodeReg(rows[0]):null;};
  const listPlatforms=()=>sql('SELECT id,tenant_id,issuer,client_id,auth_url,launch_url,deep_link_launch_url,token_url,deployments_json,status FROM platforms ORDER BY tenant_id,id').all().map(r=>({id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url,tokenUrl:r.token_url,deployments:P(r.deployments_json),status:r.status}));
+ function saveNrpsContext({registrationId,tenantId,deploymentId,contextId,service}){
+  const reg=getRegistrationById(registrationId);
+  if(reg?.status!=='ACTIVE'||reg.tenantId!==tenantId||!reg.deployments.includes(deploymentId)||
+     typeof contextId!=='string'||!contextId.trim()||contextId.length>1024)
+   throw new Error('Untrusted NRPS launch context');
+  if(service===null){
+   sql('DELETE FROM nrps_contexts WHERE registration_id=? AND deployment_id=? AND context_id=?')
+    .run(registrationId,deploymentId,contextId);
+   return {available:false};
+  }
+  if(typeof service?.membershipUrl!=='string'||!service.serviceVersions?.includes('2.0'))
+   throw new Error('Invalid verified NRPS service');
+  sql('INSERT INTO nrps_contexts VALUES(?,?,?,?,?,?,?) ON CONFLICT(registration_id,deployment_id,context_id) DO UPDATE SET membership_url=excluded.membership_url,versions_json=excluded.versions_json,updated_at=excluded.updated_at')
+   .run(registrationId,tenantId,deploymentId,contextId,service.membershipUrl,J(service.serviceVersions),t());
+  return {available:true};
+ }
+ function getNrpsContext({registrationId,tenantId,deploymentId,contextId}){
+  const row=sql('SELECT * FROM nrps_contexts WHERE registration_id=? AND tenant_id=? AND deployment_id=? AND context_id=?')
+   .get(registrationId,tenantId,deploymentId,contextId);
+  return row?{registrationId:row.registration_id,tenantId:row.tenant_id,deploymentId:row.deployment_id,
+   contextId:row.context_id,membershipUrl:row.membership_url,serviceVersions:P(row.versions_json),
+   updatedAt:row.updated_at}:null;
+ }
+ function listNrpsContexts(tenantId){
+  req(tenantId,'tenantId');
+  return sql("SELECT c.registration_id,c.tenant_id,c.deployment_id,c.context_id,c.updated_at FROM nrps_contexts c JOIN platforms p ON p.id=c.registration_id WHERE c.tenant_id=? AND c.tenant_id=p.tenant_id AND p.status='ACTIVE' ORDER BY c.updated_at DESC LIMIT 100")
+   .all(tenantId).map(row=>({registrationId:row.registration_id,tenantId:row.tenant_id,
+    deploymentId:row.deployment_id,contextId:row.context_id,updatedAt:row.updated_at}));
+ }
  const transactions={
   create(v){sql('INSERT INTO oidc(state_hash,nonce_hash,browser_hash,issuer,client_id,registration_id,deployment_hint,target_link_uri,expires_at) VALUES(?,?,?,?,?,?,?,?,?)').run(v.stateHash,v.nonceHash,v.browserHash,v.issuer,v.clientId,v.registrationId,v.deploymentHint,v.targetLinkUri,v.expiresAt);},
   consume(hash){const r=sql('UPDATE oidc SET consumed_at=? WHERE state_hash=? AND consumed_at IS NULL AND expires_at>? RETURNING *').get(t(),hash,t());return r?{nonceHash:r.nonce_hash,browserHash:r.browser_hash,issuer:r.issuer,clientId:r.client_id,registrationId:r.registration_id,deploymentHint:r.deployment_hint,targetLinkUri:r.target_link_uri,expiresAt:r.expires_at}:null;}
@@ -64,7 +100,7 @@ export function createLtiStore(filename){
  }
  const createPicker=p=>sql('INSERT INTO pickers VALUES(?,?,?,?,?,?,?,NULL)').run(p.ticketHash,p.registrationId,p.tenantId,p.deploymentId,p.returnUrl,p.ltiData??null,p.expiresAt);
  const consumePicker=hash=>{let r=sql('UPDATE pickers SET consumed_at=? WHERE ticket_hash=? AND consumed_at IS NULL AND expires_at>? RETURNING *').get(t(),hash,t());return r?{registrationId:r.registration_id,tenantId:r.tenant_id,deploymentId:r.deployment_id,returnUrl:r.return_url,ltiData:r.lti_data}:null;};
- function attachLaunch({launch,ags,tokenHash,csrfHash,expiresAt}){
+ function attachLaunch({launch,ags,tokenHash,csrfHash,expiresAt,canReadRoster=false}){
   const b=getBinding({id:launch.bindingId,tenantId:launch.tenantId,registrationId:launch.registrationId,deploymentId:launch.deploymentId});
   if(!b||b.packageId!==launch.packageId||b.contentRoot!==launch.contentRoot||b.entityId!==launch.entityId)throw new Error('P2LRN content authorization changed');
   db.exec('BEGIN IMMEDIATE');
@@ -72,12 +108,14 @@ export function createLtiStore(filename){
    const id=randomUUID();
    const result=sql("INSERT INTO attempts(id,binding_id,tenant_id,learner_key,subject,context_id,resource_link_id,ags_json,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,'IN_PROGRESS',?,?) ON CONFLICT(binding_id,learner_key,context_id) WHERE status='IN_PROGRESS' DO UPDATE SET subject=excluded.subject,resource_link_id=excluded.resource_link_id,ags_json=excluded.ags_json,updated_at=excluded.updated_at RETURNING id").get(id,launch.bindingId,launch.tenantId,launch.learnerKey,launch.platformSubject,launch.contextId??'',launch.resourceLinkId,J(ags??null),t(),t());
    sql('INSERT INTO sessions VALUES(?,?,?,?,NULL)').run(tokenHash,result.id,csrfHash,expiresAt);
+   sql('INSERT INTO nrps_instructor_attempts VALUES(?,?) ON CONFLICT(attempt_id) DO UPDATE SET allowed=excluded.allowed')
+    .run(result.id,canReadRoster===true?1:0);
    db.exec('COMMIT');return {attemptId:result.id,expiresAt};
   }catch(e){db.exec('ROLLBACK');throw e;}
  }
  function getSession(hash){
-  const r=sql("SELECT s.csrf_hash,s.expires_at,a.*,b.registration_id,b.entity_id,c.package_id,c.content_root,c.entities_json,c.filename,c.bytes FROM sessions s JOIN attempts a ON a.id=s.attempt_id JOIN bindings b ON b.id=a.binding_id JOIN catalog c ON c.id=b.catalog_id WHERE s.token_hash=? AND s.expires_at>? AND s.revoked_at IS NULL AND a.status='IN_PROGRESS' AND b.status='PUBLISHED' AND c.status='PUBLISHED'").get(hash,t());
-  return r?{attemptId:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,registrationId:r.registration_id,subject:r.subject,ags:P(r.ags_json),packageId:r.package_id,contentRoot:r.content_root,entityId:r.entity_id,entities:P(r.entities_json),filename:r.filename,bytes:r.bytes,csrfHash:r.csrf_hash,expiresAt:r.expires_at}:null;
+  const r=sql("SELECT s.csrf_hash,s.expires_at,a.*,b.registration_id,b.deployment_id,b.entity_id,c.package_id,c.content_root,c.entities_json,c.filename,c.bytes FROM sessions s JOIN attempts a ON a.id=s.attempt_id JOIN bindings b ON b.id=a.binding_id JOIN catalog c ON c.id=b.catalog_id WHERE s.token_hash=? AND s.expires_at>? AND s.revoked_at IS NULL AND a.status='IN_PROGRESS' AND b.status='PUBLISHED' AND c.status='PUBLISHED'").get(hash,t());
+  return r?{attemptId:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,registrationId:r.registration_id,deploymentId:r.deployment_id,contextId:r.context_id,canReadRoster:sql('SELECT allowed FROM nrps_instructor_attempts WHERE attempt_id=?').get(r.id)?.allowed===1,subject:r.subject,ags:P(r.ags_json),packageId:r.package_id,contentRoot:r.content_root,entityId:r.entity_id,entities:P(r.entities_json),filename:r.filename,bytes:r.bytes,csrfHash:r.csrf_hash,expiresAt:r.expires_at}:null;
  }
  const getState=(a,e,s)=>{const r=sql('SELECT value_json,revision FROM snapshots WHERE attempt_id=? AND entity_id=? AND surface=?').get(a,e,s);return r?{value:P(r.value_json),revision:r.revision}:{value:null,revision:0};};
  function saveState(a,e,s,v,expectedRevision){
@@ -114,5 +152,5 @@ export function createLtiStore(filename){
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
  return Object.freeze({close:()=>db.close(),upsertPlatform,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
  publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,consumePicker,attachLaunch,getSession,
- getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,count});
+ getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,saveNrpsContext,getNrpsContext,listNrpsContexts,count});
 }
