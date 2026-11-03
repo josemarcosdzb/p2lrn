@@ -1,17 +1,18 @@
 import {dispatchRuntimeEvent} from '../runtime-events.js';
+import {playerUiText} from './ui-i18n.js';
 export const acceptsPayload = true;
 
 function resourceTitle(resource,representation){
   if(typeof representation?.title==='string'&&representation.title.trim())return representation.title.trim();
   const title=resource?.title;
   if(typeof title==='string')return title;
-  if(title&&typeof title==='object')return title.es??title.en??title.und??Object.values(title).find((value)=>typeof value==='string')??'';
+  if(title&&typeof title==='object')return (/^en(?:-|$)/i.test(document.documentElement?.lang??'') ? (title.en??title.es) : (title.es??title.en))??title.und??Object.values(title).find((value)=>typeof value==='string')??'';
   return '';
 }
 
 export async function render({container, bytes, payload, representation, resource, resolveResourceUrl, eventTarget, adapter, context = {}}) {
   const media = String(representation.mediaType ?? 'application/octet-stream').split(';', 1)[0].trim().toLowerCase();
-  if (!/^(image|audio|video)\//.test(media)) throw new Error(`Representación multimedia no soportada: ${representation.mediaType}`);
+  if (!/^(image|audio|video)\//.test(media)) throw new Error(playerUiText('Representación multimedia no soportada: ')+representation.mediaType);
 
   let url = null;
   let revoke = false;
