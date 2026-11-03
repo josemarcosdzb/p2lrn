@@ -2002,3 +2002,25 @@ body>.language-switch{position:fixed;top:12px;right:12px;z-index:1200}
     word-break:break-word;
   }
 }
+
+
+/* Homepage editorial navigation: deliberately image-free, keyboard-accessible. */
+.home-feature-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px;margin-top:32px;border-top:1px solid var(--line)}
+.home-feature-list .home-feature{display:grid;grid-template-columns:38px minmax(0,1fr);gap:8px 16px;align-content:start;padding:26px 10px 28px 0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;color:var(--ink);text-decoration:none;min-width:0;transition:background-color .18s ease}
+.home-feature-index,.home-feature--compact>span:first-child{font-family:var(--mono);font-size:.78rem;letter-spacing:.07em;color:var(--muted);padding-top:4px}
+.home-feature-content{display:flex;flex-direction:column;align-items:flex-start;gap:9px}
+.home-feature-content small{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.home-feature-content strong,.home-feature--compact h3{font-size:clamp(1.15rem,1.65vw,1.5rem);line-height:1.22;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.home-feature-content>span,.home-feature--compact p{font-size:.95rem;line-height:1.7;color:var(--muted)}
+.home-feature-action{grid-column:2;font-size:.85rem;font-weight:750;color:#1247bd;align-self:end}
+.home-feature:hover,.home-feature:focus-visible{background:rgba(18,71,189,.045)}
+.home-feature:focus-visible{outline:3px solid #125ce0;outline-offset:3px}
+.home-feature:hover .home-feature-action{text-decoration:underline}
+.home-feature-list--compact .home-feature{grid-template-columns:38px minmax(0,1fr);grid-template-rows:auto auto 1fr auto}
+.home-feature--compact>span:first-child{grid-column:1;grid-row:1/5}
+.home-feature--compact h3,.home-feature--compact p,.home-feature--compact b{grid-column:2}
+.home-feature--compact h3{margin:0 0 4px}
+.home-feature--compact p{margin:0 0 12px}
+.home-feature--compact b{font-size:.85rem;color:#1247bd}
+@media(max-width:700px){.home-feature-list{grid-template-columns:minmax(0,1fr)}.home-feature-list .home-feature{padding:21px 6px 23px 0}.home-feature-content strong,.home-feature--compact h3{font-size:1.17rem}}
+@media(prefers-reduced-motion:reduce){.home-feature-list .home-feature{transition:none}}
