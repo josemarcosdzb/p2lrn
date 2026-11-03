@@ -242,7 +242,16 @@ const EN={
   " conectados": " connected",
   "no hay palabras": "no words",
   "Sin datos": "No data",
-  "Curso sin actividades": "Course has no activities"
+  "Curso sin actividades": "Course has no activities",
+  "Emparejar": "Matching",
+  "Verdadero/Falso": "True or false",
+  "Crucigrama": "Crossword",
+  "3D ordenar/relacionar/clasificar": "3D ordering, matching and classification",
+  "Necesita soluciones embebidas.": "Embedded answer keys are required.",
+  "Necesita al menos 3 respuestas textuales.": "At least 3 text answers are required.",
+  "Necesita al menos 4 respuestas textuales.": "At least 4 text answers are required.",
+  "Necesita al menos 3 parejas.": "At least 3 pairs are required.",
+  "Necesita al menos 2 afirmaciones.": "At least 2 statements are required."
 };
 export function playerUiText(value,doc=globalThis.document){
   const source=String(value??'');
@@ -337,4 +346,4 @@ export function playerDiagnosticText(value,doc=globalThis.document){
     return prefix+'There are more challenges ('+match[1]+') than available distinct letters ('+match[2]+').';
   return source;
 }
-export const PLAYER_UI_TRANSLATIONS=242;
+export const PLAYER_UI_TRANSLATIONS=251;
