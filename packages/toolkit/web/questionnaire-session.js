@@ -1,5 +1,6 @@
 import {scoreQuestionnaire, validateQuestionnaire} from './questionnaire-core.js';
 import {dispatchRuntimeEvent} from './runtime-events.js';
+import {playerUiText} from './renderers/ui-i18n.js';
 
 export const QUESTIONNAIRE_STATE_VERSION = 'p2lrn-questionnaire-state/0.2';
 export const QUESTIONNAIRE_STATE_LEGACY_VERSIONS = Object.freeze([
@@ -185,7 +186,7 @@ export class QuestionnaireSession {
 
   async mount() {
     if (hasQuestionTiming(this.payload) && !this.supportsQuestionTiming) {
-      const error = new Error(`Renderer ${this.rendererId ?? 'desconocido'} no implementa límites de tiempo por pregunta.`);
+      const error = new Error('Renderer '+(this.rendererId ?? playerUiText('desconocido'))+playerUiText(' no implementa límites de tiempo por pregunta.'));
       error.code = 'P2LRN_TIMING_UNSUPPORTED';
       throw error;
     }
