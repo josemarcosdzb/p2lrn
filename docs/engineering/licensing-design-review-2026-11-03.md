@@ -33,13 +33,13 @@ La base se declara *source-available* y no aprobada como open source por OSI. El
 - Fuente con hashes validada localmente: Toolkit **181 archivos**, Studio **51**, Analytics **10**, y el código nativo Go en archivo verificable.
 - `node packages/player/scripts/build-dist.mjs` produjo 131 archivos con textos de licencias de Three.js, Rapier y H5P Standalone.
 - `node packages/h5p-libraries/scripts/build.mjs` produjo 144 bibliotecas. La auditoría estricta falló por los 32 casos sin prueba de licencia; no se han ocultado o eliminado.
-- `node deploy/netlify/build-site.mjs`: preparación de CDN completada, compilación completa interrumpida porque el equipo de pruebas no disponía de Go. El workflow sí establece Go 1.26; ejecución de CI final no confirmada.
+- `node deploy/netlify/build-site.mjs`: **PASS** con Go 1.26 portátil en Windows, sobre el commit de la rama `d70a909` (la rama puede continuar cambiando). Resultado: **134 páginas, 128 URL en sitemap bilingüe, 50 guías ES y 50 EN indexadas para búsqueda, enlaces locales validados, 4 ZIP de Skills**, Player 131 archivos y ejecutable Windows de 6.528.000 bytes con manifiesto/archivo fuente verificables. Además, `node scripts/browser-license-footer-qa.mjs --built`: **8/8** pruebas Chrome sobre el HTML compilado con footer compartido, formularios y enlaces correctos. Esta prueba local no certifica URLs públicas ni el último commit posterior.
 
 ## Qué falta para considerar cerrada la entrega
 
 1. **Revisión jurídica formal** de la licencia y del Anexo A por un especialista, especialmente patentes en integraciones comerciales, límites de uso institucional y compatibilidad con obligaciones copyleft.
 2. **Acreditar los derechos de 32 bibliotecas H5P** mediante licencia original/revisión/autorización. No suprimir funciones ni desactivar `--strict` para forzar una aprobación.
-3. **Build Netlify final con Go** y descarga real de versiones, código fuente y ejecutable; contrastar tarballs npm y rutas CDN públicas con los hashes y la versión exacta.
+3. **Despliegue público y distribución verificada**: el build **local ya pasa** con Go 1.26; quedan la ejecución CI en el commit que finalmente se publique, la descarga real de Netlify/navegador y npm y el cotejo de versiones, licencias, avisos, hashes y fuente correspondiente publicada.
 4. **Validación operativa del formulario comercial** y proceso de autorización contractual revisado; enviar el formulario no otorga licencia.
 5. **Reconciliar con `main`**: la rama de diseño está divergida, por lo que no debe realizarse fusión ni `force push` hasta resolver diferencias con el trabajo más reciente del Player y la internacionalización.
 
@@ -47,6 +47,6 @@ Los documentos técnicos anteriores son evidencia de desarrollo; **no sustituyen
 
 ## Aceptación de la sección
 
-La sección se considerará **técnicamente completa** cuando el verificador de licencias y el build de Netlify pasen en el estado final de la rama, la página y sus enlaces se prueben en navegador real ES/EN a las resoluciones indicadas, los avisos de paquetes se comprueben mediante descargas reales y exista evidencia de las correspondencias de fuente/versiones.
+La sección se considerará **técnicamente completa para distribución pública** cuando el build y los controles estrictos de terceros pasen sobre el commit final, el despliegue real se pruebe en navegador ES/EN, las licencias y avisos de los paquetes distribuidos se comprueben mediante descargas públicas y existan pruebas de correspondencia entre cada versión binaria, su manifiesto y su fuente. El build local y las pruebas Chrome del HTML compilado ya se han superado; eso no sustituye comprobar Netlify y npm en producción.
 
 La **validez jurídica** requiere revisión profesional independiente.
