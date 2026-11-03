@@ -1,3 +1,4 @@
+import {playerUiText} from './ui-i18n.js';
 import {MEMORY_RENDERER} from '../renderer-registry.js';
 import {hashText, shuffleDeterministic} from '../questionnaire-games-core.js';
 import {el, setupGame, statusNode, stylesheets} from './game-common.js';
@@ -30,7 +31,7 @@ export async function render(options) {
   ]);
   const cards=layoutCards(base,hashText(base.map((card)=>card.key).join('|')));
   const board=el('div',{class:'p2lrn-memory-grid'});
-  const status=statusNode('Memoriza las cartas: se ocultarán en 3 segundos.');
+  const status=statusNode(playerUiText('Memoriza las cartas: se ocultarán en 3 segundos.'));
   const solved=new Set();
   const buttons=new Map();
   let selected=[];
@@ -72,13 +73,13 @@ export async function render(options) {
         locked=false;
         refresh();
         if(solved.size===pairs.length){
-          status.textContent='Memoria completada.';
-          void runtime.finish().then((score)=>{const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';if(score&&reveal)status.textContent=`Memoria completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`;else status.textContent='Memoria completada. Actividad enviada.';});
+          status.textContent=playerUiText('Memoria completada.');
+          void runtime.finish().then((score)=>{const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';if(score&&reveal)status.textContent=`Memoria completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`;else status.textContent=playerUiText('Memoria completada. Actividad enviada.');});
         }else status.textContent=`Pareja correcta. ${solved.size}/${pairs.length} parejas.`;
       },350);
       return;
     }
-    status.textContent='No forman pareja.';
+    status.textContent=playerUiText('No forman pareja.');
     schedule(()=>{
       selected=[];
       locked=false;
