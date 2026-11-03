@@ -210,7 +210,7 @@ async function additionalGameRenderers(language){
       };
       const container=document.getElementById('game-mount');
       const bytes=new TextEncoder().encode(JSON.stringify(pkg));
-      const runtime=await render({container,bytes,
+      const runtime=await render({container,bytes,representation:{mediaType:'application/vnd.p2lrn.questionnaire+json'},
         decodeJson:(input)=>JSON.parse(new TextDecoder().decode(input)),context:{}});
       const status=[...container.querySelectorAll('.p2lrn-game-status')].map(x=>x.textContent).filter(Boolean).join(' | ')
         ||container.querySelector('.p2lrn-q-progress')?.textContent||'';
