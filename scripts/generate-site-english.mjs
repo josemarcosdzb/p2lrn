@@ -591,6 +591,9 @@ function normalizeEnglishCopy(value){
 function translatePlain(value){
   const original=String(value??'');
   const text=original.trim();
+  // Protocol language tags and section identifiers are never translatable,
+  // even if an old editorial dictionary contains a homonymous preposition.
+  if(STRUCTURAL_JS_TOKENS.has(text)||/^[a-z]{2}(?:-[A-Za-z]{2})?$/.test(text))return original;
   if(MANUAL.has(text))return preserveWhitespace(original,normalizeEnglishCopy(MANUAL.get(text)));
   if(!shouldTranslate(text))return original;
   return preserveWhitespace(original,normalizeEnglishCopy(cache[text]??text));
