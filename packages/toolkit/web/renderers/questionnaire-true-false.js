@@ -17,11 +17,11 @@ export async function render(options){
     if(finished){
       const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
       card.append(el('h3',{},reveal?playerUiText(`Ronda completada: ${correctCount}/${items.length} aciertos.`):playerUiText('Ronda enviada. El profesor no ha habilitado mostrar la corrección.')));
-      const retry=el('button',{type:'button',class:'p2lrn-game-button'},'Repetir ronda');
+      const retry=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Repetir ronda'));
       retry.addEventListener('click',()=>{
         if(!runtime.reset()){status.textContent=playerUiText('No quedan intentos disponibles.');return;}
         index=0;correctCount=0;finished=false;locked=false;
-        status.textContent='Elige verdadero o falso.';
+        status.textContent=playerUiText('Elige verdadero o falso.');
         redraw();
       });
       card.append(retry);
@@ -40,14 +40,14 @@ export async function render(options){
       if(index>=items.length-1){
         finished=true;
         redraw();
-        status.textContent='Ronda terminada. Respuestas enviadas.';
+        status.textContent=playerUiText('Ronda terminada. Respuestas enviadas.');
         void runtime.finish();
       }else{
-        schedule(()=>{index+=1;locked=false;status.textContent='Elige verdadero o falso.';redraw();},350);
+        schedule(()=>{index+=1;locked=false;status.textContent=playerUiText('Elige verdadero o falso.');redraw();},350);
       }
     };
-    const yes=el('button',{type:'button',class:'p2lrn-game-choice'},'Verdadero');
-    const no=el('button',{type:'button',class:'p2lrn-game-choice'},'Falso');
+    const yes=el('button',{type:'button',class:'p2lrn-game-choice'},playerUiText('Verdadero'));
+    const no=el('button',{type:'button',class:'p2lrn-game-choice'},playerUiText('Falso'));
     yes.addEventListener('click',()=>answer(true));no.addEventListener('click',()=>answer(false));
     actions.append(yes,no);card.append(actions);
   };
