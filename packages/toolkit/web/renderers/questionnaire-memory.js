@@ -49,7 +49,7 @@ export async function render(options) {
       const button=buttons.get(card.key);
       const visible=preview||solved.has(card.pairId)||selected.some((item)=>item.key===card.key);
       button.textContent=visible?card.text:'?';
-      button.setAttribute('aria-label',visible?card.text:'Carta oculta');
+      button.setAttribute('aria-label',visible?card.text:playerUiText('Carta oculta'));
       button.disabled=preview||locked||solved.has(card.pairId);
       button.classList.toggle('is-selected',selected.some((item)=>item.key===card.key));
       button.classList.toggle('is-solved',solved.has(card.pairId));
@@ -67,7 +67,7 @@ export async function render(options) {
     if(first.pairId===card.pairId&&first.side!==card.side){
       solved.add(card.pairId);
       runtime.applyPatch(card.questionId,card.patch);
-      status.textContent='Pareja correcta.';
+      status.textContent=playerUiText('Pareja correcta.');
       schedule(()=>{
         selected=[];
         locked=false;
@@ -75,7 +75,7 @@ export async function render(options) {
         if(solved.size===pairs.length){
           status.textContent=playerUiText('Memoria completada.');
           void runtime.finish().then((score)=>{const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';if(score&&reveal)status.textContent=playerUiText(`Memoria completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`);else status.textContent=playerUiText('Memoria completada. Actividad enviada.');});
-        }else status.textContent=`Pareja correcta. ${solved.size}/${pairs.length} parejas.`;
+        }else status.textContent=playerUiText(`Pareja correcta. ${solved.size}/${pairs.length} parejas.`);
       },350);
       return;
     }
@@ -84,7 +84,7 @@ export async function render(options) {
       selected=[];
       locked=false;
       refresh();
-      status.textContent=`Descubre dos cartas y forma parejas. ${solved.size}/${pairs.length} parejas.`;
+      status.textContent=playerUiText(`Descubre dos cartas y forma parejas. ${solved.size}/${pairs.length} parejas.`);
     },700);
   };
 
@@ -99,7 +99,7 @@ export async function render(options) {
   schedule(()=>{
     preview=false;
     locked=false;
-    status.textContent='Descubre dos cartas y forma parejas.';
+    status.textContent=playerUiText('Descubre dos cartas y forma parejas.');
     refresh();
   },3000);
 
