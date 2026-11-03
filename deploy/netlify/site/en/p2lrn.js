@@ -64,129 +64,136 @@
   const PUBLIC_NAV = [
     { label: 'Studio', href: '/studio/', active: ['/studio/'] },
     {
-      label: 'Soluciones',
+      label: 'Solutions',
       active: ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'],
       items: [
-        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
-        ['/juegos-educativos-3d/','Juegos educativos 3D'],
-        ['/cursos-offline/','Cursos offline sin LMS'],
+        ['/crear-cursos-interactivos/','Create interactive courses'],
+        ['/juegos-educativos-3d/','3D educational games'],
+        ['/cursos-offline/','Offline courses without a platform'],
       ],
     },
     { label: 'Analytics', href: '/analytics/', active: ['/analytics/'] },
-    { label: 'Skills para IA', href: '/skills/', active: ['/skills/'] },
-    { label: 'Documentación', href: '/docs/', active: ['/docs/'] },
-    { label: 'Contacto', href: '/contacto/', active: ['/contacto/'] },
+    { label: 'AI Skills', href: '/skills/', active: ['/skills/'] },
+    { label: 'Documentation', href: '/docs/', active: ['/docs/'] },
+    { label: 'Contact', href: '/contacto/', active: ['/contacto/'] },
   ];
 
   const GLOBAL_NAV = [
     {
-      label: 'Documentación',
+      label: 'Documentation',
       active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/formato-portable-cursos-interactivos/'],
       items: [
-        ['/docs/','Inicio'],
-        ['/docs/empezar/','Antes de empezar'],
-        ['/docs/que-usar/','Mapa de componentes'],
-        ['/docs/conceptos/','Conceptos'],
+        ['/docs/','Home'],
+        ['/docs/empezar/','Before you begin'],
+        ['/docs/que-usar/','Component map'],
+        ['/docs/conceptos/','Concepts'],
         ['/docs/formato/','Formato P2LRN'],
         ['/docs/formato-portable-cursos-interactivos/','Portability guide'],
       ],
     },
     {
-      label: 'Instalar',
+      label: 'Install',
       active: ['/docs/instalar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*'],
       items: [
-        ['/docs/instalar/','Elegir instalación'],
+        ['/docs/instalar/','Choose an installation'],
         ['/docs/npm/','NPM'],
-        ['/docs/npm/studio/','Studio con NPM'],
+        ['/docs/npm/studio/','Studio with NPM'],
         ['/docs/npm/analytics/','Analytics with NPM'],
         ['/docs/cdn/','CDN'],
-        ['/docs/cdn/studio/','Studio mediante CDN'],
-        ['/docs/cdn/analytics/','Analytics mediante CDN'],
+        ['/docs/cdn/studio/','Studio via CDN'],
+        ['/docs/cdn/analytics/','Analytics via CDN'],
       ],
     },
     {
-      label: 'Crear',
+      label: 'Create',
       active: ['/studio/','/crear-cursos-interactivos/','/cursos-offline/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
       items: [
-        ['/studio/','Abrir Studio'],
-        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
-        ['/cursos-offline/','Cursos offline sin LMS'],
-        ['/docs/studio/','Guía de Studio'],
-        ['/docs/entrega-offline/','Entrega offline'],
-        ['/docs/paquetes/','Crear paquetes'],
+        ['/studio/','Open Studio'],
+        ['/crear-cursos-interactivos/','Create interactive courses'],
+        ['/cursos-offline/','Offline courses without a platform'],
+        ['/docs/studio/','Studio guide'],
+        ['/docs/entrega-offline/','Offline delivery'],
+        ['/docs/paquetes/','Create packages'],
         ['/docs/paquetes/multipart/','Multipart'],
         ['/docs/toolkit/','Toolkit'],
         ['/docs/cli/','CLI'],
       ],
     },
     {
-      label: 'Reproducir',
+      label: 'Play',
       active: ['/docs/player/','/demo/','/juegos-educativos-3d/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],
       wide: true,
       items: [
         ['/docs/player/','Player'],
-        ['/demo/','Visor'],
-        ['/juegos-educativos-3d/','Juegos educativos 3D'],
-        ['/docs/questionnaires/','Cuestionarios y juegos'],
-        ['/docs/questionnaires/standard/','Cuestionario estándar'],
-        ['/docs/questionnaires/memory/','Memoria'],
-        ['/docs/questionnaires/matching/','Relacionar'],
-        ['/docs/questionnaires/ordering/','Ordenar'],
-        ['/docs/questionnaires/classification/','Clasificar'],
-        ['/docs/questionnaires/true-false/','Verdadero / Falso'],
-        ['/docs/questionnaires/word-search/','Sopa de letras'],
-        ['/docs/questionnaires/crossword/','Crucigrama'],
-        ['/docs/questionnaires/rosco/','Rosco'],
-        ['/docs/questionnaires/3d/','Juego 3D'],
-        ['/docs/juegos-3d/','Arquitectura 3D'],
-        ['/docs/ejemplos/','Ejemplos'],
+        ['/demo/','Viewer'],
+        ['/juegos-educativos-3d/','3D educational games'],
+        ['/docs/questionnaires/','Quizzes and games'],
+        ['/docs/questionnaires/standard/','Standard quiz'],
+        ['/docs/questionnaires/memory/','Memory'],
+        ['/docs/questionnaires/matching/','Matching'],
+        ['/docs/questionnaires/ordering/','Ordering'],
+        ['/docs/questionnaires/classification/','Classification'],
+        ['/docs/questionnaires/true-false/','True / false'],
+        ['/docs/questionnaires/word-search/','Word search'],
+        ['/docs/questionnaires/crossword/','Crossword'],
+        ['/docs/questionnaires/rosco/','Alphabet quiz'],
+        ['/docs/questionnaires/3d/','3D game'],
+        ['/docs/juegos-3d/','3D architecture'],
+        ['/docs/ejemplos/','Examples'],
       ],
     },
     {
-      label: 'Integrar',
+      label: 'Integrate',
       active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
       items: [
-        ['/docs/integracion/','Integración'],
-        ['/docs/colaboracion/','Colaboración'],
-        ['/docs/eventos/','Eventos'],
-        ['/docs/conectores/','Conectores: visión general'],
-        ['/docs/conectores/ia/','Conectores para IA'],
-        ['/docs/conectores/lms/','Plataformas LMS'],
+        ['/docs/integracion/','Integration'],
+        ['/docs/colaboracion/','Collaboration'],
+        ['/docs/eventos/','Events'],
+        ['/docs/conectores/','Connectors: overview'],
+        ['/docs/conectores/ia/','AI connectors'],
+        ['/docs/conectores/lms/','LMS platforms'],
         ['/docs/conectores/lti/','LTI 1.3'],
       ],
     },
     {
-      label: 'Seguimiento',
+      label: 'Tracking',
       active: ['/docs/progresion/','/docs/metricas/'],
       items: [
-        ['/docs/progresion/','Progresión'],
-        ['/docs/metricas/','Métricas y analítica'],
+        ['/docs/progresion/','Progression'],
+        ['/docs/metricas/','Metrics and analytics'],
       ],
     },
     {
       label: 'Analytics',
       active: ['/docs/analytics/','/analytics/'],
       items: [
-        ['/docs/analytics/','Guía de Analytics'],
-        ['/analytics/','Abrir Analytics'],
+        ['/docs/analytics/','Analytics guide'],
+        ['/analytics/','Open Analytics'],
       ],
     },
     {
-      label: 'Referencia',
+      label: 'Reference',
       active: ['/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
       items: [
-        ['/docs/compatibilidad/','Compatibilidad'],
-        ['/docs/recetas/','Recetas'],
-        ['/docs/glosario/','Glosario'],
-        ['/docs/referencia/','Referencia técnica'],
-        ['/docs/troubleshooting/','Solución de problemas'],
+        ['/docs/compatibilidad/','Compatibility'],
+        ['/docs/recetas/','Recipes'],
+        ['/docs/glosario/','Glossary'],
+        ['/docs/referencia/','Technical reference'],
+        ['/docs/troubleshooting/','Troubleshooting'],
       ],
     },
   ];
 
+  // English pages have their own /en/ URLs; normalize for internal route matching.
   const normalizePath = (value) => {
     const pathname = String(value || '/').split(/[?#]/, 1)[0].replace(/\/index\.html$/u, '/');
-    return pathname.endsWith('/') ? pathname : pathname + '/';
+    const logical = pathname.replace(/^\/en(?=\/|$)/u, '') || '/';
+    return logical.endsWith('/') ? logical : logical + '/';
+  };
+  const englishHref = (href) => {
+    const url=String(href||'');
+    if(!url.startsWith('/')||url.startsWith('//')||url.startsWith('/en/')||url.startsWith('/examples/'))return url;
+    return '/en'+url;
   };
 
   const renderGlobalNavigation = () => {
@@ -199,7 +206,7 @@
       header.querySelector('.brand')?.after(nav);
     }
     nav.id = 'nav';
-    nav.setAttribute('aria-label','Navegación principal');
+    nav.setAttribute('aria-label','Main navigation');
     const current = normalizePath(window.location.pathname);
     const fragment = document.createDocumentFragment();
 
@@ -209,7 +216,7 @@
       if (entry.href) {
         const link = document.createElement('a');
         link.className = 'nav-direct';
-        link.href = entry.href;
+        link.href = englishHref(entry.href);
         link.textContent = entry.label;
         if (active) link.setAttribute('aria-current','page');
         fragment.append(link);
@@ -226,7 +233,7 @@
       dropdown.className = 'nav-dropdown';
       for (const [href,label] of entry.items) {
         const link = document.createElement('a');
-        link.href = href;
+        link.href = englishHref(href);
         link.textContent = label;
         if (current === normalizePath(href)) link.setAttribute('aria-current','page');
         dropdown.append(link);
@@ -242,7 +249,7 @@
       menuButton.className = 'menu';
       menuButton.type = 'button';
       menuButton.dataset.menu = '';
-      menuButton.textContent = 'Menú';
+      menuButton.textContent = 'Menu';
       header.append(menuButton);
     }
     menuButton.setAttribute('aria-controls','nav');
@@ -364,131 +371,131 @@
   });
 
   const GLOBAL_SIDEBAR = [
-    ['EMPEZAR', [
-      ['/docs/','Documentación'],
-      ['/docs/empezar/','Antes de empezar'],
-      ['/docs/empezar-facil/','Empezar fácil'],
+    ['GET STARTED', [
+      ['/docs/','Documentation'],
+      ['/docs/empezar/','Before you begin'],
+      ['/docs/empezar-facil/','Quick start'],
     ]],
-    ['INSTALAR', [
-      ['/docs/instalar/','Instalación'],
+    ['INSTALL', [
+      ['/docs/instalar/','Installation'],
       ['/docs/cdn/','CDN'],
-      ['/docs/cdn/studio/','Studio mediante CDN'],
-        ['/docs/cdn/analytics/','Analytics mediante CDN'],
+      ['/docs/cdn/studio/','Studio via CDN'],
+        ['/docs/cdn/analytics/','Analytics via CDN'],
       ['/docs/npm/','NPM'],
-      ['/docs/npm/studio/','Studio con NPM'],
+      ['/docs/npm/studio/','Studio with NPM'],
         ['/docs/npm/analytics/','Analytics with NPM'],
     ]],
-    ['CREAR', [
-      ['/docs/studio/','Studio visual'],
-      ['/docs/entrega-offline/','Entrega offline'],
-      ['/docs/paquetes/','Crear paquetes'],
+    ['CREATE', [
+      ['/docs/studio/','Visual Studio'],
+      ['/docs/entrega-offline/','Offline delivery'],
+      ['/docs/paquetes/','Create packages'],
       ['/docs/paquetes/multipart/','Multipart'],
       ['/docs/toolkit/','Toolkit'],
       ['/docs/cli/','CLI'],
     ]],
-    ['REPRODUCIR', [
+    ['PLAY', [
       ['/docs/player/','Player'],
-      ['/docs/questionnaires/','Cuestionarios y juegos'],
-      ['/docs/juegos-3d/','Juegos 3D'],
-      ['/docs/ejemplos/','Ejemplos'],
+      ['/docs/questionnaires/','Quizzes and games'],
+      ['/docs/juegos-3d/','3D games'],
+      ['/docs/ejemplos/','Examples'],
     ]],
-    ['INTEGRAR', [
-      ['/docs/integracion/','Integración'],
-      ['/docs/colaboracion/','Colaboración'],
-      ['/docs/eventos/','Eventos'],
+    ['INTEGRATE', [
+      ['/docs/integracion/','Integration'],
+      ['/docs/colaboracion/','Collaboration'],
+      ['/docs/eventos/','Events'],
     ]],
-    ['CONECTORES', [
-      ['/docs/conectores/','Conectores e integración'],
+    ['CONNECTORS', [
+      ['/docs/conectores/','Connectors and integration'],
     ]],
-    ['SEGUIMIENTO', [
-      ['/docs/progresion/','Progresión'],
-      ['/docs/metricas/','Métricas y analítica'],
+    ['TRACKING', [
+      ['/docs/progresion/','Progression'],
+      ['/docs/metricas/','Metrics and analytics'],
     ]],
     ['ANALYTICS', [
       ['/docs/analytics/','P2LRN Analytics'],
-      ['/analytics/','Abrir panel demo ↗'],
+      ['/analytics/','Open demo dashboard ↗'],
     ]],
-    ['REFERENCIA', [
-      ['/docs/compatibilidad/','Compatibilidad'],
-      ['/docs/recetas/','Recetas'],
-      ['/docs/glosario/','Glosario'],
-      ['/docs/referencia/','Referencia técnica'],
-      ['/docs/troubleshooting/','Solución de problemas'],
+    ['REFERENCE', [
+      ['/docs/compatibilidad/','Compatibility'],
+      ['/docs/recetas/','Recipes'],
+      ['/docs/glosario/','Glossary'],
+      ['/docs/referencia/','Technical reference'],
+      ['/docs/troubleshooting/','Troubleshooting'],
     ]],
-    ['RECURSOS', [
-      ['/studio/','Abrir Studio ↗'],
-      ['/demo/','Visor ↗'],
-      ['/examples/catalog.json','Catálogo de ejemplos ↗'],
+    ['RESOURCES', [
+      ['/studio/','Open Studio ↗'],
+      ['/demo/','Viewer ↗'],
+      ['/examples/catalog.json','Examples catalog ↗'],
     ]],
   ];
 
   const DOC_SIDEBAR_CHILDREN = new Map([
     ['/docs/empezar/',[
-      ['/docs/que-usar/','Mapa de componentes'],
-      ['/docs/conceptos/','Conceptos fundamentales'],
+      ['/docs/que-usar/','Component map'],
+      ['/docs/conceptos/','Core concepts'],
       ['/docs/formato/','Formato P2LRN'],
       ['/docs/formato-portable-cursos-interactivos/','Portability guide'],
     ]],
     ['/docs/conectores/',[
-      ['/docs/conectores/ia/','Conectores para IA'],
-      ['/docs/skills/','Skills P2LRN para IA'],
-      ['/docs/conectores/lms/','Plataformas LMS'],
-      ['/docs/conectores/lti/','Módulo LTI 1.3'],
+      ['/docs/conectores/ia/','AI connectors'],
+      ['/docs/skills/','P2LRN AI Skills'],
+      ['/docs/conectores/lms/','LMS platforms'],
+      ['/docs/conectores/lti/','LTI 1.3 module'],
     ]],
     ['/docs/questionnaires/',[
-      ['/docs/questionnaires/standard/','Cuestionario estándar'],
-      ['/docs/questionnaires/memory/','Memoria'],
-      ['/docs/questionnaires/matching/','Relacionar'],
-      ['/docs/questionnaires/ordering/','Ordenar'],
-      ['/docs/questionnaires/classification/','Clasificar'],
-      ['/docs/questionnaires/true-false/','Verdadero / Falso'],
-      ['/docs/questionnaires/word-search/','Sopa de letras'],
-      ['/docs/questionnaires/crossword/','Crucigrama'],
-      ['/docs/questionnaires/rosco/','Rosco'],
-      ['/docs/questionnaires/3d/','Juego 3D'],
+      ['/docs/questionnaires/standard/','Standard quiz'],
+      ['/docs/questionnaires/memory/','Memory'],
+      ['/docs/questionnaires/matching/','Matching'],
+      ['/docs/questionnaires/ordering/','Ordering'],
+      ['/docs/questionnaires/classification/','Classification'],
+      ['/docs/questionnaires/true-false/','True / false'],
+      ['/docs/questionnaires/word-search/','Word search'],
+      ['/docs/questionnaires/crossword/','Crossword'],
+      ['/docs/questionnaires/rosco/','Alphabet quiz'],
+      ['/docs/questionnaires/3d/','3D game'],
     ]],
   ]);
 
   // IA topics are part of a single guide. They are anchors, not extra pages.
   const DOC_AI_TOPICS = Object.freeze([
-    ['para-que','Qué puedes hacer'],
-    ['crear-cursos','Crear cursos'],
+    ['para-que','What you can do'],
+    ['crear-cursos','Create courses'],
     ['chatgpt','ChatGPT'],
     ['claude','Claude'],
     ['gemini','Gemini'],
     ['grok','Grok'],
-    ['conectar-ordenador','Conectar tu ordenador'],
-    ['servicios-web','Acceso desde la web'],
-    ['comprobar','Comprobaciones'],
+    ['conectar-ordenador','Connect your computer'],
+    ['servicios-web','Access from the web'],
+    ['comprobar','Checks'],
   ]);
 
   const DOC_SECTION_LABELS = Object.freeze({
     EMPEZAR:'Empezar',
-    INSTALAR:'Instalar',
-    CREAR:'Crear',
-    REPRODUCIR:'Reproducir',
-    INTEGRAR:'Integrar',
+    INSTALAR:'Install',
+    CREAR:'Create',
+    REPRODUCIR:'Play',
+    INTEGRAR:'Integrate',
     CONECTORES:'Conectores',
-    SEGUIMIENTO:'Seguimiento',
-    REFERENCIA:'Referencia',
+    SEGUIMIENTO:'Tracking',
+    REFERENCIA:'Reference',
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
-    ['/docs/que-usar/',['/docs/empezar/','Antes de empezar']],
-    ['/docs/conceptos/',['/docs/empezar/','Antes de empezar']],
-    ['/docs/formato/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/que-usar/',['/docs/empezar/','Before you begin']],
+    ['/docs/conceptos/',['/docs/empezar/','Before you begin']],
+    ['/docs/formato/',['/docs/empezar/','Before you begin']],
     ['/docs/formato-portable-cursos-interactivos/',['/docs/formato/','Formato P2LRN']],
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/npm/analytics/',['/docs/npm/','NPM']],
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
     ['/docs/cdn/analytics/',['/docs/cdn/','CDN']],
-    ['/docs/paquetes/multipart/',['/docs/paquetes/','Crear paquetes']],
-    ['/docs/conectores/ia/',['/docs/conectores/','Conectores e integración']],
-    ['/docs/skills/',['/docs/conectores/','Conectores e integración']],
-    ['/docs/conectores/gemini/',['/docs/conectores/ia/','Conectores para IA']],
-    ['/docs/conectores/skills/',['/docs/conectores/ia/','Conectores para IA']],
-    ['/docs/conectores/local/',['/docs/conectores/ia/','Conectores para IA']],
-    ['/docs/conectores/lms/',['/docs/conectores/','Conectores e integración']],
-    ['/docs/conectores/lti/',['/docs/conectores/','Conectores e integración']],
+    ['/docs/paquetes/multipart/',['/docs/paquetes/','Create packages']],
+    ['/docs/conectores/ia/',['/docs/conectores/','Connectors and integration']],
+    ['/docs/skills/',['/docs/conectores/','Connectors and integration']],
+    ['/docs/conectores/gemini/',['/docs/conectores/ia/','AI connectors']],
+    ['/docs/conectores/skills/',['/docs/conectores/ia/','AI connectors']],
+    ['/docs/conectores/local/',['/docs/conectores/ia/','AI connectors']],
+    ['/docs/conectores/lms/',['/docs/conectores/','Connectors and integration']],
+    ['/docs/conectores/lti/',['/docs/conectores/','Connectors and integration']],
   ]);
   // Keep legacy detail URLs reachable without advertising a separate IA
   // navigation entry for every provider or installation method.
@@ -528,7 +535,7 @@
         const children=DOC_SIDEBAR_CHILDREN.get(href) || [];
         const currentChild=children.find(([childHref])=>selected===normalizePath(childHref));
         const a=document.createElement('a');
-        a.href=href;
+        a.href=englishHref(href);
         a.textContent=textValue;
         if (current===normalized) a.setAttribute('aria-current','page');
         else if (currentChild) a.setAttribute('aria-current','location');
@@ -540,7 +547,7 @@
           childNav.setAttribute('aria-label',textValue);
           for (const [childHref,childLabel] of children) {
             const childLink=document.createElement('a');
-            childLink.href=childHref;
+            childLink.href=englishHref(childHref);
             childLink.textContent=childLabel;
             if (current===normalizePath(childHref)) childLink.setAttribute('aria-current','page');
             else if (selected===normalizePath(childHref)) childLink.setAttribute('aria-current','location');
@@ -552,7 +559,7 @@
               topics.setAttribute('aria-label','Apartados de Conectores para IA');
               for (const [id,label] of DOC_AI_TOPICS) {
                 const topic=document.createElement('a');
-                topic.href='/docs/conectores/ia/#'+id;
+                topic.href='/en/docs/conectores/ia/#'+id;
                 topic.dataset.targetId=id;
                 topic.textContent=label;
                 topics.append(topic);
@@ -599,7 +606,7 @@
         const matches = allMatches.slice(0, 8);
         results.replaceChildren(...matches.map((item) => {
           const a = document.createElement('a');
-          a.href = item.url;
+          a.href = englishHref(item.url);
           a.innerHTML = '<strong></strong><span></span>';
           a.querySelector('strong').textContent = item.title;
           a.querySelector('span').textContent = item.section || item.description || '';
@@ -703,7 +710,7 @@
       const addLink=(href,label)=>{
         const li=document.createElement('li');
         const a=document.createElement('a');
-        a.href=href;a.textContent=label;li.append(a);list.append(li);
+        a.href=englishHref(href);a.textContent=label;li.append(a);list.append(li);
       };
       const addText=(label,current=false)=>{
         const li=document.createElement('li');
@@ -712,7 +719,7 @@
         if (current) span.setAttribute('aria-current','page');
         li.append(span);list.append(li);
       };
-      addLink('/docs/','Documentación');
+      addLink('/docs/','Documentation');
       if (location?.section && DOC_SECTION_LABELS[location.section]) addText(DOC_SECTION_LABELS[location.section]);
       const explicitParent=DOC_BREADCRUMB_PARENTS.get(currentPath);
       if (explicitParent) addLink(explicitParent[0],explicitParent[1]);
@@ -727,7 +734,7 @@
     if (headings.length >= 2 && docMain && !docMain.querySelector('.doc-page-toc')) {
       const aside=document.createElement('aside');
       aside.className='doc-page-toc';
-      aside.setAttribute('aria-label','En esta página');
+      aside.setAttribute('aria-label','On this page');
 
       const toggle=document.createElement('button');
       toggle.type='button';
