@@ -1,3 +1,4 @@
+import {playerUiText} from './ui-i18n.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 
 const CAPABILITY='collaboration.room';
@@ -21,24 +22,24 @@ function fallback(container,data,eventTarget,adapter,context){
   const shell=el('section','p2lrn-collaboration p2lrn-collaboration-fallback');
   if(data.heading)shell.append(el('h3',null,data.heading));
   shell.append(el('p','p2lrn-collaboration-prompt',data.prompt||'Actividad colaborativa'));
-  const status=el('p','p2lrn-collaboration-status',data.fallbackText||'La colaboración no está disponible. Puedes continuar de forma individual.');
+  const status=el('p','p2lrn-collaboration-status',data.fallbackText||playerUiText('La colaboración no está disponible. Puedes continuar de forma individual.'));
   status.setAttribute('role','status');shell.append(status);
   if(data.mode==='poll'){
     const field=document.createElement('fieldset');field.className='p2lrn-collaboration-poll';
     const radioGroup='p2lrn-local-'+String(context?.entityId??'activity').replace(/[^A-Za-z0-9_-]/g,'-');
-    field.append(el('legend',null,data.prompt||'Elige una opción'));
+    field.append(el('legend',null,data.prompt||playerUiText('Elige una opción')));
     for(const option of data.options??[]){
       const label=el('label','p2lrn-collaboration-option');
       const input=document.createElement('input');input.type='radio';input.name=radioGroup;input.value=option.id;
       label.append(input,document.createTextNode(option.label));field.append(label);
     }
-    shell.append(field,button('Guardar respuesta individual',()=>{
+    shell.append(field,button(playerUiText('Guardar respuesta individual'),()=>{
       const selected=field.querySelector('input:checked');
       if(!selected)return;
       dispatchRuntimeEvent(eventTarget,'p2lrn:interaction',{action:'collaboration-fallback-response',mode:'poll',choiceId:selected.value,connected:false},context,{adapter});
     }));
   }else{
-    const label=el('label','p2lrn-collaboration-field');label.append(el('span',null,data.mode==='peer-review'?'Reflexión individual':'Nota individual'));
+    const label=el('label','p2lrn-collaboration-field');label.append(el('span',null,data.mode==='peer-review'?playerUiText('Reflexión individual'):'Nota individual'));
     const area=document.createElement('textarea');area.rows=4;label.append(area);shell.append(label);
   }
   container.append(shell);
@@ -93,7 +94,7 @@ export async function render({container,componentInstance,capabilities=[],invoke
       presence=Number(result?.presence??presence);cursor=Math.max(cursor,Number(result?.revision??cursor));renderView();
       return result;
     }catch(error){
-      status.textContent='No se pudo sincronizar. Se volverá a intentar al recibir cambios.';
+      status.textContent=playerUiText('No se pudo sincronizar. Se volverá a intentar al recibir cambios.');
       dispatchRuntimeEvent(eventTarget,'p2lrn:error',{phase:'collaboration-send',mode:data.mode,error:String(error?.message??error)},context,{adapter});
       return null;
     }
@@ -102,14 +103,14 @@ export async function render({container,componentInstance,capabilities=[],invoke
   const renderPoll=()=>{
     const field=document.createElement('fieldset');field.className='p2lrn-collaboration-poll';
     const radioGroup='p2lrn-collab-'+String(context?.entityId??'activity').replace(/[^A-Za-z0-9_-]/g,'-');
-    field.append(el('legend',null,data.prompt||'Elige una opción'));
+    field.append(el('legend',null,data.prompt||playerUiText('Elige una opción')));
     for(const option of data.options??[]){
       const label=el('label','p2lrn-collaboration-option');
       const radio=document.createElement('input');radio.type='radio';radio.name=radioGroup;radio.value=option.id;radio.checked=myVote===option.id;
       if(myVote&&!data.allowChange)radio.disabled=true;
       label.append(radio,document.createTextNode(option.label));field.append(label);
     }
-    const submit=button(myVote&&data.allowChange?'Cambiar voto':'Enviar voto',async()=>{
+    const submit=button(myVote&&data.allowChange?playerUiText('Cambiar voto'):'Enviar voto',async()=>{
       const selected=field.querySelector('input:checked');if(!selected)return;
       submit.disabled=true;
       try{const sent=await send('poll.vote',{choiceId:selected.value});if(sent)emit('collaboration-vote',{choiceId:selected.value});}
@@ -124,7 +125,7 @@ export async function render({container,componentInstance,capabilities=[],invoke
         const count=[...votes.values()].filter((value)=>value===option.id).length;
         const row=el('div','p2lrn-collaboration-result');
         const label=el('span',null,option.label+' · '+count);
-        const progress=document.createElement('progress');progress.max=Math.max(1,total);progress.value=count;progress.setAttribute('aria-label',option.label+': '+count+' de '+total);
+        const progress=document.createElement('progress');progress.max=Math.max(1,total);progress.value=count;progress.setAttribute('aria-label',option.label+': '+count+playerUiText(' de ')+total);
         row.append(label,progress);results.append(row);
       }
       body.append(results);
@@ -133,7 +134,7 @@ export async function render({container,componentInstance,capabilities=[],invoke
 
   const renderBoard=()=>{
     const form=el('div','p2lrn-collaboration-compose');
-    const label=el('label','p2lrn-collaboration-field');label.append(el('span',null,'Añadir idea'));
+    const label=el('label','p2lrn-collaboration-field');label.append(el('span',null,playerUiText('Añadir idea')));
     const area=document.createElement('textarea');area.rows=3;area.maxLength=4000;label.append(area);
     const add=button('Compartir',async()=>{
       const text=area.value.trim();if(!text)return;add.disabled=true;
@@ -152,19 +153,19 @@ export async function render({container,componentInstance,capabilities=[],invoke
 
   const renderPeer=()=>{
     if(!mySubmissionId){
-      const label=el('label','p2lrn-collaboration-field');label.append(el('span',null,'Tu aportación'));
+      const label=el('label','p2lrn-collaboration-field');label.append(el('span',null,playerUiText('Tu aportación')));
       const area=document.createElement('textarea');area.rows=5;area.maxLength=10000;label.append(area);
-      const submit=button('Enviar aportación',async()=>{
+      const submit=button(playerUiText('Enviar aportación'),async()=>{
         const text=area.value.trim();if(!text)return;
         const submissionId=globalThis.crypto?.randomUUID?.()??('submission-'+Date.now());
         const sent=await send('peer.submission',{submissionId,text});if(sent)emit('collaboration-peer-submit');
       });
       body.append(label,submit);
-    }else body.append(el('p','p2lrn-collaboration-confirm','Tu aportación está compartida.'));
+    }else body.append(el('p','p2lrn-collaboration-confirm',playerUiText('Tu aportación está compartida.')));
 
     const others=[...submissions.values()].filter((item)=>item.participantId!==session.participantId);
     if(others.length){
-      const section=el('section','p2lrn-collaboration-peer');section.append(el('h4',null,'Revisar aportaciones'));
+      const section=el('section','p2lrn-collaboration-peer');section.append(el('h4',null,playerUiText('Revisar aportaciones')));
       others.forEach((item,index)=>{
         const card=el('article','p2lrn-collaboration-peer-card');card.append(el('strong',null,'Aportación '+(index+1)),el('p',null,item.text));
         const area=document.createElement('textarea');area.rows=3;area.maxLength=5000;area.setAttribute('aria-label','Comentario para la aportación '+(index+1));
@@ -209,7 +210,7 @@ export async function render({container,componentInstance,capabilities=[],invoke
       }
       renderView();
     }catch{
-      status.textContent='Reconectando colaboración…';
+      status.textContent=playerUiText('Reconectando colaboración…');
     }finally{
       if(!destroyed)timer=setTimeout(poll,800);
     }
