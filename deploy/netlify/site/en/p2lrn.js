@@ -110,7 +110,7 @@
         ['/crear-cursos-interactivos/',"Create interactive courses"],
         ['/cursos-offline/',"Offline courses without an LMS"],
         ['/docs/studio/',"Studio guide"],
-        ['/docs/entrega-offline/','Entrega offline'],
+        ['/docs/entrega-offline/',"Offline delivery"],
         ['/docs/paquetes/',"Create packages"],
         ['/docs/paquetes/multipart/','Multipart'],
         ['/docs/toolkit/','Toolkit'],
@@ -123,7 +123,7 @@
       wide: true,
       items: [
         ['/docs/player/','Player'],
-        ['/demo/','Visor'],
+        ['/demo/',"Viewer"],
         ['/juegos-educativos-3d/',"3D educational games"],
         ['/docs/questionnaires/',"Quizzes and games"],
         ['/docs/questionnaires/standard/',"Standard questionnaire"],
@@ -146,10 +146,10 @@
       items: [
         ['/docs/integracion/',"Integration"],
         ['/docs/colaboracion/',"Collaboration"],
-        ['/docs/eventos/','Eventos'],
+        ['/docs/eventos/',"Events"],
         ['/docs/conectores/',"Connectors: overview"],
         ['/docs/conectores/ia/',"AI connectors"],
-        ['/docs/conectores/lms/','Plataformas LMS'],
+        ['/docs/conectores/lms/',"LMS platforms"],
         ['/docs/conectores/lti/',"LTI 1.3"],
       ],
     },
@@ -173,9 +173,9 @@
       label: "Reference",
       active: ['/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
       items: [
-        ['/docs/compatibilidad/','Compatibilidad'],
-        ['/docs/recetas/','Recetas'],
-        ['/docs/glosario/','Glosario'],
+        ['/docs/compatibilidad/',"Compatibility"],
+        ['/docs/recetas/',"Recipes"],
+        ['/docs/glosario/',"Glossary"],
         ['/docs/referencia/',"Technical reference"],
         ['/docs/troubleshooting/',"Troubleshooting"],
       ],
@@ -391,8 +391,8 @@
       ['/docs/npm/studio/',"Studio with npm"],
     ]],
     ["CREATE", [
-      ['/docs/studio/','Studio visual'],
-      ['/docs/entrega-offline/','Entrega offline'],
+      ['/docs/studio/',"Visual Studio editor"],
+      ['/docs/entrega-offline/',"Offline delivery"],
       ['/docs/paquetes/',"Create packages"],
       ['/docs/paquetes/multipart/','Multipart'],
       ['/docs/toolkit/','Toolkit'],
@@ -407,7 +407,7 @@
     ['INTEGRAR', [
       ['/docs/integracion/',"Integration"],
       ['/docs/colaboracion/',"Collaboration"],
-      ['/docs/eventos/','Eventos'],
+      ['/docs/eventos/',"Events"],
     ]],
     ["CONNECTORS", [
       ['/docs/conectores/',"Connectors and integration"],
@@ -421,15 +421,15 @@
       ['/analytics/','Abrir panel demo ↗'],
     ]],
     ["REFERENCE", [
-      ['/docs/compatibilidad/','Compatibilidad'],
-      ['/docs/recetas/','Recetas'],
-      ['/docs/glosario/','Glosario'],
+      ['/docs/compatibilidad/',"Compatibility"],
+      ['/docs/recetas/',"Recipes"],
+      ['/docs/glosario/',"Glossary"],
       ['/docs/referencia/',"Technical reference"],
       ['/docs/troubleshooting/',"Troubleshooting"],
     ]],
     ["RESOURCES", [
       ['/studio/','Abrir Studio ↗'],
-      ['/demo/','Visor ↗'],
+      ['/demo/',"Viewer ↗"],
       ['/examples/catalog.json',"Examples catalog ↗"],
     ]],
   ];
@@ -437,14 +437,14 @@
   const DOC_SIDEBAR_CHILDREN = new Map([
     ['/docs/empezar/',[
       ['/docs/que-usar/',"Component map"],
-      ['/docs/conceptos/','Conceptos fundamentales'],
+      ['/docs/conceptos/',"Fundamental concepts"],
       ['/docs/formato/',"P2LRN format"],
       ['/docs/formato-portable-cursos-interactivos/',"Portability guide"],
     ]],
     ['/docs/conectores/',[
       ['/docs/conectores/ia/',"AI connectors"],
       ['/docs/skills/',"P2LRN AI Skills"],
-      ['/docs/conectores/lms/','Plataformas LMS'],
+      ['/docs/conectores/lms/',"LMS platforms"],
       ['/docs/conectores/lti/',"LTI 1.3 module"],
     ]],
     ['/docs/questionnaires/',[
@@ -469,8 +469,8 @@
     ['claude','Claude'],
     ['gemini','Gemini'],
     ['grok','Grok'],
-    ['conectar-ordenador','Conectar tu ordenador'],
-    ['servicios-web','Acceso desde la web'],
+    ['conectar-ordenador',"Connect your computer"],
+    ['servicios-web',"Web access"],
     ['comprobar','Comprobaciones'],
   ]);
 
@@ -708,7 +708,7 @@
       const location=sidebarLocation(currentPath);
       const breadcrumb=document.createElement('nav');
       breadcrumb.className='doc-breadcrumbs';
-      breadcrumb.setAttribute('aria-label','Migas de pan');
+      breadcrumb.setAttribute('aria-label',"Breadcrumb navigation");
       const list=document.createElement('ol');
       const addLink=(href,label)=>{
         const li=document.createElement('li');
