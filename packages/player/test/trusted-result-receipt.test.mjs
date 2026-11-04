@@ -4,6 +4,7 @@ import {generateKeyPairSync} from 'node:crypto';
 import {
   createP2LRNResultAuthority,
   verifyP2LRNTrustedResultReceipt,
+  verifyAndRedeemP2LRNTrustedResultReceipt,
 } from '../server/trusted-result-receipt.mjs';
 
 const {privateKey,publicKey}=generateKeyPairSync('ed25519');
@@ -57,4 +58,45 @@ test('offline evidence by itself is not sufficient to issue an authoritative rec
   const invalidScore=createP2LRNResultAuthority({privateKey,keyId:'school-2026',
     gradeSubmission:async()=>({verified:true,score:12,maxScore:10,evidenceId:'db-attempt-42'})});
   await assert.rejects(invalidScore.issue(params),/score is invalid/);
+});
+
+test('trusted result receipts are valid only once and within the Host validity window',async()=>{
+  const authority=createP2LRNResultAuthority({
+    privateKey,keyId:'school-2026',
+    gradeSubmission:async()=>({verified:true,score:8,maxScore:10,evidenceId:'db-attempt-replay'}),
+  });
+  const receipt=await authority.issue(params);
+  const used=new Set();
+  const consumeReceiptId=async({receiptId,assignmentId,actor})=>{
+    assert.equal(assignmentId,params.assignmentId);
+    assert.equal(actor.subjectId,params.actor.subjectId);
+    if(used.has(receiptId))return false;
+    used.add(receiptId);
+    return true;
+  };
+  const options={
+    publicKey,keyId:'school-2026',actor,courseId:params.courseId,
+    assignmentId:params.assignmentId,contentRoot:params.contentRoot,consumeReceiptId,
+    now:()=>Date.parse(receipt.body.issuedAt)+1000,
+  };
+  await assert.rejects(verifyAndRedeemP2LRNTrustedResultReceipt(receipt,{
+    ...options,consumeReceiptId:undefined,
+  }),/atomic durable/);
+  const first=await verifyAndRedeemP2LRNTrustedResultReceipt(receipt,options);
+  assert.equal(first.accepted,true);
+  assert.equal(first.score,8);
+  const again=await verifyAndRedeemP2LRNTrustedResultReceipt(receipt,options);
+  assert.deepEqual(again,{accepted:false,reason:'REPLAY_OR_REDEMPTION_DENIED'});
+  const forged=structuredClone(receipt);
+  forged.body.score=10;
+  assert.deepEqual(await verifyAndRedeemP2LRNTrustedResultReceipt(forged,options),
+    {accepted:false,reason:'INVALID_OR_UNBOUND_RECEIPT'});
+  const otherLearner=await verifyAndRedeemP2LRNTrustedResultReceipt(receipt,{
+    ...options,actor:{issuer:actor.issuer,subjectId:'different-student'},
+  });
+  assert.equal(otherLearner.accepted,false);
+  const expired=await verifyAndRedeemP2LRNTrustedResultReceipt(receipt,{
+    ...options,now:()=>Date.parse(receipt.body.issuedAt)+40*24*60*60*1000,
+  });
+  assert.deepEqual(expired,{accepted:false,reason:'EXPIRED_OR_FUTURE_RECEIPT'});
 });
