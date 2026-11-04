@@ -83,6 +83,10 @@ export function verifyP2LRNTrustedResultReceipt(receipt,{
   publicKey,keyId,actor,assignmentId,courseId,contentRoot,
 }={}){
   try{
+    // A signature alone is not authorization to credit an arbitrary learner.
+    // The receiving LMS must supply the expected actor and course bindings.
+    if(!actor||!text(assignmentId)||!text(courseId)||!root(contentRoot))
+      return false;
     if(!receipt||!bodyIsValid(receipt.body)||!receipt.signature||
       receipt.signature.algorithm!=='Ed25519'||receipt.signature.keyId!==keyId||
       typeof receipt.signature.value!=='string'||
