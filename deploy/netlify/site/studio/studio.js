@@ -310,11 +310,18 @@ async function activateStudio(document,{name,recoveredSelectedId=null}={}){
 async function openPackage(pkg,{name,url,recoveredSelectedId=null}){
   return activateStudio(new P2LRNStudioDocument(pkg,{sourceName:name,sourceUrl:url}),{name,recoveredSelectedId});
 }
-async function createNewCourse(){
+async function createNewCourse({automatic=false}={}){
+  // Preserve edits when the visitor deliberately starts a different course.
+  const modified=studio && hasUnsavedChanges() &&
+    !(studio.createdFromScratch && studio.changeCount===1);
+  if(!automatic && modified && !confirm("Se perderán los cambios no guardados. ¿Crear otro curso?"))return;
   revokeUrls();
-  const document=createP2LRNStudioDocument({title:'Curso nuevo',language:'es'});
-  await activateStudio(document,{name:document.sourceName});
-  setStatus('Curso nuevo listo para editar');
+  const newDocument=createP2LRNStudioDocument({title:"Curso nuevo",language:"es"});
+  // Start inside a real editable lesson, not only the course metadata.
+  const firstUnitId=newDocument.entity(newDocument.rootId)?.children?.[0];
+  const firstLessonId=firstUnitId&&newDocument.entity(firstUnitId)?.children?.[0];
+  await activateStudio(newDocument,{name:newDocument.sourceName,recoveredSelectedId:firstLessonId||null});
+  setStatus("Curso nuevo listo para editar");
 }
 function compositeContext(){
   const current=studio?.entity(selectedId);if(!current)return null;
@@ -789,7 +796,35 @@ offlineAnalyticsButton?.addEventListener('click',()=>{
 saveDraftButton?.addEventListener('click',()=>void persistDraft().catch((error)=>setStatus('No se pudo guardar el borrador local: '+error.message)));
 recoverDraftButton?.addEventListener('click',()=>void recoverLatestDraft().catch((error)=>setStatus(error.message)));
 clearDraftButton?.addEventListener('click',()=>void discardLocalDraft().catch((error)=>setStatus(error.message)));
-void refreshDraftAvailability();
+async function initializeStudioWorkspace(){
+  const guarded=[createCourseButton,openFileButton,openUrlButton];
+  guarded.forEach((button)=>{if(button)button.disabled=true;});
+  setStatus("Abriendo editor…");
+  try{
+    await refreshDraftAvailability();
+    if(draftMetadata?.bytes){
+      try{
+        await recoverLatestDraft();
+        return;
+      }catch(error){
+        // The saved draft is never overwritten or deleted on recovery failure.
+        await createNewCourse({automatic:true});
+        if(draftMenu)draftMenu.hidden=false;
+        setStatus("No se pudo recuperar el borrador automáticamente. Sigue guardado en este navegador.");
+        console.warn('P2LRN Studio draft recovery failed',error);
+        return;
+      }
+    }
+    await createNewCourse({automatic:true});
+  }catch(error){
+    setStatus("No se pudo abrir el editor: "+String(error?.message||error));
+    console.error('P2LRN Studio startup failed',error);
+  }finally{
+    guarded.forEach((button)=>{if(button)button.disabled=false;});
+    document.documentElement.dataset.p2lrnStudioReady='true';
+  }
+}
+void initializeStudioWorkspace();
 window.addEventListener('beforeunload',(event)=>{
   revokeUrls();
   if(hasUnsavedChanges()){
@@ -797,5 +832,4 @@ window.addEventListener('beforeunload',(event)=>{
     event.returnValue='';
   }
 });
-// Signals that all Studio controls and listeners have finished initializing.
-document.documentElement.dataset.p2lrnStudioReady='true';
+// p2lrnStudioReady now marks completed editor initialization.
