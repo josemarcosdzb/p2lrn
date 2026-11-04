@@ -1,4 +1,5 @@
-import {lstat,mkdir,mkdtemp,readFile,realpath,rm,writeFile} from 'node:fs/promises';
+import {lstat,mkdir,mkdtemp,readFile,realpath,rename,rm,unlink,writeFile} from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
 import {basename,join,resolve,sep} from 'node:path';
 import {tmpdir} from 'node:os';
 
@@ -66,7 +67,15 @@ export async function saveP2LRNStudioPackage(bytes,{root=process.cwd(),coursePat
   const target=destination(root,coursePath,filename);
   await mkdir(target.dir,{recursive:true});
   await assertWithinStorageRoot(root,target);
-  await writeFile(target.file,body,{flag:'w'});
+  // Never truncate an existing destination in place. In particular, a
+  // symlink swapped into the destination after validation must be replaced,
+  // not followed. A failed write leaves the previous course intact.
+  const temporary=target.file+'.'+randomUUID()+'.tmp';
+  try{
+    await writeFile(temporary,body,{flag:'wx',mode:0o600});
+    await assertWithinStorageRoot(root,target);
+    await rename(temporary,target.file);
+  }finally{await unlink(temporary).catch(()=>{});}
   return {ok:true,path:target.file,coursePath:safeSegment(coursePath||'course','course path'),filename:safeFilename(filename),bytes:body.byteLength};
 }
 
