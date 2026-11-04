@@ -11,6 +11,7 @@ const englishRoot=join(siteRoot,'en');
 const handAuthoredEnglishPages=new Set([
   'docs/formato-portable-cursos-interactivos/index.html',
   'crear-cursos-interactivos/index.html',
+  'skills/index.html',
   // Legal summaries are manually reviewed and must not be rewritten by machine translation.
   'licencia/index.html',
 ]);
@@ -19,6 +20,8 @@ const MODEL='Xenova/opus-mt-es-en';
 const JS_FILES=['p2lrn.js','studio/studio.js','demo/viewer.js','analytics/demo.js'];
 
 const MANUAL=new Map(Object.entries({
+  "Skills para crear cursos con IA":"AI Skills for course creation",
+  "Conoce las Skills de P2LRN para preparar, crear y validar materiales educativos y paquetes de cursos.":"Discover P2LRN Skills for planning, building and validating educational content and portable course packages.",
   "P2LRN / INTELIGENCIA ARTIFICIAL":"P2LRN / ARTIFICIAL INTELLIGENCE",
   "EXPLORA P2LRN":"EXPLORE P2LRN",
   "Cursos portables .p2lrn para webs y plataformas LMS":"Portable .p2lrn courses for websites and LMSs",
@@ -442,6 +445,11 @@ for(const rel of handAuthoredEnglishPages){
      !english.includes('/en/offline-courses/')||
      !english.includes('Which question types can I create?')))
     throw Error('The manually reviewed English course creation page is out of date');
+  if(rel==='skills/index.html'&&
+    (!english.includes('AI Skills to create courses with ChatGPT')||
+     !english.includes('skill-capabilities-title')||
+     !english.includes('href="/en/docs/getting-started/"')))
+    throw Error('Manually edited English Skills landing is missing its SEO content or canonical links');
   preservedEnglishPages.set(rel,english);
 }
 console.log('P2LRN_I18N_PHASE=scan-source-html pages='+allSourceHtmlFiles.length+' translated='+htmlFiles.length+' authored='+preservedEnglishPages.size);

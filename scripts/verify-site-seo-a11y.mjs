@@ -287,6 +287,29 @@ for(const [platform,prefix] of expectedPlatforms){
 if(!landing?.includes('"@type":"CollectionPage"')||!englishLanding?.includes('"@type":"CollectionPage"'))
   errors.push('Skills collection structured data missing in one locale');
 
+if(landing&&englishLanding){
+  for(const [html,lang,heading] of [
+    [landing,'es','Skills para crear cursos con IA'],
+    [englishLanding,'en','AI Skills to create courses'],
+  ]){
+    const title=html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]||'';
+    const h1=html.match(/<h1[^>]*>([^<]+)<\/h1>/i)?.[1]||'';
+    const description=html.match(/<meta name="description" content="([^"]+)"/i)?.[1]||'';
+    const faq=html.slice(html.indexOf('aria-labelledby="questions-title"'));
+    if(!title.toLowerCase().includes(lang==='es'?'skills para crear cursos':'ai skills to create courses')||
+       !h1.includes(heading)||description.length<110||description.length>180)
+      errors.push(lang+' compiled Skills landing has insufficient SEO metadata');
+    if(!html.includes('skill-capabilities-title')||
+       !html.includes('src="/assets/hero/player.png"')||
+       (faq.match(/<div><strong>/g)||[]).length<6)
+      errors.push(lang+' compiled Skills landing has no useful static course creation content');
+    if(html.includes('noindex'))errors.push(lang+' compiled Skills landing has unintended noindex');
+    for(const name of ['chatgpt','claude','gemini','grok'])
+      if(!html.includes('p2lrn-'+name+'-'))errors.push(lang+' compiled Skills page missing '+name+' download');
+  }
+}
+
+
 
 for(const [locale,home,expectedHeading] of [
   ['es',homeHtml,'Paquetes .p2lrn para web y LMS compatibles'],

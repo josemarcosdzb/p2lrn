@@ -223,6 +223,35 @@ for(const [html,lang] of [[coursesEs,'es'],[coursesEn,'en']]){
     errors.push(lang+' course creation page lost specific FAQs');
 }
 
+
+const [skillEs,skillEn]=await Promise.all([
+  readFile(join(siteRoot,'skills/index.html'),'utf8'),
+  readFile(join(enRoot,'skills/index.html'),'utf8')
+]);
+const skillsTargets=[
+  [skillEs,'es','Skills para crear cursos con IA'],
+  [skillEn,'en','AI Skills to create courses']
+];
+for(const [html,lang,keyword] of skillsTargets){
+  const title=html.match(/<title>([^<]+)<\/title>/i)?.[1]||'';
+  const h1=html.match(/<h1\b[^>]*>([^<]+)<\/h1>/i)?.[1]||'';
+  const description=html.match(/<meta name="description" content="([^"]+)"/i)?.[1]||'';
+  const faq=html.slice(html.indexOf('aria-labelledby="questions-title"'));
+  if(!title.toLowerCase().includes(lang==='es'?'skills para crear cursos':'ai skills to create courses')||
+     !h1.includes(keyword)||
+     description.length<110||description.length>180)
+    errors.push(lang+' Skills page has lost its search-intent title, H1 or description');
+  if(!html.includes('skill-capabilities-title')||
+     !html.includes('src="/assets/hero/player.png"')||
+     (faq.match(/<div><strong>/g)||[]).length<6)
+    errors.push(lang+' Skills page lacks useful capabilities, real screenshot or practical answers');
+  if(!html.includes('href="'+(lang==='es'?'/docs/questionnaires/standard/':'/en/docs/questionnaires/standard/')+'"'))
+    errors.push(lang+' Skills page lost its internal quiz documentation link');
+}
+if(!homeEs.includes('<strong>Skills para crear cursos con IA</strong>')||
+   !homeEn.includes('<strong>AI Skills for course creation</strong>'))
+  errors.push('Homepage Skills link lacks the intended search topic');
+
 try{
   const manifest=JSON.parse(await readFile(join(enRoot,'site.webmanifest'),'utf8'));
   if(manifest.lang!=='en')errors.push('English manifest lang is not en.');
