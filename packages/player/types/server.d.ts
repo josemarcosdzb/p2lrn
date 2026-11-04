@@ -152,5 +152,5 @@ export function createP2LRNResultAuthority(options: P2LRNResultAuthorityOptions)
 };
 export function verifyP2LRNTrustedResultReceipt(
   receipt:unknown,
-  options:{publicKey:import('node:crypto').KeyLike;keyId:string;actor?:{issuer:string;subjectId:string};assignmentId?:string;courseId?:string;contentRoot?:string}
+  options:{publicKey:import('node:crypto').KeyLike;keyId:string;actor:{issuer:string;subjectId:string};assignmentId:string;courseId:string;contentRoot:string}
 ):boolean;
