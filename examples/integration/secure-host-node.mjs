@@ -23,7 +23,7 @@ const denied=(message='Not authorized')=>
 /**
  * repository is supplied by the LMS/host, not by P2LRN:
  *   findEnrollment({actor,packageId,contentRoot,entityId})
- *     => trusted {tenantId,courseId,groupId,entityId,contentRoot} | null
+ *     => trusted {tenantId,courseId,groupId,packageId,entityId,contentRoot} | null
  *   canUseRoom({actor,context,room,operation}) => boolean
  *   getVerifiedAttempt({actor,attemptId})
  *     => {assignmentId,courseId,contentRoot,submittedResult} | null
@@ -46,14 +46,17 @@ export function createSecureP2LRNHost({
     allowedOrigins,
     authenticate,
     async resolveContext({actor,clientContext}){
-      // These client identifiers are lookup keys only, never trusted ACLs.
-      const entry=await repository.findEnrollment({
-        actor,
-        packageId:clientContext.packageId,
-        contentRoot:clientContext.contentRoot,
-        entityId:clientContext.entityId,
-      });
-      if(!entry||entry.contentRoot!==clientContext.contentRoot)
+      // Untrusted portable identifiers are lookup hints, not access claims.
+      const packageId=clientContext.packageId,contentRoot=clientContext.contentRoot,
+        entityId=clientContext.entityId;
+      if(typeof packageId!=='string'||packageId.length<1||packageId.length>512||
+        typeof entityId!=='string'||entityId.length<1||entityId.length>512||
+        typeof contentRoot!=='string'||!/^sha256:[0-9a-f]{64}$/.test(contentRoot))
+        throw denied('Invalid portable course context.');
+      const entry=await repository.findEnrollment({actor,packageId,contentRoot,entityId});
+      if(!entry||entry.packageId!==packageId||entry.entityId!==entityId||
+        entry.contentRoot!==contentRoot||
+        !entry.tenantId||!entry.courseId||!entry.groupId)
         throw denied('Course membership missing.');
       return Object.freeze({
         tenantId:entry.tenantId,courseId:entry.courseId,groupId:entry.groupId,
