@@ -31,6 +31,11 @@
       "types": "./types/index.d.ts",
       "import": "./dist/model.js",
       "default": "./dist/model.js"
+    },
+    "./server": {
+      "types": "./types/server.d.ts",
+      "import": "./server/dataset-http.mjs",
+      "default": "./server/dataset-http.mjs"
     }
   },
   "files": [
@@ -40,7 +45,8 @@
     "README.md",
     "LICENSE",
     "NOTICE.md",
-    "scripts/"
+    "scripts/",
+    "server/"
   ],
   "engines": {
     "node": ">=18"
