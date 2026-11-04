@@ -65,6 +65,7 @@ const cases=[
  {name:'cmi5-geology-pretest',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',frame:'iframe.p2lrn-package-runtime',marker:/pre.?test|question|geology|pregunta|assessment|test/i,minimumText:30},
  {name:'scorm12-interactive',course:'/examples/generated/scorm12-browser-demo.p2lrn',frame:'iframe.p2lrn-scorm-runtime',marker:/Lección SCORM interactiva/,minimumText:70,button:'Completar lección',after:/Lección completada/},
  {name:'qti3-interactive',course:'/examples/generated/qti3-interactive-demo.p2lrn',marker:/Marte|planeta rojo/,minimumText:70},
+ {name:'h5p-crossword',course:'/examples/canonical/external/h5p-crossword.p2lrn',frame:'iframe.p2lrn-h5p-frame',marker:/crossword|crucigrama|h5p|palabra|word/i,minimumText:12},
 ];
 async function findVisibleText(locator,{minimumText=30,marker=null}={}){
  let result='';
@@ -86,8 +87,18 @@ try{
    await page.locator('p2lrn-player .p2lrn-head').waitFor({timeout:45000});
    const player=page.locator('p2lrn-player');
    if(item.frame)await player.locator(item.frame).waitFor({timeout:25000});
-   const content=item.frame?player.frameLocator(item.frame).locator('body'):player.locator('.p2lrn-stage');
+   let content=item.frame?player.frameLocator(item.frame).locator('body'):player.locator('.p2lrn-stage');
+   if(item.name==='h5p-crossword'){
+     const outer=player.frameLocator(item.frame);
+     const nested=outer.locator('iframe.h5p-iframe');
+     if(await nested.waitFor({timeout:22000}).then(()=>true).catch(()=>false))
+       content=outer.frameLocator('iframe.h5p-iframe').locator('body');
+   }
    const text=await findVisibleText(content,item);
+   if(item.name==='h5p-crossword'){
+     const controls=await content.locator('input,button,[role="button"],canvas').count();
+     assert.ok(controls>0,'Crossword is visible but lacks interactive controls');
+   }
    if(item.button){
     await player.frameLocator(item.frame).getByRole('button',{name:item.button}).click({timeout:10000});
     await findVisibleText(content,{marker:item.after,minimumText:20});
