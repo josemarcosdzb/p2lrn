@@ -80,6 +80,8 @@ export function createSecureP2LRNHost({
     // NEVER take course/grade/actor from the request body.
     const actor=await authenticate(request);
     if(!actor)throw denied('Missing authenticated session.');
+    if(typeof attemptId!=='string'||!/^[a-zA-Z0-9:._-]{1,128}$/.test(attemptId))
+      throw denied('Invalid attempt reference.');
     const attempt=await repository.getVerifiedAttempt({actor,attemptId});
     if(!attempt)throw denied('Attempt not found for this learner.');
     return authority.issue({
