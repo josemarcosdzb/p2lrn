@@ -7,7 +7,7 @@ import {resolve,join,dirname,isAbsolute} from 'node:path';
 
 const RESULT_SCHEMA='https://p2lrn.org/schema/offline-result/1';
 const INDEX_SCHEMA='https://p2lrn.org/schema/analytics-results-index/1';
-const LIMIT=5*1024*1024,MAX_RESULTS=500;
+const LIMIT=5*1024*1024,MAX_RESULTS=500,MAX_JSON_DEPTH=128,MAX_JSON_NODES=200000;
 const sha=x=>createHash('sha256').update(x).digest('hex');
 const clean=x=>typeof x==='string'&&x.trim().length<=512?x.trim():'';
 const failure=(code,status=422)=>Object.assign(new Error(code),{code,status});
@@ -21,6 +21,21 @@ function canonical(v){
  if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';
  throw failure('INVALID_JSON_TYPE');
 }
+// Length-safe learner identifiers. The old colon-delimited key could collide
+// for distinct (issuer,subject) pairs containing a colon.
+const actorKey=who=>sha(JSON.stringify([who.mode,who.issuer,who.subject]));
+const legacyActorKey=who=>sha(who.mode+':'+who.issuer+':'+who.subject);
+function validateComplexity(root){
+ const pending=[{value:root,depth:0}];let nodes=0;
+ while(pending.length){
+  const {value,depth}=pending.pop();
+  if(depth>MAX_JSON_DEPTH||++nodes>MAX_JSON_NODES)throw failure('RESULT_COMPLEXITY_LIMIT',422);
+  if(value&&typeof value==='object'){
+   for(const child of (Array.isArray(value)?value:Object.values(value)))
+    pending.push({value:child,depth:depth+1});
+  }
+ }
+}
 function identityOf(principal){
  const tenant=clean(principal?.tenantId),issuer=clean(principal?.issuer);
  const mode=principal?.mode==='code'?'code':'platform';
@@ -29,6 +44,7 @@ function identityOf(principal){
  return {tenant,issuer,subject,mode};
 }
 function validateResult(result,who){
+ validateComplexity(result);
  if(!result||typeof result!=='object'||Array.isArray(result)||
     result.schema!==RESULT_SCHEMA||result.version!=='1'||
     !['in_progress','submitted'].includes(result.attempt?.status))
@@ -50,7 +66,7 @@ function validateResult(result,who){
  const expected='sha256:'+sha(canonical(body));
  if(result.integrity?.algorithm!=='sha256'||result.integrity?.payloadDigest!==expected)
   throw failure('RESULT_INTEGRITY_FAILED');
- return {courseId,attemptId,digest:expected,actorKey:sha(who.mode+':'+who.issuer+':'+who.subject)};
+ return {courseId,attemptId,digest:expected,actorKey:actorKey(who),legacyActorKey:legacyActorKey(who)};
 }
 async function readExisting(file){
  try{
@@ -95,13 +111,15 @@ async function bodyBytes(req){
 const unsafeStorage=e=>['EACCES','EPERM','ENOSPC','EROFS','EDQUOT'].includes(e?.code);
 
 export function createP2LRNResultsHttpHandler({
- directory,authenticate,authorize,checkCsrf,basePath='/api/p2lrn/results'
+ directory,authenticate,authorize,checkCsrf,basePath='/api/p2lrn/results',maxAttemptsPerLearner=100
 }={}){
  if(!isAbsolute(String(directory||'')))throw new TypeError('An absolute private results directory is required');
  if(typeof authenticate!=='function'||typeof authorize!=='function'||typeof checkCsrf!=='function')
   throw new TypeError('The Host must provide authenticate(), authorize(), and checkCsrf()');
  if(typeof basePath!=='string'||!/^\/[a-z0-9/_-]+$/i.test(basePath)||basePath.endsWith('/'))
   throw new TypeError('Invalid results base path');
+ if(!Number.isSafeInteger(maxAttemptsPerLearner)||maxAttemptsPerLearner<1||maxAttemptsPerLearner>MAX_RESULTS)
+  throw new TypeError('maxAttemptsPerLearner must be between 1 and '+MAX_RESULTS);
  const root=resolve(directory),serial=new Map();
  const queue=(file,run)=>{
   const prev=serial.get(file)||Promise.resolve();
@@ -138,20 +156,52 @@ export function createP2LRNResultsHttpHandler({
     const info=validateResult(result,who);
     if((await authorize({principal,action:'write',courseId:info.courseId}))!==true)
      throw failure('COURSE_ACCESS_DENIED',403);
-    const file=join(root,sha(who.tenant),sha(info.courseId),info.actorKey,sha(info.attemptId)+'.p2lrn-result');
-    const answer=await queue(file,async()=>{
-     const existing=await readExisting(file);
+    const courseFolder=join(root,sha(who.tenant),sha(info.courseId));
+    const actorFolder=join(courseFolder,info.actorKey);
+    const file=join(actorFolder,sha(info.attemptId)+'.p2lrn-result');
+    const legacyFile=join(courseFolder,info.legacyActorKey,sha(info.attemptId)+'.p2lrn-result');
+    // Serialize at course grain: parallel new attempts cannot bypass quotas.
+    // This reference Host must run in a single writer process.
+    const answer=await queue(courseFolder,async()=>{
+     let existing=await readExisting(file),legacyExisting=null;
+     if(!existing&&legacyFile!==file){
+      const previous=await readExisting(legacyFile);
+      if(previous){
+       try{
+        const verified=validateResult(previous,who);
+        if(verified.attemptId===info.attemptId)legacyExisting=previous;
+       }catch(error){
+        // An older delimiter-based folder might belong to another actor.
+        if(error?.code!=='RESULT_IDENTITY_MISMATCH')throw error;
+       }
+       if(legacyExisting)existing=legacyExisting;
+      }
+     }
+     if(!existing){
+      if((await listCourse(root,who.tenant,info.courseId)).length>=MAX_RESULTS)
+       throw failure('RESULT_COURSE_QUOTA_EXCEEDED',429);
+      let entries=[];try{entries=await readdir(actorFolder);}catch(error){
+       if(error?.code!=='ENOENT')throw error;
+      }
+      if(entries.filter(name=>/^[0-9a-f]{64}\.p2lrn-result$/.test(name)).length>=maxAttemptsPerLearner)
+       throw failure('RESULT_LEARNER_QUOTA_EXCEEDED',429);
+     }
      if(existing){
       const old=validateResult(existing,who);
       if(old.attemptId!==info.attemptId||existing.assignment?.contentRoot!==result.assignment?.contentRoot)
        throw failure('RESULT_ATTEMPT_CONFLICT',409);
-      if(old.digest===info.digest)return {saved:true,unchanged:true,attemptId:info.attemptId};
+      if(old.digest===info.digest){
+       if(legacyExisting){await mkdir(actorFolder,{recursive:true,mode:0o700});await rename(legacyFile,file);}
+       return {saved:true,unchanged:true,attemptId:info.attemptId};
+      }
       if(existing.attempt.status==='submitted')throw failure('RESULT_ALREADY_SUBMITTED',409);
       const earlier=existing.analytics.events,later=result.analytics.events;
       if(later.length<earlier.length||earlier.some((event,index)=>canonical(event)!==canonical(later[index])))
        throw failure('STALE_OR_DIVERGENT_RESULT',409);
      }
      await mkdir(dirname(file),{recursive:true,mode:0o700});
+     // Preserve the existing checkpoint even if the updated write fails.
+     if(legacyExisting)await rename(legacyFile,file);
      const temp=file+'.'+randomUUID()+'.tmp';
      try{await writeFile(temp,JSON.stringify(result)+'\n',{flag:'wx',mode:0o600});await rename(temp,file);}
      finally{await unlink(temp).catch(()=>{});}
@@ -161,16 +211,24 @@ export function createP2LRNResultsHttpHandler({
    }
    if(method!=='GET')throw failure('METHOD_NOT_ALLOWED',405);
    if(request.pathname===basePath+'/current'){
-    const folder=join(root,sha(who.tenant),sha(course),sha(who.mode+':'+who.issuer+':'+who.subject));
-    let entries=[];try{entries=await readdir(folder);}catch(error){if(error.code!=='ENOENT')throw error;}
+    const parent=join(root,sha(who.tenant),sha(course));
     let latest=null,latestMs=-Infinity;
-    for(const name of entries){
-     if(!/^[0-9a-f]{64}\.p2lrn-result$/.test(name))continue;
-     const path=join(folder,name),result=await readExisting(path);
-     if(!result||result.attempt?.status!=='in_progress')continue;
-     validateResult(result,who);
-     const info=await stat(path);
-     if(info.mtimeMs>latestMs){latest=result;latestMs=info.mtimeMs;}
+    const keys=[actorKey(who),legacyActorKey(who)];
+    for(const [index,key] of keys.entries()){
+     if(index>0&&key===keys[0])continue;
+     const folder=join(parent,key);
+     let entries=[];try{entries=await readdir(folder);}catch(error){if(error.code!=='ENOENT')throw error;}
+     for(const name of entries){
+      if(!/^[0-9a-f]{64}\.p2lrn-result$/.test(name))continue;
+      const path=join(folder,name),result=await readExisting(path);
+      if(!result||result.attempt?.status!=='in_progress')continue;
+      try{validateResult(result,who);}catch(error){
+       if(index>0&&error?.code==='RESULT_IDENTITY_MISMATCH')continue;
+       throw error;
+      }
+      const info=await stat(path);
+      if(info.mtimeMs>latestMs){latest=result;latestMs=info.mtimeMs;}
+     }
     }
     if(latest===null){res.writeHead(204,{'Cache-Control':'private, no-store'});res.end();return;}
     respond(res,200,{result:latest});return;

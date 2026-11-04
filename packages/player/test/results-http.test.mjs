@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {webcrypto} from 'node:crypto';
+import {createHash,webcrypto} from 'node:crypto';
 import {createServer} from 'node:http';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdir,mkdtemp,rm,stat,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {dirname,join} from 'node:path';
 import {createPlayerAnalyticsSession,createHttpResultHost} from '../../toolkit/web/result-bridge.js';
+import {createResultRecorder} from '../../toolkit/web/result-recorder.js';
 import {createP2LRNResultsHttpHandler} from '../server/results-http.mjs';
 import {loadAnalyticsResultSource} from '../../analytics/src/model.js';
 
@@ -130,4 +131,106 @@ test('Host denies forged identity, missing CSRF, corrupted digests and unsafe co
   assert.equal((await fetchWith('alice',{...progress,assignment:{...progress.assignment,packageId:'other'}},true)).status,422);
   assert.equal((await t.fetchAs('bob')(end+'/current?courseId='+encodeURIComponent('urn:other'))).status,403);
  }finally{await t.cleanup();}
+});
+
+test('Results Host isolates delimiter-colliding learners, bounds attempts and rejects deeply nested records',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'p2lrn-security-results-'));
+ const identities={
+  a:{mode:'platform',tenantId:'school',issuer:'org:group',subjectId:'learner'},
+  b:{mode:'platform',tenantId:'school',issuer:'org',subjectId:'group:learner'},
+  teacher:{mode:'platform',tenantId:'school',issuer:'org',subjectId:'teacher'}
+ };
+ assert.equal(['platform',identities.a.issuer,identities.a.subjectId].join(':'),
+   ['platform',identities.b.issuer,identities.b.subjectId].join(':'));
+ const handler=createP2LRNResultsHttpHandler({
+  directory,authenticate:req=>identities[String(req.headers.authorization||'').replace('Bearer ','')]??null,
+  authorize:()=>true,checkCsrf:()=>true,maxAttemptsPerLearner:1,
+ });
+ const server=createServer((req,res)=>handler(req,res));
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const url='http://127.0.0.1:'+server.address().port+'/api/p2lrn/results';
+ const request=(token,endpoint=url,options={})=>fetch(endpoint,{
+  ...options,headers:{Authorization:'Bearer '+token,...options.headers},
+ });
+ const put=(token,value)=>request(token,url,{method:'PUT',
+  headers:{'Content-Type':'application/vnd.p2lrn-result+json','X-P2LRN-CSRF':'test'},
+  body:JSON.stringify(value)});
+ async function checkpoint(actor,id){
+  const player=players();
+  const recorder=createResultRecorder(player,{identity:{
+   mode:'platform',issuer:actor.issuer,subjectId:actor.subjectId},courseId,attemptId:id});
+  const result=await recorder.checkpoint();
+  recorder.stop();
+  return result;
+ }
+ try{
+  const first=await checkpoint(identities.a,'same-id');
+  const second=await checkpoint(identities.b,'same-id');
+  const [ra,rb]=await Promise.all([put('a',first),put('b',second)]);
+  assert.deepEqual([ra.status,rb.status],[200,200],'Two actors may not share one result slot');
+  const a=await request('a',url+'/current?courseId='+encodeURIComponent(courseId));
+  const b=await request('b',url+'/current?courseId='+encodeURIComponent(courseId));
+  assert.equal((await a.json()).result.identity.issuer,'org:group');
+  assert.equal((await b.json()).result.identity.issuer,'org');
+  const index=await request('teacher',url+'/index?courseId='+encodeURIComponent(courseId));
+  assert.equal((await index.json()).results.length,2);
+  const overflow=await checkpoint(identities.a,'second-attempt');
+  assert.equal((await put('a',overflow)).status,429);
+  const nested=structuredClone(first);
+  let value={value:'safe'};
+  for(let i=0;i<150;i++)value={value};
+  nested.submission.states.push({id:'nested',value});
+  const tooDeep=await put('a',nested);
+  assert.equal(tooDeep.status,422);
+  assert.equal((await tooDeep.json()).error,'RESULT_COMPLEXITY_LIMIT');
+ }finally{
+  await new Promise(resolve=>server.close(resolve));
+  await rm(directory,{recursive:true,force:true});
+ }
+});
+
+test('Results Host recovers a verified legacy checkpoint without mixing actors or losing its file',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'p2lrn-results-legacy-'));
+ const who={mode:'platform',tenantId:'school',issuer:'org:group',subjectId:'learner'};
+ const other={mode:'platform',tenantId:'school',issuer:'org',subjectId:'group:learner'};
+ const hash=x=>createHash('sha256').update(x).digest('hex');
+ const recorder=createResultRecorder(players(),{identity:{
+  mode:'platform',issuer:who.issuer,subjectId:who.subjectId},courseId,attemptId:'legacy-attempt'});
+ const legacy=await recorder.checkpoint();
+ recorder.stop();
+ const filename=hash(legacy.attempt.id)+'.p2lrn-result';
+ const legacyFile=join(directory,hash('school'),hash(courseId),
+  hash('platform:org:group:learner'),filename);
+ const modernFile=join(directory,hash('school'),hash(courseId),
+  hash(JSON.stringify(['platform',who.issuer,who.subjectId])),filename);
+ await mkdir(dirname(legacyFile),{recursive:true});
+ await writeFile(legacyFile,JSON.stringify(legacy)+'\n');
+ const handler=createP2LRNResultsHttpHandler({
+  directory,authenticate:req=>String(req.headers.authorization||'').includes('other')?other:who,
+  authorize:()=>true,checkCsrf:()=>true,maxAttemptsPerLearner:1,
+ });
+ const server=createServer((req,res)=>handler(req,res));
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const base='http://127.0.0.1:'+server.address().port+'/api/p2lrn/results';
+ const get=actor=>fetch(base+'/current?courseId='+encodeURIComponent(courseId),{
+  headers:{Authorization:'Bearer '+actor}
+ });
+ try{
+  const recovered=await get('owner');
+  assert.equal(recovered.status,200);
+  assert.equal((await recovered.json()).result.attempt.id,'legacy-attempt');
+  assert.equal((await get('other')).status,204,
+   'A colliding historical directory must not disclose another learner');
+  const written=await fetch(base,{method:'PUT',headers:{
+   Authorization:'Bearer owner','Content-Type':'application/vnd.p2lrn-result+json',
+   'X-P2LRN-CSRF':'test'},body:JSON.stringify(legacy)});
+  assert.equal(written.status,200);
+  assert.equal((await written.json()).unchanged,true);
+  await stat(modernFile);
+  await assert.rejects(stat(legacyFile),{code:'ENOENT'});
+  assert.equal((await get('owner')).status,200);
+ }finally{
+  await new Promise(resolve=>server.close(resolve));
+  await rm(directory,{recursive:true,force:true});
+ }
 });

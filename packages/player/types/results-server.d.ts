@@ -9,6 +9,8 @@ export interface P2LRNResultPrincipal {
 export declare function createP2LRNResultsHttpHandler(options:{
   directory:string;
   basePath?:string;
+  /** Maximum persisted attempts per learner and course (default: 100, maximum: 500). */
+  maxAttemptsPerLearner?:number;
   authenticate:(request:IncomingMessage)=>P2LRNResultPrincipal|null|Promise<P2LRNResultPrincipal|null>;
   authorize:(input:{principal:P2LRNResultPrincipal;action:'write'|'read-own'|'read-course';courseId:string})=>boolean|Promise<boolean>;
   checkCsrf:(request:IncomingMessage,principal:P2LRNResultPrincipal)=>boolean|Promise<boolean>;
