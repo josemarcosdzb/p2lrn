@@ -29,10 +29,11 @@ test('only a host independently verified grade is signed, ignoring learner suppl
   assert.equal(receipt.body.score,7);
   assert.equal(receipt.body.maxScore,10);
   assert.equal(receipt.body.evidenceId,'db-attempt-42');
-  assert.equal(verifyP2LRNTrustedResultReceipt(receipt,{
-    publicKey,keyId:'school-2026',actor,courseId:params.courseId,
-    assignmentId:params.assignmentId,contentRoot:params.contentRoot,
-  }),true);
+  const expected={publicKey,keyId:'school-2026',actor,courseId:params.courseId,
+    assignmentId:params.assignmentId,contentRoot:params.contentRoot};
+  assert.equal(verifyP2LRNTrustedResultReceipt(receipt,expected),true);
+  assert.equal(verifyP2LRNTrustedResultReceipt(receipt,{publicKey,keyId:'school-2026'}),false,
+    'Receiver must bind an authenticated learner and assignment');
   for(const change of [
     r=>{r.body.score=10;},
     r=>{r.body.actor.subjectId='admin';},
@@ -40,11 +41,11 @@ test('only a host independently verified grade is signed, ignoring learner suppl
     r=>{r.signature.value='A'.repeat(86);},
   ]){
     const forged=structuredClone(receipt);change(forged);
-    assert.equal(verifyP2LRNTrustedResultReceipt(forged,{publicKey,keyId:'school-2026'}),false);
+    assert.equal(verifyP2LRNTrustedResultReceipt(forged,expected),false);
   }
-  assert.equal(verifyP2LRNTrustedResultReceipt(receipt,{publicKey:otherPublic,keyId:'school-2026'}),false);
-  assert.equal(verifyP2LRNTrustedResultReceipt(receipt,{publicKey,keyId:'wrong'}),false);
-  assert.equal(verifyP2LRNTrustedResultReceipt(receipt,{publicKey,keyId:'school-2026',actor:{issuer:actor.issuer,subjectId:'somebody-else'}}),false);
+  assert.equal(verifyP2LRNTrustedResultReceipt(receipt,{...expected,publicKey:otherPublic}),false);
+  assert.equal(verifyP2LRNTrustedResultReceipt(receipt,{...expected,keyId:'wrong'}),false);
+  assert.equal(verifyP2LRNTrustedResultReceipt(receipt,{...expected,actor:{issuer:actor.issuer,subjectId:'somebody-else'}}),false);
 });
 test('offline evidence by itself is not sufficient to issue an authoritative receipt',async()=>{
   const authority=createP2LRNResultAuthority({privateKey,keyId:'school-2026',
