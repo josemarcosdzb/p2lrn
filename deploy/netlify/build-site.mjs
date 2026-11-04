@@ -199,15 +199,17 @@ for(const authoredPath of authoredHtmlFiles){
   html=html.replace(/(<nav\b[^>]*class=["'][^"']*landing-breadcrumbs[^"']*["'][\s\S]*?<span aria-current="page">)([^<]+)(<\/span>)/i,
     (_,opening,label,closing)=>opening+label.charAt(0).toLocaleUpperCase(destinationRoute.startsWith('/en/')?'en':'es')+label.slice(1)+closing);
   if(destinationRoute.startsWith('/en/')){
-    // Preserve old deep-link IDs while adding human-readable English aliases.
+    // Add a new anchor inside the original element; legacy fragment IDs remain.
     for(const [oldAnchor,newAnchor] of Object.entries(ENGLISH_ANCHORS)){
-      const index=html.indexOf('id="'+oldAnchor+'"');
-      if(index>=0){
-        const start=html.lastIndexOf('<h',index);
-        const opening=start>=0?html.slice(start,index):'';
-        if(/^<h[2-6]\b/i.test(opening) && !opening.includes('>')){
+      const token='id="'+oldAnchor+'"';
+      const hit=html.indexOf(token);
+      if(hit>=0){
+        const open=html.lastIndexOf('<',hit);
+        const end=html.indexOf('>',hit);
+        const tag=html.slice(open,end+1);
+        if(open>=0&&end>hit&&end-open<450&&/^<(?:section|div|article|h[1-6])\b/i.test(tag)){
           const alias='<span class="anchor-alias" id="'+newAnchor+'" aria-hidden="true"></span>';
-          html=html.slice(0,start)+alias+html.slice(start);
+          html=html.slice(0,end+1)+alias+html.slice(end+1);
         }
       }
       html=html.replaceAll('#'+oldAnchor,'#'+newAnchor);
