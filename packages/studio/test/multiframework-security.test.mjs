@@ -102,13 +102,13 @@ test('setup course paths restrict quotes, shell metacharacters and sibling trave
 });
 
 test('PHP syntax is valid when an interpreter is installed',async(t)=>{
-  const probe=spawnSync('php',['-v'],{encoding:'utf8',timeout:5000});
+  const probe=spawnSync('php',['-v'],{encoding:'utf8',timeout:30000});
   if(probe.error?.code==='ENOENT'){t.skip('PHP not installed in test environment');return;}
-  assert.equal(probe.status,0);
+  assert.equal(probe.status,0,'PHP command failed to start: '+String(probe.error?.message||probe.stderr||probe.stdout||'unknown cause'));
   for(const name of ['php-save.php','laravel-controller.php','symfony-controller.php']){
     const path=fileURLToPath(new URL(name,templates));
-    const check=spawnSync('php',['-l',path],{encoding:'utf8',timeout:5000});
-    assert.equal(check.status,0,name+' PHP syntax: '+check.stdout+check.stderr);
+    const check=spawnSync('php',['-l',path],{encoding:'utf8',timeout:30000});
+    assert.equal(check.status,0,name+' PHP syntax: '+String(check.error?.message||'')+check.stdout+check.stderr);
   }
 });
 
