@@ -1,3 +1,12 @@
+const FORBIDDEN_JSON_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+// JSON is data, never a source of object prototypes or executable configuration.
+export function parseP2LRNUntrustedJson(source) {
+  return JSON.parse(source, (key, value) => {
+    if (FORBIDDEN_JSON_KEYS.has(key)) throw new Error('Forbidden JSON object key: ' + key);
+    return value;
+  });
+}
 export const P2LRN_NS = 'https://p2lrn.org/';
 export const LEGACY_P2RLN_NS = 'https://p2rln.org/';
 export function canonicalIdentifier(value) {
@@ -19,7 +28,13 @@ export function canonicalizeIdentifiers(value) {
   if (Array.isArray(value)) return value.map(canonicalizeIdentifiers);
   if (value && typeof value === 'object') {
     const out = {};
-    for (const [key, item] of Object.entries(value)) out[canonicalIdentifier(key)] = canonicalizeIdentifiers(item);
+    for (const [key, item] of Object.entries(value)) {
+      const normalized = canonicalIdentifier(key);
+      if (FORBIDDEN_JSON_KEYS.has(normalized)) throw new Error('Forbidden graph key: ' + normalized);
+      Object.defineProperty(out, normalized, {
+        value: canonicalizeIdentifiers(item), enumerable:true, writable:true, configurable:true,
+      });
+    }
     return out;
   }
   return value;
