@@ -246,3 +246,7 @@ La implementaci?n privada de archivos es @p2lrn/player/server/results
 y exige callbacks authenticate, authorize y checkCsrf. Analytics usa el
 ?ndice protegido /api/p2lrn/results/index?courseId=..., no el .p2lrn.
 Consultar spec/RESULTS-ANALYTICS.md.
+
+### Integración de seguridad del Host (Node)
+
+Las versiones que incluyen las nuevas APIs del servidor ofrecen `createP2LRNJwtAuthenticator()` (JWKS/JWT), `createP2LRNCollaborationHandler()` (identidad y sala verificadas por el Host) y `createP2LRNResultAuthority()` (Ed25519 para calificaciones verificadas **en servidor**). El paquete no suministra una base de datos de matrículas ni puede demostrar que un resultado totalmente offline no ha sido alterado. Ejemplo: [Integración segura de P2LRN](../../docs/integration/INTEGRACION-SEGURA-HOST.md).
