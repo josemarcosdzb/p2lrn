@@ -87,3 +87,4 @@ export const startP2RLNRuntimeHost=startP2LRNRuntimeHost;
 
 
 export {createP2LRNCollaborationService,createP2LRNCollaborationHandler,P2LRN_COLLABORATION_HTTP_VERSION,P2LRN_COLLABORATION_HTTP_MEDIA_TYPE,P2LRN_COLLABORATION_OPERATIONS} from './collaboration-http.mjs';
+export {createP2LRNJwtAuthenticator} from './auth-jwt.mjs';
