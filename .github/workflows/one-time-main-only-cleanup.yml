@@ -1,0 +1,94 @@
+name: One-time P2LRN audited branch cleanup
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-main-only-cleanup.yml'
+permissions:
+  contents: write
+concurrency:
+  group: p2lrn-one-time-branch-cleanup
+  cancel-in-progress: false
+jobs:
+  prune-audited-branches:
+    if: github.repository == 'josemarcosdzb/p2lrn' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Delete only SHA-matched audited branches, never main
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          main_now="$(gh api "repos/$repo/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$main_now" != "$GITHUB_SHA" ]]; then
+            echo "FAIL: main moved; no deletion"
+            exit 1
+          fi
+          parent="$(gh api "repos/$repo/git/commits/$GITHUB_SHA" --jq '.parents[0].sha')"
+          if [[ "$parent" != "94de497c2a7b4b9d512442c07f129a3c1fc59e82" ]]; then
+            echo "FAIL: unexpected main parent; no deletion"
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/expected-refs" <<'REFS'
+          chore/netlify-cdn|05edd5175b4145e548bddaeda0f53cd81076560e
+          chore/netlify-continuous-cdn|32be0339c255c822d6aa75dd037c891979e0b8a7
+          ci-h5p-auto-runtime-20261016|5494cd5e09d643710170aa0c51d2b7ea0cb8c0bb
+          codex/automatic-isolated-runtimes|b80d72200ba4e254b57422dcee5a7d7423b6139b
+          docs-breadcrumbs-mobile-index|8352a75391a1db23f169cc2a27d6ac5267470d31
+          docs-child-page-submenu-fix|05a3d6fcf5a74f2161f65febefcab8a3ada1083a
+          docs-easy-start-cdn-first|caeb0be16682e2ec4493e0d09dcc40925ab9730a
+          docs-editor-neutral-local-server|c3668cc547a74d6c4d0da287af33eb312d66177c
+          docs-flow-redesign|36e69b01add5701c7361d903c2f6408b0ba9da93
+          docs-flow-regroup-progression-metrics|c58849d3a2b0ec138a160f636811bbe5cef9c109
+          docs-foundational-structure-v2|6775b357fd2750713ed50b486cf5e56dd5bf9384
+          docs-information-architecture|78b330ae5909c13f9b8957a5dc0a2fb85cae6114
+          docs-left-section-submenu|aad1de6145b69959bee26bc1eb2583f77177352c
+          docs-metrics-professional-copy|6df603f04debfc1e95dc9ec46fe9d3a8ee1ece46
+          docs-mobile-index-title-fix|3eb4425ed9dadc83420a3d199dc1141dafc094c7
+          docs-production-ux|0259a4ea1e07e0cc1cb0431501467e2de5a6c746
+          docs-runtime-metrics-20261016|25bc5842b60c3273aaf5d5a89214882dd264c9b5
+          docs-studio-audit-20261012|449449af7c37d02230a8e49b35e53e1ed770d93e
+          docs-vscode-local-server|eb8a9c0512def606a6ada5a763c1b773e7686e96
+          feat/universal-runtime-multipart|37667e422bbf0a9cb572fe92095cfdbed909c3a0
+          feature/auto-opaque-package-runtime-20261017|55d99a00ed5e7d154d70fa8615607569aa6bb480
+          fix/browser-fetch-binding|2090f0ea1fe2c3d5b3b1658dd8264051e7fd4c25
+          fix-followup-tracking-navigation|615f9237abffb0b4f8268d3c53ec270c5f7b3747
+          fix-nav-pointer-gap|89b6a0ab3bc9e1ec2a094354659fcc26a3ff0e77
+          h5p-auto-isolated-runtime|5494cd5e09d643710170aa0c51d2b7ea0cb8c0bb
+          main|94de497c2a7b4b9d512442c07f129a3c1fc59e82
+          redesign/home-sections-2026-11|4bb13be82e7134b04a497d98c8a10e1bea63bf28
+          test/public-npm-cdn-interop-20261019|6ec74e205750e6a8fc11ba8be1130b4efb3ab985
+          work/legal-web-no-deploy-20261001|0f7ef34ddb0ecc4c1e195d953b28ce294ec412a5
+          work/p2lrn-foundation-2026-09-27|c42874145dc547ae7408b82527c545c5d263fd4d
+          REFS
+          grep -v '^main|' "$RUNNER_TEMP/expected-refs" > "$RUNNER_TEMP/expected-adjusted"
+          printf 'main|%s\n' "$GITHUB_SHA" >> "$RUNNER_TEMP/expected-adjusted"
+          gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[] | .name + "|" + .commit.sha' | sort > "$RUNNER_TEMP/actual-refs"
+          sort "$RUNNER_TEMP/expected-adjusted" > "$RUNNER_TEMP/expected-sorted"
+          if ! diff -u "$RUNNER_TEMP/expected-sorted" "$RUNNER_TEMP/actual-refs"; then
+            echo "FAIL: refs changed; no deletion"
+            exit 1
+          fi
+          count=0
+          while IFS='|' read -r name expected_sha; do
+            [[ "$name" != "main" ]] || continue
+            current="$(gh api "repos/$repo/git/ref/heads/$name" --jq '.object.sha')"
+            if [[ "$current" != "$expected_sha" ]]; then
+              echo "FAIL: branch head moved: $name"
+              exit 1
+            fi
+            gh api -X DELETE "repos/$repo/git/refs/heads/$name" >/dev/null
+            count=$((count + 1))
+            echo "DELETED=$name"
+          done < "$RUNNER_TEMP/expected-refs"
+          echo "DELETED_COUNT=$count"
+          gh api --paginate "repos/$repo/branches?per_page=100" --jq '.[].name' | sort > "$RUNNER_TEMP/remaining"
+          if [[ "$(cat "$RUNNER_TEMP/remaining")" != "main" ]]; then
+            echo "FAIL: remote has unexpected remaining branches"
+            cat "$RUNNER_TEMP/remaining"
+            exit 1
+          fi
+          echo "FINAL_BRANCHES=main"
