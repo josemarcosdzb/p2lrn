@@ -20,6 +20,18 @@ const MODEL='Xenova/opus-mt-es-en';
 const JS_FILES=['p2lrn.js','studio/studio.js','demo/viewer.js','analytics/demo.js'];
 
 const MANUAL=new Map(Object.entries({
+  // Editorial corrections for untranslated public-facing phrases. Keep
+  // code identifiers, JSON keys and example filenames stable.
+  'Disponibilidad:':'Availability:',
+  'Generar:':'Generate:',
+  'Preparar Node.js, Toolkit, Player, claves y almacenamiento privado.':'Prepare Node.js, Toolkit, Player, keys and private storage.',
+  'issuer, client ID y deployment ID':'issuer, client ID and deployment ID',
+  'Importar progreso y continuar':'Import progress and continue',
+  'entrega offline':'offline delivery',
+  'Versión en desarrollo:':'Development version:',
+  'Versi?n en desarrollo:':'Development version:',
+  'CREAR / ENTREGA SIN PLATAFORMA':'CREATE / DELIVERY WITHOUT A PLATFORM',
+
   "Skills para crear cursos con IA":"AI Skills for course creation",
   "Conoce las Skills de P2LRN para preparar, crear y validar materiales educativos y paquetes de cursos.":"Discover P2LRN Skills for planning, building and validating educational content and portable course packages.",
   "P2LRN / INTELIGENCIA ARTIFICIAL":"P2LRN / ARTIFICIAL INTELLIGENCE",
