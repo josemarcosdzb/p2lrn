@@ -26,7 +26,8 @@ public static class P2LRNStudioEndpoint {
   }
 
   private static string Filename(HttpRequest req,string fallback,string? suffix=null) {
-    var name=req.Headers["X-P2LRN-Filename"].FirstOrDefault() ?? fallback;
+    var header=req.Headers["X-P2LRN-Filename"].ToString();
+    var name=string.IsNullOrEmpty(header)?fallback:header;
     if (name.Length>180 ||
         !Regex.IsMatch(name,@"\A[A-Za-z0-9][A-Za-z0-9._-]{0,160}\z") ||
         Regex.IsMatch(name,@"\A(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])\.",RegexOptions.IgnoreCase) ||
