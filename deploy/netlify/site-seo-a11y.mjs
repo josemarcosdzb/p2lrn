@@ -183,6 +183,10 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
   const contentRoute=english?spanishRouteFor(route):route;
   if(legalUnindexed.includes(contentRoute))result=setMeta(result,'name','robots','noindex,follow');
 
+  // Legacy redirect aliases intentionally canonicalize to a different URL.
+  // Preserve their existing noindex + refresh and don't generate alternates.
+  const redirectAlias=tagList(result,'meta').some(t=>(attr(t,'http-equiv')||'').toLowerCase()==='refresh');
+  if(!redirectAlias){
   // Correct a historical canonical only when it belongs to an explicit
   // permanent English slug migration. Never conceal unrelated mismatches.
   const previousUrl=origin+legacyRouteFor(route);
@@ -261,6 +265,8 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
           '@type':'ListItem',position:index+1,name,item:origin+route
         }))});
     }
+  }
+
   }
 
   const main=/<main\b[^>]*>/i.exec(result);
