@@ -1,3 +1,63 @@
+// Public acquisition/conversion signals. No identifiers, cookies, URL queries,
+// user-generated course data or referrer URLs are transmitted.
+(()=>{
+  if(globalThis.P2LRNRecordConversion||location.hostname!=='p2lrn.org')return;
+  const pages=new Set([
+    '/','/en/','/studio/','/en/studio/','/demo/','/en/demo/','/skills/','/en/skills/',
+    '/crear-cursos-interactivos/','/en/create-interactive-courses/',
+    '/juegos-educativos-3d/','/en/3d-educational-games/',
+    '/cursos-offline/','/en/offline-courses/'
+  ]);
+  const page=location.pathname.replace(/\/index\.html$/,'/');
+  if(!pages.has(page))return;
+  let channel='direct';
+  try{
+    if(document.referrer){
+      const from=new URL(document.referrer);
+      if(from.origin===location.origin)channel='internal';
+      else if(/(^|\.)google\.[a-z.]+$/i.test(from.hostname))channel='google';
+      else channel='external';
+    }
+  }catch{}
+  const locale=/^en\b/i.test(document.documentElement.lang||'')?'en':'es';
+  const sent=new Set();
+  const emit=(event,destination='')=>{
+    const once=event==='landing_view'||event==='studio_editor_ready'||event==='player_course_rendered';
+    if(once&&sent.has(event))return;
+    if(once)sent.add(event);
+    const payload=JSON.stringify({event,page,locale,channel,destination});
+    const url='/.netlify/functions/p2lrn-conversion';
+    try{
+      const blob=new Blob([payload],{type:'text/plain'});
+      if(navigator.sendBeacon?.(url,blob))return;
+      void fetch(url,{method:'POST',body:payload,headers:{'Content-Type':'text/plain'},
+        keepalive:true,credentials:'omit',mode:'same-origin'}).catch(()=>{});
+    }catch{}
+  };
+  globalThis.P2LRNRecordConversion=emit;
+  const landing=new Set([
+    '/','/en/','/skills/','/en/skills/','/crear-cursos-interactivos/',
+    '/en/create-interactive-courses/','/juegos-educativos-3d/',
+    '/en/3d-educational-games/','/cursos-offline/','/en/offline-courses/'
+  ]);
+  if(landing.has(page))emit('landing_view');
+  document.addEventListener('click',(event)=>{
+    const link=event.target?.closest?.('a[href]');
+    if(!link)return;
+    let target;
+    try{target=new URL(link.href,location.href);}catch{return;}
+    if(target.origin!==location.origin)return;
+    const path=target.pathname.replace(/\/index\.html$/,'/');
+    if(path==='/studio/'||path==='/en/studio/')emit('link_studio','studio');
+    else if(path==='/demo/'||path==='/en/demo/')emit('link_player','player');
+    else if(path==='/skills/'||path==='/en/skills/')emit('link_skills','skills');
+    else {
+      const match=/^\/downloads\/skills\/p2lrn-(chatgpt-plugin|claude-skill|gemini-skill|grok-skill)\.zip$/i.exec(path);
+      if(match)emit('skill_download_clicked',match[1].split('-')[0]);
+    }
+  },{capture:true,passive:true});
+})();
+
 // Always expose both site languages from every page, including embedded tools.
 // The language switch keeps the same logical route and never carries form data,
 // authentication parameters or package URLs across languages.
