@@ -344,3 +344,7 @@ The UI and documentation MUST distinguish:
 No level should claim impossibility of cheating on a learner-controlled device.
 
 A completely offline delivery also cannot guarantee that the original file was not copied before first opening or moved to a different computer. The current native expiry is deliberately described as same-device/local enforcement. Strict cross-device single-use or revocation requires a trusted external activation/time service or platform-backed credential.
+
+## Recibos de calificación verificada por servidor
+
+Para evaluaciones conectadas P2LRN ofrece `createP2LRNResultAuthority()` y `verifyP2LRNTrustedResultReceipt()` en `@p2lrn/player/server`. El primero solo emite un recibo Ed25519 si un callback **del Host** verifica de forma independiente la calificación y aporta su identificador de evidencia; **no** convierte automáticamente los hashes de un resultado offline en prueba de autoría. Véase [integración segura de LMS/Host](../docs/integration/INTEGRACION-SEGURA-HOST.md). El nuevo recibo es un artefacto complementario: no modifica el contrato `.p2lrn-result` ni puede impedir trampas en una máquina controlada por el alumno.
