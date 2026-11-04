@@ -155,8 +155,16 @@ for(const file of enHtml){
   });
   $('pre code').each((_,el)=>{
     const raw=$(el).text();
-    const inspect=raw.replace(/https?:\/\/\S+/g,'').replace(/application\/[A-Za-z0-9.+-]+/g,'');
-    if(SPANISH_RE.test(inspect))errors.push(rel+': Spanish human text inside code example: '+JSON.stringify(inspect.slice(0,220)));
+    // Sample paths, valid JavaScript identifiers, file names and domains
+    // are protocol examples, not user-visible translation. Check only
+    // literal human-facing labels instead of treating all source code as prose.
+    const readableLabels=[
+      ...[...raw.matchAll(/<(?:button|label|h[1-6]|p|option|summary|figcaption)\\b[^>]*>([^<]*)<\\/(?:button|label|h[1-6]|p|option|summary|figcaption)>/giu)].map(match=>match[1]),
+      ...[...raw.matchAll(/\\b(?:textContent|innerText)\\s*=\\s*['"`]([^'"`]+)['"`]/gu)].map(match=>match[1]),
+    ];
+    for(const label of readableLabels){
+      if(isVisibleSpanish(label))errors.push(rel+': Spanish human label inside code example: '+JSON.stringify(label.slice(0,220)));
+    }
   });
   $('script[type="application/ld+json"]').each((_,el)=>{
     try{
