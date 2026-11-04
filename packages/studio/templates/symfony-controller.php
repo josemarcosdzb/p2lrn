@@ -35,9 +35,17 @@ final class P2LRNStudioController {
     $length=$request->headers->get('Content-Length');
     if($length!==null&&(!ctype_digit((string)$length)||(float)$length>$limit))
       throw new \LengthException('UPLOAD_TOO_LARGE');
-    $data=$request->getContent();
-    if(!is_string($data)||strlen($data)>$limit)throw new \LengthException('UPLOAD_TOO_LARGE');
-    return $data;
+    $stream=$request->getContent(true);
+    if(!is_resource($stream))throw new \\RuntimeException('INPUT_UNAVAILABLE');
+    $body='';
+    while(!feof($stream)){
+      $chunk=fread($stream,65536);
+      if($chunk===false)throw new \\RuntimeException('INPUT_UNAVAILABLE');
+      if(strlen($body)+strlen($chunk)>$limit)
+        throw new \\LengthException('UPLOAD_TOO_LARGE');
+      $body.=$chunk;
+    }
+    return $body;
   }
   private function bridge(string $action,Request $request,string $fallback,int $limit):string {
     $name=$this->name($request,$fallback);
