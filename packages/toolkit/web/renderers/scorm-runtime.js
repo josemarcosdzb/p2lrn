@@ -341,10 +341,14 @@ export async function render({container, payload, representation, package: pkg, 
   if (isolatedRuntimeUrl) iframe.src = isolatedRuntimeUrl;
   else {
     const shellHtml=createScormSandboxShell(fallbackToken,version);
-    const inlineShell=/<script>([\\s\\S]*?)<\\/script>/iu.exec(shellHtml);
-    if(!inlineShell)throw new Error('Missing SCORM opaque runtime bootstrap.');
-    opaqueBootstrapUrl=URL.createObjectURL(new Blob([inlineShell[1]],{type:'text/javascript'}));
-    iframe.srcdoc=shellHtml.replace(inlineShell[0],`<script src="${opaqueBootstrapUrl}"></script>`);
+    const opening=shellHtml.indexOf('<script>');
+    const closing=shellHtml.lastIndexOf('</script>');
+    if(opening<0||closing<=opening)throw new Error('Missing SCORM opaque runtime bootstrap.');
+    const source=shellHtml.slice(opening+'<script>'.length,closing);
+    opaqueBootstrapUrl=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
+    iframe.srcdoc=shellHtml.slice(0,opening)+
+      `<script src="${opaqueBootstrapUrl}"></script>`+
+      shellHtml.slice(closing+'</script>'.length);
   }
 
   container.replaceChildren(iframe);
