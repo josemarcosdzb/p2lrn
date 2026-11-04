@@ -6,7 +6,7 @@ import {englishRouteFor} from './site-routes.mjs';
 const ES_GROUPS=Object.freeze([
   {label:'Crear y explorar',links:[
     ['/crear-cursos-interactivos/','Crear cursos interactivos'],
-    ['/juegos-educativos-3d/','Juegos educativos 2D y 3D'],
+    ['/juegos-educativos-3d/','Juegos educativos 3D'],
     ['/cursos-offline/','Cursos offline'],
     ['/demo/','Player y visor'],
   ]},
