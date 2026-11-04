@@ -6,6 +6,7 @@ export const LEGACY_PACKAGE_MEMBER_PROTOCOL = 'p2rln-package-member/1';
 export const DEFAULT_NESTED_ZIP_LIMITS = Object.freeze({
   entries: 10000,
   entryBytes: 512 * 1024 * 1024,
+  bufferedEntryBytes: 256 * 1024 * 1024,
   totalUncompressedBytes: 2 * 1024 * 1024 * 1024,
   centralDirectoryBytes: 64 * 1024 * 1024,
   compressionRatio: 250,
