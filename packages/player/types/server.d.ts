@@ -91,3 +91,22 @@ export interface P2LRNCollaborationHandlerOptions {
 }
 export function createP2LRNCollaborationService(implementation: P2LRNCollaborationService): P2LRNCollaborationService;
 export function createP2LRNCollaborationHandler(options: P2LRNCollaborationHandlerOptions): (req:P2LRNRuntimeRequest,res:P2LRNRuntimeResponse,next?:()=>void)=>void;
+
+/** Fail-closed JWT verifier. JWT identity is never taken from package input. */
+export interface P2LRNJwtAuthOptions {
+  issuer: string;
+  audience: string | string[];
+  jwksUri: string;
+  /** Default ['RS256']; explicitly opt in to ES256 or EdDSA if used by your issuer. */
+  allowedAlgorithms?: Array<'RS256' | 'ES256' | 'EdDSA'>;
+  clockSkewSeconds?: number;
+  cacheMs?: number;
+  fetchImpl?: typeof fetch;
+}
+export interface P2LRNAuthenticatedActor {
+  readonly id: string;
+  readonly issuer: string;
+  readonly subjectId: string;
+}
+export function createP2LRNJwtAuthenticator(options:P2LRNJwtAuthOptions):
+  (request:P2LRNRuntimeRequest)=>Promise<P2LRNAuthenticatedActor | null>;
