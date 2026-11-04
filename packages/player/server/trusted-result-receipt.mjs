@@ -106,3 +106,42 @@ export function verifyP2LRNTrustedResultReceipt(receipt,{
       Buffer.from(receipt.signature.value,'base64url'));
   }catch{return false;}
 }
+
+/**
+ * Verify a Host-signed grade and atomically redeem the signed receiptId.
+ * The receiver MUST persist receiptId uniqueness transactionally (e.g. a
+ * UNIQUE constraint plus INSERT ... ON CONFLICT DO NOTHING) before crediting
+ * a grade. A per-process Set is NOT a safe multi-worker replay store.
+ *
+ * The learner's offline file is not a trusted signature; this function only
+ * applies to receipts signed AFTER a server independently verified a grade.
+ */
+export async function verifyAndRedeemP2LRNTrustedResultReceipt(receipt,{
+  consumeReceiptId,now=()=>Date.now(),maxAgeMs=31*24*60*60*1000,...trust
+}={}){
+  if(typeof consumeReceiptId!=='function')
+    throw new TypeError('An atomic durable consumeReceiptId callback is required to prevent replay.');
+  if(!Number.isSafeInteger(maxAgeMs)||maxAgeMs<1000||maxAgeMs>366*24*60*60*1000)
+    throw new TypeError('Invalid receipt expiry window.');
+  if(!verifyP2LRNTrustedResultReceipt(receipt,trust))
+    return Object.freeze({accepted:false,reason:'INVALID_OR_UNBOUND_RECEIPT'});
+  const issued=Date.parse(receipt.body.issuedAt),at=Number(now());
+  if(!Number.isFinite(at)||!Number.isFinite(issued)||issued>at+60*1000||at-issued>maxAgeMs)
+    return Object.freeze({accepted:false,reason:'EXPIRED_OR_FUTURE_RECEIPT'});
+  const context=Object.freeze({
+    receiptId:receipt.body.receiptId,
+    assignmentId:receipt.body.assignmentId,
+    courseId:receipt.body.courseId,
+    contentRoot:receipt.body.contentRoot,
+    actor:receipt.body.actor,
+    issuedAt:receipt.body.issuedAt,
+    evidenceId:receipt.body.evidenceId,
+  });
+  // The trusted host's callback must do a durable, atomic insert keyed by
+  // receiptId, scoped to the verified actor/assignment and transactionally
+  // coupled to the grade update. Only a *new* redemption returns true.
+  const consumed=await consumeReceiptId(context);
+  if(consumed!==true)
+    return Object.freeze({accepted:false,reason:'REPLAY_OR_REDEMPTION_DENIED'});
+  return Object.freeze({accepted:true,receiptId:context.receiptId,score:receipt.body.score,maxScore:receipt.body.maxScore});
+}
