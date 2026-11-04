@@ -16,7 +16,12 @@ await import('./build-cdn.mjs');
 
 const siteRoot = join(root,'deploy','netlify','site');
 const outputRoot = join(root,'.netlify-cdn');
+// Preserve immutable CDN/runtime headers: copying the marketing site would
+// otherwise overwrite _headers and silently remove cross-origin SRI/CSP rules.
+const cdnHeaders=await readFile(join(outputRoot,'_headers'),'utf8');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
+const siteHeaders=await readFile(join(outputRoot,'_headers'),'utf8');
+await writeFile(join(outputRoot,'_headers'),siteHeaders.trimEnd()+'\n\n'+cdnHeaders);
 // Validate every published versioned source snapshot before HTML transformations.
 const correspondingVersion=JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
 for(const component of ['toolkit','studio','analytics']){
