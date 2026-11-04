@@ -599,7 +599,7 @@ for (const htmlPath of htmlFiles) {
   const rel = relative(outputRoot,htmlPath).replaceAll('\\','/');
   const html = await readFile(htmlPath,'utf8');
   for (const match of html.matchAll(/<form\b[^>]*>/gi)) {
-    if (rel === 'contacto/index.html'||rel === 'en/contacto/index.html') continue;
+    if (rel === 'contacto/index.html'||rel === 'en/contact/index.html') continue;
     // Studio's offline assignment form is local-only and has no network action.
     if ((rel === 'studio/index.html'||rel === 'en/studio/index.html') && /\bdata-offline-form(?:\s|=|>)/i.test(match[0]) && !/\baction\s*=/i.test(match[0])) continue;
     repeatedForms.push(rel);
