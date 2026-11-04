@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/schema/trusted-result-receipt/1",
+  "title": "P2LRN Trusted Host Grade Receipt",
+  "description": "Server-only Ed25519 attestation for a grade independently verified by a trusted host. It does not certify a learner-controlled offline result.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "body",
+    "signature"
+  ],
+  "properties": {
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "version",
+        "receiptId",
+        "issuedAt",
+        "actor",
+        "assignmentId",
+        "courseId",
+        "contentRoot",
+        "score",
+        "maxScore",
+        "evidenceId"
+      ],
+      "properties": {
+        "schema": {
+          "const": "https://p2lrn.org/schema/trusted-result-receipt/1"
+        },
+        "version": {
+          "const": "1"
+        },
+        "receiptId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "issuedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "issuer",
+            "subjectId"
+          ],
+          "properties": {
+            "issuer": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "subjectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        },
+        "assignmentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "courseId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "contentRoot": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0
+        },
+        "maxScore": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "evidenceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "keyId",
+        "value"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "Ed25519"
+        },
+        "keyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    }
+  }
+}
