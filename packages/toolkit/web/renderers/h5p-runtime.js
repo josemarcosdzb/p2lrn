@@ -3,7 +3,7 @@ import {dispatchRuntimeEvent} from '../runtime-events.js';
 import {isSafeRuntimeMessage} from '../runtime-message-security.js';
 import {resolveH5pRuntimeUrl} from '../runtime-host-config.js';
 import {encodeH5PSession, inspectH5PPackage} from '../h5p-package.js';
-import {createOpaqueH5PRuntimeDocument, getAutomaticH5PRuntimeResources, hydrateH5PRuntimeCore, hydrateH5PStaticSession} from '../h5p-auto-runtime.js';
+import {createOpaqueH5PRuntimeDocument, createOpaqueH5PRuntimeBootstrapUrl, getAutomaticH5PRuntimeResources, hydrateH5PRuntimeCore, hydrateH5PStaticSession} from '../h5p-auto-runtime.js';
 
 export const acceptsPayload = true;
 const H5P_PROFILE = 'https://p2lrn.org/profile/h5p';
@@ -286,7 +286,8 @@ export async function render({container, payload, representation, package:pkg, e
     iframe.contentWindow.postMessage({protocol:runtimeProtocol, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  if (opaqueMode) iframe.srcdoc = createOpaqueH5PRuntimeDocument({hostScriptUrl:resolvedSession.hostScriptUrl});
+  const opaqueBootstrapUrl=opaqueMode?createOpaqueH5PRuntimeBootstrapUrl():null;
+  if (opaqueMode) iframe.srcdoc = createOpaqueH5PRuntimeDocument({hostScriptUrl:resolvedSession.hostScriptUrl,bootstrapUrl:opaqueBootstrapUrl});
   else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 
@@ -298,6 +299,7 @@ export async function render({container, payload, representation, package:pkg, e
       window.removeEventListener('message', onMessage);
       try { port?.postMessage({protocol:runtimeProtocol, action:'flush'}); } catch {}
       try { port?.close?.(); } catch {}
+      if (opaqueBootstrapUrl) URL.revokeObjectURL(opaqueBootstrapUrl);
       if (!staticMode && resolvedSession?.sessionUrl) {
         try { fetch(resolvedSession.sessionUrl, {method:'DELETE', mode:'cors', credentials:'omit'}).catch(() => {}); } catch {}
       }
