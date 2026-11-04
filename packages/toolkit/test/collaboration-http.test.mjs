@@ -133,3 +133,26 @@ test('production collaboration handler rejects forged identity, untrusted origin
   assert.equal(unauthenticated.status,401);
   assert.equal((await unauthenticated.json()).code,'P2LRN_COLLABORATION_UNAUTHENTICATED');
 });
+
+
+test('collaboration host enforces a per-actor per-second burst limit independent of minute quota',async(t)=>{
+  const handler=createP2LRNCollaborationHandler({
+    allowedOrigins:['http://127.0.0.1'],
+    authenticate:()=>({id:'learner-burst'}),
+    resolveContext:()=>({tenant:'host',contentRoot:'root',entityId:'poll'}),
+    authorize:()=>true,
+    service:memoryService(),
+    maxRequestsPerMinute:600,
+    maxRequestsPerSecond:3,
+  });
+  const server=await listen(handler);t.after(server.close);
+  const run=()=>fetch(server.origin+'/collaboration',{
+    method:'POST',
+    headers:{'Content-Type':COLLABORATION_HTTP_MEDIA_TYPE,Origin:'http://127.0.0.1'},
+    body:JSON.stringify({version:'1',operation:'join',input:{room:'main'},context:{}}),
+  });
+  for(let i=0;i<3;i++)assert.equal((await run()).status,200);
+  const denied=await run();
+  assert.equal(denied.status,429);
+  assert.equal((await denied.json()).code,'P2LRN_COLLABORATION_RATE_LIMITED');
+});
