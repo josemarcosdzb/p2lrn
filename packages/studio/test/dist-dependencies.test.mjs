@@ -17,7 +17,7 @@ test('Studio distribution copies all direct localized editor module imports',asy
   const imports=new Set();
   for(const path of editorSources){
     const code=await source(path);
-    for(const match of code.matchAll(/from\\s+['"]\\.\\/(studio-ui-i18n\\.js)['"]/g))imports.add(match[1]);
+    for(const match of code.matchAll(/from\s+['"]\.\/(studio-ui-i18n\.js)['"]/g))imports.add(match[1]);
   }
   assert.deepEqual([...imports],['studio-ui-i18n.js'],
     'UI editor module graph must include the localized module');
