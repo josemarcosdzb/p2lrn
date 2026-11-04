@@ -87,3 +87,7 @@ Studio authors these visually and declares `collaboration.room` automatically. W
 The provider derives authorization and identity from trusted host state. Renderers receive only the restricted `invokeCapability()` bridge. The native UI uses semantic form controls, labels, status announcements and keyboard-operable actions. Meaningful learner actions emit `p2lrn:interaction` through the existing runtime-event envelope.
 
 This contract does not change SCORM, H5P, cmi5, QTI, Common Cartridge, the Core graph, Host Adapter or package format.
+
+## Integración segura de JWT y LMS
+
+P2LRN también proporciona `createP2LRNJwtAuthenticator()` en `@p2lrn/player/server` para verificar JWT con JWKS, emisor, audiencia y caducidad, sin copiar ejemplos inseguros de WebSocket. El Host sigue asignando matrícula, grupo y autorización desde datos de confianza. Consulte [el ejemplo completo de integración](../docs/integration/INTEGRACION-SEGURA-HOST.md) y [`examples/integration/secure-host-node.mjs`](../examples/integration/secure-host-node.mjs). Las APIs nuevas de `main` no están incluidas automáticamente en versiones npm anteriores.
