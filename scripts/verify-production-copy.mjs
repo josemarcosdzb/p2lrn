@@ -1,5 +1,6 @@
 import {readFile, readdir, stat} from 'node:fs/promises';
 import {join, relative, resolve} from 'node:path';
+import {canonicalRoute,englishRouteFor} from '../deploy/netlify/site-routes.mjs';
 
 const root=resolve(process.cwd());
 const sourceRoot=join(root,'deploy','netlify','site');
@@ -23,6 +24,7 @@ function visibleText(html){
     .replace(/<!--[\s\S]*?-->/g,' ')
     .replace(/<script\b[\s\S]*?<\/script>/giu,' ')
     .replace(/<style\b[\s\S]*?<\/style>/giu,' ')
+    .replace(/<footer\b[\s\S]*?<\/footer>/giu,' ')
     .replace(/<[^>]+>/g,' ')
     .replace(/&nbsp;|&#160;/giu,' ')
     .replace(/&amp;/giu,'&')
@@ -107,7 +109,10 @@ let checked=0;
 let publicPages=0;
 for(const sourcePath of sourcePages){
   const rel=relative(sourceRoot,sourcePath).replaceAll('\\','/');
-  const builtPath=join(builtRoot,...rel.split('/'));
+  // Validate canonical publication paths, rather than redirected legacy English URLs.
+  const sourceRoute='/'+rel.replace(/index\.html$/,'');
+  const publishedRoute=canonicalRoute(sourceRoute);
+  const builtPath=join(builtRoot,...publishedRoute.slice(1).split('/').filter(Boolean),'index.html');
   if(!await exists(builtPath)){
     errors.push(rel+': missing from production build');
     continue;
@@ -130,7 +135,7 @@ for(const sourcePath of sourcePages){
     }
     const hasSiteHeader=/class=["'][^"']*site-header/iu.test(html);
     if(hasSiteHeader){
-      const contactHref=english?'/en/contacto/':'/contacto/';
+      const contactHref=english?englishRouteFor('/contacto/'):'/contacto/';
       const docsHref=english?'/en/docs/':'/docs/';
       if(!html.includes('href="'+contactHref+'"')&&!html.includes("href='"+contactHref+"'"))
         errors.push(rel+': public navigation is missing '+(english?'Contact':'Contacto'));
