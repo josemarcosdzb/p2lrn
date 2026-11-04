@@ -1264,7 +1264,7 @@ async function verifyStudioSiteUI(cdp){
       course.click();
       return true;
     })()`);
-    await waitForEval(cdp,"Boolean(document.querySelector('[aria-label=\\\"Autor del contenido\\\"]'))",'course ownership editor');
+    await waitForEval(cdp,"Boolean(document.querySelector('.studio-rights input'))",'course ownership editor');
     const rightsFilled=await evalTop(cdp,`(()=>{
       const set=(label,value)=>{
         const input=document.querySelector('[aria-label="'+label+'"]');
