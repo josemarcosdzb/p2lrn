@@ -42,3 +42,16 @@ test('Studio blocks unsafe URLs and CSS without dropping ordinary formatting',()
     }
   }
 });
+
+test('Studio sanitizes clipboard HTML before DOM insertion and leaves ordinary files unaffected',async()=>{
+  for(const url of sourcePaths){
+    const script=await readFile(url,'utf8');
+    assert.match(script,/function installSafeStudioHtmlPaste\(node\)/);
+    assert.match(script,/node\.addEventListener\('paste'/);
+    assert.match(script,/node\.addEventListener\('drop'/);
+    assert.match(script,/if\(!html&&!plain\)return/);
+    assert.match(script,/event\.preventDefault\(\)/);
+    assert.match(script,/const sanitized=sanitizeHtml\(html\)/);
+    assert.match(script,/document\.importNode\(child,true\)/);
+  }
+});
