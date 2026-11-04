@@ -5,8 +5,16 @@ import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createP2LRNLtiServer} from './lti-server.mjs';
+import {createP2LRNLtiServer,parseLtiCookieHeader} from './lti-server.mjs';
 import {LTI_CLAIMS} from './launch-contract.mjs';
+
+test('LTI cookie parser preserves complete token values without granting access by cookie syntax',()=>{
+ const values=parseLtiCookieHeader(' __Host-p2lrn-session=abc=def==; p2lrn_oidc=xyz ; malformed ; other=x=y');
+ assert.equal(values['__Host-p2lrn-session'],'abc=def==');
+ assert.equal(values.p2lrn_oidc,'xyz');
+ assert.equal(values.other,'x=y');
+ assert.equal(Object.hasOwn(values,'malformed'),false);
+});
 
 const HERE=dirname(fileURLToPath(import.meta.url)),BASE='https://p2lrn.example',
  ISSUER='https://moodle.example', CLIENT='p2lrn-tool';
