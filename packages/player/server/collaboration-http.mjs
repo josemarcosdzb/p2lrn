@@ -138,6 +138,7 @@ export function createP2LRNCollaborationHandler({
   service,
   maxBodyBytes=DEFAULT_MAX_BODY_BYTES,
   maxRequestsPerMinute=DEFAULT_MAX_REQUESTS_PER_MINUTE,
+  maxRequestsPerSecond=15,
   rateLimitKey=actorKey,
 }={}){
   const origins=normalizeOrigins(allowedOrigins);
@@ -149,17 +150,25 @@ export function createP2LRNCollaborationHandler({
   const backend=normalizeService(service);
   const bodyLimit=Number(maxBodyBytes);
   const rpm=Number(maxRequestsPerMinute);
+  const rps=Number(maxRequestsPerSecond);
   if(!Number.isSafeInteger(bodyLimit)||bodyLimit<1024)throw new TypeError('Invalid collaboration maxBodyBytes.');
   if(!Number.isSafeInteger(rpm)||rpm<1)throw new TypeError('Invalid collaboration maxRequestsPerMinute.');
+  if(!Number.isSafeInteger(rps)||rps<1||rps>1000)throw new TypeError('Invalid collaboration maxRequestsPerSecond.');
 
   const windows=new Map();
   function takeSlot(actor){
     const key=String(rateLimitKey(actor)??'authenticated');
     const now=Date.now();
     let current=windows.get(key);
-    if(!current||now-current.startedAt>=60000){current={startedAt:now,count:0};windows.set(key,current);}
-    if(current.count>=rpm)return false;
+    if(!current||now-current.startedAt>=60000){
+      current={startedAt:now,count:0,secondStartedAt:now,secondCount:0};
+      windows.set(key,current);
+    }
+    if(now-current.secondStartedAt>=1000){current.secondStartedAt=now;current.secondCount=0;}
+    // A minute quota by itself permits hundreds of messages in one second.
+    if(current.count>=rpm||current.secondCount>=rps)return false;
     current.count+=1;
+    current.secondCount+=1;
     if(windows.size>10000){
       for(const [itemKey,item] of windows)if(now-item.startedAt>=120000)windows.delete(itemKey);
     }
