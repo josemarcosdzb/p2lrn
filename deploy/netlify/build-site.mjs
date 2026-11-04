@@ -8,6 +8,7 @@ import {reviseSiteBrowserAssets} from './browser-site-revision.mjs';
 import {renderSiteFooter,getSiteFooterLinks} from './site-footer.mjs';
 import {verifyPackageCorrespondingSource} from './corresponding-source.mjs';
 import {normalizeSeoAndAccessibility} from './site-seo-a11y.mjs';
+import {buildSocialImage} from './build-social-image.mjs';
 import {ENGLISH_ROUTES, LEGACY_ENGLISH_ROUTES, SPANISH_ROUTES, ENGLISH_ANCHORS, englishRouteFor, spanishRouteFor, canonicalRoute} from './site-routes.mjs';
 
 const root = resolve(process.cwd());
@@ -227,6 +228,15 @@ for(const publicJs of ['p2lrn.js','en/p2lrn.js']){
     'globalThis.__P2LRN_SPANISH_ROUTES='+JSON.stringify(SPANISH_ROUTES)+';\n';
   await writeFile(file,preamble+before,'utf8');
 }
+const socialBuild=await buildSocialImage({siteRoot,outputRoot});
+if(socialBuild.width!==1200||socialBuild.height!==630)
+  throw new Error('Social image must be exactly 1200 x 630');
+const heroDimensions=new Map();
+for(const filename of ['studio.png','player.png','docs.png','games.png','questionnaires.png']){
+  const bytes=await readFile(join(siteRoot,'assets','hero',filename));
+  if(bytes.subarray(1,4).toString()!=='PNG')throw Error('Not PNG: '+filename);
+  heroDimensions.set(filename,[bytes.readUInt32BE(16),bytes.readUInt32BE(20)]);
+}
 const allHtmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
 // Google Search Console HTML ownership tokens must be served byte-for-byte from the root,
 // not rewritten as normal public HTML pages.
@@ -256,6 +266,27 @@ for (const htmlPath of htmlFiles) {
   html = html.replace(/<span\s+[^>]*data-footer-version(?:=["'][^"']*["'])?[^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-release-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
   html = html.replace(/<span\s+class=["']site-build-label["'][^>]*>[\s\S]*?<\/span>/gi,'');
+  // Reserve image layout space; avoid eager-loading below-the-fold screenshots.
+  let firstHeroImage=true;
+  html=html.replace(/<img\b[^>]*>/gi,tag=>{
+    const src=/\bsrc=["']\/assets\/hero\/([^"'?]+)(?:\?[^"']*)?["']/i.exec(tag)?.[1];
+    const dimensions=heroDimensions.get(src);
+    if(!dimensions)return tag;
+    if(!/\bwidth=/.test(tag))tag=tag.replace(/>$/,' width="'+dimensions[0]+'">');
+    if(!/\bheight=/.test(tag))tag=tag.replace(/>$/,' height="'+dimensions[1]+'">');
+    if(!/\bdecoding=/.test(tag))tag=tag.replace(/>$/,' decoding="async">');
+    if(!/\bloading=/.test(tag)){
+      tag=tag.replace(/>$/,' loading="'+(firstHeroImage?'eager':'lazy')+'">');
+      if(firstHeroImage&&!/\bfetchpriority=/.test(tag))tag=tag.replace(/>$/,' fetchpriority="high">');
+    }
+    firstHeroImage=false;
+    return tag;
+  });
+  html=html.replace(/<video\b[^>]*>/gi,tag=>{
+    if(!/\bposter=/.test(tag))tag=tag.replace(/>$/,' poster="/assets/hero/video-reference.jpg">');
+    if(!/\bpreload=/.test(tag))tag=tag.replace(/>$/,' preload="metadata">');
+    return tag;
+  });
   if (!html.includes('href="/favicon.png"')) {
     html = html.replace(/<\/head>/i,brandHeadFor(pageLocale) + '</head>');
   }
