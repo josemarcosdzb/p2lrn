@@ -38,3 +38,6 @@ P2LRN packages remain owned and hosted by the publisher. This package contains o
 ## Third-party licensing
 
 The files under `dist/` are third-party H5P libraries. They retain their upstream licenses. See `THIRD_PARTY_NOTICES.md` and each library's metadata/source for applicable terms.
+
+**Course creators are responsible for the rights of content they author or import**, including embedded H5P activities, images, video and other assets. This does **not** transfer obligations for redistributed H5P library code to the course creator: software distributors must observe the applicable licenses for the libraries they ship.
+

@@ -1,5 +1,7 @@
 # @p2lrn/studio
 
+**Responsabilidad del autor / Course author rights.** El creador o distribuidor de cada curso debe comprobar las licencias y permisos de todo el material incorporado, incluidas actividades externas H5P/SCORM, recursos, fuentes, vídeos e imágenes, y conservar atribuciones y autorizaciones. Studio no verifica automáticamente derechos de terceros. Esta regla no sustituye las obligaciones de quienes redistribuyen bibliotecas de software. See `docs/DERECHOS-CONTENIDOS-CURSOS.md` in the source repository.
+
 Embeddable visual authoring surface for P2LRN.
 
 ## Browser integration: NPM

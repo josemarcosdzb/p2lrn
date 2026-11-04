@@ -26,7 +26,7 @@
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "prepack": "npm run build",
-    "prepublishOnly": "node ../../scripts/check-publish-ready.mjs"
+    "prepublishOnly": "node ../../scripts/check-publish-ready.mjs && node ../../scripts/audit-third-party-licenses.mjs --strict"
   },
   "publishConfig": {
     "access": "public"

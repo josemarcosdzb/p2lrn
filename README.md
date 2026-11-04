@@ -1,5 +1,7 @@
 # P2LRN Node.js / TypeScript 0.5.0-alpha.12
 
+**Derechos de los cursos:** quien crea, importa o distribuye un curso debe verificar y respetar los permisos y licencias de los materiales que incorpora (incluidas actividades H5P/SCORM, imágenes y vídeo), conservar las atribuciones exigidas y obtener las autorizaciones necesarias. P2LRN no concede derechos sobre obras ajenas. Esta responsabilidad sobre *contenido del curso* es distinta de la que corresponde al distribuidor de bibliotecas de software incluidas en sus paquetes. Véase [Derechos y licencias de los cursos](docs/DERECHOS-CONTENIDOS-CURSOS.md).
+
 Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeScript**. Python ya no es una dependencia del toolkit principal: se conserva únicamente en `reference-python-alpha15/` para comparación y conformidad con Alpha15. La auditoría final no encuentra archivos Python ejecutables ni comandos operativos Python fuera de esa carpeta.
 
 ## Autoridad actual
