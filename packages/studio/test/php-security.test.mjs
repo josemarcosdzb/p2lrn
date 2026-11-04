@@ -32,6 +32,16 @@ test('PHP routes deny access until Host auth and disallow executable filenames',
   assert.match(save,/\.p2lrn\$/);
   assert.match(save,/tempnam\(/);
   assert.match(save,/@rename\(/);
+  // Execute the actual PHP filename filter, not just a source-code assertion.
+  const executablePattern=save.match(/preg_match\('([^']*php\[0-9\]\*[^']*)'/)?.[1];
+  assert.ok(executablePattern,'PHP executable-extension filter must exist');
+  try {
+   const {stdout:verdict}=await exec('php',['-r',
+    'foreach(array_slice($argv,2) as $name){echo preg_match($argv[1],$name)?"1":"0";}',
+    executablePattern,'shell.php.p2lrn','shell.phtml.p2lrn','shell.php8.p2lrn','course.v1.p2lrn']);
+   assert.equal(verdict,'1110','PHP must reject executable multiple extensions and allow normal version names');
+  }catch(error){if(error?.code!=='ENOENT')throw error;}
+
   assert.doesNotMatch(save,/file_put_contents/);
   assert.doesNotMatch(save,/basename\(\$_SERVER/);
  }finally{await rm(root,{recursive:true,force:true});}
