@@ -88,9 +88,10 @@ const esLinks=links(es),enLinks=links(en);
 assert.equal(esLinks.length,enLinks.length,'Bilingual navigation count');
 for(let i=0;i<esLinks.length;i++){
   const url=esLinks[i];
-  const expected=url==='/'?'/en/':[
-    '/docs/','/docs/empezar/','/docs/player/','/docs/toolkit/','/docs/npm/','/contacto/'
-  ].some(prefix=>url.startsWith(prefix))?'/en'+url:url;
+  const matchedRoute=['/docs/','/docs/empezar/','/docs/player/','/docs/toolkit/','/docs/npm/','/contacto/']
+    .find(prefix=>url.startsWith(prefix));
+  const expected=url==='/'?'/en/':matchedRoute
+    ?englishRouteFor(matchedRoute)+url.slice(matchedRoute.length):url;
   assert.equal(enLinks[i],expected,'English href counterpart at index '+i);
 }
 assert.match(es,/No es una licencia <em>open source<\/em> aprobada por OSI/);
