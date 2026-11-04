@@ -4,10 +4,19 @@ import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {join,dirname} from 'node:path';
 import recordConversion from '../netlify/functions/p2lrn-conversion.mjs';
+import {STUDIO_RUNTIME_SHARED_FILES} from '../deploy/netlify/studio-runtime-assets.mjs';
 import {createP2LRNStudioDocument} from '../packages/toolkit/web/studio/new-document.js';
 
 const repoRoot=join(dirname(fileURLToPath(import.meta.url)),'..');
 const file=(relative)=>readFileSync(join(repoRoot,relative),'utf8');
+
+test('Studio build includes its transitive renderer localization module',()=>{
+  assert.ok(STUDIO_RUNTIME_SHARED_FILES.includes('renderers/ui-i18n.js'));
+  const build=file('deploy/netlify/build-site.mjs');
+  assert.match(build,/Studio renderer translation dependency not deployed/);
+  const browserFixture=file('scripts/verify-local-viewer.mjs');
+  assert.match(browserFixture,/await mkdir\(dirname\(destination\),\{recursive:true\}\)/);
+});
 
 test('fresh Studio documents contain a usable first lesson, not a shell',async()=>{
   for(const lang of ['es','en']){
