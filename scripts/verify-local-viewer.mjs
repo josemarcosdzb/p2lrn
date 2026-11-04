@@ -1255,6 +1255,16 @@ async function verifyStudioSiteUI(cdp){
     await cdp.send('Page.setDownloadBehavior',{behavior:'allow',downloadPath:offlineExportsDir});
     await evalTop(cdp,"document.querySelector('[data-create-course]').click();true");
     await waitForEval(cdp,"document.querySelector('[data-studio-status]')?.textContent==='Curso nuevo listo para editar'",'fresh standalone Studio course');
+    // New courses intentionally open on their first editable lesson.
+    // Ownership fields belong to the course root, so select it explicitly.
+    await evalTop(cdp,`(()=>{
+      const course=[...document.querySelectorAll('[data-tree] button[data-entity-id]')]
+        .find(node=>node.querySelector('.type')?.textContent==='course');
+      if(!course)throw new Error('Cannot select course root for authorship');
+      course.click();
+      return true;
+    })()`);
+    await waitForEval(cdp,"Boolean(document.querySelector('[aria-label=\\\"Autor del contenido\\\"]'))",'course ownership editor');
     const rightsFilled=await evalTop(cdp,`(()=>{
       const set=(label,value)=>{
         const input=document.querySelector('[aria-label="'+label+'"]');
