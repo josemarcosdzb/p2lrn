@@ -133,3 +133,50 @@ de un Host acad?mico. El ?ndice vac?o presenta un panel sin datos.
 El servidor de referencia es @p2lrn/player/server/results. La ruta de
 los resultados debe ser privada, no accesible por alumnado ajeno.
 Consultar spec/RESULTS-ANALYTICS.md.
+
+
+## Dataset privado desde un servidor autenticado (contrato seguro opcional)
+
+El paquete de desarrollo incorpora \`@p2lrn/analytics/server\`, cuya versión alineada
+todavía **no está publicada como conjunto completo en npm**. Para proteger datos
+de alumnos en producción, el componente visual no autentica usuarios: el **Host**
+debe proteger la API antes de enviar cualquier dataset.
+
+\`\`\`js
+import {createP2LRNAnalyticsDatasetHandler} from '@p2lrn/analytics/server';
+
+// authenticate: valida la sesión del propio servidor (no una cabecera libre).
+// authorize: comprueba matrícula y permisos por centro/curso en tu base de datos.
+// loadDataset: usa SQL parametrizado y devuelve solo datos del curso pedido.
+const handler=createP2LRNAnalyticsDatasetHandler({
+  allowedOrigins:['https://campus.example.edu'],
+  authenticate:request => requireSession(request),
+  authorize:async({principal,tenantId,courseId}) =>
+    authorizeAnalyticsCourseInDb(principal,tenantId,courseId),
+  loadDataset:async({principal,tenantId,courseId}) =>
+    loadAuthorizedAnalyticsDataset(principal,tenantId,courseId),
+});
+server.on('request',(request,response)=>{void handler(request,response)});
+\`\`\`
+
+El callback \`authorize\` devuelve un **grant calculado por el Host**, por ejemplo
+\`{role:'learner',learnerId:'student-123'}\` para un alumno,
+\`{role:'teacher',allowedLearnerIds:['student-123']}\` para un docente,
+o \`{role:'admin',tenantId:'tenant-1'}\` para un administrador del centro. No se
+aceptan roles ni identidades enviados como parámetros del navegador. La capa
+vuelve a filtrar cursos y alumnos en cada fila incluso si el callback de datos
+devolviera más filas de las previstas.
+
+Las respuestas usan \`Cache-Control: private, no-store\`, limitación de tamaño,
+lista explícita de orígenes permitidos (nunca \`*\`), máscara de emails por
+defecto y eliminación de \`metadata\`, \`payload\` y \`context\` potencialmente
+sensibles. El indicador \`authoritative\` se mantiene en \`false\` salvo
+autorización explícita del Host: nunca se obtiene una nota oficial por
+autodeclararla dentro de un \`.p2lrn-result\`.
+
+**El callback del Host es obligatorio:** este adaptador no implementa usuarios
+de una institución, login, certificados, claves de firma, bases de datos,
+permisos ni reglas de protección de datos. Para notas oficiales exige
+verificación o corrección del lado del servidor, con evidencia propia, no el
+JSON editable de un alumno. Configura también HTTPS, auditoría de accesos,
+retención y cuotas en la infraestructura.
