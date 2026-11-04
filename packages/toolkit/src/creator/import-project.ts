@@ -1,5 +1,6 @@
 import {existsSync, mkdirSync, readdirSync, rmSync, writeFileSync} from 'node:fs';
-import {dirname, join, resolve} from 'node:path';
+import {dirname, join, resolve, sep} from 'node:path';
+import {safeZipPath} from '../core/zip.js';
 import {randomUUID} from 'node:crypto';
 import {ProjectError} from '../core/errors.js';
 import {newUrnUuid} from '../core/uuid.js';
@@ -21,8 +22,23 @@ export interface OpenPackageProjectResult {
 }
 
 function emptyDirectory(path:string):boolean{return !existsSync(path)||readdirSync(path).length===0;}
-function workspacePath(packagePath:string):string{return ['package-files',...packagePath.split('/')].join('/');}
-function diskPath(root:string,rel:string):string{return join(root,...rel.split('/'));}
+function workspacePath(packagePath:string):string{
+  // ZIP names are virtual paths; Windows disk extraction must ALSO reject
+  // ADS, reserved device names, trailing spaces/dots and ambiguous aliases.
+  const safe=safeZipPath(packagePath),parts=safe.split('/');
+  for(const part of parts){
+    if(!part||/[<>:"|?*\x00-\x1f]/.test(part)||/[. ]$/.test(part)||
+       /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$/i.test(part))
+      throw new ProjectError('unsafe import filesystem member: '+packagePath);
+  }
+  return ['package-files',...parts].join('/');
+}
+function diskPath(root:string,rel:string):string{
+  const base=resolve(root),out=resolve(base,...rel.split('/'));
+  if(out!==base&&!out.startsWith(base+sep))
+    throw new ProjectError('import member escapes project root: '+rel);
+  return out;
+}
 function copyFields(source:any,target:any,names:string[]):void{for(const name of names)if(Object.prototype.hasOwnProperty.call(source,name))target[name]=structuredClone(source[name]);}
 function creatorProjectId(graph:any):string|undefined{const ext=graph?.extensions?.['org.p2lrn.creator'];return ext&&typeof ext==='object'&&typeof ext.projectId==='string'&&ext.projectId?ext.projectId:undefined;}
 function nextKey(type:string,counters:Map<string,number>):string{if(type==='course')return'course';const n=(counters.get(type)??0)+1;counters.set(type,n);return`${type}-${String(n).padStart(3,'0')}`;}
@@ -51,10 +67,19 @@ export function openPackageAsProject(packagePath:string,projectRoot:string,optio
   for(const entity of graph.entities){const key=nextKey(entity.type,counters);if(idToKey.has(entity.id))throw new ProjectError(`duplicate entity id while importing: ${entity.id}`);idToKey.set(entity.id,key);entityOrder.push(key);}
   const keyFor=(id:string,context:string)=>{const key=idToKey.get(id);if(!key)throw new ProjectError(`broken ${context} reference while importing: ${id}`);return key;};
   const descriptorByPath=new Map(manifest.files.map((f:any)=>[f.path,f]));
-  const written=new Set<string>(),representedPackagePaths=new Set<string>();
+  const written=new Set<string>(),diskAliases=new Set<string>(),representedPackagePaths=new Set<string>();
   const materialize=(packageMemberPath:string):string=>{
-    if(!written.has(packageMemberPath)){const rel=workspacePath(packageMemberPath),out=diskPath(root,rel);mkdirSync(dirname(out),{recursive:true});writeFileSync(out,archive.read(packageMemberPath));written.add(packageMemberPath);}
-    return workspacePath(packageMemberPath);
+    const rel=workspacePath(packageMemberPath);
+    if(!written.has(packageMemberPath)){
+      const diskKey=rel.toLowerCase();
+      if(diskAliases.has(diskKey))throw new ProjectError('case-insensitive import path collision: '+rel);
+      const out=diskPath(root,rel);
+      mkdirSync(dirname(out),{recursive:true});
+      writeFileSync(out,archive.read(packageMemberPath),{flag:'wx',mode:0o600});
+      diskAliases.add(diskKey);
+      written.add(packageMemberPath);
+    }
+    return rel;
   };
   const sourceFor=(rep:any):any=>{
     const loc=rep.location??{};
