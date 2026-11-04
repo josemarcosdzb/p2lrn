@@ -58,13 +58,36 @@ export class Crc32State {
 
 export function crc32(bytes) { return new Crc32State().update(bytes).digest(); }
 
-async function inflateRaw(bytes) {
+async function inflateRaw(bytes, maxOutputBytes) {
   if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot decompress ZIP deflate streams (DecompressionStream unavailable).');
+  if (!Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < 0) throw new TypeError('Invalid ZIP decompression byte limit.');
   let stream;
   try { stream = new DecompressionStream('deflate-raw'); }
   catch { throw new Error('This browser does not support deflate-raw ZIP decompression.'); }
-  const response = new Response(new Blob([bytes]).stream().pipeThrough(stream));
-  return new Uint8Array(await response.arrayBuffer());
+  // Never buffer an unbounded deflate stream and only then compare its size.
+  // A hostile ZIP can lie about its declared uncompressed size.
+  const reader = new Blob([bytes]).stream().pipeThrough(stream).getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
+      size += chunk.byteLength;
+      if (size > maxOutputBytes) throw new Error('ZIP decompression exceeded declared size or buffered entry limit.');
+      chunks.push(chunk);
+    }
+  } catch (error) {
+    await reader.cancel(error).catch(() => undefined);
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  const result = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { result.set(chunk, offset); offset += chunk.byteLength; }
+  return result;
 }
 
 function findEocd(bytes, absoluteStart, totalSize) {
@@ -285,8 +308,13 @@ export class BufferZipArchive {
     const dataStart = offset + 30 + nameLength + extraLength;
     const dataEnd = dataStart + entry.compressedSize;
     if (dataEnd > this.buffer.byteLength) throw new Error(`Truncated ZIP payload: ${name}`);
+    if (entry.uncompressedSize > this.limits.bufferedEntryBytes) {
+      const error = new Error(`ZIP entry is too large for ArrayBuffer reading (${entry.uncompressedSize} bytes): ${name}`);
+      error.code = 'P2LRN_ENTRY_REQUIRES_STREAM';
+      throw error;
+    }
     const compressed = this.bytesView.slice(dataStart, dataEnd);
-    const result = entry.method === 0 ? compressed : await inflateRaw(compressed);
+    const result = entry.method === 0 ? compressed : await inflateRaw(compressed, entry.uncompressedSize);
     if (result.byteLength !== entry.uncompressedSize) throw new Error(`ZIP size mismatch after decompression: ${name}`);
     if (crc32(result) !== entry.crc) throw new Error(`ZIP CRC mismatch: ${name}`);
     return result;
@@ -585,7 +613,7 @@ export class RemoteZipArchive {
     }
     const {dataStart, dataEnd} = await this.#dataRange(entry);
     const compressed = entry.compressedSize ? await this.source.readRange(dataStart, dataEnd) : new Uint8Array();
-    const result = entry.method === 0 ? compressed : await inflateRaw(compressed);
+    const result = entry.method === 0 ? compressed : await inflateRaw(compressed, entry.uncompressedSize);
     if (result.byteLength !== entry.uncompressedSize) throw new Error(`ZIP size mismatch after decompression: ${name}`);
     if (crc32(result) !== entry.crc) throw new Error(`ZIP CRC mismatch: ${name}`);
     return result;
