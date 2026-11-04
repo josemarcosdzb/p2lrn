@@ -36,7 +36,7 @@ test('one footer supplies clear product, documentation and resource groups',()=>
   assert(!footer.includes('http://'));
   assert(footer.includes('href="https://github.com/josemarcosdzb/p2lrn" target="_blank" rel="noopener noreferrer"'));
   assert(!footer.includes('github.com/josemarcosfrodo/p2lrn'));
-  assert(footer.includes('<p class="site-footer__credit">Creado por <strong>Jose Marcos Diaz</strong></p>'));
+  assert(footer.includes('<p class="site-footer__credit">Creado por <strong><a href="https://github.com/josemarcosdzb" rel="author noopener noreferrer" target="_blank">Jose Marcos Diaz</a></strong></p>'));
   assert.equal((footer.match(/https:\/\/github\.com\/josemarcosdzb\/p2lrn/g)||[]).length,1);
 });
 
@@ -51,7 +51,7 @@ test('English footer mirrors the Spanish navigation with localized routes',()=>{
   assert(footer.includes('>Documentation</'));
   assert(footer.includes('>Contact</'));
   assert(footer.includes('href="https://github.com/josemarcosdzb/p2lrn"'));
-  assert(footer.includes('<p class="site-footer__credit">Created by <strong>Jose Marcos Diaz</strong></p>'));
+  assert(footer.includes('<p class="site-footer__credit">Created by <strong><a href="https://github.com/josemarcosdzb" rel="author noopener noreferrer" target="_blank">Jose Marcos Diaz</a></strong></p>'));
   assert(!footer.includes('/en/https://'));
 });
 
