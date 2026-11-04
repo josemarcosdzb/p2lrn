@@ -40,6 +40,7 @@ function scan(dir){
     if(!e.name.endsWith('.html'))continue;
     pages++;
     const h=readFileSync(f,'utf8');
+    let homeVideoObjects=0;
     for(const m of h.matchAll(/<script\b([^>]*)>/gi)){
       if(/\bsrc\s*=/i.test(m[1]))continue;
       // application/ld+json is inert structured data, never executable JS.
@@ -68,6 +69,20 @@ function scan(dir){
       try{schema=JSON.parse(text)}catch{assert.fail('Invalid JSON-LD: '+rel)}
       const expected=allow.get(rel);
       assert.equal(schema['@context'],'https://schema.org');
+      // A second, inert VideoObject is allowed on the two homepages only.
+      // Its URLs and exact keys are checked; executable inline scripts remain forbidden.
+      if(expected.kind==='root'&&schema['@type']==='VideoObject'){
+        homeVideoObjects++;
+        const allowed=['@context','@type','@id','name','description','thumbnailUrl','contentUrl','url'];
+        assert.deepEqual(Object.keys(schema).sort(),allowed.sort(),'Unexpected VideoObject metadata: '+rel);
+        assert.equal(schema.url,expected.url+'#course-preview-video');
+        assert.equal(schema['@id'],schema.url);
+        assert.equal(schema.thumbnailUrl,'https://p2lrn.org/assets/hero/video-reference.jpg');
+        assert.equal(schema.contentUrl,'https://p2lrn.org/assets/hero/preview.mp4');
+        assert.ok(typeof schema.name==='string'&&schema.name.includes('P2LRN'),'Invalid video title: '+rel);
+        assert.ok(typeof schema.description==='string'&&schema.description.length>=30,'Invalid video description: '+rel);
+        continue;
+      }
       assert.equal(schema['@type'],expected.type);
       if(expected.name)assert.equal(schema.name,expected.name);
       if(expected.headline)assert.ok(schema.headline?.startsWith(expected.headline),'Unrelated article schema on '+rel);
@@ -100,6 +115,10 @@ function scan(dir){
         }
       }
     }
+    // Only the two real homepages may contain one verified video object.
+    const page=relative(site,f).replaceAll('\\','/');
+    if(page==='index.html'||page==='en/index.html')
+      assert.equal(homeVideoObjects,1,'Expected exactly one P2LRN video object: '+page);
     // Preserve the prohibition of all inline event handlers.
     assert.ok(!/\son(?:load|error|click|submit|change|input)\s*=/i.test(h),'Inline handler: '+f);
   }
