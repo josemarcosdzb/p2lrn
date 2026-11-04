@@ -110,3 +110,47 @@ export interface P2LRNAuthenticatedActor {
 }
 export function createP2LRNJwtAuthenticator(options:P2LRNJwtAuthOptions):
   (request:P2LRNRuntimeRequest)=>Promise<P2LRNAuthenticatedActor | null>;
+
+/** A separate, server-signed receipt; not a claim that offline files are tamper-proof. */
+export interface P2LRNHostGradeDecision {
+  verified: true;
+  score: number;
+  maxScore: number;
+  evidenceId: string;
+}
+export interface P2LRNHostGradeContext {
+  actor: Readonly<{issuer:string;subjectId:string}>;
+  assignmentId: string;
+  courseId: string;
+  contentRoot: string;
+  submittedResult: unknown;
+}
+export interface P2LRNResultAuthorityOptions {
+  privateKey: import('node:crypto').KeyLike;
+  keyId: string;
+  gradeSubmission(context: Readonly<P2LRNHostGradeContext>): Promise<P2LRNHostGradeDecision> | P2LRNHostGradeDecision;
+}
+export interface P2LRNTrustedResultReceipt {
+  body: {
+    schema: string;
+    version: '1';
+    receiptId: string;
+    issuedAt: string;
+    actor: {issuer:string;subjectId:string};
+    assignmentId: string;
+    courseId: string;
+    contentRoot: string;
+    score: number;
+    maxScore: number;
+    evidenceId: string;
+  };
+  signature: {algorithm:'Ed25519';keyId:string;value:string};
+}
+export const P2LRN_TRUSTED_RESULT_RECEIPT_SCHEMA: string;
+export function createP2LRNResultAuthority(options: P2LRNResultAuthorityOptions): {
+  issue(input: {actor:{issuer:string;subjectId:string};assignmentId:string;courseId:string;contentRoot:string;submittedResult:unknown}):Promise<P2LRNTrustedResultReceipt>;
+};
+export function verifyP2LRNTrustedResultReceipt(
+  receipt:unknown,
+  options:{publicKey:import('node:crypto').KeyLike;keyId:string;actor?:{issuer:string;subjectId:string};assignmentId?:string;courseId?:string;contentRoot?:string}
+):boolean;
