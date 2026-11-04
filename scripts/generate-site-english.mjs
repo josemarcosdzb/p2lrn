@@ -2,6 +2,7 @@ import {mkdir,readFile,readdir,rm,writeFile} from 'node:fs/promises';
 import {dirname,extname,join,relative,resolve} from 'node:path';
 import {parseJs,walkAst,structuralLiteral} from './site-i18n-ast.mjs';
 import {load} from 'cheerio';
+import {englishRouteFor,canonicalRoute,ENGLISH_ANCHORS} from '../deploy/netlify/site-routes.mjs';
 
 const root=resolve(process.cwd());
 const siteRoot=join(root,'deploy','netlify','site');
@@ -9,6 +10,7 @@ const englishRoot=join(siteRoot,'en');
 // Pages translated by an editor, rather than a machine, must survive a full mirror rebuild.
 const handAuthoredEnglishPages=new Set([
   'docs/formato-portable-cursos-interactivos/index.html',
+  'crear-cursos-interactivos/index.html',
   // Legal summaries are manually reviewed and must not be rewritten by machine translation.
   'licencia/index.html',
 ]);
@@ -17,6 +19,19 @@ const MODEL='Xenova/opus-mt-es-en';
 const JS_FILES=['p2lrn.js','studio/studio.js','demo/viewer.js','analytics/demo.js'];
 
 const MANUAL=new Map(Object.entries({
+  "P2LRN / INTELIGENCIA ARTIFICIAL":"P2LRN / ARTIFICIAL INTELLIGENCE",
+  "EXPLORA P2LRN":"EXPLORE P2LRN",
+  "Cursos portables .p2lrn para webs y plataformas LMS":"Portable .p2lrn courses for websites and LMSs",
+  "Documentación de P2LRN: formato, Player y Toolkit":"P2LRN documentation: file format, Player and Toolkit",
+  "Cuestionarios, juegos 3D y colaboración en cursos portables":"Quizzes, 3D games and collaboration in portable courses",
+  "Descubre P2LRN, el formato portable de cursos interactivos. Crea contenido con Studio, reprodúcelo con Player e integra SCORM y H5P en web y LMS.":"Build portable interactive courses in P2LRN Studio, run them with Player, and deliver compatible SCORM and H5P activities on websites and LMSs.",
+  "Player de P2LRN mostrando la reproducción de un curso interactivo":"P2LRN Player interface playing an interactive course",
+  "Interfaz del editor visual P2LRN Studio para crear cursos":"P2LRN Studio visual course editor interface",
+  "Página de P2LRN dedicada a actividades y juegos educativos 3D":"P2LRN page about 3D educational activities and games",
+  "Página de P2LRN con ejemplos de cuestionarios y preguntas":"P2LRN page with questionnaire examples and questions",
+  "Vista de las guías de P2LRN para crear, reproducir e integrar cursos":"P2LRN guides for authoring, playing and integrating courses",
+  "Vista previa en vídeo de cursos interactivos P2LRN":"P2LRN interactive course video preview",
+  "Vista breve de la reproducción de cursos interactivos P2LRN.":"Short visual preview of P2LRN interactive course playback.",
   'Guía de portabilidad':'Portability guide',
   'Una explicación práctica para comparar formatos, reproducción y entrega de contenidos. Consulta la':'A practical guide to comparing formats, playback and course delivery. Read the',
   'guía del formato portable de cursos interactivos':'portable interactive course format guide',
@@ -328,7 +343,8 @@ function routeFromRelative(rel){
   return null;
 }
 function normalizeRoute(pathname){return pathname==='/'?'/':(pathname.endsWith('/')?pathname:pathname+'/');}
-function englishRoute(route){return route==='/'?'/en/':'/en'+route;}
+function englishRoute(route){return englishRouteFor(route);}
+function translateAnchorFragment(fragment){return String(fragment).replace(/#([A-Za-z0-9_-]+)/g,(match,id)=>'#'+(ENGLISH_ANCHORS[id]||id));}
 function splitHref(value){
   const q=value.indexOf('?'),h=value.indexOf('#');
   let cut=value.length;
@@ -337,12 +353,18 @@ function splitHref(value){
   return {path:value.slice(0,cut),suffix:value.slice(cut)};
 }
 function rewriteHref(value,routes){
-  if(!value||value.startsWith('#')||value.startsWith('//')||/^[a-z][a-z0-9+.-]*:/i.test(value)||!value.startsWith('/'))return value;
+  if(!value)return value;
+  if(value.startsWith('#'))return translateAnchorFragment(value);
+  if(value.startsWith('//')||/^[a-z][a-z0-9+.-]*:/i.test(value)||!value.startsWith('/'))return value;
   const {path,suffix}=splitHref(value);
-  if(path.startsWith('/en/'))return value;
-  if(path==='/search-index.json')return '/en/search-index.json'+suffix;
+  const fragment=translateAnchorFragment(suffix);
+  if(path.startsWith('/en/')){
+    const canonical=canonicalRoute(normalizeRoute(path));
+    return (canonical!==normalizeRoute(path)?canonical:path)+fragment;
+  }
+  if(path==='/search-index.json')return '/en/search-index.json'+fragment;
   const normalized=normalizeRoute(path);
-  return routes.has(normalized)?englishRoute(normalized)+suffix:value;
+  return routes.has(normalized)?englishRoute(normalized)+fragment:value;
 }
 function rewriteAbsoluteUrl(value,routes){
   const origin='https://p2lrn.org';
@@ -679,7 +701,14 @@ for(const file of htmlFiles){
     const source=$(el).text();
     if(source.trim())$(el).text(translateJavaScriptSource(source));
   });
+  // Legacy IDs remain for JS and old external links; English aliases are additive.
+  for(const [oldId,newId] of Object.entries(ENGLISH_ANCHORS)){
+    const node=$('[id="'+oldId+'"]').first();
+    if(node.length&&!$('[id="'+newId+'"]').length)
+      node.prepend('<span class="anchor-alias" id="'+newId+'" aria-hidden="true"></span>');
+  }
   $('a[href]').each((_,el)=>$(el).attr('href',rewriteHref($(el).attr('href'),routes)));
+  $('link[rel~="alternate"][hreflang="en"][href]').each((_,el)=>$(el).attr('href',rewriteAbsoluteUrl($(el).attr('href')??'',routes)));
   $('form[action]').each((_,el)=>$(el).attr('action',rewriteHref($(el).attr('action'),routes)));
   $('link[rel~="manifest"]').each((_,el)=>$(el).attr('href','/en/site.webmanifest'));
   $('meta[http-equiv]').each((_,el)=>{

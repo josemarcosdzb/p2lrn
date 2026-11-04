@@ -19,7 +19,7 @@
   <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
 </header>
 <main id="contenido" class="landing-main">
-  <nav class="landing-breadcrumbs" aria-label="Ruta de navegación"><a href="/">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">crear cursos interactivos</span></nav>
+  <nav class="landing-breadcrumbs" aria-label="Ruta de navegación"><a href="/">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">Crear cursos interactivos</span></nav>
   <section class="landing-hero" aria-labelledby="landing-title">
     <div class="landing-hero-copy">
       <p class="eyebrow">CREAR / CURSOS INTERACTIVOS</p>
@@ -27,6 +27,7 @@
       <p class="landing-lead">P2LRN Studio reúne en un editor visual las lecciones, las actividades y la vista del alumno. Puedes preparar un curso, comprobarlo y exportarlo como un paquete .p2lrn para reproducirlo con Player.</p>
       <div class="hero-actions"><a class="button primary" href="/studio/">Abrir P2LRN Studio</a><a class="button" href="/docs/studio/">Ver la guía del editor</a></div>
     </div>
+      <figure class="landing-visual"><img src="/assets/hero/studio.png" alt="Pantalla de P2LRN Studio con el editor visual para crear y organizar cursos" decoding="async" fetchpriority="high"><figcaption>Captura de P2LRN Studio, el editor visual de cursos.</figcaption></figure>
   </section>
   <section class="landing-section" aria-labelledby="steps-heading">
     <div class="landing-section-heading"><p class="eyebrow">DEL EDITOR AL CURSO</p><h2 id="steps-heading">Cómo funciona, paso a paso</h2></div>
@@ -36,21 +37,35 @@
 <li><span class="landing-step-number" aria-hidden="true">04</span><div><h3>Exporta el paquete</h3><p>Descarga el archivo .p2lrn y ábrelo con Player o intégralo en el entorno de destino.</p></div></li></ol>
   </section>
   <section class="landing-section" aria-labelledby="features-heading">
-    <div class="landing-section-heading"><p class="eyebrow">FUNCIONES PRINCIPALES</p><h2 id="features-heading">Qué incluye el flujo</h2></div>
-    <div class="landing-card-grid"><article class="landing-card"><h3>Lecciones editables</h3><p>Trabaja con una estructura de unidades y lecciones y ajusta el texto desde el editor visual.</p><a href="/docs/studio/">Conocer Studio <span aria-hidden="true">→</span></a></article>
-<article class="landing-card"><h3>Cuestionarios y juegos</h3><p>Añade evaluaciones y actividades desde la interfaz sin tener que editar archivos internos del curso.</p><a href="/docs/questionnaires/">Ver actividades <span aria-hidden="true">→</span></a></article>
-<article class="landing-card"><h3>Formato portable</h3><p>Conserva el curso en un paquete .p2lrn. Para distribuirlo, utiliza el Player o la entrega offline.</p><a href="/docs/paquetes/">Entender el formato <span aria-hidden="true">→</span></a></article></div>
+    <div class="landing-section-heading"><p class="eyebrow">FUNCIONES PRINCIPALES</p><h2 id="features-heading">Preguntas, juegos y seguimiento en un mismo curso</h2></div>
+    <div class="landing-card-grid">
+      <article class="landing-card"><h3>Varios tipos de preguntas</h3><p>Combina elección única y múltiple, verdadero/falso, texto, completar huecos, ordenar, relacionar y clasificar dentro de una evaluación.</p><a href="/docs/questionnaires/standard/">Ver cuestionarios <span aria-hidden="true">→</span></a></article>
+      <article class="landing-card"><h3>Juegos educativos 2D y 3D</h3><p>Incluye memoria, sopa de letras, crucigrama, rosco y actividades 3D de ordenar, relacionar y clasificar donde sean compatibles.</p><a href="/docs/questionnaires/">Explorar los juegos <span aria-hidden="true">→</span></a></article>
+      <article class="landing-card"><h3>Progreso y límites</h3><p>Define requisitos de finalización y puntuación mínima; las entregas offline admiten fechas, intentos y reanudación.</p><a href="/docs/progresion/">Consultar la progresión <span aria-hidden="true">→</span></a></article>
+    </div>
   </section>
   <section class="landing-section" aria-labelledby="practical-example-heading">
-    <div class="landing-section-heading"><p class="eyebrow">CÓMO PREPARAR TU CURSO</p><h2 id="practical-example-heading">Organiza lecciones, actividades y evaluaciones</h2></div>
-    <p>Organiza tu curso en lecciones, incorpora actividades prácticas y añade una evaluación. Revisa todo el recorrido de aprendizaje antes de compartirlo.</p>
-    <div class="landing-card-grid"><article class="landing-card"><h3>1. Organiza las lecciones</h3><p>En Studio, crea una unidad y divide el contenido en lecciones. Incluye explicaciones e imágenes que el alumno pueda consultar.</p><a href="/docs/studio/">Guía del editor <span aria-hidden="true">→</span></a></article>
-<article class="landing-card"><h3>2. Prepara las preguntas</h3><p>Añade preguntas de repaso y comprueba su orden y presentación desde Vista alumno antes de exportar.</p><a href="/docs/questionnaires/">Tipos de cuestionario <span aria-hidden="true">→</span></a></article>
-<article class="landing-card"><h3>3. Comparte y reproduce</h3><p>Exporta el archivo .p2lrn y ábrelo con Player. Si necesitas cuentas o notas oficiales, integra el curso con una plataforma autorizada.</p><a href="/docs/integracion/">Opciones de integración <span aria-hidden="true">→</span></a></article></div>
+    <div class="landing-section-heading"><p class="eyebrow">EJEMPLO PRÁCTICO</p><h2 id="practical-example-heading">Ejemplo: curso de seguridad digital con tres preguntas</h2></div>
+    <p>Un recorrido concreto que puedes crear desde Studio sin editar código: una lección, una evaluación y una vista previa antes de compartir el archivo.</p>
+    <div class="landing-card-grid">
+      <article class="landing-card"><h3>1. Explica el contenido</h3><p>Crea la unidad «Seguridad digital» y una lección sobre contraseñas seguras, enlaces sospechosos y protección de cuentas.</p><a href="/docs/studio/">Crear la lección <span aria-hidden="true">→</span></a></article>
+      <article class="landing-card"><h3>2. Añade tres preguntas</h3><p>Prepara una pregunta de elección única, una de verdadero/falso y una de ordenar pasos. Revísalas juntas en un solo cuestionario.</p><a href="/docs/questionnaires/standard/">Configurar la evaluación <span aria-hidden="true">→</span></a></article>
+      <article class="landing-card"><h3>3. Comprueba y distribuye</h3><p>Abre «Vista alumno», verifica navegación y corrección al finalizar, y descarga el .p2lrn para reproducirlo con Player.</p><a href="/docs/player/">Reproducir el curso <span aria-hidden="true">→</span></a></article>
+    </div>
   </section>
-  <section class="landing-faq" aria-labelledby="course-faq-heading"><p class="eyebrow">PREGUNTAS FRECUENTES</p><h2 id="course-faq-heading">Preguntas sobre crear y compartir cursos</h2><div class="landing-faq-list"><article class="landing-faq-item"><h3>¿Necesito instalar una plataforma o un programa para crear cursos?</h3><p>No. Puedes crear lecciones, cuestionarios y actividades desde P2LRN Studio y exportarlos como un paquete portable. Solo necesitas un entorno de reproducción compatible para abrirlo.</p></article><article class="landing-faq-item"><h3>¿Puedo crear y compartir cuestionarios sin utilizar una plataforma educativa?</h3><p>Sí. Puedes incluir evaluaciones en tu curso y reproducirlas con Player. La gestión centralizada de matrículas y calificaciones oficiales depende de los servicios con los que integres el curso.</p></article><article class="landing-faq-item"><h3>¿Puedo distribuir un curso sin conexión a Internet?</h3><p>Sí, mediante una modalidad de entrega offline compatible. El contenido puede ejecutarse localmente y los resultados pueden devolverse después mediante un archivo .p2lrn-result, según la modalidad utilizada.</p></article><article class="landing-faq-item"><h3>¿Puedo combinar lecciones, cuestionarios y juegos en un mismo curso?</h3><p>Sí. Studio permite organizar diferentes tipos de contenidos y actividades en un mismo paquete para ofrecer al alumno un recorrido coherente.</p></article><article class="landing-faq-item"><h3>¿Puedo reutilizar el curso en una web o plataforma educativa?</h3><p>El formato .p2lrn está pensado para ser portable. Puedes utilizarlo con Player o integrarlo en entornos compatibles; algunas funciones, como la identidad y las notas oficiales, requieren integración adicional.</p></article></div></section>
+  <section class="landing-faq" aria-labelledby="course-faq-heading">
+  <p class="eyebrow">PREGUNTAS FRECUENTES</p><h2 id="course-faq-heading">Preguntas sobre crear y compartir cursos</h2>
+  <div class="landing-faq-list">
+    <article class="landing-faq-item"><h3>¿Necesito instalar un LMS para crear un curso?</h3><p>No. Puedes abrir P2LRN Studio en el navegador, crear unidades, lecciones y actividades, y descargar un archivo <code>.p2lrn</code> sin instalar Moodle ni otro LMS. Guardar el curso en un servidor, gestionar usuarios o emitir notas oficiales sí requiere servicios de tu plataforma.</p></article>
+    <article class="landing-faq-item"><h3>¿Qué tipos de preguntas puedo crear?</h3><p>El cuestionario nativo admite elección única o múltiple, verdadero/falso, respuesta de texto, completar huecos, ordenar, relacionar y clasificar. En Studio puedes combinar varias preguntas dentro de una evaluación y comprobarlas con la vista alumno antes de exportar.</p></article>
+    <article class="landing-faq-item"><h3>¿Se puede entregar un curso sin conexión a Internet?</h3><p>Sí. Studio ofrece entregas offline para Windows como <code>.p2lrn-offline.exe</code> y una alternativa ZIP portable. El alumno ejecuta los contenidos incorporados y devuelve un <code>.p2lrn-result</code>; las actividades que necesitan servicios remotos o colaboración en directo no funcionan completamente sin red.</p></article>
+    <article class="landing-faq-item"><h3>¿Puedo incluir juegos y cuestionarios en el mismo archivo?</h3><p>Sí. Un <code>.p2lrn</code> puede reunir lecciones, cuestionarios, juegos de memoria, relacionar, ordenar, clasificar, sopa de letras, crucigrama, rosco y actividades 3D compatibles. Player selecciona la presentación adecuada sin eliminar preguntas para adaptar el juego.</p></article>
+    <article class="landing-faq-item"><h3>¿Dónde se reproducen los cursos P2LRN?</h3><p>En una web puedes incrustar <code>&lt;p2lrn-player&gt;</code>. Para LMS, P2LRN documenta integración mediante una herramienta externa LTI 1.3 con Moodle, Canvas y Sakai, y rutas condicionadas por la versión instalada para Chamilo y Open edX. El administrador debe registrar el proveedor y verificar el lanzamiento en su campus; no es una importación SCORM automática.</p></article>
+    <article class="landing-faq-item"><h3>¿Puedo fijar intentos, fechas o requisitos de progreso?</h3><p>Sí. La progresión admite requisitos de finalización y puntuación mínima. En entregas offline puedes definir intentos, disponibilidad, fecha límite y reanudación; los límites basados en la hora dependen del reloj del dispositivo. Los resultados offline son informativos, no calificaciones oficiales del LMS.</p></article>
+  </div>
+</section>
   <section class="landing-last" aria-labelledby="last-heading"><div><p class="eyebrow">SIGUIENTE PASO</p><h2 id="last-heading">¿Ya tienes un curso preparado?</h2><p>Abre el visor para comprobar un paquete o consulta las instrucciones de entrega sin depender de una plataforma educativa.</p><div class="landing-last-links"><a class="button" href="/demo/">Probar el visor</a><a class="button" href="/cursos-offline/">Ver entrega sin plataforma ni Internet</a></div></div><aside class="landing-related" aria-label="Recursos relacionados"><h3>También te puede interesar</h3><a href="/skills/">Crear cursos o juegos con IA <span aria-hidden="true">→</span></a>
-<a href="/skills/">Ver Skills para IA <span aria-hidden="true">→</span></a></aside></section>
+<a href="/docs/questionnaires/">Ver tipos de preguntas <span aria-hidden="true">→</span></a></aside></section>
 </main>
 <footer><strong>P2LRN</strong><span>Cursos interactivos · Player web · Studio</span><nav aria-label="Información legal"><a href="/licencia/">Licencia</a><a href="/privacidad/">Privacidad</a></nav></footer>
 </body>

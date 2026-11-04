@@ -19,7 +19,7 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Cómo crear y exportar paquetes .p2lrn | P2LRN",
     "description": "Aprende a crear y exportar paquetes .p2lrn: organiza lecciones, actividades y recursos, comprueba su integridad y ábrelos con P2LRN Player."
   },
-  "/en/docs/paquetes/": {
+  "/en/docs/packages/": {
     "title": "How to create and export .p2lrn packages | P2LRN",
     "description": "Learn to build and export .p2lrn packages: organize lessons, activities and resources, check their integrity and open them with P2LRN Player."
   },
@@ -27,7 +27,7 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Studio, Player, Toolkit y Analytics: qué usar | P2LRN",
     "description": "Compara Studio, Player, Toolkit y Analytics de P2LRN: descubre qué hace cada herramienta y cómo combinarlas para crear y reproducir cursos."
   },
-  "/en/docs/que-usar/": {
+  "/en/docs/choose-tools/": {
     "title": "Studio, Player, Toolkit and Analytics: choose tools",
     "description": "Compare P2LRN Studio, Player, Toolkit and Analytics: learn what each tool does and how to combine them to create and deliver courses."
   },
@@ -35,7 +35,7 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Conceptos básicos de P2LRN: cursos y paquetes",
     "description": "Entiende cómo funcionan los cursos P2LRN: paquete .p2lrn, manifiesto, lecciones, recursos, Player y conexión con tu plataforma educativa."
   },
-  "/en/docs/conceptos/": {
+  "/en/docs/concepts/": {
     "title": "P2LRN basics: interactive courses and packages",
     "description": "Understand P2LRN courses: the .p2lrn package, manifest, lessons, resources, Player and integration with your learning platform."
   },
@@ -43,7 +43,7 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Juegos educativos 3D: actividades y ejemplos | P2LRN",
     "description": "Descubre cómo crear y reproducir juegos educativos 3D con P2LRN, incluyendo actividades de ordenar, relacionar y clasificar en tus cursos."
   },
-  "/en/docs/juegos-3d/": {
+  "/en/docs/3d-games/": {
     "title": "3D educational games: activities and examples | P2LRN",
     "description": "Explore how to create and play 3D educational games with P2LRN, including ordering, matching and classification activities in your courses."
   },
@@ -51,7 +51,7 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Formato .p2lrn: estructura de un curso | P2LRN",
     "description": "Conoce qué contiene un archivo .p2lrn: manifiesto, lecciones, actividades, recursos y comprobaciones de integridad para cursos portables."
   },
-  "/en/docs/formato/": {
+  "/en/docs/file-format/": {
     "title": "The .p2lrn file format: course structure | P2LRN",
     "description": "Learn what a .p2lrn file contains: a manifest, lessons, activities, resources and integrity checks for portable learning courses."
   },
@@ -59,7 +59,7 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Referencia de P2LRN: API, Player e integración",
     "description": "Consulta la referencia técnica de P2LRN: API de creación, Player, integración con LMS, eventos, seguimiento del alumno y herramientas de desarrollo."
   },
-  "/en/docs/referencia/": {
+  "/en/docs/reference/": {
     "title": "P2LRN reference: Player API and integration",
     "description": "Explore P2LRN technical references: authoring API, Player, LMS integration, events, learner progress and developer tools."
   },
@@ -67,7 +67,7 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Ejemplos para crear e integrar cursos | P2LRN",
     "description": "Sigue ejemplos prácticos para crear, validar, reproducir e integrar cursos interactivos con P2LRN Studio, Player y Toolkit."
   },
-  "/en/docs/recetas/": {
+  "/en/docs/recipes/": {
     "title": "How to build and integrate courses | P2LRN",
     "description": "Follow practical examples to create, validate, play and integrate interactive courses with P2LRN Studio, Player and Toolkit."
   },
@@ -75,7 +75,7 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Cómo empezar con P2LRN y crear tu primer curso",
     "description": "Empieza con P2LRN: descubre qué herramienta necesitas para crear un curso interactivo, probarlo en Player y compartirlo en una web o LMS."
   },
-  "/en/docs/empezar/": {
+  "/en/docs/getting-started/": {
     "title": "Get started with P2LRN interactive courses",
     "description": "Get started with P2LRN: choose a tool to create an interactive course, test it in Player and share it on a website or learning platform."
   },
@@ -83,7 +83,7 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Instalar P2LRN Player y Studio: CDN y npm",
     "description": "Instala P2LRN Player, Studio y Toolkit en tu web o LMS con guías para CDN y npm, o crea cursos directamente con Studio online."
   },
-  "/en/docs/instalar/": {
+  "/en/docs/installation/": {
     "title": "Install P2LRN Player and Studio: CDN and npm",
     "description": "Install P2LRN Player, Studio and Toolkit on your website or LMS using CDN or npm, or create courses directly in the online Studio."
   },

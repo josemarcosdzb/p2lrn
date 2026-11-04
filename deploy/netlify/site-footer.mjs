@@ -118,7 +118,7 @@ export function renderSiteFooter(locale='es'){
         '<p class="site-footer__signature">P2LRN <span aria-hidden="true">·</span> '+(english?'Resources and documentation':'Recursos y documentación')+'</p>'+
         '<nav class="site-footer__legal" data-legal-links aria-label="'+(english?'Legal information':'Información legal')+'">'+legal+'</nav>'+
       '</div>'+
-      '<p class="site-footer__credit">'+(english?'Created by':'Creado por')+' <strong>Jose Marcos Diaz</strong></p>'+
+      '<p class="site-footer__credit">'+(english?'Created by':'Creado por')+' <strong><a href="https://github.com/josemarcosdzb" rel="author noopener noreferrer" target="_blank">Jose Marcos Diaz</a></strong></p>'+
     '</div>'+
   '</footer>';
 }

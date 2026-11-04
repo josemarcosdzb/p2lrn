@@ -2,6 +2,7 @@ import {readFile,readdir} from 'node:fs/promises';
 import {join,relative,resolve} from 'node:path';
 import {load} from 'cheerio';
 import {parseJs,walkAst} from './site-i18n-ast.mjs';
+import {englishRouteFor,ENGLISH_ANCHORS,LEGACY_ENGLISH_ROUTES} from '../deploy/netlify/site-routes.mjs';
 
 const root=resolve(process.cwd());
 const siteRoot=join(root,'deploy','netlify','site');
@@ -80,13 +81,15 @@ for(const file of sourceHtml){
 
 const PARITY_SELECTORS=['h1','h2','h3','a','button','input','select','textarea','form','img','video','iframe','details','summary','table','thead','tbody','tr','th','td','code','pre'];
 function expectedEnglishHref(href){
+  const fragment=(s)=>String(s).replace(/#([A-Za-z0-9_-]+)/g,(m,id)=>'#'+(ENGLISH_ANCHORS[id]||id));
+  if(href.startsWith('#'))return fragment(href);
   if(!href.startsWith('/')||href.startsWith('//')||href.startsWith('/en/'))return href;
   const match=/^([^?#]*)([?#].*)?$/.exec(href);
-  const path=match?.[1]??href,suffix=match?.[2]??'';
+  const path=match?.[1]??href,suffix=fragment(match?.[2]??'');
   if(path==='/search-index.json')return '/en/search-index.json'+suffix;
   const normalized=normalizeRoute(path);
   if(!routes.has(normalized))return href;
-  return (normalized==='/'?'/en/':'/en'+normalized)+suffix;
+  return englishRouteFor(normalized)+suffix;
 }
 function idsOf($){return $('[id]').map((_,el)=>$(el).attr('id')).get().sort();}
 function dataContract($){
@@ -111,7 +114,10 @@ for(const file of sourceHtml){
     if(a!==b)errors.push(rel+': structural parity mismatch for '+selector+' ('+a+' ES vs '+b+' EN).');
   }
   const esIds=idsOf(es),enIds=idsOf(en);
-  if(JSON.stringify(esIds)!==JSON.stringify(enIds))errors.push(rel+': id set differs between ES and EN.');
+  const englishAliasIds=new Set(Object.values(ENGLISH_ANCHORS));
+  const parityIds=enIds.filter(id=>!englishAliasIds.has(id)||esIds.includes(id));
+  if(JSON.stringify(esIds)!==JSON.stringify(parityIds))
+    errors.push(rel+': id set differs between ES and EN (apart from English anchor aliases).');
   const esContract=dataContract(es),enContract=dataContract(en);
   if(JSON.stringify(esContract)!==JSON.stringify(enContract))errors.push(rel+': functional data/name/type contract differs between ES and EN.');
   const esLinks=es('a[href]').map((_,el)=>es(el).attr('href')??'').get();
@@ -166,6 +172,8 @@ for(const file of enHtml){
   });
   $('a[href]').each((_,el)=>{
     const href=$(el).attr('href')??'';
+    if(Object.keys(LEGACY_ENGLISH_ROUTES).some(old=>href===old||href.startsWith(old+'#')||href.startsWith(old+'?')))
+      errors.push(rel+': English link uses a legacy Spanish-language slug '+href);
     if(!href.startsWith('/')||href.startsWith('/en/')||href.startsWith('//'))return;
     const path=href.split(/[?#]/,1)[0];
     if(routes.has(normalizeRoute(path)))errors.push(rel+': English page links to Spanish route '+href);
@@ -185,6 +193,34 @@ for(const file of enHtml){
       if(isVisibleSpanish(value))errors.push(rel+': Spanish inline runtime string: '+JSON.stringify(String(value).slice(0,180)));
     });
   });
+}
+
+
+const [homeEs,homeEn,coursesEs,coursesEn]=await Promise.all([
+  readFile(join(siteRoot,'index.html'),'utf8'),
+  readFile(join(enRoot,'index.html'),'utf8'),
+  readFile(join(siteRoot,'crear-cursos-interactivos/index.html'),'utf8'),
+  readFile(join(enRoot,'crear-cursos-interactivos/index.html'),'utf8')
+]);
+if(!homeEs.includes('<h3>PAQUETE</h3>')||homeEs.includes('<h3>PACKAGE</h3>'))
+  errors.push('Spanish homepage lost its translated PAQUETE heading');
+if(!homeEn.includes('EXPLORE P2LRN')||homeEn.includes('EXPLORA P2LRN'))
+  errors.push('English homepage has a Spanish discovery label');
+if(!homeEn.includes('name="description" content="Build portable interactive courses'))
+  errors.push('English homepage lost its hand-edited description');
+for(const [html,lang] of [[homeEs,'es'],[homeEn,'en']]){
+  const video=html.match(/<video\b[^>]*>/i)?.[0]||'';
+  if(!html.includes('VideoObject')||!video.includes('poster=')||!video.includes('title=')||!video.includes('controls'))
+    errors.push(lang+' homepage lacks accessible video metadata');
+}
+for(const [html,lang] of [[coursesEs,'es'],[coursesEn,'en']]){
+  const img=html.match(/<img\b[^>]*src=["']\/assets\/hero\/studio\.png["'][^>]*>/i)?.[0]||'';
+  if(!img.includes('alt=')||img.length<100)
+    errors.push(lang+' course creation page lacks descriptive Studio screenshot');
+  const skills=[...html.matchAll(/<a\b[^>]*href=["']\/(?:en\/)?skills\/["']/g)];
+  if(skills.length!==1)errors.push(lang+' course creation page duplicates the Skills link');
+  if((html.match(/<article class="landing-faq-item">/g)||[]).length!==6)
+    errors.push(lang+' course creation page lost specific FAQs');
 }
 
 try{

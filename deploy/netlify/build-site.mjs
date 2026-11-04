@@ -203,7 +203,7 @@ for(const authoredPath of authoredHtmlFiles){
     for(const [oldAnchor,newAnchor] of Object.entries(ENGLISH_ANCHORS)){
       const token='id="'+oldAnchor+'"';
       const hit=html.indexOf(token);
-      if(hit>=0){
+      if(hit>=0&&!html.includes('id="'+newAnchor+'"')){
         const open=html.lastIndexOf('<',hit);
         const end=html.indexOf('>',hit);
         const tag=html.slice(open,end+1);
