@@ -69,10 +69,13 @@ Public-key governance, publisher identity, revocation, certificate chains/transp
 
 ## 5. CLI
 
-Install the Node.js/TypeScript toolkit. Ed25519 uses the Node crypto runtime and needs no Python trust extra:
+Use a **verified, version-pinned** Toolkit build. Ed25519 uses the Node crypto runtime and needs no Python trust extra. As of 4 November 2026, the npm `latest` tag points to a placeholder and the aligned `0.5.0-alpha.12` release is not yet published; do **not** use an unversioned npm command to install the security verifier. Build Toolkit locally from a trusted repository commit until an audited release is available:
 
 ```bash
-npm install @p2lrn/toolkit
+cd packages/toolkit
+npm ci
+npm run build
+# Run ./dist/cli/trust.js with Node, or invoke its installed bin once published.
 ```
 
 Generate a key pair:
