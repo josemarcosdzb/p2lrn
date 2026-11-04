@@ -1514,7 +1514,9 @@ try{
   // The CDN-only fixture does not materialize these until we copy them here.
   await cp(join(root,'packages','toolkit','web','studio'),join(siteRoot,'studio','runtime'),{recursive:true,force:true});
   for(const file of STUDIO_RUNTIME_SHARED_FILES){
-    await cp(join(root,'packages','toolkit','web',file),join(siteRoot,'studio',file));
+    const destination=join(siteRoot,'studio',file);
+    await mkdir(dirname(destination),{recursive:true});
+    await cp(join(root,'packages','toolkit','web',file),destination);
   }
   await prepareVisualStudioFixture();
   await prepareGameFixtures();
