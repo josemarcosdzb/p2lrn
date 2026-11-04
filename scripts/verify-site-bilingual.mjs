@@ -159,8 +159,8 @@ for(const file of enHtml){
     // are protocol examples, not user-visible translation. Check only
     // literal human-facing labels instead of treating all source code as prose.
     const readableLabels=[
-      ...[...raw.matchAll(/<(?:button|label|h[1-6]|p|option|summary|figcaption)\\b[^>]*>([^<]*)<\\/(?:button|label|h[1-6]|p|option|summary|figcaption)>/giu)].map(match=>match[1]),
-      ...[...raw.matchAll(/\\b(?:textContent|innerText)\\s*=\\s*['"`]([^'"`]+)['"`]/gu)].map(match=>match[1]),
+      ...[...raw.matchAll(/<(?:button|label|h[1-6]|p|option|summary|figcaption)\b[^>]*>([^<]*)<\/(?:button|label|h[1-6]|p|option|summary|figcaption)>/giu)].map(match=>match[1]),
+      ...[...raw.matchAll(/\b(?:textContent|innerText)\s*=\s*['"`]([^'"`]+)['"`]/gu)].map(match=>match[1]),
     ];
     for(const label of readableLabels){
       if(isVisibleSpanish(label))errors.push(rel+': Spanish human label inside code example: '+JSON.stringify(label.slice(0,220)));
