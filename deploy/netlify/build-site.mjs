@@ -195,6 +195,9 @@ for(const authoredPath of authoredHtmlFiles){
     join(outputRoot,...destinationRoute.slice(1).split('/').filter(Boolean),'index.html');
   let html=await readFile(target,'utf8');
   for(const [oldRoute,newRoute] of legacyEnglishPairs)html=html.replaceAll(oldRoute,newRoute);
+  // Breadcrumb labels are editorial labels, not raw slug fragments.
+  html=html.replace(/(<nav\b[^>]*class=["'][^"']*landing-breadcrumbs[^"']*["'][\s\S]*?<span aria-current="page">)([^<]+)(<\/span>)/i,
+    (_,opening,label,closing)=>opening+label.charAt(0).toLocaleUpperCase(destinationRoute.startsWith('/en/')?'en':'es')+label.slice(1)+closing);
   if(destinationRoute.startsWith('/en/')){
     // Preserve old deep-link IDs while adding human-readable English aliases.
     for(const [oldAnchor,newAnchor] of Object.entries(ENGLISH_ANCHORS)){
@@ -338,7 +341,7 @@ for (const htmlPath of htmlFiles) {
     const english=route==='/en/'||route.startsWith('/en/');
     const esRoute=english?spanishRouteFor(route):route;
     const enRoute=english?route:englishRouteFor(route);
-    if(!html.includes('data-language-switch'))throw new Error('Missing ES EN language switch in '+route);
+    if((html.match(/data-language-switch/g)||[]).length!==1)throw new Error('Duplicate or missing ES EN language switch in '+route);
     const esLink='href="'+esRoute+'" lang="es" hreflang="es"';
     const enLink='href="'+enRoute+'" lang="en" hreflang="en"';
     if(!html.includes(esLink)||!html.includes(enLink))throw new Error('Broken paired language links in '+route);
