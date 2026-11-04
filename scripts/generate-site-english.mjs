@@ -29,6 +29,7 @@ const MANUAL=new Map(Object.entries({
   'Clasificar':'Classification','Verdadero / Falso':'True / False','Sopa de letras':'Word search',
   'Crucigrama':'Crossword','Rosco':'Word Wheel','Juego 3D':'3D game','Juegos 3D':'3D games',
   'Lecciones':'Lessons','Paquetes':'Packages','Compatibilidad':'Compatibility','Métricas':'Metrics',
+  'Ver Skills para IA →':'Explore AI Skills →',
   'Analítica':'Analytics','Progresión':'Progress','Alumno':'Learner','Alumnos':'Learners','Profesor':'Teacher',
   'Profesores':'Teachers','Autor':'Author','Descripción':'Description','Título':'Title','Archivo':'File',
   'Archivos':'Files','Guardar':'Save','Descargar':'Download','Seleccionar':'Select','Eliminar':'Delete',

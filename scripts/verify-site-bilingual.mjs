@@ -50,6 +50,23 @@ const enHtml=(await walk(enRoot)).filter(file=>{
   return routeFromRelative(relative(enRoot,file).replaceAll('\\','/'))!==null;
 });
 const errors=[];
+
+const spanishHome=load(await readFile(join(siteRoot,'index.html'),'utf8'),{decodeEntities:false});
+const englishHome=load(await readFile(join(enRoot,'index.html'),'utf8'),{decodeEntities:false});
+const spanishSkills=spanishHome('a.home-feature--compact[href="/docs/skills/"]');
+const englishSkills=englishHome('a.home-feature--compact[href="/en/docs/skills/"]');
+const normalizedText=(value)=>String(value).replace(/\s+/g,' ').trim();
+if(spanishSkills.length!==1||normalizedText(spanishSkills.find('h3').text())!=='Skills para IA'||
+  normalizedText(spanishSkills.find('b').text())!=='Ver Skills para IA →')
+  errors.push('index.html: Spanish Skills card must have the correct heading, destination and CTA.');
+if(englishSkills.length!==1||normalizedText(englishSkills.find('h3').text())!=='AI Skills'||
+  normalizedText(englishSkills.find('b').text())!=='Explore AI Skills →')
+  errors.push('en/index.html: English Skills card must have the corresponding heading, destination and CTA.');
+if(normalizedText(spanishHome('.format-flow article:first-child h3').text())!=='PAQUETE')
+  errors.push('index.html: the first format step must be labeled PAQUETE, not PACKAGE.');
+if(normalizedText(englishHome('.format-flow article:first-child h3').text())!=='PACKAGE')
+  errors.push('en/index.html: the first format step must retain the English label PACKAGE.');
+
 if(sourceHtml.length!==enHtml.length)errors.push('English page count '+enHtml.length+' does not match Spanish source count '+sourceHtml.length+'.');
 
 const routes=new Set();
