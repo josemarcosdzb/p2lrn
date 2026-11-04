@@ -1,6 +1,7 @@
 // Build-time only. Source documentation HTML and its visible text are never rewritten.
 import {readFile,readdir,writeFile} from 'node:fs/promises';
 import {join,relative,basename} from 'node:path';
+import {englishRouteFor,spanishRouteFor,canonicalRoute,legacyRouteFor} from './site-routes.mjs';
 
 export const CANONICAL_ORIGIN='https://p2lrn.org';
 
@@ -128,13 +129,32 @@ const escape=(s)=>String(s).replaceAll('&','&amp;').replaceAll('"','&quot;').rep
 const decode=(s)=>String(s||'').replaceAll('&amp;','&').replaceAll('&quot;','"').replaceAll('&#39;',"'");
 const insertHead=(html,fragment)=>html.replace(/<\/head>/i,fragment+'\n</head>');
 const languageOfRoute=(route)=>route==='/en/'||route.startsWith('/en/')?'en':'es';
-const stripEnglishPrefix=(route)=>route==='/en/'?'/':route.replace(/^\/en/,'')||'/';
-const englishRoute=(route)=>route==='/'?'/en/':'/en'+route;
+const stripEnglishPrefix=(route)=>spanishRouteFor(route);
+const englishRoute=(route)=>englishRouteFor(route);
 
 export function isIndexable(html){
   const robots=attr(metaTag(html,'name','robots')||'','content')||'';
   return !/(?:^|,)\s*noindex\b/i.test(robots)&&!tagList(html,'meta').some(x=>(attr(x,'http-equiv')||'').toLowerCase()==='refresh');
 }
+
+function setMeta(html,kind,name,value){
+  const found=tagList(html,'meta').filter(x=>(attr(x,kind)||'').toLowerCase()===name.toLowerCase());
+  const tag='<meta '+kind+'="'+name+'" content="'+escape(value)+'">';
+  if(!found.length)return insertHead(html,tag);
+  html=html.replace(found[0],tag);
+  for(const duplicate of found.slice(1))html=html.replace(duplicate,'');
+  return html;
+}
+function jsonLdPayloads(html){
+  return [...html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
+    .map(x=>{try{return JSON.parse(x[1]);}catch{throw Error('Invalid JSON-LD');}});
+}
+const hasJsonLdType=(html,type)=>jsonLdPayloads(html).some(item=>{
+  const types=Array.isArray(item['@type'])?item['@type']:[item['@type']];
+  return types.includes(type)||item['@graph']?.some?.(node=>node['@type']===type);
+});
+const addJsonLd=(html,payload)=>insertHead(html,
+  '<script type="application/ld+json">'+JSON.stringify(payload).replaceAll('<','\\u003c')+'</script>');
 
 export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
   if(!/^https:\/\/[a-z\d.-]+$/i.test(origin))throw Error('Invalid public origin');
@@ -143,7 +163,7 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
   const english=language==='en';
   // Preserve guide content while replacing only search snippets in the deploy output.
   let result=html;
-  const seoCopy=SEO_PAGE_METADATA[route];
+  const seoCopy=SEO_PAGE_METADATA[route]||SEO_PAGE_METADATA[legacyRouteFor(route)];
   if(seoCopy){
     result=result.replace(/<title\b[^>]*>[\s\S]*?<\/title>/i,'<title>'+escape(seoCopy.title)+'</title>');
     const descriptionTag=metaTag(result,'name','description');
@@ -158,63 +178,88 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
   if(!title||!description)throw Error('Missing original title or description: '+route);
   const url=origin+route;
 
+  // Legal policies remain accessible to people, but not standalone search results.
+  const legalUnindexed=['/privacidad/','/terminos/','/cookies/','/aviso-legal/'];
+  const contentRoute=english?spanishRouteFor(route):route;
+  if(legalUnindexed.includes(contentRoute))result=setMeta(result,'name','robots','noindex,follow');
+
+  // Correct a historical canonical only when it belongs to an explicit
+  // permanent English slug migration. Never conceal unrelated mismatches.
+  const previousUrl=origin+legacyRouteFor(route);
+  if(previousUrl!==url)result=result.replaceAll(previousUrl,url);
+  const canonical=canonTags(result);
+  if(canonical.length>1||(canonical.length===1&&decode(attr(canonical[0],'href'))!==url))
+    throw Error('Conflicting canonical: '+route);
+  if(!canonical.length)result=insertHead(result,'<link rel="canonical" href="'+escape(url)+'">');
+
+  // Always regenerate ES, EN and x-default as reciprocal canonical pairs.
+  for(const item of alternateTags(result))result=result.replace(item,'');
+  const esRoute=english?spanishRouteFor(route):route;
+  const enRoute=english?route:englishRouteFor(route);
+  result=insertHead(result,[
+    '<link rel="alternate" hreflang="es" href="'+escape(origin+esRoute)+'">',
+    '<link rel="alternate" hreflang="en" href="'+escape(origin+enRoute)+'">',
+    '<link rel="alternate" hreflang="x-default" href="'+escape(origin+esRoute)+'">',
+  ].join('\n'));
+
+  // Standard social preview uses an actual 1200x630 screenshot of Studio.
+  const socialImage=origin+'/assets/social/p2lrn-studio-1200x630.png';
+  for(const [kind,name,value] of [
+    ['property','og:type',contentRoute.startsWith('/docs/')?'article':'website'],
+    ['property','og:title',title],
+    ['property','og:description',description],
+    ['property','og:url',url],
+    ['property','og:locale',english?'en_US':'es_ES'],
+    ['property','og:locale:alternate',english?'es_ES':'en_US'],
+    ['property','og:site_name','P2LRN'],
+    ['property','og:image',socialImage],
+    ['property','og:image:width','1200'],
+    ['property','og:image:height','630'],
+    ['property','og:image:alt',english?'P2LRN Studio course editor preview':'Vista del editor de cursos P2LRN Studio'],
+    ['name','twitter:card','summary_large_image'],
+    ['name','twitter:title',title],
+    ['name','twitter:description',description],
+    ['name','twitter:image',socialImage],
+  ])result=setMeta(result,kind,name,value);
+
   if(isIndexable(result)){
-    const canonical=canonTags(result);
-    if(canonical.length>1||(canonical.length===1&&decode(attr(canonical[0],'href'))!==url))throw Error('Conflicting canonical: '+route);
-    if(!canonical.length)result=insertHead(result,'<link rel="canonical" href="'+escape(url)+'">');
-
-    if(!alternateTags(result).length){
-      const esRoute=english?stripEnglishPrefix(route):route;
-      const enRoute=english?route:englishRoute(route);
-      result=insertHead(result,[
-        '<link rel="alternate" hreflang="es" href="'+escape(origin+esRoute)+'">',
-        '<link rel="alternate" hreflang="en" href="'+escape(origin+enRoute)+'">',
-        '<link rel="alternate" hreflang="x-default" href="'+escape(origin+esRoute)+'">',
-      ].join('\n'));
-    }
-
-    const contentRoute=stripEnglishPrefix(route);
-    // Every indexable technical guide receives one valid, localized TechArticle.
+    // Every indexable technical guide receives one localized TechArticle.
     if(contentRoute.startsWith('/docs/')){
-      const scripts=[...result.matchAll(/<script\b[^>]*type\s*=\s*(["'])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script>/gi)];
-      let articleCount=0;
-      for(const entry of scripts){
-        let payload;
-        try{payload=JSON.parse(entry[2]);}
-        catch{throw Error('Invalid JSON-LD in '+route);}
-        const types=Array.isArray(payload['@type'])?payload['@type']:[payload['@type']];
-        if(types.includes('TechArticle'))articleCount++;
-      }
-      if(articleCount>1)throw Error('Multiple TechArticle schemas in '+route);
-      if(!articleCount){
-        const article={
-          '@context':'https://schema.org',
-          '@type':'TechArticle',
-          '@id':url+'#article',
-          headline:title,
-          description,
-          url,
-          inLanguage:language,
-          mainEntityOfPage:url,
-          isPartOf:{'@type':'WebSite',name:'P2LRN',url:origin+'/'}
-        };
-        result=insertHead(result,'<script type="application/ld+json">'+JSON.stringify(article).replaceAll('<','\\u003c')+'</script>');
-      }
+      const article={
+        '@context':'https://schema.org','@type':'TechArticle','@id':url+'#article',
+        headline:title,description,url,inLanguage:language,mainEntityOfPage:url,
+        isPartOf:{'@id':origin+'/#website'}
+      };
+      if(!hasJsonLdType(result,'TechArticle'))result=addJsonLd(result,article);
     }
-    for(const [type,name,value] of [
-      ['property','og:type',contentRoute.startsWith('/docs/')?'article':'website'],
-      ['property','og:title',title],
-      ['property','og:description',description],
-      ['property','og:url',url],
-      ['property','og:locale',english?'en_US':'es_ES'],
-      ['property','og:site_name','P2LRN'],
-      ['name','twitter:card','summary'],
-      ['name','twitter:title',title],
-      ['name','twitter:description',description],
-    ]){
-      const existing=tagList(result,'meta').filter(x=>(attr(x,type)||'').toLowerCase()===name.toLowerCase());
-      if(existing.length>1)throw Error('Duplicate metadata '+name+' on '+route);
-      if(!existing.length)result=insertHead(result,'<meta '+type+'="'+name+'" content="'+escape(value)+'">');
+    if(route==='/'||route==='/en/'){
+      if(!hasJsonLdType(result,'WebSite'))
+        result=addJsonLd(result,{'@context':'https://schema.org','@type':'WebSite',
+          '@id':origin+'/#website',name:'P2LRN',url:origin+'/'});
+      if(!hasJsonLdType(result,'Organization'))
+        result=addJsonLd(result,{'@context':'https://schema.org','@type':'Organization',
+          '@id':origin+'/#organization',name:'P2LRN',url:origin+'/',
+          logo:origin+'/p2lrn-mark.png',sameAs:['https://github.com/josemarcosdzb/p2lrn']});
+    }
+    if(contentRoute==='/studio/'&&!hasJsonLdType(result,'WebApplication'))
+      result=addJsonLd(result,{'@context':'https://schema.org','@type':'WebApplication',
+        '@id':url+'#app',name:'P2LRN Studio',url,
+        applicationCategory:'EducationalApplication',operatingSystem:'Web',
+        inLanguage:language,
+        description:english?'Visual editor for P2LRN interactive courses.':'Editor visual de cursos interactivos P2LRN.',
+        publisher:{'@id':origin+'/#organization'}});
+    if(route!=='/'&&route!=='/en/'&&!hasJsonLdType(result,'BreadcrumbList')){
+      const heading=decode((result.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1]||title).replace(/<[^>]*>/g,'')).trim()||title;
+      const home=english?'/en/':'/';
+      const items=[{name:english?'Home':'Inicio',route:home}];
+      if(contentRoute.startsWith('/docs/')&&contentRoute!=='/docs/')
+        items.push({name:english?'Documentation':'Documentación',route:english?'/en/docs/':'/docs/'});
+      items.push({name:heading,route});
+      result=addJsonLd(result,{'@context':'https://schema.org','@type':'BreadcrumbList',
+        '@id':url+'#breadcrumbs',
+        itemListElement:items.map(({name,route},index)=>({
+          '@type':'ListItem',position:index+1,name,item:origin+route
+        }))});
     }
   }
 
@@ -242,12 +287,12 @@ export async function normalizeSeoAndAccessibility(outputRoot,{sourceRoot=output
   if(strict&&sourcePages.length<60)throw Error('Site page count dropped below the verified baseline: '+sourcePages.length);
 
   const bilingual=sourcePages.some(path=>relative(sourceRoot,path).replaceAll('\\','/').startsWith('en/'));
-  const expectedAliases=bilingual?6:3;
+  const expectedAliases=bilingual?14:7; // 3 old aliases + 4 legal noindex per locale
   const routes=[];
   let changed=0,aliases=0;
 
   for(const src of sourcePages){
-    const route=routeOf(sourceRoot,src);
+    const route=canonicalRoute(routeOf(sourceRoot,src));
     const target=route==='/'?join(outputRoot,'index.html'):join(outputRoot,route.slice(1),'index.html');
     const before=await readFile(target,'utf8');
     const after=updateHtml(before,route,origin);
