@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {readFile, readdir, stat, writeFile} from 'node:fs/promises';
 import {join, relative} from 'node:path';
+import {englishRouteFor} from './site-routes.mjs';
 
 // Reused by the distribution build and the installed localhost site.
 // Neither a second Player nor a separate renderer is created.
@@ -123,13 +124,13 @@ export async function reviseSiteBrowserAssets({siteRoot, htmlFiles}){
       const publicFallbackNav=englishPage
         ?'<nav class="nav" id="nav" aria-label="Main navigation">'+
           '<a href="/en/studio/">Studio</a>'+
-          '<a href="/en/crear-cursos-interactivos/">Create courses</a>'+
-          '<a href="/en/juegos-educativos-3d/">3D games</a>'+
-          '<a href="/en/cursos-offline/">Offline courses</a>'+
+          '<a href="' + englishRouteFor('/crear-cursos-interactivos/') + '">Create courses</a>'+
+          '<a href="' + englishRouteFor('/juegos-educativos-3d/') + '">3D games</a>'+
+          '<a href="' + englishRouteFor('/cursos-offline/') + '">Offline courses</a>'+
           '<a href="/en/analytics/">Analytics</a>'+
           '<a href="/en/skills/">AI Skills</a>'+
           '<a href="/en/docs/">Documentation</a>'+
-          '<a href="/en/contacto/">Contact</a>'+
+          '<a href="' + englishRouteFor('/contacto/') + '">Contact</a>'+
         '</nav>'
         :'<nav class="nav" id="nav" aria-label="Navegación principal">'+
           '<a href="/studio/">Studio</a>'+
