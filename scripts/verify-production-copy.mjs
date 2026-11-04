@@ -126,8 +126,8 @@ for(const sourcePath of sourcePages){
   const editorialScope=rel.startsWith('docs/')||rel.startsWith('en/docs/');
   for(const pattern of bannedEverywhere){
     if(editorialScope && [
-      /\\bpendiente(?:s)?\\b/iu,/todav[ií]a\\s+no/iu,/\\bbranch\\b/iu,
-      /\\brepositorio\\b/iu,/\\bproducci[oó]n\\b/iu,
+      /\bpendiente(?:s)?\b/iu,/todav[ií]a\s+no/iu,/\bbranch\b/iu,
+      /\brepositorio\b/iu,/\bproducci[oó]n\b/iu,
     ].some(allowed=>String(allowed)===String(pattern)))continue;
     if(pattern.test(text))errors.push(rel+': internal/development wording matches '+pattern);
   }
@@ -139,9 +139,9 @@ for(const sourcePath of sourcePages){
       // License disclosures need precise source, package and checksum terms;
       // Skills instructions legitimately explain CLI usage.
       if((['licencia/index.html','en/licencia/index.html'].includes(rel) &&
-          [/first-party/iu,/sha-?256/iu,/\\bnpm\\b/iu].some(allowed=>String(allowed)===String(pattern))) ||
+          [/first-party/iu,/sha-?256/iu,/\bnpm\b/iu].some(allowed=>String(allowed)===String(pattern))) ||
          (['skills/index.html','en/skills/index.html'].includes(rel) &&
-          String(pattern)===String(/\\bcli\\b/iu)))continue;
+          String(pattern)===String(/\bcli\b/iu)))continue;
       if(pattern.test(text))errors.push(rel+': public page exposes implementation jargon matching '+pattern);
     }
     for(const {pattern,allowed} of contextualPublicBanned){
