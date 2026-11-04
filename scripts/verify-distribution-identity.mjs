@@ -100,6 +100,9 @@ if (index.h5p?.sharedLibraryMode !== 'bundled-npm-artifact') throw new Error('CD
 if(index.studio?.version!==studioPackage.version) throw new Error('CDN index Studio version mismatch.');
 if(index.analytics?.version!==analyticsPackage.version) throw new Error('CDN index Analytics version mismatch.');
 
+// Verify byte-accurate SHA-384 hashes before treating the CDN as a verified distribution.
+await import('./verify-cdn-sri.mjs');
+
 console.log(JSON.stringify({
   ok:true,
   version,
