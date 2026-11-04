@@ -1,5 +1,6 @@
 import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
+import {isSafeRuntimeMessage} from '../runtime-message-security.js';
 import {resolveH5pRuntimeUrl} from '../runtime-host-config.js';
 import {encodeH5PSession, inspectH5PPackage} from '../h5p-package.js';
 import {createOpaqueH5PRuntimeDocument, getAutomaticH5PRuntimeResources, hydrateH5PRuntimeCore, hydrateH5PStaticSession} from '../h5p-auto-runtime.js';
@@ -204,7 +205,7 @@ export async function render({container, payload, representation, package:pkg, e
   let runtimeProtocol = PROTOCOL;
   let saveQueue = Promise.resolve();
   const process = (message) => {
-    if (!message || message.protocol !== runtimeProtocol) return;
+    if (!isSafeRuntimeMessage(message) || message.protocol !== runtimeProtocol) return;
     if (message.action === 'ready') {
       dispatchRuntimeEvent(eventTarget, 'p2lrn:activityready', {
         runtime:'h5p', mainLibrary:inspection.mainLibrary, dependencyMode:inspection.dependencyMode,
@@ -247,7 +248,7 @@ export async function render({container, payload, representation, package:pkg, e
   const onMessage = (event) => {
     if (destroyed || event.source !== iframe.contentWindow || event.origin !== runtimeOrigin) return;
     const data = event.data;
-    if (!data || data.protocol !== PROTOCOL || data.action !== 'shell-ready' || didConnect) return;
+    if (!isSafeRuntimeMessage(data) || data.protocol !== PROTOCOL || data.action !== 'shell-ready' || didConnect) return;
     runtimeProtocol = data.protocol;
     didConnect = true;
     const channel = new MessageChannel();
@@ -255,6 +256,7 @@ export async function render({container, payload, representation, package:pkg, e
     let initialized = false;
     port.onmessage = (portEvent) => {
       const message = portEvent.data;
+      if (!isSafeRuntimeMessage(message)) return;
       if (!initialized && message?.protocol === runtimeProtocol && message?.action === 'connected') {
         initialized = true;
         const init = {
