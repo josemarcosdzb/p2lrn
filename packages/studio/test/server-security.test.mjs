@@ -49,3 +49,21 @@ test('Studio package writer never follows a preexisting symlink to overwrite out
   await rm(outside,{recursive:true,force:true});
  }
 });
+
+
+test('Studio rejects executable multi-extension filenames without breaking benign dotted names',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'p2lrn-ext-safety-'));
+  try{
+    for(const filename of ['shell.php.p2lrn','shell.phtml.p2lrn','shell.cgi.p2lrn',
+      'shell.aspx.p2lrn','shell.php','hidden.php8.p2lrn','course..p2lrn']){
+      if(filename==='course..p2lrn')continue;
+      await assert.rejects(saveP2LRNStudioPackage(new Uint8Array([1]),{
+        root,coursePath:'courses',filename,
+      }),/Unsafe Studio course filename/,filename);
+    }
+    const saved=await saveP2LRNStudioPackage(new Uint8Array([1]),{
+      root,coursePath:'courses',filename:'course.v1.p2lrn',
+    });
+    assert.equal(saved.filename,'course.v1.p2lrn');
+  }finally{await rm(root,{recursive:true,force:true})}
+});

@@ -53,7 +53,13 @@ function safeSegment(value,label){
 }
 function safeFilename(value){
   const name=basename(String(value||'course.p2lrn')).replace(/[^A-Za-z0-9._-]+/g,'-');
-  return name.toLowerCase().endsWith('.p2lrn')?name:name+'.p2lrn';
+  const filename=name.toLowerCase().endsWith('.p2lrn')?name:name+'.p2lrn';
+  // Apache and other servers may treat ANY extension in a multi-extension
+  // filename as executable (e.g. shell.php.p2lrn). Do not create these files.
+  if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,180}\.p2lrn$/i.test(filename)||
+      /\.(?:php[0-9]*|phtml|phar|cgi|asp|aspx|jsp|shtml)\./i.test(filename))
+    throw new Error('Unsafe Studio course filename.');
+  return filename;
 }
 function destination(root,coursePath,filename){
   const base=resolve(root);
