@@ -1,5 +1,7 @@
 # @p2lrn/analytics
 
+**Versión de desarrollo documentada:** `0.5.0-alpha.12`. La publicación efectiva en NPM/CDN se verifica por separado.
+
 Panel analítico embebible de P2LRN para alumnos, cursos, progreso, actividad, intentos y notas autoritativas.
 
 ## NPM: leer archivos de resultados por src
