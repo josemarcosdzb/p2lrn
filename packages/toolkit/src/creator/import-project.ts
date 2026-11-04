@@ -22,7 +22,7 @@ export interface OpenPackageProjectResult {
 }
 
 function emptyDirectory(path:string):boolean{return !existsSync(path)||readdirSync(path).length===0;}
-function workspacePath(packagePath:string):string{
+export function workspacePath(packagePath:string):string{
   // ZIP names are virtual paths; Windows disk extraction must ALSO reject
   // ADS, reserved device names, trailing spaces/dots and ambiguous aliases.
   const safe=safeZipPath(packagePath),parts=safe.split('/');
