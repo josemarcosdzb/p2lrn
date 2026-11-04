@@ -9,7 +9,8 @@ const LOCAL=new Set(['localhost','127.0.0.1','[::1]']);
 function trustedOrigins(values){
   if(!Array.isArray(values)||!values.length)throw new TypeError('Analytics requires explicit allowedOrigins.');
   return values.map(value=>{
-    const url=new URL(value);
+    let url;
+    try{url=new URL(value);}catch{throw new TypeError('Invalid Analytics allowed origin.');}
     if(url.href!==url.origin+'/'||
        !['http:','https:'].includes(url.protocol)||
        (url.protocol!=='https:'&&!LOCAL.has(url.hostname)))
