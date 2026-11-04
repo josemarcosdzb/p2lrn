@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {cp, copyFile, mkdir, readFile, readdir, stat, writeFile} from 'node:fs/promises';
+import {cp, copyFile, mkdir, readFile, readdir, rename, stat, writeFile} from 'node:fs/promises';
 import {dirname, join, relative, resolve} from 'node:path';
 import {openP2LRNPackageBytes} from '../../packages/toolkit/web/p2lrn-player.js';
 import {buildDocExamples} from './build-doc-examples.mjs';
@@ -8,6 +8,7 @@ import {reviseSiteBrowserAssets} from './browser-site-revision.mjs';
 import {renderSiteFooter,getSiteFooterLinks} from './site-footer.mjs';
 import {verifyPackageCorrespondingSource} from './corresponding-source.mjs';
 import {normalizeSeoAndAccessibility} from './site-seo-a11y.mjs';
+import {ENGLISH_ROUTES, LEGACY_ENGLISH_ROUTES, SPANISH_ROUTES, ENGLISH_ANCHORS, englishRouteFor, spanishRouteFor, canonicalRoute} from './site-routes.mjs';
 
 const root = resolve(process.cwd());
 await import('./build-cdn.mjs');
@@ -175,6 +176,53 @@ function isImmutableDistributionHtml(path) {
   const rel=relative(outputRoot,path).replaceAll('\\','/');
   return /^(?:player|studio|analytics)\/(?:current|[^/]+)\/dist\//u.test(rel);
 }
+// Relocate only the authored English HTML pages. Keep runtime/CDN bytes immutable.
+const legacyEnglishPairs=Object.entries(LEGACY_ENGLISH_ROUTES).sort((a,b)=>b[0].length-a[0].length);
+const authoredHtmlFiles=(await walk(siteRoot)).filter(p=>p.endsWith('/index.html'));
+for(const [oldRoute,newRoute] of legacyEnglishPairs){
+  const oldPath=join(outputRoot,...oldRoute.slice(1).split('/').filter(Boolean),'index.html');
+  const newPath=join(outputRoot,...newRoute.slice(1).split('/').filter(Boolean),'index.html');
+  if(!authoredHtmlFiles.some(p=>relative(siteRoot,p).replaceAll('\\','/')===oldRoute.slice(1)+'index.html'))
+    throw new Error('Missing authored English route for localization: '+oldRoute);
+  await mkdir(dirname(newPath),{recursive:true});
+  await rename(oldPath,newPath);
+}
+for(const authoredPath of authoredHtmlFiles){
+  const sourceRoute='/'+relative(siteRoot,authoredPath).replaceAll('\\','/').replace(/index\\.html$/,'');
+  const destinationRoute=canonicalRoute(sourceRoute);
+  const target=destinationRoute==='/'?join(outputRoot,'index.html'):
+    join(outputRoot,...destinationRoute.slice(1).split('/').filter(Boolean),'index.html');
+  let html=await readFile(target,'utf8');
+  for(const [oldRoute,newRoute] of legacyEnglishPairs)html=html.replaceAll(oldRoute,newRoute);
+  if(destinationRoute.startsWith('/en/')){
+    // New English fragments work while published legacy fragments stay addressable.
+    for(const [oldAnchor,newAnchor] of Object.entries(ENGLISH_ANCHORS)){
+      if(new RegExp('\\\\bid=["\\' ]'+oldAnchor+'["\\']','i').test(html)){
+        const before=new RegExp('(<h[2-6]\\\\b[^>]*\\\\bid=["\\']'+oldAnchor+'["\\'][^>]*>)','i');
+        html=html.replace(before,'<span class="anchor-alias" id="'+newAnchor+'" aria-hidden="true"></span>$1');
+      }
+      html=html.replaceAll('#'+oldAnchor,'#'+newAnchor);
+    }
+  }
+  await writeFile(target,html,'utf8');
+}
+// Netlify executes _redirects before netlify.toml. Make the hostname rule first,
+// so the Netlify subdomain cannot remain a second indexable public copy.
+const routeRedirects=[
+  'https://p2lrn.netlify.app/* https://p2lrn.org/:splat 301!',
+  'http://p2lrn.netlify.app/* https://p2lrn.org/:splat 301!',
+  ...legacyEnglishPairs.map(([from,to])=>from+' '+to+' 301!')
+];
+await writeFile(join(outputRoot,'_redirects'),routeRedirects.join('\\n')+'\\n','utf8');
+// The same route map is embedded in both public JS bundles. Their source files
+// remain executable without it, but production navigation uses canonical slugs.
+for(const publicJs of ['p2lrn.js','en/p2lrn.js']){
+  const file=join(outputRoot,...publicJs.split('/'));
+  const before=await readFile(file,'utf8');
+  const preamble='globalThis.__P2LRN_ENGLISH_ROUTES='+JSON.stringify(ENGLISH_ROUTES)+';\\n'+
+    'globalThis.__P2LRN_SPANISH_ROUTES='+JSON.stringify(SPANISH_ROUTES)+';\\n';
+  await writeFile(file,preamble+before,'utf8');
+}
 const allHtmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
 // Google Search Console HTML ownership tokens must be served byte-for-byte from the root,
 // not rewritten as normal public HTML pages.
@@ -213,8 +261,6 @@ for (const htmlPath of htmlFiles) {
 const seoAudit=await normalizeSeoAndAccessibility(outputRoot,{sourceRoot:siteRoot});
 console.log('P2LRN_BUILD_SEO='+JSON.stringify(seoAudit));
 
-const englishRouteFor=(route)=>route==='/'?'/en/':'/en'+route;
-const spanishRouteFor=(route)=>route==='/en/'?'/':route.replace(/^\/en/,'')||'/';
 const routeFile=(route)=>route==='/'?join(outputRoot,'index.html'):join(outputRoot,...route.slice(1).split('/').filter(Boolean),'index.html');
 if(bilingualSite){
   for(const htmlPath of htmlFiles){
