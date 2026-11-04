@@ -54,7 +54,7 @@ export function createP2LRNResultAuthority({privateKey,keyId,gradeSubmission}={}
   if(typeof gradeSubmission!=='function')
     throw new TypeError('Host gradeSubmission callback is required.');
   if(!text(keyId,128))throw new TypeError('A stable signing keyId is required.');
-  const key=createPrivateKey(privateKey);
+  const key=privateKey?.type==='private'?privateKey:createPrivateKey(privateKey);
   if(key.asymmetricKeyType!=='ed25519')throw new TypeError('Trusted receipt signing key must be Ed25519.');
   return Object.freeze({
     async issue({actor,assignmentId,courseId,contentRoot,submittedResult}={}){
@@ -88,7 +88,7 @@ export function verifyP2LRNTrustedResultReceipt(receipt,{
       typeof receipt.signature.value!=='string'||
       !/^[A-Za-z0-9_-]{86}$/.test(receipt.signature.value)||
       !text(keyId,128))return false;
-    const key=createPublicKey(publicKey);
+    const key=publicKey?.type==='public'?publicKey:createPublicKey(publicKey);
     if(key.asymmetricKeyType!=='ed25519')return false;
     const body=receipt.body;
     if(actor){
