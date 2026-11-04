@@ -2,6 +2,9 @@ import {deflateRawSync, inflateRawSync} from 'node:zlib';
 import {ValidationError} from './errors.js';
 import {baseMediaType} from './integrity.js';
 
+// Deflated ZIP members are expanded synchronously: never let attacker-controlled
+// headers allocate multi-gigabyte buffers. Large media should be STORED or multipart.
+const MAX_IN_MEMORY_DEFLATE_BYTES=512*1024*1024;
 const SIG = Object.freeze({LOCAL:0x04034b50, CENTRAL:0x02014b50, EOCD:0x06054b50, ZIP64_EOCD:0x06064b50, ZIP64_LOCATOR:0x07064b50});
 const decoder = new TextDecoder('utf-8', {fatal:true});
 const encoder = new TextEncoder();
@@ -47,7 +50,16 @@ export class ZipArchive {
     if(o!==cdOffset+cdSize)throw new ValidationError('ZIP central directory size mismatch'); return archive;
   }
   names():string[]{return [...this.entries.keys()];}
-  read(name:string):Uint8Array{const e=this.entries.get(name); if(!e)throw new ValidationError(`ZIP entry not found: ${name}`); const v=new DataView(this.bytes.buffer,this.bytes.byteOffset,this.bytes.byteLength),o=e.localOffset; if(o+30>this.bytes.byteLength||u32(v,o)!==SIG.LOCAL)throw new ValidationError(`invalid local ZIP header: ${name}`); const flags=u16(v,o+6),method=u16(v,o+8),nl=u16(v,o+26),el=u16(v,o+28); if(flags&1)throw new ValidationError(`encrypted local ZIP entry: ${name}`); if(method!==e.method)throw new ValidationError(`ZIP compression method mismatch: ${name}`); let local:string; try{local=decoder.decode(this.bytes.slice(o+30,o+30+nl));}catch{throw new ValidationError(`invalid local ZIP name: ${name}`);} if(local!==name)throw new ValidationError(`local/central ZIP name mismatch: ${name}`); const ds=o+30+nl+el,de=ds+e.compressedSize; if(de>this.bytes.byteLength)throw new ValidationError(`truncated ZIP payload: ${name}`); const compressed=this.bytes.slice(ds,de); const result=e.method===0?compressed:inflateRawSync(compressed); if(result.byteLength!==e.uncompressedSize)throw new ValidationError(`ZIP size mismatch after decompression: ${name}`); if(crc32(result)!==e.crc)throw new ValidationError(`ZIP CRC mismatch: ${name}`); return new Uint8Array(result);}
+  read(name:string):Uint8Array{const e=this.entries.get(name); if(!e)throw new ValidationError(`ZIP entry not found: ${name}`); const v=new DataView(this.bytes.buffer,this.bytes.byteOffset,this.bytes.byteLength),o=e.localOffset; if(o+30>this.bytes.byteLength||u32(v,o)!==SIG.LOCAL)throw new ValidationError(`invalid local ZIP header: ${name}`); const flags=u16(v,o+6),method=u16(v,o+8),nl=u16(v,o+26),el=u16(v,o+28); if(flags&1)throw new ValidationError(`encrypted local ZIP entry: ${name}`); if(method!==e.method)throw new ValidationError(`ZIP compression method mismatch: ${name}`); let local:string; try{local=decoder.decode(this.bytes.slice(o+30,o+30+nl));}catch{throw new ValidationError(`invalid local ZIP name: ${name}`);} if(local!==name)throw new ValidationError(`local/central ZIP name mismatch: ${name}`); const ds=o+30+nl+el,de=ds+e.compressedSize; if(de>this.bytes.byteLength)throw new ValidationError(`truncated ZIP payload: ${name}`); const compressed=this.bytes.slice(ds,de);
+    if(e.method===8&&e.uncompressedSize>MAX_IN_MEMORY_DEFLATE_BYTES)
+      throw new ValidationError(`ZIP DEFLATE entry exceeds in-memory safety limit: ${name}`);
+    let result:Uint8Array;
+    if(e.method===0)result=compressed;
+    else{
+      try{result=inflateRawSync(compressed,{maxOutputLength:Math.max(1,e.uncompressedSize)});}
+      catch{throw new ValidationError(`ZIP decompression exceeded declared size or is malformed: ${name}`);}
+    }
+    if(result.byteLength!==e.uncompressedSize)throw new ValidationError(`ZIP size mismatch after decompression: ${name}`); if(crc32(result)!==e.crc)throw new ValidationError(`ZIP CRC mismatch: ${name}`); return new Uint8Array(result);}
 }
 
 const STORED=new Set(['application/pdf','application/zip','application/gzip','application/x-gzip','application/x-7z-compressed','application/x-rar-compressed','application/vnd.rar','application/wasm']);

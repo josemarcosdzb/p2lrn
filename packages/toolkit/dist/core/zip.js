@@ -1,6 +1,8 @@
 import { deflateRawSync, inflateRawSync } from 'node:zlib';
 import { ValidationError } from './errors.js';
 import { baseMediaType } from './integrity.js';
+// Bound synchronous DEFLATE extraction; large stored media remains supported.
+const MAX_IN_MEMORY_DEFLATE_BYTES = 512 * 1024 * 1024;
 const SIG = Object.freeze({ LOCAL: 0x04034b50, CENTRAL: 0x02014b50, EOCD: 0x06054b50, ZIP64_EOCD: 0x06064b50, ZIP64_LOCATOR: 0x07064b50 });
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const encoder = new TextEncoder();
@@ -177,7 +179,21 @@ export class ZipArchive {
         throw new ValidationError(`invalid local ZIP name: ${name}`);
     } if (local !== name)
         throw new ValidationError(`local/central ZIP name mismatch: ${name}`); const ds = o + 30 + nl + el, de = ds + e.compressedSize; if (de > this.bytes.byteLength)
-        throw new ValidationError(`truncated ZIP payload: ${name}`); const compressed = this.bytes.slice(ds, de); const result = e.method === 0 ? compressed : inflateRawSync(compressed); if (result.byteLength !== e.uncompressedSize)
+        throw new ValidationError(`truncated ZIP payload: ${name}`); const compressed = this.bytes.slice(ds, de);
+        if (e.method === 8 && e.uncompressedSize > MAX_IN_MEMORY_DEFLATE_BYTES)
+            throw new ValidationError(`ZIP DEFLATE entry exceeds in-memory safety limit: ${name}`);
+        let result;
+        if (e.method === 0)
+            result = compressed;
+        else {
+            try {
+                result = inflateRawSync(compressed, { maxOutputLength: Math.max(1, e.uncompressedSize) });
+            }
+            catch {
+                throw new ValidationError(`ZIP decompression exceeded declared size or is malformed: ${name}`);
+            }
+        }
+        if (result.byteLength !== e.uncompressedSize)
         throw new ValidationError(`ZIP size mismatch after decompression: ${name}`); if (crc32(result) !== e.crc)
         throw new ValidationError(`ZIP CRC mismatch: ${name}`); return new Uint8Array(result); }
 }
