@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {resolve,join} from 'node:path';
+import {englishRouteFor} from '../deploy/netlify/site-routes.mjs';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const read=(path)=>readFile(join(root,path),'utf8');
@@ -42,7 +43,8 @@ const sectionRows=(html)=>{
 for(const [lang,html] of [['es',es],['en',en]]){
   const prefix=lang==='en'?'/en':'';
   assert.match(html,new RegExp('<html lang="'+lang+'">'));
-  assert.match(html,new RegExp('<link rel="canonical" href="https:\\/\\/p2lrn\\.org'+prefix+'\\/licencia\\/"'));
+  const licenseRoute=lang==='en'?englishRouteFor('/licencia/'):'/licencia/';
+  assert.ok(html.includes('<link rel="canonical" href="https://p2lrn.org'+licenseRoute+'"'));
   assert.match(html,/<body class="license-page">/);
   assert.match(html,/<main class="legal-main" id="top">/);
   assert.match(html,/<p class="license-disclaimer" role="note">/);
@@ -62,7 +64,8 @@ for(const [lang,html] of [['es',es],['en',en]]){
     '/downloads/p2lrn-offline-launcher-source.tar.gz'
   ])assert.ok(html.includes('href="'+src+'"'),'Missing corresponding source link: '+src);
 
-  assert.match(html,new RegExp('href="'+prefix+'\\/contacto\\/"'));
+  const contactRoute=lang==='en'?englishRouteFor('/contacto/'):'/contacto/';
+  assert.ok(html.includes('href="'+contactRoute+'"'));
   assert.match(html,new RegExp('href="'+prefix+'\\/docs\\/npm\\/"'));
   assert.ok(!html.includes('github.com/josemarcosfrodo/p2lrn/blob/main/LICENSE'),
     'The contract cannot depend on a private repository');
@@ -102,7 +105,8 @@ assert.ok(!en.includes('Volver arriba'),'English retained Spanish UI text');
 assert.match(en,/Back to top/);
 for(const [lang,licensePage,contact] of [['es',es,contactEs],['en',en,contactEn]]){
   const localePrefix=lang==='en'?'/en':'';
-  assert.ok(licensePage.includes('href="'+localePrefix+'/contacto/#solicitar-licencia"'),
+  const contactRoute=lang==='en'?englishRouteFor('/contacto/'):'/contacto/';
+  assert.ok(licensePage.includes('href="'+contactRoute+'#solicitar-licencia"'),
     'Commercial license CTA must open the contact form in '+lang);
   assert.match(contact,/id="solicitar-licencia" data-contact-form/);
   assert.match(contact,/name="subject"[^>]+required/);
