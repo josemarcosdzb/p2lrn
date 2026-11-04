@@ -5,9 +5,13 @@ export const WEB_CONTENT_MAPPING_VERSION = '1';
 
 export function safeWebLogicalPath(value) {
   const text = String(value ?? '');
-  if (!text || text.startsWith('/') || text.includes('\\') || text.includes('\0')) throw new Error(`Unsafe web-content logical path: ${JSON.stringify(text)}`);
+  if (!text || text.startsWith('/') || text.includes('\\') || /[\x00-\x1f]/.test(text) ||
+      /[%](?:2e|2f|5c|00)/i.test(text) || /[?#:]/.test(text))
+    throw new Error(`Unsafe web-content logical path: ${JSON.stringify(text)}`);
   const parts = text.split('/');
-  if (parts.some((part) => !part || part === '.' || part === '..')) throw new Error(`Unsafe web-content logical path: ${JSON.stringify(text)}`);
+  if (parts.some((part) => !part || part === '.' || part === '..' ||
+      ['__proto__','constructor','prototype'].includes(part)))
+    throw new Error(`Unsafe web-content logical path: ${JSON.stringify(text)}`);
   return parts.join('/');
 }
 
@@ -25,7 +29,7 @@ export function webContentMapping(representation, inventory = null) {
     if (normalized !== logical) throw new Error(`web-content logical path is not canonical: ${logical}`);
     if (typeof embedded !== 'string' || !embedded) throw new Error(`web-content asset path is invalid: ${logical}`);
     if (inventory && !inventory.has(embedded)) throw new Error(`web-content asset is not inventoried: ${logical}`);
-    assets[logical] = embedded;
+    Object.defineProperty(assets, logical, {value:embedded, enumerable:true, writable:false, configurable:false});
   }
   if (!Object.hasOwn(assets, entrypoint)) throw new Error('web-content entrypoint is absent from assets mapping.');
   if (representation?.location?.type !== 'embedded' || representation.location.path !== assets[entrypoint]) throw new Error('web-content representation location does not match mapped entrypoint.');
