@@ -47,7 +47,9 @@ await import('./build-skill-downloads.mjs');
 await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));
 await cp(join(root,'packages','toolkit','web','studio'),join(outputRoot,'studio','runtime'),{recursive:true,force:true});
 for(const file of STUDIO_RUNTIME_SHARED_FILES){
-  await copyFile(join(root,'packages','toolkit','web',file),join(outputRoot,'studio',file));
+  const destination=join(outputRoot,'studio',file);
+  await mkdir(dirname(destination),{recursive:true});
+  await copyFile(join(root,'packages','toolkit','web',file),destination);
 }
 
 async function walk(dir) {
