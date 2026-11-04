@@ -9,6 +9,14 @@ import {join,resolve,sep,extname} from 'node:path';
 import {pathToFileURL} from 'node:url';
 const root=resolve(import.meta.dirname,'..');
 const site=join(root,'.netlify-cdn');
+const headerLines=(await readFile(join(site,'_headers'),'utf8')).split(/\r?\n/);
+let insideDemo=false,demoCsp=null;
+for(const line of headerLines){
+ if(line.startsWith('/')){insideDemo=line.trim()==='/demo/*';continue;}
+ if(insideDemo&&line.trim().startsWith('Content-Security-Policy:'))
+   demoCsp=line.trim().slice('Content-Security-Policy:'.length).trim();
+}
+assert.ok(demoCsp&&demoCsp.includes('script-src'),'Demo must exercise its real deployed CSP, not an unprotected mock.');
 const screenshotRoot=join(root,'.p2lrn-external-visual-qa');
 await mkdir(screenshotRoot,{recursive:true});
 const browserModule=join(root,'.p2lrn-i18n-ci','node_modules','playwright-core','index.mjs');
@@ -37,6 +45,7 @@ const server=createServer(async(req,res)=>{
     'Content-Type':contentTypes[extname(target)]??'application/octet-stream',
     'Accept-Ranges':'bytes','Cache-Control':'no-store',
     'Access-Control-Allow-Origin':'*',
+    ...(uri.pathname.startsWith('/demo/')?{'Content-Security-Policy':demoCsp}:{}),
   };
   if(range){
     const match=/^bytes=(\d+)-(\d*)$/.exec(range);
@@ -106,5 +115,6 @@ try{
  await new Promise(r=>server.close(r));
 }
 await writeFile(join(screenshotRoot,'report.json'),JSON.stringify({results},null,2));
+console.log('P2LRN_EXTERNAL_DEMO_CSP='+demoCsp);
 console.log('P2LRN_EXTERNAL_BROWSER_VISUAL_QA='+JSON.stringify({results}));
 if(results.some(x=>x.status==='FAIL'))process.exitCode=1;
