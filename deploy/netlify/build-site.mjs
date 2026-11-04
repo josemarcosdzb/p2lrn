@@ -51,6 +51,9 @@ for(const file of STUDIO_RUNTIME_SHARED_FILES){
   await mkdir(dirname(destination),{recursive:true});
   await copyFile(join(root,'packages','toolkit','web',file),destination);
 }
+const studioRendererLocalization=await readFile(join(outputRoot,'studio','renderers','ui-i18n.js'),'utf8');
+if(!studioRendererLocalization.includes('export function playerUiText('))
+  throw new Error('Studio renderer translation dependency not deployed');
 
 async function walk(dir) {
   const out = [];
