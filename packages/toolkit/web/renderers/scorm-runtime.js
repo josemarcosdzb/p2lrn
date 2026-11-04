@@ -115,7 +115,7 @@ export function createScormSandboxShell(token, version) {
 let privatePort=null;let privateSend=null;let initialized=false;
 const PROTOCOL=${protocol}; const SCORM_VERSION=${versionLiteral};
 const createScormApi=${apiFactory};
-const stage=document.getElementById('stage'); const files=new Map(); const urls=new Map(); let content=null; let runtime=null; let currentPath=''; let identity={learnerId:'',learnerName:'',launchData:''};
+const stage=document.getElementById('stage'); const files=new Map(); const urls=new Map(); let inlineScriptId=0; let content=null; let runtime=null; let currentPath=''; let identity={learnerId:'',learnerName:'',launchData:''};
 function reply(action,payload={}){ privateSend?.({protocol:PROTOCOL,action,...payload}); }
 function normalize(path){ const out=[]; for(const part of String(path||'').replace(/\\/g,'/').split('/')){ if(!part||part==='.')continue; if(part==='..'){if(!out.length)return null;out.pop();}else out.push(part);} return out.join('/'); }
 function resolve(base,ref){ const raw=String(ref||'').trim(); if(!raw||raw[0]==='#'||/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(raw))return null; const match=/^([^?#]*)(\?[^#]*)?(#.*)?$/.exec(raw); const target=match?.[1]||''; const root=target.startsWith('/'); const baseDir=base.includes('/')?base.slice(0,base.lastIndexOf('/')+1):''; const path=normalize(root?target.slice(1):baseDir+target); return path&&files.has(path)?{path,suffix:(match?.[2]||'')+(match?.[3]||'')}:null; }
@@ -132,7 +132,7 @@ function rewriteHtml(path){ currentPath=path; const source=text(path); const doc
 function wireDocument(doc,path){ if(!doc)return; doc.addEventListener('click',(event)=>{const a=event.target?.closest?.('[data-p2lrn-member]');if(!a)return;event.preventDefault();void navigate(a.getAttribute('data-p2lrn-member'));});
   for(const frame of doc.querySelectorAll('[data-p2lrn-frame-member]')){const member=frame.getAttribute('data-p2lrn-frame-member');try{frame.srcdoc=rewriteHtml(member);}catch{}}
 }
-async function activateScripts(root){ for(const old of [...root.querySelectorAll('script')]){ const script=document.createElement('script'); for(const attr of [...old.attributes])script.setAttribute(attr.name,attr.value); if(!old.hasAttribute('src'))script.textContent=old.textContent||''; const waits=old.hasAttribute('src')&&!old.hasAttribute('async'); let done=null; if(waits)done=new Promise((resolve)=>{script.addEventListener('load',resolve,{once:true});script.addEventListener('error',resolve,{once:true});}); old.replaceWith(script); if(done)await done; } }
+async function activateScripts(root){ for(const old of [...root.querySelectorAll('script')]){ const script=document.createElement('script'); for(const attr of [...old.attributes])script.setAttribute(attr.name,attr.value); const type=String(old.getAttribute('type')||'').toLowerCase().trim();if(!old.hasAttribute('src')&&(!type||['module','text/javascript','application/javascript','text/ecmascript','application/ecmascript'].includes(type))){const src=URL.createObjectURL(new Blob([old.textContent||''],{type:'text/javascript'}));urls.set('p2lrn-inline-'+(++inlineScriptId),src);script.setAttribute('src',src);}else if(!old.hasAttribute('src'))script.textContent=old.textContent||''; const waits=script.hasAttribute('src')&&!script.hasAttribute('async'); let done=null; if(waits)done=new Promise((resolve,reject)=>{script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>reject(new Error('SCORM JavaScript resource failed to load')),{once:true});}); old.replaceWith(script); if(done)await done; } }
 async function navigate(path){ if(!files.has(path)){showError('SCORM launch member not found: '+path);return;} const mt=files.get(path).mediaType||''; if(!mt.includes('html')&&!mt.includes('xhtml')){showError('SCORM launch member is not HTML/XHTML: '+path);return;} currentPath=path; const parsed=new DOMParser().parseFromString(rewriteHtml(path),'text/html'); document.title=parsed.title||document.title; document.head.replaceChildren(...[...parsed.head.childNodes].map((node)=>document.importNode(node,true))); document.body.replaceChildren(...[...parsed.body.childNodes].map((node)=>document.importNode(node,true))); wireDocument(document,path); await activateScripts(document); reply('ready',{member:path}); }
 function showError(message){const pre=document.createElement('pre');pre.className='error';pre.textContent=message;(document.body||document.documentElement).replaceChildren(pre);reply('error',{message});}
 function makeUrls(){ for(const [path,file] of files){ if(file.mediaType.includes('html')||file.mediaType.includes('xhtml')||file.mediaType.includes('css'))continue; urls.set(path,URL.createObjectURL(new Blob([file.buffer],{type:file.mediaType||'application/octet-stream'}))); }
@@ -335,8 +335,17 @@ export async function render({container, payload, representation, package: pkg, 
   };
   window.addEventListener('message', onMessage);
 
+  // The opaque fallback inherits its embedding document's CSP. Convert the
+  // trusted bootstrap into a blob script; never relax the embedding page CSP.
+  let opaqueBootstrapUrl=null;
   if (isolatedRuntimeUrl) iframe.src = isolatedRuntimeUrl;
-  else iframe.srcdoc = createScormSandboxShell(fallbackToken, version);
+  else {
+    const shellHtml=createScormSandboxShell(fallbackToken,version);
+    const inlineShell=/<script>([\\s\\S]*?)<\\/script>/iu.exec(shellHtml);
+    if(!inlineShell)throw new Error('Missing SCORM opaque runtime bootstrap.');
+    opaqueBootstrapUrl=URL.createObjectURL(new Blob([inlineShell[1]],{type:'text/javascript'}));
+    iframe.srcdoc=shellHtml.replace(inlineShell[0],`<script src="${opaqueBootstrapUrl}"></script>`);
+  }
 
   container.replaceChildren(iframe);
   return Object.freeze({
@@ -345,6 +354,7 @@ export async function render({container, payload, representation, package: pkg, 
       destroyed = true;
       window.removeEventListener('message', onMessage);
       try { runtimePort?.close?.(); } catch {}
+      if(opaqueBootstrapUrl)URL.revokeObjectURL(opaqueBootstrapUrl);
       iframe.remove();
     },
     flush: () => saveQueue,
