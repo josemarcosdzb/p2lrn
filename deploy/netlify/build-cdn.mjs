@@ -107,6 +107,30 @@ for(const file of offlineHtmlMirrors){
   await writeFile(join(versionedDist,file.path+'.raw'),original);
 }
 
+// SRI must be computed from the exact immutable versioned artifacts, never
+// from /current/ (which changes on the next release).
+const sri=async(file)=>'sha384-'+createHash('sha384').update(await readFile(file)).digest('base64');
+const sriResources={
+  [`/player/${version}/dist/${playerBuild.release.entrypoints.classic}`]:
+    await sri(join(versionedDist,playerBuild.release.entrypoints.classic)),
+  [`/player/${version}/dist/${playerBuild.release.entrypoints.module}`]:
+    await sri(join(versionedDist,playerBuild.release.entrypoints.module)),
+  [`/studio/${version}/dist/p2lrn-studio.js`]:
+    await sri(join(outputRoot,'studio',version,'dist','p2lrn-studio.js')),
+  [`/studio/${version}/dist/p2lrn-studio.esm.js`]:
+    await sri(join(outputRoot,'studio',version,'dist','p2lrn-studio.esm.js')),
+  [`/analytics/${version}/dist/p2lrn-analytics.js`]:
+    await sri(join(outputRoot,'analytics',version,'dist','p2lrn-analytics.js')),
+  [`/analytics/${version}/dist/p2lrn-analytics.esm.js`]:
+    await sri(join(outputRoot,'analytics',version,'dist','p2lrn-analytics.esm.js')),
+};
+const sriIndex=Object.freeze({
+  schema:'https://p2lrn.org/schema/cdn-sri/1',
+  version,
+  resources:sriResources,
+});
+await writeFile(join(outputRoot,'sri.json'),JSON.stringify(sriIndex,null,2)+'\n');
+
 // Mutable development channel.
 await cp(versionedDist, join(outputRoot, 'player', 'current', 'dist'), {
   recursive:true,
@@ -138,6 +162,7 @@ const index = {
     notice:'/NOTICE.md',
   },
   correspondingSource,
+  sriManifest:'/sri.json',
   source:{
     sourceRef:preparedSource.manifest.sourceRef,
     versionedBasePath:`/player/${version}/source/`,
@@ -150,6 +175,10 @@ const index = {
     currentBasePath:'/player/current/dist/',
     classic:`/player/${version}/dist/${playerBuild.release.entrypoints.classic}`,
     module:`/player/${version}/dist/${playerBuild.release.entrypoints.module}`,
+    integrity:{
+      classic:sriResources[`/player/${version}/dist/${playerBuild.release.entrypoints.classic}`],
+      module:sriResources[`/player/${version}/dist/${playerBuild.release.entrypoints.module}`],
+    },
     serviceWorker:`/player/${version}/dist/${playerBuild.release.entrypoints.serviceWorker}`,
     release:`/player/${version}/dist/release.json`,
   },
@@ -159,6 +188,10 @@ const index = {
     currentBasePath:'/studio/current/dist/',
     classic:`/studio/${version}/dist/p2lrn-studio.js`,
     module:`/studio/${version}/dist/p2lrn-studio.esm.js`,
+    integrity:{
+      classic:sriResources[`/studio/${version}/dist/p2lrn-studio.js`],
+      module:sriResources[`/studio/${version}/dist/p2lrn-studio.esm.js`],
+    },
     npmPackage:'@p2lrn/studio',
     defaultCoursePath:'course',
   },
@@ -176,6 +209,10 @@ const index = {
     currentBasePath:'/analytics/current/dist/',
     classic:`/analytics/${version}/dist/p2lrn-analytics.js`,
     module:`/analytics/${version}/dist/p2lrn-analytics.esm.js`,
+    integrity:{
+      classic:sriResources[`/analytics/${version}/dist/p2lrn-analytics.js`],
+      module:sriResources[`/analytics/${version}/dist/p2lrn-analytics.esm.js`],
+    },
     model:`/analytics/${version}/dist/model.js`,
     release:`/analytics/${version}/dist/release.json`,
   },
@@ -264,6 +301,12 @@ for (const channel of [version, 'current']) {
 
 headers += [
   '/index.json',
+  '  Access-Control-Allow-Origin: *',
+  '  Cache-Control: public, max-age=0, must-revalidate',
+  '  X-Content-Type-Options: nosniff',
+  '  Referrer-Policy: no-referrer',
+  '',
+  '/sri.json',
   '  Access-Control-Allow-Origin: *',
   '  Cache-Control: public, max-age=0, must-revalidate',
   '  X-Content-Type-Options: nosniff',
