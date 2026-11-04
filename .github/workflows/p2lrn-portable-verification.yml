@@ -190,6 +190,22 @@ jobs:
         run: |
           node deploy/netlify/build-site.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install pinned browser harness for external educational formats
+        run: |
+          npm install --prefix .p2lrn-i18n-ci --no-save --package-lock=false --ignore-scripts playwright-core@1.64.1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./scripts/ensure-browser-windows.ps1
+      - name: Verify real cmi5, SCORM and QTI content in Chrome/Edge
+        run: |
+          node scripts/browser-external-format-visual-qa.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve external format screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p2lrn-external-format-visual-qa
+          path: .p2lrn-external-visual-qa/
+          if-no-files-found: warn
       - name: Verify SRI hashes, browser headers and npm/CDN identity on Windows
         run: |
           node scripts/verify-cdn-sri.mjs
