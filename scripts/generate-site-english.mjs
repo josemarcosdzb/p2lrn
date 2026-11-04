@@ -437,6 +437,11 @@ for(const rel of handAuthoredEnglishPages){
   const english=await readFile(englishPath,'utf8').catch(()=>null);
   if(!english||!/<html\s+lang="en"/i.test(english))
     throw Error('Missing manually reviewed English editorial source: '+rel);
+  if(rel==='crear-cursos-interactivos/index.html'&&
+    (!english.includes('/assets/hero/studio.png')||
+     !english.includes('/en/offline-courses/')||
+     !english.includes('Which question types can I create?')))
+    throw Error('The manually reviewed English course creation page is out of date');
   preservedEnglishPages.set(rel,english);
 }
 console.log('P2LRN_I18N_PHASE=scan-source-html pages='+allSourceHtmlFiles.length+' translated='+htmlFiles.length+' authored='+preservedEnglishPages.size);
@@ -722,6 +727,16 @@ for(const file of htmlFiles){
     const src=$(el).attr('src')??'';
     for(const [from,to] of scriptMap)if(src===from||src.startsWith(from+'?')){$(el).attr('src',to+src.slice(from.length));break;}
   });
+  if(rel==='index.html'){
+    // Refuse to publish an English mirror with Spanish headings or old SEO links.
+    const homepage=$.html();
+    if(homepage.includes('EXPLORA P2LRN')||
+       homepage.includes('href="/en/docs/formato/"')||
+       homepage.includes('#guia-ia')||
+       !homepage.includes('EXPLORE P2LRN')||
+       !homepage.includes('Build portable interactive courses'))
+      throw Error('English homepage editorial localization has regressed');
+  }
   const dest=join(englishRoot,...rel.split('/'));
   await mkdir(dirname(dest),{recursive:true});
   await writeFile(dest,$.html(),'utf8');
