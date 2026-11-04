@@ -27,7 +27,13 @@ export function isSafeRuntimeMessage(value,{
     if(++nodes>maxNodes||depth>maxDepth)return false;
     if(item===null){bytes+=4;continue;}
     const type=typeof item;
-    if(type==='string'){bytes+=encoder.encode(item).byteLength;continue;}
+    if(type==='undefined')continue; // Structured-clone messages may omit optional values.
+    if(type==='string'){
+      if(item.length>maxBytes-bytes)return false;
+      bytes+=encoder.encode(item).byteLength;
+      if(bytes>maxBytes)return false;
+      continue;
+    }
     if(type==='number'){if(!Number.isFinite(item))return false;bytes+=32;continue;}
     if(type==='boolean'){bytes+=5;continue;}
     if(type!=='object'||seen.has(item))return false;
@@ -35,15 +41,18 @@ export function isSafeRuntimeMessage(value,{
     if(!Array.isArray(item)){
       const proto=Object.getPrototypeOf(item);
       if(proto!==Object.prototype&&proto!==null)return false;
-      for(const [key,child] of Object.entries(item)){
-        if(forbiddenKeys.has(key))return false;
+      const entries=Object.entries(item);
+      if(entries.length>maxNodes-nodes)return false;
+      for(const [key,child] of entries){
+        if(forbiddenKeys.has(key)||key.length>maxBytes-bytes)return false;
         bytes+=encoder.encode(key).byteLength+4;
         stack.push([child,depth+1]);
       }
     }else{
+      if(item.length>maxNodes-nodes)return false;
       for(const child of item)stack.push([child,depth+1]);
     }
-    if(bytes>maxBytes)return false;
+    if(bytes>maxBytes||stack.length>maxNodes)return false;
   }
   return bytes<=maxBytes;
 }
