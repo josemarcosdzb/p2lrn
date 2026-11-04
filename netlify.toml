@@ -13,7 +13,8 @@
   status = 301
   force = true
 
-# Public legacy hostname always redirects to the primary P2LRN domain.
+# Redirect only the legacy hostname owned by this project, not arbitrary Netlify sites.
+# The published _redirects repeats this host rule first to avoid path-rule precedence.
 [[redirects]]
   from = "https://p2lrn.netlify.app/*"
   to = "https://p2lrn.org/:splat"
@@ -35,7 +36,7 @@
 
 [[redirects]]
   from = "/en/crear-cuestionarios-interactivos/"
-  to = "/en/docs/questionnaires/standard/#crear-cuestionarios-online"
+  to = "/en/docs/questionnaires/standard/#create-online-quizzes"
   status = 301
   force = true
 
@@ -47,7 +48,7 @@
 
 [[redirects]]
   from = "/en/actividades-educativas-interactivas/"
-  to = "/en/docs/questionnaires/#juegos-educativos-2d"
+  to = "/en/docs/questionnaires/#2d-educational-games"
   status = 301
   force = true
 
@@ -59,7 +60,7 @@
 
 [[redirects]]
   from = "/en/crear-cursos-con-ia/"
-  to = "/en/skills/#guia-ia"
+  to = "/en/skills/#ai-guide"
   status = 301
   force = true
 
@@ -71,7 +72,7 @@
 
 [[redirects]]
   from = "/en/scorm-moodle-lms/"
-  to = "/en/docs/compatibilidad/#scorm-lms"
+  to = "/en/docs/compatibility/#scorm-lms"
   status = 301
   force = true
 
@@ -99,18 +100,18 @@
 # English mirrors of the historical AI documentation redirects.
 [[redirects]]
   from = "/en/docs/conectores/gemini/"
-  to = "/en/docs/conectores/ia/#gemini"
+  to = "/en/docs/connectors/ai/#gemini"
   status = 301
   force = true
 
 [[redirects]]
   from = "/en/docs/conectores/skills/"
-  to = "/en/docs/conectores/ia/#crear-cursos"
+  to = "/en/docs/connectors/ai/#create-courses"
   status = 301
   force = true
 
 [[redirects]]
   from = "/en/docs/conectores/local/"
-  to = "/en/docs/conectores/ia/#conectar-ordenador"
+  to = "/en/docs/connectors/ai/#connect-computer"
   status = 301
   force = true
