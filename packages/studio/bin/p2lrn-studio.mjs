@@ -113,7 +113,15 @@ function args(argv){
 }
 function safePath(v){
   const p=String(v||'course').replaceAll('\\','/').replace(/^\/+|\/+$/g,'');
-  if(!p||p.split('/').some(x=>!x||x==='.'||x==='..'))throw new Error('Unsafe course path');
+  const parts=p.split('/');
+  // This slug is interpolated into JavaScript, HTML and server file paths by
+  // the generator. Restrict it to safe portable segments; escaping only one
+  // of these output formats would leave other targets injectable.
+  if(!p||p.length>240||parts.length>16||parts.some(x=>
+      !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(x)||
+      x==='.'||x==='..'||x.endsWith('.')||
+      /^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$/i.test(x)))
+    throw new Error('Unsafe course path');
   return p;
 }
 async function materialize(target,cwd,coursePath,force,dryRun){

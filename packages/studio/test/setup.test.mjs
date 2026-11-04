@@ -150,3 +150,26 @@ test('generated Express routes preserve shared 422 errors and do not expose abso
     assert.match(body,/response\.arrayBuffer\(\)/);
   }finally{await rm(root,{recursive:true,force:true})}
 });
+
+
+test('setup rejects injected, control-character, reserved Windows and traversal course paths',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'p2lrn-unsafe-paths-'));
+  try{
+    const invalid=[
+      "course');process.exit(1);//", 'courses/" onerror="alert(1)',
+      'courses/../other','courses/CON','courses/NUL.txt','courses/..',
+      'courses/with space','courses/%2e%2e', 'courses/#fragment',
+      'courses/evil\nline','courses/<script>', 'courses/a;b',
+    ];
+    for(const coursePath of invalid){
+      await assert.rejects(()=>exec(process.execPath,
+        [cli,'setup','next','--cwd',root,'--course-path',coursePath]),
+        /Unsafe course path/,coursePath);
+    }
+    await assert.rejects(stat(join(root,'app')), {code:'ENOENT'},
+      'Invalid input must fail before writing generated routes');
+    const accepted=await exec(process.execPath,
+      [cli,'setup','next','--cwd',root,'--course-path','academy/courses-2026.1']);
+    assert.equal(JSON.parse(accepted.stdout).coursePath,'academy/courses-2026.1');
+  }finally{await rm(root,{recursive:true,force:true})}
+});
