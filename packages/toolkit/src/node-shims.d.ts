@@ -13,7 +13,7 @@ declare module 'node:fs' {
   export function readFileSync(path: string | URL): Uint8Array;
   export function chmodSync(path: string | URL, mode: number): void;
   export function unlinkSync(path: string | URL): void;
-  export function writeFileSync(path: string | URL, data: Uint8Array | string): void;
+  export function writeFileSync(path: string | URL, data: Uint8Array | string, options?: {flag?: string; mode?: number}): void;
   export function existsSync(path: string | URL): boolean;
   export function mkdirSync(path: string | URL, options?: {recursive?: boolean}): string | undefined;
   export function lstatSync(path: string | URL): {isFile(): boolean; isDirectory(): boolean; isSymbolicLink(): boolean; size: number};
