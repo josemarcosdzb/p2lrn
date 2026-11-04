@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {access,mkdir,readFile,readdir,writeFile} from 'node:fs/promises';
-import {dirname,join,resolve} from 'node:path';
+import {dirname,join,resolve,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import process from 'node:process';
 
@@ -129,7 +129,7 @@ async function materialize(target,cwd,coursePath,force,dryRun){
   const made=[];
   for(const [src,rel] of list){
     const dest=resolve(cwd,rel);
-    if(!dest.startsWith(resolve(cwd)))throw new Error('Unsafe output path: '+rel);
+    if(dest!==resolve(cwd)&&!dest.startsWith(resolve(cwd)+sep))throw new Error('Unsafe output path: '+rel);
     if(await exists(dest)&&!force)throw new Error('File already exists: '+rel+'; use --force to replace it');
     let body=await readFile(join(templateRoot,src),'utf8');
     body=body.replaceAll('__COURSE_PATH__',coursePath).replaceAll('__ENDPOINT__',endpoint).replaceAll('__READER_ENDPOINT__',readerEndpoint).replaceAll('__IMPORT_ENDPOINT__',importEndpoint);
