@@ -2141,3 +2141,12 @@ body.landing-page a:focus-visible,.doc-card:focus-visible{outline:3px solid #125
 @media(prefers-reduced-motion:reduce){
   .license-page .license-doc-link{transition:none}
 }
+
+/* SEO descriptive H1 retains the original hero's visual hierarchy without overflow. */
+.hero-showcase h1.hero-title{max-width:850px;margin:28px auto 0;font-size:clamp(2.35rem,4.35vw,4.6rem);line-height:1.08;letter-spacing:-.052em;overflow-wrap:normal;text-wrap:balance}
+.hero-showcase .hero-subtitle{max-width:740px;margin:17px auto 0;color:#243453;font-size:clamp(1.08rem,1.6vw,1.5rem);line-height:1.4;font-weight:560;text-wrap:balance}
+.anchor-alias{display:block;position:relative;height:0;scroll-margin-top:90px}
+@media(max-width:760px){.hero-showcase h1.hero-title{font-size:clamp(2rem,8.5vw,3rem);line-height:1.12}.hero-showcase .hero-subtitle{font-size:1.08rem}}
+/* One language selector belongs in the header, never a second overlay. */
+.site-header .language-switch{position:static;z-index:2;margin-left:0;flex-shrink:0}
+@media(max-width:420px){.site-header .language-switch{gap:1px;padding:2px}}
