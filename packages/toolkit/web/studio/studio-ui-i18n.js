@@ -1,6 +1,18 @@
 // Reviewed website/editor UI translations. Do not translate learner-authored content
 // or serialized identifiers. This module is shared by the Spanish and English site.
 const EN={
+  "Insertar vídeo": "Insert video",
+  "Eliminar recurso": "Remove media",
+  "Portada del vídeo": "Video poster",
+  "Imágenes y vídeos de la lección": "Lesson images and videos",
+  "Arrastra las imágenes o usa Alt + arrastrar en los vídeos. Ajusta su tamaño sin tapar el texto.": "Drag images or Alt + drag videos. Resize them without covering the text.",
+  "Vídeo MP4/WebM incrustado para reproducción sin conexión.": "MP4/WebM video embedded for offline playback.",
+  "Portada del vídeo guardada.": "Video poster saved.",
+  "Imagen eliminada de la lección.": "Media removed from the lesson.",
+  "El vídeo debe ocupar entre 12 bytes y 32 MB.": "The video must be between 12 bytes and 32 MB.",
+  "El tamaño del vídeo es incorrecto.": "The video size does not match the file.",
+  "Solo se admiten vídeos MP4 o WebM válidos. No se admite HTML, SVG ni archivos renombrados.": "Only valid MP4 and WebM videos are supported. HTML, SVG and renamed files are rejected.",
+  "Selecciona un vídeo local.": "Choose a local video file.",
   "Elección única": "Single choice",
   "Elección múltiple": "Multiple choice",
   "Verdadero / falso": "True / false",

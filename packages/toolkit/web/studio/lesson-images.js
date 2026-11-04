@@ -2,7 +2,10 @@ import {studioUiText} from './studio-ui-i18n.js';
 // Shared by the website Studio and npm Studio. Images remain inside the
 // portable HTML payload; the passive-text Player's CSP permits img-src data:.
 export const MAX_LESSON_IMAGE_BYTES=8*1024*1024;
+export const MAX_LESSON_VIDEO_BYTES=32*1024*1024;
 const IMAGE='img[data-p2lrn-lesson-image]';
+const VIDEO='video[data-p2lrn-lesson-video]';
+const MEDIA=IMAGE+','+VIDEO;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 export function lessonImageMediaType(bytes){
@@ -36,6 +39,37 @@ export async function lessonImageData(file){
   return {src,alt,mediaType,bytes:bytes.byteLength};
 }
 
+
+export function lessonVideoMediaType(bytes){
+  const b=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+  if(b.length>=16&&String.fromCharCode(...b.subarray(4,8))==='ftyp'){
+    // ISO Base Media File Format with MP4-compatible major brand.
+    const brand=String.fromCharCode(...b.subarray(8,12));
+    if(['isom','iso2','iso4','iso5','iso6','mp41','mp42','avc1','M4V '].includes(brand))return 'video/mp4';
+  }
+  if(b.length>=12&&b[0]===0x1a&&b[1]===0x45&&b[2]===0xdf&&b[3]===0xa3){
+    const header=new TextDecoder('latin1').decode(b.subarray(0,Math.min(b.length,4096)));
+    if(header.includes('webm'))return 'video/webm';
+  }
+  return null;
+}
+
+export async function lessonVideoData(file){
+  if(!file||typeof file.arrayBuffer!=='function')throw new TypeError('Selecciona un vídeo local.');
+  if(!Number.isFinite(file.size)||file.size<12||file.size>MAX_LESSON_VIDEO_BYTES)
+    throw new Error('El vídeo debe ocupar entre 12 bytes y 32 MB.');
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  if(bytes.byteLength!==file.size)throw new Error('El tamaño del vídeo es incorrecto.');
+  const mediaType=lessonVideoMediaType(bytes);
+  if(!mediaType)throw new Error('Solo se admiten vídeos MP4 o WebM válidos. No se admite HTML, SVG ni archivos renombrados.');
+  const chunks=[];
+  for(let offset=0;offset<bytes.length;offset+=16384)
+    chunks.push(String.fromCharCode(...bytes.subarray(offset,offset+16384)));
+  return {src:'data:'+mediaType+';base64,'+btoa(chunks.join('')),
+    label:String(file.name||'Vídeo').replace(/\.[^.]+$/,'').slice(0,160)||'Vídeo',
+    mediaType,bytes:bytes.byteLength};
+}
+
 // One layout contract for Studio, exported lesson HTML and the Player.
 // A float excludes only the actual image; text before, beside and after it
 // can occupy the remaining lines without being covered.
@@ -67,7 +101,7 @@ export function lessonImageFlowLayout({x=0,y=0,width=280,height=180},canvasWidth
   };
 }
 
-const STYLES=".p2lrn-lesson-image-editor{display:grid;gap:8px;min-width:0;max-width:100%}\n.p2lrn-lesson-image-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-height:34px}\n.p2lrn-lesson-image-toolbar button{min-height:32px;padding:6px 10px;border:1px solid #cfd8e4;border-radius:7px;background:#fff;color:#172033;font:600 12px/1.2 system-ui,sans-serif;cursor:pointer}\n.p2lrn-lesson-image-toolbar button:hover:not(:disabled){background:#eef3f9}\n.p2lrn-lesson-image-toolbar button:disabled{opacity:.45;cursor:default}\n.p2lrn-lesson-image-toolbar span{color:#64748b;font:11px/1.35 system-ui,sans-serif}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]{cursor:grab;touch-action:none;user-select:none;object-fit:contain}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:hover,.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:focus-visible{outline:2px solid #437ddd;outline-offset:2px}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:active{cursor:grabbing}\n.p2lrn-lesson-image-editor .surface img,.p2lrn-lesson-image-editor .studio-wysiwyg img{height:auto}";
+const STYLES=".p2lrn-lesson-image-editor{display:grid;gap:8px;min-width:0;max-width:100%}\n.p2lrn-lesson-image-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-height:34px}\n.p2lrn-lesson-image-toolbar button{min-height:32px;padding:6px 10px;border:1px solid #cfd8e4;border-radius:7px;background:#fff;color:#172033;font:600 12px/1.2 system-ui,sans-serif;cursor:pointer}\n.p2lrn-lesson-image-toolbar button:hover:not(:disabled){background:#eef3f9}\n.p2lrn-lesson-image-toolbar button:disabled{opacity:.45;cursor:default}\n.p2lrn-lesson-image-toolbar span{color:#64748b;font:11px/1.35 system-ui,sans-serif}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]{cursor:grab;touch-action:none;user-select:none;object-fit:contain}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:hover,.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:focus-visible{outline:2px solid #437ddd;outline-offset:2px}\n.p2lrn-lesson-image-editor [data-p2lrn-lesson-image]:active{cursor:grabbing}\n.p2lrn-lesson-image-editor .surface img,.p2lrn-lesson-image-editor .studio-wysiwyg img{height:auto}\n.p2lrn-lesson-image-editor video[data-p2lrn-lesson-video]{object-fit:contain;max-width:100%;background:#111827;border-radius:7px}\n.p2lrn-lesson-image-editor video[data-p2lrn-lesson-video]:focus-visible{outline:2px solid #437ddd;outline-offset:2px}";
 
 export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:reportStatus=()=>{}}){
   const onStatus=(message)=>reportStatus(studioUiText(message,surface?.ownerDocument));
@@ -77,26 +111,31 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   const wrapper=doc.createElement('div');wrapper.className='p2lrn-lesson-image-editor';
   const style=doc.createElement('style');style.textContent=STYLES;
   const toolbar=doc.createElement('div');toolbar.className='p2lrn-lesson-image-toolbar';
-  toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label',studioUiText('Imágenes de la lección',doc));
+  toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label',studioUiText('Imágenes y vídeos de la lección',doc));
   const button=(text,attr)=>{
     const b=doc.createElement('button');b.type='button';b.textContent=studioUiText(text,doc);b.setAttribute(attr,'');
     toolbar.append(b);return b;
   };
   const add=button('Insertar imagen','data-insert-lesson-image');
+  const addVideo=button('Insertar vídeo','data-insert-lesson-video');
   const smaller=button('− Tamaño','data-lesson-image-smaller');
   const bigger=button('+ Tamaño','data-lesson-image-bigger');
-  const remove=button('Eliminar imagen','data-lesson-image-remove');
-  const hint=doc.createElement('span');hint.textContent=studioUiText('Arrastra o cambia el tamaño de las imágenes: el texto se recoloca automáticamente.',doc);
+  const remove=button('Eliminar recurso','data-lesson-image-remove');
+  const cover=button('Portada del vídeo','data-lesson-video-poster');
+  const hint=doc.createElement('span');hint.textContent=studioUiText('Arrastra las imágenes o usa Alt + arrastrar en los vídeos. Ajusta su tamaño sin tapar el texto.',doc);
   toolbar.append(hint);
   const picker=doc.createElement('input');picker.type='file';picker.multiple=true;
   picker.accept='image/png,image/jpeg,image/gif,image/webp,image/avif';
   picker.hidden=true;picker.setAttribute('data-lesson-image-file','');
-  wrapper.append(style,toolbar,picker,surface);host.append(wrapper);
+  const videoPicker=doc.createElement('input');videoPicker.type='file';videoPicker.multiple=true;
+  videoPicker.accept='video/mp4,video/webm,.mp4,.webm';videoPicker.hidden=true;videoPicker.setAttribute('data-lesson-video-file','');
+  const coverPicker=doc.createElement('input');coverPicker.type='file';coverPicker.accept=picker.accept;coverPicker.hidden=true;
+  wrapper.append(style,toolbar,picker,videoPicker,coverPicker,surface);host.append(wrapper);
   let selected=null,drag=null;
 
   const currentCanvas=()=>surface.querySelector(':scope > [data-p2lrn-lesson-canvas]');
-  const refresh=()=>{for(const b of [smaller,bigger,remove])b.disabled=!selected||!surface.contains(selected);};
-  const hydratedImages=new WeakSet();
+  const refresh=()=>{for(const b of [smaller,bigger,remove])b.disabled=!selected||!surface.contains(selected);cover.disabled=!selected?.matches?.(VIDEO);};
+  const hydratedMedia=new WeakSet();
   function imagePosition(img){
     const rawX=img.dataset.p2lrnImageX;
     const rawY=img.dataset.p2lrnImageY;
@@ -114,7 +153,7 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     // Old absolute-position canvases forced unused space below short texts.
     box.style.minHeight='0px';
     const canvasWidth=Math.max(1,box.clientWidth||box.getBoundingClientRect().width);
-    const images=[...box.children].filter(node=>node.matches?.(IMAGE))
+    const images=[...box.children].filter(node=>node.matches?.(MEDIA))
       .sort((a,b)=>imagePosition(a).y-imagePosition(b).y);
     // Floats must precede the text in DOM order to affect all of its lines.
     for(let index=0;index<images.length;index++){
@@ -123,16 +162,16 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     }
     let previousBottom=0;
     for(const img of images){
-      if(!hydratedImages.has(img)){
-        hydratedImages.add(img);
-        img.addEventListener('load',()=>{if(box.isConnected)reflow(box);});
+      if(!hydratedMedia.has(img)){
+        hydratedMedia.add(img);
+        img.addEventListener(img.matches(VIDEO)?'loadedmetadata':'load',()=>{if(box.isConnected)reflow(box);});
       }
       const {x,y}=imagePosition(img);
       img.dataset.p2lrnImageX=x.toFixed(3);
       img.dataset.p2lrnImageY=String(Math.round(y));
       const requestedWidth=clamp(parseFloat(img.style.width)||280,80,800);
-      const measuredRatio=img.naturalWidth>0&&img.naturalHeight>0
-        ?img.naturalWidth/img.naturalHeight
+      const measuredRatio=(img.matches(VIDEO)?img.videoWidth:img.naturalWidth)>0&&(img.matches(VIDEO)?img.videoHeight:img.naturalHeight)>0
+        ?(img.matches(VIDEO)?img.videoWidth:img.naturalWidth)/(img.matches(VIDEO)?img.videoHeight:img.naturalHeight)
         :(parseFloat(img.dataset.p2lrnImageRatio)||1.5);
       const ratio=Math.max(.05,Math.min(20,measuredRatio));
       img.dataset.p2lrnImageRatio=String(ratio);
@@ -175,9 +214,9 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     const data=await lessonImageData(file);
     const box=ensureCanvas();
     const rect=box.getBoundingClientRect();
-    const nonImages=[...box.children].filter(child=>child.nodeType===1&&!child.matches(IMAGE));
+    const nonImages=[...box.children].filter(child=>child.nodeType===1&&!child.matches(MEDIA));
     const textBottom=nonImages.reduce((max,item)=>Math.max(max,item.getBoundingClientRect().bottom-rect.top),0);
-    const lastBottom=[...box.querySelectorAll(IMAGE)].reduce((max,item)=>Math.max(max,imagePosition(item).y+(item.getBoundingClientRect().height||220)),0);
+    const lastBottom=[...box.querySelectorAll(MEDIA)].reduce((max,item)=>Math.max(max,imagePosition(item).y+(item.getBoundingClientRect().height||220)),0);
     const top=point?point.y:Math.max(24,textBottom,lastBottom)+16;
     const img=doc.createElement('img');
     img.dataset.p2lrnLessonImage='1';img.alt=data.alt;img.src=data.src;
@@ -190,11 +229,42 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     onStatus('Imagen incrustada en la lección. Puedes moverla arrastrando.');
     return img;
   }
+
+  async function insertVideo(file,point=null){
+    const data=await lessonVideoData(file);
+    const box=ensureCanvas();
+    const rect=box.getBoundingClientRect();
+    const content=[...box.children].filter(child=>child.nodeType===1&&!child.matches(MEDIA));
+    const textBottom=content.reduce((max,item)=>Math.max(max,item.getBoundingClientRect().bottom-rect.top),0);
+    const lastBottom=[...box.querySelectorAll(MEDIA)].reduce((max,item)=>Math.max(max,imagePosition(item).y+(item.getBoundingClientRect().height||220)),0);
+    const top=point?point.y:Math.max(24,textBottom,lastBottom)+16;
+    const video=doc.createElement('video');
+    video.dataset.p2lrnLessonVideo='1';video.src=data.src;
+    video.controls=true;video.preload='metadata';video.playsInline=true;
+    video.dataset.p2lrnImageRatio=String(16/9);
+    video.setAttribute('contenteditable','false');video.setAttribute('draggable','false');
+    video.tabIndex=0;video.title='Selecciona para cambiar el tamaño. Alt + arrastrar para mover.';
+    video.setAttribute('aria-label',data.label);
+    video.style.cssText='position:relative;float:left;clear:both;width:420px;max-width:calc(100% - 12px);height:auto;aspect-ratio:16 / 9;';
+    box.prepend(video);place(video,box,point?point.x:0,top);
+    video.addEventListener('loadedmetadata',()=>{if(box.isConnected){reflow(box);changed();}},{once:true});
+    choose(video);changed();
+    onStatus('Vídeo MP4/WebM incrustado para reproducción sin conexión.');
+    return video;
+  }
+
   async function addFiles(files,point=null){
-    for(const file of files)try{await insertImage(file,point);}
+    for(const file of files)try{
+      if(file.type.startsWith('video/')||/\.(?:mp4|webm)$/i.test(file.name||''))await insertVideo(file,point);
+      else await insertImage(file,point);
+    }
     catch(error){onStatus(String(error?.message||error));}
   }
   add.addEventListener('click',()=>picker.click());
+  addVideo.addEventListener('click',()=>videoPicker.click());
+  videoPicker.addEventListener('change',()=>{const files=[...videoPicker.files||[]];videoPicker.value='';void addFiles(files);});
+  cover.addEventListener('click',()=>{if(selected?.matches?.(VIDEO))coverPicker.click();});
+  coverPicker.addEventListener('change',async()=>{const file=coverPicker.files?.[0];coverPicker.value='';if(!file||!selected?.matches?.(VIDEO))return;try{const data=await lessonImageData(file);selected.poster=data.src;changed();onStatus('Portada del vídeo guardada.');}catch(error){onStatus(String(error?.message||error));}});
   picker.addEventListener('change',()=>{const files=[...picker.files||[]];picker.value='';void addFiles(files);});
   surface.addEventListener('paste',event=>{
     const files=[...event.clipboardData?.items||[]].filter(item=>item.kind==='file'&&item.type.startsWith('image/'))
@@ -221,9 +291,12 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   const deleteImage=()=>{if(!selected)return;selected.remove();selected=null;refresh();changed();onStatus('Imagen eliminada de la lección.');};
   remove.addEventListener('click',deleteImage);
   surface.addEventListener('pointerdown',event=>{
-    const img=event.target?.closest?.(IMAGE);
+    const img=event.target?.closest?.(MEDIA);
     if(!img||!surface.contains(img))return;
-    event.preventDefault();choose(img);
+    choose(img);
+    // Native video controls must remain clickable; hold Alt to reposition a video.
+    if(img.matches(VIDEO)&&!event.altKey)return;
+    event.preventDefault();
     const rect=img.getBoundingClientRect();
     drag={img,box:currentCanvas(),x:event.clientX-rect.left,y:event.clientY-rect.top,moved:false};
     try{surface.setPointerCapture(event.pointerId);}catch{}
@@ -268,5 +341,5 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     observer.observe(surface);
   }
   refresh();
-  return {openPicker:()=>picker.click(),insertImage,element:wrapper};
+  return {openPicker:()=>picker.click(),openVideoPicker:()=>videoPicker.click(),insertImage,insertVideo,element:wrapper};
 }

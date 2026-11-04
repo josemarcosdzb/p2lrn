@@ -172,3 +172,7 @@ Las entregas offline creadas desde Studio generan un fichero `.p2lrn-result` al 
 El código se conserva en `result.identity` como `{mode:'code', issuer, code, label}`. **No es una prueba de identidad**: un alumno podría introducir el código de otro. Cuando el curso se reproduce en una plataforma con usuario autenticado, `@p2lrn/player` ofrece el modo `{mode:'platform',issuer,subjectId,label}`, proporcionado por el host autorizado.
 
 La ruta `src` de `@p2lrn/analytics` debe apuntar al archivo **`.p2lrn-result`**, no al curso `.p2lrn`. Para varios estudiantes puede utilizarse un índice estático `index.p2lrn-results.json` o seleccionar varios archivos locales desde el panel. Studio no necesita instalar una base de datos para estas entregas ni convierte resultados a un formato propietario.
+
+## Imágenes y vídeos en lecciones
+
+El editor visual permite insertar imágenes y vídeos MP4/WebM desde el equipo. Los vídeos tienen controles de reproducción, tamaño ajustable, posición editable (Alt + arrastrar o flechas con el vídeo seleccionado) y portada opcional mediante «Portada del vídeo». Se guardan dentro del HTML de la lección en el `.p2lrn` y Player puede reproducirlos sin conexión. Límite de 32 MB por vídeo (8 MB por imagen); se valida la cabecera real, no solo la extensión. La disponibilidad de los códecs depende del navegador.

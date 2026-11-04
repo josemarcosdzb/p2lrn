@@ -111,6 +111,41 @@ async function browserScenario(){
   host.style.width='350px';
   await new Promise(resolve=>setTimeout(resolve,220));
   const mobile=measure();
+  // Record a real WebM in Chrome, embed it via the Studio editor and play it offline.
+  const videoCanvas=document.createElement('canvas');videoCanvas.width=160;videoCanvas.height=90;
+  const ctx=videoCanvas.getContext('2d');ctx.fillStyle='#4f46e5';ctx.fillRect(0,0,160,90);
+  const stream=videoCanvas.captureStream(12);
+  const recorder=new MediaRecorder(stream,{mimeType:'video/webm'});
+  const chunks=[];recorder.ondataavailable=event=>{if(event.data?.size)chunks.push(event.data);};
+  const stopped=new Promise(resolve=>recorder.onstop=resolve);
+  let frameNo=0;const timer=setInterval(()=>{ctx.fillStyle=frameNo++%2?'#4f46e5':'#059669';ctx.fillRect(0,0,160,90);},45);
+  recorder.start();await new Promise(resolve=>setTimeout(resolve,1250));recorder.stop();await stopped;clearInterval(timer);
+  stream.getTracks().forEach(track=>track.stop());
+  const realWebm=new Blob(chunks,{type:'video/webm'});
+  if(realWebm.size<12)throw new Error('Chrome did not record playable WebM.');
+  const video=await editor.insertVideo(new File([realWebm],'leccion.webm',{type:'video/webm'}),{x:25,y:720});
+  video.muted=true;
+  await new Promise((resolve,reject)=>{
+    if(video.readyState>=1)return resolve();
+    const t=setTimeout(()=>reject(new Error('Embedded video metadata failed to load')),8000);
+    video.addEventListener('loadedmetadata',()=>{clearTimeout(t);resolve();},{once:true});
+    video.addEventListener('error',()=>{clearTimeout(t);reject(new Error('Embedded video media error: '+video.error?.code+' / '+video.error?.message+' bytes '+realWebm.size+' type '+realWebm.type+' canPlay '+video.canPlayType('video/webm')));},{once:true});
+  });
+  const originalVideoWidth=parseFloat(video.style.width);
+  host.querySelector('[data-lesson-image-bigger]').click();
+  const resizedVideo=parseFloat(video.style.width)>originalVideoWidth;
+  const videoPosition=video.dataset.p2lrnImageX;
+  const videoRatio=video.dataset.p2lrnImageRatio;
+  await video.play();await new Promise(resolve=>setTimeout(resolve,200));
+  const playbackWorks=video.currentTime>0&&!video.paused;
+  video.pause();video.muted=false;
+  const poster=await imageModule.lessonImageData(file);
+  video.poster=poster.src;
+  const videoDetails={bytes:realWebm.size,controls:video.controls,playbackWorks,resizedVideo,
+    positioned:videoPosition!==undefined,ratio:Number(videoRatio)>0,poster:video.poster.startsWith('data:image/png;base64,'),
+    src:video.getAttribute('src').startsWith('data:video/webm;base64,'),
+    contentPreserved:surface.textContent.includes('Primera lecci'),
+    selectedOnClick:!!host.querySelector('[data-lesson-video-poster]')&&!host.querySelector('[data-lesson-video-poster]').disabled};
   const html=surface.innerHTML;
 
   // Old exported HTML is migrated in place, preserving its text and embedded data.
@@ -139,7 +174,7 @@ async function browserScenario(){
       !html.includes('position: absolute'),
     portableImage:html.includes('data:image/png;base64,'),
     retainedText:html.includes('Primera lección'),
-    legacy:legacyResult,
+    legacy:legacyResult,video:videoDetails,portableVideo:html.includes('data:video/webm;base64,')&&html.includes('data-p2lrn-lesson-video'),
   };
 }
 
@@ -230,6 +265,9 @@ try{
   assert(result.legacy.float==='left'||result.legacy.float==='right');
   assert.equal(result.legacy.y,'120');
   assert(result.legacy.hasOldText&&result.legacy.persisted,'Legacy image migration lost or failed to save content.');
+  assert(result.portableVideo,'Video is not included in portable HTML.');
+  for(const [key,value] of Object.entries(result.video))if(key!=='bytes')assert(value,'Video browser check failed: '+key);
+  assert(result.video.bytes>12,'WebM recording was empty.');
   console.log('P2LRN lesson image flow E2E PASS');
 }finally{
   try{ws?.close();}catch{}
