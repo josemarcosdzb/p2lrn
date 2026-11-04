@@ -1,3 +1,4 @@
+import {englishRouteFor} from './site-routes.mjs';
 /**
  * Shared public website footer. Spanish is the canonical source language and
  * English pages are published under /en/ with the same route structure.
@@ -5,8 +6,8 @@
 const ES_GROUPS=Object.freeze([
   {label:'Crear y explorar',links:[
     ['/crear-cursos-interactivos/','Crear cursos interactivos'],
-    ['/juegos-educativos-3d/','Juegos educativos 3D'],
-    ['/cursos-offline/','Cursos sin LMS'],
+    ['/juegos-educativos-3d/','Juegos educativos 2D y 3D'],
+    ['/cursos-offline/','Cursos offline'],
     ['/demo/','Player y visor'],
   ]},
   {label:'Documentación',links:[
@@ -27,7 +28,7 @@ const EN_GROUPS=Object.freeze([
   {label:'Create and explore',links:[
     ['/crear-cursos-interactivos/','Create interactive courses'],
     ['/juegos-educativos-3d/','3D educational games'],
-    ['/cursos-offline/','Courses without an LMS'],
+    ['/cursos-offline/','Offline courses'],
     ['/demo/','Player and viewer'],
   ]},
   {label:'Documentation',links:[
@@ -66,8 +67,8 @@ export const SITE_FOOTER_LEGAL_LINKS=ES_LEGAL;
 
 const localHref=(href,locale)=>{
   if(locale!=='en'||!href.startsWith('/'))return href;
-  if(href==='/')return '/en/';
-  return '/en'+href;
+  const base=href.split(/[?#]/,1)[0];
+  return englishRouteFor(base)+href.slice(base.length);
 };
 const localizedGroups=(locale)=>(locale==='en'?EN_GROUPS:ES_GROUPS).map(group=>({
   label:group.label,
