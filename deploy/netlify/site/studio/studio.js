@@ -683,6 +683,7 @@ async function exportPackage(){
   exportedRevision=studio.changeCount;
   updateChanges();
   setStatus('Paquete exportado y verificado');
+  globalThis.P2LRNRecordConversion?.('studio_package_exported');
 }
 
 function hideAddHelp(){
@@ -822,6 +823,8 @@ async function initializeStudioWorkspace(){
   }finally{
     guarded.forEach((button)=>{if(button)button.disabled=false;});
     document.documentElement.dataset.p2lrnStudioReady='true';
+    if(studio&&toolbar&&!toolbar.hidden&&workspace&&!workspace.hidden)
+      globalThis.P2LRNRecordConversion?.('studio_editor_ready');
   }
 }
 void initializeStudioWorkspace();
