@@ -79,7 +79,7 @@ let exportedRevision=0;
 
 const titleOf=(entity)=>studio?.title(entity.id)??entity.id;
 const setStatus=(value)=>{status.textContent=studioUiText(value);};
-const hasUnsavedChanges=()=>Boolean(studio&&studio.changeCount>savedRevision&&studio.changeCount>exportedRevision);
+const hasUnsavedChanges=()=>Boolean(studio&&studio.changeCount>savedRevision&&studio.changeCount>exportedRevision&&!(studio.createdFromScratch&&studio.changeCount===1));
 const updateChanges=()=>{
   if(!studio){
     changeCount.textContent=studioUiText("No changes");
@@ -87,10 +87,12 @@ const updateChanges=()=>{
     if(unsavedWarning)unsavedWarning.hidden=true;
     return;
   }
-  changeCount.textContent=studioUiText(studio.changeCount?`${studio.changeCount} cambio${studio.changeCount===1?'':'s'}`:"No changes");
+  const actualChanges=Math.max(0,studio.changeCount-(studio.createdFromScratch?1:0));
+  changeCount.textContent=studioUiText(actualChanges?`${actualChanges} cambio${actualChanges===1?'':'s'}`:"No changes");
   const unsaved=hasUnsavedChanges();
   if(saveState){
     if(unsaved)saveState.textContent=studioUiText("Not saved");
+    else if(studio.createdFromScratch&&studio.changeCount===1)saveState.textContent=studioUiText("New course — not saved");
     else if(studio.changeCount&&exportedRevision>=studio.changeCount)saveState.textContent=studioUiText("Exported");
     else if(studio.changeCount&&savedRevision>=studio.changeCount)saveState.textContent=studioUiText("Saved in this browser");
     else saveState.textContent=studioUiText("No changes");
