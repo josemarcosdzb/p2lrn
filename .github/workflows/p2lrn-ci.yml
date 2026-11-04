@@ -120,6 +120,8 @@ jobs:
           }
       - name: Verify Studio upload and path security tests
         run: node --test packages/toolkit/test/studio-server-save.test.mjs
+      - name: Verify fail-closed Studio adapters in every framework template
+        run: node --test packages/studio/test/multiframework-security.test.mjs
       - name: Verify audited documentation and production site
         shell: powershell
         run: |
