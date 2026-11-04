@@ -23,7 +23,7 @@ import {rangeIntegrityPointer, validateRangeIntegrityIndex, RANGE_INTEGRITY_MEDI
 import {createStaticResourceBridge, installP2LRNServiceWorker} from './static-resource-bridge.js';
 import {representationPayload} from './package-member.js';
 import {configureRuntimeHost, getRuntimeHostConfig} from './runtime-host-config.js';
-import {canonicalIdentifier, canonicalizeIdentifiers, identifierIs} from './identifiers.js';
+import {canonicalIdentifier, canonicalizeIdentifiers, identifierIs, parseP2LRNUntrustedJson} from './identifiers.js';
 import {PROGRESSION_PROFILE, createProgressionModel, normalizeProgressionState, progressionContext, progressionEnabled, progressionRule, updateProgressionState, validateProgressionGraph} from './progression-core.js';
 
 export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.12';
@@ -70,8 +70,8 @@ function decodeJson(bytes, label) {
   let text;
   try { text = textDecoder.decode(bytes); }
   catch { throw new Error(`${label} is not valid UTF-8.`); }
-  try { return JSON.parse(text); }
-  catch (error) { throw new Error(`${label} is not valid JSON: ${error.message}`); }
+  try { return parseP2LRNUntrustedJson(text); }
+  catch (error) { throw new Error(`${label} is not valid or contains unsafe JSON keys: ${error.message}`); }
 }
 
 function canonicalize(value) {
