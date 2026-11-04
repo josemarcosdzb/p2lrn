@@ -143,3 +143,7 @@ Relative paths passed to `workspace.reader()` are resolved from the workspace ro
 This first-party package is distributed under **P2LRN Non-Commercial Source License 1.0 (P2LRN-NCSL 1.0)**.
 
 Commercial use is not granted. See [LICENSE](./LICENSE) for the complete terms and [NOTICE.md](./NOTICE.md) for scope and third-party exceptions.
+
+### Extracción segura de archivos en un servidor Node
+
+Use `unpackP2LRNArchive(path, outputDirectory)` desde `@p2lrn/toolkit/core` (en una versión que incluya la API) cuando necesite extraer un paquete. Exige un directorio de destino **nuevo**, crea una zona temporal privada, valida rutas, entradas y límites de descompresión y evita sobrescrituras; no extraiga con rutas construidas directamente desde nombres ZIP. El directorio padre debe ser confiable. Ejemplo e implicaciones de seguridad: [Integración segura de Host](../../docs/integration/INTEGRACION-SEGURA-HOST.md).
