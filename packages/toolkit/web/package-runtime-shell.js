@@ -4,6 +4,7 @@ const CMI5_PROTOCOL = 'p2lrn-cmi5-preview/1';
 const stage = document.getElementById('stage');
 const files = new Map();
 const urls = new Map();
+let inlineScriptId=0;
 let channel = null;
 let channelSend = null;
 let active = false;
@@ -284,14 +285,21 @@ async function navigate(path, suffix = '') {
     document.body.replaceChildren(...[...parsed.body.childNodes].map(node => document.importNode(node, true)));
     wireDocument(document, normalized);
     for (const old of [...document.querySelectorAll('script')]) {
-      // Scripts inserted through DOMParser are inert; activate them in document order.
+      // DOMParser scripts are inert. An opaque srcdoc frame inherits the
+      // embedding document's CSP, which may prohibit inline JavaScript.
       const script = document.createElement('script');
       for (const attr of [...old.attributes]) script.setAttribute(attr.name, attr.value);
-      script.textContent = old.textContent;
+      const type=String(old.getAttribute('type')??'').trim().toLowerCase();
+      if (!old.hasAttribute('src') &&
+          (!type || ['module','text/javascript','application/javascript','text/ecmascript','application/ecmascript'].includes(type))) {
+        const scriptUrl=URL.createObjectURL(new Blob([old.textContent??''],{type:'text/javascript'}));
+        urls.set('p2lrn-inline-'+(++inlineScriptId),scriptUrl);
+        script.setAttribute('src',scriptUrl);
+      } else if (!old.hasAttribute('src')) script.textContent = old.textContent;
       const waits = script.hasAttribute('src') && !script.hasAttribute('async');
       const loaded = waits ? new Promise((resolve, reject) => {
         script.addEventListener('load', resolve, {once:true});
-        script.addEventListener('error', () => reject(new Error('Package script failed: ' + old.getAttribute('src'))), {once:true});
+        script.addEventListener('error', () => reject(new Error('Package script failed: ' + (old.getAttribute('src')??'inline script'))), {once:true});
       }) : null;
       old.replaceWith(script);
       if (loaded) await loaded;
