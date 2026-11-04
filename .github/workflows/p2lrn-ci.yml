@@ -427,6 +427,12 @@ jobs:
       - name: Verify runtime host security
         run: node --test packages/player/test/runtime-security.test.mjs
 
+      - name: Verify JWT-backed collaboration and host-issued result receipts
+        run: node --test packages/player/test/host-jwt-auth.test.mjs packages/player/test/trusted-result-receipt.test.mjs
+
+      - name: Verify secure Node integration example syntax
+        run: node --check examples/integration/secure-host-node.mjs
+
       - name: Verify bundled runtime URL contract
         run: node --test --test-name-pattern="automatic runtime default is URL-resolved" packages/player/test/distribution.test.mjs
 
