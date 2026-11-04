@@ -83,7 +83,7 @@ El resultado se convierte en un dataset de Analytics con alumno, curso, intento,
 
 ## Frontera de confianza
 
-El paquete no guarda identidades ni historial del alumno dentro de \`.p2lrn\`. Analytics recibe archivos de resultados verificados. Un Host también puede entregar un dataset de métricas en una integración avanzada. Una nota sólo se trata como oficial cuando \`grades[].authoritative === true\`. Los scores de navegador, progreso, actividad e intentos se muestran como evidencia separada.
+El paquete no guarda identidades ni historial del alumno dentro de `.p2lrn`. Analytics recibe archivos de resultados verificados. Un Host también puede entregar un dataset de métricas en una integración avanzada. Una nota sólo se trata como oficial cuando `grades[].authoritative === true`. Los scores de navegador, progreso, actividad e intentos se muestran como evidencia separada.
 
 Las señales de seguimiento son reglas transparentes de inactividad, progreso, nota e intentos; no son un modelo predictivo opaco.
 
@@ -137,12 +137,12 @@ Consultar spec/RESULTS-ANALYTICS.md.
 
 ## Dataset privado desde un servidor autenticado (contrato seguro opcional)
 
-El paquete de desarrollo incorpora \`@p2lrn/analytics/server\`, cuya versión alineada
+El paquete de desarrollo incorpora `@p2lrn/analytics/server`, cuya versión alineada
 todavía **no está publicada como conjunto completo en npm**. Para proteger datos
 de alumnos en producción, el componente visual no autentica usuarios: el **Host**
 debe proteger la API antes de enviar cualquier dataset.
 
-\`\`\`js
+```js
 import {createP2LRNAnalyticsDatasetHandler} from '@p2lrn/analytics/server';
 
 // authenticate: valida la sesión del propio servidor (no una cabecera libre).
@@ -157,22 +157,22 @@ const handler=createP2LRNAnalyticsDatasetHandler({
     loadAuthorizedAnalyticsDataset(principal,tenantId,courseId),
 });
 server.on('request',(request,response)=>{void handler(request,response)});
-\`\`\`
+```
 
-El callback \`authorize\` devuelve un **grant calculado por el Host**, por ejemplo
-\`{role:'learner',learnerId:'student-123'}\` para un alumno,
-\`{role:'teacher',allowedLearnerIds:['student-123']}\` para un docente,
-o \`{role:'admin',tenantId:'tenant-1'}\` para un administrador del centro. No se
+El callback `authorize` devuelve un **grant calculado por el Host**, por ejemplo
+`{role:'learner',learnerId:'student-123'}` para un alumno,
+`{role:'teacher',allowedLearnerIds:['student-123']}` para un docente,
+o `{role:'admin',tenantId:'tenant-1'}` para un administrador del centro. No se
 aceptan roles ni identidades enviados como parámetros del navegador. La capa
 vuelve a filtrar cursos y alumnos en cada fila incluso si el callback de datos
 devolviera más filas de las previstas.
 
-Las respuestas usan \`Cache-Control: private, no-store\`, limitación de tamaño,
-lista explícita de orígenes permitidos (nunca \`*\`), máscara de emails por
-defecto y eliminación de \`metadata\`, \`payload\` y \`context\` potencialmente
-sensibles. El indicador \`authoritative\` se mantiene en \`false\` salvo
+Las respuestas usan `Cache-Control: private, no-store`, limitación de tamaño,
+lista explícita de orígenes permitidos (nunca `*`), máscara de emails por
+defecto y eliminación de `metadata`, `payload` y `context` potencialmente
+sensibles. El indicador `authoritative` se mantiene en `false` salvo
 autorización explícita del Host: nunca se obtiene una nota oficial por
-autodeclararla dentro de un \`.p2lrn-result\`.
+autodeclararla dentro de un `.p2lrn-result`.
 
 **El callback del Host es obligatorio:** este adaptador no implementa usuarios
 de una institución, login, certificados, claves de firma, bases de datos,
