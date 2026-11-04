@@ -1,24 +1,20 @@
 <?php
-function p2lrn_bridge($action,$fallback,$contentType=''){
-  $project=dirname(__DIR__,4);
-  $raw=$_SERVER['HTTP_X_P2LRN_FILENAME']??$fallback;
-  $name=rawurldecode($raw);
-  $bridge=$project.DIRECTORY_SEPARATOR.'p2lrn-setup'.DIRECTORY_SEPARATOR.'p2lrn-studio-bridge.mjs';
-  $spec=[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']];
-  $process=proc_open(['node',$bridge,$action,$name,$contentType],$spec,$pipes,$project);
-  if(!is_resource($process))throw new RuntimeException('Unable to start P2LRN Studio bridge');
-  fwrite($pipes[0],file_get_contents('php://input')); fclose($pipes[0]);
-  $out=stream_get_contents($pipes[1]); fclose($pipes[1]);
-  $err=stream_get_contents($pipes[2]); fclose($pipes[2]);
-  $code=proc_close($process);
-  if($code!==0)throw new RuntimeException(trim($err)?:'P2LRN Studio import failed');
-  return $out;
-}
-if($_SERVER['REQUEST_METHOD']!=='POST'){http_response_code(405);header('Allow: POST');exit;}
+if(($_SERVER['REQUEST_METHOD']??'')!=='POST'){http_response_code(405);header('Allow: POST');exit;}
+$project=dirname(__DIR__,4);
+$auth=$project.DIRECTORY_SEPARATOR.'p2lrn-setup'.DIRECTORY_SEPARATOR.'studio-auth.php';
+if(!is_file($auth)){http_response_code(503);exit;}
+require_once $auth;
+p2lrn_studio_require_authorization('import','__COURSE_PATH__');
+require_once $project.DIRECTORY_SEPARATOR.'p2lrn-setup'.DIRECTORY_SEPARATOR.'studio-php-bridge.php';
+header('Cache-Control: no-store');
+header('X-Content-Type-Options: nosniff');
 try{
-  $out=p2lrn_bridge('import','package.zip',$_SERVER['CONTENT_TYPE']??'application/zip');
-  header('Content-Type: application/vnd.p2lrn+zip'); echo $out;
+    $out=p2lrn_studio_bridge('import','package.zip',512*1024*1024);
+    header('Content-Type: application/vnd.p2lrn+zip');
+    echo $out;
 }catch(Throwable $error){
-  http_response_code(422);header('Content-Type: application/json; charset=utf-8');
-  echo json_encode(['ok'=>false,'error'=>$error->getMessage()]);
+    $status=(int)$error->getCode()===413?413:((int)$error->getCode()===400?400:422);
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok'=>false,'error'=>$status===413?'UPLOAD_TOO_LARGE':($status===400?'INVALID_FILENAME':'IMPORT_FAILED')]);
 }

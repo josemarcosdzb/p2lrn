@@ -1,10 +1,24 @@
-import {saveP2LRNStudioPackage,readP2LRNStudioDocument,convertP2LRNStudioExternalPackage} from '@p2lrn/studio/server';
+import {
+  handleP2LRNStudioSave,handleP2LRNStudioReader,
+  handleP2LRNStudioExternalImport,authorizeP2LRNStudioRequest,
+} from '@p2lrn/studio/server';
 
-const name=(c,fallback)=>{const value=c.req.header('x-p2lrn-filename')||fallback;try{return decodeURIComponent(value)}catch{return value}};
-const bytes=async(c)=>new Uint8Array(await c.req.arrayBuffer());
-
-export function installP2LRNStudio(app){
-  app.post('__ENDPOINT__',async(c)=>c.json(await saveP2LRNStudioPackage(await bytes(c),{coursePath:'__COURSE_PATH__',filename:name(c,'course.p2lrn')})));
-  app.post('__READER_ENDPOINT__',async(c)=>c.json(await readP2LRNStudioDocument(await bytes(c),{filename:name(c,'document.bin'),mediaType:c.req.header('content-type')})));
-  app.post('__IMPORT_ENDPOINT__',async(c)=>{const result=await convertP2LRNStudioExternalPackage(await bytes(c),{filename:name(c,'package.zip')});return new Response(result.bytes,{headers:{'content-type':'application/vnd.p2lrn+zip'}})});
+// Hono Fetch Requests use the shared bounded Upload handlers. Reading
+// c.req.arrayBuffer() directly allowed unbounded allocations.
+export function installP2LRNStudio(app,{authenticate,authorize,checkCsrf}={}){
+  if([authenticate,authorize,checkCsrf].some(fn=>typeof fn!=='function'))
+    throw new TypeError('Studio Host must configure authenticate, authorize and checkCsrf.');
+  const guard=(operation,handler,options)=>async(c)=>{
+    const request=c.req.raw;
+    const denied=await authorizeP2LRNStudioRequest(request,{
+      operation,coursePath:'__COURSE_PATH__',authenticate,authorize,checkCsrf,
+    });
+    if(denied)return denied;
+    return handler(request,options);
+  };
+  app.post('__ENDPOINT__',guard('save',handleP2LRNStudioSave,{
+    coursePath:'__COURSE_PATH__',allowClientPath:false,
+  }));
+  app.post('__READER_ENDPOINT__',guard('read',handleP2LRNStudioReader));
+  app.post('__IMPORT_ENDPOINT__',guard('import',handleP2LRNStudioExternalImport));
 }

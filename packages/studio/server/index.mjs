@@ -85,6 +85,30 @@ export async function saveP2LRNStudioPackage(bytes,{root=process.cwd(),coursePat
   return {ok:true,path:target.file,coursePath:safeSegment(coursePath||'course','course path'),filename:safeFilename(filename),bytes:body.byteLength};
 }
 
+
+// Fail-closed Host authorization for generated Fetch-compatible routes.
+// Frameworks must supply their own session identity, per-course permission,
+// and CSRF/origin decision. The helper intentionally never reads request.body.
+export async function authorizeP2LRNStudioRequest(request,{
+  operation,coursePath='course',authenticate,authorize,checkCsrf,
+}={}){
+  if(!['save','read','import'].includes(operation))
+    throw new TypeError('Invalid Studio operation.');
+  const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
+  const reject=(status,error)=>Response.json({ok:false,error},{status,headers});
+  if(request?.method!=='POST')return reject(405,'METHOD_NOT_ALLOWED');
+  if([authenticate,authorize,checkCsrf].some(fn=>typeof fn!=='function'))
+    return reject(503,'HOST_AUTHORIZATION_NOT_CONFIGURED');
+  try{
+    const principal=await authenticate(request);
+    if(!principal)return reject(401,'AUTHENTICATION_REQUIRED');
+    const ctx=Object.freeze({principal,operation,coursePath,request});
+    if((await authorize(ctx))!==true)return reject(403,'COURSE_ACCESS_DENIED');
+    if((await checkCsrf(request,principal))!==true)return reject(403,'CSRF_DENIED');
+    return null;
+  }catch{return reject(403,'AUTHORIZATION_FAILED');}
+}
+
 export async function handleP2LRNStudioSave(request,{root=process.cwd(),coursePath='course',allowClientPath=false,maxBytes=DEFAULT_MAX_BYTES}={}){
   if(request.method!=='POST')return new Response('Method Not Allowed',{status:405,headers:{Allow:'POST'}});
   const upload=await readUpload(request,maxBytes,'Package');
