@@ -70,7 +70,7 @@ Las referencias `app`, `peticionAutenticada` y `./mi-lms/servicios.mjs` correspo
 
 ### Contratos que debe proporcionar el LMS
 
-`repository.findEnrollment({actor, packageId, contentRoot, entityId})` busca el recurso en la base de datos y devuelve el tenant, curso, grupo y recurso autorizados. Los identificadores del navegador son **claves de búsqueda, no pruebas de autorización**.
+`repository.findEnrollment({actor, packageId, contentRoot, entityId})` busca el recurso en la base de datos y devuelve **exactamente** `packageId`, `entityId`, `contentRoot`, `tenantId`, `courseId` y `groupId` autorizados. Los identificadores del navegador son **claves de búsqueda, no pruebas de autorización**; la plantilla exige coincidencia exacta con la matrícula obtenida del servidor.
 
 `repository.canUseRoom({actor, operation, context, room})` decide permisos por operación. El `collaborationService` comprueba además que cada `sessionId` pertenece al actor y al curso/sala del servidor, nunca solo al identificador enviado por el cliente. En producción debe persistir sesiones y eventos fuera del proceso Node (por ejemplo, PostgreSQL/Redis).
 
