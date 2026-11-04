@@ -98,12 +98,23 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          foreach ($dir in @('packages/toolkit','packages/player','packages/studio','packages/h5p-libraries','integration/mcp')) {
+          # Runtime alpha packages are developed together but not all published to
+          # npm yet. Audit the locked dependency trees without resolving unpublished
+          # @p2lrn/* packages from the public registry. This is an actual registry
+          # advisory audit, not a skipped check.
+          foreach ($dir in @('packages/toolkit','packages/player','packages/studio','packages/analytics','packages/h5p-libraries','integration/mcp')) {
+            Push-Location $dir
+            try {
+              npm audit --package-lock-only --audit-level=moderate --no-fund
+              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            } finally { Pop-Location }
+          }
+          # Install external toolchains needed by the following tests. Toolkit and
+          # MCP have complete lockfiles that resolve without unpublished peers.
+          foreach ($dir in @('packages/toolkit','integration/mcp')) {
             Push-Location $dir
             try {
               npm ci --ignore-scripts --no-audit --no-fund
-              if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-              npm audit --audit-level=moderate --no-fund
               if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             } finally { Pop-Location }
           }

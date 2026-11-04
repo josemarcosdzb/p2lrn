@@ -2,6 +2,7 @@
 // Uses the same image editor that website Studio and npm Studio import.
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
+import {createServer} from 'node:http';
 import {existsSync} from 'node:fs';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -23,8 +24,9 @@ function chromePath(){
 }
 
 async function browserScenario(){
-  const source=globalThis.__p2lrnLessonImagesSource;
-  const imageModule=await import(URL.createObjectURL(new Blob([source],{type:'text/javascript'})));
+  // An HTTP-served native module resolves its sibling studio-ui-i18n.js.
+  // Blob URL modules do not have a hierarchical base for relative imports.
+  const imageModule=await import(new URL('/lesson-images.js',location.origin).href);
   const host=document.createElement('div');
   host.id='p2lrn-image-flow-check';
   host.style.cssText='width:720px;margin:15px;background:white;color:#111';
@@ -141,8 +143,30 @@ async function browserScenario(){
   };
 }
 
-let profile=null,chrome=null,ws=null;
+let profile=null,chrome=null,ws=null,studioServer=null;
 try{
+  // Serve only the two audited editor modules on a loopback-only origin.
+  // This is closer to production and avoids rewriting the actual module.
+  const assets=new Set(['/lesson-images.js','/studio-ui-i18n.js']);
+  studioServer=createServer((req,res)=>{
+    const url=new URL(req.url,'http://127.0.0.1');
+    if(url.pathname==='/'){
+      res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});
+      res.end('<!doctype html><html><head><meta charset="utf-8"></head><body></body></html>');
+      return;
+    }
+    if(!assets.has(url.pathname)){res.writeHead(404);res.end();return;}
+    const path=resolve('packages/toolkit/web/studio',url.pathname.slice(1));
+    readFile(path).then(bytes=>{
+      res.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8',
+        'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+      res.end(bytes);
+    }).catch(()=>{res.writeHead(404);res.end();});
+  });
+  await new Promise((done,fail)=>{
+    studioServer.once('error',fail);
+    studioServer.listen(0,'127.0.0.1',()=>{studioServer.off('error',fail);done();});
+  });
   profile=await mkdtemp(join(tmpdir(),'p2lrn-image-reflow-'));
   chrome=spawn(chromePath(),['--headless=new','--no-first-run','--disable-extensions',
     '--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'],
@@ -179,8 +203,13 @@ try{
   await send('Runtime.enable');
   await send('Page.enable');
   await send('Emulation.setDeviceMetricsOverride',{width:1200,height:900,deviceScaleFactor:1,mobile:false});
-  const source=await readFile(resolve('packages/toolkit/web/studio/lesson-images.js'),'utf8');
-  await evaluate('globalThis.__p2lrnLessonImagesSource='+JSON.stringify(source));
+  await send('Page.navigate',{url:'http://127.0.0.1:'+studioServer.address().port+'/'});
+  let loaded=false;
+  for(let attempt=0;attempt<60;attempt++){
+    if(await evaluate('document.readyState')==='complete'){loaded=true;break;}
+    await sleep(100);
+  }
+  if(!loaded)throw new Error('Chrome test page did not load.');
   const result=await evaluate('('+browserScenario.toString()+')()');
   console.log(JSON.stringify({ok:true,lessonImageFlow:result},null,2));
   for(const stage of ['initial','moved','resized','twoImages','mobile']){
@@ -206,4 +235,5 @@ try{
   try{ws?.close();}catch{}
   if(chrome?.exitCode===null)chrome.kill();
   if(profile){await sleep(500);await rm(profile,{recursive:true,force:true}).catch(()=>{});}
+  if(studioServer)await new Promise(done=>studioServer.close(done));
 }
