@@ -34,12 +34,12 @@ const denied=(message='Not authorized')=>
  * durable storage and server-bound session/room membership.
  */
 export function createSecureP2LRNHost({
-  issuer,audience,jwksUri,allowedOrigins,repository,collaborationService,
+  issuer,audience,jwksUri,jwtAlgorithms=['RS256'],allowedOrigins,repository,collaborationService,
   signingPrivateKey,signingPublicKey,signingKeyId,
 }={}){
   if(!repository||!collaborationService)throw new TypeError('Trusted Host adapters are required.');
   const authenticate=createP2LRNJwtAuthenticator({
-    issuer,audience,jwksUri,allowedAlgorithms:['RS256'],
+    issuer,audience,jwksUri,allowedAlgorithms:jwtAlgorithms,
   });
 
   const collaboration=createP2LRNCollaborationHandler({
