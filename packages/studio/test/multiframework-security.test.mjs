@@ -48,7 +48,8 @@ const mustGuard=[
   ]],
   ['rust-axum.rs',[
     'pub struct StudioHostAccess','fn guard(req:&Request<Body>,operation:&str)',
-    'guard(&req,"save")','guard(&req,"read")','guard(&req,operation)',
+    'guard(&req,"save")','guard(&req,operation)',
+    'run(req,"read"','run(req,"import"',
     'csrf_verified','course_path','AUTHENTICATION_REQUIRED','COURSE_ACCESS_DENIED',
   ]],
 ];
