@@ -23,6 +23,17 @@ for(const [pathname,integrity] of resources){
   const data=await readFile(join(root,pathname.slice(1)));
   assert.equal('sha384-'+createHash('sha384').update(data).digest('base64'),integrity,pathname);
 }
+const headers=await readFile(join(root,'_headers'),'utf8');
+if(!headers.includes('/sri.json')||!headers.includes('Access-Control-Allow-Origin: *'))
+  throw new Error('Published CDN SRI/CORS headers were overwritten by the website build');
+for(const component of ['player','studio','analytics']){
+  if(!headers.includes('/'+component+'/'+version+'/*'))
+    throw new Error('Missing immutable '+component+' CDN cache/CORS headers');
+}
+for(const runtime of ['h5p.html','scorm.html','package.html']){
+  if(!headers.includes('/player/'+version+'/dist/runtime-host/'+runtime))
+    throw new Error('Missing isolated runtime CSP header: '+runtime);
+}
 for(const component of ['player','studio','analytics']){
   for(const format of ['classic','module']){
     const asset=index[component][format];
