@@ -46,7 +46,7 @@ test('English footer mirrors the Spanish navigation with localized routes',()=>{
   assert(footer.includes('href="/en/" aria-label="P2LRN — Home"'));
   assert(footer.includes('href="/en/studio/"'));
   assert(footer.includes('href="/en/docs/"'));
-  assert(footer.includes('href="/en/contacto/"'));
+  assert(footer.includes('href="/en/contact/"'));
   assert(footer.includes('href="/en/cookies/#configuracion"'));
   assert(footer.includes('>Documentation</'));
   assert(footer.includes('>Contact</'));
