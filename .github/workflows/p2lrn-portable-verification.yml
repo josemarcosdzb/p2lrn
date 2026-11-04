@@ -140,3 +140,59 @@ jobs:
         run: node scripts/verify-npm-pack.mjs
       - name: Verify npm registry state without changing tags
         run: node scripts/check-public-npm-registry.mjs
+
+  windows-hosted-smoke:
+    name: Windows hosted security, native build and package/CDN parity
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.26'
+          cache: false
+      - name: Compile Toolkit with its locked dependencies on Windows
+        working-directory: packages/toolkit
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify Windows-specific path, framework, runtime and grades safety
+        run: |
+          node --test packages/toolkit/test/creator-import-disk-path-security.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/studio/test/multiframework-security.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/browser-zip-decompression-security.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/runtime-message-security.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/player/test/trusted-result-receipt.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/analytics/test/secure-dataset-http.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build and install actual npm tarballs in Windows
+        run: |
+          node scripts/verify-npm-pack.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Generate Windows native launcher and complete CDN site
+        run: |
+          node deploy/netlify/build-site.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify SRI hashes, browser headers and npm/CDN identity on Windows
+        run: |
+          node scripts/verify-cdn-sri.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-distribution-identity.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-built-doc-links.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
