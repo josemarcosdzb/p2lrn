@@ -178,6 +178,42 @@ function sanitizeHtml(text){
   });
   return doc;
 }
+
+function installSafeStudioHtmlPaste(node){
+  const insert=(event,source)=>{
+    const html=source?.getData?.('text/html')??'';
+    const plain=source?.getData?.('text/plain')??'';
+    if(!html&&!plain)return;
+    event.preventDefault();
+    const plainOnly=node.matches('h1[contenteditable],p[contenteditable],pre[contenteditable]');
+    const fragment=document.createDocumentFragment();
+    if(plainOnly||!html){
+      fragment.append(document.createTextNode(plain||sanitizeHtml(html).body.textContent||''));
+    }else{
+      const sanitized=sanitizeHtml(html);
+      for(const child of [...sanitized.body.childNodes])fragment.append(document.importNode(child,true));
+    }
+    const last=fragment.lastChild;
+    const selection=window.getSelection();
+    if(selection?.rangeCount&&node.contains(selection.anchorNode)){
+      const range=selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(fragment);
+      if(last){
+        range.setStartAfter(last);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }else node.append(fragment);
+    node.dispatchEvent(new Event('input',{bubbles:true}));
+  };
+  node.addEventListener('paste',event=>insert(event,event.clipboardData));
+  node.addEventListener('drop',event=>{
+    if(event.dataTransfer?.types?.includes('text/html'))insert(event,event.dataTransfer);
+  });
+}
+
 function markActive(node){
   activeEditable=node;
   editorStage.querySelectorAll('[data-active-editable=true]').forEach((item)=>item.removeAttribute('data-active-editable'));
@@ -185,6 +221,7 @@ function markActive(node){
 }
 function bindEditable(node,onInput){
   node.contentEditable='true';node.spellcheck=true;
+  installSafeStudioHtmlPaste(node);
   node.addEventListener('focus',()=>markActive(node));
   node.addEventListener('mouseup',captureSelection);
   node.addEventListener('keyup',captureSelection);
