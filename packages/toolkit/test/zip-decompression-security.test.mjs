@@ -15,7 +15,7 @@ function withCentralSize(original,size){
 }
 
 test('DEFLATE ZIP rejects deceptive uncompressed sizes without expanding past declared bytes',()=>{
- const contents=new TextEncoder().encode('A'.repeat(8192));
+ const contents=new TextEncoder().encode('A'.repeat(4096));
  const packageBytes=writeZip([{path:'lesson.txt',data:contents,method:8}]);
  const archive=ZipArchive.open(packageBytes);
  assert.deepEqual(archive.read('lesson.txt'),contents);
