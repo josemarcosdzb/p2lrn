@@ -3,13 +3,13 @@
 // authentication parameters or package URLs across languages.
 (()=>{
   const install=()=>{
-    if(document.body.querySelector(':scope > .language-switch'))return;
+    if(document.querySelector('[data-language-switch], .site-header .language-switch, body > .language-switch'))return;
     const english=/^en(?:-|$)/i.test(document.documentElement.lang||'');
     const current=location.pathname.replace(/\/index\.html$/i,'/');
-    const logical=english?(current==='/en/'?'/':current.replace(/^\/en(?=\/)/,'')):current;
+    const logical=english?(globalThis.__P2LRN_SPANISH_ROUTES?.[current]||(current==='/en/'?'/':current.replace(/^\/en(?=\/)/,''))):current;
     const path=logical.startsWith('/')?logical:'/'+logical;
     const esHref=path;
-    const enHref=path==='/'?'/en/':'/en'+path;
+    const enHref=globalThis.__P2LRN_ENGLISH_ROUTES?.[path]||(path==='/'?'/en/':'/en'+path);
     const switcher=document.createElement('nav');
     switcher.className='language-switch';
     switcher.setAttribute('aria-label',english?'Site language':"Site language");
@@ -220,7 +220,7 @@
     // independent of the locale and therefore preserves active links/sidebars.
     let pathname = String(value || '/').split(/[?#]/, 1)[0].replace(/\/index\.html$/u, '/');
     if(/^en(?:-|$)/i.test(document.documentElement.lang||'')&&pathname.startsWith('/en/'))
-      pathname=pathname.slice(3)||'/';
+      pathname=globalThis.__P2LRN_SPANISH_ROUTES?.[pathname]||(pathname.slice(3)||'/');
     return pathname.endsWith('/') ? pathname : pathname + '/';
   };
 
@@ -232,7 +232,8 @@
     if(/^\/(?:assets|downloads|examples|player|api|_next|\.netlify)\//.test(value))return value;
     if(/^\/(?:p2lrn\.|favicon\.|apple-touch-icon\.|index\.json|robots\.txt|search-index\.json)/.test(value))return value;
     if(value.startsWith('/studio/runtime/')||value.startsWith('/analytics/current/'))return value;
-    return '/en'+value;
+    const base=value.split(/[?#]/,1)[0];
+    return (globalThis.__P2LRN_ENGLISH_ROUTES?.[base]||'/en'+base)+value.slice(base.length);
   };
 
   const renderGlobalNavigation = () => {
