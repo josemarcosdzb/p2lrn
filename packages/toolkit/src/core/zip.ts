@@ -1,6 +1,9 @@
 import {deflateRawSync, inflateRawSync} from 'node:zlib';
 import {ValidationError} from './errors.js';
 import {baseMediaType} from './integrity.js';
+import {constants as fsConstants} from 'node:fs';
+import {lstat,mkdir,mkdtemp,open as openFile,readFile,realpath,rename,rm} from 'node:fs/promises';
+import {basename,dirname,join,resolve,sep} from 'node:path';
 
 // Deflated ZIP members are expanded synchronously: never let attacker-controlled
 // headers allocate multi-gigabyte buffers. Large media should be STORED or multipart.
@@ -75,4 +78,102 @@ export function writeZip(entries:ZipWriteEntry[], options:{forceZip64?:boolean}=
     let cextra=new Uint8Array(0); if(use64){cextra=new Uint8Array(28);const ev=new DataView(cextra.buffer);put16(ev,0,1);put16(ev,2,24);put64(ev,4,raw.byteLength);put64(ev,12,compressed.byteLength);put64(ev,20,offset);} const ch=new Uint8Array(46+name.byteLength+cextra.byteLength);const cv=new DataView(ch.buffer);put32(cv,0,SIG.CENTRAL);put16(cv,4,use64?45:20);put16(cv,6,use64?45:20);put16(cv,8,0x0800);put16(cv,10,method);put16(cv,12,0);put16(cv,14,0x21);put32(cv,16,crc);put32(cv,20,use64?0xffffffff:compressed.byteLength);put32(cv,24,use64?0xffffffff:raw.byteLength);put16(cv,28,name.byteLength);put16(cv,30,cextra.byteLength);put16(cv,32,0);put16(cv,34,0);put16(cv,36,0);put32(cv,38,0o100644<<16);put32(cv,42,use64?0xffffffff:offset);ch.set(name,46);ch.set(cextra,46+name.byteLength);centralParts.push(ch); offset+=lh.byteLength+compressed.byteLength;
   }
   const central=concat(centralParts), locals=concat(localParts), cdOffset=locals.byteLength, needs64=force64||entries.length>=0xffff||cdOffset>=0xffffffff||central.byteLength>=0xffffffff; const tails:Uint8Array[]=[]; if(needs64){const z=new Uint8Array(56),zv=new DataView(z.buffer);put32(zv,0,SIG.ZIP64_EOCD);put64(zv,4,44);put16(zv,12,45);put16(zv,14,45);put32(zv,16,0);put32(zv,20,0);put64(zv,24,entries.length);put64(zv,32,entries.length);put64(zv,40,central.byteLength);put64(zv,48,cdOffset); const loc=new Uint8Array(20),lv=new DataView(loc.buffer);put32(lv,0,SIG.ZIP64_LOCATOR);put32(lv,4,0);put64(lv,8,cdOffset+central.byteLength);put32(lv,16,1);tails.push(z,loc);} const e=new Uint8Array(22),ev=new DataView(e.buffer);put32(ev,0,SIG.EOCD);put16(ev,4,0);put16(ev,6,0);put16(ev,8,needs64?0xffff:entries.length);put16(ev,10,needs64?0xffff:entries.length);put32(ev,12,needs64?0xffffffff:central.byteLength);put32(ev,16,needs64?0xffffffff:cdOffset);put16(ev,20,0);tails.push(e); return concat([locals,central,...tails]);
+}
+
+
+/**
+ * Extract a ZIP-backed .p2lrn into a NEW, private directory. This is the
+ * supported disk-extraction boundary; callers never join untrusted ZIP paths
+ * themselves. Does not overwrite an existing output directory.
+ *
+ * The parent directory must be controlled by the host. A hostile process with
+ * write privileges to that parent can race a final rename on some filesystems.
+ */
+export const SAFE_UNPACK_LIMITS:ZipLimits=Object.freeze({
+  entries:2000,
+  entryBytes:64*1024*1024,
+  totalUncompressedBytes:256*1024*1024,
+  centralDirectoryBytes:16*1024*1024,
+  compressionRatio:100,
+});
+const MAX_SAFE_ARCHIVE_BYTES=128*1024*1024;
+function safeDiskComponent(part:string):void{
+  // Portable disk extraction: Windows rejects ADS, devices and ambiguous
+  // trailing spaces/dots even when a ZIP reader accepts the logical name.
+  if(!part||/[<>:"|?*\x00-\x1f]/.test(part)||/[. ]$/.test(part)||
+     /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$/i.test(part))
+    throw new ValidationError('unsafe ZIP filesystem component: '+JSON.stringify(part));
+}
+async function requireMissing(path:string):Promise<void>{
+  try{
+    await lstat(path);
+    throw new ValidationError('refusing to replace existing extraction target: '+path);
+  }catch(error){
+    if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;
+  }
+}
+async function safeStageDirectory(root:string,components:string[]):Promise<string>{
+  let current=root;
+  for(const part of components){
+    current=join(current,part);
+    try{await mkdir(current,{mode:0o700});}
+    catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;}
+    const info=await lstat(current);
+    if(info.isSymbolicLink()||!info.isDirectory())
+      throw new ValidationError('unsafe extraction directory: '+current);
+    const actual=await realpath(current);
+    if(actual!==root&&!actual.startsWith(root+sep))
+      throw new ValidationError('directory escaped extraction root: '+current);
+  }
+  return current;
+}
+export async function unpackP2LRNArchive(
+  archivePath:string,
+  outputDirectory:string,
+  options:{limits?:ZipLimits;maxArchiveBytes?:number}={}
+):Promise<{directory:string;files:number;totalBytes:number}>{
+  const input=resolve(archivePath),target=resolve(outputDirectory);
+  const maximum=options.maxArchiveBytes??MAX_SAFE_ARCHIVE_BYTES;
+  if(!Number.isSafeInteger(maximum)||maximum<22||maximum>MAX_SAFE_ARCHIVE_BYTES)
+    throw new ValidationError('invalid maximum archive size');
+  const source=await lstat(input);
+  if(!source.isFile()||source.isSymbolicLink()||source.size>maximum)
+    throw new ValidationError('unsafe ZIP input file or archive exceeds safety limit');
+  const archive=ZipArchive.open(new Uint8Array(await readFile(input)),options.limits??SAFE_UNPACK_LIMITS);
+  const parent=await realpath(dirname(target));
+  if(target===parent||basename(target)==='.'||basename(target)==='..')
+    throw new ValidationError('invalid extraction destination');
+  await requireMissing(target);
+  const staging=await mkdtemp(join(parent,'.p2lrn-unpack-'));
+  let count=0,totalBytes=0;
+  try{
+    const base=await realpath(staging);
+    for(const entry of archive.entries.values()){
+      safeZipPath(entry.name);
+      const segments=entry.name.split('/');
+      for(const part of segments)safeDiskComponent(part);
+      const unixType=(entry.externalAttributes>>>16)&0o170000;
+      if(unixType!==0&&unixType!==0o100000)
+        throw new ValidationError('non-regular ZIP entry is forbidden: '+entry.name);
+      const directory=await safeStageDirectory(base,segments.slice(0,-1));
+      const filename=join(directory,segments.at(-1)!);
+      // O_NOFOLLOW blocks a final-component symlink on supported platforms;
+      // O_EXCL prevents clobbering existing files and duplicate aliases.
+      const flags=fsConstants.O_WRONLY|fsConstants.O_CREAT|fsConstants.O_EXCL|
+        (fsConstants.O_NOFOLLOW??0);
+      const handle=await openFile(filename,flags,0o600);
+      try{
+        const content=archive.read(entry.name); // CRC, size and DEFLATE bound
+        await handle.writeFile(content);
+        totalBytes+=content.byteLength;
+      }finally{await handle.close();}
+      count+=1;
+    }
+    await requireMissing(target);
+    await rename(staging,target);
+    return {directory:target,files:count,totalBytes};
+  }catch(error){
+    await rm(staging,{recursive:true,force:true});
+    throw error;
+  }
 }
