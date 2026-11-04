@@ -74,6 +74,16 @@ test('all PHP template saves restrict executable names and replace packages atom
   }
 });
 
+test('Laravel and Symfony bound unknown-length uploads while streaming instead of unbounded getContent',async()=>{
+  for(const name of ['laravel-controller.php','symfony-controller.php']){
+    const text=await source(name);
+    assert.match(text,/getContent\(true\)/);
+    assert.match(text,/fread\(\$stream,65536\)/);
+    assert.match(text,/strlen\(\$body\)\+strlen\(\$chunk\)>\$limit/);
+    assert.doesNotMatch(text,/\$data=\$request->getContent\(\)/);
+  }
+});
+
 test('generated native and framework handlers bound file uploads and avoid direct truncation',async()=>{
   for(const name of ['go-handler.go','aspnet-endpoint.cs','spring-controller.java','rust-axum.rs','nest-controller.ts','rails-controller.rb']){
     const text=await source(name);
