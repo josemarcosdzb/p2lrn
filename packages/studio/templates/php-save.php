@@ -17,7 +17,7 @@ if($length!==null){
 $name=$_SERVER['HTTP_X_P2LRN_FILENAME']??'course.p2lrn';
 if(!is_string($name)||strlen($name)>180||!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,160}\.p2lrn$/iD',$name)||
     preg_match('/^(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])\./i',$name)||
-    preg_match('/\\.(?:php[0-9]*|phtml|phar|cgi|asp|aspx|jsp|shtml)\\./i',$name)){
+    preg_match('/\.(?:php[0-9]*|phtml|phar|cgi|asp|aspx|jsp|shtml)\./i',$name)){
     http_response_code(400);echo json_encode(['ok'=>false,'error'=>'INVALID_FILENAME']);exit;
 }
 $base=realpath($project);
