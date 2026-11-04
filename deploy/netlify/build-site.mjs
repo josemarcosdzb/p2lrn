@@ -188,39 +188,43 @@ for(const [oldRoute,newRoute] of legacyEnglishPairs){
   await rename(oldPath,newPath);
 }
 for(const authoredPath of authoredHtmlFiles){
-  const sourceRoute='/'+relative(siteRoot,authoredPath).replaceAll('\\','/').replace(/index\\.html$/,'');
+  const sourceRoute='/'+relative(siteRoot,authoredPath).replaceAll('\\','/').replace(/index\.html$/,'');
   const destinationRoute=canonicalRoute(sourceRoute);
   const target=destinationRoute==='/'?join(outputRoot,'index.html'):
     join(outputRoot,...destinationRoute.slice(1).split('/').filter(Boolean),'index.html');
   let html=await readFile(target,'utf8');
   for(const [oldRoute,newRoute] of legacyEnglishPairs)html=html.replaceAll(oldRoute,newRoute);
   if(destinationRoute.startsWith('/en/')){
-    // New English fragments work while published legacy fragments stay addressable.
+    // Preserve old deep-link IDs while adding human-readable English aliases.
     for(const [oldAnchor,newAnchor] of Object.entries(ENGLISH_ANCHORS)){
-      if(new RegExp('\\\\bid=["\\' ]'+oldAnchor+'["\\']','i').test(html)){
-        const before=new RegExp('(<h[2-6]\\\\b[^>]*\\\\bid=["\\']'+oldAnchor+'["\\'][^>]*>)','i');
-        html=html.replace(before,'<span class="anchor-alias" id="'+newAnchor+'" aria-hidden="true"></span>$1');
+      const index=html.indexOf('id="'+oldAnchor+'"');
+      if(index>=0){
+        const start=html.lastIndexOf('<h',index);
+        const opening=start>=0?html.slice(start,index):'';
+        if(/^<h[2-6]\b/i.test(opening) && !opening.includes('>')){
+          const alias='<span class="anchor-alias" id="'+newAnchor+'" aria-hidden="true"></span>';
+          html=html.slice(0,start)+alias+html.slice(start);
+        }
       }
       html=html.replaceAll('#'+oldAnchor,'#'+newAnchor);
     }
   }
   await writeFile(target,html,'utf8');
 }
-// Netlify executes _redirects before netlify.toml. Make the hostname rule first,
-// so the Netlify subdomain cannot remain a second indexable public copy.
+// Netlify executes _redirects before netlify.toml. Make the hostname rule first.
 const routeRedirects=[
   'https://p2lrn.netlify.app/* https://p2lrn.org/:splat 301!',
   'http://p2lrn.netlify.app/* https://p2lrn.org/:splat 301!',
   ...legacyEnglishPairs.map(([from,to])=>from+' '+to+' 301!')
 ];
-await writeFile(join(outputRoot,'_redirects'),routeRedirects.join('\\n')+'\\n','utf8');
-// The same route map is embedded in both public JS bundles. Their source files
-// remain executable without it, but production navigation uses canonical slugs.
+await writeFile(join(outputRoot,'_redirects'),routeRedirects.join('\n')+'\n','utf8');
+// Route config is embedded in both public JS bundles. Source scripts still
+// work without this build-only config, but canonical links never need hops.
 for(const publicJs of ['p2lrn.js','en/p2lrn.js']){
   const file=join(outputRoot,...publicJs.split('/'));
   const before=await readFile(file,'utf8');
-  const preamble='globalThis.__P2LRN_ENGLISH_ROUTES='+JSON.stringify(ENGLISH_ROUTES)+';\\n'+
-    'globalThis.__P2LRN_SPANISH_ROUTES='+JSON.stringify(SPANISH_ROUTES)+';\\n';
+  const preamble='globalThis.__P2LRN_ENGLISH_ROUTES='+JSON.stringify(ENGLISH_ROUTES)+';\n'+
+    'globalThis.__P2LRN_SPANISH_ROUTES='+JSON.stringify(SPANISH_ROUTES)+';\n';
   await writeFile(file,preamble+before,'utf8');
 }
 const allHtmlFiles = (await walk(outputRoot)).filter((path)=>path.endsWith('.html'));
