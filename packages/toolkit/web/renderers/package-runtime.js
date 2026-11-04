@@ -294,13 +294,7 @@ export async function render({container, payload, representation, package:pkg, e
     iframe.contentWindow.postMessage({protocol:PROTOCOL, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  // A srcdoc frame inherits the embedding page's CSP. Bootstrapping with
-  // inline JavaScript therefore fails on strict sites, even if a meta CSP
-  // inside the frame tries to allow it. Use a first-party blob script instead.
-  const opaqueBootstrapUrl = opaqueMode
-    ? URL.createObjectURL(new Blob([`(${startPackageRuntime.toString()})({opaqueRuntime:true});`], {type:'text/javascript'}))
-    : null;
-  if (opaqueMode) iframe.srcdoc = createOpaquePackageRuntimeDocument(opaqueBootstrapUrl);
+  if (opaqueMode) iframe.srcdoc = createOpaquePackageRuntimeDocument();
   else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 
@@ -312,16 +306,13 @@ export async function render({container, payload, representation, package:pkg, e
       destroyed = true;
       window.removeEventListener('message', onMessage);
       try { port?.close?.(); } catch {}
-      if (opaqueBootstrapUrl) URL.revokeObjectURL(opaqueBootstrapUrl);
       iframe.remove();
     },
   });
 }
 
 
-export function createOpaquePackageRuntimeDocument(bootstrapUrl=null) {
-  const bootstrap = bootstrapUrl
-    ? `<script src="${String(bootstrapUrl).replaceAll('&','&amp;').replaceAll('"','&quot;')}"></script>`
-    : `<script>(${startPackageRuntime.toString()})({opaqueRuntime:true});</script>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src about: blob: data:; connect-src blob:; form-action 'none'; base-uri 'none'; object-src 'none'"></head><body><div id="stage"></div>${bootstrap}</body></html>`;
+export function createOpaquePackageRuntimeDocument() {
+  const bootstrap = `(${startPackageRuntime.toString()})({opaqueRuntime:true});`.replace(/<\/script/giu, '<\\/script');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src about: blob: data:; connect-src blob:; form-action 'none'; base-uri 'none'; object-src 'none'"></head><body><div id="stage"></div><script>${bootstrap}</script></body></html>`;
 }

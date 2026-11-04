@@ -66,16 +66,9 @@ export function getAutomaticH5PRuntimeResources(baseUrl=DEFAULT_BASE_URL) {
   });
 }
 
-export function createOpaqueH5PRuntimeBootstrapUrl() {
-  // An opaque srcdoc iframe inherits the embedding page's CSP. External
-  // blob scripts are allowed without permitting inline code on the host.
-  return URL.createObjectURL(new Blob([`(${startH5PRuntime.toString()})();`],{type:'text/javascript'}));
-}
-export function createOpaqueH5PRuntimeDocument({bootstrapUrl=null}={}) {
-  const bootstrap = bootstrapUrl
-    ? `<script src="${String(bootstrapUrl).replaceAll('&','&amp;').replaceAll('"','&quot;')}"></script>`
-    : `<script>(${startH5PRuntime.toString()})();</script>`;
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src data: blob:; media-src data: blob:; font-src data: blob:; connect-src 'none'; frame-src about: blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="no-referrer"><title>P2LRN H5P Runtime</title><style>html,body,#h5p-stage{width:100%;min-height:100%;margin:0;padding:0}#h5p-error{font:14px system-ui,sans-serif;color:#7a1f1f;padding:16px;white-space:pre-wrap}</style></head><body><div id="h5p-stage"></div><div id="h5p-error" hidden></div>${bootstrap}</body></html>`;
+export function createOpaqueH5PRuntimeDocument() {
+  const bootstrap = `(${startH5PRuntime.toString()})();`.replace(/<\/script/giu, '<\\/script');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src data: blob:; media-src data: blob:; font-src data: blob:; connect-src 'none'; frame-src about: blob: data:; object-src 'none'; base-uri 'none'; form-action 'none'"><meta name="referrer" content="no-referrer"><title>P2LRN H5P Runtime</title><style>html,body,#h5p-stage{width:100%;min-height:100%;margin:0;padding:0}#h5p-error{font:14px system-ui,sans-serif;color:#7a1f1f;padding:16px;white-space:pre-wrap}</style></head><body><div id="h5p-stage"></div><div id="h5p-error" hidden></div><script>${bootstrap}</script></body></html>`;
 }
 
 async function readBundledMetadata(nested, names) {

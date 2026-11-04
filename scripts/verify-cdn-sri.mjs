@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {resolve, join} from 'node:path';
+import {runtimeBootstrapCspManifest} from '../deploy/netlify/runtime-bootstrap-csp.mjs';
 
 const root=resolve(process.cwd(),'.netlify-cdn');
 const manifest=JSON.parse(await readFile(join(root,'sri.json'),'utf8'));
@@ -24,6 +25,20 @@ for(const [pathname,integrity] of resources){
   assert.equal('sha384-'+createHash('sha384').update(data).digest('base64'),integrity,pathname);
 }
 const headers=await readFile(join(root,'_headers'),'utf8');
+const runtimeCsp=JSON.parse(await readFile(join(root,'runtime-bootstrap-csp.json'),'utf8'));
+assert.deepEqual(runtimeCsp,runtimeBootstrapCspManifest());
+const lines=headers.split(/\r?\n/);
+let route='',matched=0;
+for(const line of lines){
+  if(line.startsWith('/')){route=line.trim();continue;}
+  if(!runtimeCsp.routes.includes(route)||!/^\s+Content-Security-Policy:/.test(line))continue;
+  const scriptSrc=/script-src ([^;]*);/.exec(line)?.[1]??'';
+  assert.ok(!scriptSrc.includes("'unsafe-inline'"),'Runtime CSP must not allow all inline code: '+route);
+  for(const hash of Object.values(runtimeCsp.hashes))assert.ok(scriptSrc.includes("'"+hash+"'"),'Missing sandbox bootstrap CSP hash: '+route);
+  matched++;
+}
+assert.equal(matched,runtimeCsp.routes.length,'Demo and Studio CSP must authorize deterministic opaque sandbox scripts');
+
 if(!headers.includes('/sri.json')||!headers.includes('Access-Control-Allow-Origin: *'))
   throw new Error('Published CDN SRI/CORS headers were overwritten by the website build');
 for(const component of ['player','studio','analytics']){

@@ -5,6 +5,7 @@ import {openP2LRNPackageBytes} from '../../packages/toolkit/web/p2lrn-player.js'
 import {buildDocExamples} from './build-doc-examples.mjs';
 import {STUDIO_RUNTIME_SHARED_FILES} from './studio-runtime-assets.mjs';
 import {reviseSiteBrowserAssets} from './browser-site-revision.mjs';
+import {authorizeOpaqueRuntimeBootstraps} from './runtime-bootstrap-csp.mjs';
 import {renderSiteFooter,getSiteFooterLinks} from './site-footer.mjs';
 import {verifyPackageCorrespondingSource} from './corresponding-source.mjs';
 import {normalizeSeoAndAccessibility} from './site-seo-a11y.mjs';
@@ -435,6 +436,9 @@ if (sidebarProblems.length) {
 // The distribution and Windows localhost use the same content revision
 // implementation, preventing different browser module graphs across deployments.
 const {runtimeRevision}=await reviseSiteBrowserAssets({siteRoot:outputRoot,htmlFiles});
+// Keep the production CSP strict, while allowing only the known sandbox
+// bootstraps. The import-map CSP hash above must be finalized first.
+await authorizeOpaqueRuntimeBootstraps({outputRoot});
 
 // Validate the compiled output here, not in the source-only browser fixture.
 // All mutable transitive modules and CSS must use the same content revision.

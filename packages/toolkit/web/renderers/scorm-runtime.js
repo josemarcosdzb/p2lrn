@@ -335,21 +335,8 @@ export async function render({container, payload, representation, package: pkg, 
   };
   window.addEventListener('message', onMessage);
 
-  // The opaque fallback inherits its embedding document's CSP. Convert the
-  // trusted bootstrap into a blob script; never relax the embedding page CSP.
-  let opaqueBootstrapUrl=null;
   if (isolatedRuntimeUrl) iframe.src = isolatedRuntimeUrl;
-  else {
-    const shellHtml=createScormSandboxShell(fallbackToken,version);
-    const opening=shellHtml.indexOf('<script>');
-    const closing=shellHtml.lastIndexOf('</script>');
-    if(opening<0||closing<=opening)throw new Error('Missing SCORM opaque runtime bootstrap.');
-    const source=shellHtml.slice(opening+'<script>'.length,closing);
-    opaqueBootstrapUrl=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
-    iframe.srcdoc=shellHtml.slice(0,opening)+
-      `<script src="${opaqueBootstrapUrl}"></script>`+
-      shellHtml.slice(closing+'</script>'.length);
-  }
+  else iframe.srcdoc = createScormSandboxShell(fallbackToken, version);
 
   container.replaceChildren(iframe);
   return Object.freeze({
@@ -358,7 +345,6 @@ export async function render({container, payload, representation, package: pkg, 
       destroyed = true;
       window.removeEventListener('message', onMessage);
       try { runtimePort?.close?.(); } catch {}
-      if(opaqueBootstrapUrl)URL.revokeObjectURL(opaqueBootstrapUrl);
       iframe.remove();
     },
     flush: () => saveQueue,
