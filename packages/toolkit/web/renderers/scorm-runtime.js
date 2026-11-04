@@ -2,6 +2,7 @@ import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {createScormApi, isScormRuntimeProtocol, normalizeScormVersion, SCORM_PROFILE, SCORM_RUNTIME_PROTOCOL} from '../scorm-runtime-core.js';
 import {createScorm2004Sequencer, parseScormManifest} from '../scorm2004-sequencing.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
+import {isSafeRuntimeMessage} from '../runtime-message-security.js';
 import {resolveScormRuntimeUrl} from '../runtime-host-config.js';
 
 export const acceptsPayload = true;
@@ -225,14 +226,14 @@ export async function render({container, payload, representation, package: pkg, 
       const key = score ? JSON.stringify(score) : '';
       if (score && key !== lastReported) {
         lastReported = key;
-        saveQueue = saveQueue.catch(() => undefined).then(() => adapter.reportScore(score, context)).catch((error) => {
+        saveQueue = saveQueue.catch(() => undefined).then(() => adapter.reportScore({...score,authoritative:false}, context)).catch((error) => {
           dispatchRuntimeEvent(eventTarget, 'p2lrn:error', {phase:'scorm-report-score', error:String(error?.message ?? error)}, context, {adapter});
         });
       }
     }
     if (reason === 'terminate') {
       const pendingNavigation = version === '2004' && sequencer && String(state?.values?.['adl.nav.request'] ?? '_none') !== '_none';
-      if (!pendingNavigation) dispatchRuntimeEvent(eventTarget, 'p2lrn:complete', {runtime:'scorm', topology, score:scoreFromState(persistedState), state:persistedState}, context, {adapter});
+      if (!pendingNavigation) dispatchRuntimeEvent(eventTarget, 'p2lrn:complete', {runtime:'scorm', topology, authoritative:false, score:scoreFromState(persistedState), state:persistedState}, context, {adapter});
     }
   };
 
@@ -241,7 +242,7 @@ export async function render({container, payload, representation, package: pkg, 
   };
 
   const processRuntimeData = (data) => {
-    if (!data || data.protocol !== runtimeProtocol) return;
+    if (!isSafeRuntimeMessage(data) || data.protocol !== runtimeProtocol) return;
     if (data.action === 'resize') {
       const height = Number(data.height);
       if (Number.isFinite(height)) iframe.style.height = `${Math.max(420, Math.min(760, Math.ceil(height)))}px`;
@@ -271,7 +272,7 @@ export async function render({container, payload, representation, package: pkg, 
         return;
       }
       if (result.terminal) {
-        dispatchRuntimeEvent(eventTarget, 'p2lrn:complete', {runtime:'scorm', topology, request, score:scoreFromState(data.state), state:{...(data.state ?? {}), sequencing:sequencer.serialize()}}, context, {adapter});
+        dispatchRuntimeEvent(eventTarget, 'p2lrn:complete', {runtime:'scorm', topology, authoritative:false, request, score:scoreFromState(data.state), state:{...(data.state ?? {}), sequencing:sequencer.serialize()}}, context, {adapter});
         return;
       }
       if (!result.targetMember || !nested.archive.entries.has(result.targetMember)) {
@@ -307,7 +308,7 @@ export async function render({container, payload, representation, package: pkg, 
   const onMessage = (event) => {
     if (destroyed || event.source !== iframe.contentWindow) return;
     const data = event.data;
-    if (!data || !isScormRuntimeProtocol(data.protocol)) return;
+    if (!isSafeRuntimeMessage(data) || !isScormRuntimeProtocol(data.protocol)) return;
 
     {
       if (event.origin !== runtimeOrigin || data.action !== 'shell-ready' || runtimePort) return;
@@ -317,7 +318,7 @@ export async function render({container, payload, representation, package: pkg, 
       runtimeSend = runtimePort.postMessage.bind(runtimePort);
       runtimePort.onmessage = (portEvent) => {
         const message = portEvent.data;
-        if (!message || message.protocol !== runtimeProtocol) return;
+        if (!isSafeRuntimeMessage(message) || message.protocol !== runtimeProtocol) return;
         if (message.action === 'connected' && !didInit) {
           didInit = true;
           runtimeSend(initPayload(), transfers);
