@@ -35,6 +35,8 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npm run build
+      - name: Inspect actual external demo launch members (cmi5, SCORM, QTI, H5P)
+        run: node scripts/inspect-external-visual-qa.mjs
       - name: Run full Toolkit security and regression suite
         working-directory: packages/toolkit
         run: node --test --test-concurrency=2 test/*.test.mjs
