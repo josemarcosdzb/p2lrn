@@ -178,7 +178,7 @@ function isImmutableDistributionHtml(path) {
 }
 // Relocate only the authored English HTML pages. Keep runtime/CDN bytes immutable.
 const legacyEnglishPairs=Object.entries(LEGACY_ENGLISH_ROUTES).sort((a,b)=>b[0].length-a[0].length);
-const authoredHtmlFiles=(await walk(siteRoot)).filter(p=>p.endsWith('/index.html'));
+const authoredHtmlFiles=(await walk(siteRoot)).filter(p=>p.endsWith('index.html'));
 for(const [oldRoute,newRoute] of legacyEnglishPairs){
   const oldPath=join(outputRoot,...oldRoute.slice(1).split('/').filter(Boolean),'index.html');
   const newPath=join(outputRoot,...newRoute.slice(1).split('/').filter(Boolean),'index.html');
@@ -485,20 +485,21 @@ for (const [slug,expectedTitle] of requiredLegalRoutes) {
   if (!html.includes('<title>' + expectedTitle + '</title>')) legalProblems.push('/' + slug + '/ title');
   if (!/<meta\s+name="description"\s+content="[^"]+"/i.test(html)) legalProblems.push('/' + slug + '/ description');
   if (!html.includes('<link rel="canonical" href="https://p2lrn.org/' + slug + '/">')) legalProblems.push('/' + slug + '/ canonical');
-  if (!/<meta\s+name="robots"\s+content="index,follow"/i.test(html)) legalProblems.push('/' + slug + '/ robots');
+  if (!html.includes('name="robots" content="'+(slug==='licencia'?'index,follow':'noindex,follow')+'"')) legalProblems.push('/' + slug + '/ robots');
   if (!html.includes('property="og:title"') || !html.includes('property="og:description"')) legalProblems.push('/' + slug + '/ OpenGraph');
   if (forbiddenLegalPlaceholders.test(html)) legalProblems.push('/' + slug + '/ placeholder');
 }
 if(bilingualSite){
   for(const [slug] of requiredLegalRoutes){
-    const path=join(outputRoot,'en',slug,'index.html');
+    const englishLegalRoute=englishRouteFor('/'+slug+'/');
+    const path=join(outputRoot,...englishLegalRoute.slice(1).split('/').filter(Boolean),'index.html');
     if(!(await exists(path))){legalProblems.push('/en/'+slug+'/ missing');continue;}
     const html=await readFile(path,'utf8');
     if(!/<html\b[^>]*\blang=["']en["']/i.test(html))legalProblems.push('/en/'+slug+'/ lang');
     if(!/<title>[^<]+<\/title>/i.test(html))legalProblems.push('/en/'+slug+'/ title');
     if(!/<meta\s+name="description"\s+content="[^"]+"/i.test(html))legalProblems.push('/en/'+slug+'/ description');
-    if(!html.includes('<link rel="canonical" href="https://p2lrn.org/en/'+slug+'/">'))legalProblems.push('/en/'+slug+'/ canonical');
-    if(!/<meta\s+name="robots"\s+content="index,follow"/i.test(html))legalProblems.push('/en/'+slug+'/ robots');
+    if(!html.includes('<link rel="canonical" href="https://p2lrn.org'+englishLegalRoute+'">'))legalProblems.push('/en/'+slug+'/ canonical');
+    if(!html.includes('name="robots" content="'+(slug==='licencia'?'index,follow':'noindex,follow')+'"'))legalProblems.push('/en/'+slug+'/ robots');
     if(!html.includes('property="og:title"')||!html.includes('property="og:description"'))legalProblems.push('/en/'+slug+'/ OpenGraph');
     if(forbiddenLegalPlaceholders.test(html))legalProblems.push('/en/'+slug+'/ placeholder');
   }
