@@ -103,7 +103,7 @@ const homeBanned=[
   /\bgate\b/iu,
 ];
 
-const sourcePages=await walkHtml(sourceRoot);
+const sourcePages=(await walkHtml(sourceRoot)).filter(file=>!/^google[0-9a-f]+\.html$/i.test(relative(sourceRoot,file).replaceAll('\\','/')));
 const errors=[];
 let checked=0;
 let publicPages=0;
