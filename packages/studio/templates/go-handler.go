@@ -28,8 +28,8 @@ type HostAccess struct {
  VerifyCSRF func(*http.Request) bool
 }
 var safeName=regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,160}$`)
-var unsafeExec=regexp.MustCompile(`(?i).(php[0-9]*|phtml|phar|cgi|asp|aspx|jsp|shtml).`)
-var reservedName=regexp.MustCompile(`(?i)^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]).`)
+var unsafeExec=regexp.MustCompile(`(?i)[.](php[0-9]*|phtml|phar|cgi|asp|aspx|jsp|shtml)[.]`)
+var reservedName=regexp.MustCompile(`(?i)^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])[.]`)
 
 func filename(r *http.Request, fallback string, suffix string)(string,error){
  name:=r.Header.Get("X-P2LRN-Filename")
