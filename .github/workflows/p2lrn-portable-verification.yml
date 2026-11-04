@@ -110,6 +110,8 @@ jobs:
         run: node deploy/netlify/build-site.mjs
       - name: Verify published artifacts use exact SHA-384 SRI
         run: node scripts/verify-cdn-sri.mjs
+      - name: Prepare and install inspected npm tarballs for byte identity comparison
+        run: node scripts/verify-npm-pack.mjs
       - name: Verify package/CDN byte identity and sourcemaps
         run: node scripts/verify-distribution-identity.mjs
       - name: Verify website links, headers and document accessibility
