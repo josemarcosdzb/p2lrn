@@ -70,11 +70,12 @@ jobs:
           node --test --test-concurrency=2 packages/analytics/test/*.test.mjs
           node packages/analytics/scripts/build-dist.mjs
           node scripts/verify-analytics.mjs
+      - name: Build the Player distribution before testing its published entry points
+        run: node packages/player/scripts/build-dist.mjs
       - name: Player score receipts, collaboration and runtime boundaries
         run: |
           node --test --test-concurrency=2 packages/player/test/*.test.mjs
           node --test packages/toolkit/test/collaboration-http.test.mjs
-          node packages/player/scripts/build-dist.mjs
       - name: TypeScript and JavaScript syntax checks
         run: |
           node --check packages/toolkit/web/zip-source.js
