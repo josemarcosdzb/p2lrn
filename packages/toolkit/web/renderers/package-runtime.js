@@ -1,6 +1,7 @@
 import {startPackageRuntime} from '../package-runtime-shell.js';
 import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
+import {isSafeRuntimeMessage} from '../runtime-message-security.js';
 import {resolvePackageRuntimeUrl} from '../runtime-host-config.js';
 
 export const acceptsPayload = true;
@@ -195,14 +196,14 @@ export async function render({container, payload, representation, package:pkg, e
   const onMessage = (event) => {
     if (destroyed || event.source !== iframe.contentWindow || event.origin !== runtimeOrigin) return;
     const data = event.data;
-    if (!data || data.protocol !== PROTOCOL || data.action !== 'shell-ready' || connected) return;
+    if (!isSafeRuntimeMessage(data) || data.protocol !== PROTOCOL || data.action !== 'shell-ready' || connected) return;
     connected = true;
     const channel = new MessageChannel();
     port = channel.port1;
     let initialized = false;
     port.onmessage = (portEvent) => {
       const message = portEvent.data;
-      if (!message || message.protocol !== PROTOCOL) return;
+      if (!isSafeRuntimeMessage(message) || message.protocol !== PROTOCOL) return;
       if (!initialized && message.action === 'connected') {
         initialized = true;
         port.postMessage({
