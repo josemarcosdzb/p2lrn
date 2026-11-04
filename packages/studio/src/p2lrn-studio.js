@@ -112,6 +112,42 @@ function sanitizeHtml(text){
   });
   return doc;
 }
+
+function installSafeStudioHtmlPaste(node){
+  const insert=(event,source)=>{
+    const html=source?.getData?.('text/html')??'';
+    const plain=source?.getData?.('text/plain')??'';
+    if(!html&&!plain)return;
+    event.preventDefault();
+    const plainOnly=node.matches('h1[contenteditable],p[contenteditable],pre[contenteditable]');
+    const fragment=document.createDocumentFragment();
+    if(plainOnly||!html){
+      fragment.append(document.createTextNode(plain||sanitizeHtml(html).body.textContent||''));
+    }else{
+      const sanitized=sanitizeHtml(html);
+      for(const child of [...sanitized.body.childNodes])fragment.append(document.importNode(child,true));
+    }
+    const last=fragment.lastChild;
+    const selection=window.getSelection();
+    if(selection?.rangeCount&&node.contains(selection.anchorNode)){
+      const range=selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(fragment);
+      if(last){
+        range.setStartAfter(last);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }else node.append(fragment);
+    node.dispatchEvent(new Event('input',{bubbles:true}));
+  };
+  node.addEventListener('paste',event=>insert(event,event.clipboardData));
+  node.addEventListener('drop',event=>{
+    if(event.dataTransfer?.types?.includes('text/html'))insert(event,event.dataTransfer);
+  });
+}
+
 function filenameFromUrl(value){
   try{return new URL(value,location.href).pathname.split('/').filter(Boolean).at(-1)||'course.p2lrn';}
   catch{return'course.p2lrn';}
@@ -406,7 +442,7 @@ export class P2LRNStudioElement extends HTMLElement{
       }
       const editable=await this.#studio.readEditableText(entity.id);
       if(editable){
-        const surface=document.createElement(editable.mediaType==='text/plain'?'pre':'article');surface.className='surface';surface.contentEditable='true';
+        const surface=document.createElement(editable.mediaType==='text/plain'?'pre':'article');surface.className='surface';surface.contentEditable='true';installSafeStudioHtmlPaste(surface);
         if(editable.mediaType==='text/plain')surface.textContent=editable.text;
         else surface.innerHTML=sanitizeHtml(editable.text).body.innerHTML;
         surface.oninput=()=>{
