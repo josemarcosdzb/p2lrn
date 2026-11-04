@@ -21,7 +21,7 @@ function put16(v:DataView,o:number,n:number){v.setUint16(o,n,true);} function pu
 function put64(v:DataView,o:number,n:number){const b=BigInt(n); v.setUint32(o,Number(b&0xffffffffn),true); v.setUint32(o+4,Number((b>>32n)&0xffffffffn),true);}
 function concat(parts:Uint8Array[]):Uint8Array{const size=parts.reduce((n,p)=>n+p.byteLength,0); const out=new Uint8Array(size); let o=0; for(const p of parts){out.set(p,o);o+=p.byteLength;} return out;}
 
-export function safeZipPath(name:string):string{
+export export function safeZipPath(name:string):string{
   if(!name || name.includes('\0') || name.includes('\\') || name.startsWith('/')) throw new ValidationError(`unsafe ZIP path: ${JSON.stringify(name)}`);
   const parts=name.split('/');
   if(parts.length>32 || parts.some((p)=>!p||p==='.'||p==='..')) throw new ValidationError(`unsafe ZIP path component: ${JSON.stringify(name)}`);
