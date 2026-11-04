@@ -29,16 +29,33 @@ async function delegate(req,res,next,handler,options){
   }catch(error){next(error)}
 }
 
-export function installP2LRNStudio(app){
-  app.post('__ENDPOINT__',raw('512mb'),(req,res,next)=>{
+// Secure by default: the Host MUST supply real session, course permissions
+// and CSRF verification before P2LRN ever receives or parses an upload.
+export function installP2LRNStudio(app,{authenticate,authorize,verifyCsrf}={}){
+  if([authenticate,authorize,verifyCsrf].some(callback=>typeof callback!=='function'))
+    throw new TypeError('P2LRN Studio requires authenticate, authorize and verifyCsrf Host callbacks.');
+  const protect=(operation)=>async(req,res,next)=>{
+    try{
+      const principal=await authenticate(req);
+      if(!principal){res.status(401).json({ok:false,error:'Authentication required'});return;}
+      if((await authorize({principal,operation,coursePath:'__COURSE_PATH__',req}))!==true){
+        res.status(403).json({ok:false,error:'Course access denied'});return;
+      }
+      if((await verifyCsrf(req,principal))!==true){
+        res.status(403).json({ok:false,error:'CSRF denied'});return;
+      }
+      next();
+    }catch(error){next(error);}
+  };
+  app.post('__ENDPOINT__',protect('save'),raw('512mb'),(req,res,next)=>{
     void delegate(req,res,next,handleP2LRNStudioSave,{
       root:process.cwd(),coursePath:'__COURSE_PATH__',allowClientPath:false,
     });
   });
-  app.post('__READER_ENDPOINT__',raw('128mb'),(req,res,next)=>{
+  app.post('__READER_ENDPOINT__',protect('read'),raw('128mb'),(req,res,next)=>{
     void delegate(req,res,next,handleP2LRNStudioReader);
   });
-  app.post('__IMPORT_ENDPOINT__',raw('512mb'),(req,res,next)=>{
+  app.post('__IMPORT_ENDPOINT__',protect('import'),raw('512mb'),(req,res,next)=>{
     void delegate(req,res,next,handleP2LRNStudioExternalImport);
   });
 }

@@ -4,6 +4,7 @@ import {mkdir, mkdtemp, readFile, readdir, rename, rm, stat, writeFile} from 'no
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
+import {applyPinnedH5pSecurityPatches} from './security-patches.mjs';
 
 const execFileAsync = promisify(execFile);
 export const LUMI_H5P_LIBRARY_COMMIT = '236912f8e3c07a6b5c7ece4930b98fec2b6d3f6a';
@@ -65,6 +66,9 @@ export async function buildH5pLibraries({output = join(packageRoot, 'dist')} = {
     const source = join(work, extracted.name, 'assets', 'h5p', 'libraries');
     if (!(await stat(source)).isDirectory()) throw new Error('Pinned source has no assets/h5p/libraries directory.');
 
+    // Keep the verified Lumi source snapshot, but apply hash-locked security
+    // fixes before publishing the derived library catalog.
+    const securityPatches=await applyPinnedH5pSecurityPatches(source);
     const catalog = [];
     for (const entry of (await readdir(source, {withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))) {
       if (!entry.isDirectory()) continue;
@@ -118,6 +122,7 @@ export async function buildH5pLibraries({output = join(packageRoot, 'dist')} = {
       fileCount:files.length,
       bytes,
       catalogSha256:'sha256:' + sha256(Buffer.from(JSON.stringify(catalog))),
+      securityPatches,
       libraries:catalog,
     };
     await writeFile(join(source, 'index.json'), JSON.stringify(manifest, null, 2) + '\n');

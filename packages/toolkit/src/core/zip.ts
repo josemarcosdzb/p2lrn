@@ -56,7 +56,12 @@ export class ZipArchive {
     let result:Uint8Array;
     if(e.method===0)result=compressed;
     else{
-      try{result=inflateRawSync(compressed,{maxOutputLength:Math.max(1,e.uncompressedSize)});}
+      try{
+        // Node >=22 supports maxOutputLength; the project's @types/node 22.10
+        // exposes a narrower inflateRawSync overload. Keep the runtime bound.
+        const boundedInflate=inflateRawSync as unknown as (bytes:Uint8Array,options:{maxOutputLength:number})=>Buffer;
+        result=boundedInflate(compressed,{maxOutputLength:Math.max(1,e.uncompressedSize)});
+      }
       catch{throw new ValidationError(`ZIP decompression exceeded declared size or is malformed: ${name}`);}
     }
     if(result.byteLength!==e.uncompressedSize)throw new ValidationError(`ZIP size mismatch after decompression: ${name}`); if(crc32(result)!==e.crc)throw new ValidationError(`ZIP CRC mismatch: ${name}`); return new Uint8Array(result);}

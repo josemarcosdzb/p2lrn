@@ -1,4 +1,5 @@
 import {execFile} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {access, mkdir, readFile, rm, stat, writeFile} from 'node:fs/promises';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -242,6 +243,27 @@ const catalog = JSON.parse(await readFile(join(h5pRoot,'dist','index.json'),'utf
 if (catalog.packageVersion !== h5pPackage.version || catalog.libraryCount !== 144) {
   throw new Error(`Packed H5P catalog mismatch: version=${catalog.packageVersion}, count=${catalog.libraryCount}`);
 }
+
+
+const {SECURITY_PATCH}=await import('../packages/h5p-libraries/scripts/security-patches.mjs');
+const patch=catalog.securityPatches?.find((entry)=>entry.advisory===SECURITY_PATCH.advisory);
+if(!patch||patch.patchedSha256!=='sha256:'+SECURITY_PATCH.patchedSha256||
+    patch.originalSha256!=='sha256:'+SECURITY_PATCH.originalSha256)
+  throw new Error('Packed H5P catalog does not declare the verified jQuery UI XSS patch.');
+const jqueryBytes=await readFile(join(h5pRoot,'dist',...SECURITY_PATCH.file.split('/')));
+if(createHash('sha256').update(jqueryBytes).digest('hex')!==SECURITY_PATCH.patchedSha256)
+  throw new Error('Packed H5P jQuery UI bytes differ from the validated patch.');
+const djangoTemplate=await readFile(join(studioRoot,'templates','django-views.py'),'utf8');
+if(djangoTemplate.includes('@csrf_exempt') || !djangoTemplate.includes('P2LRN_STUDIO_AUTHORIZE') ||
+    (djangoTemplate.match(/@csrf_protect/g)?.length??0)!==3)
+  throw new Error('Packed Studio Django routes must require CSRF and Host authorization.');
+const expressTemplate=await readFile(join(studioRoot,'templates','express-route.mjs'),'utf8');
+if(!expressTemplate.includes('authenticate,authorize,verifyCsrf') ||
+    !expressTemplate.includes('protect(\'save\')') ||
+    !expressTemplate.includes('protect(\'read\')') ||
+    !expressTemplate.includes('protect(\'import\')'))
+  throw new Error('Packed Studio Express routes must authorize before accepting file bodies.');
+
 
 // Release blocker: inspect upstream third-party metadata in the actual built archives,
 // including all pinned H5P library.json entries and Player vendor license files.
