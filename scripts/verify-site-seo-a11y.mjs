@@ -4,6 +4,7 @@ import {readFile,readdir,stat} from 'node:fs/promises';
 import {join,resolve,relative,basename,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {CANONICAL_ORIGIN,SEO_PAGE_METADATA,routeOf,isIndexable} from '../deploy/netlify/site-seo-a11y.mjs';
+import {canonicalRoute,englishRouteFor,spanishRouteFor,legacyRouteFor,LEGACY_ENGLISH_ROUTES} from '../deploy/netlify/site-routes.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const src=join(root,'deploy/netlify/site');
 const out=join(root,'.netlify-cdn');
@@ -15,7 +16,7 @@ const errors=[];const indexable=[];const aliases=[];
 // Fact-checked SEO guide must stay substantial, readable and symmetric in both languages.
 for(const [rel,language,faqTitle] of [
  ['docs/formato-portable-cursos-interactivos/index.html','es','Preguntas frecuentes'],
- ['en/docs/formato-portable-cursos-interactivos/index.html','en','Frequently asked questions']
+ ['en/docs/portable-course-format/index.html','en','Frequently asked questions']
 ]){
  const html=await readFile(join(out,...rel.split('/')),'utf8').catch(()=>null);
  if(!html){errors.push(rel+' missing editorial article');continue}
@@ -36,12 +37,31 @@ for(const [rel,language,faqTitle] of [
 
 const sourcePages=(await walk(src)).filter(p=>basename(p)==='index.html');
 for(const file of sourcePages){
- const route=routeOf(src,file);
- const target=join(out,relative(src,file));
+ const route=canonicalRoute(routeOf(src,file));
+ const target=route==='/'?join(out,'index.html'):join(out,...route.slice(1).split('/').filter(Boolean),'index.html');
  const html=await readFile(target,'utf8').catch(()=>{errors.push(route+' missing compiled page');return ''});
  if(!html)continue;
  const pageIndexable=isIndexable(html);if(pageIndexable)indexable.push(route);else aliases.push(route);
  const head=html.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1]||'';
+ if(pageIndexable){
+   const counterpart=localeRoute=>localeRoute.startsWith('/en/')?spanishRouteFor(localeRoute):englishRouteFor(localeRoute);
+   const other=counterpart(route);
+   const expectedPairs=[[route.startsWith('/en/')?'en':'es',route],
+     [route.startsWith('/en/')?'es':'en',other]];
+   for(const [language,expectedRoute] of expectedPairs){
+     const actual=[...html.matchAll(/<link\b[^>]*rel=["']alternate["'][^>]*>/gi)]
+       .filter(x=>x[0].includes('hreflang="'+language+'"'));
+     if(actual.length!==1||!actual[0][0].includes('href="'+CANONICAL_ORIGIN+expectedRoute+'"'))
+       errors.push(route+' missing reciprocal hreflang '+language+' to '+expectedRoute);
+   }
+   if(!html.includes('content="summary_large_image"'))errors.push(route+' Twitter large card missing');
+   if(!html.includes(CANONICAL_ORIGIN+'/assets/social/p2lrn-studio-1200x630.png'))
+     errors.push(route+' social Studio screenshot missing');
+   if(route!=='/'&&route!=='/en/'&&!html.includes('"@type":"BreadcrumbList"'))
+     errors.push(route+' BreadcrumbList missing');
+ }
+ if((html.match(/data-language-switch/g)||[]).length!==1)
+   errors.push(route+' duplicate or missing language selector');
  // Parse the complete JSON-LD in the compiled HTML and verify each guide's schema.
  const structured=[];
  for(const script of head.matchAll(/<script\b[^>]*type\s*=\s*(["'])application\/ld\+json\1[^>]*>([\s\S]*?)<\/script>/gi)){
@@ -54,7 +74,7 @@ for(const file of sourcePages){
    else if(articles[0].url!==CANONICAL_ORIGIN+route||articles[0].inLanguage!==(route.startsWith('/en/')?'en':'es'))
      errors.push(route+' TechArticle URL or language mismatched');
  }
- const customSeo=SEO_PAGE_METADATA[route];
+ const customSeo=SEO_PAGE_METADATA[route]||SEO_PAGE_METADATA[legacyRouteFor(route)];
  if(pageIndexable&&customSeo){
    const pageTitle=(head.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'').trim();
    const pageDescription=attr(named(head,'meta','name','description')[0]||'','content');
@@ -86,6 +106,16 @@ for(const file of sourcePages){
   if(!sidebar||!attr(sidebar,'aria-label'))errors.push(route+' sidebar not labelled');
  }
 }
+// A real 1200x630 PNG generated from the Studio screenshot must ship.
+const social=await readFile(join(out,'assets/social/p2lrn-studio-1200x630.png')).catch(()=>null);
+if(!social||social.length<1000||social.subarray(1,4).toString()!=='PNG'||
+   social.readUInt32BE(16)!==1200||social.readUInt32BE(20)!==630)
+  errors.push('Social Studio image is not a valid 1200x630 PNG');
+const redirects=await readFile(join(out,'_redirects'),'utf8').catch(()=>'');
+for(const [from,to] of Object.entries(LEGACY_ENGLISH_ROUTES))
+  if(!redirects.includes(from+' '+to+' 301!'))errors.push('Missing permanent English redirect '+from);
+if(!redirects.includes('https://p2lrn.netlify.app/* https://p2lrn.org/:splat 301!'))
+  errors.push('Netlify subdomain is not redirected to the canonical host');
 const sitemap=await readFile(join(out,'sitemap.xml'),'utf8').catch(()=>{errors.push('missing sitemap.xml');return ''});
 const xmlUrls=[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]).sort();
 const expected=indexable.map(x=>CANONICAL_ORIGIN+x).sort();
@@ -97,7 +127,7 @@ const spanishAliases=aliases.filter(route=>!(route==='/en/'||route.startsWith('/
 if(spanishSourcePages.length<60||englishSourcePages.length<60||
    spanishSourcePages.length!==englishSourcePages.length||
    indexable.length+aliases.length!==sourcePages.length||
-   spanishAliases.length!==englishAliases.length||aliases.length!==6)
+   spanishAliases.length!==englishAliases.length||aliases.length!==14)
   errors.push('unexpected bilingual source/indexable/alias counts: '+[
     sourcePages.length,indexable.length,aliases.length,
     spanishSourcePages.length,englishSourcePages.length,
@@ -107,9 +137,9 @@ if(spanishSourcePages.length<60||englishSourcePages.length<60||
 const solutionSlugs=['crear-cursos-interactivos','juegos-educativos-3d','cursos-offline'];
 const homeHtml=await readFile(join(out,'index.html'),'utf8');
 const englishHomeHtml=await readFile(join(out,'en','index.html'),'utf8');
-for(const [prefix,home] of [['/',homeHtml],['/en/',englishHomeHtml]]){
+for(const [language,home] of [['es',homeHtml],['en',englishHomeHtml]]){
   for(const slug of solutionSlugs){
-    const route=prefix+slug+'/';
+    const route=language==='en'?englishRouteFor('/'+slug+'/'):'/'+slug+'/';
     if(!indexable.includes(route))errors.push('Solution route is not indexable: '+route);
     if(!home.includes('href="'+route+'"'))errors.push('No discoverable home link to '+route);
     const html=await readFile(join(out,...route.slice(1).split('/').filter(Boolean),'index.html'),'utf8').catch(()=>null);
@@ -205,8 +235,8 @@ for(const [route,landingHref,guideHref] of [
   ['docs/conectores/ia/index.html','/skills/','/docs/skills/'],
   ['docs/conectores/index.html','/skills/','/docs/skills/'],
   ['en/docs/index.html','/en/skills/','/en/docs/skills/'],
-  ['en/docs/conectores/ia/index.html','/en/skills/','/en/docs/skills/'],
-  ['en/docs/conectores/index.html','/en/skills/','/en/docs/skills/'],
+  ['en/docs/connectors/ai/index.html','/en/skills/','/en/docs/skills/'],
+  ['en/docs/connectors/index.html','/en/skills/','/en/docs/skills/'],
 ]){
   const html=await readFile(join(out,...route.split('/')),'utf8').catch(()=>null);
   if(!html||!html.includes('href="'+landingHref+'"')||!html.includes('href="'+guideHref+'"'))
