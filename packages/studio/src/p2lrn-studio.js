@@ -103,7 +103,7 @@ function sanitizeHtml(text){
       if(['href','src','poster'].includes(name)&&!safeUrl(value,name,tag)){
         node.removeAttribute(attr.name);continue;
       }
-      if(name==='style'&&/(?:url\s*\(|image-set\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding|\\)/i.test(value)){
+      if(name==='style'&&/(?:url\s*\(|image-set\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding|position\s*:\s*(?:fixed|sticky)|z-index\s*:|\\)/i.test(value)){
         node.removeAttribute(attr.name);continue;
       }
       if(name==='target'&&value!=='_blank'&&value!=='_self')node.removeAttribute(attr.name);
