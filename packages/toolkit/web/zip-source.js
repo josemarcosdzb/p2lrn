@@ -58,7 +58,7 @@ export class Crc32State {
 
 export function crc32(bytes) { return new Crc32State().update(bytes).digest(); }
 
-async function inflateRaw(bytes, maxOutputBytes) {
+export async function inflateRawBounded(bytes, maxOutputBytes) {
   if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot decompress ZIP deflate streams (DecompressionStream unavailable).');
   if (!Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < 0) throw new TypeError('Invalid ZIP decompression byte limit.');
   let stream;
@@ -308,13 +308,13 @@ export class BufferZipArchive {
     const dataStart = offset + 30 + nameLength + extraLength;
     const dataEnd = dataStart + entry.compressedSize;
     if (dataEnd > this.buffer.byteLength) throw new Error(`Truncated ZIP payload: ${name}`);
-    if (entry.uncompressedSize > this.limits.bufferedEntryBytes) {
+    if (entry.uncompressedSize > (this.limits.bufferedEntryBytes ?? 256 * 1024 * 1024)) {
       const error = new Error(`ZIP entry is too large for ArrayBuffer reading (${entry.uncompressedSize} bytes): ${name}`);
       error.code = 'P2LRN_ENTRY_REQUIRES_STREAM';
       throw error;
     }
     const compressed = this.bytesView.slice(dataStart, dataEnd);
-    const result = entry.method === 0 ? compressed : await inflateRaw(compressed, entry.uncompressedSize);
+    const result = entry.method === 0 ? compressed : await inflateRawBounded(compressed, entry.uncompressedSize);
     if (result.byteLength !== entry.uncompressedSize) throw new Error(`ZIP size mismatch after decompression: ${name}`);
     if (crc32(result) !== entry.crc) throw new Error(`ZIP CRC mismatch: ${name}`);
     return result;
@@ -613,7 +613,7 @@ export class RemoteZipArchive {
     }
     const {dataStart, dataEnd} = await this.#dataRange(entry);
     const compressed = entry.compressedSize ? await this.source.readRange(dataStart, dataEnd) : new Uint8Array();
-    const result = entry.method === 0 ? compressed : await inflateRaw(compressed, entry.uncompressedSize);
+    const result = entry.method === 0 ? compressed : await inflateRawBounded(compressed, entry.uncompressedSize);
     if (result.byteLength !== entry.uncompressedSize) throw new Error(`ZIP size mismatch after decompression: ${name}`);
     if (crc32(result) !== entry.crc) throw new Error(`ZIP CRC mismatch: ${name}`);
     return result;
