@@ -18,6 +18,7 @@ await cp(join(repo,'packages','toolkit','web','studio','questionnaire-editor.js'
 await cp(join(repo,'packages','toolkit','web','studio','questionnaire-grading.js'),join(out,'runtime','questionnaire-grading.js'));
 await cp(join(repo,'packages','toolkit','web','studio','structured-editor.js'),join(out,'runtime','structured-editor.js'));
 await cp(join(repo,'packages','toolkit','web','studio','lesson-images.js'),join(out,'runtime','lesson-images.js'));
+await cp(join(repo,'packages','toolkit','web','studio','visual-layout.js'),join(out,'runtime','visual-layout.js'));
 // Required by questionnaire, structured and lesson-image editors at module load.
 // Omitting it leaves the published Studio Web Component unregistered in browsers.
 await cp(join(repo,'packages','toolkit','web','studio','studio-ui-i18n.js'),join(out,'runtime','studio-ui-i18n.js'));
