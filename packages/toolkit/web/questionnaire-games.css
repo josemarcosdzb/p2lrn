@@ -338,7 +338,7 @@
 .p2lrn-3d-trial .p2lrn-game-actions {
   margin-block:.2rem;
 }
-@media (any-pointer:coarse) {
+@media (hover:none) and (pointer:coarse) {
   .p2lrn-3d-joystick { display:flex; }
   .p2lrn-3d-entry-hint { display:none; }
   .p2lrn-3d-stage .p2lrn-3d-canvas { cursor:default; }
