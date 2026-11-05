@@ -110,16 +110,59 @@ const canonicalDisplayTitles = Object.freeze({
   'external/qti3-minimal.p2lrn':'QTI 3 · fixture mínima preservada (sin itemBody)',
   'external/cmi5-catapult-pre-post.p2lrn':'cmi5 Catapult · Introduction to Geology',
 });
+// The external community sample list is verified provenance, not user-controlled
+// runtime metadata. A sample without an exact source hash, licence and pinned
+// P2LRN bytes must not silently appear as a supported web demo.
+const freeProvenancePath=join(canonicalSource,'external','free','provenance.json');
+const freeProvenanceMap=new Map();
+if(await exists(freeProvenancePath)){
+  const manifest=JSON.parse(await readFile(freeProvenancePath,'utf8'));
+  if(manifest?.schema!=='https://p2lrn.org/schema/community-samples/1'||manifest?.version!==1||
+     !Array.isArray(manifest.samples)||manifest.samples.length>80)
+    throw new Error('Invalid community sample provenance schema');
+  const supported=new Set(['scorm','h5p','qti','cmi5','imscc']);
+  const allowedLicenses=new Set(['MIT','Apache-2.0','CC-BY-4.0']);
+  for(const item of manifest.samples){
+    if(!/^[a-z0-9][a-z0-9-]*$/u.test(item?.slug??'')||freeProvenanceMap.has(item.slug))
+      throw new Error('Community sample has an invalid/duplicate slug');
+    if(!supported.has(item.kind)||!allowedLicenses.has(item.license))
+      throw new Error('Community sample has an undocumented external format or licence: '+item.slug);
+    if(!/^https:\/\//u.test(item.sourceUrl??'')||
+       !/^sha256:[0-9a-f]{64}$/u.test(item.sourceSha256??'')||
+       !/^sha256:[0-9a-f]{64}$/u.test(item.packageSha256??''))
+      throw new Error('Community sample is missing exact HTTPS provenance or SHA-256: '+item.slug);
+    if(typeof item.title!=='string'||!item.title.trim()||item.title.length>140)
+      throw new Error('Community sample title invalid: '+item.slug);
+    freeProvenanceMap.set(item.slug,item);
+  }
+}
+const freeSamplesSeen=new Set();
 const canonicalEntries = [];
 for (const path of (await walk(join(canonicalSource,'external'))).filter((item)=>item.endsWith('.p2lrn')).sort()) {
   const rel = relative(canonicalSource,path).replaceAll('\\','/');
   const publishedPath = join(canonicalOutput,...rel.split('/'));
   const [sourceBytes,publishedBytes] = await Promise.all([readFile(path),readFile(publishedPath)]);
   if (!sourceBytes.equals(publishedBytes)) throw new Error(`Published canonical example differs byte-for-byte from source: ${rel}`);
+  const freeMatch=/^external\/free\/([a-z0-9][a-z0-9-]*)\.p2lrn$/u.exec(rel);
+  const freeMetadata=freeMatch?freeProvenanceMap.get(freeMatch[1]):null;
+  if(freeMatch){
+    if(!freeMetadata)throw new Error('Unknown community sample without redistribution provenance: '+rel);
+    const digest='sha256:'+createHash('sha256').update(sourceBytes).digest('hex');
+    if(digest!==freeMetadata.packageSha256)throw new Error('Community sample changed without pinned SHA-256: '+rel);
+    freeSamplesSeen.add(freeMatch[1]);
+  }
   const inspected = await inspectPackage(publishedPath);
   canonicalEntries.push({
-    title:canonicalDisplayTitles[rel] ?? inspected.title,
+    title:freeMetadata?.title??canonicalDisplayTitles[rel] ?? inspected.title,
     category:rel.startsWith('external/') ? 'canonical-external' : rel.startsWith('aulap2p-reader/') ? 'canonical-reader' : 'canonical',
+    ...(freeMetadata ? {
+      sourceFormat:freeMetadata.kind,
+      originUrl:freeMetadata.sourceUrl,
+      license:freeMetadata.license,
+      sourceSha256:freeMetadata.sourceSha256,
+      browserVerified:freeMetadata.browserVerified===true,
+      provenance:'/examples/canonical/external/free/provenance.json',
+    } : {}),
     url:'/examples/canonical/' + rel,
     source:'examples/canonical/' + rel,
     rendererId:null,
@@ -130,6 +173,10 @@ for (const path of (await walk(join(canonicalSource,'external'))).filter((item)=
     bytes:inspected.bytes,
   });
 }
+
+if(freeSamplesSeen.size!==freeProvenanceMap.size)
+  throw new Error('Community sample provenance includes files absent from the public corpus: '+
+    [...freeProvenanceMap.keys()].filter(id=>!freeSamplesSeen.has(id)).join(', '));
 
 // Native documentation fixtures are verified during the build, but must not be published.
 const documentationExamples = await buildDocExamples({outputRoot:examplesOutput});
