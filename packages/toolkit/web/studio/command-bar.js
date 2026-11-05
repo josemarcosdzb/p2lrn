@@ -80,6 +80,9 @@ const CSS=[
   '.p2lrn-ribbon-panel[hidden]{display:none!important}',
   '.p2lrn-ribbon-tab[hidden]{display:none!important}',
   '.p2lrn-ribbon-feedback{padding:6px 15px 8px;border-top:1px solid #edf0f4;min-height:28px;font-size:11px;color:#64748b}',
+  '.p2lrn-ribbon-modes{display:flex;align-items:center;gap:3px;padding:3px;border:1px solid #dbe2eb;border-radius:9px;background:#f7f9fc;flex:none}',
+  '.p2lrn-ribbon-modes button{min-height:32px;padding:7px 12px;border:1px solid transparent;border-radius:6px;background:transparent;color:#475467;white-space:nowrap;font-weight:650}',
+  '.p2lrn-ribbon-modes button[aria-pressed=true]{background:#fff;border-color:#cbd6e4;color:#243e64;box-shadow:0 1px 3px rgba(15,23,42,.08)}',
   '.p2lrn-ribbon-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}',
   '.p2lrn-ribbon-divider{width:1px;height:28px;background:#e5e9f0;flex:none}',
   '.p2lrn-ribbon-field{display:grid;gap:3px;font-size:10px;font-weight:650;color:#667085}',
@@ -212,8 +215,15 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   if(actions.open)topActions.append(button(doc,'Abrir',{action:'open'}));
   const save=button(doc,'Guardar',{action:'save'});
   if(actions.save)topActions.append(save);
-  const preview=button(doc,'Vista alumno',{action:'preview',pressed:false});
-  if(actions.preview)topActions.append(preview);
+  // Keep both explicit modes visible. A single toggling label used to make
+  // 'Vista alumno' disappear as soon as the student view was selected.
+  const edit=button(doc,'Editar',{action:'edit',pressed:true,title:'Volver al editor del curso'});
+  const preview=button(doc,'Vista alumno',{action:'preview',pressed:false,title:'Ver el contenido con el Player del alumno'});
+  const modes=node(doc,'div','p2lrn-ribbon-modes');
+  modes.setAttribute('role','group');modes.setAttribute('aria-label','Modo de visualización');
+  if(actions.edit)modes.append(edit);
+  if(actions.preview)modes.append(preview);
+  if(modes.childElementCount)topActions.append(modes);
   const exportButton=button(doc,'Exportar .p2lrn',{action:'export',cls:'p2lrn-primary'});
   if(actions.export)topActions.append(exportButton);
   top.append(topActions);bar.append(top);
@@ -458,8 +468,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     const target=event.target.closest?.('[data-ui-action]');
     if(!target||!bar.contains(target))return;
     const action=target.dataset.uiAction;
-    if(action==='preview'&&previewMode)void run('edit');
-    else void run(action);
+    void run(action);
   });
   block.addEventListener('change',()=>applyCommand('formatBlock',block.value));
   font.addEventListener('change',()=>applyCommand('fontName',font.value));
@@ -472,9 +481,8 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   const advanced=mountAdvancedStudioTools({bar,root,resolveSurface,onStatus});
   function setPreviewMode(value){
     previewMode=Boolean(value);
-    preview.textContent=previewMode?'Volver a editar':'Vista alumno';
-    preview.dataset.uiAction=previewMode?'edit':'preview';
     preview.setAttribute('aria-pressed',String(previewMode));
+    edit.setAttribute('aria-pressed',String(!previewMode));
     refreshButtons();
   }
   function setDocument(value,label=''){
