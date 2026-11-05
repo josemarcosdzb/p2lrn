@@ -522,7 +522,7 @@ function buildClassificationControls({trial,runtime,scene,status}) {
 
 // The analog joystick is scoped to one scene. It never intercepts gestures
 // on the WebGL canvas, where taps and drags must remain available for gameplay.
-function createVirtualJoystick(scene){
+export function createVirtualJoystick(scene){
   const pad=el('div',{
     class:'p2lrn-3d-joystick',
     role:'group',
