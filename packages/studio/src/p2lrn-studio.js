@@ -288,10 +288,16 @@ export class P2LRNStudioElement extends HTMLElement{
 
   async createCourse(options={}){
     this._revoke();
-    this.#studio=createP2LRNStudioDocument(options);this.#savedRevision=0;
-    this.#sourceUrl=null;this.#selected=this.#studio.rootId;
+    this.#studio=createP2LRNStudioDocument(options);
+    // The hosted editor also opens the first lesson, not the course metadata.
+    const firstUnitId=this.#studio.entity(this.#studio.rootId)?.children?.[0];
+    const firstLessonId=firstUnitId&&this.#studio.entity(firstUnitId)?.children?.[0];
+    this.#sourceUrl=null;this.#selected=firstLessonId||this.#studio.rootId;
+    // A freshly created empty course starts with no edits after its initial template.
+    this.#savedRevision=this.#studio.changeCount;
     this.shadowRoot.querySelector('[data-body]').hidden=false;
     this._renderTree();await this._renderEditor();this._updateState();
+    this.setStatus('Curso nuevo listo para editar');
     this.dispatchEvent(new CustomEvent('p2lrn-studio-create',{detail:{name:this.#studio.sourceName,packageId:this.#studio.manifest.packageId},bubbles:true,composed:true}));
     return this.#studio;
   }
