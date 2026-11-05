@@ -20,7 +20,7 @@ permissions:
 
 concurrency:
   group: p2lrn-studio-local-preview
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-and-serve:
