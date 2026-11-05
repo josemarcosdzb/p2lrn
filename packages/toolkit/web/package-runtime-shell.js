@@ -202,6 +202,17 @@ function rewriteDeferredMarkup(doc, path) {
 function rewriteHtml(path) {
   const doc = new DOMParser().parseFromString(text(path), 'text/html');
   doc.querySelectorAll('base').forEach((node) => node.remove());
+  // Never mount on* HTML attributes under a restrictive inherited CSP:
+  // preserve their source as inert data until a sandbox-local blob registers
+  // the equivalent event listeners.
+  for(const el of doc.querySelectorAll('*')){
+    for(const attr of [...el.attributes]){
+      const name=attr.name.toLowerCase();
+      if(!/^on[a-z][a-z0-9]*$/.test(name))continue;
+      el.setAttribute('data-p2lrn-legacy-'+name,attr.value);
+      el.removeAttribute(attr.name);
+    }
+  }
   const csp = doc.createElement('meta');
   csp.httpEquiv = 'Content-Security-Policy';
   csp.content = "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src blob:; form-action 'none'; base-uri 'none'; object-src 'none';";
@@ -269,7 +280,9 @@ async function installLegacyInlineHandlers(root) {
     let id=null;
     for(const attribute of [...el.attributes]) {
       const name=attribute.name.toLowerCase();
-      if(!/^on[a-z][a-z0-9]*$/.test(name))continue;
+      const handlerName=name.startsWith('data-p2lrn-legacy-on')
+        ? name.slice('data-p2lrn-legacy-'.length) : name;
+      if(!/^on[a-z][a-z0-9]*$/.test(handlerName))continue;
       const source=attribute.value;
       el.removeAttribute(attribute.name);
       bytes+=source.length;
@@ -279,8 +292,8 @@ async function installLegacyInlineHandlers(root) {
         id='p2lrn-legacy-'+inlineScriptId;
         el.setAttribute('data-p2lrn-legacy-id',id);
       }
-      handlers.push({id,eventName:name.slice(2),source});
-      if(name==='onload'&&(el===document.body||el===document.documentElement))
+      handlers.push({id,eventName:handlerName.slice(2),source});
+      if(handlerName==='onload'&&(el===document.body||el===document.documentElement))
         onLoadElements.push(el);
     }
   }
