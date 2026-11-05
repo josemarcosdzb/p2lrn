@@ -60,6 +60,19 @@ function insertAtSelection(surface,block){
   surface.dispatchEvent(new Event('input',{bubbles:true}));
   return block;
 }
+export function insertVisualLayoutBlock(surface,kind,{anchorNode=null}={}){
+  if(!surface?.isContentEditable)throw new Error('Selecciona una lección HTML editable.');
+  if(!BLOCKS.some(([id])=>id===kind))throw new RangeError('Bloque visual desconocido.');
+  const block=makeBlock(kind);
+  if(anchorNode&&surface.contains(anchorNode)){
+    let top=anchorNode;
+    while(top&&top.parentNode!==surface)top=top.parentNode;
+    if(top?.parentNode===surface)top.after(block);
+    else surface.append(block);
+    surface.dispatchEvent(new Event('input',{bubbles:true}));
+  }else insertAtSelection(surface,block);
+  return block;
+}
 export function mountVisualLayoutTools({host,surface,onStatus}={}){
   if(!host||!surface)throw new TypeError('Studio visual tools require host and editable surface.');
   const bar=elt('div');bar.className='p2lrn-layout-toolbar';
