@@ -188,7 +188,9 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   const filePop=node(doc,'div','p2lrn-file-pop');
   const fileItems=[
     ['create','Nuevo curso'],['open','Abrir .p2lrn'],
-    ['save','Guardar'],['export','Descargar .p2lrn'],
+    ['save','Guardar'],['saveDraft','Guardar borrador local'],
+    ['recoverDraft','Recuperar borrador'],['clearDraft','Eliminar borrador…'],
+    ['export','Descargar .p2lrn'],
     ['offline','Entrega offline'],['review','Revisar entrega']
   ];
   for(const [id,label] of fileItems){if(actions[id])filePop.append(button(doc,label,{action:id}));}
