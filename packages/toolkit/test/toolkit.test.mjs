@@ -149,7 +149,7 @@ test('browser SDK opens retained legacy P2RLN and newly authored P2LRN packages'
     const canonical=await openP2LRNPackageBytes(asArrayBuffer(readFileSync(canonicalPath)));
     assert.equal(legacy.manifest.format,'P2RLN');
     assert.equal(canonical.manifest.format,'P2LRN');
-    assert.ok(legacy.graph.entities.some((e)=>e.activityType==='https://p2lrn.org/type/resource'));
+    assert.ok(legacy.graph.entities.some((e)=>e.type==='activity'),'retained SCORM legacy wrapper has an activity');
     assert.ok(canonical.graph.entities.some((e)=>e.activityType==='https://p2lrn.org/type/resource'));
   }finally{rmSync(dir,{recursive:true,force:true});}
 });

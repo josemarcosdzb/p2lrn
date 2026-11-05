@@ -93,6 +93,9 @@ const examplesOutput = join(outputRoot,'examples');
 // Always reset examples so deleted courses cannot survive incremental Netlify builds.
 await rm(examplesOutput,{recursive:true,force:true});
 await mkdir(examplesOutput,{recursive:true});
+// The website's Analytics examples module is application code, not a course.
+// Restore it after purging old course artifacts.
+await copyFile(join(siteRoot,'examples','p2lrn-results-index.mjs'),join(examplesOutput,'p2lrn-results-index.mjs'));
 const canonicalSource = join(root,'examples','canonical');
 const canonicalOutput = join(examplesOutput,'canonical');
 await mkdir(canonicalOutput,{recursive:true});

@@ -89,7 +89,7 @@ test('distribution source contains no sandbox escape token',async()=>{
 test('only the canonical P2LRN workflows remain',async()=>{
   const dir=resolve(root,'.github/workflows');
   const names=(await readdir(dir)).filter(name=>/\.ya?ml$/i.test(name)).sort();
-  assert.deepEqual(names,['p2lrn-ci.yml','p2lrn-license-design-qa.yml','p2lrn-native-offline-windows.yml','p2lrn-player-i18n.yml','p2lrn-portable-verification.yml','p2lrn-site-i18n.yml']);
+  assert.deepEqual(names,['p2lrn-ci.yml','p2lrn-grading-modes-qa.yml','p2lrn-license-design-qa.yml','p2lrn-native-offline-windows.yml','p2lrn-player-i18n.yml','p2lrn-portable-verification.yml','p2lrn-site-i18n.yml']);
 });
 
 
