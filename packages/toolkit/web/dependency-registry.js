@@ -21,6 +21,44 @@ export class DependencyRegistry {
 
   get(id) { return this.entries.get(id) ?? null; }
 
+  /**
+   * Side-effect-free runtime preflight: never invokes load() and never
+   * downloads/executes package code. 'loadable' means a later resolver may
+   * satisfy the dependency; it is NOT proof that it will succeed.
+   */
+  async inspect(ids = [], context = {}) {
+    const items = [], missing = [], pending = [];
+    for (const requested of ids) {
+      const request = typeof requested === 'string' ? {id:requested} : requested;
+      if (!request || typeof request.id !== 'string' || !request.id.trim()) {
+        const error = new TypeError('Invalid runtime dependency request.');
+        error.code = 'P2LRN_DEPENDENCY_INVALID';
+        throw error;
+      }
+      const descriptor = this.get(request.id);
+      const optional = request.optional === true || descriptor?.optional === true;
+      const exactVersion = request.version == null ? null : String(request.version);
+      let state = 'unavailable';
+      if (descriptor && (!exactVersion || descriptor.version === exactVersion)) {
+        let detected = false;
+        try { detected = Boolean(await descriptor.detect(context)); } catch { detected = false; }
+        state = detected ? 'available' : descriptor.load ? 'loadable' : 'unavailable';
+      }
+      const item = Object.freeze({
+        id:request.id, required:!optional, version:exactVersion,
+        installedVersion:descriptor?.version ?? null, state,
+      });
+      items.push(item);
+      if (state === 'loadable') pending.push(item);
+      else if (state === 'unavailable' && !optional) missing.push(item);
+    }
+    return Object.freeze({
+      ok:missing.length === 0, verified:missing.length === 0 && pending.filter(x=>x.required).length === 0,
+      items:Object.freeze(items), missing:Object.freeze(missing),
+      pending:Object.freeze(pending),
+    });
+  }
+
   async resolve(ids = [], context = {}) {
     const resolved = new Map();
     for (const requested of ids) {
@@ -29,6 +67,12 @@ export class DependencyRegistry {
       if (!descriptor) {
         if (request.optional) continue;
         const error = new Error(`Required runtime dependency is not registered: ${request.id}`); error.code = 'P2LRN_DEPENDENCY_UNAVAILABLE'; throw error;
+      }
+      if (request.version != null && descriptor.version !== String(request.version)) {
+        if (request.optional || descriptor.optional) continue;
+        const error = new Error(`Runtime dependency ${request.id} requires version ${String(request.version)}, installed ${descriptor.version}.`);
+        error.code = 'P2LRN_DEPENDENCY_VERSION_UNAVAILABLE';
+        throw error;
       }
       let available = false;
       try { available = Boolean(await descriptor.detect(context)); }
