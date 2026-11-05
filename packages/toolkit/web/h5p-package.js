@@ -166,6 +166,28 @@ export async function inspectH5PPackage(nested) {
     if (!libraries.has(descriptor.machineName)) libraries.set(descriptor.machineName, descriptor);
   }
 
+  // Check bundled library asset closure before starting H5P code. A bundled
+  // library.json with a missing preloaded .js/.css is not a playable library.
+  const inventory=new Set(names);
+  for(const lib of new Set(libraries.values())){
+    for(const path of [...lib.preloadedJs,...lib.preloadedCss]){
+      const normal=String(path).replace(/^\.\//u,'');
+      if(!normal||normal.includes('\\')||normal.startsWith('/')||
+        /^[a-z][a-z0-9+.-]*:/iu.test(normal)||
+        normal.split('/').some(part=>!part||part==='.'||part==='..'||part.includes('\0'))){
+        const error=new Error('Unsafe H5P library asset path in '+lib.folder+': '+path);
+        error.code='P2LRN_H5P_LIBRARY_ASSET_UNSAFE';
+        throw error;
+      }
+      const member=lib.folder+'/'+normal;
+      if(!inventory.has(member)){
+        const error=new Error('H5P bundled library requires missing file: '+member);
+        error.code='P2LRN_H5P_LIBRARY_ASSET_MISSING';
+        throw error;
+      }
+    }
+  }
+
   const missing = [];
   const bundled = [];
   for (const dep of required) {
