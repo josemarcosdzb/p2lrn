@@ -41,6 +41,76 @@ function dependencyList(value, label = 'dependencies') {
   });
 }
 
+
+const MAX_H5P_DEPENDENCY_SCAN_NODES=50000;
+const MAX_H5P_DEPENDENCY_CLOSURE=1024;
+function collectContentLibraryDependencies(content){
+  const found=new Map(),stack=[content],seen=new Set();
+  let visited=0;
+  while(stack.length){
+    const value=stack.pop();
+    if(!value||typeof value!=='object')continue;
+    if(seen.has(value))continue;
+    seen.add(value);
+    if(++visited>MAX_H5P_DEPENDENCY_SCAN_NODES){
+      const error=new Error('H5P content dependency scan exceeds the safe node limit.');
+      error.code='P2LRN_H5P_DEPENDENCY_SCAN_LIMIT';
+      throw error;
+    }
+    if(Array.isArray(value)){for(const item of value)stack.push(item);continue;}
+    for(const [key,child] of Object.entries(value)){
+      if(key==='library'&&typeof child==='string'){
+        const match=/^([A-Za-z][A-Za-z0-9_.-]{0,127})\s+(\d+)\.(\d+)$/u.exec(child.trim());
+        if(match){
+          const entry={machineName:match[1],majorVersion:Number(match[2]),minorVersion:Number(match[3])};
+          if(Number.isSafeInteger(entry.majorVersion)&&Number.isSafeInteger(entry.minorVersion))
+            found.set(depKey(entry),entry);
+        }
+      }
+      stack.push(child);
+    }
+  }
+  return [...found.values()];
+}
+function inspectH5PDependencyClosure(required,content,libraries){
+  // Only exact machineName+major.minor versions may satisfy a dependency.
+  // Package-provided metadata never authorizes fetching arbitrary code.
+  const direct=[...required,...collectContentLibraryDependencies(content)];
+  const queued=new Map(direct.map(dep=>[depKey(dep),dep]));
+  const checked=new Set(),resolved=new Map(),bundled=[],missing=[],conditional=[];
+  const enqueue=(dep,into=queued)=>{
+    const key=depKey(dep);
+    if(!key||checked.has(key)||into.has(key))return;
+    if(checked.size+into.size>=MAX_H5P_DEPENDENCY_CLOSURE){
+      const error=new Error('H5P transitive dependency closure exceeds the safe limit.');
+      error.code='P2LRN_H5P_DEPENDENCY_LIMIT';
+      throw error;
+    }
+    into.set(key,dep);
+  };
+  while(queued.size){
+    const [key,dep]=queued.entries().next().value;
+    queued.delete(key);
+    if(checked.has(key))continue;
+    checked.add(key);resolved.set(key,dep);
+    const lib=libraries.get(key);
+    if(!lib){missing.push(dep);continue;}
+    bundled.push(dep);
+    for(const child of lib.preloadedDependencies)enqueue(child);
+    // Dynamic dependencies are noted but not considered required at launch.
+    for(const child of lib.dynamicDependencies){
+      if(!conditional.some(item=>depKey(item)===depKey(child)))
+        conditional.push(child);
+    }
+  }
+  const stable=list=>Object.freeze([...list].sort((a,b)=>depKey(a).localeCompare(depKey(b))).map(item=>Object.freeze({...item})));
+  return Object.freeze({
+    complete:missing.length===0,required:stable(resolved.values()),
+    bundled:stable(bundled),missing:stable(missing),dynamic:stable(conditional),
+    requiresTrustedLibraryResolver:missing.length>0,
+  });
+}
+
 export async function inspectH5PPackage(nested) {
   const names = nested?.names?.() ?? [];
   if (!names.includes('h5p.json') || !names.includes('content/content.json')) {
@@ -86,7 +156,13 @@ export async function inspectH5PPackage(nested) {
       preloadedCss: Array.isArray(metadata.preloadedCss) ? metadata.preloadedCss.map((entry) => String(entry?.path ?? '')).filter(Boolean) : [],
       raw: metadata,
     });
-    libraries.set(depKey(descriptor), descriptor);
+    const exactKey=depKey(descriptor);
+    if(libraries.has(exactKey)){
+      const error=new Error('Duplicate H5P library version in separate folders: '+exactKey);
+      error.code='P2LRN_H5P_DUPLICATE_LIBRARY_VERSION';
+      throw error;
+    }
+    libraries.set(exactKey, descriptor);
     if (!libraries.has(descriptor.machineName)) libraries.set(descriptor.machineName, descriptor);
   }
 
@@ -100,6 +176,7 @@ export async function inspectH5PPackage(nested) {
     else missing.push(dep);
   }
   const dependencyMode = missing.length === 0 ? 'bundled' : bundled.length === 0 ? 'external' : 'mixed';
+  const dependencyClosure=inspectH5PDependencyClosure(required,content,libraries);
 
   return Object.freeze({
     profile: H5P_PROFILE,
@@ -111,6 +188,7 @@ export async function inspectH5PPackage(nested) {
     bundled: Object.freeze(bundled),
     missing: Object.freeze(missing),
     dependencyMode,
+    dependencyClosure,
     libraryCount: new Set([...libraries.values()].map((value) => value.folder)).size,
     h5p,
     content,
