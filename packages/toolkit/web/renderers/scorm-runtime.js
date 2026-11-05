@@ -133,7 +133,43 @@ function wireDocument(doc,path){ if(!doc)return; doc.addEventListener('click',(e
   for(const frame of doc.querySelectorAll('[data-p2lrn-frame-member]')){const member=frame.getAttribute('data-p2lrn-frame-member');try{frame.srcdoc=rewriteHtml(member);}catch{}}
 }
 async function activateScripts(root){ for(const old of [...root.querySelectorAll('script')]){ const script=document.createElement('script'); for(const attr of [...old.attributes])script.setAttribute(attr.name,attr.value); const type=String(old.getAttribute('type')||'').toLowerCase().trim();if(!old.hasAttribute('src')&&(!type||['module','text/javascript','application/javascript','text/ecmascript','application/ecmascript'].includes(type))){const src=URL.createObjectURL(new Blob([old.textContent||''],{type:'text/javascript'}));urls.set('p2lrn-inline-'+(++inlineScriptId),src);script.setAttribute('src',src);}else if(!old.hasAttribute('src'))script.textContent=old.textContent||''; const waits=script.hasAttribute('src')&&!script.hasAttribute('async'); let done=null; if(waits)done=new Promise((resolve,reject)=>{script.addEventListener('load',resolve,{once:true});script.addEventListener('error',()=>reject(new Error('SCORM JavaScript resource failed to load')),{once:true});}); old.replaceWith(script); if(done)await done; } }
-async function navigate(path){ if(!files.has(path)){showError('SCORM launch member not found: '+path);return;} const mt=files.get(path).mediaType||''; if(!mt.includes('html')&&!mt.includes('xhtml')){showError('SCORM launch member is not HTML/XHTML: '+path);return;} currentPath=path; const parsed=new DOMParser().parseFromString(rewriteHtml(path),'text/html'); document.title=parsed.title||document.title; document.head.replaceChildren(...[...parsed.head.childNodes].map((node)=>document.importNode(node,true))); document.body.replaceChildren(...[...parsed.body.childNodes].map((node)=>document.importNode(node,true))); wireDocument(document,path); await activateScripts(document); reply('ready',{member:path}); }
+async function installLegacyInlineHandlers(doc){
+  const handlers=[],onLoadElements=[];
+  let size=0;
+  for(const node of doc.querySelectorAll('*')){
+    let id=null;
+    for(const attr of [...node.attributes]){
+      const name=attr.name.toLowerCase();
+      if(!/^on[a-z][a-z0-9]*$/.test(name))continue;
+      const body=attr.value;
+      node.removeAttribute(attr.name);
+      size+=body.length;
+      if(++inlineScriptId>5000||size>512*1024)throw new Error('SCORM has too many legacy event handlers');
+      if(!id){id='p2lrn-scorm-event-'+inlineScriptId;node.setAttribute('data-p2lrn-legacy-id',id);}
+      handlers.push({id,eventName:name.slice(2),body});
+      if(name==='onload'&&(node===doc.body||node===doc.documentElement))onLoadElements.push(node);
+    }
+  }
+  if(!handlers.length)return;
+  const text=handlers.map(x=>{
+    const selector=JSON.stringify('[data-p2lrn-legacy-id="'+x.id+'"]');
+    return '(function(){const node=document.querySelector('+selector+');if(!node)return;'+
+      'node.addEventListener('+JSON.stringify(x.eventName)+',function(event){'+
+      'const output=(function(event){\n'+x.body+'\n}).call(this,event);'+
+      'if(output===false){event.preventDefault();event.stopPropagation();}'+
+      '});})();';
+  }).join('\n');
+  const src=URL.createObjectURL(new Blob([text],{type:'text/javascript'}));
+  urls.set('p2lrn-legacy-events-'+(++inlineScriptId),src);
+  const script=doc.createElement('script');script.src=src;
+  await new Promise((resolve,reject)=>{
+    script.addEventListener('load',resolve,{once:true});
+    script.addEventListener('error',()=>reject(new Error('SCORM legacy event handlers failed to load')),{once:true});
+    doc.head.append(script);
+  });
+  for(const element of onLoadElements)element.dispatchEvent(new Event('load'));
+}
+async function navigate(path){ if(!files.has(path)){showError('SCORM launch member not found: '+path);return;} const mt=files.get(path).mediaType||''; if(!mt.includes('html')&&!mt.includes('xhtml')){showError('SCORM launch member is not HTML/XHTML: '+path);return;} currentPath=path; const parsed=new DOMParser().parseFromString(rewriteHtml(path),'text/html'); document.title=parsed.title||document.title; document.head.replaceChildren(...[...parsed.head.childNodes].map((node)=>document.importNode(node,true))); document.body.replaceChildren(...[...parsed.body.childNodes].map((node)=>document.importNode(node,true))); wireDocument(document,path); await activateScripts(document); await installLegacyInlineHandlers(document); reply('ready',{member:path}); }
 function showError(message){const pre=document.createElement('pre');pre.className='error';pre.textContent=message;(document.body||document.documentElement).replaceChildren(pre);reply('error',{message});}
 function makeUrls(){ for(const [path,file] of files){ if(file.mediaType.includes('html')||file.mediaType.includes('xhtml')||file.mediaType.includes('css'))continue; urls.set(path,URL.createObjectURL(new Blob([file.buffer],{type:file.mediaType||'application/octet-stream'}))); }
   for(const [path,file] of files){ if(!file.mediaType.includes('css'))continue; const compiled=rewriteCss(text(path),path,new Set([path])); urls.set(path,URL.createObjectURL(new Blob([compiled],{type:'text/css'}))); }
