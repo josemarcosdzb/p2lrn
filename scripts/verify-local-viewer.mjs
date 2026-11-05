@@ -794,7 +794,9 @@ async function verifyNarrowLayout(cdp){
 }
 
 
-const visualEvidenceRoot=join(root,'.visual-evidence');
+const visualEvidenceRoot=process.env.P2LRN_QUEST3D_OUTPUT_DIR
+  ?resolve(process.env.P2LRN_QUEST3D_OUTPUT_DIR)
+  :join(root,'.visual-evidence');
 async function captureVisualEvidence(cdp,name){
   await mkdir(visualEvidenceRoot,{recursive:true});
   const shot=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});
@@ -1565,6 +1567,15 @@ try{
   chrome=await launchChrome(chromePath);
   cdp=await connectPage(chrome.browserWs);
 
+  if(process.env.P2LRN_QUEST3D_ONLY==='1'){
+    const threeGame=await verifyThreeGameInteractionAndResume(cdp);
+    const pointerDrag=await verifyThreePointerDragAndRope(cdp);
+    const threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);
+    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,pointerDrag,threeMobile};
+    await mkdir(visualEvidenceRoot,{recursive:true});
+    await writeFile(join(visualEvidenceRoot,'quest3d-report.json'),JSON.stringify(report,null,2)+'\n');
+    console.log('P2LRN_QUEST3D_BROWSER_REPORT='+JSON.stringify(report));
+  }else{
   const cases=[];
   const failures=[];
   try{cases.push({name:'public-default-startup',state:await verifyDefaultViewerStartup(cdp)});}
@@ -1604,6 +1615,7 @@ try{
   try{connectedArchitecture=await verifyConnectedArchitecture(cdp,connectedFixture);}catch(error){failures.push({name:'connected-architecture',message:String(error?.message||error)});}
   console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,pointerDrag,threeMobile,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
+  }
 }finally{
   try{cdp?.socket?.close();}catch{}
   if(chrome?.child?.exitCode===null)chrome.child.kill();
