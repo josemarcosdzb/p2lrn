@@ -65,7 +65,7 @@ const cases=[
  {name:'cmi5-geology-pretest',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',frame:'iframe.p2lrn-package-runtime',marker:/pre.?test|question|geology|pregunta|assessment|test/i,minimumText:30},
  {name:'scorm12-interactive',course:'/examples/generated/scorm12-browser-demo.p2lrn',frame:'iframe.p2lrn-scorm-runtime',marker:/Lección SCORM interactiva/,minimumText:70,button:'Completar lección',after:/Lección completada/},
  {name:'qti3-interactive',course:'/examples/generated/qti3-interactive-demo.p2lrn',marker:/Marte|planeta rojo/,minimumText:70},
- {name:'h5p-crossword',course:'/examples/canonical/external/h5p-crossword.p2lrn',frame:'iframe.p2lrn-h5p-frame',marker:/crossword|crucigrama|h5p|palabra|word/i,minimumText:12},
+ {name:'h5p-crossword',course:'/examples/canonical/external/h5p-crossword.p2lrn',frame:'iframe.p2lrn-h5p-frame',marker:/across|down|check|show solution|crucigrama|crossword|palabra/i,minimumText:12},
 ];
 async function findVisibleText(locator,{minimumText=30,marker=null}={}){
  let result='';
@@ -104,11 +104,18 @@ try{
     await findVisibleText(content,{marker:item.after,minimumText:20});
    }
    const image=join(screenshotRoot,item.name+'.png');
-   await page.screenshot({path:image,fullPage:true});
+   try {
+     // A long scrollable cmi5 course can exceed full-page screenshot limits
+     // despite fully visible and operational activity content.
+     await page.screenshot({path:image,fullPage:false,animations:'disabled',timeout:15000});
+   } catch (captureError) {
+     await player.screenshot({path:image,animations:'disabled',timeout:12000})
+       .catch(fallbackError=>{throw new Error('Activity visible but screenshot unavailable: '+String(captureError)+'; '+String(fallbackError));});
+   }
    results.push({case:item.name,status:'PASS',visibleTextLength:text.length,preview:text.slice(0,220),errors});
   }catch(error){
    const image=join(screenshotRoot,item.name+'-FAIL.png');
-   try{await page.screenshot({path:image,fullPage:true,timeout:7000});}catch{}
+   try{await page.screenshot({path:image,fullPage:false,animations:'disabled',timeout:7000});}catch{}
    const diagnostic=await page.evaluate(()=>{
     const p=document.querySelector('p2lrn-player');
     return {
