@@ -22,6 +22,7 @@ await cp(join(repo,'packages','toolkit','web','studio','lesson-images.js'),join(
 // Omitting it leaves the published Studio Web Component unregistered in browsers.
 await cp(join(repo,'packages','toolkit','web','studio','studio-ui-i18n.js'),join(out,'runtime','studio-ui-i18n.js'));
 await cp(join(repo,'packages','toolkit','web','studio','offline-assignment.js'),join(out,'runtime','offline-assignment.js'));
+await cp(join(repo,'packages','toolkit','web','studio','manual-grading.js'),join(out,'runtime','manual-grading.js'));
 for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','capability-broker.js','course-rights.js']){
   await cp(join(repo,'packages','toolkit','web',file),join(out,file));
 }
