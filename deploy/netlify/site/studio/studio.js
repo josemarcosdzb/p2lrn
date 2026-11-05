@@ -80,7 +80,7 @@ let exportedRevision=0;
 let sharedCommandBar=null;
 
 const titleOf=(entity)=>studio?.title(entity.id)??entity.id;
-const setStatus=(value)=>{status.textContent=studioUiText(value);};
+const setStatus=(value)=>{status.textContent=studioUiText(value);sharedCommandBar?.setMessage(studioUiText(value));};
 const hasUnsavedChanges=()=>Boolean(studio&&studio.changeCount>savedRevision&&studio.changeCount>exportedRevision&&!(studio.createdFromScratch&&studio.changeCount===1));
 const updateChanges=()=>{
   if(!studio){
