@@ -135,7 +135,7 @@ function renderTrueFalseEditor(box,question,commit,rerender,manual=false){
       label.append(radio,node('span',null,labelText));answers.append(label);
     }
     const remove=guardedDelete(()=>{question.statements.splice(index,1);ensureSolution(question);commit();rerender();},question.statements.length>2,'Se necesitan al menos dos afirmaciones.');
-    answers.hidden=manual;row.append(node('span','q-tf-number',String(index+1)),text,answers,remove);box.append(row);
+    answers.hidden=manual;answers.querySelectorAll('input').forEach((input)=>{input.disabled=manual;});row.append(node('span','q-tf-number',String(index+1)),text,answers,remove);box.append(row);
   });
   box.append(rowButton('+ Añadir afirmación',()=>{const id=uid('tf');question.statements.push({id,text:studioUiText('Nueva afirmación')});question.solution.answers[id]=true;commit();rerender();}));
 }
@@ -144,7 +144,7 @@ function renderChoiceEditor(box,question,commit,rerender,manual=false){
   const multiple=question.type==='multiple-choice';const trueFalse=question.type==='true-false';ensureSolution(question);
   question.choices.forEach((choice,index)=>{
     const row=node('div','q-option-row');const correct=document.createElement('input');
-    correct.type=multiple?'checkbox':'radio';correct.hidden=manual;correct.name='correct-'+question.id;correct.checked=question.solution.choiceIds.includes(choice.id);correct.title=studioUiText('Respuesta correcta');
+    correct.type=multiple?'checkbox':'radio';correct.hidden=manual;correct.disabled=manual;correct.name='correct-'+question.id;correct.checked=question.solution.choiceIds.includes(choice.id);correct.title=studioUiText('Respuesta correcta');
     correct.addEventListener('change',()=>{
       if(multiple){
         const set=new Set(question.solution.choiceIds);
@@ -213,7 +213,7 @@ function renderBlankEditor(box,question,commit,rerender,manual=false){
   question.blanks.forEach((blank,index)=>{
     const row=node('div','q-option-row q-blank-row');
     const id=node('span','q-chip','Hueco '+(index+1));
-    const answers=textInput((question.solution.answers[blank.id]??[]).join(' | '),'respuesta | alternativa');answers.hidden=manual;
+    const answers=textInput((question.solution.answers[blank.id]??[]).join(' | '),'respuesta | alternativa');answers.hidden=manual;answers.disabled=manual;
     answers.addEventListener('input',()=>{const distractors=fillBlankDistractors(question);question.solution.answers[blank.id]=answers.value.split('|').map((x)=>x.trim()).filter(Boolean);syncDragOptions(distractors);commit();});
     row.append(id,answers,guardedDelete(()=>{
       const distractors=fillBlankDistractors(question);
@@ -280,7 +280,7 @@ function renderClassificationEditor(box,question,commit,rerender,manual=false){
   const items=node('div','q-subsection');items.append(node('h4',null,'Elementos'));
   question.items.forEach((item,index)=>{
     const row=node('div','q-class-row');const input=textInput(item.text,'Elemento');input.addEventListener('input',()=>{item.text=input.value;commit();});
-    const current=question.solution.assignments.find((x)=>x.item===item.id)?.category;const select=selectInput(current,question.categories.map((c)=>[c.id,c.text]));select.hidden=manual;
+    const current=question.solution.assignments.find((x)=>x.item===item.id)?.category;const select=selectInput(current,question.categories.map((c)=>[c.id,c.text]));select.hidden=manual;select.disabled=manual;
     select.addEventListener('change',()=>{const found=question.solution.assignments.find((x)=>x.item===item.id);if(found)found.category=select.value;else question.solution.assignments.push({item:item.id,category:select.value});commit();});
     row.append(input,select,guardedDelete(()=>{question.items.splice(index,1);ensureSolution(question);commit();rerender();},question.items.length>2,'Clasificar necesita al menos dos elementos.'));items.append(row);
   });
@@ -311,6 +311,11 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
         const previous=model.progressionForActivity?.(activityId);
         if(previous?.completionRequirement==='passed')
           model.setActivityProgression?.(activityId,{mode:'completed'});
+      }else{
+        // Deferred assessments never persist an answer key. Re-enable the
+        // editable key when switching back to automatic grading.
+        for(const q of payload.questions)ensureSolution(q);
+        report('Revisa y marca las respuestas correctas antes de publicar la corrección automática.');
       }
       save(model,activityId,payload,onChange);render();
     });
