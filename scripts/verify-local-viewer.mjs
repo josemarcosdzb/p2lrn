@@ -230,6 +230,10 @@ async function connectPage(browserWs){
 
 async function evalTop(cdp,expression){
   const result=await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
+  if(result.exceptionDetails){
+    const detail=result.exceptionDetails;
+    throw new Error('Chrome evaluation: '+String(detail.exception?.description||detail.text||'unknown browser error'));
+  }
   return result.result?.value;
 }
 
