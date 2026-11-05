@@ -276,6 +276,7 @@ function renderTree(){
 }
 async function renderEditor(){
   editorStage.replaceChildren();activeEditable=null;
+  sharedCommandBar?.refresh();
   const entity=studio.entity(selectedId);
   if(!entity)return;
   const sheet=document.createElement('article');sheet.className='studio-sheet p2lrn-studio-sheet';
@@ -359,6 +360,7 @@ async function renderEditor(){
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
     updateChanges();
   },onStatus:setStatus});
+  sharedCommandBar?.refresh();
 }
 
 async function buildVerifiedPreview(){
@@ -894,6 +896,7 @@ applyUnifiedStudioWorkspace({
   canvas:workspace.querySelector('.studio-canvas'),
   stage:editorStage
 });
+workspace.querySelector('.studio-outline-head')?.classList.add('p2lrn-studio-outline-title');
 document.querySelector('.studio-topbar')?.classList.add('p2lrn-studio-legacy-topbar');
 sharedCommandBar=mountStudioCommandBar({
   mount:toolbar,
