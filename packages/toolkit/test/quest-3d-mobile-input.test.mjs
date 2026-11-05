@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
-import {createVirtualJoystick} from '../web/renderers/questionnaire-3d.js';
+import {runInNewContext} from 'node:vm';
 
 class FakeElement {
   constructor(tag){
@@ -34,11 +34,31 @@ const touch=(id,x,y)=>({
   prevented:false,preventDefault(){this.prevented=true;},
 });
 
-test('mobile joystick moves analog, clamps diagonals, resets on release and cancel',()=>{
+test('mobile joystick moves analog, clamps diagonals, resets on release and cancel',async()=>{
   const previous=globalThis.document;
   globalThis.document={createElement:(tag)=>new FakeElement(tag),documentElement:{lang:'es'}};
   try{
     const values=[];
+    const renderSource=await source('../web/renderers/questionnaire-3d.js');
+    const start=renderSource.indexOf('export function createVirtualJoystick(scene){');
+    const end=renderSource.indexOf('// A WebGL failure must not make',start);
+    assert.ok(start>=0&&end>start,'joystick factory should exist');
+    // The renderer imports generated Three.js vendor files, which are only
+    // installed by the browser build. Exercise its real factory in isolation.
+    const code=renderSource.slice(start,end).replace('export function','function');
+    const createVirtualJoystick=runInNewContext(code+'\ncreateVirtualJoystick;',{
+      el:(tag,attrs={},value=null)=>{
+        const node=new FakeElement(tag);
+        if(attrs.class)node.className=attrs.class;
+        if(value!==null)node.textContent=String(value);
+        for(const [name,val] of Object.entries(attrs)){
+          if(name!=='class')node.setAttribute(name,val);
+        }
+        return node;
+      },
+      playerUiText:(text)=>text,
+      globalThis:{},
+    });
     const joystick=createVirtualJoystick({setMovementVector:(x,y)=>values.push([x,y])});
     const pad=joystick.element;
     const knob=pad.children[0].children[0];
