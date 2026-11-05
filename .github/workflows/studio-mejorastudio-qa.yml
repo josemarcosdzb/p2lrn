@@ -6,6 +6,7 @@ on:
     paths:
       - 'packages/toolkit/web/studio/**'
       - 'packages/toolkit/test/studio-visual-layout.test.mjs'
+      - 'packages/toolkit/test/studio-advanced-history.test.mjs'
       - 'packages/studio/**'
       - 'packages/toolkit/web/game-3d/**'
       - 'packages/toolkit/web/renderers/questionnaire-3d.js'
@@ -67,7 +68,7 @@ jobs:
           node --test packages/toolkit/test/quest-3d-mobile-input.test.mjs packages/toolkit/test/quest-3d-aulap2p-parity.test.mjs packages/toolkit/test/quest-3d-player-physics.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Studio interface regressions
-        run: node --test packages/toolkit/test/studio-visual-layout.test.mjs packages/studio/test/dist-dependencies.test.mjs
+        run: node --test packages/toolkit/test/studio-visual-layout.test.mjs packages/toolkit/test/studio-advanced-history.test.mjs packages/studio/test/dist-dependencies.test.mjs
       - name: Build npm Studio including shared command bar
         run: node packages/studio/scripts/build-dist.mjs
       - name: Assert npm bundled editor assets
@@ -75,6 +76,9 @@ jobs:
         run: |
           if (!(Test-Path packages/studio/dist/runtime/command-bar.js)) { throw 'Shared Studio UI missing from dist' }
           if (!(Test-Path packages/studio/dist/runtime/visual-layout.js)) { throw 'Shared visual layout missing from dist' }
+          foreach ($module in @('studio-history.js','studio-object-tools.js','studio-advanced-tools.js')) {
+            if (!(Test-Path ('packages/studio/dist/runtime/' + $module))) { throw ('Missing advanced Studio asset: ' + $module) }
+          }
       - name: Real Chrome / Edge Studio UI and portable course round-trip
         run: node scripts/verify-studio-unified-ui.mjs
 
