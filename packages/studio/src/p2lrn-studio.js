@@ -425,6 +425,7 @@ export class P2LRNStudioElement extends HTMLElement{
   }
   async _renderEditor(){
     const stage=this.shadowRoot.querySelector('[data-stage]');stage.replaceChildren();
+    this.#unifiedBar?.refresh();
     const entity=this.#studio?.entity(this.#selected);if(!entity)return;
     if(this.#mode==='preview'){await this._renderPreview();return;}
     const sheet=document.createElement('article');sheet.className='sheet p2lrn-studio-sheet';
@@ -492,6 +493,7 @@ export class P2LRNStudioElement extends HTMLElement{
       }
     }
     stage.append(sheet);
+    this.#unifiedBar?.refresh();
   }
   async _renderPreview(){
     const stage=this.shadowRoot.querySelector('[data-stage]');stage.replaceChildren();
