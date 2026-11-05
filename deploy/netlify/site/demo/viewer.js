@@ -3,6 +3,7 @@
   const sample=document.querySelector('[data-sample]');
   const rendererSelect=document.querySelector('[data-renderer]');
   const urlInput=document.querySelector('[data-package-url]');
+  const fileInput=document.querySelector('[data-package-file]');
   const loadButton=document.querySelector('[data-load]');
   const reloadButton=document.querySelector('[data-reload]');
   const clearButton=document.querySelector('[data-clear-log]');
@@ -22,6 +23,7 @@
   // External runtime hosts are optional and explicitly requested, never a prerequisite for the viewer.
   const automaticRuntime=params.get('runtime')!=='isolated';
   let paused=false,records=[],catalog=[],catalogDefault=null;
+  let localFile=null,localObjectUrl=null,loadSequence=0;
   const MAX_EVENTS=200;
   // Keep the default opaque sandbox. A separate HTTPS runtime is opt-in.
   const RUNTIME_ORIGINS=Object.freeze([...new Set([
@@ -67,11 +69,87 @@
   function selectCatalogEntry(src){let normalized;try{normalized=normalizeSource(src);}catch{return null;}const item=catalog.find((entry)=>{try{return normalizeSource(entry.url)===normalized;}catch{return false;}});if(item){sample.value=item.url;if(!rendererSelect.value&&item.rendererId)rendererSelect.value=item.rendererId;}return item;}
 
   async function inspect(src){setField('integrity','verificando…');const api=await window.P2LRNReady;const pkg=await api.openPackageURL(src);const manifest=pkg.manifest||{};setField('package',manifest.packageId||new URL(src).pathname.split('/').filter(Boolean).at(-1));setField('format',manifest.format||'—');setField('version',manifest.formatVersion||'—');setField('integrity',manifest.integrity?.contentRoot?'verificada':'sin contentRoot');setField('transport',pkg.verification?.transport||'—');setField('entrypoints',Array.isArray(manifest.entrypoints)?manifest.entrypoints.length:0);setField('profiles',Array.isArray(manifest.profiles)?manifest.profiles.map((profile)=>profile.id).join(' · '):'—');write('inspect',{packageId:manifest.packageId,format:manifest.format,formatVersion:manifest.formatVersion,contentRoot:manifest.integrity?.contentRoot,transport:pkg.verification?.transport,profiles:manifest.profiles?.map((profile)=>profile.id)});}
-  async function load(){let src;try{src=normalizeSource(urlInput.value);}catch(error){setState('ERROR',error.message);write('url-error',{message:error.message});return;}urlInput.value=src;const renderer=rendererSelect.value.trim();if(renderer)player.setAttribute('renderer',renderer);else player.removeAttribute('renderer');setState('LOADING','Cargando paquete');label.textContent=new URL(src).pathname.split('/').filter(Boolean).at(-1)||src;setField('renderer',renderer||'automático');setField('entity','—');setField('representation','—');write('load',{src,renderer:renderer||null});try{await inspect(src);player.setAttribute('src',src);const next=new URL(location.href);next.searchParams.set('src',src);if(renderer)next.searchParams.set('renderer',renderer);else next.searchParams.delete('renderer');history.replaceState(null,'',next);selectCatalogEntry(src);}catch(error){setState('ERROR','No se pudo abrir o verificar el paquete');write('load-error',{message:error?.message||String(error)});}}
+  async function load(){
+    const sequence=++loadSequence;
+    const file=fileInput?.files?.[0]??null;
+    let src,provisionalUrl=null;
+    try{
+      if(file){
+        if(!/\.p2lrn$/i.test(file.name))throw new Error("Selecciona un archivo de paquete .p2lrn.");
+        if(file===localFile && localObjectUrl)src=localObjectUrl;
+        else{provisionalUrl=URL.createObjectURL(file);src=provisionalUrl;}
+      }else src=normalizeSource(urlInput.value);
+    }catch(error){
+      setState('ERROR',error.message);
+      write('load-input-error',{message:error.message});
+      return;
+    }
+    const renderer=rendererSelect.value.trim();
+    if(renderer)player.setAttribute('renderer',renderer);
+    else player.removeAttribute('renderer');
+    setState('LOADING',"Cargando paquete");
+    label.textContent=file?.name||new URL(src).pathname.split('/').filter(Boolean).at(-1)||src;
+    setField('renderer',renderer||"automático");
+    setField('entity','—');
+    setField('representation','—');
+    loadButton.disabled=true;
+    write('load',{src:file?'local-file':src,file:file?.name??null,renderer:renderer||null});
+    try{
+      await inspect(src);
+      if(sequence!==loadSequence){
+        if(provisionalUrl)URL.revokeObjectURL(provisionalUrl);
+        return;
+      }
+      if(file){
+        const localOption=sample?.querySelector('[data-local-file]')||document.createElement('option');
+        localOption.dataset.localFile='1';
+        localOption.value='';
+        localOption.textContent="Archivo local: "+file.name;
+        if(!localOption.isConnected)sample.prepend(localOption);
+        sample.value='';
+        if(provisionalUrl){
+          const previous=localObjectUrl;
+          localFile=file;localObjectUrl=provisionalUrl;
+          if(previous&&previous!==localObjectUrl)URL.revokeObjectURL(previous);
+        }
+        const next=new URL(location.href);
+        next.searchParams.delete('src');
+        next.searchParams.delete('renderer');
+        history.replaceState(null,'',next);
+      }else{
+        sample?.querySelector('[data-local-file]')?.remove();
+        const next=new URL(location.href);
+        next.searchParams.set('src',src);
+        if(renderer)next.searchParams.set('renderer',renderer);
+        else next.searchParams.delete('renderer');
+        history.replaceState(null,'',next);
+        selectCatalogEntry(src);
+      }
+      // A click on Load with an unchanged URL must actually load again.
+      // Setting the same src attribute does not trigger attributeChangedCallback.
+      if(player.getAttribute('src')===src)await player.reload();
+      else player.setAttribute('src',src);
+      if(!file&&localObjectUrl){
+        URL.revokeObjectURL(localObjectUrl);
+        localObjectUrl=null;localFile=null;
+      }
+    }catch(error){
+      if(provisionalUrl&&provisionalUrl!==localObjectUrl)URL.revokeObjectURL(provisionalUrl);
+      if(sequence===loadSequence){
+        setState('ERROR',"No se pudo abrir o verificar el paquete");
+        write('load-error',{message:error?.message||String(error)});
+      }
+    }finally{
+      if(sequence===loadSequence)loadButton.disabled=false;
+    }
+  }
 
-  sample?.addEventListener('change',()=>{const option=sample.selectedOptions[0];urlInput.value=new URL(sample.value,location.href).href;rendererSelect.value=option?.dataset.renderer||'';void load();});
+  sample?.addEventListener('change',()=>{if(!sample.value)return;fileInput.value='';const option=sample.selectedOptions[0];urlInput.value=new URL(sample.value,location.href).href;rendererSelect.value=option?.dataset.renderer||'';void load();});
   rendererSelect?.addEventListener('change',()=>{if(player.getAttribute('src'))void load();});
+  fileInput?.addEventListener('change',()=>{if(fileInput.files?.length){urlInput.value='';void load();}});
+  urlInput?.addEventListener('input',()=>{if(fileInput?.value)fileInput.value='';});
   loadButton?.addEventListener('click',()=>void load());
+  window.addEventListener('pagehide',()=>{if(localObjectUrl)URL.revokeObjectURL(localObjectUrl);});
   urlInput?.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();void load();}});
   reloadButton?.addEventListener('click',()=>{setState('LOADING','Recargando');write('reload');void player.reload?.();});
   clearButton?.addEventListener('click',()=>{records=[];renderLog();});
