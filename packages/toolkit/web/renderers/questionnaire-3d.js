@@ -282,18 +282,33 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   const leftColumn=el('div',{class:'p2lrn-match-column'});
   const rightColumn=el('div',{class:'p2lrn-match-column'});
   const leftButtons=new Map();
+  const allMatched=()=>connections.length>=trial.connections.length;
+  const matchingLocked=()=>Boolean(runtime.state.completed||allMatched());
+  const completedMessage=()=>playerUiText('Todas las relaciones están completadas. Finaliza la actividad.');
 
   function chooseLeft(id) {
-    if(activeRope){scene.disconnect(activeRope);activeRope=null;}
-    if(selected) scene.highlight(`left:${selected}`,false);
+    // A solved source must not create another temporary rope, even before
+    // the learner presses the final Submit button.
+    if(matchingLocked()||connections.some((pair)=>pair.leftId===id)){
+      clearSelection();
+      setText(status,matchingLocked()?completedMessage():playerUiText('Esta pareja ya está conectada.'));
+      return false;
+    }
+    clearSelection();
     selected=id;
     scene.highlight(`left:${selected}`,true);
     activeRope=scene.connectToPlayer(`left:${selected}`);
     leftButtons.forEach((button,key)=>button.classList.toggle('is-selected',key===id));
-    setText(status,'Origen seleccionado. Elige su pareja.');
+    setText(status,playerUiText('Origen seleccionado. Elige su pareja.'));
+    return true;
   }
 
   function chooseRight(id) {
+    if(matchingLocked()){
+      clearSelection();
+      setText(status,completedMessage());
+      return false;
+    }
     if(!selected){setText(status,playerUiText('Selecciona primero un elemento de la izquierda.'));return false;}
     const validation=validateConnection(selected,id,expected,solved);
     if(!validation.ok){
@@ -315,7 +330,7 @@ function buildMatchingControls({trial,runtime,scene,status}) {
     scene.highlight(`left:${selected}`,false);
     selected=null;
     leftButtons.forEach((button)=>button.classList.remove('is-selected'));
-    setText(status,playerUiText(`Conexión correcta · ${connections.length}/${trial.connections.length}`));
+    setText(status,allMatched()?completedMessage():playerUiText(`Conexión correcta · ${connections.length}/${trial.connections.length}`));
     return true;
   }
 
@@ -355,16 +370,16 @@ function buildMatchingControls({trial,runtime,scene,status}) {
     drag(meta,phase,{position=null,target=null}={}){
       if(meta.kind!=='matching-left')return false;
       if(phase==='start'){
-        if(runtime.state.completed)return false;
-        chooseLeft(meta.id);
+        if(!chooseLeft(meta.id))return false;
         if(activeRope){scene.disconnect(activeRope);activeRope=null;}
         activeRope=scene.connectToPointer(`left:${meta.id}`);
         if(position)scene.setPointerTarget(position);
         setText(status,playerUiText('Lleva la cuerda hasta la pareja en la escena.'));
         return true;
       }
-      if(phase==='move'){if(position)scene.setPointerTarget(position);return true;}
+      if(phase==='move'){if(activeRope&&position)scene.setPointerTarget(position);return Boolean(activeRope);}
       if(phase==='end'){
+        if(!selected){clearSelection();return false;}
         if(target?.kind==='matching-right')chooseRight(target.id);
         else {clearSelection();setText(status,playerUiText('Suelta la cuerda encima de su pareja.'));}
         return true;
