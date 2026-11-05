@@ -15,7 +15,7 @@ import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
-import {mountVisualLayoutTools} from './runtime/visual-layout.js';
+import {mountStudioCommandBar,applyUnifiedStudioWorkspace} from './runtime/command-bar.js';
 import {exportOfflineAssignmentBundle, parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
 
 export const P2LRN_STUDIO_VERSION='0.5.0-alpha.12';
@@ -157,7 +157,7 @@ function filenameFromUrl(value){
 export class P2LRNStudioElement extends HTMLElement{
   static p2lrnStudioVersion=P2LRN_STUDIO_VERSION;
   static get observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path','offline-runtime-base-url'];}
-  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;#resourceLibrary=null;
+  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;#resourceLibrary=null;#unifiedBar=null;
 
   constructor(){
     super();
@@ -231,6 +231,30 @@ export class P2LRNStudioElement extends HTMLElement{
     q('[data-save]').addEventListener('click',()=>this.saveCourse());
     this._syncSaveButton();
     this._syncResourceLibraryButton();
+    applyUnifiedStudioWorkspace({
+      workspace:q('[data-body]'),outline:q('[data-tree]'),
+      canvas:q('.stage'),stage:q('[data-stage]')
+    });
+    if(!this.#unifiedBar)this.#unifiedBar=mountStudioCommandBar({
+      mount:q('.toolbar'),
+      resolveSurface:()=>q('[data-studio-html-surface="true"]'),
+      addContentElement:q('[data-add-menu]'),
+      onStatus:(message)=>this.setStatus(message),
+      actions:{
+        create:()=>this.createCourse(),
+        open:()=>q('[data-file]').click(),
+        openUrl:(url)=>this.openUrl(url),
+        save:()=>this.saveEndpoint?this.saveCourse():this.download(),
+        export:()=>this.download(),
+        offline:()=>this.showOfflineExportDialog(),
+        review:()=>q('[data-result-file]').click(),
+        addUnit:()=>this.addUnit(),
+        addLesson:()=>this.addLesson(),
+        preview:()=>this.setMode('preview'),
+        edit:()=>this.setMode('edit')
+      }
+    });
+    this.#unifiedBar.setDocument(Boolean(this.#studio),this.#studio?.sourceName||'Editor visual de cursos');
     if(this.src&&!this.#studio)this.openUrl(this.src).catch((e)=>this.setStatus(e.message));
   }
   disconnectedCallback(){this._revoke();}
@@ -288,6 +312,10 @@ export class P2LRNStudioElement extends HTMLElement{
   }
   _renderTree(){
     const nav=this.shadowRoot.querySelector('[data-tree]');nav.replaceChildren();
+    const heading=document.createElement('div');heading.className='p2lrn-studio-outline-title';
+    const kicker=document.createElement('small');kicker.textContent='CURSO';
+    const titleOfCourse=document.createElement('strong');titleOfCourse.textContent=this.#studio?.title(this.#studio.rootId)||'Curso P2LRN';
+    heading.append(kicker,titleOfCourse);nav.append(heading);
     const actions=document.createElement('div');actions.className='tree-actions';
     const unit=document.createElement('button');unit.type='button';unit.textContent='+ Unidad';unit.onclick=()=>this.addUnit().catch((error)=>this.setStatus(error.message));
     const lesson=document.createElement('button');lesson.type='button';lesson.textContent='+ Lección';lesson.onclick=()=>this.addLesson().catch((error)=>this.setStatus(error.message));
@@ -399,12 +427,14 @@ export class P2LRNStudioElement extends HTMLElement{
     const stage=this.shadowRoot.querySelector('[data-stage]');stage.replaceChildren();
     const entity=this.#studio?.entity(this.#selected);if(!entity)return;
     if(this.#mode==='preview'){await this._renderPreview();return;}
-    const sheet=document.createElement('article');sheet.className='sheet';
+    const sheet=document.createElement('article');sheet.className='sheet p2lrn-studio-sheet';
     const title=document.createElement('h1');title.className='title';title.textContent=this.#studio.title(entity.id);title.contentEditable='true';title.setAttribute('role','textbox');title.setAttribute('aria-label','Título');title.setAttribute('aria-multiline','true');
     const desc=document.createElement('p');desc.className='description';desc.textContent=entity.description?.es??entity.description?.en??'';desc.contentEditable='true';desc.setAttribute('role','textbox');desc.setAttribute('aria-label','Descripción');desc.setAttribute('aria-multiline','true');
     title.oninput=()=>{this.#studio.setTitle(entity.id,title.textContent||'');this._renderTree();this._updateState();};
     desc.oninput=()=>{this.#studio.setDescription(entity.id,desc.textContent||'');this._updateState();};
-    sheet.append(title,desc);
+    const head=document.createElement('header');head.className='p2lrn-studio-sheet-head';
+    const type=document.createElement('span');type.className='studio-entity-type';type.textContent=entity.type;
+    head.append(type,title,desc);sheet.append(head);
     if(entity.type==='course'){
       const rights=document.createElement('section');rights.className='rights-panel';
       const heading=document.createElement('h2');heading.textContent='Autoría y derechos';rights.append(heading);
@@ -443,7 +473,7 @@ export class P2LRNStudioElement extends HTMLElement{
       }
       const editable=await this.#studio.readEditableText(entity.id);
       if(editable){
-        const surface=document.createElement(editable.mediaType==='text/plain'?'pre':'article');surface.className='surface';surface.contentEditable='true';installSafeStudioHtmlPaste(surface);
+        const surface=document.createElement(editable.mediaType==='text/plain'?'pre':'article');surface.className='surface';surface.contentEditable='true';if(editable.mediaType==='text/html')surface.dataset.studioHtmlSurface='true';installSafeStudioHtmlPaste(surface);
         if(editable.mediaType==='text/plain')surface.textContent=editable.text;
         else surface.innerHTML=sanitizeHtml(editable.text).body.innerHTML;
         surface.oninput=()=>{
@@ -451,7 +481,6 @@ export class P2LRNStudioElement extends HTMLElement{
           else {const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);}
           this._updateState();
         };
-        if(editable.mediaType==='text/html')mountVisualLayoutTools({host:sheet,surface,onStatus:(message)=>this.setStatus(message)});
         if(editable.mediaType==='text/html')mountLessonImageEditor({host:sheet,surface,onChange:()=>{
           const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');
           this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);
@@ -473,6 +502,7 @@ export class P2LRNStudioElement extends HTMLElement{
   }
   async setMode(mode){
     this.#mode=mode==='preview'?'preview':'edit';
+    this.#unifiedBar?.setPreviewMode(this.#mode==='preview');
     this.shadowRoot.querySelector('[data-edit]').classList.toggle('primary',this.#mode==='edit');
     this.shadowRoot.querySelector('[data-preview]').classList.toggle('primary',this.#mode==='preview');
     if(this.#studio)await this._renderEditor();
@@ -609,6 +639,7 @@ export class P2LRNStudioElement extends HTMLElement{
   setStatus(text){this.shadowRoot.querySelector('[data-meta]').textContent=text}
   _updateState(){
     const changes=this.#studio?.changeCount??0;this.setStatus(changes?changes+' cambio sin guardar'+(changes===1?'':'s'):'Listo');
+    this.#unifiedBar?.setDocument(Boolean(this.#studio),this.#studio?.sourceName||'Editor visual de cursos');
     this.shadowRoot.querySelector('[data-warn]').hidden=!changes;
   }
   _syncSaveButton(){if(this.shadowRoot)this.shadowRoot.querySelector('[data-save]').hidden=!this.saveEndpoint}
