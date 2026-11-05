@@ -10,14 +10,20 @@ Implementación compartida: `packages/toolkit/web/studio/`. El empaquetado NPM c
 La Skill P2LRN dirige al Toolkit y Studio oficiales: no debe implementar un editor paralelo.
 Las lecciones HTML se serializan en recursos del paquete P2LRN; los perfiles SCORM/H5P/cmi5 permanecen encapsulados.
 
-## Entrega inicial de la rama
+## Entrega de interfaz unificada en la rama (sin publicar)
 
-`visual-layout.js`: insertar secciones, dos columnas, destacados, tablas y separadores, editar dentro del WYSIWYG y serializar como HTML existente. Disponible en ambas interfaces de Studio. No equivale a importar o exportar presentaciones PPTX.
+- `command-bar.js`: único árbol de controles y único CSS para Studio web y el Web Component NPM. No duplicar la barra ni la lógica de inserción. Menús Archivo / Inicio / Insertar / Diseño, estado visible, tipografía, alineación, listas, colores, guardado/exportación y vista alumno.
+- Un mismo selector de actividades con búsqueda sirve para lecciones, cuestionarios, juegos 2D/3D, multimedia y recursos externos. Las acciones usan los métodos educativos existentes de cada host.
+- `visual-layout.js`: secciones, dos columnas, destacados, tablas y separadores; editables y serializados en HTML semántico dentro de `.p2lrn`.
+- Borradores locales: guardar, recuperar y eliminar tanto en la web como en NPM. En NPM se conserva el endpoint autorizado de guardado del host.
+- Un mismo diseño minimalista de barra, esquema del curso y lienzo para navegador y Shadow DOM. Las diferencias por disponibilidad de servicios del host se deben mostrar como estados de capacidad, no como bifurcaciones de interfaz.
+- `scripts/verify-studio-unified-ui.mjs` prueba el componente compartido en Chrome/Edge normal y Shadow DOM, su buscador, comandos y persistencia en un paquete abierto después de exportar. `studio-mejorastudio-qa.yml` ejecuta QA en Windows; **no constituye por sí solo prueba completa de todos los flujos del Studio publicado**.
+- Sin cambio de formato P2LRN ni instalación de Fabric.js, PptxGenJS o exportadores PDF. No confundir este trabajo con la implementación del editor PowerPoint completo.
 
 ## Editor visual completo (pendiente, no declarar implementado)
 
 1. Modelo de documento de diseño: páginas/diapositivas, elementos identificados, cuadros de texto, geometría, z-order, capas, estilos, temas, restricciones responsive; mantener HTML como fallback accesible.
-2. Interfaz SaaS: cinta o barra de pestañas Inicio/Insertar/Diseño/Animaciones/Revisar/Exportar, panel lateral de diapositivas, lienzo, reglas, cuadrícula, guías, ajuste, selección múltiple, arrastrar, redimensionar, alinear, distribuir, deshacer/rehacer y atajos.
+2. Editor avanzado: la barra compartida Inicio/Insertar/Diseño, el esquema, el lienzo y el selector de actividades están implementados en la rama. Siguen pendientes páginas/diapositivas auténticas, reglas, guías, cuadrícula, selección múltiple, capas, alineación y distribución geométricas, animaciones y atajos completos.
 3. Contenido educativo: insertar componentes P2LRN, cuestionarios, juegos, multimedia y actividades usando los contratos existentes, sin duplicar datos ni extraer SCORM/H5P.
 4. PPTX: importación mediante parser OOXML seguro o conversión, conservación de texto/imágenes/orden y exportación editable con PptxGenJS; definir matriz explícita de fidelidad y avisos de degradación.
 5. PDF: importación mediante Reader existente cuando proceda; exportación impresa a partir de páginas renderizadas y/o servicio autorizado con ReportLab. No afirmar edición vectorial completa de cualquier PDF.
@@ -47,4 +53,5 @@ Las lecciones HTML se serializan en recursos del paquete P2LRN; los perfiles SCO
 - Los estilos HTML actuales se filtran en Studio y pueden recibir restricciones adicionales en Player. Confirmar en navegador que las columnas CSS/grid se conservan tanto online como offline.
 - El editor visual no debe serializar eventos JS, clases dependientes del host ni coordenadas de pantalla imposibles de reproducir.
 - Importación PPTX: tratar imágenes, tablas, fuentes, gráficos y animaciones con un informe de compatibilidad por elemento. No aceptar macros ni relaciones OOXML externas sin validación.
-- El trabajo actual no implementa la cinta de opciones, motor de páginas ni exportadores. La entrega de la rama es una base inicial integrable, no la versión final.
+- La rama sí implementa una cinta de opciones ligera y única para los dos Studio. **No** implementa todavía un motor libre de páginas/diapositivas ni exportadores PPTX/PDF. No atribuir esas capacidades a la versión publicada.
+- No realizar merge a `main`, tag, publicación NPM ni despliegue público sin la orden expresa del propietario del repositorio.
