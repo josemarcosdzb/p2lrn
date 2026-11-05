@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/schema/execution-plan/1",
+  "title": "P2LRN Reading-System Execution Preflight v1",
+  "description": "Runtime-derived diagnostic report. Not part of the Core ZIP manifest or a certificate of complete playback.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "status",
+    "offline",
+    "rendererId",
+    "rendererVersion",
+    "representationId",
+    "profile",
+    "kind",
+    "conformance",
+    "limitations",
+    "dependencies",
+    "permissions",
+    "requiredCapabilities",
+    "diagnostics"
+  ],
+  "properties": {
+    "schema": {
+      "const": "https://p2lrn.org/schema/execution-plan/1"
+    },
+    "version": {
+      "const": "1"
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "conditional",
+        "blocked"
+      ]
+    },
+    "offline": {
+      "type": "boolean"
+    },
+    "rendererId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rendererVersion": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "representationId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "profile": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "kind": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "conformance": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "string",
+        "maxLength": 128
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "required"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 80
+          }
+        }
+      }
+    },
+    "permissions": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "string",
+        "maxLength": 128
+      }
+    },
+    "requiredCapabilities": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "string",
+        "maxLength": 128
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "rendererId",
+          "representationId"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 600
+          },
+          "rendererId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "representationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
