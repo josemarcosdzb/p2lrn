@@ -176,3 +176,17 @@ La ruta `src` de `@p2lrn/analytics` debe apuntar al archivo **`.p2lrn-result`**,
 ## Imágenes y vídeos en lecciones
 
 El editor visual permite insertar imágenes y vídeos MP4/WebM desde el equipo. Los vídeos tienen controles de reproducción, tamaño ajustable, posición editable (Alt + arrastrar o flechas con el vídeo seleccionado) y portada opcional mediante «Portada del vídeo». Se guardan dentro del HTML de la lección en el `.p2lrn` y Player puede reproducirlos sin conexión. Límite de 32 MB por vídeo (8 MB por imagen); se valida la cabecera real, no solo la extensión. La disponibilidad de los códecs depende del navegador.
+## Corrección automática y posterior de cuestionarios
+
+Al crear o editar una actividad de tipo **Cuestionario** en Studio aparece **«Modo de corrección»**:
+
+- **Automática: corregir al finalizar.** Se marcan las respuestas correctas, el Player calcula la nota y el profesor decide si mostrarla al alumno al finalizar. Como las soluciones están en el paquete, esta modalidad es apropiada cuando no es necesario mantenerlas secretas frente a quien controla el equipo.
+- **Corregir después: no incluir soluciones.** Se crean preguntas sin tener que indicar una respuesta correcta. Al guardar o exportar, Studio elimina `solution` y `explanation` del contenido entregado; el alumno envía las respuestas y Player no inventa una nota. El profesor las revisa posteriormente desde su LMS o la entrega importada. No se exige conexión para completar las preguntas, aunque enviar resultados a un LMS sí requiere su integración.
+
+Ambas opciones funcionan al generar un `.p2lrn` normal, insertarlo en un LMS o exportarlo para trabajar offline: **no es una función exclusiva de las entregas offline**. El selector se aplica al **cuestionario completo**; las preguntas individuales pueden ser de elección única, múltiple, verdadero/falso, texto, huecos, ordenar, relacionar o clasificar. Para evaluar unas preguntas automáticamente y otras manualmente, use actividades separadas.
+
+En corrección posterior no se puede condicionar el avance a «Superar» con una nota aún inexistente; el editor cambia esa condición por «Completar». Los juegos especializados que calculan su tablero a partir de respuestas (crucigrama, rosco, sopa de letras, memoria, 3D, etc.) necesitan soluciones locales y mantienen su modo compatible. Si requiere preguntas sin soluciones, use **Cuestionario**.
+
+La verificación de las respuestas por un profesor o Host confiable sigue siendo necesaria para emitir una calificación oficial; el cifrado o un hash generado en el equipo del alumno no demuestran autoría de las respuestas.
+
+Consulte el contrato de [cuestionarios nativos](../../spec/NATIVE-QUESTIONNAIRE.md) y la [integración de un Host de confianza](../../docs/integration/INTEGRACION-SEGURA-HOST.md).
