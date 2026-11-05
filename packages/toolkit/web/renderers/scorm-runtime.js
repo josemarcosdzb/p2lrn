@@ -1,6 +1,6 @@
 import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {createScormApi, isScormRuntimeProtocol, normalizeScormVersion, SCORM_PROFILE, SCORM_RUNTIME_PROTOCOL} from '../scorm-runtime-core.js';
-import {createScorm2004Sequencer, parseScormManifest} from '../scorm2004-sequencing.js';
+import {createScorm2004Sequencer,parseScormManifest,inspectScorm2004SequencingSupport} from '../scorm2004-sequencing.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 import {isSafeRuntimeMessage} from '../runtime-message-security.js';
 import {resolveScormRuntimeUrl} from '../runtime-host-config.js';
@@ -50,13 +50,23 @@ async function resolveNestedArchive(pkg, representation, payload) {
   throw error;
 }
 
-async function createSequencerForPackage(nested, version, launchMember, sequencingState = null) {
+async function createSequencerForPackage(nested, version, launchMember, sequencingState = null, report = null) {
   if (version !== '2004') return null;
   const manifestMember = nested.names().find((name) => String(name).toLowerCase() === 'imsmanifest.xml');
-  if (!manifestMember) return null;
+  if (!manifestMember) {
+    const error=new Error('SCORM 2004 package is missing imsmanifest.xml; cannot execute sequencing.');
+    error.code='P2LRN_SCORM2004_MANIFEST_MISSING';
+    throw error;
+  }
   const xml = decoder.decode(await nested.read(manifestMember));
   const manifest = parseScormManifest(xml);
-  if (manifest.version !== '2004') return null;
+  if (manifest.version !== '2004') {
+    const error=new Error('SCORM 2004 declared version does not match the original package manifest.');
+    error.code='P2LRN_SCORM2004_MANIFEST_VERSION_MISMATCH';
+    throw error;
+  }
+  const inspection=inspectScorm2004SequencingSupport(manifest);
+  report?.(inspection);
   return createScorm2004Sequencer(manifest, {launchMember, sequencingState});
 }
 
@@ -212,11 +222,16 @@ export async function render({container, payload, representation, package: pkg, 
   const initialState = restoredState.values ? {...restoredState, values:restoredValues} : restoredValues;
   let sequencer = null;
   try {
-    sequencer = await createSequencerForPackage(nested, version, launchMember, initialState?.sequencing ?? null);
+    sequencer = await createSequencerForPackage(nested,version,launchMember,initialState?.sequencing??null,
+      inspection=>dispatchRuntimeEvent(eventTarget,'p2lrn:scormpreflight',inspection,context,{adapter}));
   } catch (error) {
     dispatchRuntimeEvent(eventTarget, 'p2lrn:error', {
       phase:'scorm-sequencing-manifest', error:String(error?.message ?? error),
+      code:error?.code??'P2LRN_SCORM2004_SEQUENCING_FAILED',
     }, context, {adapter});
+    // Never continue a declared SCORM 2004 launch as an unsequenced SCORM 1.2
+    // runtime when parsing or setting up SCORM 2004 sequencing failed.
+    throw error;
   }
   const {files, transfers, total} = await collectRuntimeFiles(nested);
   let isolatedRuntimeUrl = null;
