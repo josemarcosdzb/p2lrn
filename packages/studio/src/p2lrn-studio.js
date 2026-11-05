@@ -202,7 +202,7 @@ export class P2LRNStudioElement extends HTMLElement{
           <button type="button" data-save hidden>Guardar curso</button>
           <span class="meta" data-meta>Sin curso</span>
         </div>
-        <div class="warn" data-warn hidden>Los cambios permanecen en memoria hasta que descargues o guardes el curso.</div>
+        <div class="warn" data-warn hidden><strong>Sin guardar</strong> Guarda un borrador o exporta el curso para conservar los cambios.</div>
         <div class="body" data-body hidden>
           <nav data-tree></nav>
           <main class="stage"><div data-stage></div></main>
@@ -497,7 +497,7 @@ export class P2LRNStudioElement extends HTMLElement{
           else {const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);}
           this._updateState();
         };
-        if(editable.mediaType==='text/html')mountLessonImageEditor({host:sheet,surface,onChange:()=>{
+        if(editable.mediaType==='text/html')mountLessonImageEditor({preferRibbonInsert:true,host:sheet,surface,onChange:()=>{
           const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');
           this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);
           this._updateState();this.#unifiedBar?.recordChange();

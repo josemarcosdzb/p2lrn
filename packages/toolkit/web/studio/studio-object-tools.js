@@ -81,18 +81,9 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   const controls=doc.createElement('div');controls.className='p2lrn-object-controls';
   controls.setAttribute('role','toolbar');controls.setAttribute('aria-label','Posición y tamaño del objeto');
   const status=doc.createElement('span');status.className='p2lrn-object-label';controls.append(status);
-  for(const [action,label,title] of [
-    ['drag','Mover','Arrastrar objeto'],['duplicate','Duplicar','Duplicar objeto'],
-    ['up','Subir','Mover antes en el documento'],['down','Bajar','Mover después en el documento'],
-    ['reset','Restablecer','Restablecer posición'],['remove','Eliminar','Eliminar objeto']
-  ])controls.append(button(doc,label,action,title));
-  const tableActions=doc.createElement('span');tableActions.className='p2lrn-object-table-actions';
-  tableActions.style.cssText='display:contents';
-  for(const [action,label] of [
-    ['rowAbove','Fila ↑'],['rowBelow','Fila ↓'],['colLeft','Col ←'],
-    ['colRight','Col →'],['deleteRow','− Fila'],['deleteCol','− Col']
-  ])tableActions.append(button(doc,label,action,'Tabla: '+label));
-  controls.append(tableActions);
+  // Movement and resizing are the only floating controls. All other actions
+  // are available once in Formato, beside typography and table properties.
+  controls.append(button(doc,'Mover','drag','Arrastrar objeto'));
   const resize=button(doc,'','resize','Arrastrar para redimensionar objeto');
   resize.className='p2lrn-object-resize';
   frame.append(controls,resize);host.append(frame);
@@ -108,7 +99,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     frame.style.width=geo.width+'px';frame.style.height=geo.height+'px';
     frame.dataset.visible='true';
     const table=selected.matches('table');
-    tableActions.style.display=table?'contents':'none';
+    // Table operations belong to the unified contextual inspector.
     status.textContent=table?'TABLA':selected.dataset.p2lrnLayout==='columns'?'COLUMNAS':'OBJETO';
   }
   function select(element,cell=null){

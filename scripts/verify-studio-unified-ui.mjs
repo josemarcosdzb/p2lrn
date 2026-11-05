@@ -63,14 +63,19 @@ async function browserScenario(){
     ui.setDocument(true,'Estudio visual');
     const toolbar=mount.querySelector('.p2lrn-studio-ribbon');
     expect(toolbar&&mount.classList.contains('p2lrn-studio-unified'),'Canonical toolbar missing');
-    expect([...toolbar.querySelectorAll('[role=tab]')].filter(tab=>!tab.hidden).length===3,'Three working tabs not rendered');
+    expect([...toolbar.querySelectorAll('[role=tab]')].filter(tab=>!tab.hidden).length===2,'Only Formato and Insertar tabs should remain');
+    expect(!toolbar.querySelector('[role=tab][aria-controls$="-design"],[role=tab][aria-controls$="-table"]'),'Duplicate Design or Table tabs remain');
+    expect(toolbar.querySelectorAll('[data-ui-action=create]').length===1,'Create command is duplicated');
+    expect(toolbar.querySelectorAll('[data-ui-action=open]').length===1,'Open command is duplicated');
+    expect(toolbar.querySelectorAll('[data-ui-action=export]').length===1,'Export command is duplicated');
+    expect(toolbar.querySelectorAll('[data-ui-action=save]').length===1,'Save command is duplicated');
     expect(toolbar.querySelector('[data-ui-action=save]'),'Save button missing');
     expect(toolbar.querySelector('[data-ui-action=export]'),'Export button missing');
     expect(toolbar.querySelector('[data-ui-action=preview]'),'Preview button missing');
     expect(toolbar.querySelector('[data-ui-action=edit]'),'Persistent Editar control missing');
     expect(toolbar.querySelector('[data-ui-action=preview]').textContent==='Vista alumno','Student view label missing');
     expect(toolbar.querySelector('[data-ui-action=edit]').textContent==='Editar','Edit mode label missing');
-    const html=toolbar.outerHTML.replace(/p2lrn-studio-(?:panel|tab)-\d+/g,'p2lrn-studio-unique');
+    const html=toolbar.outerHTML.replace(/p2lrn-studio-(?:panel|tab|more)-\d+/g,'p2lrn-studio-unique');
     return {host,root,mount,toolbar,workspace,outline,stage,surface,course,lesson,editable,ui,actions,html,get writes(){return writes;}};
   };
   const website=await make(false),npm=await make(true);
@@ -96,9 +101,11 @@ async function browserScenario(){
     let table=item.surface.querySelector('table[data-p2lrn-layout=table]');
     expect(table&&table.rows.length===3&&table.rows[0].cells.length===2,'Inserted table has the wrong grid');
     table.rows[1].cells[0].click();
-    const tableTab=item.toolbar.querySelector('[role=tab][aria-controls$="-table"]');
-    expect(tableTab&&!tableTab.hidden,'Selecting a table does not show table tools');
-    tableTab.click();
+    const context=item.toolbar.querySelector('[data-studio-context-tools]');
+    expect(context&&!context.hidden,'Selecting a table does not show contextual editing');
+    const formatTab=item.toolbar.querySelector('[role=tab][aria-controls$="-home"]');
+    expect(formatTab.getAttribute('aria-selected')==='true','Table selection must return to Formato automatically');
+    expect(item.toolbar.querySelectorAll('[data-studio-advanced-action=rowBelow]').length===1,'Table row insertion is duplicated');
     const addRow=item.toolbar.querySelector('[data-studio-advanced-action=rowBelow]');
     const addCol=item.toolbar.querySelector('[data-studio-advanced-action=colRight]');
     expect(!addRow.disabled&&!addCol.disabled,'Context table actions are disabled');
@@ -122,7 +129,7 @@ async function browserScenario(){
     expect(table.rows.length===4&&table.rows[0].cells.length===3,'Redo did not restore table modifications');
     // Cell formatting and row geometry must be reversible as well.
     table.rows[1].cells[0].click();
-    tableTab.click();
+    expect(!context.hidden&&formatTab.getAttribute('aria-selected')==='true','Cell formatting requires unnecessary tab switching');
     const cellFill=item.toolbar.querySelector('input[aria-label="Color de fondo de celda"]');
     cellFill.value='#ffd6a5';
     item.toolbar.querySelector('[data-studio-advanced-action=cellFill]').click();
@@ -163,7 +170,7 @@ async function browserScenario(){
     insert.click();
     expect(item.surface.querySelector('[data-p2lrn-layout=columns]'),'Columns not inserted in HTML');
     expect(item.writes>0,'Insertion was not persisted in authoring model');
-    item.toolbar.querySelector('[role=tab][aria-controls*="-design"]').click();
+    expect(formatTab.getAttribute('aria-selected')==='true','New block should expose Formato automatically');
     const blue=[...item.toolbar.querySelectorAll('button')].find(b=>b.title==='Aplicar fondo azul');
     expect(blue,'Visual design option missing');
     blue.click();
@@ -190,9 +197,11 @@ async function browserScenario(){
     redo.click();
     shape=item.surface.querySelector('[data-p2lrn-layout=shape]');
     expect(shape.getBoundingClientRect().width>previousWidth,'Redo did not restore shape width');
-    item.toolbar.querySelector('[role=tab][aria-controls*="-design"]').click();
+    expect(formatTab.getAttribute('aria-selected')==='true','New shape should expose Formato automatically');
     item.toolbar.querySelector('[data-ui-action=save]').click();
-    item.toolbar.querySelector('[data-ui-action=export]').click();
+    const fileMenu=item.toolbar.querySelector('.p2lrn-file-menu');
+    expect(fileMenu.querySelectorAll('[data-ui-action=export]').length===1,'Export action must exist once in Archivo');
+    fileMenu.open=true;fileMenu.querySelector('[data-ui-action=export]').click();
     const lessonBeforePreview=item.surface.innerHTML;
     const student=item.toolbar.querySelector('[data-ui-action=preview]');
     const edit=item.toolbar.querySelector('[data-ui-action=edit]');
@@ -221,7 +230,7 @@ async function browserScenario(){
     expect(item.toolbar.querySelector('[role=status]').textContent==='Cambios guardados','Status feedback is not visible');
   }
   const label=website.toolbar.querySelector('[role=tab][aria-selected=true]');
-  expect(label.textContent==='Diseño','Tab state is not consistent');
+  expect(label.textContent==='Formato','Tab state is not consistent');
   const lightStyle=getComputedStyle(website.toolbar).fontFamily;
   const shadowStyle=getComputedStyle(npm.toolbar).fontFamily;
   expect(lightStyle===shadowStyle,'Stylesheets differ across light and Shadow DOM');

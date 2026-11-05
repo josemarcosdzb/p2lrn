@@ -32,12 +32,13 @@ async function advancedCase(){
   let table=surface.querySelector('table[data-p2lrn-layout=table]');
   check(table&&table.rows.length===3,'Table insertion failed');
   table.rows[1].cells[0].click();
-  check(!tab('table').hidden,'Table tab is not contextual');
-  tab('table').click();
+  const context=ribbon.querySelector('[data-studio-context-tools]');
+  check(context&&!context.hidden&&tab('home').getAttribute('aria-selected')==='true','Selecting table must show tools within Formato');
+  check(!tab('table')&&!tab('design'),'Redundant design/table tabs still exist');
   ribbon.querySelector('[data-studio-advanced-action=rowBelow]').click();
   ribbon.querySelector('[data-studio-advanced-action=colRight]').click();
   check(table.rows.length===4&&table.rows[0].cells.length===3,'Table row or column edit failed');
-  tab('design').click();
+  check(tab('home').getAttribute('aria-selected')==='true','Object design must remain in Formato');
   const width=ribbon.querySelector('input[aria-label="Ancho del elemento en píxeles"]');
   width.value='360';
   ribbon.querySelector('[data-studio-advanced-action=width]').click();
@@ -158,7 +159,7 @@ try{
     const info=await evalExpr(expression);
     assert.equal(ready,true,sample.id+' did not initialize: '+JSON.stringify(info));
     assert.equal(info.ribbon,true,sample.id+' missing unified toolbar');
-    assert(info.tabs.includes('Inicio')&&info.tabs.includes('Insertar')&&info.tabs.includes('Diseño'),
+    assert(info.tabs.length===2&&info.tabs.includes('Formato')&&info.tabs.includes('Insertar'),
       sample.id+' lacks a shared tab');
     assert(info.stage,sample.id+' missing the Studio editing stage');
     const advanced=await evalExpr('('+advancedCase.toString()+')()');

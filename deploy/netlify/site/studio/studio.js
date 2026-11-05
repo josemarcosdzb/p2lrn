@@ -356,7 +356,7 @@ async function renderEditor(){
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
   });
-  mountLessonImageEditor({host:content,surface,onChange:()=>{
+  mountLessonImageEditor({preferRibbonInsert:true,host:content,surface,onChange:()=>{
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
     updateChanges();

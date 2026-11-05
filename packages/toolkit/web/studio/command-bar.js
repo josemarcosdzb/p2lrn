@@ -146,6 +146,30 @@ const CSS=[
   '@media(max-width:860px){.p2lrn-studio-workspace{grid-template-columns:minmax(0,1fr)!important}.p2lrn-studio-outline{max-height:260px}.p2lrn-ribbon-top{align-items:flex-start}.p2lrn-studio-stage{padding:12px}.p2lrn-studio-sheet{padding:18px}.p2lrn-ribbon-actions{justify-content:flex-start}}',
   '.p2lrn-outline-toggle{display:none!important}',
   '.p2lrn-ribbon-group[hidden]{display:none!important}',
+  '.p2lrn-ribbon-context[hidden],.p2lrn-ribbon-context .p2lrn-ribbon-group[hidden]{display:none!important}',
+  '.studio-warning[data-unsaved-warning],.warn[data-warn]{display:flex;align-items:center;gap:7px;margin:7px 0!important;padding:8px 12px!important;border:1px solid #e9dbb7;border-radius:8px;background:#fffaf1;color:#75531b;font-size:12px;line-height:1.35}',
+  '.studio-warning[data-unsaved-warning] strong,.warn[data-warn] strong{font-weight:750;flex:none}',
+  '.studio-warning[data-unsaved-warning][hidden],.warn[data-warn][hidden]{display:none!important}',
+  '.p2lrn-ribbon-context:not([hidden]){overflow:visible!important;flex-wrap:wrap!important;align-items:center}',
+  '.p2lrn-ribbon-context .p2lrn-ribbon-group{flex-wrap:wrap!important}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu-pop button{white-space:nowrap}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu{position:relative;flex:0 0 auto;min-width:0}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu>summary{display:inline-flex;align-items:center;justify-content:center;gap:5px;list-style:none;min-height:34px;padding:7px 11px;border:1px solid #d6e0ec;border-radius:7px;background:#fff;color:#344054;font-size:12px;font-weight:650;cursor:pointer;white-space:nowrap}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu>summary::-webkit-details-marker{display:none}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu>summary::after{content:"⌄";font-size:12px;color:#64748b}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu>summary:focus-visible{outline:2px solid #4776b6;outline-offset:2px}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu-pop{display:flex;flex-direction:column;gap:4px;position:absolute;top:calc(100% + 5px);left:0;min-width:170px;max-height:360px;overflow:auto;padding:7px;border:1px solid #dce4ef;border-radius:9px;background:#fff;box-shadow:0 14px 32px #14213d25;z-index:80}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu:not([open])>.p2lrn-context-menu-pop{display:none!important}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu-pop>button{width:100%;justify-content:flex-start;text-align:left;min-height:33px;font-size:12px}',
+  '.p2lrn-ribbon-context .p2lrn-context-menu-pop .p2lrn-ribbon-color{width:100%}',
+  '.p2lrn-ribbon-context .p2lrn-ribbon-group{flex-shrink:0}',
+  '.p2lrn-ribbon-context{display:flex;align-items:center;flex-wrap:wrap;gap:9px;width:100%;flex:1 0 100%;padding:10px 12px;margin:-3px -2px 3px;border:1px solid #dfe6ef;border-radius:9px;background:#f7f9fc}',
+  '.p2lrn-ribbon-context-heading{font-size:11px;font-weight:750;color:#344054;white-space:nowrap;margin-right:4px}',
+  '.p2lrn-ribbon-context .p2lrn-ribbon-group{flex-wrap:wrap;gap:6px}',
+  '.p2lrn-ribbon-context .p2lrn-ribbon-divider{height:25px}',
+  '.p2lrn-ribbon-context [data-studio-advanced-action^=delete]{color:#a02d32}',
+  '@media(max-width:1200px){.p2lrn-ribbon-panel[aria-labelledby$="-home"]{flex-wrap:wrap;overflow-x:visible}.p2lrn-ribbon-panel[aria-labelledby$="-home"]>.p2lrn-ribbon-group{flex-shrink:0}.p2lrn-ribbon-context{order:9;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;margin:2px 0;padding:8px}.p2lrn-ribbon-context .p2lrn-ribbon-group{flex-wrap:nowrap;flex-shrink:0}}',
+  '@media(max-width:740px){.p2lrn-ribbon-panel[aria-labelledby$="-home"]{gap:5px}.p2lrn-ribbon-context{gap:7px}.p2lrn-ribbon-context-heading{font-size:11px}.p2lrn-ribbon-context button{min-height:32px}}',
   '.p2lrn-ribbon-panel{scrollbar-width:thin;scrollbar-color:#c1cfdd transparent}',
   '@media(max-width:1200px){.p2lrn-ribbon-panel{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;min-height:66px;padding:9px 12px}.p2lrn-ribbon-panel>.p2lrn-ribbon-group,.p2lrn-ribbon-panel>.p2lrn-ribbon-divider,.p2lrn-ribbon-panel>.p2lrn-ribbon-caption{flex-shrink:0}.p2lrn-ribbon-panel .p2lrn-ribbon-group{flex-wrap:nowrap}.p2lrn-ribbon-panel::-webkit-scrollbar{height:6px}.p2lrn-ribbon-panel::-webkit-scrollbar-thumb{border-radius:6px;background:#c1cfdd}}',
   '@media(max-width:860px){.p2lrn-outline-toggle{display:inline-flex!important;margin-left:auto}.p2lrn-studio-workspace:not([data-outline-open=true]) .p2lrn-studio-outline{display:none!important}.p2lrn-ribbon-identity{width:100%}}',
@@ -158,6 +182,18 @@ const CSS=[
   '.p2lrn-studio-property-edit{margin-left:auto;font-size:11px;color:#3264a1}',
   '.p2lrn-studio-lesson-properties .p2lrn-studio-sheet-head{padding:13px 15px;margin:0;border-top:1px solid #e3e8f0;border-bottom:0;background:#fff}',
   '.p2lrn-studio-lesson-properties .p2lrn-studio-sheet-head h1{font-size:23px;line-height:1.2}',
+  '.p2lrn-ribbon-panel[aria-labelledby$="-home"]{display:flex;flex-direction:column;align-items:stretch;gap:4px;min-width:0}',
+  '.p2lrn-core-format-strip{display:flex;align-items:center;flex-wrap:nowrap;gap:9px;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;padding:4px 2px 6px;scrollbar-width:thin;scrollbar-color:#c3cfdd transparent}',
+  '.p2lrn-core-format-strip>.p2lrn-ribbon-group{display:flex;flex:0 0 auto;flex-wrap:nowrap;align-items:center}',
+  '.p2lrn-core-format-strip>.p2lrn-ribbon-divider{flex:0 0 auto}',
+  '.p2lrn-ribbon-context{order:2;min-width:0;max-width:100%;flex:0 0 auto;margin:2px 0 1px}',
+  '@media(max-width:1200px){.p2lrn-ribbon-panel[aria-labelledby$="-home"]{flex-wrap:nowrap;overflow:visible}.p2lrn-core-format-strip{width:100%;flex-wrap:nowrap;overflow-x:auto}}',
+  '@media(max-width:740px){.p2lrn-ribbon-panel[aria-labelledby$="-home"]{gap:3px;min-height:0}.p2lrn-core-format-strip{gap:7px;padding:2px 0 5px;min-height:44px}.p2lrn-ribbon-context{width:100%;min-height:44px}}',
+  '.p2lrn-format-more-toggle{display:none!important}',
+  '.p2lrn-format-more-panel{display:flex;align-items:center;gap:7px;min-width:0;flex:0 0 auto}',
+  '.p2lrn-format-more-panel>.p2lrn-ribbon-field{flex:0 0 auto}',
+  '.p2lrn-format-more-panel>.p2lrn-ribbon-group{display:flex;align-items:center;flex-wrap:nowrap;gap:5px}',
+  '@media(max-width:740px){.p2lrn-core-format-strip{display:flex;flex-wrap:wrap;overflow:visible;align-items:center;gap:7px}.p2lrn-core-format-strip>.p2lrn-ribbon-group{flex-shrink:0}.p2lrn-core-format-strip .p2lrn-ribbon-field:first-child select{max-width:105px;min-width:86px}.p2lrn-format-more-toggle{display:inline-flex!important;margin-left:auto;font-size:12px;min-height:34px}.p2lrn-format-more-panel{flex:1 0 100%;width:100%;flex-wrap:wrap;gap:8px;padding:9px 0 2px;border-top:1px solid #e4eaf1}.p2lrn-format-more-panel[data-expanded=false]{display:none!important}.p2lrn-format-more-panel>.p2lrn-ribbon-group{flex-wrap:wrap}.p2lrn-format-more-panel>.p2lrn-ribbon-field{max-width:155px}}',
   '@media(max-width:520px){.p2lrn-ribbon-top{padding:10px}.p2lrn-ribbon-panel{padding:10px}.p2lrn-ribbon-name small{max-width:180px}.p2lrn-ribbon-group{gap:4px}.p2lrn-ribbon-divider{display:none}}'
 ].join('\n');
 
@@ -191,7 +227,8 @@ export function collapseStudioLessonProperties({header,title}={}){
   const sync=()=>{name.textContent=title.textContent?.trim()||'Lección sin título';};
   sync();title.addEventListener('input',sync);
   const affordance=doc.createElement('span');affordance.className='p2lrn-studio-property-edit';affordance.textContent='Editar título y descripción';
-  summary.append(label,name,affordance);
+  label.textContent='Lección';affordance.textContent='Editar título y descripción';
+  summary.append(label,affordance);
   header.replaceWith(details);details.append(summary,header);
   return details;
 }
@@ -233,7 +270,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   const filePop=node(doc,'div','p2lrn-file-pop');
   const fileItems=[
     ['create','Nuevo curso'],['open','Abrir .p2lrn'],
-    ['save','Guardar'],['saveDraft','Guardar borrador local'],
+    ['saveDraft','Guardar borrador local'],
     ['recoverDraft','Recuperar borrador'],['clearDraft','Eliminar borrador…'],
     ['export','Descargar .p2lrn'],
     ['offline','Entrega offline'],['review','Revisar entrega']
@@ -251,8 +288,6 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   }
   fileMenu.append(filePop);
   topActions.append(fileMenu);
-  if(actions.create)topActions.append(button(doc,'Nuevo',{action:'create'}));
-  if(actions.open)topActions.append(button(doc,'Abrir',{action:'open'}));
   const save=button(doc,'Guardar',{action:'save'});
   if(actions.save)topActions.append(save);
   // Keep both explicit modes visible. A single toggling label used to make
@@ -264,12 +299,10 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   if(actions.edit)modes.append(edit);
   if(actions.preview)modes.append(preview);
   if(modes.childElementCount)topActions.append(modes);
-  const exportButton=button(doc,'Exportar .p2lrn',{action:'export',cls:'p2lrn-primary'});
-  if(actions.export)topActions.append(exportButton);
   top.append(topActions);bar.append(top);
   const tabs=node(doc,'div','p2lrn-ribbon-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Herramientas de edición');
   const panels=node(doc,'div');
-  const tabDefs=[['home','Inicio'],['insert','Insertar'],['design','Diseño']];
+  const tabDefs=[['home','Formato'],['insert','Insertar']];
   const tabControls=[];
   const panelMap=new Map();
   const uid=++instance;
@@ -296,7 +329,13 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   activateTab('home');bar.append(tabs,panels);
   const feedback=node(doc,'div','p2lrn-ribbon-feedback','Selecciona una lección para editarla.');
   feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');bar.append(feedback);
-  const home=panelMap.get('home'),insert=panelMap.get('insert'),design=panelMap.get('design');
+  const home=panelMap.get('home'),insert=panelMap.get('insert');
+  const formatStrip=node(doc,'div','p2lrn-core-format-strip');home.append(formatStrip);
+  const context=node(doc,'section','p2lrn-ribbon-context');
+  context.dataset.studioContextTools='true';context.hidden=true;
+  context.setAttribute('aria-label','Propiedades del elemento seleccionado');
+  const contextHead=node(doc,'div','p2lrn-ribbon-context-heading','Elemento seleccionado');
+  context.append(contextHead);home.append(context);
   const group=(parent)=>{
     const g=node(doc,'div','p2lrn-ribbon-group');parent.append(g);return g;
   };
@@ -304,12 +343,12 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     const f=node(doc,'label','p2lrn-ribbon-field');
     f.append(node(doc,'span','',label),control);parent.append(f);return control;
   };
-  const styleGroup=group(home);
+  const styleGroup=group(formatStrip);
   const block=field(styleGroup,'Párrafo',select(doc,BLOCK_STYLES,'Estilo de párrafo'));
   const font=field(styleGroup,'Fuente',select(doc,FONT_FAMILIES.map(v=>[v,v]),'Tipo de letra'));font.value='Calibri';
   const size=field(styleGroup,'Tamaño',select(doc,FONT_SIZES.map(v=>[v,String(v)]),'Tamaño de letra'));size.value='20';
-  home.append(node(doc,'span','p2lrn-ribbon-divider'));
-  const formatGroup=group(home);
+  formatStrip.append(node(doc,'span','p2lrn-ribbon-divider'));
+  const formatGroup=group(formatStrip);
   const formatButtons=[
     ['bold','B','Negrita'],['italic','I','Cursiva'],['underline','U','Subrayado'],['strikeThrough','S','Tachado'],
     ['justifyLeft','≡','Alinear a la izquierda'],['justifyCenter','≣','Centrar'],
@@ -327,8 +366,8 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     b.addEventListener('click',()=>applyCommand(id));
     formatGroup.append(b);commandButtons.set(id,b);
   }
-  home.append(node(doc,'span','p2lrn-ribbon-divider'));
-  const colorGroup=group(home);
+  formatStrip.append(node(doc,'span','p2lrn-ribbon-divider'));
+  const colorGroup=group(formatStrip);
   for(const [label,value,cmd] of [['Texto','#1f2937','foreColor'],['Resaltar','#fff2ae','hiliteColor']]){
     const wrapper=node(doc,'label','p2lrn-ribbon-color');
     wrapper.append(node(doc,'span','',label));
@@ -336,6 +375,25 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     input.addEventListener('input',()=>applyCommand(cmd,input.value));
     wrapper.append(input);colorGroup.append(wrapper);
   }
+  // One location for ALL text formatting, with an explicit responsive overflow.
+  // Move existing control nodes rather than making duplicate command buttons.
+  const morePanel=node(doc,'div','p2lrn-format-more-panel');
+  const moreToggle=button(doc,'Más formato',{title:'Fuente, tamaño, alineación, listas, colores y deshacer'});
+  moreToggle.classList.add('p2lrn-format-more-toggle');
+  moreToggle.setAttribute('aria-expanded','false');
+  moreToggle.setAttribute('aria-controls','p2lrn-studio-more-'+uid);
+  morePanel.id='p2lrn-studio-more-'+uid;morePanel.dataset.expanded='false';
+  morePanel.append(font.closest('.p2lrn-ribbon-field'),size.closest('.p2lrn-ribbon-field'));
+  for(const [command,control] of commandButtons){
+    if(!['bold','italic','underline'].includes(command))morePanel.append(control);
+  }
+  morePanel.append(colorGroup);
+  for(const separator of formatStrip.querySelectorAll(':scope > .p2lrn-ribbon-divider'))separator.remove();
+  moreToggle.addEventListener('click',()=>{
+    const next=moreToggle.getAttribute('aria-expanded')!=='true';
+    moreToggle.setAttribute('aria-expanded',String(next));morePanel.dataset.expanded=String(next);
+  });
+  formatStrip.append(moreToggle,morePanel);
   const structure=group(insert);
   for(const [action,title] of [['addUnit','+ Unidad'],['addLesson','+ Lección']])
     if(actions[action])structure.append(button(doc,title,{action}));
@@ -417,13 +475,16 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     b.addEventListener('click',()=>addLayout(item.id));
     layouts.append(b);
   }
-  const colors=group(design);
-  colors.append(node(doc,'span','p2lrn-ribbon-caption','Fondo del bloque seleccionado'));
+  const colors=group(context);colors.classList.add('p2lrn-object-colors');
+  const colorMenu=node(doc,'details','p2lrn-context-menu');colorMenu.dataset.studioContextMenu='fondo';
+  const colorSummary=node(doc,'summary','','Fondo');colorSummary.setAttribute('aria-label','Color de fondo del bloque');
+  const colorPop=node(doc,'div','p2lrn-context-menu-pop');
+  colorMenu.append(colorSummary,colorPop);colors.append(colorMenu);
   for(const [,label,color] of PALETTE){
     const b=button(doc,label,{title:'Aplicar fondo '+label.toLowerCase()});
     const swatch=node(doc,'span','p2lrn-ribbon-swatch');swatch.style.backgroundColor=color;
     b.prepend(swatch);b.addEventListener('mousedown',(e)=>e.preventDefault());
-    b.addEventListener('click',()=>colorBlock(color));colors.append(b);
+    b.addEventListener('click',()=>{colorBlock(color);colorMenu.open=false;});colorPop.append(b);
   }
 
   let savedRange=null,savedSurface=null,lastVisualBlock=null,previewMode=false,hasDocument=false;

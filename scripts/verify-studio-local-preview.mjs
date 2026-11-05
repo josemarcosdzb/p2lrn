@@ -80,7 +80,7 @@ try{
     const info=await evalExpr(expression);
     assert.equal(ready,true,sample.id+' did not initialize: '+JSON.stringify(info));
     assert.equal(info.ribbon,true,sample.id+' missing unified toolbar');
-    assert(info.tabs.includes('Inicio')&&info.tabs.includes('Insertar')&&info.tabs.includes('Diseño'),
+    assert(info.tabs.length===2&&info.tabs.includes('Formato')&&info.tabs.includes('Insertar'),
       sample.id+' lacks a shared tab');
     assert(info.stage,sample.id+' missing the Studio editing stage');
     if(out){
