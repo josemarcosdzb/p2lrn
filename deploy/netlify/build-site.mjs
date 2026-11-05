@@ -795,6 +795,18 @@ for(const example of documentationExamples){
   await rm(join(examplesOutput,...parts),{force:true});
 }
 await rm(join(examplesOutput,'multipart-demo'),{recursive:true,force:true});
+// Release gate: refuse to publish any native course or previously removed test course.
+const expectedPublicCoursePaths = new Set([
+  ...canonicalEntries.map((entry)=>entry.url),
+  ...generatedEntries.map((entry)=>entry.url),
+]);
+const actuallyPublishedCourses = (await walk(examplesOutput))
+  .filter((path)=>path.endsWith('.p2lrn')||path.endsWith('.p2rln'))
+  .map((path)=>'/examples/'+relative(examplesOutput,path).replaceAll('\\','/'));
+const unauthorizedCourses=actuallyPublishedCourses.filter((url)=>!expectedPublicCoursePaths.has(url));
+if(unauthorizedCourses.length||actuallyPublishedCourses.length!==expectedPublicCoursePaths.size){
+  throw new Error('Public course allowlist mismatch: '+JSON.stringify({unauthorizedCourses,actuallyPublishedCourses,expected:[...expectedPublicCoursePaths]}));
+}
 const broken = [];
 const refPattern = /\b(?:href|src)=["']([^"']+)["']/gi;
 for (const path of htmlFiles) {
