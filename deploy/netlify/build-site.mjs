@@ -109,6 +109,12 @@ for (const name of ['developer-course','developer-game-3d']) {
 }
 
 const canonicalDisplayTitles = Object.freeze({
+  'external/h5p-boardgame.p2lrn':'H5P Boardgame',
+  'external/h5p-arts-of-europe.p2lrn':'H5P Arts of Europe',
+  'external/scorm12-golf.p2lrn':'SCORM 1.2 Golf Explained',
+  'external/scorm2004-golf.p2lrn':'SCORM 2004 Golf Explained',
+  'external/scorm12-bilan-moodle.p2lrn':'SCORM Bilan Moodle',
+  'external/common-cartridge-topkit.p2lrn':'IMS Common Cartridge Topkit',
   'external/scorm12-real.p2lrn':'SCORM 1.2 · fixture ADL preservada (contenido fuente incompleto)',
   'external/qti3-minimal.p2lrn':'QTI 3 · fixture mínima preservada (sin itemBody)',
   'external/cmi5-catapult-pre-post.p2lrn':'cmi5 Catapult · Introduction to Geology',
