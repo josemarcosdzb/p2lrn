@@ -274,7 +274,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     if(typeof commandDoc.execCommand!=='function'){onStatus('El navegador no permite aplicar este formato.');return;}
     if(['fontName','fontSize','foreColor','hiliteColor'].includes(name))
       commandDoc.execCommand('styleWithCSS',false,true);
-    const ok=commandDoc.execCommand(name,false,value);
+    const ok=commandDoc.execCommand(name,false,name==='fontSize'?'7':value);
     if(!ok){onStatus('No se pudo aplicar '+name+'. Selecciona texto e inténtalo de nuevo.');return;}
     if(name==='fontSize'){
       for(const element of s.querySelectorAll('[style]'))
