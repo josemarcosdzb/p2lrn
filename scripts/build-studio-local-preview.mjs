@@ -39,6 +39,17 @@ for(const file of STUDIO_RUNTIME_SHARED_FILES){
 }
 console.log('4/5 Install the exact NPM-build assets and Player under local routes');
 await cp(playerOut,join(output,'player','current','dist'),{recursive:true,force:true});
+// Player's demo requires this root-scoped service worker before course launch.
+await cp(join(playerOut,'p2lrn-sw.js'),join(output,'p2lrn-sw.js'),{force:true});
+// Reject stale Player builds that still carry the removed arrow pad or floating labels.
+const compiled3d=await readFile(join(playerOut,'renderers','questionnaire-3d.js'),'utf8');
+const compiledScene=await readFile(join(playerOut,'game-3d','three-runtime.js'),'utf8');
+if(compiled3d.includes('p2lrn-3d-move-pad')||compiled3d.includes('Recentrar jugador')
+  ||!compiled3d.includes('matchingLocked')||!compiled3d.includes('createVirtualJoystick'))
+  throw new Error('Preview Player still contains legacy 3D controls or missing matching finalization');
+if(!compiledScene.includes('p2lrn-box-face-label')||compiledScene.includes('new THREE.Sprite('))
+  throw new Error('Preview Player did not include text fixed to the front of boxes');
+
 await cp(join(repository,'packages','studio','dist'),join(output,'studio','current','dist'),{recursive:true,force:true});
 await mkdir(join(output,'npm-studio'),{recursive:true});
 await cp(join(repository,'dev','studio-preview','index.html'),join(output,'npm-studio','index.html'),{force:true});
@@ -47,6 +58,6 @@ console.log('5/5 Save reproducible preview metadata');
 const pkg=JSON.parse(await readFile(join(repository,'packages','studio','package.json'),'utf8'));
 const manifest={branch:'mejorastudio',commit:process.env.GITHUB_SHA||null,studioPackage:'@p2lrn/studio',
  studioVersion:pkg.version,playerVersion:player.release.webSdkVersion,mode:'compiled-from-repository',
- paths:['/studio/','/npm-studio/'],publicDeployment:false,mainModified:false};
+ paths:['/studio/','/npm-studio/','/demo/'],quest3dUx:'touch-joystick+face-labels+locked-matching',publicDeployment:false,mainModified:false};
 await writeFile(join(output,'preview-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 console.log(JSON.stringify({ok:true,output,...manifest},null,2));
