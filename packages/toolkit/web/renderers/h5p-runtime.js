@@ -106,6 +106,18 @@ function scoreFromXapi(statement) {
 export async function render({container, payload, representation, package:pkg, eventTarget, adapter, context, runtimeBaseUrl}) {
   const nested = await nestedH5P(pkg, representation, payload);
   const inspection = await inspectH5PPackage(nested);
+  // Validate the exact transitive bundled dependency closure before creating
+  // the untrusted iframe. Missing libraries may be resolved by the trusted
+  // shared library runtime; they must never be silently treated as present.
+  const closure=inspection.dependencyClosure;
+  dispatchRuntimeEvent(eventTarget,'p2lrn:h5pdependencies',{
+    mainLibrary:inspection.mainLibrary,
+    bundled:closure.bundled,
+    missing:closure.missing,
+    dynamic:closure.dynamic,
+    completeBundled:closure.complete,
+    requiresTrustedLibraryResolver:closure.requiresTrustedLibraryResolver,
+  },context,{adapter});
   const declared = extensionFor(representation);
   if (declared.mainLibrary && declared.mainLibrary !== inspection.mainLibrary) {
     const error = new Error(`H5P mainLibrary mismatch: P2LRN metadata declares ${declared.mainLibrary}, package declares ${inspection.mainLibrary}.`);
