@@ -86,3 +86,9 @@ Ambos Studio deben usar exactamente la misma interfaz basada en command-bar.js y
 La Skill no debe prometer un historial global de todos los metadatos/actividades, combinaciones de celdas, diapositivas con capas libres, ni importación/exportación completa y editable de PPTX o PDF. Estas funciones no están verificadas. La nueva barra y el NPM son desarrollo de la rama, no una publicación pública; no fusionar, publicar ni desplegar sin orden expresa.
 
 Pruebas recomendadas desde el repositorio: node --test packages/toolkit/test/studio-advanced-history.test.mjs packages/toolkit/test/studio-visual-layout.test.mjs packages/studio/test/dist-dependencies.test.mjs; node scripts/verify-studio-unified-ui.mjs; y, si está activo el servidor local de dos vistas, node scripts/verify-studio-advanced-local-preview.mjs --port 5531 --output CARPETA_EXISTENTE.
+
+## Estado vigente de la UX de Studio en `mejorastudio` (5 de noviembre de 2026)
+
+**Esta sección sustituye las referencias antiguas a pestañas Inicio, Diseño y Tabla.** Los dos editores Studio web y componente NPM utilizan **Formato** e **Insertar**. Archivo concentra nuevo/abrir/borradores/exportar; Guardar y Vista alumno permanecen accesibles. Al seleccionar un objeto o tabla, sus acciones de tamaño, color, filas, columnas, celda y organización aparecen **en Formato**, junto al texto; nunca duplicar esos comandos en controles flotantes o nuevas pestañas. En móvil, Más formato despliega controles secundarios en el mismo apartado. Los controles flotantes solo arrastran y redimensionan; la multimedia usa los selectores de Insertar y muestra sus ajustes al seleccionar el recurso. No publicar NPM ni fusionar sin autorización del propietario.
+
+Fuente de verdad: `docs/studio-saas-oneplace-ux-2026-11-05.md`; reproducir QA con `scripts/verify-studio-unified-ui.mjs`, `scripts/verify-studio-saas-ui.mjs`, `scripts/verify-studio-advanced-local-preview.mjs` y `scripts/verify-studio-student-preview.mjs`.
