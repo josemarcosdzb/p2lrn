@@ -15,13 +15,13 @@ function makeBlock(kind){
   if(kind==='divider')return elt('hr');
   if(kind==='text-box'){
     const box=elt('section');box.dataset.p2lrnLayout='text-box';
-    setStyle(box,{width:'420px',maxWidth:'100%',minHeight:'96px',padding:'18px',margin:'16px 0',border:'1px dashed #94a3b8',borderRadius:'10px',backgroundColor:'#fff'});
+    setStyle(box,{width:'420px',maxWidth:'100%',boxSizing:'border-box',minHeight:'96px',padding:'18px',margin:'16px 0',border:'1px dashed #94a3b8',borderRadius:'10px',backgroundColor:'#fff'});
     box.append(elt('p','Escribe aquí. Puedes mover y redimensionar este cuadro.'));
     return box;
   }
   if(kind==='shape'){
     const shape=elt('figure');shape.dataset.p2lrnLayout='shape';
-    setStyle(shape,{width:'260px',maxWidth:'100%',minHeight:'126px',padding:'20px',margin:'16px 0',borderRadius:'16px',border:'2px solid #93c5fd',backgroundColor:'#dbeafe',textAlign:'center'});
+    setStyle(shape,{width:'260px',maxWidth:'100%',boxSizing:'border-box',minHeight:'126px',padding:'20px',margin:'16px 0',borderRadius:'16px',border:'2px solid #93c5fd',backgroundColor:'#dbeafe',textAlign:'center'});
     shape.append(elt('figcaption','Forma editable'));
     return shape;
   }
@@ -41,17 +41,17 @@ function makeBlock(kind){
     table.append(tbody);return table;
   }
   const section=elt('section');section.setAttribute('data-p2lrn-layout',kind);
-  setStyle(section,{margin:'22px 0',padding:'22px',borderRadius:'12px'});
+  setStyle(section,{margin:'22px 0',padding:'22px',boxSizing:'border-box',maxWidth:'100%',borderRadius:'12px'});
   if(kind==='callout'){
     setStyle(section,{backgroundColor:'#eff6ff',borderLeft:'4px solid #2563eb'});
     section.append(elt('h2','Idea clave'),elt('p','Escribe aquí el contenido destacado.'));
   }else if(kind==='columns'){
     const heading=elt('h2','Comparación');
     const grid=elt('div');
-    setStyle(grid,{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:'18px'});
+    setStyle(grid,{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'18px'});
     for(const title of ['Primera columna','Segunda columna']){
       const cell=elt('div');
-      setStyle(cell,{padding:'16px',border:'1px solid #d0d5dd',borderRadius:'8px'});
+      setStyle(cell,{padding:'16px',boxSizing:'border-box',minWidth:'0',border:'1px solid #d0d5dd',borderRadius:'8px'});
       cell.append(elt('h3',title),elt('p','Escribe aquí.'));
       grid.append(cell);
     }
@@ -62,33 +62,70 @@ function makeBlock(kind){
   }
   return section;
 }
-function insertAtSelection(surface,block){
-  const selection=surface.ownerDocument.getSelection();
-  if(selection?.rangeCount&&surface.contains(selection.anchorNode)){
-    let top=selection.anchorNode;
+const VISUAL_CONTAINER='[data-p2lrn-layout],td,th';
+const normalizeElement=node=>node?.nodeType===1?node:node?.parentElement||null;
+
+// Resolve an actual nested HTML container, never an overlay.
+export function studioNestedInsertionContainer(surface,{anchorNode=null,targetElement=null}={}){
+  if(!surface?.isContentEditable)return null;
+  const target=normalizeElement(targetElement);
+  const anchor=normalizeElement(anchorNode);
+  const from=target&&surface.contains(target)?target:anchor&&surface.contains(anchor)?anchor:null;
+  if(!from)return null;
+  const scope=from.closest?.(VISUAL_CONTAINER);
+  if(!scope||!surface.contains(scope))return null;
+  if(scope.matches('td,th'))return scope;
+  const kind=scope.dataset.p2lrnLayout;
+  if(kind==='table'||scope.tagName==='TABLE'){
+    const inside=anchor?.closest?.('td,th');
+    return inside&&scope.contains(inside)?inside:scope.querySelector('td,th');
+  }
+  if(kind==='columns'){
+    const grid=scope.querySelector(':scope > div');
+    if(!grid)return scope;
+    const column=[...grid.children].find(child=>child.contains(anchor));
+    return column||grid.firstElementChild||scope;
+  }
+  if(kind==='divider'||scope.tagName==='HR')return scope.parentElement===surface?null:scope.parentElement;
+  return scope;
+}
+export function insertStudioNestedElement(surface,element,{anchorNode=null,targetElement=null}={}){
+  const parent=studioNestedInsertionContainer(surface,{anchorNode,targetElement});
+  if(!parent)return null;
+  const anchor=normalizeElement(anchorNode);
+  if(anchor&&parent.contains(anchor)&&anchor!==parent){
+    let direct=anchor;
+    while(direct?.parentElement!==parent)direct=direct?.parentElement;
+    if(direct?.parentElement===parent)direct.after(element);
+    else parent.append(element);
+  }else parent.append(element);
+  surface.dispatchEvent(new Event('input',{bubbles:true}));
+  return parent;
+}
+function insertAtSelection(surface,block,{anchorNode=null,targetElement=null}={}){
+  if(insertStudioNestedElement(surface,block,{anchorNode,targetElement}))return block;
+  const root=surface.getRootNode();
+  const selection=typeof root.getSelection==='function'?root.getSelection():surface.ownerDocument.getSelection();
+  const pointer=anchorNode&&surface.contains(anchorNode)?anchorNode:
+    selection?.rangeCount&&surface.contains(selection.anchorNode)?selection.anchorNode:null;
+  if(pointer){
+    let top=pointer;
     while(top&&top.parentNode!==surface)top=top.parentNode;
-    if(top&&top.parentNode===surface){
+    if(top?.parentNode===surface){
       if(top.matches?.('[data-p2lrn-lesson-canvas]'))top.append(block);
       else top.after(block);
-    }
-    else surface.append(block);
-  }else surface.append(block);
-  // Ensure the insertion is serialized by the existing Studio change handler.
+    }else surface.append(block);
+  }else{
+    const canvas=surface.querySelector(':scope > [data-p2lrn-lesson-canvas]');
+    (canvas||surface).append(block);
+  }
   surface.dispatchEvent(new Event('input',{bubbles:true}));
   return block;
 }
-export function insertVisualLayoutBlock(surface,kind,{anchorNode=null}={}){
+export function insertVisualLayoutBlock(surface,kind,{anchorNode=null,targetElement=null}={}){
   if(!surface?.isContentEditable)throw new Error('Selecciona una lección HTML editable.');
   if(!BLOCKS.some(([id])=>id===kind))throw new RangeError('Bloque visual desconocido.');
-  const block=makeBlock(kind);
-  if(anchorNode&&surface.contains(anchorNode)){
-    let top=anchorNode;
-    while(top&&top.parentNode!==surface)top=top.parentNode;
-    if(top?.parentNode===surface)top.after(block);
-    else surface.append(block);
-    surface.dispatchEvent(new Event('input',{bubbles:true}));
-  }else insertAtSelection(surface,block);
-  return block;
+  return insertAtSelection(surface,makeBlock(kind),{anchorNode,targetElement});
 }
 export function mountVisualLayoutTools({host,surface,onStatus}={}){
   if(!host||!surface)throw new TypeError('Studio visual tools require host and editable surface.');

@@ -497,7 +497,7 @@ export class P2LRNStudioElement extends HTMLElement{
           else {const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);}
           this._updateState();
         };
-        if(editable.mediaType==='text/html')mountLessonImageEditor({preferRibbonInsert:true,host:sheet,surface,onChange:()=>{
+        if(editable.mediaType==='text/html')mountLessonImageEditor({preferRibbonInsert:true,getInsertionTarget:()=>this.#unifiedBar?.selectedObject?.()||null,host:sheet,surface,onChange:()=>{
           const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');
           this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);
           this._updateState();this.#unifiedBar?.recordChange();

@@ -1,3 +1,4 @@
+import {studioNestedInsertionContainer} from './visual-layout.js';
 // One object toolbar shared by Studio web and the embedded NPM component.
 // Editing controls are outside the saved HTML; only standard HTML and
 // constrained inline styles are serialized to a P2LRN lesson.
@@ -13,7 +14,8 @@ const STYLES=[
  '.p2lrn-object-controls button[data-object-action=drag]{background:#edf4fc;border-color:#d2deeb;cursor:grab}',
  '.p2lrn-object-controls button[data-object-action=drag]:active{cursor:grabbing}',
  '.p2lrn-object-controls .p2lrn-object-label{color:#64748b;font-size:10px;padding:0 6px;font-family:system-ui,sans-serif}',
- '.p2lrn-object-resize{position:absolute;right:-8px;bottom:-8px;pointer-events:auto;width:17px;height:17px;padding:0;border:2px solid #fff;border-radius:4px;background:#4776b6;box-shadow:0 0 0 1px #4776b6;cursor:nwse-resize}'
+ '.p2lrn-object-resize{position:absolute;right:-8px;bottom:-8px;pointer-events:auto;width:17px;height:17px;padding:0;border:2px solid #fff;border-radius:4px;background:#4776b6;box-shadow:0 0 0 1px #4776b6;cursor:nwse-resize}',
+  '.p2lrn-studio-drop-target{outline:2px dashed #3a73bd!important;outline-offset:3px!important}'
 ].join('\n');
 const between=(x,min,max)=>Math.max(min,Math.min(max,x));
 const positive=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
@@ -88,6 +90,25 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   resize.className='p2lrn-object-resize';
   frame.append(controls,resize);host.append(frame);
   let selected=null,selectedCell=null,drag=null;
+  let dropTarget=null;
+  function findDropTarget(event,source){
+    const hits=(root.elementsFromPoint?.(event.clientX,event.clientY)||
+      doc.elementsFromPoint?.(event.clientX,event.clientY)||[]);
+    for(const hit of hits){
+      if(!surface.contains(hit)||source.contains(hit))continue;
+      const candidate=hit.closest?.('td,th,[data-p2lrn-layout]');
+      if(!candidate||!surface.contains(candidate)||candidate===source||candidate.contains(source))continue;
+      const parent=studioNestedInsertionContainer(surface,{targetElement:candidate,anchorNode:hit});
+      if(parent&&parent!==source.parentElement&&parent!==source&&!source.contains(parent))return parent;
+    }
+    return null;
+  }
+  function markDropTarget(next){
+    if(dropTarget===next)return;
+    dropTarget?.classList.remove('p2lrn-studio-drop-target');
+    dropTarget=next;
+    dropTarget?.classList.add('p2lrn-studio-drop-target');
+  }
   const emit=()=>surface.dispatchEvent(new Event('input',{bubbles:true}));
   function update(){
     if(!isObject(selected,surface)||!selected.getClientRects().length){
@@ -172,6 +193,9 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   }
   const onClick=event=>{
     if(!surface.contains(event.target))return;
+    // Media has its own persistent editing inspector; do not also expose
+    // the enclosing section's object tools when selecting an image/video.
+    if(event.target.closest?.('img[data-p2lrn-lesson-image],video[data-p2lrn-lesson-video]')){select(null);return;}
     const element=event.target.closest?.(OBJECT_SELECTOR);
     if(element&&surface.contains(element))select(element,event.target.closest?.('td,th'));
     else select(null);
@@ -200,12 +224,20 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       el.style.maxWidth='100%';
       if(!el.matches('table'))el.style.minHeight=Math.round(between(drag.height+dy,40,1800))+'px';
     }
+    if(drag.kind==='drag')markDropTarget(findDropTarget(event,el));
     drag.moved=true;update();
   }
   function finishDrag(event){
     if(!drag||drag.pointerId!==event.pointerId)return;
-    const moved=drag.moved;drag=null;
+    const {moved,kind,target}=drag;drag=null;
     try{event.currentTarget.releasePointerCapture?.(event.pointerId);}catch{}
+    // Re-hit-test on release because nested layouts can shift during a drag.
+    if(moved&&kind==='drag')markDropTarget(findDropTarget(event,target));
+    const parent=dropTarget;markDropTarget(null);
+    if(moved&&kind==='drag'&&parent&&parent!==target.parentElement&&!target.contains(parent)){
+      parent.append(target);setPosition(target,0,0);
+      select(target);onStatus('Elemento anidado dentro del contenedor de destino.');
+    }
     if(moved)change();
   }
   const handle=controls.querySelector('[data-object-action=drag]');
@@ -237,6 +269,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   return {element:frame,select,current,perform,get table(){return current()?.matches('table')?current():null;},
     get cell(){return selectedCell;},refresh:update,clear(){select(null);},
     dispose(){
+      markDropTarget(null);
       resizeObserver?.disconnect();surface.removeEventListener('click',onClick);
       doc.removeEventListener('scroll',scroll,true);win?.removeEventListener('resize',scroll);frame.remove();
     }

@@ -550,7 +550,12 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     const s=surface();
     if(!s){onStatus('Selecciona una lección HTML para insertar un bloque visual.');return;}
     const anchor=savedSurface===s&&savedRange&&s.contains(savedRange.commonAncestorContainer)?savedRange.commonAncestorContainer:null;
-    try{lastVisualBlock=insertVisualLayoutBlock(s,kind,{anchorNode:anchor});advanced.selectObject(lastVisualBlock);onStatus('Bloque insertado. Selecciónalo y usa Mover o Redimensionar.');}
+    try{
+      const targetElement=advanced.insertionTarget()||s.__p2lrnMediaInsertionTarget?.()||null;
+      lastVisualBlock=insertVisualLayoutBlock(s,kind,{anchorNode:anchor,targetElement});
+      advanced.selectObject(lastVisualBlock);
+      onStatus(targetElement?'Elemento insertado dentro del bloque seleccionado.':'Bloque insertado. Selecciónalo para editarlo.');
+    }
     catch(error){onStatus(error.message);}
   }
   function colorBlock(color){
@@ -616,6 +621,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     recordChange:advanced.recordChange,
     resetHistory:advanced.resetHistory,
     selectObject:advanced.selectObject,
+    selectedObject:()=>advanced.insertionTarget(),
     performObject:advanced.performObject,
     get history(){return advanced.history;},
     dispose(){

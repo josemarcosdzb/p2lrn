@@ -199,6 +199,7 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     refresh,recordChange,resetHistory,
     selectObject(node){refresh();return objectTools?.select(node);},
     current(){refresh();return objectTools?.current()||null;},
+    insertionTarget(){refresh();return objectTools?.cell||objectTools?.current()||null;},
     performObject(action,value){refresh();return objectTools?.perform(action,value);},
     get history(){return history;},
     dispose(){
