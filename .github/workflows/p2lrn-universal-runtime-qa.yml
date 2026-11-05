@@ -34,6 +34,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
+  external-formats-browser:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Build canonical Player and pinned H5P libraries without publishing
+        shell: powershell
+        run: |
+          node packages/player/scripts/build-dist.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node packages/h5p-libraries/scripts/build.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Regress real imported SCORM, H5P, QTI and sandbox behavior in Chrome
+        shell: powershell
+        run: |
+          node scripts/verify-automatic-runtimes.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
   universal-runtime:
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 25
