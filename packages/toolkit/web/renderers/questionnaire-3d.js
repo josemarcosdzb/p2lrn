@@ -234,7 +234,6 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='ordering-object'){
-        if(scene.playerDistanceTo(`order:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque para cogerlo.'));return true;}
         if(selected&&selected!==meta.id){setText(status,playerUiText('Ya llevas un objeto. Colócalo antes de coger otro.'));return true;}
         selected=meta.id;
         scene.highlight(`order:${selected}`,true);
@@ -243,7 +242,6 @@ function buildOrderingControls({trial,runtime,scene,status}) {
         return true;
       }
       if(meta.kind==='ordering-slot'){
-        if(scene.playerDistanceTo(`order-slot:${meta.index}`)>3.15){setText(status,playerUiText('Acércate al pedestal para colocar el bloque.'));return true;}
         const placedOk=place(selected,meta.index);
         if(placedOk && selected){
           scene.highlight(`order:${selected}`,false);
@@ -377,11 +375,9 @@ function buildMatchingControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='matching-left'){
-        if(scene.playerDistanceTo(`left:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque de origen para coger la cuerda.'));return true;}
         chooseLeft(meta.id);return true;
       }
       if(meta.kind==='matching-right'){
-        if(scene.playerDistanceTo(`right:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque de destino para enganchar la cuerda.'));return true;}
         chooseRight(meta.id);return true;
       }
       return false;
@@ -502,7 +498,6 @@ function buildClassificationControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='classification-object'){
-        if(scene.playerDistanceTo(`classify:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque para cogerlo.'));return true;}
         if(selected&&selected!==meta.id){setText(status,playerUiText('Ya llevas un objeto. Deposítalo antes de coger otro.'));return true;}
         selected=meta.id;
         scene.highlight(`classify:${selected}`,true);
@@ -511,7 +506,6 @@ function buildClassificationControls({trial,runtime,scene,status}) {
         return true;
       }
       if(meta.kind==='classification-category'){
-        if(scene.playerDistanceTo(`category:${meta.id}`)>3.25){setText(status,playerUiText('Acércate a la categoría para colocar el bloque.'));return true;}
         if(!selected){setText(status,playerUiText('Selecciona primero un objeto.'));return true;}
         const ok=moveToCategory(selected,meta.id);
         if(ok){
