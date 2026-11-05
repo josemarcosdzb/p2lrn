@@ -161,6 +161,17 @@ try{
      const button=player.locator('nav.p2lrn-nav button').filter({hasText:item.navigateTo}).nth(item.navigateIndex??0);
      await button.waitFor({timeout:20000});
      assert.equal(await button.isDisabled(),false,'Expected playable '+item.navigateTo+' activity');
+     await player.evaluate((host)=>{
+       const stage=host.shadowRoot?.querySelector('.p2lrn-stage');
+       window.__p2lrnActivityLoadingSeen=stage?.getAttribute('data-p2lrn-loading')==='true';
+       if(stage){
+         const observer=new MutationObserver(()=>{
+           if(stage.getAttribute('data-p2lrn-loading')==='true')window.__p2lrnActivityLoadingSeen=true;
+         });
+         observer.observe(stage,{attributes:true,attributeFilter:['data-p2lrn-loading']});
+         window.__p2lrnLoadingObserver=observer;
+       }
+     });
      await button.click({timeout:20000});
    }
    if(item.frame)await player.locator(item.frame).waitFor({timeout:25000});
@@ -172,6 +183,15 @@ try{
        content=outer.frameLocator('iframe.h5p-iframe').locator('body');
    }
    const text=await findVisibleText(content,item);
+   await page.waitForFunction(()=>{
+     const stage=document.querySelector('p2lrn-player')?.shadowRoot?.querySelector('.p2lrn-stage');
+     return !!stage&&!stage.hasAttribute('data-p2lrn-loading')&&!stage.hasAttribute('aria-busy');
+   },null,{timeout:15000});
+   if(item.navigateTo){
+     assert.equal(await page.evaluate(()=>window.__p2lrnActivityLoadingSeen),true,
+       'Activity navigation must show its loading indicator before runtime readiness');
+     await page.evaluate(()=>window.__p2lrnLoadingObserver?.disconnect());
+   }
    if(item.name==='h5p-crossword'){
      const controls=await content.locator('input,button,[role="button"],canvas').count();
      assert.ok(controls>0,'Crossword is visible but lacks interactive controls');
