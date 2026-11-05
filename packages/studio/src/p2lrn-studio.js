@@ -636,7 +636,7 @@ export class P2LRNStudioElement extends HTMLElement{
     this.dispatchEvent(new CustomEvent('p2lrn-studio-save',{detail:{filename:exported.filename,coursePath:this.coursePath,result},bubbles:true,composed:true}));
     return result;
   }
-  setStatus(text){this.shadowRoot.querySelector('[data-meta]').textContent=text}
+  setStatus(text){this.shadowRoot.querySelector('[data-meta]').textContent=text;this.#unifiedBar?.setMessage(text)}
   _updateState(){
     const changes=this.#studio?.changeCount??0;this.setStatus(changes?changes+' cambio sin guardar'+(changes===1?'':'s'):'Listo');
     this.#unifiedBar?.setDocument(Boolean(this.#studio),this.#studio?.sourceName||'Editor visual de cursos');
