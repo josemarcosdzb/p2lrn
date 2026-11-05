@@ -1,0 +1,83 @@
+{
+    "schema":  "https://p2lrn.org/schema/community-samples/1",
+    "version":  1,
+    "samples":  [
+                    {
+                        "slug":  "snack-safety-scorm12",
+                        "kind":  "scorm",
+                        "title":  "Mandatory Annual Snack Safety (SCORM 1.2)",
+                        "license":  "MIT",
+                        "sourceUrl":  "https://xtoscorm.com/scorm-example/download/snack-safety-scorm12.zip",
+                        "licenseUrl":  "https://xtoscorm.com/scorm-example",
+                        "sourceSha256":  "sha256:5fbf20cfbcb90b94ade8f13d9961ff249603ee6c2f7a9338aecf993a63414474",
+                        "packageSha256":  "sha256:5c045f374cea9273f669f3883ef96b582c824345e79279253ba86424d2c53ca9",
+                        "browserVerified":  false
+                    },
+                    {
+                        "slug":  "snack-safety-scorm2004",
+                        "kind":  "scorm",
+                        "title":  "Mandatory Annual Snack Safety (SCORM 2004)",
+                        "license":  "MIT",
+                        "sourceUrl":  "https://xtoscorm.com/scorm-example/download/snack-safety-scorm2004.zip",
+                        "licenseUrl":  "https://xtoscorm.com/scorm-example",
+                        "sourceSha256":  "sha256:7c19a69387adde792f095f1e42b20531d4621fe8528cf3ba2a655cf77890151a",
+                        "packageSha256":  "sha256:57ee7645d702efe135234a369e4b7a4dddad48f5560cd37a13aa8b5dd29e4610",
+                        "browserVerified":  false
+                    },
+                    {
+                        "slug":  "dog-maths-scorm2004",
+                        "kind":  "scorm",
+                        "title":  "Dog Maths 101 - three lessons (SCORM 2004)",
+                        "license":  "MIT",
+                        "sourceUrl":  "https://xtoscorm.com/scorm-example/download/dog-maths-scorm2004.zip",
+                        "licenseUrl":  "https://xtoscorm.com/scorm-example",
+                        "sourceSha256":  "sha256:08c1dd797b7cef8583cd4847a1ec476d4e1615a89f957740aa860eae2488ecca",
+                        "packageSha256":  "sha256:b3b1862a515c1f7af64416c780367a9618531c62e5b672833b253f519de4ab3a",
+                        "browserVerified":  false
+                    },
+                    {
+                        "slug":  "dog-maths-scorm12",
+                        "kind":  "scorm",
+                        "title":  "Dog Maths 101 - three lessons (SCORM 1.2)",
+                        "license":  "MIT",
+                        "sourceUrl":  "https://xtoscorm.com/scorm-example/download/dog-maths-scorm12.zip",
+                        "licenseUrl":  "https://xtoscorm.com/scorm-example",
+                        "sourceSha256":  "sha256:8a6978e499d1549433fd13480392a71f47b187153a86678c405c13df96aaec8e",
+                        "packageSha256":  "sha256:c4ec1ac7dd34999fce2460c013036ccb3db7370b86a640cfbd9cfac89858509c",
+                        "browserVerified":  false
+                    },
+                    {
+                        "slug":  "working-for-a-cat-scorm12",
+                        "kind":  "scorm",
+                        "title":  "Working for a Cat 101 (SCORM 1.2)",
+                        "license":  "MIT",
+                        "sourceUrl":  "https://xtoscorm.com/scorm-example/download/working-for-a-cat-scorm12.zip",
+                        "licenseUrl":  "https://xtoscorm.com/scorm-example",
+                        "sourceSha256":  "sha256:b9205965aa2bbdec86839c73e093e2662fe1542eaffa94c18048132f62ab0e13",
+                        "packageSha256":  "sha256:80c1d88596b960f66b02ea99d6d85d3fa870b5d370d49803cfa59be3fb99b96f",
+                        "browserVerified":  false
+                    },
+                    {
+                        "slug":  "meeting-or-email-scorm2004",
+                        "kind":  "scorm",
+                        "title":  "Could This Have Been an Email? (SCORM 2004)",
+                        "license":  "MIT",
+                        "sourceUrl":  "https://xtoscorm.com/scorm-example/download/meeting-or-email-scorm2004.zip",
+                        "licenseUrl":  "https://xtoscorm.com/scorm-example",
+                        "sourceSha256":  "sha256:d7569b3541a0904faca7ede5c9a5ad548fcc21755a83b95f623894a3482e7810",
+                        "packageSha256":  "sha256:ab0d666ac203ac8dfbea6d5c63abb5f3bfc884c668e70d6e0e0cc3b40559aac3",
+                        "browserVerified":  false
+                    },
+                    {
+                        "slug":  "procrastination-resume-test-scorm12",
+                        "kind":  "scorm",
+                        "title":  "Procrastination 101 - resume test (SCORM 1.2)",
+                        "license":  "MIT",
+                        "sourceUrl":  "https://xtoscorm.com/scorm-example/download/procrastination-resume-test-scorm12.zip",
+                        "licenseUrl":  "https://xtoscorm.com/scorm-example",
+                        "sourceSha256":  "sha256:0e87b155f0254bd19546a944b5261308a413eea770d41948513c874ffca6a8ac",
+                        "packageSha256":  "sha256:8b7e4dab029770a480977b49dca0c57210ebfc8607613dd3c96f2b2090e57c39",
+                        "browserVerified":  false
+                    }
+                ]
+}
