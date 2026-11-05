@@ -525,6 +525,75 @@ function buildClassificationControls({trial,runtime,scene,status}) {
   };
 }
 
+
+// The analog joystick is scoped to one scene. It never intercepts gestures
+// on the WebGL canvas, where taps and drags must remain available for gameplay.
+function createVirtualJoystick(scene){
+  const pad=el('div',{
+    class:'p2lrn-3d-joystick',
+    role:'group',
+    'aria-label':playerUiText('Joystick de movimiento. Desliza la bola para caminar.'),
+  });
+  const base=el('div',{class:'p2lrn-3d-joystick-base','aria-hidden':'true'});
+  const knob=el('div',{class:'p2lrn-3d-joystick-knob'});
+  base.append(knob);
+  pad.append(base);
+  let pointerId=null;
+  const update=(event)=>{
+    const rect=base.getBoundingClientRect();
+    const radius=Math.max(1,rect.width*0.33);
+    const dx=event.clientX-(rect.left+rect.width/2);
+    const dy=event.clientY-(rect.top+rect.height/2);
+    const distance=Math.hypot(dx,dy);
+    const amount=Math.min(1,distance/radius);
+    const strength=amount<0.12?0:(amount-0.12)/0.88;
+    const nx=distance?dx/distance:0,ny=distance?dy/distance:0;
+    knob.style.transform='translate3d('+(nx*amount*radius)+'px,'+(ny*amount*radius)+'px,0)';
+    scene.setMovementVector(nx*strength,-ny*strength);
+  };
+  const reset=()=>{
+    const held=pointerId;
+    pointerId=null;
+    scene.setMovementVector(0,0);
+    knob.style.transform='translate3d(0,0,0)';
+    if(held!==null)try{pad.releasePointerCapture?.(held);}catch{}
+  };
+  const start=(event)=>{
+    if(pointerId!==null || (event.pointerType==='mouse'&&event.button!==0))return;
+    event.preventDefault();
+    pointerId=event.pointerId;
+    try{pad.setPointerCapture?.(pointerId);}catch{}
+    update(event);
+  };
+  const move=(event)=>{
+    if(pointerId!==event.pointerId)return;
+    event.preventDefault();
+    update(event);
+  };
+  const end=(event)=>{
+    if(pointerId===event.pointerId)reset();
+  };
+  pad.addEventListener('pointerdown',start);
+  pad.addEventListener('pointermove',move);
+  pad.addEventListener('pointerup',end);
+  pad.addEventListener('pointercancel',end);
+  pad.addEventListener('lostpointercapture',end);
+  globalThis.addEventListener?.('blur',reset);
+  return {
+    element:pad,
+    reset,
+    destroy(){
+      reset();
+      globalThis.removeEventListener?.('blur',reset);
+      pad.removeEventListener('pointerdown',start);
+      pad.removeEventListener('pointermove',move);
+      pad.removeEventListener('pointerup',end);
+      pad.removeEventListener('pointercancel',end);
+      pad.removeEventListener('lostpointercapture',end);
+    },
+  };
+}
+
 // A WebGL failure must not make the entire authored exercise unusable.
 // The accessible fields still drive the same native questionnaire session.
 function createAccessibleOnlyScene() {
@@ -535,19 +604,29 @@ function createAccessibleOnlyScene() {
     connect(){return null;},connectToPlayer(){return null;},connectToPointer(){return null;},
     setPointerTarget(){},disconnect(){return false;},
     carry(){return false;},setTranslation(){return false;},highlight(){},
-    playerDistanceTo(){return 0;},nudgePlayer(){},resetPlayer(){},destroy(){},
+    playerDistanceTo(){return 0;},nudgePlayer(){},setMovementVector(){},resetPlayer(){},destroy(){}, 
   };
 }
 
 export async function render(options) {
   const {game,runtime,shell}=await setupGame({...options,rendererId:THREE_D_RENDERER});
   const layout=el('div',{class:'p2lrn-3d-layout'});
+  const directions=el('p',{class:'p2lrn-3d-directions',role:'note'});
+  const stage=el('div',{class:'p2lrn-3d-stage'});
   const canvas=el('canvas',{
     class:'p2lrn-3d-canvas',
     width:'960',
     height:'540',
     'aria-label':playerUiText('Escena 3D interactiva del ejercicio'),
   });
+  stage.append(canvas);
+  const entryHint=el('div',{class:'p2lrn-3d-entry-hint',role:'note'},
+    playerUiText('Haz clic en la escena para entrar'));
+  entryHint.append(el('small',{},playerUiText('Usa WASD o las flechas para caminar y arrastra el fondo para mirar.')));
+  stage.append(entryHint);
+  const enterScene=()=>{stage.classList.add('is-entered');entryHint.setAttribute('aria-hidden','true');};
+  canvas.addEventListener('focus',enterScene);
+  canvas.addEventListener('pointerdown',enterScene);
   const controls=el('div',{class:'p2lrn-3d-controls'});
   const status=statusNode(playerUiText('Preparando escena 3D…'));
   let trialIndex=0;
@@ -555,18 +634,22 @@ export async function render(options) {
   let currentDrag=()=>false;
 
   let scene;
+  let joystick=null;
   let accessibleOnly=false;
   try{
     scene=await createThreeGameScene(canvas,{
       onInteraction:(meta)=>currentInteraction(meta),
       onDrag:(meta,phase,info)=>currentDrag(meta,phase,info),
     });
+    layout.classList.add('p2lrn-3d-interactive');
+    joystick=createVirtualJoystick(scene);
+    stage.append(joystick.element);
   }catch(error){
     console.warn('P2LRN 3D renderer unavailable; accessible controls remain enabled:',error);
     scene=createAccessibleOnlyScene();
     accessibleOnly=true;
-    canvas.style.display='none';
-    layout.style.gridTemplateColumns='minmax(0,1fr)';
+    stage.hidden=true;
+    layout.classList.add('p2lrn-3d-fallback');
     layout.append(el('p',{class:'p2lrn-game-description',role:'status'},
       playerUiText('La escena 3D no está disponible en este dispositivo. Puedes completar las mismas preguntas con los controles accesibles.')));
   }
@@ -576,19 +659,11 @@ export async function render(options) {
     :playerUiText(`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`));
   const help=el('p',{class:'p2lrn-game-description'},accessibleOnly
     ?playerUiText('Elige las respuestas usando los botones y selectores de cada prueba.')
-    :playerUiText('Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.'));
-  const movePad=el('div',{class:'p2lrn-3d-move-pad','aria-label':playerUiText('Controles de movimiento')});
-  for(const [label,direction] of [['▲','forward'],['◀','left'],['▼','back'],['▶','right']]){
-    const button=el('button',{type:'button',class:'p2lrn-game-button','aria-label':direction},label);
-    button.addEventListener('click',()=>scene.nudgePlayer(direction));
-    movePad.append(button);
-  }
-  const resetView=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Recentrar jugador'));
-  resetView.addEventListener('click',()=>scene.resetPlayer());
-  if(accessibleOnly){movePad.style.display='none';resetView.style.display='none';}
-  controls.append(technology,help,movePad,resetView);
+    :playerUiText('En móvil, mueve la bola para caminar y arrastra el fondo para mirar. En PC, haz clic en la escena y usa WASD o las flechas.'));
+  controls.append(technology,help);
 
   const renderTrial=()=>{
+    joystick?.reset();
     scene.reset();
     controls.querySelectorAll('.p2lrn-3d-trial').forEach((node)=>node.remove());
     const trial=game.data.trials[trialIndex];
@@ -604,9 +679,17 @@ export async function render(options) {
     else if(trial.type==='classification-3d') controller=buildClassificationControls({trial,runtime,scene,status});
     else throw new Error(`Unsupported P2LRN 3D trial: ${trial.type}`);
 
+    const instructions={
+      'ordering-3d':'Haz clic en una caja y después en el pedestal numerado, o arrastra la caja hasta él.',
+      'matching-3d':'Haz clic en una caja azul y luego en su pareja morada para enlazarlas, o arrastra la cuerda.',
+      'classification-3d':'Haz clic en una caja y después en su categoría, o arrastra la caja hasta la zona correcta.',
+    };
+    setText(directions,playerUiText(instructions[trial.type]));
     currentInteraction=controller.interact;
     currentDrag=controller.drag??(()=>false);
-    wrap.append(controller.panel);
+    const alternative=el('div',{class:'p2lrn-3d-alternative'});
+    alternative.append(controller.panel);
+    wrap.append(alternative);
 
     const nav=el('div',{class:'p2lrn-game-actions'});
     const previous=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},playerUiText('Anterior'));
@@ -614,19 +697,22 @@ export async function render(options) {
     previous.addEventListener('click',()=>{trialIndex-=1;renderTrial();});
     next.addEventListener('click',()=>{trialIndex+=1;renderTrial();});
     nav.append(previous,next);
-    wrap.append(nav);
+    if(game.data.trials.length>1)wrap.append(nav);
     controls.append(wrap);
-    setText(status,controller.summary??playerUiText('Selecciona elementos en la escena o utiliza los controles accesibles.'));
+    setText(status,controller.summary??playerUiText('Toca o arrastra las cajas en la escena para responder.'));
   };
 
   renderTrial();
-  layout.append(canvas,controls);
+  layout.append(directions,stage,controls);
   shell.append(layout);
   finishPanel(runtime,shell);
   shell.append(status);
 
   const originalDestroy=runtime.destroy.bind(runtime);
   runtime.destroy=()=>{
+    joystick?.destroy();
+    canvas.removeEventListener('focus',enterScene);
+    canvas.removeEventListener('pointerdown',enterScene);
     scene.destroy();
     originalDestroy();
   };
