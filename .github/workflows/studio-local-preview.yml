@@ -117,8 +117,15 @@ jobs:
           Write-Output ('LOCAL_DIRECTORY=' + $dir)
           Write-Output ('SERVER_PID=' + $process.Id)
       - name: Verify both editors in real Chrome or Edge and save screenshots
-        run: node scripts/verify-studio-local-preview.mjs --port $env:P2LRN_PREVIEW_PORT --output "$env:P2LRN_STUDIO_PREVIEW_DIR"
         shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Output ('VERIFY_STUDIO_PORT=' + $env:P2LRN_PREVIEW_PORT)
+          $base='http://127.0.0.1:'+$env:P2LRN_PREVIEW_PORT
+          $health=Invoke-RestMethod -Uri ($base+'/__preview_health') -TimeoutSec 8
+          if (!$health.ok -or $health.commit -ne $env:GITHUB_SHA) { throw 'Chrome QA would connect to a stale preview' }
+          node scripts/verify-studio-local-preview.mjs --port $env:P2LRN_PREVIEW_PORT --output "$env:P2LRN_STUDIO_PREVIEW_DIR"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   confirm-server-survives-runner-job:
     needs: build-and-serve
