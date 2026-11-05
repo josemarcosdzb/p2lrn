@@ -372,6 +372,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   }
 
   let savedRange=null,savedSurface=null,lastVisualBlock=null,previewMode=false,hasDocument=false;
+  const allowedWithoutDocument=new Set(['create','open','openUrl','recoverDraft','clearDraft','review']);
   function surface(){
     const value=resolveSurface();
     return value?.isContentEditable&&value.dataset?.studioHtmlSurface==='true'?value:null;
@@ -445,7 +446,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     onStatus('Diseño del bloque actualizado.');
   }
   async function run(name,...args){
-    if(!hasDocument&&!['create','open','openUrl'].includes(name)){onStatus('Abre o crea un curso primero.');return;}
+    if(!hasDocument&&!allowedWithoutDocument.has(name)){onStatus('Abre o crea un curso primero.');return;}
     if(typeof actions[name]!=='function')return;
     try{await actions[name](...args);if(name==='preview')setPreviewMode(true);if(name==='edit')setPreviewMode(false);fileMenu.open=false;}
     catch(error){onStatus(String(error?.message??error));}
@@ -477,7 +478,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     documentName.textContent=label||'Editor visual de cursos';
     for(const b of bar.querySelectorAll('[data-ui-action]')){
       const action=b.dataset.uiAction;
-      b.disabled=!hasDocument&&!['create','open','openUrl'].includes(action);
+      b.disabled=!hasDocument&&!allowedWithoutDocument.has(action);
     }
     if(contentButton)contentButton.disabled=!hasDocument;
     refreshButtons();
