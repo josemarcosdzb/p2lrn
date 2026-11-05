@@ -14,6 +14,7 @@ let instance=0;
 const CSS=[
   '.p2lrn-studio-unified{display:block!important;padding:0!important;border:1px solid #dbe2eb!important;border-radius:13px!important;background:#fff!important;box-shadow:0 6px 22px rgba(15,23,42,.06)!important;overflow:visible!important;min-width:0!important}',
   '.p2lrn-studio-unified[hidden]{display:none!important}',
+  '.p2lrn-studio-legacy-topbar{display:none!important}',
   '.p2lrn-studio-unified > :not(.p2lrn-studio-ribbon){display:none!important}',
   '.p2lrn-studio-ribbon,.p2lrn-studio-ribbon *{box-sizing:border-box}',
   '.p2lrn-studio-ribbon{font:500 13px/1.35 Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f2937;min-width:0}',
@@ -37,6 +38,7 @@ const CSS=[
   '.p2lrn-studio-ribbon .p2lrn-ribbon-tab[aria-selected=true]{color:#243e64;border-bottom-color:#243e64}',
   '.p2lrn-ribbon-panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px;min-height:64px}',
   '.p2lrn-ribbon-panel[hidden]{display:none!important}',
+  '.p2lrn-ribbon-feedback{padding:6px 15px 8px;border-top:1px solid #edf0f4;min-height:28px;font-size:11px;color:#64748b}',
   '.p2lrn-ribbon-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}',
   '.p2lrn-ribbon-divider{width:1px;height:28px;background:#e5e9f0;flex:none}',
   '.p2lrn-ribbon-field{display:grid;gap:3px;font-size:10px;font-weight:650;color:#667085}',
@@ -62,6 +64,11 @@ const CSS=[
   '.p2lrn-studio-workspace{display:grid!important;grid-template-columns:minmax(230px,260px) minmax(0,1fr)!important;gap:12px!important;min-height:630px}',
   '.p2lrn-studio-workspace[hidden]{display:none!important}',
   '.p2lrn-studio-outline{min-width:0;border:1px solid #e2e7ee;border-radius:11px;background:#fff;overflow:auto}',
+  '.p2lrn-studio-outline .tree-actions{display:none!important}',
+  '.p2lrn-studio-outline nav,.p2lrn-studio-outline[data-tree]{padding:8px!important}',
+  '.p2lrn-studio-outline nav button,.p2lrn-studio-outline[data-tree] > button{color:#344054;font-weight:500;font-size:13px;border:0;background:transparent;min-height:35px;border-radius:7px}',
+  '.p2lrn-studio-outline nav button:hover,.p2lrn-studio-outline[data-tree] > button:hover{background:#f4f7fa}',
+  '.p2lrn-studio-outline nav button[aria-current=true],.p2lrn-studio-outline[data-tree] > button[aria-current=true]{background:#eaf1fa;color:#243e64;font-weight:650}',
   '.p2lrn-studio-canvas{min-width:0;border:1px solid #e2e7ee;border-radius:11px;background:#f0f3f7;overflow:hidden}',
   '.p2lrn-studio-stage{min-height:630px;padding:20px;background:#f0f3f7}',
   '.p2lrn-studio-sheet{width:100%;max-width:1040px;min-height:520px;margin:0 auto;padding:30px;background:#fff;border:1px solid #e5e9ef;border-radius:9px;box-shadow:0 3px 13px rgba(15,23,42,.045);overflow-wrap:anywhere}',
@@ -175,6 +182,8 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     tabs.append(tab);panels.append(panel);tabControls.push([id,tab]);panelMap.set(id,panel);
   }
   activateTab('home');bar.append(tabs,panels);
+  const feedback=node(doc,'div','p2lrn-ribbon-feedback','Selecciona una lección para editarla.');
+  feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');bar.append(feedback);
   const home=panelMap.get('home'),insert=panelMap.get('insert'),design=panelMap.get('design');
   const group=(parent)=>{
     const g=node(doc,'div','p2lrn-ribbon-group');parent.append(g);return g;
@@ -354,6 +363,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     element:bar,
     setDocument,
     setPreviewMode,
+    setMessage:(message)=>{feedback.textContent=String(message??'');},
     refresh:refreshButtons,
     openTab:activateTab,
     dispose(){
