@@ -265,6 +265,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify real playback and hostile-content isolation
         run: node scripts/verify-automatic-runtimes.mjs
+      - name: Verify real cmi5 CATAPULT content and navigation in isolated frame
+        run: node scripts/verify-cmi5-browser-runtime.mjs
       - name: Verify imported H5P and Common Cartridge with real Chrome
         run: |
           node scripts/verify-imported-formats-browser.mjs h5p-boardgame

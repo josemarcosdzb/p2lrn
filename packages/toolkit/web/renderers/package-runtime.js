@@ -313,7 +313,12 @@ export async function render({container, payload, representation, package:pkg, e
     iframe.contentWindow.postMessage({protocol:PROTOCOL, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  if (opaqueMode) iframe.srcdoc = createOpaquePackageRuntimeDocument();
+  if (opaqueMode) {
+    // Navigate to a separate sandboxed document so imported content does not
+    // inherit the host application's stricter CSP. The sandbox is still opaque.
+    const urlParts = ['..', 'runtime-host', 'package-opaque.html'].join('/');
+    iframe.src = new URL(urlParts, import.meta.url).href;
+  }
   else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 

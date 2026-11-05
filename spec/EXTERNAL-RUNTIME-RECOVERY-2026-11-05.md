@@ -26,3 +26,6 @@ El identificador Core 0.4.0 corresponde al formato; el Player revisado pertenece
 ## Distribución
 
 Player y CDN comparten el código fuente de packages/toolkit/web. El build de Player incluye h5p-opaque.html y genera su bootstrap JavaScript; el build CDN añade el CSP exclusivo de ese host. Verificar en el dominio público tanto la ruta como su cabecera. Para npm se requiere una nueva publicación autenticada de los cinco paquetes en versiones alineadas; compilar o empaquetar localmente no equivale a publicar.
+## Corrección adicional cmi5 CATAPULT
+
+El contenido activo cmi5 ya no utiliza un iframe srcdoc que hereda la CSP de la web principal. Se sirve desde runtime-host/package-opaque.html, que mantiene sandbox allow-scripts sin allow-same-origin y una cabecera CSP exclusiva. El script clásico package-opaque.js sale de la misma implementación compartida por CDN y npm. La prueba real de Chrome abre la introducción, activa Next y verifica que aparece el cuestionario Pre-Test con preguntas, sin errores CSP. La CI ejecuta scripts/verify-cmi5-browser-runtime.mjs.

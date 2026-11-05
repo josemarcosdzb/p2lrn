@@ -67,6 +67,9 @@ export async function copyCanonicalRuntime(dist) {
   const {startH5PRuntime} = await import(pathToFileURL(join(web,'h5p-runtime-shell.js')).href);
   const standalone = '(' + startH5PRuntime.toString() + ')();\n';
   await writeFile(join(dist,'runtime-host','h5p-opaque.js'),standalone,'utf8');
+  const {startPackageRuntime} = await import(pathToFileURL(join(web,'package-runtime-shell.js')).href);
+  await writeFile(join(dist,'runtime-host','package-opaque.js'),
+    '('+startPackageRuntime.toString()+')({opaqueRuntime:true});\n','utf8');
   for (const name of ['p2lrn.js','p2lrn.esm.js','p2rln.js','p2rln.esm.js']) {
     await cp(join(sdk, name), join(dist, name));
   }
