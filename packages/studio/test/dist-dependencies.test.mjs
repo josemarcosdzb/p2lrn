@@ -23,6 +23,8 @@ test('Studio distribution copies localized UI and deferred-grading editor module
   }
   assert.deepEqual([...imports].sort(),['questionnaire-grading.js','studio-ui-i18n.js'],
     'UI editor module graph must include both shared modules');
+  assert.ok(build.includes("join(out,'runtime','manual-grading.js')"),'Studio dist must include teacher manual-review helper');
+  await source('packages/toolkit/web/studio/manual-grading.js');
   for(const file of imports){
     const marker="join(out,'runtime','"+file+"')";
     assert.ok(build.includes(marker),'Studio dist must copy runtime dependency '+file);
