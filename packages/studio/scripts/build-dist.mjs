@@ -28,4 +28,7 @@ await cp(join(repo,'packages','toolkit','web','studio','offline-assignment.js'),
 for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','capability-broker.js','course-rights.js']){
   await cp(join(repo,'packages','toolkit','web',file),join(out,file));
 }
+// The copied course-rights module imports this transitive renderer localization module.
+await mkdir(join(out,'renderers'),{recursive:true});
+await cp(join(repo,'packages','toolkit','web','renderers','ui-i18n.js'),join(out,'renderers','ui-i18n.js'));
 console.log(JSON.stringify({ok:true,output:out},null,2));
