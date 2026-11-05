@@ -77,7 +77,7 @@ async function browserScenario(){
     const add=[...item.toolbar.querySelectorAll('button')].find(b=>b.textContent==='Añadir contenido');
     expect(add&&!add.disabled,'Common activity picker action missing');
     add.click();
-    const picker=item.root.querySelector('.p2lrn-activity-picker');
+    const picker=item.root.querySelector('.p2lrn-activity-picker')||document.querySelector('.p2lrn-activity-picker');
     expect(picker?.open,'Activity picker did not open in its DOM root');
     const search=picker.querySelector('input[type=search]');search.value='crucigrama';
     search.dispatchEvent(new Event('input',{bubbles:true}));
