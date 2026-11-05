@@ -3,6 +3,7 @@ import {playerUiText} from './renderers/ui-i18n.js';
 import {createResultRecorder} from './result-recorder.js';
 import {createDefaultDependencyRegistry} from './dependency-registry.js';
 import {RendererRegistry} from './renderer-registry.js';
+import {negotiateP2LRNExecution,inspectP2LRNPackageExecution,P2LRN_EXECUTION_PLAN_SCHEMA,P2LRN_EXECUTION_PLAN_VERSION} from './execution-negotiation.js';
 import {registerBuiltInRenderers} from './built-in-renderers.js';
 import {createDefaultComponentRegistry} from './component-registry.js';
 import {dispatchRuntimeEvent} from './runtime-events.js';
@@ -902,17 +903,26 @@ export class P2LRNPlayerElement extends HTMLElementBase {
 
     const excluded = new Set();
     const strictRenderer = requestedRenderer === undefined ? this.getAttribute('renderer') : requestedRenderer;
+    const preflightContext = {
+      packageId:this._package.manifest.packageId,
+      contentRoot:this._package.manifest.integrity.contentRoot,
+      entityId:entity.id,resourceId:resource.id,
+    };
     while (true) {
-      const candidate = await defaultRendererRegistry.select({
-        representations,
-        entity,
-        resource,
-        requestedRenderer: strictRenderer,
-        roleRank,
-        excludeRendererIds: [...excluded],
+      const plan = await negotiateP2LRNExecution({
+        registry:defaultRendererRegistry,
+        representations,entity,resource,
+        requestedRenderer:strictRenderer,roleRank,
+        excludeRendererIds:[...excluded],
+        context:preflightContext,
+        requiredCapabilities:capabilityState.requests.filter(item=>item.required).map(item=>item.id),
+        isCapabilityAvailable:(id)=>capabilityState.statuses.some(item=>item.id===id&&item.available),
       });
+      const candidate = plan.candidate;
       if (!candidate) {
-        this.#stageMessage(stage, playerUiText('Este reproductor web todavía no tiene un renderer instalado compatible con las representaciones de esta actividad.'));
+        dispatchRuntimeEvent(this,'p2lrn:executionblocked',plan.report,preflightContext,{adapter:this._adapter});
+        const last=plan.report.diagnostics.at(-1);
+        this.#stageMessage(stage,last?.message??playerUiText('Este reproductor web todavía no tiene un renderer instalado compatible con las representaciones de esta actividad.'));
         return null;
       }
 
@@ -926,6 +936,9 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         rendererId: candidate.descriptor.id,
       };
       try {
+        // Preflight is diagnostic only. The trusted registry re-checks
+        // permissions and dependencies when the renderer is actually loaded.
+        dispatchRuntimeEvent(this,'p2lrn:executionpreflight',plan.report,context,{adapter:this._adapter});
         const module = await defaultRendererRegistry.load(candidate, context);
         this.#ensureRendererStyles(module.stylesheets ?? []);
         const remoteLocation = rep.location?.type === 'remote';
@@ -1162,6 +1175,10 @@ if (!existingP2LRNApi) {
     registerRenderer: (descriptor) => defaultRendererRegistry.register(descriptor),
     unregisterRenderer: (id) => defaultRendererRegistry.unregister(id),
     renderers: () => defaultRendererRegistry.list(),
+    negotiateExecution: (options = {}) => negotiateP2LRNExecution({...options,registry:defaultRendererRegistry}),
+    inspectPackageExecution: (pkg,options = {}) => inspectP2LRNPackageExecution(pkg,{...options,registry:defaultRendererRegistry}),
+    executionPlanSchema:P2LRN_EXECUTION_PLAN_SCHEMA,
+    executionPlanVersion:P2LRN_EXECUTION_PLAN_VERSION,
     registerComponent: (descriptor) => defaultComponentRegistry.register(descriptor),
     unregisterComponent: (id, componentVersion) => defaultComponentRegistry.unregister(id, componentVersion),
     components: () => defaultComponentRegistry.list(),
