@@ -1,0 +1,46 @@
+name: P2LRN Studio Grading Modes QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/toolkit/web/studio/questionnaire-editor.js'
+      - 'packages/toolkit/web/studio/questionnaire-grading.js'
+      - 'packages/toolkit/web/studio/authoring-document.js'
+      - 'packages/toolkit/web/studio/package-export.js'
+      - 'packages/toolkit/test/studio-deferred-grading.test.mjs'
+      - 'packages/studio/scripts/build-dist.mjs'
+      - 'packages/studio/test/dist-dependencies.test.mjs'
+      - 'scripts/verify-studio-deferred-grading.mjs'
+      - '.github/workflows/p2lrn-grading-modes-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  grading-modes:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Verify Studio authoring code and tests
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web/studio/questionnaire-editor.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/studio/questionnaire-grading.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/verify-studio-deferred-grading.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/studio-deferred-grading.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/studio/test/dist-dependencies.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify teacher mode selector and portable course in real Chrome
+        run: node scripts/verify-studio-deferred-grading.mjs
