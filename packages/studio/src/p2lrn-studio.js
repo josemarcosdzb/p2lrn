@@ -16,6 +16,7 @@ import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
 import {exportOfflineAssignmentBundle, parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
+import {latestManualReviewAnswers,createP2LRNManualReviewReport} from './runtime/manual-grading.js';
 
 export const P2LRN_STUDIO_VERSION='0.5.0-alpha.12';
 
@@ -585,6 +586,65 @@ export class P2LRNStudioElement extends HTMLElement{
       const tbody=document.createElement('tbody');
       for(const item of review.summary.answers){const tr=document.createElement('tr');for(const value of [item.entityId??'—',item.questionId??'—',JSON.stringify(item.answer)]){const td=document.createElement('td');td.textContent=String(value);tr.append(td);}tbody.append(tr);}table.append(tbody);shell.append(table);
     }else{const empty=document.createElement('p');empty.className='offline-note';empty.textContent='La entrega no contiene respuestas estructuradas detectables.';shell.append(empty);}
+    // Teacher-only manual grading: the learner's answerless package never
+    // contains these marks, and the local report is explicitly non-authoritative.
+    const pendingAnswers=latestManualReviewAnswers(review);
+    if(pendingAnswers.length&&review.integrityValid&&review.courseMatches&&review.assignmentMatches!==false){
+      const heading=document.createElement('h3');heading.textContent='Corrección posterior del profesor';shell.append(heading);
+      const note=document.createElement('p');note.className='offline-note';
+      note.textContent='Asigna los puntos a cada respuesta. Se guardará una revisión independiente; no modifica la entrega original ni certifica una nota por sí sola.';
+      shell.append(note);
+      const teacher=document.createElement('input');teacher.type='text';teacher.value='Profesor';teacher.maxLength=120;
+      teacher.setAttribute('aria-label','Profesor que corrige');teacher.placeholder='Nombre del profesor';
+      const teacherLabel=document.createElement('label');teacherLabel.textContent='Profesor: ';teacherLabel.append(teacher);shell.append(teacherLabel);
+      const gradeTable=document.createElement('table');gradeTable.className='offline-grading-table';
+      const gradeHead=document.createElement('thead');gradeHead.innerHTML='<tr><th>Pregunta</th><th>Puntos obtenidos</th><th>Máximo</th><th>Observación</th></tr>';
+      gradeTable.append(gradeHead);
+      const gradeBody=document.createElement('tbody'),gradingFields=[];
+      const known=Array.isArray(review.summary.latestScore?.questions)?review.summary.latestScore.questions:[];
+      for(const answer of pendingAnswers){
+        const tr=document.createElement('tr');
+        const titleCell=document.createElement('td');titleCell.textContent=answer.questionId;
+        const amountCell=document.createElement('td'),maxCell=document.createElement('td'),noteCell=document.createElement('td');
+        const defaultMax=known.find(item=>item.questionId===answer.questionId)?.pointsPossible??1;
+        const earned=document.createElement('input');earned.type='number';earned.min='0';earned.step='any';earned.placeholder='Sin corregir';
+        earned.setAttribute('aria-label','Puntos obtenidos: '+answer.questionId);
+        const maximum=document.createElement('input');maximum.type='number';maximum.min='0.01';maximum.step='any';maximum.value=String(defaultMax>0?defaultMax:1);
+        maximum.setAttribute('aria-label','Puntos posibles: '+answer.questionId);
+        const comment=document.createElement('input');comment.type='text';comment.maxLength=2000;comment.placeholder='Comentario opcional';
+        comment.setAttribute('aria-label','Comentario: '+answer.questionId);
+        amountCell.append(earned);maxCell.append(maximum);noteCell.append(comment);
+        tr.append(titleCell,amountCell,maxCell,noteCell);gradeBody.append(tr);
+        gradingFields.push({answer,earned,maximum,comment});
+      }
+      gradeTable.append(gradeBody);shell.append(gradeTable);
+      const status=document.createElement('p');status.className='offline-note';status.setAttribute('aria-live','polite');
+      const download=document.createElement('button');download.type='button';download.textContent='Guardar corrección del profesor';
+      download.addEventListener('click',()=>{
+        try{
+          const marks=gradingFields.map(({answer,earned,maximum,comment})=>({
+            entityId:answer.entityId,questionId:answer.questionId,
+            pointsAwarded:earned.value.trim()===''?NaN:Number(earned.value),
+            pointsPossible:Number(maximum.value),
+            comment:comment.value,
+          }));
+          const corrected=createP2LRNManualReviewReport(review,{marks,reviewer:teacher.value});
+          const file=String(filename||'entrega').replace(/[^A-Za-z0-9._-]/g,'_').replace(/\.p2lrn-result$/i,'')+'.p2lrn-review.json';
+          const blob=new Blob([JSON.stringify(corrected,null,2)+'\n'],{type:'application/json'});
+          const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=file;
+          shell.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+          status.textContent='Corrección guardada: '+corrected.totals.awarded+' / '+corrected.totals.maximum+'. Informe local sin certificación de servidor.';
+          this.dispatchEvent(new CustomEvent('p2lrn-studio-manual-review',{detail:{
+            filename:file,awarded:corrected.totals.awarded,maximum:corrected.totals.maximum,
+          },bubbles:true,composed:true}));
+        }catch(error){status.textContent=String(error?.message??error);}
+      });
+      shell.append(download,status);
+    }else if(pendingAnswers.length){
+      const warning=document.createElement('p');warning.className='offline-note';
+      warning.textContent='No se habilita la corrección: la integridad o la correspondencia de la entrega no están verificadas.';
+      shell.append(warning);
+    }
     const anomaliesHeading=document.createElement('h3');anomaliesHeading.textContent='Incidencias / anomalías';shell.append(anomaliesHeading);
     const anomalies=document.createElement('p');anomalies.className='offline-note';anomalies.textContent=review.summary.anomalies.length?review.summary.anomalies.map((item)=>item.code).join(' · '):'Sin anomalías registradas.';shell.append(anomalies);
     const details=document.createElement('details');const detailsSummary=document.createElement('summary');detailsSummary.textContent='Ver métricas y entrega completa';const pre=document.createElement('pre');pre.textContent=JSON.stringify(review.result,null,2);details.append(detailsSummary,pre);shell.append(details);
