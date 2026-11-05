@@ -15,6 +15,7 @@ import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
+import {mountVisualLayoutTools} from './runtime/visual-layout.js';
 import {exportOfflineAssignmentBundle, parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
 
 export const P2LRN_STUDIO_VERSION='0.5.0-alpha.12';
@@ -450,6 +451,7 @@ export class P2LRNStudioElement extends HTMLElement{
           else {const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);}
           this._updateState();
         };
+        if(editable.mediaType==='text/html')mountVisualLayoutTools({host:sheet,surface,onStatus:(message)=>this.setStatus(message)});
         if(editable.mediaType==='text/html')mountLessonImageEditor({host:sheet,surface,onChange:()=>{
           const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');
           this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);
