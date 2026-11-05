@@ -6,7 +6,7 @@ import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
-import {mountVisualLayoutTools} from './runtime/visual-layout.js';
+import {mountStudioCommandBar,applyUnifiedStudioWorkspace} from './runtime/command-bar.js';
 import {studioUiText} from './runtime/studio-ui-i18n.js';
 
 const createCourseButton=document.querySelector('[data-create-course]');
@@ -77,6 +77,7 @@ let mode='edit';
 let draftMetadata=null;
 let savedRevision=0;
 let exportedRevision=0;
+let sharedCommandBar=null;
 
 const titleOf=(entity)=>studio?.title(entity.id)??entity.id;
 const setStatus=(value)=>{status.textContent=studioUiText(value);};
@@ -277,8 +278,8 @@ async function renderEditor(){
   editorStage.replaceChildren();activeEditable=null;
   const entity=studio.entity(selectedId);
   if(!entity)return;
-  const sheet=document.createElement('article');sheet.className='studio-sheet';
-  const head=document.createElement('header');head.className='studio-sheet-head';
+  const sheet=document.createElement('article');sheet.className='studio-sheet p2lrn-studio-sheet';
+  const head=document.createElement('header');head.className='studio-sheet-head p2lrn-studio-sheet-head';
   const type=document.createElement('span');type.className='studio-entity-type';type.textContent=entity.type;
   const title=document.createElement('h1');title.className='studio-title';title.textContent=titleOf(entity);
   title.setAttribute('role','textbox');title.setAttribute('aria-label','Título');title.setAttribute('aria-multiline','true');
@@ -348,12 +349,11 @@ async function renderEditor(){
     bindEditable(surface,()=>studio.setPayloadText(editable.path,surface.textContent||''));content.append(surface);return;
   }
   const source=sanitizeHtml(editable.text);
-  const surface=document.createElement('article');surface.className='studio-wysiwyg';surface.innerHTML=source.body.innerHTML;
+  const surface=document.createElement('article');surface.className='studio-wysiwyg';surface.dataset.studioHtmlSurface='true';surface.innerHTML=source.body.innerHTML;
   bindEditable(surface,()=>{
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
   });
-  mountVisualLayoutTools({host:content,surface,onStatus:setStatus});
   mountLessonImageEditor({host:content,surface,onChange:()=>{
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
@@ -383,6 +383,7 @@ async function setMode(next){
   mode=next;
   const preview=next==='preview';
   document.documentElement.dataset.studioMode=preview?'preview':'edit';
+  sharedCommandBar?.setPreviewMode(preview);
   editorStage.hidden=preview;previewStage.hidden=!preview;
   editButton.setAttribute('aria-pressed',String(!preview));previewButton.setAttribute('aria-pressed',String(preview));
   editButton.classList.toggle('primary',!preview);previewButton.classList.toggle('primary',preview);
@@ -394,6 +395,7 @@ async function activateStudio(document,{name,recoveredSelectedId=null}={}){
   savedRevision=0;exportedRevision=0;
   packageName.textContent=name||studio.sourceName||'curso.p2lrn';
   toolbar.hidden=false;workspace.hidden=false;
+  sharedCommandBar?.setDocument(true,name||studio.sourceName||'Curso P2LRN');
   renderTree();await renderEditor();updateChanges();await setMode('edit');
 }
 async function openPackage(pkg,{name,url,recoveredSelectedId=null}){
@@ -886,6 +888,32 @@ offlineAnalyticsButton?.addEventListener('click',()=>{
 saveDraftButton?.addEventListener('click',()=>void persistDraft().catch((error)=>setStatus('No se pudo guardar el borrador local: '+error.message)));
 recoverDraftButton?.addEventListener('click',()=>void recoverLatestDraft().catch((error)=>setStatus(error.message)));
 clearDraftButton?.addEventListener('click',()=>void discardLocalDraft().catch((error)=>setStatus(error.message)));
+applyUnifiedStudioWorkspace({
+  workspace,
+  outline:workspace.querySelector('.studio-outline'),
+  canvas:workspace.querySelector('.studio-canvas'),
+  stage:editorStage
+});
+document.querySelector('.studio-topbar')?.classList.add('p2lrn-studio-legacy-topbar');
+sharedCommandBar=mountStudioCommandBar({
+  mount:toolbar,
+  resolveSurface:()=>editorStage.querySelector('[data-studio-html-surface="true"]'),
+  onStatus:setStatus,
+  actions:{
+    create:()=>createCourseButton.click(),
+    open:()=>openFileButton.click(),
+    openUrl:(url)=>{urlInput.value=url;return openRemote();},
+    save:()=>persistDraft(),
+    export:()=>exportPackage(),
+    offline:()=>offlineButton.click(),
+    review:()=>offlineResultButton.click(),
+    addUnit:()=>addUnit(),
+    addLesson:()=>addLesson(),
+    addContent:()=>addContentButton.click(),
+    preview:()=>setMode('preview'),
+    edit:()=>setMode('edit')
+  }
+});
 async function initializeStudioWorkspace(){
   const guarded=[createCourseButton,openFileButton,openUrlButton];
   guarded.forEach((button)=>{if(button)button.disabled=true;});
