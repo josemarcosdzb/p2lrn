@@ -334,7 +334,7 @@ async function renderEditor(){
   }
   const structured=await studio.readStructuredJson(entity.id);
   if(structured){
-    renderStructuredVisualEditor(content,{model:studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>updateChanges(),onStructureChange:()=>{renderTree();updateChanges();},onStatus:setStatus,onSelectActivity:(id)=>{selectedId=id;renderTree();void renderEditor();},onCreateChild:(id)=>{selectedId=id;renderTree();addDialog?.showModal();}});
+    renderStructuredVisualEditor(content,{model:studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>updateChanges(),onStructureChange:()=>{renderTree();updateChanges();},onStatus:setStatus,onSelectActivity:(id)=>{selectedId=id;renderTree();void renderEditor();},onCreateChild:(id)=>{selectedId=id;renderTree();sharedCommandBar?.openActivities();}});
     return;
   }
   const editable=await studio.readEditableText(entity.id);
@@ -913,6 +913,8 @@ sharedCommandBar=mountStudioCommandBar({
     addUnit:()=>addUnit(),
     addLesson:()=>addLesson(),
     addContent:()=>addContentButton.click(),
+    addKind:(kind)=>addContentKind(kind),
+    canAddKind:(kind)=>kind!=='shared-library'||Boolean(connectedResourceLibrary),
     preview:()=>setMode('preview'),
     edit:()=>setMode('edit')
   }
