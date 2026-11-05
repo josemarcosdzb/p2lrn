@@ -121,7 +121,7 @@ function normalize(path){ const out=[]; for(const part of String(path||'').repla
 function resolve(base,ref){ const raw=String(ref||'').trim(); if(!raw||raw[0]==='#'||/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(raw))return null; const match=/^([^?#]*)(\?[^#]*)?(#.*)?$/.exec(raw); const target=match?.[1]||''; const root=target.startsWith('/'); const baseDir=base.includes('/')?base.slice(0,base.lastIndexOf('/')+1):''; const path=normalize(root?target.slice(1):baseDir+target); return path&&files.has(path)?{path,suffix:(match?.[2]||'')+(match?.[3]||'')}:null; }
 function text(path){ return new TextDecoder('utf-8',{fatal:false}).decode(files.get(path).buffer); }
 function rewriteCss(css,base,stack=new Set()){ return String(css).replace(/@import\s+(?:url\()?\s*(['"]?)([^'"\)\s;]+)\1\s*\)?\s*;/gi,(all,_q,ref)=>{const r=resolve(base,ref);if(!r||stack.has(r.path)||!files.get(r.path)?.mediaType?.includes('css'))return all;const next=new Set(stack);next.add(r.path);return rewriteCss(text(r.path),r.path,next);}).replace(/url\(\s*(['"]?)([^'"\)]+)\1\s*\)/gi,(all,_q,ref)=>{const r=resolve(base,ref);return r&&urls.has(r.path)?'url("'+urls.get(r.path)+r.suffix+'")':all;}); }
-function rewriteHtml(path){ currentPath=path; const source=text(path); const doc=new DOMParser().parseFromString(source,'text/html'); doc.querySelectorAll('base').forEach((node)=>node.remove()); const csp=doc.createElement('meta');csp.httpEquiv='Content-Security-Policy';csp.content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none';";doc.head?.prepend(csp);
+function rewriteHtml(path){ currentPath=path; const source=text(path); const doc=new DOMParser().parseFromString(source,'text/html'); doc.querySelectorAll('base').forEach((node)=>node.remove()); for(const el of doc.querySelectorAll('*')){for(const attr of [...el.attributes]){const name=attr.name.toLowerCase();if(/^on[a-z][a-z0-9]*$/.test(name)){el.setAttribute('data-p2lrn-legacy-'+name,attr.value);el.removeAttribute(attr.name);}}} const csp=doc.createElement('meta');csp.httpEquiv='Content-Security-Policy';csp.content="default-src 'none'; script-src 'unsafe-inline' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none';";doc.head?.prepend(csp);
   const attrs=[['src','src'],['href','href'],['poster','poster'],['data','data'],['background','background']];
   for(const el of doc.querySelectorAll('*')){ for(const [attr] of attrs){ if(!el.hasAttribute(attr))continue; const raw=el.getAttribute(attr); const r=resolve(path,raw); if(!r)continue; const tag=el.tagName.toLowerCase(); const mt=files.get(r.path)?.mediaType||''; if((tag==='a'||tag==='area')&&mt.includes('html')){el.setAttribute(attr,'#');el.setAttribute('data-p2lrn-member',r.path);continue;} if((tag==='iframe'||tag==='frame')&&mt.includes('html')){el.removeAttribute(attr);el.setAttribute('data-p2lrn-frame-member',r.path);continue;} if(urls.has(r.path))el.setAttribute(attr,urls.get(r.path)+r.suffix); }
     if(el.hasAttribute('style'))el.setAttribute('style',rewriteCss(el.getAttribute('style'),path));
@@ -140,14 +140,15 @@ async function installLegacyInlineHandlers(doc){
     let id=null;
     for(const attr of [...node.attributes]){
       const name=attr.name.toLowerCase();
-      if(!/^on[a-z][a-z0-9]*$/.test(name))continue;
+      const handlerName=name.startsWith('data-p2lrn-legacy-on')?name.slice('data-p2lrn-legacy-'.length):name;
+      if(!/^on[a-z][a-z0-9]*$/.test(handlerName))continue;
       const body=attr.value;
       node.removeAttribute(attr.name);
       size+=body.length;
       if(++inlineScriptId>5000||size>512*1024)throw new Error('SCORM has too many legacy event handlers');
       if(!id){id='p2lrn-scorm-event-'+inlineScriptId;node.setAttribute('data-p2lrn-legacy-id',id);}
-      handlers.push({id,eventName:name.slice(2),body});
-      if(name==='onload'&&(node===doc.body||node===doc.documentElement))onLoadElements.push(node);
+      handlers.push({id,eventName:handlerName.slice(2),body});
+      if(handlerName==='onload'&&(node===doc.body||node===doc.documentElement))onLoadElements.push(node);
     }
   }
   if(!handlers.length)return;
