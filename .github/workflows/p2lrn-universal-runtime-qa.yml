@@ -16,6 +16,9 @@ on:
       - 'packages/player/types/index.d.ts'
       - 'schemas/execution-plan.schema.json'
       - 'packages/toolkit/test/h5p-dependency-closure.test.mjs'
+      - 'packages/toolkit/web/qti-compatibility.js'
+      - 'packages/toolkit/web/renderers/qti-runtime.js'
+      - 'packages/toolkit/test/qti-compatibility-preflight.test.mjs'
       - 'spec/UNIVERSAL-RUNTIME-1.md'
       - '.github/workflows/p2lrn-universal-runtime-qa.yml'
   workflow_dispatch:
@@ -65,6 +68,15 @@ jobs:
           node --check packages/toolkit/web/renderers/h5p-runtime.js
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --test packages/toolkit/test/h5p-dependency-closure.test.mjs packages/toolkit/test/h5p-auto-runtime.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify QTI 3 support boundaries are explicit
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web/qti-compatibility.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/renderers/qti-runtime.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/qti-compatibility-preflight.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify browser SDK ESM and types expose the same preflight
         shell: powershell
