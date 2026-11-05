@@ -30,6 +30,91 @@ export function parseScormManifest(xml) {
   });
 }
 
+/**
+ * Inspect supported SCORM 2004 rules before launching a SCO. This prevents
+ * quietly claiming normative sequencing for rules the reference engine does
+ * not implement. This analysis does not execute SCO code or infer LMS state.
+ */
+export function inspectScorm2004SequencingSupport(manifest,{maxItems=10000,maxRules=20000}={}){
+  if(!manifest||!Array.isArray(manifest.organizations))
+    throw new TypeError('A parsed SCORM manifest is required.');
+  if(!Number.isSafeInteger(maxItems)||maxItems<1||maxItems>100000||
+     !Number.isSafeInteger(maxRules)||maxRules<1||maxRules>100000)
+    throw new TypeError('Invalid SCORM inspection bounds.');
+  const issues=[],knownConditions=new Set([
+    'always','attempted','completed','activityProgressKnown',
+    'satisfied','objectiveStatusKnown','objectiveMeasureKnown',
+    'objectiveMeasureGreaterThan','objectiveMeasureLessThan',
+    'attemptLimitExceeded',
+  ]);
+  const allowedActions={
+    preCondition:new Set(['skip','disabled','hiddenFromChoice']),
+    postCondition:new Set(['exitParent','continue','exitAll','retry','retryAll','previous']),
+    exitCondition:new Set(['exit']),
+    rollup:new Set(['completed','incomplete','satisfied','notSatisfied']),
+  };
+  const allowedSets=new Set(['all','any','none','atLeastCount','atLeastPercent']);
+  let itemCount=0,ruleCount=0;
+  const record=(code,item,detail)=>{
+    if(issues.length<256)issues.push(Object.freeze({
+      code,itemIdentifier:String(item?.identifier??'').slice(0,128),
+      detail:String(detail??'').slice(0,160),
+    }));
+  };
+  const examineRule=(rule,item,group)=>{
+    if(++ruleCount>maxRules){
+      const error=new Error('SCORM 2004 rules exceed inspection safety limit.');
+      error.code='P2LRN_SCORM2004_INSPECTION_LIMIT';throw error;
+    }
+    const type=group??rule?.type;
+    if(!Object.hasOwn(allowedActions,type)||!allowedActions[type].has(rule?.action))
+      record('P2LRN_SCORM2004_RULE_ACTION_UNSUPPORTED',item,type+': '+rule?.action);
+    if(!['all','any',undefined,null].includes(rule?.conditionCombination))
+      record('P2LRN_SCORM2004_CONDITION_COMBINATION_UNSUPPORTED',item,rule.conditionCombination);
+    if(type==='rollup'&&!allowedSets.has(rule?.childActivitySet??'all'))
+      record('P2LRN_SCORM2004_CHILD_SET_UNSUPPORTED',item,rule.childActivitySet);
+    for(const condition of rule?.conditions??[]){
+      if(!knownConditions.has(condition?.condition))
+        record('P2LRN_SCORM2004_RULE_CONDITION_UNSUPPORTED',item,condition?.condition);
+      if(!['noOp','not',null,undefined].includes(condition?.operator))
+        record('P2LRN_SCORM2004_RULE_OPERATOR_UNSUPPORTED',item,condition.operator);
+    }
+  };
+  const visit=(item,depth)=>{
+    if(++itemCount>maxItems||depth>200){
+      const error=new Error('SCORM 2004 activity tree exceeds inspection safety limit.');
+      error.code='P2LRN_SCORM2004_INSPECTION_LIMIT';throw error;
+    }
+    const seq=item?.raw?.sequencing??{};
+    for(const rule of seq.rules??[])examineRule(rule,item);
+    for(const rule of seq.rollupRules??[])examineRule(rule,item,'rollup');
+    const control=seq.controlMode??{};
+    // These are normative navigation controls that the bounded reference
+    // sequencer does not currently enforce in every situation.
+    for(const [key,value] of Object.entries(control)){
+      if(['flow','choice','choiceExit','forwardOnly'].includes(key)&&
+        String(value).toLowerCase()==='false'&&key!=='forwardOnly')
+        record('P2LRN_SCORM2004_CONTROL_MODE_UNSUPPORTED',item,key+'='+value);
+      if(key==='forwardOnly'&&String(value).toLowerCase()==='true')
+        record('P2LRN_SCORM2004_CONTROL_MODE_UNSUPPORTED',item,key+'='+value);
+    }
+    for(const child of item?.children??[])visit(child,depth+1);
+  };
+  for(const item of manifest.organizations)visit(item,0);
+  if((manifest.sequencingCollection??[]).length)
+    record('P2LRN_SCORM2004_SHARED_SEQUENCING_REFERENCES_UNVERIFIED',
+      null,'sequencingCollection requires shared-reference validation');
+  return Object.freeze({
+    version:'1',standard:'SCORM 2004',
+    scope:'bounded-sequencing-subset',
+    status:issues.length?'unsupported-semantics':'conditional',
+    fullyConformant:false,
+    inspectedItems:itemCount,
+    inspectedRules:ruleCount,
+    issues:Object.freeze(issues),
+  });
+}
+
 export function createScorm2004Sequencer(manifest, options = {}) {
   const tree = flatten(manifest?.organizations ?? []);
   const byId = new Map(tree.map((item) => [item.identifier, item]));
