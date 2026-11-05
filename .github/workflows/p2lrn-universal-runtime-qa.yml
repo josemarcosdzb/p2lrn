@@ -1,0 +1,59 @@
+name: P2LRN Universal Runtime - mejorastudio
+
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'packages/toolkit/web/execution-negotiation.js'
+      - 'packages/toolkit/web/dependency-registry.js'
+      - 'packages/toolkit/web/p2lrn-player.js'
+      - 'packages/toolkit/web/h5p-package.js'
+      - 'packages/toolkit/web/renderers/h5p-runtime.js'
+      - 'packages/toolkit/test/universal-execution-negotiation.test.mjs'
+      - 'packages/toolkit/test/h5p-dependency-closure.test.mjs'
+      - 'spec/UNIVERSAL-RUNTIME-1.md'
+      - '.github/workflows/p2lrn-universal-runtime-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-universal-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  universal-runtime:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Validate universal runtime source
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @(
+            'packages/toolkit/web/execution-negotiation.js',
+            'packages/toolkit/web/dependency-registry.js',
+            'packages/toolkit/web/renderer-registry.js',
+            'packages/toolkit/web/p2lrn-player.js',
+            'packages/toolkit/test/universal-execution-negotiation.test.mjs'
+          )) {
+            node --check $path
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Prove no silent fallbacks, exact versions, offline and host permissions
+        shell: powershell
+        run: |
+          node --test packages/toolkit/test/universal-execution-negotiation.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify existing runtime boundary tests
+        shell: powershell
+        run: |
+          node --test packages/toolkit/test/host-capability-offline.test.mjs packages/toolkit/test/automatic-runtime-boundaries.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
