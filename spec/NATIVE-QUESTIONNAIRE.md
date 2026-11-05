@@ -52,6 +52,40 @@ Every question carries its portable solution. This enables deterministic offline
 
 Solutions may be omitted. The native runtime emits answers and completion state but MUST NOT fabricate an authoritative score. A host may grade server-side or forward the answers to another assessment system.
 
+### Studio: selección del modo al crear preguntas
+
+En el editor visual de **Cuestionario**, el profesor dispone del selector **«Modo de corrección»**:
+
+1. **Automática: corregir al finalizar** (`grading.mode: "embedded-key"`): el profesor marca las soluciones y P2LRN calcula la nota localmente. `presentation.showFeedback` controla si el alumno ve la puntuación o no; ocultarla **no protege** las claves incluidas en el paquete.
+2. **Corregir después: no incluir soluciones** (`grading.mode: "host"`): se pueden crear preguntas de elección única/múltiple, verdadero/falso, texto, huecos, ordenar, relacionar o clasificar **sin marcar respuestas correctas**. Studio elimina `solution` y `explanation` de cada pregunta al guardar y exportar. Player registra respuestas y finalización, pero devuelve `graded:false` y `normalized:null`, sin inventar una nota. El profesor revisa la entrega en su plataforma o mediante la importación de resultados.
+
+Esta opción pertenece a la **actividad**, no a un tipo de entrega, y está disponible tanto para paquetes que se abren online/LMS como para paquetes offline. El exportador también elimina claves residuales de antiguos cuestionarios `host` importados. Si la actividad bloqueaba el avance por nota mínima, Studio pasa a exigir únicamente completar la actividad al seleccionar corrección posterior; sin nota verificada no se puede comprobar una condición `passed` local.
+
+**Compatibilidad:** las representaciones de juego que construyen su tablero a partir de soluciones (sopa de letras, crucigrama, rosco, memoria, 3D y otras modalidades específicas) mantienen corrección automática. Para preguntar sin soluciones, se utiliza el **Cuestionario estándar**, que admite los tipos de pregunta correspondientes. Ofrecer un juego sin datos imprescindibles para renderizarlo rompería el curso.
+
+**No significa firma del resultado:** el alumno puede manipular los datos en su equipo. Las respuestas recuperadas deben revisarse por el profesor o por un Host confiable antes de emitir una nota oficial. Consulte [integración segura del Host](../docs/integration/INTEGRACION-SEGURA-HOST.md).
+
+Ejemplo de cuestionario normal u offline que se corrige posteriormente:
+
+```json
+{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "Respuesta sin solución",
+  "grading": {"mode": "host"},
+  "presentation": {"showFeedback": "never"},
+  "questions": [{
+    "id": "q1",
+    "type": "text",
+    "prompt": "Explica cómo funciona la fotosíntesis.",
+    "points": 10
+  }]
+}
+```
+
+Observe que la pregunta **no contiene `solution`**. En modo automático Studio sí requiere una solución y la conserva como parte del contenido que recibe el alumno.
+
+
 ## 4. Scoring modes
 
 Each question may use:
