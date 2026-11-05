@@ -287,7 +287,7 @@ export class P2LRNStudioElement extends HTMLElement{
   set coursePath(v){this.setAttribute('course-path',v||'course')}
 
   async createCourse(options={}){
-    this._revoke();
+    this._revoke();this.#unifiedBar?.resetHistory();
     this.#studio=createP2LRNStudioDocument(options);
     // The hosted editor also opens the first lesson, not the course metadata.
     const firstUnitId=this.#studio.entity(this.#studio.rootId)?.children?.[0];
@@ -315,6 +315,7 @@ export class P2LRNStudioElement extends HTMLElement{
     await this._open(pkg,{name:filenameFromUrl(resolved),url:resolved});
   }
   async _open(pkg,{name,url}){
+    this.#unifiedBar?.resetHistory();
     this.#studio=new P2LRNStudioDocument(pkg,{sourceName:name,sourceUrl:url});this.#savedRevision=0;
     this.#sourceUrl=url;this.#selected=this.#studio.rootId;
     this.shadowRoot.querySelector('[data-body]').hidden=false;
@@ -485,7 +486,7 @@ export class P2LRNStudioElement extends HTMLElement{
       }
       const editable=await this.#studio.readEditableText(entity.id);
       if(editable){
-        const surface=document.createElement(editable.mediaType==='text/plain'?'pre':'article');surface.className='surface';surface.contentEditable='true';if(editable.mediaType==='text/html')surface.dataset.studioHtmlSurface='true';installSafeStudioHtmlPaste(surface);
+        const surface=document.createElement(editable.mediaType==='text/plain'?'pre':'article');surface.className='surface';surface.contentEditable='true';if(editable.mediaType==='text/html'){surface.dataset.studioHtmlSurface='true';surface.dataset.studioHtmlKey=editable.path;}installSafeStudioHtmlPaste(surface);
         if(editable.mediaType==='text/plain')surface.textContent=editable.text;
         else surface.innerHTML=sanitizeHtml(editable.text).body.innerHTML;
         surface.oninput=()=>{
@@ -496,7 +497,7 @@ export class P2LRNStudioElement extends HTMLElement{
         if(editable.mediaType==='text/html')mountLessonImageEditor({host:sheet,surface,onChange:()=>{
           const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');
           this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);
-          this._updateState();
+          this._updateState();this.#unifiedBar?.recordChange();
         },onStatus:(message)=>this.setStatus(message)});
         else sheet.append(surface);
       }else{

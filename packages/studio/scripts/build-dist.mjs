@@ -20,6 +20,9 @@ await cp(join(repo,'packages','toolkit','web','studio','structured-editor.js'),j
 await cp(join(repo,'packages','toolkit','web','studio','lesson-images.js'),join(out,'runtime','lesson-images.js'));
 await cp(join(repo,'packages','toolkit','web','studio','visual-layout.js'),join(out,'runtime','visual-layout.js'));
 await cp(join(repo,'packages','toolkit','web','studio','command-bar.js'),join(out,'runtime','command-bar.js'));
+for(const name of ['studio-history.js','studio-object-tools.js','studio-advanced-tools.js']){
+  await cp(join(repo,'packages','toolkit','web','studio',name),join(out,'runtime',name));
+}
 await cp(join(repo,'packages','toolkit','web','studio','browser-drafts.js'),join(out,'runtime','browser-drafts.js'));
 // Required by questionnaire, structured and lesson-image editors at module load.
 // Omitting it leaves the published Studio Web Component unregistered in browsers.

@@ -55,3 +55,17 @@ Las lecciones HTML se serializan en recursos del paquete P2LRN; los perfiles SCO
 - Importación PPTX: tratar imágenes, tablas, fuentes, gráficos y animaciones con un informe de compatibilidad por elemento. No aceptar macros ni relaciones OOXML externas sin validación.
 - La rama sí implementa una cinta de opciones ligera y única para los dos Studio. **No** implementa todavía un motor libre de páginas/diapositivas ni exportadores PPTX/PDF. No atribuir esas capacidades a la versión publicada.
 - No realizar merge a `main`, tag, publicación NPM ni despliegue público sin la orden expresa del propietario del repositorio.
+
+## Herramientas visuales implementadas en mejorastudio (5 de noviembre de 2026)
+
+La web y el componente NPM comparten los mismos módulos y la misma interfaz. No hay dos editores visuales alternativos.
+
+- studio-advanced-tools.js: pestaña contextual Tabla, herramientas de Diseño y atajos Ctrl+Z, Ctrl+Y y Ctrl+Mayús+Z, aplicados al historial de la lección HTML.
+- studio-object-tools.js: marco de selección ajeno al HTML exportado; mover arrastrando el control, redimensionar con la esquina inferior derecha, duplicar, cambiar posición en el flujo, alinear y eliminar.
+- Tablas: insertar fila antes/después y columna a izquierda/derecha, eliminar filas y columnas, cambiar fondo y alineación de celdas y altura de fila. Se limitan a 80 filas y 20 columnas; las operaciones estructurales no se aplican a celdas combinadas.
+- visual-layout.js: nuevos Cuadro de texto y Forma, además de Sección, Columnas, Destacado, Tabla y Separador.
+- studio-history.js: historial por recurso HTML con deshacer y rehacer de inserciones, modificaciones de estilos, tablas y geometría. Mantiene el historial al navegar entre lecciones; se reinicia al abrir otro curso. Deduplica cadenas multimedia incrustadas dentro de las instantáneas.
+
+Pruebas realizadas: node --test del historial, bloques y dependencias, Chrome/Edge con DOM normal y Shadow DOM, cambios de filas y columnas, diseño de celdas, movimiento y redimensionado mediante puntero, historial reversible y exportación/reapertura P2LRN en el componente NPM. La corrección diferida de cuestionarios y las pruebas de exportación de paquetes han pasado. La prueba de medios reales grabados en Chrome headless ha fallado con un WebM de prueba no reproducible y, en otro intento, un bloqueo temporal de DevTools; no se considera validada esa parte.
+
+Límites: no existe aún un historial global que abarque todos los metadatos, cuestionarios y juegos; tampoco un motor completo de páginas, capas y animaciones de PowerPoint, combinaciones de celdas, ni importación o exportación editable PPTX/PDF. No afirmar dichas capacidades. Prohibido fusionar, publicar NPM o desplegar la rama sin autorización expresa del usuario.

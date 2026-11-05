@@ -39,3 +39,13 @@ test('Studio npm build includes renderer localization required by course rights'
     'The npm Studio dist must preserve the transitive renderers/ui-i18n.js import');
   await source('packages/toolkit/web/renderers/ui-i18n.js');
 });
+
+test('Studio dist build copies the shared history, geometry and contextual table tools',async()=>{
+  const build=await source('packages/studio/scripts/build-dist.mjs');
+  const bar=await source('packages/toolkit/web/studio/command-bar.js');
+  assert.match(bar,/studio-advanced-tools\.js/);
+  for(const name of ['studio-history.js','studio-object-tools.js','studio-advanced-tools.js']){
+    assert.ok(build.includes(name),'Missing runtime asset in build: '+name);
+    await source('packages/toolkit/web/studio/'+name);
+  }
+});

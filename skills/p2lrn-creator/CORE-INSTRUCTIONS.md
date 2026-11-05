@@ -78,3 +78,11 @@ La carpeta `assets/ejemplo-curso.json` contiene un blueprint de muestra con lecc
 - Seguir `docs/studio-visual-editor-roadmap.md` para el contrato pendiente de páginas/diapositivas, barra de menús SaaS, importadores y exportadores. No implementar la interfaz de Studio dentro de la Skill, ni copiar librerías de autoría de Office en el empaquetador Python limitado.
 - Para comprobar la interfaz compartida ejecutar `node --test packages/toolkit/test/studio-visual-layout.test.mjs`, `node packages/studio/scripts/build-dist.mjs` y `node scripts/verify-studio-unified-ui.mjs` con Chrome/Edge. Antes de fusionar, comprobar además las interfaces completas, el Player y los flujos de Studio web, NPM y host.
 - Prohibido realizar merge a `main`, publicar NPM o desplegar cambios de esta rama sin petición expresa del usuario.
+
+## Herramientas compartidas de Studio en la rama mejorastudio
+
+Ambos Studio deben usar exactamente la misma interfaz basada en command-bar.js y los módulos studio-advanced-tools.js, studio-object-tools.js, studio-history.js y visual-layout.js. Se pueden insertar bloques, cuadros de texto, formas y tablas, añadir o quitar filas y columnas no combinadas, dar formato a celdas, arrastrar y redimensionar objetos, y deshacer o rehacer cambios en el contenido HTML de la lección desde Inicio, Insertar, Tabla y Diseño.
+
+La Skill no debe prometer un historial global de todos los metadatos/actividades, combinaciones de celdas, diapositivas con capas libres, ni importación/exportación completa y editable de PPTX o PDF. Estas funciones no están verificadas. La nueva barra y el NPM son desarrollo de la rama, no una publicación pública; no fusionar, publicar ni desplegar sin orden expresa.
+
+Pruebas recomendadas desde el repositorio: node --test packages/toolkit/test/studio-advanced-history.test.mjs packages/toolkit/test/studio-visual-layout.test.mjs packages/studio/test/dist-dependencies.test.mjs; node scripts/verify-studio-unified-ui.mjs; y, si está activo el servidor local de dos vistas, node scripts/verify-studio-advanced-local-preview.mjs --port 5531 --output CARPETA_EXISTENTE.

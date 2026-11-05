@@ -350,7 +350,7 @@ async function renderEditor(){
     bindEditable(surface,()=>studio.setPayloadText(editable.path,surface.textContent||''));content.append(surface);return;
   }
   const source=sanitizeHtml(editable.text);
-  const surface=document.createElement('article');surface.className='studio-wysiwyg';surface.dataset.studioHtmlSurface='true';surface.innerHTML=source.body.innerHTML;
+  const surface=document.createElement('article');surface.className='studio-wysiwyg';surface.dataset.studioHtmlSurface='true';surface.dataset.studioHtmlKey=editable.path;surface.innerHTML=source.body.innerHTML;
   bindEditable(surface,()=>{
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
@@ -359,6 +359,7 @@ async function renderEditor(){
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
     updateChanges();
+    sharedCommandBar?.recordChange();
   },onStatus:setStatus});
   sharedCommandBar?.refresh();
 }
@@ -392,6 +393,7 @@ async function setMode(next){
   if(preview)await refreshPreview();else setStatus('Editando curso');
 }
 async function activateStudio(document,{name,recoveredSelectedId=null}={}){
+  sharedCommandBar?.resetHistory();
   studio=document;
   selectedId=recoveredSelectedId&&studio.entity(recoveredSelectedId)?recoveredSelectedId:studio.rootId;
   savedRevision=0;exportedRevision=0;

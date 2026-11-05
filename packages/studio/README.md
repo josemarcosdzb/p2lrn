@@ -190,3 +190,9 @@ En corrección posterior no se puede condicionar el avance a «Superar» con una
 La verificación de las respuestas por un profesor o Host confiable sigue siendo necesaria para emitir una calificación oficial; el cifrado o un hash generado en el equipo del alumno no demuestran autoría de las respuestas.
 
 Consulte el contrato de [cuestionarios nativos](../../spec/NATIVE-QUESTIONNAIRE.md) y la [integración de un Host de confianza](../../docs/integration/INTEGRACION-SEGURA-HOST.md).
+
+## Herramientas avanzadas (rama de desarrollo mejorastudio)
+
+Studio NPM y Studio web comparten los mismos menús y componentes de edición. La pestaña contextual Tabla permite insertar o eliminar filas y columnas, modificar colores y alineaciones de celdas y alturas de fila. Las herramientas de objetos permiten seleccionar bloques, redimensionarlos por la esquina, moverlos, duplicarlos, cambiar su orden y alinearlos. Se incorporan cuadros de texto y formas, y un historial por lección que cubre acciones de Insertar, Tabla y Diseño.
+
+Se guarda HTML y CSS semántico dentro del paquete P2LRN; los controles de selección no se exportan. No se modifican estructuralmente tablas con celdas combinadas ni se exportan/importan PowerPoint o PDF editables. Funciones disponibles en la rama mejorastudio solamente; el paquete del registro NPM no cambia hasta publicación autorizada.

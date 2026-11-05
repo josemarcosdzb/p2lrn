@@ -63,7 +63,7 @@ async function browserScenario(){
     ui.setDocument(true,'Estudio visual');
     const toolbar=mount.querySelector('.p2lrn-studio-ribbon');
     expect(toolbar&&mount.classList.contains('p2lrn-studio-unified'),'Canonical toolbar missing');
-    expect(toolbar.querySelectorAll('[role=tab]').length===3,'Three working tabs not rendered');
+    expect([...toolbar.querySelectorAll('[role=tab]')].filter(tab=>!tab.hidden).length===3,'Three working tabs not rendered');
     expect(toolbar.querySelector('[data-ui-action=save]'),'Save button missing');
     expect(toolbar.querySelector('[data-ui-action=export]'),'Export button missing');
     expect(toolbar.querySelector('[data-ui-action=preview]'),'Preview button missing');
@@ -86,6 +86,75 @@ async function browserScenario(){
     crossword.click();
     await new Promise(done=>setTimeout(done,0));
     expect(item.actions.includes('kind:crossword'),'Shared activity picker did not dispatch the chosen game');
+    // Real table commands shared by both Studio entrypoints.
+    const addTable=item.toolbar.querySelector('[data-ui-layout=table]');
+    expect(addTable&&!addTable.disabled,'Table insertion is missing');
+    addTable.click();
+    let table=item.surface.querySelector('table[data-p2lrn-layout=table]');
+    expect(table&&table.rows.length===3&&table.rows[0].cells.length===2,'Inserted table has the wrong grid');
+    table.rows[1].cells[0].click();
+    const tableTab=item.toolbar.querySelector('[role=tab][aria-controls$="-table"]');
+    expect(tableTab&&!tableTab.hidden,'Selecting a table does not show table tools');
+    tableTab.click();
+    const addRow=item.toolbar.querySelector('[data-studio-advanced-action=rowBelow]');
+    const addCol=item.toolbar.querySelector('[data-studio-advanced-action=colRight]');
+    expect(!addRow.disabled&&!addCol.disabled,'Context table actions are disabled');
+    addRow.click();
+    expect(table.rows.length===4,'Could not add a table row');
+    addCol.click();
+    expect(table.rows[0].cells.length===3,'Could not add a table column');
+    // Undo/redo must work across Insertar and contextual Tabla, not just typing.
+    item.toolbar.querySelector('[role=tab][aria-controls$="-home"]').click();
+    const undo=item.toolbar.querySelector('[data-ui-command=undo]');
+    const redo=item.toolbar.querySelector('[data-ui-command=redo]');
+    expect(!undo.disabled,'Structural changes did not enter the shared history');
+    undo.click();
+    table=item.surface.querySelector('table[data-p2lrn-layout=table]');
+    expect(table.rows[0].cells.length===2&&table.rows.length===4,'Undo did not remove column');
+    undo.click();
+    table=item.surface.querySelector('table[data-p2lrn-layout=table]');
+    expect(table.rows.length===3,'Undo did not remove row');
+    redo.click();redo.click();
+    table=item.surface.querySelector('table[data-p2lrn-layout=table]');
+    expect(table.rows.length===4&&table.rows[0].cells.length===3,'Redo did not restore table modifications');
+    // Cell formatting and row geometry must be reversible as well.
+    table.rows[1].cells[0].click();
+    tableTab.click();
+    const cellFill=item.toolbar.querySelector('input[aria-label="Color de fondo de celda"]');
+    cellFill.value='#ffd6a5';
+    item.toolbar.querySelector('[data-studio-advanced-action=cellFill]').click();
+    expect(table.rows[1].cells[0].style.backgroundColor==='rgb(255, 214, 165)','Cell fill failed');
+    const rowHeight=item.toolbar.querySelector('input[aria-label="Altura de fila en píxeles"]');
+    rowHeight.value='64';
+    item.toolbar.querySelector('[data-studio-advanced-action=rowHeight]').click();
+    expect(table.rows[1].style.height==='64px','Row height failed');
+    undo.click();undo.click();
+    table=item.surface.querySelector('table[data-p2lrn-layout=table]');
+    expect(table.rows[1].style.height!=='64px'&&table.rows[1].cells[0].style.backgroundColor!=='rgb(255, 214, 165)','Undo of cell formatting failed');
+    redo.click();redo.click();
+    table=item.surface.querySelector('table[data-p2lrn-layout=table]');
+    expect(table.rows[1].style.height==='64px'&&table.rows[1].cells[0].style.backgroundColor==='rgb(255, 214, 165)','Redo of cell formatting failed');
+    // Object geometry is also part of the same portable history.
+    table.rows[1].cells[0].click();
+    expect(item.ui.performObject('width',340)!==false,'Width command failed');
+    expect(table.style.width==='340px','Table resize was not applied');
+    expect(item.ui.performObject('nudge',{x:30,y:14})!==false,'Movement command failed');
+    expect(table.dataset.p2lrnObjectX==='30','Object translation missing');
+    const dragHandle=item.root.querySelector('[data-object-action=drag]');
+    expect(dragHandle,'Object drag handle not rendered');
+    const pointer=(type,x,y)=>dragHandle.dispatchEvent(new PointerEvent(type,{
+      bubbles:true,pointerId:93,pointerType:'mouse',button:0,
+      buttons:type==='pointerup'?0:1,clientX:x,clientY:y
+    }));
+    pointer('pointerdown',210,210);pointer('pointermove',235,230);pointer('pointerup',235,230);
+    expect(table.dataset.p2lrnObjectX!=='30','Pointer drag did not move the table');
+    undo.click();
+    table=item.surface.querySelector('table[data-p2lrn-layout=table]');
+    expect(table.dataset.p2lrnObjectX==='30','Undo did not restore previous position');
+    redo.click();
+    table=item.surface.querySelector('table[data-p2lrn-layout=table]');
+    expect(Number(table.dataset.p2lrnObjectX)>30,'Redo did not restore drag');
+    item.toolbar.querySelector('[role=tab][aria-controls$="-insert"]').click();
     const insert=item.toolbar.querySelector('[data-ui-layout=columns]');
     expect(insert&&!insert.disabled,'Columns action unavailable');
     insert.click();
@@ -97,6 +166,28 @@ async function browserScenario(){
     blue.click();
     const section=item.surface.querySelector('[data-p2lrn-layout=columns]');
     expect(section.style.backgroundColor==='rgb(239, 246, 255)','Block design was not persisted');
+    // Resize handle on a movable shape, including undo/redo of the gesture.
+    item.toolbar.querySelector('[role=tab][aria-controls*="-insert"]').click();
+    item.toolbar.querySelector('[data-ui-layout=shape]').click();
+    let shape=item.surface.querySelector('[data-p2lrn-layout=shape]');
+    expect(shape,'Shape insertion failed');
+    const grip=item.root.querySelector('[data-object-action=resize]');
+    expect(grip,'Shape resize grip missing');
+    const previousWidth=shape.getBoundingClientRect().width;
+    const resizeEvent=(type,x,y)=>grip.dispatchEvent(new PointerEvent(type,{
+      bubbles:true,pointerId:75,pointerType:'mouse',button:0,
+      buttons:type==='pointerup'?0:1,clientX:x,clientY:y
+    }));
+    resizeEvent('pointerdown',200,200);resizeEvent('pointermove',280,235);resizeEvent('pointerup',280,235);
+    expect(shape.getBoundingClientRect().width>previousWidth,'Pointer resize did not grow shape');
+    item.toolbar.querySelector('[role=tab][aria-controls*="-home"]').click();
+    undo.click();
+    shape=item.surface.querySelector('[data-p2lrn-layout=shape]');
+    expect(shape.getBoundingClientRect().width<=previousWidth+2,'Undo did not restore shape width');
+    redo.click();
+    shape=item.surface.querySelector('[data-p2lrn-layout=shape]');
+    expect(shape.getBoundingClientRect().width>previousWidth,'Redo did not restore shape width');
+    item.toolbar.querySelector('[role=tab][aria-controls*="-design"]').click();
     item.toolbar.querySelector('[data-ui-action=save]').click();
     item.toolbar.querySelector('[data-ui-action=export]').click();
     item.toolbar.querySelector('[data-ui-action=preview]').click();

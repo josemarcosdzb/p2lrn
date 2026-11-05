@@ -1,4 +1,5 @@
 import {VISUAL_LAYOUT_BLOCKS,insertVisualLayoutBlock} from './visual-layout.js';
+import {mountAdvancedStudioTools} from './studio-advanced-tools.js';
 
 // Canonical Studio chrome. Both the hosted Studio and @p2lrn/studio mount
 // this exact control tree and CSS; platform-specific commands stay adapters.
@@ -77,6 +78,7 @@ const CSS=[
   '.p2lrn-studio-ribbon .p2lrn-ribbon-tab[aria-selected=true]{color:#243e64;border-bottom-color:#243e64}',
   '.p2lrn-ribbon-panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px;min-height:64px}',
   '.p2lrn-ribbon-panel[hidden]{display:none!important}',
+  '.p2lrn-ribbon-tab[hidden]{display:none!important}',
   '.p2lrn-ribbon-feedback{padding:6px 15px 8px;border-top:1px solid #edf0f4;min-height:28px;font-size:11px;color:#64748b}',
   '.p2lrn-ribbon-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}',
   '.p2lrn-ribbon-divider{width:1px;height:28px;background:#e5e9f0;flex:none}',
@@ -427,12 +429,13 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
       try{selected=enabled&&doc.queryCommandState?.(cmd)===true;}catch{}
       b.setAttribute('aria-pressed',String(selected));
     }
+    advanced.refresh();
   }
   function addLayout(kind){
     const s=surface();
     if(!s){onStatus('Selecciona una lección HTML para insertar un bloque visual.');return;}
     const anchor=savedSurface===s&&savedRange&&s.contains(savedRange.commonAncestorContainer)?savedRange.commonAncestorContainer:null;
-    try{lastVisualBlock=insertVisualLayoutBlock(s,kind,{anchorNode:anchor});onStatus('Bloque insertado. Puedes editarlo directamente.');}
+    try{lastVisualBlock=insertVisualLayoutBlock(s,kind,{anchorNode:anchor});advanced.selectObject(lastVisualBlock);onStatus('Bloque insertado. Selecciónalo y usa Mover o Redimensionar.');}
     catch(error){onStatus(error.message);}
   }
   function colorBlock(color){
@@ -440,7 +443,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     if(!s){onStatus('Selecciona una lección con un bloque visual.');return;}
     let anchor=savedSurface===s&&savedRange&&s.contains(savedRange.commonAncestorContainer)?savedRange.commonAncestorContainer:null;
     if(anchor?.nodeType===3)anchor=anchor.parentElement;
-    const block=anchor?.closest?.('[data-p2lrn-layout]')||lastVisualBlock;
+    const block=advanced.current()||anchor?.closest?.('[data-p2lrn-layout]')||lastVisualBlock;
     if(!block||!s.contains(block)){onStatus('Selecciona un bloque visual antes de cambiar su fondo.');return;}
     block.style.backgroundColor=color;changed(s);
     onStatus('Diseño del bloque actualizado.');
@@ -466,6 +469,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   doc.addEventListener('selectionchange',remember);
   if(root!==doc)root.addEventListener('selectionchange',remember);
   mount.append(bar);
+  const advanced=mountAdvancedStudioTools({bar,root,resolveSurface,onStatus});
   function setPreviewMode(value){
     previewMode=Boolean(value);
     preview.textContent=previewMode?'Volver a editar':'Vista alumno';
@@ -492,7 +496,13 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     refresh:refreshButtons,
     openTab:activateTab,
     openActivities:openActivityPicker,
+    recordChange:advanced.recordChange,
+    resetHistory:advanced.resetHistory,
+    selectObject:advanced.selectObject,
+    performObject:advanced.performObject,
+    get history(){return advanced.history;},
     dispose(){
+      advanced.dispose();
       activityDialog?.remove();
       doc.removeEventListener('selectionchange',remember);
       if(root!==doc)root.removeEventListener('selectionchange',remember);

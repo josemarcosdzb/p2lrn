@@ -5,12 +5,26 @@ const BLOCKS=Object.freeze([
   ['columns','Dos columnas','Comparación visual en dos columnas'],
   ['callout','Destacado','Recuadro para ideas importantes'],
   ['table','Tabla','Tabla editable de dos columnas'],
+  ['text-box','Cuadro de texto','Texto independiente que puedes mover y redimensionar'],
+  ['shape','Forma','Forma visual editable y redimensionable'],
   ['divider','Separador','Separador horizontal'],
 ]);
 const setStyle=(node,properties)=>{Object.assign(node.style,properties);return node;};
 const elt=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
 function makeBlock(kind){
   if(kind==='divider')return elt('hr');
+  if(kind==='text-box'){
+    const box=elt('section');box.dataset.p2lrnLayout='text-box';
+    setStyle(box,{width:'420px',maxWidth:'100%',minHeight:'96px',padding:'18px',margin:'16px 0',border:'1px dashed #94a3b8',borderRadius:'10px',backgroundColor:'#fff'});
+    box.append(elt('p','Escribe aquí. Puedes mover y redimensionar este cuadro.'));
+    return box;
+  }
+  if(kind==='shape'){
+    const shape=elt('figure');shape.dataset.p2lrnLayout='shape';
+    setStyle(shape,{width:'260px',maxWidth:'100%',minHeight:'126px',padding:'20px',margin:'16px 0',borderRadius:'16px',border:'2px solid #93c5fd',backgroundColor:'#dbeafe',textAlign:'center'});
+    shape.append(elt('figcaption','Forma editable'));
+    return shape;
+  }
   if(kind==='table'){
     const table=elt('table');table.setAttribute('data-p2lrn-layout','table');
     setStyle(table,{width:'100%',borderCollapse:'collapse',margin:'20px 0'});
@@ -53,7 +67,10 @@ function insertAtSelection(surface,block){
   if(selection?.rangeCount&&surface.contains(selection.anchorNode)){
     let top=selection.anchorNode;
     while(top&&top.parentNode!==surface)top=top.parentNode;
-    if(top&&top.parentNode===surface)top.after(block);
+    if(top&&top.parentNode===surface){
+      if(top.matches?.('[data-p2lrn-lesson-canvas]'))top.append(block);
+      else top.after(block);
+    }
     else surface.append(block);
   }else surface.append(block);
   // Ensure the insertion is serialized by the existing Studio change handler.
