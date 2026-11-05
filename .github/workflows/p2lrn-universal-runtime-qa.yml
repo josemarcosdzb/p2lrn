@@ -52,6 +52,24 @@ jobs:
         run: |
           node --test packages/toolkit/test/universal-execution-negotiation.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify H5P transitive closure and secure imported assets
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web/h5p-package.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/renderers/h5p-runtime.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/h5p-dependency-closure.test.mjs packages/toolkit/test/h5p-auto-runtime.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify browser SDK ESM and types expose the same preflight
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web-sdk-src/p2lrn.esm.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/player/src/p2lrn.esm.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/universal-runtime-public-api.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify existing runtime boundary tests
         shell: powershell
         run: |
