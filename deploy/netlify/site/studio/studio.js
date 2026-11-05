@@ -6,7 +6,7 @@ import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
-import {mountStudioCommandBar,applyUnifiedStudioWorkspace} from './runtime/command-bar.js';
+import {mountStudioCommandBar,applyUnifiedStudioWorkspace,collapseStudioLessonProperties} from './runtime/command-bar.js';
 import {studioUiText} from './runtime/studio-ui-i18n.js';
 
 const createCourseButton=document.querySelector('[data-create-course]');
@@ -350,6 +350,7 @@ async function renderEditor(){
     bindEditable(surface,()=>studio.setPayloadText(editable.path,surface.textContent||''));content.append(surface);return;
   }
   const source=sanitizeHtml(editable.text);
+  collapseStudioLessonProperties({header:head,title});
   const surface=document.createElement('article');surface.className='studio-wysiwyg';surface.dataset.studioHtmlSurface='true';surface.dataset.studioHtmlKey=editable.path;surface.innerHTML=source.body.innerHTML;
   bindEditable(surface,()=>{
     source.body.innerHTML=surface.innerHTML;
@@ -919,6 +920,8 @@ sharedCommandBar=mountStudioCommandBar({
     addLesson:()=>addLesson(),
     addContent:()=>addContentButton.click(),
     addKind:(kind)=>addContentKind(kind),
+    insertImage:()=>{const btn=editorStage.querySelector('[data-insert-lesson-image]');if(!btn)throw new Error('Selecciona una lección HTML para insertar imágenes.');btn.click();},
+    insertVideo:()=>{const btn=editorStage.querySelector('[data-insert-lesson-video]');if(!btn)throw new Error('Selecciona una lección HTML para insertar vídeo.');btn.click();},
     canAddKind:(kind)=>kind!=='shared-library'||Boolean(connectedResourceLibrary),
     preview:()=>setMode('preview'),
     edit:()=>setMode('edit')

@@ -109,7 +109,7 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     throw new TypeError(studioUiText('Se requiere una superficie HTML editable.',surface?.ownerDocument));
   const doc=surface.ownerDocument;
   const wrapper=doc.createElement('div');wrapper.className='p2lrn-lesson-image-editor';
-  const style=doc.createElement('style');style.textContent=STYLES;
+  const style=doc.createElement('style');style.textContent=STYLES+`\n.p2lrn-lesson-media-options{border:1px solid #e2e8f0;border-radius:8px;background:#fbfcfe;margin:0 0 14px;overflow:hidden}\n.p2lrn-lesson-media-options>summary{padding:9px 12px;cursor:pointer;color:#475467;font:600 12px/1.35 system-ui,sans-serif}\n.p2lrn-lesson-media-options>summary:focus-visible{outline:2px solid #4776b6;outline-offset:-2px}\n.p2lrn-lesson-media-options[open] .p2lrn-lesson-image-toolbar{padding:10px 12px;border-top:1px solid #e2e8f0}\n`;
   const toolbar=doc.createElement('div');toolbar.className='p2lrn-lesson-image-toolbar';
   toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label',studioUiText('Imágenes y vídeos de la lección',doc));
   const button=(text,attr)=>{
@@ -130,7 +130,11 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   const videoPicker=doc.createElement('input');videoPicker.type='file';videoPicker.multiple=true;
   videoPicker.accept='video/mp4,video/webm,.mp4,.webm';videoPicker.hidden=true;videoPicker.setAttribute('data-lesson-video-file','');
   const coverPicker=doc.createElement('input');coverPicker.type='file';coverPicker.accept=picker.accept;coverPicker.hidden=true;
-  wrapper.append(style,toolbar,picker,videoPicker,coverPicker,surface);host.append(wrapper);
+  const options=doc.createElement('details');options.className='p2lrn-lesson-media-options';
+  const summary=doc.createElement('summary');summary.textContent='Opciones de multimedia';
+  summary.title='Abrir controles de tamaño, eliminación y portada de imágenes y vídeos';
+  options.append(summary,toolbar);
+  wrapper.append(style,options,picker,videoPicker,coverPicker,surface);host.append(wrapper);
   let selected=null,drag=null;
 
   const currentCanvas=()=>surface.querySelector(':scope > [data-p2lrn-lesson-canvas]');

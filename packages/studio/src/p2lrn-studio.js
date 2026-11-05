@@ -15,7 +15,7 @@ import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
-import {mountStudioCommandBar,applyUnifiedStudioWorkspace} from './runtime/command-bar.js';
+import {mountStudioCommandBar,applyUnifiedStudioWorkspace,collapseStudioLessonProperties} from './runtime/command-bar.js';
 import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
 import {exportOfflineAssignmentBundle, parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
 
@@ -254,6 +254,8 @@ export class P2LRNStudioElement extends HTMLElement{
         addUnit:()=>this.addUnit(),
         addLesson:()=>this.addLesson(),
         addKind:(kind)=>this.addContent(kind),
+        insertImage:()=>{const btn=q('[data-insert-lesson-image]');if(!btn)throw new Error('Selecciona una lección HTML para insertar imágenes.');btn.click();},
+        insertVideo:()=>{const btn=q('[data-insert-lesson-video]');if(!btn)throw new Error('Selecciona una lección HTML para insertar vídeo.');btn.click();},
         canAddKind:(kind)=>kind!=='shared-library'||Boolean(this.#resourceLibrary),
         preview:()=>this.setMode('preview'),
         edit:()=>this.setMode('edit')
@@ -489,6 +491,7 @@ export class P2LRNStudioElement extends HTMLElement{
         const surface=document.createElement(editable.mediaType==='text/plain'?'pre':'article');surface.className='surface';surface.contentEditable='true';if(editable.mediaType==='text/html'){surface.dataset.studioHtmlSurface='true';surface.dataset.studioHtmlKey=editable.path;}installSafeStudioHtmlPaste(surface);
         if(editable.mediaType==='text/plain')surface.textContent=editable.text;
         else surface.innerHTML=sanitizeHtml(editable.text).body.innerHTML;
+        if(editable.mediaType==='text/html')collapseStudioLessonProperties({header:head,title});
         surface.oninput=()=>{
           if(editable.mediaType==='text/plain')this.#studio.setPayloadText(editable.path,surface.textContent||'');
           else {const doc=sanitizeHtml('<!doctype html><html><body>'+surface.innerHTML+'</body></html>');this.#studio.setPayloadText(editable.path,'<!doctype html>\n'+doc.documentElement.outerHTML);}

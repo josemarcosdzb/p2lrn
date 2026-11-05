@@ -12,6 +12,7 @@ on:
       - 'packages/toolkit/web/renderers/questionnaire-3d.js'
       - 'packages/toolkit/web/renderers/ui-i18n.js'
       - 'packages/toolkit/web/questionnaire-games.css'
+      - 'scripts/verify-studio-saas-ui.mjs'
       - '.github/workflows/studio-local-preview.yml'
   workflow_dispatch:
 
@@ -126,6 +127,10 @@ jobs:
           if (!$health.ok -or $health.commit -ne $env:GITHUB_SHA) { throw 'Chrome QA would connect to a stale preview' }
           node scripts/verify-studio-local-preview.mjs --port $env:P2LRN_PREVIEW_PORT --output "$env:P2LRN_STUDIO_PREVIEW_DIR"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check SaaS editor usability, responsive layout and actions
+        run: node scripts/verify-studio-saas-ui.mjs --port $env:P2LRN_PREVIEW_PORT --output "$env:P2LRN_STUDIO_PREVIEW_DIR"
+        shell: powershell
 
   confirm-server-survives-runner-job:
     needs: build-and-serve

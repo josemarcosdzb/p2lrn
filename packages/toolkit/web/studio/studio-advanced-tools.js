@@ -69,10 +69,30 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     panel.hidden=true;tab.setAttribute('aria-selected','false');
   };
   tabs.addEventListener('click',tabReset,true);
+  // One ARIA-compliant arrow-key path also covers the dynamically shown Table tab.
+  const tabKeys=event=>{
+    const current=event.target.closest?.('[role=tab]');
+    if(!current||!tabs.contains(current)||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    const visible=[...tabs.querySelectorAll('[role=tab]')].filter(item=>!item.hidden&&!item.disabled);
+    if(!visible.length)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const index=visible.indexOf(current);
+    const next=event.key==='Home'?visible[0]:event.key==='End'?visible.at(-1):
+      visible[(index+(event.key==='ArrowRight'?1:-1)+visible.length)%visible.length];
+    next.focus();next.click();
+  };
+  tabs.addEventListener('keydown',tabKeys,true);
   const tableActions=group.querySelectorAll('[data-studio-advanced-action]');
-  function updateSelection({table=null}={}){
+  const palette=designPanel.querySelector('.p2lrn-ribbon-group');
+  let designGroup=null,designHint=null;
+  function updateSelection({table=null,element=null}={}){
     tab.hidden=!table;
     for(const b of tableActions)b.disabled=!table;
+    for(const input of tableFormat.querySelectorAll('button,input'))input.disabled=!table;
+    const selected=Boolean(element);
+    if(designGroup)designGroup.hidden=!selected;
+    if(designHint)designHint.hidden=selected;
+    if(palette){palette.hidden=!selected;for(const control of palette.querySelectorAll('button'))control.disabled=!selected;}
     if(!table&&!panel.hidden){
       panel.hidden=true;tab.setAttribute('aria-selected','false');
       const insert=tabs.querySelector('[aria-controls$="-insert"]');
@@ -80,7 +100,7 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     }
   }
   updateSelection();
-  const designGroup=el(doc,'div','p2lrn-ribbon-group');
+  designGroup=el(doc,'div','p2lrn-ribbon-group');
   designGroup.style.cssText='gap:5px;flex-wrap:wrap';
   designGroup.append(el(doc,'span','p2lrn-ribbon-caption','Objeto seleccionado'));
   for(const [action,label] of OBJECT_ACTIONS)designGroup.append(button(doc,label,action));
@@ -89,7 +109,10 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
   widthInput.style.cssText='width:74px;min-height:34px;border:1px solid #dbe2eb;border-radius:7px;padding:5px';
   widthInput.setAttribute('aria-label','Ancho del elemento en píxeles');
   designGroup.append(el(doc,'span','p2lrn-ribbon-caption','Ancho px'),widthInput,button(doc,'Aplicar ancho','width'));
+  designHint=el(doc,'span','p2lrn-ribbon-caption','Selecciona un objeto para editar su diseño.');
+  designPanel.insertBefore(designHint,designPanel.firstChild);
   designPanel.append(el(doc,'span','p2lrn-ribbon-divider'),designGroup);
+  updateSelection();
   const hint=el(doc,'span','p2lrn-ribbon-caption','Selecciona un bloque; usa Mover o la esquina inferior derecha para cambiar tamaño.');
   insertPanel.append(hint);
   const history=createStudioHistory({onChange:refreshHistoryButtons,onApply:()=>objectTools?.clear()});
@@ -179,6 +202,7 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
       bar.removeEventListener('click',onUndoClick,true);
       bar.removeEventListener('click',onAction);
       tabs.removeEventListener('click',tabReset,true);
+      tabs.removeEventListener('keydown',tabKeys,true);
       objectTools?.dispose();panel.remove();tab.remove();designGroup.remove();hint.remove();
     }
   };

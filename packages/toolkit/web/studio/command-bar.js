@@ -144,6 +144,20 @@ const CSS=[
   '.p2lrn-studio-sheet :is(.studio-wysiwyg,.surface){min-height:360px;font-size:16px;line-height:1.7;color:#253044}',
   '.p2lrn-studio-sheet :is(img,video,table){max-width:100%}',
   '@media(max-width:860px){.p2lrn-studio-workspace{grid-template-columns:minmax(0,1fr)!important}.p2lrn-studio-outline{max-height:260px}.p2lrn-ribbon-top{align-items:flex-start}.p2lrn-studio-stage{padding:12px}.p2lrn-studio-sheet{padding:18px}.p2lrn-ribbon-actions{justify-content:flex-start}}',
+  '.p2lrn-outline-toggle{display:none!important}',
+  '.p2lrn-ribbon-group[hidden]{display:none!important}',
+  '.p2lrn-ribbon-panel{scrollbar-width:thin;scrollbar-color:#c1cfdd transparent}',
+  '@media(max-width:1200px){.p2lrn-ribbon-panel{display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;min-height:66px;padding:9px 12px}.p2lrn-ribbon-panel>.p2lrn-ribbon-group,.p2lrn-ribbon-panel>.p2lrn-ribbon-divider,.p2lrn-ribbon-panel>.p2lrn-ribbon-caption{flex-shrink:0}.p2lrn-ribbon-panel .p2lrn-ribbon-group{flex-wrap:nowrap}.p2lrn-ribbon-panel::-webkit-scrollbar{height:6px}.p2lrn-ribbon-panel::-webkit-scrollbar-thumb{border-radius:6px;background:#c1cfdd}}',
+  '@media(max-width:860px){.p2lrn-outline-toggle{display:inline-flex!important;margin-left:auto}.p2lrn-studio-workspace:not([data-outline-open=true]) .p2lrn-studio-outline{display:none!important}.p2lrn-ribbon-identity{width:100%}}',
+  '@media(max-width:740px){.p2lrn-ribbon-top{padding:10px 11px;gap:8px}.p2lrn-ribbon-name small{max-width:min(180px,46vw)}.p2lrn-ribbon-identity{flex-basis:100%;width:100%}.p2lrn-ribbon-actions{display:flex;flex-wrap:nowrap;justify-content:space-between!important;gap:5px;width:100%}.p2lrn-ribbon-actions>button[data-ui-action=create],.p2lrn-ribbon-actions>button[data-ui-action=open],.p2lrn-ribbon-actions>button[data-ui-action=export]{display:none!important}.p2lrn-ribbon-actions .p2lrn-ribbon-modes{margin-left:auto}.p2lrn-ribbon-actions>button,.p2lrn-ribbon-actions>details>summary,.p2lrn-ribbon-actions .p2lrn-ribbon-modes button{padding:7px 8px;font-size:12px}.p2lrn-ribbon-tabs{padding:0 8px;gap:1px}.p2lrn-studio-ribbon .p2lrn-ribbon-tab{padding:8px 10px;min-height:36px}.p2lrn-ribbon-panel{gap:8px;padding:8px 10px;min-height:62px}.p2lrn-ribbon-group{gap:5px}.p2lrn-ribbon-feedback{padding:5px 11px;min-height:23px}.p2lrn-studio-stage{padding:10px}.p2lrn-studio-sheet{padding:16px}}',
+  '.p2lrn-studio-lesson-properties{margin:0 0 15px;border:1px solid #e3e8f0;border-radius:9px;background:#fafbfd;overflow:hidden}',
+  '.p2lrn-studio-lesson-properties>summary{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 13px;font:500 12px/1.3 Inter,system-ui,sans-serif;color:#475467;cursor:pointer}',
+  '.p2lrn-studio-lesson-properties>summary:focus-visible{outline:2px solid #4776b6;outline-offset:-2px}',
+  '.p2lrn-studio-property-label{font-size:10px;text-transform:uppercase;letter-spacing:.045em;font-weight:700;color:#64748b}',
+  '.p2lrn-studio-property-name{font-size:12px;font-weight:650;color:#344054;min-width:0;max-width:34ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.p2lrn-studio-property-edit{margin-left:auto;font-size:11px;color:#3264a1}',
+  '.p2lrn-studio-lesson-properties .p2lrn-studio-sheet-head{padding:13px 15px;margin:0;border-top:1px solid #e3e8f0;border-bottom:0;background:#fff}',
+  '.p2lrn-studio-lesson-properties .p2lrn-studio-sheet-head h1{font-size:23px;line-height:1.2}',
   '@media(max-width:520px){.p2lrn-ribbon-top{padding:10px}.p2lrn-ribbon-panel{padding:10px}.p2lrn-ribbon-name small{max-width:180px}.p2lrn-ribbon-group{gap:4px}.p2lrn-ribbon-divider{display:none}}'
 ].join('\n');
 
@@ -166,6 +180,21 @@ function select(doc,items,label){
   }
   return el;
 }
+export function collapseStudioLessonProperties({header,title}={}){
+  if(!header?.parentNode||!title)return null;
+  const doc=header.ownerDocument;
+  const details=doc.createElement('details');details.className='p2lrn-studio-lesson-properties';
+  const summary=doc.createElement('summary');
+  summary.setAttribute('aria-label','Editar título y descripción de la lección');
+  const label=doc.createElement('span');label.className='p2lrn-studio-property-label';label.textContent='Propiedades de lección';
+  const name=doc.createElement('strong');name.className='p2lrn-studio-property-name';
+  const sync=()=>{name.textContent=title.textContent?.trim()||'Lección sin título';};
+  sync();title.addEventListener('input',sync);
+  const affordance=doc.createElement('span');affordance.className='p2lrn-studio-property-edit';affordance.textContent='Editar título y descripción';
+  summary.append(label,name,affordance);
+  header.replaceWith(details);details.append(summary,header);
+  return details;
+}
 export function applyUnifiedStudioWorkspace({workspace,outline,canvas,stage,sheet}={}){
   for(const [item,cls] of [[workspace,'p2lrn-studio-workspace'],[outline,'p2lrn-studio-outline'],[canvas,'p2lrn-studio-canvas'],[stage,'p2lrn-studio-stage'],[sheet,'p2lrn-studio-sheet']])
     if(item)item.classList.add(cls);
@@ -186,7 +215,18 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   const name=node(doc,'div','p2lrn-ribbon-name');
   name.append(node(doc,'strong','', 'P2LRN Studio'));
   const documentName=node(doc,'small','', 'Editor visual de cursos');
-  name.append(documentName);identity.append(mark,name);top.append(identity);
+  name.append(documentName);identity.append(mark,name);
+  const outlineToggle=button(doc,'Esquema',{title:'Mostrar la estructura del curso',cls:'p2lrn-outline-toggle'});
+  const workspace=root.querySelector('.p2lrn-studio-workspace');
+  const outline=workspace?.querySelector('.p2lrn-studio-outline');
+  if(outline&&workspace){
+    if(!outline.id)outline.id='p2lrn-studio-outline';
+    outlineToggle.setAttribute('aria-controls',outline.id);
+    const sync=()=>outlineToggle.setAttribute('aria-expanded',String(workspace.dataset.outlineOpen==='true'));
+    outlineToggle.addEventListener('click',()=>{workspace.dataset.outlineOpen=String(workspace.dataset.outlineOpen!=='true');sync();});
+    sync();identity.append(outlineToggle);
+  }
+  top.append(identity);
   const topActions=node(doc,'div','p2lrn-ribbon-actions');
   const fileMenu=node(doc,'details','p2lrn-file-menu');
   fileMenu.append(node(doc,'summary','','Archivo'));
@@ -299,6 +339,9 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   const structure=group(insert);
   for(const [action,title] of [['addUnit','+ Unidad'],['addLesson','+ Lección']])
     if(actions[action])structure.append(button(doc,title,{action}));
+  for(const [id,label] of [['insertImage','Imagen'],['insertVideo','Vídeo']]){
+    if(actions[id])structure.append(button(doc,label,{action:id,title:'Insertar '+label.toLowerCase()+' en la lección'}));
+  }
   let activityDialog=null;
   function openActivityPicker(){
     if(!hasDocument){onStatus('Crea o abre un curso primero.');return;}
@@ -432,6 +475,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   }
   function refreshButtons(){
     const enabled=Boolean(surface())&&!previewMode;
+    for(const button of bar.querySelectorAll('[data-ui-action=insertImage],[data-ui-action=insertVideo]'))button.disabled=!enabled;
     for(const b of commandButtons.values())b.disabled=!enabled;
     for(const cmd of ['bold','italic','underline','strikeThrough']){
       const b=commandButtons.get(cmd);if(!b)continue;
@@ -479,6 +523,10 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   if(root!==doc)root.addEventListener('selectionchange',remember);
   mount.append(bar);
   const advanced=mountAdvancedStudioTools({bar,root,resolveSurface,onStatus});
+  const dismissFileMenu=event=>{if(fileMenu.open&&!fileMenu.contains(event.target))fileMenu.open=false;};
+  const dismissFileKeys=event=>{if(event.key==='Escape'&&fileMenu.open){fileMenu.open=false;fileMenu.querySelector('summary')?.focus();event.stopPropagation();}};
+  root.addEventListener('pointerdown',dismissFileMenu,true);
+  root.addEventListener('keydown',dismissFileKeys,true);
   function setPreviewMode(value){
     previewMode=Boolean(value);
     preview.setAttribute('aria-pressed',String(previewMode));
@@ -510,6 +558,8 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     performObject:advanced.performObject,
     get history(){return advanced.history;},
     dispose(){
+      root.removeEventListener('pointerdown',dismissFileMenu,true);
+      root.removeEventListener('keydown',dismissFileKeys,true);
       advanced.dispose();
       activityDialog?.remove();
       doc.removeEventListener('selectionchange',remember);
