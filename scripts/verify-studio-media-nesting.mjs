@@ -11,6 +11,7 @@ const flag=(name,fallback)=>{const i=process.argv.indexOf(name);return i<0?fallb
 const port=Number(flag('--port','5531'));
 const out=flag('--output','');
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const REAL_WEBM_BASE64=(await readFile(new URL('./studio-media-test.webm',import.meta.url))).toString('base64');
 const executable=[
   process.env.P2LRN_CHROME,
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -162,7 +163,7 @@ async function inspectSaasCapabilities(){
   return {ok:true,outline:true,fileMenuKeyboard:true,lessonProperties:true,mediaOptions:true,mediaInsert:true,contextTabs:true,targetSizes:true,onePlaceTextAndTable:true,noDuplicates:true,responsiveMore:true};
 }
 
-async function inspectMediaNesting(){
+async function inspectMediaNesting(webmBase64){
   const root=document.querySelector('p2lrn-studio')?.shadowRoot||document;
   const ribbon=root.querySelector('.p2lrn-studio-ribbon');
   const lesson=root.querySelector('[data-studio-html-surface=true]');
@@ -178,33 +179,8 @@ async function inspectMediaNesting(){
   clickLayout('text-box');
   const box=columns.querySelector('[data-p2lrn-layout=text-box]');check(box,'Text box was not nested into a column');
   const png='iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==';
-  async function makeRealWebm(){
-    check(typeof MediaRecorder==='function'&&MediaRecorder.isTypeSupported('video/webm'),'Browser has no WebM recording support');
-    const canvas=document.createElement('canvas');canvas.width=96;canvas.height=54;
-    const ctx=canvas.getContext('2d');check(ctx,'Canvas renderer not available');
-    canvas.style.cssText='position:fixed;right:0;bottom:0;opacity:0;pointer-events:none';document.body.append(canvas);
-    const stream=canvas.captureStream(0);const track=stream.getVideoTracks()[0];
-    check(track&&typeof track.requestFrame==='function','Canvas frame capture is unavailable');
-    const recorder=new MediaRecorder(stream,{mimeType:'video/webm'});
-    const pieces=[];
-    let resolveStop,rejectStop;
-    const stopped=new Promise((resolve,reject)=>{resolveStop=resolve;rejectStop=reject;});
-    recorder.ondataavailable=e=>{if(e.data?.size)pieces.push(e.data);};
-    recorder.onerror=e=>rejectStop(new Error(String(e.error?.message||'Recording error')));
-    recorder.onstop=()=>resolveStop();
-    recorder.start();
-    for(let frame=0;frame<6;frame++){
-      ctx.fillStyle=frame%2?'#467bbe':'#d9e9f5';ctx.fillRect(0,0,96,54);
-      ctx.fillStyle='#183b6b';ctx.fillRect(frame*7,18,18,18);
-      track.requestFrame();await pause(130);
-    }
-    recorder.requestData();recorder.stop();await stopped;
-    stream.getTracks().forEach(track=>track.stop());canvas.remove();
-    const bytes=new Uint8Array(await new Blob(pieces,{type:'video/webm'}).arrayBuffer());
-    check(bytes.byteLength>100,'Generated WebM is empty');
-    return bytes;
-  }
-  const realVideoBytes=await makeRealWebm();
+  check(typeof webmBase64==='string'&&webmBase64.length>100,'Missing reproducible WebM test fixture');
+  const realVideoBytes=Uint8Array.from(atob(webmBase64),c=>c.charCodeAt(0));
   const imageBytes=Uint8Array.from(atob(png),c=>c.charCodeAt(0));
   async function upload(selector,bytes,name,mime,query){
     const input=root.querySelector(selector);check(input,'Missing picker '+selector);
@@ -425,7 +401,7 @@ try{
       await writeFile(join(out,'saas-'+sample.id+'-menu-open-mobile.png'),Buffer.from(menuImage.data,'base64'));
     }
     await evalExpr("(()=>{const r=document.querySelector('p2lrn-studio')?.shadowRoot||document;const m=r.querySelector('[data-studio-context-menu=columnas]');if(m)m.open=false;return true})()");
-    const media=await evalExpr("("+inspectMediaNesting.toString()+")()");
+    const media=await evalExpr("("+inspectMediaNesting.toString()+")("+JSON.stringify(REAL_WEBM_BASE64)+")");
     assert(media?.ok,sample.id+" media interaction regression");
     info.mediaNesting=media;
     const selectVideo=await evalExpr("(async()=>{const root=document.querySelector(\'p2lrn-studio\')?.shadowRoot||document;const v=root.querySelector(\'video[data-p2lrn-lesson-video]\');if(!v)return {found:false};v.scrollIntoView({block:\'center\',behavior:\'instant\'});await new Promise(done=>setTimeout(done,180));v.dispatchEvent(new MouseEvent(\'click\',{bubbles:true}));const o=root.querySelector(\'.p2lrn-lesson-media-options\');const r=o?.getBoundingClientRect();return {found:true,open:!!o?.open,hidden:!!o?.hidden,videoHeight:Math.round(v.getBoundingClientRect().height),toolbarRect:r?{x:r.x,y:r.y,width:r.width,height:r.height}:null,viewportHeight:innerHeight,viewportWidth:innerWidth};})()");
