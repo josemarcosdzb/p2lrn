@@ -65,7 +65,7 @@ jobs:
             node --check $path
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-          node --test packages/toolkit/test/quest-3d-mobile-input.test.mjs packages/toolkit/test/quest-3d-aulap2p-parity.test.mjs packages/toolkit/test/quest-3d-player-physics.test.mjs
+          node --test packages/toolkit/test/quest-3d-mobile-input.test.mjs packages/toolkit/test/quest-3d-aulap2p-parity.test.mjs packages/toolkit/test/quest-3d-player-physics.test.mjs packages/toolkit/test/quest-3d-matching-finished.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Studio interface regressions
         run: node --test packages/toolkit/test/studio-visual-layout.test.mjs packages/toolkit/test/studio-advanced-history.test.mjs packages/studio/test/dist-dependencies.test.mjs
