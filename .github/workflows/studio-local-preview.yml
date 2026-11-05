@@ -1,0 +1,124 @@
+name: P2LRN local Studio previews (web and npm)
+
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'dev/studio-preview/**'
+      - 'scripts/build-studio-local-preview.mjs'
+      - 'scripts/serve-studio-local-preview.mjs'
+      - 'scripts/verify-studio-local-preview.mjs'
+      - '.github/workflows/studio-local-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-studio-local-preview
+  cancel-in-progress: false
+
+jobs:
+  build-and-serve:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    outputs:
+      port: ${{ steps.serve.outputs.port }}
+      directory: ${{ steps.serve.outputs.directory }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify preview scripts before execution
+        shell: powershell
+        run: |
+          foreach ($path in @('scripts/build-studio-local-preview.mjs','scripts/serve-studio-local-preview.mjs','scripts/verify-studio-local-preview.mjs')) {
+            node --check $path
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Build complete local hosted Studio and npm Studio
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sha = $env:GITHUB_SHA.Substring(0,8)
+          $dir = Join-Path (Join-Path $env:USERPROFILE 'Downloads') ('p2lrn-mejorastudio-preview-' + $sha)
+          node scripts/build-studio-local-preview.mjs --output "$dir"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "P2LRN_STUDIO_PREVIEW_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Start one loopback HTTP server with two separate URLs
+        id: serve
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = $env:P2LRN_STUDIO_PREVIEW_DIR
+          $free = $null
+          foreach ($candidate in 5531..5540) {
+            if (!(Get-NetTCPConnection -LocalPort $candidate -State Listen -ErrorAction SilentlyContinue)) {
+              $free = $candidate
+              break
+            }
+          }
+          if (!$free) { throw 'Local ports 5531-5540 are already occupied. No processes were stopped.' }
+          $script = Join-Path $dir 'preview-server.mjs'
+          $stdout = Join-Path $dir 'preview-server.stdout.log'
+          $stderr = Join-Path $dir 'preview-server.stderr.log'
+          $node = (Get-Command node).Source
+          $args = ('"{0}" --root "{1}" --port {2}' -f $script,$dir,$free)
+          $previous = $env:RUNNER_TRACKING_ID
+          $env:RUNNER_TRACKING_ID = ''
+          try {
+            $process = Start-Process -FilePath $node -ArgumentList $args -WorkingDirectory $dir -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          } finally {
+            $env:RUNNER_TRACKING_ID = $previous
+          }
+          $process.Id | Out-File (Join-Path $dir 'preview-server.pid') -Encoding ascii
+          $base = 'http://127.0.0.1:' + $free
+          $ok = $false
+          for ($try=0; $try -lt 60; $try++) {
+            try {
+              $response = Invoke-RestMethod -Uri ($base + '/__preview_health') -TimeoutSec 3
+              if ($response.ok -eq $true) { $ok=$true; break }
+            } catch { Start-Sleep -Milliseconds 400 }
+          }
+          if (!$ok) { Get-Content $stderr -ErrorAction SilentlyContinue; throw 'Preview server failed its health check.' }
+          foreach ($path in @('/studio/','/studio/studio.js','/studio/runtime/command-bar.js','/player/current/dist/p2lrn.js','/npm-studio/','/studio/current/dist/p2lrn-studio.js')) {
+            $response=Invoke-WebRequest -Uri ($base+$path) -UseBasicParsing -TimeoutSec 8
+            if ($response.StatusCode -ne 200) { throw 'Preview returned HTTP '+$response.StatusCode+' for '+$path }
+          }
+          "P2LRN_PREVIEW_PORT=$free" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "port=$free" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "directory=$dir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Output ('WEB_URL=' + $base + '/studio/')
+          Write-Output ('NPM_URL=' + $base + '/npm-studio/')
+          Write-Output ('LOCAL_DIRECTORY=' + $dir)
+          Write-Output ('SERVER_PID=' + $process.Id)
+      - name: Verify both editors in real Chrome or Edge and save screenshots
+        run: node scripts/verify-studio-local-preview.mjs --port $env:P2LRN_PREVIEW_PORT --output "$env:P2LRN_STUDIO_PREVIEW_DIR"
+        shell: powershell
+
+  confirm-server-survives-runner-job:
+    needs: build-and-serve
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 5
+    steps:
+      - name: Verify HTTP after the original runner job exits
+        shell: powershell
+        env:
+          PREVIEW_PORT: ${{ needs.build-and-serve.outputs.port }}
+          PREVIEW_DIRECTORY: ${{ needs.build-and-serve.outputs.directory }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $url = 'http://127.0.0.1:' + $env:PREVIEW_PORT
+          $health = Invoke-RestMethod -Uri ($url + '/__preview_health') -TimeoutSec 8
+          if (!$health.ok -or $health.branch -ne 'mejorastudio') { throw 'Preview is not healthy after job exit.' }
+          foreach ($path in @('/studio/','/npm-studio/')) {
+            $response = Invoke-WebRequest -Uri ($url + $path) -UseBasicParsing -TimeoutSec 8
+            if ($response.StatusCode -ne 200) { throw ('Preview missing '+$path) }
+          }
+          Write-Output ('VERIFIED_WEB=' + $url + '/studio/')
+          Write-Output ('VERIFIED_NPM=' + $url + '/npm-studio/')
+          Write-Output ('SCREENSHOTS=' + (Join-Path $env:PREVIEW_DIRECTORY 'qa-web.png') + '; ' + (Join-Path $env:PREVIEW_DIRECTORY 'qa-npm.png'))
