@@ -330,7 +330,8 @@ function buildMatchingControls({trial,runtime,scene,status}) {
     scene.highlight(`left:${selected}`,false);
     selected=null;
     leftButtons.forEach((button)=>button.classList.remove('is-selected'));
-    setText(status,allMatched()?completedMessage():playerUiText(`Conexión correcta · ${connections.length}/${trial.connections.length}`));
+    setText(status,playerUiText(`Conexión correcta · ${connections.length}/${trial.connections.length}`)
+      +(allMatched()?` · ${completedMessage()}`:''));
     return true;
   }
 
