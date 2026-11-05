@@ -33,6 +33,7 @@ function createMatchingHarness(source,{savedPairs={}}={}){
     playerUiText:(text)=>text,
     setText:(node,text)=>{node.textContent=String(text);},
     appendUniqueConnection,connectionKey,validateConnection,
+    seedText:()=>42,
     matchingPositions:(side,total)=>Array.from({length:total},(_,index)=>[
       side==='left'?-5:5,0,index*2,
     ]),
