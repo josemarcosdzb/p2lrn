@@ -80,37 +80,73 @@ async function findVisibleText(locator,{minimumText=30,marker=null}={}){
  throw Error('Content was missing/empty. textLength='+result.length+' bodyText='+result.slice(0,650));
 }
 
-async function verifyLoadButton(route,language){
+async function verifyLocalPackageUpload(route,language){
  const page=await browser.newPage({viewport:{width:1360,height:800}});
- const caseName='viewer-load-button-'+language;
+ const caseName='viewer-local-package-upload-'+language;
+ const networkWrites=[];
+ page.on('request',req=>{
+  if(['POST','PUT','PATCH'].includes(req.method()))networkWrites.push({method:req.method(),url:req.url()});
+ });
  try{
    const initial='/examples/generated/scorm12-browser-demo.p2lrn';
    await page.goto(base+route+'?src='+encodeURIComponent(initial),{waitUntil:'domcontentloaded',timeout:30000});
-   await page.locator('p2lrn-player .p2lrn-head').waitFor({timeout:40000});
-   await page.locator('[data-load]').waitFor({timeout:10000});
+   const example=page.locator('[data-sample]');
+   const player=page.locator('#demo-player');
+   await player.locator('.p2lrn-head').waitFor({timeout:40000});
    const events=page.locator('[data-event-log]');
    const count=async()=>((await events.innerText()).match(/p2lrn:ready/g)??[]).length;
    await page.waitForFunction(()=>String(document.querySelector('[data-event-log]')?.textContent??'').includes('p2lrn:ready'),null,{timeout:25000});
+   assert.equal(await page.locator('[data-package-url]').count(),0,'Obsolete URL input still present');
+   assert.equal(await page.locator('[data-file-input][type=file][multiple]').count(),1,'Native multi-file picker missing');
+   const catalogItems=await example.locator('option').allTextContents();
+   assert.ok(catalogItems.some(item=>item.includes('Catapult')),'Existing cmi5 examples disappeared');
+   assert.ok(catalogItems.some(item=>item.includes('SCORM')),'Existing SCORM examples disappeared');
+
+   const chooserPromise=page.waitForEvent('filechooser',{timeout:12000});
+   await page.locator('[data-load]').click();
+   const chooser=await chooserPromise;
+   assert.equal(chooser.isMultiple(),true,'Load package must support selecting multiple local .p2lrn files');
+   await chooser.setFiles([
+     join(root,'examples','canonical','external','cmi5-catapult-pre-post.p2lrn'),
+     join(root,'examples','canonical','external','scorm12-real.p2lrn'),
+   ]);
+   await page.waitForFunction(()=>document.querySelector('#demo-player')?.getAttribute('src')?.startsWith('blob:'),null,{timeout:45000});
+   const firstSrc=await player.getAttribute('src');
+   assert.ok(firstSrc.startsWith('blob:'),'The chosen local file must be played through a browser object URL');
+   const uploaded=example.locator('optgroup option').filter({hasText:/^(cmi5-catapult-pre-post\.p2lrn|scorm12-real\.p2lrn)$/});
+   await page.waitForFunction(()=>document.querySelectorAll('[data-sample] option[value^="blob:"]').length===2,null,{timeout:30000});
+   assert.equal(await uploaded.count(),2,'Both local packages must be listed');
+   await page.waitForFunction(()=>String(document.querySelector('[data-event-log]')?.textContent??'').includes('p2lrn:ready'),null,{timeout:25000});
+   assert.ok((await events.innerText()).includes('inspect'),'Uploaded package must be verified');
+   const localLabel=await page.locator('[data-package-label]').innerText();
+   assert.equal(localLabel,'cmi5-catapult-pre-post.p2lrn');
+   assert.ok(!(new URL(page.url()).searchParams.get('src')||'').startsWith('blob:'),'Never persist session-local blob URLs in address bar');
+
    const before=await count();
-   assert.ok(before>0,'Initial P2LRN example was not loaded');
-   assert.equal(await page.locator('[data-package-file]').count(),0,'Unexpected local file picker');
-   await page.locator('[data-load]').click();
-   await page.waitForFunction(n=>((document.querySelector('[data-event-log]')?.textContent??'').match(/p2lrn:ready/g)??[]).length>n,before,{timeout:25000});
-   assert.equal(new URL(await page.locator('#demo-player').getAttribute('src'),base).pathname,initial);
-   const next='/examples/canonical/external/cmi5-catapult-pre-post.p2lrn';
-   await page.locator('[data-package-url]').fill(base+next);
-   const oldCount=await count();
-   await page.locator('[data-load]').click();
-   await page.waitForFunction(path=>document.querySelector('#demo-player')?.getAttribute('src')?.endsWith(path),next,{timeout:20000});
-   await page.waitForFunction(n=>((document.querySelector('[data-event-log]')?.textContent??'').match(/p2lrn:ready/g)??[]).length>n,oldCount,{timeout:25000});
-   await page.screenshot({path:join(screenshotRoot,caseName+'.png'),fullPage:false});
-   results.push({case:caseName,status:'PASS',sameUrlReload:true,urlChange:true,extraFilePicker:false});
+   await example.selectOption({label:'scorm12-real.p2lrn'});
+   await page.waitForFunction(first=>document.querySelector('#demo-player')?.getAttribute('src')?.startsWith('blob:')&&document.querySelector('#demo-player')?.getAttribute('src')!==first,firstSrc,{timeout:30000});
+   await page.waitForFunction(n=>((document.querySelector('[data-event-log]')?.textContent??'').match(/p2lrn:ready/g)??[]).length>n,before,{timeout:35000});
+   assert.equal(await page.locator('[data-package-label]').innerText(),'scorm12-real.p2lrn');
+   const secondSrc=await player.getAttribute('src');
+   const beforeReload=await count();
+   await page.locator('[data-reload]').click();
+   await page.waitForFunction(n=>((document.querySelector('[data-event-log]')?.textContent??'').match(/p2lrn:ready/g)??[]).length>n,beforeReload,{timeout:35000});
+   assert.equal(await player.getAttribute('src'),secondSrc,'Reload must keep the selected local package');
+
+   // Selecting a public sample again must not delete the locally added files.
+   await example.selectOption('/examples/generated/scorm12-browser-demo.p2lrn');
+   await page.waitForFunction(()=>String(document.querySelector('#demo-player')?.getAttribute('src')??'').includes('scorm12-browser-demo.p2lrn'),null,{timeout:30000});
+   assert.equal(await example.locator('option[value^="blob:"]').count(),2,'Locally added courses must remain selectable after opening an example');
+   assert.equal(networkWrites.length,0,'Local files must never be POSTed to a server by the public viewer');
+   await page.screenshot({path:join(screenshotRoot,caseName+'.png'),fullPage:false,animations:'disabled'});
+   results.push({case:caseName,status:'PASS',filesLoaded:2,exampleRestored:true,reloadWorks:true,serverUploads:0});
  }catch(error){
    results.push({case:caseName,status:'FAIL',reason:String(error?.message??error).slice(0,1300),
-    log:(await page.locator('[data-event-log]').textContent().catch(()=>''))?.slice(-2600)});
+     log:(await page.locator('[data-event-log]').textContent().catch(()=>''))?.slice(-2700)});
    await page.screenshot({path:join(screenshotRoot,caseName+'-FAIL.png'),fullPage:false,timeout:6000}).catch(()=>{});
  }finally{await page.close();}
 }
+
 try{
  for(const item of cases){
   const page=await browser.newPage({viewport:{width:1350,height:850}});
@@ -172,8 +208,8 @@ try{
    results.push({case:item.name,status:'FAIL',reason:String(error?.message??error).slice(0,900),diagnostic,errors});
   }finally{await page.close();}
  }
- await verifyLoadButton('/demo/','es');
- await verifyLoadButton('/en/demo/','en');
+ await verifyLocalPackageUpload('/demo/','es');
+ await verifyLocalPackageUpload('/en/demo/','en');
 }finally{
  await browser.close();
  await new Promise(r=>server.close(r));
