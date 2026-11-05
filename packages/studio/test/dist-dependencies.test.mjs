@@ -29,3 +29,13 @@ test('Studio distribution copies localized UI and deferred-grading editor module
     await source('packages/toolkit/web/studio/'+file);
   }
 });
+
+// Ensure dependencies of copied root modules are not omitted from the npm release.
+test('Studio npm build includes renderer localization required by course rights',async()=>{
+  const rights=await source('packages/toolkit/web/course-rights.js');
+  assert.match(rights,/from\s+['"]\.\/renderers\/ui-i18n\.js['"]/);
+  const build=await source('packages/studio/scripts/build-dist.mjs');
+  assert.ok(build.includes("join(out,'renderers','ui-i18n.js')"),
+    'The npm Studio dist must preserve the transitive renderers/ui-i18n.js import');
+  await source('packages/toolkit/web/renderers/ui-i18n.js');
+});
