@@ -63,6 +63,9 @@ const browser=await chromium.launch({executablePath:browserExe,headless:true,arg
 const results=[];
 const cases=[
  {name:'cmi5-geology-pretest',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',frame:'iframe.p2lrn-package-runtime',marker:/pre.?test|question|geology|pregunta|assessment|test/i,minimumText:30},
+ {name:'cmi5-geology-content-1',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',navigateTo:'Content',navigateIndex:0,frame:'iframe.p2lrn-package-runtime',marker:/geology|earth|content|next|previous|rock|page/i,minimumText:28},
+ {name:'cmi5-geology-content-2',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',navigateTo:'Content',navigateIndex:1,frame:'iframe.p2lrn-package-runtime',marker:/geology|earth|content|next|previous|rock|page/i,minimumText:28},
+ {name:'cmi5-geology-posttest',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',navigateTo:'Post-test',navigateIndex:0,frame:'iframe.p2lrn-package-runtime',marker:/post.?test|geology|assessment|question|test/i,minimumText:28},
  {name:'scorm12-interactive',course:'/examples/generated/scorm12-browser-demo.p2lrn',frame:'iframe.p2lrn-scorm-runtime',marker:/Lección SCORM interactiva/,minimumText:70,button:'Completar lección',after:/Lección completada/},
  {name:'qti3-interactive',course:'/examples/generated/qti3-interactive-demo.p2lrn',marker:/Marte|planeta rojo/,minimumText:70},
  {name:'h5p-crossword',course:'/examples/canonical/external/h5p-crossword.p2lrn',frame:'iframe.p2lrn-h5p-frame',marker:/across|down|check|show solution|crucigrama|crossword|palabra/i,minimumText:12},
@@ -86,6 +89,66 @@ try{
    await page.goto(base+'/demo/?src='+encodeURIComponent(item.course),{waitUntil:'domcontentloaded',timeout:30000});
    await page.locator('p2lrn-player .p2lrn-head').waitFor({timeout:45000});
    const player=page.locator('p2lrn-player');
+   if(item.navigateTo){
+     const available=player.locator('nav.p2lrn-nav button').filter({hasText:new RegExp('^'+item.navigateTo+'
+   let content=item.frame?player.frameLocator(item.frame).locator('body'):player.locator('.p2lrn-stage');
+   if(item.name==='h5p-crossword'){
+     const outer=player.frameLocator(item.frame);
+     const nested=outer.locator('iframe.h5p-iframe');
+     if(await nested.waitFor({timeout:22000}).then(()=>true).catch(()=>false))
+       content=outer.frameLocator('iframe.h5p-iframe').locator('body');
+   }
+   const text=await findVisibleText(content,item);
+   if(item.name==='h5p-crossword'){
+     const controls=await content.locator('input,button,[role="button"],canvas').count();
+     assert.ok(controls>0,'Crossword is visible but lacks interactive controls');
+   }
+   if(item.button){
+    await player.frameLocator(item.frame).getByRole('button',{name:item.button}).click({timeout:10000});
+    await findVisibleText(content,{marker:item.after,minimumText:20});
+   }
+   const violations=errors.filter(error=>/content security policy|not allowed to load local resource|refused to execute|refused to load/i.test(error));
+   if(violations.length)
+     throw new Error('Course visible but blocked by CSP: '+violations.slice(0,3).join(' | '));
+   const image=join(screenshotRoot,item.name+'.png');
+   try {
+     // A long scrollable cmi5 course can exceed full-page screenshot limits
+     // despite fully visible and operational activity content.
+     await page.screenshot({path:image,fullPage:false,animations:'disabled',timeout:15000});
+   } catch (captureError) {
+     await player.screenshot({path:image,animations:'disabled',timeout:12000})
+       .catch(fallbackError=>{throw new Error('Activity visible but screenshot unavailable: '+String(captureError)+'; '+String(fallbackError));});
+   }
+   results.push({case:item.name,status:'PASS',visibleTextLength:text.length,preview:text.slice(0,220),errors});
+  }catch(error){
+   const image=join(screenshotRoot,item.name+'-FAIL.png');
+   try{await page.screenshot({path:image,fullPage:false,animations:'disabled',timeout:7000});}catch{}
+   const diagnostic=await page.evaluate(()=>{
+    const p=document.querySelector('p2lrn-player');
+    return {
+      state:document.querySelector('[data-runtime-state]')?.textContent,
+      viewerLog:document.querySelector('[data-event-log]')?.textContent?.slice(-5500),
+      playerStage:p?.shadowRoot?.querySelector('.p2lrn-stage')?.textContent?.slice(0,1000),
+      playerHtml:p?.shadowRoot?.querySelector('.p2lrn-stage')?.innerHTML?.slice(0,1200),
+    };
+   }).catch(err=>({diagnosticError:String(err)}));
+   results.push({case:item.name,status:'FAIL',reason:String(error?.message??error).slice(0,900),diagnostic,errors});
+  }finally{await page.close();}
+ }
+}finally{
+ await browser.close();
+ await new Promise(r=>server.close(r));
+}
+await writeFile(join(screenshotRoot,'report.json'),JSON.stringify({results},null,2));
+console.log('P2LRN_EXTERNAL_DEMO_CSP='+demoCsp);
+console.log('P2LRN_EXTERNAL_BROWSER_VISUAL_QA='+JSON.stringify({results}));
+if(results.some(x=>x.status==='FAIL'))process.exitCode=1;
+,'i')});
+     const button=available.nth(item.navigateIndex??0);
+     await button.waitFor({timeout:20000});
+     assert.equal(await button.isDisabled(),false,'Expected playable '+item.navigateTo+' activity');
+     await button.click({timeout:20000});
+   }
    if(item.frame)await player.locator(item.frame).waitFor({timeout:25000});
    let content=item.frame?player.frameLocator(item.frame).locator('body'):player.locator('.p2lrn-stage');
    if(item.name==='h5p-crossword'){
