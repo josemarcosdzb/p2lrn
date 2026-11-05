@@ -14,6 +14,9 @@ const player=await buildPlayerDistribution({output:playerDist});
 const published=join(site,'player','current','dist');
 await mkdir(join(site,'player','current'),{recursive:true});
 await cp(playerDist,published,{recursive:true,force:true});
+// The site's demo boot sequence registers this root-scope service worker.
+// Without it, boot() exits before it sets the course src or builds navigation.
+await cp(join(playerDist,'p2lrn-sw.js'),join(site,'p2lrn-sw.js'),{force:true});
 
 for(const relative of [
   'p2lrn.js','renderers/questionnaire-3d.js',
