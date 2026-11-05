@@ -184,7 +184,6 @@
 .p2lrn-word-answer.is-solved { font-weight: 700; }
 
 
-.p2lrn-3d-move-pad { display: grid; grid-template-columns: repeat(4,minmax(2.5rem,auto)); gap: .4rem; max-width: 18rem; }
 .p2lrn-3d-canvas:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 
 /* Consistent controls and identifiable tentative matching links. */
@@ -353,3 +352,9 @@
 @media (prefers-reduced-motion:reduce) {
   .p2lrn-3d-joystick-knob { transition:none; }
 }
+
+/* Immersive 3D questions should use the available reading width, not the
+   compact two-column layout used by accessible HTML fallback forms. */
+.p2lrn-game-shell.p2lrn-3d-game{max-width:1380px;width:100%;margin-inline:auto}
+.p2lrn-3d-game .p2lrn-3d-stage{width:100%}
+.p2lrn-3d-game .p2lrn-3d-stage canvas{image-rendering:auto}
