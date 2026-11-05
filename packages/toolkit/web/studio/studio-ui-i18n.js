@@ -1,6 +1,16 @@
 // Reviewed website/editor UI translations. Do not translate learner-authored content
 // or serialized identifiers. This module is shared by the Spanish and English site.
 const EN={
+  "Modo de corrección": "Grading method",
+  "Automática: corregir al finalizar": "Automatic: grade on submission",
+  "Corregir después: no incluir soluciones": "Grade later: omit answer keys",
+  "Mostrar resultados al alumno": "Show results to learner",
+  "Revisa y marca las respuestas correctas antes de publicar la corrección automática.": "Review and mark correct answers before publishing automatic grading.",
+  "Corregir después: el paquete no incluirá las soluciones; los alumnos entregarán respuestas sin nota automática. El profesor las revisará en su plataforma o al importar la entrega.": "Grade later: the package will not contain answer keys; learners submit answers without automatic scores. The teacher reviews them in the platform or on import.",
+  "Este juego necesita soluciones durante su ejecución. Para crear preguntas sin solución y corregirlas después, utiliza Cuestionario con el tipo de pregunta correspondiente.": "This game needs answer keys to run. For answer-free questions graded later, use a standard Questionnaire with the corresponding question type.",
+  "Respuesta abierta: el profesor corregirá después. No se guarda una lista de respuestas correctas en el curso.": "Open response: the teacher will grade it later. No accepted answers are stored in the course.",
+  "Cada afirmación se responde de forma independiente. La corrección se realizará después.": "Each statement is answered separately. The teacher will grade it later.",
+  "Elemento de la derecha": "Right-side item",
   "Insertar vídeo": "Insert video",
   "Eliminar recurso": "Remove media",
   "Portada del vídeo": "Video poster",
