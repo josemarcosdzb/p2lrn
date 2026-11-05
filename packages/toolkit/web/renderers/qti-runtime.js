@@ -1,4 +1,5 @@
 import {dispatchRuntimeEvent} from '../runtime-events.js';
+import {inspectQTIItemCompatibility} from '../qti-compatibility.js';
 
 export const acceptsPayload = false;
 const decoder = new TextDecoder('utf-8', {fatal:false});
@@ -61,6 +62,29 @@ export async function render({container, bytes, payload, eventTarget, adapter, c
     box.className = 'p2lrn-message';
     box.textContent = `QTI ${kind || 'document'} is preserved, but this browser renderer currently delivers assessment items only.`;
     container.append(box);
+    return {destroy(){container.replaceChildren();}};
+  }
+
+  const support=inspectQTIItemCompatibility(doc);
+  dispatchRuntimeEvent(eventTarget,'p2lrn:qtipreflight',{
+    scope:support.scope,supported:support.supported,
+    supportedInteractions:support.interactions.length,
+    unsupportedInteractions:support.unsupported.map(item=>item.name),
+    responseProcessing:support.responseProcessing,
+    authoritativeScoring:false,
+  },context,{adapter});
+  if(!support.supported){
+    const note=document.createElement('div');note.className='p2lrn-message';
+    note.textContent='QTI no ejecutable por este Player: '+support.reason+
+      (support.unsupported.length?' ('+support.unsupported.map(item=>item.name).join(', ')+')':'')+
+      '. Se conserva el contenido original sin generar una calificación.';
+    container.replaceChildren(note);
+    dispatchRuntimeEvent(eventTarget,'p2lrn:executionblocked',{
+      profile:'https://p2lrn.org/profile/qti',
+      code:support.reason,
+      unsupportedInteractions:support.unsupported.map(item=>item.name),
+      authoritative:false,
+    },context,{adapter});
     return {destroy(){container.replaceChildren();}};
   }
 
