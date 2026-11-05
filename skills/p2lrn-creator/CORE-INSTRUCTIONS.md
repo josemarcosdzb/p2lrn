@@ -70,8 +70,11 @@ La carpeta `assets/ejemplo-curso.json` contiene un blueprint de muestra con lecc
 
 ## Diseño visual de lecciones y presentaciones (rama de desarrollo `mejorastudio`)
 
-- En Studio, usar el motor oficial de composición HTML de `packages/toolkit/web/studio/visual-layout.js`, conectado a los editores web y NPM. Permite insertar secciones, dos columnas, destacados, tablas y separadores. Las lecciones siguen siendo HTML válido dentro del paquete `.p2lrn`.
+- En Studio, `packages/toolkit/web/studio/command-bar.js` es la **única interfaz de edición** para la web y `@p2lrn/studio`. Ambos deben importar la misma barra, el selector de actividades y los mismos estilos; no mantener interfaces duplicadas ni eliminar capacidades al unificarlas.
+- Los bloques HTML se generan con `packages/toolkit/web/studio/visual-layout.js`: secciones, dos columnas, destacados, tablas y separadores. El editor guarda HTML semántico dentro del paquete `.p2lrn`, sin scripts incrustados.
+- En ambos entornos, el menú Archivo debe conservar Guardar, Guardar borrador local, Recuperar borrador, Eliminar borrador, exportación y revisión de entregas. El guardado remoto NPM sigue siendo dependiente de un Host autorizado. Usar el diálogo común con búsqueda para añadir juegos, cuestionarios, actividades y recursos.
 - Tratar estos bloques como una base de autoría visual, **no** como un editor PowerPoint completo. La Skill no debe prometer importación/exportación `.pptx`, exportación PDF, animaciones, capas o fidelidad de diapositivas mientras no existan comandos oficiales y pruebas reales.
 - Para lecciones con imágenes, combinar las herramientas visuales con el editor oficial de recursos. Para cuestionarios, juegos y formatos externos, conservar sus editores y perfiles existentes.
 - Seguir `docs/studio-visual-editor-roadmap.md` para el contrato pendiente de páginas/diapositivas, barra de menús SaaS, importadores y exportadores. No implementar la interfaz de Studio dentro de la Skill, ni copiar librerías de autoría de Office en el empaquetador Python limitado.
-- Antes de publicar o fusionar: ejecutar `node --test packages/toolkit/test/studio-visual-layout.test.mjs`, construir `@p2lrn/studio`, verificar round-trip `.p2lrn` y probar en navegador las dos interfaces y el Player.
+- Para comprobar la interfaz compartida ejecutar `node --test packages/toolkit/test/studio-visual-layout.test.mjs`, `node packages/studio/scripts/build-dist.mjs` y `node scripts/verify-studio-unified-ui.mjs` con Chrome/Edge. Antes de fusionar, comprobar además las interfaces completas, el Player y los flujos de Studio web, NPM y host.
+- Prohibido realizar merge a `main`, publicar NPM o desplegar cambios de esta rama sin petición expresa del usuario.
