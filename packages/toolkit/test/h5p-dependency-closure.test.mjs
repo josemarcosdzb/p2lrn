@@ -9,7 +9,10 @@ function nested({required=[dep('H5P.Parent')],libraries=[],content={}}={}){
     ['h5p.json',{mainLibrary:'H5P.Parent',title:'Test',preloadedDependencies:required}],
     ['content/content.json',content],
   ]);
-  for(const {folder,metadata} of libraries)files.set(folder+'/library.json',metadata);
+  for(const {folder,metadata,files:assets=[]} of libraries){
+    files.set(folder+'/library.json',metadata);
+    for(const asset of assets)files.set(folder+'/'+asset,'fake local asset bytes');
+  }
   return {
     names:()=>[...files.keys()],
     read:async path=>{
@@ -82,4 +85,23 @@ test('H5P content dependency scan is bounded against excessive JSON graphs',asyn
     content:{children:Array.from({length:50100},()=>({}))},
     libraries:[lib('H5P.Parent')],
   })),{code:'P2LRN_H5P_DEPENDENCY_SCAN_LIMIT'});
+});
+
+test('a bundled H5P library with a missing preloaded JavaScript or CSS asset fails before execution',async()=>{
+  const library=lib('H5P.Parent');
+  library.metadata.preloadedJs=[{path:'scripts/main.js'}];
+  library.metadata.preloadedCss=[{path:'styles/main.css'}];
+  await assert.rejects(inspectH5PPackage(nested({libraries:[library]})),{
+    code:'P2LRN_H5P_LIBRARY_ASSET_MISSING',
+  });
+  const healthy={...library,files:['scripts/main.js','styles/main.css']};
+  const result=await inspectH5PPackage(nested({libraries:[healthy]}));
+  assert.equal(result.dependencyClosure.complete,true);
+});
+test('H5P asset references cannot traverse outside their library folder',async()=>{
+  const library=lib('H5P.Parent');
+  library.metadata.preloadedJs=[{path:'../outside.js'}];
+  await assert.rejects(inspectH5PPackage(nested({libraries:[library]})),{
+    code:'P2LRN_H5P_LIBRARY_ASSET_UNSAFE',
+  });
 });
