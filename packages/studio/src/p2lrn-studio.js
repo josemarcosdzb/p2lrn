@@ -238,7 +238,6 @@ export class P2LRNStudioElement extends HTMLElement{
     if(!this.#unifiedBar)this.#unifiedBar=mountStudioCommandBar({
       mount:q('.toolbar'),
       resolveSurface:()=>q('[data-studio-html-surface="true"]'),
-      addContentElement:q('[data-add-menu]'),
       onStatus:(message)=>this.setStatus(message),
       actions:{
         create:()=>this.createCourse(),
@@ -250,6 +249,8 @@ export class P2LRNStudioElement extends HTMLElement{
         review:()=>q('[data-result-file]').click(),
         addUnit:()=>this.addUnit(),
         addLesson:()=>this.addLesson(),
+        addKind:(kind)=>this.addContent(kind),
+        canAddKind:(kind)=>kind!=='shared-library'||Boolean(this.#resourceLibrary),
         preview:()=>this.setMode('preview'),
         edit:()=>this.setMode('edit')
       }
@@ -469,7 +470,7 @@ export class P2LRNStudioElement extends HTMLElement{
       }
       const structured=await this.#studio.readStructuredJson(entity.id);
       if(structured){
-        renderStructuredVisualEditor(sheet,{model:this.#studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>this._updateState(),onStructureChange:()=>{this._renderTree();this._updateState();},onStatus:(message)=>this.setStatus(message),onSelectActivity:(id)=>{this.#selected=id;this._renderTree();void this._renderEditor();},onCreateChild:(id)=>{this.#selected=id;this._renderTree();const menu=this.shadowRoot.querySelector('[data-add-menu]');if(menu)menu.open=true;}});
+        renderStructuredVisualEditor(sheet,{model:this.#studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>this._updateState(),onStructureChange:()=>{this._renderTree();this._updateState();},onStatus:(message)=>this.setStatus(message),onSelectActivity:(id)=>{this.#selected=id;this._renderTree();void this._renderEditor();},onCreateChild:(id)=>{this.#selected=id;this._renderTree();this.#unifiedBar?.openActivities();}});
         stage.append(sheet);return;
       }
       const editable=await this.#studio.readEditableText(entity.id);
