@@ -193,6 +193,12 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   scene.add(player);
 
   const movement={forward:false,back:false,left:false,right:false};
+  // Analog movement comes from the touch joystick; keyboard remains available on desktop.
+  const analogMovement={x:0,y:0};
+  function setMovementVector(x=0,y=0){
+    analogMovement.x=Number.isFinite(x)?Math.max(-1,Math.min(1,x)):0;
+    analogMovement.y=Number.isFinite(y)?Math.max(-1,Math.min(1,y)):0;
+  }
   let cameraYaw=0;
   let cameraPitch=-0.05;
   let cameraDrag=null;
@@ -244,8 +250,11 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(movement.back)velocity.sub(forward);
     if(movement.left)velocity.sub(right);
     if(movement.right)velocity.add(right);
+    velocity.addScaledVector(forward,analogMovement.y);
+    velocity.addScaledVector(right,analogMovement.x);
     if(velocity.lengthSq()>0){
-      velocity.normalize().multiplyScalar(4.3*delta);
+      // Preserve the stick's analog speed and never make diagonals faster.
+      velocity.clampLength(0,1).multiplyScalar(4.3*delta);
       player.position.add(velocity);
       player.position.x=clamp(player.position.x,-10.2,10.2);
       player.position.z=clamp(player.position.z,-7.8,11.8);
@@ -518,6 +527,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   }
   function onPointerDown(event){
     if(event.button!==0&&event.pointerType==='mouse')return;
+    // Clicking the scene enters keyboard mode without pointer lock, so users
+    // can still select, drag and connect objects directly.
+    canvas.focus({preventScroll:true});
+    if(cameraDrag)return;
     const hit=raycastInteraction(event,{dispatch:false});
     const draggable=hit&&['ordering-object','classification-object','matching-left'].includes(hit.meta.kind);
     const objectDrag=Boolean(draggable&&onDrag(hit.meta,'start',{position:pointerWorldPosition(event),event,hit}));
@@ -554,7 +567,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
   }
   function onPointerCancel(event){
-    if(cameraDrag?.mode==='object')onDrag(cameraDrag.source,'cancel',{event});
+    if(!cameraDrag||cameraDrag.pointerId!==event.pointerId)return;
+    if(cameraDrag.mode==='object')onDrag(cameraDrag.source,'cancel',{event});
     cameraDrag=null;
   }
   function onKeyDown(event){
@@ -574,7 +588,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(code==='KeyD'||code==='ArrowRight')movement.right=false;
   }
 
+  function clearKeys(){for(const key of Object.keys(movement))movement[key]=false;}
   canvas.tabIndex=0;
+  canvas.addEventListener('blur',clearKeys);
+  globalThis.addEventListener?.('blur',clearKeys);
   canvas.addEventListener('pointerdown',onPointerDown);
   canvas.addEventListener('pointermove',onPointerMove);
   canvas.addEventListener('pointerup',onPointerUp);
@@ -603,6 +620,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     playerPosition:()=>[player.position.x,player.position.y,player.position.z],
     resetPlayer,
     nudgePlayer,
+    setMovementVector,
     destroy() {
       alive=false;
       cancelAnimationFrame(raf);
@@ -612,6 +630,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       canvas.removeEventListener('pointercancel',onPointerCancel);
       canvas.removeEventListener('keydown',onKeyDown);
       canvas.removeEventListener('keyup',onKeyUp);
+      canvas.removeEventListener('blur',clearKeys);
+      globalThis.removeEventListener?.('blur',clearKeys);
+      setMovementVector(0,0);
+      clearKeys();
       clearStage();
       physicsWorld.destroy?.();
       renderer.dispose();
