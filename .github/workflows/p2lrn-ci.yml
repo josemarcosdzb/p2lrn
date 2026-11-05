@@ -500,6 +500,18 @@ jobs:
           node scripts/verify-studio-image-reflow.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Validate automatic vs deferred grading in Studio and Player
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web/studio/questionnaire-editor.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/studio/questionnaire-grading.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/studio-deferred-grading.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-studio-deferred-grading.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Verify unified footer, legal navigation and Studio form isolation
         shell: powershell
         run: |
