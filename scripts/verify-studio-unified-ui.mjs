@@ -56,7 +56,7 @@ async function browserScenario(){
         create:on('create'),open:on('open'),save:on('save'),
         export:on('export'),offline:on('offline'),
         review:on('review'),addUnit:on('unit'),addLesson:on('lesson'),
-        addContent:on('activity'),preview:on('preview'),edit:on('edit')
+        addContent:on('activity'),addKind:(kind)=>{actions.push('kind:'+kind);},preview:on('preview'),edit:on('edit')
       },
       onStatus:msg=>actions.push('status:'+msg)
     });
@@ -74,6 +74,18 @@ async function browserScenario(){
   expect(website.html===npm.html,'Website and npm command trees are different');
   for(const item of [website,npm]){
     item.toolbar.querySelector('[role=tab][aria-controls*="-insert"]').click();
+    const add=[...item.toolbar.querySelectorAll('button')].find(b=>b.textContent==='Añadir contenido');
+    expect(add&&!add.disabled,'Common activity picker action missing');
+    add.click();
+    const picker=item.root.querySelector('.p2lrn-activity-picker');
+    expect(picker?.open,'Activity picker did not open in its DOM root');
+    const search=picker.querySelector('input[type=search]');search.value='crucigrama';
+    search.dispatchEvent(new Event('input',{bubbles:true}));
+    const crossword=picker.querySelector('[data-activity-kind=crossword]');
+    expect(crossword&&!crossword.hidden,'Searching the shared activity catalog failed');
+    crossword.click();
+    await new Promise(done=>setTimeout(done,0));
+    expect(item.actions.includes('kind:crossword'),'Shared activity picker did not dispatch the chosen game');
     const insert=item.toolbar.querySelector('[data-ui-layout=columns]');
     expect(insert&&!insert.disabled,'Columns action unavailable');
     insert.click();
