@@ -335,6 +335,63 @@ export interface P2LRNServiceWorkerOptions {
   scope?: string;
 }
 
+/** An inspection report is not a certificate that SCORM/QTI/H5P fully executes. */
+export interface P2LRNExecutionDiagnostic {
+  readonly code:string;
+  readonly message:string;
+  readonly rendererId:string|null;
+  readonly representationId:string|null;
+}
+export interface P2LRNExecutionPlan {
+  readonly schema:'https://p2lrn.org/schema/execution-plan/1';
+  readonly version:'1';
+  readonly status:'ready'|'conditional'|'blocked';
+  readonly offline:boolean;
+  readonly rendererId:string|null;
+  readonly rendererVersion:string|null;
+  readonly representationId:string|null;
+  readonly profile:string|null;
+  readonly kind:string|null;
+  readonly conformance:string|null;
+  readonly limitations:readonly string[];
+  readonly dependencies:readonly Readonly<{id:string;required:boolean;version?:string|null}>[];
+  readonly permissions:readonly string[];
+  readonly requiredCapabilities:readonly string[];
+  readonly diagnostics:readonly P2LRNExecutionDiagnostic[];
+}
+export interface P2LRNExecutionNegotiationOptions {
+  readonly representations?:readonly unknown[];
+  readonly entity?:unknown;
+  readonly resource?:unknown;
+  readonly requestedRenderer?:string|null;
+  readonly offline?:boolean;
+  readonly roleRank?:(representation:unknown)=>number;
+  readonly excludeRendererIds?:readonly string[];
+  readonly context?:Readonly<Record<string,unknown>>;
+  readonly requiredCapabilities?:readonly string[];
+  readonly isCapabilityAvailable?:(id:string,context:Readonly<Record<string,unknown>>)=>boolean|Promise<boolean>;
+}
+export interface P2LRNPackageExecutionReport {
+  readonly schema:'https://p2lrn.org/schema/execution-plan/1';
+  readonly version:'1';
+  readonly packageId:string|null;
+  readonly contentRoot:string|null;
+  readonly offline:boolean;
+  readonly activities:readonly (P2LRNExecutionPlan & Readonly<{activityId:string;resourceId:string|null}>)[];
+  readonly total:number;
+  readonly ready:number;
+  readonly conditional:number;
+  readonly blocked:number;
+}
+export const executionPlanSchema:'https://p2lrn.org/schema/execution-plan/1';
+export const executionPlanVersion:'1';
+export function negotiateExecution(options?:P2LRNExecutionNegotiationOptions):
+  Promise<Readonly<{candidate:unknown|null;report:P2LRNExecutionPlan}>>;
+export function inspectPackageExecution(pkg:unknown,options?:{
+  offline?:boolean;
+  isCapabilityAvailable?:(id:string,context:Readonly<Record<string,unknown>>)=>boolean|Promise<boolean>;
+}):Promise<P2LRNPackageExecutionReport>;
+
 export interface P2LRNPublicAPI {
   readonly version: "0.5.0-alpha.12";
   readonly toolkitVersion: "0.5.0-alpha.12";
@@ -347,6 +404,10 @@ export interface P2LRNPublicAPI {
   readonly registerRenderer: typeof registerRenderer;
   readonly unregisterRenderer: typeof unregisterRenderer;
   readonly renderers: typeof renderers;
+  readonly negotiateExecution:typeof negotiateExecution;
+  readonly inspectPackageExecution:typeof inspectPackageExecution;
+  readonly executionPlanSchema:typeof executionPlanSchema;
+  readonly executionPlanVersion:typeof executionPlanVersion;
   readonly registerComponent: typeof registerComponent;
   readonly unregisterComponent: typeof unregisterComponent;
   readonly components: typeof components;
