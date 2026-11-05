@@ -517,7 +517,7 @@ jobs:
           node deploy/netlify/build-site.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (-not (Test-Path .netlify-cdn/examples/catalog.json)) { throw 'Viewer catalog missing from canonical website build' }
-          if (-not (Test-Path .netlify-cdn/examples/canonical/creator-course.p2lrn)) { throw 'Canonical viewer fixture missing from website build' }
+          if (-not (Test-Path .netlify-cdn/examples/generated/scorm12-browser-demo.p2lrn)) { throw 'Imported SCORM viewer fixture missing from website build' }
           if (-not (Test-Path .netlify-cdn/p2lrn-sw.js)) { throw 'Root Service Worker missing from website build' }
           $catalog = Get-Content -Raw .netlify-cdn/examples/catalog.json | ConvertFrom-Json
           if ($catalog.examples.Count -le 1) { throw 'Website catalog must include the canonical and generated examples' }

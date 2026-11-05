@@ -86,25 +86,20 @@ for(const rel of ['deploy/netlify/site/docs/empezar-facil/index.html','deploy/ne
   }
 }
 const examplesPage=await readFile(join(root,'deploy/netlify/site/docs/ejemplos/index.html'),'utf8');
-const executableSection=/<section class="doc-section"><h2>Ejemplos ejecutables<\/h2>([\s\S]*?)<\/section>/i.exec(examplesPage)?.[1]??'';
-for(const href of [
-  '/examples/generated/questionnaire-standard.p2lrn',
-  '/examples/generated/questionnaire-memory.p2lrn',
-  '/examples/generated/questionnaire-matching.p2lrn',
-  '/examples/generated/questionnaire-ordering.p2lrn',
-  '/examples/generated/questionnaire-classification.p2lrn',
-  '/examples/generated/questionnaire-true-false.p2lrn',
-  '/examples/generated/questionnaire-word-search.p2lrn',
-  '/examples/generated/questionnaire-crossword.p2lrn',
-  '/examples/generated/questionnaire-rosco.p2lrn',
-  '/examples/generated/questionnaire-3d.p2lrn',
-  '/examples/multipart-demo/course.p2lrn',
-]){
-  const needle='<a href="'+href+'" download>Paquete</a>';
-  if(!executableSection.includes(needle)){
-    failures.push('deploy/netlify/site/docs/ejemplos/index.html: executable examples missing downloadable package '+href);
-  }
+const requiredImportedExamples = [
+  '/examples/canonical/external/scorm12-real.p2lrn',
+  '/examples/canonical/external/h5p-crossword.p2lrn',
+  '/examples/canonical/external/qti3-minimal.p2lrn',
+  '/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',
+  '/examples/generated/scorm12-browser-demo.p2lrn',
+  '/examples/generated/qti3-interactive-demo.p2lrn',
+];
+for(const href of requiredImportedExamples){
+  if(!examplesPage.includes(href))failures.push('deploy/netlify/site/docs/ejemplos/index.html: imported example missing '+href);
 }
+if(/\/examples\/(?:canonical\/(?!external\/)|generated\/questionnaire-|multipart-demo\/)/u.test(examplesPage))
+  failures.push('deploy/netlify/site/docs/ejemplos/index.html: old native demo links must not be published');
+
 const progressionDocs=article(await readFile(join(root,'deploy/netlify/site/docs/progresion/index.html'),'utf8'));
 if(!progressionDocs.includes('<p class="eyebrow">SEGUIMIENTO / PROGRESIÓN</p>')){
   failures.push('deploy/netlify/site/docs/progresion/index.html: progression must belong to Seguimiento, not Empezar');

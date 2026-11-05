@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {cp, copyFile, mkdir, readFile, readdir, rename, stat, writeFile} from 'node:fs/promises';
+import {cp, copyFile, mkdir, readFile, readdir, rename, rm, stat, writeFile} from 'node:fs/promises';
 import {dirname, join, relative, resolve} from 'node:path';
 import {openP2LRNPackageBytes} from '../../packages/toolkit/web/p2lrn-player.js';
 import {buildDocExamples} from './build-doc-examples.mjs';
@@ -90,22 +90,15 @@ async function inspectPackage(path) {
 }
 
 const examplesOutput = join(outputRoot,'examples');
+// Always reset examples so deleted courses cannot survive incremental Netlify builds.
+await rm(examplesOutput,{recursive:true,force:true});
 await mkdir(examplesOutput,{recursive:true});
 const canonicalSource = join(root,'examples','canonical');
 const canonicalOutput = join(examplesOutput,'canonical');
-await cp(canonicalSource,canonicalOutput,{recursive:true,force:true});
+await mkdir(canonicalOutput,{recursive:true});
+await cp(join(canonicalSource,'external'),join(canonicalOutput,'external'),{recursive:true,force:true});
 
-// Preserve the old short URLs while publishing the complete canonical corpus.
-for (const entry of await readdir(canonicalSource,{withFileTypes:true})) {
-  if (entry.isFile() && entry.name.endsWith('.p2lrn')) {
-    const source = join(canonicalSource,entry.name);
-    const destination = join(examplesOutput,entry.name);
-    await copyFile(source,destination);
-    const [sourceBytes,publishedBytes] = await Promise.all([readFile(source),readFile(destination)]);
-    if (!sourceBytes.equals(publishedBytes)) throw new Error(`Published short example differs from canonical bytes: ${entry.name}`);
-    await inspectPackage(destination);
-  }
-}
+// Only imported interoperability packages remain in the public canonical corpus.
 for (const name of ['developer-course','developer-game-3d']) {
   try {
     await cp(join(root,'examples',name),join(examplesOutput,'source',name),{recursive:true,force:true});
@@ -118,7 +111,7 @@ const canonicalDisplayTitles = Object.freeze({
   'external/cmi5-catapult-pre-post.p2lrn':'cmi5 Catapult · Introduction to Geology',
 });
 const canonicalEntries = [];
-for (const path of (await walk(canonicalSource)).filter((item)=>item.endsWith('.p2lrn')).sort()) {
+for (const path of (await walk(join(canonicalSource,'external'))).filter((item)=>item.endsWith('.p2lrn')).sort()) {
   const rel = relative(canonicalSource,path).replaceAll('\\','/');
   const publishedPath = join(canonicalOutput,...rel.split('/'));
   const [sourceBytes,publishedBytes] = await Promise.all([readFile(path),readFile(publishedPath)]);
@@ -138,22 +131,17 @@ for (const path of (await walk(canonicalSource)).filter((item)=>item.endsWith('.
   });
 }
 
-const generatedEntries = await buildDocExamples({outputRoot:examplesOutput});
+// Native documentation fixtures are verified during the build, but must not be published.
+const documentationExamples = await buildDocExamples({outputRoot:examplesOutput});
+const generatedEntries = documentationExamples.filter((entry)=>entry.category==='generated-external');
 const requiredExecutableExamples = ['scorm12-browser-demo.p2lrn','qti3-interactive-demo.p2lrn'];
 for (const name of requiredExecutableExamples) {
   const demoPath = join(examplesOutput,'generated',name);
   if (!(await exists(demoPath))) throw new Error('Executable documentation example is missing: ' + name);
   await inspectPackage(demoPath);
 }
-const verifiedDefaultViewerExample=canonicalEntries.find((example)=>example.url==='/examples/canonical/creator-course.p2lrn');
-if(!verifiedDefaultViewerExample)throw new Error('The public viewer default must be a verified local playable package.');
-// Preserve the documented quickstart download without editing its documentation page.
-const quickstartPath=join(examplesOutput,'quickstart.p2lrn');
-const quickstartSource=join(canonicalSource,'creator-course.p2lrn');
-await copyFile(quickstartSource,quickstartPath);
-const [quickstartBytes,quickstartOriginal]=await Promise.all([readFile(quickstartPath),readFile(quickstartSource)]);
-if(!quickstartBytes.equals(quickstartOriginal))throw new Error('Quickstart compatibility example differs from verified course');
-await inspectPackage(quickstartPath);
+const verifiedDefaultViewerExample=generatedEntries.find((example)=>example.url==='/examples/generated/scorm12-browser-demo.p2lrn');
+if(!verifiedDefaultViewerExample)throw new Error('The public viewer default must be a validated imported SCORM package.');
 const catalog = {
   defaultExample:verifiedDefaultViewerExample.url,
   schema:'https://p2lrn.org/schema/docs-example-catalog/1',
@@ -797,6 +785,16 @@ async function exists(path) {
   try { return (await stat(path)).isFile(); }
   catch { return false; }
 }
+// QA fixtures are used to verify questionnaire and multipart functionality during the build,
+// but only imported SCORM and QTI packages are distributed on the public site.
+for(const example of documentationExamples){
+  if(example.category==='generated-external')continue;
+  if(!example.url.startsWith('/examples/'))throw new Error('Invalid QA example path');
+  const parts=example.url.slice('/examples/'.length).split('/');
+  if(parts.some((part)=>!part||part==='.'||part==='..'))throw new Error('Unsafe QA example path');
+  await rm(join(examplesOutput,...parts),{force:true});
+}
+await rm(join(examplesOutput,'multipart-demo'),{recursive:true,force:true});
 const broken = [];
 const refPattern = /\b(?:href|src)=["']([^"']+)["']/gi;
 for (const path of htmlFiles) {

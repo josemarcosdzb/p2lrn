@@ -12,8 +12,8 @@ Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeS
 - Colaboración conectada ligera: el componente nativo de votación/pizarra/peer review usa `collaboration.room` con `join`, `send`, `listen`, `snapshot` y `leave`; identidad, transporte y persistencia permanecen en el host. El Player incluye un provider en memoria para pruebas/local, no como servidor de producción.
 - Analítica pedagógica: `p2lrn:attempt` separa el ciclo de intento y `p2lrn:interaction` cubre cambios de respuesta, apertura de recursos, reproducción/pausa/seek y acciones colaborativas sin convertir la telemetría genérica en captura de texto, teclas o coordenadas.
 - `schemas/`, `profiles/`, `spec/`, `integration/`: material canónico con namespace P2LRN.
-- `examples/canonical/`: 18 paquetes `.p2lrn` validados.
-- `examples/legacy-alpha15/`: los 17 paquetes `.p2rln` usados para comprobar retrocompatibilidad.
+- `examples/canonical/external/`: 4 paquetes `.p2lrn` importados de SCORM, H5P, QTI y cmi5 publicados; las demás muestras canónicas se mantienen temporalmente como fixtures técnicos de pruebas y no se distribuyen en la web.
+- `examples/legacy-alpha15/external/`: 4 paquetes externos `.p2rln` preservados; el resto de fixtures legacy se mantiene solo para validar retrocompatibilidad interna.
 
 ## Identidad P2LRN
 

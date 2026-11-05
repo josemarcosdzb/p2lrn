@@ -1395,7 +1395,7 @@ async function prepareConnectedArchitectureFixtures(){
   const sharedExport=await exportP2LRNPackage(shared);
   await writeFile(join(dir,'shared-resource.p2lrn'),sharedExport.bytes);
 
-  await cp(join(siteRoot,'examples','canonical','web-bundle-course.p2lrn'),join(dir,'offline-web.p2lrn'),{force:true});
+  await cp(join(root,'examples','canonical','web-bundle-course.p2lrn'),join(dir,'offline-web.p2lrn'),{force:true});
   return Object.freeze({activityId:activity.id,collaborationActivityId:poll.id,sharedActivityId:sharedActivity.id,sharedSvg,sharedDigest,offlineSource:join(dir,'offline-web.p2lrn')});
 }
 
