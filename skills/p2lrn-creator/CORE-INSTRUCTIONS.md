@@ -67,3 +67,11 @@ La carpeta `assets/ejemplo-curso.json` contiene un blueprint de muestra con lecc
 - Cada conversación debe entregar el archivo de unidad y el manifiesto actualizado como archivos reales. En otra conversación recuperar los archivos mediante las herramientas autorizadas o solicitar que se adjunten; nunca presumir que los binarios persisten en el historial.
 - Buscar información e imágenes en Internet cuando existan herramientas de búsqueda. Contrastar fuentes, registrar URL, autor, licencia y atribución; no incorporar imágenes con licencia incompatible ni afirmar que están embebidas sin verificar el paquete y el Player.
 - No generar ejecutables Windows mediante multipart. El empaquetado multipart es independiente de la exportación offline de Studio.
+
+## Diseño visual de lecciones y presentaciones (rama de desarrollo `mejorastudio`)
+
+- En Studio, usar el motor oficial de composición HTML de `packages/toolkit/web/studio/visual-layout.js`, conectado a los editores web y NPM. Permite insertar secciones, dos columnas, destacados, tablas y separadores. Las lecciones siguen siendo HTML válido dentro del paquete `.p2lrn`.
+- Tratar estos bloques como una base de autoría visual, **no** como un editor PowerPoint completo. La Skill no debe prometer importación/exportación `.pptx`, exportación PDF, animaciones, capas o fidelidad de diapositivas mientras no existan comandos oficiales y pruebas reales.
+- Para lecciones con imágenes, combinar las herramientas visuales con el editor oficial de recursos. Para cuestionarios, juegos y formatos externos, conservar sus editores y perfiles existentes.
+- Seguir `docs/studio-visual-editor-roadmap.md` para el contrato pendiente de páginas/diapositivas, barra de menús SaaS, importadores y exportadores. No implementar la interfaz de Studio dentro de la Skill, ni copiar librerías de autoría de Office en el empaquetador Python limitado.
+- Antes de publicar o fusionar: ejecutar `node --test packages/toolkit/test/studio-visual-layout.test.mjs`, construir `@p2lrn/studio`, verificar round-trip `.p2lrn` y probar en navegador las dos interfaces y el Player.
