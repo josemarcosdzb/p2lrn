@@ -59,6 +59,9 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $dir = $env:P2LRN_STUDIO_PREVIEW_DIR
+          $worker = Join-Path $dir 'p2lrn-sw.js'
+          if (!(Test-Path -LiteralPath $worker)) { throw ('Missing compiled Player service worker: '+$worker) }
+          Write-Output ('LOCAL_PREVIEW_WORKER=' + $worker)
           $free = $null
           foreach ($candidate in 5531..5540) {
             if (!(Get-NetTCPConnection -LocalPort $candidate -State Listen -ErrorAction SilentlyContinue)) {
@@ -85,7 +88,8 @@ jobs:
           for ($try=0; $try -lt 60; $try++) {
             try {
               $response = Invoke-RestMethod -Uri ($base + '/__preview_health') -TimeoutSec 3
-              if ($response.ok -eq $true) { $ok=$true; break }
+              if ($response.ok -eq $true -and $response.commit -eq $env:GITHUB_SHA) { $ok=$true; break }
+              Write-Output ('PREVIEW_HEALTH_STALE=' + $response.commit + '; expected=' + $env:GITHUB_SHA)
             } catch { Start-Sleep -Milliseconds 400 }
           }
           if (!$ok) { Get-Content $stderr -ErrorAction SilentlyContinue; throw 'Preview server failed its health check.' }
