@@ -56,11 +56,22 @@ function resolve(base, ref) {
   const raw = String(ref || '').trim();
   if (!raw || raw[0] === '#' || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(raw)) return null;
   const match = /^([^?#]*)(\?[^#]*)?(#.*)?$/u.exec(raw);
-  const target = match?.[1] || '';
-  const root = target.startsWith('/');
+  let target = match?.[1] || '';
+  // IMS Common Cartridge exported by Canvas uses this portable file-base token.
+  // Its files live at web_resources/ in the preserved cartridge, not alongside
+  // the current wiki_content/ page. Decode percent-encoded filenames safely.
+  const cartridgeFile = /^\$IMS-CC-FILEBASE\$\//iu.exec(target);
+  const root = Boolean(cartridgeFile) || target.startsWith('/');
+  if (cartridgeFile) target = 'web_resources/' + target.slice(cartridgeFile[0].length);
+  try { target = decodeURIComponent(target); } catch { return null; }
   const baseDir = base.includes('/') ? base.slice(0, base.lastIndexOf('/') + 1) : '';
-  const path = normalize(root ? target.slice(1) : baseDir + target);
+  const path = normalize(root ? target.replace(/^\//u, '') : baseDir + target);
   return path && files.has(path) ? {path, suffix:(match?.[2] || '') + (match?.[3] || '')} : null;
+}
+function blobReference(url, suffix) {
+  const value = String(suffix ?? '');
+  const hash = value.indexOf('#');
+  return String(url) + (hash < 0 ? '' : value.slice(hash));
 }
 function text(path) {
   return new TextDecoder('utf-8', {fatal:false}).decode(files.get(path).buffer);
@@ -149,7 +160,7 @@ function rewriteCss(css, base, stack = new Set()) {
     })
     .replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/giu, (all, _q, ref) => {
       const resolved = resolve(base, ref);
-      return resolved && urls.has(resolved.path) ? `url("${urls.get(resolved.path)}${resolved.suffix}")` : all;
+      return resolved && urls.has(resolved.path) ? `url("${blobReference(urls.get(resolved.path),resolved.suffix)}")` : all;
     });
 }
 function rewriteElementTree(root, path) {
@@ -173,14 +184,14 @@ function rewriteElementTree(root, path) {
         el.setAttribute('data-p2lrn-frame-member', resolved.path);
         continue;
       }
-      if (urls.has(resolved.path)) el.setAttribute(attr, urls.get(resolved.path) + resolved.suffix);
+      if (urls.has(resolved.path)) el.setAttribute(attr, blobReference(urls.get(resolved.path),resolved.suffix));
     }
     if (el.hasAttribute('style')) el.setAttribute('style', rewriteCss(el.getAttribute('style'), path));
     if (el.hasAttribute('srcset')) {
       el.setAttribute('srcset', el.getAttribute('srcset').split(',').map((item) => {
         const bits = item.trim().split(/\s+/);
         const resolved = resolve(path, bits[0]);
-        if (resolved && urls.has(resolved.path)) bits[0] = urls.get(resolved.path) + resolved.suffix;
+        if (resolved && urls.has(resolved.path)) bits[0] = blobReference(urls.get(resolved.path),resolved.suffix);
         return bits.join(' ');
       }).join(', '));
     }
@@ -215,7 +226,7 @@ function rewriteHtml(path) {
   }
   const csp = doc.createElement('meta');
   csp.httpEquiv = 'Content-Security-Policy';
-  csp.content = "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src blob:; form-action 'none'; base-uri 'none'; object-src 'none';";
+  csp.content = "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'unsafe-inline' blob:; img-src blob: data: https:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src blob:; form-action 'none'; base-uri 'none'; object-src 'none';";
   if (!doc.querySelector('meta[name="viewport"]')) {
     const viewport = doc.createElement('meta');
     viewport.name = 'viewport';

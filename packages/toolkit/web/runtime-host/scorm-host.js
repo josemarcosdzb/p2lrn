@@ -72,6 +72,11 @@ function resolve(base, ref) {
   return path && files.has(path) ? {path, suffix: (match?.[2] || '') + (match?.[3] || '')} : null;
 }
 
+function blobReference(url, suffix) {
+  const value = String(suffix ?? '');
+  const hash = value.indexOf('#');
+  return String(url) + (hash < 0 ? '' : value.slice(hash));
+}
 function text(path) {
   return new TextDecoder('utf-8', {fatal: false}).decode(files.get(path).buffer);
 }
@@ -92,7 +97,7 @@ function rewriteCss(css, base, stack = new Set()) {
     })
     .replace(/url\(\s*(['"]?)([^'"\)]+)\1\s*\)/gi, (all, _q, ref) => {
       const resolved = resolve(base, ref);
-      return resolved && urls.has(resolved.path) ? `url("${urls.get(resolved.path)}${resolved.suffix}")` : all;
+      return resolved && urls.has(resolved.path) ? `url("${blobReference(urls.get(resolved.path),resolved.suffix)}")` : all;
     });
 }
 
@@ -146,14 +151,14 @@ function rewriteHtml(path) {
         el.setAttribute('data-p2lrn-frame-member', resolved.path);
         continue;
       }
-      if (urls.has(resolved.path)) el.setAttribute(attr, urls.get(resolved.path) + resolved.suffix);
+      if (urls.has(resolved.path)) el.setAttribute(attr, blobReference(urls.get(resolved.path),resolved.suffix));
     }
     if (el.hasAttribute('style')) el.setAttribute('style', rewriteCss(el.getAttribute('style'), path));
     if (el.hasAttribute('srcset')) {
       el.setAttribute('srcset', el.getAttribute('srcset').split(',').map((item) => {
         const bits = item.trim().split(/\s+/);
         const resolved = resolve(path, bits[0]);
-        if (resolved && urls.has(resolved.path)) bits[0] = urls.get(resolved.path) + resolved.suffix;
+        if (resolved && urls.has(resolved.path)) bits[0] = blobReference(urls.get(resolved.path),resolved.suffix);
         return bits.join(' ');
       }).join(', '));
     }
@@ -240,6 +245,15 @@ async function navigate(path, suffix = '') {
   const mediaType = files.get(path).mediaType || '';
   if (!mediaType.includes('html') && !mediaType.includes('xhtml')) throw new Error(`SCORM launch member is not HTML/XHTML: ${path}`);
   activePath = path;
+  // Catch incomplete archives before the browser silently emits a generic
+  // script load error inside the nested SCO document.
+  const documentSource = text(path);
+  const parsedScripts = new DOMParser().parseFromString(documentSource, 'text/html');
+  for (const script of parsedScripts.querySelectorAll('script[src]')) {
+    const reference = script.getAttribute('src') || '';
+    if (!/^(?:[a-z][a-z0-9+.-]*:|\/\/)/iu.test(reference) && !resolve(path, reference))
+      throw new Error('SCORM source package is missing JavaScript: ' + reference + ' (in ' + path + ')');
+  }
 
   const next = document.createElement('iframe');
   next.id = 'content';

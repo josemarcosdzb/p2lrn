@@ -140,17 +140,36 @@ async function nestedPackage(pkg, representation, payload) {
 async function runtimeFiles(nested) {
   const names = nested.names?.() ?? [];
   if (names.length > 10000) throw new Error(`External package contains too many files (${names.length}).`);
-  const files = [], transfers = [];
-  let total = 0;
-  for (const path of names) {
-    const bytes = await nested.read(path);
-    total += bytes.byteLength;
-    if (total > 512 * 1024 * 1024) throw new Error('External package runtime payload exceeds 512 MiB.');
-    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-    files.push({path, mediaType:mediaTypeForPath(path), buffer});
-    transfers.push(buffer);
+  const maxBytes = 512 * 1024 * 1024;
+  const entries = nested.archive?.entries;
+  // Reject oversized archives before allocating hundreds of content blobs.
+  if (entries) {
+    let declared = 0;
+    for (const path of names) {
+      const size = entries.get(path)?.uncompressedSize;
+      if (!Number.isSafeInteger(size) || size < 0) throw new Error('Invalid external package member size: ' + path);
+      declared += size;
+      if (declared > maxBytes) throw new Error('External package runtime payload exceeds 512 MiB.');
+    }
   }
-  return {files, transfers};
+  // Independent ZIP members can decompress concurrently; keep bounded memory,
+  // preserve source order and never loosen the runtime size/file ceilings.
+  const files = new Array(names.length);
+  let nextIndex = 0;
+  let total = 0;
+  const workers = Array.from({length:Math.min(names.length, 8)},async()=>{
+    while (nextIndex < names.length) {
+      const index = nextIndex++;
+      const path = names[index];
+      const bytes = await nested.read(path);
+      total += bytes.byteLength;
+      if (total > maxBytes) throw new Error('External package runtime payload exceeds 512 MiB.');
+      const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      files[index] = {path, mediaType:mediaTypeForPath(path), buffer};
+    }
+  });
+  await Promise.all(workers);
+  return {files, transfers:files.map(file=>file.buffer)};
 }
 
 export async function render({container, payload, representation, package:pkg, eventTarget, adapter, context, runtimeBaseUrl}) {

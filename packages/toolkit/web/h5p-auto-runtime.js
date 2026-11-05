@@ -61,6 +61,7 @@ export function getAutomaticH5PRuntimeResources(baseUrl=DEFAULT_BASE_URL) {
   return Object.freeze({
     baseUrl:staticBase.href,
     hostScriptUrl:new URL('h5p-host.js',staticBase).href,
+    opaqueRuntimeUrl:new URL('h5p-opaque.html',staticBase).href,
     runtimeAssetsUrl:new URL('assets/',staticBase).href,
     sharedLibrariesUrl:new URL('h5p-libraries/',staticBase).href,
   });

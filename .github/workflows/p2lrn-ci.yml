@@ -265,6 +265,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify real playback and hostile-content isolation
         run: node scripts/verify-automatic-runtimes.mjs
+      - name: Verify imported H5P and Common Cartridge with real Chrome
+        run: |
+          node scripts/verify-imported-formats-browser.mjs h5p-boardgame
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-imported-formats-browser.mjs common-cartridge-topkit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-imported-formats-browser.mjs common-cartridge-plan
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-imported-formats-browser.mjs scorm12-bilan-moodle
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   license-integrity:
     if: ${{ contains(github.event.head_commit.message, '[license verify]') || (github.event_name == 'workflow_dispatch' && inputs.license_only) }}

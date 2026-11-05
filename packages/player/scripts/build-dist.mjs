@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto';
 import {cp, mkdir, readFile, readdir, rm, stat, writeFile} from 'node:fs/promises';
 import {dirname, extname, join, relative, resolve} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath, pathToFileURL} from 'node:url';
 
 import {
   H5P_STANDALONE_VERSION,
@@ -61,6 +61,12 @@ export async function copyCanonicalRuntime(dist) {
     await mkdir(dirname(target), {recursive:true});
     await cp(source, target);
   }
+  // Generate a classic, self-contained bootstrap: sandboxed opaque frames cannot
+  // import ESM modules reliably when third-party hosts omit CORS headers.
+  // This source is copied into the Player npm runtime and deployed unchanged on CDN.
+  const {startH5PRuntime} = await import(pathToFileURL(join(web,'h5p-runtime-shell.js')).href);
+  const standalone = '(' + startH5PRuntime.toString() + ')();\n';
+  await writeFile(join(dist,'runtime-host','h5p-opaque.js'),standalone,'utf8');
   for (const name of ['p2lrn.js','p2lrn.esm.js','p2rln.js','p2rln.esm.js']) {
     await cp(join(sdk, name), join(dist, name));
   }

@@ -3,7 +3,7 @@ import {dispatchRuntimeEvent} from '../runtime-events.js';
 import {isSafeRuntimeMessage} from '../runtime-message-security.js';
 import {resolveH5pRuntimeUrl} from '../runtime-host-config.js';
 import {encodeH5PSession, inspectH5PPackage} from '../h5p-package.js';
-import {createOpaqueH5PRuntimeDocument, getAutomaticH5PRuntimeResources, hydrateH5PRuntimeCore, hydrateH5PStaticSession} from '../h5p-auto-runtime.js';
+import {getAutomaticH5PRuntimeResources, hydrateH5PRuntimeCore, hydrateH5PStaticSession} from '../h5p-auto-runtime.js';
 
 export const acceptsPayload = true;
 const H5P_PROFILE = 'https://p2lrn.org/profile/h5p';
@@ -145,6 +145,7 @@ export async function render({container, payload, representation, package:pkg, e
       runtimeAssetsUrl:resources.runtimeAssetsUrl,
       sharedLibrariesUrl:null,
       hostScriptUrl:resources.hostScriptUrl,
+      opaqueRuntimeUrl:resources.opaqueRuntimeUrl,
     });
   } else if (staticMode) {
     staticSession = await staticRuntimeFiles(nested, inspection);
@@ -286,7 +287,7 @@ export async function render({container, payload, representation, package:pkg, e
     iframe.contentWindow.postMessage({protocol:runtimeProtocol, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  if (opaqueMode) iframe.srcdoc = createOpaqueH5PRuntimeDocument({hostScriptUrl:resolvedSession.hostScriptUrl});
+  if (opaqueMode) iframe.src = resolvedSession.opaqueRuntimeUrl;
   else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 

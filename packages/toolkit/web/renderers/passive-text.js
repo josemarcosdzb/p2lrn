@@ -1,10 +1,11 @@
 import {WEB_CONTENT_PROFILE, webContentMapping, webEntrypointDirectory} from '../web-content-core.js';
 import {playerUiText} from './ui-i18n.js';
+import {rewriteImportedHtmlAssets} from '../package-passive-assets.js';
 
 const decoder = new TextDecoder('utf-8', {fatal: true});
 
 function cspFor(baseUrl = null) {
-  if (!baseUrl) return "default-src 'none'; img-src data: blob:; media-src data: blob:; style-src 'unsafe-inline'; font-src data:; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
+  if (!baseUrl) return "default-src 'none'; img-src data: blob:; media-src data: blob:; style-src 'unsafe-inline' data: blob:; font-src data: blob:; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
   const origin = new URL(baseUrl, document.baseURI).origin;
   return `default-src 'none'; img-src ${origin} data: blob:; media-src ${origin} data: blob:; style-src ${origin} 'unsafe-inline'; font-src ${origin} data:; script-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri ${origin}`;
 }
@@ -33,7 +34,7 @@ export function webEntrypointUrl(baseUrl, entrypoint) {
   return new URL(encodeURIComponent(name), base).href;
 }
 
-export async function render({container, bytes, representation, resolveResourceUrl}) {
+export async function render({container, bytes, payload, representation, resolveResourceUrl}) {
   const media = String(representation.mediaType ?? '').split(';', 1)[0].trim().toLowerCase();
   const text = decoder.decode(bytes);
   if (media === 'text/plain') {
@@ -73,6 +74,12 @@ export async function render({container, bytes, representation, resolveResourceU
     iframe.setAttribute('sandbox', verifiedEntrypointUrl ? 'allow-same-origin' : '');
     iframe.referrerPolicy = 'no-referrer';
 
+    let importedAssets=null;
+    if (!verifiedEntrypointUrl && representation.location?.type === 'package-member') {
+      importedAssets=await rewriteImportedHtmlAssets({html:text, member:representation.location.member, nested:payload?.nested});
+      if (importedAssets.missingAssets.length) console.warn('P2LRN imported HTML references files missing from its original package:', importedAssets.missingAssets);
+    }
+
     if (verifiedEntrypointUrl) {
       // Navigate the sandboxed iframe inside the Service Worker scope instead of
       // using srcdoc + <base>. This lets the verified virtual-resource Service
@@ -80,7 +87,7 @@ export async function render({container, bytes, representation, resolveResourceU
       // coherent web bundle.
       iframe.src = verifiedEntrypointUrl;
     } else {
-      iframe.srcdoc = prepareHtml(text);
+      iframe.srcdoc = prepareHtml(importedAssets?.html ?? text);
     }
 
     container.append(iframe);
@@ -88,6 +95,7 @@ export async function render({container, bytes, representation, resolveResourceU
       destroy() {
         iframe.removeAttribute('src');
         iframe.srcdoc = '';
+        for (const url of importedAssets?.urls ?? []) URL.revokeObjectURL(url);
         container.replaceChildren();
       },
     };
