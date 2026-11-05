@@ -576,7 +576,7 @@ export class P2LRNStudioElement extends HTMLElement{
     add('Intento',review.summary.attemptNumber??'—');
     add('Duración',Math.round(review.summary.elapsedSeconds/60)+' min');
     add('Tiempo activo',Math.round(review.summary.activeTimeMs/60000)+' min');
-    const score=review.summary.latestScore;add('Última puntuación',score?.normalized!=null?Math.round(Number(score.normalized)*100)+' %':score?.raw??'—');
+    const score=review.summary.latestScore;add('Última puntuación',score?.graded===false?'Pendiente de corrección':score?.normalized!=null?Math.round(Number(score.normalized)*100)+' %':score?.raw??'—');
     add('Eventos',review.summary.events.length);
     shell.append(summary);
     const answersHeading=document.createElement('h3');answersHeading.textContent='Respuestas para corrección';shell.append(answersHeading);
