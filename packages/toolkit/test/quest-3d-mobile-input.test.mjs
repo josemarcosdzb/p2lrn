@@ -111,7 +111,7 @@ test('3D input is scene-first on PC and mobile, while retaining WebGL fallback',
   assert.doesNotMatch(render,/if\(scene\.playerDistanceTo\(/);
   assert.match(render,/p2lrn-3d-alternative/);
   assert.match(render,/createAccessibleOnlyScene/);
-  assert.match(css,/@media \(any-pointer:coarse\)/);
+  assert.match(css,/@media \(hover:none\) and \(pointer:coarse\)/);
   assert.match(css,/touch-action:none/);
   assert.match(css,/p2lrn-3d-alternative:focus-within/);
   assert.match(locales,/"Haz clic en la escena para entrar": "Click the scene to enter"/);
