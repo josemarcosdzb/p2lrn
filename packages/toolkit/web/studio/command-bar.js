@@ -7,6 +7,45 @@ const PALETTE=Object.freeze([
   ['white','Blanco','#ffffff'],['fog','Niebla','#f1f5f9'],
   ['blue','Azul','#eff6ff'],['sand','Arena','#fef3c7']
 ]);
+
+export const STUDIO_CONTENT_CATALOG=Object.freeze([
+  {group:'Contenido',items:[
+    ['lesson','Lección','Texto, imágenes, tablas y diseño visual'],
+    ['file','Archivo o multimedia','Inserta imágenes, vídeo, audio y otros archivos'],
+    ['url','Recurso web','Añade un enlace a una página o recurso'],
+    ['reader','Importar documento','Reader para PDF, DOCX, PPTX y más'],
+    ['external','Paquete educativo','SCORM, H5P, QTI, cmi5 y otros perfiles'],
+    ['shared-resource','Recurso compartido','Vincula un recurso verificable'],
+    ['shared-library','Biblioteca conectada','Selecciona recursos del host']
+  ]},
+  {group:'Evaluación',items:[
+    ['questionnaire','Cuestionario','Preguntas, corrección y seguimiento']
+  ]},
+  {group:'Juegos',items:[
+    ['memory','Memoria','Encuentra parejas'],
+    ['matching','Relacionar','Une conceptos y respuestas'],
+    ['ordering','Ordenar','Organiza elementos en secuencia'],
+    ['classification','Clasificar','Asigna elementos a categorías'],
+    ['true-false','Verdadero o falso','Valora afirmaciones'],
+    ['fill-blanks','Completar huecos','Rellena espacios vacíos'],
+    ['word-search','Sopa de letras','Encuentra términos ocultos'],
+    ['crossword','Crucigrama','Resuelve pistas'],
+    ['rosco','Rosco','Responde a las pistas del alfabeto'],
+    ['3d','Juego 3D','Ordena objetos 3D'],
+    ['3d-matching','Relacionar 3D','Conecta objetos 3D'],
+    ['3d-classification','Clasificar 3D','Clasifica objetos 3D']
+  ]},
+  {group:'Colaboración',items:[
+    ['live-poll','Votación en directo','Participación conectada al host'],
+    ['shared-board','Pizarra compartida','Trabajo colaborativo'],
+    ['peer-review','Revisión entre pares','Comentarios entre alumnos']
+  ]},
+  {group:'Estructura avanzada',items:[
+    ['component','Componente nativo','Avisos y líneas temporales'],
+    ['composite','Grupo de actividades','Combina actividades existentes']
+  ]}
+]);
+
 const FONT_FAMILIES=['Arial','Calibri','Georgia','Verdana','Times New Roman'];
 const FONT_SIZES=[12,14,16,18,20,24,28,32,40,48];
 const BLOCK_STYLES=[['p','Párrafo'],['h1','Título 1'],['h2','Título 2'],['h3','Título 3'],['blockquote','Cita']];
@@ -59,6 +98,24 @@ const CSS=[
   '.p2lrn-file-pop input{width:100%;min-height:34px;border:1px solid #dbe2eb;border-radius:7px;padding:5px 8px}',
   '.p2lrn-file-pop .p2lrn-menu-separator{border-top:1px solid #edf0f4;margin:3px 0}',
   '.p2lrn-import-menu .add-pop{position:absolute!important;top:calc(100% + 7px)!important;left:0!important;z-index:120!important;width:min(680px,calc(100vw - 38px))!important;max-height:min(76vh,650px);overflow:auto;background:white;border:1px solid #dbe2eb;border-radius:10px;box-shadow:0 20px 45px rgba(15,23,42,.16)}',
+  '.p2lrn-activity-picker{width:min(880px,calc(100vw - 28px));max-height:min(86vh,850px);padding:0;border:1px solid #e2e7ee;border-radius:14px;background:#fff;color:#1f2937;box-shadow:0 24px 70px rgba(15,23,42,.22);font:500 13px/1.4 Inter,system-ui,sans-serif}',
+  '.p2lrn-activity-picker::backdrop{background:rgba(15,23,42,.34)}',
+  '.p2lrn-activity-picker-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:22px 24px 14px}',
+  '.p2lrn-activity-picker-head h2{margin:0 0 5px;font-size:22px;letter-spacing:-.03em}',
+  '.p2lrn-activity-picker-head p{margin:0;color:#667085}',
+  '.p2lrn-activity-picker-head button{min-height:35px;padding:7px 11px;border:1px solid #dbe2eb;background:#fff;border-radius:8px;cursor:pointer}',
+  '.p2lrn-activity-picker-search{display:block;margin:0 24px 14px;width:calc(100% - 48px);min-height:42px;border:1px solid #dbe2eb;border-radius:8px;padding:8px 13px;font:inherit}',
+  '.p2lrn-activity-picker-content{max-height:min(62vh,615px);overflow:auto;padding:0 24px 24px}',
+  '.p2lrn-activity-picker-group{padding:13px 0 4px;border-top:1px solid #edf0f4}',
+  '.p2lrn-activity-picker-group h3{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#64748b;margin:0 0 12px}',
+  '.p2lrn-activity-picker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:9px}',
+  '.p2lrn-activity-picker-grid button{display:grid;align-content:start;gap:5px;min-height:81px;text-align:left;padding:12px;border:1px solid #e2e7ee;border-radius:9px;background:#fff;color:#1f2937;cursor:pointer;font:inherit}',
+  '.p2lrn-activity-picker-grid button:hover:not(:disabled){border-color:#aabbd1;background:#f7f9fc}',
+  '.p2lrn-activity-picker-grid button:focus-visible{outline:2px solid #4b77bf;outline-offset:2px}',
+  '.p2lrn-activity-picker-grid button:disabled{opacity:.45;cursor:not-allowed}',
+  '.p2lrn-activity-picker-grid button strong{font-size:13px;font-weight:650}',
+  '.p2lrn-activity-picker-grid button small{font-size:11px;color:#667085;line-height:1.45}',
+  '.p2lrn-activity-picker [hidden]{display:none!important}',
   '.p2lrn-import-menu .add-help{display:none!important}',
   '.p2lrn-ribbon-swatch{width:17px;height:17px;display:inline-block;border-radius:5px;border:1px solid #d0d5dd;flex:none}',
   '.p2lrn-studio-workspace{display:grid!important;grid-template-columns:minmax(230px,260px) minmax(0,1fr)!important;gap:12px!important;min-height:630px}',
@@ -228,7 +285,68 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   const structure=group(insert);
   for(const [action,title] of [['addUnit','+ Unidad'],['addLesson','+ Lección']])
     if(actions[action])structure.append(button(doc,title,{action}));
-  if(addContentElement){
+  let activityDialog=null;
+  function openActivityPicker(){
+    if(!hasDocument){onStatus('Crea o abre un curso primero.');return;}
+    if(!activityDialog){
+      const dialog=node(doc,'dialog','p2lrn-activity-picker');
+      dialog.setAttribute('aria-label','Añadir contenido al curso');
+      const header=node(doc,'header','p2lrn-activity-picker-head');
+      const heading=node(doc,'div');
+      heading.append(node(doc,'h2','','Añadir contenido'),node(doc,'p','','Elige una actividad o un recurso para el curso.'));
+      const close=button(doc,'Cerrar',{title:'Cerrar el selector de contenido'});
+      close.addEventListener('click',()=>dialog.close());
+      header.append(heading,close);
+      const search=node(doc,'input','p2lrn-activity-picker-search');
+      search.type='search';search.placeholder='Buscar lecciones, juegos, preguntas…';
+      search.setAttribute('aria-label','Buscar contenido');
+      const content=node(doc,'div','p2lrn-activity-picker-content');
+      const groups=[];
+      for(const category of STUDIO_CONTENT_CATALOG){
+        const section=node(doc,'section','p2lrn-activity-picker-group');
+        section.append(node(doc,'h3','',category.group));
+        const grid=node(doc,'div','p2lrn-activity-picker-grid');
+        for(const [id,label,description] of category.items){
+          const item=button(doc,'',{title:description});
+          item.dataset.activityKind=id;
+          item.replaceChildren(node(doc,'strong','',label),node(doc,'small','',description));
+          item.addEventListener('click',async()=>{
+            if(typeof actions.addKind!=='function')return;
+            dialog.close();
+            try{await actions.addKind(id);}
+            catch(error){onStatus(String(error?.message??error));}
+          });
+          grid.append(item);
+        }
+        section.append(grid);content.append(section);groups.push(section);
+      }
+      search.addEventListener('input',()=>{
+        const query=search.value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+        for(const section of groups){
+          for(const item of section.querySelectorAll('[data-activity-kind]')){
+            const name=item.textContent.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+            item.hidden=!name.includes(query);
+          }
+          section.hidden=![...section.querySelectorAll('[data-activity-kind]')].some(item=>!item.hidden);
+        }
+      });
+      dialog.append(header,search,content);
+      (root===doc?doc.body:root).append(dialog);
+      activityDialog=dialog;
+    }
+    for(const item of activityDialog.querySelectorAll('[data-activity-kind]'))
+      item.disabled=typeof actions.canAddKind==='function'&&!actions.canAddKind(item.dataset.activityKind);
+    activityDialog.querySelector('input[type=search]').value='';
+    activityDialog.querySelector('input[type=search]').dispatchEvent(new Event('input',{bubbles:true}));
+    activityDialog.showModal();
+    activityDialog.querySelector('input[type=search]').focus();
+  }
+  let contentButton=null;
+  if(actions.addKind){
+    contentButton=button(doc,'Añadir contenido',{title:'Lecciones, cuestionarios, juegos y recursos'});
+    contentButton.addEventListener('click',openActivityPicker);
+    structure.append(contentButton);
+  }else if(addContentElement){
     addContentElement.classList.add('p2lrn-import-menu');
     for(const el of addContentElement.querySelectorAll('[data-help]'))if(!el.title)el.title=el.dataset.help;
     structure.append(addContentElement);
@@ -359,6 +477,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
       const action=b.dataset.uiAction;
       b.disabled=!hasDocument&&!['create','open','openUrl'].includes(action);
     }
+    if(contentButton)contentButton.disabled=!hasDocument;
     refreshButtons();
   }
   setDocument(false);
@@ -369,7 +488,9 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     setMessage:(message)=>{feedback.textContent=String(message??'');},
     refresh:refreshButtons,
     openTab:activateTab,
+    openActivities:openActivityPicker,
     dispose(){
+      activityDialog?.remove();
       doc.removeEventListener('selectionchange',remember);
       if(root!==doc)root.removeEventListener('selectionchange',remember);
       bar.remove();
