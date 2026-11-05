@@ -72,40 +72,51 @@ function simulateRope(state,from,to,delta){
   setPoint(0,from);setPoint(count-1,to);
 }
 
-function labelTexture(text,{background='#0f172a',foreground='#f8fafc',border='#38bdf8'}={}) {
+function labelTexture(text,{background='#f8fafc',foreground='#0f172a',border='#38bdf8'}={}) {
+  // High-resolution opaque ink laid directly onto the geometry's vertical
+  // faces, not a camera-facing sprite floating above the game piece.
   const canvas=document.createElement('canvas');
-  canvas.width=768;
-  canvas.height=224;
+  canvas.width=1280;
+  canvas.height=480;
   const ctx=canvas.getContext('2d');
-  if (!ctx) return null;
+  if(!ctx)return null;
   ctx.fillStyle=background;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle=border;
-  ctx.lineWidth=10;
-  ctx.beginPath();
-  ctx.roundRect(8,8,canvas.width-16,canvas.height-16,28);
-  ctx.fill();
-  ctx.stroke();
+  ctx.lineWidth=16;
+  ctx.strokeRect(9,9,canvas.width-18,canvas.height-18);
+  const content=String(text??'').trim()||'—';
+  const words=content.split(/\s+/u);
+  const maxWidth=canvas.width-130;
+  let fontSize=178;
+  let lines=[];
+  // Preserve whole authored labels and expand short words substantially.
+  for(let size=178;size>=68;size-=5){
+    ctx.font=`800 ${size}px system-ui, sans-serif`;
+    const candidate=[];
+    let line='';
+    for(const word of words){
+      const next=line?line+' '+word:word;
+      if(!line||ctx.measureText(next).width<=maxWidth)line=next;
+      else{candidate.push(line);line=word;}
+    }
+    if(line)candidate.push(line);
+    fontSize=size;
+    lines=candidate;
+    if(candidate.length<=4&&candidate.length*size*1.12<=canvas.height-54)break;
+  }
+  ctx.font=`800 ${fontSize}px system-ui, sans-serif`;
   ctx.fillStyle=foreground;
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  ctx.font='700 42px system-ui, sans-serif';
-  const words=String(text).trim().split(/\s+/u);
-  const lines=[];
-  let current='';
-  for (const word of words) {
-    const candidate=current?`${current} ${word}`:word;
-    if (ctx.measureText(candidate).width<660 || !current) current=candidate;
-    else { lines.push(current); current=word; }
-    if (lines.length===2) break;
-  }
-  if (current && lines.length<3) lines.push(current);
-  const lineHeight=48;
-  const start=canvas.height/2-((lines.length-1)*lineHeight)/2;
-  lines.slice(0,3).forEach((line,index)=>ctx.fillText(line,canvas.width/2,start+index*lineHeight));
+  const lineHeight=fontSize*1.12;
+  const start=(canvas.height-(lines.length-1)*lineHeight)/2;
+  lines.forEach((line,index)=>ctx.fillText(line,canvas.width/2,start+index*lineHeight,maxWidth));
   const texture=new THREE.CanvasTexture(canvas);
   texture.colorSpace=THREE.SRGBColorSpace;
   texture.minFilter=THREE.LinearFilter;
   texture.magFilter=THREE.LinearFilter;
+  texture.anisotropy=4;
   texture.needsUpdate=true;
   return texture;
 }
@@ -313,18 +324,44 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     dragPointer.set(0,0.78,0);
   }
 
-  function addLabel(parent,text,y=1.2,options={}) {
+  function addFaceLabel(parent,text,size,options={}) {
     const texture=labelTexture(text,options);
-    if (!texture) return null;
-    const material=new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false,toneMapped:false});
-    const sprite=new THREE.Sprite(material);
-    sprite.position.set(0,y,0);
-    sprite.scale.set(3.2,0.95,1);
-    parent.add(sprite);
-    return sprite;
+    if(!texture)return;
+    const material=new THREE.MeshBasicMaterial({
+      map:texture,side:THREE.DoubleSide,toneMapped:false,
+      polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1,
+    });
+    const add=(width,height,x,y,z,angleY=0)=>{
+      const face=new THREE.Mesh(new THREE.PlaneGeometry(width,height),material);
+      face.position.set(x,y,z);
+      face.rotation.y=angleY;
+      face.name='p2lrn-box-face-label';
+      face.renderOrder=1;
+      parent.add(face);
+    };
+    const surface=0.016;
+    // Keep the text attached to the front and side faces when blocks rotate.
+    add(size[0]*0.93,size[1]*0.82,0,0,size[2]/2+surface);
+    add(size[0]*0.93,size[1]*0.82,0,0,-size[2]/2-surface,Math.PI);
+    add(size[2]*0.90,size[1]*0.82,size[0]/2+surface,0,0,Math.PI/2);
+    add(size[2]*0.90,size[1]*0.82,-size[0]/2-surface,0,0,-Math.PI/2);
   }
 
-  function addBox({id,text,position=[0,1,0],size=[1.5,0.9,1.5],color=null,dynamic=true,interaction=null}={}) {
+  function addPlatformLabel(parent,text,size,options={}) {
+    const texture=labelTexture(text,options);
+    if(!texture)return;
+    const face=new THREE.Mesh(
+      new THREE.PlaneGeometry(size[0]*0.88,size[2]*0.78),
+      new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide,toneMapped:false}),
+    );
+    face.rotation.x=-Math.PI/2;
+    face.position.y=size[1]/2+0.018;
+    face.name='p2lrn-platform-surface-label';
+    face.renderOrder=1;
+    parent.add(face);
+  }
+
+  function addBox({id,text,position=[0,1,0],size=[2.05,1.12,1.55],color=null,dynamic=true,interaction=null}={}) {
     const keyId=String(id);
     const p=normalizePosition(position);
     const geometry=new THREE.BoxGeometry(size[0],size[1],size[2]);
@@ -334,7 +371,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     mesh.castShadow=true;
     mesh.receiveShadow=true;
     mesh.userData.p2lrnInteraction=interaction;
-    addLabel(mesh,text,size[1]/2+0.72);
+    addFaceLabel(mesh,text,size);
     stage.add(mesh);
     meshes.set(keyId,mesh);
     if (interaction) interactables.push(mesh);
@@ -349,7 +386,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     mesh.position.set(...normalizePosition(position));
     mesh.receiveShadow=true;
     mesh.userData.p2lrnInteraction=interaction;
-    addLabel(mesh,text,size[1]/2+0.75,{border:color});
+    addPlatformLabel(mesh,text,size,{border:color});
     stage.add(mesh);
     meshes.set(String(id),mesh);
     if (interaction) interactables.push(mesh);
@@ -357,7 +394,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   }
 
   function addNode({id,text,position=[0,1,0],color='#334155',interaction=null}={}) {
-    const size=[2.55,0.92,1.35];
+    const size=[2.55,1.12,1.5];
     const mesh=new THREE.Mesh(
       new THREE.BoxGeometry(...size),
       new THREE.MeshStandardMaterial({color,roughness:0.48,metalness:0.16}),
@@ -366,7 +403,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     mesh.castShadow=true;
     mesh.receiveShadow=true;
     mesh.userData.p2lrnInteraction=interaction;
-    addLabel(mesh,text,size[1]/2+0.72,{border:color});
+    addFaceLabel(mesh,text,size,{border:color});
     stage.add(mesh);
     meshes.set(String(id),mesh);
     if (interaction) interactables.push(mesh);
