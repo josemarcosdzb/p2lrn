@@ -90,7 +90,9 @@ jobs:
           }
           if (!$ok) { Get-Content $stderr -ErrorAction SilentlyContinue; throw 'Preview server failed its health check.' }
           foreach ($path in @('/studio/','/studio/studio.js','/studio/runtime/command-bar.js','/player/current/dist/p2lrn.js','/player/current/dist/renderers/questionnaire-3d.js','/player/current/dist/game-3d/three-runtime.js','/p2lrn-sw.js','/demo/','/npm-studio/','/studio/current/dist/p2lrn-studio.js')) {
-            $response=Invoke-WebRequest -Uri ($base+$path) -UseBasicParsing -TimeoutSec 8
+            Write-Output ('VERIFY_ROUTE=' + $path)
+            try { $response=Invoke-WebRequest -Uri ($base+$path) -UseBasicParsing -TimeoutSec 8 -ErrorAction Stop }
+            catch { throw ('Preview route ' + $path + ' failed: ' + $_.Exception.Message) }
             if ($response.StatusCode -ne 200) { throw 'Preview returned HTTP '+$response.StatusCode+' for '+$path }
           }
           "P2LRN_PREVIEW_PORT=$free" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
