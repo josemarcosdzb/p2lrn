@@ -299,10 +299,12 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
     const title=textInput(payload.title,'Título');title.addEventListener('input',()=>{payload.title=title.value;save(model,activityId,payload,onChange);hero.querySelector('h2').textContent=title.value||'Cuestionario';});
     const language=textInput(payload.language||studioLanguage(),studioLanguage());language.addEventListener('input',()=>{payload.language=language.value;save(model,activityId,payload,onChange);});
     const mode=selectInput(payload.presentation?.questionMode??'one-at-a-time',[['one-at-a-time','Una pregunta cada vez'],['all','Todas a la vez']]);mode.addEventListener('change',()=>{payload.presentation??={};payload.presentation.questionMode=mode.value;save(model,activityId,payload,onChange);});
+    const supportsDeferred=!renderer||renderer==='https://p2lrn.org/renderer/questionnaire/standard';
     const grading=selectInput(manual?'host':'embedded-key',[
       ['embedded-key','Automática: corregir al finalizar'],
       ['host','Corregir después: no incluir soluciones'],
     ]);
+    if(!supportsDeferred)grading.querySelector('option[value="host"]').disabled=true;
     grading.addEventListener('change',()=>{
       payload.grading={...(payload.grading??{}),mode:grading.value};
       if(grading.value==='host'){
@@ -332,6 +334,7 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
     attempts.addEventListener('input',()=>{const value=attempts.value.trim();if(!value){if(payload.attemptPolicy){delete payload.attemptPolicy.maxAttempts;if(Object.keys(payload.attemptPolicy).length===0)delete payload.attemptPolicy;}}else{payload.attemptPolicy??={};payload.attemptPolicy.maxAttempts=Math.max(1,Math.floor(Number(value)||1));}save(model,activityId,payload,onChange);});
     settings.append(labeled('Título',title),labeled('Idioma',language),labeled('Presentación',mode),labeled('Modo de corrección',grading),labeled('Mostrar resultados al alumno',feedback),labeled('Mezclar preguntas',shuffle),labeled('Para poder seguir',continueMode),labeled('Nota mínima (%)',minScore),labeled('Número de intentos',attempts));root.append(settings);
     if(manual)root.append(node('p','q-help q-grading-notice','Corregir después: el paquete no incluirá las soluciones; los alumnos entregarán respuestas sin nota automática. El profesor las revisará en su plataforma o al importar la entrega.'));
+    if(!supportsDeferred)root.append(node('p','q-help','Este juego necesita soluciones durante su ejecución. Para crear preguntas sin solución y corregirlas después, utiliza Cuestionario con el tipo de pregunta correspondiente.'));
     const list=node('div','q-list');
     payload.questions.forEach((question,index)=>{
       ensureSolution(question);
