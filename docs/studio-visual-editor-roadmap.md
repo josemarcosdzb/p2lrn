@@ -33,3 +33,18 @@ Las lecciones HTML se serializan en recursos del paquete P2LRN; los perfiles SCO
 - Menús y botones funcionales, navegación con teclado, lectura de pantalla, responsive y rendimiento razonable.
 - PPTX/PDF: pruebas de exportación e importación con ejemplos concretos, no solo opciones de menú.
 - CI limpio y revisión explícita antes de fusionar a main.
+
+## Investigación de dependencias (no instaladas todavía)
+
+- Fabric.js, MIT: motor de lienzo con selección, escala, giro, agrupaciones y exportación SVG/JSON. Candidato para el lienzo visual, sin sustituir el modelo semántico P2LRN. Fuente: https://github.com/fabricjs/fabric.js
+- PptxGenJS, MIT: generación de PPTX OOXML editable desde JavaScript. Es un *exportador*; no suponer un importador simétrico PPTX. Fuente: https://github.com/gitbrent/PptxGenJS
+- pdf-lib, MIT: creación y modificación de PDF en JS. No garantiza convertir HTML completo con CSS a PDF; requiere flujo de renderizado paginado. Fuente: https://github.com/Hopding/pdf-lib
+- pdfjs-dist ya figura como dependencia de @p2lrn/studio en este repositorio: reutilizarlo para lectura/preview PDF, no introducir un lector duplicado.
+- Evitar incorporar dependencias nuevas sin pruebas de tamaño de bundle, licencias, CSP y compatibilidad con paquetes offline.
+
+## Riesgos de implementación
+
+- Los estilos HTML actuales se filtran en Studio y pueden recibir restricciones adicionales en Player. Confirmar en navegador que las columnas CSS/grid se conservan tanto online como offline.
+- El editor visual no debe serializar eventos JS, clases dependientes del host ni coordenadas de pantalla imposibles de reproducir.
+- Importación PPTX: tratar imágenes, tablas, fuentes, gráficos y animaciones con un informe de compatibilidad por elemento. No aceptar macros ni relaciones OOXML externas sin validación.
+- El trabajo actual no implementa la cinta de opciones, motor de páginas ni exportadores. La entrega de la rama es una base inicial integrable, no la versión final.
