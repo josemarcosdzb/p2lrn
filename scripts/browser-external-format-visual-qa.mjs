@@ -79,6 +79,38 @@ async function findVisibleText(locator,{minimumText=30,marker=null}={}){
  }
  throw Error('Content was missing/empty. textLength='+result.length+' bodyText='+result.slice(0,650));
 }
+
+async function verifyLoadButton(route,language){
+ const page=await browser.newPage({viewport:{width:1360,height:800}});
+ const caseName='viewer-load-button-'+language;
+ try{
+   const initial='/examples/generated/scorm12-browser-demo.p2lrn';
+   await page.goto(base+route+'?src='+encodeURIComponent(initial),{waitUntil:'domcontentloaded',timeout:30000});
+   await page.locator('p2lrn-player .p2lrn-head').waitFor({timeout:40000});
+   await page.locator('[data-load]').waitFor({timeout:10000});
+   const events=page.locator('[data-event-log]');
+   const count=async()=>((await events.innerText()).match(/p2lrn:ready/g)??[]).length;
+   await page.waitForFunction(()=>String(document.querySelector('[data-event-log]')?.textContent??'').includes('p2lrn:ready'),null,{timeout:25000});
+   const before=await count();
+   assert.ok(before>0,'Initial P2LRN example was not loaded');
+   assert.equal(await page.locator('[data-package-file]').count(),0,'Unexpected local file picker');
+   await page.locator('[data-load]').click();
+   await page.waitForFunction(n=>((document.querySelector('[data-event-log]')?.textContent??'').match(/p2lrn:ready/g)??[]).length>n,before,{timeout:25000});
+   assert.equal(new URL(await page.locator('#demo-player').getAttribute('src'),base).pathname,initial);
+   const next='/examples/canonical/external/cmi5-catapult-pre-post.p2lrn';
+   await page.locator('[data-package-url]').fill(base+next);
+   const oldCount=await count();
+   await page.locator('[data-load]').click();
+   await page.waitForFunction(path=>document.querySelector('#demo-player')?.getAttribute('src')?.endsWith(path),next,{timeout:20000});
+   await page.waitForFunction(n=>((document.querySelector('[data-event-log]')?.textContent??'').match(/p2lrn:ready/g)??[]).length>n,oldCount,{timeout:25000});
+   await page.screenshot({path:join(screenshotRoot,caseName+'.png'),fullPage:false});
+   results.push({case:caseName,status:'PASS',sameUrlReload:true,urlChange:true,extraFilePicker:false});
+ }catch(error){
+   results.push({case:caseName,status:'FAIL',reason:String(error?.message??error).slice(0,1300),
+    log:(await page.locator('[data-event-log]').textContent().catch(()=>''))?.slice(-2600)});
+   await page.screenshot({path:join(screenshotRoot,caseName+'-FAIL.png'),fullPage:false,timeout:6000}).catch(()=>{});
+ }finally{await page.close();}
+}
 try{
  for(const item of cases){
   const page=await browser.newPage({viewport:{width:1350,height:850}});
@@ -140,6 +172,8 @@ try{
    results.push({case:item.name,status:'FAIL',reason:String(error?.message??error).slice(0,900),diagnostic,errors});
   }finally{await page.close();}
  }
+ await verifyLoadButton('/demo/','es');
+ await verifyLoadButton('/en/demo/','en');
 }finally{
  await browser.close();
  await new Promise(r=>server.close(r));
