@@ -62,14 +62,23 @@ jobs:
           $worker = Join-Path $dir 'p2lrn-sw.js'
           if (!(Test-Path -LiteralPath $worker)) { throw ('Missing compiled Player service worker: '+$worker) }
           Write-Output ('LOCAL_PREVIEW_WORKER=' + $worker)
+          # Test the actual IPv4 loopback bind; Get-NetTCPConnection can report
+          # a candidate as free while an older preview still serves requests.
           $free = $null
-          foreach ($candidate in 5531..5540) {
-            if (!(Get-NetTCPConnection -LocalPort $candidate -State Listen -ErrorAction SilentlyContinue)) {
+          foreach ($candidate in 5550..5599) {
+            $probe = $null
+            try {
+              $probe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $candidate)
+              $probe.Start()
               $free = $candidate
               break
+            } catch [System.Net.Sockets.SocketException] {
+              continue
+            } finally {
+              if ($probe) { $probe.Stop() }
             }
           }
-          if (!$free) { throw 'Local ports 5531-5540 are already occupied. No processes were stopped.' }
+          if (!$free) { throw 'No free loopback ports in 5550-5599. No processes were stopped.' }
           $script = Join-Path $dir 'preview-server.mjs'
           $stdout = Join-Path $dir 'preview-server.stdout.log'
           $stderr = Join-Path $dir 'preview-server.stderr.log'
@@ -104,6 +113,7 @@ jobs:
           "directory=$dir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           Write-Output ('WEB_URL=' + $base + '/studio/')
           Write-Output ('NPM_URL=' + $base + '/npm-studio/')
+          Write-Output ('DEMO_URL=' + $base + '/demo/')
           Write-Output ('LOCAL_DIRECTORY=' + $dir)
           Write-Output ('SERVER_PID=' + $process.Id)
       - name: Verify both editors in real Chrome or Edge and save screenshots
@@ -124,7 +134,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $url = 'http://127.0.0.1:' + $env:PREVIEW_PORT
           $health = Invoke-RestMethod -Uri ($url + '/__preview_health') -TimeoutSec 8
-          if (!$health.ok -or $health.branch -ne 'mejorastudio') { throw 'Preview is not healthy after job exit.' }
+          if (!$health.ok -or $health.branch -ne 'mejorastudio' -or $health.commit -ne $env:GITHUB_SHA) { throw 'Preview SHA changed or server is stale after job exit.' }
           foreach ($path in @('/studio/','/npm-studio/')) {
             $response = Invoke-WebRequest -Uri ($url + $path) -UseBasicParsing -TimeoutSec 8
             if ($response.StatusCode -ne 200) { throw ('Preview missing '+$path) }
