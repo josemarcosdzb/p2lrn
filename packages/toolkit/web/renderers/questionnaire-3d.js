@@ -620,6 +620,7 @@ function createAccessibleOnlyScene() {
 
 export async function render(options) {
   const {game,runtime,shell}=await setupGame({...options,rendererId:THREE_D_RENDERER});
+  shell.classList.add('p2lrn-3d-game');
   const layout=el('div',{class:'p2lrn-3d-layout'});
   const directions=el('p',{class:'p2lrn-3d-directions',role:'note'});
   const stage=el('div',{class:'p2lrn-3d-stage'});
