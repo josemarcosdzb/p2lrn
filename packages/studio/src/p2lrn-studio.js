@@ -16,6 +16,7 @@ import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
 import {mountStudioCommandBar,applyUnifiedStudioWorkspace} from './runtime/command-bar.js';
+import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
 import {exportOfflineAssignmentBundle, parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
 
 export const P2LRN_STUDIO_VERSION='0.5.0-alpha.12';
@@ -157,7 +158,7 @@ function filenameFromUrl(value){
 export class P2LRNStudioElement extends HTMLElement{
   static p2lrnStudioVersion=P2LRN_STUDIO_VERSION;
   static get observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path','offline-runtime-base-url'];}
-  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;#resourceLibrary=null;#unifiedBar=null;
+  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;#resourceLibrary=null;#unifiedBar=null;#savedRevision=0;
 
   constructor(){
     super();
@@ -243,7 +244,10 @@ export class P2LRNStudioElement extends HTMLElement{
         create:()=>this.createCourse(),
         open:()=>q('[data-file]').click(),
         openUrl:(url)=>this.openUrl(url),
-        save:()=>this.saveEndpoint?this.saveCourse():this.download(),
+        save:()=>this.saveEndpoint?this.saveCourse():this.saveLocalDraft(),
+        saveDraft:()=>this.saveLocalDraft(),
+        recoverDraft:()=>this.recoverLocalDraft(),
+        clearDraft:()=>this.clearLocalDraft(),
         export:()=>this.download(),
         offline:()=>this.showOfflineExportDialog(),
         review:()=>q('[data-result-file]').click(),
@@ -284,7 +288,7 @@ export class P2LRNStudioElement extends HTMLElement{
 
   async createCourse(options={}){
     this._revoke();
-    this.#studio=createP2LRNStudioDocument(options);
+    this.#studio=createP2LRNStudioDocument(options);this.#savedRevision=0;
     this.#sourceUrl=null;this.#selected=this.#studio.rootId;
     this.shadowRoot.querySelector('[data-body]').hidden=false;
     this._renderTree();await this._renderEditor();this._updateState();
@@ -305,7 +309,7 @@ export class P2LRNStudioElement extends HTMLElement{
     await this._open(pkg,{name:filenameFromUrl(resolved),url:resolved});
   }
   async _open(pkg,{name,url}){
-    this.#studio=new P2LRNStudioDocument(pkg,{sourceName:name,sourceUrl:url});
+    this.#studio=new P2LRNStudioDocument(pkg,{sourceName:name,sourceUrl:url});this.#savedRevision=0;
     this.#sourceUrl=url;this.#selected=this.#studio.rootId;
     this.shadowRoot.querySelector('[data-body]').hidden=false;
     this._renderTree();await this._renderEditor();this._updateState();
@@ -514,10 +518,34 @@ export class P2LRNStudioElement extends HTMLElement{
     if(!this.#studio)throw new Error('No hay ningún curso P2LRN abierto.');
     return exportP2LRNPackage(this.#studio);
   }
+  async saveLocalDraft(){
+    const exported=await this.exportPackage();
+    await saveLatestDraft({name:exported.filename,bytes:exported.bytes,selectedId:this.#selected,contentRoot:exported.manifest.integrity?.contentRoot??null});
+    this.#savedRevision=this.#studio.changeCount;
+    this._updateState();this.setStatus('Borrador guardado solo en este navegador');
+    return exported.filename;
+  }
+  async recoverLocalDraft(){
+    const saved=await loadLatestDraft();
+    if(!saved?.bytes)throw new Error('No hay un borrador local para recuperar.');
+    await this.openFile(new File([saved.bytes],saved.name||'borrador.p2lrn',{type:'application/vnd.p2lrn+zip'}));
+    if(saved.selectedId&&this.#studio.entity(saved.selectedId)){
+      this.#selected=saved.selectedId;this._renderTree();await this._renderEditor();
+    }
+    this.#savedRevision=this.#studio.changeCount;
+    this._updateState();this.setStatus('Borrador local recuperado');
+    return saved;
+  }
+  async clearLocalDraft(){
+    if(!confirm('¿Eliminar el borrador guardado en este navegador? Esta acción no se puede deshacer.'))return false;
+    await clearLatestDraft();this.setStatus('Borrador local eliminado');return true;
+  }
   async download(){
     const exported=await this.exportPackage();
     const url=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
     const a=document.createElement('a');a.href=url;a.download=exported.filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    this.#savedRevision=this.#studio.changeCount;
+    this._updateState();this.setStatus('Paquete exportado y verificado');
     this.dispatchEvent(new CustomEvent('p2lrn-studio-download',{detail:{filename:exported.filename},bubbles:true,composed:true}));
   }
   showOfflineExportDialog(){
@@ -636,14 +664,18 @@ export class P2LRNStudioElement extends HTMLElement{
     },body:exported.bytes});
     if(!response.ok)throw new Error('Studio save failed: HTTP '+response.status);
     let result=null;try{result=await response.json();}catch{}
+    this.#savedRevision=this.#studio.changeCount;
+    this._updateState();this.setStatus('Curso guardado en servidor');
     this.dispatchEvent(new CustomEvent('p2lrn-studio-save',{detail:{filename:exported.filename,coursePath:this.coursePath,result},bubbles:true,composed:true}));
     return result;
   }
   setStatus(text){this.shadowRoot.querySelector('[data-meta]').textContent=text;this.#unifiedBar?.setMessage(text)}
   _updateState(){
-    const changes=this.#studio?.changeCount??0;this.setStatus(changes?changes+' cambio sin guardar'+(changes===1?'':'s'):'Listo');
+    const changes=this.#studio?.changeCount??0;
+    const unsaved=Boolean(this.#studio&&changes>this.#savedRevision);
+    this.setStatus(unsaved?changes+' cambio'+(changes===1?'':'s')+' pendiente'+(changes===1?'':'s')+' de guardar':'Sin cambios pendientes');
     this.#unifiedBar?.setDocument(Boolean(this.#studio),this.#studio?.sourceName||'Editor visual de cursos');
-    this.shadowRoot.querySelector('[data-warn]').hidden=!changes;
+    this.shadowRoot.querySelector('[data-warn]').hidden=!unsaved;
   }
   _syncSaveButton(){if(this.shadowRoot)this.shadowRoot.querySelector('[data-save]').hidden=!this.saveEndpoint}
   _syncResourceLibraryButton(){const button=this.shadowRoot?.querySelector('[data-shared-library]');if(button)button.hidden=!this.#resourceLibrary}
