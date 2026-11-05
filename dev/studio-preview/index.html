@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Studio NPM local | P2LRN mejorastudio</title>
+  <style>
+    :root{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#202b3c;background:#eef2f6}
+    *{box-sizing:border-box}
+    body{margin:0}
+    header{display:flex;gap:16px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:16px max(20px,3vw);background:white;border-bottom:1px solid #dce3ed}
+    .brand{display:flex;align-items:center;gap:12px;font-size:16px;font-weight:750}
+    .mark{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:#1f2937;color:#fff}
+    nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    nav a{color:#334155;text-decoration:none;border:1px solid #d9e0eb;border-radius:8px;padding:9px 13px;font-size:13px}
+    nav a[aria-current=page]{background:#1f2937;color:#fff}
+    nav a:hover{border-color:#aebbd0}
+    main{width:min(1590px,calc(100% - 30px));margin:22px auto 55px}
+    .intro{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:13px}
+    .intro h1{font-size:clamp(23px,3vw,34px);margin:0 0 4px;letter-spacing:-.035em}
+    .intro p{color:#64748b;margin:0;font-size:13px}
+    #status{font-size:12px;color:#475569;background:white;padding:7px 12px;border:1px solid #dce3ed;border-radius:8px}
+    p2lrn-studio{display:block;min-height:620px}
+    .failure{color:#b42318!important;border-color:#eac4c0!important}
+  </style>
+  <script src="/studio/current/dist/p2lrn-studio.js" defer></script>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="mark">P</span>P2LRN Studio — vista NPM</div>
+  <nav aria-label="Cambiar versión">
+    <a href="/studio/">Studio web</a>
+    <a href="/npm-studio/" aria-current="page">Studio desde NPM</a>
+  </nav>
+</header>
+<main>
+  <div class="intro">
+    <div><h1>Editor embebido</h1><p>Compilación local de <code>@p2lrn/studio</code> desde la rama <code>mejorastudio</code>. Sin publicación NPM.</p></div>
+    <span id="status" role="status" aria-live="polite">Cargando componente y Player…</span>
+  </div>
+  <p2lrn-studio id="studio"></p2lrn-studio>
+</main>
+<script>
+  const status=document.querySelector('#status');
+  window.addEventListener('error',event=>{
+    status.textContent='Error al cargar Studio: '+event.message;
+    status.classList.add('failure');
+  });
+  window.addEventListener('unhandledrejection',event=>{
+    status.textContent='Fallo de inicialización: '+String(event.reason?.message??event.reason);
+    status.classList.add('failure');
+  });
+  window.addEventListener('load',async()=>{
+    try {
+      if(!window.P2LRNStudioReady)throw new Error('No se ha inicializado el loader NPM');
+      await window.P2LRNStudioReady;
+      await customElements.whenDefined('p2lrn-studio');
+      const studio=document.querySelector('#studio');
+      await studio.createCourse({title:'Curso de ejemplo NPM',language:'es'});
+      status.textContent='Studio NPM cargado desde esta compilación local';
+      document.documentElement.dataset.previewReady='true';
+    }catch(error){
+      status.textContent='No se pudo abrir el editor NPM: '+String(error?.message??error);
+      status.classList.add('failure');
+      document.documentElement.dataset.previewReady='false';
+    }
+  });
+</script>
+</body>
+</html>
