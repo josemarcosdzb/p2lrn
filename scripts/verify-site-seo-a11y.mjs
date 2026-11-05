@@ -178,8 +178,9 @@ for(const [home,expectedUrl,label] of [
     errors.push('Missing or inconsistent '+label+' P2LRN WebSite identity structured data');
   if(named(home,'meta','property','og:site_name').length!==1)errors.push('Missing '+label+' site identity in home OpenGraph');
 }
-const [quick,creator]=await Promise.all(['quickstart.p2lrn','canonical/creator-course.p2lrn'].map(p=>readFile(join(out,'examples',p)).catch(()=>null)));
-if(!quick||!creator||!quick.equals(creator))errors.push('compatibility quickstart package missing or not identical to verified creator-course');
+const [quick,creator,scorm]=await Promise.all(['quickstart.p2lrn','canonical/creator-course.p2lrn','generated/scorm12-browser-demo.p2lrn'].map(p=>readFile(join(out,'examples',p)).catch(()=>null)));
+if(quick||creator)errors.push('Retired native quickstart or creator course is still published');
+if(!scorm)errors.push('Imported SCORM example missing from generated site');
 for(const [path,label] of [['studio/index.html','Spanish'],['en/studio/index.html','English']]){
   const studio=await readFile(join(out,...path.split('/')),'utf8');
   if(!/<button\b[^>]*data-open-file/.test(studio)||!/<dialog\b[^>]*data-add-dialog[^>]*aria-labelledby=/.test(studio))

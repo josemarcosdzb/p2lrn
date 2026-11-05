@@ -314,7 +314,7 @@ try{
   const catalog=JSON.parse((await get('/examples/catalog.json')).bytes.toString('utf8'));
   assert(Array.isArray(catalog.examples)&&catalog.examples.length>=5,'Live CDN has no real example catalog');
   report.catalogSize=catalog.examples.length;
-  const examples=['/examples/canonical/creator-course.p2lrn','/examples/canonical/external/scorm12-real.p2lrn','/examples/canonical/external/h5p-crossword.p2lrn','/examples/generated/scorm12-browser-demo.p2lrn'];
+  const examples=['/examples/generated/qti3-interactive-demo.p2lrn','/examples/canonical/external/scorm12-real.p2lrn','/examples/canonical/external/h5p-crossword.p2lrn','/examples/generated/scorm12-browser-demo.p2lrn'];
   for(const path of examples)await validateDownloadedPackage(path);
   const range=await fetch(origin+examples[0],{headers:{Range:'bytes=0-31'},signal:AbortSignal.timeout(20000)});
   report.range={status:range.status,contentRange:range.headers.get('content-range')};

@@ -81,7 +81,7 @@ async function check(){
   const toolkitZip=await import(pathToFileURL(join(nodeModules,'toolkit','dist','core','zip.js')).href);
   assert.equal(typeof toolkitZip.ZipArchive?.open,'function','Installed npm Toolkit ZIP API missing');
   for(const path of [
-    '/examples/canonical/creator-course.p2lrn',
+    '/examples/generated/qti3-interactive-demo.p2lrn',
     '/examples/canonical/external/scorm12-real.p2lrn',
     '/examples/canonical/external/h5p-crossword.p2lrn'
   ]){
