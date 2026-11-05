@@ -558,7 +558,8 @@ export function createVirtualJoystick(scene){
     const strength=amount<0.12?0:(amount-0.12)/0.88;
     const nx=distance?dx/distance:0,ny=distance?dy/distance:0;
     knob.style.transform='translate3d('+(nx*amount*radius)+'px,'+(ny*amount*radius)+'px,0)';
-    scene.setMovementVector(nx*strength,-ny*strength);
+    if(strength===0)scene.setMovementVector(0,0);
+    else scene.setMovementVector(nx*strength,-ny*strength);
   };
   const reset=()=>{
     const held=pointerId;
