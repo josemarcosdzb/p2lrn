@@ -69,14 +69,15 @@ const CSS=[
   '.p2lrn-studio-outline nav button,.p2lrn-studio-outline[data-tree] > button{color:#344054;font-weight:500;font-size:13px;border:0;background:transparent;min-height:35px;border-radius:7px}',
   '.p2lrn-studio-outline nav button:hover,.p2lrn-studio-outline[data-tree] > button:hover{background:#f4f7fa}',
   '.p2lrn-studio-outline nav button[aria-current=true],.p2lrn-studio-outline[data-tree] > button[aria-current=true]{background:#eaf1fa;color:#243e64;font-weight:650}',
-  '.p2lrn-studio-canvas{min-width:0;border:1px solid #e2e7ee;border-radius:11px;background:#f0f3f7;overflow:hidden}',
+  '.p2lrn-studio-canvas{min-width:0;padding:0!important;border:1px solid #e2e7ee;border-radius:11px;background:#f0f3f7;overflow:hidden}',
   '.p2lrn-studio-stage{min-height:630px;padding:20px;background:#f0f3f7}',
   '.p2lrn-studio-sheet{width:100%;max-width:1040px;min-height:520px;margin:0 auto;padding:30px;background:#fff;border:1px solid #e5e9ef;border-radius:9px;box-shadow:0 3px 13px rgba(15,23,42,.045);overflow-wrap:anywhere}',
   '.p2lrn-studio-sheet-head{display:grid;gap:7px;padding-bottom:20px;margin-bottom:22px;border-bottom:1px solid #edf0f4}',
   '.p2lrn-studio-sheet-head h1{font-size:clamp(24px,3vw,35px);font-weight:700;letter-spacing:-.035em;line-height:1.16}',
   '.p2lrn-studio-sheet-head p{font-size:14px;color:#667085}',
+  '.p2lrn-studio-sheet-head .studio-entity-type{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#667085}',
   '.p2lrn-studio-outline-title{padding:15px;border-bottom:1px solid #edf0f4;background:#fafbfd;display:grid;gap:4px}',
-  '.p2lrn-studio-outline-title small{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#667085}',
+  '.p2lrn-studio-outline-title small,.p2lrn-studio-outline-title span{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#667085}',
   '.p2lrn-studio-outline-title strong{font-size:13px}',
   '.p2lrn-studio-sheet :is(.studio-wysiwyg,.surface){min-height:360px;font-size:16px;line-height:1.7;color:#253044}',
   '.p2lrn-studio-sheet :is(img,video,table){max-width:100%}',
@@ -339,6 +340,8 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   block.addEventListener('change',()=>applyCommand('formatBlock',block.value));
   font.addEventListener('change',()=>applyCommand('fontName',font.value));
   size.addEventListener('change',()=>applyCommand('fontSize',size.value));
+  bar.addEventListener('pointerenter',refreshButtons);
+  bar.addEventListener('focusin',refreshButtons);
   doc.addEventListener('selectionchange',remember);
   if(root!==doc)root.addEventListener('selectionchange',remember);
   mount.append(bar);
