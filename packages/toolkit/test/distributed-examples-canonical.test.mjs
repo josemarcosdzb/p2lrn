@@ -1,31 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,readdirSync,statSync} from 'node:fs';
-import {join,relative,resolve} from 'node:path';
-import {writeZip} from '../dist/core/zip.js';
-import {validatePackageBytes} from '../dist/core/validator.js';
-
-function walkFiles(root){
-  const out=[];
-  for(const name of readdirSync(root)){
-    const path=join(root,name),stat=statSync(path);
-    if(stat.isDirectory())out.push(...walkFiles(path));
-    else if(stat.isFile())out.push(path);
-  }
-  return out.sort();
-}
+import {mkdtempSync,rmSync,readFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import {validatePackageFile} from '../dist/core/validator.js';
+import {rebuildExample} from '../dist/tools/rebuild-examples.js';
 
 for(const name of ['minimal','web']){
-  test(`distributed toolkit example ${name} is canonical P2LRN`,()=>{
-    const root=resolve('examples',name);
-    const entries=walkFiles(root).map((path)=>({
-      path:relative(root,path).split('\\').join('/'),
-      data:readFileSync(path),
-    }));
-    const validated=validatePackageBytes(writeZip(entries),{strictProfiles:true,validateProfilePayloads:true});
-    assert.equal(validated.manifest.format,'P2LRN');
-    const manifest=readFileSync(join(root,'META-INF/manifest.json'),'utf8');
-    const graph=readFileSync(join(root,'content/graph.json'),'utf8');
-    assert.doesNotMatch(`${manifest}\n${graph}`,/P2RLN|p2rln\.org/);
+  test(`generated toolkit example ${name} is canonical P2LRN and does not require stored courses`,()=>{
+    const dir=mkdtempSync(join(tmpdir(),'p2lrn-distributed-fixture-'));
+    try{
+      const result=rebuildExample(resolve('.'),name,dir);
+      const validated=validatePackageFile(result.output,{strictProfiles:true,validateProfilePayloads:true});
+      assert.equal(validated.manifest.format,'P2LRN');
+      const manifest=readFileSync(result.output);
+      assert.ok(manifest.byteLength>0);
+      assert.ok(result.validation.contentRoot);
+      assert.ok(validated.graph.entities.some((entity)=>entity.type==='activity'));
+    }finally{rmSync(dir,{recursive:true,force:true});}
   });
 }

@@ -39,7 +39,7 @@ p2lrn-create open course.p2lrn workspace
 p2lrn-create build workspace course-v2.p2lrn --strict-profiles
 ```
 
-A no-op open/build of the 17 shipped canonical examples is regression-tested to retain the exact `contentRoot`. Imported portable IDs and opaque package members are retained instead of being regenerated or discarded.
+A no-op open/build of the four retained imported canonical examples is regression-tested to retain the exact `contentRoot`. Native test courses are authored on demand in temporary directories and are not stored in the repository. Imported portable IDs and opaque package members are retained instead of being regenerated or discarded.
 
 Legacy workspace upgrade:
 

@@ -7,7 +7,7 @@ import {cacheP2LRNPackageURL,openCachedP2LRNPackage,openP2LRNPackageURL} from '.
 import {createMemoryPackageCache,createPackageCacheFetch} from '../web/package-cache.js';
 
 const here=dirname(fileURLToPath(import.meta.url));
-const fixture=join(here,'..','..','..','examples','canonical','minimal-course.p2lrn');
+const fixture=join(here,'..','..','..','examples','canonical','external','qti3-minimal.p2lrn');
 
 test('verified package cache reopens the same package with network unavailable',async()=>{
   const sourceUrl='https://courses.example.test/minimal.p2lrn';
