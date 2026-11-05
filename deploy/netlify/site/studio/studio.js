@@ -6,6 +6,7 @@ import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
 import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browser-drafts.js';
 import {mountLessonImageEditor} from './runtime/lesson-images.js';
+import {mountVisualLayoutTools} from './runtime/visual-layout.js';
 import {studioUiText} from './runtime/studio-ui-i18n.js';
 
 const createCourseButton=document.querySelector('[data-create-course]');
@@ -352,6 +353,7 @@ async function renderEditor(){
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
   });
+  mountVisualLayoutTools({host:content,surface,onStatus:setStatus});
   mountLessonImageEditor({host:content,surface,onChange:()=>{
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,'<!doctype html>\n'+source.documentElement.outerHTML);
