@@ -90,7 +90,12 @@ try{
    await page.locator('p2lrn-player .p2lrn-head').waitFor({timeout:45000});
    const player=page.locator('p2lrn-player');
    if(item.navigateTo){
-     const available=player.locator('nav.p2lrn-nav button').filter({hasText:new RegExp('^'+item.navigateTo+'
+     const button=player.locator('nav.p2lrn-nav button').filter({hasText:item.navigateTo}).nth(item.navigateIndex??0);
+     await button.waitFor({timeout:20000});
+     assert.equal(await button.isDisabled(),false,'Expected playable '+item.navigateTo+' activity');
+     await button.click({timeout:20000});
+   }
+   if(item.frame)await player.locator(item.frame).waitFor({timeout:25000});
    let content=item.frame?player.frameLocator(item.frame).locator('body'):player.locator('.p2lrn-stage');
    if(item.name==='h5p-crossword'){
      const outer=player.frameLocator(item.frame);
