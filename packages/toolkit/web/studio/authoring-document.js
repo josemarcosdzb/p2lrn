@@ -1,4 +1,5 @@
 import {getCourseRights,setCourseRights} from '../course-rights.js';
+import {questionnaireForLearner} from './questionnaire-grading.js';
 import {createDefaultComponentRegistry, CAPABILITY_ACTION_COMPONENT, COLLABORATION_COMPONENT} from '../component-registry.js';
 import {validateNativeComposite} from '../native-composite-core.js';
 import {HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION, capabilityRequirements} from '../capability-broker.js';
@@ -271,7 +272,8 @@ export class P2LRNStudioDocument{
 
   setQuestionnaire(activityId,payload){
     const target=this.questionnaireForActivity(activityId);if(!target)throw new Error('La actividad no es un cuestionario nativo.');
-    this.payloadOverrides.set(target.path,encoder.encode(JSON.stringify(payload,null,2)+'\n'));this.changeCount+=1;return payload;
+    const learnerPayload=questionnaireForLearner(payload);
+    this.payloadOverrides.set(target.path,encoder.encode(JSON.stringify(learnerPayload,null,2)+'\n'));this.changeCount+=1;return learnerPayload;
   }
 
   hostCapabilitiesForEntity(entityId){
@@ -503,7 +505,7 @@ export class P2LRNStudioDocument{
   }
 
   addQuestionnaire(parentId=this.rootId,{title='Cuestionario',language='es',renderer='https://p2lrn.org/renderer/questionnaire/standard',payload=null}={}){
-    const data=payload??{schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Cuestionario'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'never'},questions:[{id:'q1',type:'single-choice',prompt:'Escribe aquí la pregunta',points:1,choices:[{id:'a',text:'Respuesta correcta'},{id:'b',text:'Otra respuesta'}],solution:{choiceIds:['a']}}]};
+    const data=questionnaireForLearner(payload??{schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Cuestionario'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'never'},questions:[{id:'q1',type:'single-choice',prompt:'Escribe aquí la pregunta',points:1,choices:[{id:'a',text:'Respuesta correcta'},{id:'b',text:'Otra respuesta'}],solution:{choiceIds:['a']}}]});
     return this.addEmbeddedResource(parentId,{title,language,filename:'questionnaire.json',mediaType:'application/vnd.p2lrn.questionnaire+json',bytes:encoder.encode(JSON.stringify(data,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-questionnaire',activityType:'https://p2lrn.org/type/assessment',renderer});
   }
 
