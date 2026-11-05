@@ -15,6 +15,7 @@ await cp(join(repo,'packages','toolkit','web','studio','authoring-document.js'),
 await cp(join(repo,'packages','toolkit','web','studio','package-export.js'),join(out,'runtime','package-export.js'));
 await cp(join(repo,'packages','toolkit','web','studio','new-document.js'),join(out,'runtime','new-document.js'));
 await cp(join(repo,'packages','toolkit','web','studio','questionnaire-editor.js'),join(out,'runtime','questionnaire-editor.js'));
+await cp(join(repo,'packages','toolkit','web','studio','questionnaire-grading.js'),join(out,'runtime','questionnaire-grading.js'));
 await cp(join(repo,'packages','toolkit','web','studio','structured-editor.js'),join(out,'runtime','structured-editor.js'));
 await cp(join(repo,'packages','toolkit','web','studio','lesson-images.js'),join(out,'runtime','lesson-images.js'));
 // Required by questionnaire, structured and lesson-image editors at module load.
