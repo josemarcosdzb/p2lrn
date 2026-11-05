@@ -662,6 +662,27 @@ async function verifyThreePointerDragAndRope(cdp){
   return result;
 }
 
+async function verifyThreeMobileAndDesktopEntry(cdp){
+  await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:2});
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  try{
+    await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/?src='+encodeURIComponent('/examples/game-ui-3d-mixed.p2lrn')});
+    await waitForEval(cdp,"document.getElementById('demo-player')?.shadowRoot?.querySelectorAll('.p2lrn-nav button').length>0",'mobile 3D navigation',30000);
+    const mobile=await evalTop(cdp,"(async()=>{\n  const player=document.getElementById('demo-player'),root=player?.shadowRoot;\n  const wait=async(predicate,label)=>{\n    for(let i=0;i<240;i++){\n      if(predicate())return;\n      await new Promise(resolve=>setTimeout(resolve,70));\n    }\n    throw new Error('Mobile 3D timeout: '+label);\n  };\n  const open=await (async()=>{\n    await wait(()=>[...root.querySelectorAll('.p2lrn-nav button')].some(b=>b.textContent.includes('Laboratorio 3D QA')),'navigation');\n    return [...root.querySelectorAll('.p2lrn-nav button')].find(b=>b.textContent.includes('Laboratorio 3D QA'));\n  })();\n  open.click();\n  await wait(()=>root.querySelector('.p2lrn-3d-joystick')&&root.querySelector('.p2lrn-3d-directions'),'scene');\n  const stage=root.querySelector('.p2lrn-3d-stage');\n  const canvas=stage.querySelector('canvas');\n  const stick=stage.querySelector('.p2lrn-3d-joystick');\n  const knob=stick?.querySelector('.p2lrn-3d-joystick-knob');\n  const fallback=root.querySelector('.p2lrn-3d-fallback');\n  if(fallback)throw new Error('WebGL fell back while testing the mobile 3D scene');\n  if(getComputedStyle(stick).display==='none')throw new Error('Joystick is hidden on touch screen');\n  if(getComputedStyle(canvas).touchAction!=='none')throw new Error('Touch input is intercepted by page scrolling');\n  const alt=root.querySelector('.p2lrn-3d-alternative');\n  if(!getComputedStyle(alt).clipPath.includes('inset'))throw new Error('Legacy 3D button controls remain visible');\n  const initialInstruction=root.querySelector('.p2lrn-3d-directions').textContent;\n  if(!initialInstruction.includes('pedestal'))throw new Error('Missing ordering scene instruction');\n  const rect=stick.getBoundingClientRect();\n  const x=rect.left+rect.width/2,y=rect.top+rect.height/2;\n  const dispatch=(name,px,py)=>stick.dispatchEvent(new PointerEvent(name,{\n    bubbles:true,cancelable:true,pointerId:83,pointerType:'touch',button:0,\n    buttons:name==='pointerup'?0:1,clientX:px,clientY:py,\n  }));\n  dispatch('pointerdown',x,y);\n  dispatch('pointermove',x,y-44);\n  const activeKnob=knob.style.transform;\n  if(!activeKnob.includes('translate3d')||activeKnob==='translate3d(0,0,0)')\n    throw new Error('Touch joystick did not track thumb position');\n  dispatch('pointerup',x,y-44);\n  if(knob.style.transform!=='translate3d(0,0,0)')\n    throw new Error('Touch joystick did not return to neutral');\n  const next=()=>[...root.querySelectorAll('.p2lrn-3d-trial .p2lrn-game-actions button')]\n    .find(button=>button.textContent==='Siguiente');\n  next().click();\n  await wait(()=>root.querySelector('.p2lrn-3d-directions')?.textContent.includes('azul'),'matching instruction');\n  next().click();\n  await wait(()=>root.querySelector('.p2lrn-3d-directions')?.textContent.includes('categoría'),'classification instruction');\n  return {\n    mobileViewport:innerWidth,stageWidth:stage.getBoundingClientRect().width,\n    joystickVisible:true,joystickMovesAndResets:true,touchAction:'none',\n    oldControlsVisuallyHidden:true,gameInstructions:['ordering','matching','classification'],\n    noMoveButtons:root.querySelectorAll('.p2lrn-3d-move-pad button').length===0,\n  };\n})()");
+    invariant(mobile.joystickVisible&&mobile.joystickMovesAndResets&&mobile.oldControlsVisuallyHidden&&mobile.noMoveButtons,'Mobile 3D QA failed: '+JSON.stringify(mobile));
+    const screenshot=await captureElementVisualEvidence(cdp,'quest-3d-mobile-390px',"document.getElementById('demo-player')",{maxHeight:1400});
+    await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:false});
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+    await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/?src='+encodeURIComponent('/examples/game-ui-3d-mixed.p2lrn')});
+    const desktop=await evalTop(cdp,"(async()=>{\n  const root=document.getElementById('demo-player')?.shadowRoot;\n  const wait=async(predicate)=>{\n    for(let i=0;i<240;i++){\n      if(predicate())return;\n      await new Promise(r=>setTimeout(r,70));\n    }\n    throw new Error('Desktop 3D scene did not render');\n  };\n  await wait(()=>[...root.querySelectorAll('.p2lrn-nav button')].some(b=>b.textContent.includes('Laboratorio 3D QA')));\n  [...root.querySelectorAll('.p2lrn-nav button')].find(b=>b.textContent.includes('Laboratorio 3D QA')).click();\n  await wait(()=>root.querySelector('.p2lrn-3d-entry-hint'));\n  const entry=root.querySelector('.p2lrn-3d-entry-hint'),stage=root.querySelector('.p2lrn-3d-stage');\n  const initiallyVisible=getComputedStyle(entry).display!=='none';\n  const label=entry.textContent;\n  stage.querySelector('canvas').focus();\n  const entered=stage.classList.contains('is-entered')&&getComputedStyle(entry).display==='none';\n  if(!initiallyVisible||!label.includes('Haz clic')||!entered)\n    throw new Error('Desktop 3D entry hint did not guide users into the scene');\n  return {entryPrompt:label,enteredWithSceneFocus:entered};\n})()");
+    invariant(desktop.enteredWithSceneFocus,'Desktop scene entry failed');
+    return {mobile,desktop,screenshot};
+  }finally{
+    await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:false});
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+  }
+}
+
 async function verifyGameLayout(cdp,kind){
   const title=kind==='crossword'?'Crucigrama de prueba':'Rosco de prueba';
   const selector=kind==='crossword'?'.p2lrn-crossword-grid':'.p2lrn-rosco';
@@ -1570,6 +1591,9 @@ try{
   let pointerDrag=null;
   try{pointerDrag=await verifyThreePointerDragAndRope(cdp);}
   catch(error){failures.push({name:'three-pointer-drag-and-rope',message:String(error?.message||error)});}
+  let threeMobile=null;
+  try{threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);}
+  catch(error){failures.push({name:'three-mobile-joystick-and-desktop-entry',message:String(error?.message||error)});}
   let narrow=null;
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
   let studioUI=null;
@@ -1578,7 +1602,7 @@ try{
   try{studioSiteUI=await verifyStudioSiteUI(cdp);}catch(error){failures.push({name:'studio-website-ui',message:String(error?.message||error)});}
   let connectedArchitecture=null;
   try{connectedArchitecture=await verifyConnectedArchitecture(cdp,connectedFixture);}catch(error){failures.push({name:'connected-architecture',message:String(error?.message||error)});}
-  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,pointerDrag,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
+  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,pointerDrag,threeMobile,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
 }finally{
   try{cdp?.socket?.close();}catch{}
