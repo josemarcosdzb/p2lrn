@@ -639,6 +639,7 @@ export async function render(options) {
   const enterScene=()=>{stage.classList.add('is-entered');entryHint.setAttribute('aria-hidden','true');};
   canvas.addEventListener('focus',enterScene);
   canvas.addEventListener('pointerdown',enterScene);
+  canvas.addEventListener('click',enterScene);
   const controls=el('div',{class:'p2lrn-3d-controls'});
   const status=statusNode(playerUiText('Preparando escena 3D…'));
   let trialIndex=0;
@@ -725,6 +726,7 @@ export async function render(options) {
     joystick?.destroy();
     canvas.removeEventListener('focus',enterScene);
     canvas.removeEventListener('pointerdown',enterScene);
+    canvas.removeEventListener('click',enterScene);
     scene.destroy();
     originalDestroy();
   };
