@@ -42,5 +42,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --test packages/studio/test/dist-dependencies.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node packages/studio/scripts/build-dist.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path packages/studio/dist/runtime/questionnaire-grading.js)) { throw 'Studio npm bundle lacks grading mode helper' }
       - name: Verify teacher mode selector and portable course in real Chrome
         run: node scripts/verify-studio-deferred-grading.mjs
