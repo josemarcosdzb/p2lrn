@@ -51,8 +51,10 @@ function makeBlock(kind){
 function insertAtSelection(surface,block){
   const selection=surface.ownerDocument.getSelection();
   if(selection?.rangeCount&&surface.contains(selection.anchorNode)){
-    const range=selection.getRangeAt(0);
-    range.deleteContents();range.insertNode(block);
+    let top=selection.anchorNode;
+    while(top&&top.parentNode!==surface)top=top.parentNode;
+    if(top&&top.parentNode===surface)top.after(block);
+    else surface.append(block);
   }else surface.append(block);
   // Ensure the insertion is serialized by the existing Studio change handler.
   surface.dispatchEvent(new Event('input',{bubbles:true}));
@@ -77,7 +79,8 @@ export function mountVisualLayoutTools({host,surface,onStatus}={}){
     });
     bar.append(button);
   }
-  host.prepend(bar);
+  if(surface.parentNode===host)host.insertBefore(bar,surface);
+  else host.prepend(bar);
   return {toolbar:bar,dispose(){bar.remove();}};
 }
 export const VISUAL_LAYOUT_BLOCKS=BLOCKS.map(([id,label])=>({id,label}));
