@@ -193,6 +193,8 @@ for(const [path,label] of [['p2lrn.js','Spanish'],['en/p2lrn.js','English']]){
 // Ensure the production CSP authorizes exactly the immutable import map on Viewer and Studio.
 async function verifyGeneratedImportMapCsp(){
  const raw=await readFile(join(out,'_headers'),'utf8');
+ const runtimeManifest=JSON.parse(await readFile(join(out,'runtime-bootstrap-csp.json'),'utf8'));
+ const approvedBootstraps=Object.values(runtimeManifest.hashes??{}).map(hash=>"'"+hash+"'");
  let section='';
  const policies=new Map();
  for(const line of raw.split(/\r?\n/)){
@@ -210,7 +212,9 @@ async function verifyGeneratedImportMapCsp(){
    if(!policy){errors.push(name+' generated CSP missing');continue}
    const scriptSrc=policy.match(/(?:^|;)\s*script-src\s+([^;]+)/)?.[1]||'';
    const hashes=[...scriptSrc.matchAll(/'sha256-[A-Za-z0-9+/=]+'/g)].map(m=>m[0]);
-   if(hashes.length!==1||hashes[0]!=="'"+expected+"'")errors.push(name+' CSP hash must match its exact import map');
+   const approved=new Set(["'"+expected+"'",...approvedBootstraps]);
+   if(hashes.length!==approved.size||hashes.some(hash=>!approved.has(hash)))
+     errors.push(name+' CSP must authorize exactly the import map and approved sandbox bootstrap hashes');
    if(scriptSrc.includes("'unsafe-inline'"))errors.push(name+' CSP must not allow arbitrary inline scripts');
  }
 }
