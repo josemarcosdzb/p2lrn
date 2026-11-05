@@ -1,3 +1,4 @@
+import {questionnaireForLearner} from './questionnaire-grading.js';
 const encoder=new TextEncoder();
 
 function canonicalize(value){
@@ -104,9 +105,16 @@ export async function exportP2LRNPackage(document){
   const payloads=new Map();
   const files=[];
   for(const original of manifest.files){
-    const bytes=document.payloadOverrides.has(original.path)
+    let bytes=document.payloadOverrides.has(original.path)
       ?document.payloadOverrides.get(original.path)
       :await document.package.zip.read(original.path);
+    // Protect imported packages as well, including host-graded questionnaires
+    // that were never opened in the Studio visual editor.
+    if(baseMedia(original.mediaType)==='application/vnd.p2lrn.questionnaire+json'){
+      const questionnaire=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+      if(questionnaire?.grading?.mode==='host')
+        bytes=jsonBytes(questionnaireForLearner(questionnaire));
+    }
     payloads.set(original.path,bytes);
     files.push(await descriptor(original.path,bytes,original.mediaType,original.schema));
   }
