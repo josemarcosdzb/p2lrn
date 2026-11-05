@@ -257,6 +257,57 @@ function wireDocument(doc, path) {
     } catch {}
   }
 }
+async function installLegacyInlineHandlers(root) {
+  // Existing cmi5/IMS packages may rely on onclick/onchange HTML attributes.
+  // A strict embedding CSP blocks those attributes even though package JS
+  // runs in a sandboxed opaque-origin iframe. Convert them to blob-backed
+  // listeners INSIDE that iframe, never in the host application.
+  const handlers=[];
+  const onLoadElements=[];
+  let bytes=0;
+  for(const el of root.querySelectorAll('*')) {
+    let id=null;
+    for(const attribute of [...el.attributes]) {
+      const name=attribute.name.toLowerCase();
+      if(!/^on[a-z][a-z0-9]*$/.test(name))continue;
+      const source=attribute.value;
+      el.removeAttribute(attribute.name);
+      bytes+=source.length;
+      if(++inlineScriptId>5000||bytes>512*1024)
+        throw new Error('External package has too many legacy event handlers.');
+      if(!id){
+        id='p2lrn-legacy-'+inlineScriptId;
+        el.setAttribute('data-p2lrn-legacy-id',id);
+      }
+      handlers.push({id,eventName:name.slice(2),source});
+      if(name==='onload'&&(el===document.body||el===document.documentElement))
+        onLoadElements.push(el);
+    }
+  }
+  if(!handlers.length)return;
+  const source=handlers.map(handler=>{
+    const selector=JSON.stringify('[data-p2lrn-legacy-id="'+handler.id+'"]');
+    const eventName=JSON.stringify(handler.eventName);
+    // The source is deliberately executable, just like scripts in the
+    // supplied package, but it never crosses the allow-scripts opaque sandbox.
+    return '(function(){const node=document.querySelector('+selector+');if(!node)return;'+
+      'node.addEventListener('+eventName+',function(event){'+
+      'const result=(function(event){\n'+handler.source+'\n}).call(this,event);'+
+      'if(result===false){event.preventDefault();event.stopPropagation();}'+
+      '});})();';
+  }).join('\n');
+  const src=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
+  urls.set('p2lrn-events-'+(++inlineScriptId),src);
+  const script=document.createElement('script');
+  script.src=src;
+  await new Promise((resolve,reject)=>{
+    script.addEventListener('load',resolve,{once:true});
+    script.addEventListener('error',()=>reject(new Error('External package legacy events failed to initialize.')),{once:true});
+    document.head.append(script);
+  });
+  for(const el of onLoadElements)el.dispatchEvent(new Event('load'));
+}
+
 function makeUrls() {
   for (const [path, file] of files) {
     if (file.mediaType.includes('html') || file.mediaType.includes('xhtml') || file.mediaType.includes('css')) continue;
@@ -304,6 +355,7 @@ async function navigate(path, suffix = '') {
       old.replaceWith(script);
       if (loaded) await loaded;
     }
+    await installLegacyInlineHandlers(document);
     reply('ready', {member:normalized, suffix:launchSuffix, topology:'opaque-inline'});
     return;
   }
