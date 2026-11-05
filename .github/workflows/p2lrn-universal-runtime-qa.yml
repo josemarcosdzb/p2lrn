@@ -22,6 +22,7 @@ on:
       - 'packages/toolkit/web/scorm2004-sequencing.js'
       - 'packages/toolkit/web/renderers/scorm-runtime.js'
       - 'packages/toolkit/test/scorm2004-sequencing-preflight.test.mjs'
+      - 'scripts/verify-automatic-runtimes.mjs'
       - 'spec/UNIVERSAL-RUNTIME-1.md'
       - '.github/workflows/p2lrn-universal-runtime-qa.yml'
   workflow_dispatch:
