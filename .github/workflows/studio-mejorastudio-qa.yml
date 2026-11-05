@@ -1,0 +1,57 @@
+name: P2LRN Studio unified UI - mejorastudio
+
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'packages/toolkit/web/studio/**'
+      - 'packages/toolkit/test/studio-visual-layout.test.mjs'
+      - 'packages/studio/**'
+      - 'deploy/netlify/site/studio/**'
+      - 'scripts/verify-studio-unified-ui.mjs'
+      - '.github/workflows/studio-mejorastudio-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-studio-mejorastudio-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  studio-ui:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Check module syntax and integration
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @(
+            'packages/toolkit/web/studio/visual-layout.js',
+            'packages/toolkit/web/studio/command-bar.js',
+            'packages/studio/src/p2lrn-studio.js',
+            'deploy/netlify/site/studio/studio.js',
+            'scripts/verify-studio-unified-ui.mjs'
+          )) {
+            node --check $path
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Studio interface regressions
+        run: node --test packages/toolkit/test/studio-visual-layout.test.mjs packages/studio/test/dist-dependencies.test.mjs
+      - name: Build npm Studio including shared command bar
+        run: node packages/studio/scripts/build-dist.mjs
+      - name: Assert npm bundled editor assets
+        shell: powershell
+        run: |
+          if (!(Test-Path packages/studio/dist/runtime/command-bar.js)) { throw 'Shared Studio UI missing from dist' }
+          if (!(Test-Path packages/studio/dist/runtime/visual-layout.js)) { throw 'Shared visual layout missing from dist' }
+      - name: Real Chrome / Edge Studio UI and portable course round-trip
+        run: node scripts/verify-studio-unified-ui.mjs
