@@ -77,7 +77,7 @@ export function mountVisualLayoutTools({host,surface,onStatus}={}){
     });
     bar.append(button);
   }
-  host.insertBefore(bar,surface);
+  host.prepend(bar);
   return {toolbar:bar,dispose(){bar.remove();}};
 }
 export const VISUAL_LAYOUT_BLOCKS=BLOCKS.map(([id,label])=>({id,label}));
