@@ -61,8 +61,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  untrusted-pr-hosted-validation:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Verify security invariants without running imported courses
+        run: |
+          node --test scripts/test-security-hardening.test.mjs
+          node scripts/verify-site-security.mjs
+          node scripts/verify-contact-security.mjs
   security-windows:
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 25
     steps:
@@ -147,7 +165,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
   public-npm-registry:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]') }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]')) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     env:
@@ -246,7 +264,7 @@ jobs:
 
 
   automatic-runtime:
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || github.event_name == 'pull_request') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 20
     steps:
@@ -279,7 +297,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   license-integrity:
-    if: ${{ contains(github.event.head_commit.message, '[license verify]') || (github.event_name == 'workflow_dispatch' && inputs.license_only) }}
+    if: ${{ github.event_name != 'pull_request' && (contains(github.event.head_commit.message, '[license verify]') || (github.event_name == 'workflow_dispatch' && inputs.license_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 10
     steps:
@@ -311,7 +329,7 @@ jobs:
         run: node scripts/verify-license-integration.mjs
 
   focused-local:
-    if: ${{ contains(github.event.head_commit.message, '[focused local]') || (github.event_name == 'workflow_dispatch' && inputs.focused_only) }}
+    if: ${{ github.event_name != 'pull_request' && (contains(github.event.head_commit.message, '[focused local]') || (github.event_name == 'workflow_dispatch' && inputs.focused_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 25
     steps:
@@ -347,7 +365,7 @@ jobs:
         run: node scripts/verify-local-viewer.mjs
 
   toolkit-and-cdn:
-    if: ${{ !contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !contains(github.event.head_commit.message, '[lms design]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
+    if: ${{ github.event_name != 'pull_request' && (!contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !contains(github.event.head_commit.message, '[lms design]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only))) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
@@ -733,7 +751,7 @@ jobs:
           node scripts/stage-npm-release.mjs
 
   public-cdn:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify live CDN]') }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify live CDN]')) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 20
     steps:
@@ -753,7 +771,7 @@ jobs:
         run: node scripts/verify-public-cdn.mjs
 
   local-viewer-revision:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[local viewer sync]') }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' && contains(github.event.head_commit.message, '[local viewer sync]')) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 16
     steps:
@@ -780,7 +798,7 @@ jobs:
         run: node scripts/verify-live-local-4183.mjs
 
   deployment-state-windows:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify deployments]') }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify deployments]')) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 10
     steps:
@@ -797,7 +815,7 @@ jobs:
         run: node scripts/verify-deployment-state.mjs
 
   lms-contracts-windows:
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || github.event_name == 'pull_request') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 20
     steps:
@@ -880,7 +898,7 @@ jobs:
 
   mcp-connectors-windows:
     # Independent gate to isolate MCP results from unrelated Studio/Player CI failures.
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || github.event_name == 'pull_request') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 20
     steps:
