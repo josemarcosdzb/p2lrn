@@ -132,7 +132,7 @@ function installOpaqueStorage() {
 // at the isolated document head instead of relaxing the CSP. This never runs
 // on the application document and does not grant networking, navigation or
 // same-origin privileges to the package.
-function protectOpaqueDocumentBase(doc) {
+function protectOpaqueDocumentBase(doc, protectDetachedFactory=true) {
   const head=doc.head;
   if(!head)return;
   const baseNode=(node)=>node?.nodeType===1&&node.localName?.toLowerCase()==='base';
@@ -184,12 +184,13 @@ function protectOpaqueDocumentBase(doc) {
   // detached document too, so no disallowed base is ever inserted.
   // This does not change the CSP or permit network, parent navigation,
   // same-origin access, or relative resource resolution via <base>.
+  if(!protectDetachedFactory)return;
   const implementation=doc.implementation;
   const createHTMLDocument=implementation?.createHTMLDocument;
   if(typeof createHTMLDocument==='function'){
     const guardedCreate=function(...args){
       const detached=createHTMLDocument.apply(this,args);
-      protectOpaqueDocumentBase(detached);
+      protectOpaqueDocumentBase(detached,false);
       return detached;
     };
     Object.defineProperty(implementation,'createHTMLDocument',{
