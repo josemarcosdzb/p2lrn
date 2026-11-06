@@ -1,4 +1,6 @@
-import {VISUAL_LAYOUT_BLOCKS,insertVisualLayoutBlock} from './visual-layout.js';
+import {VISUAL_LAYOUT_BLOCKS,insertVisualLayoutBlock,STUDIO_SHAPES} from './visual-layout.js';
+import {styleStudioShapeArt} from './studio-shapes.js';
+import {addStudioDropPair,isStudioDropActivity,removeStudioDropPair,setStudioDropBackground,removeStudioDropBackground,mountStudioDropAuthoring} from './studio-drop-activity.js';
 import {mountAdvancedStudioTools} from './studio-advanced-tools.js';
 
 // Canonical Studio chrome. Both the hosted Studio and @p2lrn/studio mount
@@ -122,6 +124,10 @@ const CSS=[
   '.p2lrn-activity-picker-grid button small{font-size:11px;color:#667085;line-height:1.45}',
   '.p2lrn-activity-picker [hidden]{display:none!important}',
   '.p2lrn-import-menu .add-help{display:none!important}',
+  '.p2lrn-shape-picker>.p2lrn-file-pop{width:min(395px,calc(100vw - 34px));grid-template-columns:repeat(6,minmax(0,1fr));max-height:360px;overflow:auto}',
+  '.p2lrn-shape-picker .p2lrn-shape-button{display:grid!important;justify-items:center!important;gap:4px!important;padding:6px 2px!important;min-width:0;white-space:normal!important;color:#334155}',
+  '.p2lrn-shape-picker .p2lrn-shape-button small{font:500 9px/1.2 system-ui,sans-serif;text-align:center}',
+  '.p2lrn-shape-picker .p2lrn-shape-button>span{display:block;flex:none;max-width:100%}',
   '.p2lrn-ribbon-swatch{width:17px;height:17px;display:inline-block;border-radius:5px;border:1px solid #d0d5dd;flex:none}',
   '.p2lrn-studio-workspace{display:grid!important;grid-template-columns:minmax(230px,260px) minmax(0,1fr)!important;gap:12px!important;min-height:630px}',
   '.p2lrn-studio-workspace[hidden]{display:none!important}',
@@ -469,12 +475,53 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   insert.append(node(doc,'span','p2lrn-ribbon-divider'));
   const layouts=group(insert);
   for(const item of VISUAL_LAYOUT_BLOCKS){
+    if(item.id==='shape'){
+      const picker=node(doc,'details','p2lrn-file-menu p2lrn-shape-picker');
+      picker.append(node(doc,'summary','','Formas'));
+      const grid=node(doc,'div','p2lrn-file-pop');
+      grid.setAttribute('role','group');
+      grid.setAttribute('aria-label','Tipos de formas geométricas');
+      for(const shape of STUDIO_SHAPES){
+        const b=button(doc,'',{title:'Insertar '+shape.label,cls:'p2lrn-shape-button'});
+        b.dataset.uiLayout='shape:'+shape.id;
+        const art=node(doc,'span');
+        styleStudioShapeArt(art,shape.id);
+        Object.assign(art.style,{width:'26px',height:'21px',minHeight:'21px',maxHeight:'21px',flex:'none',borderBottomWidth:'3px'});
+        b.append(art,node(doc,'small','',shape.label));
+        b.addEventListener('mousedown',event=>event.preventDefault());
+        b.addEventListener('click',()=>{addLayout('shape:'+shape.id);picker.open=false;});
+        grid.append(b);
+      }
+      picker.append(grid);layouts.append(picker);
+      continue;
+    }
     const b=button(doc,item.label,{title:'Insertar '+item.label.toLowerCase()});
     b.dataset.uiLayout=item.id;
     b.addEventListener('mousedown',(event)=>event.preventDefault());
     b.addEventListener('click',()=>addLayout(item.id));
     layouts.append(b);
   }
+  const dropMenu=node(doc,'details','p2lrn-file-menu');
+  dropMenu.append(node(doc,'summary','','Zonas de arrastre'));
+  const dropActions=node(doc,'div','p2lrn-file-pop');
+  for(const [action,label] of [
+    ['add','Añadir zona y ficha'],['remove','Eliminar zona seleccionada'],
+    ['image','Elegir imagen de fondo'],['remove-image','Quitar imagen de fondo'],
+  ]){
+    const b=button(doc,label,{title:label});
+    b.addEventListener('mousedown',event=>event.preventDefault());
+    b.addEventListener('click',()=>{if(action!=='image')void runDropAction(action);else dropFile.click();dropMenu.open=false;});
+    dropActions.append(b);
+  }
+  const dropFile=node(doc,'input');dropFile.type='file';
+  dropFile.accept='image/png,image/jpeg,image/webp,image/gif,image/avif';
+  dropFile.setAttribute('aria-label','Imagen de fondo del ejercicio de arrastre');
+  dropFile.hidden=true;
+  dropFile.addEventListener('change',async()=>{
+    const file=dropFile.files?.[0];dropFile.value='';
+    if(file)await runDropAction('image',file);
+  });
+  dropActions.append(dropFile);dropMenu.append(dropActions);layouts.append(dropMenu);
   const colors=group(context);colors.classList.add('p2lrn-object-colors');
   const colorMenu=node(doc,'details','p2lrn-context-menu');colorMenu.dataset.studioContextMenu='fondo';
   const colorSummary=node(doc,'summary','','Fondo');colorSummary.setAttribute('aria-label','Color de fondo del bloque');
@@ -488,6 +535,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   }
 
   let savedRange=null,savedSurface=null,lastVisualBlock=null,previewMode=false,hasDocument=false;
+  let dropSurface=null,dropAuthoring=null;
   const allowedWithoutDocument=new Set(['create','open','openUrl','recoverDraft','clearDraft','review']);
   function surface(){
     const value=resolveSurface();
@@ -534,8 +582,20 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     changed(s);
     refreshButtons();
   }
+  function ensureDropAuthoring(next){
+    if(dropSurface===next)return;
+    dropAuthoring?.dispose();dropAuthoring=null;dropSurface=next;
+    if(next)dropAuthoring=mountStudioDropAuthoring({
+      surface:next,
+      onChange:()=>{
+        dropAuthoring?.selectedZone?.removeAttribute('data-p2lrn-studio-zone-selected');
+        changed(next);
+      },
+    });
+  }
   function refreshButtons(){
     const enabled=Boolean(surface())&&!previewMode;
+    ensureDropAuthoring(enabled?surface():null);
     for(const button of bar.querySelectorAll('[data-ui-action=insertImage],[data-ui-action=insertVideo]'))button.disabled=!enabled;
     for(const b of commandButtons.values())b.disabled=!enabled;
     for(const cmd of ['bold','italic','underline','strikeThrough']){
@@ -558,6 +618,31 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     }
     catch(error){onStatus(error.message);}
   }
+  async function runDropAction(action,file=null){
+    const s=surface();
+    if(!s){onStatus('Selecciona una lección HTML editable.');return;}
+    const zone=dropAuthoring?.selectedZone||null;
+    const selection=advanced.current();
+    const activity=isStudioDropActivity(selection)?selection:
+      zone?.closest?.('[data-p2lrn-dnd="1"]')||
+      (isStudioDropActivity(lastVisualBlock)?lastVisualBlock:null);
+    if(!activity||!s.contains(activity)){
+      onStatus('Primero inserta o selecciona una actividad de arrastrar y soltar.');return;
+    }
+    try{
+      if(action==='add'){
+        const count=activity.querySelectorAll('[data-p2lrn-dnd-zone]').length;
+        const {zone:newZone}=addStudioDropPair(activity,{x:9+(count%3)*26,y:10+(count%4)*18,width:24,height:22});
+        dropAuthoring?.select(newZone);
+      }else if(action==='remove'){
+        if(!zone){onStatus('Selecciona primero una zona de destino.');return;}
+        removeStudioDropPair(activity,zone);dropAuthoring?.select(null);
+      }else if(action==='image')await setStudioDropBackground(activity,file);
+      else if(action==='remove-image')removeStudioDropBackground(activity);
+      else throw new RangeError('Acción de zonas no reconocida.');
+      changed(s);onStatus('Actividad actualizada. Arrastra los bordes de una zona para redimensionarla.');
+    }catch(error){onStatus(error.message);}
+  }
   function colorBlock(color){
     const s=surface();
     if(!s){onStatus('Selecciona una lección con un bloque visual.');return;}
@@ -565,7 +650,12 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     if(anchor?.nodeType===3)anchor=anchor.parentElement;
     const block=advanced.current()||anchor?.closest?.('[data-p2lrn-layout]')||lastVisualBlock;
     if(!block||!s.contains(block)){onStatus('Selecciona un bloque visual antes de cambiar su fondo.');return;}
-    block.style.backgroundColor=color;changed(s);
+    const art=block.querySelector?.('[data-p2lrn-shape-art]');
+    if(art){
+      if(['line','curve','wave'].includes(art.dataset.p2lrnShapeArt))art.style.borderBottomColor=color;
+      else art.style.backgroundColor=color;
+    }else block.style.backgroundColor=color;
+    changed(s);
     onStatus('Diseño del bloque actualizado.');
   }
   async function run(name,...args){
@@ -627,6 +717,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     dispose(){
       root.removeEventListener('pointerdown',dismissFileMenu,true);
       root.removeEventListener('keydown',dismissFileKeys,true);
+      dropAuthoring?.dispose();dropAuthoring=null;dropSurface=null;
       advanced.dispose();
       activityDialog?.remove();
       doc.removeEventListener('selectionchange',remember);
