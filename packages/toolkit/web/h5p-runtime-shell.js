@@ -125,6 +125,58 @@ function installOpaqueStorage() {
     try { Object.defineProperty(globalThis,name,{configurable:true,value:ephemeralStorage()}); } catch {}
   }
 }
+// P2LRN already resolves H5P library and content files to verified Blob URLs.
+// Some video libraries redundantly inject <base href="about:srcdoc"> into the
+// opaque iframe. This violates our enforced base-uri 'none' even though that
+// base does not help with local Blob media. Reject insertion of ALL base nodes
+// at the isolated document head instead of relaxing the CSP. This never runs
+// on the application document and does not grant networking, navigation or
+// same-origin privileges to the package.
+function protectOpaqueDocumentBase(doc) {
+  const head=doc.head;
+  if(!head)return;
+  const baseNode=(node)=>node?.nodeType===1&&node.localName?.toLowerCase()==='base';
+  const removeBases=(node)=>{
+    if(baseNode(node))return true;
+    if(node?.nodeType===11||node?.nodeType===1)
+      for(const base of [...(node.querySelectorAll?.('base')??[])])base.remove();
+    return false;
+  };
+  for(const method of ['appendChild','insertBefore','replaceChild']){
+    const original=head[method].bind(head);
+    Object.defineProperty(head,method,{
+      configurable:true,value:function(node,...args){
+        if(removeBases(node))return method==='replaceChild'?args[0]:node;
+        return original(node,...args);
+      }
+    });
+  }
+  for(const method of ['append','prepend','replaceChildren']){
+    const original=head[method].bind(head);
+    Object.defineProperty(head,method,{
+      configurable:true,value:function(...nodes){
+        for(const node of nodes)if(typeof node!=='string')removeBases(node);
+        return original(...nodes.filter(node=>typeof node==='string'||!baseNode(node)));
+      }
+    });
+  }
+  const originalInsertAdjacentHTML=head.insertAdjacentHTML.bind(head);
+  Object.defineProperty(head,'insertAdjacentHTML',{
+    configurable:true,value:function(position,html){
+      // Do not allow raw HTML to create base elements through this bypass.
+      const template=doc.createElement('template');
+      template.innerHTML=String(html??'');
+      removeBases(template.content);
+      if(String(position).toLowerCase()==='afterbegin'){
+        return head.prepend(template.content);
+      }
+      if(String(position).toLowerCase()==='beforeend'){
+        return head.append(template.content);
+      }
+      return originalInsertAdjacentHTML(position,template.innerHTML);
+    }
+  });
+}
 
 function staticFiles(data) {
   if (!Array.isArray(data.files) || data.files.length > MAX_STATIC_FILES) {
@@ -389,6 +441,7 @@ async function initializeStatic(data) {
   let doc = document;
   let win = globalThis;
   if (data.opaqueRuntime) {
+    protectOpaqueDocumentBase(document);
     const contentRoot = document.createElement('div');
     contentRoot.className = 'h5p-content';
     contentRoot.dataset.contentId = 'p2lrn-h5p';
