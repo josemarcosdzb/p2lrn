@@ -86,3 +86,12 @@
 .p2lrn-community-fixture-note{
   margin:0;color:#334155;font-size:.91rem;line-height:1.55;
 }
+
+.community-source-context{
+  max-width:82ch;margin:18px 0 20px;padding:13px 16px;
+  border-left:3px solid #466b9b;background:#eef4fc;
+  color:#243b58;font-size:.93rem;line-height:1.6;
+}
+.community-source-context strong{color:#172b47}
+.community-source-context a{color:#1747a6;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.community-source-context a:focus-visible{outline:3px solid #1747a6;outline-offset:3px}
