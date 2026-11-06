@@ -198,6 +198,47 @@ async function browserScenario(){
     shape=item.surface.querySelector('[data-p2lrn-layout=shape]');
     expect(shape.getBoundingClientRect().width>previousWidth,'Redo did not restore shape width');
     expect(formatTab.getAttribute('aria-selected')==='true','New shape should expose Formato automatically');
+    // All authored shapes must share the same resize/undo system, not a parallel editor.
+    item.toolbar.querySelector('[role=tab][aria-controls*="-insert"]').click();
+    const choices=[...item.toolbar.querySelectorAll('[data-ui-layout^="shape:"]')];
+    expect(choices.length>=21,'The full geometric shape gallery is missing');
+    const triangleChoice=item.toolbar.querySelector('[data-ui-layout="shape:triangle"]');
+    expect(triangleChoice,'Triangle is missing from the shape gallery');
+    triangleChoice.click();
+    const triangle=item.surface.querySelector('[data-p2lrn-shape=triangle]');
+    expect(triangle&&triangle.querySelector('[data-p2lrn-shape-art]')?.style.clipPath.startsWith('polygon('),
+      'Geometric shape does not use scalable CSS geometry');
+    const dropdownChoice=item.toolbar.querySelector('[data-ui-layout=dropdown]');
+    dropdownChoice.click();
+    const dropdown=item.surface.querySelector('details[data-p2lrn-layout=dropdown]');
+    expect(dropdown&&dropdown.querySelector('summary')?.textContent.includes('desplegar'),
+      'Native keyboard-accessible dropdown was not inserted');
+    item.toolbar.querySelector('[data-ui-layout=drag-drop]').click();
+    const activityDrop=item.surface.querySelector('section[data-p2lrn-dnd="1"]');
+    expect(activityDrop,'Image drop activity was not inserted');
+    expect(activityDrop.querySelectorAll('[data-p2lrn-dnd-zone]').length===2,'Missing initial destination zones');
+    expect(activityDrop.querySelectorAll('[data-p2lrn-dnd-item]').length===2,'Missing draggable item tray');
+    const zonesMenu=[...item.toolbar.querySelectorAll('details')].find(el=>el.querySelector(':scope > summary')?.textContent==='Zonas de arrastre');
+    expect(zonesMenu,'Drag-drop hotspot controls are missing');
+    zonesMenu.open=true;
+    const newZone=[...zonesMenu.querySelectorAll('button')].find(btn=>btn.textContent==='Añadir zona y ficha');
+    newZone.click();
+    expect(activityDrop.querySelectorAll('[data-p2lrn-dnd-zone]').length===3,
+      'Adding a new image hotspot did not also add a draggable item');
+    expect(activityDrop.querySelectorAll('[data-p2lrn-dnd-item]').length===3,'Draggable item tray did not grow');
+    // Upload a tiny local raster image; it must survive strict Studio HTML sanitization.
+    const fileInput=zonesMenu.querySelector('input[type=file]');
+    const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y7lMqYAAAAASUVORK5CYII='),x=>x.charCodeAt(0));
+    const files=new DataTransfer();files.items.add(new File([bytes],'fondo.png',{type:'image/png'}));
+    fileInput.files=files.files;fileInput.dispatchEvent(new Event('change',{bubbles:true}));
+    for(let i=0;i<60&&!activityDrop.querySelector('[data-p2lrn-dnd-image]');i++)
+      await new Promise(done=>setTimeout(done,25));
+    expect(activityDrop.querySelector('[data-p2lrn-dnd-image]')?.getAttribute('src')?.startsWith('data:image/png;base64,'),
+      'Raster background image did not persist in the activity');
+    // The board is percentage-based, so drop zones stay aligned when responsive.
+    const hotspot=activityDrop.querySelector('[data-p2lrn-dnd-zone]');
+    expect(hotspot.style.left.endsWith('%')&&hotspot.style.width.endsWith('%'),
+      'Hotspots must use responsive percentage coordinates');
     item.toolbar.querySelector('[data-ui-action=save]').click();
     const fileMenu=item.toolbar.querySelector('.p2lrn-file-menu');
     expect(fileMenu.querySelectorAll('[data-ui-action=export]').length===1,'Export action must exist once in Archivo');
@@ -226,6 +267,12 @@ async function browserScenario(){
     expect(html.includes('data-p2lrn-layout="columns"'),'Exported course lost visual layout');
     expect(html.includes('rgb(239, 246, 255)'),'Exported course lost design styles');
     expect(html.includes('La explicación debe conservarse.'),'Exported course lost original lesson text');
+    expect(html.includes('data-p2lrn-shape="triangle"'),'Exported course lost the selected shape');
+    expect(html.includes('data-p2lrn-layout="dropdown"'),'Exported course lost native dropdown');
+    expect(html.includes('data-p2lrn-dnd="1"')&&html.includes('data-p2lrn-dnd-accept="item-3"'),
+      'Exported course lost image hotspot mapping');
+    expect(html.includes('data:image/png;base64,'),'Exported course lost the author-provided background image');
+    expect(!html.includes('<script')&&!html.includes('onerror='),'Lesson must remain inert HTML');
     item.ui.setMessage('Cambios guardados');
     expect(item.toolbar.querySelector('[role=status]').textContent==='Cambios guardados','Status feedback is not visible');
   }
