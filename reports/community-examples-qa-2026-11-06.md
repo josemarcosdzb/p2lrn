@@ -1,7 +1,7 @@
 # Certificación funcional de los ejemplos P2LRN — 6 de noviembre de 2026
 
 **Estado funcional de la matriz de ejemplos: APROBADA (30/30 en Chrome real, rama `mejorastudio`).**
-**Estado del despliegue público: NO VERIFICADO / NO CERTIFICADO EN PRODUCCIÓN.**
+**Estado del despliegue público: PUBLICADO Y VERIFICADO.** Commit de `main` [0880c98e](https://github.com/josemarcosdzb/p2lrn/commit/0880c98e319e738cac01e4e1e9d4d4cce979ea7d); comprobaciones funcionales de 19 ejemplos sobre la candidata de `main`: [42238231145](https://github.com/josemarcosdzb/p2lrn/actions/runs/42238231145), 23/23; publicación condicionada a los mismos tests en [42239207540](https://github.com/josemarcosdzb/p2lrn/actions/runs/42239207540).
 
 ## Evidencias reproducibles
 
@@ -21,9 +21,14 @@ El error persistente de H5P provenía de documentos HTML **temporales** creados 
 
 La ejecución `42237187875` también incluye pruebas de seguridad y compilación previas a los tests de navegador. Los fixtures y las fuentes continúan tratados como datos no confiables.
 
-## Publicación: puerta de salida independiente
+## Publicación verificada e integridad remota
 
-El estado `30/30` **no** confirma publicación. `main` y `mejorastudio` divergen de forma material: no realizar un merge completo de ramas a ciegas. La previsualización de producción `p2lrn-community-production-preview.yml` debe superar compilación, invariantes de seguridad, catálogo de 19 entradas y reproducción sobre `main` antes de promocionar los cambios. La última auditoría pública previa [42205548318](https://github.com/josemarcosdzb/p2lrn/actions/runs/42205548318) encontró 0/19 ejemplos nuevos en ambas direcciones web; no se ha establecido una aprobación pública posterior. Después del despliegue hay que volver a ejecutar `scripts/check-community-public-web.mjs` contra `p2lrn.org` y Netlify.
+La rama `main` ha recibido exclusivamente los archivos de los 19 ejemplos y las dependencias necesarias del Player, sin fusionar indiscriminadamente los commits divergentes de `mejorastudio`. La previsualización desde `main` aprobó **23/23** pruebas de comunidad [42238231145](https://github.com/josemarcosdzb/p2lrn/actions/runs/42238231145). El workflow de promoción repitió integridad, construcción, seguridad y Chrome antes de enviar el commit `0880c98e`: [42239207540](https://github.com/josemarcosdzb/p2lrn/actions/runs/42239207540).
+
+- Primera comprobación pública [42239906867](https://github.com/josemarcosdzb/p2lrn/actions/runs/42239906867): **19/19 entradas de catálogo** en `https://p2lrn.org` y `https://p2lrn.netlify.app`, más galerías ES/EN y archivos de muestra con HTTP 200.
+- Verificación posterior de integridad [42240191054](https://github.com/josemarcosdzb/p2lrn/actions/runs/42240191054): **19/19 paquetes accesibles por HTTP** en ambos nombres de dominio y **SHA-256 de los 19 archivos descargados desde `p2lrn.org` coincidentes exactamente con `provenance.json`**. La dirección Netlify redirige al dominio canónico; se comprueban sus 19 URLs, pero no se descargan los mismos paquetes por duplicado. Ningún archivo ausente ni hash distinto.
+- El JavaScript de la galería y las páginas españolas e inglesas respondieron **HTTP 200**.
+- La **certificación aquí es de la matriz de ejemplos probada**, no de la conformidad total con los estándares SCORM 2004/QTI 3/cmi5-xAPI, ni de notas oficiales de LMS. Los controles de la galería pueden seguir indicando que no existe certificación de *reproducción completa del estándar*, lo cual no contradice la aprobación de las pruebas funcionales específicas.
 
 ## Ejecución reproducible
 
