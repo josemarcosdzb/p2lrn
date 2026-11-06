@@ -68,8 +68,16 @@ const shapesCode=await readFile(join(output,'studio','runtime','studio-shapes.js
 if(!shapesCode.includes("id:'triangle'")||!shapesCode.includes("id:'speech-oval'"))
   throw new Error('Local Studio does not contain the complete shape palette');
 const dragCode=await readFile(join(output,'studio','runtime','studio-drop-activity.js'),'utf8');
-if(!dragCode.includes('setStudioDropBackground')||!dragCode.includes('mountStudioDropAuthoring'))
-  throw new Error('Local Studio is missing image hotspot authoring');
+if(!dragCode.includes('setStudioDropBackground')||!dragCode.includes('mountStudioDropAuthoring')||
+   !dragCode.includes('setStudioDropItemImage')||!dragCode.includes('setStudioDropItemText')||
+   !dragCode.includes('setStudioDropItemImageAlt'))
+  throw new Error('Local Studio is missing text/image draggable tile authoring');
+const commandCode=await readFile(join(output,'studio','runtime','command-bar.js'),'utf8');
+if(!commandCode.includes('Poner imagen en la ficha')||!commandCode.includes('Descripción de imagen de la ficha'))
+  throw new Error('Local Studio has not exposed the card image controls');
+const runtimeCode=await readFile(join(output,'player','current','dist','renderers','lesson-drop-runtime.js'),'utf8');
+if(!runtimeCode.includes('tileName')||!runtimeCode.includes('data-p2lrn-dnd-item-image'))
+  throw new Error('Local Player is missing accessible image-only card support');
 await mkdir(join(output,'npm-studio'),{recursive:true});
 await cp(join(repository,'dev','studio-preview','index.html'),join(output,'npm-studio','index.html'),{force:true});
 await cp(join(repository,'scripts','serve-studio-local-preview.mjs'),join(output,'preview-server.mjs'),{force:true});
