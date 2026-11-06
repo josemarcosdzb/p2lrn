@@ -476,6 +476,12 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   const layouts=group(insert);
   for(const item of VISUAL_LAYOUT_BLOCKS){
     if(item.id==='shape'){
+      // Keep the existing one-click Forma command for old courses and UI QA.
+      const defaultShape=button(doc,'Forma',{title:'Insertar rectángulo redimensionable'});
+      defaultShape.dataset.uiLayout='shape';
+      defaultShape.addEventListener('mousedown',event=>event.preventDefault());
+      defaultShape.addEventListener('click',()=>addLayout('shape'));
+      layouts.append(defaultShape);
       const picker=node(doc,'details','p2lrn-file-menu p2lrn-shape-picker');
       picker.append(node(doc,'summary','','Formas'));
       const grid=node(doc,'div','p2lrn-file-pop');
