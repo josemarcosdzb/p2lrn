@@ -160,14 +160,26 @@
     {
       "slug": "imscc-single-page",
       "kind": "imscc",
-      "title": "Common Cartridge — Single Page",
+      "title": "Common Cartridge — Accessible Learning Lesson",
       "license": "MIT",
-      "sourceUrl": "https://raw.githubusercontent.com/instructure/common-cartridge-viewer/3a4e1da4215a5de646e6230ed092647822168563/public/test-cartridges/single-page.imscc",
+      "sourceUrl": "https://github.com/josemarcosdzb/p2lrn/blob/mejorastudio/scripts/enrich-community-imscc-page.mjs",
       "licenseUrl": "https://github.com/instructure/common-cartridge-viewer/blob/3a4e1da4215a5de646e6230ed092647822168563/LICENSE",
-      "sourceSha256": "sha256:9681c4f94e517aaf7fa87f2680a6601b7b9f84e384afa41d0f97bc40f518a02e",
-      "packageSha256": "sha256:15657fe48cf9d5dd49f9f36bc5ac292028157aa31c0a739850062fb171a7beee",
+      "sourceSha256": "sha256:09cbf71b8c8d39514f80c5816bec99d2faa61fbd202414e390c6069f76dcd2af",
+      "packageSha256": "sha256:25f22bf812ebb5b423fe2e0f3e95b46005335fe8c51e92e743a95bf72f0ad059",
       "browserVerified": false,
-      "origin": "Instructure test fixtures"
+      "origin": "Instructure test fixtures",
+      "enrichment": {
+        "schema": "https://p2lrn.org/schema/derived-imscc-learning-page/1",
+        "originalPageWasEmpty": true,
+        "derivedContentAuthor": "P2LRN",
+        "derivedContentLicense": "MIT",
+        "noExternalMedia": true,
+        "scriptFree": true,
+        "upstreamSourceUrl": "https://raw.githubusercontent.com/instructure/common-cartridge-viewer/3a4e1da4215a5de646e6230ed092647822168563/public/test-cartridges/single-page.imscc",
+        "upstreamSourceSha256": "sha256:9681c4f94e517aaf7fa87f2680a6601b7b9f84e384afa41d0f97bc40f518a02e",
+        "upstreamPackageSha256": "sha256:15657fe48cf9d5dd49f9f36bc5ac292028157aa31c0a739850062fb171a7beee",
+        "upstreamEmbeddedAs": "p2lrn-provenance/upstream-original.imscc"
+      }
     },
     {
       "slug": "meeting-or-email-scorm2004",
