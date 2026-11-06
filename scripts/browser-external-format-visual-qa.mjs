@@ -291,6 +291,9 @@ try{
          attributeCount:attr.length,
          legacyHandlers:document.querySelectorAll('[data-p2lrn-legacy-onclick]').length,
          frames:document.querySelectorAll('iframe').length,
+         baseElements:[...document.querySelectorAll('base')].slice(0,6).map(node=>({
+           href:node.getAttribute('href'),parent:node.parentNode?.nodeName??null
+         })),
        };
      })}catch(e){return{url:frame.url().slice(0,100),error:String(e).slice(0,140)}}
    }));
