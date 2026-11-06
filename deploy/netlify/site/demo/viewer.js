@@ -12,6 +12,11 @@
   const state=document.querySelector('[data-runtime-state]');
   const status=document.querySelector('[data-viewer-status]');
   const label=document.querySelector('[data-package-label]');
+  const sampleNotice=document.createElement('aside');
+  sampleNotice.className='viewer-source-notice';
+  sampleNotice.setAttribute('aria-live','polite');
+  sampleNotice.hidden=true;
+  document.querySelector('.viewer-workbench')?.before(sampleNotice);
   const menu=document.querySelector('[data-menu]');
   const nav=document.getElementById('nav');
   const fields={package:document.querySelector('[data-inspect-package]'),format:document.querySelector('[data-inspect-format]'),version:document.querySelector('[data-inspect-version]'),integrity:document.querySelector('[data-inspect-integrity]'),transport:document.querySelector('[data-inspect-transport]'),entrypoints:document.querySelector('[data-inspect-entrypoints]'),profiles:document.querySelector('[data-inspect-profiles]'),renderer:document.querySelector('[data-inspect-renderer]'),entity:document.querySelector('[data-inspect-entity]'),representation:document.querySelector('[data-inspect-representation]')};
@@ -64,7 +69,44 @@
   const categoryLabel=(value)=>value==='generated-questionnaire'?'Cuestionarios y juegos':value==='generated-multipart'?'Multipart':value==='generated-external'?'Formatos externos':value==='canonical-external'?'Formatos externos':value==='canonical-reader'?'Ejemplos de Reader':'Ejemplos P2LRN';
 
   function populateCatalog(data){catalog=Array.isArray(data?.examples)?data.examples:[];catalogDefault=catalog.find((example)=>example.url===data?.defaultExample)?.url??null;sample.replaceChildren();const groups=new Map();for(const item of catalog){const key=categoryLabel(item.category);if(!groups.has(key)){const group=document.createElement('optgroup');group.label=key;groups.set(key,group);sample.append(group);}const option=document.createElement('option');option.value=item.url;option.textContent=item.title||item.url;option.dataset.renderer=item.rendererId||'';groups.get(key).append(option);}}
-  function selectCatalogEntry(src){let normalized;try{normalized=normalizeSource(src);}catch{return null;}const item=catalog.find((entry)=>{try{return normalizeSource(entry.url)===normalized;}catch{return false;}});if(item){sample.value=item.url;if(!rendererSelect.value&&item.rendererId)rendererSelect.value=item.rendererId;}return item;}
+
+  // Digest-valid imported archives can be minimal upstream test fixtures.
+  function updateSourceNotice(item){
+    sampleNotice.replaceChildren();
+    if(item?.sampleRole!=='technical-fixture'){
+      sampleNotice.hidden=true;
+      return;
+    }
+    const en=document.documentElement.lang.toLowerCase().startsWith('en');
+    const heading=document.createElement('strong');
+    heading.textContent=en?'Technical compatibility fixture — not a complete course':
+      'Archivo de pruebas técnicas — no es un curso completo';
+    const description=document.createElement('p');
+    description.textContent=String((en?item.sampleNoteEn:item.sampleNoteEs)||
+      (en?'This source contains minimal test resources.':'La fuente contiene recursos de prueba mínimos.')).slice(0,400);
+    const integrity=document.createElement('p');
+    integrity.textContent=en?
+      'Verified integrity confirms that the package has not been altered; it does not certify pedagogical completeness or full standard conformance.':
+      'La integridad verificada confirma que el paquete no ha sido alterado; no certifica que sea un curso desarrollado ni la conformidad completa del estándar.';
+    const children=[heading,description,integrity];
+    const fullCourse=catalog.find(row=>row.url==='/examples/canonical/external/common-cartridge-topkit.p2lrn');
+    if(fullCourse){
+      const link=document.createElement('a');
+      const dest=new URL(en?'/en/demo/':'/demo/',location.origin);
+      dest.searchParams.set('src',fullCourse.url);
+      link.href=dest.pathname+dest.search;
+      link.textContent=en?'Open the more extensive TOPkit course':'Abrir el curso TOPkit, con más contenido';
+      const note=document.createElement('p');
+      note.append(link);
+      if(Number.isSafeInteger(fullCourse.bytes)&&fullCourse.bytes>0)
+        note.append(document.createTextNode(' ('+Math.ceil(fullCourse.bytes/1048576)+' MiB)'));
+      children.push(note);
+    }
+    sampleNotice.replaceChildren(...children);
+    sampleNotice.hidden=false;
+  }
+
+  function selectCatalogEntry(src){let normalized;try{normalized=normalizeSource(src);}catch{return null;}const item=catalog.find((entry)=>{try{return normalizeSource(entry.url)===normalized;}catch{return false;}});if(item){sample.value=item.url;if(!rendererSelect.value&&item.rendererId)rendererSelect.value=item.rendererId;}updateSourceNotice(item);return item;}
 
   async function inspect(src){setField('integrity','verificando…');const api=await window.P2LRNReady;const pkg=await api.openPackageURL(src);const manifest=pkg.manifest||{};setField('package',manifest.packageId||new URL(src).pathname.split('/').filter(Boolean).at(-1));setField('format',manifest.format||'—');setField('version',manifest.formatVersion||'—');setField('integrity',manifest.integrity?.contentRoot?'verificada':'sin contentRoot');setField('transport',pkg.verification?.transport||'—');setField('entrypoints',Array.isArray(manifest.entrypoints)?manifest.entrypoints.length:0);setField('profiles',Array.isArray(manifest.profiles)?manifest.profiles.map((profile)=>profile.id).join(' · '):'—');write('inspect',{packageId:manifest.packageId,format:manifest.format,formatVersion:manifest.formatVersion,contentRoot:manifest.integrity?.contentRoot,transport:pkg.verification?.transport,profiles:manifest.profiles?.map((profile)=>profile.id)});}
   async function load(){let src;try{src=normalizeSource(urlInput.value);}catch(error){setState('ERROR',error.message);write('url-error',{message:error.message});return;}urlInput.value=src;const renderer=rendererSelect.value.trim();if(renderer)player.setAttribute('renderer',renderer);else player.removeAttribute('renderer');setState('LOADING','Cargando paquete');label.textContent=new URL(src).pathname.split('/').filter(Boolean).at(-1)||src;setField('renderer',renderer||'automático');setField('entity','—');setField('representation','—');write('load',{src,renderer:renderer||null});try{await inspect(src);player.setAttribute('src',src);const next=new URL(location.href);next.searchParams.set('src',src);if(renderer)next.searchParams.set('renderer',renderer);else next.searchParams.delete('renderer');history.replaceState(null,'',next);selectCatalogEntry(src);}catch(error){setState('ERROR','No se pudo abrir o verificar el paquete');write('load-error',{message:error?.message||String(error)});}}
