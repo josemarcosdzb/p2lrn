@@ -826,6 +826,43 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       }
     };
     walk(root, 0);
+    // Common Cartridge may contain legitimate webcontent resources that the
+    // source LMS did not link from its <organizations> outline (Canvas exports
+    // do this for standalone pages). Keep the canonical graph unchanged, but
+    // surface those verified package members as navigable fallback resources.
+    // Never turn course-settings metadata, opaque ZIPs or unverified remotes
+    // into executable activities.
+    const orphanCommonCartridge=[];
+    const commonCartridge=pkg.manifest.profiles.some(profile=>
+      canonicalIdentifier(profile.id)==='https://p2lrn.org/profile/common-cartridge');
+    if(commonCartridge){
+      const referenced=new Set(activities.map(activity=>activity.resource).filter(Boolean));
+      for(const resource of pkg.entities.values()){
+        if(resource?.type!=='resource'||referenced.has(resource.id))continue;
+        const launch=(resource.representations??[]).find(rep=>
+          rep.location?.type==='package-member'&&
+          /\.(?:html?|xhtml)$/iu.test(String(rep.location.member??'')) &&
+          rep.role!=='original-package');
+        if(!launch)continue;
+        const member=String(launch.location.member);
+        const filename=member.split('/').pop()??'';
+        const label=filename.replace(/\.(?:html?|xhtml)$/iu,'').replace(/[-_]+/gu,' ').trim()||
+          playerUiText('Recurso importado');
+        const button=nav?document.createElement('button'):null;
+        if(button){
+          button.type='button';button.className='depth-1';
+          button.textContent=label;
+          button.setAttribute('data-p2lrn-imported-resource',resource.id);
+          button.addEventListener('click',async()=>{
+            nav.querySelectorAll('[aria-current="true"]').forEach(item=>item.removeAttribute('aria-current'));
+            button.setAttribute('aria-current','true');
+            await this.#renderEntity(resource,stage);
+          });
+          nav.append(button);
+        }
+        orphanCommonCartridge.push({resource,button});
+      }
+    }
     this.#refreshProgressionNav();
     if (activities.length) {
       const firstActivity = activities.find((activity) => !this._progressionModel?.isLocked(activity.id, this._progressionState));
@@ -835,6 +872,10 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       } else {
         this.#stageMessage(stage, this.#progressionLockMessage(activities[0].id));
       }
+    } else if (orphanCommonCartridge.length) {
+      const first=orphanCommonCartridge[0];
+      first.button?.setAttribute('aria-current','true');
+      await this.#renderEntity(first.resource,stage);
     } else {
       const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = 'Este nodo no contiene actividades reproducibles.'; stage.append(message);
     }
