@@ -2150,3 +2150,17 @@ body.landing-page a:focus-visible,.doc-card:focus-visible{outline:3px solid #125
 /* One language selector belongs in the header, never a second overlay. */
 .site-header .language-switch{position:static;z-index:2;margin-left:0;flex-shrink:0}
 @media(max-width:420px){.site-header .language-switch{gap:1px;padding:2px}}
+
+/* Documentation must remain navigable and indexable before client JS loads. */
+.doc-sidebar .doc-fallback-nav{display:grid;gap:2px;min-width:0}
+.doc-sidebar .doc-fallback-nav a{display:block;padding:7px 9px;color:#263448;background:transparent;text-decoration:underline;text-decoration-color:#8c9aaa;text-underline-offset:3px;border-radius:5px;overflow-wrap:anywhere}
+.doc-sidebar .doc-fallback-nav a:hover,.doc-sidebar .doc-fallback-nav a:focus-visible{color:#123f9e;background:#eaf0ff;text-decoration-color:currentColor;outline-offset:2px}
+@media(max-width:900px){
+  /* When JS is blocked there is no toggle. Do not hide the only navigation. */
+  .doc-main:not(:has(>.docs-sidebar-toggle))>.doc-sidebar{
+    display:grid!important;grid-column:1;grid-row:auto;position:static!important;
+    max-height:none!important;overflow:visible!important;
+    padding:14px!important;border:1px solid #bfc9d8!important;
+    border-radius:9px;background:#fff;
+  }
+}
