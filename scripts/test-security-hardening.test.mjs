@@ -23,3 +23,13 @@ test('native Windows workflow pins uploaded-artifact to immutable SHA',()=>{
  const p=read('.github/workflows/p2lrn-native-offline-windows.yml');
  assert.match(p,/actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02/);
 });
+
+test('anonymous conversion endpoint has Netlify-managed per-client rate limits', async()=>{
+ const fn=await import('../netlify/functions/p2lrn-conversion.mjs');
+ assert.equal(fn.config.path,'/.netlify/functions/p2lrn-conversion');
+ assert.deepEqual(fn.config.rateLimit.aggregateBy,['ip','domain']);
+ assert.ok(fn.config.rateLimit.windowLimit<=60);
+ assert.ok(fn.config.rateLimit.windowSize>=60);
+ const response=await fn.default(new Request('https://p2lrn.org/.netlify/functions/p2lrn-conversion',{method:'GET'}));
+ assert.equal(response.status,405);
+});
