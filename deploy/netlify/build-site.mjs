@@ -21,6 +21,23 @@ const outputRoot = join(root,'.netlify-cdn');
 // otherwise overwrite _headers and silently remove cross-origin SRI/CSP rules.
 const cdnHeaders=await readFile(join(outputRoot,'_headers'),'utf8');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
+
+const pinnedPlayerIndex=JSON.parse(await readFile(join(outputRoot,'sri.json'),'utf8'));
+const pinnedPlayerPath='/player/'+pinnedPlayerIndex.version+'/dist/p2lrn.js';
+const pinnedPlayerSri=pinnedPlayerIndex.resources?.[pinnedPlayerPath];
+if(typeof pinnedPlayerSri!=='string'||!/^sha384-[A-Za-z0-9+/]+={0,2}$/u.test(pinnedPlayerSri))
+  throw new Error('Cannot publish installation snippets without the correct SHA-384');
+const pinnedPlayerUrl='https://p2lrn.org'+pinnedPlayerPath;
+const pinnedPages=["index.html","en/index.html","docs/cdn/index.html","en/docs/cdn/index.html","docs/cdn/analytics/index.html","en/docs/cdn/analytics/index.html","docs/empezar-facil/index.html","en/docs/empezar-facil/index.html"];
+for(const rel of pinnedPages){
+ const target=join(outputRoot,...rel.split('/'));
+ const html=await readFile(target,'utf8');
+ if(!html.includes('__P2LRN_PINNED_PLAYER_URL__')||!html.includes('__P2LRN_PINNED_PLAYER_SRI__'))
+   throw new Error('Missing pinned snippet in '+rel);
+ await writeFile(target,html.replaceAll('__P2LRN_PINNED_PLAYER_URL__',pinnedPlayerUrl)
+   .replaceAll('__P2LRN_PINNED_PLAYER_SRI__',pinnedPlayerSri),'utf8');
+}
+
 const siteHeaders=await readFile(join(outputRoot,'_headers'),'utf8');
 await writeFile(join(outputRoot,'_headers'),siteHeaders.trimEnd()+'\n\n'+cdnHeaders);
 // Validate every published versioned source snapshot before HTML transformations.
