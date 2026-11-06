@@ -5,6 +5,7 @@ on:
     branches: [mejorastudio]
     paths:
       - 'scripts/browser-external-format-visual-qa.mjs'
+      - 'scripts/verify-site-security.mjs'
       - 'scripts/verify-community-samples.mjs'
       - 'deploy/netlify/build-site.mjs'
       - 'packages/toolkit/web/package-runtime-shell.js'
