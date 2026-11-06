@@ -76,3 +76,13 @@
 .community-static-index strong{color:var(--community-ink)}
 .community-static-index a{color:var(--community-link);font-weight:650;text-decoration:underline;text-underline-offset:3px}
 .community-static-index a:focus-visible{outline:3px solid #1849b2;outline-offset:2px}
+
+/* Verified source provenance is not proof that a fixture is a complete course. */
+.p2lrn-community-role{
+  display:block;align-self:start;padding:5px 9px;border-radius:5px;
+  border:1px solid #a6b9cf;background:#eef3fa;color:#233956;
+  font-size:.84rem;line-height:1.35;font-weight:750;
+}
+.p2lrn-community-fixture-note{
+  margin:0;color:#334155;font-size:.91rem;line-height:1.55;
+}
