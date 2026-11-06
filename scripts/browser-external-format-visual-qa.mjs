@@ -111,6 +111,11 @@ try{
        document.querySelectorAll('[data-community-examples] .p2lrn-community-item').length===expected,
        community.samples.length,{timeout:25000});
      assert.equal(await rows.count(),community.samples.length,filterName+' gallery count');
+      const fixtureCount=community.samples.filter(x=>x.sampleRole==='technical-fixture').length;
+      assert.equal(await rows.locator('.p2lrn-community-role').count(),fixtureCount,
+        filterName+' gallery must distinguish technical fixtures from complete courses');
+      for(const text of await rows.locator('.p2lrn-community-role').allTextContents())
+        assert.match(text,/prueba técnica|technical fixture/iu,'Technical sample classification not readable');
      const filter=page.locator('[data-community-examples] select');
      const counts=Object.fromEntries(['scorm','h5p','qti','imscc'].map(kind=>[
        kind,community.samples.filter(x=>x.kind===kind).length]));
@@ -148,6 +153,14 @@ try{
   try{
    await page.goto(base+'/demo/?src='+encodeURIComponent(item.course),{waitUntil:'domcontentloaded',timeout:30000});
    await page.locator('p2lrn-player .p2lrn-head').waitFor({timeout:45000});
+    if(item.name==='community-imscc-canvas-cc-gem'){
+      const notice=page.locator('.viewer-source-notice');
+      await notice.waitFor({state:'visible',timeout:15000});
+      assert.match(await notice.innerText(),/tres tareas|no es un curso completo/iu,
+        'The imported Canvas compatibility fixture was presented as a complete course');
+      assert.equal(await notice.locator('a[href*="common-cartridge-topkit.p2lrn"]').count(),1,
+        'The viewer must offer a real substantive Common Cartridge example');
+    }
    const player=page.locator('p2lrn-player');
    if(item.navigateTo){
      const button=player.locator('nav.p2lrn-nav button').filter({hasText:item.navigateTo}).nth(item.navigateIndex??0);
