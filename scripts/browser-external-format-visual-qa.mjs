@@ -62,6 +62,7 @@ const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({executablePath:browserExe,headless:true,args:['--no-first-run','--no-default-browser-check']});
 const results=[];
 const communityOnly=process.argv.includes('--community-only');
+const onlyCase=process.argv.find(arg=>arg.startsWith('--case='))?.slice('--case='.length)??null;
 const cases=[
  {name:'cmi5-geology-pretest',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',frame:'iframe.p2lrn-package-runtime',marker:/pre.?test|question|geology|pregunta|assessment|test/i,minimumText:30},
  {name:'cmi5-geology-content-1',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',navigateTo:'Content',navigateIndex:0,frame:'iframe.p2lrn-package-runtime',marker:/geology|earth|content|next|previous|rock|page/i,minimumText:28},
@@ -101,7 +102,7 @@ async function findVisibleText(locator,{minimumText=30,marker=null}={}){
 }
 try{
  // Verify both public-facing gallery languages and the complete 19-item catalog.
- for(const [route,filterName] of [['/docs/ejemplos/','es'],['/en/docs/examples/','en']]){
+ for(const [route,filterName] of (onlyCase?[]:[['/docs/ejemplos/','es'],['/en/docs/examples/','en']])){
    const page=await browser.newPage({viewport:{width:1280,height:820}});
    try{
      await page.goto(base+route,{waitUntil:'domcontentloaded',timeout:25000});
@@ -134,11 +135,16 @@ try{
      await page.screenshot({path:join(screenshotRoot,filterName+'-gallery-FAIL.png'),timeout:7000}).catch(()=>{});
    }finally{await page.close();}
  }
- for(const item of cases.filter(entry=>!communityOnly||entry.name.startsWith('community-'))){
+ for(const item of cases.filter(entry=>(!onlyCase||entry.name===onlyCase)&&(!communityOnly||entry.name.startsWith('community-')))){
   const page=await browser.newPage({viewport:{width:1350,height:850}});
   const errors=[];
   page.on('pageerror',err=>errors.push(String(err.message).slice(0,600)));
-  page.on('console',msg=>{if(msg.type()==='error')errors.push('console: '+msg.text().slice(0,450));});
+  page.on('console',msg=>{
+    if(msg.type()==='error'){
+      const loc=msg.location();
+      errors.push('console: '+msg.text().slice(0,650)+' @'+String(loc?.url??'').slice(-180)+':'+String(loc?.lineNumber??'?'));
+    }
+  });
   try{
    await page.goto(base+'/demo/?src='+encodeURIComponent(item.course),{waitUntil:'domcontentloaded',timeout:30000});
    await page.locator('p2lrn-player .p2lrn-head').waitFor({timeout:45000});
@@ -265,7 +271,23 @@ try{
       playerHtml:p?.shadowRoot?.querySelector('.p2lrn-stage')?.innerHTML?.slice(0,1200),
     };
    }).catch(err=>({diagnosticError:String(err)}));
-   results.push({case:item.name,status:'FAIL',reason:String(error?.message??error).slice(0,900),diagnostic,errors});
+   const frames=await Promise.all(page.frames().map(async(frame)=>{
+     try{return await frame.evaluate(()=>{
+       const attr=[];
+       for(const el of [...document.querySelectorAll('*')].slice(0,8000)){
+         for(const a of el.getAttributeNames())if(/^on[a-z][a-z0-9]*$/i.test(a))
+           attr.push({tag:el.tagName.toLowerCase(),attr:a,handler:String(el.getAttribute(a)).slice(0,110)});
+       }
+       return {url:document.URL.slice(0,130),title:document.title,
+         bodyText:document.body?.innerText?.slice(0,260)??'',
+         inlineAttributes:attr.slice(0,20),
+         attributeCount:attr.length,
+         legacyHandlers:document.querySelectorAll('[data-p2lrn-legacy-onclick]').length,
+         frames:document.querySelectorAll('iframe').length,
+       };
+     })}catch(e){return{url:frame.url().slice(0,100),error:String(e).slice(0,140)}}
+   }));
+   results.push({case:item.name,status:'FAIL',reason:String(error?.message??error).slice(0,900),diagnostic:{...diagnostic,frames},errors});
   }finally{await page.close();}
  }
 }finally{
