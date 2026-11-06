@@ -11,6 +11,13 @@ let active = false;
 let resizeObserver = null;
 let runtimeProfile = null;
 let cmi5Config = null;
+let handlerObserver = null;
+let pendingHandlerPass = Promise.resolve();
+let handlerPassQueued = false;
+// Prevent repeated mutation-driven handler compilation from bypassing a
+// per-document limit. No new privileges or network access are added.
+let legacyHandlersInstalled = 0;
+let legacyHandlerBytes = 0;
 
 function reply(action, payload = {}) {
   channelSend?.({protocol:PROTOCOL, action, ...payload});
@@ -286,7 +293,10 @@ async function installLegacyInlineHandlers(root) {
       const source=attribute.value;
       el.removeAttribute(attribute.name);
       bytes+=source.length;
-      if(++inlineScriptId>5000||bytes>512*1024)
+      legacyHandlerBytes+=source.length;
+      legacyHandlersInstalled++;
+      if(++inlineScriptId>5000||bytes>512*1024||
+          legacyHandlersInstalled>5000||legacyHandlerBytes>512*1024)
         throw new Error('External package has too many legacy event handlers.');
       if(!id){
         id='p2lrn-legacy-'+inlineScriptId;
@@ -321,6 +331,35 @@ async function installLegacyInlineHandlers(root) {
   for(const el of onLoadElements)el.dispatchEvent(new Event('load'));
 }
 
+// Content may create legacy on* attributes using document.write, innerHTML or
+// dynamic DOM APIs AFTER the initial HTML was inspected. A MutationObserver
+// converts those attributes to blob-backed event listeners. This works under
+// the existing strict CSP; it never enables unsafe-inline, eval, same-origin,
+// remote networking, forms, or privileges in the host page.
+function observeLegacyHandlers() {
+  handlerObserver?.disconnect();
+  handlerPassQueued=false;
+  const schedule=()=>{
+    if(handlerPassQueued)return;
+    handlerPassQueued=true;
+    pendingHandlerPass=pendingHandlerPass.then(async()=>{
+      handlerPassQueued=false;
+      await installLegacyInlineHandlers(document);
+    }).catch(error=>{
+      handlerPassQueued=false;
+      reply('error',{message:'Dynamic legacy handlers: '+String(error?.message??error)});
+    });
+  };
+  handlerObserver=new MutationObserver((mutations)=>{
+    if(mutations.some(m=>
+      (m.type==='attributes' && /^(?:on[a-z][a-z0-9]*|data-p2lrn-legacy-on[a-z][a-z0-9]*)$/i.test(m.attributeName??'')) ||
+      (m.type==='childList' && [...m.addedNodes].some(n=>n.nodeType===1))
+    ))schedule();
+  });
+  handlerObserver.observe(document,{
+    subtree:true,childList:true,attributes:true,
+  });
+}
 function makeUrls() {
   for (const [path, file] of files) {
     if (file.mediaType.includes('html') || file.mediaType.includes('xhtml') || file.mediaType.includes('css')) continue;
@@ -348,6 +387,9 @@ async function navigate(path, suffix = '') {
     document.head.replaceChildren(...[...parsed.head.childNodes].map(node => document.importNode(node, true)));
     document.body.replaceChildren(...[...parsed.body.childNodes].map(node => document.importNode(node, true)));
     wireDocument(document, normalized);
+    // Install before executing any untrusted package script so that handlers
+    // added during script initialization are registered without inline CSP.
+    observeLegacyHandlers();
     for (const old of [...document.querySelectorAll('script')]) {
       // DOMParser scripts are inert. An opaque srcdoc frame inherits the
       // embedding document's CSP, which may prohibit inline JavaScript.
@@ -368,6 +410,7 @@ async function navigate(path, suffix = '') {
       old.replaceWith(script);
       if (loaded) await loaded;
     }
+    await pendingHandlerPass;
     await installLegacyInlineHandlers(document);
     reply('ready', {member:normalized, suffix:launchSuffix, topology:'opaque-inline'});
     return;
