@@ -385,6 +385,25 @@ for(const [file,locale] of [
     errors.push('Documentation must expose fallback navigation without JS: '+locale);
 }
 
+
+// Technical compatibility fixtures must not be misrepresented as full courses.
+const publishedSamples=JSON.parse(await readFile(join(out,'examples/catalog.json'),'utf8'));
+const technicalFixtures=publishedSamples.examples.filter(x=>x.sampleRole==='technical-fixture');
+if(technicalFixtures.length!==3)errors.push('Expected exactly three disclosed IMSCC fixtures');
+for(const item of technicalFixtures){
+  if(item.sourceFormat!=='imscc'||!item.sampleNoteEs||!item.sampleNoteEn||
+      item.browserVerified!==false)
+    errors.push('Technical fixture lacks bilingual scope or has unsupported verification status: '+item.url);
+}
+for(const [file,needle] of [
+  ['docs/ejemplos/index.html','Pruebas técnicas y cursos reales son distintos'],
+  ['en/docs/examples/index.html','Technical fixtures and complete courses are different']
+]){
+  const html=await readFile(join(out,...file.split('/')),'utf8').catch(()=>'');
+  if(!html.includes(needle)||!html.includes('common-cartridge-topkit.p2lrn'))
+    errors.push('Examples documentation must disclose test fixtures and link to TOPkit: '+file);
+}
+
 const result={ok:errors.length===0,sourcePages:sourcePages.length,indexable:indexable.length,aliases:aliases.length,sitemapURLs:xmlUrls.length,quickstartVerified:Boolean(quick&&creator&&quick.equals(creator)),errors};
 console.log(JSON.stringify(result,null,2));
 if(errors.length)process.exitCode=1;
