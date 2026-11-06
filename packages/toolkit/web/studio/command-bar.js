@@ -527,6 +527,42 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     const file=dropFile.files?.[0];dropFile.value='';
     if(file)await runDropAction('image',file);
   });
+  // In-menu labels let the teacher name exact hotspots and their matching
+  // draggable items without accidental text editing while moving a zone.
+  const dropNameFields=[];
+  for(const [key,label] of [['zone','Texto de la zona'],['item','Texto de la ficha']]){
+    const field=node(doc,'label','',label);
+    const input=node(doc,'input');input.type='text';input.maxLength=120;
+    input.dataset.p2lrnDropName=key;
+    input.placeholder='Selecciona una zona de destino';
+    input.disabled=true;
+    field.append(input);dropActions.append(field);dropNameFields.push(input);
+    input.addEventListener('change',()=>{
+      const zone=dropAuthoring?.selectedZone;
+      const s=surface();
+      if(!zone||!s)return;
+      const activity=zone.closest('[data-p2lrn-dnd="1"]');
+      const target=key==='zone'?zone.querySelector('[data-p2lrn-dnd-label]'):
+        [...(activity?.querySelectorAll('[data-p2lrn-dnd-item]')??[])].find(item=>
+          item.dataset.p2lrnDndItem===zone.dataset.p2lrnDndAccept);
+      if(!target){onStatus('No se ha encontrado el texto de destino.');return;}
+      const text=input.value.trim();
+      if(!text){onStatus('El texto de zona o ficha no puede quedar vacío.');return;}
+      target.textContent=text;
+      changed(s);
+    });
+  }
+  const updateDropNameFields=zone=>{
+    for(const input of dropNameFields){
+      const activity=zone?.closest?.('[data-p2lrn-dnd="1"]');
+      const target=input.dataset.p2lrnDropName==='zone'?zone?.querySelector('[data-p2lrn-dnd-label]'):
+        [...(activity?.querySelectorAll('[data-p2lrn-dnd-item]')??[])].find(item=>
+          item.dataset.p2lrnDndItem===zone?.dataset.p2lrnDndAccept);
+      input.disabled=!target;
+      input.value=target?.textContent||'';
+    }
+  };
+  dropMenu.addEventListener('toggle',()=>{if(dropMenu.open)updateDropNameFields(dropAuthoring?.selectedZone);});
   dropActions.append(dropFile);dropMenu.append(dropActions);layouts.append(dropMenu);
   const colors=group(context);colors.classList.add('p2lrn-object-colors');
   const colorMenu=node(doc,'details','p2lrn-context-menu');colorMenu.dataset.studioContextMenu='fondo';
@@ -593,6 +629,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     dropAuthoring?.dispose();dropAuthoring=null;dropSurface=next;
     if(next)dropAuthoring=mountStudioDropAuthoring({
       surface:next,
+      onSelected:updateDropNameFields,
       onChange:()=>{
         dropAuthoring?.selectedZone?.removeAttribute('data-p2lrn-studio-zone-selected');
         changed(next);
