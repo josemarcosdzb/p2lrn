@@ -166,7 +166,7 @@
     let normalized;
     try{normalized=normalizeSource(src);}catch{return null;}
     const local=localPackages.get(normalized);
-    if(local){sample.value=normalized;return {url:normalized,title:local.name,rendererId:''};}
+    if(local){sample.value=normalized;updateSourceNotice(null);return {url:normalized,title:local.name,rendererId:''};}
     const item=catalog.find(entry=>{
       try{return normalizeSource(entry.url)===normalized;}catch{return false;}
     });
