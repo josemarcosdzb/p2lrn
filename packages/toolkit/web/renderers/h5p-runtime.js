@@ -3,7 +3,7 @@ import {dispatchRuntimeEvent} from '../runtime-events.js';
 import {isSafeRuntimeMessage} from '../runtime-message-security.js';
 import {resolveH5pRuntimeUrl} from '../runtime-host-config.js';
 import {encodeH5PSession, inspectH5PPackage} from '../h5p-package.js';
-import {getAutomaticH5PRuntimeResources, hydrateH5PRuntimeCore, hydrateH5PStaticSession} from '../h5p-auto-runtime.js';
+import {createOpaqueH5PRuntimeDocument, getAutomaticH5PRuntimeResources, hydrateH5PRuntimeCore, hydrateH5PStaticSession} from '../h5p-auto-runtime.js';
 
 export const acceptsPayload = true;
 const H5P_PROFILE = 'https://p2lrn.org/profile/h5p';
@@ -106,6 +106,18 @@ function scoreFromXapi(statement) {
 export async function render({container, payload, representation, package:pkg, eventTarget, adapter, context, runtimeBaseUrl}) {
   const nested = await nestedH5P(pkg, representation, payload);
   const inspection = await inspectH5PPackage(nested);
+  // Validate the exact transitive bundled dependency closure before creating
+  // the untrusted iframe. Missing libraries may be resolved by the trusted
+  // shared library runtime; they must never be silently treated as present.
+  const closure=inspection.dependencyClosure;
+  dispatchRuntimeEvent(eventTarget,'p2lrn:h5pdependencies',{
+    mainLibrary:inspection.mainLibrary,
+    bundled:closure.bundled,
+    missing:closure.missing,
+    dynamic:closure.dynamic,
+    completeBundled:closure.complete,
+    requiresTrustedLibraryResolver:closure.requiresTrustedLibraryResolver,
+  },context,{adapter});
   const declared = extensionFor(representation);
   if (declared.mainLibrary && declared.mainLibrary !== inspection.mainLibrary) {
     const error = new Error(`H5P mainLibrary mismatch: P2LRN metadata declares ${declared.mainLibrary}, package declares ${inspection.mainLibrary}.`);
@@ -145,7 +157,6 @@ export async function render({container, payload, representation, package:pkg, e
       runtimeAssetsUrl:resources.runtimeAssetsUrl,
       sharedLibrariesUrl:null,
       hostScriptUrl:resources.hostScriptUrl,
-      opaqueRuntimeUrl:resources.opaqueRuntimeUrl,
     });
   } else if (staticMode) {
     staticSession = await staticRuntimeFiles(nested, inspection);
@@ -193,6 +204,7 @@ export async function render({container, payload, representation, package:pkg, e
   iframe.setAttribute('allow', "camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; usb 'none'; clipboard-read 'none'; clipboard-write 'none'; fullscreen");
   iframe.className = 'p2lrn-h5p-frame';
   iframe.title = inspection.title || 'H5P';
+  iframe.setAttribute('referrerpolicy','no-referrer');
   iframe.setAttribute('sandbox', opaqueMode
     ? 'allow-scripts'
     : 'allow-scripts allow-same-origin allow-forms allow-modals');
@@ -287,7 +299,7 @@ export async function render({container, payload, representation, package:pkg, e
     iframe.contentWindow.postMessage({protocol:runtimeProtocol, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  if (opaqueMode) iframe.src = resolvedSession.opaqueRuntimeUrl;
+  if (opaqueMode) iframe.srcdoc = createOpaqueH5PRuntimeDocument({hostScriptUrl:resolvedSession.hostScriptUrl});
   else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 

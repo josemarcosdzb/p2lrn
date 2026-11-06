@@ -125,6 +125,79 @@ function installOpaqueStorage() {
     try { Object.defineProperty(globalThis,name,{configurable:true,value:ephemeralStorage()}); } catch {}
   }
 }
+// P2LRN already resolves H5P library and content files to verified Blob URLs.
+// Some video libraries redundantly inject <base href="about:srcdoc"> into the
+// opaque iframe. This violates our enforced base-uri 'none' even though that
+// base does not help with local Blob media. Reject insertion of ALL base nodes
+// at the isolated document head instead of relaxing the CSP. This never runs
+// on the application document and does not grant networking, navigation or
+// same-origin privileges to the package.
+function protectOpaqueDocumentBase(doc, protectDetachedFactory=true) {
+  const head=doc.head;
+  if(!head)return;
+  const baseNode=(node)=>node?.nodeType===1&&node.localName?.toLowerCase()==='base';
+  const removeBases=(node)=>{
+    if(baseNode(node))return true;
+    if(node?.nodeType===11||node?.nodeType===1)
+      for(const base of [...(node.querySelectorAll?.('base')??[])])base.remove();
+    return false;
+  };
+  for(const method of ['appendChild','insertBefore','replaceChild']){
+    const original=head[method].bind(head);
+    Object.defineProperty(head,method,{
+      configurable:true,value:function(node,...args){
+        if(removeBases(node))return method==='replaceChild'?args[0]:node;
+        return original(node,...args);
+      }
+    });
+  }
+  for(const method of ['append','prepend','replaceChildren']){
+    const original=head[method].bind(head);
+    Object.defineProperty(head,method,{
+      configurable:true,value:function(...nodes){
+        for(const node of nodes)if(typeof node!=='string')removeBases(node);
+        return original(...nodes.filter(node=>typeof node==='string'||!baseNode(node)));
+      }
+    });
+  }
+  const originalInsertAdjacentHTML=head.insertAdjacentHTML.bind(head);
+  Object.defineProperty(head,'insertAdjacentHTML',{
+    configurable:true,value:function(position,html){
+      // Do not allow raw HTML to create base elements through this bypass.
+      const template=doc.createElement('template');
+      template.innerHTML=String(html??'');
+      removeBases(template.content);
+      if(String(position).toLowerCase()==='afterbegin'){
+        return head.prepend(template.content);
+      }
+      if(String(position).toLowerCase()==='beforeend'){
+        return head.append(template.content);
+      }
+      return originalInsertAdjacentHTML(position,template.innerHTML);
+    }
+  });
+
+  // jQuery's parseHTML() creates a *detached* HTMLDocument, inserts a
+  // temporary <base href="about:srcdoc"> there, and then parses HTML.
+  // These detached heads inherit the opaque iframe's base-uri 'none' CSP,
+  // even though the main document contains no <base> element. Protect each
+  // detached document too, so no disallowed base is ever inserted.
+  // This does not change the CSP or permit network, parent navigation,
+  // same-origin access, or relative resource resolution via <base>.
+  if(!protectDetachedFactory)return;
+  const implementation=doc.implementation;
+  const createHTMLDocument=implementation?.createHTMLDocument;
+  if(typeof createHTMLDocument==='function'){
+    const guardedCreate=function(...args){
+      const detached=createHTMLDocument.apply(this,args);
+      protectOpaqueDocumentBase(detached,false);
+      return detached;
+    };
+    Object.defineProperty(implementation,'createHTMLDocument',{
+      configurable:true,writable:true,value:guardedCreate,
+    });
+  }
+}
 
 function staticFiles(data) {
   if (!Array.isArray(data.files) || data.files.length > MAX_STATIC_FILES) {
@@ -389,6 +462,7 @@ async function initializeStatic(data) {
   let doc = document;
   let win = globalThis;
   if (data.opaqueRuntime) {
+    protectOpaqueDocumentBase(document);
     const contentRoot = document.createElement('div');
     contentRoot.className = 'h5p-content';
     contentRoot.dataset.contentId = 'p2lrn-h5p';
@@ -429,14 +503,62 @@ async function initializeStatic(data) {
     return originalNewRunnable.call(this, descriptor, contentId, container, skipResize, resume);
   };
 
+  // H5P core sometimes returns a portable content IRI like
+  // urn:p2lrn:<id>/libraries/<library>/sounds/positive-short.ogg. Its
+  // portable identifier is NOT a fetchable browser URL. Resolve exactly one
+  // existing bundled library member to an ephemeral Blob URL, without allowing
+  // arbitrary external fetches or synthesizing a path outside the package.
+  const bundledLibraryUrl = (reference) => {
+    let raw=String(reference??'').trim();
+    const index=raw.indexOf('/libraries/');
+    if(index>=0)raw=raw.slice(index+'/libraries/'.length);
+    else raw=raw.replace(/^\.\//u,'').replace(/^libraries\//u,'');
+    try{raw=decodeURIComponent(raw);}catch{return null;}
+    if(!raw||raw.includes('\\')||raw.split('/').some(part=>!part||part==='.'||part==='..'))
+      return null;
+    return objectUrls.get(raw)??null;
+  };
   const originalGetPath = typeof H5P.getPath === 'function' ? H5P.getPath.bind(H5P) : null;
   H5P.getPath = function(path, id) {
     const raw = String(path ?? '').replace(/^\.\//, '');
     const key = raw.startsWith('content/') ? raw : `content/${raw}`;
-    const mapped = objectUrls.get(key);
+    const mapped = objectUrls.get(key)??bundledLibraryUrl(raw);
     if (mapped) return mapped;
-    return originalGetPath ? originalGetPath(path, id) : raw;
+    const fallback=originalGetPath ? originalGetPath(path, id) : raw;
+    return bundledLibraryUrl(fallback)??fallback;
   };
+  const originalGetLibraryFilePath = typeof H5P.getLibraryFilePath === 'function'
+    ? H5P.getLibraryFilePath.bind(H5P) : null;
+  H5P.getLibraryFilePath = function(path) {
+    const direct=bundledLibraryUrl(path);
+    if(direct)return direct;
+    const fallback=originalGetLibraryFilePath ? originalGetLibraryFilePath(path) : String(path??'');
+    return bundledLibraryUrl(fallback)??fallback;
+  };
+  // Some H5P libraries bypass H5P.getPath() and send their virtual URN paths
+  // straight to XHR/fetch. Convert ONLY already-bundled library media into
+  // ephemeral blob URLs, before the network stack sees the request. Unknown
+  // URNs, arbitrary HTTP(S), and data outside the validated package stay
+  // blocked by the opaque iframe CSP. No network permission is added.
+  const nativeXHROpen=win.XMLHttpRequest?.prototype?.open;
+  if(nativeXHROpen){
+    win.XMLHttpRequest.prototype.open=function(method,url,...rest){
+      const name=String(method??'').toUpperCase();
+      const raw=String(url??'');
+      const mapped=name==='GET'&&raw.startsWith('urn:p2lrn:') ? bundledLibraryUrl(raw):null;
+      return nativeXHROpen.call(this,method,mapped??url,...rest);
+    };
+  }
+  const nativeFetch=typeof win.fetch==='function'?win.fetch.bind(win):null;
+  if(nativeFetch){
+    win.fetch=function(input,init){
+      const raw=typeof input==='string'?input:(input?.url??'');
+      const method=String(init?.method??(input?.method??'GET')).toUpperCase();
+      const mapped=method==='GET'&&String(raw).startsWith('urn:p2lrn:')
+        ? bundledLibraryUrl(raw):null;
+      return nativeFetch(mapped??input,init);
+    };
+  }
 
   for (const href of integration.core.styles) loadStylesheet(doc, href);
   for (const href of styles) loadStylesheet(doc, href);

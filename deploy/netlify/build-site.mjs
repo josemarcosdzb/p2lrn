@@ -21,23 +21,6 @@ const outputRoot = join(root,'.netlify-cdn');
 // otherwise overwrite _headers and silently remove cross-origin SRI/CSP rules.
 const cdnHeaders=await readFile(join(outputRoot,'_headers'),'utf8');
 await cp(siteRoot,outputRoot,{recursive:true,force:true});
-
-const pinnedPlayerIndex=JSON.parse(await readFile(join(outputRoot,'sri.json'),'utf8'));
-const pinnedPlayerPath='/player/'+pinnedPlayerIndex.version+'/dist/p2lrn.js';
-const pinnedPlayerSri=pinnedPlayerIndex.resources?.[pinnedPlayerPath];
-if(typeof pinnedPlayerSri!=='string'||!/^sha384-[A-Za-z0-9+/]+={0,2}$/u.test(pinnedPlayerSri))
-  throw new Error('Cannot publish installation snippets without the correct SHA-384');
-const pinnedPlayerUrl='https://p2lrn.org'+pinnedPlayerPath;
-const pinnedPages=["index.html","en/index.html","docs/cdn/index.html","en/docs/cdn/index.html","docs/cdn/analytics/index.html","en/docs/cdn/analytics/index.html","docs/empezar-facil/index.html","en/docs/empezar-facil/index.html"];
-for(const rel of pinnedPages){
- const target=join(outputRoot,...rel.split('/'));
- const html=await readFile(target,'utf8');
- if(!html.includes('__P2LRN_PINNED_PLAYER_URL__')||!html.includes('__P2LRN_PINNED_PLAYER_SRI__'))
-   throw new Error('Missing pinned snippet in '+rel);
- await writeFile(target,html.replaceAll('__P2LRN_PINNED_PLAYER_URL__',pinnedPlayerUrl)
-   .replaceAll('__P2LRN_PINNED_PLAYER_SRI__',pinnedPlayerSri),'utf8');
-}
-
 const siteHeaders=await readFile(join(outputRoot,'_headers'),'utf8');
 await writeFile(join(outputRoot,'_headers'),siteHeaders.trimEnd()+'\n\n'+cdnHeaders);
 // Validate every published versioned source snapshot before HTML transformations.
@@ -110,8 +93,8 @@ const examplesOutput = join(outputRoot,'examples');
 // Always reset examples so deleted courses cannot survive incremental Netlify builds.
 await rm(examplesOutput,{recursive:true,force:true});
 await mkdir(examplesOutput,{recursive:true});
-// The website's Analytics examples module is application code, not a course.
-// Restore it after purging old course artifacts.
+// Retain the public Analytics example script after clearing obsolete sample packages.
+// The documentation references this exact route in both languages.
 await copyFile(join(siteRoot,'examples','p2lrn-results-index.mjs'),join(examplesOutput,'p2lrn-results-index.mjs'));
 const canonicalSource = join(root,'examples','canonical');
 const canonicalOutput = join(examplesOutput,'canonical');
@@ -126,26 +109,63 @@ for (const name of ['developer-course','developer-game-3d']) {
 }
 
 const canonicalDisplayTitles = Object.freeze({
-  'external/h5p-boardgame.p2lrn':'H5P Boardgame',
-  'external/h5p-arts-of-europe.p2lrn':'H5P Arts of Europe',
-  'external/scorm12-golf.p2lrn':'SCORM 1.2 Golf Explained',
-  'external/scorm2004-golf.p2lrn':'SCORM 2004 Golf Explained',
-  'external/scorm12-bilan-moodle.p2lrn':'SCORM Bilan Moodle',
-  'external/common-cartridge-topkit.p2lrn':'IMS Common Cartridge Topkit',
   'external/scorm12-real.p2lrn':'SCORM 1.2 · fixture ADL preservada (contenido fuente incompleto)',
   'external/qti3-minimal.p2lrn':'QTI 3 · fixture mínima preservada (sin itemBody)',
   'external/cmi5-catapult-pre-post.p2lrn':'cmi5 Catapult · Introduction to Geology',
 });
+// The external community sample list is verified provenance, not user-controlled
+// runtime metadata. A sample without an exact source hash, licence and pinned
+// P2LRN bytes must not silently appear as a supported web demo.
+const freeProvenancePath=join(canonicalSource,'external','free','provenance.json');
+const freeProvenanceMap=new Map();
+if(await exists(freeProvenancePath)){
+  const manifest=JSON.parse(await readFile(freeProvenancePath,'utf8'));
+  if(manifest?.schema!=='https://p2lrn.org/schema/community-samples/1'||manifest?.version!==1||
+     !Array.isArray(manifest.samples)||manifest.samples.length>80)
+    throw new Error('Invalid community sample provenance schema');
+  const supported=new Set(['scorm','h5p','qti','cmi5','imscc']);
+  const allowedLicenses=new Set(['MIT','Apache-2.0','CC-BY-4.0']);
+  for(const item of manifest.samples){
+    if(!/^[a-z0-9][a-z0-9-]*$/u.test(item?.slug??'')||freeProvenanceMap.has(item.slug))
+      throw new Error('Community sample has an invalid/duplicate slug');
+    if(!supported.has(item.kind)||!allowedLicenses.has(item.license))
+      throw new Error('Community sample has an undocumented external format or licence: '+item.slug);
+    if(!/^https:\/\//u.test(item.sourceUrl??'')||
+       !/^sha256:[0-9a-f]{64}$/u.test(item.sourceSha256??'')||
+       !/^sha256:[0-9a-f]{64}$/u.test(item.packageSha256??''))
+      throw new Error('Community sample is missing exact HTTPS provenance or SHA-256: '+item.slug);
+    if(typeof item.title!=='string'||!item.title.trim()||item.title.length>140)
+      throw new Error('Community sample title invalid: '+item.slug);
+    freeProvenanceMap.set(item.slug,item);
+  }
+}
+const freeSamplesSeen=new Set();
 const canonicalEntries = [];
 for (const path of (await walk(join(canonicalSource,'external'))).filter((item)=>item.endsWith('.p2lrn')).sort()) {
   const rel = relative(canonicalSource,path).replaceAll('\\','/');
   const publishedPath = join(canonicalOutput,...rel.split('/'));
   const [sourceBytes,publishedBytes] = await Promise.all([readFile(path),readFile(publishedPath)]);
   if (!sourceBytes.equals(publishedBytes)) throw new Error(`Published canonical example differs byte-for-byte from source: ${rel}`);
+  const freeMatch=/^external\/free\/([a-z0-9][a-z0-9-]*)\.p2lrn$/u.exec(rel);
+  const freeMetadata=freeMatch?freeProvenanceMap.get(freeMatch[1]):null;
+  if(freeMatch){
+    if(!freeMetadata)throw new Error('Unknown community sample without redistribution provenance: '+rel);
+    const digest='sha256:'+createHash('sha256').update(sourceBytes).digest('hex');
+    if(digest!==freeMetadata.packageSha256)throw new Error('Community sample changed without pinned SHA-256: '+rel);
+    freeSamplesSeen.add(freeMatch[1]);
+  }
   const inspected = await inspectPackage(publishedPath);
   canonicalEntries.push({
-    title:canonicalDisplayTitles[rel] ?? inspected.title,
+    title:freeMetadata?.title??canonicalDisplayTitles[rel] ?? inspected.title,
     category:rel.startsWith('external/') ? 'canonical-external' : rel.startsWith('aulap2p-reader/') ? 'canonical-reader' : 'canonical',
+    ...(freeMetadata ? {
+      sourceFormat:freeMetadata.kind,
+      originUrl:freeMetadata.sourceUrl,
+      license:freeMetadata.license,
+      sourceSha256:freeMetadata.sourceSha256,
+      browserVerified:freeMetadata.browserVerified===true,
+      provenance:'/examples/canonical/external/free/provenance.json',
+    } : {}),
     url:'/examples/canonical/' + rel,
     source:'examples/canonical/' + rel,
     rendererId:null,
@@ -156,6 +176,10 @@ for (const path of (await walk(join(canonicalSource,'external'))).filter((item)=
     bytes:inspected.bytes,
   });
 }
+
+if(freeSamplesSeen.size!==freeProvenanceMap.size)
+  throw new Error('Community sample provenance includes files absent from the public corpus: '+
+    [...freeProvenanceMap.keys()].filter(id=>!freeSamplesSeen.has(id)).join(', '));
 
 // Native documentation fixtures are verified during the build, but must not be published.
 const documentationExamples = await buildDocExamples({outputRoot:examplesOutput});

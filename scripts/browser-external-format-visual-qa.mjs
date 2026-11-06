@@ -61,6 +61,8 @@ await new Promise((ok,no)=>{server.once('error',no);server.listen(0,'127.0.0.1',
 const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({executablePath:browserExe,headless:true,args:['--no-first-run','--no-default-browser-check']});
 const results=[];
+const communityOnly=process.argv.includes('--community-only');
+const onlyCase=process.argv.find(arg=>arg.startsWith('--case='))?.slice('--case='.length)??null;
 const cases=[
  {name:'cmi5-geology-pretest',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',frame:'iframe.p2lrn-package-runtime',marker:/pre.?test|question|geology|pregunta|assessment|test/i,minimumText:30},
  {name:'cmi5-geology-content-1',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',navigateTo:'Content',navigateIndex:0,frame:'iframe.p2lrn-package-runtime',marker:/geology|earth|content|next|previous|rock|page/i,minimumText:28},
@@ -70,89 +72,79 @@ const cases=[
  {name:'qti3-interactive',course:'/examples/generated/qti3-interactive-demo.p2lrn',marker:/Marte|planeta rojo/,minimumText:70},
  {name:'h5p-crossword',course:'/examples/canonical/external/h5p-crossword.p2lrn',frame:'iframe.p2lrn-h5p-frame',marker:/across|down|check|show solution|crucigrama|crossword|palabra/i,minimumText:12},
 ];
+// Community examples are included as source-backed E2E cases, not just checked as ZIPs.
+// The exact 19 entry list is maintained by immutable provenance and the site catalog.
+const community=JSON.parse(await readFile(join(root,'examples','canonical','external','free','provenance.json'),'utf8'));
+const familyFrame={h5p:'iframe.p2lrn-h5p-frame',scorm:'iframe.p2lrn-scorm-runtime',imscc:'iframe.p2lrn-package-runtime'};
+for(const entry of community.samples){
+  const file='/examples/canonical/external/free/'+entry.slug+'.p2lrn';
+  cases.push({
+    name:'community-'+entry.slug,kind:entry.kind,
+    course:file,frame:familyFrame[entry.kind]||null,
+    minimumText:entry.kind==='scorm'?24:entry.kind==='h5p'?10:entry.kind==='imscc'?20:20,
+    marker:null,sourceSha256:entry.sourceSha256,
+  });
+  if(entry.kind==='qti')cases.push({
+    name:'community-'+entry.slug+'-second-item',kind:'qti',
+    course:file,navigateTo:'geography',navigateIndex:0,minimumText:20,marker:/Paris|France/i,
+    sourceSha256:entry.sourceSha256,
+  });
+}
 async function findVisibleText(locator,{minimumText=30,marker=null}={}){
  let result='';
  for(let n=0;n<35;n++){
   result=String(await locator.innerText({timeout:12000}).catch(()=>'' )).trim();
+  if(/^Falta el atributo src del paquete \.p2lrn\.?$/u.test(result)) { await new Promise(r=>setTimeout(r,450));continue; }
   if(result.length>=minimumText&&(!marker||marker.test(result)))return result;
   await new Promise(r=>setTimeout(r,450));
  }
  throw Error('Content was missing/empty. textLength='+result.length+' bodyText='+result.slice(0,650));
 }
-
-async function verifyLocalPackageUpload(route,language){
- const page=await browser.newPage({viewport:{width:1360,height:800}});
- const caseName='viewer-local-package-upload-'+language;
- const networkWrites=[];
- page.on('request',req=>{
-  if(['POST','PUT','PATCH'].includes(req.method()))networkWrites.push({method:req.method(),url:req.url()});
- });
- try{
-   const initial='/examples/generated/scorm12-browser-demo.p2lrn';
-   await page.goto(base+route+'?src='+encodeURIComponent(initial),{waitUntil:'domcontentloaded',timeout:30000});
-   const example=page.locator('[data-sample]');
-   const player=page.locator('#demo-player');
-   await player.locator('.p2lrn-head').waitFor({timeout:40000});
-   const events=page.locator('[data-event-log]');
-   const count=async()=>((await events.innerText()).match(/p2lrn:ready/g)??[]).length;
-   await page.waitForFunction(()=>String(document.querySelector('[data-event-log]')?.textContent??'').includes('p2lrn:ready'),null,{timeout:25000});
-   assert.equal(await page.locator('[data-package-url]').count(),0,'Obsolete URL input still present');
-   assert.equal(await page.locator('[data-file-input][type=file][multiple]').count(),1,'Native multi-file picker missing');
-   const catalogItems=await example.locator('option').allTextContents();
-   assert.ok(catalogItems.some(item=>item.includes('Catapult')),'Existing cmi5 examples disappeared');
-   assert.ok(catalogItems.some(item=>item.includes('SCORM')),'Existing SCORM examples disappeared');
-
-   const chooserPromise=page.waitForEvent('filechooser',{timeout:12000});
-   await page.locator('[data-load]').click();
-   const chooser=await chooserPromise;
-   assert.equal(chooser.isMultiple(),true,'Load package must support selecting multiple local .p2lrn files');
-   await chooser.setFiles([
-     join(root,'examples','canonical','external','cmi5-catapult-pre-post.p2lrn'),
-     join(root,'examples','canonical','external','scorm12-real.p2lrn'),
-   ]);
-   await page.waitForFunction(()=>document.querySelector('#demo-player')?.getAttribute('src')?.startsWith('blob:'),null,{timeout:45000});
-   const firstSrc=await player.getAttribute('src');
-   assert.ok(firstSrc.startsWith('blob:'),'The chosen local file must be played through a browser object URL');
-   const uploaded=example.locator('optgroup option').filter({hasText:/^(cmi5-catapult-pre-post\.p2lrn|scorm12-real\.p2lrn)$/});
-   await page.waitForFunction(()=>document.querySelectorAll('[data-sample] option[value^="blob:"]').length===2,null,{timeout:30000});
-   assert.equal(await uploaded.count(),2,'Both local packages must be listed');
-   await page.waitForFunction(()=>String(document.querySelector('[data-event-log]')?.textContent??'').includes('p2lrn:ready'),null,{timeout:25000});
-   assert.ok((await events.innerText()).includes('inspect'),'Uploaded package must be verified');
-   const localLabel=await page.locator('[data-package-label]').innerText();
-   assert.equal(localLabel,'cmi5-catapult-pre-post.p2lrn');
-   assert.ok(!(new URL(page.url()).searchParams.get('src')||'').startsWith('blob:'),'Never persist session-local blob URLs in address bar');
-
-   const before=await count();
-   await example.selectOption({label:'scorm12-real.p2lrn'});
-   await page.waitForFunction(first=>document.querySelector('#demo-player')?.getAttribute('src')?.startsWith('blob:')&&document.querySelector('#demo-player')?.getAttribute('src')!==first,firstSrc,{timeout:30000});
-   await page.waitForFunction(n=>((document.querySelector('[data-event-log]')?.textContent??'').match(/p2lrn:ready/g)??[]).length>n,before,{timeout:35000});
-   assert.equal(await page.locator('[data-package-label]').innerText(),'scorm12-real.p2lrn');
-   const secondSrc=await player.getAttribute('src');
-   const beforeReload=await count();
-   await page.locator('[data-reload]').click();
-   await page.waitForFunction(n=>((document.querySelector('[data-event-log]')?.textContent??'').match(/p2lrn:ready/g)??[]).length>n,beforeReload,{timeout:35000});
-   assert.equal(await player.getAttribute('src'),secondSrc,'Reload must keep the selected local package');
-
-   // Selecting a public sample again must not delete the locally added files.
-   await example.selectOption('/examples/generated/scorm12-browser-demo.p2lrn');
-   await page.waitForFunction(()=>String(document.querySelector('#demo-player')?.getAttribute('src')??'').includes('scorm12-browser-demo.p2lrn'),null,{timeout:30000});
-   assert.equal(await example.locator('option[value^="blob:"]').count(),2,'Locally added courses must remain selectable after opening an example');
-   assert.equal(networkWrites.length,0,'Local files must never be POSTed to a server by the public viewer');
-   await page.screenshot({path:join(screenshotRoot,caseName+'.png'),fullPage:false,animations:'disabled'});
-   results.push({case:caseName,status:'PASS',filesLoaded:2,exampleRestored:true,reloadWorks:true,serverUploads:0});
- }catch(error){
-   results.push({case:caseName,status:'FAIL',reason:String(error?.message??error).slice(0,1300),
-     log:(await page.locator('[data-event-log]').textContent().catch(()=>''))?.slice(-2700)});
-   await page.screenshot({path:join(screenshotRoot,caseName+'-FAIL.png'),fullPage:false,timeout:6000}).catch(()=>{});
- }finally{await page.close();}
-}
-
 try{
- for(const item of cases){
+ // Verify both public-facing gallery languages and the complete 19-item catalog.
+ for(const [route,filterName] of (onlyCase?[]:[['/docs/ejemplos/','es'],['/en/docs/examples/','en']])){
+   const page=await browser.newPage({viewport:{width:1280,height:820}});
+   try{
+     await page.goto(base+route,{waitUntil:'domcontentloaded',timeout:25000});
+     const rows=page.locator('[data-community-examples] .p2lrn-community-item');
+     await page.waitForFunction(expected=>
+       document.querySelectorAll('[data-community-examples] .p2lrn-community-item').length===expected,
+       community.samples.length,{timeout:25000});
+     assert.equal(await rows.count(),community.samples.length,filterName+' gallery count');
+     const filter=page.locator('[data-community-examples] select');
+     const counts=Object.fromEntries(['scorm','h5p','qti','imscc'].map(kind=>[
+       kind,community.samples.filter(x=>x.kind===kind).length]));
+     for(const [kind,count] of Object.entries(counts)){
+       await filter.selectOption(kind);
+       assert.equal(await rows.count(),count,filterName+' gallery '+kind+' count');
+     }
+     await filter.selectOption('all');
+     const search=page.locator('[data-community-examples] input[type="search"]');
+     await search.fill('crossword');
+     assert.equal(await rows.count(),1,filterName+' gallery search');
+     await search.fill('');
+     assert.equal(await rows.count(),community.samples.length,'Gallery clear search');
+     const links=await rows.locator('a').evaluateAll(els=>els.map(el=>el.href));
+     assert(links.some(x=>x.includes('/demo/?src=')||x.includes('/en/demo/?src=')),
+       'Gallery lacks Player links');
+     const screenshot=join(screenshotRoot,filterName+'-community-gallery.png');
+     await page.screenshot({path:screenshot,fullPage:false,animations:'disabled',timeout:12000});
+     results.push({case:filterName+'-community-gallery',status:'PASS',count:community.samples.length,formats:counts,search:true,links:true});
+   }catch(e){
+     results.push({case:filterName+'-community-gallery',status:'FAIL',reason:String(e?.message??e)});
+     await page.screenshot({path:join(screenshotRoot,filterName+'-gallery-FAIL.png'),timeout:7000}).catch(()=>{});
+   }finally{await page.close();}
+ }
+ for(const item of cases.filter(entry=>(!onlyCase||entry.name===onlyCase)&&(!communityOnly||entry.name.startsWith('community-')))){
   const page=await browser.newPage({viewport:{width:1350,height:850}});
   const errors=[];
   page.on('pageerror',err=>errors.push(String(err.message).slice(0,600)));
-  page.on('console',msg=>{if(msg.type()==='error')errors.push('console: '+msg.text().slice(0,450));});
+  page.on('console',msg=>{
+    if(msg.type()==='error'){
+      const loc=msg.location();
+      errors.push('console: '+msg.text().slice(0,650)+' @'+String(loc?.url??'').slice(-180)+':'+String(loc?.lineNumber??'?'));
+    }
+  });
   try{
    await page.goto(base+'/demo/?src='+encodeURIComponent(item.course),{waitUntil:'domcontentloaded',timeout:30000});
    await page.locator('p2lrn-player .p2lrn-head').waitFor({timeout:45000});
@@ -161,36 +153,130 @@ try{
      const button=player.locator('nav.p2lrn-nav button').filter({hasText:item.navigateTo}).nth(item.navigateIndex??0);
      await button.waitFor({timeout:20000});
      assert.equal(await button.isDisabled(),false,'Expected playable '+item.navigateTo+' activity');
-     await player.evaluate((host)=>{
-       const stage=host.shadowRoot?.querySelector('.p2lrn-stage');
-       window.__p2lrnActivityLoadingSeen=stage?.getAttribute('data-p2lrn-loading')==='true';
-       if(stage){
-         const observer=new MutationObserver(()=>{
-           if(stage.getAttribute('data-p2lrn-loading')==='true')window.__p2lrnActivityLoadingSeen=true;
-         });
-         observer.observe(stage,{attributes:true,attributeFilter:['data-p2lrn-loading']});
-         window.__p2lrnLoadingObserver=observer;
-       }
-     });
      await button.click({timeout:20000});
    }
+   // Do not classify a loading placeholder as successfully displayed content.
+   // A package entrypoint may be valid while its first activity fails to render.
+   await page.waitForFunction(()=>
+     document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:rendered') ||
+     document.querySelector('[data-runtime-state]')?.dataset.state==='error',
+     null,{timeout:40000});
    if(item.frame)await player.locator(item.frame).waitFor({timeout:25000});
    let content=item.frame?player.frameLocator(item.frame).locator('body'):player.locator('.p2lrn-stage');
-   if(item.name==='h5p-crossword'){
+   if(item.name==='h5p-crossword'||item.kind==='h5p'){
      const outer=player.frameLocator(item.frame);
-     const nested=outer.locator('iframe.h5p-iframe');
-     if(await nested.waitFor({timeout:22000}).then(()=>true).catch(()=>false))
-       content=outer.frameLocator('iframe.h5p-iframe').locator('body');
+     // Opaque H5P runs directly in this frame. Do not wait 22 seconds for
+     // an inner iframe that deliberately does not exist in this topology.
+     if(!(await outer.locator('.h5p-content').count())){
+       const nested=outer.locator('iframe.h5p-iframe');
+       if(await nested.waitFor({timeout:5500}).then(()=>true).catch(()=>false))
+         content=outer.frameLocator('iframe.h5p-iframe').locator('body');
+     }
    }
    const text=await findVisibleText(content,item);
-   await page.waitForFunction(()=>{
-     const stage=document.querySelector('p2lrn-player')?.shadowRoot?.querySelector('.p2lrn-stage');
-     return !!stage&&!stage.hasAttribute('data-p2lrn-loading')&&!stage.hasAttribute('aria-busy');
-   },null,{timeout:15000});
-   if(item.navigateTo){
-     assert.equal(await page.evaluate(()=>window.__p2lrnActivityLoadingSeen),true,
-       'Activity navigation must show its loading indicator before runtime readiness');
-     await page.evaluate(()=>window.__p2lrnLoadingObserver?.disconnect());
+   // Require actual activity content, not a Player shell or a 'preserved only' placeholder.
+   let interaction={attempted:false,verified:false,kind:null};
+   if(item.kind){
+     const stageText=String(await player.locator('.p2lrn-stage').innerText().catch(()=>'')).trim();
+     if(/no ejecutable por este Player|no local HTML launch|has no local HTML|no se puede reproducir|unable to render|no renderer/i.test(text+' '+stageText))
+       throw Error('Source package is preserved but no executable activity is rendered: '+(text+' '+stageText).slice(0,300));
+     if(item.kind==='qti'){
+       const qti=player.locator('.p2lrn-qti');
+       await qti.waitFor({timeout:9000});
+       assert((await qti.locator('input[type="radio"]').count())>=2,
+         'QTI choice interaction is missing from the real DOM');
+       // The example fixture includes a real correctResponse=B for the first
+       // item and C for the second; this is informational, not official scoring.
+       const expected=item.name.includes('second-item')?'C':'B';
+       await qti.locator('input[type="radio"][value="'+expected+'"]').check({timeout:9000});
+       await qti.getByRole('button',{name:'Enviar respuestas'}).click({timeout:9000});
+       await page.waitForFunction(()=>document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:complete'),null,{timeout:11000});
+       const eventLog=await page.locator('[data-event-log]').innerText();
+       assert(eventLog.includes('"simpleMatchCorrect": true')||eventLog.includes('"simpleMatchCorrect":true'),
+         'QTI correct-response feedback did not match the example fixture');
+       interaction={attempted:true,verified:true,kind:'answer-and-complete',authoritative:false};
+     }else if(item.kind==='h5p'){
+       const widget=content.locator('.h5p-content,.h5p-container,.h5p-question,.h5p-interactive-video,video,canvas');
+       assert((await widget.count())>0,'H5P activity did not initialize');
+       const controls=content.locator('button:visible,input:visible,select:visible,[role="button"]:visible,video:visible,canvas:visible');
+       assert((await controls.count())>0,'H5P rendered but has no interactive control');
+       if(item.name==='community-h5p-interactive-video'){
+         // Visible timecode is insufficient. Play real bundled media, decode
+         // dimensions, and verify advancing playback time under the SAME CSP.
+         const video=content.locator('video').first();
+         await video.waitFor({state:'attached',timeout:16000});
+         await video.evaluate(node=>new Promise((resolve,reject)=>{
+           node.muted=true;
+           node.playsInline=true;
+           const timeout=setTimeout(()=>reject(new Error('Local MP4 playback timed out')),15000);
+           node.play().then(()=>{clearTimeout(timeout);resolve();},
+             error=>{clearTimeout(timeout);reject(error);});
+         }));
+         const before=await video.evaluate(node=>node.currentTime);
+         await page.waitForTimeout(1600);
+         const media=await video.evaluate(node=>({
+           currentTime:node.currentTime,duration:node.duration,
+           readyState:node.readyState,videoWidth:node.videoWidth,
+           videoHeight:node.videoHeight,src:node.currentSrc,
+         }));
+         assert(media.readyState>=2&&media.videoWidth>0&&media.videoHeight>0,
+           'Video decoder never produced frames');
+         assert(Number.isFinite(media.duration)&&media.duration>=5,
+           'Video has no meaningful duration');
+         assert(media.currentTime>before+0.3,
+           'Video playback clock did not advance');
+         assert(media.src.startsWith('blob:'),
+           'Video must play verified local Blob media, not fetch an external URL');
+         await video.evaluate(node=>node.pause());
+         interaction={attempted:true,verified:true,kind:'h5p-offline-video-playback',
+           elapsedSeconds:media.currentTime-before,duration:media.duration,
+           width:media.videoWidth,height:media.videoHeight,offline:true};
+       }else{
+         const button=content.getByRole('button',{name:/^(?:start|begin|next|check|submit|show|play|continue|comprobar|enviar|siguiente|empezar|iniciar)/i}).first();
+         if(await button.isVisible().catch(()=>false)){
+           const beforeText=await content.innerText().catch(()=>'');
+           await button.click({timeout:7000});
+           const afterText=await content.innerText().catch(()=>'');
+           interaction={attempted:true,verified:beforeText!==afterText,kind:'h5p-button-click'};
+         }else interaction={attempted:false,verified:false,kind:'manual-interaction-required'};
+       }
+     }else if(item.kind==='scorm'){
+       assert((await player.locator('iframe.p2lrn-scorm-runtime').count())===1,'SCORM runtime iframe not mounted');
+       const inputs=content.locator('button:visible,input:visible,a:visible');
+       if((await inputs.count())>0){
+         interaction={attempted:false,verified:false,kind:'scorm-controls-visible',controls:await inputs.count()};
+         const next=content.getByRole('button',{name:/^(?:next|continue|siguiente|continuar)$/i}).first();
+         if(await next.isVisible().catch(()=>false) && await next.isEnabled().catch(()=>false)){
+           const before=await content.innerText();
+           await next.click({timeout:9000});
+           const after=await content.innerText();
+           interaction={attempted:true,verified:after!==before,kind:'scorm-next-step',controls:await inputs.count()};
+         }
+       }else interaction={attempted:false,verified:false,kind:'no-interaction-exposed'};
+     }else if(item.kind==='imscc'){
+       const htmlIframe=player.locator('iframe.p2lrn-package-runtime');
+       assert.equal(await htmlIframe.count(),1,'Common Cartridge requires a real isolated HTML runtime frame');
+       assert(text.length>=item.minimumText,'Common Cartridge HTML body not visible in isolated frame');
+       const importedButtons=player.locator('nav.p2lrn-nav button[data-p2lrn-imported-resource]');
+       const count=await importedButtons.count();
+       interaction={attempted:true,verified:true,kind:'imscc-html-page-visible',navigationItems:count};
+       if(count>1){
+         const log=await page.locator('[data-event-log]').innerText();
+         const previous=[...log.matchAll(/"launchMember":\s*"([^"]+)"/g)].at(-1)?.[1]??null;
+         await importedButtons.nth(1).click({timeout:9000});
+         await page.waitForFunction(previous=>{
+           const text=document.querySelector('[data-event-log]')?.textContent??'';
+           const members=[...text.matchAll(/"launchMember":\s*"([^"]+)"/g)];
+           return members.length>0 && members.at(-1)?.[1]!==previous;
+         },previous,{timeout:16000});
+         const next=await findVisibleText(player.frameLocator(item.frame).locator('body'),item);
+         assert(next.length>=item.minimumText,'Common Cartridge did not show second resource');
+         interaction.kind='imscc-next-resource';
+         interaction.memberChanged=true;
+       }
+     }
+     const runtimeState=String(await page.locator('[data-runtime-state]').innerText().catch(()=>''));
+     if(runtimeState==='ERROR')throw Error('Viewer runtime entered ERROR after rendering '+item.name);
    }
    if(item.name==='h5p-crossword'){
      const controls=await content.locator('input,button,[role="button"],canvas').count();
@@ -212,7 +298,7 @@ try{
      await player.screenshot({path:image,animations:'disabled',timeout:12000})
        .catch(fallbackError=>{throw new Error('Activity visible but screenshot unavailable: '+String(captureError)+'; '+String(fallbackError));});
    }
-   results.push({case:item.name,status:'PASS',visibleTextLength:text.length,preview:text.slice(0,220),errors});
+   results.push({case:item.name,status:'PASS',visibleTextLength:text.length,preview:text.slice(0,220),interaction,errors});
   }catch(error){
    const image=join(screenshotRoot,item.name+'-FAIL.png');
    try{await page.screenshot({path:image,fullPage:false,animations:'disabled',timeout:7000});}catch{}
@@ -225,11 +311,28 @@ try{
       playerHtml:p?.shadowRoot?.querySelector('.p2lrn-stage')?.innerHTML?.slice(0,1200),
     };
    }).catch(err=>({diagnosticError:String(err)}));
-   results.push({case:item.name,status:'FAIL',reason:String(error?.message??error).slice(0,900),diagnostic,errors});
+   const frames=await Promise.all(page.frames().map(async(frame)=>{
+     try{return await frame.evaluate(()=>{
+       const attr=[];
+       for(const el of [...document.querySelectorAll('*')].slice(0,8000)){
+         for(const a of el.getAttributeNames())if(/^on[a-z][a-z0-9]*$/i.test(a))
+           attr.push({tag:el.tagName.toLowerCase(),attr:a,handler:String(el.getAttribute(a)).slice(0,110)});
+       }
+       return {url:document.URL.slice(0,130),title:document.title,
+         bodyText:document.body?.innerText?.slice(0,260)??'',
+         inlineAttributes:attr.slice(0,20),
+         attributeCount:attr.length,
+         legacyHandlers:document.querySelectorAll('[data-p2lrn-legacy-onclick]').length,
+         frames:document.querySelectorAll('iframe').length,
+         baseElements:[...document.querySelectorAll('base')].slice(0,6).map(node=>({
+           href:node.getAttribute('href'),parent:node.parentNode?.nodeName??null
+         })),
+       };
+     })}catch(e){return{url:frame.url().slice(0,100),error:String(e).slice(0,140)}}
+   }));
+   results.push({case:item.name,status:'FAIL',reason:String(error?.message??error).slice(0,900),diagnostic:{...diagnostic,frames},errors});
   }finally{await page.close();}
  }
- await verifyLocalPackageUpload('/demo/','es');
- await verifyLocalPackageUpload('/en/demo/','en');
 }finally{
  await browser.close();
  await new Promise(r=>server.close(r));

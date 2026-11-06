@@ -11,6 +11,11 @@ let active = false;
 let resizeObserver = null;
 let runtimeProfile = null;
 let cmi5Config = null;
+const legacyHandlerObservers = new WeakMap();
+// Prevent repeated mutation-driven handler compilation from bypassing a
+// per-document limit. No new privileges or network access are added.
+let legacyHandlersInstalled = 0;
+let legacyHandlerBytes = 0;
 
 function reply(action, payload = {}) {
   channelSend?.({protocol:PROTOCOL, action, ...payload});
@@ -56,22 +61,11 @@ function resolve(base, ref) {
   const raw = String(ref || '').trim();
   if (!raw || raw[0] === '#' || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(raw)) return null;
   const match = /^([^?#]*)(\?[^#]*)?(#.*)?$/u.exec(raw);
-  let target = match?.[1] || '';
-  // IMS Common Cartridge exported by Canvas uses this portable file-base token.
-  // Its files live at web_resources/ in the preserved cartridge, not alongside
-  // the current wiki_content/ page. Decode percent-encoded filenames safely.
-  const cartridgeFile = /^\$IMS-CC-FILEBASE\$\//iu.exec(target);
-  const root = Boolean(cartridgeFile) || target.startsWith('/');
-  if (cartridgeFile) target = 'web_resources/' + target.slice(cartridgeFile[0].length);
-  try { target = decodeURIComponent(target); } catch { return null; }
+  const target = match?.[1] || '';
+  const root = target.startsWith('/');
   const baseDir = base.includes('/') ? base.slice(0, base.lastIndexOf('/') + 1) : '';
-  const path = normalize(root ? target.replace(/^\//u, '') : baseDir + target);
+  const path = normalize(root ? target.slice(1) : baseDir + target);
   return path && files.has(path) ? {path, suffix:(match?.[2] || '') + (match?.[3] || '')} : null;
-}
-function blobReference(url, suffix) {
-  const value = String(suffix ?? '');
-  const hash = value.indexOf('#');
-  return String(url) + (hash < 0 ? '' : value.slice(hash));
 }
 function text(path) {
   return new TextDecoder('utf-8', {fatal:false}).decode(files.get(path).buffer);
@@ -160,7 +154,7 @@ function rewriteCss(css, base, stack = new Set()) {
     })
     .replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/giu, (all, _q, ref) => {
       const resolved = resolve(base, ref);
-      return resolved && urls.has(resolved.path) ? `url("${blobReference(urls.get(resolved.path),resolved.suffix)}")` : all;
+      return resolved && urls.has(resolved.path) ? `url("${urls.get(resolved.path)}${resolved.suffix}")` : all;
     });
 }
 function rewriteElementTree(root, path) {
@@ -184,14 +178,14 @@ function rewriteElementTree(root, path) {
         el.setAttribute('data-p2lrn-frame-member', resolved.path);
         continue;
       }
-      if (urls.has(resolved.path)) el.setAttribute(attr, blobReference(urls.get(resolved.path),resolved.suffix));
+      if (urls.has(resolved.path)) el.setAttribute(attr, urls.get(resolved.path) + resolved.suffix);
     }
     if (el.hasAttribute('style')) el.setAttribute('style', rewriteCss(el.getAttribute('style'), path));
     if (el.hasAttribute('srcset')) {
       el.setAttribute('srcset', el.getAttribute('srcset').split(',').map((item) => {
         const bits = item.trim().split(/\s+/);
         const resolved = resolve(path, bits[0]);
-        if (resolved && urls.has(resolved.path)) bits[0] = blobReference(urls.get(resolved.path),resolved.suffix);
+        if (resolved && urls.has(resolved.path)) bits[0] = urls.get(resolved.path) + resolved.suffix;
         return bits.join(' ');
       }).join(', '));
     }
@@ -199,19 +193,80 @@ function rewriteElementTree(root, path) {
   for (const style of root?.querySelectorAll?.('style') ?? []) style.textContent = rewriteCss(style.textContent || '', path);
   for (const template of root?.querySelectorAll?.('template') ?? []) rewriteElementTree(template.content, path);
 }
+// Strip inline event attributes BEFORE passing untrusted HTML to DOMParser.
+// Chromium may report an inline-handler CSP violation when parsing inert HTML,
+// even if the attribute is removed before mounting. A bounded lexical scan
+// rewrites attributes only in actual opening tags (not in script bodies,
+// quoted attribute values, comments or raw CSS). The original handler source
+// remains inert data until isolated Blob-backed listeners are registered.
+function neutralizeEventHandlerMarkup(value) {
+  const html=String(value??'');
+  const lower=html.toLowerCase();
+  let result='',position=0;
+  while(position<html.length){
+    const lt=html.indexOf('<',position);
+    if(lt<0){result+=html.slice(position);break;}
+    result+=html.slice(position,lt);
+    if(html.startsWith('<!--',lt)){
+      const end=html.indexOf('-->',lt+4);
+      if(end<0){result+=html.slice(lt);break;}
+      result+=html.slice(lt,end+3);position=end+3;continue;
+    }
+    const opening=/^<([a-z][a-z0-9:.-]*)/i.exec(html.slice(lt,lt+150));
+    if(!opening){result+='<';position=lt+1;continue;}
+    const name=opening[1].toLowerCase();
+    let e=lt+opening[0].length,quote='';
+    for(;e<html.length;e++){
+      const c=html[e];
+      if(quote){if(c===quote)quote='';}
+      else if(c==='"'||c==="'")quote=c;
+      else if(c==='>')break;
+    }
+    if(e===html.length){result+=html.slice(lt);break;}
+    const tag=html.slice(lt,e+1);
+    let k=opening[0].length;
+    let safe=tag.slice(0,k);
+    while(k<tag.length-1){
+      if(/[\s/]/u.test(tag[k])){safe+=tag[k++];continue;}
+      const start=k;
+      while(k<tag.length-1&&!/[\s=\/<>]/u.test(tag[k]))k++;
+      if(k===start){safe+=tag[k++];continue;}
+      const attr=tag.slice(start,k);
+      let equal=k;
+      while(equal<tag.length-1&&/\s/u.test(tag[equal]))equal++;
+      const hasValue=tag[equal]==='=';
+      safe+=(hasValue&&/^on[a-z][a-z0-9]*$/iu.test(attr))
+        ? 'data-p2lrn-legacy-'+attr.toLowerCase():attr;
+      if(hasValue){
+        safe+=tag.slice(k,equal+1);k=equal+1;
+        while(k<tag.length-1&&/\s/u.test(tag[k]))safe+=tag[k++];
+        if(tag[k]==='"'||tag[k]==="'"){
+          const q=tag[k];safe+=tag[k++];
+          while(k<tag.length-1){const c=tag[k++];safe+=c;if(c===q)break;}
+        }else while(k<tag.length-1&&!/\s/u.test(tag[k]))safe+=tag[k++];
+      }
+    }
+    result+=safe+'>';position=e+1;
+    if(name==='script'||name==='style'||name==='textarea'){
+      const close=lower.indexOf('</'+name,position);
+      if(close>=0){result+=html.slice(position,close);position=close;}
+    }
+  }
+  return result;
+}
 function rewriteDeferredMarkup(doc, path) {
   const templateTypes = new Set(['text/template','text/x-template','text/html','application/x-template']);
   for (const script of doc.querySelectorAll('script:not([src])')) {
     const type = String(script.getAttribute('type') || '').trim().toLowerCase();
     if (!templateTypes.has(type)) continue;
     const holder = doc.createElement('template');
-    holder.innerHTML = script.textContent || '';
+    holder.innerHTML = neutralizeEventHandlerMarkup(script.textContent || '');
     rewriteElementTree(holder.content, path);
     script.textContent = holder.innerHTML;
   }
 }
 function rewriteHtml(path) {
-  const doc = new DOMParser().parseFromString(text(path), 'text/html');
+  const doc = new DOMParser().parseFromString(neutralizeEventHandlerMarkup(text(path)), 'text/html');
   doc.querySelectorAll('base').forEach((node) => node.remove());
   // Never mount on* HTML attributes under a restrictive inherited CSP:
   // preserve their source as inert data until a sandbox-local blob registers
@@ -226,7 +281,7 @@ function rewriteHtml(path) {
   }
   const csp = doc.createElement('meta');
   csp.httpEquiv = 'Content-Security-Policy';
-  csp.content = "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'unsafe-inline' blob:; img-src blob: data: https:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src blob:; form-action 'none'; base-uri 'none'; object-src 'none';";
+  csp.content = "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; frame-src blob: data: about:; connect-src blob:; form-action 'none'; base-uri 'none'; object-src 'none';";
   if (!doc.querySelector('meta[name="viewport"]')) {
     const viewport = doc.createElement('meta');
     viewport.name = 'viewport';
@@ -255,6 +310,12 @@ function rewriteHtml(path) {
 }
 function wireDocument(doc, path) {
   if (!doc) return;
+  // Nested srcdoc frames are separate Document objects: observe and wire
+  // handlers in their OWN sandboxed context. The outer MutationObserver cannot
+  // see attributes or generated elements inside a child document.
+  observeLegacyHandlers(doc);
+  void installLegacyInlineHandlers(doc).catch(error=>
+    reply('error',{message:'Legacy document handlers: '+String(error?.message??error)}));
   doc.addEventListener('click', (event) => {
     const anchor = event.target?.closest?.('a,area');
     if (!anchor) return;
@@ -280,6 +341,7 @@ function wireDocument(doc, path) {
   }
 }
 async function installLegacyInlineHandlers(root) {
+  const ownerDoc=root.nodeType===9?root:(root.ownerDocument??document);
   // Existing cmi5/IMS packages may rely on onclick/onchange HTML attributes.
   // A strict embedding CSP blocks those attributes even though package JS
   // runs in a sandboxed opaque-origin iframe. Convert them to blob-backed
@@ -297,14 +359,17 @@ async function installLegacyInlineHandlers(root) {
       const source=attribute.value;
       el.removeAttribute(attribute.name);
       bytes+=source.length;
-      if(++inlineScriptId>5000||bytes>512*1024)
+      legacyHandlerBytes+=source.length;
+      legacyHandlersInstalled++;
+      if(++inlineScriptId>5000||bytes>512*1024||
+          legacyHandlersInstalled>5000||legacyHandlerBytes>512*1024)
         throw new Error('External package has too many legacy event handlers.');
       if(!id){
         id='p2lrn-legacy-'+inlineScriptId;
         el.setAttribute('data-p2lrn-legacy-id',id);
       }
       handlers.push({id,eventName:handlerName.slice(2),source});
-      if(handlerName==='onload'&&(el===document.body||el===document.documentElement))
+      if(handlerName==='onload'&&(el===ownerDoc.body||el===ownerDoc.documentElement))
         onLoadElements.push(el);
     }
   }
@@ -322,16 +387,46 @@ async function installLegacyInlineHandlers(root) {
   }).join('\n');
   const src=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
   urls.set('p2lrn-events-'+(++inlineScriptId),src);
-  const script=document.createElement('script');
+  const script=ownerDoc.createElement('script');
   script.src=src;
   await new Promise((resolve,reject)=>{
     script.addEventListener('load',resolve,{once:true});
     script.addEventListener('error',()=>reject(new Error('External package legacy events failed to initialize.')),{once:true});
-    document.head.append(script);
+    ownerDoc.head.append(script);
   });
   for(const el of onLoadElements)el.dispatchEvent(new Event('load'));
 }
 
+// Content may create legacy on* attributes using document.write, innerHTML or
+// dynamic DOM APIs AFTER the initial HTML was inspected. A MutationObserver
+// converts those attributes to blob-backed event listeners. This works under
+// the existing strict CSP; it never enables unsafe-inline, eval, same-origin,
+// remote networking, forms, or privileges in the host page.
+function observeLegacyHandlers(doc=document) {
+  if(legacyHandlerObservers.has(doc))return;
+  let queued=false;
+  let pending=Promise.resolve();
+  const schedule=()=>{
+    if(queued)return;
+    queued=true;
+    pending=pending.then(async()=>{
+      queued=false;
+      await installLegacyInlineHandlers(doc);
+    }).catch(error=>{
+      queued=false;
+      reply('error',{message:'Dynamic legacy handlers: '+String(error?.message??error)});
+    });
+  };
+  const Observer=doc.defaultView?.MutationObserver??MutationObserver;
+  const observer=new Observer(mutations=>{
+    if(mutations.some(m=>
+      (m.type==='attributes' && /^(?:on[a-z][a-z0-9]*|data-p2lrn-legacy-on[a-z][a-z0-9]*)$/i.test(m.attributeName??'')) ||
+      (m.type==='childList' && [...m.addedNodes].some(n=>n.nodeType===1))
+    ))schedule();
+  });
+  observer.observe(doc,{subtree:true,childList:true,attributes:true});
+  legacyHandlerObservers.set(doc,observer);
+}
 function makeUrls() {
   for (const [path, file] of files) {
     if (file.mediaType.includes('html') || file.mediaType.includes('xhtml') || file.mediaType.includes('css')) continue;
@@ -359,6 +454,9 @@ async function navigate(path, suffix = '') {
     document.head.replaceChildren(...[...parsed.head.childNodes].map(node => document.importNode(node, true)));
     document.body.replaceChildren(...[...parsed.body.childNodes].map(node => document.importNode(node, true)));
     wireDocument(document, normalized);
+    // Install before executing any untrusted package script so that handlers
+    // added during script initialization are registered without inline CSP.
+    observeLegacyHandlers();
     for (const old of [...document.querySelectorAll('script')]) {
       // DOMParser scripts are inert. An opaque srcdoc frame inherits the
       // embedding document's CSP, which may prohibit inline JavaScript.

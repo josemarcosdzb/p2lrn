@@ -3,6 +3,7 @@ import {playerUiText} from './renderers/ui-i18n.js';
 import {createResultRecorder} from './result-recorder.js';
 import {createDefaultDependencyRegistry} from './dependency-registry.js';
 import {RendererRegistry} from './renderer-registry.js';
+import {negotiateP2LRNExecution,inspectP2LRNPackageExecution,P2LRN_EXECUTION_PLAN_SCHEMA,P2LRN_EXECUTION_PLAN_VERSION} from './execution-negotiation.js';
 import {registerBuiltInRenderers} from './built-in-renderers.js';
 import {createDefaultComponentRegistry} from './component-registry.js';
 import {dispatchRuntimeEvent} from './runtime-events.js';
@@ -461,7 +462,6 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     this._learningEventObserver = null;
     this._package = null;
     this._runtimeByContainer = new Map();
-    this._activityLoadingByStage = new Map();
     this._loadGeneration = 0;
     this._rendererStyleLinks = [];
     this._rendererStyles = new Set();
@@ -700,7 +700,6 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   }
 
   #base() {
-    for (const stage of [...this._activityLoadingByStage.keys()]) this.#stopActivityLoading(stage);
     this.shadowRoot.replaceChildren();
     this._rendererStyleLinks = [];
     this._rendererStyles = new Set();
@@ -727,74 +726,14 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
-  #stopActivityLoading(stage, expected = null) {
-    const state = this._activityLoadingByStage.get(stage);
-    if (!state || (expected && expected !== state)) return;
-    this._activityLoadingByStage.delete(stage);
-    clearTimeout(state.slowTimer);
-    this.removeEventListener('p2lrn:activityready', state.onReady);
-    this.removeEventListener('p2lrn:error', state.onError);
-    stage.removeAttribute('data-p2lrn-loading');
-    stage.removeAttribute('data-p2lrn-loading-label');
-    stage.removeAttribute('aria-busy');
-    stage.removeAttribute('aria-label');
-    stage.removeAttribute('aria-live');
-    stage.removeAttribute('role');
-  }
-
-  #startActivityLoading(stage, entity) {
-    this.#stopActivityLoading(stage);
-    const label = playerUiText('Cargando actividad…');
-    stage.setAttribute('data-p2lrn-loading', 'true');
-    stage.setAttribute('data-p2lrn-loading-label', label);
-    stage.setAttribute('aria-busy', 'true');
-    stage.setAttribute('aria-label', label);
-    stage.setAttribute('aria-live', 'polite');
-    stage.setAttribute('role', 'status');
-    const matches = (event) => event.target === this && event.detail?.context?.entityId === entity.id;
-    const state = {
-      onReady: null, onError: null, slowTimer: null,
-    };
-    state.onReady = (event) => {
-      if (matches(event)) this.#stopActivityLoading(stage, state);
-    };
-    state.onError = (event) => {
-      if (!matches(event)) return;
-      // A state-sync/reporting warning must not hide an activity still booting.
-      const phase = String(event.detail?.phase ?? '');
-      if (/(?:save-state|report-score|progression-save|emitEvent)$/.test(phase)) return;
-      this.#stopActivityLoading(stage, state);
-      if (stage.isConnected && !stage.querySelector('.p2lrn-error')) {
-        const message = document.createElement('div');
-        message.className = 'p2lrn-message p2lrn-error';
-        message.textContent = playerUiText('No se pudo cargar la actividad.');
-        stage.append(message);
-      }
-    };
-    this.addEventListener('p2lrn:activityready', state.onReady);
-    this.addEventListener('p2lrn:error', state.onError);
-    state.slowTimer = setTimeout(() => {
-      if (this._activityLoadingByStage.get(stage) !== state) return;
-      const slow = playerUiText('La actividad está tardando más de lo habitual…');
-      stage.setAttribute('data-p2lrn-loading-label', slow);
-      stage.setAttribute('aria-label', slow);
-    }, 12000);
-    this._activityLoadingByStage.set(stage, state);
-    return state;
-  }
-
   #renderLoading() {
     const shell = this.#base();
     const head = document.createElement('div'); head.className = 'p2lrn-head';
     const strong = document.createElement('strong'); strong.textContent = 'P2LRN';
-    const status = document.createElement('span'); status.className = 'p2lrn-status'; status.textContent = playerUiText('Verificando paquete…');
+    const status = document.createElement('span'); status.className = 'p2lrn-status'; status.textContent = 'Verificando paquete…';
     head.append(strong, status);
     const stage = document.createElement('div'); stage.className = 'p2lrn-stage';
-    const message = document.createElement('div'); message.className = 'p2lrn-message p2lrn-loading-message';
-    const indicator = document.createElement('span'); indicator.className = 'p2lrn-loading-spinner'; indicator.setAttribute('aria-hidden', 'true');
-    const label = document.createElement('span'); label.textContent = playerUiText('Cargando contenido educativo.');
-    message.setAttribute('role', 'status'); message.setAttribute('aria-live', 'polite');
-    message.append(indicator, label);
+    const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = playerUiText('Cargando contenido educativo.');
     stage.append(message); shell.append(head, stage);
   }
 
@@ -887,6 +826,43 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       }
     };
     walk(root, 0);
+    // Common Cartridge may contain legitimate webcontent resources that the
+    // source LMS did not link from its <organizations> outline (Canvas exports
+    // do this for standalone pages). Keep the canonical graph unchanged, but
+    // surface those verified package members as navigable fallback resources.
+    // Never turn course-settings metadata, opaque ZIPs or unverified remotes
+    // into executable activities.
+    const orphanCommonCartridge=[];
+    const commonCartridge=pkg.manifest.profiles.some(profile=>
+      canonicalIdentifier(profile.id)==='https://p2lrn.org/profile/common-cartridge');
+    if(commonCartridge){
+      const referenced=new Set(activities.map(activity=>activity.resource).filter(Boolean));
+      for(const resource of pkg.entities.values()){
+        if(resource?.type!=='resource'||referenced.has(resource.id))continue;
+        const launch=(resource.representations??[]).find(rep=>
+          rep.location?.type==='package-member'&&
+          /\.(?:html?|xhtml)$/iu.test(String(rep.location.member??'')) &&
+          rep.role!=='original-package');
+        if(!launch)continue;
+        const member=String(launch.location.member);
+        const filename=member.split('/').pop()??'';
+        const label=filename.replace(/\.(?:html?|xhtml)$/iu,'').replace(/[-_]+/gu,' ').trim()||
+          playerUiText('Recurso importado');
+        const button=nav?document.createElement('button'):null;
+        if(button){
+          button.type='button';button.className='depth-1';
+          button.textContent=label;
+          button.setAttribute('data-p2lrn-imported-resource',resource.id);
+          button.addEventListener('click',async()=>{
+            nav.querySelectorAll('[aria-current="true"]').forEach(item=>item.removeAttribute('aria-current'));
+            button.setAttribute('aria-current','true');
+            await this.#renderEntity(resource,stage);
+          });
+          nav.append(button);
+        }
+        orphanCommonCartridge.push({resource,button});
+      }
+    }
     this.#refreshProgressionNav();
     if (activities.length) {
       const firstActivity = activities.find((activity) => !this._progressionModel?.isLocked(activity.id, this._progressionState));
@@ -896,6 +872,10 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       } else {
         this.#stageMessage(stage, this.#progressionLockMessage(activities[0].id));
       }
+    } else if (orphanCommonCartridge.length) {
+      const first=orphanCommonCartridge[0];
+      first.button?.setAttribute('aria-current','true');
+      await this.#renderEntity(first.resource,stage);
     } else {
       const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = 'Este nodo no contiene actividades reproducibles.'; stage.append(message);
     }
@@ -930,7 +910,6 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   }
 
   async #renderEntity(entity, stage, {requestedRenderer = undefined} = {}) {
-    this.#stopActivityLoading(stage);
     this.#cleanupRuntime(stage);
     stage.replaceChildren();
     if (entity?.type === 'activity' && this._progressionModel?.isLocked(entity.id, this._progressionState)) {
@@ -944,11 +923,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
     if (!resource || resource.type !== 'resource') { this.#stageMessage(stage, playerUiText('El recurso no existe o no es reproducible.')); return null; }
 
-    const waiting = this.#startActivityLoading(stage, entity);
-    const capabilityState = await this.#negotiateHostCapabilities(entity, resource).catch((error) => {
-      this.#stopActivityLoading(stage, waiting);
-      throw error;
-    });
+    const capabilityState = await this.#negotiateHostCapabilities(entity, resource);
     if (capabilityState.blocked.length) {
       this.#stageMessage(stage, playerUiText('Esta actividad requiere capacidades del host no disponibles: ') + capabilityState.blocked.map((item)=>item.id).join(', '));
       return null;
@@ -969,17 +944,26 @@ export class P2LRNPlayerElement extends HTMLElementBase {
 
     const excluded = new Set();
     const strictRenderer = requestedRenderer === undefined ? this.getAttribute('renderer') : requestedRenderer;
+    const preflightContext = {
+      packageId:this._package.manifest.packageId,
+      contentRoot:this._package.manifest.integrity.contentRoot,
+      entityId:entity.id,resourceId:resource.id,
+    };
     while (true) {
-      const candidate = await defaultRendererRegistry.select({
-        representations,
-        entity,
-        resource,
-        requestedRenderer: strictRenderer,
-        roleRank,
-        excludeRendererIds: [...excluded],
+      const plan = await negotiateP2LRNExecution({
+        registry:defaultRendererRegistry,
+        representations,entity,resource,
+        requestedRenderer:strictRenderer,roleRank,
+        excludeRendererIds:[...excluded],
+        context:preflightContext,
+        requiredCapabilities:capabilityState.requests.filter(item=>item.required).map(item=>item.id),
+        isCapabilityAvailable:(id)=>capabilityState.statuses.some(item=>item.id===id&&item.available),
       });
+      const candidate = plan.candidate;
       if (!candidate) {
-        this.#stageMessage(stage, playerUiText('Este reproductor web todavía no tiene un renderer instalado compatible con las representaciones de esta actividad.'));
+        dispatchRuntimeEvent(this,'p2lrn:executionblocked',plan.report,preflightContext,{adapter:this._adapter});
+        const last=plan.report.diagnostics.at(-1);
+        this.#stageMessage(stage,last?.message??playerUiText('Este reproductor web todavía no tiene un renderer instalado compatible con las representaciones de esta actividad.'));
         return null;
       }
 
@@ -993,6 +977,9 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         rendererId: candidate.descriptor.id,
       };
       try {
+        // Preflight is diagnostic only. The trusted registry re-checks
+        // permissions and dependencies when the renderer is actually loaded.
+        dispatchRuntimeEvent(this,'p2lrn:executionpreflight',plan.report,context,{adapter:this._adapter});
         const module = await defaultRendererRegistry.load(candidate, context);
         this.#ensureRendererStyles(module.stylesheets ?? []);
         const remoteLocation = rep.location?.type === 'remote';
@@ -1055,9 +1042,6 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           },
         }) ?? null;
         if (runtime) this._runtimeByContainer.set(stage, runtime);
-        // External frames report readiness after the renderer has returned.
-        // Do not treat p2lrn:rendered as proof that the iframe is usable.
-        if (!['h5p', 'scorm', 'external-package'].includes(runtime?.kind)) this.#stopActivityLoading(stage, waiting);
         dispatchRuntimeEvent(this, 'p2lrn:rendered', {
           rendererId: candidate.descriptor.id,
           representationId: rep.id,
@@ -1088,10 +1072,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           'P2LRN_REMOTE_RESOURCE_UNAVAILABLE',
           'P2LRN_REMOTE_RESOURCE_UNVERIFIED',
         ].includes(error?.code);
-        if (!canFallback) {
-          this.#stopActivityLoading(stage, waiting);
-          throw error;
-        }
+        if (!canFallback) throw error;
         excluded.add(candidate.descriptor.id);
         this.#cleanupRuntime(stage);
         stage.replaceChildren();
@@ -1137,7 +1118,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     return Object.freeze({url: result.url, verified: true, seekable: result.seekable === true});
   }
 
-  #stageMessage(stage, text) { this.#stopActivityLoading(stage); const box = document.createElement('div'); box.className = 'p2lrn-message'; box.textContent = text; stage.append(box); }
+  #stageMessage(stage, text) { const box = document.createElement('div'); box.className = 'p2lrn-message'; box.textContent = text; stage.append(box); }
 
   #packageContext() {
     if (!this._package) return {};
@@ -1162,7 +1143,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
-  disconnectedCallback() { for (const stage of [...this._activityLoadingByStage.keys()]) this.#stopActivityLoading(stage); this.#cleanupRuntime(); this.stopActivityTracking(); this.stopLearningEventTracking(); this._resultRecorder?.stop(); }
+  disconnectedCallback() { this.#cleanupRuntime(); this.stopActivityTracking(); this.stopLearningEventTracking(); this._resultRecorder?.stop(); }
 }
 
 export async function mountP2LRN(target, options = {}) {
@@ -1235,6 +1216,10 @@ if (!existingP2LRNApi) {
     registerRenderer: (descriptor) => defaultRendererRegistry.register(descriptor),
     unregisterRenderer: (id) => defaultRendererRegistry.unregister(id),
     renderers: () => defaultRendererRegistry.list(),
+    negotiateExecution: (options = {}) => negotiateP2LRNExecution({...options,registry:defaultRendererRegistry}),
+    inspectPackageExecution: (pkg,options = {}) => inspectP2LRNPackageExecution(pkg,{...options,registry:defaultRendererRegistry}),
+    executionPlanSchema:P2LRN_EXECUTION_PLAN_SCHEMA,
+    executionPlanVersion:P2LRN_EXECUTION_PLAN_VERSION,
     registerComponent: (descriptor) => defaultComponentRegistry.register(descriptor),
     unregisterComponent: (id, componentVersion) => defaultComponentRegistry.unregister(id, componentVersion),
     components: () => defaultComponentRegistry.list(),
