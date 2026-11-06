@@ -48,6 +48,6 @@ test('Opaque renderers never set same-origin or top-navigation permission',async
   assert.match(external,/opaqueMode\s*\?\s*'allow-scripts'/);
   for(const src of [h5p,external]){
     assert.doesNotMatch(src,/allow-top-navigation/u);
-    assert.match(src,/iframe\.setAttribute\('referrerpolicy','no-referrer'\)/u);
+    assert.match(src,/iframe\.setAttribute\('referrerpolicy',\s*'no-referrer'\)/u);
   }
 });
