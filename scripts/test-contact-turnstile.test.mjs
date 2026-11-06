@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import test from 'node:test';
 
 const VALID_BODY=Object.freeze({
@@ -28,7 +29,12 @@ async function harness({secret='test-secret',required='true',siteResult={success
     if(String(url).includes('submit_p2lrn_contact'))return new Response(null,{status:204});
     throw Error('Unexpected outbound URL in security test');
   };
-  await import('../supabase/functions/p2lrn-contact/index.ts?test='+String(counter++));
+  // Import an independent instance for each policy scenario. Node's TypeScript
+  // module cache normalizes URL query strings in some Windows runtimes.
+  const ts=readFileSync(new URL('../supabase/functions/p2lrn-contact/index.ts',import.meta.url),'utf8');
+  const js=ts.replace(/\b(token|hostname|request|status|message|key|max):\s*(string|number|Request)\b/g,'$1');
+  const url='data:text/javascript;base64,'+Buffer.from(js,'utf8').toString('base64')+'#scenario-'+counter++;
+  await import(url);
   assert.equal(typeof handler,'function');
   const request=body=>new Request('https://test.supabase.invalid/functions/v1/p2lrn-contact',{
     method:'POST',headers:{origin:'https://p2lrn.org','content-type':'application/json'},body:JSON.stringify(body),
