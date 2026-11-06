@@ -246,6 +246,55 @@ async function browserScenario(){
       await new Promise(done=>setTimeout(done,25));
     expect(activityDrop.querySelector('[data-p2lrn-dnd-image]')?.getAttribute('src')?.startsWith('data:image/png;base64,'),
       'Raster background image did not persist in the activity');
+    const cardImageInput=zonesMenu.querySelector('[data-p2lrn-drop-image=item]');
+    const altField=zonesMenu.querySelector('[data-p2lrn-drop-name=alt]');
+    expect(cardImageInput?.type==='file','Card image upload input was not installed');
+    const newCard=activityDrop.querySelector('[data-p2lrn-dnd-item=item-3]');
+    const cardFiles=new DataTransfer();
+    cardFiles.items.add(new File([pngBytes],'papel.png',{type:'image/png'}));
+    cardImageInput.files=cardFiles.files;
+    cardImageInput.dispatchEvent(new Event('change',{bubbles:true}));
+    for(let i=0;i<100&&!newCard.querySelector('[data-p2lrn-dnd-item-image]');i++)
+      await new Promise(done=>setTimeout(done,25));
+    const cardImage=newCard.querySelector('[data-p2lrn-dnd-item-image]');
+    expect(cardImage?.getAttribute('src')?.startsWith('data:image/png;base64,'),
+      'Card image did not embed as a local data URL');
+    expect(newCard.querySelector('[data-p2lrn-dnd-text]')?.textContent==='Papel reciclado',
+      'Adding a card image erased the existing label');
+    expect(!altField.disabled,'The image description must be editable');
+    altField.value='Papel para depositar en el contenedor azul';
+    altField.dispatchEvent(new Event('change',{bubbles:true}));
+    expect(cardImage.alt===altField.value,'Edited image description did not persist');
+    const removeCardImage=[...zonesMenu.querySelectorAll('button')]
+      .find(button=>button.textContent==='Quitar imagen de la ficha');
+    removeCardImage.click();
+    expect(!newCard.querySelector('[data-p2lrn-dnd-item-image]')&&newCard.textContent.includes('Papel reciclado'),
+      'Removing an image must preserve card text');
+    cardImageInput.files=cardFiles.files;
+    cardImageInput.dispatchEvent(new Event('change',{bubbles:true}));
+    for(let i=0;i<100&&!newCard.querySelector('[data-p2lrn-dnd-item-image]');i++)
+      await new Promise(done=>setTimeout(done,25));
+    expect(newCard.querySelector('[data-p2lrn-dnd-item-image]'),'Could not restore mixed image and text card');
+    // Click a card itself to select it, without requiring a click on the target zone.
+    const pictureOnly=activityDrop.querySelector('[data-p2lrn-dnd-item=item-2]');
+    pictureOnly.click();
+    expect(itemName.value==='Ficha 2','Clicking a tile did not select its pair in the editor');
+    const secondFiles=new DataTransfer();
+    secondFiles.items.add(new File([pngBytes],'puente.png',{type:'image/png'}));
+    cardImageInput.files=secondFiles.files;
+    cardImageInput.dispatchEvent(new Event('change',{bubbles:true}));
+    for(let i=0;i<100&&!pictureOnly.querySelector('[data-p2lrn-dnd-item-image]');i++)
+      await new Promise(done=>setTimeout(done,25));
+    expect(pictureOnly.querySelector('[data-p2lrn-dnd-item-image]'),'Second card image was not added');
+    itemName.value='';
+    itemName.dispatchEvent(new Event('change',{bubbles:true}));
+    expect(pictureOnly.querySelector('[data-p2lrn-dnd-text]')?.textContent==='' &&
+      pictureOnly.querySelector('[data-p2lrn-dnd-item-image]'),
+      'Image-only tiles must remain valid without requiring text');
+    altField.value='Puente de madera';
+    altField.dispatchEvent(new Event('change',{bubbles:true}));
+    expect(pictureOnly.querySelector('img')?.alt==='Puente de madera',
+      'Image-only card lost its accessible description');
     // The board is percentage-based, so drop zones stay aligned when responsive.
     const hotspot=activityDrop.querySelector('[data-p2lrn-dnd-zone]');
     expect(hotspot.style.left.endsWith('%')&&hotspot.style.width.endsWith('%'),
@@ -284,7 +333,15 @@ async function browserScenario(){
       'Exported course lost image hotspot mapping');
     expect(html.includes('data:image/png;base64,'),'Exported course lost the author-provided background image');
     expect(html.includes('Papel reciclado')&&html.includes('Zona de reciclaje'),'Exported course lost customized hotspot answers');
+    expect((html.match(/data-p2lrn-dnd-item-image/g)||[]).length>=2,
+      'Export lost the embedded mixed and image-only draggable cards');
+    expect(html.includes('Puente de madera')&&html.includes('data-p2lrn-dnd-text'),
+      'Export lost image-only card alternative or text/image distinction');
     expect(!html.includes('<script')&&!html.includes('onerror='),'Lesson must remain inert HTML');
+    const imagePlayer=prepareStudioDropSandbox(html);
+    expect(imagePlayer?.html.includes('data-p2lrn-dnd-item-image')&&
+      imagePlayer.html.includes('data:image/png;base64,')&&imagePlayer.html.includes('Puente de madera'),
+      'The sandboxed Player lost embedded draggable images or alternative text');
     item.ui.setMessage('Cambios guardados');
     expect(item.toolbar.querySelector('[role=status]').textContent==='Cambios guardados','Status feedback is not visible');
   }
