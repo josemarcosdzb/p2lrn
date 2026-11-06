@@ -197,16 +197,49 @@ try{
        interaction={attempted:true,verified:true,kind:'answer-and-complete',authoritative:false};
      }else if(item.kind==='h5p'){
        const widget=content.locator('.h5p-content,.h5p-container,.h5p-question,.h5p-interactive-video,video,canvas');
-       assert((await widget.count())>0,'H5P real content root or media control did not initialize');
+       assert((await widget.count())>0,'H5P activity did not initialize');
        const controls=content.locator('button:visible,input:visible,select:visible,[role="button"]:visible,video:visible,canvas:visible');
-       assert((await controls.count())>0,'H5P rendered but exposes no interactive control');
-       const button=content.getByRole('button',{name:/^(?:start|begin|next|check|submit|show|play|continue|comprobar|enviar|siguiente|empezar|iniciar)/i}).first();
-       if(await button.isVisible().catch(()=>false)){
-         const beforeText=await content.innerText().catch(()=>'');
-         await button.click({timeout:7000});
-         const afterText=await content.innerText().catch(()=>'');
-         interaction={attempted:true,verified:beforeText!==afterText,kind:'h5p-button-click'};
-       }else interaction={attempted:false,verified:false,kind:'manual-interaction-required'};
+       assert((await controls.count())>0,'H5P rendered but has no interactive control');
+       if(item.name==='community-h5p-interactive-video'){
+         // Visible timecode is insufficient. Play real bundled media, decode
+         // dimensions, and verify advancing playback time under the SAME CSP.
+         const video=content.locator('video').first();
+         await video.waitFor({state:'attached',timeout:16000});
+         await video.evaluate(node=>new Promise((resolve,reject)=>{
+           node.muted=true;
+           node.playsInline=true;
+           const timeout=setTimeout(()=>reject(new Error('Local MP4 playback timed out')),15000);
+           node.play().then(()=>{clearTimeout(timeout);resolve();},
+             error=>{clearTimeout(timeout);reject(error);});
+         }));
+         const before=await video.evaluate(node=>node.currentTime);
+         await page.waitForTimeout(1600);
+         const media=await video.evaluate(node=>({
+           currentTime:node.currentTime,duration:node.duration,
+           readyState:node.readyState,videoWidth:node.videoWidth,
+           videoHeight:node.videoHeight,src:node.currentSrc,
+         }));
+         assert(media.readyState>=2&&media.videoWidth>0&&media.videoHeight>0,
+           'Video decoder never produced frames');
+         assert(Number.isFinite(media.duration)&&media.duration>=5,
+           'Video has no meaningful duration');
+         assert(media.currentTime>before+0.3,
+           'Video playback clock did not advance');
+         assert(media.src.startsWith('blob:'),
+           'Video must play verified local Blob media, not fetch an external URL');
+         await video.evaluate(node=>node.pause());
+         interaction={attempted:true,verified:true,kind:'h5p-offline-video-playback',
+           elapsedSeconds:media.currentTime-before,duration:media.duration,
+           width:media.videoWidth,height:media.videoHeight,offline:true};
+       }else{
+         const button=content.getByRole('button',{name:/^(?:start|begin|next|check|submit|show|play|continue|comprobar|enviar|siguiente|empezar|iniciar)/i}).first();
+         if(await button.isVisible().catch(()=>false)){
+           const beforeText=await content.innerText().catch(()=>'');
+           await button.click({timeout:7000});
+           const afterText=await content.innerText().catch(()=>'');
+           interaction={attempted:true,verified:beforeText!==afterText,kind:'h5p-button-click'};
+         }else interaction={attempted:false,verified:false,kind:'manual-interaction-required'};
+       }
      }else if(item.kind==='scorm'){
        assert((await player.locator('iframe.p2lrn-scorm-runtime').count())===1,'SCORM runtime iframe not mounted');
        const inputs=content.locator('button:visible,input:visible,a:visible');
