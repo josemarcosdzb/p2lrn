@@ -429,25 +429,37 @@ async function initializeStatic(data) {
     return originalNewRunnable.call(this, descriptor, contentId, container, skipResize, resume);
   };
 
+  // H5P core sometimes returns a portable content IRI like
+  // urn:p2lrn:<id>/libraries/<library>/sounds/positive-short.ogg. Its
+  // portable identifier is NOT a fetchable browser URL. Resolve exactly one
+  // existing bundled library member to an ephemeral Blob URL, without allowing
+  // arbitrary external fetches or synthesizing a path outside the package.
+  const bundledLibraryUrl = (reference) => {
+    let raw=String(reference??'').trim();
+    const index=raw.indexOf('/libraries/');
+    if(index>=0)raw=raw.slice(index+'/libraries/'.length);
+    else raw=raw.replace(/^\.\//u,'').replace(/^libraries\//u,'');
+    try{raw=decodeURIComponent(raw);}catch{return null;}
+    if(!raw||raw.includes('\\')||raw.split('/').some(part=>!part||part==='.'||part==='..'))
+      return null;
+    return objectUrls.get(raw)??null;
+  };
   const originalGetPath = typeof H5P.getPath === 'function' ? H5P.getPath.bind(H5P) : null;
   H5P.getPath = function(path, id) {
     const raw = String(path ?? '').replace(/^\.\//, '');
     const key = raw.startsWith('content/') ? raw : `content/${raw}`;
-    const mapped = objectUrls.get(key);
+    const mapped = objectUrls.get(key)??bundledLibraryUrl(raw);
     if (mapped) return mapped;
-    return originalGetPath ? originalGetPath(path, id) : raw;
+    const fallback=originalGetPath ? originalGetPath(path, id) : raw;
+    return bundledLibraryUrl(fallback)??fallback;
   };
-  // H5P libraries frequently load feedback sounds (and other binary assets)
-  // through getLibraryFilePath rather than getPath. Resolve exactly to the
-  // immutable bundled content instead of generating a synthetic urn: URL that
-  // the opaque iframe cannot request. Missing paths retain core fallback.
   const originalGetLibraryFilePath = typeof H5P.getLibraryFilePath === 'function'
     ? H5P.getLibraryFilePath.bind(H5P) : null;
   H5P.getLibraryFilePath = function(path) {
-    const raw = String(path ?? '').replace(/^\.\//, '').replace(/^libraries\//, '');
-    const mapped = objectUrls.get(raw);
-    if (mapped) return mapped;
-    return originalGetLibraryFilePath ? originalGetLibraryFilePath(path) : raw;
+    const direct=bundledLibraryUrl(path);
+    if(direct)return direct;
+    const fallback=originalGetLibraryFilePath ? originalGetLibraryFilePath(path) : String(path??'');
+    return bundledLibraryUrl(fallback)??fallback;
   };
 
   for (const href of integration.core.styles) loadStylesheet(doc, href);
