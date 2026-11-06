@@ -25,6 +25,14 @@ for(const sample of provenance.samples){
   assert(['scorm','h5p','qti','cmi5','imscc'].includes(sample.kind));
   assert(['MIT','Apache-2.0','CC-BY-4.0'].includes(sample.license));
   assert.equal(sample.browserVerified,false,'Only a real browser test may mark a new sample verified');
+  // A small interoperability fixture must not be advertised as a course.
+  if(sample.kind==='imscc'){
+    assert.equal(sample.sampleRole,'technical-fixture',sample.slug+' must disclose its limited scope');
+    for(const note of [sample.sampleNoteEs,sample.sampleNoteEn])
+      assert(typeof note==='string'&&note.length>=30&&note.length<=400,
+        sample.slug+' requires bilingual fixture context');
+  }
+
   assert.match(sample.sourceUrl,/^https:\/\/[^\s]+$/);
   assert.match(sample.sourceSha256,/^sha256:[a-f0-9]{64}$/);
   assert.match(sample.packageSha256,/^sha256:[a-f0-9]{64}$/);
