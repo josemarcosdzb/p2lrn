@@ -193,19 +193,80 @@ function rewriteElementTree(root, path) {
   for (const style of root?.querySelectorAll?.('style') ?? []) style.textContent = rewriteCss(style.textContent || '', path);
   for (const template of root?.querySelectorAll?.('template') ?? []) rewriteElementTree(template.content, path);
 }
+// Strip inline event attributes BEFORE passing untrusted HTML to DOMParser.
+// Chromium may report an inline-handler CSP violation when parsing inert HTML,
+// even if the attribute is removed before mounting. A bounded lexical scan
+// rewrites attributes only in actual opening tags (not in script bodies,
+// quoted attribute values, comments or raw CSS). The original handler source
+// remains inert data until isolated Blob-backed listeners are registered.
+function neutralizeEventHandlerMarkup(value) {
+  const html=String(value??'');
+  const lower=html.toLowerCase();
+  let result='',position=0;
+  while(position<html.length){
+    const lt=html.indexOf('<',position);
+    if(lt<0){result+=html.slice(position);break;}
+    result+=html.slice(position,lt);
+    if(html.startsWith('<!--',lt)){
+      const end=html.indexOf('-->',lt+4);
+      if(end<0){result+=html.slice(lt);break;}
+      result+=html.slice(lt,end+3);position=end+3;continue;
+    }
+    const opening=/^<([a-z][a-z0-9:.-]*)/i.exec(html.slice(lt,lt+150));
+    if(!opening){result+='<';position=lt+1;continue;}
+    const name=opening[1].toLowerCase();
+    let e=lt+opening[0].length,quote='';
+    for(;e<html.length;e++){
+      const c=html[e];
+      if(quote){if(c===quote)quote='';}
+      else if(c==='"'||c==="'")quote=c;
+      else if(c==='>')break;
+    }
+    if(e===html.length){result+=html.slice(lt);break;}
+    const tag=html.slice(lt,e+1);
+    let k=opening[0].length;
+    let safe=tag.slice(0,k);
+    while(k<tag.length-1){
+      if(/[\s/]/u.test(tag[k])){safe+=tag[k++];continue;}
+      const start=k;
+      while(k<tag.length-1&&!/[\s=\/<>]/u.test(tag[k]))k++;
+      if(k===start){safe+=tag[k++];continue;}
+      const attr=tag.slice(start,k);
+      let equal=k;
+      while(equal<tag.length-1&&/\s/u.test(tag[equal]))equal++;
+      const hasValue=tag[equal]==='=';
+      safe+=(hasValue&&/^on[a-z][a-z0-9]*$/iu.test(attr))
+        ? 'data-p2lrn-legacy-'+attr.toLowerCase():attr;
+      if(hasValue){
+        safe+=tag.slice(k,equal+1);k=equal+1;
+        while(k<tag.length-1&&/\s/u.test(tag[k]))safe+=tag[k++];
+        if(tag[k]==='"'||tag[k]==="'"){
+          const q=tag[k];safe+=tag[k++];
+          while(k<tag.length-1){const c=tag[k++];safe+=c;if(c===q)break;}
+        }else while(k<tag.length-1&&!/\s/u.test(tag[k]))safe+=tag[k++];
+      }
+    }
+    result+=safe+'>';position=e+1;
+    if(name==='script'||name==='style'||name==='textarea'){
+      const close=lower.indexOf('</'+name,position);
+      if(close>=0){result+=html.slice(position,close);position=close;}
+    }
+  }
+  return result;
+}
 function rewriteDeferredMarkup(doc, path) {
   const templateTypes = new Set(['text/template','text/x-template','text/html','application/x-template']);
   for (const script of doc.querySelectorAll('script:not([src])')) {
     const type = String(script.getAttribute('type') || '').trim().toLowerCase();
     if (!templateTypes.has(type)) continue;
     const holder = doc.createElement('template');
-    holder.innerHTML = script.textContent || '';
+    holder.innerHTML = neutralizeEventHandlerMarkup(script.textContent || '');
     rewriteElementTree(holder.content, path);
     script.textContent = holder.innerHTML;
   }
 }
 function rewriteHtml(path) {
-  const doc = new DOMParser().parseFromString(text(path), 'text/html');
+  const doc = new DOMParser().parseFromString(neutralizeEventHandlerMarkup(text(path)), 'text/html');
   doc.querySelectorAll('base').forEach((node) => node.remove());
   // Never mount on* HTML attributes under a restrictive inherited CSP:
   // preserve their source as inert data until a sandbox-local blob registers
