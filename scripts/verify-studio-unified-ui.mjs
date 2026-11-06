@@ -23,6 +23,8 @@ async function browserScenario(){
   const {createP2LRNStudioDocument}=await import('/studio/new-document.js');
   const {exportP2LRNPackage}=await import('/studio/package-export.js');
   const {openP2LRNPackageBytes}=await import('/p2lrn-player.js');
+  const {prepareStudioDropSandbox}=await import('/renderers/lesson-drop-sandbox.js');
+  const {render:renderPassiveText}=await import('/renderers/passive-text.js');
   const expect=(value,msg)=>{if(!value)throw new Error(msg);};
   const make=async(withShadow)=>{
     const host=document.createElement('div');
@@ -276,6 +278,28 @@ async function browserScenario(){
     item.ui.setMessage('Cambios guardados');
     expect(item.toolbar.querySelector('[role=status]').textContent==='Cambios guardados','Status feedback is not visible');
   }
+  // The Player only runs the bundled interaction script in an opaque iframe.
+  // User HTML, event handlers, base/link/iframe tags and their scripts are removed.
+  const hostile='<section data-p2lrn-layout="drag-drop" data-p2lrn-dnd="1"><div data-p2lrn-dnd-board></div></section>'
+    +'<script>window.P2LRN_UNSAFE_EXECUTED=true</script>'
+    +'<img src="javascript:alert(1)" onerror="window.P2LRN_UNSAFE_EXECUTED=true">';
+  const secured=prepareStudioDropSandbox(hostile);
+  expect(secured?.interactive===true,'Studio drop-lesson sanitizer is not enabled');
+  expect(!secured.html.includes('P2LRN_UNSAFE_EXECUTED'),'Untrusted script was preserved in the Player iframe');
+  expect(!secured.html.includes('onerror=')&&!secured.html.includes('javascript:alert'),'Unsafe URL or event handler survived the sandbox');
+  expect(secured.html.includes("script-src 'nonce-"),'Player interactive sandbox lacks nonce CSP');
+  expect(secured.html.includes('data-p2lrn-dnd-board'),'Approved hotspot model lost on sanitization');
+  expect(prepareStudioDropSandbox('<p>Ordinary lesson</p>')===null,'Normal lessons must stay scriptless');
+  const safeBox=document.createElement('div');
+  const interactiveView=await renderPassiveText({container:safeBox,bytes:new TextEncoder().encode(hostile),representation:{mediaType:'text/html'}});
+  const sandbox=safeBox.querySelector('iframe');
+  expect(sandbox?.getAttribute('sandbox')==='allow-scripts','Drop Player must use opaque-origin, script-limited sandbox');
+  expect(!sandbox.getAttribute('sandbox').includes('allow-same-origin'),'Sandbox accidentally grants same-origin privileges');
+  interactiveView.destroy();
+  const ordinaryBox=document.createElement('div');
+  const ordinaryView=await renderPassiveText({container:ordinaryBox,bytes:new TextEncoder().encode('<p>safe</p>'),representation:{mediaType:'text/html'}});
+  expect(ordinaryBox.querySelector('iframe')?.getAttribute('sandbox')==='','Ordinary HTML iframe unexpectedly gained script permission');
+  ordinaryView.destroy();
   const label=website.toolbar.querySelector('[role=tab][aria-selected=true]');
   expect(label.textContent==='Formato','Tab state is not consistent');
   const lightStyle=getComputedStyle(website.toolbar).fontFamily;
