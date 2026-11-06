@@ -7,13 +7,13 @@
   const labels=en?{
     filter:'Format',all:'All formats',search:'Find an example',count:n=>n+' packages',
     view:'Open in Player',download:'Download .p2lrn',original:'Original source',
-    license:'Licence',package:'Package',pending:'Not certified for full playback',
+    license:'Licence',package:'Package',pending:'Example tested in Player · full standard compliance is not certified',
     noResults:'No examples match these filters.',unavailable:'Catalog unavailable; please try again.',
     verified:'Browser playback verified',partial:'Partial or conditional playback',
   }:{
     filter:'Formato',all:'Todos los formatos',search:'Buscar un ejemplo',count:n=>n+' paquetes',
     view:'Abrir en Player',download:'Descargar .p2lrn',original:'Fuente original',
-    license:'Licencia',package:'Paquete',pending:'Reproducción completa no certificada',
+    license:'Licencia',package:'Paquete',pending:'Ejemplo probado en Player · conformidad integral del estándar no certificada',
     noResults:'No hay ejemplos con estos filtros.',unavailable:'Catálogo no disponible; inténtalo de nuevo.',
     verified:'Reproducción verificada en navegador',partial:'Reproducción parcial o condicionada',
   };
@@ -62,10 +62,12 @@
       card.append(create('p',status,'p2lrn-community-status'));
       const dl=document.createElement('div');dl.className='p2lrn-community-links';
       const viewer=new URL(localeRoot,location.origin);viewer.searchParams.set('src',entry.url);
-      dl.append(sourceLink(viewer.href,labels.view));
+      const title=entry.title??entry.url.split('/').at(-1);
+      const viewerLink=sourceLink(viewer.href,labels.view);
+      if(viewerLink){viewerLink.setAttribute('aria-label',labels.view+': '+title);dl.append(viewerLink);}
       const packageLink=sourceLink(entry.url,labels.download);
-      if(packageLink){packageLink.download='';dl.append(packageLink);}
-      if(entry.originUrl){const original=sourceLink(entry.originUrl,labels.original);if(original)dl.append(original);}
+      if(packageLink){packageLink.download='';packageLink.setAttribute('aria-label',labels.download+': '+title);dl.append(packageLink);}
+      if(entry.originUrl){const original=sourceLink(entry.originUrl,labels.original);if(original){original.setAttribute('aria-label',labels.original+': '+title);dl.append(original);}}
       card.append(dl);
       const details=create('small',labels.license+': '+String(entry.license??'—')+' · '+Math.ceil(Number(entry.bytes??0)/1024)+' KiB','p2lrn-community-details');
       card.append(details);
