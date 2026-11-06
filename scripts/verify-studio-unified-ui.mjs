@@ -371,9 +371,21 @@ async function browserScenario(){
   // into their specific zones, and completion locks the activity until reset.
   const scene=createStudioDropActivity(document);
   document.body.append(scene);
-  bootStudioDropActivities();
   const source=[...scene.querySelectorAll('[data-p2lrn-dnd-item]')];
   const targets=[...scene.querySelectorAll('[data-p2lrn-dnd-zone]')];
+  // An image-only card must be usable with a screen reader, mouse and keyboard.
+  const picture=document.createElement('img');
+  picture.dataset.p2lrnDndItemImage='';
+  picture.setAttribute('src','data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y7lMqYAAAAASUVORK5CYII=');
+  picture.alt='Un puente de madera';
+  source[1].prepend(picture);
+  const secondText=source[1].querySelector('[data-p2lrn-dnd-text]');
+  secondText.textContent='';secondText.hidden=true;
+  const originalCardStyle=source[1].getAttribute('style');
+  // Player initialization already happened above; the new scene needs activation.
+  bootStudioDropActivities();
+  expect(source[1].getAttribute('aria-label')==='Ficha: Un puente de madera',
+    'Image-only cards are not accessible to students');
   source[0].click();targets[1].click();
   expect(scene.querySelector('[data-p2lrn-dnd-tray]').contains(source[0]),'Wrong answer was accepted by Player');
   expect(scene.querySelector('[data-p2lrn-dnd-status]').textContent.includes('No corresponde'),
@@ -381,12 +393,19 @@ async function browserScenario(){
   targets[0].click();
   expect(targets[0].contains(source[0]),'Correct answer did not move to its assigned zone');
   source[1].click();targets[1].click();
+  expect(targets[1].contains(picture)&&targets[1].querySelector('[data-p2lrn-dnd-label]').hidden,
+    'The placed image did not replace the target label');
+  expect(source[1].style.maxHeight==='100%','An image tile does not fit inside its destination');
   expect(scene.dataset.p2lrnDndCompleted==='true','Completion state was not reached');
   const reset=scene.querySelector('button');
   expect(reset?.textContent==='Reiniciar actividad','The student cannot restart a drop activity');
   reset.click();
   expect(scene.querySelector('[data-p2lrn-dnd-tray]').contains(source[0])&&!scene.dataset.p2lrnDndCompleted,
     'Reset did not restore draggable pieces');
+  expect(scene.querySelector('[data-p2lrn-dnd-tray]').contains(source[1]) &&
+    source[1].getAttribute('style')===originalCardStyle &&
+    !targets[1].querySelector('[data-p2lrn-dnd-label]').hidden,
+    'Reset did not restore image card dimensions and destination labels');
   scene.remove();
   const label=website.toolbar.querySelector('[role=tab][aria-selected=true]');
   expect(label.textContent==='Formato','Tab state is not consistent');
