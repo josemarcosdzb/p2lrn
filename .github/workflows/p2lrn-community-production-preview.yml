@@ -33,6 +33,8 @@ jobs:
             'deploy/netlify/site/en/docs/ejemplos/index.html',
             'packages/toolkit/web/h5p-auto-runtime.js',
             'packages/toolkit/web/h5p-runtime-shell.js',
+            'packages/toolkit/web/p2lrn-player.js',
+            'packages/toolkit/web/built-in-renderers.js',
             'packages/toolkit/web/renderers/qti-runtime.js',
             'scripts/verify-community-samples.mjs',
             'scripts/browser-external-format-visual-qa.mjs'
