@@ -434,9 +434,29 @@ for(const page of functionalPages){
     throw new Error('Published functional page lost control '+page.path.join('/')+': '+marker);
 }
 
-// Normalize every documentation sidebar in the generated site. Source articles
-// may contain historical fallback links, but published HTML must have one empty
-// placeholder so p2lrn.js is the sole navigation authority.
+// Publish a small, crawlable fallback navigation in EVERY documentation page.
+// p2lrn.js replaces this with the full localised sidebar when it loads, but
+// loss of JS, a blocked bundle or a slow connection must never leave the
+// documentation without any navigation or indexable internal links.
+const fallbackDocSections=[
+  ['/docs/','Documentación','Documentation'],
+  ['/docs/empezar-facil/','Primeros pasos','Quick start'],
+  ['/docs/instalar/','Instalación','Installation'],
+  ['/docs/studio/','Crear cursos','Authoring with Studio'],
+  ['/docs/player/','Reproducción','Playing packages'],
+  ['/docs/ejemplos/','Ejemplos reales','Real examples'],
+  ['/docs/compatibilidad/','Compatibilidad','Compatibility'],
+  ['/docs/integracion/','Integración','Integration'],
+  ['/docs/analytics/','Seguimiento','Analytics'],
+  ['/docs/referencia/','Referencia técnica','Technical reference']
+];
+const staticDocSidebar=(english)=>{
+  const heading=english?'Documentation guides':'Guías de documentación';
+  const links=fallbackDocSections.map(([path,es,en])=>
+    '<a href="'+(english?englishRouteFor(path):path)+'">'+(english?en:es)+'</a>').join('');
+  return '<aside class="doc-sidebar" aria-label="'+(english?'Documentation navigation':'Navegación de documentación')+'">'+
+    '<span>'+heading+'</span><nav class="doc-fallback-nav" aria-label="'+heading+'">'+links+'</nav></aside>';
+};
 const docsHtmlFilesForSidebar = htmlFiles.filter((path)=>{
   const rel=relative(outputRoot,path).replaceAll('\\','/');
   return rel.startsWith('docs/')||rel.startsWith('en/docs/');
@@ -450,8 +470,7 @@ for (const htmlPath of docsHtmlFilesForSidebar) {
     continue;
   }
   const english=relative(outputRoot,htmlPath).replaceAll('\\','/').startsWith('en/');
-  const label=english?'Documentation navigation':'Navegación de documentación';
-  html = html.replace(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/i,'<aside class="doc-sidebar" aria-label="'+label+'"></aside>');
+  html = html.replace(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/i,staticDocSidebar(english));
   await writeFile(htmlPath,html);
 }
 for (const htmlPath of docsHtmlFilesForSidebar) {
@@ -460,8 +479,9 @@ for (const htmlPath of docsHtmlFilesForSidebar) {
   const rel=relative(outputRoot,htmlPath).replaceAll('\\','/');
   if (!sidebar) {
     sidebarProblems.push(rel + ': sidebar missing after normalization');
-  } else if (/<a\b|<span\b|P2LRN_EXTRA_DOC_LINKS/i.test(sidebar[1])) {
-    sidebarProblems.push(rel + ': legacy sidebar content survived normalization');
+  } else if (!sidebar[1].includes('class="doc-fallback-nav"') ||
+      (sidebar[1].match(/<a\s+href=/g)||[]).length!==fallbackDocSections.length) {
+    sidebarProblems.push(rel + ': static navigation fallback missing or incomplete');
   }
   const expectedScript=rel.startsWith('en/')?'/en/p2lrn.js':'/p2lrn.js';
   const hasScript=html.includes('src="'+expectedScript)||html.includes("src='"+expectedScript);
