@@ -2168,3 +2168,17 @@ body.landing-page a:focus-visible,.doc-card:focus-visible{outline:3px solid #125
     border-radius:9px;background:#fff;
   }
 }
+
+/* Distinguish authentic content from upstream interoperability fixtures.
+   Archive integrity is NOT a course-completeness certificate. */
+.viewer-source-notice[hidden]{display:none!important}
+.viewer-source-notice{
+  margin:14px 0 20px;padding:18px 20px;border:1px solid #a5b6cb;
+  border-left:4px solid #305baf;border-radius:9px;
+  background:#eef4ff;color:#172b47;line-height:1.55;
+}
+.viewer-source-notice strong{display:block;margin:0 0 6px;font-size:1rem;color:#172b47}
+.viewer-source-notice p{margin:7px 0;max-width:100ch;color:#243b58}
+.viewer-source-notice a{color:#1747a6;text-decoration:underline;text-underline-offset:3px;font-weight:750}
+.viewer-source-notice a:focus-visible{outline:3px solid #1747a6;outline-offset:3px}
+@media(max-width:650px){.viewer-source-notice{padding:15px;margin:10px 0 16px}}
