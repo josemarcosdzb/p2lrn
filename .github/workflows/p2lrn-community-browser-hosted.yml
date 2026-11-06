@@ -11,6 +11,10 @@ on:
       - 'packages/toolkit/web/p2lrn-player.js'
       - 'packages/toolkit/web/built-in-renderers.js'
       - 'scripts/browser-external-format-visual-qa.mjs'
+      - 'deploy/netlify/site/demo/viewer.js'
+      - 'deploy/netlify/site/en/demo/viewer.js'
+      - 'deploy/netlify/site/docs/ejemplos/community-gallery.js'
+      - 'examples/canonical/external/free/provenance.json'
       - 'scripts/verify-site-security.mjs'
   workflow_dispatch:
 
