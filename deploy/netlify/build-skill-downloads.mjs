@@ -12,7 +12,9 @@ const names=['NOTICE.md','CORE-INSTRUCTIONS.md','scripts/p2lrn_package.py','scri
  'assets/icon.svg','agents/openai.yaml',
  'scripts/p2lrn_official.mjs','scripts/test_p2lrn_official_real.mjs',
  'references/official-packages.json','references/official-runtime.md',
- 'scripts/multipart.py','references/multipart-research.md'];
+ 'scripts/multipart.py','references/multipart-research.md',
+ 'scripts/p2lrn_presentations.py','scripts/p2lrn_export_pptx.mjs','scripts/p2lrn_export_pdf.py',
+ 'scripts/test_p2lrn_presentations.py','references/presentations.md','assets/presentacion-curso.json'];
 const assets=new Map();
 for(const name of names){
  const path=join(src,...name.split('/'));
@@ -35,16 +37,19 @@ for(const name of ['toolkit','studio','player','analytics']){
 const platforms={
  chatgpt:{file:'p2lrn-chatgpt-plugin.zip',prefix:'skills/p2lrn-creator/',
   about:'Instalar como Skill de ChatGPT/Codex o enviar el plugin Skills only a revisión de OpenAI. La importación no supone aprobación ni publicación pública.',
-  desc:'Crear, abrir, editar y validar cursos .p2lrn con Toolkit oficial y alternativa Python limitada.'},
+  desc:'Crear cursos y presentaciones editables .p2lrn, con diapositivas, PPTX y PDF opcionales y validación real.'},
+ codex:{file:'p2lrn-codex-skill.zip',prefix:'.agents/skills/p2lrn-creator/',
+  about:'Extraer en la raíz del repositorio bajo .agents/skills/p2lrn-creator/. Requiere permisos de ejecución explícitos.',
+  desc:'Crear presentaciones y cursos .p2lrn editables, validar y exportar PPTX/PDF con bibliotecas autorizadas en Codex.'},
  claude:{file:'p2lrn-claude-skill.zip',prefix:'p2lrn-creator/',
   about:'Importar este ZIP como Skill personalizada donde Claude admita la función, o extraer la carpeta para Claude Code. Python 3.10+ y permisos de archivos son necesarios.',
-  desc:'Crear, editar y validar cursos P2LRN usando Toolkit oficial con Claude Code.'},
+  desc:'Crear diapositivas, presentaciones y cursos P2LRN usando Toolkit y exportadores PPTX/PDF opcionales con Claude.'},
  gemini:{file:'p2lrn-gemini-skill.zip',prefix:'',
   about:'Extraer esta Skill en .gemini/skills/p2lrn-creator/ para Gemini CLI. La importación web está sujeta a disponibilidad y no garantiza la ejecución Python.',
-  desc:'Crear, editar y validar P2LRN con Toolkit oficial en Gemini CLI.'},
+  desc:'Crear presentaciones y cursos P2LRN, PPTX/PDF opcionales, con Toolkit oficial en Gemini CLI.'},
  grok:{file:'p2lrn-grok-skill.zip',prefix:'.grok/skills/p2lrn-creator/',
   about:'Extraer el ZIP en la raíz de un proyecto con Grok Build y comprobar el descubrimiento de .grok/skills/p2lrn-creator/. Grok web tiene funciones separadas.',
-  desc:'Crear, editar y validar P2LRN con Toolkit oficial en Grok Build.'}
+  desc:'Crear presentaciones y cursos P2LRN, PPTX/PDF opcionales, con Toolkit oficial en Grok Build.'}
 };
 const table=Uint32Array.from({length:256},(_,v)=>{for(let k=0;k<8;k++)v=(v&1)?(0xedb88320^(v>>>1)):(v>>>1);return v>>>0;});
 function crc32(bytes){let v=0xffffffff;for(const b of bytes)v=table[(v^b)&255]^(v>>>8);return (v^0xffffffff)>>>0;}
@@ -106,6 +111,8 @@ for(const [platform,info] of Object.entries(platforms)){
     publication:{release_notes:'Skill autónoma; requiere aprobación de OpenAI antes de publicarse.'}}}};
   files.push({path:'plugin.json',bytes:utf8(JSON.stringify(plugin,null,2)+'\n')});
  }
+ if(platform==='codex')files.push({path:'README-CODEX.md',
+  bytes:utf8('# P2LRN para Codex\n\nExtraer en .agents/skills/p2lrn-creator/ y comprobar el descubrimiento de SKILL.md. La Skill no instala dependencias ni abre conexiones.\n')});
  if(platform==='grok')files.push({path:'README-GROK.md',
   bytes:utf8('# P2LRN para Grok Build\n\nExtraer en la raíz del proyecto y verificar la ruta .grok/skills/p2lrn-creator/. No implica disponibilidad en Grok web ni publicación global.\n')});
  const bytes=zip(files);await writeFile(join(dest,info.file),bytes);
