@@ -461,6 +461,30 @@ async function initializeStatic(data) {
     const fallback=originalGetLibraryFilePath ? originalGetLibraryFilePath(path) : String(path??'');
     return bundledLibraryUrl(fallback)??fallback;
   };
+  // Some H5P libraries bypass H5P.getPath() and send their virtual URN paths
+  // straight to XHR/fetch. Convert ONLY already-bundled library media into
+  // ephemeral blob URLs, before the network stack sees the request. Unknown
+  // URNs, arbitrary HTTP(S), and data outside the validated package stay
+  // blocked by the opaque iframe CSP. No network permission is added.
+  const nativeXHROpen=win.XMLHttpRequest?.prototype?.open;
+  if(nativeXHROpen){
+    win.XMLHttpRequest.prototype.open=function(method,url,...rest){
+      const name=String(method??'').toUpperCase();
+      const raw=String(url??'');
+      const mapped=name==='GET'&&raw.startsWith('urn:p2lrn:') ? bundledLibraryUrl(raw):null;
+      return nativeXHROpen.call(this,method,mapped??url,...rest);
+    };
+  }
+  const nativeFetch=typeof win.fetch==='function'?win.fetch.bind(win):null;
+  if(nativeFetch){
+    win.fetch=function(input,init){
+      const raw=typeof input==='string'?input:(input?.url??'');
+      const method=String(init?.method??(input?.method??'GET')).toUpperCase();
+      const mapped=method==='GET'&&String(raw).startsWith('urn:p2lrn:')
+        ? bundledLibraryUrl(raw):null;
+      return nativeFetch(mapped??input,init);
+    };
+  }
 
   for (const href of integration.core.styles) loadStylesheet(doc, href);
   for (const href of styles) loadStylesheet(doc, href);
