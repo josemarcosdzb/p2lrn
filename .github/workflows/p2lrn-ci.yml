@@ -1,23 +1,6 @@
 name: P2LRN CI
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'packages/toolkit/**'
-      - 'integration/mcp/**'
-      - 'integration/lms/**'
-      - 'packages/player/**'
-      - 'packages/studio/**'
-      - 'packages/analytics/**'
-      - 'packages/h5p-libraries/**'
-      - 'deploy/netlify/**'
-      - 'PUBLISHING.md'
-      - 'LICENSE'
-      - 'NOTICE.md'
-      - 'scripts/**'
-      - '.github/workflows/p2lrn-ci.yml'
-      - '.github/workflows/p2lrn-public-cdn.yml'
   push:
     branches: [main]
     paths:
@@ -61,24 +44,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  untrusted-pr-hosted-validation:
-    if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-      - name: Verify security invariants without running imported courses
-        run: |
-          node --test scripts/test-security-hardening.test.mjs
-          node scripts/verify-site-security.mjs
-          node scripts/verify-contact-security.mjs
   security-windows:
     if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]

@@ -8,10 +8,14 @@ test('file association passes filename as an argument rather than PowerShell cod
  assert.match(p,/node\.exe/);assert.match(p,/-NoProfile -File/);
  assert.match(p,/' "%1"'/);assert.match(p,/\[switch\]\$InspectOnly/);
 });
-test('external pull requests cannot use existing self-hosted Windows workflow jobs',()=>{
- const p=read('.github/workflows/p2lrn-ci.yml');
- assert.match(p,/untrusted-pr-hosted-validation:[\s\S]+?runs-on: ubuntu-latest/);
- const jobs=p.split(/\n(?=  [a-z][\w-]*:\s*\n)/).filter(x=>/runs-on: \[self-hosted, Windows, X64, p2lrn-windows\]/.test(x));
+test('Only the hosted workflow runs on untrusted pull requests',()=>{
+ const src=read('.github/workflows/p2lrn-ci.yml');
+ assert.doesNotMatch(src,/^\s{2}pull_request:\s*$/m);
+ const pr=read('.github/workflows/p2lrn-pr-safe.yml');
+ assert.match(pr,/^\s{2}pull_request:\s*$/m);
+ assert.match(pr,/runs-on: ubuntu-latest/);
+ assert.doesNotMatch(pr,/self-hosted/i);
+ const jobs=src.split(/\n(?=  [a-z][\w-]*:\s*\n)/).filter(x=>/runs-on: \[self-hosted, Windows, X64, p2lrn-windows\]/.test(x));
  assert.equal(jobs.length,11);
  for(const job of jobs)assert.match(job.split(/\n    runs-on:/)[0],/if: \$\{\{ github\.event_name != 'pull_request'/);
 });
