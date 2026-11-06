@@ -8,6 +8,12 @@ for(const d of ['X-Content-Type-Options: nosniff','Referrer-Policy:','Permission
 assert.ok(headers.includes('/player/')===false,'Runtime headers must not inherit restrictive iframe policy');
 assert.ok(headers.includes('/docs/*')&&headers.includes('/studio/*')&&headers.includes('/demo/*')&&headers.includes('/analytics/*'),'Missing protected web sections');
 const sections=headers.replaceAll('\r\n','\n').split('\n');
+// Netlify headers require explicit route coverage: never rely on a catch-all
+// page CSP because executable Player iframes need their separate policies.
+for(const route of ["/skills/*","/crear-cursos-interactivos/*","/cursos-offline/*","/juegos-educativos-3d/*","/en/","/en/docs/*","/en/analytics/*","/en/skills/*","/en/crear-cursos-interactivos/*","/en/cursos-offline/*","/en/juegos-educativos-3d/*","/en/aviso-legal/*","/en/cookies/*","/en/licencia/*","/en/privacidad/*","/en/terminos/*","/en/contacto/*","/en/contact/*","/en/create-interactive-courses/*","/en/offline-courses/*","/en/3d-educational-games/*"]){
+  assert.ok(headers.split(/\r?\n/u).includes(route),'Missing protected HTML route '+route);
+}
+
 const cspForRoute=(route)=>{
   const pos=sections.findIndex(line=>line===route);
   assert.ok(pos>=0,'Missing route '+route);
@@ -15,6 +21,14 @@ const cspForRoute=(route)=>{
   assert.ok(policy,'Missing policy for '+route);
   return policy;
 };
+for(const route of ["/skills/*","/crear-cursos-interactivos/*","/cursos-offline/*","/juegos-educativos-3d/*","/en/","/en/docs/*","/en/analytics/*","/en/skills/*","/en/crear-cursos-interactivos/*","/en/cursos-offline/*","/en/juegos-educativos-3d/*","/en/aviso-legal/*","/en/cookies/*","/en/licencia/*","/en/privacidad/*","/en/terminos/*","/en/contacto/*","/en/contact/*","/en/create-interactive-courses/*","/en/offline-courses/*","/en/3d-educational-games/*"]){
+  const policy=cspForRoute(route);
+  assert.match(policy,/frame-ancestors 'self'/u,'Missing frame-ancestors '+route);
+  assert.ok(!policy.includes("script-src 'unsafe-eval'"),'Executable CSP not allowed on information page: '+route);
+  const connect=/connect-src ([^;]+)/u.exec(policy)?.[1]??'';
+  if(route.includes('contact')) assert.equal(connect,"'self' https://yurtnmtesugykrqtujdx.supabase.co");
+  else assert.equal(connect,"'self'");
+}
 for(const route of ['/studio/*','/demo/*']){
   const policy=cspForRoute(route);
   const connect=/connect-src ([^;]+)/u.exec(policy)?.[1]??'';
