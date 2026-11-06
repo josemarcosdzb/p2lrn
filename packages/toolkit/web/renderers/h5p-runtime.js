@@ -204,6 +204,7 @@ export async function render({container, payload, representation, package:pkg, e
   iframe.setAttribute('allow', "camera 'none'; microphone 'none'; geolocation 'none'; payment 'none'; usb 'none'; clipboard-read 'none'; clipboard-write 'none'; fullscreen");
   iframe.className = 'p2lrn-h5p-frame';
   iframe.title = inspection.title || 'H5P';
+  iframe.setAttribute('referrerpolicy','no-referrer');
   iframe.setAttribute('sandbox', opaqueMode
     ? 'allow-scripts'
     : 'allow-scripts allow-same-origin allow-forms allow-modals');
