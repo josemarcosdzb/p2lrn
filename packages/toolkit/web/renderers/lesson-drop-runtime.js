@@ -14,10 +14,17 @@ export function bootStudioDropActivities(){
     const placed=new Set();
     let selected=null,pointer=null;
     const announce=(text)=>{status.textContent=text;};
+    const tileName=item=>{
+      const text=item?.querySelector('[data-p2lrn-dnd-text]')?.textContent?.trim()
+        ||[...(item?.childNodes??[])].filter(node=>node.nodeType===3)
+          .map(node=>node.textContent||'').join('').trim();
+      const alt=item?.querySelector('[data-p2lrn-dnd-item-image]')?.getAttribute('alt')?.trim();
+      return text||alt||'Imagen';
+    };
     const select=(item)=>{
       selected=item&&!placed.has(item.dataset.p2lrnDndItem)?item:null;
       for(const source of items)source.style.outline=source===selected?'3px solid #1d4ed8':'';
-      if(selected)announce('Ficha seleccionada: '+selected.textContent+'. Elige su destino.');
+      if(selected)announce('Ficha seleccionada: '+tileName(selected)+'. Elige su destino.');
     };
     const place=(item,zone)=>{
       if(!item||!zone)return false;
@@ -34,7 +41,7 @@ export function bootStudioDropActivities(){
       zone.append(item);
       zone.style.border='2px solid #15803d';
       zone.style.backgroundColor='#dcfce7';
-      zone.setAttribute('aria-label','Respuesta correcta: '+item.textContent);
+      zone.setAttribute('aria-label','Respuesta correcta: '+tileName(item));
       selected=null;
       const complete=placed.size===zones.length;
       announce(complete?'Actividad completada. Todas las fichas están colocadas.':
@@ -59,7 +66,7 @@ export function bootStudioDropActivities(){
     for(const item of items){
       item.setAttribute('role','button');
       item.tabIndex=0;item.draggable=true;
-      item.setAttribute('aria-label','Ficha: '+item.textContent);
+      item.setAttribute('aria-label','Ficha: '+tileName(item));
       item.addEventListener('click',()=>select(item));
       item.addEventListener('keydown',event=>{
         if(event.key==='Enter'||event.key===' '){event.preventDefault();select(item);}
