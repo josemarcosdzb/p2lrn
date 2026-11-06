@@ -66,6 +66,11 @@ jobs:
         run: |
           npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save playwright-core@1.56.0
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Verify Canvas three-assignment fixture and TOPkit link in Chrome
+        shell: pwsh
+        run: |
+          node scripts/browser-external-format-visual-qa.mjs --case=community-imscc-canvas-cc-gem
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
       - name: Test all real community samples, formats and cmi5 regression
         shell: pwsh
         run: |
