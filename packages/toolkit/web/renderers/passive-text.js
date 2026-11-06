@@ -1,5 +1,6 @@
 import {WEB_CONTENT_PROFILE, webContentMapping, webEntrypointDirectory} from '../web-content-core.js';
 import {playerUiText} from './ui-i18n.js';
+import {prepareStudioDropSandbox} from './lesson-drop-sandbox.js';
 
 const decoder = new TextDecoder('utf-8', {fatal: true});
 
@@ -67,10 +68,13 @@ export async function render({container, bytes, representation, resolveResourceU
       }
     }
 
+    const dropSandbox=verifiedEntrypointUrl?null:prepareStudioDropSandbox(text);
     const iframe = document.createElement('iframe');
     iframe.className = 'p2lrn-html';
     iframe.title = playerUiText('Contenido HTML del paquete P2LRN');
-    iframe.setAttribute('sandbox', verifiedEntrypointUrl ? 'allow-same-origin' : '');
+    // A validated lesson gets only an opaque-origin, nonce-limited script sandbox.
+    // All other passive HTML stays script-disabled as before.
+    iframe.setAttribute('sandbox', verifiedEntrypointUrl ? 'allow-same-origin' : (dropSandbox?.interactive?'allow-scripts':''));
     iframe.referrerPolicy = 'no-referrer';
 
     if (verifiedEntrypointUrl) {
@@ -80,7 +84,7 @@ export async function render({container, bytes, representation, resolveResourceU
       // coherent web bundle.
       iframe.src = verifiedEntrypointUrl;
     } else {
-      iframe.srcdoc = prepareHtml(text);
+      iframe.srcdoc = dropSandbox?.html??prepareHtml(text);
     }
 
     container.append(iframe);
