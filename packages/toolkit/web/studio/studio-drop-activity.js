@@ -144,12 +144,10 @@ export function removeStudioDropBackground(section){
 export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=>{}}={}){
   if(!surface?.isContentEditable)throw new TypeError('Editor HTML no disponible.');
   let selected=null,drag=null;
-  const clear=()=>{selected?.removeAttribute('data-p2lrn-studio-zone-selected');selected=null;onSelected(null);};
+  const clear=()=>{selected=null;onSelected(null);};
   const select=zone=>{
     if(selected===zone)return;
-    selected?.removeAttribute('data-p2lrn-studio-zone-selected');
     selected=zone&&surface.contains(zone)?zone:null;
-    if(selected)selected.dataset.p2lrnStudioZoneSelected='true';
     onSelected(selected);
   };
   const onPointerDown=event=>{
