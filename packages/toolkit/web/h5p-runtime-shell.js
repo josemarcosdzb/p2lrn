@@ -176,6 +176,26 @@ function protectOpaqueDocumentBase(doc) {
       return originalInsertAdjacentHTML(position,template.innerHTML);
     }
   });
+
+  // jQuery's parseHTML() creates a *detached* HTMLDocument, inserts a
+  // temporary <base href="about:srcdoc"> there, and then parses HTML.
+  // These detached heads inherit the opaque iframe's base-uri 'none' CSP,
+  // even though the main document contains no <base> element. Protect each
+  // detached document too, so no disallowed base is ever inserted.
+  // This does not change the CSP or permit network, parent navigation,
+  // same-origin access, or relative resource resolution via <base>.
+  const implementation=doc.implementation;
+  const createHTMLDocument=implementation?.createHTMLDocument;
+  if(typeof createHTMLDocument==='function'){
+    const guardedCreate=function(...args){
+      const detached=createHTMLDocument.apply(this,args);
+      protectOpaqueDocumentBase(detached);
+      return detached;
+    };
+    Object.defineProperty(implementation,'createHTMLDocument',{
+      configurable:true,writable:true,value:guardedCreate,
+    });
+  }
 }
 
 function staticFiles(data) {
