@@ -7,6 +7,13 @@ on:
       - 'scripts/browser-external-format-visual-qa.mjs'
       - 'scripts/verify-community-samples.mjs'
       - 'deploy/netlify/build-site.mjs'
+      - 'packages/toolkit/web/package-runtime-shell.js'
+      - 'packages/toolkit/web/h5p-runtime-shell.js'
+      - 'packages/toolkit/web/h5p-auto-runtime.js'
+      - 'packages/toolkit/web/p2lrn-player.js'
+      - 'packages/toolkit/web/built-in-renderers.js'
+      - 'packages/toolkit/web/renderers/package-runtime.js'
+      - 'scripts/audit-community-h5p-media.mjs'
       - '.github/workflows/p2lrn-community-browser-qa.yml'
   workflow_dispatch:
 
@@ -43,6 +50,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node --check scripts/browser-external-format-visual-qa.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/package-runtime-shell.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/qti-compatibility-preflight.test.mjs packages/toolkit/test/h5p-auto-runtime.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/audit-community-h5p-media.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build the real Netlify website locally
         shell: powershell
         run: |
@@ -58,6 +71,8 @@ jobs:
       - name: Test real viewer and embedded package DOM
         shell: powershell
         run: |
+          node scripts/verify-site-security.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/browser-external-format-visual-qa.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Keep screenshots and report on the Windows runner
