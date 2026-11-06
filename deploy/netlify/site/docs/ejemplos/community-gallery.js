@@ -9,17 +9,17 @@
     view:'Open in Player',download:'Download .p2lrn',original:'Original source',
     license:'Licence',package:'Package',pending:'Not certified for full playback',
     noResults:'No examples match these filters.',unavailable:'Catalog unavailable; please try again.',
-    verified:'Package integrity verified',partial:'Partial or conditional playback',
+    verified:'Browser playback verified',partial:'Partial or conditional playback',
   }:{
     filter:'Formato',all:'Todos los formatos',search:'Buscar un ejemplo',count:n=>n+' paquetes',
     view:'Abrir en Player',download:'Descargar .p2lrn',original:'Fuente original',
     license:'Licencia',package:'Paquete',pending:'Reproducción completa no certificada',
     noResults:'No hay ejemplos con estos filtros.',unavailable:'Catálogo no disponible; inténtalo de nuevo.',
-    verified:'Integridad del paquete verificada',partial:'Reproducción parcial o condicionada',
+    verified:'Reproducción verificada en navegador',partial:'Reproducción parcial o condicionada',
   };
   const validPath=/^\/examples\/canonical\/external\/free\/[a-z0-9][a-z0-9-]*\.p2lrn$/;
   const localeRoot=en?'/en/demo/':'/demo/';
-  const formats={scorm:'SCORM',h5p:'H5P',qti:'QTI 3',cmi5:'cmi5',imscc:'Common Cartridge'};
+  const formats={scorm:'SCORM',h5p:'H5P',qti:'QTI',cmi5:'cmi5',imscc:'Common Cartridge'};
   const controls=document.createElement('div');controls.className='p2lrn-community-controls';
   const filter=document.createElement('select');filter.setAttribute('aria-label',labels.filter);
   const search=document.createElement('input');search.type='search';search.placeholder=labels.search;search.setAttribute('aria-label',labels.search);
@@ -57,9 +57,8 @@
       const card=document.createElement('article');card.className='p2lrn-community-item';
       card.append(create('span',formats[entry.family]??entry.family.toUpperCase(),'p2lrn-community-type'));
       card.append(create('h3',entry.title??entry.url.split('/').at(-1)));
-      const status=entry.browserVerified===true?labels.verified:
-        entry.sourceFormat==='h5p'||entry.sourceFormat==='qti'||entry.sourceFormat==='cmi5'?
-        labels.partial:labels.pending;
+      const status=entry.browserVerified===true?labels.verified:labels.pending;
+      // A format family or a valid ZIP never proves playback or scoring.
       card.append(create('p',status,'p2lrn-community-status'));
       const dl=document.createElement('div');dl.className='p2lrn-community-links';
       const viewer=new URL(localeRoot,location.origin);viewer.searchParams.set('src',entry.url);
