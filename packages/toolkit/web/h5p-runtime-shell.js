@@ -437,6 +437,18 @@ async function initializeStatic(data) {
     if (mapped) return mapped;
     return originalGetPath ? originalGetPath(path, id) : raw;
   };
+  // H5P libraries frequently load feedback sounds (and other binary assets)
+  // through getLibraryFilePath rather than getPath. Resolve exactly to the
+  // immutable bundled content instead of generating a synthetic urn: URL that
+  // the opaque iframe cannot request. Missing paths retain core fallback.
+  const originalGetLibraryFilePath = typeof H5P.getLibraryFilePath === 'function'
+    ? H5P.getLibraryFilePath.bind(H5P) : null;
+  H5P.getLibraryFilePath = function(path) {
+    const raw = String(path ?? '').replace(/^\.\//, '').replace(/^libraries\//, '');
+    const mapped = objectUrls.get(raw);
+    if (mapped) return mapped;
+    return originalGetLibraryFilePath ? originalGetLibraryFilePath(path) : raw;
+  };
 
   for (const href of integration.core.styles) loadStylesheet(doc, href);
   for (const href of styles) loadStylesheet(doc, href);
