@@ -13,6 +13,11 @@
   const state=document.querySelector('[data-runtime-state]');
   const status=document.querySelector('[data-viewer-status]');
   const label=document.querySelector('[data-package-label]');
+  const sampleNotice=document.createElement('aside');
+  sampleNotice.className='viewer-source-notice';
+  sampleNotice.setAttribute('aria-live','polite');
+  sampleNotice.hidden=true;
+  document.querySelector('.viewer-workbench')?.before(sampleNotice);
   const menu=document.querySelector('[data-menu]');
   const nav=document.getElementById('nav');
   const fields={package:document.querySelector('[data-inspect-package]'),format:document.querySelector('[data-inspect-format]'),version:document.querySelector('[data-inspect-version]'),integrity:document.querySelector('[data-inspect-integrity]'),transport:document.querySelector('[data-inspect-transport]'),entrypoints:document.querySelector('[data-inspect-entrypoints]'),profiles:document.querySelector('[data-inspect-profiles]'),renderer:document.querySelector('[data-inspect-renderer]'),entity:document.querySelector('[data-inspect-entity]'),representation:document.querySelector('[data-inspect-representation]')};
@@ -120,6 +125,43 @@
     catalogDefault=catalog.find(item=>item.url===data?.defaultExample)?.url??null;
     refreshCatalog();
   }
+
+  // Digest-valid imported archives can be minimal upstream test fixtures.
+  function updateSourceNotice(item){
+    sampleNotice.replaceChildren();
+    if(item?.sampleRole!=='technical-fixture'){
+      sampleNotice.hidden=true;
+      return;
+    }
+    const en=document.documentElement.lang.toLowerCase().startsWith('en');
+    const heading=document.createElement('strong');
+    heading.textContent=en?'Technical compatibility fixture — not a complete course':
+      'Archivo de pruebas técnicas — no es un curso completo';
+    const description=document.createElement('p');
+    description.textContent=String((en?item.sampleNoteEn:item.sampleNoteEs)||
+      (en?'This source contains minimal test resources.':'La fuente contiene recursos de prueba mínimos.')).slice(0,400);
+    const integrity=document.createElement('p');
+    integrity.textContent=en?
+      'Verified integrity confirms that the package has not been altered; it does not certify pedagogical completeness or full standard conformance.':
+      'La integridad verificada confirma que el paquete no ha sido alterado; no certifica que sea un curso desarrollado ni la conformidad completa del estándar.';
+    const children=[heading,description,integrity];
+    const fullCourse=catalog.find(row=>row.url==='/examples/canonical/external/common-cartridge-topkit.p2lrn');
+    if(fullCourse){
+      const link=document.createElement('a');
+      const dest=new URL(en?'/en/demo/':'/demo/',location.origin);
+      dest.searchParams.set('src',fullCourse.url);
+      link.href=dest.pathname+dest.search;
+      link.textContent=en?'Open the more extensive TOPkit course':'Abrir el curso TOPkit, con más contenido';
+      const note=document.createElement('p');
+      note.append(link);
+      if(Number.isSafeInteger(fullCourse.bytes)&&fullCourse.bytes>0)
+        note.append(document.createTextNode(' ('+Math.ceil(fullCourse.bytes/1048576)+' MiB)'));
+      children.push(note);
+    }
+    sampleNotice.replaceChildren(...children);
+    sampleNotice.hidden=false;
+  }
+
   function selectCatalogEntry(src){
     let normalized;
     try{normalized=normalizeSource(src);}catch{return null;}
@@ -132,7 +174,7 @@
       sample.value=item.url;
       if(!rendererSelect.value&&item.rendererId)rendererSelect.value=item.rendererId;
     }else sample.selectedIndex=-1;
-    return item;
+    updateSourceNotice(item);return item;
   }
   async function inspect(src){
     setField('integrity',"verifying…");
