@@ -81,18 +81,18 @@ jobs:
           }
           if (!$free) { throw 'No free loopback ports in 5550-5599. No processes were stopped.' }
           $script = Join-Path $dir 'preview-server.mjs'
-          $stdout = Join-Path $dir 'preview-server.stdout.log'
-          $stderr = Join-Path $dir 'preview-server.stderr.log'
           $node = (Get-Command node).Source
-          $args = ('"{0}" --root "{1}" --port {2}' -f $script,$dir,$free)
-          $previous = $env:RUNNER_TRACKING_ID
-          $env:RUNNER_TRACKING_ID = ''
-          try {
-            $process = Start-Process -FilePath $node -ArgumentList $args -WorkingDirectory $dir -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
-          } finally {
-            $env:RUNNER_TRACKING_ID = $previous
+          # GitHub's runner job object terminates Start-Process children during
+          # cleanup. Win32_Process.Create is invoked via the Windows management
+          # service, outside that job; this is an on-demand local process, NOT
+          # a scheduled task, Windows service installation or public deploy.
+          $commandLine = ('"{0}" "{1}" --root "{2}" --port {3}' -f $node,$script,$dir,$free)
+          $launch = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $commandLine; CurrentDirectory = $dir } -ErrorAction Stop
+          if ($launch.ReturnValue -ne 0 -or !$launch.ProcessId) {
+            throw ('Windows could not launch the independent local Studio process. WMI code=' + $launch.ReturnValue)
           }
-          $process.Id | Out-File (Join-Path $dir 'preview-server.pid') -Encoding ascii
+          $serverPid = [int]$launch.ProcessId
+          $serverPid | Out-File (Join-Path $dir 'preview-server.pid') -Encoding ascii
           $base = 'http://127.0.0.1:' + $free
           $ok = $false
           for ($try=0; $try -lt 60; $try++) {
@@ -102,7 +102,7 @@ jobs:
               Write-Output ('PREVIEW_HEALTH_STALE=' + $response.commit + '; expected=' + $env:GITHUB_SHA)
             } catch { Start-Sleep -Milliseconds 400 }
           }
-          if (!$ok) { Get-Content $stderr -ErrorAction SilentlyContinue; throw 'Preview server failed its health check.' }
+          if (!$ok) { throw 'Independent local Studio process did not pass its SHA-verified health check.' }
           foreach ($path in @('/studio/','/studio/studio.js','/studio/runtime/command-bar.js','/player/current/dist/p2lrn.js','/player/current/dist/renderers/questionnaire-3d.js','/player/current/dist/game-3d/three-runtime.js','/p2lrn-sw.js','/demo/','/npm-studio/','/studio/current/dist/p2lrn-studio.js')) {
             Write-Output ('VERIFY_ROUTE=' + $path)
             try { $response=Invoke-WebRequest -Uri ($base+$path) -UseBasicParsing -TimeoutSec 8 -ErrorAction Stop }
@@ -116,7 +116,7 @@ jobs:
           Write-Output ('NPM_URL=' + $base + '/npm-studio/')
           Write-Output ('DEMO_URL=' + $base + '/demo/')
           Write-Output ('LOCAL_DIRECTORY=' + $dir)
-          Write-Output ('SERVER_PID=' + $process.Id)
+          Write-Output ('SERVER_PID=' + $serverPid)
           # The Windows self-hosted runner can terminate a child process when
           # the PowerShell step ends. Run both browser checks while this exact
           # SHA-verified server is alive, rather than between separate steps.
