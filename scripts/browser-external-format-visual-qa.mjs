@@ -74,7 +74,7 @@ const cases=[
 // Community examples are included as source-backed E2E cases, not just checked as ZIPs.
 // The exact 19 entry list is maintained by immutable provenance and the site catalog.
 const community=JSON.parse(await readFile(join(root,'examples','canonical','external','free','provenance.json'),'utf8'));
-const familyFrame={h5p:'iframe.p2lrn-h5p-frame',scorm:'iframe.p2lrn-scorm-runtime'};
+const familyFrame={h5p:'iframe.p2lrn-h5p-frame',scorm:'iframe.p2lrn-scorm-runtime',imscc:'iframe.p2lrn-package-runtime'};
 for(const entry of community.samples){
   const file='/examples/canonical/external/free/'+entry.slug+'.p2lrn';
   cases.push({
@@ -216,11 +216,17 @@ try{
        }else interaction={attempted:false,verified:false,kind:'no-interaction-exposed'};
      }else if(item.kind==='imscc'){
        const htmlIframe=player.locator('iframe.p2lrn-package-runtime');
-       interaction={attempted:false,verified:false,kind:(await htmlIframe.count())>0?'imscc-html-rendered':'imscc-resources-only'};
-       if(interaction.kind==='imscc-resources-only'){
-          // This is a useful packaging result but does not qualify as
-          // successful runnable course playback.
-          throw Error('IMS Common Cartridge resource inventory shown without a launchable activity');
+       assert.equal(await htmlIframe.count(),1,'Common Cartridge requires a real isolated HTML runtime frame');
+       assert(text.length>=item.minimumText,'Common Cartridge HTML body not visible in isolated frame');
+       const importedButtons=player.locator('nav.p2lrn-nav button[data-p2lrn-imported-resource]');
+       const count=await importedButtons.count();
+       interaction={attempted:true,verified:true,kind:'imscc-html-page-visible',navigationItems:count};
+       if(count>1){
+         const current=await content.innerText();
+         await importedButtons.nth(1).click({timeout:9000});
+         const next=await findVisibleText(player.frameLocator(item.frame).locator('body'),item);
+         assert(current!==next,'Common Cartridge resource navigation did not change page content');
+         interaction.kind='imscc-next-resource';
        }
      }
      const runtimeState=String(await page.locator('[data-runtime-state]').innerText().catch(()=>''));
