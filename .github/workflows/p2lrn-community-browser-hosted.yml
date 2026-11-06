@@ -4,6 +4,13 @@ on:
     branches: [mejorastudio]
     paths:
       - '.github/workflows/p2lrn-community-browser-hosted.yml'
+      - 'packages/toolkit/test/opaque-runtime-security.test.mjs'
+      - 'packages/toolkit/web/package-runtime-shell.js'
+      - 'packages/toolkit/web/h5p-auto-runtime.js'
+      - 'packages/toolkit/web/h5p-runtime-shell.js'
+      - 'packages/toolkit/web/p2lrn-player.js'
+      - 'packages/toolkit/web/built-in-renderers.js'
+      - 'scripts/browser-external-format-visual-qa.mjs'
   workflow_dispatch:
 
 permissions:
