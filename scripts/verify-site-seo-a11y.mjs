@@ -255,11 +255,12 @@ if(!landing||!guide||!englishLanding||!englishGuide)errors.push('Skills landing 
 const skillManifest=JSON.parse(await readFile(join(out,'downloads/skills/manifest.json'),'utf8').catch(()=>'{"packages":[]}'));
 const expectedPlatforms=new Map([
  ['chatgpt','skills/p2lrn-creator/'],
+ ['codex','.agents/skills/p2lrn-creator/'],
  ['claude','p2lrn-creator/'],
  ['gemini',''],
  ['grok','.grok/skills/p2lrn-creator/']
 ]);
-if(skillManifest.packages.length!==4)errors.push('Skill download manifest must contain four packages');
+if(skillManifest.packages.length!==expectedPlatforms.size)errors.push('Skill download manifest must contain all five declared platforms');
 function zipEntries(bytes){
   const paths=[];let pos=0;
   while(pos+30<=bytes.length&&bytes.readUInt32LE(pos)===0x04034b50){
@@ -309,7 +310,7 @@ if(landing&&englishLanding){
        (faq.match(/<div><strong>/g)||[]).length<6)
       errors.push(lang+' compiled Skills landing has no useful static course creation content');
     if(html.includes('noindex'))errors.push(lang+' compiled Skills landing has unintended noindex');
-    for(const name of ['chatgpt','claude','gemini','grok'])
+    for(const name of ['chatgpt','codex','claude','gemini','grok'])
       if(!html.includes('p2lrn-'+name+'-'))errors.push(lang+' compiled Skills page missing '+name+' download');
   }
 }
