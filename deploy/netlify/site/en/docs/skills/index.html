@@ -8,19 +8,21 @@
 <body><a class="skip-link" href="#contenido">Skip to content</a>
 <header class="site-header"><a class="brand" href="/en/">P2LRN</a><nav class="nav" id="nav" aria-label="Main navigation"><a class="nav-direct" href="/en/docs/">Documentation</a><a class="nav-direct" href="/en/docs/instalar/">Install</a><a class="nav-direct" href="/en/docs/studio/">Create</a><a class="nav-direct" href="/en/docs/player/">Play</a><a class="nav-direct" href="/en/docs/integracion/">Integrate</a><a class="nav-direct" href="/en/docs/analytics/">Analytics</a><a class="nav-direct" href="/en/docs/referencia/">Reference</a></nav><div class="header-meta"><span class="status"><i></i><span data-health="">CDN</span></span></div><button class="menu" type="button" data-menu="" aria-expanded="false" aria-controls="nav">Menu</button></header>
 <main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Documentation navigation"></aside><article class="doc-content">
-<header class="doc-hero"><p class="eyebrow">DOCUMENTATION / SKILLS / AI</p><h1>Install and use P2LRN Skills</h1><p>Download the appropriate Skill for ChatGPT, Claude, Gemini or Grok Build and generate educational courses <code>.p2lrn</code> from a conversation. This guide explains the installation, its requirements, and what to check before submitting the file.</p><div class="example-actions"><a class="button primary" href="/en/skills/">See all four downloads</a><a class="button" href="/downloads/skills/manifest.json">Verify SHA-256</a></div></header>
+<header class="doc-hero"><p class="eyebrow">DOCUMENTATION / SKILLS / AI</p><h1>Install and use P2LRN Skills</h1><p>Download the appropriate Skill for ChatGPT, Claude, Gemini or Grok Build and generate educational courses <code>.p2lrn</code> from a conversation. This guide explains the installation, its requirements, and what to check before submitting the file.</p><div class="example-actions"><a class="button primary" href="/en/skills/">See all five downloads</a><a class="button" href="/downloads/skills/manifest.json">Verify SHA-256</a></div></header>
 
 <section class="doc-section" id="que-incluye"><h2>What the Skill does and what it doesn't</h2>
 <p>“P2LRN – Create and Download” uses the official Toolkit when installed and authorized, to create, import, edit and validate courses; when missing Node retains a limited standalone Python generator for new courses within the contract <strong>P2LRN Core 0.4.0</strong>. It allows you to structure units and lessons, create quizzes, true/false questions with various statements, games and authorship metadata, and deliver a file <code>.p2lrn</code> real.</p>
-<p><strong>Requirements:</strong> Node 22+ and Toolkit 0.5.0-alpha.11 for official authoring; Python 3.10+ for limited packager only. File access and execute permission required. If the platform does not support running code, you can write content, but you should not claim to have created the package.</p>
+<p><strong>Requirements:</strong> Node 22+ and Toolkit 0.5.0-alpha.12 for official authoring; Python 3.10+ for limited packager only. File access and execute permission required. If the platform does not support running code, you can write content, but you should not claim to have created the package.</p>
 <p>The Skill does not replace <a href="/en/docs/studio/">Studio</a>, the visual execution of the <a href="/en/docs/player/">Player</a>, the 3D games of the official engine nor the <a href="/en/docs/entrega-offline/">entregas Windows autoejecutables</a>. To consult real courses from an authorized folder, use the <a href="/en/docs/conectores/ia/">P2LRN MCP</a> separately.</p>
 </section>
 
-<section class="doc-section" id="chatgpt"><h2>ChatGPT and Codex: download and installation</h2>
+<section class="doc-section" id="chatgpt"><h2>ChatGPT: download and installation</h2>
 <div class="example-actions"><a class="button primary" href="/downloads/skills/p2lrn-chatgpt-plugin.zip" download="">Download Skill for ChatGPT (.zip)</a></div>
 <ol class="doc-list"><li>Download the ZIP type <strong>Skills only</strong> with the manifesto <code>plugin.json</code> and the folder <code>skills/p2lrn-creator/</code>.</li><li>Import the Skill into a ChatGPT space that supports it. For a public distribution of the plugin, the owner must submit it for review by OpenAI; Downloading it does not constitute approval.</li><li>It requests a full course and requires the generator to be run and verified before delivering the file.</li></ol>
 <p><a href="https://platform.openai.com/plugins" rel="noopener noreferrer">OpenAI Publishing Portal</a>. Access and review process depend on account permissions.</p>
 </section>
+
+<section class="doc-section" id="codex"><h2>Codex: dedicated local Skill</h2><div class="example-actions"><a class="button primary" href="/downloads/skills/p2lrn-codex-skill.zip" download>Download Skill for Codex (.zip)</a></div><p>Extract into <code>.agents/skills/p2lrn-creator/</code>. Verify that Codex discovers SKILL.md, and that Node/Python have the required local execution permissions. This ZIP is separate from the ChatGPT plugin and does not install dependencies.</p></section>
 
 <section class="doc-section" id="claude"><h2>Claude: Custom Skill and Claude Code</h2>
 <div class="example-actions"><a class="button primary" href="/downloads/skills/p2lrn-claude-skill.zip" download="">Download Skill for Claude (.zip)</a></div>
@@ -42,8 +44,10 @@
 <p><strong>Grok web no es Grok Build.</strong> It is not guaranteed that the website will import this ZIP directly or distribute it publicly.</p>
 </section>
 
+<section class="doc-section" id="presentations"><h2>Generate presentations directly in P2LRN courses</h2><p>All five AI Skills include the same scripts and instructions: <code>references/presentations.md</code>, a sample slide deck, and optional PPTX/PDF export tools. Create a real course using <code>python scripts/p2lrn_presentations.py build --input assets/presentacion-curso.json --output slides-course.p2lrn</code>. Native PowerPoint export requires PptxGenJS and PDF export requires ReportLab, installed separately with permission; neither is silently bundled. Edit slides in Studio with Insert &gt; Presentation.</p></section>
+
 <section class="doc-section" id="comprobar"><h2>Verify the ZIP and generate a sample course</h2>
-<p>Before installing, compare the SHA-256 of the downloaded ZIP with the <a href="/downloads/skills/manifest.json">download manifest</a>. All four packages are rebuilt from the same versioned sources, but have different folder structures.</p>
+<p>Before installing, compare the SHA-256 of the downloaded ZIP with the <a href="/downloads/skills/manifest.json">download manifest</a>. All five packages are rebuilt from the same versioned sources, but have different folder structures.</p>
 <div class="codebox"><div class="codebox-head"><span>Try Python 3.10+</span><button type="button" data-copy="">Copy</button></div><pre><code>python -m unittest discover -s scripts -p "test_*.py"
 python scripts/p2lrn_package.py build --input assets/example-course.json --output test-course.p2lrn
 python scripts/p2lrn_package.py verify test-course.p2lrn</code></pre></div>
