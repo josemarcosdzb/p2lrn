@@ -94,13 +94,31 @@
       "kind": "h5p",
       "title": "Interactive Video",
       "license": "CC-BY-4.0",
-      "sourceUrl": "https://raw.githubusercontent.com/justineuro/h5p-view/4d76f01918d85cbb06a9e246d3e71c9d10b92019/interactive-video-2-618.h5p",
+      "sourceUrl": "https://github.com/josemarcosdzb/p2lrn/blob/mejorastudio/scripts/embed-community-h5p-video.mjs",
       "licenseUrl": "https://h5p.org/licensing",
-      "sourceSha256": "sha256:b9463e0e5f78778e57213b7ebcde1c515c0f236b03945e796f759165eafc22b8",
-      "packageSha256": "sha256:64e7d3edac7fc1e84a01c81b07979e724e3440bb3eb56cff9c1081ca8e047b08",
+      "sourceSha256": "sha256:f836726fb55a48a3e0946336fedab1d26f22f6421bf227ffc5f55792487bc8e2",
+      "packageSha256": "sha256:258a1ad0a3cd4bfffcb1f70368f159ccdaafd44b0ad3fcd4fe6043446d1bf868",
       "browserVerified": false,
       "origin": "H5P.org sample mirrored by justineuro/h5p-view",
-      "dependencyMode": "bundled"
+      "dependencyMode": "bundled",
+      "enrichment": {
+        "schema": "https://p2lrn.org/schema/offline-h5p-media/1",
+        "upstreamSourceSha256": "sha256:b9463e0e5f78778e57213b7ebcde1c515c0f236b03945e796f759165eafc22b8",
+        "upstreamPackageSha256": "sha256:64e7d3edac7fc1e84a01c81b07979e724e3440bb3eb56cff9c1081ca8e047b08",
+        "upstreamSourceUrl": "https://raw.githubusercontent.com/justineuro/h5p-view/4d76f01918d85cbb06a9e246d3e71c9d10b92019/interactive-video-2-618.h5p",
+        "upstreamEmbeddedAs": "p2lrn-provenance/upstream-original.h5p",
+        "mediaSourceUrl": "https://h5p.org/sites/default/files/h5p/iv.mp4",
+        "mediaSha256": "sha256:007d8a7fb68c902ef196f61a938f071e83ff9cdd9f3e0ed08ebfd57cdbac58ea",
+        "mediaBytes": 13255441,
+        "mediaMember": "content/videos/iv.mp4",
+        "mediaCopyright": {
+          "title": "Berry Smoothie",
+          "author": "Joanna Siemek",
+          "source": "http://vimeo.com/68264542",
+          "license": "CC BY 4.0"
+        },
+        "externalNetworkEnabled": false
+      }
     },
     {
       "slug": "h5p-question-set",
