@@ -1,0 +1,81 @@
+name: P2LRN Production Candidate Preview (No Deploy)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - '.github/workflows/p2lrn-community-production-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-without-mutating-main:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout production main without write access
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Overlay only community examples and required runtime changes from mejorarstudio
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          git fetch --no-tags --depth=1 origin mejorastudio
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $selected=@(
+            'examples/canonical/external/free',
+            'deploy/netlify/build-site.mjs',
+            'deploy/netlify/site/docs/ejemplos',
+            'deploy/netlify/site/en/docs/ejemplos/index.html',
+            'packages/toolkit/web/h5p-auto-runtime.js',
+            'packages/toolkit/web/h5p-runtime-shell.js',
+            'packages/toolkit/web/renderers/qti-runtime.js',
+            'scripts/verify-community-samples.mjs',
+            'scripts/browser-external-format-visual-qa.mjs'
+          )
+          git checkout origin/mejorastudio -- $selected
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git diff --stat --cached
+          Write-Host 'PREVIEW_ONLY_NO_MAIN_PUSH=1'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: '1.26'
+          cache: false
+      - name: Check package integrity
+        shell: powershell
+        run: |
+          node scripts/verify-community-samples.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build production candidate and verify 19 entries in catalog
+        shell: powershell
+        run: |
+          cmd /d /c "node deploy\netlify\build-site.mjs > .production-candidate-build.log 2>&1"
+          $status=$LASTEXITCODE
+          Get-Content .production-candidate-build.log -Tail 140
+          if($status -ne 0){exit $status}
+          node --input-type=module -e "import fs from 'node:fs';let a=JSON.parse(fs.readFileSync('.netlify-cdn/examples/catalog.json'));let c=a.examples.filter(x=>x.sourceFormat&&x.url.startsWith('/examples/canonical/external/free/'));console.log('PRODUCTION_CANDIDATE_COMMUNITY='+c.length);if(c.length!==19)process.exit(1)"
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Verify Chrome package interactions on candidate
+        shell: powershell
+        run: |
+          npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save playwright-core@1.56.0
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/browser-external-format-visual-qa.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Save candidate evidence locally (not GitHub artifacts)
+        if: always()
+        shell: powershell
+        run: |
+          $root=Join-Path $env:USERPROFILE "Downloads\P2LRN-QA-LOCAL\production-candidate"
+          $dest=Join-Path $root "$env:GITHUB_RUN_ID"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          if(Test-Path '.p2lrn-external-visual-qa'){Copy-Item '.p2lrn-external-visual-qa\*' $dest -Recurse -Force}
+          if(Test-Path '.production-candidate-build.log'){Copy-Item '.production-candidate-build.log' $dest -Force}
+          Write-Host "PRODUCTION_CANDIDATE_LOCAL_EVIDENCE=$dest"
