@@ -62,12 +62,17 @@ jobs:
           if($status -ne 0){exit $status}
           node --input-type=module -e "import fs from 'node:fs';let a=JSON.parse(fs.readFileSync('.netlify-cdn/examples/catalog.json'));let c=a.examples.filter(x=>x.sourceFormat&&x.url.startsWith('/examples/canonical/external/free/'));console.log('PRODUCTION_CANDIDATE_COMMUNITY='+c.length);if(c.length!==19)process.exit(1)"
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Check site security invariants
+        shell: powershell
+        run: |
+          node scripts/verify-site-security.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
       - name: Verify Chrome package interactions on candidate
         shell: powershell
         run: |
           npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save playwright-core@1.56.0
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
-          node scripts/browser-external-format-visual-qa.mjs
+          node scripts/browser-external-format-visual-qa.mjs --community-only
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
       - name: Save candidate evidence locally (not GitHub artifacts)
         if: always()
