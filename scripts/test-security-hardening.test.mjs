@@ -6,7 +6,7 @@ test('file association passes filename as an argument rather than PowerShell cod
  const p=read('integration/windows/register-p2lrn-reader.ps1');
  assert.doesNotMatch(p,/powershell\.exe -NoProfile -ExecutionPolicy Bypass -Command/i);
  assert.match(p,/node\.exe/);assert.match(p,/-NoProfile -File/);
- assert.match(p,/' "%1"'/);assert.match(p,/\[switch\]\$InspectOnly/);
+ assert.match(p,/%1/);assert.match(p,/\$command\s*=\s*'"'/);assert.match(p,/\[switch\]\$InspectOnly/);
 });
 test('Only the hosted workflow runs on untrusted pull requests',()=>{
  const src=read('.github/workflows/p2lrn-ci.yml');
