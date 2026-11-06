@@ -43,6 +43,7 @@ jobs:
             'packages/toolkit/web/built-in-renderers.js',
             'packages/toolkit/web/renderers/qti-runtime.js',
             'packages/toolkit/web/renderers/scorm-runtime.js',
+            'packages/toolkit/web/scorm2004-sequencing.js',
             'packages/toolkit/web/qti-compatibility.js',
             'scripts/verify-community-samples.mjs',
             'scripts/browser-external-format-visual-qa.mjs'
