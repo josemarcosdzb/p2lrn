@@ -67,6 +67,37 @@ function resolve(base, ref) {
   const path = normalize(root ? target.slice(1) : baseDir + target);
   return path && files.has(path) ? {path, suffix:(match?.[2] || '') + (match?.[3] || '')} : null;
 }
+// IMS Common Cartridge often stores referenced pictures under web_resources/
+// while authored pages use LMS-specific URLs, $IMS-CC-FILEBASE$ aliases, or
+// percent-encoded relative links. Resolve these to *existing package members*
+// only; never fetch remote content or allow an ambiguous filename match.
+function resolveBundledMedia(base, reference) {
+  const direct=resolve(base,reference);
+  if(direct)return direct;
+  let raw=String(reference??'').trim();
+  if(!raw||raw.startsWith('#')||/^(?:data|blob|javascript|file):/iu.test(raw))return null;
+  const suffixMatch=/^([^?#]*)(\?[^#]*)?(#.*)?$/u.exec(raw);
+  raw=suffixMatch?.[1]??raw;
+  raw=raw.replace(/^\$IMS-CC-(?:FILEBASE|WEB-BASE)\$/iu,'').replace(/^\.\//u,'');
+  if(/^(?:https?:)?\/\//iu.test(raw)){
+    try{raw=new URL(raw.startsWith('//')?'https:'+raw:raw).pathname;}catch{return null;}
+  }
+  try{raw=decodeURIComponent(raw);}catch{return null;}
+  if(raw.includes('\0')||raw.includes('\\'))return null;
+  raw=raw.replace(/^\/+/u,'');
+  const isMedia=(key)=>/^(?:image|video|audio|font)\//iu.test(files.get(key)?.mediaType??'') ||
+    /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|ico|mp3|ogg|wav|mp4|webm|woff2?|ttf|otf)$/iu.test(key);
+  const baseDir=base.includes('/')?base.slice(0,base.lastIndexOf('/')+1):'';
+  const possibilities=[
+    normalize(baseDir+raw),normalize(raw),normalize('web_resources/'+raw),
+    normalize('resources/'+raw),normalize('course_files/'+raw)
+  ];
+  for(const p of possibilities)if(p&&files.has(p)&&isMedia(p))return{path:p,suffix:''};
+  const leaf=raw.split('/').at(-1)?.toLowerCase();
+  if(!leaf||leaf.length<4)return null;
+  const matches=[...files.keys()].filter(p=>isMedia(p)&&p.split('/').at(-1)?.toLowerCase()===leaf);
+  return matches.length===1?{path:matches[0],suffix:''}:null;
+}
 function text(path) {
   return new TextDecoder('utf-8', {fatal:false}).decode(files.get(path).buffer);
 }
@@ -153,7 +184,7 @@ function rewriteCss(css, base, stack = new Set()) {
       return rewriteCss(text(resolved.path), resolved.path, next);
     })
     .replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/giu, (all, _q, ref) => {
-      const resolved = resolve(base, ref);
+      const resolved = resolveBundledMedia(base, ref);
       return resolved && urls.has(resolved.path) ? `url("${urls.get(resolved.path)}${resolved.suffix}")` : all;
     });
 }
@@ -164,9 +195,14 @@ function rewriteElementTree(root, path) {
     for (const attr of attrs) {
       if (!el.hasAttribute(attr)) continue;
       const raw = el.getAttribute(attr);
-      const resolved = resolve(path, raw);
-      if (!resolved) continue;
       const tag = el.tagName.toLowerCase();
+      const direct=resolve(path, raw);
+      const resolved=direct??(
+        ['img','source','video','audio','track'].includes(tag) &&
+        ['src','poster','background'].includes(attr)
+          ? resolveBundledMedia(path,raw)
+          : null);
+      if (!resolved) continue;
       const mt = files.get(resolved.path)?.mediaType || '';
       if ((tag === 'a' || tag === 'area') && (mt.includes('html') || mt.includes('xhtml'))) {
         el.setAttribute(attr, '#');
@@ -184,7 +220,7 @@ function rewriteElementTree(root, path) {
     if (el.hasAttribute('srcset')) {
       el.setAttribute('srcset', el.getAttribute('srcset').split(',').map((item) => {
         const bits = item.trim().split(/\s+/);
-        const resolved = resolve(path, bits[0]);
+        const resolved = resolveBundledMedia(path, bits[0]);
         if (resolved && urls.has(resolved.path)) bits[0] = urls.get(resolved.path) + resolved.suffix;
         return bits.join(' ');
       }).join(', '));
