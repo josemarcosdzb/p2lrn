@@ -34,9 +34,15 @@ jobs:
             'deploy/netlify/site/en/docs/ejemplos/index.html',
             'packages/toolkit/web/h5p-auto-runtime.js',
             'packages/toolkit/web/h5p-runtime-shell.js',
+            'packages/toolkit/web/h5p-package.js',
+            'packages/toolkit/web/renderers/h5p-runtime.js',
+            'packages/toolkit/web/package-runtime-shell.js',
+            'packages/toolkit/web/dependency-registry.js',
+            'packages/toolkit/web/execution-negotiation.js',
             'packages/toolkit/web/p2lrn-player.js',
             'packages/toolkit/web/built-in-renderers.js',
             'packages/toolkit/web/renderers/qti-runtime.js',
+            'packages/toolkit/web/renderers/scorm-runtime.js',
             'packages/toolkit/web/qti-compatibility.js',
             'scripts/verify-community-samples.mjs',
             'scripts/browser-external-format-visual-qa.mjs'
@@ -60,7 +66,7 @@ jobs:
       - name: Build production candidate and verify 19 entries in catalog
         shell: powershell
         run: |
-          cmd /d /c "node deploy\netlify\build-site.mjs > .production-candidate-build.log 2>&1"
+          cmd /d /c "node deploy/netlify/build-site.mjs > .production-candidate-build.log 2>&1"
           $status=$LASTEXITCODE
           Get-Content .production-candidate-build.log -Tail 140
           if($status -ne 0){exit $status}
