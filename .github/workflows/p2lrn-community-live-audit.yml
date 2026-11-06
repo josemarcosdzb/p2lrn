@@ -23,8 +23,18 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - name: Check public site, bilingual gallery and course URLs
+      - name: Confirm production deployment and bilingual gallery on both hostnames
         shell: powershell
         run: |
-          node scripts/check-community-public-web.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host "EXPECTED_MAIN_COMMIT=0880c98e319e738cac01e4e1e9d4d4cce979ea7d"
+          for($attempt=1;$attempt -le 12;$attempt++){
+            Write-Host "PUBLIC_AUDIT_ATTEMPT=$attempt"
+            node scripts/check-community-public-web.mjs
+            if($LASTEXITCODE -eq 0){
+              Write-Host "PUBLIC_AUDIT_APPROVED=1"
+              exit 0
+            }
+            if($attempt -lt 12){Start-Sleep -Seconds 20}
+          }
+          Write-Error 'Public catalog or gallery still unavailable; do not claim live certification'
+          exit 1
