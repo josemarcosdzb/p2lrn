@@ -1,10 +1,29 @@
-# Paquetes gratuitos externos para el catálogo de P2LRN
+# Paquetes gratuitos externos de la galería P2LRN
 
-Estos siete cursos de prueba **reales** proceden de XtoSCORM: https://xtoscorm.com/scorm-example. El autor los distribuye bajo **licencia MIT**. Conservamos el ZIP original sin modificar dentro de cada contenedor `.p2lrn` (Core 0.4.0) y su SHA-256 en `provenance.json`, junto con el origen y el SHA-256 del nuevo contenedor.
+Esta carpeta conserva **19 paquetes** en `provenance.json`, cada uno con su fuente, licencia, SHA-256 del ZIP/H5P/IMSCC original y SHA-256 del nuevo archivo `.p2lrn`. La conversión emplea `convertExternalPackage` del Toolkit oficial. No se sobrescriben los originales.
 
-- SCORM 1.2: Snack Safety, Dog Maths 101, Working for a Cat 101 y Procrastination 101 (recuperación de sesión).
-- SCORM 2004: Snack Safety, Dog Maths 101 (varios SCO) y Could This Have Been an Email?.
+| Perfil | Número | Origen y licencia |
+|---|---:|---|
+| SCORM 1.2/2004 | 7 | XtoSCORM, MIT, https://xtoscorm.com/scorm-example |
+| H5P | 7 | Ejemplos H5P.org conservados por `justineuro/h5p-view`, CC BY 4.0 por defecto según https://h5p.org/licensing, salvo excepciones de derechos de uso de medios individuales |
+| IMS Common Cartridge | 3 | `instructure/common-cartridge-viewer`, fixtures con licencia MIT, https://github.com/instructure/common-cartridge-viewer |
+| QTI 2.2/3.0 | 2 | Preguntas de demostración creadas por `scripts/import-community-formats.mjs`, con `GENERATED-LICENSE.md` MIT |
 
-Cada curso se convierte con `convertExternalPackage` del Toolkit oficial y supera validación estructural. **No equivalen a una certificación funcional en el navegador**, ni demuestran compatibilidad integral SCORM 2004. Se mantienen con `browserVerified:false` hasta superar pruebas reales de interacción y seguimiento. Las bibliotecas y enlaces externos solo se ejecutan dentro del runtime aislado que corresponda.
+La fuente original se conserva byte a byte dentro del contenedor; la transformación mantiene metadatos y estructura **hasta el alcance declarado de cada perfil**. La preservación no implica ejecución de todos los perfiles, conformidad SCORM 2004, procesamiento completo QTI ni calificaciones oficiales.
 
-Ejecutar `node scripts/verify-community-samples.mjs` desde la raíz del repositorio para comprobar integridad y preservación exacta del original. La web debe generar el catálogo exclusivamente a partir de este corpus verificado, sin enlaces arbitrarios a contenido no aprobado.
+El comprobador de integridad y procedencia es:
+
+```sh
+node scripts/verify-community-samples.mjs
+```
+
+La comprobación funcional real requiere construir la web y ejecutar Chrome/Edge, incluyendo inspección del DOM dentro de los iframes, navegación, interacción, eventos, galería y capturas:
+
+```sh
+node deploy/netlify/build-site.mjs
+node scripts/browser-external-format-visual-qa.mjs
+```
+
+El workflow `p2lrn-community-browser-qa.yml` ejecuta este proceso en el runner Windows y guarda evidencias en `Downloads/P2LRN-QA-LOCAL/community-browser/<run_id>/`; **no utiliza los artefactos de GitHub Actions**. Se marca `browserVerified: false` hasta que una verificación funcional suficiente quede documentada y vinculada a la versión del paquete.
+
+El workflow `p2lrn-community-live-audit.yml` comprueba el catálogo y las rutas públicas en `p2lrn.org` y Netlify por separado. La rama de trabajo es `mejorastudio`; producción se despliega desde `main`. Un paquete presente en la rama no debe mostrarse como publicado si no figura en la web.
