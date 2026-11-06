@@ -33,7 +33,7 @@ export function addStudioDropPair(section,{x=10,y=14,width=33,height=26}={}){
       boxSizing:'border-box',padding:'8px',border:'2px dashed #1d4ed8',
       borderRadius:'8px',backgroundColor:'rgba(255,255,255,.83)',
       color:'#172554',fontSize:'16px',fontWeight:'650',textAlign:'center',
-      cursor:'move',overflow:'hidden',
+      cursor:'move',touchAction:'none',overflow:'hidden',
     },
   });
   zone.append(element(section.ownerDocument,'span',{
