@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: p2lrn-hosted-pr-\${{ github.event.pull_request.number }}
+  group: p2lrn-hosted-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
