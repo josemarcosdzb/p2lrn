@@ -1,0 +1,42 @@
+name: Derive substantive IMSCC page from blank upstream fixture
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'scripts/enrich-community-imscc-page.mjs'
+      - '.github/workflows/p2lrn-enrich-community-imscc.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: p2lrn-imscc-lesson-import-mejorastudio
+  cancel-in-progress: false
+jobs:
+  derive-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: mejorastudio
+          persist-credentials: true
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Create accessible offline HTML lesson preserving original IMSCC
+        run: |
+          node --check scripts/enrich-community-imscc-page.mjs
+          node scripts/enrich-community-imscc-page.mjs
+          node scripts/verify-community-samples.mjs
+      - name: Commit verified example to existing branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add examples/canonical/external/free/imscc-single-page.p2lrn examples/canonical/external/free/provenance.json
+          if git diff --cached --quiet; then
+            echo "No files changed"; exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat(samples): replace empty IMSCC example with attributed offline lesson'
+          git push origin HEAD:mejorastudio
