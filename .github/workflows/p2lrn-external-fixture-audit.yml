@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/audit-external-script-handlers.mjs'
       - 'scripts/audit-community-imscc-sources.mjs'
+      - 'scripts/audit-community-video-origin.mjs'
       - '.github/workflows/p2lrn-external-fixture-audit.yml'
   workflow_dispatch:
 permissions:
@@ -24,3 +25,4 @@ jobs:
         run: |
           node scripts/audit-external-script-handlers.mjs
           node scripts/audit-community-imscc-sources.mjs
+          node scripts/audit-community-video-origin.mjs
