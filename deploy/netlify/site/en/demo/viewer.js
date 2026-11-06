@@ -93,7 +93,7 @@
     sample.replaceChildren();
     const groups=new Map();
     for(const item of catalog){
-      const key=categoryLabel(item.category);
+      const key=item.sampleRole==='technical-fixture'?'Technical format fixtures (not complete courses)':categoryLabel(item.category);
       if(!groups.has(key)){
         const group=document.createElement('optgroup');
         group.label=key;
