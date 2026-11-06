@@ -200,6 +200,39 @@ const catalog = {
 };
 await writeFile(join(examplesOutput,'catalog.json'),JSON.stringify(catalog,null,2)+'\n');
 
+// Render meaningful examples without JavaScript for accessibility and search
+// engines. The interactive gallery progressively enhances this static index;
+// no lesson script executes in the documentation page.
+const publicCommunitySamples=catalog.examples.filter(item=>
+  /^\/examples\/canonical\/external\/free\/[a-z0-9-]+\.p2lrn$/u.test(item.url??''));
+const escapeCommunityText=value=>String(value??'').replace(/[&<>"']/gu,ch=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+})[ch]);
+if(publicCommunitySamples.length!==freeProvenanceMap.size)
+  throw new Error('Static example index count differs from verified community catalog');
+for(const [rel,isEnglish] of [['docs/ejemplos/index.html',false],['en/docs/ejemplos/index.html',true]]){
+  const target=join(outputRoot,...rel.split('/'));
+  let html=await readFile(target,'utf8');
+  const heading=isEnglish?'Examples available without JavaScript':'Ejemplos disponibles sin JavaScript';
+  const action=isEnglish?'Open in Player':'Abrir en Player';
+  const download=isEnglish?'Download package':'Descargar paquete';
+  const items=publicCommunitySamples.map(entry=>{
+    const title=escapeCommunityText(entry.title||entry.url.split('/').at(-1));
+    const kind=escapeCommunityText(entry.sourceFormat||'P2LRN');
+    const view=(isEnglish?'/en/demo/':'/demo/')+'?src='+encodeURIComponent(entry.url);
+    return '<li><strong>'+title+'</strong> <span>('+kind+')</span> '+
+      '<a href="'+view+'">'+action+'</a> · '+
+      '<a href="'+entry.url+'" download>'+download+'</a></li>';
+  }).join('');
+  const replacement='<div data-community-examples><div class="community-static-index">'+
+    '<h3>'+heading+'</h3><ul>'+items+'</ul></div></div>';
+  if(!/<div data-community-examples>[\s\S]*?<\/div>/iu.test(html))
+    throw new Error('Missing community gallery mount: '+rel);
+  html=html.replace(/<div data-community-examples>[\s\S]*?<\/div>/iu,replacement);
+  await writeFile(target,html,'utf8');
+}
+
+
 function stripTags(value) {
   return String(value ?? '')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
