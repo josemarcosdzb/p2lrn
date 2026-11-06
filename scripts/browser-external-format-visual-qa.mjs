@@ -92,6 +92,7 @@ async function findVisibleText(locator,{minimumText=30,marker=null}={}){
  let result='';
  for(let n=0;n<35;n++){
   result=String(await locator.innerText({timeout:12000}).catch(()=>'' )).trim();
+  if(/^Falta el atributo src del paquete \.p2lrn\.?$/u.test(result)) { await new Promise(r=>setTimeout(r,450));continue; }
   if(result.length>=minimumText&&(!marker||marker.test(result)))return result;
   await new Promise(r=>setTimeout(r,450));
  }
@@ -99,7 +100,7 @@ async function findVisibleText(locator,{minimumText=30,marker=null}={}){
 }
 try{
  // Verify both public-facing gallery languages and the complete 19-item catalog.
- for(const [route,filterName] of [['/docs/ejemplos/','es'],['/en/docs/ejemplos/','en']]){
+ for(const [route,filterName] of [['/docs/ejemplos/','es'],['/en/docs/examples/','en']]){
    const page=await browser.newPage({viewport:{width:1280,height:820}});
    try{
      await page.goto(base+route,{waitUntil:'domcontentloaded',timeout:25000});
@@ -147,6 +148,12 @@ try{
      assert.equal(await button.isDisabled(),false,'Expected playable '+item.navigateTo+' activity');
      await button.click({timeout:20000});
    }
+   // Do not classify a loading placeholder as successfully displayed content.
+   // A package entrypoint may be valid while its first activity fails to render.
+   await page.waitForFunction(()=>
+     document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:rendered') ||
+     document.querySelector('[data-runtime-state]')?.dataset.state==='error',
+     null,{timeout:40000});
    if(item.frame)await player.locator(item.frame).waitFor({timeout:25000});
    let content=item.frame?player.frameLocator(item.frame).locator('body'):player.locator('.p2lrn-stage');
    if(item.name==='h5p-crossword'||item.kind==='h5p'){
@@ -172,7 +179,7 @@ try{
        const expected=item.name.includes('second-item')?'C':'B';
        await qti.locator('input[type="radio"][value="'+expected+'"]').check({timeout:9000});
        await qti.getByRole('button',{name:'Enviar respuestas'}).click({timeout:9000});
-       await page.waitForFunction(()=>document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:complete'),{timeout:11000});
+       await page.waitForFunction(()=>document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:complete'),null,{timeout:11000});
        const eventLog=await page.locator('[data-event-log]').innerText();
        assert(eventLog.includes('"simpleMatchCorrect": true')||eventLog.includes('"simpleMatchCorrect":true'),
          'QTI correct-response feedback did not match the example fixture');
@@ -194,6 +201,13 @@ try{
        const inputs=content.locator('button:visible,input:visible,a:visible');
        if((await inputs.count())>0){
          interaction={attempted:false,verified:false,kind:'scorm-controls-visible',controls:await inputs.count()};
+         const next=content.getByRole('button',{name:/^(?:next|continue|siguiente|continuar)$/i}).first();
+         if(await next.isVisible().catch(()=>false) && await next.isEnabled().catch(()=>false)){
+           const before=await content.innerText();
+           await next.click({timeout:9000});
+           const after=await content.innerText();
+           interaction={attempted:true,verified:after!==before,kind:'scorm-next-step',controls:await inputs.count()};
+         }
        }else interaction={attempted:false,verified:false,kind:'no-interaction-exposed'};
      }else if(item.kind==='imscc'){
        const htmlIframe=player.locator('iframe.p2lrn-package-runtime');
