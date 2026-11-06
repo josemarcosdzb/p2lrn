@@ -93,6 +93,9 @@ const examplesOutput = join(outputRoot,'examples');
 // Always reset examples so deleted courses cannot survive incremental Netlify builds.
 await rm(examplesOutput,{recursive:true,force:true});
 await mkdir(examplesOutput,{recursive:true});
+// Retain the public Analytics example script after clearing obsolete sample packages.
+// The documentation references this exact route in both languages.
+await copyFile(join(siteRoot,'examples','p2lrn-results-index.mjs'),join(examplesOutput,'p2lrn-results-index.mjs'));
 const canonicalSource = join(root,'examples','canonical');
 const canonicalOutput = join(examplesOutput,'canonical');
 await mkdir(canonicalOutput,{recursive:true});
