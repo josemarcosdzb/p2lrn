@@ -239,8 +239,8 @@ async function browserScenario(){
       'Hotspot labels were not updated in the WYSIWYG course');
     // Upload a tiny local raster image; it must survive strict Studio HTML sanitization.
     const fileInput=zonesMenu.querySelector('input[type=file]');
-    const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y7lMqYAAAAASUVORK5CYII='),x=>x.charCodeAt(0));
-    const files=new DataTransfer();files.items.add(new File([bytes],'fondo.png',{type:'image/png'}));
+    const pngBytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y7lMqYAAAAASUVORK5CYII='),x=>x.charCodeAt(0));
+    const files=new DataTransfer();files.items.add(new File([pngBytes],'fondo.png',{type:'image/png'}));
     fileInput.files=files.files;fileInput.dispatchEvent(new Event('change',{bubbles:true}));
     for(let i=0;i<60&&!activityDrop.querySelector('[data-p2lrn-dnd-image]');i++)
       await new Promise(done=>setTimeout(done,25));
