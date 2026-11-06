@@ -61,6 +61,7 @@ await new Promise((ok,no)=>{server.once('error',no);server.listen(0,'127.0.0.1',
 const base='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({executablePath:browserExe,headless:true,args:['--no-first-run','--no-default-browser-check']});
 const results=[];
+const communityOnly=process.argv.includes('--community-only');
 const cases=[
  {name:'cmi5-geology-pretest',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',frame:'iframe.p2lrn-package-runtime',marker:/pre.?test|question|geology|pregunta|assessment|test/i,minimumText:30},
  {name:'cmi5-geology-content-1',course:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn',navigateTo:'Content',navigateIndex:0,frame:'iframe.p2lrn-package-runtime',marker:/geology|earth|content|next|previous|rock|page/i,minimumText:28},
@@ -133,7 +134,7 @@ try{
      await page.screenshot({path:join(screenshotRoot,filterName+'-gallery-FAIL.png'),timeout:7000}).catch(()=>{});
    }finally{await page.close();}
  }
- for(const item of cases){
+ for(const item of cases.filter(entry=>!communityOnly||entry.name.startsWith('community-'))){
   const page=await browser.newPage({viewport:{width:1350,height:850}});
   const errors=[];
   page.on('pageerror',err=>errors.push(String(err.message).slice(0,600)));
@@ -158,9 +159,13 @@ try{
    let content=item.frame?player.frameLocator(item.frame).locator('body'):player.locator('.p2lrn-stage');
    if(item.name==='h5p-crossword'||item.kind==='h5p'){
      const outer=player.frameLocator(item.frame);
-     const nested=outer.locator('iframe.h5p-iframe');
-     if(await nested.waitFor({timeout:22000}).then(()=>true).catch(()=>false))
-       content=outer.frameLocator('iframe.h5p-iframe').locator('body');
+     // Opaque H5P runs directly in this frame. Do not wait 22 seconds for
+     // an inner iframe that deliberately does not exist in this topology.
+     if(!(await outer.locator('.h5p-content').count())){
+       const nested=outer.locator('iframe.h5p-iframe');
+       if(await nested.waitFor({timeout:5500}).then(()=>true).catch(()=>false))
+         content=outer.frameLocator('iframe.h5p-iframe').locator('body');
+     }
    }
    const text=await findVisibleText(content,item);
    // Require actual activity content, not a Player shell or a 'preserved only' placeholder.
