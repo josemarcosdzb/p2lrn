@@ -29,6 +29,7 @@ jobs:
           $selected=@(
             'examples/canonical/external/free',
             'deploy/netlify/build-site.mjs',
+            'deploy/netlify/build-skill-downloads.mjs',
             'deploy/netlify/site/docs/ejemplos',
             'deploy/netlify/site/en/docs/ejemplos/index.html',
             'packages/toolkit/web/h5p-auto-runtime.js',
@@ -36,6 +37,7 @@ jobs:
             'packages/toolkit/web/p2lrn-player.js',
             'packages/toolkit/web/built-in-renderers.js',
             'packages/toolkit/web/renderers/qti-runtime.js',
+            'packages/toolkit/web/qti-compatibility.js',
             'scripts/verify-community-samples.mjs',
             'scripts/browser-external-format-visual-qa.mjs'
           )
