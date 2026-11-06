@@ -4,6 +4,7 @@ on:
     branches: [mejorastudio]
     paths:
       - 'scripts/audit-external-script-handlers.mjs'
+      - 'scripts/audit-community-imscc-sources.mjs'
       - '.github/workflows/p2lrn-external-fixture-audit.yml'
   workflow_dispatch:
 permissions:
@@ -20,4 +21,6 @@ jobs:
         with:
           node-version: '22'
       - name: Inspect source file without executing it
-        run: node scripts/audit-external-script-handlers.mjs
+        run: |
+          node scripts/audit-external-script-handlers.mjs
+          node scripts/audit-community-imscc-sources.mjs
