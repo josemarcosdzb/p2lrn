@@ -89,7 +89,7 @@
       'Verified integrity confirms that the package has not been altered; it does not certify pedagogical completeness or full standard conformance.':
       'La integridad verificada confirma que el paquete no ha sido alterado; no certifica que sea un curso desarrollado ni la conformidad completa del estándar.';
     const children=[heading,description,integrity];
-    const fullCourse=catalog.find(row=>row.url==='/examples/canonical/external/common-cartridge-topkit.p2lrn');
+    const fullCourse=catalog.find(row=>row.url==='/examples/canonical/external/common-cartridge-topkit.p2lrn')??{url:'/examples/canonical/external/common-cartridge-topkit.p2lrn'};
     if(fullCourse){
       const link=document.createElement('a');
       const dest=new URL(en?'/en/demo/':'/demo/',location.origin);
