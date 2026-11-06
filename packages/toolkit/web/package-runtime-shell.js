@@ -76,17 +76,17 @@ function resolveBundledMedia(base, reference) {
   if(direct)return direct;
   let raw=String(reference??'').trim();
   if(!raw||raw.startsWith('#')||/^(?:data|blob|javascript|file):/iu.test(raw))return null;
-  const suffixMatch=/^([^?#]*)(?:\\?[^#]*)?(?:#.*)?$/u.exec(raw);
+  const suffixMatch=/^([^?#]*)(\?[^#]*)?(#.*)?$/u.exec(raw);
   raw=suffixMatch?.[1]??raw;
-  raw=raw.replace(/^\\$IMS-CC-(?:FILEBASE|WEB-BASE)\\$/iu,'').replace(/^\\.\\//u,'');
-  if(/^(?:https?:)?\\/\\//iu.test(raw)){
+  raw=raw.replace(/^\$IMS-CC-(?:FILEBASE|WEB-BASE)\$/iu,'').replace(/^\.\//u,'');
+  if(/^(?:https?:)?\/\//iu.test(raw)){
     try{raw=new URL(raw.startsWith('//')?'https:'+raw:raw).pathname;}catch{return null;}
   }
   try{raw=decodeURIComponent(raw);}catch{return null;}
-  if(raw.includes('\\0')||raw.includes('\\\\'))return null;
-  raw=raw.replace(/^\\/+/u,'');
-  const isMedia=(key)=>/^(?:image|video|audio|font)\\//iu.test(files.get(key)?.mediaType??'') ||
-    /\\.(?:png|jpe?g|gif|webp|svg|avif|bmp|ico|mp3|ogg|wav|mp4|webm|woff2?|ttf|otf)$/iu.test(key);
+  if(raw.includes('\0')||raw.includes('\\'))return null;
+  raw=raw.replace(/^\/+/u,'');
+  const isMedia=(key)=>/^(?:image|video|audio|font)\//iu.test(files.get(key)?.mediaType??'') ||
+    /\.(?:png|jpe?g|gif|webp|svg|avif|bmp|ico|mp3|ogg|wav|mp4|webm|woff2?|ttf|otf)$/iu.test(key);
   const baseDir=base.includes('/')?base.slice(0,base.lastIndexOf('/')+1):'';
   const possibilities=[
     normalize(baseDir+raw),normalize(raw),normalize('web_resources/'+raw),
