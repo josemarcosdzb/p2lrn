@@ -21,7 +21,8 @@ export function addStudioDropPair(section,{x=10,y=14,width=33,height=26}={}){
     throw new RangeError('Máximo de 20 zonas por actividad.');
   const existing=[...section.querySelectorAll('[data-p2lrn-dnd-item]')].map(node=>Number(node.dataset.p2lrnDndItem?.replace('item-',''))||0);
   const id='item-'+(Math.max(0,...existing)+1);
-  const ordinal=existing.length+1;
+  // Keep displayed numbers unique after deleting a middle zone and adding another.
+  const ordinal=Number(id.slice('item-'.length));
   const zone=element(section.ownerDocument,'div',{
     'data-p2lrn-dnd-zone':'zone-'+id,
     'data-p2lrn-dnd-accept':id,
@@ -43,14 +44,17 @@ export function addStudioDropPair(section,{x=10,y=14,width=33,height=26}={}){
     'data-p2lrn-dnd-item':id,
     role:'listitem',
     style:{
-      display:'inline-flex',alignItems:'center',justifyContent:'center',
-      minWidth:'92px',minHeight:'42px',padding:'9px 13px',
+      display:'inline-flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'6px',
+      minWidth:'106px',minHeight:'48px',padding:'9px 13px',
       border:'1px solid #94a3b8',borderRadius:'8px',
       backgroundColor:'#fff',color:'#172554',fontWeight:'650',
       cursor:'grab',touchAction:'none',boxSizing:'border-box',
     },
-    text:'Ficha '+ordinal,
   });
+  item.append(element(section.ownerDocument,'span',{
+    'data-p2lrn-dnd-text':'',text:'Ficha '+ordinal,
+    style:{display:'block',width:'100%',fontSize:'16px',lineHeight:'1.35',textAlign:'center',whiteSpace:'normal',overflowWrap:'anywhere'},
+  }));
   board.append(zone);
   tray.append(item);
   return {zone,item};
@@ -111,16 +115,82 @@ export function removeStudioDropPair(section,zone){
   });
   return true;
 }
-export async function setStudioDropBackground(section,file){
-  if(!isStudioDropActivity(section))throw new Error('Selecciona una actividad de arrastrar y soltar.');
+function findDropItem(section,item){
+  return isStudioDropActivity(section)&&item?.matches?.('[data-p2lrn-dnd-item]')&&section.contains(item);
+}
+export function getStudioDropItemText(item){
+  const label=item?.querySelector?.('[data-p2lrn-dnd-text]');
+  if(label)return label.textContent?.trim()||'';
+  // Earlier courses stored the text directly inside the tile.
+  return [...(item?.childNodes??[])].filter(node=>node.nodeType===3)
+    .map(node=>node.textContent||'').join('').trim();
+}
+export function setStudioDropItemText(section,item,text){
+  if(!findDropItem(section,item))throw new Error('Selecciona una ficha de esta actividad.');
+  const value=String(text??'').trim().slice(0,120);
+  if(!value&&!item.querySelector('[data-p2lrn-dnd-item-image]'))
+    throw new Error('La ficha necesita texto o una imagen.');
+  let label=item.querySelector('[data-p2lrn-dnd-text]');
+  if(!label){
+    label=element(section.ownerDocument,'span',{
+      'data-p2lrn-dnd-text':'',
+      style:{display:'block',width:'100%',fontSize:'16px',lineHeight:'1.35',textAlign:'center',overflowWrap:'anywhere'},
+    });
+    for(const child of [...item.childNodes])if(child.nodeType===3)child.remove();
+    item.append(label);
+  }
+  label.textContent=value;
+  label.hidden=!value;
+  return label;
+}
+async function readStudioDropImage(file){
   if(!file||!ALLOWED_IMAGE.has(file.type)||file.size<=0||file.size>MAX_IMAGE_BYTES)
     throw new Error('Elige una imagen PNG, JPEG, WebP, GIF o AVIF de hasta 5 MB.');
   const bytes=new Uint8Array(await file.arrayBuffer());
-  let text='';
-  // Chunking avoids argument limits and works in the browser's isolated Studio.
+  if(bytes.byteLength!==file.size||bytes.byteLength>MAX_IMAGE_BYTES)
+    throw new Error('El archivo de imagen no coincide con su tamaño declarado.');
+  let binary='';
   for(let offset=0;offset<bytes.length;offset+=8192)
-    text+=String.fromCharCode(...bytes.subarray(offset,offset+8192));
-  const data='data:'+file.type+';base64,'+btoa(text);
+    binary+=String.fromCharCode(...bytes.subarray(offset,offset+8192));
+  return 'data:'+file.type+';base64,'+btoa(binary);
+}
+export async function setStudioDropItemImage(section,item,file){
+  if(!findDropItem(section,item))throw new Error('Selecciona una ficha de esta actividad.');
+  const data=await readStudioDropImage(file);
+  const previous=item.querySelector('[data-p2lrn-dnd-item-image]');
+  const image=element(section.ownerDocument,'img',{
+    'data-p2lrn-dnd-item-image':'',src:data,
+    alt:String(file.name||'Imagen de ficha').replace(/\.[^.]+$/,'').trim().slice(0,120)||'Imagen de ficha',
+    draggable:'false',
+    style:{
+      display:'block',width:'130px',maxWidth:'100%',height:'92px',maxHeight:'140px',
+      objectFit:'contain',objectPosition:'center',pointerEvents:'none',userSelect:'none',
+      borderRadius:'6px',margin:'0 auto',
+    },
+  });
+  if(previous)previous.replaceWith(image);else item.prepend(image);
+  return image;
+}
+export function setStudioDropItemImageAlt(section,item,text){
+  if(!findDropItem(section,item))throw new Error('Selecciona una ficha de esta actividad.');
+  const image=item.querySelector('[data-p2lrn-dnd-item-image]');
+  if(!image)throw new Error('Primero añade una imagen a la ficha.');
+  const alt=String(text??'').trim().slice(0,120);
+  if(!alt)throw new Error('Escribe una descripción de la imagen para accesibilidad.');
+  image.alt=alt;
+  return image;
+}
+export function removeStudioDropItemImage(section,item){
+  if(!findDropItem(section,item))return false;
+  const image=item.querySelector('[data-p2lrn-dnd-item-image]');
+  if(!image)return false;
+  if(!getStudioDropItemText(item))throw new Error('Antes de quitar la imagen, escribe el texto de la ficha.');
+  image.remove();
+  return true;
+}
+export async function setStudioDropBackground(section,file){
+  if(!isStudioDropActivity(section))throw new Error('Selecciona una actividad de arrastrar y soltar.');
+  const data=await readStudioDropImage(file);
   const board=section.querySelector('[data-p2lrn-dnd-board]');
   if(!board)throw new Error('Escenario de destino no disponible.');
   const old=board.querySelector('[data-p2lrn-dnd-image]');
@@ -190,6 +260,14 @@ export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=
     if(changed)onChange();
   };
   const onClick=event=>{
+    const item=event.target.closest?.('[data-p2lrn-dnd-item]');
+    if(item&&surface.contains(item)){
+      const activity=item.closest('[data-p2lrn-dnd="1"]');
+      const matchingZone=[...(activity?.querySelectorAll('[data-p2lrn-dnd-zone]')??[])]
+        .find(zone=>zone.dataset.p2lrnDndAccept===item.dataset.p2lrnDndItem);
+      if(matchingZone){event.preventDefault();select(matchingZone);}
+      return;
+    }
     if(event.target.closest?.('[data-p2lrn-dnd-zone]'))return;
     if(!event.target.closest?.('[data-p2lrn-dnd="1"]'))clear();
   };
