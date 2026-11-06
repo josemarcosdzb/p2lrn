@@ -136,6 +136,14 @@ if(await exists(freeProvenancePath)){
       throw new Error('Community sample is missing exact HTTPS provenance or SHA-256: '+item.slug);
     if(typeof item.title!=='string'||!item.title.trim()||item.title.length>140)
       throw new Error('Community sample title invalid: '+item.slug);
+    // Keep educational samples distinct from standards-compatibility fixtures.
+    // These fields label the published metadata; the pinned course bytes stay unchanged.
+    if(item.sampleRole!==undefined){
+      if(item.sampleRole!=='technical-fixture' ||
+          ![item.sampleNoteEs,item.sampleNoteEn].every(x=>typeof x==='string'&&
+            x.length>=30&&x.length<=400&&x.trim()===x))
+        throw new Error('Invalid technical fixture description: '+item.slug);
+    }
     freeProvenanceMap.set(item.slug,item);
   }
 }
@@ -164,6 +172,11 @@ for (const path of (await walk(join(canonicalSource,'external'))).filter((item)=
       license:freeMetadata.license,
       sourceSha256:freeMetadata.sourceSha256,
       browserVerified:freeMetadata.browserVerified===true,
+      ...(freeMetadata.sampleRole ? {
+        sampleRole:freeMetadata.sampleRole,
+        sampleNoteEs:freeMetadata.sampleNoteEs,
+        sampleNoteEn:freeMetadata.sampleNoteEn,
+      } : {}),
       provenance:'/examples/canonical/external/free/provenance.json',
     } : {}),
     url:'/examples/canonical/' + rel,
