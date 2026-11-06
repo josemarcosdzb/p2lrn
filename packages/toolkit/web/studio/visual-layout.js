@@ -1,4 +1,6 @@
-// Shared, dependency-free visual composition tools for HTML lessons.
+import {createStudioShape,getStudioShape,STUDIO_SHAPES} from './studio-shapes.js';
+import {createStudioDropActivity} from './studio-drop-activity.js';
+// Shared visual composition tools for HTML lessons.
 // The saved output is ordinary semantic HTML: no scripts or embedded runtimes.
 const BLOCKS=Object.freeze([
   ['section','Sección','Sección visual con título y texto'],
@@ -7,24 +9,36 @@ const BLOCKS=Object.freeze([
   ['table','Tabla','Tabla editable de dos columnas'],
   ['text-box','Cuadro de texto','Texto independiente que puedes mover y redimensionar'],
   ['shape','Forma','Forma visual editable y redimensionable'],
+  ['dropdown','Desplegable','Contenido que se abre o se cierra con clic o teclado'],
+  ['drag-drop','Arrastrar y soltar','Actividad con zonas sobre imagen y bandeja de fichas'], 
   ['divider','Separador','Separador horizontal'],
 ]);
 const setStyle=(node,properties)=>{Object.assign(node.style,properties);return node;};
 const elt=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
 function makeBlock(kind){
   if(kind==='divider')return elt('hr');
+  if(kind==='drag-drop')return createStudioDropActivity(document);
+  if(kind==='dropdown'){
+    const details=elt('details');details.dataset.p2lrnLayout='dropdown';details.open=true;
+    setStyle(details,{width:'100%',maxWidth:'100%',boxSizing:'border-box',margin:'16px 0',padding:'12px 16px',border:'1px solid #94a3b8',borderRadius:'9px',backgroundColor:'#f8fafc'});
+    const summary=elt('summary','Pulsa para desplegar');
+    setStyle(summary,{cursor:'pointer',fontSize:'18px',fontWeight:'650',color:'#0f172a'});
+    const body=elt('div');setStyle(body,{padding:'10px 0',lineHeight:'1.6'});
+    body.append(elt('p','Escribe aquí el contenido del desplegable.'));
+    details.append(summary,body);return details;
+  }
+  if(kind.startsWith('shape:')){
+    const id=kind.slice(6);
+    if(!getStudioShape(id))throw new RangeError('Forma no reconocida.');
+    return createStudioShape(document,id);
+  }
   if(kind==='text-box'){
     const box=elt('section');box.dataset.p2lrnLayout='text-box';
     setStyle(box,{width:'420px',maxWidth:'100%',boxSizing:'border-box',minHeight:'96px',padding:'18px',margin:'16px 0',border:'1px dashed #94a3b8',borderRadius:'10px',backgroundColor:'#fff'});
     box.append(elt('p','Escribe aquí. Puedes mover y redimensionar este cuadro.'));
     return box;
   }
-  if(kind==='shape'){
-    const shape=elt('figure');shape.dataset.p2lrnLayout='shape';
-    setStyle(shape,{width:'260px',maxWidth:'100%',boxSizing:'border-box',minHeight:'126px',padding:'20px',margin:'16px 0',borderRadius:'16px',border:'2px solid #93c5fd',backgroundColor:'#dbeafe',textAlign:'center'});
-    shape.append(elt('figcaption','Forma editable'));
-    return shape;
-  }
+  if(kind==='shape')return createStudioShape(document,'rectangle');
   if(kind==='table'){
     const table=elt('table');table.setAttribute('data-p2lrn-layout','table');
     setStyle(table,{width:'100%',borderCollapse:'collapse',margin:'20px 0'});
@@ -124,7 +138,7 @@ function insertAtSelection(surface,block,{anchorNode=null,targetElement=null}={}
 }
 export function insertVisualLayoutBlock(surface,kind,{anchorNode=null,targetElement=null}={}){
   if(!surface?.isContentEditable)throw new Error('Selecciona una lección HTML editable.');
-  if(!BLOCKS.some(([id])=>id===kind))throw new RangeError('Bloque visual desconocido.');
+  if(!BLOCKS.some(([id])=>id===kind)&&!(kind.startsWith('shape:')&&getStudioShape(kind.slice(6))))throw new RangeError('Bloque visual desconocido.');
   return insertAtSelection(surface,makeBlock(kind),{anchorNode,targetElement});
 }
 export function mountVisualLayoutTools({host,surface,onStatus}={}){
@@ -151,3 +165,4 @@ export function mountVisualLayoutTools({host,surface,onStatus}={}){
   return {toolbar:bar,dispose(){bar.remove();}};
 }
 export const VISUAL_LAYOUT_BLOCKS=BLOCKS.map(([id,label])=>({id,label}));
+export {STUDIO_SHAPES};
