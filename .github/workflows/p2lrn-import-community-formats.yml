@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: '22'
       - name: Download, convert and inspect immutable licensed samples
-        shell: pwsh
+        shell: powershell
         run: |
           node --check scripts/import-community-formats.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -40,7 +40,7 @@ jobs:
           node scripts/verify-community-samples.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Record changes on the same branch
-        shell: pwsh
+        shell: powershell
         run: |
           git add -- examples/canonical/external/free
           if (git diff --cached --quiet) {
