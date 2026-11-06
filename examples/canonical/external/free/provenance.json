@@ -136,31 +136,37 @@
     {
       "slug": "imscc-canvas-cc-gem",
       "kind": "imscc",
-      "title": "Common Cartridge — Canvas Test Course",
+      "title": "Common Cartridge — Canvas (3 assignment test fixtures)",
       "license": "MIT",
       "sourceUrl": "https://raw.githubusercontent.com/instructure/common-cartridge-viewer/3a4e1da4215a5de646e6230ed092647822168563/public/test-cartridges/canvas_cc_gem_course.imscc",
       "licenseUrl": "https://github.com/instructure/common-cartridge-viewer/blob/3a4e1da4215a5de646e6230ed092647822168563/LICENSE",
       "sourceSha256": "sha256:93728821240844e982e5f5ecd538eb455d95c4b5a15abf8418f5abf34228d8d6",
       "packageSha256": "sha256:1069c82f170aa0460dd5d19b7019bd66f068c1f50e0af91ba7b2337d668c80b7",
       "browserVerified": false,
-      "origin": "Instructure test fixtures"
+      "origin": "Instructure test fixtures",
+      "sampleRole": "technical-fixture",
+      "sampleNoteEs": "Cartucho técnico de Instructure: contiene tres tareas mínimas que prueban tipos de entrega. No es un curso educativo completo; la frase breve es contenido de la fuente original.",
+      "sampleNoteEn": "Instructure technical fixture: three minimal assignments exercise submission types. This is not a complete learning course; the short text comes from the original source."
     },
     {
       "slug": "imscc-latex",
       "kind": "imscc",
-      "title": "Common Cartridge — Mathematics and LaTeX",
+      "title": "Common Cartridge — Mathematics / LaTeX test fixture",
       "license": "MIT",
       "sourceUrl": "https://raw.githubusercontent.com/instructure/common-cartridge-viewer/3a4e1da4215a5de646e6230ed092647822168563/public/test-cartridges/latex.imscc",
       "licenseUrl": "https://github.com/instructure/common-cartridge-viewer/blob/3a4e1da4215a5de646e6230ed092647822168563/LICENSE",
       "sourceSha256": "sha256:772c2617d3ebba11d92ef867dadce2f74f7b924418f32c9072a87cba1508ab85",
       "packageSha256": "sha256:8fee6b0b4ea8aeef643a1cb321bf1590fdb0340cb67ca2dc4e209c29e56f87ee",
       "browserVerified": false,
-      "origin": "Instructure test fixtures"
+      "origin": "Instructure test fixtures",
+      "sampleRole": "technical-fixture",
+      "sampleNoteEs": "Cartucho técnico para comprobar importación y presentación de contenido matemático y LaTeX; no representa un curso desarrollado.",
+      "sampleNoteEn": "Technical cartridge for checking mathematics and LaTeX import and display; not a fully authored course."
     },
     {
       "slug": "imscc-single-page",
       "kind": "imscc",
-      "title": "Common Cartridge — Accessible Learning Lesson",
+      "title": "Common Cartridge — Accessible single-lesson sample",
       "license": "MIT",
       "sourceUrl": "https://github.com/josemarcosdzb/p2lrn/blob/mejorastudio/scripts/enrich-community-imscc-page.mjs",
       "licenseUrl": "https://github.com/instructure/common-cartridge-viewer/blob/3a4e1da4215a5de646e6230ed092647822168563/LICENSE",
@@ -179,7 +185,10 @@
         "upstreamSourceSha256": "sha256:9681c4f94e517aaf7fa87f2680a6601b7b9f84e384afa41d0f97bc40f518a02e",
         "upstreamPackageSha256": "sha256:15657fe48cf9d5dd49f9f36bc5ac292028157aa31c0a739850062fb171a7beee",
         "upstreamEmbeddedAs": "p2lrn-provenance/upstream-original.imscc"
-      }
+      },
+      "sampleRole": "technical-fixture",
+      "sampleNoteEs": "Muestra de una sola lección, adaptada y documentada como contenido derivado; no representa un curso completo.",
+      "sampleNoteEn": "Single-lesson sample, adapted and documented as derived content; not a complete learning course."
     },
     {
       "slug": "meeting-or-email-scorm2004",
