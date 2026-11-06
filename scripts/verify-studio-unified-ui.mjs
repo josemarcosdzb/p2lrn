@@ -230,6 +230,13 @@ async function browserScenario(){
     expect(activityDrop.querySelectorAll('[data-p2lrn-dnd-zone]').length===3,
       'Adding a new image hotspot did not also add a draggable item');
     expect(activityDrop.querySelectorAll('[data-p2lrn-dnd-item]').length===3,'Draggable item tray did not grow');
+    const zoneName=zonesMenu.querySelector('[data-p2lrn-drop-name=zone]');
+    const itemName=zonesMenu.querySelector('[data-p2lrn-drop-name=item]');
+    expect(zoneName&&!zoneName.disabled&&itemName&&!itemName.disabled,'Selected hotspot needs editable labels');
+    zoneName.value='Zona de reciclaje';zoneName.dispatchEvent(new Event('change',{bubbles:true}));
+    itemName.value='Papel reciclado';itemName.dispatchEvent(new Event('change',{bubbles:true}));
+    expect(activityDrop.textContent.includes('Zona de reciclaje')&&activityDrop.textContent.includes('Papel reciclado'),
+      'Hotspot labels were not updated in the WYSIWYG course');
     // Upload a tiny local raster image; it must survive strict Studio HTML sanitization.
     const fileInput=zonesMenu.querySelector('input[type=file]');
     const bytes=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y7lMqYAAAAASUVORK5CYII='),x=>x.charCodeAt(0));
@@ -276,6 +283,7 @@ async function browserScenario(){
     expect(html.includes('data-p2lrn-dnd="1"')&&html.includes('data-p2lrn-dnd-accept="item-3"'),
       'Exported course lost image hotspot mapping');
     expect(html.includes('data:image/png;base64,'),'Exported course lost the author-provided background image');
+    expect(html.includes('Papel reciclado')&&html.includes('Zona de reciclaje'),'Exported course lost customized hotspot answers');
     expect(!html.includes('<script')&&!html.includes('onerror='),'Lesson must remain inert HTML');
     item.ui.setMessage('Cambios guardados');
     expect(item.toolbar.querySelector('[role=status]').textContent==='Cambios guardados','Status feedback is not visible');
