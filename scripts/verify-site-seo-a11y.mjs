@@ -348,6 +348,42 @@ for(const [route,heading] of [
     errors.push('Missing substantive package compatibility explanation: '+route);
 }
 
+
+// Regression gates for the 19-format gallery: crawlable content and accessible
+// colors must remain present even with JavaScript switched off.
+const communityCss=await readFile(join(out,'docs','ejemplos','community-gallery.css'),'utf8');
+const hexValue=name=>{
+  const hit=new RegExp('--'+name+':(#[0-9a-fA-F]{6})').exec(communityCss);
+  return hit?.[1]??null;
+};
+const luminance=hex=>{
+  const rgb=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255)
+    .map(x=>x<=.04045?x/12.92:Math.pow((x+.055)/1.055,2.4));
+  return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
+};
+const ratio=(a,b)=>{
+  const la=luminance(a),lb=luminance(b);
+  return (Math.max(la,lb)+.05)/(Math.min(la,lb)+.05);
+};
+for(const field of ['community-ink','community-muted','community-link']){
+  const color=hexValue(field);
+  if(!color||ratio(color,'#ffffff')<4.5)
+    errors.push('Gallery '+field+' fails WCAG AA 4.5:1 foreground contrast on white');
+}
+for(const [file,locale] of [
+  ['docs/ejemplos/index.html','es'],['en/docs/examples/index.html','en']
+]){
+  const html=await readFile(join(out,...file.split('/')),'utf8').catch(()=>null);
+  if(!html){errors.push('Examples documentation route missing: '+file);continue;}
+  const index=/<div class="community-static-index">([\s\S]*?)<\/div>/u.exec(html)?.[1]??'';
+  if((index.match(/<li>/gu)||[]).length!==19 ||
+     (index.match(/\/examples\/canonical\/external\/free\/[a-z0-9-]+\.p2lrn/gu)||[]).length<19)
+    errors.push('Examples static fallback lacks 19 crawlable package links: '+locale);
+  const sidebar=/<nav class="doc-fallback-nav"[^>]*>([\s\S]*?)<\/nav>/u.exec(html)?.[1]??'';
+  if((sidebar.match(/<a\b/gu)||[]).length!==10)
+    errors.push('Documentation must expose fallback navigation without JS: '+locale);
+}
+
 const result={ok:errors.length===0,sourcePages:sourcePages.length,indexable:indexable.length,aliases:aliases.length,sitemapURLs:xmlUrls.length,quickstartVerified:Boolean(quick&&creator&&quick.equals(creator)),errors};
 console.log(JSON.stringify(result,null,2));
 if(errors.length)process.exitCode=1;
