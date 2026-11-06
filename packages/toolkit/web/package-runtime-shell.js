@@ -11,9 +11,7 @@ let active = false;
 let resizeObserver = null;
 let runtimeProfile = null;
 let cmi5Config = null;
-let handlerObserver = null;
-let pendingHandlerPass = Promise.resolve();
-let handlerPassQueued = false;
+const legacyHandlerObservers = new WeakMap();
 // Prevent repeated mutation-driven handler compilation from bypassing a
 // per-document limit. No new privileges or network access are added.
 let legacyHandlersInstalled = 0;
@@ -251,6 +249,12 @@ function rewriteHtml(path) {
 }
 function wireDocument(doc, path) {
   if (!doc) return;
+  // Nested srcdoc frames are separate Document objects: observe and wire
+  // handlers in their OWN sandboxed context. The outer MutationObserver cannot
+  // see attributes or generated elements inside a child document.
+  observeLegacyHandlers(doc);
+  void installLegacyInlineHandlers(doc).catch(error=>
+    reply('error',{message:'Legacy document handlers: '+String(error?.message??error)}));
   doc.addEventListener('click', (event) => {
     const anchor = event.target?.closest?.('a,area');
     if (!anchor) return;
@@ -276,6 +280,7 @@ function wireDocument(doc, path) {
   }
 }
 async function installLegacyInlineHandlers(root) {
+  const ownerDoc=root.nodeType===9?root:(root.ownerDocument??document);
   // Existing cmi5/IMS packages may rely on onclick/onchange HTML attributes.
   // A strict embedding CSP blocks those attributes even though package JS
   // runs in a sandboxed opaque-origin iframe. Convert them to blob-backed
@@ -303,7 +308,7 @@ async function installLegacyInlineHandlers(root) {
         el.setAttribute('data-p2lrn-legacy-id',id);
       }
       handlers.push({id,eventName:handlerName.slice(2),source});
-      if(handlerName==='onload'&&(el===document.body||el===document.documentElement))
+      if(handlerName==='onload'&&(el===ownerDoc.body||el===ownerDoc.documentElement))
         onLoadElements.push(el);
     }
   }
@@ -321,12 +326,12 @@ async function installLegacyInlineHandlers(root) {
   }).join('\n');
   const src=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
   urls.set('p2lrn-events-'+(++inlineScriptId),src);
-  const script=document.createElement('script');
+  const script=ownerDoc.createElement('script');
   script.src=src;
   await new Promise((resolve,reject)=>{
     script.addEventListener('load',resolve,{once:true});
     script.addEventListener('error',()=>reject(new Error('External package legacy events failed to initialize.')),{once:true});
-    document.head.append(script);
+    ownerDoc.head.append(script);
   });
   for(const el of onLoadElements)el.dispatchEvent(new Event('load'));
 }
@@ -336,29 +341,30 @@ async function installLegacyInlineHandlers(root) {
 // converts those attributes to blob-backed event listeners. This works under
 // the existing strict CSP; it never enables unsafe-inline, eval, same-origin,
 // remote networking, forms, or privileges in the host page.
-function observeLegacyHandlers() {
-  handlerObserver?.disconnect();
-  handlerPassQueued=false;
+function observeLegacyHandlers(doc=document) {
+  if(legacyHandlerObservers.has(doc))return;
+  let queued=false;
+  let pending=Promise.resolve();
   const schedule=()=>{
-    if(handlerPassQueued)return;
-    handlerPassQueued=true;
-    pendingHandlerPass=pendingHandlerPass.then(async()=>{
-      handlerPassQueued=false;
-      await installLegacyInlineHandlers(document);
+    if(queued)return;
+    queued=true;
+    pending=pending.then(async()=>{
+      queued=false;
+      await installLegacyInlineHandlers(doc);
     }).catch(error=>{
-      handlerPassQueued=false;
+      queued=false;
       reply('error',{message:'Dynamic legacy handlers: '+String(error?.message??error)});
     });
   };
-  handlerObserver=new MutationObserver((mutations)=>{
+  const Observer=doc.defaultView?.MutationObserver??MutationObserver;
+  const observer=new Observer(mutations=>{
     if(mutations.some(m=>
       (m.type==='attributes' && /^(?:on[a-z][a-z0-9]*|data-p2lrn-legacy-on[a-z][a-z0-9]*)$/i.test(m.attributeName??'')) ||
       (m.type==='childList' && [...m.addedNodes].some(n=>n.nodeType===1))
     ))schedule();
   });
-  handlerObserver.observe(document,{
-    subtree:true,childList:true,attributes:true,
-  });
+  observer.observe(doc,{subtree:true,childList:true,attributes:true});
+  legacyHandlerObservers.set(doc,observer);
 }
 function makeUrls() {
   for (const [path, file] of files) {
@@ -410,7 +416,6 @@ async function navigate(path, suffix = '') {
       old.replaceWith(script);
       if (loaded) await loaded;
     }
-    await pendingHandlerPass;
     await installLegacyInlineHandlers(document);
     reply('ready', {member:normalized, suffix:launchSuffix, topology:'opaque-inline'});
     return;
