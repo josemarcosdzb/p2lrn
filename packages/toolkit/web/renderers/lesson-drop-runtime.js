@@ -12,6 +12,11 @@ export function bootStudioDropActivities(){
     if(!tray||!status||!items.length||!zones.length||items.length>20||zones.length>20)continue;
     const byId=new Map(items.map(item=>[item.dataset.p2lrnDndItem,item]));
     const placed=new Set();
+    // Keep the authored tray dimensions for a perfect reset after placing an image.
+    const cardStyles=new Map(items.map(item=>[item,{
+      style:item.getAttribute('style'),
+      imageStyle:item.querySelector('[data-p2lrn-dnd-item-image]')?.getAttribute('style')??null,
+    }]));
     let selected=null,pointer=null;
     const announce=(text)=>{status.textContent=text;};
     const tileName=item=>{
@@ -39,6 +44,17 @@ export function bootStudioDropActivities(){
       item.draggable=false;item.style.cursor='default';
       item.style.outline='';item.style.position='relative';item.style.touchAction='auto';
       zone.append(item);
+      const destinationLabel=zone.querySelector('[data-p2lrn-dnd-label]');
+      if(destinationLabel)destinationLabel.hidden=true;
+      // Cards with photos must fit even when the teacher resizes a target area.
+      Object.assign(item.style,{
+        minWidth:'0',minHeight:'0',width:'100%',height:'100%',maxWidth:'100%',maxHeight:'100%',
+        padding:'3px',gap:'2px',boxSizing:'border-box',overflow:'hidden',
+      });
+      const picture=item.querySelector('[data-p2lrn-dnd-item-image]');
+      if(picture)Object.assign(picture.style,{
+        flex:'1 1 0',minHeight:'0',maxHeight:'100%',width:'auto',height:'auto',objectFit:'contain',
+      });
       zone.style.border='2px solid #15803d';
       zone.style.backgroundColor='#dcfce7';
       zone.setAttribute('aria-label','Respuesta correcta: '+tileName(item));
@@ -128,12 +144,21 @@ export function bootStudioDropActivities(){
     });
     reset.addEventListener('click',()=>{
       for(const item of items){
-        tray.append(item);item.draggable=true;item.style.cursor='grab';
-        item.style.position='';item.style.touchAction='none';item.style.outline='';
+        tray.append(item);item.draggable=true;
+        const original=cardStyles.get(item);
+        if(original?.style===null)item.removeAttribute('style');
+        else if(original?.style!==undefined)item.setAttribute('style',original.style);
+        const picture=item.querySelector('[data-p2lrn-dnd-item-image]');
+        if(picture){
+          if(original?.imageStyle===null)picture.removeAttribute('style');
+          else if(original?.imageStyle!==undefined)picture.setAttribute('style',original.imageStyle);
+        }
       }
       placed.clear();selected=null;pointer?.ghost?.remove();pointer=null;
       activity.removeAttribute('data-p2lrn-dnd-completed');
       for(const zone of zones){
+        const label=zone.querySelector('[data-p2lrn-dnd-label]');
+        if(label)label.hidden=false;
         zone.style.border='2px dashed #1d4ed8';
         zone.style.backgroundColor='rgba(255,255,255,.83)';
         zone.setAttribute('aria-label',zone.querySelector('[data-p2lrn-dnd-label]')?.textContent||'Zona');
