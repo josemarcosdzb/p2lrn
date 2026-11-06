@@ -228,11 +228,18 @@ try{
        const count=await importedButtons.count();
        interaction={attempted:true,verified:true,kind:'imscc-html-page-visible',navigationItems:count};
        if(count>1){
-         const current=await content.innerText();
+         const log=await page.locator('[data-event-log]').innerText();
+         const previous=[...log.matchAll(/"launchMember":\s*"([^"]+)"/g)].at(-1)?.[1]??null;
          await importedButtons.nth(1).click({timeout:9000});
+         await page.waitForFunction(previous=>{
+           const text=document.querySelector('[data-event-log]')?.textContent??'';
+           const members=[...text.matchAll(/"launchMember":\s*"([^"]+)"/g)];
+           return members.length>0 && members.at(-1)?.[1]!==previous;
+         },previous,{timeout:16000});
          const next=await findVisibleText(player.frameLocator(item.frame).locator('body'),item);
-         assert(current!==next,'Common Cartridge resource navigation did not change page content');
+         assert(next.length>=item.minimumText,'Common Cartridge did not show second resource');
          interaction.kind='imscc-next-resource';
+         interaction.memberChanged=true;
        }
      }
      const runtimeState=String(await page.locator('[data-runtime-state]').innerText().catch(()=>''));
