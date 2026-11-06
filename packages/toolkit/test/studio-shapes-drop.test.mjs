@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {STUDIO_SHAPES,STUDIO_SHAPE_IDS,getStudioShape} from '../web/studio/studio-shapes.js';
-import {setStudioDropBackground,createStudioDropActivity,addStudioDropPair} from '../web/studio/studio-drop-activity.js';
+import {setStudioDropBackground,createStudioDropActivity,addStudioDropPair,setStudioDropItemImage,setStudioDropItemImageAlt,removeStudioDropItemImage,getStudioDropItemText} from '../web/studio/studio-drop-activity.js';
 import {studioDropRuntimeSource} from '../web/renderers/lesson-drop-runtime.js';
 
 test('Every reference palette form is unique, scalable and safe without inline SVG',()=>{
@@ -44,4 +44,27 @@ test('Drag authoring includes matching zone and item APIs, not arbitrary scripts
   assert.match(studioDropRuntimeSource,/pointerdown/);
   assert.match(studioDropRuntimeSource,/keydown/);
   assert.match(studioDropRuntimeSource,/place\(item,zone\)/);
+});
+
+test('Draggable cards reject SVG/oversized images and require accessible text or alt',async()=>{
+  const section={matches:()=>true,contains:()=>true};
+  let removed=false;
+  const image={alt:'Original',remove:()=>{removed=true;}};
+  const tile={
+    matches:()=>true,
+    querySelector:(selector)=>selector==='[data-p2lrn-dnd-item-image]'?image:null,
+    childNodes:[],
+  };
+  await assert.rejects(()=>setStudioDropItemImage(section,tile,{
+    type:'image/svg+xml',size:23,arrayBuffer:async()=>new ArrayBuffer(23),
+  }),/PNG, JPEG, WebP, GIF o AVIF/);
+  await assert.rejects(()=>setStudioDropItemImage(section,tile,{
+    type:'image/png',size:6*1024*1024,arrayBuffer:async()=>new ArrayBuffer(1),
+  }),/hasta 5 MB/);
+  assert.equal(getStudioDropItemText(tile),'');
+  assert.throws(()=>removeStudioDropItemImage(section,tile),/Antes de quitar la imagen/);
+  assert.equal(removed,false,'Image-only cards must stay visible');
+  assert.throws(()=>setStudioDropItemImageAlt(section,tile,'  '),/descripción de la imagen/);
+  assert.equal(setStudioDropItemImageAlt(section,tile,'  Un puente de madera  ').alt,'Un puente de madera');
+  assert.equal(getStudioDropItemText({childNodes:[{nodeType:3,textContent:'Ficha antigua'}]}),'Ficha antigua');
 });
