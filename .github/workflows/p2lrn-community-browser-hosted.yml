@@ -11,6 +11,7 @@ on:
       - 'packages/toolkit/web/p2lrn-player.js'
       - 'packages/toolkit/web/built-in-renderers.js'
       - 'scripts/browser-external-format-visual-qa.mjs'
+      - 'scripts/verify-site-security.mjs'
   workflow_dispatch:
 
 permissions:
