@@ -32,7 +32,7 @@ async function harness({secret='test-secret',required='true',siteResult={success
   // Import an independent instance for each policy scenario. Node's TypeScript
   // module cache normalizes URL query strings in some Windows runtimes.
   const ts=readFileSync(new URL('../supabase/functions/p2lrn-contact/index.ts',import.meta.url),'utf8');
-  const js=ts.replace(/\b(token|hostname|request|status|message|key|max):\s*(string|number|Request)\b/g,'$1');
+  const js=ts.replace(/\b([A-Za-z_$][\w$]*):\s*(string|number|Request)\b/g,'$1');
   const url='data:text/javascript;base64,'+Buffer.from(js,'utf8').toString('base64')+'#scenario-'+counter++;
   await import(url);
   assert.equal(typeof handler,'function');
