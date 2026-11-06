@@ -6,6 +6,7 @@ on:
       - 'scripts/audit-external-script-handlers.mjs'
       - 'scripts/audit-community-imscc-sources.mjs'
       - 'scripts/audit-community-video-origin.mjs'
+      - 'scripts/audit-h5p-base-creation.mjs'
       - '.github/workflows/p2lrn-external-fixture-audit.yml'
   workflow_dispatch:
 permissions:
@@ -26,3 +27,4 @@ jobs:
           node scripts/audit-external-script-handlers.mjs
           node scripts/audit-community-imscc-sources.mjs
           node scripts/audit-community-video-origin.mjs
+          node scripts/audit-h5p-base-creation.mjs
