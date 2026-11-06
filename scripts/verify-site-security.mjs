@@ -106,8 +106,8 @@ function scan(dir){
       if(expected.kind==='skills'){
         assert.equal(schema.mainEntity?.['@type'],'ItemList');
         const links=schema.mainEntity?.itemListElement;
-        assert.ok(Array.isArray(links)&&links.length===4,'Expected four Skill packages in JSON-LD');
-        const expectedFiles=['p2lrn-chatgpt-plugin.zip','p2lrn-claude-skill.zip','p2lrn-gemini-skill.zip','p2lrn-grok-skill.zip'];
+        const expectedFiles=['p2lrn-chatgpt-plugin.zip','p2lrn-codex-skill.zip','p2lrn-claude-skill.zip','p2lrn-gemini-skill.zip','p2lrn-grok-skill.zip'];
+        assert.ok(Array.isArray(links)&&links.length===expectedFiles.length,'Skill JSON-LD must list all five downloadable Skills');
         for(let i=0;i<expectedFiles.length;i++){
           assert.equal(links[i].position,i+1);
           assert.equal(links[i].url,'https://p2lrn.org/downloads/skills/'+expectedFiles[i]);
