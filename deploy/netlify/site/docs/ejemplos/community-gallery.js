@@ -7,13 +7,13 @@
   const labels=en?{
     filter:'Format',all:'All formats',search:'Find an example',count:n=>n+' packages',
     view:'Open in Player',download:'Download .p2lrn',original:'Original source',
-    license:'Licence',package:'Package',pending:'Example tested in Player · full standard compliance is not certified',
+    license:'Licence',package:'Package',pending:'Full playback and standards compliance not certified',technical:'Technical fixture · not a complete course',
     noResults:'No examples match these filters.',unavailable:'Catalog unavailable; please try again.',
     verified:'Browser playback verified',partial:'Partial or conditional playback',
   }:{
     filter:'Formato',all:'Todos los formatos',search:'Buscar un ejemplo',count:n=>n+' paquetes',
     view:'Abrir en Player',download:'Descargar .p2lrn',original:'Fuente original',
-    license:'Licencia',package:'Paquete',pending:'Ejemplo probado en Player · conformidad integral del estándar no certificada',
+    license:'Licencia',package:'Paquete',pending:'Reproducción completa y conformidad del estándar no certificadas',technical:'Prueba técnica · no es un curso completo',
     noResults:'No hay ejemplos con estos filtros.',unavailable:'Catálogo no disponible; inténtalo de nuevo.',
     verified:'Reproducción verificada en navegador',partial:'Reproducción parcial o condicionada',
   };
@@ -57,6 +57,12 @@
       const card=document.createElement('article');card.className='p2lrn-community-item';
       card.append(create('span',formats[entry.family]??entry.family.toUpperCase(),'p2lrn-community-type'));
       card.append(create('h3',entry.title??entry.url.split('/').at(-1)));
+      if(entry.sampleRole==='technical-fixture'){
+        card.append(create('strong',labels.technical,'p2lrn-community-role'));
+        const explanation=en?entry.sampleNoteEn:entry.sampleNoteEs;
+        if(typeof explanation==='string'&&explanation.length<=400)
+          card.append(create('p',explanation,'p2lrn-community-fixture-note'));
+      }
       const status=entry.browserVerified===true?labels.verified:labels.pending;
       // A format family or a valid ZIP never proves playback or scoring.
       card.append(create('p',status,'p2lrn-community-status'));
