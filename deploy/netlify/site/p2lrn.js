@@ -93,9 +93,14 @@
   const SUPABASE_URL = 'https://yurtnmtesugykrqtujdx.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_cmC0leUeJtwzXrZb7nUn1Q_xdYoAKfH';
 
-  const removeInjectedNetlifyBranding = () => {
+  // Observe newly inserted DOM subtrees, never re-scan the whole page
+  // for every mutation. Full document scans blocked busy pages.
+  const NETLIFY_BRANDING_SELECTOR =
+    'netlify-toolbar,#netlify-toolbar,[data-netlify-toolbar],iframe[title*="netlify" i],iframe[src*="netlify" i],[aria-label*="netlify" i],[id*="netlify" i],[class*="netlify" i]';
+  const removeInjectedNetlifyBranding = (scope=document) => {
     const removeCandidate = (node) => {
-      if (!(node instanceof Element)) return;
+      // A branding badge must never be allowed to delete the document root.
+      if (!(node instanceof Element) || node===document.documentElement || node===document.body) return;
       const tag = node.tagName.toLowerCase();
       const id = String(node.id || '').toLowerCase();
       const cls = String(node.className || '').toLowerCase();
@@ -112,32 +117,41 @@
         node.remove();
         return;
       }
-      const ownText = String(node.textContent || '').replace(/\s+/g,' ').trim();
+      // Only process an exact branding leaf; never climb into <body>/<html>.
+      const ownText = node.childElementCount===0
+        ? String(node.textContent || '').replace(/\s+/g,' ').trim() : '';
       if (ownText === 'Powered by Netlify') {
         let target = node;
-        for (let i=0;i<5 && target.parentElement;i++) {
-          const parent = target.parentElement;
+        for (let parent=node.parentElement,i=0;parent && i<5;parent=parent.parentElement,i++) {
+          if (parent===document.body || parent===document.documentElement) break;
           const style = window.getComputedStyle(parent);
           const rect = parent.getBoundingClientRect();
-          target = parent;
-          if ((style.position === 'fixed' || style.position === 'sticky') && rect.width < 360 && rect.height < 140) break;
+          if ((style.position === 'fixed' || style.position === 'sticky') && rect.width < 360 && rect.height < 140) {
+            target=parent;
+            break;
+          }
         }
         target.remove();
       }
     };
-    document.querySelectorAll('netlify-toolbar,#netlify-toolbar,[data-netlify-toolbar],iframe,[aria-label*="Netlify" i],[id*="netlify" i],[class*="netlify" i]').forEach(removeCandidate);
-    document.querySelectorAll('a,button,div,span').forEach((node) => {
+    // Initial document scan runs once; mutation scans inspect only the added
+    // element and descendants. Avoid reading textContent of big ancestors.
+    if (scope instanceof Element && scope.matches(NETLIFY_BRANDING_SELECTOR)) removeCandidate(scope);
+    scope.querySelectorAll(NETLIFY_BRANDING_SELECTOR).forEach(removeCandidate);
+    const checkText = (node) => {
+      if (node.childElementCount) return;
       if (String(node.textContent || '').replace(/\s+/g,' ').trim() === 'Powered by Netlify') removeCandidate(node);
-    });
+    };
+    if (scope instanceof Element && scope.matches('a,button,div,span')) checkText(scope);
+    scope.querySelectorAll('a,button,div,span').forEach(checkText);
   };
 
   removeInjectedNetlifyBranding();
   const netlifyBrandingObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
-        if (!(node instanceof Element)) continue;
-        removeInjectedNetlifyBranding();
-        return;
+        if (!(node instanceof Element) || !node.isConnected) continue;
+        removeInjectedNetlifyBranding(node);
       }
     }
   });
