@@ -51,6 +51,25 @@ if(!compiledScene.includes('p2lrn-box-face-label')||compiledScene.includes('new 
   throw new Error('Preview Player did not include text fixed to the front of boxes');
 
 await cp(join(repository,'packages','studio','dist'),join(output,'studio','current','dist'),{recursive:true,force:true});
+// Verify that both editor hosts and the Player ship the new Studio features.
+// Fail before advertising a local URL if the compiler omitted any dependency.
+for(const rel of [
+  'studio/runtime/studio-shapes.js',
+  'studio/runtime/studio-drop-activity.js',
+  'studio/current/dist/runtime/studio-shapes.js',
+  'studio/current/dist/runtime/studio-drop-activity.js',
+  'player/current/dist/renderers/lesson-drop-runtime.js',
+  'player/current/dist/renderers/lesson-drop-sandbox.js',
+]){
+  const bytes=await readFile(join(output,...rel.split('/')));
+  if(bytes.byteLength<250)throw new Error('Incomplete Studio feature asset: '+rel);
+}
+const shapesCode=await readFile(join(output,'studio','runtime','studio-shapes.js'),'utf8');
+if(!shapesCode.includes("id:'triangle'")||!shapesCode.includes("id:'speech-oval'"))
+  throw new Error('Local Studio does not contain the complete shape palette');
+const dragCode=await readFile(join(output,'studio','runtime','studio-drop-activity.js'),'utf8');
+if(!dragCode.includes('setStudioDropBackground')||!dragCode.includes('mountStudioDropAuthoring'))
+  throw new Error('Local Studio is missing image hotspot authoring');
 await mkdir(join(output,'npm-studio'),{recursive:true});
 await cp(join(repository,'dev','studio-preview','index.html'),join(output,'npm-studio','index.html'),{force:true});
 await cp(join(repository,'scripts','serve-studio-local-preview.mjs'),join(output,'preview-server.mjs'),{force:true});
@@ -58,6 +77,6 @@ console.log('5/5 Save reproducible preview metadata');
 const pkg=JSON.parse(await readFile(join(repository,'packages','studio','package.json'),'utf8'));
 const manifest={branch:'mejorastudio',commit:process.env.GITHUB_SHA||null,studioPackage:'@p2lrn/studio',
  studioVersion:pkg.version,playerVersion:player.release.webSdkVersion,mode:'compiled-from-repository',
- paths:['/studio/','/npm-studio/','/demo/'],quest3dUx:'touch-joystick+face-labels+locked-matching',publicDeployment:false,mainModified:false};
+ paths:['/studio/','/npm-studio/','/demo/'],visualAuthoring:'23-shapes+dropdown+image-hotspots',quest3dUx:'touch-joystick+face-labels+locked-matching',publicDeployment:false,mainModified:false};
 await writeFile(join(output,'preview-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 console.log(JSON.stringify({ok:true,output,...manifest},null,2));
