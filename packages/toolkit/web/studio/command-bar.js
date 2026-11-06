@@ -1,6 +1,6 @@
 import {VISUAL_LAYOUT_BLOCKS,insertVisualLayoutBlock,STUDIO_SHAPES} from './visual-layout.js';
 import {styleStudioShapeArt} from './studio-shapes.js';
-import {addStudioDropPair,isStudioDropActivity,removeStudioDropPair,setStudioDropBackground,removeStudioDropBackground,mountStudioDropAuthoring} from './studio-drop-activity.js';
+import {addStudioDropPair,isStudioDropActivity,removeStudioDropPair,setStudioDropBackground,removeStudioDropBackground,mountStudioDropAuthoring,getStudioDropItemText,setStudioDropItemText,setStudioDropItemImage,setStudioDropItemImageAlt,removeStudioDropItemImage} from './studio-drop-activity.js';
 import {mountAdvancedStudioTools} from './studio-advanced-tools.js';
 
 // Canonical Studio chrome. Both the hosted Studio and @p2lrn/studio mount
@@ -513,10 +513,16 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   for(const [action,label] of [
     ['add','Añadir zona y ficha'],['remove','Eliminar zona seleccionada'],
     ['image','Elegir imagen de fondo'],['remove-image','Quitar imagen de fondo'],
+    ['item-image','Poner imagen en la ficha'],['remove-item-image','Quitar imagen de la ficha'],
   ]){
     const b=button(doc,label,{title:label});
     b.addEventListener('mousedown',event=>event.preventDefault());
-    b.addEventListener('click',()=>{if(action!=='image')void runDropAction(action);else dropFile.click();dropMenu.open=false;});
+    b.addEventListener('click',()=>{
+      if(action==='image')dropFile.click();
+      else if(action==='item-image')dropItemFile.click();
+      else void runDropAction(action);
+      if(action!=='item-image'&&action!=='image')dropMenu.open=false;
+    });
     dropActions.append(b);
   }
   const dropFile=node(doc,'input');dropFile.type='file';
@@ -527,10 +533,19 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     const file=dropFile.files?.[0];dropFile.value='';
     if(file)await runDropAction('image',file);
   });
+  const dropItemFile=node(doc,'input');dropItemFile.type='file';
+  dropItemFile.accept='image/png,image/jpeg,image/webp,image/gif,image/avif';
+  dropItemFile.dataset.p2lrnDropImage='item';
+  dropItemFile.setAttribute('aria-label','Imagen de la ficha seleccionada');
+  dropItemFile.hidden=true;
+  dropItemFile.addEventListener('change',async()=>{
+    const file=dropItemFile.files?.[0];dropItemFile.value='';
+    if(file)await runDropAction('item-image',file);
+  });
   // In-menu labels let the teacher name exact hotspots and their matching
   // draggable items without accidental text editing while moving a zone.
   const dropNameFields=[];
-  for(const [key,label] of [['zone','Texto de la zona'],['item','Texto de la ficha']]){
+  for(const [key,label] of [['zone','Texto de la zona'],['item','Texto de la ficha'],['alt','Descripción de imagen de la ficha']]){
     const field=node(doc,'label','',label);
     const input=node(doc,'input');input.type='text';input.maxLength=120;
     input.dataset.p2lrnDropName=key;
@@ -542,28 +557,35 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
       const s=surface();
       if(!zone||!s)return;
       const activity=zone.closest('[data-p2lrn-dnd="1"]');
-      const target=key==='zone'?zone.querySelector('[data-p2lrn-dnd-label]'):
-        [...(activity?.querySelectorAll('[data-p2lrn-dnd-item]')??[])].find(item=>
-          item.dataset.p2lrnDndItem===zone.dataset.p2lrnDndAccept);
-      if(!target){onStatus('No se ha encontrado el texto de destino.');return;}
+      const tile=[...(activity?.querySelectorAll('[data-p2lrn-dnd-item]')??[])]
+        .find(item=>item.dataset.p2lrnDndItem===zone.dataset.p2lrnDndAccept);
       const text=input.value.trim();
-      if(!text){onStatus('El texto de zona o ficha no puede quedar vacío.');return;}
-      target.textContent=text;
-      changed(s);
+      try{
+        if(key==='zone'){
+          if(!text)throw new Error('El texto de la zona no puede quedar vacío.');
+          const label=zone.querySelector('[data-p2lrn-dnd-label]');
+          if(!label)throw new Error('Falta la etiqueta de la zona.');
+          label.textContent=text;
+        }else if(key==='item')setStudioDropItemText(activity,tile,text);
+        else setStudioDropItemImageAlt(activity,tile,text);
+        changed(s);
+      }catch(error){onStatus(error.message);updateDropNameFields(zone);}
     });
   }
   const updateDropNameFields=zone=>{
     for(const input of dropNameFields){
       const activity=zone?.closest?.('[data-p2lrn-dnd="1"]');
-      const target=input.dataset.p2lrnDropName==='zone'?zone?.querySelector('[data-p2lrn-dnd-label]'):
-        [...(activity?.querySelectorAll('[data-p2lrn-dnd-item]')??[])].find(item=>
-          item.dataset.p2lrnDndItem===zone?.dataset.p2lrnDndAccept);
-      input.disabled=!target;
-      input.value=target?.textContent||'';
+      const item=[...(activity?.querySelectorAll('[data-p2lrn-dnd-item]')??[])]
+        .find(tile=>tile.dataset.p2lrnDndItem===zone?.dataset.p2lrnDndAccept);
+      const kind=input.dataset.p2lrnDropName;
+      const image=item?.querySelector('[data-p2lrn-dnd-item-image]');
+      const label=zone?.querySelector('[data-p2lrn-dnd-label]');
+      input.disabled=kind==='zone'?!label:kind==='item'?!item:!image;
+      input.value=kind==='zone'?label?.textContent||'':kind==='item'?getStudioDropItemText(item):image?.alt||'';
     }
   };
   dropMenu.addEventListener('toggle',()=>{if(dropMenu.open)updateDropNameFields(dropAuthoring?.selectedZone);});
-  dropActions.append(dropFile);dropMenu.append(dropActions);layouts.append(dropMenu);
+  dropActions.append(dropFile,dropItemFile);dropMenu.append(dropActions);layouts.append(dropMenu);
   const colors=group(context);colors.classList.add('p2lrn-object-colors');
   const colorMenu=node(doc,'details','p2lrn-context-menu');colorMenu.dataset.studioContextMenu='fondo';
   const colorSummary=node(doc,'summary','','Fondo');colorSummary.setAttribute('aria-label','Color de fondo del bloque');
@@ -682,8 +704,15 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
         removeStudioDropPair(activity,zone);dropAuthoring?.select(null);
       }else if(action==='image')await setStudioDropBackground(activity,file);
       else if(action==='remove-image')removeStudioDropBackground(activity);
-      else throw new RangeError('Acción de zonas no reconocida.');
-      changed(s);onStatus('Actividad actualizada. Arrastra los bordes de una zona para redimensionarla.');
+      else if(action==='item-image'||action==='remove-item-image'){
+        const selectedItem=[...activity.querySelectorAll('[data-p2lrn-dnd-item]')]
+          .find(item=>item.dataset.p2lrnDndItem===zone?.dataset.p2lrnDndAccept);
+        if(!selectedItem)throw new Error('Selecciona una ficha o su zona antes de editar la imagen.');
+        if(action==='item-image')await setStudioDropItemImage(activity,selectedItem,file);
+        else removeStudioDropItemImage(activity,selectedItem);
+        updateDropNameFields(zone);
+      }else throw new RangeError('Acción de zonas no reconocida.');
+      changed(s);onStatus(action.includes('item-image')?'Imagen de la ficha actualizada.':'Actividad actualizada. Arrastra los bordes de una zona para redimensionarla.');
     }catch(error){onStatus(error.message);}
   }
   function colorBlock(color){
