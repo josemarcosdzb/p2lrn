@@ -65,6 +65,8 @@ jobs:
         run: node scripts/verify-site-security.mjs
       - name: Verify contact server route and anti-abuse frontend contract
         run: node scripts/verify-contact-security.mjs
+      - name: Verify contact Turnstile policy, replay and failure scenarios
+        run: node --test scripts/test-contact-turnstile.test.mjs scripts/test-security-hardening.test.mjs
       - name: Check native 3D game modules and physics contract
         shell: powershell
         run: |

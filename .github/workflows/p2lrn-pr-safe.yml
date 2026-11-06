@@ -27,5 +27,6 @@ jobs:
       - name: Verify security source invariants
         run: |
           node --test scripts/test-security-hardening.test.mjs
+          node --test scripts/test-contact-turnstile.test.mjs
           node scripts/verify-site-security.mjs
           node scripts/verify-contact-security.mjs
