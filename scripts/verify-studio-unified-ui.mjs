@@ -25,6 +25,8 @@ async function browserScenario(){
   const {openP2LRNPackageBytes}=await import('/p2lrn-player.js');
   const {prepareStudioDropSandbox}=await import('/renderers/lesson-drop-sandbox.js');
   const {render:renderPassiveText}=await import('/renderers/passive-text.js');
+  const {createStudioDropActivity}=await import('/studio/studio-drop-activity.js');
+  const {bootStudioDropActivities}=await import('/renderers/lesson-drop-runtime.js');
   const expect=(value,msg)=>{if(!value)throw new Error(msg);};
   const make=async(withShadow)=>{
     const host=document.createElement('div');
@@ -300,6 +302,27 @@ async function browserScenario(){
   const ordinaryView=await renderPassiveText({container:ordinaryBox,bytes:new TextEncoder().encode('<p>safe</p>'),representation:{mediaType:'text/html'}});
   expect(ordinaryBox.querySelector('iframe')?.getAttribute('sandbox')==='','Ordinary HTML iframe unexpectedly gained script permission');
   ordinaryView.destroy();
+  // Real interaction state: wrong answers stay in the tray, right answers move
+  // into their specific zones, and completion locks the activity until reset.
+  const scene=createStudioDropActivity(document);
+  document.body.append(scene);
+  bootStudioDropActivities();
+  const source=[...scene.querySelectorAll('[data-p2lrn-dnd-item]')];
+  const targets=[...scene.querySelectorAll('[data-p2lrn-dnd-zone]')];
+  source[0].click();targets[1].click();
+  expect(scene.querySelector('[data-p2lrn-dnd-tray]').contains(source[0]),'Wrong answer was accepted by Player');
+  expect(scene.querySelector('[data-p2lrn-dnd-status]').textContent.includes('No corresponde'),
+    'Wrong drop does not explain the error');
+  targets[0].click();
+  expect(targets[0].contains(source[0]),'Correct answer did not move to its assigned zone');
+  source[1].click();targets[1].click();
+  expect(scene.dataset.p2lrnDndCompleted==='true','Completion state was not reached');
+  const reset=scene.querySelector('button');
+  expect(reset?.textContent==='Reiniciar actividad','The student cannot restart a drop activity');
+  reset.click();
+  expect(scene.querySelector('[data-p2lrn-dnd-tray]').contains(source[0])&&!scene.dataset.p2lrnDndCompleted,
+    'Reset did not restore draggable pieces');
+  scene.remove();
   const label=website.toolbar.querySelector('[role=tab][aria-selected=true]');
   expect(label.textContent==='Formato','Tab state is not consistent');
   const lightStyle=getComputedStyle(website.toolbar).fontFamily;
