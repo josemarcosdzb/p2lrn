@@ -62,6 +62,9 @@ export function registerBuiltInRenderers(registry) {
       'https://p2lrn.org/profile/cmi5',
       'https://p2lrn.org/profile/tincan-package',
       'https://p2lrn.org/profile/common-cartridge',
+      // HTML package members imported from Common Cartridge are tagged with
+      // the web-content profile but still need the isolated nested ZIP runtime.
+      'https://p2lrn.org/profile/web-content',
       'https://p2lrn.org/profile/ims-content-package',
       'https://p2lrn.org/profile/qti',
     ],
