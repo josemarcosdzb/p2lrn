@@ -25,7 +25,7 @@ function secureIsolation(p) {
 test('H5P opaque mode only accepts embedded media; never accepts arbitrary remote URLs',()=>{
   const p=policy(createOpaqueH5PRuntimeDocument());
   secureIsolation(p);
-  assert.equal(p['connect-src'],"'none'");
+  assert.equal(p['connect-src'],'blob:');
   assert.equal(p['media-src'],'data: blob:');
   assert.equal(p['font-src'],'data: blob:');
   assert.equal(p['img-src'],'data: blob:');
