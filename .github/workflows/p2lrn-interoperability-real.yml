@@ -106,3 +106,32 @@ jobs:
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           Write-Output ('REAL_INDEPENDENT_WEB_EVIDENCE='+$out)
           Write-Output ('UNCHANGED_ORIGINAL_SHA256='+$hash)
+  verify-original-offline-windows:
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Execute offline Windows launcher with ORIGINAL Studio package
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $downloads=Join-Path $env:USERPROFILE 'Downloads'
+          $course=Join-Path $downloads 'P2LRN-INTEROP-0474eb9b\seguridad-informatica.p2lrn'
+          $site=Join-Path $downloads 'p2lrn-mejorastudio-preview-0474eb9b'
+          $out=Join-Path $downloads ('P2LRN-INTEROP-OFFLINE-'+$env:GITHUB_SHA.Substring(0,8))
+          if(!(Test-Path $course)){throw 'The unchanged original P2LRN course was not found'}
+          $sha=(Get-FileHash -LiteralPath $course -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($sha -ne 'cce43503ea425ec4f1e6203c8ef6556beb999e71c08e59d5511091a6b931a380'){throw 'Original package SHA-256 mismatch'}
+          node --check scripts/interoperability/verify-fixed-course-offline.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/verify-fixed-course-offline.mjs --course "$course" --site "$site" --output "$out" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if(!(Test-Path (Join-Path $out 'offline-windows-report.json'))){throw 'Offline QA report missing'}
+          Write-Output ('ORIGINAL_COURSE_SHA256='+$sha)
+          Write-Output ('REAL_OFFLINE_REPORT_DIRECTORY='+$out)
