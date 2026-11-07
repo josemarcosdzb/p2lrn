@@ -2,7 +2,7 @@ import {studioDropRuntimeSource} from './lesson-drop-runtime.js';
 
 // Opt-in for a Studio-created drag-and-drop lesson only; ordinary HTML retains
 // the existing script-disabled iframe. No script from package content is kept.
-export function prepareStudioDropSandbox(text){
+export function prepareStudioDropSandbox(text,{runtimeUrl=null}={}){
   const doc=new DOMParser().parseFromString(String(text),'text/html');
   if(!doc.querySelector('[data-p2lrn-dnd="1"][data-p2lrn-layout="drag-drop"]'))return null;
   doc.querySelectorAll('script,iframe,frame,frameset,object,embed,form,input,button,select,textarea,meta,base,link,style,svg,math,template,portal,foreignObject')
@@ -55,13 +55,23 @@ export function prepareStudioDropSandbox(text){
   const bytes=new Uint8Array(18);
   globalThis.crypto.getRandomValues(bytes);
   const nonce=Array.from(bytes,byte=>byte.toString(16).padStart(2,'0')).join('');
+  // A srcdoc frame inherits the parent CSP. The Player may supply only its
+  // own trusted, same-origin classic-script bootstrap. This avoids allowing
+  // arbitrary scripts or relaxing the host's policy for course content.
+  const trusted=runtimeUrl===null?null:new URL(runtimeUrl);
+  if(trusted){
+    const origin=new URL(import.meta.url).origin;
+    if(!['http:','https:'].includes(trusted.protocol)||trusted.origin!==origin||
+       !trusted.pathname.endsWith('/renderers/lesson-drop-bootstrap.js'))
+      throw new Error('Studio drag runtime must come from the verified Player distribution.');
+  }
   const policy=[
     "default-src 'none'",
     "img-src data: blob:",
     "media-src data: blob:",
     "style-src 'unsafe-inline'",
     "font-src data:",
-    "script-src 'nonce-"+nonce+"'",
+    "script-src 'nonce-"+nonce+"'"+(trusted?" "+trusted.origin:""),
     "connect-src 'none'",
     "frame-src 'none'",
     "object-src 'none'",
@@ -76,7 +86,8 @@ export function prepareStudioDropSandbox(text){
   // Player code. The iframe has allow-scripts but NO allow-same-origin.
   const script=doc.createElement('script');
   script.setAttribute('nonce',nonce);
-  script.textContent=studioDropRuntimeSource;
+  if(trusted)script.src=trusted.href;
+  else script.textContent=studioDropRuntimeSource;
   doc.body.append(script);
   return {interactive:true,html:'<!doctype html>\n'+doc.documentElement.outerHTML};
 }
