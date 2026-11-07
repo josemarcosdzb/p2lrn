@@ -101,19 +101,21 @@ try{
       const beforeState=await current();
       // Real SCORM quiz at step 4: choose answers through the visible form,
       // not through LMSSetValue or direct grade/progress mutation.
-      if(beforeState.step?.[0]===4){
+      if(beforeState.step?.[0]===4||beforeState.step?.[0]===5){
+        const answerMap=beforeState.step[0]===4?
+          ['Notify the sandwich owner through approved channels','False']:
+          ['All of the above','Consult the team before acting'];
         const submitted=await evaluate("(()=>{"+
-          "const labels=[...document.querySelectorAll('label')];"+
-          "const correctFirst=labels.find(x=>x.textContent.includes('Notify the sandwich owner through approved channels'));"+
-          "const correctSecond=labels.find(x=>x.textContent.trim()==='False');"+
-          "if(!correctFirst||!correctSecond)return {found:false};"+
-          "correctFirst.querySelector('input')?.click();correctSecond.querySelector('input')?.click();"+
-          "return {found:true,first:correctFirst.textContent.trim(),second:correctSecond.textContent.trim()};})()");
+          "const expected="+JSON.stringify(answerMap)+";const labels=[...document.querySelectorAll('label')];"+
+          "const found=expected.map(text=>labels.find(label=>label.textContent.trim()===text));"+
+          "if(found.some(x=>!x))return {found:false,expected};"+
+          "found.forEach(label=>label.querySelector('input')?.click());"+
+          "return {found:true,choices:found.map(label=>label.textContent.trim())};})()");
         if(submitted.found)progress.push({answerSelectionsFromRealScormUi:submitted});
       }
       const clickResult=await evaluate("(()=>{"+
         "const options=[...document.querySelectorAll('button,input[type=button],input[type=submit]')].filter(x=>!x.disabled);"+
-        "const next=options.find(x=>/^(?:next|siguiente|continue|continuar|finish|complete|terminar|finalizar)/i.test((x.textContent||x.value||'').trim()));"+
+        "const next=options.find(x=>/^(?:next|siguiente|continue|continuar|submit answers|finish|complete|terminar|finalizar|exit training)/i.test((x.textContent||x.value||'').trim()));"+
         "if(!next)return {clicked:false};"+
         "const label=(next.textContent||next.value||'').trim();next.click();return {clicked:true,label};"+
         "})()");
