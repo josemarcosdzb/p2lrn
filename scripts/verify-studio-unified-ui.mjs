@@ -285,25 +285,16 @@ async function browserScenario(){
     removeCardImage.click();
     expect(!newCard.querySelector('[data-p2lrn-dnd-item-image]')&&newCard.textContent.includes('Papel reciclado'),
       'Removing an image must preserve card text');
-    cardImageInput.files=cardFiles.files;
+    // Resetting a file input can empty the FileList shared with DataTransfer.
+    // Simulate a real second upload with a new selection.
+    const restoreFiles=new DataTransfer();
+    restoreFiles.items.add(new File([pngBytes],'papel.png',{type:'image/png'}));
+    cardImageInput.files=restoreFiles.files;
     cardImageInput.dispatchEvent(new Event('change',{bubbles:true}));
     for(let i=0;i<100&&!newCard.querySelector('[data-p2lrn-dnd-item-image]');i++)
       await new Promise(done=>setTimeout(done,25));
     expect(newCard.querySelector('[data-p2lrn-dnd-item-image]'),
-      'Could not restore mixed image and text card: '+JSON.stringify({
-        menuOpen:zonesMenu.open,
-        inputFiles:cardImageInput.files?.length,
-        status:item.actions.filter(action=>action.startsWith('status:')).slice(-5),
-        cardText:newCard.textContent,
-        selectedZone:zonesMenu.querySelector('[data-p2lrn-drop-name=zone]')?.value,
-        activeCards:activityDrop.querySelectorAll('[data-p2lrn-dnd-item-image]').length,
-        surfaceCards:item.surface.querySelectorAll('[data-p2lrn-dnd-item-image]').length,
-        activityConnected:item.surface.contains(activityDrop),
-        cardConnected:item.surface.contains(newCard),
-        currentCardSame:item.surface.querySelector('[data-p2lrn-dnd-item=item-3]')===newCard,
-        sourceDataTransferFiles:cardFiles.files.length,
-        nearestActivity:zonesMenu.querySelector('[data-p2lrn-drop-name=zone]')?.value,
-      }));
+      'Re-upload must restore a mixed image and text card');
     // Click a card itself to select it, without requiring a click on the target zone.
     const pictureOnly=activityDrop.querySelector('[data-p2lrn-dnd-item=item-2]');
     pictureOnly.click();
