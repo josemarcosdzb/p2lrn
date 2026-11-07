@@ -99,6 +99,18 @@ try{
       "}))()");
     for(let n=0;n<12;n++){
       const beforeState=await current();
+      // Real SCORM quiz at step 4: choose answers through the visible form,
+      // not through LMSSetValue or direct grade/progress mutation.
+      if(beforeState.step?.[0]===4){
+        const submitted=await evaluate("(()=>{"+
+          "const labels=[...document.querySelectorAll('label')];"+
+          "const correctFirst=labels.find(x=>x.textContent.includes('Notify the sandwich owner through approved channels'));"+
+          "const correctSecond=labels.find(x=>x.textContent.trim()==='False');"+
+          "if(!correctFirst||!correctSecond)return {found:false};"+
+          "correctFirst.querySelector('input')?.click();correctSecond.querySelector('input')?.click();"+
+          "return {found:true,first:correctFirst.textContent.trim(),second:correctSecond.textContent.trim()};})()");
+        if(submitted.found)progress.push({answerSelectionsFromRealScormUi:submitted});
+      }
       const clickResult=await evaluate("(()=>{"+
         "const options=[...document.querySelectorAll('button,input[type=button],input[type=submit]')].filter(x=>!x.disabled);"+
         "const next=options.find(x=>/^(?:next|siguiente|continue|continuar|finish|complete|terminar|finalizar)/i.test((x.textContent||x.value||'').trim()));"+
@@ -140,9 +152,34 @@ try{
       "}))()");
     result.after=state;
     result.visibleAnswers=await evaluate("(()=>[...document.querySelectorAll('*')].filter(el=>el.children.length===0&&/^(?:[0-9]{1,4}|−?[0-9]{1,4})$/.test(el.textContent?.trim()||'')&&el.getBoundingClientRect().width>0).slice(0,35).map(el=>({text:el.textContent.trim(),node:el.outerHTML.slice(0,350),parent:el.parentElement?.outerHTML.slice(0,600),grandparent:el.parentElement?.parentElement?.outerHTML.slice(0,600)})))()");
+    // Answer the arithmetic quiz by reading the visible equation and clicking
+    // one of the original H5P <li role=radio> elements, without invoking H5P
+    // internal scoring methods. Every click is a genuine learner UI action.
+    const answered=[];
+    for(let n=0;n<10;n++){
+      const q=await evaluate("(()=>{const page=document.querySelector('.question-page.current');if(!page)return null;return {question:page.querySelector('.question')?.textContent?.trim()||null,choices:[...page.querySelectorAll('[role=radio]')].map(x=>x.textContent.trim())}})()");
+      if(!q?.question||!q.choices?.length)break;
+      const match=/(\d+)\s*([+\-×x*])\s*(\d+)\s*=\s*\?/u.exec(q.question);
+      if(!match){answered.push({question:q.question,error:'Unsupported visible arithmetic expression'});break;}
+      const first=Number(match[1]),second=Number(match[3]);
+      const expected=match[2]==='+'?first+second:match[2]==='-'?first-second:first*second;
+      if(!q.choices.includes(String(expected))){answered.push({question:q.question,expected,error:'Answer not offered'});break;}
+      const clicked=await evaluate("(()=>{const page=document.querySelector('.question-page.current');const answer=[...page.querySelectorAll('[role=radio]')].find(x=>x.textContent.trim()==="+JSON.stringify(String(expected))+");if(!answer)throw Error('Visible answer disappeared');answer.click();return true})()");
+      answered.push({question:q.question,expected,choices:q.choices,clicked});
+      let advanced=false;
+      for(let k=0;k<35;k++){
+        await new Promise(ok=>setTimeout(ok,90));
+        const next=await evaluate("(()=>document.querySelector('.question-page.current .question')?.textContent?.trim()||null)()");
+        if(next!==q.question){advanced=true;break;}
+      }
+      if(!advanced&&n<9){answered.push({error:'Question did not advance after learner click'});break;}
+    }
+    await new Promise(ok=>setTimeout(ok,350));
+    result.realArithmeticAnswers=answered;
+    result.after=await evaluate("(()=>({text:document.body?.innerText?.slice(0,1100)||'',resultText:document.querySelector('.h5p-results,.h5p-baq-feedback,.h5p-result')?.textContent?.slice(0,400)||null,score:document.querySelector('.h5p-baq-score')?.textContent||null,completed:!document.querySelector('.question-page.current .question')}))()");
     result.verifiedInteraction=Boolean(result.action.clicked);
-    result.status=state.completed?'H5P_RUNTIME_COMPLETION_NEEDS_GRADE_VALIDATION':
-      result.verifiedInteraction?'H5P_REAL_START_AND_TIMED_ACTIVITY':'H5P_NO_START_ACTION';
+    result.status=result.realArithmeticAnswers.length>=10&&result.after?.completed?'H5P_ALL_TEN_UI_ANSWERS_RESULT_NEEDS_SCORE_CHECK':
+      result.verifiedInteraction?'H5P_REAL_START_PARTIAL_ANSWERS':'H5P_NO_START_ACTION';
    }
    result.screenshotAfter=await browser.screenshot('after-'+target.kind);
    result.playerEvents=await browser.evaluate("window.__subframeEvents.slice("+before+").slice(-40)");
