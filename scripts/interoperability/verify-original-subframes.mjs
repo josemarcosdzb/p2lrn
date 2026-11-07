@@ -88,12 +88,59 @@ try{
     result.action=await evaluate("(()=>{const activity=document.querySelector('[data-p2lrn-dnd=\"1\"]');const items=[...activity.querySelectorAll('[data-p2lrn-dnd-item]')];const zones=[...activity.querySelectorAll('[data-p2lrn-dnd-zone]')];const before=items.length;for(const item of items){const zone=zones.find(z=>z.dataset.p2lrnDndAccept===item.dataset.p2lrnDndItem);if(!zone)throw Error('Missing answer zone');item.click();zone.click();}return {answerCount:before,completed:activity.dataset.p2lrnDndCompleted==='true',placed:zones.filter(z=>z.querySelector('[data-p2lrn-dnd-item]')).length,status:activity.querySelector('[data-p2lrn-dnd-status]')?.textContent}})()");
     result.verifiedInteraction=result.action.completed&&result.action.placed===result.action.answerCount;
     result.status=result.verifiedInteraction?'PASS_REAL_DRAG_DROP':'FAIL_DRAG_DROP';
-   }else{
-    result.action=await evaluate("(()=>{const relevant=[...document.querySelectorAll('button,input[type=button],input[type=submit],a')].filter(x=>!x.disabled&&getComputedStyle(x).display!=='none');const before=document.body?.innerText?.slice(0,350)||'';const matching=relevant.find(x=>/(?:start|comenzar|check|comprobar|begin|continue|siguiente|next|submit|enviar)/i.test(x.textContent||x.value||''));if(matching){matching.click();return {clicked:(matching.textContent||matching.value).trim().slice(0,110),before,after:document.body?.innerText?.slice(0,350)||''};}return {clicked:null,before,after:before};})()");
-    await new Promise(ok=>setTimeout(ok,350));
-    result.after=await evaluate("(()=>({text:document.body?.innerText?.slice(0,1200)||'',buttons:[...document.querySelectorAll('button,input[type=button]')].map(x=>x.textContent?.trim()||x.value).filter(Boolean).slice(0,24)}))()");
+   }else if(target.kind==='real-scorm'){
+    const progress=[];
+    const current=()=>evaluate("(()=>({"+
+      "text:document.body?.innerText?.slice(0,1500)||'',"+
+      "step:document.body?.innerText?.match(/Step\\s+(\\d+)\\s+of\\s+(\\d+)/i)?.slice(1).map(Number)||null,"+
+      "controls:[...document.querySelectorAll('button,input[type=button],input[type=submit]')].map(x=>({label:(x.textContent||x.value||'').trim(),disabled:x.disabled})).filter(x=>x.label).slice(0,25),"+
+      "lessonStatus:typeof window.API?.LMSGetValue==='function'?window.API.LMSGetValue('cmi.core.lesson_status'):null,"+
+      "lessonScore:typeof window.API?.LMSGetValue==='function'?window.API.LMSGetValue('cmi.core.score.raw'):null"+
+      "}))()");
+    for(let n=0;n<12;n++){
+      const beforeState=await current();
+      const clickResult=await evaluate("(()=>{"+
+        "const options=[...document.querySelectorAll('button,input[type=button],input[type=submit]')].filter(x=>!x.disabled);"+
+        "const next=options.find(x=>/^(?:next|siguiente|continue|continuar|finish|complete|terminar|finalizar)/i.test((x.textContent||x.value||'').trim()));"+
+        "if(!next)return {clicked:false};"+
+        "const label=(next.textContent||next.value||'').trim();next.click();return {clicked:true,label};"+
+        "})()");
+      if(!clickResult.clicked)break;
+      await new Promise(ok=>setTimeout(ok,220));
+      const afterState=await current();
+      progress.push({clicked:clickResult.label,stepBefore:beforeState.step,stepAfter:afterState.step,
+        lessonStatus:afterState.lessonStatus,score:afterState.lessonScore,
+        controls:afterState.controls});
+      const done=['completed','passed'].includes(String(afterState.lessonStatus??'').toLowerCase());
+      const advanced=JSON.stringify(afterState.step)!==JSON.stringify(beforeState.step)||
+        beforeState.lessonStatus!==afterState.lessonStatus||beforeState.text!==afterState.text;
+      if(done||!advanced)break;
+    }
+    const final=await current();
+    result.action={realUIActions:progress,finalStep:final.step,finalLessonStatus:final.lessonStatus,
+      finalRawScore:final.lessonScore,remainingControls:final.controls};
+    const completed=final.step?.[0]===final.step?.[1]&&
+      ['completed','passed'].includes(String(final.lessonStatus??'').toLowerCase());
+    result.verifiedInteraction=progress.length>0;
+    result.status=completed?'SCORM_FINAL_STEP_AND_RUNTIME_COMPLETION':
+      progress.length>0?'SCORM_REAL_UI_ADVANCED_NOT_GRADE_CERTIFIED':'SCORM_NO_ACTION_AVAILABLE';
+    result.after=final;
+   }else if(target.kind==='real-h5p'){
+    result.action=await evaluate("(()=>{const start=[...document.querySelectorAll('button,input[type=button]')]"+
+      ".find(x=>/^(?:start|comenzar|iniciar)$/i.test((x.textContent||x.value||'').trim()));"+
+      "if(!start)return {clicked:false};start.click();return {clicked:true,label:(start.textContent||start.value||'').trim()};})()");
+    await new Promise(ok=>setTimeout(ok,5300));
+    const state=await evaluate("(()=>({"+
+      "text:document.body?.innerText?.slice(0,1800)||'',"+
+      "buttons:[...document.querySelectorAll('button,input[type=button],input[type=submit]')].map(x=>({text:(x.textContent||x.value||'').trim(),disabled:x.disabled})).filter(x=>x.text).slice(0,25),"+
+      "inputControls:[...document.querySelectorAll('input')].map(x=>({type:x.type,placeholder:x.placeholder,valueLength:x.value.length})).slice(0,20),"+
+      "completed:Boolean(document.querySelector('.h5p-question-finished,.h5p-score-bar')),"+
+      "h5pChildren:document.querySelector('.h5p-content')?.children?.length??0"+
+      "}))()");
+    result.after=state;
     result.verifiedInteraction=Boolean(result.action.clicked);
-    result.status=result.verifiedInteraction?'UI_INTERACTION_ONLY_NO_COMPLETION_GRADE':'RENDER_ONLY_NO_ACTION_AVAILABLE';
+    result.status=state.completed?'H5P_RUNTIME_COMPLETION_NEEDS_GRADE_VALIDATION':
+      result.verifiedInteraction?'H5P_REAL_START_AND_TIMED_ACTIVITY':'H5P_NO_START_ACTION';
    }
    result.screenshotAfter=await browser.screenshot('after-'+target.kind);
    result.playerEvents=await browser.evaluate("window.__subframeEvents.slice("+before+").slice(-40)");
