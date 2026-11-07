@@ -1,4 +1,4 @@
-﻿// Dynamic ingress routing for explicitly enabled local QA only.
+// Dynamic ingress routing for explicitly enabled local QA only.
 // Preserve the trusted LMS Host header for Caddy virtual hosts. Node fetch
 // normalizes Host for rewritten URLs, so use node:http rather than fetch here.
 import {lookup as dnsLookup} from 'node:dns/promises';
@@ -77,4 +77,3 @@ export async function createLocalQaLmsFetch({
   return postLocalLms(original,gatewayHost,options,requestLocal);
  };
 }
-

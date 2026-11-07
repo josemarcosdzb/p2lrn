@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import http from 'node:http';
 import assert from 'node:assert/strict';
 import {createLocalQaLmsFetch} from './lti-local-qa-gateway.mjs';
@@ -65,4 +65,3 @@ test('rejects custom gateway hostnames that could be untrusted destinations',asy
   await assert.rejects(createLocalQaLmsFetch({enabled:true,gatewayHost:h}),/Invalid local QA gateway DNS name/);
  }
 });
-
