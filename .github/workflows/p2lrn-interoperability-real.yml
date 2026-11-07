@@ -10,7 +10,8 @@ permissions:
   contents: read
 concurrency:
   group: p2lrn-interoperability-real-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve evidence: newer commits must not interrupt an active real LMS run.
+  cancel-in-progress: false
 jobs:
   discover-real-lms:
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
