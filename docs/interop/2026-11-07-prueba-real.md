@@ -27,19 +27,19 @@ En Chrome se sirvió la versión 1 sin alterar un byte: SHA-256 idéntico al ori
 
 | Actividad | Estado verificado | No demostrado |
 |---|---|---|
-| Lección multimedia con tabla, imagen, vídeo y drag/drop | HTML y recursos aparecen en iframe aislado | Completar drag/drop y registrar su progreso |
+| Lección multimedia con tabla, imagen, vídeo y drag/drop | En el iframe real se seleccionaron y colocaron correctamente **2 fichas**: se mostró «Actividad completada» | Evento de puntuación/progreso acreditado por Host |
 | Segunda lección | Contenido abre en iframe | Retorno y persistencia |
 | Relacionar (3 parejas) | Alumno conectó las tres parejas y terminó, puntuación local normalizada 1 | AGS oficial |
 | Cuestionario | Alumno respondió y finalizó, puntuación local normalizada 1 | Nota almacenada en Host |
-| H5P | Se abrió el iframe H5P | Contestar y completar el contenido |
-| SCORM | Se abrió el iframe y emitió eventos de estado | Recorrido completo, nota y reanudación |
+| H5P | Se abrió el **H5P real** «Arithmetic quiz example - addition» y se pulsó «Start»; comenzó la cuenta atrás | Responder y completar todas las preguntas, conservar puntuación y resultado |
+| SCORM 1.2 | Se abrió el iframe real, se detectó su API y se pulsó «Next» pasando de la **etapa 1 a la 2 de 6**; emite eventos de estado | Las demás etapas, nota, finalización y reanudación |
 | Evaluación final | Alumno respondió y envió | Nota aprobada; el Player correctamente no mostró calificación oficial |
 
-**Resultado medido:** 3/7 interacciones de alumno realizadas; cuatro actividades sólo renderizadas. No hubo errores de renderizado en el recorrido. El Host web de ejemplo tiene `player.adapter = null`; por tanto, **la reanudación y los resultados oficiales no están certificados**.
+**Resultado medido:** cuatro de siete actividades admitieron la **finalización o envío de interacciones reales**: drag/drop (2/2 destinos), relacionar (3/3), cuestionario de autoevaluación y evaluación final (sin mostrar nota oficial); H5P fue iniciado y SCORM avanzó una etapa, **sin completar**; segunda lección se cargó. El Host web de ejemplo tiene `player.adapter = null`; por tanto, **la reanudación y los resultados oficiales no están certificados**.
 
 **Evidencia:** `C:\Users\Usuario\Downloads\P2LRN-INTEROP-WEB-ad6cc4e3\independent-web-student-report.json` y `web-student-evidence\*.png`.
 
-El primer inspector de subframes confirmó eventos de renderizado y estado, pero no accedió a los documentos internos; **sus tres actividades siguen como NO VERIFICADAS**, no como aprobadas.
+El primer inspector de iframes no accedió a sus documentos. El segundo, ejecutado en Windows con **Chrome DevTools conectado a los procesos realmente aislados** (OOPIF), permitió completar la actividad de arrastre y avanzar parcialmente dentro de H5P y SCORM. **Acceder al contenido interno no significa que los estándares externos hayan completado el curso**. Evidencia nueva: `C:\Users\Usuario\Downloads\P2LRN-INTEROP-FRAMES-348e8245\real-subframe-interactions.json` y capturas `frame-captures\*.png`; [ejecución de Chrome](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364924854).
 
 ## LMS y LTI 1.3
 
@@ -69,7 +69,7 @@ Comprobación real: la alteración de bytes de una copia de la versión 1 fue re
 |---|---|
 | Un mismo SHA-256 en todos los destinos para cada versión | Confirmado únicamente entre exportación Studio y web independiente |
 | Adaptaciones por LMS | **0 realizadas**, porque ningún LMS pasó la fase de conexión |
-| 100 % de las actividades completadas | **No**: 3/7 interacciones completas en web |
+| 100 % de las actividades completadas | **No**: 4/7 con finalización o envío de interacción; H5P, SCORM y reanudación sin cerrar. La evaluación final no recibió nota oficial. |
 | 100 % de progresos, reanudaciones y notas oficiales | **No verificado** |
 | 5 LMS reales + web + Windows sin conexión | **0/7 destinos certificados integralmente** |
 | Manipulación no puede crear calificaciones oficiales | **No demostrado**; falta Host autoritativo y prueba de ataques contra su integración |
@@ -78,6 +78,6 @@ Comprobación real: la alteración de bytes de una copia de la versión 1 fue re
 
 ### Para cerrar la certificación
 
-Hacen falta cinco instalaciones LMS accesibles desde el runner, sus registros LTI 1.3 y permisos AGS con alumnos de prueba; configurar un Host real de persistencia y aprobación de notas para la web independiente; completar autoría y titularidad desde Studio antes de firmar la entrega offline; realizar un recorrido real de cada H5P/SCORM/drag-drop; y probar restauración de intentos tras sustituir v1 por v2 sin borrar el historial del Host.
+Hacen falta cinco instalaciones LMS accesibles desde el runner, sus registros LTI 1.3 y permisos AGS con alumnos de prueba; configurar un Host real de persistencia y aprobación de notas para la web independiente; completar autoría y titularidad desde Studio antes de firmar la entrega offline; completar el recorrido real de H5P y SCORM (drag/drop ya completado); y probar restauración de intentos tras sustituir v1 por v2 sin borrar el historial del Host.
 
-**Ejecuciones verificables en GitHub:** [creación real y SHA](https://github.com/josemarcosdzb/p2lrn/actions/runs/42363679207), [alumno web](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364114504), [v2 y offline](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364493157). El código de QA está en `scripts/interoperability/` y su workflow en `.github/workflows/p2lrn-interoperability-real.yml`.
+**Ejecuciones verificables en GitHub:** [creación real y SHA](https://github.com/josemarcosdzb/p2lrn/actions/runs/42363679207), [alumno web](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364114504), [v2 y offline](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364493157), [interacción real de los iframes](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364924854). El código de QA está en `scripts/interoperability/` y su workflow en `.github/workflows/p2lrn-interoperability-real.yml`.
