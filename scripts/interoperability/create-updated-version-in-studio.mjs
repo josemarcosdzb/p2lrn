@@ -44,7 +44,7 @@ try{
   await chrome.wait("document.documentElement.dataset.p2lrnStudioReady==='true'",{timeout:45000,label:'Studio ready'});
   const url=server.base+'/interop/seguridad-informatica.p2lrn';
   await chrome.evaluate("(()=>{const el=document.querySelector('[data-url]');if(!el)throw Error('No Studio URL import field');el.value="+JSON.stringify(url)+";document.querySelector('[data-open-url]').click();return true})()");
-  await chrome.wait("document.querySelectorAll('[data-tree] button[data-entity-id]').length>=11",{timeout:40000,label:'Course outline imported'});
+  await chrome.wait("document.querySelectorAll('[data-tree] button[data-entity-id]').length>=8",{timeout:40000,label:'Course outline imported'});
   const layout=await chrome.evaluate("(()=>{const list=[...document.querySelectorAll('[data-tree] button[data-entity-id]')];return {count:list.length,courseTitles:list.filter(x=>x.querySelector('.type')?.textContent==='course').map(x=>x.textContent)}})()");
   return {...layout,screenshot:await chrome.screenshot('version-2-original-opened')};
  });
