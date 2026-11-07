@@ -32,7 +32,7 @@ export function addStudioDropPair(section,{x=10,y=14,width=33,height=26}={}){
       width:percent(width),height:percent(height),minWidth:'28px',minHeight:'32px',
       display:'flex',alignItems:'center',justifyContent:'center',
       boxSizing:'border-box',padding:'8px',border:'2px dashed #1d4ed8',
-      borderRadius:'8px',backgroundColor:'rgba(255,255,255,.83)',
+      borderRadius:'8px',backgroundColor:'transparent',
       color:'#172554',fontSize:'16px',fontWeight:'650',textAlign:'center',
       cursor:'move',touchAction:'none',overflow:'hidden',
     },
@@ -52,8 +52,8 @@ export function addStudioDropPair(section,{x=10,y=14,width=33,height=26}={}){
     },
   });
   item.append(element(section.ownerDocument,'span',{
-    'data-p2lrn-dnd-text':'',text:'Ficha '+ordinal,
-    style:{display:'block',width:'100%',fontSize:'16px',lineHeight:'1.35',textAlign:'center',whiteSpace:'normal',overflowWrap:'anywhere'},
+    'data-p2lrn-dnd-text':'',text:'',
+    style:{display:'none',width:'100%',fontSize:'16px',lineHeight:'1.35',textAlign:'center',whiteSpace:'normal',overflowWrap:'anywhere'},
   }));
   board.append(zone);
   tray.append(item);
@@ -125,12 +125,30 @@ export function getStudioDropItemText(item){
   return [...(item?.childNodes??[])].filter(node=>node.nodeType===3)
     .map(node=>node.textContent||'').join('').trim();
 }
+// Older lessons generated "Ficha N" as if it were authored text. Once an
+// image is attached, this automatically generated caption must not appear.
+export function normalizeStudioDropImageTile(item){
+  const image=item?.querySelector?.('[data-p2lrn-dnd-item-image]');
+  if(!image)return false;
+  let modified=false;
+  const caption=item.querySelector('[data-p2lrn-dnd-text]');
+  const index=Number(String(item.dataset?.p2lrnDndItem||'').replace(/^item-/,''));
+  if(caption&&Number.isInteger(index)&&index>0&&caption.textContent?.trim()==='Ficha '+index){
+    caption.remove();modified=true;
+  }
+  // No opaque tile plate may be composited behind a transparent PNG.
+  for(const [property,value] of [['backgroundColor','transparent'],['borderColor','transparent'],['padding','0px']]){
+    if(item.style[property]!==value){item.style[property]=value;modified=true;}
+  }
+  return modified;
+}
 export function setStudioDropItemText(section,item,text){
   if(!findDropItem(section,item))throw new Error('Selecciona una ficha de esta actividad.');
   const value=String(text??'').trim().slice(0,120);
   if(!value&&!item.querySelector('[data-p2lrn-dnd-item-image]'))
     throw new Error('La ficha necesita texto o una imagen.');
   let label=item.querySelector('[data-p2lrn-dnd-text]');
+  if(!value){label?.remove();return null;}
   if(!label){
     label=element(section.ownerDocument,'span',{
       'data-p2lrn-dnd-text':'',
@@ -140,7 +158,8 @@ export function setStudioDropItemText(section,item,text){
     item.append(label);
   }
   label.textContent=value;
-  label.hidden=!value;
+  label.hidden=false;
+  label.style.display='block';
   return label;
 }
 async function readStudioDropImage(file){
@@ -169,6 +188,7 @@ export async function setStudioDropItemImage(section,item,file){
     },
   });
   if(previous)previous.replaceWith(image);else item.prepend(image);
+  normalizeStudioDropImageTile(item);
   return image;
 }
 export function setStudioDropItemImageAlt(section,item,text){
@@ -186,6 +206,9 @@ export function removeStudioDropItemImage(section,item){
   if(!image)return false;
   if(!getStudioDropItemText(item))throw new Error('Antes de quitar la imagen, escribe el texto de la ficha.');
   image.remove();
+  item.style.backgroundColor='#fff';
+  item.style.borderColor='#94a3b8';
+  item.style.padding='9px 13px';
   return true;
 }
 export async function setStudioDropBackground(section,file){
@@ -213,6 +236,10 @@ export function removeStudioDropBackground(section){
 }
 export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=>{}}={}){
   if(!surface?.isContentEditable)throw new TypeError('Editor HTML no disponible.');
+  // Normalize legacy image-only cards immediately on opening an older lesson.
+  const normalized=[...surface.querySelectorAll('[data-p2lrn-dnd-item]')]
+    .filter(item=>normalizeStudioDropImageTile(item));
+  if(normalized.length)onChange();
   let selected=null,drag=null;
   const clear=()=>{selected=null;onSelected(null);};
   const select=zone=>{

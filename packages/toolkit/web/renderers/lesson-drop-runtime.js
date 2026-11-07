@@ -10,6 +10,19 @@ export function bootStudioDropActivities(){
     const items=[...activity.querySelectorAll('[data-p2lrn-dnd-item]')];
     const zones=[...activity.querySelectorAll('[data-p2lrn-dnd-zone]')];
     if(!tray||!status||!items.length||!zones.length||items.length>20||zones.length>20)continue;
+    // Import existing authored images without inserting a white card plate.
+    // Historic "Ficha N" defaults were not a teacher-provided caption.
+    for(const item of items){
+      if(!item.querySelector('[data-p2lrn-dnd-item-image]'))continue;
+      const caption=item.querySelector('[data-p2lrn-dnd-text]');
+      const index=Number(String(item.dataset.p2lrnDndItem||'').replace(/^item-/,''));
+      if(caption&&Number.isInteger(index)&&index>0&&caption.textContent?.trim()==='Ficha '+index)
+        caption.remove();
+      item.style.backgroundColor='transparent';
+      item.style.borderColor='transparent';
+      item.style.padding='0';
+    }
+    const zoneBackgrounds=new Map(zones.map(zone=>[zone,zone.style.backgroundColor]));
     const byId=new Map(items.map(item=>[item.dataset.p2lrnDndItem,item]));
     const placed=new Set();
     // Keep the authored tray dimensions for a perfect reset after placing an image.
@@ -56,7 +69,8 @@ export function bootStudioDropActivities(){
         flex:'1 1 0',minHeight:'0',maxHeight:'100%',width:'auto',height:'auto',objectFit:'contain',
       });
       zone.style.border='2px solid #15803d';
-      zone.style.backgroundColor='#dcfce7';
+      // Green border and status indicate success; no opaque rectangle over PNG alpha.
+      zone.style.backgroundColor='transparent';
       zone.setAttribute('aria-label','Respuesta correcta: '+tileName(item));
       selected=null;
       const complete=placed.size===zones.length;
@@ -160,7 +174,7 @@ export function bootStudioDropActivities(){
         const label=zone.querySelector('[data-p2lrn-dnd-label]');
         if(label)label.hidden=false;
         zone.style.border='2px dashed #1d4ed8';
-        zone.style.backgroundColor='rgba(255,255,255,.83)';
+        zone.style.backgroundColor=zoneBackgrounds.get(zone)||'transparent';
         zone.setAttribute('aria-label',zone.querySelector('[data-p2lrn-dnd-label]')?.textContent||'Zona');
       }
       announce('Actividad reiniciada. Arrastra una ficha hasta su zona.');
