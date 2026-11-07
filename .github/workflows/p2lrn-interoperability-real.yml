@@ -34,3 +34,45 @@ jobs:
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           if(!(Test-Path (Join-Path $dir 'real-destination-preflight.json'))){throw 'Actual host report missing'}
           Write-Output ('INTEROP_EVIDENCE_DIR='+$dir)
+
+  create-one-real-studio-course:
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Syntax-check the real browser and import lab
+        shell: powershell
+        run: |
+          foreach($file in @('scripts/interoperability/studio-lab-server.mjs','scripts/interoperability/chrome-visual.mjs','scripts/interoperability/create-one-course.mjs')){
+            node --check $file
+            if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          }
+      - name: Build real hosted Studio and Player without publishing
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $dir=Join-Path $env:USERPROFILE ('Downloads\P2LRN-INTEROP-'+$env:GITHUB_SHA.Substring(0,8))
+          $site=Join-Path $dir 'site'
+          node scripts/build-studio-local-preview.mjs --output "$site"
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          "P2LRN_INTEROP_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Operate actual Studio UI, import genuine H5P SCORM and export once
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          node scripts/interoperability/create-one-course.mjs --site "$env:P2LRN_INTEROP_DIR\site" --output "$env:P2LRN_INTEROP_DIR" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $file=Join-Path $env:P2LRN_INTEROP_DIR 'seguridad-informatica.p2lrn'
+          if(!(Test-Path $file)){throw 'Studio did not produce the ONE requested course'}
+          $hash=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+          $report=Get-Content (Join-Path $env:P2LRN_INTEROP_DIR 'course-creation-evidence.json') -Raw | ConvertFrom-Json
+          if($hash -ne $report.courseSha256){throw 'File changed after Studio export'}
+          Write-Output ('P2LRN_REAL_ONE_COURSE_SHA256='+$hash)
+          Write-Output ('P2LRN_REAL_ONE_COURSE_FILE='+$file)
+          Write-Output ('P2LRN_REAL_INTEROP_EVIDENCE_DIR='+$env:P2LRN_INTEROP_DIR)
