@@ -180,6 +180,19 @@ async function browserScenario(){
     blue.click();
     const section=item.surface.querySelector('[data-p2lrn-layout=columns]');
     expect(section.style.backgroundColor==='rgb(239, 246, 255)','Block design was not persisted');
+    const backgroundMenu=item.toolbar.querySelector('[data-studio-context-menu=fondo]');
+    const colorHex=backgroundMenu.querySelector('input[aria-label="Color hexadecimal del fondo"]');
+    const alpha=backgroundMenu.querySelector('input[aria-label="Opacidad del fondo, porcentaje"]');
+    expect(backgroundMenu.querySelector('input[type=color]')&&colorHex&&alpha,
+      'Any RGB background color and opacity must be editable, not only 4 preset colors');
+    colorHex.value='#1ba4ef';colorHex.dispatchEvent(new Event('change',{bubbles:true}));
+    expect(section.style.backgroundColor==='rgb(27, 164, 239)','Arbitrary hex background did not apply');
+    alpha.value='37';alpha.dispatchEvent(new Event('change',{bubbles:true}));
+    expect(section.style.backgroundColor==='rgba(27, 164, 239, 0.37)','Alpha background did not apply');
+    backgroundMenu.querySelector('button[title*="Eliminar el fondo"]').click();
+    expect(section.style.backgroundColor==='transparent','Transparent background was not applied');
+    blue.click();
+    expect(section.style.backgroundColor==='rgb(239, 246, 255)','Preset could not restore the block background');
     // Resize handle on a movable shape, including undo/redo of the gesture.
     item.toolbar.querySelector('[role=tab][aria-controls*="-insert"]').click();
     item.toolbar.querySelector('[data-ui-layout=shape]').click();
@@ -261,6 +274,8 @@ async function browserScenario(){
       'Card image did not embed as a local data URL');
     expect(newCard.querySelector('[data-p2lrn-dnd-text]')?.textContent==='Papel reciclado',
       'Adding a card image erased the existing label');
+    expect(newCard.style.backgroundColor==='transparent'&&newCard.style.borderColor==='transparent',
+      'Transparent PNG images must not be surrounded by an opaque tile background');
     expect(!altField.disabled,'The image description must be editable');
     altField.value='Papel para depositar en el contenedor azul';
     altField.dispatchEvent(new Event('change',{bubbles:true}));
@@ -278,7 +293,7 @@ async function browserScenario(){
     // Click a card itself to select it, without requiring a click on the target zone.
     const pictureOnly=activityDrop.querySelector('[data-p2lrn-dnd-item=item-2]');
     pictureOnly.click();
-    expect(itemName.value==='Ficha 2','Clicking a tile did not select its pair in the editor');
+    expect(itemName.value==='','The editor must not invent a card caption when the teacher did not write one');
     const secondFiles=new DataTransfer();
     secondFiles.items.add(new File([pngBytes],'puente.png',{type:'image/png'}));
     cardImageInput.files=secondFiles.files;
@@ -288,9 +303,9 @@ async function browserScenario(){
     expect(pictureOnly.querySelector('[data-p2lrn-dnd-item-image]'),'Second card image was not added');
     itemName.value='';
     itemName.dispatchEvent(new Event('change',{bubbles:true}));
-    expect(pictureOnly.querySelector('[data-p2lrn-dnd-text]')?.textContent==='' &&
+    expect(!pictureOnly.querySelector('[data-p2lrn-dnd-text]') &&
       pictureOnly.querySelector('[data-p2lrn-dnd-item-image]'),
-      'Image-only tiles must remain valid without requiring text');
+      'Image-only tiles must not render a blank or automatically numbered caption');
     altField.value='Puente de madera';
     altField.dispatchEvent(new Event('change',{bubbles:true}));
     expect(pictureOnly.querySelector('img')?.alt==='Puente de madera',
@@ -299,6 +314,23 @@ async function browserScenario(){
     const hotspot=activityDrop.querySelector('[data-p2lrn-dnd-zone]');
     expect(hotspot.style.left.endsWith('%')&&hotspot.style.width.endsWith('%'),
       'Hotspots must use responsive percentage coordinates');
+    // Reproduce the teacher's end-of-lesson insertion bug with a previously
+    // selected exercise and a caret now positioned below its last activity.
+    const endCaret=item.surface.querySelector('p[data-p2lrn-end-caret]');
+    expect(endCaret&&endCaret.isConnected,'No editable caret exists below the final activity');
+    const atEnd=document.createRange();atEnd.selectNodeContents(endCaret);atEnd.collapse(true);
+    const browserSelection=(typeof item.root.getSelection==='function'?item.root.getSelection():null)||document.getSelection();
+    browserSelection.removeAllRanges();browserSelection.addRange(atEnd);
+    item.root.dispatchEvent(new Event('selectionchange'));
+    document.dispatchEvent(new Event('selectionchange'));
+    item.toolbar.querySelector('[role=tab][aria-controls$="-insert"]').click();
+    item.toolbar.querySelector('[data-ui-layout=section]').click();
+    const addedAfter=item.surface.querySelector(':scope > [data-p2lrn-layout=section]');
+    const lastEndCaret=item.surface.querySelector(':scope > p[data-p2lrn-end-caret]');
+    expect(addedAfter&&addedAfter.nextElementSibling===lastEndCaret,
+      'The last inserted section must appear immediately above the ending caret');
+    expect(!activityDrop.contains(addedAfter),
+      'Inserting after an exercise must never accidentally nest inside its board');
     item.toolbar.querySelector('[data-ui-action=save]').click();
     const fileMenu=item.toolbar.querySelector('.p2lrn-file-menu');
     expect(fileMenu.querySelectorAll('[data-ui-action=export]').length===1,'Export action must exist once in Archivo');

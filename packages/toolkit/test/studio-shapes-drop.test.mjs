@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {STUDIO_SHAPES,STUDIO_SHAPE_IDS,getStudioShape} from '../web/studio/studio-shapes.js';
-import {setStudioDropBackground,createStudioDropActivity,addStudioDropPair,setStudioDropItemImage,setStudioDropItemImageAlt,removeStudioDropItemImage,getStudioDropItemText} from '../web/studio/studio-drop-activity.js';
+import {setStudioDropBackground,createStudioDropActivity,addStudioDropPair,setStudioDropItemImage,setStudioDropItemImageAlt,removeStudioDropItemImage,getStudioDropItemText,normalizeStudioDropImageTile} from '../web/studio/studio-drop-activity.js';
 import {studioDropRuntimeSource} from '../web/renderers/lesson-drop-runtime.js';
 
 test('Every reference palette form is unique, scalable and safe without inline SVG',()=>{
@@ -67,4 +67,24 @@ test('Draggable cards reject SVG/oversized images and require accessible text or
   assert.throws(()=>setStudioDropItemImageAlt(section,tile,'  '),/descripción de la imagen/);
   assert.equal(setStudioDropItemImageAlt(section,tile,'  Un puente de madera  ').alt,'Un puente de madera');
   assert.equal(getStudioDropItemText({childNodes:[{nodeType:3,textContent:'Ficha antigua'}]}),'Ficha antigua');
+});
+
+test('Image-only cards remove inherited Ficha N captions and preserve PNG alpha',()=>{
+  let removed=false;
+  const label={textContent:'Ficha 2',remove(){removed=true;}};
+  const style={backgroundColor:'#fff',borderColor:'#94a3b8',padding:'9px'};
+  const item={
+    dataset:{p2lrnDndItem:'item-2'},style,
+    querySelector(selector){
+      if(selector==='[data-p2lrn-dnd-item-image]')return {src:'data:image/png;base64,AA=='};
+      if(selector==='[data-p2lrn-dnd-text]'&&!removed)return label;
+      return null;
+    }
+  };
+  assert.equal(normalizeStudioDropImageTile(item),true);
+  assert.equal(removed,true);
+  assert.equal(style.backgroundColor,'transparent');
+  assert.equal(style.borderColor,'transparent');
+  assert.equal(style.padding,'0px');
+  assert.equal(normalizeStudioDropImageTile(item),false,'Normalization must be idempotent');
 });
