@@ -1,0 +1,36 @@
+name: P2LRN Real Interoperability Lab (no mocks)
+on:
+  workflow_dispatch:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'scripts/interoperability/**'
+      - '.github/workflows/p2lrn-interoperability-real.yml'
+permissions:
+  contents: read
+concurrency:
+  group: p2lrn-interoperability-real-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  discover-real-lms:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Probe real Windows LMS without fake registration or grades
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $dir=Join-Path $env:USERPROFILE ('Downloads\P2LRN-INTEROP-'+$env:GITHUB_SHA.Substring(0,8))
+          $env:P2LRN_INTEROP_OUTPUT=$dir
+          node --check scripts/interoperability/probe-real-destinations.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/probe-real-destinations.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if(!(Test-Path (Join-Path $dir 'real-destination-preflight.json'))){throw 'Actual host report missing'}
+          Write-Output ('INTEROP_EVIDENCE_DIR='+$dir)
