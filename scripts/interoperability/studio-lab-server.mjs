@@ -5,7 +5,7 @@
 import {createServer} from 'node:http';
 import {readFile,stat} from 'node:fs/promises';
 import {resolve,relative,sep,join,extname} from 'node:path';
-import {createHash} from 'node:crypto';
+import {createHash,randomBytes} from 'node:crypto';
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const mediaTypes={
  '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8',
@@ -24,9 +24,13 @@ const samples=Object.freeze({
   'snack-safety-scorm12.p2lrn':'examples/canonical/external/free/snack-safety-scorm12.p2lrn',
   'video.webm':'scripts/studio-media-test.webm',
 });
-export async function createInteropStudioServer({siteRoot,repoRoot,coursePath=null,versionTwoPath=null}={}){
+export async function createInteropStudioServer({siteRoot,repoRoot,coursePath=null,versionTwoPath=null,stateHost=false}={}){
   const root=resolve(siteRoot),repo=resolve(repoRoot);
-  const report={imports:[],requests:[],sourceFiles:{}};
+  const report={imports:[],requests:[],sourceFiles:{},draftSessions:0,draftWrites:0,officialGradeWrites:0,rejectedGradeSpoofs:0};
+  // This is a LOCAL QA Host, not an LMS: stores untrusted learner draft state
+  // but deliberately offers NO authoritative grade acceptance endpoint.
+  const learnerSessions=new Map();
+  const courseContentRoot='sha256:e0fb13f5092e0d1d9cf6cf552632279b30bf89c6364662b1dbdf5cfe80804323';
   for(const [name,path] of Object.entries(samples)){
     const bytes=await readFile(join(repo,path));
     report.sourceFiles[name]={bytes:bytes.length,sha256:sha(bytes)};
@@ -42,6 +46,66 @@ export async function createInteropStudioServer({siteRoot,repoRoot,coursePath=nu
       if(pathname==='/__interop_health'){
         send(200,JSON.stringify({ok:true,kind:'real-studio-ui',samples:Object.keys(samples)}),'application/json');
         return;
+      }
+      if(stateHost&&pathname.startsWith('/interop/host/')){
+        const hostname=req.headers.host||'';
+        if(!/^127\.0\.0\.1:\d+$/.test(hostname)){send(403,'Loopback host required');return;}
+        const token=/\bp2lrn_qa_session=([a-f0-9]{48})\b/.exec(req.headers.cookie||'')?.[1];
+        const actor=token?learnerSessions.get(token):null;
+        if(req.method==='POST'&&pathname==='/interop/host/login'){
+          const newToken=randomBytes(24).toString('hex');
+          learnerSessions.set(newToken,{actorId:'local-qa-'+randomBytes(8).toString('hex'),drafts:new Map(),scoreNotifications:0});
+          report.draftSessions=learnerSessions.size;
+          res.writeHead(200,{...responseHeaders,'Set-Cookie':'p2lrn_qa_session='+newToken+'; Path=/interop/host; HttpOnly; SameSite=Strict',
+            'Content-Type':'application/json','Cache-Control':'no-store'});
+          res.end(JSON.stringify({ok:true,gradeAuthority:false}));return;
+        }
+        if(!actor){send(401,JSON.stringify({error:'No QA learner session'}),'application/json');return;}
+        const key=url.searchParams.get('entityId');
+        const rootId=url.searchParams.get('contentRoot');
+        if(pathname==='/interop/host/official-grade'){
+          report.rejectedGradeSpoofs++;
+          send(403,JSON.stringify({error:'Client grade cannot create a trusted LMS result'}),'application/json');
+          return;
+        }
+        if(pathname==='/interop/host/audit'&&req.method==='GET'){
+          send(200,JSON.stringify({draftCount:actor.drafts.size,draftWrites:report.draftWrites,
+            scoreNotifications:actor.scoreNotifications,verifiedGrades:report.officialGradeWrites,
+            rejectedGradeSpoofs:report.rejectedGradeSpoofs}),'application/json');
+          return;
+        }
+        if(pathname==='/interop/host/state'){
+          if(!/^urn:uuid:[0-9a-f-]{36}$/i.test(key||'')||rootId!==courseContentRoot){
+            send(400,JSON.stringify({error:'Unknown original course or activity'}),'application/json');return;
+          }
+          if(req.method==='GET'){
+            const draft=actor.drafts.get(key);
+            send(draft?200:404,JSON.stringify(draft?{ok:true,state:draft}:{error:'No stored draft'}),'application/json');
+            return;
+          }
+          if(req.method==='POST'){
+            const origin=req.headers.origin;
+            if(origin&&origin!=='http://127.0.0.1:'+server.address().port){send(403,'Wrong origin');return;}
+            const chunks=[];let n=0;
+            for await(const chunk of req){
+              n+=chunk.length;if(n>65536){send(413,'State too large');return;}
+              chunks.push(chunk);
+            }
+            let data;
+            try{data=JSON.parse(Buffer.concat(chunks).toString('utf8'));}
+            catch{send(400,'Invalid JSON');return;}
+            if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.state!=='object'||!data.state||Array.isArray(data.state)){
+              send(400,'Invalid draft');return;
+            }
+            actor.drafts.set(key,data.state);report.draftWrites++;
+            send(200,JSON.stringify({ok:true,untrustedDraft:true}),'application/json');return;
+          }
+        }
+        if(pathname==='/interop/host/untrusted-score'&&req.method==='POST'){
+          actor.scoreNotifications++;
+          send(202,JSON.stringify({received:true,verifiedGrade:false}),'application/json');return;
+        }
+        send(405,'Unsupported QA Host operation');return;
       }
       if(req.method==='POST'&&pathname==='/api/p2lrn/studio/import'){
         const rawName=req.headers['x-p2lrn-filename'];
