@@ -24,7 +24,7 @@ const samples=Object.freeze({
   'snack-safety-scorm12.p2lrn':'examples/canonical/external/free/snack-safety-scorm12.p2lrn',
   'video.webm':'scripts/studio-media-test.webm',
 });
-export async function createInteropStudioServer({siteRoot,repoRoot,coursePath=null}={}){
+export async function createInteropStudioServer({siteRoot,repoRoot,coursePath=null,versionTwoPath=null}={}){
   const root=resolve(siteRoot),repo=resolve(repoRoot);
   const report={imports:[],requests:[],sourceFiles:{}};
   for(const [name,path] of Object.entries(samples)){
@@ -67,9 +67,10 @@ export async function createInteropStudioServer({siteRoot,repoRoot,coursePath=nu
         const bytes=await readFile(join(repo,samples[name]));
         send(200,bytes,mediaTypes[extname(name)]||'application/octet-stream');return;
       }
-      if(pathname==='/interop/seguridad-informatica.p2lrn'){
-        if(!coursePath){send(404,'Course not yet exported');return;}
-        const body=await readFile(coursePath).catch(()=>null);
+      if(pathname==='/interop/seguridad-informatica.p2lrn'||pathname==='/interop/seguridad-informatica-v2.p2lrn'){
+        const resolvedCourse=pathname.endsWith('-v2.p2lrn')?versionTwoPath:coursePath;
+        if(!resolvedCourse){send(404,'Course not yet exported');return;}
+        const body=await readFile(resolvedCourse).catch(()=>null);
         if(!body){send(404,'Course not yet exported');return;}
         send(200,body,'application/vnd.p2lrn+zip');return;
       }
