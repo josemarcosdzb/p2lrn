@@ -135,3 +135,32 @@ jobs:
           if(!(Test-Path (Join-Path $out 'offline-windows-report.json'))){throw 'Offline QA report missing'}
           Write-Output ('ORIGINAL_COURSE_SHA256='+$sha)
           Write-Output ('REAL_OFFLINE_REPORT_DIRECTORY='+$out)
+  create-version-two-in-real-studio:
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Open exactly the original v1 in Studio and update one question
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $downloads=Join-Path $env:USERPROFILE 'Downloads'
+          $source=Join-Path $downloads 'P2LRN-INTEROP-0474eb9b\seguridad-informatica.p2lrn'
+          $site=Join-Path $downloads 'p2lrn-mejorastudio-preview-0474eb9b'
+          $out=Join-Path $downloads ('P2LRN-INTEROP-V2-'+$env:GITHUB_SHA.Substring(0,8))
+          if(!(Test-Path $source)){throw 'Original course not found'}
+          $digest=(Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($digest -ne 'cce43503ea425ec4f1e6203c8ef6556beb999e71c08e59d5511091a6b931a380'){throw 'V1 SHA changed'}
+          node --check scripts/interoperability/create-updated-version-in-studio.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/create-updated-version-in-studio.mjs --course "$source" --site "$site" --output "$out" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if(!(Test-Path (Join-Path $out 'seguridad-informatica-v2.p2lrn'))){throw 'Updated version not exported by Studio'}
+          Write-Output ('UNTOUCHED_ORIGINAL_SHA256='+$digest)
+          Write-Output ('STUDIO_REAL_V2_DIRECTORY='+$out)
