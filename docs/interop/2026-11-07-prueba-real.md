@@ -39,6 +39,14 @@ En Chrome se sirvió la versión 1 sin alterar un byte: SHA-256 idéntico al ori
 
 **Evidencia:** `C:\Users\Usuario\Downloads\P2LRN-INTEROP-WEB-ad6cc4e3\independent-web-student-report.json` y `web-student-evidence\*.png`.
 
+### Web independiente con adaptador de estado
+
+Como comprobación adicional, se conectó el Player al **adaptador oficial de Host** y a un servidor de pruebas de sesión local: un alumno respondió una pregunta; el servidor guardó el borrador; al abandonar y volver a cargar la página Chrome restauró esa respuesta. Otra sesión no pudo leer ese borrador. El Host respondió HTTP **403** al intento de registrar desde el navegador una nota supuestamente oficial; el contador de notas verificadas se mantuvo en **0**. Se notificó la nota de autoevaluación únicamente como **dato sin verificar**.
+
+**Importante:** el Host utilizado es **un servicio local de pruebas** (sesiones en memoria, no conectado a ningún LMS ni a una base de datos productiva). Esta prueba acredita reanudación de una respuesta tras recargar la web, aislamiento entre sesiones de prueba y rechazo de un intento de suplantación de nota **en dicho servidor**, pero **no** conservación ante reinicio del servidor, LTI/AGS, ni grado oficial. El contenido del curso no se alteró. [Ejecución real](https://github.com/josemarcosdzb/p2lrn/actions/runs/42365432381).
+
+**Evidencia de sesiones y ataque:** `C:\Users\Usuario\Downloads\P2LRN-INTEROP-REENTRY-09aeaa7f\independent-web-reentry.json` y dos capturas en `web-resume-screenshots`.
+
 El primer inspector de iframes no accedió a sus documentos. El segundo, ejecutado en Windows con **Chrome DevTools conectado a los procesos realmente aislados** (OOPIF), permitió completar la actividad de arrastre y avanzar parcialmente dentro de H5P y SCORM. **Acceder al contenido interno no significa que los estándares externos hayan completado el curso**. Evidencia nueva: `C:\Users\Usuario\Downloads\P2LRN-INTEROP-FRAMES-348e8245\real-subframe-interactions.json` y capturas `frame-captures\*.png`; [ejecución de Chrome](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364924854).
 
 ## LMS y LTI 1.3
@@ -70,7 +78,7 @@ Comprobación real: la alteración de bytes de una copia de la versión 1 fue re
 | Un mismo SHA-256 en todos los destinos para cada versión | Confirmado únicamente entre exportación Studio y web independiente |
 | Adaptaciones por LMS | **0 realizadas**, porque ningún LMS pasó la fase de conexión |
 | 100 % de las actividades completadas | **No**: 4/7 con finalización o envío de interacción; H5P, SCORM y reanudación sin cerrar. La evaluación final no recibió nota oficial. |
-| 100 % de progresos, reanudaciones y notas oficiales | **No verificado** |
+| 100 % de progresos, reanudaciones y notas oficiales | **No**: recuperación de una respuesta aprobada con Host local de pruebas; reinicio del Host, LMS y notas oficiales pendientes |
 | 5 LMS reales + web + Windows sin conexión | **0/7 destinos certificados integralmente** |
 | Manipulación no puede crear calificaciones oficiales | **No demostrado**; falta Host autoritativo y prueba de ataques contra su integración |
 | V2 con una pregunta actualizada y v1 intacta | **Sí, en Studio y en Player web** |
