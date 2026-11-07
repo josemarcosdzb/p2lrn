@@ -297,6 +297,12 @@ async function browserScenario(){
         cardText:newCard.textContent,
         selectedZone:zonesMenu.querySelector('[data-p2lrn-drop-name=zone]')?.value,
         activeCards:activityDrop.querySelectorAll('[data-p2lrn-dnd-item-image]').length,
+        surfaceCards:item.surface.querySelectorAll('[data-p2lrn-dnd-item-image]').length,
+        activityConnected:item.surface.contains(activityDrop),
+        cardConnected:item.surface.contains(newCard),
+        currentCardSame:item.surface.querySelector('[data-p2lrn-dnd-item=item-3]')===newCard,
+        sourceDataTransferFiles:cardFiles.files.length,
+        nearestActivity:zonesMenu.querySelector('[data-p2lrn-drop-name=zone]')?.value,
       }));
     // Click a card itself to select it, without requiring a click on the target zone.
     const pictureOnly=activityDrop.querySelector('[data-p2lrn-dnd-item=item-2]');
