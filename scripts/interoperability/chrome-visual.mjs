@@ -45,10 +45,10 @@ export async function launchInteropChrome({downloadDir,evidenceDir}){
     if(payload.error)fail(Error(payload.error.message||'CDP failure'));
     else ok(payload.result||{});
   };
-  const send=(method,params={})=>new Promise((ok,fail)=>{
+  const send=(method,params={},sessionId=null)=>new Promise((ok,fail)=>{
     const id=++sequence;
     pending.set(id,{ok,fail});
-    ws.send(JSON.stringify({id,method,params}));
+    ws.send(JSON.stringify(sessionId?{id,method,params,sessionId}:{id,method,params}));
   });
   await send('Page.enable');
   await send('Runtime.enable');
