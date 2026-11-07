@@ -159,14 +159,14 @@ try{
     // question page and confirm advance using the visible slide counter.
     const answered=[];
     for(let n=0;n<10;n++){
-      const q=await evaluate("(()=>{const page=[...document.querySelectorAll('.question-page')].at(-1);const label=document.body?.innerText?.match(/Slide\\s+(\\d+)\\s+of\\s+(\\d+)/i);if(!page)return null;return {slide:label?Number(label[1]):null,total:label?Number(label[2]):null,question:page.querySelector('.question')?.textContent?.trim()||null,choices:[...page.querySelectorAll('[role=radio]')].map(x=>x.textContent.trim())}})()");
+      const q=await evaluate("(()=>{const visible=document.body?.innerText||'';const label=visible.match(/Slide\\s+(\\d+)\\s+of\\s+(\\d+)/i);const expressions=[...visible.matchAll(/\\d+\\s*[+\\-×x*]\\s*\\d+\\s*=\\s*\\?/g)];const question=expressions.at(-1)?.[0]||null;const page=[...document.querySelectorAll('.question-page')].find(x=>x.querySelector('.question')?.textContent.trim()===question);if(!page)return null;return {slide:label?Number(label[1]):null,total:label?Number(label[2]):null,question,choices:[...page.querySelectorAll('[role=radio]')].map(x=>x.textContent.trim())}})()");
       if(!q?.question||!q.choices?.length)break;
       const match=/(\d+)\s*([+\-×x*])\s*(\d+)\s*=\s*\?/u.exec(q.question);
       if(!match){answered.push({slide:q.slide,question:q.question,error:'Unsupported visible arithmetic expression'});break;}
       const first=Number(match[1]),second=Number(match[3]);
       const expected=match[2]==='+'?first+second:match[2]==='-'?first-second:first*second;
       if(!q.choices.includes(String(expected))){answered.push({slide:q.slide,question:q.question,expected,error:'Answer not offered'});break;}
-      const clicked=await evaluate("(()=>{const page=[...document.querySelectorAll('.question-page')].at(-1);const answer=[...page.querySelectorAll('[role=radio]')].find(x=>x.textContent.trim()==="+JSON.stringify(String(expected))+");if(!answer)throw Error('Visible answer disappeared');answer.click();return true})()");
+      const clicked=await evaluate("(()=>{const question="+JSON.stringify(q.question)+";const page=[...document.querySelectorAll('.question-page')].find(x=>x.querySelector('.question')?.textContent.trim()===question);const answer=[...page.querySelectorAll('[role=radio]')].find(x=>x.textContent.trim()==="+JSON.stringify(String(expected))+");if(!answer)throw Error('Visible answer disappeared');answer.click();return {selected:answer.textContent.trim(),pageQuestion:question};})()");
       answered.push({slide:q.slide,question:q.question,expected,clicked});
       let advanced=false;
       for(let k=0;k<55;k++){
