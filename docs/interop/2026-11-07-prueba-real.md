@@ -161,3 +161,15 @@ Antes de la corrección el comprobador podía clasificar un HTTP 200 con cuerpo 
 El workflow histórico de un curso específico permanece disponible solo cuando se inicia manualmente. Los pushes ordinarios ejecutan exclusivamente el inventario no destructivo y 11 pruebas de regresión, almacenando la salida temporal en RUNNER_TEMP y no creando nuevos directorios P2LRN-INTEROP por commit. No se modifican los paquetes .p2lrn originales, sus hashes, las 68 vinculaciones existentes ni los resultados de alumnos.
 
 **Criterio de publicación definitiva:** cinco lanzamientos LTI 1.3 firmados y autenticados desde los propios LMS, interacción y reanudación de alumno en el paquete idéntico, nota oficial AGS leída del libro de cada plataforma y pruebas de web/Windows sin conexión, sin modificar el mismo curso para cada destino. Este criterio sigue pendiente. No se debe crear una etiqueta final ni describir P2LRN como certificado integralmente mientras no exista esa evidencia.
+
+### Evidencia adicional: identidad del paquete maestro entre tres LMS
+
+Se comprobó directamente con el validador oficial Toolkit el archivo maestro ya existente en studio-master/seguridad-informatica-con-autoria.p2lrn, de 1.080.413 bytes. SHA-256: 957c716b9282fc9289f0256c5daf90ae5eea0210699478f76406e01340018631. contentRoot: sha256:e64e587b8584d836e3b73edc9c753971f6a9032bea6d89205db6b0a6b076870a. El grafo contiene 11 entidades publicables.
+
+Una consulta de solo lectura al catálogo SQLite persistente del proveedor comprobó tres publicaciones PUBLISHED con el mismo SHA, la misma raíz y el mismo tamaño: tenants moodle-qa, chamilo-qa y sakai-qa; cada registro maestro cuenta con una vinculación publicada. Los tres manifiestos de enlaces existentes coinciden también en la entidad principal. Este paquete maestro **no tiene los mismos bytes** que el primer archivo histórico sin autoría y no debe confundirse con él.
+
+El resultado prueba publicación/identidad del paquete en P2LRN para los tres LMS, **no** importación o reproducción completa dentro de ellos. En particular, Sakai todavía no ha confirmado un enlace de sitio nuevo por la protección CSRF. La evidencia offline existente descargó un fichero p2lrn-result, pero no demuestra calificación oficial y presenta una incidencia de página; tampoco constituye una prueba completa aprobada. No se modificó ni reexportó el maestro para esta verificación.
+
+### CI después de la corrección
+
+GitHub Actions ejecutó el run 42421026536 sobre el commit b1d54dafa026755e72bd5bb1fac9d2f132f5c219 con resultado success en discover-real-lms. Los otros seis trabajos de creación o interacción con el curso histórico quedaron correctamente omitidos porque el evento fue push y requieren workflow_dispatch. Este verde certifica únicamente la auditoría de conectividad y sus regresiones, no los cinco recorridos E2E.
