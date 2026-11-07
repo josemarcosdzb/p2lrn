@@ -117,6 +117,7 @@ try{
       if(done||!advanced)break;
     }
     const final=await current();
+    result.formControls=await evaluate("(()=>({inputNodes:[...document.querySelectorAll('input,select')].map(x=>({tag:x.tagName,type:x.type,value:x.value,name:x.name,id:x.id,outer:x.outerHTML.slice(0,350),parent:x.parentElement?.outerHTML.slice(0,420)})).slice(0,35),labels:[...document.querySelectorAll('label')].map(x=>x.outerHTML.slice(0,420)).slice(0,35),buttons:[...document.querySelectorAll('button')].map(x=>x.outerHTML.slice(0,300)).slice(0,15)}))()");
     result.action={realUIActions:progress,finalStep:final.step,finalLessonStatus:final.lessonStatus,
       finalRawScore:final.lessonScore,remainingControls:final.controls};
     const completed=final.step?.[0]===final.step?.[1]&&
@@ -138,6 +139,7 @@ try{
       "h5pChildren:document.querySelector('.h5p-content')?.children?.length??0"+
       "}))()");
     result.after=state;
+    result.visibleAnswers=await evaluate("(()=>[...document.querySelectorAll('*')].filter(el=>el.children.length===0&&/^(?:[0-9]{1,4}|−?[0-9]{1,4})$/.test(el.textContent?.trim()||'')&&el.getBoundingClientRect().width>0).slice(0,35).map(el=>({text:el.textContent.trim(),node:el.outerHTML.slice(0,350),parent:el.parentElement?.outerHTML.slice(0,600),grandparent:el.parentElement?.parentElement?.outerHTML.slice(0,600)})))()");
     result.verifiedInteraction=Boolean(result.action.clicked);
     result.status=state.completed?'H5P_RUNTIME_COMPLETION_NEEDS_GRADE_VALIDATION':
       result.verifiedInteraction?'H5P_REAL_START_AND_TIMED_ACTIVITY':'H5P_NO_START_ACTION';
