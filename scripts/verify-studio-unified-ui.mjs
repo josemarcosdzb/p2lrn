@@ -289,7 +289,15 @@ async function browserScenario(){
     cardImageInput.dispatchEvent(new Event('change',{bubbles:true}));
     for(let i=0;i<100&&!newCard.querySelector('[data-p2lrn-dnd-item-image]');i++)
       await new Promise(done=>setTimeout(done,25));
-    expect(newCard.querySelector('[data-p2lrn-dnd-item-image]'),'Could not restore mixed image and text card');
+    expect(newCard.querySelector('[data-p2lrn-dnd-item-image]'),
+      'Could not restore mixed image and text card: '+JSON.stringify({
+        menuOpen:zonesMenu.open,
+        inputFiles:cardImageInput.files?.length,
+        status:item.actions.filter(action=>action.startsWith('status:')).slice(-5),
+        cardText:newCard.textContent,
+        selectedZone:zonesMenu.querySelector('[data-p2lrn-drop-name=zone]')?.value,
+        activeCards:activityDrop.querySelectorAll('[data-p2lrn-dnd-item-image]').length,
+      }));
     // Click a card itself to select it, without requiring a click on the target zone.
     const pictureOnly=activityDrop.querySelector('[data-p2lrn-dnd-item=item-2]');
     pictureOnly.click();
