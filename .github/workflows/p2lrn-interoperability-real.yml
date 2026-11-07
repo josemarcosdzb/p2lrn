@@ -58,15 +58,16 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $dir=Join-Path $env:USERPROFILE ('Downloads\P2LRN-INTEROP-'+$env:GITHUB_SHA.Substring(0,8))
-          $site=Join-Path $dir 'site'
+          $site=Join-Path (Join-Path $env:USERPROFILE 'Downloads') ('p2lrn-mejorastudio-preview-'+$env:GITHUB_SHA.Substring(0,8))
           node scripts/build-studio-local-preview.mjs --output "$site"
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           "P2LRN_INTEROP_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "P2LRN_INTEROP_SITE=$site" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Operate actual Studio UI, import genuine H5P SCORM and export once
         shell: powershell
         run: |
           $ErrorActionPreference='Stop'
-          node scripts/interoperability/create-one-course.mjs --site "$env:P2LRN_INTEROP_DIR\site" --output "$env:P2LRN_INTEROP_DIR" --repo (Get-Location).Path
+          node scripts/interoperability/create-one-course.mjs --site "$env:P2LRN_INTEROP_SITE" --output "$env:P2LRN_INTEROP_DIR" --repo (Get-Location).Path
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           $file=Join-Path $env:P2LRN_INTEROP_DIR 'seguridad-informatica.p2lrn'
           if(!(Test-Path $file)){throw 'Studio did not produce the ONE requested course'}
