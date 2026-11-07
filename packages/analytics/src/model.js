@@ -361,7 +361,8 @@ function latestAuthoritativeGrade(grades,courseId){
 function courseAttemptCompleted(attempt){
   if(attempt?.entityId)return false;
   const status=String(attempt?.status??'').toLowerCase();
-  return Boolean(attempt?.completedAt)||['completed','passed','submitted'].includes(status);
+  // A submitted offline result confirms hand-in, not completion of the course syllabus.
+  return Boolean(attempt?.completedAt)||['completed','passed'].includes(status);
 }
 function courseProgress(enrollment,attempts){
   if(enrollment?.completedAt||String(enrollment?.status).toLowerCase()==='completed')return 1;
