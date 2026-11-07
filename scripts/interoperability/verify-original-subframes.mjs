@@ -154,27 +154,27 @@ try{
       "}))()");
     result.after=state;
     result.visibleAnswers=await evaluate("(()=>[...document.querySelectorAll('*')].filter(el=>el.children.length===0&&/^(?:[0-9]{1,4}|−?[0-9]{1,4})$/.test(el.textContent?.trim()||'')&&el.getBoundingClientRect().width>0).slice(0,35).map(el=>({text:el.textContent.trim(),node:el.outerHTML.slice(0,350),parent:el.parentElement?.outerHTML.slice(0,600),grandparent:el.parentElement?.parentElement?.outerHTML.slice(0,600)})))()");
-    // Answer the arithmetic quiz by reading the visible equation and clicking
-    // one of the original H5P <li role=radio> elements, without invoking H5P
-    // internal scoring methods. Every click is a genuine learner UI action.
+    // Each H5P arithmetic slide is a genuine list of radio-like <li> options.
+    // The old slide remains in the DOM during animation, so select the newest
+    // question page and confirm advance using the visible slide counter.
     const answered=[];
     for(let n=0;n<10;n++){
-      const q=await evaluate("(()=>{const page=document.querySelector('.question-page.current');if(!page)return null;return {question:page.querySelector('.question')?.textContent?.trim()||null,choices:[...page.querySelectorAll('[role=radio]')].map(x=>x.textContent.trim())}})()");
+      const q=await evaluate("(()=>{const page=[...document.querySelectorAll('.question-page')].at(-1);const label=document.body?.innerText?.match(/Slide\\s+(\\d+)\\s+of\\s+(\\d+)/i);if(!page)return null;return {slide:label?Number(label[1]):null,total:label?Number(label[2]):null,question:page.querySelector('.question')?.textContent?.trim()||null,choices:[...page.querySelectorAll('[role=radio]')].map(x=>x.textContent.trim())}})()");
       if(!q?.question||!q.choices?.length)break;
       const match=/(\d+)\s*([+\-×x*])\s*(\d+)\s*=\s*\?/u.exec(q.question);
-      if(!match){answered.push({question:q.question,error:'Unsupported visible arithmetic expression'});break;}
+      if(!match){answered.push({slide:q.slide,question:q.question,error:'Unsupported visible arithmetic expression'});break;}
       const first=Number(match[1]),second=Number(match[3]);
       const expected=match[2]==='+'?first+second:match[2]==='-'?first-second:first*second;
-      if(!q.choices.includes(String(expected))){answered.push({question:q.question,expected,error:'Answer not offered'});break;}
-      const clicked=await evaluate("(()=>{const page=document.querySelector('.question-page.current');const answer=[...page.querySelectorAll('[role=radio]')].find(x=>x.textContent.trim()==="+JSON.stringify(String(expected))+");if(!answer)throw Error('Visible answer disappeared');answer.click();return true})()");
-      answered.push({question:q.question,expected,choices:q.choices,clicked});
+      if(!q.choices.includes(String(expected))){answered.push({slide:q.slide,question:q.question,expected,error:'Answer not offered'});break;}
+      const clicked=await evaluate("(()=>{const page=[...document.querySelectorAll('.question-page')].at(-1);const answer=[...page.querySelectorAll('[role=radio]')].find(x=>x.textContent.trim()==="+JSON.stringify(String(expected))+");if(!answer)throw Error('Visible answer disappeared');answer.click();return true})()");
+      answered.push({slide:q.slide,question:q.question,expected,clicked});
       let advanced=false;
-      for(let k=0;k<35;k++){
-        await new Promise(ok=>setTimeout(ok,90));
-        const next=await evaluate("(()=>document.querySelector('.question-page.current .question')?.textContent?.trim()||null)()");
-        if(next!==q.question){advanced=true;break;}
+      for(let k=0;k<55;k++){
+        await new Promise(ok=>setTimeout(ok,75));
+        const next=await evaluate("(()=>{const label=document.body?.innerText?.match(/Slide\\s+(\\d+)\\s+of\\s+(\\d+)/i);return label?Number(label[1]):null})()");
+        if(next===null || next>q.slide){advanced=true;break;}
       }
-      if(!advanced&&n<9){answered.push({error:'Question did not advance after learner click'});break;}
+      if(!advanced&&n<9){answered.push({error:'Visible slide counter did not advance after learner answer'});break;}
     }
     await new Promise(ok=>setTimeout(ok,350));
     result.realArithmeticAnswers=answered;
