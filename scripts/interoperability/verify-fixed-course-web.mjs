@@ -72,7 +72,7 @@ try{
       }else if(details?.isMatching){
         row.activityBehavior='MATCHING_IN_PROGRESS';
         const pairs=await chrome.evaluate("(()=>{const root=document.querySelector('#demo-player')?.shadowRoot;const left=[...root.querySelectorAll('[data-p2lrn-match-left]')];for(const source of left){const id=source.dataset.p2lrnMatchLeft;const target=root.querySelector('[data-p2lrn-match-right=\"'+id+'\"]');if(!target)throw Error('Missing matching partner for '+id);source.click();target.click();}const finish=[...root.querySelectorAll('.p2lrn-game-shell button')].find(x=>x.textContent.includes('Finalizar actividad'));if(!finish)throw Error('Matching submission missing');finish.click();return {pairs:left.length}})()");
-        await chrome.wait("document.querySelector('#demo-player')?.shadowRoot?.querySelector('.p2lrn-game-shell')?.textContent?.includes('Resultado:')||document.querySelector('#demo-player')?.shadowRoot?.querySelector('.p2lrn-game-shell')?.textContent?.includes('Actividad completada')",{timeout:16000,label:'matching completion'});
+        await chrome.wait("(()=>{const root=document.querySelector('#demo-player')?.shadowRoot;return root?.querySelector('.p2lrn-game-actions button')?.disabled===true && root?.querySelector('.p2lrn-game-status')?.textContent?.includes('Actividad enviada')})()",{timeout:16000,label:'matching completion without displaying answer key'});
         row.pairs=pairs.pairs;
         row.status='PASS_STUDENT_INTERACTION';
         row.activityBehavior='MATCHING_COMPLETED';
