@@ -90,6 +90,9 @@ export function studioNestedInsertionContainer(surface,{anchorNode=null,targetEl
   if(!scope||!surface.contains(scope))return null;
   if(scope.matches('td,th'))return scope;
   const kind=scope.dataset.p2lrnLayout;
+  // A drag/drop exercise is an interactive component, not a general layout
+  // container. Clicking its empty background must insert AFTER the exercise.
+  if(kind==='drag-drop')return null;
   if(kind==='table'||scope.tagName==='TABLE'){
     const inside=anchor?.closest?.('td,th');
     return inside&&scope.contains(inside)?inside:scope.querySelector('td,th');
@@ -103,6 +106,32 @@ export function studioNestedInsertionContainer(surface,{anchorNode=null,targetEl
   if(kind==='divider'||scope.tagName==='HR')return scope.parentElement===surface?null:scope.parentElement;
   return scope;
 }
+// Keep a real editable paragraph after the final block so an author can put
+// the caret beneath a full-height image, video, table or interactive exercise.
+// Only blank paragraphs are reused; existing authored content is never cleared.
+export function ensureStudioEndCaret(surface){
+  if(!surface?.isContentEditable)return null;
+  const root=surface.querySelector(':scope > [data-p2lrn-lesson-canvas]')||surface;
+  let tail=root.querySelector(':scope > p[data-p2lrn-end-caret]');
+  if(tail?.textContent?.trim()){
+    tail.removeAttribute('data-p2lrn-end-caret');
+    tail.removeAttribute('aria-label');
+    tail=null;
+  }
+  if(!tail){
+    const last=root.lastElementChild;
+    if(last?.tagName==='P'&&!last.textContent?.trim())tail=last;
+  }
+  if(!tail){
+    tail=surface.ownerDocument.createElement('p');
+    tail.append(surface.ownerDocument.createElement('br'));
+  }
+  tail.setAttribute('data-p2lrn-end-caret','1');
+  tail.setAttribute('aria-label','Escribir o insertar después de la última actividad');
+  if(!tail.hasChildNodes())tail.append(surface.ownerDocument.createElement('br'));
+  if(root.lastElementChild!==tail)root.append(tail);
+  return tail;
+}
 export function insertStudioNestedElement(surface,element,{anchorNode=null,targetElement=null}={}){
   const parent=studioNestedInsertionContainer(surface,{anchorNode,targetElement});
   if(!parent)return null;
@@ -113,26 +142,25 @@ export function insertStudioNestedElement(surface,element,{anchorNode=null,targe
     if(direct?.parentElement===parent)direct.after(element);
     else parent.append(element);
   }else parent.append(element);
+  ensureStudioEndCaret(surface);
   surface.dispatchEvent(new Event('input',{bubbles:true}));
   return parent;
 }
 function insertAtSelection(surface,block,{anchorNode=null,targetElement=null}={}){
   if(insertStudioNestedElement(surface,block,{anchorNode,targetElement}))return block;
-  const root=surface.getRootNode();
-  const selection=typeof root.getSelection==='function'?root.getSelection():surface.ownerDocument.getSelection();
-  const pointer=anchorNode&&surface.contains(anchorNode)?anchorNode:
-    selection?.rangeCount&&surface.contains(selection.anchorNode)?selection.anchorNode:null;
-  if(pointer){
-    let top=pointer;
-    while(top&&top.parentNode!==surface)top=top.parentNode;
-    if(top?.parentNode===surface){
-      if(top.matches?.('[data-p2lrn-lesson-canvas]'))top.append(block);
-      else top.after(block);
-    }else surface.append(block);
-  }else{
-    const canvas=surface.querySelector(':scope > [data-p2lrn-lesson-canvas]');
-    (canvas||surface).append(block);
-  }
+  const domRoot=surface.getRootNode();
+  const selection=typeof domRoot.getSelection==='function'?domRoot.getSelection():surface.ownerDocument.getSelection();
+  const contentRoot=surface.querySelector(':scope > [data-p2lrn-lesson-canvas]')||surface;
+  const pointer=anchorNode&&contentRoot.contains(anchorNode)?anchorNode:
+    selection?.rangeCount&&contentRoot.contains(selection.anchorNode)?selection.anchorNode:null;
+  // The editor may wrap the whole lesson in one canvas. Find the direct child
+  // under the actual caret, not the outer canvas (which would force append or
+  // an earlier selected object). This also works for the trailing paragraph.
+  let direct=normalizeElement(pointer);
+  while(direct&&direct.parentElement!==contentRoot)direct=direct.parentElement;
+  if(direct?.parentElement===contentRoot)direct.after(block);
+  else contentRoot.append(block);
+  ensureStudioEndCaret(surface);
   surface.dispatchEvent(new Event('input',{bubbles:true}));
   return block;
 }

@@ -593,6 +593,46 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
   const colorSummary=node(doc,'summary','','Fondo');colorSummary.setAttribute('aria-label','Color de fondo del bloque');
   const colorPop=node(doc,'div','p2lrn-context-menu-pop');
   colorMenu.append(colorSummary,colorPop);colors.append(colorMenu);
+  // The preset colors are shortcuts, not a restriction. Native color + hex
+  // + alpha permit the full RGB gamut, including a completely clear fill.
+  const customColor=node(doc,'div','p2lrn-background-custom');
+  const colorLabel=node(doc,'label','p2lrn-ribbon-caption','Color personalizado');
+  const colorPicker=node(doc,'input');colorPicker.type='color';colorPicker.value='#ffffff';
+  colorPicker.title='Elegir cualquier color del fondo';
+  colorPicker.setAttribute('aria-label','Elegir cualquier color de fondo');
+  colorLabel.append(colorPicker);
+  const hexLabel=node(doc,'label','p2lrn-ribbon-caption','Hexadecimal');
+  const hexColor=node(doc,'input');hexColor.type='text';hexColor.value='#ffffff';
+  hexColor.maxLength=7;hexColor.spellcheck=false;hexColor.placeholder='#RRGGBB';
+  hexColor.setAttribute('aria-label','Color hexadecimal del fondo');
+  hexLabel.append(hexColor);
+  const alphaLabel=node(doc,'label','p2lrn-ribbon-caption','Opacidad');
+  const alpha=node(doc,'input');alpha.type='range';alpha.min='0';alpha.max='100';alpha.step='1';alpha.value='100';
+  alpha.setAttribute('aria-label','Opacidad del fondo, porcentaje');
+  const alphaText=node(doc,'output','', '100 %');
+  alphaLabel.append(alpha,alphaText);
+  const commitColor=()=>{
+    const hex=hexColor.value.trim();
+    if(!/^#[0-9a-f]{6}$/i.test(hex)){onStatus('Utiliza un color hexadecimal válido, como #12ABEF.');return;}
+    colorPicker.value=hex;
+    const opacity=Number(alpha.value);
+    const rgb=[1,3,5].map(index=>parseInt(hex.slice(index,index+2),16));
+    const value=opacity===0?'transparent':opacity===100?hex:
+      'rgba('+rgb.join(',')+','+(opacity/100)+')';
+    colorBlock(value);
+    colorMenu.open=false;
+  };
+  colorPicker.addEventListener('input',()=>{hexColor.value=colorPicker.value;});
+  colorPicker.addEventListener('change',commitColor);
+  hexColor.addEventListener('change',commitColor);
+  alpha.addEventListener('input',()=>{alphaText.textContent=alpha.value+' %';});
+  alpha.addEventListener('change',commitColor);
+  const clearFill=button(doc,'Sin fondo',{title:'Eliminar el fondo del bloque y mostrar lo que hay detrás'});
+  clearFill.addEventListener('click',()=>{colorBlock('transparent');colorMenu.open=false;});
+  const chooseColor=button(doc,'Aplicar color',{title:'Aplicar color y opacidad personalizados'});
+  chooseColor.addEventListener('click',commitColor);
+  customColor.append(colorLabel,hexLabel,alphaLabel,chooseColor,clearFill);
+  colorPop.append(customColor);
   for(const [,label,color] of PALETTE){
     const b=button(doc,label,{title:'Aplicar fondo '+label.toLowerCase()});
     const swatch=node(doc,'span','p2lrn-ribbon-swatch');swatch.style.backgroundColor=color;
@@ -678,7 +718,12 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     if(!s){onStatus('Selecciona una lección HTML para insertar un bloque visual.');return;}
     const anchor=savedSurface===s&&savedRange&&s.contains(savedRange.commonAncestorContainer)?savedRange.commonAncestorContainer:null;
     try{
-      const targetElement=advanced.insertionTarget()||s.__p2lrnMediaInsertionTarget?.()||null;
+      const previousTarget=advanced.insertionTarget()||s.__p2lrnMediaInsertionTarget?.()||null;
+      const caret=anchor?.nodeType===3?anchor.parentElement:anchor;
+      // A selected object must not override a caret that has since moved to
+      // another block (especially the trailing paragraph below the activity).
+      const targetElement=caret&&previousTarget&&
+        !(previousTarget===caret||previousTarget.contains(caret))?null:previousTarget;
       lastVisualBlock=insertVisualLayoutBlock(s,kind,{anchorNode:anchor,targetElement});
       advanced.selectObject(lastVisualBlock);
       onStatus(targetElement?'Elemento insertado dentro del bloque seleccionado.':'Bloque insertado. Selecciónalo para editarlo.');

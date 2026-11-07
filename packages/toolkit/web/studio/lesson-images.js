@@ -1,5 +1,5 @@
 import {studioUiText} from './studio-ui-i18n.js';
-import {studioNestedInsertionContainer} from './visual-layout.js';
+import {studioNestedInsertionContainer,ensureStudioEndCaret} from './visual-layout.js';
 // Shared by the website Studio and npm Studio. Images remain inside the
 // portable HTML payload; the passive-text Player's CSP permits img-src data:.
 export const MAX_LESSON_IMAGE_BYTES=8*1024*1024;
@@ -173,8 +173,12 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   const insertionContainer=(explicit=null)=>{
     const root=surface.getRootNode();
     const selection=typeof root.getSelection==='function'?root.getSelection():doc.getSelection();
-    const target=explicit&&surface.contains(explicit)?explicit:(getInsertionTarget?.()||selected?.parentElement||null);
-    return studioNestedInsertionContainer(surface,{targetElement:target,anchorNode:selection?.anchorNode});
+    const caret=selection?.rangeCount&&surface.contains(selection.anchorNode)?selection.anchorNode:null;
+    let target=explicit&&surface.contains(explicit)?explicit:(getInsertionTarget?.()||selected?.parentElement||null);
+    // A visible caret after the last activity wins over a stale media/object
+    // selection; do not insert new media back inside an old block.
+    if(caret&&target&&!target.contains(caret)&&target!==caret)target=null;
+    return studioNestedInsertionContainer(surface,{targetElement:target,anchorNode:caret});
   };
   const refresh=()=>{
     for(const b of [smaller,bigger,remove])b.disabled=!selected||!surface.contains(selected);
@@ -284,7 +288,7 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     if(selected===img)syncSelectionPosition();
   }
   const choose=img=>{if(!img||!surface.contains(img))return;const same=selected===img;selected=img;refresh();if(!same&&!img.matches(VIDEO))try{img.focus({preventScroll:true});}catch{}};
-  const changed=()=>onChange();
+  const changed=()=>{ensureStudioEndCaret(surface);onChange();};
   async function insertImage(file,point=null,explicitTarget=null){
     const data=await lessonImageData(file);
     const box=ensureCanvas();
@@ -499,6 +503,12 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     });
     observer.observe(surface);
   }
+  // The last section of a lesson must remain editable, even when it ends in
+  // an interactive block or large video with no natural text caret below.
+  ensureStudioEndCaret(surface);
+  surface.addEventListener('input',()=>ensureStudioEndCaret(surface));
+  style.textContent+='\n'+'.p2lrn-lesson-image-editor p[data-p2lrn-end-caret]{min-height:32px;padding:5px 2px;margin:16px 0 0;cursor:text;outline-offset:3px}'+
+    '\n'+'.p2lrn-lesson-image-editor p[data-p2lrn-end-caret]:not(:focus)::before{content:"Escribe o inserta aquí, después de la última actividad";pointer-events:none;color:#64748b;font:400 12px/1.5 system-ui,sans-serif}';
   refresh();
   return {openPicker:()=>picker.click(),openVideoPicker:()=>videoPicker.click(),insertImage,insertVideo,element:wrapper};
 }
