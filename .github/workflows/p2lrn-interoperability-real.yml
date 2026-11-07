@@ -27,9 +27,11 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference='Stop'
-          $dir=Join-Path $env:USERPROFILE ('Downloads\P2LRN-INTEROP-'+$env:GITHUB_SHA.Substring(0,8))
+          $dir=Join-Path $env:RUNNER_TEMP 'p2lrn-interoperability-preflight'
           $env:P2LRN_INTEROP_OUTPUT=$dir
           node --check scripts/interoperability/probe-real-destinations.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node --test scripts/interoperability/lms-http-inspection.test.mjs
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           node scripts/interoperability/probe-real-destinations.mjs
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
@@ -82,6 +84,8 @@ jobs:
           Write-Output ('P2LRN_REAL_ONE_COURSE_FILE='+$file)
           Write-Output ('P2LRN_REAL_INTEROP_EVIDENCE_DIR='+$env:P2LRN_INTEROP_DIR)
   verify-fixed-original-in-independent-web:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
     needs: [discover-real-lms]
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 30
@@ -111,6 +115,8 @@ jobs:
           Write-Output ('REAL_INDEPENDENT_WEB_EVIDENCE='+$out)
           Write-Output ('UNCHANGED_ORIGINAL_SHA256='+$hash)
   verify-original-offline-windows:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
     needs: [discover-real-lms]
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 35
@@ -140,6 +146,8 @@ jobs:
           Write-Output ('ORIGINAL_COURSE_SHA256='+$sha)
           Write-Output ('REAL_OFFLINE_REPORT_DIRECTORY='+$out)
   create-version-two-in-real-studio:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
     needs: [discover-real-lms]
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 30
@@ -169,6 +177,8 @@ jobs:
           Write-Output ('UNTOUCHED_ORIGINAL_SHA256='+$digest)
           Write-Output ('STUDIO_REAL_V2_DIRECTORY='+$out)
   verify-original-h5p-scorm-and-drag-frames:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
     needs: [discover-real-lms]
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 30
@@ -195,6 +205,8 @@ jobs:
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           Write-Output ('ORIGINAL_SUBFRAME_EVIDENCE='+$out)
   verify-independent-web-reentry:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
     needs: [discover-real-lms]
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 30

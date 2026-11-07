@@ -125,3 +125,39 @@ Tras reconstruir el Player local del commit actual, la prueba real en Chrome par
 El alumno QA de la instalación Moodle está matriculado en los cursos 2 y 6. El acceso web ordinario al curso nuevo redirige a la pantalla SSO de AulaP2P, por lo que la prueba con credenciales de alumno no ha completado el inicio de sesión. La función administrativa de Moodle «Log in as» existe, pero el propio Moodle advierte que deshabilita scripts de contenido durante esa sesión por seguridad; no se puede utilizar esa suplantación para certificar H5P o SCORM. No se modificó esta protección, ni se simuló la sesión del alumno.
 
 La única nota AGS oficial verificada corresponde a la actividad del curso histórico 2. Para certificar el curso 6 siguen pendientes el inicio de sesión real del alumno, las actividades completas, la restauración de intentos y su calificación en el libro de Moodle. Para las otras cuatro plataformas siguen siendo aplicables los bloqueos anteriores.
+
+## Auditoría posterior: cinco LMS reales y comprobación de los bloqueos (7 de noviembre de 2026)
+
+Esta sección complementa el resultado histórico anterior, sin atribuir nuevas notas ni sesiones a ningún alumno. Se ejecutó el descubrimiento contra las cinco instalaciones locales existentes, a través del ingress real de AulaP2P, sin modificar cursos ni bases de datos.
+
+### Resultado del descubrimiento sin falsos positivos
+
+| LMS | HTTP del sitio | Salud P2LRN y JWKS públicos desde su dominio | Registro de alumno y nota oficial del curso nuevo |
+|---|---|---|---|
+| Moodle | Redirección 303 a acceso institucional | Ambos válidos | No probado |
+| Chamilo | Página HTML real, 11.310 bytes | Ambos válidos | No probado |
+| Sakai | Página HTTP real, 124 bytes | Ambos válidos | No probado |
+| Canvas | Redirección HTTP 302 | Ambos válidos | No probado |
+| Open edX | Página HTML real, 13.337 bytes | Ambos válidos | No probado |
+
+La disponibilidad de salud/JWKS corresponde al **proveedor P2LRN compartido por el proxy**; no significa que el LMS haya registrado la herramienta, verificado un JWT de alumno ni aceptado una nota. Resultado de certificación E2E: **0/5**. Evidencia sin credenciales: C:\Users\Usuario\Downloads\P2LRN-CERT-20261107\real-destination-preflight.json y lms-network-probe-20261107.log.
+
+Antes de la corrección el comprobador podía clasificar un HTTP 200 con cuerpo vacío como destino alcanzado. scripts/interoperability/lms-http-inspection.mjs distingue contenido real, respuesta vacía, redirección, fallo HTTP, salud auténtica del proveedor y JWKS con claves públicas válidas. Para evitar falsos resultados, no marca ninguna sesión ni nota como aprobada. Sus pruebas verifican también que se eliminen parámetros sensibles de las URL de redirección. Se puede cambiar cada origen de laboratorio sin alterar el curso mediante P2LRN_QA_MOODLE_URL, P2LRN_QA_CHAMILO_URL, P2LRN_QA_SAKAI_URL, P2LRN_QA_CANVAS_URL y P2LRN_QA_OPENEDX_URL.
+
+### Diagnóstico de los bloqueos funcionales que continúan
+
+**Moodle.** El alumno QA (usuario 5) está activo, usa autenticación manual y se encuentra matriculado con rol calificable en los cursos 2 y 6. Una prueba de inicio de sesión ordinaria finalizó en la redirección loginredirect y posteriormente en el SSO de AulaP2P. Esa sesión de alumno no quedó autenticada. La función administrativa «Log in as» no sirve como prueba de H5P/SCORM porque Moodle deshabilita scripts durante la suplantación. La nota 85/100 entregada oficialmente corresponde exclusivamente al curso histórico 2. No se ha entregado la evaluación del curso nuevo 6.
+
+**Sakai.** Se comprobó la administración con una sesión QA existente. La API EntityBroker rechazó la creación del sitio nuevo con HTTP 400 («Invalid address provided for icon URL»), incluso tras revisar sus parámetros. El formulario oficial de Worksite Setup y el de External Tools rechazaron el guardado al faltar estado de token CSRF en esa sesión: el servidor registró «Missing CSRF Token session attribute: doSite_type_option» y «doContentPut». El servicio SOAP existe, pero respondió «Web Services Login Disabled». No se habilitaron accesos alternativos, no se desactivó CSRF y no se creó un sitio duplicado. La administración también advierte que falta lti.encryption.key en la configuración de Sakai; debe resolverse de forma segura antes del uso de secretos en un entorno de producción.
+
+**Chamilo.** El curso y sus 20 enlaces nativos existen. El consumidor LtiBundle observado utiliza un lanzamiento LTI-1p0; esto no constituye una integración LTI 1.3 / Advantage con AGS. Requiere la compatibilidad/configuración real del LMS, no cambiar el encabezado de una petición para simular 1.3.
+
+**Canvas.** La instalación y el proxy responden, pero la auditoría de Rails mostró 0 Developer Keys y 0 herramientas externas. Debe registrarse una clave de herramienta LTI Advantage con su despliegue y permisos oficiales antes del ensayo de notas.
+
+**Open edX.** El LMS funciona y dispone del consumidor lti_consumer, pero no hay registro P2LRN bidireccional, contexto de curso, alumno ni entrega AGS real probados.
+
+### Metodología y conservación de evidencias
+
+El workflow histórico de un curso específico permanece disponible solo cuando se inicia manualmente. Los pushes ordinarios ejecutan exclusivamente el inventario no destructivo y 11 pruebas de regresión, almacenando la salida temporal en RUNNER_TEMP y no creando nuevos directorios P2LRN-INTEROP por commit. No se modifican los paquetes .p2lrn originales, sus hashes, las 68 vinculaciones existentes ni los resultados de alumnos.
+
+**Criterio de publicación definitiva:** cinco lanzamientos LTI 1.3 firmados y autenticados desde los propios LMS, interacción y reanudación de alumno en el paquete idéntico, nota oficial AGS leída del libro de cada plataforma y pruebas de web/Windows sin conexión, sin modificar el mismo curso para cada destino. Este criterio sigue pendiente. No se debe crear una etiqueta final ni describir P2LRN como certificado integralmente mientras no exista esa evidencia.
