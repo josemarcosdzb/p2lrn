@@ -77,3 +77,32 @@ jobs:
           Write-Output ('P2LRN_REAL_ONE_COURSE_SHA256='+$hash)
           Write-Output ('P2LRN_REAL_ONE_COURSE_FILE='+$file)
           Write-Output ('P2LRN_REAL_INTEROP_EVIDENCE_DIR='+$env:P2LRN_INTEROP_DIR)
+  verify-fixed-original-in-independent-web:
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Open and exercise exact original course from earlier Studio run
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $homeDownloads=Join-Path $env:USERPROFILE 'Downloads'
+          $course=Join-Path $homeDownloads 'P2LRN-INTEROP-0474eb9b\seguridad-informatica.p2lrn'
+          $site=Join-Path $homeDownloads 'p2lrn-mejorastudio-preview-0474eb9b'
+          $out=Join-Path $homeDownloads ('P2LRN-INTEROP-WEB-'+$env:GITHUB_SHA.Substring(0,8))
+          if(!(Test-Path $course)){throw 'The ORIGINAL course file is missing: '+$course}
+          if(!(Test-Path (Join-Path $site 'preview-manifest.json'))){throw 'The original Player site is missing: '+$site}
+          $hash=(Get-FileHash -LiteralPath $course -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($hash -ne 'cce43503ea425ec4f1e6203c8ef6556beb999e71c08e59d5511091a6b931a380'){throw 'The source course changed. Refuse to adapt it.'}
+          node --check scripts/interoperability/verify-fixed-course-web.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/verify-fixed-course-web.mjs --course "$course" --site "$site" --output "$out" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          Write-Output ('REAL_INDEPENDENT_WEB_EVIDENCE='+$out)
+          Write-Output ('UNCHANGED_ORIGINAL_SHA256='+$hash)
