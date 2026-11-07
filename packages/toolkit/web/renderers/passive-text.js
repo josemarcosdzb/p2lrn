@@ -68,7 +68,10 @@ export async function render({container, bytes, representation, resolveResourceU
       }
     }
 
-    const dropSandbox=verifiedEntrypointUrl?null:prepareStudioDropSandbox(text);
+    const bootstrap=new URL('./lesson-drop-bootstrap.js',import.meta.url);
+    const allowedBootstrap=['http:','https:'].includes(bootstrap.protocol)?bootstrap.href:null;
+    const dropSandbox=verifiedEntrypointUrl?null:
+      prepareStudioDropSandbox(text,{runtimeUrl:allowedBootstrap});
     const iframe = document.createElement('iframe');
     iframe.className = 'p2lrn-html';
     iframe.title = playerUiText('Contenido HTML del paquete P2LRN');
