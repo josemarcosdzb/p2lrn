@@ -259,3 +259,13 @@ integration/lms/lti-server.test.mjs superadas.
 
 Esta reparacion no certifica que el LMS haya recibido notas oficiales AGS.
 Tampoco autoriza desactivar CSP o SameSite para ocultar errores.
+
+## Diagnostico de DNS interno para LTI Advantage / AGS (7-11-2026)
+
+Las IP fijas en Docker ExtraHosts pueden quedar obsoletas cuando se recrean los servicios de Moodle, Chamilo o Sakai. Se comprobo que el nombre DNS local de Moodle apuntaba al contenedor cron en vez de al ingress. La peticion OAuth daba ECONNREFUSED. Usar fetch contra el dominio del proxy sin conservar Host produjo HTTP 200 con cuerpo vacio.
+
+La CLI del proveedor usa integration/lms/lti-local-qa-gateway.mjs cuando el modo local inseguro de QA esta autorizado mediante P2LRN_LTI_DEV_INSECURE=true. El modulo resuelve el alias interno del proxy y utiliza node:http preservando Host del LMS; exige un destino privado y no opera para HTTPS externos. Se permite configurar la etiqueta DNS mediante P2LRN_LTI_DEV_LMS_GATEWAY. El modo HTTPS de produccion conserva su transporte y sus controles existentes.
+
+Para comprobarlo, ejecutar los tests integration/lms/*.test.mjs y consultar el endpoint /lti/health mediante el Host original. Comparar recuentos de SQLite antes y despues de actualizar. El reintento oficial de AGS debe usar solo POST /lti/admin/ags/retry, con autenticacion administrativa y un intento calificable previamente aprobado por el servidor. Confirmar la nota tambien en el libro del LMS, no solo en el outbox.
+
+Resultado real: 44/44 pruebas LTI correctas, reintento del alumno QA de Moodle exitoso (HTTP 200, SENT) y 85/100 en grade_grades, curso historico 2. La nota de la cuenta administradora que no tiene rol de alumno sigue sin poder entregarse legitimamente. El curso nuevo de seguridad informatica y los otros LMS siguen pendientes de certificacion integral; consultar docs/interop/2026-11-07-prueba-real.md.

@@ -89,3 +89,25 @@ Comprobación real: la alteración de bytes de una copia de la versión 1 fue re
 Hacen falta cinco instalaciones LMS accesibles desde el runner, sus registros LTI 1.3 y permisos AGS con alumnos de prueba; configurar un Host real de persistencia y aprobación de notas para la web independiente; completar autoría y titularidad desde Studio antes de firmar la entrega offline; completar las diez preguntas H5P y validar persistencia/reanudación de SCORM (su actividad y nota interna ya se completaron); y probar restauración de intentos tras sustituir v1 por v2 sin borrar el historial del Host.
 
 **Ejecuciones verificables en GitHub:** [creación real y SHA](https://github.com/josemarcosdzb/p2lrn/actions/runs/42363679207), [alumno web](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364114504), [v2 y offline](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364493157), [interacción real de los iframes](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364924854), [SCORM completado con su examen](https://github.com/josemarcosdzb/p2lrn/actions/runs/42365934787). El código de QA está en `scripts/interoperability/` y su workflow en `.github/workflows/p2lrn-interoperability-real.yml`.
+
+## Actualizacion de interoperabilidad en los LMS (7-11-2026, posterior al informe original)
+
+La tabla anterior documentaba un runner sin DNS funcional. Esta actualizacion conserva esas evidencias historicas y registra las pruebas posteriores ejecutadas en los LMS locales de AulaP2P.
+
+**Causa identificada y correccion AGS:** El contenedor P2LRN tenia entradas ExtraHosts con IP privadas fijas. El nombre de Moodle resolvia a 172.28.0.5, direccion actualmente usada por el contenedor cron, mientras el ingress de Moodle operaba en 172.28.0.6. Por ello las solicitudes OAuth daban ECONNREFUSED. Reescribir solo la URL de fetch hacia el ingress tampoco servia: Host se convertia en el nombre del proxy y Caddy devolvia HTTP 200 sin contenido.
+
+El modulo integration/lms/lti-local-qa-gateway.mjs corrige ese caso de desarrollo con DNS dinamico y node:http, preservando el dominio del LMS en la cabecera Host y los valores de OAuth/JWT. Solo se habilita al ejecutar la CLI con P2LRN_LTI_DEV_INSECURE=true, con nombre DNS interno verificable y direccion privada. La logica de los LMS publicos HTTPS, la validacion de origen, la autorizacion y los scopes no cambian. El gateway es configurable mediante P2LRN_LTI_DEV_LMS_GATEWAY.
+
+**Evidencia:** 44/44 tests LTI aprobados; el proveedor se reinicio sin cambios de recuento (3 plataformas, 73 contenidos, 68 bindings, 33 intentos, 36 estados, 1410 eventos y 2 registros de outbox). Tras desplegar la correccion, el reintento de la nota historica del alumno QA de Moodle (curso 2, recurso LTI 1) fue aceptado por Moodle con HTTP 200, estado SENT y calificacion final de **85/100** confirmada por una consulta directa a la tabla grade_grades. El intento de un administrador del mismo curso, que no esta matriculado con un rol calificable, permanece PENDING: no se fuerza una nota que Moodle debe rechazar.
+
+| Plataforma | Funcionamiento comprobado | Limitacion de certificacion |
+|---|---|---|
+| Moodle | Curso 6 con 20 enlaces, 19 ejemplos visibles, H5P/SCORM interactivos y AGS oficial confirmado en un curso previo | Falta entrada autenticada como alumno, reanudacion y nota del curso nuevo 6. El acceso del alumno de pruebas se redirige al login de AulaP2P |
+| Chamilo | Curso 4 y 20 enlaces existentes | LtiBundle envia LTI-1p0 y el acceso a las actividades redirige a AulaP2P. Falta consumidor LTI 1.3 funcional |
+| Sakai | Sitio historico registrado y herramienta global LTI | Crear sitio nuevo con EntityBroker devolvio HTTP 400 por icon URL y guardar el formulario nativo Tool Links fue rechazado por un control CSRF |
+| Canvas | Instancia iniciada y accesible | Inventario real: 0 Developer Keys LTI y 0 herramientas externas; registro, despliegue, curso y nota no completados |
+| Open edX | Servicio LMS activo y modulo lti_consumer disponible en el contenedor | Registro LTI 1.3, lanzamiento, curso y calificacion sin prueba integral |
+
+**Certificacion de los cinco LMS: pendiente.** Haber corregido un gradebook real de Moodle no acredita cinco LMS, ni la nota de la evaluacion del curso nuevo. El offline y Analytics no quedan certificados integralmente por estas pruebas. No publicar una version denominada definitiva hasta completar las pruebas estudiantiles y sus resultados, preservando el mismo paquete P2LRN, sus identificadores y los historiales.
+
+Evidencias locales verificadas: C:\Users\Usuario\Downloads\P2LRN-CERT-20261107\moodle-ags-gradebook-real.log, provider-status-verificado.json, certificacion-lms-20261107.json, lti-regresion-fix-gateway.log y ver-videos.html. Los archivos de diagnostico en otras plataformas no son certificaciones de lanzamiento.

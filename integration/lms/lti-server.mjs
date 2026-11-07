@@ -9,6 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {createP2LRNLtiProvider} from './lti-provider.mjs';
 import {createLtiStore} from './lti-store.mjs';
 import {createLtiAgsClient} from './lti-ags.mjs';
+import {createLocalQaLmsFetch} from './lti-local-qa-gateway.mjs';
 import {createLtiNrpsClient,validateNrpsClaim,NRPS_CLAIM} from './lti-nrps.mjs';
 import {validatePackageBytes} from '../../packages/toolkit/dist/core/validator.js';
 
@@ -508,12 +509,13 @@ if(script){
   const baseUrl=valid(process.env.P2LRN_LTI_BASE_URL,'P2LRN_LTI_BASE_URL');
   const port=Number(process.env.P2LRN_LTI_PORT||37891);
   const dev=process.env.P2LRN_LTI_DEV_INSECURE==='true';
+  const outboundLmsFetch=await createLocalQaLmsFetch({enabled:dev,gatewayHost:process.env.P2LRN_LTI_DEV_LMS_GATEWAY||'aulap2p-ingress-local'});
   const gateway=createP2LRNLtiServer({
    dataDir:valid(process.env.P2LRN_LTI_DATA_DIR,'P2LRN_LTI_DATA_DIR',4096),
    baseUrl,tool:{privateKeyPem,kid:keyId},adminToken:process.env.P2LRN_LTI_ADMIN_TOKEN_FILE
     ? readFileSync(process.env.P2LRN_LTI_ADMIN_TOKEN_FILE,'utf8').trim()
     : process.env.P2LRN_LTI_ADMIN_TOKEN,
-   port,bindHost:process.env.P2LRN_LTI_HOST||'127.0.0.1',allowInsecureLoopback:dev
+   port,bindHost:process.env.P2LRN_LTI_HOST||'127.0.0.1',allowInsecureLoopback:dev,fetchImpl:outboundLmsFetch
   });
   await gateway.listen();
   console.log('P2LRN LTI server ready on '+baseUrl+' (bind port '+port+')');
