@@ -61,9 +61,9 @@ const sendHtml=(res,status,body,csp,headers={})=>{
 };
 const policy=(nonceStr,ancestor)=>[
  "default-src 'none'","base-uri 'none'","form-action 'self' "+(ancestor||''),
- "script-src 'self' 'nonce-"+nonceStr+"' 'wasm-unsafe-eval' blob:","style-src 'self' 'unsafe-inline'",
- "img-src 'self' blob: data:","font-src 'self' data:",
- "connect-src 'self' blob:","worker-src 'self' blob:","frame-src 'self' blob:",
+ "script-src 'self' 'nonce-"+nonceStr+"' 'wasm-unsafe-eval' blob:","style-src 'self' 'unsafe-inline' blob:",
+ "img-src 'self' blob: data:","font-src 'self' data: blob:",
+ "connect-src 'self' blob:","worker-src 'self' blob:","media-src blob: data:","frame-src 'self' blob: about:",
  "frame-ancestors "+(ancestor||"'none'")
 ].join('; ');
 const browserId=(req)=>valid(cookies(req).p2lrn_oidc||cookies(req)['p2lrn_oidc-partitioned']||cookies(req)['__Host-p2lrn-oidc']||cookies(req)['__Host-p2lrn-oidc-partitioned'],'OIDC browser binding',512);
@@ -124,7 +124,8 @@ function playerHtml({entityId,csrf,playerScript}){
  ].join('');
  return ['<!doctype html><html lang="es"><head><meta charset="utf-8">',
  '<meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1">',
- '<title>Actividad P2LRN</title><style>html,body{margin:0;width:100%;height:100%;font-family:system-ui}main{height:100%;display:flex;flex-direction:column}p2lrn-player{flex:1;min-height:500px}#p2lrn-status{padding:8px}</style>',
+ '<meta name="p2lrn-opaque-runtime-nonce" content="__CSP_NONCE__">',
+'<title>Actividad P2LRN</title><style>html,body{margin:0;width:100%;min-height:100%;font-family:system-ui}main{display:block;min-height:100%;width:100%}p2lrn-player{display:block;width:100%;height:auto;min-height:500px}#p2lrn-status{padding:8px}</style>',
  '</head><body><main><div id="p2lrn-status">Preparando actividad P2LRN…</div>',
  '<p2lrn-player node="',html(entityId),'"></p2lrn-player></main>',
  '<script src="',html(playerScript),'" defer></script>',
@@ -304,7 +305,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     const cspNonce=nonce(16);
     const body=playerHtml({entityId:verified.launch.entityId,csrf,
       playerScript:'/lti/assets/player/p2lrn.js'})
-      .replace('__CSP_NONCE__',html(cspNonce));
+      .replaceAll('__CSP_NONCE__',html(cspNonce));
     return sendHtml(res,200,body,policy(cspNonce,ancestor),
       {'Set-Cookie':cohost?secureCookie(sessionCookie,token,false,3600):localHttp?[
        secureCookie(sessionCookie,token,true,3600),

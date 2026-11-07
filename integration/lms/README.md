@@ -225,3 +225,37 @@ El proveedor de P2LRN incorpora `integration/lms/lti-nrps.mjs`, que consulta el 
 Pruebas automáticas: `node --test integration/lms/lti-nrps.test.mjs integration/lms/lti-nrps-server.test.mjs`.
 
 **Pruebas con AulaP2P, 3 de noviembre de 2026:** Moodle tiene el endpoint OAuth registrado inaccesible (`ECONNREFUSED`). Sakai también tiene mal el puerto del endpoint registrado; al probar el puerto 8080 sin modificar el registro, responde `invalid_scope` para NRPS. Chamilo responde `invalid_client`. Canvas y Open edX aparecen arrancados, pero no están registrados en el proveedor LTI de pruebas. La lectura de matrículas NRPS todavía **no se ha podido confirmar** frente a estas instalaciones. Falta corregir la configuración del LMS y completar un lanzamiento firmado con scope NRPS. NRPS no sustituye los archivos `.p2lrn-result` utilizados por Analytics.
+
+## Reproduccion H5P, SCORM y paquetes bajo LTI (diagnostico CSP)
+
+Un lanzamiento LTI puede autenticar correctamente, cargar el Player y mostrar el
+titulo, pero dejar vacio el marco de una actividad importada. El srcdoc de
+un iframe sandbox heredaba la Content-Security-Policy del documento LTI:
+el script de arranque interno de H5P/SCORM/paquete no tenia el nonce de la
+sesion. La misma politica bloqueaba hojas CSS blob: y el contenedor de
+altura fija podia recortar los botones de las actividades.
+
+La integracion usa una solucion acotada, no unsafe-inline global para scripts:
+
+- playerHtml publica un nonce generado por lanzamiento en la meta
+  p2lrn-opaque-runtime-nonce, ademas de usarlo en su propio script LTI.
+- withOpaqueRuntimeBootstrapNonce autoriza solamente el primer script del
+  shell srcdoc generado internamente. No altera HTML arbitrario del paquete.
+  El runtime normal sin meta LTI conserva su comportamiento.
+- CSP conserva script-src basado en nonce y mantiene el sandbox de origen
+  opaco (allow-scripts, sin allow-same-origin en esta modalidad), mientras
+  permite CSS, multimedia y fuentes locales blob:/data:.
+- El contenedor LTI crece con la altura real del Player para que los botones
+  de H5P y el contenido SCORM no queden cortados por un height:100% fijo.
+
+Al desplegar una modificacion, compilar el mismo Player existente con
+node packages/player/scripts/build-dist.mjs y actualizar el proveedor LTI
+sin regenerar sus claves, su base SQLite ni sus cursos. Confirmar en un
+navegador real (no solo HTTP 200): pregunta H5P visible y boton Check
+funcional; pagina SCORM visible y boton Next funcional; pruebas de
+packages/toolkit/test/opaque-runtime-bootstrap-nonce.test.mjs,
+packages/toolkit/test/opaque-runtime-security.test.mjs e
+integration/lms/lti-server.test.mjs superadas.
+
+Esta reparacion no certifica que el LMS haya recibido notas oficiales AGS.
+Tampoco autoriza desactivar CSP o SameSite para ocultar errores.

@@ -1,3 +1,4 @@
+import {withOpaqueRuntimeBootstrapNonce} from '../opaque-runtime-bootstrap-nonce.js';
 import {startPackageRuntime} from '../package-runtime-shell.js';
 import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
@@ -294,7 +295,7 @@ export async function render({container, payload, representation, package:pkg, e
     iframe.contentWindow.postMessage({protocol:PROTOCOL, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  if (opaqueMode) iframe.srcdoc = createOpaquePackageRuntimeDocument();
+  if (opaqueMode) iframe.srcdoc = withOpaqueRuntimeBootstrapNonce(createOpaquePackageRuntimeDocument());
   else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 

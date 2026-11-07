@@ -171,7 +171,21 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.match(launch.headers.get('content-security-policy')??'',/script-src[^;]*'wasm-unsafe-eval'/,
     'the LTI Player must permit WebAssembly physics without globally enabling JavaScript eval');
   const htmlBody=await launch.text();
+  const playerNonce=/<meta name="p2lrn-opaque-runtime-nonce" content="([^"]+)">/u.exec(htmlBody)?.[1];
+  assert.match(playerNonce ?? '',/^[A-Za-z0-9_-]{20,128}$/u,'each LTI launch must expose a valid opaque-runtime bootstrap nonce');
+  const csp=launch.headers.get('content-security-policy') ?? '';
+  assert.match(csp,/style-src[^;]*blob:/u,'LTI H5P must permit sandboxed blob stylesheets');
+  assert.match(csp,/font-src[^;]*blob:/u,'LTI H5P must permit sandboxed blob fonts');
+  assert.match(csp,/media-src[^;]*blob:/u,'LTI activities must permit packaged audio and video');
+  assert.doesNotMatch(csp,/script-src[^;]*unsafe-inline/u,'the LTI top-level page must keep strict nonce-based scripts');
+  assert.ok(launch.headers.get('content-security-policy')?.includes("'nonce-" + playerNonce + "'"),
+    'the runtime nonce must be the same nonce enforced by the LTI launch CSP');
+  assert.ok(htmlBody.includes('<script nonce="' + playerNonce + '">'));
   assert.match(htmlBody,/<p2lrn-player/);
+  assert.match(htmlBody,/p2lrn-player\{display:block;width:100%;height:auto;min-height:500px\}/u,
+    'the embedded Player must expand to show interactive content without clipping buttons');
+  assert.doesNotMatch(htmlBody,/main\{height:100%;display:flex/u,
+    'LTI must not clip H5P and SCORM content to the initial LMS iframe height');
   assert.match(htmlBody,/player\.setAttribute\("src",src\)/,
     'LTI HTML must use the observed src attribute, not an inert player.src property');
   assert.doesNotMatch(htmlBody,/player\.src=src/);
