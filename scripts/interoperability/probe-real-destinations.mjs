@@ -4,6 +4,7 @@
 import {mkdir,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
+import {request as httpRequest} from 'node:http';
 const startedAt=new Date().toISOString();
 const output=resolve(process.env.P2LRN_INTEROP_OUTPUT||join(process.cwd(),'.interop-evidence'));
 const limit=(text,n=240)=>String(text??'').slice(0,n);
@@ -37,17 +38,42 @@ async function request(url,{expectJson=false}={}){
       detail:limit(error?.cause?.message||error?.message||String(error),210)};
   }
 }
+async function viaLoopbackProxy(url,{expectJson=false}={}){
+  const target=new URL(url);
+  if(target.protocol!=='http:'||!target.hostname.endsWith('.localhost'))return {skipped:true,reason:'Not a documented local proxy URL'};
+  return new Promise(resolve=>{
+    const req=httpRequest({hostname:'127.0.0.1',port:Number(target.port||80),path:target.pathname+target.search,
+      method:'GET',headers:{Host:target.host,Accept:expectJson?'application/json':'text/html'},timeout:5500},response=>{
+        const parts=[];let count=0;
+        response.on('data',chunk=>{count+=chunk.length;if(count<=1024*1024)parts.push(chunk);});
+        response.on('end',()=>{
+          const body=Buffer.concat(parts).toString('utf8');
+          let json=null;try{json=expectJson?JSON.parse(body):null;}catch{}
+          resolve({reached:true,via:'127.0.0.1:80+Host',requestedHost:target.host,
+            status:response.statusCode,bodySha256:sha(body),title:(body.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]||null),
+            ltiHealthOk:expectJson?json?.status==='ok'&&json?.provider==='P2LRN LTI 1.3':null,
+            jwksKeys:expectJson&&Array.isArray(json?.keys)?json.keys.length:null});
+        });
+      });
+    req.on('timeout',()=>req.destroy(new Error('HTTP_TIMEOUT')));
+    req.on('error',error=>resolve({reached:false,via:'127.0.0.1:80+Host',error:limit(error.code||error.message,130)}));
+    req.end();
+  });
+}
 const cases=[];
 for(const lab of labs){
   const result={id:lab.id,source:lab.source,address:lab.url??null,contentSha256:null,
     state:lab.url?'UNVERIFIED':'NOT_CONFIGURED',studentLaunch:'NOT_TESTED',gradePassback:'NOT_TESTED'};
   if(lab.url){
     result.ui=await request(lab.url);
-    result.state=result.ui.reached?'HTTP_ONLY_REACHED':'UNREACHABLE';
+    if(!result.ui.reached)result.proxyProbe=await viaLoopbackProxy(lab.url);
+    result.state=result.ui.reached?'HTTP_ONLY_REACHED':result.proxyProbe?.reached?'HOST_ROUTED_ONLY':'UNREACHABLE';
     if(['moodle','chamilo','sakai'].includes(lab.id)){
       result.p2lrnHealth=await request(new URL('/lti/health',lab.url),{expectJson:true});
+      if(!result.p2lrnHealth.reached)result.p2lrnProxyHealth=await viaLoopbackProxy(new URL('/lti/health',lab.url),{expectJson:true});
       const jwks=await request(new URL('/lti/jwks',lab.url),{expectJson:true});
       result.jwks={reached:jwks.reached,status:jwks.status??null,keys:jwks.jwksKeys??null,error:jwks.error??null};
+      if(!jwks.reached)result.jwksProxy=await viaLoopbackProxy(new URL('/lti/jwks',lab.url),{expectJson:true});
     }
   }
   cases.push(result);
