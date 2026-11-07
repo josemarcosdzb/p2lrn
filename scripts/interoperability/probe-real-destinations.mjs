@@ -33,7 +33,8 @@ async function request(url,{expectJson=false}={}){
       jwksKeys:expectJson&&Array.isArray(json?.keys)?json.keys.length:null,
     };
   }catch(error){
-    return {reached:false,error:limit(error?.code||error?.name||String(error),130)};
+    return {reached:false,error:limit(error?.cause?.code||error?.code||error?.name||String(error),130),
+      detail:limit(error?.cause?.message||error?.message||String(error),210)};
   }
 }
 const cases=[];
