@@ -32,10 +32,10 @@ En Chrome se sirvió la versión 1 sin alterar un byte: SHA-256 idéntico al ori
 | Relacionar (3 parejas) | Alumno conectó las tres parejas y terminó, puntuación local normalizada 1 | AGS oficial |
 | Cuestionario | Alumno respondió y finalizó, puntuación local normalizada 1 | Nota almacenada en Host |
 | H5P | Se abrió el **H5P real** «Arithmetic quiz example - addition» y se pulsó «Start»; comenzó la cuenta atrás | Responder y completar todas las preguntas, conservar puntuación y resultado |
-| SCORM 1.2 | Se abrió el iframe real, se detectó su API y se pulsó «Next» pasando de la **etapa 1 a la 2 de 6**; emite eventos de estado | Las demás etapas, nota, finalización y reanudación |
+| SCORM 1.2 | **Seis etapas recorridas con la interfaz real; cuatro respuestas enviadas con «Submit answers»; API SCORM 1.2: `lesson_status=passed`, `cmi.core.score.raw=100`** | Transferencia y conservación de esa nota en un LMS real, reanudación SCORM |
 | Evaluación final | Alumno respondió y envió | Nota aprobada; el Player correctamente no mostró calificación oficial |
 
-**Resultado medido:** cuatro de siete actividades admitieron la **finalización o envío de interacciones reales**: drag/drop (2/2 destinos), relacionar (3/3), cuestionario de autoevaluación y evaluación final (sin mostrar nota oficial); H5P fue iniciado y SCORM avanzó una etapa, **sin completar**; segunda lección se cargó. El Host web de ejemplo tiene `player.adapter = null`; por tanto, **la reanudación y los resultados oficiales no están certificados**.
+**Resultado medido:** cinco de siete actividades admitieron finalización o envío de interacciones reales: drag/drop (2/2 destinos), relacionar (3/3), cuestionario de autoevaluación, evaluación final (sin mostrar nota oficial) y **SCORM completado con 100 puntos en su propia API**. H5P comenzó y aceptó respuestas, pero no se completó; la segunda lección cargó sin prueba de reanudación. El Host web de ejemplo no ofrece por defecto persistencia. La prueba independiente de Host local sí demostró recuperar una respuesta, pero no LTI/AGS. El Host web de ejemplo tiene `player.adapter = null`; por tanto, **la reanudación y los resultados oficiales no están certificados**.
 
 **Evidencia:** `C:\Users\Usuario\Downloads\P2LRN-INTEROP-WEB-ad6cc4e3\independent-web-student-report.json` y `web-student-evidence\*.png`.
 
@@ -77,7 +77,7 @@ Comprobación real: la alteración de bytes de una copia de la versión 1 fue re
 |---|---|
 | Un mismo SHA-256 en todos los destinos para cada versión | Confirmado únicamente entre exportación Studio y web independiente |
 | Adaptaciones por LMS | **0 realizadas**, porque ningún LMS pasó la fase de conexión |
-| 100 % de las actividades completadas | **No**: 4/7 con finalización o envío de interacción; H5P, SCORM y reanudación sin cerrar. La evaluación final no recibió nota oficial. |
+| 100 % de las actividades completadas | **No**: 5/7 con finalización/envío de respuestas; SCORM finalizado con estado `passed` y puntuación 100 en su API. H5P y reanudación SCORM siguen pendientes; la evaluación final no recibió nota oficial. |
 | 100 % de progresos, reanudaciones y notas oficiales | **No**: recuperación de una respuesta aprobada con Host local de pruebas; reinicio del Host, LMS y notas oficiales pendientes |
 | 5 LMS reales + web + Windows sin conexión | **0/7 destinos certificados integralmente** |
 | Manipulación no puede crear calificaciones oficiales | **No demostrado**; falta Host autoritativo y prueba de ataques contra su integración |
@@ -86,6 +86,6 @@ Comprobación real: la alteración de bytes de una copia de la versión 1 fue re
 
 ### Para cerrar la certificación
 
-Hacen falta cinco instalaciones LMS accesibles desde el runner, sus registros LTI 1.3 y permisos AGS con alumnos de prueba; configurar un Host real de persistencia y aprobación de notas para la web independiente; completar autoría y titularidad desde Studio antes de firmar la entrega offline; completar el recorrido real de H5P y SCORM (drag/drop ya completado); y probar restauración de intentos tras sustituir v1 por v2 sin borrar el historial del Host.
+Hacen falta cinco instalaciones LMS accesibles desde el runner, sus registros LTI 1.3 y permisos AGS con alumnos de prueba; configurar un Host real de persistencia y aprobación de notas para la web independiente; completar autoría y titularidad desde Studio antes de firmar la entrega offline; completar las diez preguntas H5P y validar persistencia/reanudación de SCORM (su actividad y nota interna ya se completaron); y probar restauración de intentos tras sustituir v1 por v2 sin borrar el historial del Host.
 
-**Ejecuciones verificables en GitHub:** [creación real y SHA](https://github.com/josemarcosdzb/p2lrn/actions/runs/42363679207), [alumno web](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364114504), [v2 y offline](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364493157), [interacción real de los iframes](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364924854). El código de QA está en `scripts/interoperability/` y su workflow en `.github/workflows/p2lrn-interoperability-real.yml`.
+**Ejecuciones verificables en GitHub:** [creación real y SHA](https://github.com/josemarcosdzb/p2lrn/actions/runs/42363679207), [alumno web](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364114504), [v2 y offline](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364493157), [interacción real de los iframes](https://github.com/josemarcosdzb/p2lrn/actions/runs/42364924854), [SCORM completado con su examen](https://github.com/josemarcosdzb/p2lrn/actions/runs/42365934787). El código de QA está en `scripts/interoperability/` y su workflow en `.github/workflows/p2lrn-interoperability-real.yml`.
