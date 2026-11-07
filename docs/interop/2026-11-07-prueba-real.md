@@ -111,3 +111,11 @@ El modulo integration/lms/lti-local-qa-gateway.mjs corrige ese caso de desarroll
 **Certificacion de los cinco LMS: pendiente.** Haber corregido un gradebook real de Moodle no acredita cinco LMS, ni la nota de la evaluacion del curso nuevo. El offline y Analytics no quedan certificados integralmente por estas pruebas. No publicar una version denominada definitiva hasta completar las pruebas estudiantiles y sus resultados, preservando el mismo paquete P2LRN, sus identificadores y los historiales.
 
 Evidencias locales verificadas: C:\Users\Usuario\Downloads\P2LRN-CERT-20261107\moodle-ags-gradebook-real.log, provider-status-verificado.json, certificacion-lms-20261107.json, lti-regresion-fix-gateway.log y ver-videos.html. Los archivos de diagnostico en otras plataformas no son certificaciones de lanzamiento.
+
+### Prueba de regresión 3D en el runner Windows
+
+El workflow de Studio correspondiente al commit 00af07d falló en su trabajo quest3d-browser: la prueba intentaba escuchar en 127.0.0.1:8765, que ya estaba ocupado por otro proceso. El error real fue EADDRINUSE, no un fallo demostrado del juego 3D.
+
+Se corrigió el verificador canónico scripts/verify-local-viewer.mjs para reservar dinámicamente tres puertos libres mediante el sistema operativo. La aplicación, el entorno de ejecución aislado y el servicio de colaboración siguen utilizando orígenes HTTP separados. La prueba no cierra otros procesos ni depende de que estén libres 8765, 8766 o 8767.
+
+Tras reconstruir el Player local del commit actual, la prueba real en Chrome para Quest 3D completó ordenación, emparejamiento y clasificación; comprobó persistencia y restauración, los controles móviles a 390 px, el joystick y la entrada a la escena de escritorio. Resultado local: ok=true, con capturas verificadas y el informe quest3d-report.json en la carpeta existente P2LRN-CERT-20261107/quest3d-e2e. La validación de CI posterior se informa por separado y no se deduce de esta ejecución local.

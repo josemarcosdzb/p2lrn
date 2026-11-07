@@ -16,9 +16,9 @@ import {STUDIO_RUNTIME_SHARED_FILES} from '../deploy/netlify/studio-runtime-asse
 const root=resolve(process.cwd());
 const siteRoot=join(root,'.netlify-cdn');
 const viewerPath=join(siteRoot,'demo','viewer.js');
-const APP_ORIGIN='http://127.0.0.1:8765';
-const RUNTIME_ORIGIN='http://127.0.0.1:8766';
-const COLLABORATION_ORIGIN='http://127.0.0.1:8767';
+let APP_ORIGIN=null;
+let RUNTIME_ORIGIN=null;
+let COLLABORATION_ORIGIN=null;
 
 function invariant(value,message){if(!value)throw new Error(message);}
 const sleep=(ms)=>new Promise((resolvePromise)=>setTimeout(resolvePromise,ms));
@@ -366,7 +366,7 @@ const stateExpression=String.raw`(()=>{const p=document.getElementById('demo-pla
 async function runtimeTexts(cdp){
   const out=[];
   for(const ctx of [...cdp.contexts.values()]){
-    if(!ctx.origin.includes('127.0.0.1:8766'))continue;
+    if(!ctx.origin.startsWith(RUNTIME_ORIGIN))continue;
     try{
       const evaluated=await cdp.send('Runtime.evaluate',{contextId:ctx.id,expression:"document.body?.innerText?.slice(0,2500)||''",returnByValue:true});
       const value=String(evaluated.result?.value||'').trim();
@@ -1559,15 +1559,26 @@ try{
   await prepareVisualStudioFixture();
   await prepareGameFixtures();
   const connectedFixture=await prepareConnectedArchitectureFixtures();
+  // Avoid collisions with previews and runners that already own 8765-8767.
+  // Ephemeral app/runtime ports remain different origins for sandbox isolation.
+  appServer=await listen(0);
+  APP_ORIGIN='http://127.0.0.1:'+appServer.address().port;
+  runtimeServer=await listen(0);
+  RUNTIME_ORIGIN='http://127.0.0.1:'+runtimeServer.address().port;
+  collaborationServer=await listenCollaboration(0);
+  COLLABORATION_ORIGIN='http://127.0.0.1:'+collaborationServer.address().port;
+  invariant(new Set([APP_ORIGIN,RUNTIME_ORIGIN,COLLABORATION_ORIGIN]).size===3,
+    'QA runtime, app and collaboration must have isolated origins');
+  console.log('P2LRN_QA_DYNAMIC_ORIGINS='+JSON.stringify({
+    app:APP_ORIGIN,runtime:RUNTIME_ORIGIN,collaboration:COLLABORATION_ORIGIN
+  }));
   const builtViewer=await readFile(viewerPath,'utf8');
   const localViewer=builtViewer.replace(/const RUNTIME_ORIGINS=Object\.freeze\(\[[\s\S]*?\]\);/u,
     `const RUNTIME_ORIGINS=Object.freeze(['${RUNTIME_ORIGIN}','${APP_ORIGIN}']);`);
   invariant(localViewer!==builtViewer,'Could not patch built viewer runtime origins for local-only verification.');
   await writeFile(viewerPath,localViewer,'utf8');
 
-  appServer=await listen(8765);
-  runtimeServer=await listen(8766);
-  collaborationServer=await listenCollaboration(8767);
+
   const chromePath=await findChrome();
   chrome=await launchChrome(chromePath);
   cdp=await connectPage(chrome.browserWs);
