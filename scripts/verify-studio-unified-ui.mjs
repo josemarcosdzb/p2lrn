@@ -418,9 +418,14 @@ async function browserScenario(){
   source[1].prepend(picture);
   const secondText=source[1].querySelector('[data-p2lrn-dnd-text]');
   secondText.textContent='';secondText.hidden=true;
-  const originalCardStyle=source[1].getAttribute('style');
+  let originalCardStyle=source[1].getAttribute('style');
   // Player initialization already happened above; the new scene needs activation.
   bootStudioDropActivities();
+  // Runtime intentionally removes the opaque backing from image-only cards
+  // before capturing the reset baseline. Compare against that visible state.
+  originalCardStyle=source[1].getAttribute('style');
+  expect(source[1].style.backgroundColor==='transparent',
+    'The Player flattened a transparent PNG onto an opaque tile');
   expect(source[1].getAttribute('aria-label')==='Ficha: Un puente de madera',
     'Image-only cards are not accessible to students');
   source[0].click();targets[1].click();
