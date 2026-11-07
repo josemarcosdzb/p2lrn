@@ -52,16 +52,34 @@ try{
     await new Promise(ok=>setTimeout(ok,150));
    }
    result.frames=descendants.map(x=>({id:x.id,url:x.url,securityOrigin:x.securityOrigin||null}));
-   if(!descendants.length){result.status='FRAME_NOT_FOUND';continue;}
-   // A valid Player activity has one top-level sandbox iframe.
-   const frame=descendants[0];
-   const context=await browser.send('Page.createIsolatedWorld',{frameId:frame.id,worldName:'p2lrn-interop-qa'});
-   const contextId=context.executionContextId;
-   const evaluate=async expression=>{
-    const answer=await browser.send('Runtime.evaluate',{contextId,expression,returnByValue:true,awaitPromise:true});
-    if(answer.exceptionDetails)throw new Error(String(answer.exceptionDetails.exception?.description||answer.exceptionDetails.text));
-    return answer.result?.value;
-   };
+   let evaluate;
+   if(descendants.length){
+     const frame=descendants[0];
+     const context=await browser.send('Page.createIsolatedWorld',{frameId:frame.id,worldName:'p2lrn-interop-qa'});
+     const contextId=context.executionContextId;
+     evaluate=async expression=>{
+       const answer=await browser.send('Runtime.evaluate',{contextId,expression,returnByValue:true,awaitPromise:true});
+       if(answer.exceptionDetails)throw new Error(String(answer.exceptionDetails.exception?.description||answer.exceptionDetails.text));
+       return answer.result?.value;
+     };
+   }else{
+     // Chromium may place opaque srcdoc frames in a different renderer process
+     // (OOPIF). Enumerate and attach to their true Chrome target, never clone
+     // the HTML into a same-origin fake iframe.
+     const all=await browser.send('Target.getTargets');
+     const candidates=(all.targetInfos??[]).filter(x=>x.type==='iframe');
+     result.frameTargets=candidates.map(x=>({id:x.targetId,url:x.url,attached:x.attached}));
+     const frameTarget=candidates.find(x=>/about:srcdoc|about:blank|blob:/i.test(x.url))??candidates.at(-1);
+     if(!frameTarget){result.status='FRAME_NOT_FOUND_AND_NO_OOPIF_TARGET';continue;}
+     const attachment=await browser.send('Target.attachToTarget',{targetId:frameTarget.targetId,flatten:true});
+     const sessionId=attachment.sessionId;
+     await browser.send('Runtime.enable',{},sessionId);
+     evaluate=async expression=>{
+       const answer=await browser.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true},sessionId);
+       if(answer.exceptionDetails)throw new Error(String(answer.exceptionDetails.exception?.description||answer.exceptionDetails.text));
+       return answer.result?.value;
+     };
+   }
    await new Promise(ok=>setTimeout(ok,400));
    result.initial=await evaluate("(()=>({title:document.title,text:document.body?.innerText?.slice(0,1400)||'',inputs:document.querySelectorAll('input').length,buttons:[...document.querySelectorAll('button,input[type=button],input[type=submit]')].map(x=>x.textContent?.trim()||x.value||x.getAttribute('aria-label')).filter(Boolean).slice(0,30),links:document.querySelectorAll('a').length,h5p:Boolean(document.querySelector('.h5p-content')),scormApi:Boolean(window.API||window.API_1484_11),dragItems:document.querySelectorAll('[data-p2lrn-dnd-item]').length,dragZones:document.querySelectorAll('[data-p2lrn-dnd-zone]').length}))()");
    result.screenshot=await browser.screenshot('before-'+target.kind);
@@ -83,7 +101,9 @@ try{
   await persist();
   console.log('P2LRN_INTEROP_SUBFRAME='+JSON.stringify({kind:target.kind,status:result.status,interaction:result.action,errors:result.error}));
  }
- report.status=report.activities.every(x=>x.status!=='FAIL_DRAG_DROP'&&x.status!=='FAIL_OR_UNAVAILABLE')?'PARTIAL_REAL_EVIDENCE':'FAILED_SUBFRAME_TEST';
+ report.verifiedInteractions=report.activities.filter(x=>x.verifiedInteraction).length;
+ report.status=report.activities.some(x=>x.status==='FAIL_DRAG_DROP'||x.status==='FAIL_OR_UNAVAILABLE')?'FAILED_SUBFRAME_TEST':
+   report.verifiedInteractions===0?'NO_SUBFRAME_INTERACTIONS_VERIFIED':'PARTIAL_REAL_EVIDENCE';
  report.resultEvents=await browser.evaluate("window.__subframeEvents.slice(-55)");
 }catch(error){
  report.status='TEST_HARNESS_FAILED';report.error=String(error?.message||error).slice(0,1200);
@@ -93,4 +113,4 @@ try{
  if(server)await server.close();
 }
 console.log('P2LRN_INTEROP_SUBFRAMES_REPORT='+JSON.stringify(report));
-if(report.status==='TEST_HARNESS_FAILED'||report.status==='FAILED_SUBFRAME_TEST')process.exitCode=1;
+if(!['PARTIAL_REAL_EVIDENCE'].includes(report.status))process.exitCode=1;
