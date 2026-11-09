@@ -107,7 +107,33 @@ async function inspectExistingLmsContainers(){
   const services=stdout.split(/\r?\n/).map(row=>row.trim()).filter(Boolean)
    .map(row=>{const [name,state,status]=row.split('|');return {name,state,status};})
    .filter(row=>relevant.test(row.name)).slice(0,80);
-  return {available:true,services};
+  const resources={hostTotalBytes:null,hostFreeBytes:null,dockerMemoryBytes:null,
+   runningMemoryUsage:[],stoppedOpenEdx:[]};
+  const os=await import('node:os');
+  resources.hostTotalBytes=os.totalmem();resources.hostFreeBytes=os.freemem();
+  try{
+   const info=await run('docker',['info','--format','{{.MemTotal}}'],{
+    timeout:5000,windowsHide:true,maxBuffer:8192});
+   const bytes=Number(info.stdout.trim());
+   if(Number.isSafeInteger(bytes)&&bytes>=0)resources.dockerMemoryBytes=bytes;
+  }catch{}
+  try{
+   const stats=await run('docker',['stats','--no-stream','--format','{{.Name}}|{{.MemUsage}}'],{
+    timeout:12000,windowsHide:true,maxBuffer:128*1024});
+   resources.runningMemoryUsage=stats.stdout.split(/\\r?\\n/).filter(Boolean)
+    .map(row=>{const [name,memory]=row.split('|');return {name,memory};})
+    .filter(row=>relevant.test(row.name)).slice(0,30);
+  }catch{}
+  for(const row of services.filter(row=>row.name.startsWith('openedx-')&&row.state!=='running').slice(0,14)){
+   try{
+    const details=await run('docker',['inspect','--format',
+     '{{.State.ExitCode}}|{{.State.OOMKilled}}|{{.HostConfig.RestartPolicy.Name}}',
+     row.name],{timeout:4000,windowsHide:true,maxBuffer:8192});
+    const [exitCode,oomKilled,restartPolicy]=details.stdout.trim().split('|');
+    resources.stoppedOpenEdx.push({name:row.name,exitCode:Number(exitCode),oomKilled:oomKilled==='true',restartPolicy});
+   }catch{resources.stoppedOpenEdx.push({name:row.name,inspect:'UNAVAILABLE'});}
+  }
+  return {available:true,services,resources};
  }catch(e){
   return {available:false,reason:limit(e.code||e.message,110)};
  }
