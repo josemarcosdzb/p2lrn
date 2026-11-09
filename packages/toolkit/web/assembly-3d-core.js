@@ -23,21 +23,35 @@ export function cageVertices(width=1.6,height=1.6,depth=1.6){
   const x=width/2,y=height/2,z=depth/2;
   return [[-x,-y,-z],[x,-y,-z],[x,y,-z],[-x,y,-z],[-x,-y,z],[x,-y,z],[x,y,z],[-x,y,z]];
 }
+// A convex-hull test allows any individual vertex to move, including
+// slanted and non-coplanar original quad faces. No fixed cuboid assumption.
+function hullPlanes(vertices){
+  const planes=[];
+  for(let i=0;i<vertices.length;i++)for(let j=i+1;j<vertices.length;j++)for(let k=j+1;k<vertices.length;k++){
+    const a=vertices[i],crossed=cross(sub(vertices[j],a),sub(vertices[k],a)),m=norm(crossed);
+    if(m<1e-8)continue;
+    let n=crossed.map(v=>v/m),d=dot(n,a);
+    const distances=vertices.map(p=>dot(n,p)-d);
+    const lo=Math.min(...distances),hi=Math.max(...distances);
+    if(lo< -1e-6&&hi>1e-6)continue;
+    if(lo>=-1e-6){n=n.map(v=>-v);d=-d;}
+    if(planes.some(p=>dot(p.normal,n)>1-1e-7&&Math.abs(p.distance-d)<1e-6))continue;
+    planes.push({normal:n,distance:d});
+  }
+  return planes;
+}
 export function validCage(vertices){
   if(!Array.isArray(vertices)||vertices.length!==8||!vertices.every(v=>vec(v,3)))return false;
-  const center=[0,1,2].map(j=>vertices.reduce((s,v)=>s+v[j],0)/8);
-  let volume=0;
-  for(const face of FACES){
-    const [a,b,c,d]=face.map(i=>vertices[i]);
-    const normal=cross(sub(b,a),sub(c,a)),area=norm(normal);
-    if(area<1e-5||dot(normal,sub(center,a))>=-1e-6)return false;
-    const planeTolerance=area*0.0006;
-    if(Math.abs(dot(normal,sub(d,a)))>planeTolerance)return false;
-    for(const p of vertices)if(dot(normal,sub(p,a))>planeTolerance)return false;
-    volume+=dot(sub(a,center),cross(sub(b,center),sub(c,center)))/6;
-    volume+=dot(sub(a,center),cross(sub(c,center),sub(d,center)))/6;
-  }
-  return volume>1e-5;
+  if(new Set(vertices.map(v=>v.map(n=>n.toFixed(5)).join(','))).size!==8)return false;
+  const planes=hullPlanes(vertices);
+  if(planes.length<4)return false;
+  // Every control vertex must remain on the hull; an internal point is a
+  // misleading handle that would not affect the placement collider.
+  if(vertices.some(v=>planes.filter(p=>Math.abs(dot(p.normal,v)-p.distance)<1e-5).length<3))return false;
+  const values=[];
+  for(let a=0;a<vertices.length;a++)for(let b=a+1;b<vertices.length;b++)for(let c=b+1;c<vertices.length;c++)for(let d=c+1;d<vertices.length;d++)
+    values.push(Math.abs(dot(sub(vertices[b],vertices[a]),cross(sub(vertices[c],vertices[a]),sub(vertices[d],vertices[a])))/6));
+  return Math.max(...values)>1e-5;
 }
 export function rotateVector(v,q){
   // Quaternion x,y,z,w, v transformed without a matrix allocation.
@@ -56,14 +70,10 @@ export function toLocal(world,transform){
 }
 export function cageContains(world,target,epsilon=0){
   const point=toLocal(world,target.transform);
-  let outside=0;
-  for(const face of FACES){
-    const [a,b,c]=face.map(i=>target.vertices[i]);
-    const normal=cross(sub(b,a),sub(c,a)),length=norm(normal);
-    if(length<1e-8)return false;
-    outside=Math.max(outside,dot(normal,sub(point,a))/length);
-  }
-  return outside<=epsilon/Math.min(...target.transform.scale)+1e-7;
+  const planes=hullPlanes(target.vertices);
+  if(planes.length<4)return false;
+  const tolerance=epsilon/Math.min(...target.transform.scale);
+  return planes.every(p=>dot(p.normal,point)-p.distance<=tolerance+1e-7);
 }
 export function rotationErrorDegrees(a,b){
   // q and -q represent the same rotation.
@@ -95,6 +105,8 @@ export function validateAssembly(scene,{requireReady=true}={}){
     if(!Number.isInteger(asset.size)||asset.size<20||asset.size>ASSEMBLY_MAX_ASSET_BYTES)fail('tamaño de recurso inválido');
   }
   const validTransform=(t)=>t&&vec(t.position,3)&&validQuat(t.rotation)&&vec(t.scale,3,100)&&t.scale.every(n=>n>=0.001);
+  if(scene.referenceAssetId!=null&&!assetIds.has(scene.referenceAssetId))fail('modelo base de referencia inexistente');
+  if(scene.referenceTransform!=null&&!validTransform(scene.referenceTransform))fail('transformación de referencia inválida');
   for(const p of scene.pieces){
     if(typeof p.text!=='string'||!p.text.trim()||!validTransform(p.initialTransform))fail('pieza con geometría/texto inválidos');
     if(p.assetId!==null&&p.assetId!==undefined&&!assetIds.has(p.assetId))fail('modelo de pieza inexistente');
@@ -116,7 +128,7 @@ export function validateAssembly(scene,{requireReady=true}={}){
   const visited=new Set(),stack=new Set();
   function walk(id){if(stack.has(id))fail('dependencias circulares');if(visited.has(id))return;stack.add(id);for(const dep of deps.get(id)??[])walk(dep);stack.delete(id);visited.add(id)}
   for(const id of pieceIds)walk(id);
-  if(requireReady&&scene.assets.some(asset=>scene.pieces.every(p=>p.assetId!==asset.id)))fail('modelo sin piezas asociadas');
+  if(requireReady&&scene.assets.some(asset=>scene.pieces.every(p=>p.assetId!==asset.id)&&scene.referenceAssetId!==asset.id))fail('modelo sin piezas asociadas');
   return scene;
 }
 export function evaluateAssemblyPlacement(scene,pieceId,targetId,placement,placed={}){
