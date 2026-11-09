@@ -429,12 +429,21 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
        !reg.deployments.includes(pending.deploymentId))
      throw new Error('PICKER_PLATFORM_REVOKED');
     checkLocalCohost(req,reg.deepLinkLaunchUrl||reg.launchUrl);
+    const renderInvalidCourse=()=>{
+     const cspNonce=nonce(16);
+     return sendHtml(res,422,pickerHtml({
+      ticket:fields.get('ticket'),contents:store.listCatalog(pending.tenantId),cspNonce,
+      errorMessage:'Comprueba que has elegido el archivo .p2lrn exportado desde Studio y vuelve a seleccionarlo. No se ha perdido tu selección del aula.'
+     }),policy(cspNonce,new URL(reg.issuer).origin));
+    };
     const file=fields.get('course');
     if(!file||typeof file.arrayBuffer!=='function'||typeof file.name!=='string'||
        !file.name.toLowerCase().endsWith('.p2lrn')||file.size===0||file.size>64*1024*1024)
-     throw new Error('INVALID_P2LRN_UPLOAD_FILE');
+     return renderInvalidCourse();
     const bytes=Buffer.from(await file.arrayBuffer());
-    const inspection=inspectCourseBytes(bytes);
+    let inspection;
+    try{inspection=inspectCourseBytes(bytes);}
+    catch{return renderInvalidCourse();}
     const entry=store.consumePicker(ticketHash);
     if(!entry)throw new Error('PICKER_EXPIRED');
     const published=persistCourse(entry.tenantId,inspection,bytes);

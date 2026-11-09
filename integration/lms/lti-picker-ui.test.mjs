@@ -25,6 +25,16 @@ test('teacher sees one primary Add course button per package',()=>{
  assert.match(markup,/<script nonce="csp-123">/);
 });
 
+test('upload error is accessible, sanitized and leaves the upload form available',()=>{
+ const markup=pickerHtml({ticket:'retry-ticket',contents:content,cspNonce:'nonce',
+  errorMessage:'El archivo <script>alert("bad")</script> no está disponible.'});
+ assert.match(markup,/role="alert"/);
+ assert.match(markup,/No se ha publicado/);
+ assert.match(markup,/Publicar y añadir/);
+ assert.match(markup,/value="retry-ticket"/);
+ assert.doesNotMatch(markup,/<script>alert/);
+ assert.match(markup,/&lt;script&gt;/);
+});
 test('empty catalogue gives actionable response; malformed content cannot inject markup',()=>{
  const missing=pickerHtml({ticket:'t',contents:[],cspNonce:'n'});
  assert.match(missing,/No hay cursos publicados/);

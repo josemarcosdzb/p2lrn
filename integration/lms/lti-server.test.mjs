@@ -287,7 +287,13 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   };
   const badUpload=await req('/lti/deep-link/confirm',{method:'POST',
    body:uploadForm(uploadTicket,Buffer.from('invalid archive'))});
-  assert.equal(badUpload.status,400,'invalid course must not be published');
+  assert.equal(badUpload.status,422,'invalid course remains in the LMS teacher picker');
+  const retryMarkup=await badUpload.text();
+  assert.match(retryMarkup,/No se ha publicado/);
+  assert.match(retryMarkup,/role="alert"/);
+  assert.match(retryMarkup,/name="ticket" value="[^"]+"/);
+  assert.match(retryMarkup,/Publicar y añadir/,
+   'professor must retry without returning to admin setup');
   const validUpload=await req('/lti/deep-link/confirm',{method:'POST',
    body:uploadForm(uploadTicket,course)});
   assert.equal(validUpload.status,200,await validUpload.clone().text());
