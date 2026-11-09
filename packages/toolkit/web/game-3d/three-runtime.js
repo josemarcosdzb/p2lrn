@@ -365,7 +365,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     parent.add(face);
   }
 
-  function addBox({id,text,position=[0,1,0],size=[2.05,1.12,1.55],color=null,dynamic=true,interaction=null}={}) {
+  function addBox({id,text,position=[0,1,0],size=[2.05,1.12,1.55],color=null,dynamic=true,physicsEnabled=true,interaction=null}={}) {
     const keyId=String(id);
     const p=normalizePosition(position);
     const geometry=new THREE.BoxGeometry(size[0],size[1],size[2]);
@@ -379,8 +379,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     stage.add(mesh);
     meshes.set(keyId,mesh);
     if (interaction) interactables.push(mesh);
-    physicsWorld.createBox?.({id:keyId,position:p,halfExtents:[size[0]/2,size[1]/2,size[2]/2],dynamic});
-    bodies.add(keyId);
+    if(physicsEnabled){
+      physicsWorld.createBox?.({id:keyId,position:p,halfExtents:[size[0]/2,size[1]/2,size[2]/2],dynamic});
+      bodies.add(keyId);
+    }
     return mesh;
   }
 
