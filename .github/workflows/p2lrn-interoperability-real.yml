@@ -51,6 +51,78 @@ jobs:
           if(!(Test-Path (Join-Path $dir 'real-destination-preflight.json'))){throw 'Actual host report missing'}
           Write-Output ('INTEROP_EVIDENCE_DIR='+$dir)
 
+  recover-existing-openedx-qa:
+    # Explicit, one-time recovery of the previously existing Docker containers.
+    # This is never run on normal pushes or from a different project.
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[qa-recover-existing-openedx]')
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Restore existing stopped Open edX core only after checking real memory
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $names = @(
+            'openedx-josemarcosdiaz-mysql-1',
+            'openedx-josemarcosdiaz-mongodb-1',
+            'openedx-josemarcosdiaz-redis-1',
+            'openedx-josemarcosdiaz-caddy-1',
+            'openedx-josemarcosdiaz-lms-1',
+            'openedx-josemarcosdiaz-mfe-1'
+          )
+          $started = New-Object 'System.Collections.Generic.List[string]'
+          function FreeGiB {
+            $bytes = & node -e "process.stdout.write(String(require('os').freemem()))"
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to read Windows memory' }
+            return [math]::Round(([double]$bytes / 1GB), 2)
+          }
+          $before = FreeGiB
+          Write-Output ('OPENEDX_BEFORE_FREE_GIB=' + $before)
+          if ($before -lt 4.0) { throw 'Open edX recovery blocked: Windows has less than 4 GiB free' }
+          try {
+            foreach ($name in $names) {
+              $exists = & docker inspect --format '{{.State.Running}}' $name
+              if ($LASTEXITCODE -ne 0) { throw ('Existing Open edX container not found: ' + $name) }
+              if (($exists | Out-String).Trim() -eq 'true') { continue }
+              if ((FreeGiB) -lt 2.2) { throw 'Open edX recovery stopped before low-memory threshold' }
+              & docker start $name | Out-Null
+              if ($LASTEXITCODE -ne 0) { throw ('Cannot restart existing Open edX container: ' + $name) }
+              $started.Add($name)
+              Start-Sleep -Seconds 3
+            }
+            $ready = $false
+            $outputDir = Join-Path $env:RUNNER_TEMP 'p2lrn-interoperability-preflight'
+            $env:P2LRN_INTEROP_OUTPUT = $outputDir
+            foreach ($attempt in 1..14) {
+              if ((FreeGiB) -lt 1.8) { throw 'Open edX recovery exceeded the safety memory margin' }
+              node scripts/interoperability/probe-real-destinations.mjs | Out-Null
+              if ($LASTEXITCODE -ne 0) { throw 'Cannot probe Open edX after recovering services' }
+              $report = Get-Content (Join-Path $outputDir 'real-destination-preflight.json') -Raw | ConvertFrom-Json
+              $edx = $report.cases | Where-Object { $_.id -eq 'openedx' }
+              Write-Output ('OPENEDX_RECOVERY_ATTEMPT=' + $attempt + '; SITE=' + $edx.state + '; LTI_PROVIDER=' + $edx.providerTransportReady + '; FREE_GIB=' + (FreeGiB))
+              if ($edx.state -eq 'PROXY_CONTENT_OBSERVED_NOT_AUTHENTICATED' -and $edx.providerTransportReady -eq $true) {
+                $ready = $true
+                break
+              }
+              Start-Sleep -Seconds 12
+            }
+            if (-not $ready) { throw 'Open edX did not expose working content and the P2LRN provider via the existing proxy' }
+            Write-Output ('OPENEDX_EXISTING_CORE_RECOVERED=YES; STARTED_COUNT=' + $started.Count)
+          } catch {
+            Write-Output 'OPENEDX_RECOVERY_FAILED_ROLLING_BACK_STARTED_CONTAINERS'
+            for ($index = $started.Count - 1; $index -ge 0; $index--) {
+              & docker stop --time 20 $started[$index] | Out-Null
+            }
+            throw
+          }
+
   create-one-real-studio-course:
     # The canonical original SHA was already exported from real Studio.
     # Avoid exporting new supposedly equivalent source packages on every push.
