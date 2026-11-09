@@ -108,13 +108,14 @@ export function assemblyPlacementTransform(scene,pieceId){
 }
 export function fitAssemblyBounds(target,bounds,{margin=0.88}={}){
   if(!bounds||!vec(bounds.min,3,100000)||!vec(bounds.max,3,100000)||
-    !bounds.min.every((n,i)=>bounds.max[i]-n>1e-6))fail('el modelo no tiene dimensiones 3D válidas');
+    !bounds.min.every((n,i)=>bounds.max[i]>=n)||
+    bounds.min.every((n,i)=>bounds.max[i]-n<1e-6))fail('el modelo no tiene dimensiones 3D válidas');
   if(!bounded(margin,0.2,0.98))fail('margen de ajuste inválido');
   if(!validCage(target.vertices))fail('caja de encaje no válida');
   const lows=[0,1,2].map(i=>Math.min(...target.vertices.map(v=>v[i])));
   const highs=[0,1,2].map(i=>Math.max(...target.vertices.map(v=>v[i])));
   const size=[0,1,2].map(i=>highs[i]-lows[i]);
-  const modelSize=[0,1,2].map(i=>bounds.max[i]-bounds.min[i]);
+  const modelSize=[0,1,2].map(i=>Math.max(0.0001,bounds.max[i]-bounds.min[i]));
   // Uniform world scaling preserves shape; the cage owns its own rotation.
   const fitted=Math.min(100,...size.map((n,i)=>n*target.transform.scale[i]/modelSize[i]))*margin;
   if(!bounded(fitted,0.001,99))fail('el modelo no se puede ajustar a la caja por sus dimensiones');
@@ -128,7 +129,8 @@ export function fitAssemblyBounds(target,bounds,{margin=0.88}={}){
 export function assemblyFitStatus(scene,pieceId,placement){
   const link=scene.links.find(l=>l.pieceId===pieceId);
   if(!link)return {ok:false,reason:'wrong-target'};
-  return evaluateAssemblyPlacement(scene,pieceId,link.targetId,placement??assemblyPlacementTransform(scene,pieceId));
+  return evaluateAssemblyPlacement(scene,pieceId,link.targetId,placement??assemblyPlacementTransform(scene,pieceId),
+    Object.fromEntries(scene.links.map(l=>[l.pieceId,l.targetId])));
 }
 export function defaultAssembly(){
   const pieces=[
@@ -176,7 +178,7 @@ export function validateAssembly(scene,{requireReady=true}={}){
     if(link.placement!==undefined){
       const p=link.placement;
       if(!p||!vec(p.offset,3)||!validQuat(p.rotation)||!vec(p.scale,3,100)||!p.scale.every(v=>v>=0.001))fail('encaje configurado con posición, giro o escala no válidos');
-      if(p.bounds&&(!vec(p.bounds.min,3,100000)||!vec(p.bounds.max,3,100000)||!p.bounds.min.every((v,i)=>p.bounds.max[i]-v>1e-6)))fail('dimensiones de la pieza no válidas');
+      if(p.bounds&&(!vec(p.bounds.min,3,100000)||!vec(p.bounds.max,3,100000)||!p.bounds.min.every((v,i)=>p.bounds.max[i]>=v)||p.bounds.min.every((v,i)=>p.bounds.max[i]-v<1e-6)))fail('dimensiones de la pieza no válidas');
     }
     if(!Array.isArray(link.prerequisites)||link.prerequisites.length>ASSEMBLY_MAX_PIECES||link.prerequisites.some(id=>!pieceIds.has(id)||id===link.pieceId))fail('dependencias inválidas');
     seen.add(link.pieceId);deps.set(link.pieceId,link.prerequisites);
