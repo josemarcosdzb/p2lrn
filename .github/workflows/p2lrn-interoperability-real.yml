@@ -103,19 +103,19 @@ jobs:
             & docker exec aulap2p-ingress-local test -e $routeDest | Out-Null
             if ($LASTEXITCODE -eq 0) { throw 'Open edX route already exists; cannot overwrite it without reconciliation' }
             $route = @'
-http://josemarcosdiaz.localhost, http://apps.josemarcosdiaz.localhost, http://studio-josemarcosdiaz.localhost, http://meilisearch.josemarcosdiaz.localhost {
-  encode zstd gzip
-  @local_lti_qa {
-    path /lti/login /lti/launch /lti/deep-link /lti/deep-link/confirm /lti/jwks /lti/health /lti/assets/* /lti/runtime/* /lti/legacy/launch
-  }
-  handle @local_lti_qa {
-    reverse_proxy p2lrn-lti-provider:37891
-  }
-  handle {
-    reverse_proxy openedx-josemarcosdiaz-caddy-1:80
-  }
-}
-'@
+          http://josemarcosdiaz.localhost, http://apps.josemarcosdiaz.localhost, http://studio-josemarcosdiaz.localhost, http://meilisearch.josemarcosdiaz.localhost {
+            encode zstd gzip
+            @local_lti_qa {
+              path /lti/login /lti/launch /lti/deep-link /lti/deep-link/confirm /lti/jwks /lti/health /lti/assets/* /lti/runtime/* /lti/legacy/launch
+            }
+            handle @local_lti_qa {
+              reverse_proxy p2lrn-lti-provider:37891
+            }
+            handle {
+              reverse_proxy openedx-josemarcosdiaz-caddy-1:80
+            }
+          }
+          '@
             [System.IO.File]::WriteAllText($routeTemp,$route,(New-Object System.Text.UTF8Encoding($false)))
             & docker cp $routeTemp ('aulap2p-ingress-local:' + $routeDest) | Out-Null
             if ($LASTEXITCODE -ne 0) { throw 'Cannot write Open edX QA route in existing ingress' }
