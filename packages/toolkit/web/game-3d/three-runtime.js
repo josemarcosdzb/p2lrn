@@ -240,6 +240,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   let sceneEpoch=0;
   let raf=0;
   let last=performance.now();
+  let canvasResizeObserver=null;
+  function requestFrame(){if(alive&&!raf)raf=requestAnimationFrame(frame);}
 
   const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
   function playerDistanceTo(id){
@@ -347,6 +349,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     connectors.length=0;
     carried.clear();
     dragPointer.set(0,0.78,0);
+    if(authoring)requestFrame();
   }
 
   function addFaceLabel(parent,text,size,options={}) {
@@ -473,6 +476,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     stage.add(root);
     meshes.set(String(id),root);
     if(interaction)interactables.push(root);
+    if(authoring)requestFrame();
     return root;
   }
 
@@ -512,6 +516,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     stage.add(group);
     meshes.set(String(id),group);
     if(interaction)interactables.push(group);
+    if(authoring)requestFrame();
     return group;
   }
 
@@ -530,6 +535,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     data.box.geometry=new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i])));
     data.box.position.fromArray(highs.map((v,i)=>(v+lows[i])/2));
     if(transform)setTransform(id,transform);
+    if(authoring)requestFrame();
     return true;
   }
 
@@ -539,6 +545,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(transform.position)mesh.position.fromArray(normalizePosition(transform.position));
     if(transform.rotation)mesh.quaternion.fromArray(transform.rotation);
     if(transform.scale)mesh.scale.fromArray(transform.scale);
+    if(authoring)requestFrame();
     return true;
   }
 
@@ -548,6 +555,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     orbitDistance=clamp(Number(radius)||14,2.5,350);
     camera.far=Math.max(120,orbitDistance*12);
     camera.updateProjectionMatrix();
+    if(authoring)requestFrame();
     return true;
   }
 
@@ -658,6 +666,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   }
 
   function frame(now) {
+    raf=0;
     if (!alive) return;
     resize();
     const delta=Math.min(0.05,Math.max(1/240,(now-last)/1000));
@@ -668,7 +677,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     syncCarried(delta);
     syncConnectors(delta);
     renderer.render(scene,camera);
-    raf=requestAnimationFrame(frame);
+    if(!authoring)requestFrame();
   }
 
   function raycastInteraction(event,{dispatch=true,exclude=null}={}) {
@@ -712,6 +721,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       (authoring&&['assembly-editor-piece','assembly-editor-target','assembly-editor-vertex'].includes(hit.meta.kind))
     );
     if(authoring&&hit)authorDragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()),hit.point);
+    if(authoring)requestFrame();
     const objectDrag=Boolean(draggable&&onDrag(hit.meta,'start',{position:pointerWorldPosition(event),event,hit}));
     cameraDrag={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,moved:false,
       mode:objectDrag?'object':'camera',source:objectDrag?hit.meta:null};
@@ -727,6 +737,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     } else if(drag.moved) {
       cameraYaw-=dx*(authoring?0.008:0.006);
       cameraPitch=authoring?clamp(cameraPitch+dy*0.006,-1.38,1.38):clamp(cameraPitch-dy*0.004,-0.58,0.24);
+      if(authoring)requestFrame();
     }
     drag.x=event.clientX;drag.y=event.clientY;
   }
@@ -751,6 +762,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     orbitDistance=clamp(orbitDistance*Math.exp(event.deltaY*0.001),2.5,350);
     camera.far=Math.max(120,orbitDistance*12);
     camera.updateProjectionMatrix();
+    if(authoring)requestFrame();
   }
   function onPointerCancel(event){
     if(!cameraDrag||cameraDrag.pointerId!==event.pointerId)return;
@@ -785,7 +797,11 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   if(authoring)canvas.addEventListener('wheel',onWheel,{passive:false});
   canvas.addEventListener('keydown',onKeyDown);
   canvas.addEventListener('keyup',onKeyUp);
-  raf=requestAnimationFrame(frame);
+  if(authoring&&typeof ResizeObserver==='function'){
+    canvasResizeObserver=new ResizeObserver(()=>requestFrame());
+    canvasResizeObserver.observe(canvas);
+  }
+  requestFrame();
 
   return {
     physics:physicsWorld.kind,
@@ -816,6 +832,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     destroy() {
       alive=false;
       cancelAnimationFrame(raf);
+      canvasResizeObserver?.disconnect();
+      canvasResizeObserver=null;
       canvas.removeEventListener('pointerdown',onPointerDown);
       canvas.removeEventListener('pointermove',onPointerMove);
       canvas.removeEventListener('pointerup',onPointerUp);
