@@ -9,6 +9,7 @@ import {exportP2LRNPackage} from '../packages/toolkit/web/studio/package-export.
 import {openP2LRNPackageBytes} from '../packages/toolkit/web/p2lrn-player.js';
 import {parseOfflineAssignmentResult} from '../packages/toolkit/web/studio/offline-assignment.js';
 import {buildQuestionnaireGame} from '../packages/toolkit/web/questionnaire-games-core.js';
+import {defaultAssembly} from '../packages/toolkit/web/assembly-3d-core.js';
 import {createP2LRNCollaborationHandler} from '../packages/player/server/collaboration-http.mjs';
 import {tmpdir} from 'node:os';
 import {STUDIO_RUNTIME_SHARED_FILES} from '../deploy/netlify/studio-runtime-assets.mjs';
@@ -509,6 +510,42 @@ async function prepareGameFixtures(){
         solution:{assignments:[{item:'c1',category:'g1'},{item:'c2',category:'g2'}]}}
     ]
   };
+
+  // Valid, embedded mesh asset: one actual GLB triangle with local POSITION and indices.
+  // Player must parse this real GLB, not silently replace it with a fallback cube.
+  function createAssemblyTestGLB(){
+    const bin=new Uint8Array(44),dv=new DataView(bin.buffer);
+    [0,0,0,0.8,0,0,0,0.8,0].forEach((v,i)=>dv.setFloat32(4*i,v,true));
+    [0,1,2].forEach((v,i)=>dv.setUint16(36+2*i,v,true));
+    const doc={asset:{version:'2.0'},scene:0,scenes:[{nodes:[0]}],
+      nodes:[{mesh:0,name:'Pieza tridimensional de prueba'}],
+      meshes:[{primitives:[{attributes:{POSITION:0},indices:1,mode:4}]}],
+      buffers:[{byteLength:44}],bufferViews:[
+        {buffer:0,byteOffset:0,byteLength:36,target:34962},
+        {buffer:0,byteOffset:36,byteLength:6,target:34963}],
+      accessors:[{bufferView:0,componentType:5126,count:3,type:'VEC3',min:[0,0,0],max:[0.8,0.8,0]},
+        {bufferView:1,componentType:5123,count:3,type:'SCALAR'}]};
+    const json=new TextEncoder().encode(JSON.stringify(doc)),len=(json.byteLength+3)&~3;
+    const out=new Uint8Array(12+8+len+8+bin.byteLength),view=new DataView(out.buffer);
+    view.setUint32(0,0x46546c67,true);view.setUint32(4,2,true);view.setUint32(8,out.byteLength,true);
+    view.setUint32(12,len,true);view.setUint32(16,0x4e4f534a,true);
+    out.fill(32,20,20+len);out.set(json,20);
+    view.setUint32(20+len,bin.byteLength,true);view.setUint32(24+len,0x004e4942,true);out.set(bin,28+len);
+    return out;
+  }
+  const assemblyAsset=await threeDoc.addAssemblyAsset({bytes:createAssemblyTestGLB(),filename:'pieza-qa.glb'});
+  const assemblyScene=defaultAssembly();
+  assemblyScene.assets=[{id:assemblyAsset.id,path:assemblyAsset.path,name:'pieza-qa.glb',size:assemblyAsset.size,nodes:assemblyAsset.inspected.nodes}];
+  assemblyScene.referenceAssetId=assemblyAsset.id;
+  assemblyScene.pieces[0].assetId=assemblyAsset.id;
+  assemblyScene.pieces[0].nodeId=assemblyAsset.inspected.nodes[0].nodeId;
+  threePayload.questions.push({
+    id:'q-assembly',type:'classification',prompt:'Ensambla las piezas en el espacio',points:2,
+    items:assemblyScene.pieces.map(p=>({id:p.id,text:p.text})),
+    categories:assemblyScene.targets.map(t=>({id:t.id,text:t.text})),
+    solution:{assignments:assemblyScene.links.map(link=>({item:link.pieceId,category:link.targetId}))},
+    assembly3d:assemblyScene,
+  });
   const threeRenderer='https://p2lrn.org/renderer/questionnaire/3d-order-match';
   const compiled3D=buildQuestionnaireGame(threePayload,threeRenderer,{seedSource:'real-three-game-regression'});
   invariant(compiled3D.compatible,'3D game modes must be compatible: '+JSON.stringify(compiled3D.reasons));
@@ -587,6 +624,30 @@ async function verifyThreeGameInteractionAndResume(cdp){
       throw new Error('3D classification did not restore: '+read('Triángulo')+' '+status());
     select('Círculo','g2');
     if(!status().includes('completada'))throw new Error('3D classification could not finish: '+status());
+
+    // Real assembly scene, real GLB and same exported course, in the actual
+    // Player/Three.js/Rapier browser runtime. Check no fallback model warning.
+    go('Siguiente');
+    await wait(()=>title()==='Ensambla las piezas en el espacio','3D assembly scene');
+    if(!root.querySelector('.p2lrn-3d-interactive'))throw new Error('3D assembly silently entered fallback mode');
+    const assemblyTrial=trial();
+    const warning=assemblyTrial.querySelector('[role=alert]');
+    if(warning)throw new Error('GLB asset could not load in Player: '+warning.textContent);
+    const piecePicker=assemblyTrial.querySelector('select[aria-label="Pieza que vas a colocar"]');
+    const targetPicker=assemblyTrial.querySelector('select[aria-label="Zona donde colocar la pieza"]');
+    const placeButton=[...assemblyTrial.querySelectorAll('button')].find(button=>button.textContent==='Colocar pieza');
+    if(!piecePicker||!targetPicker||!placeButton)throw new Error('Assembly controls missing in Player');
+    for(const [piece,target] of [['piece-1','target-1'],['piece-2','target-2']]){
+      piecePicker.value=piece;
+      piecePicker.dispatchEvent(new Event('change',{bubbles:true}));
+      targetPicker.value=target;
+      targetPicker.dispatchEvent(new Event('change',{bubbles:true}));
+      if(placeButton.disabled)throw new Error('Assembly placement locked unexpectedly: '+piece);
+      placeButton.click();
+    }
+    if(!status().includes('Montaje completado'))throw new Error('Assembly snap/score did not complete: '+status());
+    const assemblyProgress=assemblyTrial.querySelector('p[role=status]')?.textContent??'';
+    if(!assemblyProgress.includes('2/2'))throw new Error('Assembly did not persist both pieces: '+assemblyProgress);
     const finish=[...root.querySelectorAll('.p2lrn-game-shell button')].find(x=>x.textContent==='Finalizar actividad');
     if(!finish)throw new Error('3D scoring action missing');
     finish.click();
@@ -594,12 +655,12 @@ async function verifyThreeGameInteractionAndResume(cdp){
       document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:score'),'3D final score');
     const log=document.querySelector('[data-event-log]')?.textContent||'';
     if(log.includes('p2lrn:error'))throw new Error('3D runtime emitted an error: '+log.slice(-1000));
-    return {threeModes:['ordering','matching','classification'],orderedAndSaved:true,matchingRestored:true,
-      classificationRestored:true,solvedConnectionButtons:matchingPreserved,
+    return {threeModes:['ordering','matching','classification','assembly'],orderedAndSaved:true,matchingRestored:true,
+      classificationRestored:true,assemblyWithRealGLB:true,solvedConnectionButtons:matchingPreserved,
       finalScoreReceived:log.includes('p2lrn:score'),noRuntimeError:true};
   })()`);
   invariant(outcome?.orderedAndSaved&&outcome?.matchingRestored&&outcome?.classificationRestored
-    &&outcome.finalScoreReceived, '3D browser regression incomplete: '+JSON.stringify(outcome));
+    &&outcome.assemblyWithRealGLB&&outcome.finalScoreReceived, '3D browser regression incomplete: '+JSON.stringify(outcome));
   const screenshot=await captureElementVisualEvidence(cdp,'3d-three-modes-completed',
     "document.getElementById('demo-player')",{maxHeight:1450});
   return {...outcome,screenshot};
