@@ -581,8 +581,10 @@ async function verifyThreeGameInteractionAndResume(cdp){
     // cached activity trees may retain old accessible controls in the DOM.
     const stage=()=>root.querySelector('.p2lrn-stage');
     const trial=()=>stage()?.querySelector('.p2lrn-3d-trial');
-    await wait(()=>trial()?.querySelector('h3')?.textContent==='Ordena los tres bloques','3D ordering scene');
-    const title=()=>trial()?.querySelector('h3')?.textContent||'';
+    // The heading is a sibling of the accessible answer panel in compiled
+    // Player layouts; inspect the active stage heading, not a panel child.
+    const title=()=>stage()?.querySelector('.p2lrn-3d-layout h3')?.textContent||'';
+    await wait(()=>Boolean(trial())&&title()==='Ordena los tres bloques','3D ordering scene');
     const status=()=>[...root.querySelectorAll('.p2lrn-game-status')].at(-1)?.textContent??'';
     const select=(name,value)=>{
       const label=[...trial().querySelectorAll('label')].find(node=>node.querySelector('span')?.textContent===name);
