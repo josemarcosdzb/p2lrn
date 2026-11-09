@@ -69,6 +69,7 @@ test('tenant isolation, durable Player snapshots and idempotent client events',(
   assert.deepEqual(session.entities.map(e=>e.id),['course1','lesson1']);
   assert.deepEqual(f.store.getState(attempt.attemptId,'lesson1','quiz'),{value:null,revision:0});
   assert.deepEqual(f.store.saveState(attempt.attemptId,'lesson1','quiz',{answers:['B']},0),{saved:true,revision:1});
+  assert.deepEqual(f.store.saveState(attempt.attemptId,'lesson1','quiz',{answers:['B']},0),{saved:true,revision:1,unchanged:true},'HTTP replay of an already persisted snapshot must be idempotent');
   assert.deepEqual(f.store.saveState(attempt.attemptId,'lesson1','quiz',{answers:['C']},0),{saved:false,conflict:true,revision:1});
   assert.equal(f.store.appendEvent(attempt.attemptId,'event-1','lesson1',{type:'p2lrn:complete'}).saved,true);
   assert.equal(f.store.appendEvent(attempt.attemptId,'event-1','lesson1',{type:'p2lrn:complete'}).saved,false);

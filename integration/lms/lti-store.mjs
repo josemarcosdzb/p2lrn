@@ -122,7 +122,12 @@ export function createLtiStore(filename){
   db.exec('BEGIN IMMEDIATE');
   try{
    const prev=getState(a,e,s);
-   if(expectedRevision!==undefined&&prev.revision!==expectedRevision){db.exec('ROLLBACK');return {saved:false,conflict:true,revision:prev.revision};}
+   if(expectedRevision!==undefined&&prev.revision!==expectedRevision){
+     // A retry after an interrupted HTTP response may already have committed.
+     // Acknowledge identical state without incrementing the revision again.
+     if(J(prev.value)===J(v)){db.exec('ROLLBACK');return {saved:true,revision:prev.revision,unchanged:true};}
+     db.exec('ROLLBACK');return {saved:false,conflict:true,revision:prev.revision};
+    }
    sql('INSERT INTO snapshots VALUES(?,?,?,?,1,?) ON CONFLICT(attempt_id,entity_id,surface) DO UPDATE SET value_json=excluded.value_json,revision=revision+1,updated_at=excluded.updated_at').run(a,e,s,J(v),t());
    const revision=getState(a,e,s).revision;db.exec('COMMIT');return {saved:true,revision};
   }catch(err){try{db.exec('ROLLBACK');}catch{}throw err;}

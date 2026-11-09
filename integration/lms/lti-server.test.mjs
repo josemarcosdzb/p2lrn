@@ -189,6 +189,10 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.match(htmlBody,/player\.setAttribute\("src",src\)/,
     'LTI HTML must use the observed src attribute, not an inert player.src property');
   assert.doesNotMatch(htmlBody,/player\.src=src/);
+  assert.match(htmlBody,/expectedRevision/, 'the embedded LMS adapter must preserve optimistic state revisions');
+  assert.match(htmlBody,/retryTransient/, 'temporary network failures must be retried in a bounded fashion');
+  assert.match(htmlBody,/No se pudo guardar tu progreso/, 'a student must see failed progress persistence');
+  assert.match(htmlBody,/p2lrn:rendered/, 'loading a file is not the same as a rendered activity');
   assert(!htmlBody.includes('learner-opaque-1'));
   const cookie=launch.headers.get('set-cookie').split(';')[0];
   assert.ok(cookie.startsWith('__Host-p2lrn-session='));
@@ -206,6 +210,9 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.equal((await postRuntime('state/save',{context:playerContext,state:{answer:'A'},expectedRevision:0})).status,200);
   const state=await (await postRuntime('state/load',{context:playerContext})).json();
   assert.deepEqual(state,{value:{answer:'A'},revision:1});
+  const replay=await postRuntime('state/save',{context:playerContext,state:{answer:'A'},expectedRevision:0});
+  assert.equal(replay.status,200,'repeated save after lost response must not discard an already committed answer');
+  assert.equal((await replay.json()).unchanged,true);
   assert.equal((await postRuntime('state/save',{context:playerContext,state:{answer:'B'},expectedRevision:0})).status,409);
   assert.equal((await postRuntime('state/load',{context:playerContext},{Cookie:cookie,'Content-Type':'application/json'})).status,403);
   assert.equal((await postRuntime('score',{context:playerContext,score:{normalized:0.8,completed:true}})).status,200);
