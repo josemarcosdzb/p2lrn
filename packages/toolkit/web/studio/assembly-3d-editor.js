@@ -144,7 +144,10 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   root.append(head);
   tree.append($('summary',null,'Piezas y modelos'));
   const entries=$('div','a3-tree');tree.append(entries);
-  center.append(svg,canvas,note,tree,props);props.append($('strong',null,'Propiedades'));
+  // Never mount both render surfaces. The fallback SVG stays detached unless
+  // WebGL actually fails; a hidden second surface used to take up 637px and
+  // pushed the real cage off-screen despite looking 'hidden' in DOM tests.
+  center.append(canvas,note,tree,props);props.append($('strong',null,'Propiedades'));
   main.append(center);root.append(main,warning);container.replaceChildren(root);
   const centerPoint={x:300,y:212};
   const project=(p)=>{
@@ -484,6 +487,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       await rebuildThree();
     }catch(error){
       threeRuntime?.destroy();threeRuntime=null;svg.hidden=false;canvas.hidden=true;
+      if(canvas.isConnected)canvas.replaceWith(svg);
       drawScene();note.textContent='Sin WebGL: vista geométrica alternativa del mismo encaje';
       message('Vista 3D no disponible: '+String(error.message||error));
     }
@@ -503,7 +507,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     });
     detachObserver.observe(root.getRootNode(),{subtree:true,childList:true});
     if(typeof createScene==='function')void startThree();
-    else {canvas.hidden=true;svg.hidden=false;drawScene();message('WebGL no está disponible: edición de zonas mediante la vista geométrica.');}
+    else {canvas.hidden=true;svg.hidden=false;if(canvas.isConnected)canvas.replaceWith(svg);drawScene();message('WebGL no está disponible: edición de zonas mediante la vista geométrica.');}
   });
   svg.addEventListener('pointerdown',e=>{
     if(e.button!==0&&e.pointerType==='mouse')return;
