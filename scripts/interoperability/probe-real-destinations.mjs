@@ -5,6 +5,8 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {request as httpRequest} from 'node:http';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {classifyLmsResponse,connectivityState} from './lms-http-inspection.mjs';
 const startedAt=new Date().toISOString();
 const output=resolve(process.env.P2LRN_INTEROP_OUTPUT||join(process.cwd(),'.interop-evidence'));
@@ -93,6 +95,24 @@ async function viaLoopbackProxy(url,options={}){
  });
 }
 
+// Read-only diagnostics of the already-running QA installation. No credentials,
+// container configuration, process restarts, ports, or resources are changed.
+async function inspectExistingLmsContainers(){
+ const run=promisify(execFile);
+ try{
+  const {stdout}=await run('docker',['ps','--all','--format','{{.Names}}|{{.State}}|{{.Status}}'],{
+   timeout:8000,windowsHide:true,maxBuffer:256*1024
+  });
+  const relevant=/moodle|chamilo|sakai|canvas|edx|caddy|ingress|p2lrn|lti|tutor/i;
+  const services=stdout.split(/\r?\n/).map(row=>row.trim()).filter(Boolean)
+   .map(row=>{const [name,state,status]=row.split('|');return {name,state,status};})
+   .filter(row=>relevant.test(row.name)).slice(0,80);
+  return {available:true,services};
+ }catch(e){
+  return {available:false,reason:limit(e.code||e.message,110)};
+ }
+}
+
 const cases=[];
 for(const lab of labs){
   const result={id:lab.id,source:lab.source,address:lab.url??null,contentSha256:null,
@@ -119,12 +139,14 @@ for(const lab of labs){
 }
 const loopback=await request('http://p2lrn-lti.localhost/lti/health',{expectJson:true});
 const loopbackProxy=loopback.payloadObserved?null:await viaLoopbackProxy('http://p2lrn-lti.localhost/lti/health',{expectJson:true});
+const existingServiceInventory=await inspectExistingLmsContainers();
 const preflight={
   schema:'https://p2lrn.org/schema/interoperability-real-qa/1',
   purpose:'ACTUAL_WINDOWS_NETWORK_DISCOVERY_NOT_END_TO_END_CERTIFICATION',
   startedAt,finishedAt:new Date().toISOString(),branch:process.env.GITHUB_REF_NAME||'mejorastudio',
   commit:process.env.GITHUB_SHA||null,node:process.version,platform:process.platform,
   firstPartyLtiProvider:loopback,firstPartyLtiProviderViaProxy:loopbackProxy,cases,artifacts:[],
+  existingServiceInventory,
   PROVIDER_ROUTE_CHECKS_READY:cases.filter(c=>c.id!=='independent-web'&&c.providerTransportReady).length,
   PASS_DESTINATIONS:0,
   note:'HTTP reachability and JWKS availability do not prove valid registration, LTI login, learner session, results, AGS or course package identity.',
