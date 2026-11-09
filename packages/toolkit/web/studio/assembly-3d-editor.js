@@ -210,6 +210,186 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     entries.append($('small','a3-hint','El archivo GLB se incorpora al curso. Si contiene varios nodos, selecciona qué submalla corresponde a cada pieza. Las jaulas son los destinos, no una copia del modelo.'));
   }
   function drawAll(){if(!svg.hidden)drawScene();treePanel();propertyPanel();}
+
+  // Interactive Three.js view shares the exact same scene/GLB loader that
+  // Player uses. The SVG editor remains usable when WebGL is unavailable.
+  const assetSignature=()=>JSON.stringify({
+    pieces:scene.pieces.map(p=>[p.id,p.assetId,p.nodeId]),
+    targets:scene.targets.map(t=>t.id),
+    reference:scene.referenceAssetId??null,
+  });
+  function syncThreeTransforms(){
+    if(!threeRuntime)return;
+    for(const target of scene.targets){
+      threeRuntime.updateCage('author-target:'+target.id,target.vertices,target.transform);
+    }
+    for(const piece of scene.pieces){
+      threeRuntime.setTransform('author-piece:'+piece.id,piece.initialTransform);
+    }
+    if(scene.referenceAssetId)threeRuntime.setTransform('author-reference',scene.referenceTransform??{
+      position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1],
+    });
+  }
+  async function rebuildThree(){
+    const runtime=threeRuntime;
+    if(!runtime||threeDestroyed)return;
+    const generation=++threeGeneration;
+    threeSignature=assetSignature();
+    runtime.reset();
+    const targets=[...scene.targets],pieces=[...scene.pieces],assets=[...scene.assets];
+    for(const target of targets)runtime.addCage({
+      id:'author-target:'+target.id,vertices:target.vertices,position:target.transform.position,
+      rotation:target.transform.rotation,scale:target.transform.scale,editable:true,
+      interaction:{kind:'assembly-editor-target',id:target.id},visibility:'outline',
+    });
+    for(const piece of pieces){
+      if(generation!==threeGeneration||threeDestroyed)return;
+      const asset=assets.find(a=>a.id===piece.assetId);
+      const id='author-piece:'+piece.id;
+      if(asset){
+        try{
+          const bytes=await model.readAssemblyAsset(asset.path);
+          if(generation!==threeGeneration||threeDestroyed)return;
+          await runtime.addModel({
+            id,assetId:asset.id,bytes,nodeId:piece.nodeId??null,
+            ...{position:piece.initialTransform.position,rotation:piece.initialTransform.rotation,scale:piece.initialTransform.scale},
+            interaction:{kind:'assembly-editor-piece',id:piece.id},
+          });
+          if(generation!==threeGeneration||threeDestroyed)return;
+        }catch(error){
+          if(generation!==threeGeneration||threeDestroyed)return;
+          message('No se pudo mostrar '+asset.name+': '+String(error.message||error));
+          runtime.addBox({id,text:piece.text,position:piece.initialTransform.position,
+            dynamic:false,physicsEnabled:false,size:[1.25,0.9,1],
+            interaction:{kind:'assembly-editor-piece',id:piece.id}});
+        }
+      }else runtime.addBox({id,text:piece.text,position:piece.initialTransform.position,
+        dynamic:false,physicsEnabled:false,size:[1.25,0.9,1],
+        interaction:{kind:'assembly-editor-piece',id:piece.id}});
+    }
+    const ref=assets.find(a=>a.id===scene.referenceAssetId);
+    if(ref){
+      try{
+        const bytes=await model.readAssemblyAsset(ref.path);
+        if(generation!==threeGeneration||threeDestroyed)return;
+        const t=scene.referenceTransform??{position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1]};
+        await runtime.addModel({id:'author-reference',assetId:ref.id,bytes,
+          position:t.position,rotation:t.rotation,scale:t.scale,opacity:0.4});
+      }catch(error){if(generation===threeGeneration)message('Modelo base no visible: '+String(error.message||error));}
+    }
+    if(generation!==threeGeneration||threeDestroyed)return;
+    const locations=[...scene.pieces.map(p=>p.initialTransform.position),...scene.targets.map(t=>t.transform.position)];
+    const center=locations.length?[0,1,2].map(axis=>locations.reduce((sum,p)=>sum+p[axis],0)/locations.length):[0,1,0];
+    const extent=Math.max(4,...locations.map(p=>Math.hypot(...p.map((n,i)=>n-center[i]))));
+    runtime.focusOn(center,Math.max(9,extent*2.2+5));
+    syncThreeTransforms();
+  }
+  function scheduleThreeSync(){
+    if(!threeRuntime||threeDestroyed||threePending)return;
+    threePending=true;
+    queueMicrotask(()=>{
+      threePending=false;
+      if(!threeRuntime||threeDestroyed)return;
+      if(threeSignature!==assetSignature())void rebuildThree().catch(error=>message('No se pudo actualizar la escena 3D: '+error.message));
+      else syncThreeTransforms();
+    });
+  }
+  function selectThree(meta){
+    if(meta.kind==='assembly-editor-vertex'){
+      selected={kind:'target',id:meta.id};vertexIndex=meta.index;
+    }else if(meta.kind==='assembly-editor-target')selected={kind:'target',id:meta.id};
+    else if(meta.kind==='assembly-editor-piece')selected={kind:'piece',id:meta.id};
+    treePanel();propertyPanel();
+    return true;
+  }
+  function onThreeInteraction(meta){
+    if(!meta?.kind?.startsWith('assembly-editor-'))return;
+    selectThree(meta);
+  }
+  function onThreeDrag(meta,phase,{position=null,hit=null}={}){
+    if(!meta?.kind?.startsWith('assembly-editor-'))return false;
+    if(phase==='start'){
+      selectThree(meta);
+      const target=scene.targets.find(t=>t.id===meta.id),piece=scene.pieces.find(p=>p.id===meta.id);
+      if(!target&&!piece)return false;
+      const t=piece?.initialTransform??target.transform;
+      threeDrag={meta,initial:JSON.stringify(scene),point:position??hit?.point?.toArray()??[...t.position],start:[...t.position],changed:false};
+      return true;
+    }
+    if(!threeDrag||threeDrag.meta.id!==meta.id||threeDrag.meta.kind!==meta.kind)return false;
+    if(phase==='move'){
+      if(!position)return true;
+      const target=scene.targets.find(t=>t.id===meta.id),piece=scene.pieces.find(p=>p.id===meta.id);
+      if(meta.kind==='assembly-editor-vertex'){
+        if(!target)return false;
+        const candidate=toLocal(position,target.transform),previous=target.vertices[meta.index];
+        if(candidate.every(v=>Number.isFinite(v)&&Math.abs(v)<=1000)){
+          target.vertices[meta.index]=candidate;
+          if(validCage(target.vertices))threeDrag.changed=true;
+          else target.vertices[meta.index]=previous;
+          threeRuntime?.updateCage('author-target:'+target.id,target.vertices,target.transform);
+        }
+      }else{
+        const t=piece?.initialTransform??target?.transform;
+        if(!t)return false;
+        const moved=threeDrag.start.map((n,i)=>n+position[i]-threeDrag.point[i]);
+        if(moved.every(n=>Number.isFinite(n)&&Math.abs(n)<=1000)){
+          t.position=moved;
+          threeRuntime?.setTransform((piece?'author-piece:':'author-target:')+meta.id,t);
+          threeDrag.changed=true;
+        }
+      }
+      propertyPanel();return true;
+    }
+    const state=threeDrag;threeDrag=null;
+    if(phase==='cancel'||!state.changed){
+      if(phase==='cancel'){
+        const previous=JSON.parse(state.initial);
+        Object.assign(scene,previous);syncThreeTransforms();drawAll();
+      }
+      return true;
+    }
+    try{
+      validateAssembly(scene,{requireReady:false});syncQuestion(question);
+      commit();snapshot();drawAll();message('');return true;
+    }catch(error){
+      const previous=JSON.parse(state.initial);
+      Object.assign(scene,previous);
+      syncThreeTransforms();drawAll();message(error.message||'La modificación no es válida');
+      return true;
+    }
+  }
+  async function startThree(){
+    if(typeof createScene!=='function'||threeDestroyed)return;
+    canvas.hidden=false;svg.hidden=true;
+    try{
+      const runtime=await createScene(canvas,{onInteraction:onThreeInteraction,onDrag:onThreeDrag});
+      if(threeDestroyed||!root.isConnected){runtime.destroy();return;}
+      threeRuntime=runtime;
+      note.textContent='Arrastra puntos para editar vértices · Arrastra fondo para girar · Rueda para zoom';
+      await rebuildThree();
+    }catch(error){
+      threeRuntime?.destroy();threeRuntime=null;svg.hidden=false;canvas.hidden=true;
+      drawScene();note.textContent='Edición geométrica sin WebGL disponible';
+      message('Vista 3D no disponible: '+String(error.message||error));
+    }
+  }
+  let detachObserver=null;
+  function destroy(){
+    if(threeDestroyed)return;
+    threeDestroyed=true;++threeGeneration;
+    detachObserver?.disconnect();detachObserver=null;
+    threeRuntime?.destroy();threeRuntime=null;
+    root.remove();
+  }
+  queueMicrotask(()=>{
+    if(!root.isConnected||threeDestroyed)return;
+    detachObserver=new MutationObserver(()=>{
+      if(!root.isConnected)destroy();
+    });
+    detachObserver.observe(root.getRootNode(),{subtree:true,childList:true});
+    if(typeof createScene==='function')void startThree();
+  });
   svg.addEventListener('pointerdown',e=>{
     if(e.button!==0&&e.pointerType==='mouse')return;
     const kind=e.target?.dataset?.kind,id=e.target?.dataset?.id,index=Number(e.target?.dataset?.index??-1),p=pointer(e);
@@ -253,5 +433,5 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     apply(()=>{const obj=selected.kind==='piece'?scene.pieces.find(x=>x.id===selected.id):scene.targets.find(x=>x.id===selected.id);const t=selected.kind==='piece'?obj.initialTransform:obj.transform;t.position[axis]+=amount;});
   });
   drawAll();
-  return {destroy(){if(root.isConnected)root.remove()}};
+  return {destroy};
 }
