@@ -6,6 +6,7 @@ async function playerApi(){
   return {
     openPackageBytes:mod.openP2LRNPackageBytes,
     openPackageURL:mod.openP2LRNPackageURL,
+    create3DAuthoringScene:mod.create3DAuthoringScene,
   };
 }
 import {COURSE_RIGHTS_FIELDS,COURSE_RIGHTS_LABELS} from './course-rights.js';
