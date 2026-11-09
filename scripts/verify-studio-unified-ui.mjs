@@ -913,6 +913,15 @@ async function browserScenario(){
   expect(finalAssemblyFitStatus(resultForScreenshot.payload.questions[0].assembly3d,'piece-1').ok,
     'Visual evidence GLB does not fit in its configured cage');
   const actualRuntime=globalThis.__p2lrnAssemblyQaRuntime;
+  const secondCage=actualRuntime?.scene?.children?.find(n=>n.type==='Group'&&n.children?.some(c=>c.userData?.p2lrnInteraction?.id==='target-2'))?.children?.find(c=>c.userData?.p2lrnInteraction?.id==='target-2');
+  const showAllButton=[...viewer.querySelectorAll('.a3-toolbar button')].find(b=>b.textContent==='Ver todas las piezas');
+  expect(showAllButton,'The one-screen assembly needs a show-all control');
+  expect(secondCage?.visible===false,'Unselected cage still crowds the focused one-piece workspace');
+  showAllButton.click();
+  expect(secondCage.visible===true&&viewer.querySelectorAll('.a3-scene').length===1,
+    'Show-all must reveal all pieces IN THE SAME 3D SCENE');
+  showAllButton.click();
+  expect(secondCage.visible===false,'Focused editing did not restore its uncluttered single cage');
   const camera=actualRuntime?.camera;
   const objects=[];
   if(camera&&actualRuntime?.scene){
