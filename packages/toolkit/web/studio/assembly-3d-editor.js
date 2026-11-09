@@ -218,10 +218,10 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       props.append(initial);
       const assetLabel=$('label');assetLabel.append($('span',null,'Modelo GLB de la pieza'));const sel=$('select');
       [['','Forma básica'] ,...scene.assets.map(a=>[a.id,a.name])].forEach(([id,text])=>{const o=$('option');o.value=id;o.textContent=text;o.selected===(obj.assetId??'');sel.append(o);});
-      sel.addEventListener('change',()=>apply(()=>{obj.assetId=sel.value||null;obj.nodeId=null}));assetLabel.append(sel);props.append(assetLabel);
+      sel.addEventListener('change',()=>apply(()=>{obj.assetId=sel.value||null;obj.nodeId=null;const link=scene.links.find(l=>l.pieceId===obj.id);if(link)delete link.placement;}));assetLabel.append(sel);props.append(assetLabel);
       const asset=scene.assets.find(x=>x.id===obj.assetId);
       if(asset?.nodes?.length){
-        const m=$('label');m.append($('span',null,'Submalla del modelo'));const nodeSel=$('select');[['','Modelo completo'],...asset.nodes.map(x=>[x.nodeId,x.name])].forEach(([id,text])=>{const o=$('option');o.value=id;o.textContent=text;o.selected===(obj.nodeId??'');nodeSel.append(o);});nodeSel.addEventListener('change',()=>apply(()=>{obj.nodeId=nodeSel.value||null}));m.append(nodeSel);props.append(m);
+        const m=$('label');m.append($('span',null,'Submalla del modelo'));const nodeSel=$('select');[['','Modelo completo'],...asset.nodes.map(x=>[x.nodeId,x.name])].forEach(([id,text])=>{const o=$('option');o.value=id;o.textContent=text;o.selected===(obj.nodeId??'');nodeSel.append(o);});nodeSel.addEventListener('change',()=>apply(()=>{obj.nodeId=nodeSel.value||null;const link=scene.links.find(l=>l.pieceId===obj.id);if(link)delete link.placement;}));m.append(nodeSel);props.append(m);
       }
       if(link){
         const targetField=$('label');targetField.append($('span',null,'Destino correcto'));const selects=$('select');scene.targets.forEach(x=>{const o=$('option');o.value=x.id;o.textContent=x.text;o.selected=x.id===link.targetId;selects.append(o)});selects.addEventListener('change',()=>apply(()=>{link.targetId=selects.value;delete link.placement;}));targetField.append(selects);props.append(targetField);
@@ -245,7 +245,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       const metadata=inspectAssemblyGLB(bytes);
       const resource=await model.addAssemblyAsset({bytes,filename:selectedFile.name});
       apply(()=>{if(!scene.assets.some(a=>a.id===resource.id))scene.assets.push({id:resource.id,path:resource.path,name:selectedFile.name,size:resource.size,nodes:metadata.nodes});
-        const piece=scene.pieces.find(p=>p.id===selected.id);if(piece){piece.assetId=resource.id;piece.nodeId=metadata.nodes.length===1?metadata.nodes[0].nodeId:null;}
+        const piece=scene.pieces.find(p=>p.id===selected.id);if(piece){piece.assetId=resource.id;piece.nodeId=metadata.nodes.length===1?metadata.nodes[0].nodeId:null;const link=scene.links.find(l=>l.pieceId===piece.id);if(link)delete link.placement;}
       });
     }catch(error){message(error.message||String(error));}finally{file.value='';}});
     importLabel.append(file);entries.append(importLabel);
