@@ -467,6 +467,11 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       // independent so highlighting a piece never recolors every instance.
       part.material=Array.isArray(part.material)?part.material.map(m=>m.clone()):part.material.clone();
     }});
+    visible.updateMatrixWorld(true);
+    const localBox=new THREE.Box3().setFromObject(visible);
+    if(!localBox.isEmpty()&&[...localBox.min,...localBox.max].every(Number.isFinite)){
+      root.userData.p2lrnLocalBounds={min:localBox.min.toArray(),max:localBox.max.toArray()};
+    }
     root.add(visible);
     root.position.fromArray(normalizePosition(position));
     root.quaternion.fromArray(rotation);
@@ -486,7 +491,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     const coords=edges.flatMap(([a,b])=>[...vertices[a],...vertices[b]]);
     const geo=new THREE.BufferGeometry();
     geo.setAttribute('position',new THREE.Float32BufferAttribute(coords,3));
-    const line=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#5eead4',transparent:true,opacity:visibility==='hidden'?0:visibility==='hint'?0.2:0.68}));
+    const line=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#5eead4',transparent:true,opacity:visibility==='hidden'?0:visibility==='hint'?0.2:0.68,depthTest:!authoring}));
+    line.renderOrder=authoring?8:0;
     line.visible=visibility!=='hidden';
     group.add(line);
     // Invisible volume for pointer picking; the actual acceptance test uses
@@ -547,6 +553,21 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(transform.scale)mesh.scale.fromArray(transform.scale);
     if(authoring)requestFrame();
     return true;
+  }
+
+  function getObjectLocalBounds(id){
+    const root=meshes.get(String(id));
+    if(!root)return null;
+    if(root.userData?.p2lrnLocalBounds){
+      const b=root.userData.p2lrnLocalBounds;
+      return {min:[...b.min],max:[...b.max]};
+    }
+    if(root.isMesh&&root.geometry){
+      if(!root.geometry.boundingBox)root.geometry.computeBoundingBox();
+      const b=root.geometry.boundingBox;
+      if(b)return {min:b.min.toArray(),max:b.max.toArray()};
+    }
+    return null;
   }
 
   function focusOn(position=[0,1,0],radius=14){
@@ -687,17 +708,26 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
     raycaster.setFromCamera(pointer,camera);
     const hits=raycaster.intersectObjects(interactables,true);
+    // While authoring an assembly, the invisible cage volume MUST NOT mask
+    // a model placed INSIDE it. Vertex handles have first priority, the
+    // actual piece second, and the zone volume remains selectable last.
+    let picked=null,best=-1;
     for(const hit of hits){
       let node=hit.object;
       while(node&&!node.userData?.p2lrnInteraction)node=node.parent;
       const meta=node?.userData?.p2lrnInteraction;
       if(!meta)continue;
       if(exclude&&meta.kind===exclude.kind&&meta.id===exclude.id)continue;
-      const info={point:hit.point,event,playerDistance:player.position.distanceTo(hit.point)};
-      if(dispatch)onInteraction(meta,info);
-      return {meta,...info};
+      const priority=authoring?
+        (meta.kind==='assembly-editor-vertex'?30:meta.kind==='assembly-editor-piece'?20:meta.kind==='assembly-editor-target'?10:15):0;
+      if(picked&&priority<=best)continue;
+      best=priority;
+      picked={meta,point:hit.point,event,playerDistance:player.position.distanceTo(hit.point)};
+      if(priority===30)break;
+      if(!authoring)break;
     }
-    return null;
+    if(picked&&dispatch)onInteraction(picked.meta,picked);
+    return picked;
   }
   function pointerWorldPosition(event){
     const rect=canvas.getBoundingClientRect();
@@ -815,6 +845,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     addModel,
     setTransform,
     updateCage,
+    getObjectLocalBounds,
     focusOn,
     connect,
     connectToPlayer,
