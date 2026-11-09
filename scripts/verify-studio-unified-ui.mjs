@@ -544,6 +544,71 @@ async function browserScenario(){
     !targets[1].querySelector('[data-p2lrn-dnd-label]').hidden,
     'Reset did not restore image card dimensions and destination labels');
   scene.remove();
+  // Assembly authoring must be a real shared editor, not an inert screenshot,
+  // and its GLB must survive a complete .p2lrn round-trip in both DOM modes.
+  const {renderQuestionnaireVisualEditor}=await import('/studio/questionnaire-editor.js');
+  const {buildQuestionnaireGame}=await import('/questionnaire-games-core.js');
+  const makeGLB=()=>{
+    const body=new Uint8Array(44),dv=new DataView(body.buffer);
+    const xyz=[0,0,0,0.8,0,0,0,0.8,0];
+    xyz.forEach((v,i)=>dv.setFloat32(i*4,v,true));
+    [0,1,2].forEach((v,i)=>dv.setUint16(36+i*2,v,true));
+    const json={
+      asset:{version:'2.0'},scene:0,scenes:[{nodes:[0]}],
+      nodes:[{name:'Pieza geométrica',mesh:0}],
+      meshes:[{primitives:[{attributes:{POSITION:0},indices:1,mode:4}]}],
+      buffers:[{byteLength:44}],
+      bufferViews:[{buffer:0,byteOffset:0,byteLength:36,target:34962},{buffer:0,byteOffset:36,byteLength:6,target:34963}],
+      accessors:[{bufferView:0,componentType:5126,count:3,type:'VEC3',min:[0,0,0],max:[0.8,0.8,0]},{bufferView:1,componentType:5123,count:3,type:'SCALAR'}],
+    };
+    const encoded=new TextEncoder().encode(JSON.stringify(json)),length=(encoded.length+3)&~3;
+    const out=new Uint8Array(12+8+length+8+body.length);
+    const h=new DataView(out.buffer);
+    h.setUint32(0,0x46546c67,true);h.setUint32(4,2,true);h.setUint32(8,out.length,true);
+    h.setUint32(12,length,true);h.setUint32(16,0x4e4f534a,true);
+    out.fill(32,20,20+length);out.set(encoded,20);
+    h.setUint32(20+length,body.length,true);h.setUint32(24+length,0x004e4942,true);
+    out.set(body,28+length);
+    return out;
+  };
+  for(const item of [website,npm]){
+    const activity=item.course.addGame(item.course.rootId,{kind:'assembly-3d',title:'Ensamblaje validado'});
+    const current=await item.course.readQuestionnaire(activity.id);
+    expect(current.payload.questions[0].assembly3d?.targets?.length===2,'Assembly 3D activity was not created');
+    const inspector=document.createElement('div');item.root.append(inspector);
+    renderQuestionnaireVisualEditor(inspector,{model:item.course,activityId:activity.id,payload:current.payload,
+      renderer:'https://p2lrn.org/renderer/questionnaire/3d-order-match'});
+    await Promise.resolve();
+    expect(inspector.querySelector('.p2lrn-assembly-editor svg'),'Native assembly geometry editor missing');
+    const selected=inspector.querySelector('.a3-fields input');
+    expect(selected,'Authoring transform field missing');
+    const previous=Number(selected.value);
+    selected.value=String(previous-0.45);
+    selected.dispatchEvent(new Event('change',{bubbles:true}));
+    const modified=await item.course.readQuestionnaire(activity.id);
+    expect(Math.abs(modified.payload.questions[0].assembly3d.targets[0].transform.position[0]-(previous-0.45))<0.001,
+      '3D authoring did not persist XYZ edits to native questionnaire bytes');
+    const asset=await item.course.addAssemblyAsset({bytes:makeGLB(),filename:'pieza.glb'});
+    const question=modified.payload.questions[0];
+    question.assembly3d.assets.push({id:asset.id,path:asset.path,name:'pieza.glb',size:asset.size,nodes:asset.inspected.nodes});
+    question.assembly3d.pieces[0].assetId=asset.id;
+    question.assembly3d.pieces[0].nodeId='0';
+    item.course.setQuestionnaire(activity.id,modified.payload);
+    const exported=await exportP2LRNPackage(item.course);
+    const opened=await openP2LRNPackageBytes(exported.bytes);
+    const rendered=opened.entities.get(activity.id);
+    expect(rendered?.type==='activity','Round-trip removed assembly activity');
+    const resource=opened.entities.get(rendered.resource);
+    const file=resource?.representations.find(r=>r.role==='primary')?.location?.path;
+    const data=JSON.parse(new TextDecoder().decode(await opened.payload(file).read()));
+    const sceneData=data.questions[0].assembly3d;
+    expect(sceneData.targets.length===2&&sceneData.assets[0].path===asset.path,'3D geometry or GLB references were lost on export');
+    const glbBytes=await opened.payload(asset.path).read();
+    expect(glbBytes.byteLength===asset.size,'GLB model bytes missing from portable P2LRN course');
+    const game=buildQuestionnaireGame(data,'https://p2lrn.org/renderer/questionnaire/3d-order-match');
+    expect(game.compatible&&game.data.trials[0].type==='assembly-3d','Exported assembly is not playable');
+    inspector.remove();
+  }
   const label=website.toolbar.querySelector('[role=tab][aria-selected=true]');
   expect(label.textContent==='Formato','Tab state is not consistent');
   const lightStyle=getComputedStyle(website.toolbar).fontFamily;
