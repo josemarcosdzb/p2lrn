@@ -72,7 +72,7 @@ Límites: no existe aún un historial global que abarque todos los metadatos, cu
 
 ## Juego nativo de ensamblaje 3D por piezas — especificación de diseño (9 de noviembre de 2026)
 
-**Estado:** DISEÑADO; NO IMPLEMENTADO ni validado en Studio/Player/LMS/offline. Esta sección define el contrato funcional y criterios de aceptación, no resultados de pruebas. Extender los componentes existentes; prohibido crear un segundo editor/motor/formato/checkout.
+**Estado actual (9-11-2026):** IMPLEMENTACIÓN EN RAMA mejorastudio. Nuevo juego, jaulas editables por vértices, modelos GLB incluidos en el paquete, evaluación nativa, vista docente WebGL con fallback geométrico y Player 3D. No publicado ni certificado en LMS/offline. La CI de la edición WebGL final sigue pendiente; no confundir los resultados anteriores con una aprobación de los cambios recientes. Esta sección define el contrato funcional y criterios de aceptación, no resultados de pruebas. Extender los componentes existentes; prohibido crear un segundo editor/motor/formato/checkout.
 
 ### Experiencia del profesor y alumno
 
@@ -110,6 +110,13 @@ Optimización medible: normalizar escala/ejes/pivotes; eliminar atributos y nodo
 - packages/toolkit/web/game-3d/three-runtime.js: visor Three.js existente con jaulas wireframe editables, picking, transformaciones XYZ, snap y modelos GLB; preservar anteriores juegos, cámara y joystick.
 - packages/toolkit/web/renderers/questionnaire-3d.js: ejecución del nuevo modo, evaluación, reanudación y accesibilidad.
 - packages/studio/scripts/build-dist.mjs y builds Player/web/offline: verificar que empaquetan exactamente los mismos módulos, sin copiar implementación entre interfaces.
+
+### Evidencias reales obtenidas (sin sustitución por mocks)
+
+- En el commit 6528a6eed399a1164f64876c067b25d292be24da, el workflow 42599955186 cerró **success** en ambos jobs. La prueba Chrome/Edge de Player confirmó los cuatro modos 3D (ordenar, relacionar, clasificar y ensamblar), carga del GLB incrustado sin fallback, dos piezas colocadas, puntuación y ausencia de errores; también validó móvil 390px, joystick y arrastre.
+- El mismo workflow verificó Studio web y Shadow DOM/NPM: crear el juego, cambiar XYZ, importar GLB, exportar un .p2lrn, reabrirlo, conservar geometría y contenido del modelo. Son pruebas reales de navegador y bytes de paquete, no sólo pruebas de funciones aisladas.
+- La vista docente WebGL integrada en Three.js y su render bajo demanda son posteriores a ese workflow. Requieren superar su propia CI, probar la edición en canvas y revisar capturas reales antes de considerarse aprobadas.
+- No se ha publicado nueva versión npm/CDN ni se ha ejecutado una prueba auténtica LMS/offline con esta actividad. Esos destinos permanecen PENDIENTES, sin certificación implícita.
 
 ### Criterios de aceptación
 

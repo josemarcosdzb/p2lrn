@@ -8,7 +8,7 @@ function submitForm(ticket,c,e,main=false){
   '<input type="hidden" name="entityId" value="'+esc(e.id)+'">'+
   '<button type="submit">'+(main?'Añadir curso':'Añadir actividad')+'</button></form>';
 }
-export function pickerHtml({ticket,contents,cspNonce}){
+export function pickerHtml({ticket,contents,cspNonce,errorMessage=null}){
  const cards=[];
  for(const c of contents||[]){
   const entities=(c.entities||[]).filter(e=>['course','unit','activity'].includes(e.type));
@@ -52,6 +52,7 @@ export function pickerHtml({ticket,contents,cspNonce}){
   'No necesitas descargar archivos ni configurar nada más.</p>'+
   '<section class="upload"><h2>¿Tu curso todavía no está aquí?</h2>'+
   '<p>Desde Studio, exporta un archivo <b>.p2lrn</b>. Selecciónalo y se añadirá a esta aula sin convertirlo ni cambiarlo.</p>'+
+  (errorMessage?'<p id="p2lrn-upload-alert" role="alert" tabindex="-1" style="border-left:4px solid #b45309;background:#fff8df;padding:10px"><strong>No se ha publicado.</strong> '+esc(errorMessage)+'</p>':'')+
   '<form method="post" action="/lti/deep-link/confirm" enctype="multipart/form-data">'+
   '<input type="hidden" name="ticket" value="'+esc(ticket)+'">'+
   '<label for="p2lrn-file">Archivo del curso</label>'+
