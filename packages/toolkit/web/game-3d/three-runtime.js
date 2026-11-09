@@ -514,7 +514,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
         handles.push(handle);
       });
     }
-    group.userData.p2lrnCage={line,box,handles};
+    group.userData.p2lrnCage={line,box,handles,vertexSignature:vertices.flat().join(',')};
     group.position.fromArray(normalizePosition(position));
     group.quaternion.fromArray(rotation);
     group.scale.fromArray(scale);
@@ -530,16 +530,20 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   function updateCage(id,vertices,transform=null){
     const group=meshes.get(String(id)),data=group?.userData?.p2lrnCage;
     if(!data||!Array.isArray(vertices)||vertices.length!==8)return false;
-    const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
-    const attr=data.line.geometry.getAttribute('position');
-    edges.forEach(([a,b],i)=>{attr.setXYZ(i*2,...vertices[a]);attr.setXYZ(i*2+1,...vertices[b]);});
-    attr.needsUpdate=true;
-    data.line.geometry.computeBoundingSphere();
-    data.handles.forEach((handle,index)=>handle.position.fromArray(vertices[index]));
-    const lows=[0,1,2].map(i=>Math.min(...vertices.map(p=>p[i]))),highs=[0,1,2].map(i=>Math.max(...vertices.map(p=>p[i])));
-    data.box.geometry.dispose();
-    data.box.geometry=new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i])));
-    data.box.position.fromArray(highs.map((v,i)=>(v+lows[i])/2));
+    const signature=vertices.flat().join(',');
+    if(data.vertexSignature!==signature){
+      const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+      const attr=data.line.geometry.getAttribute('position');
+      edges.forEach(([a,b],i)=>{attr.setXYZ(i*2,...vertices[a]);attr.setXYZ(i*2+1,...vertices[b]);});
+      attr.needsUpdate=true;
+      data.line.geometry.computeBoundingSphere();
+      data.handles.forEach((handle,index)=>handle.position.fromArray(vertices[index]));
+      const lows=[0,1,2].map(i=>Math.min(...vertices.map(p=>p[i]))),highs=[0,1,2].map(i=>Math.max(...vertices.map(p=>p[i])));
+      data.box.geometry.dispose();
+      data.box.geometry=new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i])));
+      data.box.position.fromArray(highs.map((v,i)=>(v+lows[i])/2));
+      data.vertexSignature=signature;
+    }
     if(transform)setTransform(id,transform);
     if(authoring)requestFrame();
     return true;
