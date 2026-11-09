@@ -706,6 +706,91 @@ async function browserScenario(){
     expect(game.compatible&&game.data.trials[0].type==='assembly-3d','Exported assembly is not playable');
     inspector.remove();
   }
+  // Moving a nested square must follow its parent only while it remains inside.
+  // Direct pointer dragging must detach it without creating a second object.
+  const nestedFrame=document.createElement('section');
+  nestedFrame.dataset.p2lrnLayout='section';
+  Object.assign(nestedFrame.style,{width:'180px',height:'160px',padding:'8px',
+    margin:'20px 0',position:'relative',backgroundColor:'#eef2ff'});
+  const square=document.createElement('figure');square.dataset.p2lrnLayout='shape';
+  Object.assign(square.style,{width:'70px',height:'55px',margin:'2px',display:'block',
+    backgroundColor:'#2563eb',minHeight:'55px'});
+  nestedFrame.append(square);website.surface.append(nestedFrame);
+  const {insertVisualLayoutBlock}=await import('/studio/visual-layout.js');
+  const divider=insertVisualLayoutBlock(website.surface,'divider');
+  nestedFrame.after(divider);
+  expect(divider.tagName==='HR'&&divider.style.clear==='both'&&
+    divider.style.borderTopWidth==='2px','Separator is not a real flow-level divider');
+  const gesture=(handle,id,x,y,dx,dy)=>{
+    const evt=(type,left,top)=>handle.dispatchEvent(new PointerEvent(type,{
+      bubbles:true,cancelable:true,pointerId:id,pointerType:'mouse',button:0,
+      buttons:type==='pointerup'?0:1,clientX:left,clientY:top,
+    }));
+    evt('pointerdown',x,y);evt('pointermove',x+dx,y+dy);evt('pointerup',x+dx,y+dy);
+  };
+  website.ui.selectObject(nestedFrame);
+  const objectHandle=website.root.querySelector('[data-object-action=drag]');
+  const squareStart=square.getBoundingClientRect().left;
+  const parentRect=nestedFrame.getBoundingClientRect();
+  gesture(objectHandle,220,parentRect.left+12,parentRect.top+12,20,0);
+  expect(square.parentElement===nestedFrame&&square.getBoundingClientRect().left>squareStart+10,
+    'A square inside a parent must move with its parent');
+  website.ui.selectObject(square);
+  const rectInside=square.getBoundingClientRect();
+  gesture(objectHandle,221,rectInside.left+12,rectInside.top+12,290,0);
+  expect(square.parentElement!==nestedFrame&&website.surface.contains(square),
+    'A square outside its old parent was not detached from the group');
+  const detachedLeft=square.getBoundingClientRect().left;
+  website.ui.selectObject(nestedFrame);
+  const shiftedParent=nestedFrame.getBoundingClientRect();
+  gesture(objectHandle,222,shiftedParent.left+12,shiftedParent.top+12,-16,0);
+  expect(Math.abs(square.getBoundingClientRect().left-detachedLeft)<3,
+    'An already detached blue square still follows its previous parent');
+  // The author can scroll down to retrieve an object moved beyond normal flow.
+  const lower=document.createElement('figure');lower.dataset.p2lrnLayout='shape';
+  Object.assign(lower.style,{width:'75px',height:'55px',margin:'8px',
+    backgroundColor:'#2563eb'});
+  website.surface.append(lower);website.ui.selectObject(lower);
+  const low=lower.getBoundingClientRect();
+  gesture(objectHandle,223,low.left+8,low.top+8,0,1100);
+  expect(parseFloat(website.surface.style.paddingBottom)>0&&
+    website.stage.scrollHeight>website.stage.clientHeight,
+    'An object moved below the page is unreachable because the stage cannot scroll');
+  // A real learner 3D classification scene shows the question ABOVE the
+  // enlarged canvas and exposes a fullscreen control.
+  const moduleStatus=await Promise.all(['/renderers/questionnaire-3d.js',
+    '/renderers/assembly-3d.js','/game-3d/three-runtime.js'].map(async path=>{
+      const res=await fetch(path);return [path,res.status];
+    }));
+  expect(moduleStatus.every(([,status])=>status===200),
+    '3D module HTTP route is missing: '+JSON.stringify(moduleStatus));
+  await import('/renderers/questionnaire-3d.js');
+  const threeCourse=createP2LRNStudioDocument({title:'Vista 3D del alumno',language:'es'});
+  const classification=threeCourse.addGame(threeCourse.rootId,{kind:'3d-classification',
+    title:'Clasificar en 3D',language:'es'});
+  const threePackage=await exportP2LRNPackage(threeCourse);
+  const threeBlob=URL.createObjectURL(new Blob([threePackage.bytes],
+    {type:'application/vnd.p2lrn+zip'}));
+  const threePlayer=document.createElement('p2lrn-player');
+  threePlayer.setAttribute('src',threeBlob);
+  threePlayer.setAttribute('node',classification.id);
+  document.body.append(threePlayer);
+  let threeHeader=null,threeStage=null;
+  for(let attempt=0;attempt<95;attempt++){
+    threeHeader=threePlayer.shadowRoot?.querySelector('.p2lrn-3d-question-head');
+    threeStage=threePlayer.shadowRoot?.querySelector('.p2lrn-3d-stage');
+    if(threeHeader&&threeStage)break;
+    await new Promise(done=>setTimeout(done,70));
+  }
+  expect(threeHeader?.querySelector('h3')?.textContent?.trim().length>0&&
+    threeStage&&Boolean(threeHeader.compareDocumentPosition(threeStage)&Node.DOCUMENT_POSITION_FOLLOWING),
+    'The learner 3D classification prompt appears below its viewer: '+JSON.stringify({heading:!!threeHeader,headingText:threeHeader?.textContent,stage:!!threeStage,order:threeHeader?.compareDocumentPosition(threeStage),stageHTML:threeStage?.outerHTML?.slice(0,500),error:threePlayer.shadowRoot?.querySelector('.p2lrn-error')?.textContent}));
+  const stageFullscreen=threeStage.querySelector('.p2lrn-3d-fullscreen');
+  const stageCanvas=threeStage.querySelector('.p2lrn-3d-canvas');
+  expect(stageFullscreen&&stageFullscreen.type==='button'&&stageFullscreen.getAttribute('aria-label')&&
+    stageCanvas&&stageCanvas.getBoundingClientRect().height>=400,
+    'The learner 3D viewer lacks an enlarged stage or fullscreen control');
+  threePlayer.remove();URL.revokeObjectURL(threeBlob);
   const label=website.toolbar.querySelector('[role=tab][aria-selected=true]');
   expect(label.textContent==='Formato','Tab state is not consistent');
   const lightStyle=getComputedStyle(website.toolbar).fontFamily;
@@ -725,7 +810,11 @@ try{
     try{url=new URL(req.url,'http://127.0.0.1');}catch{res.writeHead(400);res.end();return;}
     if(url.pathname==='/'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end('<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body></body></html>');return;}
     const isPlayer=url.pathname.startsWith('/player/current/dist/');
-    const root=isPlayer?resolve('packages/player/dist'):webRoot;
+    // Three.js and the trusted drop bootstrap are generated only in the
+    // canonical compiled Player, not in the unbuilt Toolkit source folder.
+    const compiledAsset=url.pathname.startsWith('/vendor/')||
+      url.pathname==='/renderers/lesson-drop-bootstrap.js';
+    const root=isPlayer||compiledAsset?resolve('packages/player/dist'):webRoot;
     const requested=isPlayer?url.pathname.slice('/player/current/dist/'.length):'.'+url.pathname;
     const path=resolve(root,decodeURIComponent(requested));
     if(!path.startsWith(root+sep)){res.writeHead(403);res.end();return;}

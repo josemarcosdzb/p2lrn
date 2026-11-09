@@ -10,6 +10,25 @@ export function bootStudioDropActivities(){
     const items=[...activity.querySelectorAll('[data-p2lrn-dnd-item]')];
     const zones=[...activity.querySelectorAll('[data-p2lrn-dnd-zone]')];
     if(!tray||!status||!items.length||!zones.length||items.length>20||zones.length>20)continue;
+    // Same trusted drop engine; optional concentric-image placement for geometry-based lessons.
+    // Standard free-position activities keep their existing behaviour.
+    const concentric=activity.dataset.p2lrnDndPuzzle==='concentric';
+    const board=concentric?activity.querySelector('[data-p2lrn-dnd-board]'):null;
+    let layerStack=null;
+    if(concentric&&board){
+      board.style.isolation='isolate';
+      layerStack=document.createElement('div');
+      layerStack.dataset.p2lrnDndStack='1';
+      Object.assign(layerStack.style,{position:'absolute',inset:'0',width:'100%',height:'100%',
+        pointerEvents:'none',zIndex:'1'});
+      board.prepend(layerStack);
+      const surface=board.querySelector('[data-p2lrn-dnd-image]');
+      if(surface){
+        surface.style.position='absolute';
+        surface.style.zIndex='2';
+        surface.style.pointerEvents='none';
+      }
+    }
     // Import existing authored images without inserting a white card plate.
     // Historic "Ficha N" defaults were not a teacher-provided caption.
     for(const item of items){
@@ -25,6 +44,9 @@ export function bootStudioDropActivities(){
     const zoneBackgrounds=new Map(zones.map(zone=>[zone,zone.style.backgroundColor]));
     const byId=new Map(items.map(item=>[item.dataset.p2lrnDndItem,item]));
     const placed=new Set();
+    // Prefer Pointer Events for mouse, pen and touch inside sandboxed lesson iframes.
+    // Native HTML5 drag can lose its drop target when the browser scrolls an iframe.
+    const pointerDragSupported=typeof PointerEvent==='function';
     // Keep the authored tray dimensions for a perfect reset after placing an image.
     const cardStyles=new Map(items.map(item=>[item,{
       style:item.getAttribute('style'),
@@ -72,6 +94,24 @@ export function bootStudioDropActivities(){
       // Green border and status indicate success; no opaque rectangle over PNG alpha.
       zone.style.backgroundColor='transparent';
       zone.setAttribute('aria-label','Respuesta correcta: '+tileName(item));
+      if(concentric&&layerStack){
+        // The teacher's image occupies a normalized full-board canvas, while
+        // the editable drop target is just a small hit region on the real Earth.
+        const source=item.querySelector('[data-p2lrn-dnd-item-image]');
+        if(source?.src?.startsWith('data:image/')){
+          const overlay=source.cloneNode(true);
+          overlay.removeAttribute('data-p2lrn-dnd-item-image');
+          overlay.dataset.p2lrnDndPlacedOverlay=id;
+          overlay.alt='';
+          overlay.setAttribute('aria-hidden','true');
+          Object.assign(overlay.style,{display:'block',position:'absolute',inset:'0',
+            width:'100%',height:'100%',minHeight:'0',maxHeight:'none',maxWidth:'none',
+            objectFit:'contain',objectPosition:'center',pointerEvents:'none',margin:'0'});
+          layerStack.append(overlay);
+          item.style.display='none';
+        }
+        zone.style.border='none';
+      }
       selected=null;
       const complete=placed.size===zones.length;
       announce(complete?'Actividad completada. Todas las fichas están colocadas.':
@@ -81,6 +121,13 @@ export function bootStudioDropActivities(){
     };
     for(const zone of zones){
       zone.tabIndex=0;zone.setAttribute('role','button');
+      if(concentric){
+        zone.style.zIndex='3';
+        zone.style.borderRadius='50%';
+        zone.style.backgroundColor='transparent';
+        const label=zone.querySelector('[data-p2lrn-dnd-label]');
+        if(label)label.hidden=true;
+      }
       zone.setAttribute('aria-label',(zone.querySelector('[data-p2lrn-dnd-label]')?.textContent||'Zona de destino')+'. Pulsa para colocar una ficha.');
       zone.addEventListener('dragover',event=>event.preventDefault());
       zone.addEventListener('drop',event=>{
@@ -95,7 +142,7 @@ export function bootStudioDropActivities(){
     }
     for(const item of items){
       item.setAttribute('role','button');
-      item.tabIndex=0;item.draggable=true;
+      item.tabIndex=0;item.draggable=!pointerDragSupported;
       item.setAttribute('aria-label','Ficha: '+tileName(item));
       item.addEventListener('click',()=>select(item));
       item.addEventListener('keydown',event=>{
@@ -108,9 +155,10 @@ export function bootStudioDropActivities(){
         if(event.dataTransfer)event.dataTransfer.effectAllowed='move';
         select(item);
       });
-      // Touch/pen pointer gestures work without HTML5 drag-and-drop support.
+      // Pointer gestures work consistently for mouse, touch and pen, even in iframes.
       item.addEventListener('pointerdown',event=>{
-        if(!['touch','pen'].includes(event.pointerType)||placed.has(item.dataset.p2lrnDndItem))return;
+        if(placed.has(item.dataset.p2lrnDndItem)
+          ||(event.pointerType==='mouse'&&event.button!==0))return;
         pointer={id:event.pointerId,item,x:event.clientX,y:event.clientY,ghost:null};
         try{item.setPointerCapture(event.pointerId);}catch{}
       });
@@ -158,7 +206,7 @@ export function bootStudioDropActivities(){
     });
     reset.addEventListener('click',()=>{
       for(const item of items){
-        tray.append(item);item.draggable=true;
+        tray.append(item);item.draggable=!pointerDragSupported;
         const original=cardStyles.get(item);
         if(original?.style===null)item.removeAttribute('style');
         else if(original?.style!==undefined)item.setAttribute('style',original.style);
@@ -169,6 +217,7 @@ export function bootStudioDropActivities(){
         }
       }
       placed.clear();selected=null;pointer?.ghost?.remove();pointer=null;
+      if(concentric&&layerStack)layerStack.replaceChildren();
       activity.removeAttribute('data-p2lrn-dnd-completed');
       for(const zone of zones){
         const label=zone.querySelector('[data-p2lrn-dnd-label]');
@@ -176,6 +225,11 @@ export function bootStudioDropActivities(){
         zone.style.border='2px dashed #1d4ed8';
         zone.style.backgroundColor=zoneBackgrounds.get(zone)||'transparent';
         zone.setAttribute('aria-label',zone.querySelector('[data-p2lrn-dnd-label]')?.textContent||'Zona');
+        if(concentric){
+          zone.style.border='1px dashed #0c6599';
+          const label=zone.querySelector('[data-p2lrn-dnd-label]');
+          if(label)label.hidden=true;
+        }
       }
       announce('Actividad reiniciada. Arrastra una ficha hasta su zona.');
     });
