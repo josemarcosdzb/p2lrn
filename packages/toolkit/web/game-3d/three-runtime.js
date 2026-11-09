@@ -135,7 +135,7 @@ function normalizePosition(value=[0,0,0]) {
   return [Number(value[0])||0,Number(value[1])||0,Number(value[2])||0];
 }
 
-export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=()=>false,physics='rapier'}={}) {
+export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=()=>false,physics='rapier',authoring=false}={}) {
   let physicsWorld;
   try {
     physicsWorld=physics==='none'?await createNoPhysicsWorld():await createRapierPhysicsWorld();
@@ -158,7 +158,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
 
   const scene=new THREE.Scene();
   scene.background=new THREE.Color('#050b16');
-  scene.fog=new THREE.Fog('#050b16',24,62);
+  scene.fog=authoring?null:new THREE.Fog('#050b16',24,62);
 
   const camera=new THREE.PerspectiveCamera(48,2,0.1,120);
   camera.position.set(0,8.2,15.5);
@@ -203,7 +203,13 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   playerHead.castShadow=true;
   player.add(playerBody,playerHead);
   player.position.set(0,0,6.5);
+  player.visible=!authoring;
   scene.add(player);
+  if(authoring){
+    const grid=new THREE.GridHelper(40,40,'#42728c','#1f3447');
+    grid.position.y=0.005;
+    scene.add(grid);
+  }
 
   const movement={forward:false,back:false,left:false,right:false};
   // Analog movement comes from the touch joystick; keyboard remains available on desktop.
@@ -212,9 +218,12 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     analogMovement.x=Number.isFinite(x)?Math.max(-1,Math.min(1,x)):0;
     analogMovement.y=Number.isFinite(y)?Math.max(-1,Math.min(1,y)):0;
   }
-  let cameraYaw=0;
-  let cameraPitch=-0.05;
+  let cameraYaw=authoring?0.55:0;
+  let cameraPitch=authoring?0.51:-0.05;
   let cameraDrag=null;
+  const orbitFocus=new THREE.Vector3(0,1,0);
+  let orbitDistance=14;
+  const authorDragPlane=new THREE.Plane();
 
   const meshes=new Map();
   const modelCache=new Map();
@@ -256,6 +265,16 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     player.position.z=clamp(player.position.z,-7.8,11.8);
   }
   function updatePlayer(delta){
+    if(authoring){
+      const elevation=clamp(cameraPitch,-1.38,1.38),slope=Math.cos(elevation);
+      camera.position.set(
+        orbitFocus.x+Math.sin(cameraYaw)*orbitDistance*slope,
+        orbitFocus.y+Math.sin(elevation)*orbitDistance,
+        orbitFocus.z+Math.cos(cameraYaw)*orbitDistance*slope,
+      );
+      camera.lookAt(orbitFocus);
+      return;
+    }
     const previous=player.position.clone();
     const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
@@ -453,7 +472,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     return root;
   }
 
-  function addCage({id,vertices,position=[0,1,0],rotation=[0,0,0,1],scale=[1,1,1],interaction=null,visibility='outline'}={}){
+  function addCage({id,vertices,position=[0,1,0],rotation=[0,0,0,1],scale=[1,1,1],interaction=null,visibility='outline',editable=false}={}){
     const group=new THREE.Group();
     const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
     const coords=edges.flatMap(([a,b])=>[...vertices[a],...vertices[b]]);
@@ -468,6 +487,20 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     const box=new THREE.Mesh(new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i]))),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
     box.position.fromArray(highs.map((v,i)=>(v+lows[i])/2));
     group.add(box);
+    const handles=[];
+    if(editable){
+      const geometry=new THREE.SphereGeometry(0.105,10,8);
+      const material=new THREE.MeshBasicMaterial({color:'#22d3ee',depthTest:false});
+      vertices.forEach((point,index)=>{
+        const handle=new THREE.Mesh(geometry,material);
+        handle.position.fromArray(point);
+        handle.renderOrder=4;
+        handle.userData.p2lrnInteraction={kind:'assembly-editor-vertex',id:String(id),index};
+        group.add(handle);
+        handles.push(handle);
+      });
+    }
+    group.userData.p2lrnCage={line,box,handles};
     group.position.fromArray(normalizePosition(position));
     group.quaternion.fromArray(rotation);
     group.scale.fromArray(scale);
@@ -478,12 +511,39 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     return group;
   }
 
+
+  function updateCage(id,vertices,transform=null){
+    const group=meshes.get(String(id)),data=group?.userData?.p2lrnCage;
+    if(!data||!Array.isArray(vertices)||vertices.length!==8)return false;
+    const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+    const attr=data.line.geometry.getAttribute('position');
+    edges.forEach(([a,b],i)=>{attr.setXYZ(i*2,...vertices[a]);attr.setXYZ(i*2+1,...vertices[b]);});
+    attr.needsUpdate=true;
+    data.line.geometry.computeBoundingSphere();
+    data.handles.forEach((handle,index)=>handle.position.fromArray(vertices[index]));
+    const lows=[0,1,2].map(i=>Math.min(...vertices.map(p=>p[i]))),highs=[0,1,2].map(i=>Math.max(...vertices.map(p=>p[i])));
+    data.box.geometry.dispose();
+    data.box.geometry=new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i])));
+    data.box.position.fromArray(highs.map((v,i)=>(v+lows[i])/2));
+    if(transform)setTransform(id,transform);
+    return true;
+  }
+
   function setTransform(id,transform){
     const mesh=meshes.get(String(id));
     if(!mesh||!transform)return false;
     if(transform.position)mesh.position.fromArray(normalizePosition(transform.position));
     if(transform.rotation)mesh.quaternion.fromArray(transform.rotation);
     if(transform.scale)mesh.scale.fromArray(transform.scale);
+    return true;
+  }
+
+  function focusOn(position=[0,1,0],radius=14){
+    if(!authoring)return false;
+    orbitFocus.fromArray(normalizePosition(position));
+    orbitDistance=clamp(Number(radius)||14,2.5,350);
+    camera.far=Math.max(120,orbitDistance*12);
+    camera.updateProjectionMatrix();
     return true;
   }
 
@@ -632,9 +692,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
     pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
     raycaster.setFromCamera(pointer,camera);
-    const hit=raycaster.ray.intersectPlane(dragPlane,dragWorld);
+    const hit=raycaster.ray.intersectPlane(authoring?authorDragPlane:dragPlane,dragWorld);
     if(!hit)return null;
-    return [clamp(hit.x,-11.2,11.2),0.78,clamp(hit.z,-12,12)];
+    return authoring?[hit.x,hit.y,hit.z]:[clamp(hit.x,-11.2,11.2),0.78,clamp(hit.z,-12,12)];
   }
   function onPointerDown(event){
     if(event.button!==0&&event.pointerType==='mouse')return;
@@ -643,7 +703,11 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     canvas.focus({preventScroll:true});
     if(cameraDrag)return;
     const hit=raycastInteraction(event,{dispatch:false});
-    const draggable=hit&&['ordering-object','classification-object','matching-left','assembly-piece'].includes(hit.meta.kind);
+    const draggable=hit&&(
+      ['ordering-object','classification-object','matching-left','assembly-piece'].includes(hit.meta.kind)||
+      (authoring&&['assembly-editor-piece','assembly-editor-target','assembly-editor-vertex'].includes(hit.meta.kind))
+    );
+    if(authoring&&hit)authorDragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()),hit.point);
     const objectDrag=Boolean(draggable&&onDrag(hit.meta,'start',{position:pointerWorldPosition(event),event,hit}));
     cameraDrag={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,moved:false,
       mode:objectDrag?'object':'camera',source:objectDrag?hit.meta:null};
@@ -657,8 +721,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(drag.mode==='object'){
       if(drag.moved)onDrag(drag.source,'move',{position:pointerWorldPosition(event),event});
     } else if(drag.moved) {
-      cameraYaw-=dx*0.006;
-      cameraPitch=clamp(cameraPitch-dy*0.004,-0.58,0.24);
+      cameraYaw-=dx*(authoring?0.008:0.006);
+      cameraPitch=authoring?clamp(cameraPitch+dy*0.006,-1.38,1.38):clamp(cameraPitch-dy*0.004,-0.58,0.24);
     }
     drag.x=event.clientX;drag.y=event.clientY;
   }
@@ -676,6 +740,13 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     }else if(!drag.moved)raycastInteraction(event);
     cameraDrag=null;
     try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
+  }
+  function onWheel(event){
+    if(!authoring)return;
+    event.preventDefault();
+    orbitDistance=clamp(orbitDistance*Math.exp(event.deltaY*0.001),2.5,350);
+    camera.far=Math.max(120,orbitDistance*12);
+    camera.updateProjectionMatrix();
   }
   function onPointerCancel(event){
     if(!cameraDrag||cameraDrag.pointerId!==event.pointerId)return;
@@ -707,6 +778,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   canvas.addEventListener('pointermove',onPointerMove);
   canvas.addEventListener('pointerup',onPointerUp);
   canvas.addEventListener('pointercancel',onPointerCancel);
+  if(authoring)canvas.addEventListener('wheel',onWheel,{passive:false});
   canvas.addEventListener('keydown',onKeyDown);
   canvas.addEventListener('keyup',onKeyUp);
   raf=requestAnimationFrame(frame);
@@ -722,6 +794,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     addCage,
     addModel,
     setTransform,
+    updateCage,
+    focusOn,
     connect,
     connectToPlayer,
     connectToPointer,
@@ -742,6 +816,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       canvas.removeEventListener('pointermove',onPointerMove);
       canvas.removeEventListener('pointerup',onPointerUp);
       canvas.removeEventListener('pointercancel',onPointerCancel);
+      if(authoring)canvas.removeEventListener('wheel',onWheel);
       canvas.removeEventListener('keydown',onKeyDown);
       canvas.removeEventListener('keyup',onKeyUp);
       canvas.removeEventListener('blur',clearKeys);
