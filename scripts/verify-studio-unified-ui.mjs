@@ -883,7 +883,11 @@ async function browserScenario(){
   viewer.style.cssText='max-width:1450px;margin:auto;background:#fff;border:1px solid #d0dae5;border-radius:12px;padding:16px';
   renderQuestionnaireVisualEditor(viewer,{model:website.course,activityId:visualGame.id,
     payload:visualData.payload,renderer:'https://p2lrn.org/renderer/questionnaire/3d-order-match',
-    createScene:create3DAuthoringScene});
+    createScene:async(canvas,options)=>{
+      const runtime=await create3DAuthoringScene(canvas,options);
+      globalThis.__p2lrnAssemblyQaRuntime=runtime;
+      return runtime;
+    }});
   let fitted=false;
   for(let i=0;i<120;i++){
     const box=viewer.querySelector('.a3-scene'),rendered=box?.querySelector('canvas.a3-webgl');
@@ -905,9 +909,29 @@ async function browserScenario(){
   const {assemblyFitStatus:finalAssemblyFitStatus}=await import('/assembly-3d-core.js');
   expect(finalAssemblyFitStatus(resultForScreenshot.payload.questions[0].assembly3d,'piece-1').ok,
     'Visual evidence GLB does not fit in its configured cage');
+  const actualRuntime=globalThis.__p2lrnAssemblyQaRuntime;
+  const camera=actualRuntime?.camera;
+  const objects=[];
+  if(camera&&actualRuntime?.scene){
+    camera.updateMatrixWorld(true);
+    actualRuntime.scene.traverse(node=>{
+      const meta=node.userData?.p2lrnInteraction;
+      if(!meta?.kind?.startsWith('assembly-editor-'))return;
+      const world=node.position.clone();
+      node.getWorldPosition(world);
+      objects.push({kind:meta.kind,id:meta.id,world:world.toArray(),projected:world.clone().project(camera).toArray()});
+    });
+  }
+  const rect=finalCanvas.getBoundingClientRect(),style=getComputedStyle(finalCanvas);
+  const screenshotDiagnostics={
+    viewport:[innerWidth,innerHeight],canvasRect:[rect.x,rect.y,rect.width,rect.height],
+    canvasPixels:[finalCanvas.width,finalCanvas.height],canvasCss:[style.width,style.height,style.display],
+    camera:camera?{position:camera.position.toArray(),rotation:camera.rotation.toArray(),aspect:camera.aspect}:null,
+    objects:objects.slice(0,16),svgHidden:viewer.querySelector('.a3-scene svg')?.hidden,
+  };
   return {ok:true,sameUI:true,sharedControls:website.toolbar.querySelectorAll('button').length,
     persisted:website.writes>0&&npm.writes>0,roundTrip:true,shadowDOM:true,stylesMatch:true,
-    singleAssemblyViewport:true,glbInsideCage:true};
+    singleAssemblyViewport:true,glbInsideCage:true,screenshotDiagnostics};
 
 }
 
