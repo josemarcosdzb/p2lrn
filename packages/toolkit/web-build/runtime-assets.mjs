@@ -64,6 +64,21 @@ async function installGame3dRuntime(dist,work){
   await cp(join(threeRoot,'build','three.module.js'),join(vendor,'three.module.js'));
   await cp(join(threeRoot,'build','three.core.js'),join(vendor,'three.core.js'));
   await cp(join(threeRoot,'LICENSE'),join(vendor,'LICENSE.three.txt'));
+  // Use the exact same pinned Three.js runtime and GLTFLoader in Player.
+  // Addons are localized to the packaged Three module, never a CDN import.
+  await mkdir(join(vendor,'loaders'),{recursive:true});
+  await mkdir(join(vendor,'utils'),{recursive:true});
+  for(const [source,target] of [
+    ['examples/jsm/loaders/GLTFLoader.js','loaders/GLTFLoader.js'],
+    ['examples/jsm/utils/BufferGeometryUtils.js','utils/BufferGeometryUtils.js'],
+    ['examples/jsm/utils/SkeletonUtils.js','utils/SkeletonUtils.js'],
+  ]){
+    const file=await readFile(join(threeRoot,...source.split('/')),'utf8');
+    if(!file.includes("from 'three'"))throw new Error('Pinned Three addon imports changed: '+source);
+    const compatible=file.replaceAll("from 'three'","from '../three.module.js'");
+    await writeFile(join(vendor,...target.split('/')),compatible);
+  }
+
   await cp(join(rapierRoot,'dist','rapier.mjs'),join(vendor,'rapier3d.mjs'));
   await cp(join(rapierRoot,'LICENSE'),join(vendor,'LICENSE.rapier3d.txt'));
   await writeFile(join(vendor,'game-3d-runtime.json'),JSON.stringify({three:{name:'three',version:THREE_VERSION,license:'MIT'},physics:{name:'@dimforge/rapier3d-compat',version:RAPIER3D_VERSION,license:'Apache-2.0'}},null,2)+'\n');
