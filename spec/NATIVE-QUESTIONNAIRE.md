@@ -63,7 +63,9 @@ Esta opción pertenece a la **actividad**, no a un tipo de entrega, y está disp
 
 **Compatibilidad:** las representaciones de juego que construyen su tablero a partir de soluciones (sopa de letras, crucigrama, rosco, memoria, 3D y otras modalidades específicas) mantienen corrección automática. Para preguntar sin soluciones, se utiliza el **Cuestionario estándar**, que admite los tipos de pregunta correspondientes. Ofrecer un juego sin datos imprescindibles para renderizarlo rompería el curso.
 
-**No significa firma del resultado:** el alumno puede manipular los datos en su equipo. Las respuestas recuperadas deben revisarse por el profesor o por un Host confiable antes de emitir una nota oficial. Consulte [integración segura del Host](../docs/integration/INTEGRACION-SEGURA-HOST.md).
+**No significa firma del resultado:** el alumno puede manipular los datos en su equipo. Las respuestas recuperadas deben revisarse por el profesor o por un Host confiable antes de emitir una nota oficial.
+
+**Revisión en Studio:** al importar una entrega offline `.p2lrn-result`, el profesor puede ver las últimas respuestas, asignar puntos y comentarios a cada pregunta y descargar un `.p2lrn-review.json` separado. Este informe utiliza `https://p2lrn.org/schema/teacher-manual-review/1` y declara `authoritative:false`: no sustituye una calificación firmada por un Host de confianza. Para cursos conectados, el LMS puede realizar la misma corrección posterior mediante su servicio de resultados y emitir un recibo de servidor si dispone de evidencia suficiente. Consulte [integración segura del Host](../docs/integration/INTEGRACION-SEGURA-HOST.md).
 
 Ejemplo de cuestionario normal u offline que se corrige posteriormente:
 

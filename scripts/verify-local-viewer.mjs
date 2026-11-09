@@ -1495,8 +1495,11 @@ async function prepareConnectedArchitectureFixtures(){
   const sharedExport=await exportP2LRNPackage(shared);
   await writeFile(join(dir,'shared-resource.p2lrn'),sharedExport.bytes);
 
-  await cp(join(root,'examples','canonical','web-bundle-course.p2lrn'),join(dir,'offline-web.p2lrn'),{force:true});
-  return Object.freeze({activityId:activity.id,collaborationActivityId:poll.id,sharedActivityId:sharedActivity.id,sharedSvg,sharedDigest,offlineSource:join(dir,'offline-web.p2lrn')});
+  const offlineDocument=createP2LRNStudioDocument({title:'Contenido web offline de prueba',language:'es'});
+  const offlineActivity=offlineDocument.addLesson(offlineDocument.rootId,{title:'Lección web offline',language:'es'});
+  const offlineExport=await exportP2LRNPackage(offlineDocument);
+  await writeFile(join(dir,'offline-web.p2lrn'),offlineExport.bytes);
+  return Object.freeze({activityId:activity.id,collaborationActivityId:poll.id,sharedActivityId:sharedActivity.id,sharedSvg,sharedDigest,offlineNodeId:offlineActivity.id,offlineSource:join(dir,'offline-web.p2lrn')});
 }
 
 async function verifyConnectedArchitecture(cdp,fixture){
@@ -1601,7 +1604,7 @@ async function verifyConnectedArchitecture(cdp,fixture){
     const player=document.createElement('p2lrn-player');
     player.id='offline-package-gate';
     player.packageCache=globalThis.__p2lrnConnectedCache;
-    player.setAttribute('node','urn:uuid:36676731-dfe6-5125-afa5-dc8d76c94859');
+    player.setAttribute('node',${JSON.stringify(fixture.offlineNodeId)});
     player.setAttribute('src','/tests/offline-web.p2lrn');
     document.body.append(player);
     const wait=async(test,label)=>{for(let i=0;i<320;i++){const value=test();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw new Error(label+' timeout');};

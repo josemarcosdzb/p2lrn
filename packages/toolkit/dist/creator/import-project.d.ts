@@ -12,4 +12,5 @@ export interface OpenPackageProjectResult {
     preservedFiles: number;
     canonicalMigration: boolean;
 }
+export declare function workspacePath(packagePath: string): string;
 export declare function openPackageAsProject(packagePath: string, projectRoot: string, options?: OpenPackageProjectOptions): OpenPackageProjectResult;

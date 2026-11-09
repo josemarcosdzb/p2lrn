@@ -2,25 +2,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdirSync,mkdtempSync,readFileSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join,resolve} from 'node:path';
+import {join} from 'node:path';
 import {P2LRNAuthoringWorkspace} from '../dist/authoring/index.js';
 import {P2LRNReader} from '../dist/reader/index.js';
 
-const canonicalExamples=resolve('../../examples/canonical');
-
-function extractProfilePayload(packageName,profile,target){
-  const reader=new P2LRNReader(join(canonicalExamples,packageName));
-  for(const entity of reader.entities.values()){
-    if(entity.type!=='resource')continue;
-    const representation=(entity.representations??[]).find((rep)=>rep.profile===profile);
-    if(!representation)continue;
-    const location=representation.location;
-    assert.equal(location.type,'embedded');
-    writeFileSync(target,reader.package.archive.read(location.path));
-    return;
-  }
-  assert.fail(`profile payload not found: ${profile}`);
-}
+// Native authoring fixtures are created from source data during the test,
+// not retained as old distributable courses in the repository.
+const questionnaireFixture = {
+  schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',
+  version:'0.4.0',title:'Evaluación de prueba',language:'es',
+  grading:{mode:'embedded-key'},
+  questions:[{id:'q1',type:'single-choice',prompt:'¿Cuál es la respuesta correcta?',points:1,
+    choices:[{id:'a',text:'Correcta'},{id:'b',text:'Incorrecta'}],solution:{choiceIds:['a']}}],
+};
+const componentFixture = {
+  schema:'https://p2lrn.org/schema/native-component/0.1',
+  version:'0.1',
+  component:{id:'https://p2lrn.org/component/test-fixture',componentVersion:'1',dataVersion:'1',runtimeContractVersion:'1'},
+  data:{text:'Componente nativo de prueba'},title:'Componente',language:'es',
+};
 
 test('Studio authoring boundary performs typed edits without mutating Creator internals',()=>{
   const dir=mkdtempSync(join(tmpdir(),'p2lrn-studio-api-'));
@@ -40,11 +40,11 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
     workspace.addWebContent({sourceDirectory:web,key:'web',title:'Web',parent:'unidad'});
 
     const questionnaire=join(dir,'questionnaire.json');
-    extractProfilePayload('native-questionnaire-course.p2lrn','https://p2lrn.org/profile/native-questionnaire',questionnaire);
+    writeFileSync(questionnaire,JSON.stringify(questionnaireFixture));
     workspace.addQuestionnaire({source:questionnaire,key:'quiz',parent:'unidad'});
 
     const component=join(dir,'component.json');
-    extractProfilePayload('native-component-course.p2lrn','https://p2lrn.org/profile/native-component',component);
+    writeFileSync(component,JSON.stringify(componentFixture));
     workspace.addComponent({source:component,key:'component',parent:'unidad'});
 
     workspace.setChildren('unidad',['act-enlace','act-nota','act-web','act-quiz','act-component']);
@@ -69,7 +69,11 @@ test('Studio authoring boundary performs typed edits without mutating Creator in
 test('opening an existing course retains imported entityOrder when adding new authoring entities',()=>{
   const dir=mkdtempSync(join(tmpdir(),'p2lrn-authoring-import-order-'));
   try{
-    const workspace=P2LRNAuthoringWorkspace.open(join(canonicalExamples,'minimal-course.p2lrn'),join(dir,'workspace'));
+    const initial=P2LRNAuthoringWorkspace.create(join(dir,'initial'),{title:'Curso de origen',language:'es'});
+    initial.addUrl({key:'original',title:'Recurso original',url:'https://example.invalid/original'});
+    const source=join(dir,'source.p2lrn');
+    initial.build(source,{strictProfiles:true});
+    const workspace=P2LRNAuthoringWorkspace.open(source,join(dir,'workspace'));
     const before=workspace.project.entityOrder;
     assert.ok(Array.isArray(before)&&before.length>0);
     workspace.addUnit({key:'extra-unit',title:'Nueva unidad'});

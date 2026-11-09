@@ -462,6 +462,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     this._learningEventObserver = null;
     this._package = null;
     this._runtimeByContainer = new Map();
+    this._activityLoading = new Map();
     this._loadGeneration = 0;
     this._rendererStyleLinks = [];
     this._rendererStyles = new Set();
@@ -967,6 +968,42 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     return Object.freeze({requests, statuses, blocked});
   }
 
+  #startActivityLoading(stage, entity) {
+    this.#stopActivityLoading(stage);
+    const state={entityId:entity.id,ready:false,onReady:null,onError:null,timer:null};
+    state.onReady=event=>{
+      if(event.detail?.context?.entityId === entity.id){
+        state.ready=true;
+        this.#stopActivityLoading(stage,state);
+      }
+    };
+    state.onError=event=>{
+      if(event.detail?.context?.entityId === entity.id)this.#stopActivityLoading(stage,state);
+    };
+    this._activityLoading.set(stage,state);
+    stage.setAttribute('data-p2lrn-loading','true');
+    stage.dataset.p2lrnLoadingLabel=playerUiText('Cargando actividad?');
+    stage.setAttribute('aria-busy','true');
+    this.addEventListener('p2lrn:activityready', state.onReady);
+    this.addEventListener('p2lrn:error', state.onError);
+    state.timer=setTimeout(()=>{
+      if(this._activityLoading.get(stage)===state)
+        stage.dataset.p2lrnLoadingLabel=playerUiText('La actividad est? tardando m?s de lo habitual?');
+    },12000);
+    return state;
+  }
+
+  #stopActivityLoading(stage, waiting=this._activityLoading.get(stage)) {
+    if(!waiting||this._activityLoading.get(stage)!==waiting)return;
+    this._activityLoading.delete(stage);
+    this.removeEventListener('p2lrn:activityready',waiting.onReady);
+    this.removeEventListener('p2lrn:error',waiting.onError);
+    if(waiting.timer!==null)clearTimeout(waiting.timer);
+    delete stage.dataset.p2lrnLoading;
+    delete stage.dataset.p2lrnLoadingLabel;
+    stage.removeAttribute('aria-busy');
+  }
+
   async #renderEntity(entity, stage, {requestedRenderer = undefined} = {}) {
     this.#cleanupRuntime(stage);
     stage.replaceChildren();
@@ -1000,6 +1037,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       return null;
     }
 
+    const waiting=this.#startActivityLoading(stage,entity);
     const excluded = new Set();
     const strictRenderer = requestedRenderer === undefined ? this.getAttribute('renderer') : requestedRenderer;
     const preflightContext = {
@@ -1021,6 +1059,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       if (!candidate) {
         dispatchRuntimeEvent(this,'p2lrn:executionblocked',plan.report,preflightContext,{adapter:this._adapter});
         const last=plan.report.diagnostics.at(-1);
+        this.#stopActivityLoading(stage, waiting);
         this.#stageMessage(stage,last?.message??playerUiText('Este reproductor web todavía no tiene un renderer instalado compatible con las representaciones de esta actividad.'));
         return null;
       }
@@ -1100,6 +1139,11 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           },
         }) ?? null;
         if (runtime) this._runtimeByContainer.set(stage, runtime);
+        // External runtimes may return their iframe handle before the
+        // learner content is actually initialized. A rendered event is not
+        // equivalent to p2lrn:activityready.
+        if(!['h5p', 'scorm', 'external-package'].includes(runtime?.kind))
+          this.#stopActivityLoading(stage, waiting);
         dispatchRuntimeEvent(this, 'p2lrn:rendered', {
           rendererId: candidate.descriptor.id,
           representationId: rep.id,
@@ -1130,7 +1174,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           'P2LRN_REMOTE_RESOURCE_UNAVAILABLE',
           'P2LRN_REMOTE_RESOURCE_UNVERIFIED',
         ].includes(error?.code);
-        if (!canFallback) throw error;
+        if (!canFallback){this.#stopActivityLoading(stage,waiting);throw error;}
         excluded.add(candidate.descriptor.id);
         this.#cleanupRuntime(stage);
         stage.replaceChildren();
@@ -1187,6 +1231,11 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   }
 
   #cleanupRuntime(container = null) {
+    for(const [stage,waiting] of [...this._activityLoading.entries()]){
+      const matches=!container||stage===container||
+        (typeof container.contains==='function'&&container.contains(stage));
+      if(matches)this.#stopActivityLoading(stage,waiting);
+    }
     const entries = [...this._runtimeByContainer.entries()];
     for (const [stage, runtime] of entries) {
       const matches = !container || stage === container || (typeof container.contains === 'function' && container.contains(stage));

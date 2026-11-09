@@ -102,6 +102,19 @@ export function bootStudioDropActivities(){
           const overlay=source.cloneNode(true);
           overlay.removeAttribute('data-p2lrn-dnd-item-image');
           overlay.dataset.p2lrnDndPlacedOverlay=id;
+          // Optional teacher-authored layer order: a student may place
+          // concentric shells in any sequence without one hiding another.
+          const explicitOrder=Number(item.dataset.p2lrnDndLayerOrder);
+          let layerOrder=item.dataset.p2lrnDndLayerOrder!==undefined
+            &&Number.isInteger(explicitOrder)&&explicitOrder>=0&&explicitOrder<=20
+            ? explicitOrder:null;
+          if(layerOrder===null&&activity.dataset.p2lrnDndLayerOrderMode==='core-to-crust'){
+            const index=items.indexOf(item);
+            // An outward core-to-crust list has its last, cutaway crust
+            // on top; the inner core overlays the intermediate rings.
+            layerOrder=index===items.length-1?items.length:items.length-1-index;
+          }
+          if(layerOrder!==null)overlay.style.zIndex=String(layerOrder);
           overlay.alt='';
           overlay.setAttribute('aria-hidden','true');
           Object.assign(overlay.style,{display:'block',position:'absolute',inset:'0',

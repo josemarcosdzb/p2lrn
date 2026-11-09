@@ -20,6 +20,11 @@ const MODEL='Xenova/opus-mt-es-en';
 const JS_FILES=['p2lrn.js','studio/studio.js','demo/viewer.js','analytics/demo.js'];
 
 const MANUAL=new Map(Object.entries({
+  "Sitio oficial de P2LRN: crea cursos interactivos portables con Studio y Player. Formato .p2lrn, SCORM, H5P, documentación y código fuente.":"Official P2LRN website: create portable interactive courses with Studio and Player. Explore the .p2lrn format, SCORM, H5P, docs and source code.",
+  "Sitio oficial y documentación del proyecto P2LRN: formato de cursos interactivos con Studio, Player y Toolkit.":"Official P2LRN project website and documentation: an interactive course format with Studio, Player and Toolkit.",
+  "Web oficial de P2LRN, formato de cursos interactivos con herramientas Studio, Player y Toolkit.":"Official P2LRN website: portable interactive courses with Studio, Player and Toolkit.",
+  "Consultar el repositorio oficial":"View the official source repository",
+
   // Editorial corrections for untranslated public-facing phrases. Keep
   // code identifiers, JSON keys and example filenames stable.
   'Disponibilidad:':'Availability:',

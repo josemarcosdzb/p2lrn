@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "package": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\curso-tierra-nuevo\\la-tierra-real-del-nucleo-a-la-atmosfera.p2lrn",
+  "published": "C:\\Users\\Usuario\\Downloads\\p2lrn-mejorastudio-preview\\courses\\la-tierra-real-del-nucleo-a-la-atmosfera.p2lrn",
+  "sha256": "8e6954503aa19da96c6eb50b96b68561ef1a64a3d8f6fb25821c1a7851f01426",
+  "sourceImagesDeclared": 8,
+  "activities": 17,
+  "units": 6,
+  "lessons": 16,
+  "files": 17,
+  "games": 1,
+  "photosEmbedded": 13,
+  "images": 19,
+  "questions": 16,
+  "solutions": 16,
+  "quiz": {
+    "path": "content/resources/caa00e0a-a53e-47c3-bfb2-e6642816a76c.json",
+    "questions": 16,
+    "title": "Evaluación final de la Tierra",
+    "gradingMode": "embedded-key",
+    "answers": 16,
+    "types": {
+      "single-choice": 14,
+      "ordering": 2
+    }
+  },
+  "source": "Real P2LRN Studio export from the recorded full authoring session; independent strict Reader verification."
+}

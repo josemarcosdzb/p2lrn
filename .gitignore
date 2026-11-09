@@ -14,3 +14,8 @@ packages/document-reader/package-lock.json
 
 # Local test/browser artifacts
 .p2lrn-e2e/
+
+# Native QA courses are generated into temporary folders; keep legacy demo outputs untracked.
+/examples/canonical/*.p2lrn
+/examples/legacy-alpha15/*.p2rln
+/packages/toolkit/examples/

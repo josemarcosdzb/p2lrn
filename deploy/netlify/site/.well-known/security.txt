@@ -1,0 +1,5 @@
+Contact: https://p2lrn.org/contacto/
+Expires: 2027-11-06T23:59:59Z
+Canonical: https://p2lrn.org/.well-known/security.txt
+Preferred-Languages: es, en
+Policy: https://github.com/josemarcosdzb/p2lrn/blob/main/SECURITY.md

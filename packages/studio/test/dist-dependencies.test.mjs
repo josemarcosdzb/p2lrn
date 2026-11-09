@@ -25,6 +25,8 @@ test('Studio distribution copies localized UI and deferred-grading editor module
     'UI editor module graph must include all shared modules, including nested layout');
   assert.ok(build.includes("'assembly-3d-core.js'") && build.includes("join(out,file)"),
     'Studio dist must copy assembly-3d-core.js through its canonical root-module loop');
+  assert.ok(build.includes("join(out,'runtime','manual-grading.js')"),'Studio dist must include teacher manual-review helper');
+  await source('packages/toolkit/web/studio/manual-grading.js');
   for(const file of imports){
     const marker="join(out,'runtime','"+file+"')";
     assert.ok(build.includes(marker),'Studio dist must copy runtime dependency '+file);

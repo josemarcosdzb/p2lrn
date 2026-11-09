@@ -41,3 +41,14 @@ export default async function handler(request){
   }));
   return new Response(null,{status:204,headers:{'Cache-Control':'no-store'}});
 }
+
+// Netlify-enforced per-client throttling: unlike an in-memory Map, this
+// survives function replicas and bounds anonymous event-log abuse.
+export const config = {
+  path: '/.netlify/functions/p2lrn-conversion',
+  rateLimit: {
+    windowLimit: 60,
+    windowSize: 60,
+    aggregateBy: ['ip','domain'],
+  },
+};

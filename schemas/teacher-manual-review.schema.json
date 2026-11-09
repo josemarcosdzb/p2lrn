@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p2lrn.org/schema/teacher-manual-review/1",
+  "title": "P2LRN Teacher Local Manual Review",
+  "description": "Unsigned locally graded copy of answers. It must never be treated as a cryptographically authoritative LMS grade.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "reviewedAt",
+    "reviewer",
+    "source",
+    "corrections",
+    "totals",
+    "status",
+    "authoritative"
+  ],
+  "properties": {
+    "schema": {
+      "const": "https://p2lrn.org/schema/teacher-manual-review/1"
+    },
+    "version": {
+      "const": "1"
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignmentId",
+        "contentRoot",
+        "resultDigest",
+        "participantLabel"
+      ],
+      "properties": {
+        "assignmentId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contentRoot": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resultDigest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "participantLabel": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "corrections": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entityId",
+          "questionId",
+          "answer",
+          "pointsAwarded",
+          "pointsPossible",
+          "comment"
+        ],
+        "properties": {
+          "entityId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "questionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "answer": {},
+          "pointsAwarded": {
+            "type": "number",
+            "minimum": 0
+          },
+          "pointsPossible": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "awarded",
+        "maximum",
+        "normalized"
+      ],
+      "properties": {
+        "awarded": {
+          "type": "number",
+          "minimum": 0
+        },
+        "maximum": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "normalized": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "status": {
+      "const": "reviewed-local-unverified"
+    },
+    "authoritative": {
+      "const": false
+    }
+  }
+}
