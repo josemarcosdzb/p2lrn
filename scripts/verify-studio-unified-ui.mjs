@@ -648,7 +648,10 @@ async function browserScenario(){
     renderQuestionnaireVisualEditor(inspector,{model:item.course,activityId:activity.id,payload:current.payload,
       renderer:'https://p2lrn.org/renderer/questionnaire/3d-order-match',createScene:create3DAuthoringScene});
     await Promise.resolve();
-    expect(inspector.querySelector('.p2lrn-assembly-editor svg'),'Native assembly geometry fallback missing');
+    expect(inspector.querySelector('.p2lrn-assembly-editor canvas.a3-webgl'),
+      'Shared assembly editor has no 3D viewport');
+    expect(inspector.querySelectorAll('.a3-scene>canvas,.a3-scene>svg').length===1,
+      'Both WebGL and SVG rendering surfaces were mounted at once');
     expect(!inspector.querySelector('.q-editor-head,.q-settings,.q-card,.q-basic-grid'),
       'Assembly still includes a duplicate questionnaire editing screen above the 3D viewport');
     expect(inspector.querySelector('.a3-main')?.children.length===1,
@@ -696,7 +699,7 @@ async function browserScenario(){
     for(let i=0;i<100;i++){
       const warning=inspector.querySelector('.a3-error')?.textContent??'';
       if(warning.includes('No se pudo mostrar')||warning.includes('Vista 3D no disponible'))throw new Error(warning);
-      if(!inspector.querySelector('.a3-scene svg')?.hidden)throw new Error('Three.js authoring unexpectedly switched back to SVG fallback');
+      if(inspector.querySelector('.a3-scene>svg'))throw new Error('A second SVG surface is mounted alongside Three.js');
       await new Promise(done=>setTimeout(done,40));
       if(i===7)break;
     }
@@ -923,11 +926,16 @@ async function browserScenario(){
     });
   }
   const rect=finalCanvas.getBoundingClientRect(),style=getComputedStyle(finalCanvas);
+  expect(rect.y<260&&rect.height>=390,
+    'A hidden second renderer is pushing the real 3D canvas below the visible viewport: '+JSON.stringify({y:rect.y,height:rect.height}));
+  const selectedTarget=objects.find(x=>x.kind==='assembly-editor-target'&&x.id==='target-1');
+  expect(selectedTarget&&Math.abs(selectedTarget.projected[0])<0.6&&Math.abs(selectedTarget.projected[1])<0.6,
+    'Selected cage is not centered in the Three.js camera: '+JSON.stringify(selectedTarget));
   const screenshotDiagnostics={
     viewport:[innerWidth,innerHeight],canvasRect:[rect.x,rect.y,rect.width,rect.height],
     canvasPixels:[finalCanvas.width,finalCanvas.height],canvasCss:[style.width,style.height,style.display],
     camera:camera?{position:camera.position.toArray(),rotation:camera.rotation.toArray(),aspect:camera.aspect}:null,
-    objects:objects.slice(0,16),svgHidden:viewer.querySelector('.a3-scene svg')?.hidden,
+    objects:objects.slice(0,16),fallbackMounted:Boolean(viewer.querySelector('.a3-scene>svg')),
   };
   return {ok:true,sameUI:true,sharedControls:website.toolbar.querySelectorAll('button').length,
     persisted:website.writes>0&&npm.writes>0,roundTrip:true,shadowDOM:true,stylesMatch:true,
