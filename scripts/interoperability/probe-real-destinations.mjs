@@ -120,7 +120,7 @@ async function inspectExistingLmsContainers(){
   try{
    const stats=await run('docker',['stats','--no-stream','--format','{{.Name}}|{{.MemUsage}}'],{
     timeout:12000,windowsHide:true,maxBuffer:128*1024});
-   resources.runningMemoryUsage=stats.stdout.split(/\\r?\\n/).filter(Boolean)
+   resources.runningMemoryUsage=stats.stdout.split(/\r?\n/).filter(Boolean)
     .map(row=>{const [name,memory]=row.split('|');return {name,memory};})
     .filter(row=>relevant.test(row.name)).slice(0,30);
   }catch{}
