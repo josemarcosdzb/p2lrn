@@ -1,4 +1,5 @@
 import {studioNestedInsertionContainer} from './visual-layout.js';
+import {normalizeStudioShapeCaptions} from './studio-shapes.js';
 // One object toolbar shared by Studio web and the embedded NPM component.
 // Editing controls are outside the saved HTML; only standard HTML and
 // constrained inline styles are serialized to a P2LRN lesson.
@@ -110,6 +111,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     dropTarget?.classList.add('p2lrn-studio-drop-target');
   }
   const emit=()=>surface.dispatchEvent(new Event('input',{bubbles:true}));
+  if(normalizeStudioShapeCaptions(surface))emit();
   function update(){
     if(!isObject(selected,surface)||!selected.getClientRects().length){
       frame.dataset.visible='false';return;

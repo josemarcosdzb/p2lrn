@@ -236,81 +236,153 @@ export function removeStudioDropBackground(section){
 }
 export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=>{}}={}){
   if(!surface?.isContentEditable)throw new TypeError('Editor HTML no disponible.');
-  // Normalize legacy image-only cards immediately on opening an older lesson.
-  const normalized=[...surface.querySelectorAll('[data-p2lrn-dnd-item]')]
-    .filter(item=>normalizeStudioDropImageTile(item));
+  const doc=surface.ownerDocument,root=surface.getRootNode(),styleHost=root.nodeType===9?doc.head:root;
+  if(!styleHost.querySelector('[data-p2lrn-drop-editing-style]')){
+    const style=doc.createElement('style');style.dataset.p2lrnDropEditingStyle='1';
+    style.textContent=[
+      '.p2lrn-studio-drop-editing [data-p2lrn-dnd-zone],.p2lrn-studio-drop-editing [data-p2lrn-dnd-item]{user-select:none;-webkit-user-select:none;touch-action:none}',
+      '.p2lrn-studio-drop-editing [data-p2lrn-dnd-zone]{cursor:move!important}',
+      '.p2lrn-studio-drop-editing [data-p2lrn-dnd-item]{cursor:grab!important;position:relative}',
+      '.p2lrn-studio-drop-editing [data-p2lrn-dnd-zone]::after,.p2lrn-studio-drop-editing [data-p2lrn-dnd-item]::after{content:"";position:absolute;right:2px;bottom:2px;width:12px;height:12px;border-right:3px solid #2563eb;border-bottom:3px solid #2563eb;pointer-events:none;opacity:.85}',
+      '.p2lrn-studio-drop-editing [data-p2lrn-dnd-board].p2lrn-drop-board-target{outline:3px solid #2563eb;outline-offset:2px}',
+    ].join('\n');
+    styleHost.append(style);
+  }
+  surface.classList.add('p2lrn-studio-drop-editing');
+  const normalized=[...surface.querySelectorAll('[data-p2lrn-dnd-item]')].filter(normalizeStudioDropImageTile);
   if(normalized.length)onChange();
-  let selected=null,drag=null;
-  const clear=()=>{selected=null;onSelected(null);};
-  const select=zone=>{
-    if(selected===zone)return;
-    selected=zone&&surface.contains(zone)?zone:null;
-    onSelected(selected);
+  let selected=null,drag=null,suppressClick=null;
+  const select=zone=>{const next=zone&&surface.contains(zone)?zone:null;if(selected!==next){selected=next;onSelected(selected);}};
+  const matchingZone=item=>{
+    const activity=item?.closest?.('[data-p2lrn-dnd="1"]');
+    return [...(activity?.querySelectorAll('[data-p2lrn-dnd-zone]')??[])]
+      .find(zone=>zone.dataset.p2lrnDndAccept===item?.dataset.p2lrnDndItem)??null;
   };
+  const cleanup=state=>{state?.ghost?.remove();state?.board?.classList.remove('p2lrn-drop-board-target');};
   const onPointerDown=event=>{
-    const zone=event.target.closest?.('[data-p2lrn-dnd-zone]');
-    if(!zone||!surface.contains(zone)||event.button!==0||event.detail>1)return;
-    const board=zone.closest('[data-p2lrn-dnd-board]');
-    if(!board)return;
-    const box=board.getBoundingClientRect(),bounds=zone.getBoundingClientRect();
-    const resize=event.clientX>=bounds.right-23&&event.clientY>=bounds.bottom-23;
-    select(zone);
-    drag={
-      id:event.pointerId,zone,box,mode:resize?'resize':'move',
-      x:event.clientX,y:event.clientY,
-      left:parseFloat(zone.style.left)||0,top:parseFloat(zone.style.top)||0,
-      width:parseFloat(zone.style.width)||25,height:parseFloat(zone.style.height)||25,
-      changed:false,
-    };
+    if(event.button!==0)return;
+    const item=event.target.closest?.('[data-p2lrn-dnd-item]');
+    const zone=item?null:event.target.closest?.('[data-p2lrn-dnd-zone]');
+    const target=item||zone;
+    if(!target||!surface.contains(target))return;
+    // Use the inspector to edit names: prevent accidental selection of labels.
     event.preventDefault();
-    try{zone.setPointerCapture(event.pointerId);}catch{}
+    if(event.detail>1)return;
+    cleanup(drag);
+    const rect=target.getBoundingClientRect();
+    if(item){
+      const match=matchingZone(item);select(match);
+      drag={kind:event.clientX>=rect.right-19&&event.clientY>=rect.bottom-19?'card-resize':'card',
+        node:item,zone:match,board:match?.closest('[data-p2lrn-dnd-board]')??null,
+        tray:item.closest('[data-p2lrn-dnd-tray]'),pointerId:event.pointerId,
+        x:event.clientX,y:event.clientY,width:rect.width,height:rect.height,changed:false,ghost:null};
+    }else{
+      const board=zone.closest('[data-p2lrn-dnd-board]');if(!board)return;
+      select(zone);
+      drag={kind:event.clientX>=rect.right-23&&event.clientY>=rect.bottom-23?'zone-resize':'zone',
+        node:zone,board,box:board.getBoundingClientRect(),pointerId:event.pointerId,
+        x:event.clientX,y:event.clientY,
+        left:parseFloat(zone.style.left)||0,top:parseFloat(zone.style.top)||0,
+        width:parseFloat(zone.style.width)||25,height:parseFloat(zone.style.height)||25,
+        changed:false,ghost:null};
+    }
+    try{target.setPointerCapture(event.pointerId);}catch{}
   };
   const onPointerMove=event=>{
-    if(!drag||drag.id!==event.pointerId)return;
-    const item=drag,dx=100*(event.clientX-item.x)/Math.max(1,item.box.width);
-    const dy=100*(event.clientY-item.y)/Math.max(1,item.box.height);
-    if(item.mode==='move'){
-      item.zone.style.left=percent(clamp(item.left+dx,0,100-item.width));
-      item.zone.style.top=percent(clamp(item.top+dy,0,100-item.height));
-    }else{
-      item.zone.style.width=percent(clamp(item.width+dx,8,100-item.left));
-      item.zone.style.height=percent(clamp(item.height+dy,8,100-item.top));
+    if(!drag||drag.pointerId!==event.pointerId||!surface.contains(drag.node))return;
+    const state=drag,dx=event.clientX-state.x,dy=event.clientY-state.y;
+    if(state.kind==='card'){
+      if(Math.hypot(dx,dy)<6&&!state.ghost)return;
+      event.preventDefault();
+      if(!state.ghost){
+        const ghost=state.node.cloneNode(true);
+        ghost.removeAttribute('id');ghost.removeAttribute('data-p2lrn-dnd-item');
+        ghost.setAttribute('aria-hidden','true');ghost.contentEditable='false';
+        Object.assign(ghost.style,{position:'fixed',left:'0px',top:'0px',
+          width:Math.round(state.width)+'px',height:Math.round(state.height)+'px',
+          margin:'0',transform:'translate(-50%,-50%)',zIndex:'2147483000',
+          pointerEvents:'none',opacity:'.88',boxSizing:'border-box'});
+        (root.nodeType===9?doc.body:root).append(ghost);state.ghost=ghost;
+      }
+      state.ghost.style.left=event.clientX+'px';state.ghost.style.top=event.clientY+'px';
+      const box=state.board?.getBoundingClientRect();
+      state.board?.classList.toggle('p2lrn-drop-board-target',Boolean(box&&
+        event.clientX>=box.left&&event.clientX<=box.right&&
+        event.clientY>=box.top&&event.clientY<=box.bottom));
+      state.changed=true;return;
     }
-    item.changed=true;
-    event.preventDefault();
+    if(Math.abs(dx)<1&&Math.abs(dy)<1)return;
+    if(state.kind==='card-resize'){
+      const width=Math.round(clamp(state.width+dx,72,Math.max(72,state.tray?.clientWidth??state.width)));
+      const height=Math.round(clamp(state.height+dy,44,360));
+      Object.assign(state.node.style,{width:width+'px',minWidth:width+'px',
+        height:height+'px',minHeight:height+'px'});
+    }else{
+      const x=100*dx/Math.max(1,state.box.width),y=100*dy/Math.max(1,state.box.height);
+      if(state.kind==='zone'){
+        state.node.style.left=percent(clamp(state.left+x,0,100-state.width));
+        state.node.style.top=percent(clamp(state.top+y,0,100-state.height));
+      }else{
+        state.node.style.width=percent(clamp(state.width+x,8,100-state.left));
+        state.node.style.height=percent(clamp(state.height+y,8,100-state.top));
+      }
+    }
+    state.changed=true;event.preventDefault();
   };
   const onPointerUp=event=>{
-    if(!drag||drag.id!==event.pointerId)return;
-    const {zone,changed}=drag;
-    drag=null;
-    try{zone.releasePointerCapture(event.pointerId);}catch{}
-    if(changed)onChange();
+    if(!drag||drag.pointerId!==event.pointerId)return;
+    const state=drag;drag=null;cleanup(state);
+    try{state.node.releasePointerCapture(event.pointerId);}catch{}
+    if(!surface.contains(state.node))return;
+    if(state.kind==='card'){
+      if(!state.changed||event.type==='pointercancel')return;
+      const box=state.board?.getBoundingClientRect();
+      if(state.zone&&box?.width&&box.height&&event.clientX>=box.left&&
+         event.clientX<=box.right&&event.clientY>=box.top&&event.clientY<=box.bottom){
+        // Moving a card onto the picture positions the corresponding hotspot.
+        // The card stays in the tray, preserving Player/answer IDs.
+        const rect=state.zone.getBoundingClientRect();
+        const width=100*rect.width/box.width,height=100*rect.height/box.height;
+        state.zone.style.left=percent(clamp(100*(event.clientX-box.left)/box.width-width/2,0,100-width));
+        state.zone.style.top=percent(clamp(100*(event.clientY-box.top)/box.height-height/2,0,100-height));
+        select(state.zone);onChange();
+      }else if(state.tray?.contains(state.node)){
+        const hits=root.elementsFromPoint?.(event.clientX,event.clientY)||
+          doc.elementsFromPoint?.(event.clientX,event.clientY)||[];
+        const sibling=hits.map(el=>el.closest?.('[data-p2lrn-dnd-item]'))
+          .find(el=>el&&el!==state.node&&el.parentElement===state.tray);
+        if(sibling){
+          const rect=sibling.getBoundingClientRect();
+          if(event.clientX<rect.left+rect.width/2)sibling.before(state.node);
+          else sibling.after(state.node);
+          onChange();
+        }
+      }
+      suppressClick={node:state.node,until:Date.now()+400};
+      event.preventDefault();return;
+    }
+    if(state.changed)onChange();
   };
   const onClick=event=>{
-    const item=event.target.closest?.('[data-p2lrn-dnd-item]');
-    if(item&&surface.contains(item)){
-      const activity=item.closest('[data-p2lrn-dnd="1"]');
-      const matchingZone=[...(activity?.querySelectorAll('[data-p2lrn-dnd-zone]')??[])]
-        .find(zone=>zone.dataset.p2lrnDndAccept===item.dataset.p2lrnDndItem);
-      if(matchingZone){event.preventDefault();select(matchingZone);}
-      return;
+    if(suppressClick){
+      const item=event.target.closest?.('[data-p2lrn-dnd-item]');
+      if(Date.now()<suppressClick.until&&item===suppressClick.node){
+        event.preventDefault();suppressClick=null;return;
+      }
+      suppressClick=null;
     }
+    const item=event.target.closest?.('[data-p2lrn-dnd-item]');
+    if(item&&surface.contains(item)){select(matchingZone(item));return;}
     if(event.target.closest?.('[data-p2lrn-dnd-zone]'))return;
-    if(!event.target.closest?.('[data-p2lrn-dnd="1"]'))clear();
+    if(!event.target.closest?.('[data-p2lrn-dnd="1"]'))select(null);
   };
-  surface.addEventListener('pointerdown',onPointerDown);
-  surface.addEventListener('pointermove',onPointerMove);
-  surface.addEventListener('pointerup',onPointerUp);
-  surface.addEventListener('pointercancel',onPointerUp);
-  surface.addEventListener('click',onClick);
-  return {get selectedZone(){return selected&&surface.contains(selected)?selected:null;},
-    select,dispose(){
-      clear();drag=null;
-      surface.removeEventListener('pointerdown',onPointerDown);
-      surface.removeEventListener('pointermove',onPointerMove);
-      surface.removeEventListener('pointerup',onPointerUp);
-      surface.removeEventListener('pointercancel',onPointerUp);
-      surface.removeEventListener('click',onClick);
-    },
-  };
+  const handlers=[['pointerdown',onPointerDown],['pointermove',onPointerMove],
+    ['pointerup',onPointerUp],['pointercancel',onPointerUp],['click',onClick]];
+  for(const [name,handler] of handlers)surface.addEventListener(name,handler);
+  return {get selectedZone(){return selected&&surface.contains(selected)?selected:null;},select,
+    dispose(){
+      select(null);cleanup(drag);drag=null;
+      surface.classList.remove('p2lrn-studio-drop-editing');
+      for(const [name,handler] of handlers)surface.removeEventListener(name,handler);
+    }};
 }

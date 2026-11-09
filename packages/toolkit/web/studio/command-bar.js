@@ -54,7 +54,12 @@ const FONT_SIZES=[12,14,16,18,20,24,28,32,40,48];
 const BLOCK_STYLES=[['p','Párrafo'],['h1','Título 1'],['h2','Título 2'],['h3','Título 3'],['blockquote','Cita']];
 let instance=0;
 const CSS=[
-  '.p2lrn-studio-unified{display:block!important;padding:0!important;border:1px solid #dbe2eb!important;border-radius:13px!important;background:#fff!important;box-shadow:0 6px 22px rgba(15,23,42,.06)!important;overflow:visible!important;min-width:0!important}',
+  '.p2lrn-studio-unified{display:block!important;padding:0!important;border:1px solid #dbe2eb!important;border-radius:13px!important;background:#fff!important;box-shadow:0 6px 22px rgba(15,23,42,.06)!important;overflow:visible!important;min-width:0!important;z-index:90!important;isolation:isolate}',
+  // On small screens the hosted toolbar used position:static, making its
+  // z-index ineffective and letting the lesson overlay the open editor menu.
+  '.p2lrn-studio-unified:not(.studio-toolbar){position:relative!important}',
+  '@media(max-width:900px){.studio-toolbar.p2lrn-studio-unified{position:relative!important}}',
+  '.p2lrn-studio-unified :is(.p2lrn-file-menu,.p2lrn-import-menu,.p2lrn-context-menu)[open]{z-index:200!important}',
   '.p2lrn-studio-unified[hidden]{display:none!important}',
   '.p2lrn-studio-legacy-topbar{display:none!important}',
   '.p2lrn-studio-unified > :not(.p2lrn-studio-ribbon){display:none!important}',
@@ -103,7 +108,7 @@ const CSS=[
   '.p2lrn-file-pop button{justify-content:flex-start!important;border:0!important;width:100%}',
   '.p2lrn-file-pop label{font-size:11px;color:#667085;display:grid;gap:5px;padding:5px}',
   '.p2lrn-file-pop input{width:100%;min-height:34px;border:1px solid #dbe2eb;border-radius:7px;padding:5px 8px}',
-  '.p2lrn-drop-editor>.p2lrn-file-pop{width:min(300px,calc(100vw - 30px));max-height:min(70vh,520px);overflow-y:auto;overscroll-behavior:contain}',
+  '.p2lrn-drop-editor>.p2lrn-file-pop{width:min(300px,calc(100vw - 30px));max-height:min(70vh,520px);overflow-y:auto;overscroll-behavior:contain;z-index:300}',
   '.p2lrn-file-pop .p2lrn-menu-separator{border-top:1px solid #edf0f4;margin:3px 0}',
   '.p2lrn-import-menu .add-pop{position:absolute!important;top:calc(100% + 7px)!important;left:0!important;z-index:120!important;width:min(680px,calc(100vw - 38px))!important;max-height:min(76vh,650px);overflow:auto;background:white;border:1px solid #dbe2eb;border-radius:10px;box-shadow:0 20px 45px rgba(15,23,42,.16)}',
   '.p2lrn-activity-picker{width:min(880px,calc(100vw - 28px));max-height:min(86vh,850px);padding:0;border:1px solid #e2e7ee;border-radius:14px;background:#fff;color:#1f2937;box-shadow:0 24px 70px rgba(15,23,42,.22);font:500 13px/1.4 Inter,system-ui,sans-serif}',
