@@ -54,6 +54,15 @@ const style=`
 .p2lrn-assembly-editor .a3-toolbar .a3-primary{background:#0f766e;color:#fff;border-color:#0f766e}
 .p2lrn-assembly-editor .a3-scene-note{padding:6px 10px;border-radius:7px;background:#071522c9;font-size:12px;max-width:calc(100% - 32px)}
 @media(max-width:620px){.p2lrn-assembly-editor .a3-scene canvas,.p2lrn-assembly-editor .a3-scene svg{height:360px}.p2lrn-assembly-editor .a3-main{grid-template-areas:"scene" "navigator" "inspector"}}
+
+/* Precision controls remain OVER the same 3D canvas, not below another screen.
+   They can be dismissed without destroying the user's camera or selection. */
+.p2lrn-assembly-editor .a3-main{grid-template-areas:"scene" "navigator"}
+.p2lrn-assembly-editor .a3-scene>.a3-pane{position:absolute;z-index:4;right:12px;top:12px;bottom:48px;width:min(300px,35%);max-height:calc(100% - 62px);overflow-y:auto;background:rgba(247,250,252,.96);color:#15263b;box-shadow:0 8px 24px #02061780;align-content:start;display:grid;gap:8px}
+.p2lrn-assembly-editor .a3-scene>.a3-pane input,.p2lrn-assembly-editor .a3-scene>.a3-pane select{color:#15263b}
+.p2lrn-assembly-editor .a3-scene>.a3-pane>.a3-panel-title{grid-column:1/-1}
+.p2lrn-assembly-editor .a3-scene>.a3-pane[hidden]{display:none!important}
+@media(max-width:620px){.p2lrn-assembly-editor .a3-scene>.a3-pane{width:min(270px,71%);top:8px;bottom:42px;right:8px;max-height:calc(100% - 50px)}}
 `;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const degrees=180/Math.PI;
@@ -130,13 +139,21 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   const fit=btn('Ajustar pieza dentro de la caja',()=>fitSelected());
   fit.classList.add('a3-primary');
   const frame=btn('Centrar encaje',()=>focusSelection());
-  buttons.append(fit,frame,undo,redoButton,add,remove);
+  const settings=btn('Ocultar ajustes',()=>{
+    props.hidden=!props.hidden;
+    settings.textContent=props.hidden?'Mostrar ajustes':'Ocultar ajustes';
+    settings.setAttribute('aria-expanded',String(!props.hidden));
+    settings.setAttribute('aria-pressed',String(!props.hidden));
+  });
+  settings.setAttribute('aria-expanded','true');
+  settings.setAttribute('aria-pressed','true');
+  buttons.append(fit,frame,settings,undo,redoButton,add,remove);
   head.append($('strong',null,'Ensamblaje 3D · editor de piezas y jaulas'),buttons);
   root.append(head);
   tree.append($('strong',null,'Escena / piezas / destinos'));
   const entries=$('div','a3-tree');tree.append(entries);
-  center.append(svg,canvas,note);props.append($('strong',null,'Propiedades'));
-  main.append(tree,center,props);root.append(main,warning);container.replaceChildren(root);
+  center.append(svg,canvas,note,props);props.append($('strong',null,'Propiedades'));
+  main.append(tree,center);root.append(main,warning);container.replaceChildren(root);
   const centerPoint={x:300,y:212};
   const project=(p)=>{
     const rx=p[0]*Math.cos(yaw)-p[2]*Math.sin(yaw),rz=p[0]*Math.sin(yaw)+p[2]*Math.cos(yaw);
