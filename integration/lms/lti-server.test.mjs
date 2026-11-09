@@ -210,6 +210,26 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.equal((await postRuntime('state/save',{context:playerContext,state:{answer:'A'},expectedRevision:0})).status,200);
   const state=await (await postRuntime('state/load',{context:playerContext})).json();
   assert.deepEqual(state,{value:{answer:'A'},revision:1});
+  // Re-entry is a new, signed LMS launch in the same learner and context.
+  // The same persistent attempt must be resumed rather than silently reset.
+  const reentry=await begin('LtiResourceLinkRequest');
+  const reentryLaunch=await req('/lti/launch',{method:'POST',headers:{
+    'Content-Type':'application/x-www-form-urlencoded','Cookie':reentry.browserCookie
+  },body:new URLSearchParams({state:reentry.state,id_token:signedPlatformToken({
+    nonce:reentry.nonce,kind:'LtiResourceLinkRequest',target:reentry.target,bindingId
+  })})});
+  assert.equal(reentryLaunch.status,200,'an enrolled learner must re-enter without technical credentials');
+  const reentryHtml=await reentryLaunch.text();
+  const reentryCookie=reentryLaunch.headers.get('set-cookie').split(';')[0];
+  const reentryCsrf=/const csrf="([^"]+)"/.exec(reentryHtml)?.[1];
+  assert.ok(reentryCsrf,'re-entry must issue an independent CSRF token');
+  const reloaded=await req('/lti/runtime/state/load',{method:'POST',headers:{
+    Cookie:reentryCookie,'Content-Type':'application/json','X-P2LRN-CSRF':reentryCsrf
+  },body:JSON.stringify({context:playerContext})});
+  assert.equal(reloaded.status,200);
+  assert.deepEqual(await reloaded.json(),{value:{answer:'A'},revision:1},
+    'the next signed LMS session must recover the actual saved answer and revision');
+
   const replay=await postRuntime('state/save',{context:playerContext,state:{answer:'A'},expectedRevision:0});
   assert.equal(replay.status,200,'repeated save after lost response must not discard an already committed answer');
   assert.equal((await replay.json()).unchanged,true);
@@ -232,6 +252,7 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
    body:new URLSearchParams({state:learner.state,id_token:token})})).status,403);
   const attempts=await (await req('/lti/admin/attempts?tenantId=school',{headers:admin})).json();
   assert.equal(attempts.attempts.length,1);
+  assert.equal(attempts.attempts[0].status,'IN_PROGRESS','new session must reuse one existing learner attempt');
   const grade=await req('/lti/admin/grades',{method:'POST',
    headers:{...admin,'Content-Type':'application/json'},
    body:JSON.stringify({attemptId:attempts.attempts[0].id,normalized:0.8,completed:true})});
