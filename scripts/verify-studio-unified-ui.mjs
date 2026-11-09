@@ -692,6 +692,28 @@ async function browserScenario(){
       await new Promise(done=>setTimeout(done,40));
       if(i===7)break;
     }
+    // The teacher sees ONE interactive viewport, with the real GLB
+    // geometrically inside its destination rather than parked off-screen.
+    const viewport=inspector.querySelector('.a3-scene');
+    const displayed=[...viewport.querySelectorAll('canvas,svg')].filter(node=>!node.hidden&&getComputedStyle(node).display!=='none');
+    expect(displayed.length===1&&displayed[0]===webgl,'Editor exposes two separate scene screens instead of one 3D viewport');
+    const gridStyle=getComputedStyle(inspector.querySelector('.a3-main'));
+    expect(gridStyle.gridTemplateColumns.trim().split(/\s+/u).length===1,'Teacher workspace still splits the scene into multiple narrow columns');
+    let fitted=null;
+    for(let i=0;i<100;i++){
+      const state=await item.course.readQuestionnaire(activity.id);
+      fitted=state.payload.questions[0].assembly3d;
+      if(fitted.links[0].placement?.bounds)break;
+      await new Promise(done=>setTimeout(done,75));
+    }
+    expect(fitted.links[0].placement?.bounds,'Real imported GLB mesh was never measured and fitted inside the cage');
+    const {assemblyPlacementTransform,assemblyFitStatus}=await import('/assembly-3d-core.js');
+    const pose=assemblyPlacementTransform(fitted,'piece-1');
+    expect(pose&&assemblyFitStatus(fitted,'piece-1',pose).ok,'Fitted GLB is not inside the professor-defined mesh destination');
+    expect(Math.hypot(...pose.position.map((v,i)=>v-fitted.pieces[0].initialTransform.position[i]))>0.5,
+      'The start position and the correct assembly position were incorrectly combined');
+    const inCage=inspector.querySelector('.a3-scene-note');
+    expect(inCage?.textContent.includes('caja'),'The editor does not explain piece-in-cage editing');
     const exported=await exportP2LRNPackage(item.course);
     const opened=await openP2LRNPackageBytes(exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength));
     const rendered=opened.entities.get(activity.id);
@@ -701,6 +723,8 @@ async function browserScenario(){
     const data=JSON.parse(new TextDecoder().decode(await opened.payload(file).read()));
     const sceneData=data.questions[0].assembly3d;
     expect(sceneData.targets.length===2&&sceneData.assets[0].path===asset.path,'3D geometry or GLB references were lost on export');
+    expect(sceneData.links[0].placement?.bounds&&assemblyFitStatus(sceneData,'piece-1').ok,
+      'Correct GLB fitting pose did not survive portable P2LRN export/reopen');
     const glbBytes=await opened.payload(asset.path).read();
     expect(glbBytes.byteLength===asset.size,'GLB model bytes missing from portable P2LRN course');
     const game=buildQuestionnaireGame(data,'https://p2lrn.org/renderer/questionnaire/3d-order-match');
