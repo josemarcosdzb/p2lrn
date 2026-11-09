@@ -10,6 +10,9 @@ on:
       - 'packages/toolkit/test/studio-advanced-history.test.mjs'
       - 'packages/studio/**'
       - 'packages/toolkit/web/game-3d/**'
+      - 'packages/toolkit/web/assembly-3d-core.js'
+      - 'packages/toolkit/web/renderers/assembly-3d.js'
+      - 'packages/toolkit/test/assembly-3d.test.mjs'
       - 'packages/toolkit/web/renderers/questionnaire-3d.js'
       - 'packages/toolkit/web/renderers/passive-text.js'
       - 'packages/toolkit/web/renderers/lesson-drop-runtime.js'
@@ -63,6 +66,16 @@ jobs:
             node --check $path
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+      - name: 3D assembly geometry, scoring and portable GLB validation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @('packages/toolkit/web/assembly-3d-core.js','packages/toolkit/web/studio/assembly-3d-editor.js','packages/toolkit/web/renderers/assembly-3d.js','packages/toolkit/test/assembly-3d.test.mjs')) {
+            node --check $path
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          node --test packages/toolkit/test/assembly-3d.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Quest 3D touch joystick, direct box interaction and desktop controls
         shell: powershell
         run: |
