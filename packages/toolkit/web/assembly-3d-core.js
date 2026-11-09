@@ -80,6 +80,56 @@ export function rotationErrorDegrees(a,b){
   const d=Math.min(1,Math.abs(dot(a,b)));
   return 2*Math.acos(d)*180/Math.PI;
 }
+// A piece's correct pose is relative to its destination, never its starting
+// transform. Moving or resizing the teacher's cage preserves the fitting pose.
+function qmul(a,b){
+  const [x,y,z,w]=a,[u,v,t,s]=b;
+  return [w*u+x*s+y*t-z*v,w*v-x*t+y*s+z*u,w*t+x*v-y*u+z*s,w*s-x*u-y*v-z*t];
+}
+const identity=[0,0,0,1];
+function boundsCenter(bounds){
+  return bounds?[0,1,2].map(i=>(bounds.min[i]+bounds.max[i])/2):[0,0,0];
+}
+export function assemblyPlacementTransform(scene,pieceId){
+  const link=scene.links.find(l=>l.pieceId===pieceId);
+  const target=scene.targets.find(t=>t.id===link?.targetId);
+  if(!link||!target)return null;
+  if(!link.placement)return structuredClone(target.transform);
+  const pose=link.placement;
+  const rotation=qmul(target.transform.rotation,pose.rotation);
+  const scale=[...pose.scale];
+  const worldCenter=toWorld(pose.offset,target.transform);
+  const anchor=boundsCenter(pose.bounds);
+  const centerOffset=rotateVector(anchor.map((v,i)=>v*scale[i]),rotation);
+  return {
+    position:worldCenter.map((v,i)=>v-centerOffset[i]),
+    rotation,scale,
+  };
+}
+export function fitAssemblyBounds(target,bounds,{margin=0.88}={}){
+  if(!bounds||!vec(bounds.min,3,100000)||!vec(bounds.max,3,100000)||
+    !bounds.min.every((n,i)=>bounds.max[i]-n>1e-6))fail('el modelo no tiene dimensiones 3D válidas');
+  if(!bounded(margin,0.2,0.98))fail('margen de ajuste inválido');
+  if(!validCage(target.vertices))fail('caja de encaje no válida');
+  const lows=[0,1,2].map(i=>Math.min(...target.vertices.map(v=>v[i])));
+  const highs=[0,1,2].map(i=>Math.max(...target.vertices.map(v=>v[i])));
+  const size=[0,1,2].map(i=>highs[i]-lows[i]);
+  const modelSize=[0,1,2].map(i=>bounds.max[i]-bounds.min[i]);
+  // Uniform world scaling preserves shape; the cage owns its own rotation.
+  const fitted=Math.min(100,...size.map((n,i)=>n*target.transform.scale[i]/modelSize[i]))*margin;
+  if(!bounded(fitted,0.001,99))fail('el modelo no se puede ajustar a la caja por sus dimensiones');
+  return {
+    offset:lows.map((v,i)=>(v+highs[i])/2),
+    rotation:[...identity],
+    scale:[fitted,fitted,fitted],
+    bounds:{min:[...bounds.min],max:[...bounds.max]},
+  };
+}
+export function assemblyFitStatus(scene,pieceId,placement){
+  const link=scene.links.find(l=>l.pieceId===pieceId);
+  if(!link)return {ok:false,reason:'wrong-target'};
+  return evaluateAssemblyPlacement(scene,pieceId,link.targetId,placement??assemblyPlacementTransform(scene,pieceId));
+}
 export function defaultAssembly(){
   const pieces=[
     {id:'piece-1',text:'Pieza 1',assetId:null,nodeId:null,initialTransform:{position:[-2.5,0.8,2.5],rotation:[0,0,0,1],scale:[1,1,1]}},
@@ -122,6 +172,12 @@ export function validateAssembly(scene,{requireReady=true}={}){
   for(const link of scene.links){
     if(!pieceIds.has(link.pieceId)||!targetIds.has(link.targetId)||seen.has(link.pieceId))fail('relación de montaje inexistente o duplicada');
     if(!bounded(link.positionTolerance,0,2)||!bounded(link.rotationToleranceDeg,0,180))fail('tolerancias fuera de límites');
+    if(link.scaleTolerance!==undefined&&!bounded(link.scaleTolerance,0,1))fail('tolerancia de escala inválida');
+    if(link.placement!==undefined){
+      const p=link.placement;
+      if(!p||!vec(p.offset,3)||!validQuat(p.rotation)||!vec(p.scale,3,100)||!p.scale.every(v=>v>=0.001))fail('encaje configurado con posición, giro o escala no válidos');
+      if(p.bounds&&(!vec(p.bounds.min,3,100000)||!vec(p.bounds.max,3,100000)||!p.bounds.min.every((v,i)=>p.bounds.max[i]-v>1e-6)))fail('dimensiones de la pieza no válidas');
+    }
     if(!Array.isArray(link.prerequisites)||link.prerequisites.length>ASSEMBLY_MAX_PIECES||link.prerequisites.some(id=>!pieceIds.has(id)||id===link.pieceId))fail('dependencias inválidas');
     seen.add(link.pieceId);deps.set(link.pieceId,link.prerequisites);
   }
@@ -136,10 +192,36 @@ export function evaluateAssemblyPlacement(scene,pieceId,targetId,placement,place
   const link=scene.links.find(l=>l.pieceId===pieceId),target=scene.targets.find(t=>t.id===targetId);
   if(!link||!target||link.targetId!==targetId)return {ok:false,reason:'wrong-target'};
   if(link.prerequisites.some(id=>placed[id]!==scene.links.find(l=>l.pieceId===id)?.targetId))return {ok:false,reason:'prerequisite'};
-  if(!placement||!vec(placement.position,3)||!validQuat(placement.rotation))return {ok:false,reason:'invalid-transform'};
-  if(!cageContains(placement.position,target,link.positionTolerance))return {ok:false,reason:'outside'};
-  if(rotationErrorDegrees(placement.rotation,target.transform.rotation)>link.rotationToleranceDeg)return {ok:false,reason:'rotation'};
-  return {ok:true,reason:'accepted',snap:{position:[...target.transform.position],rotation:[...target.transform.rotation],scale:[...target.transform.scale]}};
+  if(!placement||!vec(placement.position,3)||!validQuat(placement.rotation)||
+    (placement.scale!==undefined&&(!vec(placement.scale,3,100)||!placement.scale.every(v=>v>=0.001))))
+    return {ok:false,reason:'invalid-transform'};
+  const expected=assemblyPlacementTransform(scene,pieceId);
+  const pose=link.placement;
+  if(pose){
+    // Measure the geometric centre, NOT the potentially remote glTF pivot.
+    const center=boundsCenter(pose.bounds);
+    const actual={...placement,scale:placement.scale??expected.scale};
+    const worldCenter=toWorld(center,actual);
+    const desiredCenter=toWorld(center,expected);
+    if(!cageContains(worldCenter,target,link.positionTolerance))return {ok:false,reason:'outside'};
+    if(norm(sub(worldCenter,desiredCenter))>link.positionTolerance+1e-7)return {ok:false,reason:'misaligned'};
+    if(rotationErrorDegrees(actual.rotation,expected.rotation)>link.rotationToleranceDeg)return {ok:false,reason:'rotation'};
+    const maxScaleError=Math.max(...actual.scale.map((v,i)=>Math.abs(v/expected.scale[i]-1)));
+    if(maxScaleError>(link.scaleTolerance??0.12))return {ok:false,reason:'scale'};
+    if(pose.bounds){
+      // All corners must be inside the authored convex cage, not just its pivot.
+      const {min,max}=pose.bounds;
+      const corners=[];
+      for(const x of [min[0],max[0]])for(const y of [min[1],max[1]])for(const z of [min[2],max[2]])corners.push([x,y,z]);
+      if(corners.some(c=>!cageContains(toWorld(c,actual),target,link.positionTolerance)))
+        return {ok:false,reason:'outside-volume'};
+    }
+  }else{
+    // Old, unmodified courses retain their original placement semantics.
+    if(!cageContains(placement.position,target,link.positionTolerance))return {ok:false,reason:'outside'};
+    if(rotationErrorDegrees(placement.rotation,target.transform.rotation)>link.rotationToleranceDeg)return {ok:false,reason:'rotation'};
+  }
+  return {ok:true,reason:'accepted',snap:expected};
 }
 export function inspectAssemblyGLB(bytes){
   const data=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes??[]);
