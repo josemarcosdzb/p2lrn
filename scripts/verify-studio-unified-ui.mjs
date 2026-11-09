@@ -548,6 +548,7 @@ async function browserScenario(){
   // and its GLB must survive a complete .p2lrn round-trip in both DOM modes.
   const {renderQuestionnaireVisualEditor}=await import('/studio/questionnaire-editor.js');
   const {buildQuestionnaireGame}=await import('/questionnaire-games-core.js');
+  const {create3DAuthoringScene}=await import('/player/current/dist/p2lrn.esm.js');
   const makeGLB=()=>{
     const body=new Uint8Array(44),dv=new DataView(body.buffer);
     const xyz=[0,0,0,0.8,0,0,0,0.8,0];
@@ -577,7 +578,7 @@ async function browserScenario(){
     expect(current.payload.questions[0].assembly3d?.targets?.length===2,'Assembly 3D activity was not created');
     const inspector=document.createElement('div');item.root.append(inspector);
     renderQuestionnaireVisualEditor(inspector,{model:item.course,activityId:activity.id,payload:current.payload,
-      renderer:'https://p2lrn.org/renderer/questionnaire/3d-order-match'});
+      renderer:'https://p2lrn.org/renderer/questionnaire/3d-order-match',createScene:create3DAuthoringScene});
     await Promise.resolve();
     expect(inspector.querySelector('.p2lrn-assembly-editor svg'),'Native assembly geometry editor missing');
     const selected=inspector.querySelector('.a3-fields input');
@@ -588,12 +589,36 @@ async function browserScenario(){
     const modified=await item.course.readQuestionnaire(activity.id);
     expect(Math.abs(modified.payload.questions[0].assembly3d.targets[0].transform.position[0]-(previous-0.45))<0.001,
       '3D authoring did not persist XYZ edits to native questionnaire bytes');
-    const asset=await item.course.addAssemblyAsset({bytes:makeGLB(),filename:'pieza.glb'});
-    const question=modified.payload.questions[0];
-    question.assembly3d.assets.push({id:asset.id,path:asset.path,name:'pieza.glb',size:asset.size,nodes:asset.inspected.nodes});
-    question.assembly3d.pieces[0].assetId=asset.id;
-    question.assembly3d.pieces[0].nodeId='0';
-    item.course.setQuestionnaire(activity.id,modified.payload);
+    const pieceSelect=[...inspector.querySelectorAll('.a3-tree button')].find(button=>button.textContent==='Pieza 1');
+    expect(pieceSelect,'Teacher cannot select a piece for GLB assignment');
+    pieceSelect.click();
+    const upload=inspector.querySelector('input[type=file]');
+    expect(upload,'Shared editor cannot import GLB through the visible UI');
+    const transfer=new DataTransfer();
+    transfer.items.add(new File([makeGLB()],'pieza.glb',{type:'model/gltf-binary'}));
+    upload.files=transfer.files;
+    upload.dispatchEvent(new Event('change',{bubbles:true}));
+    let imported=null;
+    for(let i=0;i<100;i++){
+      await new Promise(done=>setTimeout(done,75));
+      imported=await item.course.readQuestionnaire(activity.id);
+      if(imported.payload.questions[0].assembly3d.assets[0]?.path&&imported.payload.questions[0].assembly3d.pieces[0].assetId)break;
+    }
+    const sceneDataImported=imported?.payload.questions[0].assembly3d;
+    expect(sceneDataImported?.assets?.length===1&&sceneDataImported.pieces[0].assetId===sceneDataImported.assets[0].id,
+      'Visible Studio import did not bind GLB asset to its selected piece');
+    const asset=sceneDataImported.assets[0];
+    const webgl=inspector.querySelector('canvas.a3-webgl');
+    for(let i=0;i<100&&webgl?.hidden;i++)await new Promise(done=>setTimeout(done,75));
+    expect(webgl&&!webgl.hidden&&webgl.width>=320&&Boolean(webgl.getContext('webgl2')),
+      'Shared professor editor did not initialize a real Three.js WebGL2 scene');
+    for(let i=0;i<100;i++){
+      const warning=inspector.querySelector('.a3-error')?.textContent??'';
+      if(warning.includes('No se pudo mostrar')||warning.includes('Vista 3D no disponible'))throw new Error(warning);
+      if(!inspector.querySelector('.a3-scene svg')?.hidden)throw new Error('Three.js authoring unexpectedly switched back to SVG fallback');
+      await new Promise(done=>setTimeout(done,40));
+      if(i===7)break;
+    }
     const exported=await exportP2LRNPackage(item.course);
     const opened=await openP2LRNPackageBytes(exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength));
     const rendered=opened.entities.get(activity.id);
@@ -627,8 +652,11 @@ try{
     let url;
     try{url=new URL(req.url,'http://127.0.0.1');}catch{res.writeHead(400);res.end();return;}
     if(url.pathname==='/'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end('<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body></body></html>');return;}
-    const path=resolve(webRoot,'.'+decodeURIComponent(url.pathname));
-    if(!path.startsWith(webRoot+sep)){res.writeHead(403);res.end();return;}
+    const isPlayer=url.pathname.startsWith('/player/current/dist/');
+    const root=isPlayer?resolve('packages/player/dist'):webRoot;
+    const requested=isPlayer?url.pathname.slice('/player/current/dist/'.length):'.'+url.pathname;
+    const path=resolve(root,decodeURIComponent(requested));
+    if(!path.startsWith(root+sep)){res.writeHead(403);res.end();return;}
     readFile(path).then(bytes=>{res.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8','Cache-Control':'no-store'});res.end(bytes);}).catch(()=>{res.writeHead(404);res.end();});
   });
   await new Promise((done,fail)=>{server.once('error',fail);server.listen(0,'127.0.0.1',done);});
