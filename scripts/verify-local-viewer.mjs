@@ -577,8 +577,11 @@ async function verifyThreeGameInteractionAndResume(cdp){
     const open=[...root.querySelectorAll('.p2lrn-nav button')].find(button=>button.textContent.includes('Laboratorio 3D QA'));
     if(!open)throw new Error('3D QA activity missing from navigation');
     open.click();
-    await wait(()=>root.querySelector('.p2lrn-3d-trial')?.querySelector('h3')?.textContent==='Ordena los tres bloques','3D ordering scene');
-    const trial=()=>root.querySelector('.p2lrn-3d-trial');
+    // Scope the trial to the currently visible Player stage: background or
+    // cached activity trees may retain old accessible controls in the DOM.
+    const stage=()=>root.querySelector('.p2lrn-stage');
+    const trial=()=>stage()?.querySelector('.p2lrn-3d-trial');
+    await wait(()=>trial()?.querySelector('h3')?.textContent==='Ordena los tres bloques','3D ordering scene');
     const title=()=>trial()?.querySelector('h3')?.textContent||'';
     const status=()=>[...root.querySelectorAll('.p2lrn-game-status')].at(-1)?.textContent??'';
     const select=(name,value)=>{
