@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {createServer} from 'node:http';
 import {existsSync} from 'node:fs';
-import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 
@@ -648,7 +648,15 @@ async function browserScenario(){
     renderQuestionnaireVisualEditor(inspector,{model:item.course,activityId:activity.id,payload:current.payload,
       renderer:'https://p2lrn.org/renderer/questionnaire/3d-order-match',createScene:create3DAuthoringScene});
     await Promise.resolve();
-    expect(inspector.querySelector('.p2lrn-assembly-editor svg'),'Native assembly geometry editor missing');
+    expect(inspector.querySelector('.p2lrn-assembly-editor svg'),'Native assembly geometry fallback missing');
+    expect(!inspector.querySelector('.q-editor-head,.q-settings,.q-card,.q-basic-grid'),
+      'Assembly still includes a duplicate questionnaire editing screen above the 3D viewport');
+    expect(inspector.querySelector('.a3-main')?.children.length===1,
+      'Assembly workspace must contain exactly one full-size 3D scene');
+    expect(inspector.querySelector('.a3-assets')?.tagName==='DETAILS'&&!inspector.querySelector('.a3-assets')?.open,
+      'Model library must be a collapsed in-scene menu, not a second screen');
+    expect(inspector.querySelector('.a3-properties')?.hidden,
+      'Precision controls obscure the model instead of starting collapsed');
     const selected=inspector.querySelector('.a3-fields input');
     expect(selected,'Authoring transform field missing');
     const previous=Number(selected.value);
@@ -857,8 +865,49 @@ async function browserScenario(){
   const lightStyle=getComputedStyle(website.toolbar).fontFamily;
   const shadowStyle=getComputedStyle(npm.toolbar).fontFamily;
   expect(lightStyle===shadowStyle,'Stylesheets differ across light and Shadow DOM');
+  // Final visual evidence: mount a real native assembly in a SINGLE viewer
+  // using the same compiled GLB, Three runtime and Studio editor. No mockups.
+  const visualGame=website.course.addGame(website.course.rootId,{kind:'assembly-3d',title:'Montaje 3D · una escena'});
+  const visualResource=await website.course.addAssemblyAsset({bytes:makeGLB(),filename:'pieza.glb'});
+  const visualData=await website.course.readQuestionnaire(visualGame.id);
+  const assembly=visualData.payload.questions[0].assembly3d;
+  assembly.assets.push({id:visualResource.id,path:visualResource.path,name:'pieza.glb',
+    size:visualResource.size,nodes:visualResource.inspected.nodes});
+  assembly.pieces[0].assetId=visualResource.id;
+  assembly.pieces[0].nodeId=visualResource.inspected.nodes[0].nodeId;
+  website.course.setQuestionnaire(visualGame.id,visualData.payload);
+  const viewer=document.createElement('main');
+  viewer.className='p2lrn-assembly-qa-single';
+  document.body.replaceChildren(viewer);
+  document.body.style.cssText='margin:0;padding:18px;box-sizing:border-box;background:#edf2f7;font:15px system-ui,sans-serif';
+  viewer.style.cssText='max-width:1450px;margin:auto;background:#fff;border:1px solid #d0dae5;border-radius:12px;padding:16px';
+  renderQuestionnaireVisualEditor(viewer,{model:website.course,activityId:visualGame.id,
+    payload:visualData.payload,renderer:'https://p2lrn.org/renderer/questionnaire/3d-order-match',
+    createScene:create3DAuthoringScene});
+  let fitted=false;
+  for(let i=0;i<120;i++){
+    const box=viewer.querySelector('.a3-scene'),rendered=box?.querySelector('canvas.a3-webgl');
+    const game=await website.course.readQuestionnaire(visualGame.id);
+    fitted=Boolean(game.payload.questions[0].assembly3d.links[0].placement?.bounds);
+    if(fitted&&rendered&&!rendered.hidden&&rendered.width>=320)break;
+    await new Promise(done=>setTimeout(done,75));
+  }
+  expect(fitted,'Assembly QA screen never fitted the actual GLB model inside its target');
+  expect(viewer.querySelectorAll('.a3-scene').length===1,'More than one scene is visible in the assembler');
+  expect(!viewer.querySelector('.q-editor-head,.q-settings,.q-card'),'Second questionnaire editor present in assembler');
+  expect(viewer.querySelector('.a3-main').children.length===1,'A second work area remains');
+  expect(viewer.querySelector('.a3-assets')?.open===false,'Parts menu covers the model on load');
+  expect(viewer.querySelector('.a3-properties')?.hidden===true,'Precision panel covers the model on load');
+  const finalCanvas=viewer.querySelector('canvas.a3-webgl');
+  expect(finalCanvas&&!finalCanvas.hidden&&finalCanvas.width>=320&&finalCanvas.getContext('webgl2'),
+    'Visual evidence is not a rendered real WebGL assembler');
+  const resultForScreenshot=await website.course.readQuestionnaire(visualGame.id);
+  expect(assemblyFitStatus(resultForScreenshot.payload.questions[0].assembly3d,'piece-1').ok,
+    'Visual evidence GLB does not fit in its configured cage');
   return {ok:true,sameUI:true,sharedControls:website.toolbar.querySelectorAll('button').length,
-    persisted:website.writes>0&&npm.writes>0,roundTrip:true,shadowDOM:true,stylesMatch:true};
+    persisted:website.writes>0&&npm.writes>0,roundTrip:true,shadowDOM:true,stylesMatch:true,
+    singleAssemblyViewport:true,glbInsideCage:true};
+
 }
 
 const webRoot=resolve('packages/toolkit/web');
@@ -921,6 +970,18 @@ try{
   });
   if(r.exceptionDetails)throw new Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);
   assert.equal(r.result?.value?.ok,true);
+  // Reusable evidence file in the existing Studio preview workspace. This is
+  // captured from headless Chrome's REAL WebGL canvas, not generated art.
+  await send('Emulation.setDeviceMetricsOverride',{width:1480,height:980,deviceScaleFactor:1,mobile:false});
+  await sleep(350);
+  const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+  const dest=process.env.P2LRN_STUDIO_QA_SCREENSHOT||
+    join(process.env.USERPROFILE??process.env.HOME??process.cwd(),
+      'Downloads','p2lrn-mejorastudio-preview','qa-assembly-one-viewport.png');
+  if(existsSync(resolve(dest,'..'))) {
+    await writeFile(dest,Buffer.from(shot.data,'base64'));
+    console.log('ASSEMBLY_SINGLE_VIEW_SCREENSHOT='+dest);
+  }
   console.log(JSON.stringify(r.result.value,null,2));
 }finally{
   try{ws?.close();}catch{}
