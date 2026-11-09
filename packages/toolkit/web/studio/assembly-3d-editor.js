@@ -1,6 +1,6 @@
 import {
   ASSEMBLY_MAX_PIECES,CAGE_EDGES,cageVertices,validCage,toWorld,toLocal,
-  validateAssembly,inspectAssemblyGLB,
+  validateAssembly,inspectAssemblyGLB,fitAssemblyBounds,assemblyPlacementTransform,assemblyFitStatus,
 } from '../assembly-3d-core.js';
 
 // The authoring viewport is a lightweight geometric overlay. The same
@@ -36,6 +36,24 @@ const style=`
 .p2lrn-assembly-editor .a3-scene:focus-within{outline:2px solid #0d9488}
 @media(max-width:950px){.p2lrn-assembly-editor .a3-main{grid-template-columns:1fr 1fr}.p2lrn-assembly-editor .a3-scene{grid-column:1 / -1;grid-row:1}}
 @media(max-width:620px){.p2lrn-assembly-editor .a3-main{grid-template-columns:1fr}.p2lrn-assembly-editor .a3-scene{grid-column:1;grid-row:auto}}
+
+/* One workshop, one actual 3D viewport. The navigator and precision controls
+   are docks for that same scene, never a second preview canvas. */
+.p2lrn-assembly-editor .a3-main{grid-template-columns:minmax(0,1fr);grid-template-areas:"scene" "navigator" "inspector"}
+.p2lrn-assembly-editor .a3-main>.a3-scene{grid-area:scene;min-width:0}
+.p2lrn-assembly-editor .a3-main>.a3-pane:first-child{grid-area:navigator}
+.p2lrn-assembly-editor .a3-main>.a3-pane:last-child{grid-area:inspector}
+.p2lrn-assembly-editor .a3-scene canvas,.p2lrn-assembly-editor .a3-scene svg{width:100%;height:clamp(380px,59vh,740px);aspect-ratio:auto}
+.p2lrn-assembly-editor .a3-tree{display:flex;flex-wrap:wrap;max-height:160px;align-items:center}
+.p2lrn-assembly-editor .a3-tree>strong{width:100%}
+.p2lrn-assembly-editor .a3-tree>button{width:auto;max-width:220px;white-space:normal}
+.p2lrn-assembly-editor .a3-tree>label{max-width:min(100%,320px)}
+.p2lrn-assembly-editor .a3-main>.a3-pane:last-child{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));align-items:start}
+.p2lrn-assembly-editor .a3-main>.a3-pane:last-child>.a3-panel-title{grid-column:1/-1}
+.p2lrn-assembly-editor .a3-main>.a3-pane:last-child details{grid-column:1/-1}
+.p2lrn-assembly-editor .a3-toolbar .a3-primary{background:#0f766e;color:#fff;border-color:#0f766e}
+.p2lrn-assembly-editor .a3-scene-note{padding:6px 10px;border-radius:7px;background:#071522c9;font-size:12px;max-width:calc(100% - 32px)}
+@media(max-width:620px){.p2lrn-assembly-editor .a3-scene canvas,.p2lrn-assembly-editor .a3-scene svg{height:360px}.p2lrn-assembly-editor .a3-main{grid-template-areas:"scene" "navigator" "inspector"}}
 `;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const degrees=180/Math.PI;
@@ -76,7 +94,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 600 410');svg.setAttribute('role','img');svg.setAttribute('aria-label','Editor 3D de piezas y volúmenes de encaje; gira arrastrando el fondo');
   svg.tabIndex=0;
   const canvas=$('canvas','a3-webgl');canvas.hidden=true;canvas.tabIndex=0;canvas.setAttribute('aria-label','Visor 3D editable; arrastra piezas, jaulas o vértices, y gira la cámara arrastrando el fondo');
-  const note=$('div','a3-scene-note','Arrastra puntos verdes para editar · Mayús: altura · Fondo: girar vista');
+  const note=$('div','a3-scene-note','La pieza aparece dentro de su destino. Arrástrala para ajustar el encaje; arrastra el fondo para girar.');
   const warning=$('p','a3-error');warning.setAttribute('role','status');warning.setAttribute('aria-live','polite');
   let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0;
   let yaw=0.55,pitch=0.73,zoom=46,drag=null;
@@ -109,7 +127,10 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     if(!link)return;
     apply(()=>{scene.links=scene.links.filter(x=>x!==link);scene.pieces=scene.pieces.filter(x=>x.id!==link.pieceId);scene.targets=scene.targets.filter(x=>x.id!==link.targetId);scene.links.forEach(x=>x.prerequisites=x.prerequisites.filter(y=>y!==link.pieceId));selected={kind:'target',id:scene.targets[0].id};});
   });
-  buttons.append(undo,redoButton,add,remove);
+  const fit=btn('Ajustar pieza dentro de la caja',()=>fitSelected());
+  fit.classList.add('a3-primary');
+  const frame=btn('Centrar encaje',()=>focusSelection());
+  buttons.append(fit,frame,undo,redoButton,add,remove);
   head.append($('strong',null,'Ensamblaje 3D · editor de piezas y jaulas'),buttons);
   root.append(head);
   tree.append($('strong',null,'Escena / piezas / destinos'));
@@ -143,7 +164,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       const loc=project(target.transform.position);
       element('text',{x:loc[0]+7,y:loc[1]+8,fill:'#ccfbf1','font-size':12},group).textContent=target.text;
     }});});
-    scene.pieces.forEach(piece=>{const p=project(piece.initialTransform.position);sortItems.push({depth:p[2],run:()=>{
+    scene.pieces.forEach(piece=>{const p=project(assemblyPlacementTransform(scene,piece.id)?.position??piece.initialTransform.position);sortItems.push({depth:p[2],run:()=>{
       const active=selected.kind==='piece'&&selected.id===piece.id;
       const node=element('g',{'data-kind':'piece','data-id':piece.id});const box=element('rect',{x:p[0]-12,y:p[1]-12,width:24,height:24,rx:5,fill:active?'#fcd34d':'#60a5fa',stroke:'#e2e8f0','stroke-width':active?2:1},node);box.dataset.kind='piece';box.dataset.id=piece.id;box.style.cursor='move';element('text',{x:p[0]+16,y:p[1]+5,fill:'#eff6ff','font-size':12},node).textContent=piece.text;
     }});});
@@ -160,16 +181,41 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     if(!obj){props.append($('p','a3-hint','Selecciona una pieza o destino.'));return}
     props.append($('div','a3-panel-title',(selected.kind==='piece'?'Pieza · ':'Destino · ')+obj.id));
     const name=$('label');name.append($('span',null,'Nombre educativo'));const nameInput=$('input');nameInput.type='text';nameInput.maxLength=100;nameInput.value=obj.text;nameInput.addEventListener('change',()=>apply(()=>{obj.text=nameInput.value.trim()||obj.text}));name.append(nameInput);props.append(name);
-    const t=selected.kind==='piece'?obj.initialTransform:obj.transform;
-    props.append(fieldset('Posición (m)',t.position,(axis,n)=>apply(()=>{t.position[axis]=n}),{step:0.1}));
-    props.append(fieldset('Rotación (°)',quatEuler(t.rotation),(axis,n)=>apply(()=>{const xyz=quatEuler(t.rotation);xyz[axis]=n;t.rotation=eulerQuat(xyz)}),{min:-180,max:180,step:5}));
-    props.append(fieldset('Escala',t.scale,(axis,n)=>apply(()=>{t.scale[axis]=n}),{min:0.001,max:100,step:0.1}));
     if(selected.kind==='target'){
+      const t=obj.transform;
+      props.append(fieldset('Posición de la caja (m)',t.position,(axis,n)=>apply(()=>{t.position[axis]=n}),{step:0.1}));
+      props.append(fieldset('Rotación de la caja (°)',quatEuler(t.rotation),(axis,n)=>apply(()=>{const xyz=quatEuler(t.rotation);xyz[axis]=n;t.rotation=eulerQuat(xyz)}),{min:-180,max:180,step:5}));
+      props.append(fieldset('Escala de la caja',t.scale,(axis,n)=>apply(()=>{t.scale[axis]=n}),{min:0.001,max:100,step:0.1}));
+      props.append($('p','a3-hint','La pieza asociada se ve dentro de esta caja. Arrastra la caja y la pieza seguirá el mismo destino; cambia los vértices para ajustar el volumen.'));
+
       const pick=$('label');pick.append($('span',null,'Vértice editable'));
       const sel=$('select');obj.vertices.forEach((v,i)=>{const o=$('option');o.value=String(i);o.textContent='V'+(i+1);o.selected=vertexIndex===i;sel.append(o);});sel.addEventListener('change',()=>{vertexIndex=Number(sel.value);drawScene();propertyPanel();});pick.append(sel);props.append(pick);
       props.append(fieldset('Vértice V'+(vertexIndex+1)+' (local)',obj.vertices[vertexIndex],(axis,n)=>apply(()=>{obj.vertices[vertexIndex][axis]=n}),{min:-100,max:100,step:0.1}));
       const vis=$('label');vis.append($('span',null,'Ayuda visual al alumno'));const vs=$('select');[['outline','Contorno'],['hint','Pista al aproximarse'],['hidden','Invisible']].forEach(([id,label])=>{const o=$('option');o.value=id;o.textContent=label;o.selected=obj.visibility===id;vs.append(o);});vs.addEventListener('change',()=>apply(()=>{obj.visibility=vs.value}));vis.append(vs);props.append(vis);
     }else{
+      const pairedEntry=paired(obj.id),link=pairedEntry?.link;
+      if(link){
+        const pose=link.placement;
+        props.append($('p','a3-hint','Encaje final dentro de «'+pairedEntry.target.text+'». Edita aquí el volumen y la colocación real; la posición de inicio del alumno se guarda aparte.'));
+        if(pose){
+          props.append(fieldset('Centro dentro de la caja (XYZ)',pose.offset,(axis,n)=>apply(()=>{pose.offset[axis]=n}),{min:-100,max:100,step:0.05}));
+          props.append(fieldset('Giro dentro de la caja (°)',quatEuler(pose.rotation),(axis,n)=>apply(()=>{const xyz=quatEuler(pose.rotation);xyz[axis]=n;pose.rotation=eulerQuat(xyz)}),{min:-180,max:180,step:2}));
+          props.append(fieldset('Tamaño de la pieza',pose.scale,(axis,n)=>apply(()=>{pose.scale[axis]=n}),{min:0.001,max:100,step:0.05}));
+        }else props.append($('p','a3-hint','Elige «Ajustar pieza dentro de la caja» para medir el modelo y definir su encaje.'));
+        const fitButton=btn('Medir y encajar automáticamente',()=>fitSelected());
+        props.append(fitButton);
+        if(pose){
+          const result=assemblyFitStatus(scene,obj.id,assemblyPlacementTransform(scene,obj.id));
+          props.append($('p','a3-hint',result.ok?'El modelo encaja dentro del volumen configurado.':'Ajusta la caja o la pieza: '+result.reason));
+        }
+      }
+      const initial=$('details'),summary=$('summary',null,'Posición de salida del alumno (distinta del encaje)');
+      initial.append(summary);
+      const t=obj.initialTransform;
+      initial.append(fieldset('Salida: posición',t.position,(axis,n)=>apply(()=>{t.position[axis]=n}),{step:0.1}));
+      initial.append(fieldset('Salida: rotación',quatEuler(t.rotation),(axis,n)=>apply(()=>{const xyz=quatEuler(t.rotation);xyz[axis]=n;t.rotation=eulerQuat(xyz)}),{min:-180,max:180,step:5}));
+      initial.append(fieldset('Salida: escala',t.scale,(axis,n)=>apply(()=>{t.scale[axis]=n}),{min:0.001,max:100,step:0.05}));
+      props.append(initial);
       const assetLabel=$('label');assetLabel.append($('span',null,'Modelo GLB de la pieza'));const sel=$('select');
       [['','Forma básica'] ,...scene.assets.map(a=>[a.id,a.name])].forEach(([id,text])=>{const o=$('option');o.value=id;o.textContent=text;o.selected===(obj.assetId??'');sel.append(o);});
       sel.addEventListener('change',()=>apply(()=>{obj.assetId=sel.value||null;obj.nodeId=null}));assetLabel.append(sel);props.append(assetLabel);
@@ -179,7 +225,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       }
       const link=scene.links.find(l=>l.pieceId===obj.id);
       if(link){
-        const targetField=$('label');targetField.append($('span',null,'Destino correcto'));const selects=$('select');scene.targets.forEach(x=>{const o=$('option');o.value=x.id;o.textContent=x.text;o.selected=x.id===link.targetId;selects.append(o)});selects.addEventListener('change',()=>apply(()=>{link.targetId=selects.value}));targetField.append(selects);props.append(targetField);
+        const targetField=$('label');targetField.append($('span',null,'Destino correcto'));const selects=$('select');scene.targets.forEach(x=>{const o=$('option');o.value=x.id;o.textContent=x.text;o.selected=x.id===link.targetId;selects.append(o)});selects.addEventListener('change',()=>apply(()=>{link.targetId=selects.value;delete link.placement;}));targetField.append(selects);props.append(targetField);
         props.append(fieldset('Tolerancias', [link.positionTolerance,link.rotationToleranceDeg,0],(axis,n)=>{if(axis===2)return;apply(()=>{if(axis===0)link.positionTolerance=n;else link.rotationToleranceDeg=n})},{min:0,max:180,step:0.05}));
         const prerequisites=$('label');prerequisites.append($('span',null,'Requiere colocar primero'));
         const dep=$('select');[['','Ninguna'],...scene.pieces.filter(x=>x.id!==obj.id).map(x=>[x.id,x.text])].forEach(([v,name])=>{const o=$('option');o.value=v;o.textContent=name;o.selected===(link.prerequisites[0]??'');dep.append(o);});dep.addEventListener('change',()=>apply(()=>{link.prerequisites=dep.value?[dep.value]:[]}));prerequisites.append(dep);props.append(prerequisites);
@@ -190,7 +236,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     entries.replaceChildren();
     for(const [name,kind,items] of [['Piezas','piece',scene.pieces],['Destinos','target',scene.targets]]){
       entries.append($('strong',null,name));
-      items.forEach(p=>{const b=btn(p.text,()=>{selected={kind,id:p.id};vertexIndex=0;drawAll();});b.setAttribute('aria-pressed',selected.kind===kind&&selected.id===p.id?'true':'false');entries.append(b);});
+      items.forEach(p=>{const b=btn(p.text,()=>{selected={kind,id:p.id};vertexIndex=0;drawAll();focusSelection();});b.setAttribute('aria-pressed',selected.kind===kind&&selected.id===p.id?'true':'false');entries.append(b);});
     }
     const importLabel=$('label');importLabel.append($('strong',null,'Importar modelo GLB'));
     const file=$('input');file.type='file';file.accept='.glb,model/gltf-binary';file.setAttribute('aria-label','Importar modelo 3D GLB');
@@ -208,6 +254,35 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     [['','Sin modelo base'],...scene.assets.map(a=>[a.id,a.name])].forEach(([id,text])=>{const o=$('option');o.value=id;o.textContent=text;o.selected=== (scene.referenceAssetId??'');refSelect.append(o);});
     refSelect.addEventListener('change',()=>apply(()=>{scene.referenceAssetId=refSelect.value||null}));reference.append(refSelect);entries.append(reference);
     entries.append($('small','a3-hint','El archivo GLB se incorpora al curso. Si contiene varios nodos, selecciona qué submalla corresponde a cada pieza. Las jaulas son los destinos, no una copia del modelo.'));
+  }
+  const paired=(id)=>{
+    const link=scene.links.find(l=>l.pieceId===id||l.targetId===id);
+    return link?{link,piece:scene.pieces.find(p=>p.id===link.pieceId),target:scene.targets.find(t=>t.id===link.targetId)}:null;
+  };
+  function fitSelected({silent=false}={}){
+    const pair=paired(selected.id);
+    if(!pair?.piece||!pair.target)return false;
+    const {piece,target,link}=pair;
+    const bounds=threeRuntime?.getObjectLocalBounds?.('author-piece:'+piece.id);
+    if(piece.assetId&&!bounds){
+      if(!silent)message('Para ajustar el modelo real, primero tiene que cargarse en el visor 3D.');
+      return false;
+    }
+    const measured=bounds??{min:[-0.625,-0.45,-0.5],max:[0.625,0.45,0.5]};
+    const success=apply(()=>{
+      link.placement=fitAssemblyBounds(target,measured);
+      piece.initialTransform.scale=[...link.placement.scale];
+    });
+    if(success){selected={kind:'piece',id:piece.id};drawAll();focusSelection();}
+    return success;
+  }
+  function focusSelection(){
+    if(!threeRuntime)return;
+    const pair=paired(selected.id);
+    if(!pair?.target)return;
+    const target=pair.target,coords=target.vertices.map(v=>toWorld(v,target.transform));
+    const radius=Math.max(3.4,...coords.map(v=>Math.hypot(...v.map((n,i)=>n-target.transform.position[i]))))*2.6;
+    threeRuntime.focusOn(target.transform.position,Math.max(4.2,radius));
   }
   function drawAll(){if(!svg.hidden)drawScene();treePanel();propertyPanel();}
 
