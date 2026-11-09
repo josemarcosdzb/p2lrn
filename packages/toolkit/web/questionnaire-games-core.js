@@ -1,4 +1,5 @@
 import {normalizeText, validateQuestionnaire} from './questionnaire-core.js';
+import {validateAssembly} from './assembly-3d-core.js';
 import {
   MEMORY_RENDERER,
   MATCHING_RENDERER,
@@ -478,6 +479,12 @@ function build3D(payload, seedSource) {
       if(new Set(left.map((item)=>normalizeText(item.text))).size!==left.length||new Set(right.map((item)=>normalizeText(item.text))).size!==right.length){reasons.push(`${question.id}: hay textos duplicados no distinguibles físicamente.`);continue;}
       const lset=new Set(left.map((item)=>item.id)),rset=new Set(right.map((item)=>item.id));if(connections.some((c)=>!lset.has(c.leftId)||!rset.has(c.rightId))){reasons.push(`${question.id}: relación 3D apunta a elemento inexistente.`);continue;}
       trials.push({type:'matching-3d',questionId:question.id,prompt:question.prompt,left,right:rightWithoutFacing(left,right,connections,seedFor(payload,`3d:${question.id}`,seedSource)),connections});continue;
+    }
+    if(question.type==='classification'&&question.assembly3d){
+      validateAssembly(question.assembly3d);
+      const assignments=question.solution.assignments.map(entry=>({itemId:String(entry.item),categoryId:String(entry.category)}));
+      trials.push({type:'assembly-3d',questionId:question.id,prompt:question.prompt,scene:structuredClone(question.assembly3d),assignments});
+      continue;
     }
     if(question.type==='classification'){
       const objects=(question.items??[]).map((item)=>({id:String(item.id),text:String(item.text)}));
