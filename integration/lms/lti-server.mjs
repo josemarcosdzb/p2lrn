@@ -118,6 +118,7 @@ function playerHtml({entityId,csrf,playerScript}){
  'if(result.saved!==true)throw Error("P2LRN server did not confirm state persistence");',
  'if(Number.isSafeInteger(result.revision))revisions.set(key,result.revision);return result;});',
  'stateWrites.set(key,pending);try{return await pending}finally{if(stateWrites.get(key)===pending)stateWrites.delete(key)}}',
+ 'window.addEventListener("beforeunload",event=>{if(stateWrites.size||status.dataset.saveError==="true"){event.preventDefault();event.returnValue="";}});',
  'async function main(){if(window.P2LRNReady)await window.P2LRNReady;',
  'await customElements.whenDefined("p2lrn-player");',
  'const player=document.querySelector("p2lrn-player");',

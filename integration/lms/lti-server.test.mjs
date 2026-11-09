@@ -192,6 +192,7 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.match(htmlBody,/expectedRevision/, 'the embedded LMS adapter must preserve optimistic state revisions');
   assert.match(htmlBody,/retryTransient/, 'temporary network failures must be retried in a bounded fashion');
   assert.match(htmlBody,/No se pudo guardar tu progreso/, 'a student must see failed progress persistence');
+  assert.match(htmlBody,/beforeunload/, 'leaving with unsaved answers must warn the learner');
   assert.match(htmlBody,/p2lrn:rendered/, 'loading a file is not the same as a rendered activity');
   assert(!htmlBody.includes('learner-opaque-1'));
   const cookie=launch.headers.get('set-cookie').split(';')[0];
