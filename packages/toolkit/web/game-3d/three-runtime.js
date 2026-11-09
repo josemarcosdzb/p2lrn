@@ -1,4 +1,6 @@
 import * as THREE from '../vendor/three.module.js';
+import {GLTFLoader} from '../vendor/loaders/GLTFLoader.js';
+import {clone as cloneRig} from '../vendor/utils/SkeletonUtils.js';
 import {createRapierPhysicsWorld} from './physics/rapier-adapter.js';
 import {createNoPhysicsWorld} from './physics/no-physics.js';
 
@@ -215,6 +217,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   let cameraDrag=null;
 
   const meshes=new Map();
+  const modelCache=new Map();
   const bodies=new Set();
   const interactables=[];
   const connectors=[];
@@ -318,6 +321,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     for (const id of bodies) physicsWorld.remove(id);
     bodies.clear();
     meshes.clear();
+    modelCache.clear();
     interactables.length=0;
     connectors.length=0;
     carried.clear();
@@ -412,6 +416,70 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     return mesh;
   }
 
+
+  async function addModel({id,assetId,bytes,nodeId=null,position=[0,0.9,0],rotation=[0,0,0,1],scale=[1,1,1],interaction=null,opacity=1}={}) {
+    if(!bytes || !assetId)throw new Error('Modelo 3D no disponible dentro del paquete');
+    let loading=modelCache.get(assetId);
+    if(!loading){
+      const buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+      loading=(new GLTFLoader()).parseAsync(buffer,'');
+      modelCache.set(assetId,loading);
+      loading.catch(()=>{if(modelCache.get(assetId)===loading)modelCache.delete(assetId);});
+    }
+    const gltf=await loading;
+    if(!alive) return null;
+    const source=nodeId===null?gltf.scene:await gltf.parser.getDependency('node',Number(nodeId));
+    if(!source)throw new Error('Submalla GLB inexistente: '+String(nodeId));
+    const root=new THREE.Group();
+    // SkeletonUtils preserves the internal skeleton references for skinned GLBs.
+    const visible=cloneRig(source);
+    visible.traverse((part)=>{if(part.isMesh){part.castShadow=true;part.receiveShadow=true;}});
+    root.add(visible);
+    root.position.fromArray(normalizePosition(position));
+    root.quaternion.fromArray(rotation);
+    root.scale.fromArray(scale);
+    root.userData.p2lrnInteraction=interaction;
+    if(opacity<1)visible.traverse(part=>{if(part.isMesh){part.material=Array.isArray(part.material)?part.material.map(m=>m.clone()):part.material.clone();const materials=Array.isArray(part.material)?part.material:[part.material];materials.forEach(m=>{m.transparent=true;m.opacity=opacity;m.depthWrite=false;});}});
+    stage.add(root);
+    meshes.set(String(id),root);
+    if(interaction)interactables.push(root);
+    return root;
+  }
+
+  function addCage({id,vertices,position=[0,1,0],rotation=[0,0,0,1],scale=[1,1,1],interaction=null,visibility='outline'}={}){
+    const group=new THREE.Group();
+    const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+    const coords=edges.flatMap(([a,b])=>[...vertices[a],...vertices[b]]);
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(coords,3));
+    const line=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#5eead4',transparent:true,opacity:visibility==='hidden'?0:visibility==='hint'?0.2:0.68}));
+    line.visible=visibility!=='hidden';
+    group.add(line);
+    // Invisible volume for pointer picking; the actual acceptance test uses
+    // the authored oriented convex polyhedron, never this rough AABB.
+    const lows=[0,1,2].map(i=>Math.min(...vertices.map(p=>p[i]))),highs=[0,1,2].map(i=>Math.max(...vertices.map(p=>p[i])));
+    const box=new THREE.Mesh(new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i]))),new THREE.MeshBasicMaterial({visible:false,depthWrite:false}));
+    box.position.fromArray(highs.map((v,i)=>(v+lows[i])/2));
+    group.add(box);
+    group.position.fromArray(normalizePosition(position));
+    group.quaternion.fromArray(rotation);
+    group.scale.fromArray(scale);
+    group.userData.p2lrnInteraction=interaction;
+    stage.add(group);
+    meshes.set(String(id),group);
+    if(interaction)interactables.push(group);
+    return group;
+  }
+
+  function setTransform(id,transform){
+    const mesh=meshes.get(String(id));
+    if(!mesh||!transform)return false;
+    if(transform.position)mesh.position.fromArray(normalizePosition(transform.position));
+    if(transform.rotation)mesh.quaternion.fromArray(transform.rotation);
+    if(transform.scale)mesh.scale.fromArray(transform.scale);
+    return true;
+  }
+
   function playerHandPosition(distance=0.82,height=1.18) {
     const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     return player.position.clone().add(forward.multiplyScalar(distance)).add(new THREE.Vector3(0,height,0));
@@ -502,9 +570,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   function highlight(id,active=true) {
     const mesh=meshes.get(String(id));
     const material=mesh?.material;
-    if (!material || Array.isArray(material) || !('emissive' in material)) return;
-    material.emissive.set(active?'#1d4ed8':'#000000');
-    material.emissiveIntensity=active?0.55:0;
+    if(material&&!Array.isArray(material)&&'emissive' in material){material.emissive.set(active?'#1d4ed8':'#000000');material.emissiveIntensity=active?0.55:0;}
+    else mesh?.traverse?.(part=>{if(!part.isMesh)return;for(const mat of (Array.isArray(part.material)?part.material:[part.material])){if(mat?.emissive){mat.emissive.set(active?'#0e7490':'#000000');mat.emissiveIntensity=active?0.35:0;}}});
   }
 
   function syncPhysics() {
@@ -569,7 +636,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     canvas.focus({preventScroll:true});
     if(cameraDrag)return;
     const hit=raycastInteraction(event,{dispatch:false});
-    const draggable=hit&&['ordering-object','classification-object','matching-left'].includes(hit.meta.kind);
+    const draggable=hit&&['ordering-object','classification-object','matching-left','assembly-piece'].includes(hit.meta.kind);
     const objectDrag=Boolean(draggable&&onDrag(hit.meta,'start',{position:pointerWorldPosition(event),event,hit}));
     cameraDrag={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,moved:false,
       mode:objectDrag?'object':'camera',source:objectDrag?hit.meta:null};
@@ -645,6 +712,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     addBox,
     addZone,
     addNode,
+    addCage,
+    addModel,
+    setTransform,
     connect,
     connectToPlayer,
     connectToPointer,
