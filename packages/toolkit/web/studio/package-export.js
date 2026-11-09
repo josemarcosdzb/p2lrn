@@ -51,6 +51,16 @@ async function descriptor(path,bytes,mediaType,schema){
   if(schema)out.schema=schema;
   return out;
 }
+// The portable format binds embedded asset paths to the SHA-256 of their bytes.
+// Editing an imported lesson must relocate its new bytes AND its graph reference.
+function contentAddressedPath(path,digest){
+  const current=String(path);
+  if(!/^assets\/sha256\/[0-9a-f]{2}\/[0-9a-f]{2}\/[0-9a-f]{64}$/.test(current))return current;
+  const hash=String(digest).replace(/^sha256:/,'');
+  if(!/^[0-9a-f]{64}$/.test(hash))throw new Error('Invalid SHA-256 for content-addressed asset.');
+  return 'assets/sha256/'+hash.slice(0,2)+'/'+hash.slice(2,4)+'/'+hash;
+}
+
 function normalizedIntegrityInput(manifest){
   const compare=(a,b)=>{const x=String(a??''),y=String(b??'');return x<y?-1:x>y?1:0;};
   const tuple=(a,b,keys)=>{for(const key of keys){const value=compare(a[key],b[key]);if(value)return value;}return 0;};
@@ -99,11 +109,9 @@ export async function exportP2LRNPackage(document){
   const course=graph.entities.find((entity)=>entity.id===rootId&&entity.type==='course');
   if(course&&document.dirty&&Number.isInteger(course.revision))course.revision+=1;
 
-  const graphBytes=jsonBytes(graph);
-  manifest.graph=await descriptor(manifest.graph.path,graphBytes,manifest.graph.mediaType,manifest.graph.schema);
-
   const payloads=new Map();
   const files=[];
+  const relocatedPaths=new Map();
   for(const original of manifest.files){
     let bytes=document.payloadOverrides.has(original.path)
       ?document.payloadOverrides.get(original.path)
@@ -115,9 +123,37 @@ export async function exportP2LRNPackage(document){
       if(questionnaire?.grading?.mode==='host')
         bytes=jsonBytes(questionnaireForLearner(questionnaire));
     }
-    payloads.set(original.path,bytes);
-    files.push(await descriptor(original.path,bytes,original.mediaType,original.schema));
+    const next=await descriptor(original.path,bytes,original.mediaType,original.schema);
+    const targetPath=contentAddressedPath(original.path,next.byteDigest);
+    if(targetPath!==original.path){
+      relocatedPaths.set(original.path,targetPath);
+      next.path=targetPath;
+    }
+    if(payloads.has(targetPath)){
+      const previous=payloads.get(targetPath);
+      const duplicate=files.find(file=>file.path===targetPath);
+      if(!duplicate||duplicate.mediaType!==next.mediaType||
+         previous.byteLength!==bytes.byteLength||
+         !previous.every((value,index)=>value===bytes[index]))
+        throw new Error('Conflicting embedded asset after content-addressed relocation: '+targetPath);
+      continue;
+    }
+    payloads.set(targetPath,bytes);
+    files.push(next);
   }
+  if(relocatedPaths.size){
+    for(const entity of graph.entities??[]){
+      for(const representation of entity.representations??[]){
+        const location=representation.location;
+        if(location?.type==='embedded'&&relocatedPaths.has(location.path))
+          location.path=relocatedPaths.get(location.path);
+      }
+    }
+  }
+  // Graph integrity must describe the updated content-addressed locations,
+  // not the imported asset paths that no longer exist.
+  const graphBytes=jsonBytes(graph);
+  manifest.graph=await descriptor(manifest.graph.path,graphBytes,manifest.graph.mediaType,manifest.graph.schema);
   files.sort((a,b)=>a.path<b.path?-1:a.path>b.path?1:0);
   manifest.files=files;
   manifest.integrity={algorithm:'sha256',contentRoot:await sha256(encoder.encode(canonicalize(normalizedIntegrityInput(manifest))))};

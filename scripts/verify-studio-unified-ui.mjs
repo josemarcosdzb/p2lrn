@@ -22,6 +22,7 @@ async function browserScenario(){
   const {mountStudioCommandBar,applyUnifiedStudioWorkspace}=await import('/studio/command-bar.js');
   const {createP2LRNStudioDocument}=await import('/studio/new-document.js');
   const {exportP2LRNPackage}=await import('/studio/package-export.js');
+  const {P2LRNStudioDocument}=await import('/studio/authoring-document.js');
   const {openP2LRNPackageBytes}=await import('/p2lrn-player.js');
   const {prepareStudioDropSandbox}=await import('/renderers/lesson-drop-sandbox.js');
   const {render:renderPassiveText}=await import('/renderers/passive-text.js');
@@ -791,6 +792,42 @@ async function browserScenario(){
     stageCanvas&&stageCanvas.getBoundingClientRect().height>=400,
     'The learner 3D viewer lacks an enlarged stage or fullscreen control');
   threePlayer.remove();URL.revokeObjectURL(threeBlob);
+  // Imported content-addressed lessons must remain verifiable after WYSIWYG changes.
+  // Regression: a previously edited SHA-256 asset may not retain its old ZIP path.
+  const fixture=createP2LRNStudioDocument({title:'SHA-256 round-trip',language:'es'});
+  const fresh=await exportP2LRNPackage(fixture);
+  const freshBytes=fresh.bytes.buffer.slice(fresh.bytes.byteOffset,fresh.bytes.byteOffset+fresh.bytes.byteLength);
+  const freshOpen=await openP2LRNPackageBytes(freshBytes);
+  const contentStudio=new P2LRNStudioDocument(freshOpen,{sourceName:'fixture.p2lrn'});
+  const firstUnit=contentStudio.entity(contentStudio.entity(contentStudio.rootId).children[0]);
+  const firstLessonId=firstUnit.children[0];
+  const lessonContent=await contentStudio.readEditableText(firstLessonId);
+  const originalBytes=new TextEncoder().encode(lessonContent.text);
+  const firstHash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',originalBytes)))
+    .map(byte=>byte.toString(16).padStart(2,'0')).join('');
+  const firstPath='assets/sha256/'+firstHash.slice(0,2)+'/'+firstHash.slice(2,4)+'/'+firstHash;
+  contentStudio.manifest.files.find(file=>file.path===lessonContent.path).path=firstPath;
+  contentStudio.entity(lessonContent.resource.id).representations[0].location.path=firstPath;
+  contentStudio.payloadOverrides.set(firstPath,originalBytes);
+  const sourceAddressed=await exportP2LRNPackage(contentStudio);
+  const sourceBytes=sourceAddressed.bytes.buffer.slice(sourceAddressed.bytes.byteOffset,
+    sourceAddressed.bytes.byteOffset+sourceAddressed.bytes.byteLength);
+  const reopenedAddressed=await openP2LRNPackageBytes(sourceBytes);
+  const modifiedStudio=new P2LRNStudioDocument(reopenedAddressed,{sourceName:'fixture-editado.p2lrn'});
+  modifiedStudio.setPayloadText(firstPath,lessonContent.text+'\n<p>Zona editada en Studio.</p>');
+  const changedAddressed=await exportP2LRNPackage(modifiedStudio);
+  const changedBytes=changedAddressed.bytes.buffer.slice(changedAddressed.bytes.byteOffset,
+    changedAddressed.bytes.byteOffset+changedAddressed.bytes.byteLength);
+  const verifiedAddressed=await openP2LRNPackageBytes(changedBytes);
+  const amendedResource=verifiedAddressed.entities.get(lessonContent.resource.id);
+  const amendedPath=amendedResource.representations[0].location.path;
+  const amendedFile=changedAddressed.manifest.files.find(file=>file.path===amendedPath);
+  expect(amendedPath!==firstPath&&/^assets\/sha256\//.test(amendedPath),
+    'Edited content-addressed lesson retained stale path');
+  expect(amendedPath.endsWith(amendedFile.byteDigest.slice(7)),
+    'Edited lesson path no longer matches its SHA-256');
+  expect((await verifiedAddressed.payload(amendedPath).read()).byteLength>originalBytes.byteLength,
+    'Updated content was not preserved after content-addressed export');
   const label=website.toolbar.querySelector('[role=tab][aria-selected=true]');
   expect(label.textContent==='Formato','Tab state is not consistent');
   const lightStyle=getComputedStyle(website.toolbar).fontFamily;
