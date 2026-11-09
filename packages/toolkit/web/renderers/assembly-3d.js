@@ -1,6 +1,6 @@
 // The assembly mode plugs into the existing questionnaire 3D renderer/runtime.
 // Classification answers remain the authoritative, resumable grading contract.
-import {evaluateAssemblyPlacement,inspectAssemblyGLB,validateAssembly} from '../assembly-3d-core.js';
+import {evaluateAssemblyPlacement,inspectAssemblyGLB,validateAssembly,assemblyPlacementTransform} from '../assembly-3d-core.js';
 import {playerUiText} from './ui-i18n.js';
 import {el} from './game-common.js';
 
@@ -20,6 +20,9 @@ const reasonText={
   'prerequisite':'Antes hay que colocar las piezas previas de este montaje.',
   'outside':'La pieza debe situarse dentro de la zona indicada.',
   'rotation':'La orientación de la pieza no coincide con el montaje.',
+  'misaligned':'Ajusta el centro de la pieza dentro de la caja de encaje.',
+  'outside-volume':'Parte de la pieza queda fuera del volumen de encaje.',
+  'scale':'La pieza tiene un tamaño distinto del configurado por el profesor.',
   'invalid-transform':'La posición de la pieza no es válida.',
 };
 
@@ -119,19 +122,23 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
     setText('Pieza seleccionada. Oriéntala y selecciona su destino.');
     update();return true;
   }
-  function place(id,targetId){
+  function place(id,targetId,{draggedPosition=null}={}){
     if(runtime.state.completed||!pieceById.has(id)||placements[id])return false;
     const target=targetById.get(targetId);
     if(!target){setText('Selecciona un destino válido.');return false;}
-    // Selecting the destination specifies the intended spatial center. The
-    // authored rotation and prerequisites still gate the snap and grade.
-    const orientation=transforms.get(id).rotation;
-    const result=evaluateAssemblyPlacement(config,id,targetId,{
-      position:[...target.transform.position],rotation:orientation,
-    },placements);
+    const desired=assemblyPlacementTransform(config,id);
+    const current=transforms.get(id);
+    // Accessible selection uses the authored visual fitting pose, with the
+    // student's own orientation/scale. Physical dragging must validate its
+    // ACTUAL released location; it may never teleport to the answer first.
+    const placement={
+      position:draggedPosition?[...draggedPosition]:[...desired.position],
+      rotation:[...current.rotation],scale:[...current.scale],
+    };
+    const result=evaluateAssemblyPlacement(config,id,targetId,placement,placements);
     if(!result.ok){setText(reasonText[result.reason]??'La pieza no encaja.');return false;}
     placements[id]=targetId;
-    transforms.set(id,{...transforms.get(id),...fromJson(result.snap)});
+    transforms.set(id,{...current,...fromJson(result.snap)});
     runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId:id,categoryId:targetId});
     scene.carry(boxId(id),false);
     scene.highlight(boxId(id),false);
@@ -175,7 +182,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
   panel.append(instruction,controls,rotateInfo,rotateButtons,progress,rows);
   for(const [id,target] of Object.entries(placements)){
     const t=targetById.get(target);
-    if(t)scene.setTransform(boxId(id),t.transform);
+    if(t)scene.setTransform(boxId(id),assemblyPlacementTransform(config,id)??t.transform);
   }
   if(sceneLoadWarning)panel.prepend(el('p',{class:'p2lrn-game-description',role:'alert'},sceneLoadWarning));
   update();
@@ -188,7 +195,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
       if(phase==='start')return choosePiece(id);
       if(phase==='move'){if(position)scene.setTranslation(boxId(id),position);return true;}
       if(phase==='end'){
-        const placed=target?.kind==='assembly-target'&&place(id,target.id);
+        const placed=target?.kind==='assembly-target'&&place(id,target.id,{draggedPosition:position});
         if(!placed){restore(id);scene.highlight(boxId(id),false);selected=null;}
         return true;
       }
