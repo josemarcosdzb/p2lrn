@@ -250,3 +250,28 @@ Consultar spec/RESULTS-ANALYTICS.md.
 ### Integración de seguridad del Host (Node)
 
 Las versiones que incluyen las nuevas APIs del servidor ofrecen `createP2LRNJwtAuthenticator()` (JWKS/JWT), `createP2LRNCollaborationHandler()` (identidad y sala verificadas por el Host) y `createP2LRNResultAuthority()` (Ed25519 para calificaciones verificadas **en servidor**). El paquete no suministra una base de datos de matrículas ni puede demostrar que un resultado totalmente offline no ha sido alterado. Ejemplo: [Integración segura de P2LRN](../../docs/integration/INTEGRACION-SEGURA-HOST.md).
+
+### P2LRN Universal Runtime - diagnostico de compatibilidad (mejorastudio)
+
+La rama `mejorastudio` incluye un contrato comun de negociacion de ejecucion,
+sin cambiar Core 0.4.0 ni los archivos `.p2lrn` existentes. El Player
+comprueba renderer, versiones de dependencias, permisos, capacidades del Host
+y compatibilidad offline antes de cargar cada actividad. Repite las
+comprobaciones de confianza durante la ejecucion.
+
+APIs ESM y global `P2LRN`:
+
+- `negotiateExecution({representations,entity,resource,...})`: retorna
+  `ready`, `conditional` o `blocked` y diagnosticos explicitos.
+- `inspectPackageExecution(openedPackage,{offline:false})`: inventario de
+  actividades y compatibilidad sin ejecutar contenido del curso.
+- `inspectPackageExecution(openedPackage,{offline:true})`: comprueba la
+  presencia de una representacion local; no descarga bibliotecas ausentes.
+
+H5P examina versiones transitivas y recursos declarados antes de crear el
+iframe. QTI rechaza interacciones no soportadas y SCORM 2004 no continua
+silenciosamente si falla la inicializacion del secuenciador. Esto NO
+certifica compatibilidad integral QTI 3, SCORM 2004, cmi5 o H5P.
+
+Consulte [contrato, ejemplo y limites](../../spec/UNIVERSAL-RUNTIME-1.md).
+Las nuevas APIs de esta rama no estan publicadas automaticamente en npm/CDN.

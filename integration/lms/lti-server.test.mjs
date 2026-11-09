@@ -171,10 +171,31 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.match(launch.headers.get('content-security-policy')??'',/script-src[^;]*'wasm-unsafe-eval'/,
     'the LTI Player must permit WebAssembly physics without globally enabling JavaScript eval');
   const htmlBody=await launch.text();
+  const playerNonce=/<meta name="p2lrn-opaque-runtime-nonce" content="([^"]+)">/u.exec(htmlBody)?.[1];
+  assert.match(playerNonce ?? '',/^[A-Za-z0-9_-]{20,128}$/u,'each LTI launch must expose a valid opaque-runtime bootstrap nonce');
+  const csp=launch.headers.get('content-security-policy') ?? '';
+  assert.match(csp,/style-src[^;]*blob:/u,'LTI H5P must permit sandboxed blob stylesheets');
+  assert.match(csp,/font-src[^;]*blob:/u,'LTI H5P must permit sandboxed blob fonts');
+  assert.match(csp,/media-src[^;]*blob:/u,'LTI activities must permit packaged audio and video');
+  assert.doesNotMatch(csp,/script-src[^;]*unsafe-inline/u,'the LTI top-level page must keep strict nonce-based scripts');
+  assert.ok(launch.headers.get('content-security-policy')?.includes("'nonce-" + playerNonce + "'"),
+    'the runtime nonce must be the same nonce enforced by the LTI launch CSP');
+  assert.ok(htmlBody.includes('<script nonce="' + playerNonce + '">'));
   assert.match(htmlBody,/<p2lrn-player/);
+  assert.match(htmlBody,/p2lrn-player\{display:block;width:100%;height:auto;min-height:500px\}/u,
+    'the embedded Player must expand to show interactive content without clipping buttons');
+  assert.doesNotMatch(htmlBody,/main\{height:100%;display:flex/u,
+    'LTI must not clip H5P and SCORM content to the initial LMS iframe height');
   assert.match(htmlBody,/player\.setAttribute\("src",src\)/,
     'LTI HTML must use the observed src attribute, not an inert player.src property');
   assert.doesNotMatch(htmlBody,/player\.src=src/);
+  assert.match(htmlBody,/expectedRevision/, 'the embedded LMS adapter must preserve optimistic state revisions');
+  assert.match(htmlBody,/retryTransient/, 'temporary network failures must be retried in a bounded fashion');
+  assert.match(htmlBody,/No se pudo guardar tu progreso/, 'a student must see failed progress persistence');
+  assert.match(htmlBody,/beforeunload/, 'leaving with unsaved answers must warn the learner');
+  assert.match(htmlBody,/progression-load/, 'failed Host state restore must not silently reset the learner');
+  assert.match(htmlBody,/player\.inert=true/, 'a failed restore must block answering until retrying the launch');
+  assert.match(htmlBody,/p2lrn:rendered/, 'loading a file is not the same as a rendered activity');
   assert(!htmlBody.includes('learner-opaque-1'));
   const cookie=launch.headers.get('set-cookie').split(';')[0];
   assert.ok(cookie.startsWith('__Host-p2lrn-session='));
@@ -192,6 +213,29 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.equal((await postRuntime('state/save',{context:playerContext,state:{answer:'A'},expectedRevision:0})).status,200);
   const state=await (await postRuntime('state/load',{context:playerContext})).json();
   assert.deepEqual(state,{value:{answer:'A'},revision:1});
+  // Re-entry is a new, signed LMS launch in the same learner and context.
+  // The same persistent attempt must be resumed rather than silently reset.
+  const reentry=await begin('LtiResourceLinkRequest');
+  const reentryLaunch=await req('/lti/launch',{method:'POST',headers:{
+    'Content-Type':'application/x-www-form-urlencoded','Cookie':reentry.browserCookie
+  },body:new URLSearchParams({state:reentry.state,id_token:signedPlatformToken({
+    nonce:reentry.nonce,kind:'LtiResourceLinkRequest',target:reentry.target,bindingId
+  })})});
+  assert.equal(reentryLaunch.status,200,'an enrolled learner must re-enter without technical credentials');
+  const reentryHtml=await reentryLaunch.text();
+  const reentryCookie=reentryLaunch.headers.get('set-cookie').split(';')[0];
+  const reentryCsrf=/const csrf="([^"]+)"/.exec(reentryHtml)?.[1];
+  assert.ok(reentryCsrf,'re-entry must issue an independent CSRF token');
+  const reloaded=await req('/lti/runtime/state/load',{method:'POST',headers:{
+    Cookie:reentryCookie,'Content-Type':'application/json','X-P2LRN-CSRF':reentryCsrf
+  },body:JSON.stringify({context:playerContext})});
+  assert.equal(reloaded.status,200);
+  assert.deepEqual(await reloaded.json(),{value:{answer:'A'},revision:1},
+    'the next signed LMS session must recover the actual saved answer and revision');
+
+  const replay=await postRuntime('state/save',{context:playerContext,state:{answer:'A'},expectedRevision:0});
+  assert.equal(replay.status,200,'repeated save after lost response must not discard an already committed answer');
+  assert.equal((await replay.json()).unchanged,true);
   assert.equal((await postRuntime('state/save',{context:playerContext,state:{answer:'B'},expectedRevision:0})).status,409);
   assert.equal((await postRuntime('state/load',{context:playerContext},{Cookie:cookie,'Content-Type':'application/json'})).status,403);
   assert.equal((await postRuntime('score',{context:playerContext,score:{normalized:0.8,completed:true}})).status,200);
@@ -211,6 +255,7 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
    body:new URLSearchParams({state:learner.state,id_token:token})})).status,403);
   const attempts=await (await req('/lti/admin/attempts?tenantId=school',{headers:admin})).json();
   assert.equal(attempts.attempts.length,1);
+  assert.equal(attempts.attempts[0].status,'IN_PROGRESS','new session must reuse one existing learner attempt');
   const grade=await req('/lti/admin/grades',{method:'POST',
    headers:{...admin,'Content-Type':'application/json'},
    body:JSON.stringify({attemptId:attempts.attempts[0].id,normalized:0.8,completed:true})});
@@ -218,6 +263,100 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.deepEqual(calls.map(x=>x.path),['/token','/ags/items/1/scores']);
   const pending=await (await req('/lti/admin/ags/pending',{headers:admin})).json();
   assert.equal(pending.pending.length,0);
+
+  // One-step teacher upload from the actual signed LTI Deep Linking picker.
+  // No administrative bearer token may be present in the browser request.
+  const secondTeacher=await begin('LtiDeepLinkingRequest');
+  const teacherPicker=await req('/lti/deep-link',{method:'POST',headers:{
+   'Content-Type':'application/x-www-form-urlencoded','Cookie':secondTeacher.browserCookie
+  },body:new URLSearchParams({state:secondTeacher.state,id_token:signedPlatformToken({
+   nonce:secondTeacher.nonce,kind:'LtiDeepLinkingRequest',target:secondTeacher.target
+  })})});
+  assert.equal(teacherPicker.status,200);
+  const pickerMarkup=await teacherPicker.text();
+  assert.match(pickerMarkup,/Publicar y añadir/);
+  assert.match(pickerMarkup,/enctype="multipart\/form-data"/);
+  assert.match(pickerMarkup,/name="course"/);
+  const uploadTicket=/name="ticket" value="([^"]+)"/.exec(pickerMarkup)?.[1];
+  assert.ok(uploadTicket,'signed teacher picker must issue an upload ticket');
+  const uploadForm=(ticket,buffer,name='mi-curso.p2lrn')=>{
+   const formData=new FormData();
+   formData.set('ticket',ticket);
+   formData.set('course',new Blob([buffer],{type:'application/vnd.p2lrn+zip'}),name);
+   return formData;
+  };
+  const badUpload=await req('/lti/deep-link/confirm',{method:'POST',
+   body:uploadForm(uploadTicket,Buffer.from('invalid archive'))});
+  assert.equal(badUpload.status,422,'invalid course remains in the LMS teacher picker');
+  const retryMarkup=await badUpload.text();
+  assert.match(retryMarkup,/No se ha publicado/);
+  assert.match(retryMarkup,/role="alert"/);
+  assert.match(retryMarkup,/name="ticket" value="[^"]+"/);
+  assert.match(retryMarkup,/Publicar y añadir/,
+   'professor must retry without returning to admin setup');
+  const validUpload=await req('/lti/deep-link/confirm',{method:'POST',
+   body:uploadForm(uploadTicket,course)});
+  assert.equal(validUpload.status,200,await validUpload.clone().text());
+  const uploadedHtml=await validUpload.text();
+  const uploadedJwt=/name="JWT" value="([^"]+)"/.exec(uploadedHtml)?.[1];
+  assert.ok(uploadedJwt,'successful teacher upload must return signed LMS content');
+  const parts=uploadedJwt.split('.');
+  assert.equal(verify('RSA-SHA256',Buffer.from(parts[0]+'.'+parts[1]),TOOL.publicKey,
+   Buffer.from(parts[2],'base64url')),true);
+  const uploadedClaim=JSON.parse(Buffer.from(parts[1],'base64url').toString());
+  const uploadedBindingId=uploadedClaim[C.items][0].custom.p2lrn_binding_id;
+  assert.equal(gateway.store.getBinding({id:uploadedBindingId,tenantId:'school',
+   registrationId:'moodle',deploymentId:'D1'}).contentRoot,catalogue.contentRoot);
+  assert.equal((await req('/lti/deep-link/confirm',{method:'POST',
+   body:uploadForm(uploadTicket,course)})).status,403,
+   'one teacher ticket cannot be replayed to create another link');
+
+  const uploadedLearner=await begin('LtiResourceLinkRequest');
+  const uploadedLaunch=await req('/lti/launch',{method:'POST',headers:{
+   'Content-Type':'application/x-www-form-urlencoded','Cookie':uploadedLearner.browserCookie
+  },body:new URLSearchParams({state:uploadedLearner.state,id_token:signedPlatformToken({
+   nonce:uploadedLearner.nonce,kind:'LtiResourceLinkRequest',
+   target:uploadedLearner.target,bindingId:uploadedBindingId
+  })})});
+  assert.equal(uploadedLaunch.status,200,'student must enter the newly published course');
+  const uploadedPlayerHtml=await uploadedLaunch.text();
+  assert.match(uploadedPlayerHtml,/<p2lrn-player/);
+  const uploadedSessionCookie=uploadedLaunch.headers.get('set-cookie').split(';')[0];
+  const uploadedCsrf=/const csrf="([^"]+)"/.exec(uploadedPlayerHtml)?.[1];
+  assert.ok(uploadedCsrf,'student gets a bound CSRF token');
+  const uploadedPackage=await req('/lti/runtime/package',{headers:{Cookie:uploadedSessionCookie}});
+  assert.equal(uploadedPackage.status,200);
+  assert.deepEqual(Buffer.from(await uploadedPackage.arrayBuffer()),course,
+   'the LMS Player receives the identical unconverted .p2lrn bytes');
+  const uploadedStateContext={packageId:catalogue.packageId,
+   contentRoot:catalogue.contentRoot,entityId:selected.id,rendererId:'course'};
+  const uploadedRuntime=(operation,body)=>req('/lti/runtime/'+operation,{method:'POST',
+   headers:{Cookie:uploadedSessionCookie,'Content-Type':'application/json',
+    'X-P2LRN-CSRF':uploadedCsrf},body:JSON.stringify(body)});
+  const saveUploaded=await uploadedRuntime('state/save',
+   {context:uploadedStateContext,state:{lesson:'intro',answered:true}});
+  assert.equal(saveUploaded.status,200,'newly uploaded course must persist real learner state');
+  const reloadUploaded=await uploadedRuntime('state/load',{context:uploadedStateContext});
+  assert.deepEqual((await reloadUploaded.json()).value,{lesson:'intro',answered:true});
+  const unverifiedScore=await uploadedRuntime('score',
+   {context:uploadedStateContext,score:{normalized:0.95,completed:true}});
+  assert.equal(unverifiedScore.status,200);
+  assert.equal((await unverifiedScore.json()).authoritative,false,
+   'browser-reported grades must not be official before approval');
+  const afterUpload=await (await req('/lti/admin/catalog/school',{headers:admin})).json();
+  assert.equal(afterUpload.courses.length,1,
+   'uploading an already published identical package must reuse the same bytes and catalog');
+  const forbiddenUpload=await req('/lti/deep-link/confirm',{method:'POST',
+   body:uploadForm('forged-ticket',course)});
+  assert.equal(forbiddenUpload.status,403,'teacher uploads require signed LTI authority');
+  const browserFailure=await req('/lti/launch',{method:'POST',headers:{
+   'Content-Type':'application/x-www-form-urlencoded',Accept:'text/html'
+  },body:new URLSearchParams({state:'not-a-real-state',id_token:'not-a-token'})});
+  assert.equal(browserFailure.status,403);
+  const failureHtml=await browserFailure.text();
+  assert.match(failureHtml,/Incidencia/);
+  assert.match(failureHtml,/Vuelve a tu aula virtual|Vuelve al curso de tu aula virtual/);
+  assert.doesNotMatch(failureHtml,/not-a-token/);
  }finally{
   await gateway.close();rmSync(folder,{recursive:true,force:true});
  }

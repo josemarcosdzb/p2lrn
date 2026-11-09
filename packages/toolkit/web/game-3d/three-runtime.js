@@ -1,4 +1,6 @@
 import * as THREE from '../vendor/three.module.js';
+import {GLTFLoader} from '../vendor/loaders/GLTFLoader.js';
+import {clone as cloneRig} from '../vendor/utils/SkeletonUtils.js';
 import {createRapierPhysicsWorld} from './physics/rapier-adapter.js';
 import {createNoPhysicsWorld} from './physics/no-physics.js';
 
@@ -72,40 +74,51 @@ function simulateRope(state,from,to,delta){
   setPoint(0,from);setPoint(count-1,to);
 }
 
-function labelTexture(text,{background='#0f172a',foreground='#f8fafc',border='#38bdf8'}={}) {
+function labelTexture(text,{background='#f8fafc',foreground='#0f172a',border='#38bdf8'}={}) {
+  // High-resolution opaque ink laid directly onto the geometry's vertical
+  // faces, not a camera-facing sprite floating above the game piece.
   const canvas=document.createElement('canvas');
-  canvas.width=768;
-  canvas.height=224;
+  canvas.width=1280;
+  canvas.height=480;
   const ctx=canvas.getContext('2d');
-  if (!ctx) return null;
+  if(!ctx)return null;
   ctx.fillStyle=background;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle=border;
-  ctx.lineWidth=10;
-  ctx.beginPath();
-  ctx.roundRect(8,8,canvas.width-16,canvas.height-16,28);
-  ctx.fill();
-  ctx.stroke();
+  ctx.lineWidth=16;
+  ctx.strokeRect(9,9,canvas.width-18,canvas.height-18);
+  const content=String(text??'').trim()||'—';
+  const words=content.split(/\s+/u);
+  const maxWidth=canvas.width-130;
+  let fontSize=178;
+  let lines=[];
+  // Preserve whole authored labels and expand short words substantially.
+  for(let size=178;size>=68;size-=5){
+    ctx.font=`800 ${size}px system-ui, sans-serif`;
+    const candidate=[];
+    let line='';
+    for(const word of words){
+      const next=line?line+' '+word:word;
+      if(!line||ctx.measureText(next).width<=maxWidth)line=next;
+      else{candidate.push(line);line=word;}
+    }
+    if(line)candidate.push(line);
+    fontSize=size;
+    lines=candidate;
+    if(candidate.length<=4&&candidate.length*size*1.12<=canvas.height-54)break;
+  }
+  ctx.font=`800 ${fontSize}px system-ui, sans-serif`;
   ctx.fillStyle=foreground;
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  ctx.font='700 42px system-ui, sans-serif';
-  const words=String(text).trim().split(/\s+/u);
-  const lines=[];
-  let current='';
-  for (const word of words) {
-    const candidate=current?`${current} ${word}`:word;
-    if (ctx.measureText(candidate).width<660 || !current) current=candidate;
-    else { lines.push(current); current=word; }
-    if (lines.length===2) break;
-  }
-  if (current && lines.length<3) lines.push(current);
-  const lineHeight=48;
-  const start=canvas.height/2-((lines.length-1)*lineHeight)/2;
-  lines.slice(0,3).forEach((line,index)=>ctx.fillText(line,canvas.width/2,start+index*lineHeight));
+  const lineHeight=fontSize*1.12;
+  const start=(canvas.height-(lines.length-1)*lineHeight)/2;
+  lines.forEach((line,index)=>ctx.fillText(line,canvas.width/2,start+index*lineHeight,maxWidth));
   const texture=new THREE.CanvasTexture(canvas);
   texture.colorSpace=THREE.SRGBColorSpace;
   texture.minFilter=THREE.LinearFilter;
   texture.magFilter=THREE.LinearFilter;
+  texture.anisotropy=4;
   texture.needsUpdate=true;
   return texture;
 }
@@ -122,7 +135,7 @@ function normalizePosition(value=[0,0,0]) {
   return [Number(value[0])||0,Number(value[1])||0,Number(value[2])||0];
 }
 
-export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=()=>false,physics='rapier'}={}) {
+export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=()=>false,physics='rapier',authoring=false}={}) {
   let physicsWorld;
   try {
     physicsWorld=physics==='none'?await createNoPhysicsWorld():await createRapierPhysicsWorld();
@@ -145,7 +158,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
 
   const scene=new THREE.Scene();
   scene.background=new THREE.Color('#050b16');
-  scene.fog=new THREE.Fog('#050b16',24,62);
+  scene.fog=authoring?null:new THREE.Fog('#050b16',24,62);
 
   const camera=new THREE.PerspectiveCamera(48,2,0.1,120);
   camera.position.set(0,8.2,15.5);
@@ -190,14 +203,30 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   playerHead.castShadow=true;
   player.add(playerBody,playerHead);
   player.position.set(0,0,6.5);
+  player.visible=!authoring;
   scene.add(player);
+  if(authoring){
+    const grid=new THREE.GridHelper(40,40,'#42728c','#1f3447');
+    grid.position.y=0.005;
+    scene.add(grid);
+  }
 
   const movement={forward:false,back:false,left:false,right:false};
-  let cameraYaw=0;
-  let cameraPitch=-0.05;
+  // Analog movement comes from the touch joystick; keyboard remains available on desktop.
+  const analogMovement={x:0,y:0};
+  function setMovementVector(x=0,y=0){
+    analogMovement.x=Number.isFinite(x)?Math.max(-1,Math.min(1,x)):0;
+    analogMovement.y=Number.isFinite(y)?Math.max(-1,Math.min(1,y)):0;
+  }
+  let cameraYaw=authoring?0.55:0;
+  let cameraPitch=authoring?0.51:-0.05;
   let cameraDrag=null;
+  const orbitFocus=new THREE.Vector3(0,1,0);
+  let orbitDistance=14;
+  const authorDragPlane=new THREE.Plane();
 
   const meshes=new Map();
+  const modelCache=new Map();
   const bodies=new Set();
   const interactables=[];
   const connectors=[];
@@ -208,8 +237,11 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   const dragWorld=new THREE.Vector3();
   const dragPointer=new THREE.Vector3();
   let alive=true;
+  let sceneEpoch=0;
   let raf=0;
   let last=performance.now();
+  let canvasResizeObserver=null;
+  function requestFrame(){if(alive&&!raf)raf=requestAnimationFrame(frame);}
 
   const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
   function playerDistanceTo(id){
@@ -236,6 +268,16 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     player.position.z=clamp(player.position.z,-7.8,11.8);
   }
   function updatePlayer(delta){
+    if(authoring){
+      const elevation=clamp(cameraPitch,-1.38,1.38),slope=Math.cos(elevation);
+      camera.position.set(
+        orbitFocus.x+Math.sin(cameraYaw)*orbitDistance*slope,
+        orbitFocus.y+Math.sin(elevation)*orbitDistance,
+        orbitFocus.z+Math.cos(cameraYaw)*orbitDistance*slope,
+      );
+      camera.lookAt(orbitFocus);
+      return;
+    }
     const previous=player.position.clone();
     const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
@@ -244,8 +286,11 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(movement.back)velocity.sub(forward);
     if(movement.left)velocity.sub(right);
     if(movement.right)velocity.add(right);
+    velocity.addScaledVector(forward,analogMovement.y);
+    velocity.addScaledVector(right,analogMovement.x);
     if(velocity.lengthSq()>0){
-      velocity.normalize().multiplyScalar(4.3*delta);
+      // Preserve the stick's analog speed and never make diagonals faster.
+      velocity.clampLength(0,1).multiplyScalar(4.3*delta);
       player.position.add(velocity);
       player.position.x=clamp(player.position.x,-10.2,10.2);
       player.position.z=clamp(player.position.z,-7.8,11.8);
@@ -291,6 +336,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   }
 
   function clearStage() {
+    sceneEpoch+=1;
     for (const object of [...stage.children]) {
       stage.remove(object);
       disposeObject(object);
@@ -298,24 +344,52 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     for (const id of bodies) physicsWorld.remove(id);
     bodies.clear();
     meshes.clear();
+    modelCache.clear();
     interactables.length=0;
     connectors.length=0;
     carried.clear();
     dragPointer.set(0,0.78,0);
+    if(authoring)requestFrame();
   }
 
-  function addLabel(parent,text,y=1.2,options={}) {
+  function addFaceLabel(parent,text,size,options={}) {
     const texture=labelTexture(text,options);
-    if (!texture) return null;
-    const material=new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false,toneMapped:false});
-    const sprite=new THREE.Sprite(material);
-    sprite.position.set(0,y,0);
-    sprite.scale.set(3.2,0.95,1);
-    parent.add(sprite);
-    return sprite;
+    if(!texture)return;
+    const material=new THREE.MeshBasicMaterial({
+      map:texture,side:THREE.DoubleSide,toneMapped:false,
+      polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1,
+    });
+    const add=(width,height,x,y,z,angleY=0)=>{
+      const face=new THREE.Mesh(new THREE.PlaneGeometry(width,height),material);
+      face.position.set(x,y,z);
+      face.rotation.y=angleY;
+      face.name='p2lrn-box-face-label';
+      face.renderOrder=1;
+      parent.add(face);
+    };
+    const surface=0.016;
+    // Keep the text attached to the front and side faces when blocks rotate.
+    add(size[0]*0.93,size[1]*0.82,0,0,size[2]/2+surface);
+    add(size[0]*0.93,size[1]*0.82,0,0,-size[2]/2-surface,Math.PI);
+    add(size[2]*0.90,size[1]*0.82,size[0]/2+surface,0,0,Math.PI/2);
+    add(size[2]*0.90,size[1]*0.82,-size[0]/2-surface,0,0,-Math.PI/2);
   }
 
-  function addBox({id,text,position=[0,1,0],size=[1.5,0.9,1.5],color=null,dynamic=true,interaction=null}={}) {
+  function addPlatformLabel(parent,text,size,options={}) {
+    const texture=labelTexture(text,options);
+    if(!texture)return;
+    const face=new THREE.Mesh(
+      new THREE.PlaneGeometry(size[0]*0.88,size[2]*0.78),
+      new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide,toneMapped:false}),
+    );
+    face.rotation.x=-Math.PI/2;
+    face.position.y=size[1]/2+0.018;
+    face.name='p2lrn-platform-surface-label';
+    face.renderOrder=1;
+    parent.add(face);
+  }
+
+  function addBox({id,text,position=[0,1,0],size=[2.05,1.12,1.55],color=null,dynamic=true,physicsEnabled=true,interaction=null}={}) {
     const keyId=String(id);
     const p=normalizePosition(position);
     const geometry=new THREE.BoxGeometry(size[0],size[1],size[2]);
@@ -325,12 +399,14 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     mesh.castShadow=true;
     mesh.receiveShadow=true;
     mesh.userData.p2lrnInteraction=interaction;
-    addLabel(mesh,text,size[1]/2+0.72);
+    addFaceLabel(mesh,text,size);
     stage.add(mesh);
     meshes.set(keyId,mesh);
     if (interaction) interactables.push(mesh);
-    physicsWorld.createBox?.({id:keyId,position:p,halfExtents:[size[0]/2,size[1]/2,size[2]/2],dynamic});
-    bodies.add(keyId);
+    if(physicsEnabled){
+      physicsWorld.createBox?.({id:keyId,position:p,halfExtents:[size[0]/2,size[1]/2,size[2]/2],dynamic});
+      bodies.add(keyId);
+    }
     return mesh;
   }
 
@@ -340,7 +416,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     mesh.position.set(...normalizePosition(position));
     mesh.receiveShadow=true;
     mesh.userData.p2lrnInteraction=interaction;
-    addLabel(mesh,text,size[1]/2+0.75,{border:color});
+    addPlatformLabel(mesh,text,size,{border:color});
     stage.add(mesh);
     meshes.set(String(id),mesh);
     if (interaction) interactables.push(mesh);
@@ -348,7 +424,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   }
 
   function addNode({id,text,position=[0,1,0],color='#334155',interaction=null}={}) {
-    const size=[2.55,0.92,1.35];
+    const size=[2.55,1.12,1.5];
     const mesh=new THREE.Mesh(
       new THREE.BoxGeometry(...size),
       new THREE.MeshStandardMaterial({color,roughness:0.48,metalness:0.16}),
@@ -357,13 +433,155 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     mesh.castShadow=true;
     mesh.receiveShadow=true;
     mesh.userData.p2lrnInteraction=interaction;
-    addLabel(mesh,text,size[1]/2+0.72,{border:color});
+    addFaceLabel(mesh,text,size,{border:color});
     stage.add(mesh);
     meshes.set(String(id),mesh);
     if (interaction) interactables.push(mesh);
     physicsWorld.createBox?.({id:String(id),position:normalizePosition(position),halfExtents:[size[0]/2,size[1]/2,size[2]/2],dynamic:true});
     bodies.add(String(id));
     return mesh;
+  }
+
+
+  async function addModel({id,assetId,bytes,nodeId=null,position=[0,0.9,0],rotation=[0,0,0,1],scale=[1,1,1],interaction=null,opacity=1}={}) {
+    const requestedEpoch=sceneEpoch;
+    if(!bytes || !assetId)throw new Error('Modelo 3D no disponible dentro del paquete');
+    let loading=modelCache.get(assetId);
+    if(!loading){
+      const buffer=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+      loading=(new GLTFLoader()).parseAsync(buffer,'');
+      modelCache.set(assetId,loading);
+      loading.catch(()=>{if(modelCache.get(assetId)===loading)modelCache.delete(assetId);});
+    }
+    const gltf=await loading;
+    if(!alive||requestedEpoch!==sceneEpoch)return null;
+    const source=nodeId===null?gltf.scene:await gltf.parser.getDependency('node',Number(nodeId));
+    if(!source)throw new Error('Submalla GLB inexistente: '+String(nodeId));
+    if(!alive||requestedEpoch!==sceneEpoch)return null;
+    const root=new THREE.Group();
+    // SkeletonUtils preserves the internal skeleton references for skinned GLBs.
+    const visible=cloneRig(source);
+    visible.traverse((part)=>{if(part.isMesh){
+      part.castShadow=true;part.receiveShadow=true;
+      // Keep GPU geometry and texture buffers shared, but material state
+      // independent so highlighting a piece never recolors every instance.
+      part.material=Array.isArray(part.material)?part.material.map(m=>m.clone()):part.material.clone();
+    }});
+    visible.updateMatrixWorld(true);
+    const localBox=new THREE.Box3().setFromObject(visible);
+    if(!localBox.isEmpty()&&[...localBox.min,...localBox.max].every(Number.isFinite)){
+      root.userData.p2lrnLocalBounds={min:localBox.min.toArray(),max:localBox.max.toArray()};
+    }
+    root.add(visible);
+    root.position.fromArray(normalizePosition(position));
+    root.quaternion.fromArray(rotation);
+    root.scale.fromArray(scale);
+    root.userData.p2lrnInteraction=interaction;
+    if(opacity<1)visible.traverse(part=>{if(part.isMesh){const materials=Array.isArray(part.material)?part.material:[part.material];materials.forEach(m=>{m.transparent=true;m.opacity=opacity;m.depthWrite=false;});}});
+    stage.add(root);
+    meshes.set(String(id),root);
+    if(interaction)interactables.push(root);
+    if(authoring)requestFrame();
+    return root;
+  }
+
+  function addCage({id,vertices,position=[0,1,0],rotation=[0,0,0,1],scale=[1,1,1],interaction=null,visibility='outline',editable=false}={}){
+    const group=new THREE.Group();
+    const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+    const coords=edges.flatMap(([a,b])=>[...vertices[a],...vertices[b]]);
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(coords,3));
+    const line=new THREE.LineSegments(geo,new THREE.LineBasicMaterial({color:'#5eead4',transparent:true,opacity:visibility==='hidden'?0:visibility==='hint'?0.2:0.68,depthTest:!authoring}));
+    line.renderOrder=authoring?8:0;
+    line.visible=visibility!=='hidden';
+    group.add(line);
+    // Invisible volume for pointer picking; the actual acceptance test uses
+    // the authored oriented convex polyhedron, never this rough AABB.
+    const lows=[0,1,2].map(i=>Math.min(...vertices.map(p=>p[i]))),highs=[0,1,2].map(i=>Math.max(...vertices.map(p=>p[i])));
+    const box=new THREE.Mesh(new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i]))),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
+    box.position.fromArray(highs.map((v,i)=>(v+lows[i])/2));
+    group.add(box);
+    const handles=[];
+    if(editable){
+      const geometry=new THREE.SphereGeometry(0.105,10,8);
+      const material=new THREE.MeshBasicMaterial({color:'#22d3ee',depthTest:false});
+      vertices.forEach((point,index)=>{
+        const handle=new THREE.Mesh(geometry,material);
+        handle.position.fromArray(point);
+        handle.renderOrder=4;
+        handle.userData.p2lrnInteraction={kind:'assembly-editor-vertex',id:String(id),index};
+        group.add(handle);
+        handles.push(handle);
+      });
+    }
+    group.userData.p2lrnCage={line,box,handles,vertexSignature:vertices.flat().join(',')};
+    group.position.fromArray(normalizePosition(position));
+    group.quaternion.fromArray(rotation);
+    group.scale.fromArray(scale);
+    group.userData.p2lrnInteraction=interaction;
+    stage.add(group);
+    meshes.set(String(id),group);
+    if(interaction)interactables.push(group);
+    if(authoring)requestFrame();
+    return group;
+  }
+
+
+  function updateCage(id,vertices,transform=null){
+    const group=meshes.get(String(id)),data=group?.userData?.p2lrnCage;
+    if(!data||!Array.isArray(vertices)||vertices.length!==8)return false;
+    const signature=vertices.flat().join(',');
+    if(data.vertexSignature!==signature){
+      const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+      const attr=data.line.geometry.getAttribute('position');
+      edges.forEach(([a,b],i)=>{attr.setXYZ(i*2,...vertices[a]);attr.setXYZ(i*2+1,...vertices[b]);});
+      attr.needsUpdate=true;
+      data.line.geometry.computeBoundingSphere();
+      data.handles.forEach((handle,index)=>handle.position.fromArray(vertices[index]));
+      const lows=[0,1,2].map(i=>Math.min(...vertices.map(p=>p[i]))),highs=[0,1,2].map(i=>Math.max(...vertices.map(p=>p[i])));
+      data.box.geometry.dispose();
+      data.box.geometry=new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i])));
+      data.box.position.fromArray(highs.map((v,i)=>(v+lows[i])/2));
+      data.vertexSignature=signature;
+    }
+    if(transform)setTransform(id,transform);
+    if(authoring)requestFrame();
+    return true;
+  }
+
+  function setTransform(id,transform){
+    const mesh=meshes.get(String(id));
+    if(!mesh||!transform)return false;
+    if(transform.position)mesh.position.fromArray(normalizePosition(transform.position));
+    if(transform.rotation)mesh.quaternion.fromArray(transform.rotation);
+    if(transform.scale)mesh.scale.fromArray(transform.scale);
+    if(authoring)requestFrame();
+    return true;
+  }
+
+  function getObjectLocalBounds(id){
+    const root=meshes.get(String(id));
+    if(!root)return null;
+    if(root.userData?.p2lrnLocalBounds){
+      const b=root.userData.p2lrnLocalBounds;
+      return {min:[...b.min],max:[...b.max]};
+    }
+    if(root.isMesh&&root.geometry){
+      if(!root.geometry.boundingBox)root.geometry.computeBoundingBox();
+      const b=root.geometry.boundingBox;
+      if(b)return {min:b.min.toArray(),max:b.max.toArray()};
+    }
+    return null;
+  }
+
+  function focusOn(position=[0,1,0],radius=14){
+    if(!authoring)return false;
+    orbitFocus.fromArray(normalizePosition(position));
+    orbitDistance=clamp(Number(radius)||14,2.5,350);
+    camera.far=Math.max(120,orbitDistance*12);
+    camera.updateProjectionMatrix();
+    if(authoring)requestFrame();
+    return true;
   }
 
   function playerHandPosition(distance=0.82,height=1.18) {
@@ -456,9 +674,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   function highlight(id,active=true) {
     const mesh=meshes.get(String(id));
     const material=mesh?.material;
-    if (!material || Array.isArray(material) || !('emissive' in material)) return;
-    material.emissive.set(active?'#1d4ed8':'#000000');
-    material.emissiveIntensity=active?0.55:0;
+    if(material&&!Array.isArray(material)&&'emissive' in material){material.emissive.set(active?'#1d4ed8':'#000000');material.emissiveIntensity=active?0.55:0;}
+    else mesh?.traverse?.(part=>{if(!part.isMesh)return;for(const mat of (Array.isArray(part.material)?part.material:[part.material])){if(mat?.emissive){mat.emissive.set(active?'#0e7490':'#000000');mat.emissiveIntensity=active?0.35:0;}}});
   }
 
   function syncPhysics() {
@@ -474,6 +691,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   }
 
   function frame(now) {
+    raf=0;
     if (!alive) return;
     resize();
     const delta=Math.min(0.05,Math.max(1/240,(now-last)/1000));
@@ -484,7 +702,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     syncCarried(delta);
     syncConnectors(delta);
     renderer.render(scene,camera);
-    raf=requestAnimationFrame(frame);
+    if(!authoring)requestFrame();
   }
 
   function raycastInteraction(event,{dispatch=true,exclude=null}={}) {
@@ -494,17 +712,26 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
     raycaster.setFromCamera(pointer,camera);
     const hits=raycaster.intersectObjects(interactables,true);
+    // While authoring an assembly, the invisible cage volume MUST NOT mask
+    // a model placed INSIDE it. Vertex handles have first priority, the
+    // actual piece second, and the zone volume remains selectable last.
+    let picked=null,best=-1;
     for(const hit of hits){
       let node=hit.object;
       while(node&&!node.userData?.p2lrnInteraction)node=node.parent;
       const meta=node?.userData?.p2lrnInteraction;
       if(!meta)continue;
       if(exclude&&meta.kind===exclude.kind&&meta.id===exclude.id)continue;
-      const info={point:hit.point,event,playerDistance:player.position.distanceTo(hit.point)};
-      if(dispatch)onInteraction(meta,info);
-      return {meta,...info};
+      const priority=authoring?
+        (meta.kind==='assembly-editor-vertex'?30:meta.kind==='assembly-editor-piece'?20:meta.kind==='assembly-editor-target'?10:15):0;
+      if(picked&&priority<=best)continue;
+      best=priority;
+      picked={meta,point:hit.point,event,playerDistance:player.position.distanceTo(hit.point)};
+      if(priority===30)break;
+      if(!authoring)break;
     }
-    return null;
+    if(picked&&dispatch)onInteraction(picked.meta,picked);
+    return picked;
   }
   function pointerWorldPosition(event){
     const rect=canvas.getBoundingClientRect();
@@ -512,14 +739,23 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
     pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
     raycaster.setFromCamera(pointer,camera);
-    const hit=raycaster.ray.intersectPlane(dragPlane,dragWorld);
+    const hit=raycaster.ray.intersectPlane(authoring?authorDragPlane:dragPlane,dragWorld);
     if(!hit)return null;
-    return [clamp(hit.x,-11.2,11.2),0.78,clamp(hit.z,-12,12)];
+    return authoring?[hit.x,hit.y,hit.z]:[clamp(hit.x,-11.2,11.2),0.78,clamp(hit.z,-12,12)];
   }
   function onPointerDown(event){
     if(event.button!==0&&event.pointerType==='mouse')return;
+    // Clicking the scene enters keyboard mode without pointer lock, so users
+    // can still select, drag and connect objects directly.
+    canvas.focus({preventScroll:true});
+    if(cameraDrag)return;
     const hit=raycastInteraction(event,{dispatch:false});
-    const draggable=hit&&['ordering-object','classification-object','matching-left'].includes(hit.meta.kind);
+    const draggable=hit&&(
+      ['ordering-object','classification-object','matching-left','assembly-piece'].includes(hit.meta.kind)||
+      (authoring&&['assembly-editor-piece','assembly-editor-target','assembly-editor-vertex'].includes(hit.meta.kind))
+    );
+    if(authoring&&hit)authorDragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()),hit.point);
+    if(authoring)requestFrame();
     const objectDrag=Boolean(draggable&&onDrag(hit.meta,'start',{position:pointerWorldPosition(event),event,hit}));
     cameraDrag={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,moved:false,
       mode:objectDrag?'object':'camera',source:objectDrag?hit.meta:null};
@@ -533,8 +769,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(drag.mode==='object'){
       if(drag.moved)onDrag(drag.source,'move',{position:pointerWorldPosition(event),event});
     } else if(drag.moved) {
-      cameraYaw-=dx*0.006;
-      cameraPitch=clamp(cameraPitch-dy*0.004,-0.58,0.24);
+      cameraYaw-=dx*(authoring?0.008:0.006);
+      cameraPitch=authoring?clamp(cameraPitch+dy*0.006,-1.38,1.38):clamp(cameraPitch-dy*0.004,-0.58,0.24);
+      if(authoring)requestFrame();
     }
     drag.x=event.clientX;drag.y=event.clientY;
   }
@@ -553,8 +790,17 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     cameraDrag=null;
     try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
   }
+  function onWheel(event){
+    if(!authoring)return;
+    event.preventDefault();
+    orbitDistance=clamp(orbitDistance*Math.exp(event.deltaY*0.001),2.5,350);
+    camera.far=Math.max(120,orbitDistance*12);
+    camera.updateProjectionMatrix();
+    if(authoring)requestFrame();
+  }
   function onPointerCancel(event){
-    if(cameraDrag?.mode==='object')onDrag(cameraDrag.source,'cancel',{event});
+    if(!cameraDrag||cameraDrag.pointerId!==event.pointerId)return;
+    if(cameraDrag.mode==='object')onDrag(cameraDrag.source,'cancel',{event});
     cameraDrag=null;
   }
   function onKeyDown(event){
@@ -574,14 +820,22 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(code==='KeyD'||code==='ArrowRight')movement.right=false;
   }
 
+  function clearKeys(){for(const key of Object.keys(movement))movement[key]=false;}
   canvas.tabIndex=0;
+  canvas.addEventListener('blur',clearKeys);
+  globalThis.addEventListener?.('blur',clearKeys);
   canvas.addEventListener('pointerdown',onPointerDown);
   canvas.addEventListener('pointermove',onPointerMove);
   canvas.addEventListener('pointerup',onPointerUp);
   canvas.addEventListener('pointercancel',onPointerCancel);
+  if(authoring)canvas.addEventListener('wheel',onWheel,{passive:false});
   canvas.addEventListener('keydown',onKeyDown);
   canvas.addEventListener('keyup',onKeyUp);
-  raf=requestAnimationFrame(frame);
+  if(authoring&&typeof ResizeObserver==='function'){
+    canvasResizeObserver=new ResizeObserver(()=>requestFrame());
+    canvasResizeObserver.observe(canvas);
+  }
+  requestFrame();
 
   return {
     physics:physicsWorld.kind,
@@ -591,6 +845,12 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     addBox,
     addZone,
     addNode,
+    addCage,
+    addModel,
+    setTransform,
+    updateCage,
+    getObjectLocalBounds,
+    focusOn,
     connect,
     connectToPlayer,
     connectToPointer,
@@ -603,15 +863,23 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     playerPosition:()=>[player.position.x,player.position.y,player.position.z],
     resetPlayer,
     nudgePlayer,
+    setMovementVector,
     destroy() {
       alive=false;
       cancelAnimationFrame(raf);
+      canvasResizeObserver?.disconnect();
+      canvasResizeObserver=null;
       canvas.removeEventListener('pointerdown',onPointerDown);
       canvas.removeEventListener('pointermove',onPointerMove);
       canvas.removeEventListener('pointerup',onPointerUp);
       canvas.removeEventListener('pointercancel',onPointerCancel);
+      if(authoring)canvas.removeEventListener('wheel',onWheel);
       canvas.removeEventListener('keydown',onKeyDown);
       canvas.removeEventListener('keyup',onKeyUp);
+      canvas.removeEventListener('blur',clearKeys);
+      globalThis.removeEventListener?.('blur',clearKeys);
+      setMovementVector(0,0);
+      clearKeys();
       clearStage();
       physicsWorld.destroy?.();
       renderer.dispose();

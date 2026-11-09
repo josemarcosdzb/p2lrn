@@ -37,3 +37,20 @@ export interface ZipWriteEntry {
 export declare function writeZip(entries: ZipWriteEntry[], options?: {
     forceZip64?: boolean;
 }): Uint8Array;
+/**
+ * Extract a ZIP-backed .p2lrn into a NEW, private directory. This is the
+ * supported disk-extraction boundary; callers never join untrusted ZIP paths
+ * themselves. Does not overwrite an existing output directory.
+ *
+ * The parent directory must be controlled by the host. A hostile process with
+ * write privileges to that parent can race a final rename on some filesystems.
+ */
+export declare const SAFE_UNPACK_LIMITS: ZipLimits;
+export declare function unpackP2LRNArchive(archivePath: string, outputDirectory: string, options?: {
+    limits?: ZipLimits;
+    maxArchiveBytes?: number;
+}): Promise<{
+    directory: string;
+    files: number;
+    totalBytes: number;
+}>;

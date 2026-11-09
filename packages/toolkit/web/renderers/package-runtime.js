@@ -1,3 +1,4 @@
+import {withOpaqueRuntimeBootstrapNonce} from '../opaque-runtime-bootstrap-nonce.js';
 import {startPackageRuntime} from '../package-runtime-shell.js';
 import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
@@ -314,10 +315,11 @@ export async function render({container, payload, representation, package:pkg, e
   };
   window.addEventListener('message', onMessage);
   if (opaqueMode) {
-    // Navigate to a separate sandboxed document so imported content does not
-    // inherit the host application's stricter CSP. The sandbox is still opaque.
-    const urlParts = ['..', 'runtime-host', 'package-opaque.html'].join('/');
-    iframe.src = new URL(urlParts, import.meta.url).href;
+    // HTTP(S) hosts need an external, opaque-origin document to avoid inheriting host CSP.
+    // File/offline previews retain Studio's nonce-protected srcdoc fallback.
+    const url=new URL(['..','runtime-host','package-opaque.html'].join('/'),import.meta.url);
+    if (['http:','https:'].includes(url.protocol)) iframe.src=url.href;
+    else iframe.srcdoc=withOpaqueRuntimeBootstrapNonce(createOpaquePackageRuntimeDocument());
   }
   else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);

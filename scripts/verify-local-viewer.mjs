@@ -9,6 +9,7 @@ import {exportP2LRNPackage} from '../packages/toolkit/web/studio/package-export.
 import {openP2LRNPackageBytes} from '../packages/toolkit/web/p2lrn-player.js';
 import {parseOfflineAssignmentResult} from '../packages/toolkit/web/studio/offline-assignment.js';
 import {buildQuestionnaireGame} from '../packages/toolkit/web/questionnaire-games-core.js';
+import {defaultAssembly} from '../packages/toolkit/web/assembly-3d-core.js';
 import {createP2LRNCollaborationHandler} from '../packages/player/server/collaboration-http.mjs';
 import {tmpdir} from 'node:os';
 import {STUDIO_RUNTIME_SHARED_FILES} from '../deploy/netlify/studio-runtime-assets.mjs';
@@ -16,9 +17,9 @@ import {STUDIO_RUNTIME_SHARED_FILES} from '../deploy/netlify/studio-runtime-asse
 const root=resolve(process.cwd());
 const siteRoot=join(root,'.netlify-cdn');
 const viewerPath=join(siteRoot,'demo','viewer.js');
-const APP_ORIGIN='http://127.0.0.1:8765';
-const RUNTIME_ORIGIN='http://127.0.0.1:8766';
-const COLLABORATION_ORIGIN='http://127.0.0.1:8767';
+let APP_ORIGIN=null;
+let RUNTIME_ORIGIN=null;
+let COLLABORATION_ORIGIN=null;
 
 function invariant(value,message){if(!value)throw new Error(message);}
 const sleep=(ms)=>new Promise((resolvePromise)=>setTimeout(resolvePromise,ms));
@@ -230,6 +231,10 @@ async function connectPage(browserWs){
 
 async function evalTop(cdp,expression){
   const result=await cdp.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});
+  if(result.exceptionDetails){
+    const detail=result.exceptionDetails;
+    throw new Error('Chrome evaluation: '+String(detail.exception?.description||detail.text||'unknown browser error'));
+  }
   return result.result?.value;
 }
 
@@ -362,7 +367,7 @@ const stateExpression=String.raw`(()=>{const p=document.getElementById('demo-pla
 async function runtimeTexts(cdp){
   const out=[];
   for(const ctx of [...cdp.contexts.values()]){
-    if(!ctx.origin.includes('127.0.0.1:8766'))continue;
+    if(!ctx.origin.startsWith(RUNTIME_ORIGIN))continue;
     try{
       const evaluated=await cdp.send('Runtime.evaluate',{contextId:ctx.id,expression:"document.body?.innerText?.slice(0,2500)||''",returnByValue:true});
       const value=String(evaluated.result?.value||'').trim();
@@ -505,6 +510,42 @@ async function prepareGameFixtures(){
         solution:{assignments:[{item:'c1',category:'g1'},{item:'c2',category:'g2'}]}}
     ]
   };
+
+  // Valid, embedded mesh asset: one actual GLB triangle with local POSITION and indices.
+  // Player must parse this real GLB, not silently replace it with a fallback cube.
+  function createAssemblyTestGLB(){
+    const bin=new Uint8Array(44),dv=new DataView(bin.buffer);
+    [0,0,0,0.8,0,0,0,0.8,0].forEach((v,i)=>dv.setFloat32(4*i,v,true));
+    [0,1,2].forEach((v,i)=>dv.setUint16(36+2*i,v,true));
+    const doc={asset:{version:'2.0'},scene:0,scenes:[{nodes:[0]}],
+      nodes:[{mesh:0,name:'Pieza tridimensional de prueba'}],
+      meshes:[{primitives:[{attributes:{POSITION:0},indices:1,mode:4}]}],
+      buffers:[{byteLength:44}],bufferViews:[
+        {buffer:0,byteOffset:0,byteLength:36,target:34962},
+        {buffer:0,byteOffset:36,byteLength:6,target:34963}],
+      accessors:[{bufferView:0,componentType:5126,count:3,type:'VEC3',min:[0,0,0],max:[0.8,0.8,0]},
+        {bufferView:1,componentType:5123,count:3,type:'SCALAR'}]};
+    const json=new TextEncoder().encode(JSON.stringify(doc)),len=(json.byteLength+3)&~3;
+    const out=new Uint8Array(12+8+len+8+bin.byteLength),view=new DataView(out.buffer);
+    view.setUint32(0,0x46546c67,true);view.setUint32(4,2,true);view.setUint32(8,out.byteLength,true);
+    view.setUint32(12,len,true);view.setUint32(16,0x4e4f534a,true);
+    out.fill(32,20,20+len);out.set(json,20);
+    view.setUint32(20+len,bin.byteLength,true);view.setUint32(24+len,0x004e4942,true);out.set(bin,28+len);
+    return out;
+  }
+  const assemblyAsset=await threeDoc.addAssemblyAsset({bytes:createAssemblyTestGLB(),filename:'pieza-qa.glb'});
+  const assemblyScene=defaultAssembly();
+  assemblyScene.assets=[{id:assemblyAsset.id,path:assemblyAsset.path,name:'pieza-qa.glb',size:assemblyAsset.size,nodes:assemblyAsset.inspected.nodes}];
+  assemblyScene.referenceAssetId=assemblyAsset.id;
+  assemblyScene.pieces[0].assetId=assemblyAsset.id;
+  assemblyScene.pieces[0].nodeId=assemblyAsset.inspected.nodes[0].nodeId;
+  threePayload.questions.push({
+    id:'q-assembly',type:'classification',prompt:'Ensambla las piezas en el espacio',points:2,
+    items:assemblyScene.pieces.map(p=>({id:p.id,text:p.text})),
+    categories:assemblyScene.targets.map(t=>({id:t.id,text:t.text})),
+    solution:{assignments:assemblyScene.links.map(link=>({item:link.pieceId,category:link.targetId}))},
+    assembly3d:assemblyScene,
+  });
   const threeRenderer='https://p2lrn.org/renderer/questionnaire/3d-order-match';
   const compiled3D=buildQuestionnaireGame(threePayload,threeRenderer,{seedSource:'real-three-game-regression'});
   invariant(compiled3D.compatible,'3D game modes must be compatible: '+JSON.stringify(compiled3D.reasons));
@@ -525,14 +566,25 @@ async function verifyThreeGameInteractionAndResume(cdp){
         if(predicate())return true;
         await new Promise(resolve=>setTimeout(resolve,100));
       }
-      throw new Error(label+' timeout');
+      const diagnostic={
+        trial:root.querySelector('.p2lrn-3d-trial')?.textContent?.slice(0,350)??null,
+        message:[...root.querySelectorAll('[role=status]')].map(n=>n.textContent?.slice(0,350)),
+        current:root.querySelector('.p2lrn-stage')?.textContent?.slice(0,450)??null,
+        page:root.textContent?.slice(-700)??null
+      };
+      throw new Error(label+' timeout: '+JSON.stringify(diagnostic));
     };
     const open=[...root.querySelectorAll('.p2lrn-nav button')].find(button=>button.textContent.includes('Laboratorio 3D QA'));
     if(!open)throw new Error('3D QA activity missing from navigation');
     open.click();
-    await wait(()=>root.querySelector('.p2lrn-3d-trial')?.querySelector('h3')?.textContent==='Ordena los tres bloques','3D ordering scene');
-    const trial=()=>root.querySelector('.p2lrn-3d-trial');
-    const title=()=>trial()?.querySelector('h3')?.textContent||'';
+    // Scope the trial to the currently visible Player stage: background or
+    // cached activity trees may retain old accessible controls in the DOM.
+    const stage=()=>root.querySelector('.p2lrn-stage');
+    const trial=()=>stage()?.querySelector('.p2lrn-3d-trial');
+    // The heading is a sibling of the accessible answer panel in compiled
+    // Player layouts; inspect the active stage heading, not a panel child.
+    const title=()=>stage()?.querySelector('.p2lrn-3d-layout h3')?.textContent||'';
+    await wait(()=>Boolean(trial())&&title()==='Ordena los tres bloques','3D ordering scene');
     const status=()=>[...root.querySelectorAll('.p2lrn-game-status')].at(-1)?.textContent??'';
     const select=(name,value)=>{
       const label=[...trial().querySelectorAll('label')].find(node=>node.querySelector('span')?.textContent===name);
@@ -583,6 +635,30 @@ async function verifyThreeGameInteractionAndResume(cdp){
       throw new Error('3D classification did not restore: '+read('Triángulo')+' '+status());
     select('Círculo','g2');
     if(!status().includes('completada'))throw new Error('3D classification could not finish: '+status());
+
+    // Real assembly scene, real GLB and same exported course, in the actual
+    // Player/Three.js/Rapier browser runtime. Check no fallback model warning.
+    go('Siguiente');
+    await wait(()=>title()==='Ensambla las piezas en el espacio' && Boolean(trial()?.querySelector('select[aria-label="Pieza que vas a colocar"]')),'3D assembly scene');
+    if(!root.querySelector('.p2lrn-3d-interactive'))throw new Error('3D assembly silently entered fallback mode');
+    const assemblyTrial=trial();
+    const warning=assemblyTrial.querySelector('[role=alert]');
+    if(warning)throw new Error('GLB asset could not load in Player: '+warning.textContent);
+    const piecePicker=assemblyTrial.querySelector('select[aria-label="Pieza que vas a colocar"]');
+    const targetPicker=assemblyTrial.querySelector('select[aria-label="Zona donde colocar la pieza"]');
+    const placeButton=[...assemblyTrial.querySelectorAll('button')].find(button=>button.textContent==='Colocar pieza');
+    if(!piecePicker||!targetPicker||!placeButton)throw new Error('Assembly controls missing in Player');
+    for(const [piece,target] of [['piece-1','target-1'],['piece-2','target-2']]){
+      piecePicker.value=piece;
+      piecePicker.dispatchEvent(new Event('change',{bubbles:true}));
+      targetPicker.value=target;
+      targetPicker.dispatchEvent(new Event('change',{bubbles:true}));
+      if(placeButton.disabled)throw new Error('Assembly placement locked unexpectedly: '+piece);
+      placeButton.click();
+    }
+    if(!status().includes('Montaje completado'))throw new Error('Assembly snap/score did not complete: '+status());
+    const assemblyProgress=assemblyTrial.querySelector('p[role=status]')?.textContent??'';
+    if(!assemblyProgress.includes('2/2'))throw new Error('Assembly did not persist both pieces: '+assemblyProgress);
     const finish=[...root.querySelectorAll('.p2lrn-game-shell button')].find(x=>x.textContent==='Finalizar actividad');
     if(!finish)throw new Error('3D scoring action missing');
     finish.click();
@@ -590,12 +666,12 @@ async function verifyThreeGameInteractionAndResume(cdp){
       document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:score'),'3D final score');
     const log=document.querySelector('[data-event-log]')?.textContent||'';
     if(log.includes('p2lrn:error'))throw new Error('3D runtime emitted an error: '+log.slice(-1000));
-    return {threeModes:['ordering','matching','classification'],orderedAndSaved:true,matchingRestored:true,
-      classificationRestored:true,solvedConnectionButtons:matchingPreserved,
+    return {threeModes:['ordering','matching','classification','assembly'],orderedAndSaved:true,matchingRestored:true,
+      classificationRestored:true,assemblyWithRealGLB:true,solvedConnectionButtons:matchingPreserved,
       finalScoreReceived:log.includes('p2lrn:score'),noRuntimeError:true};
   })()`);
   invariant(outcome?.orderedAndSaved&&outcome?.matchingRestored&&outcome?.classificationRestored
-    &&outcome.finalScoreReceived, '3D browser regression incomplete: '+JSON.stringify(outcome));
+    &&outcome.assemblyWithRealGLB&&outcome.finalScoreReceived, '3D browser regression incomplete: '+JSON.stringify(outcome));
   const screenshot=await captureElementVisualEvidence(cdp,'3d-three-modes-completed',
     "document.getElementById('demo-player')",{maxHeight:1450});
   return {...outcome,screenshot};
@@ -660,6 +736,28 @@ async function verifyThreePointerDragAndRope(cdp){
   invariant(result?.finiteRope&&result?.dragPhases?.includes('end'),
     '3D pointer-drag scene test failed: '+JSON.stringify(result));
   return result;
+}
+
+async function verifyThreeMobileAndDesktopEntry(cdp){
+  await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:2});
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  try{
+    await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/?src='+encodeURIComponent('/examples/game-ui-3d-mixed.p2lrn')});
+    await waitForEval(cdp,"document.getElementById('demo-player')?.shadowRoot?.querySelectorAll('.p2lrn-nav button').length>0",'mobile 3D navigation',30000);
+    const mobile=await evalTop(cdp,"(async()=>{\n  const player=document.getElementById('demo-player'),root=player?.shadowRoot;\n  const wait=async(predicate,label)=>{\n    for(let i=0;i<240;i++){\n      if(predicate())return;\n      await new Promise(resolve=>setTimeout(resolve,70));\n    }\n    throw new Error('Mobile 3D timeout: '+label);\n  };\n  const open=await (async()=>{\n    await wait(()=>[...root.querySelectorAll('.p2lrn-nav button')].some(b=>b.textContent.includes('Laboratorio 3D QA')),'navigation');\n    return [...root.querySelectorAll('.p2lrn-nav button')].find(b=>b.textContent.includes('Laboratorio 3D QA'));\n  })();\n  open.click();\n  await wait(()=>root.querySelector('.p2lrn-3d-joystick')&&root.querySelector('.p2lrn-3d-directions'),'scene');\n  const stage=root.querySelector('.p2lrn-3d-stage');\n  const canvas=stage.querySelector('canvas');\n  const stick=stage.querySelector('.p2lrn-3d-joystick');\n  const knob=stick?.querySelector('.p2lrn-3d-joystick-knob');\n  const fallback=root.querySelector('.p2lrn-3d-fallback');\n  if(fallback)throw new Error('WebGL fell back while testing the mobile 3D scene');\n  if(getComputedStyle(stick).display==='none')throw new Error('Joystick is hidden on touch screen');\n  if(getComputedStyle(canvas).touchAction!=='none')throw new Error('Touch input is intercepted by page scrolling');\n  const alt=root.querySelector('.p2lrn-3d-alternative');\n  if(!getComputedStyle(alt).clipPath.includes('inset'))throw new Error('Legacy 3D button controls remain visible');\n  const initialInstruction=root.querySelector('.p2lrn-3d-directions').textContent;\n  if(!initialInstruction.includes('pedestal'))throw new Error('Missing ordering scene instruction');\n  const rect=stick.getBoundingClientRect();\n  const x=rect.left+rect.width/2,y=rect.top+rect.height/2;\n  const dispatch=(name,px,py)=>stick.dispatchEvent(new PointerEvent(name,{\n    bubbles:true,cancelable:true,pointerId:83,pointerType:'touch',button:0,\n    buttons:name==='pointerup'?0:1,clientX:px,clientY:py,\n  }));\n  dispatch('pointerdown',x,y);\n  dispatch('pointermove',x,y-44);\n  const activeKnob=knob.style.transform;\n  if(!activeKnob.includes('translate3d')||activeKnob==='translate3d(0,0,0)')\n    throw new Error('Touch joystick did not track thumb position');\n  dispatch('pointerup',x,y-44);\n  const neutral=new DOMMatrix(getComputedStyle(knob).transform);\n  if(Math.hypot(neutral.m41,neutral.m42)>0.5)\n    throw new Error('Touch joystick did not return to neutral: '+knob.style.transform);\n  const next=()=>[...root.querySelectorAll('.p2lrn-3d-trial .p2lrn-game-actions button')]\n    .find(button=>button.textContent==='Siguiente');\n  next().click();\n  await wait(()=>root.querySelector('.p2lrn-3d-directions')?.textContent.includes('azul'),'matching instruction');\n  next().click();\n  await wait(()=>root.querySelector('.p2lrn-3d-directions')?.textContent.includes('categoría'),'classification instruction');\n  return {\n    mobileViewport:innerWidth,stageWidth:stage.getBoundingClientRect().width,\n    joystickVisible:true,joystickMovesAndResets:true,touchAction:'none',\n    oldControlsVisuallyHidden:true,gameInstructions:['ordering','matching','classification'],\n    noMoveButtons:root.querySelectorAll('.p2lrn-3d-move-pad button').length===0,\n  };\n})()");
+    invariant(mobile.joystickVisible&&mobile.joystickMovesAndResets&&mobile.oldControlsVisuallyHidden&&mobile.noMoveButtons,'Mobile 3D QA failed: '+JSON.stringify(mobile));
+    const screenshot=await captureElementVisualEvidence(cdp,'quest-3d-mobile-390px',"document.getElementById('demo-player')",{maxHeight:1400});
+    await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:false});
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+    await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/?src='+encodeURIComponent('/examples/game-ui-3d-mixed.p2lrn')});
+    await waitForEval(cdp,"Boolean(document.getElementById('demo-player')?.shadowRoot?.querySelector('.p2lrn-nav'))",'desktop 3D navigation',30000);
+    const desktop=await evalTop(cdp,"(async()=>{\n  const root=document.getElementById('demo-player')?.shadowRoot;\n  const wait=async(predicate)=>{\n    for(let i=0;i<240;i++){\n      if(predicate())return;\n      await new Promise(r=>setTimeout(r,70));\n    }\n    throw new Error('Desktop 3D scene did not render');\n  };\n  await wait(()=>[...root.querySelectorAll('.p2lrn-nav button')].some(b=>b.textContent.includes('Laboratorio 3D QA')));\n  [...root.querySelectorAll('.p2lrn-nav button')].find(b=>b.textContent.includes('Laboratorio 3D QA')).click();\n  await wait(()=>root.querySelector('.p2lrn-3d-entry-hint'));\n  const entry=root.querySelector('.p2lrn-3d-entry-hint'),stage=root.querySelector('.p2lrn-3d-stage');\n  const initiallyVisible=getComputedStyle(entry).display!=='none';\n  const label=entry.textContent;\n  stage.querySelector('canvas').click();\n  const entered=stage.classList.contains('is-entered')&&getComputedStyle(entry).display==='none';\n  if(!initiallyVisible||!label.includes('Haz clic')||!entered)\n    throw new Error('Desktop 3D entry hint invalid: '+JSON.stringify({initiallyVisible,entered,label,stageClass:stage.className,display:getComputedStyle(entry).display,coarse:matchMedia('(pointer:coarse)').matches,fine:matchMedia('(pointer:fine)').matches}));\n  return {entryPrompt:label,enteredWithSceneClick:entered};\n})()");
+    invariant(desktop.enteredWithSceneClick,'Desktop scene entry failed');
+    return {mobile,desktop,screenshot};
+  }finally{
+    await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:false});
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+  }
 }
 
 async function verifyGameLayout(cdp,kind){
@@ -773,7 +871,9 @@ async function verifyNarrowLayout(cdp){
 }
 
 
-const visualEvidenceRoot=join(root,'.visual-evidence');
+const visualEvidenceRoot=process.env.P2LRN_QUEST3D_OUTPUT_DIR
+  ?resolve(process.env.P2LRN_QUEST3D_OUTPUT_DIR)
+  :join(root,'.visual-evidence');
 async function captureVisualEvidence(cdp,name){
   await mkdir(visualEvidenceRoot,{recursive:true});
   const shot=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});
@@ -1534,19 +1634,39 @@ try{
   await prepareVisualStudioFixture();
   await prepareGameFixtures();
   const connectedFixture=await prepareConnectedArchitectureFixtures();
+  // Avoid collisions with previews and runners that already own 8765-8767.
+  // Ephemeral app/runtime ports remain different origins for sandbox isolation.
+  appServer=await listen(0);
+  APP_ORIGIN='http://127.0.0.1:'+appServer.address().port;
+  runtimeServer=await listen(0);
+  RUNTIME_ORIGIN='http://127.0.0.1:'+runtimeServer.address().port;
+  collaborationServer=await listenCollaboration(0);
+  COLLABORATION_ORIGIN='http://127.0.0.1:'+collaborationServer.address().port;
+  invariant(new Set([APP_ORIGIN,RUNTIME_ORIGIN,COLLABORATION_ORIGIN]).size===3,
+    'QA runtime, app and collaboration must have isolated origins');
+  console.log('P2LRN_QA_DYNAMIC_ORIGINS='+JSON.stringify({
+    app:APP_ORIGIN,runtime:RUNTIME_ORIGIN,collaboration:COLLABORATION_ORIGIN
+  }));
   const builtViewer=await readFile(viewerPath,'utf8');
   const localViewer=builtViewer.replace(/const RUNTIME_ORIGINS=Object\.freeze\(\[[\s\S]*?\]\);/u,
     `const RUNTIME_ORIGINS=Object.freeze(['${RUNTIME_ORIGIN}','${APP_ORIGIN}']);`);
   invariant(localViewer!==builtViewer,'Could not patch built viewer runtime origins for local-only verification.');
   await writeFile(viewerPath,localViewer,'utf8');
 
-  appServer=await listen(8765);
-  runtimeServer=await listen(8766);
-  collaborationServer=await listenCollaboration(8767);
+
   const chromePath=await findChrome();
   chrome=await launchChrome(chromePath);
   cdp=await connectPage(chrome.browserWs);
 
+  if(process.env.P2LRN_QUEST3D_ONLY==='1'){
+    const threeGame=await verifyThreeGameInteractionAndResume(cdp);
+    const pointerDrag=await verifyThreePointerDragAndRope(cdp);
+    const threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);
+    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,pointerDrag,threeMobile};
+    await mkdir(visualEvidenceRoot,{recursive:true});
+    await writeFile(join(visualEvidenceRoot,'quest3d-report.json'),JSON.stringify(report,null,2)+'\n');
+    console.log('P2LRN_QUEST3D_BROWSER_REPORT='+JSON.stringify(report));
+  }else{
   const cases=[];
   const failures=[];
   try{cases.push({name:'public-default-startup',state:await verifyDefaultViewerStartup(cdp)});}
@@ -1573,6 +1693,9 @@ try{
   let pointerDrag=null;
   try{pointerDrag=await verifyThreePointerDragAndRope(cdp);}
   catch(error){failures.push({name:'three-pointer-drag-and-rope',message:String(error?.message||error)});}
+  let threeMobile=null;
+  try{threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);}
+  catch(error){failures.push({name:'three-mobile-joystick-and-desktop-entry',message:String(error?.message||error)});}
   let narrow=null;
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
   let studioUI=null;
@@ -1581,8 +1704,9 @@ try{
   try{studioSiteUI=await verifyStudioSiteUI(cdp);}catch(error){failures.push({name:'studio-website-ui',message:String(error?.message||error)});}
   let connectedArchitecture=null;
   try{connectedArchitecture=await verifyConnectedArchitecture(cdp,connectedFixture);}catch(error){failures.push({name:'connected-architecture',message:String(error?.message||error)});}
-  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,pointerDrag,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
+  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,pointerDrag,threeMobile,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
+  }
 }finally{
   try{cdp?.socket?.close();}catch{}
   if(chrome?.child?.exitCode===null)chrome.child.kill();

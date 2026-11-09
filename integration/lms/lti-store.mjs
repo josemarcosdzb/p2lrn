@@ -24,7 +24,11 @@ export function createLtiStore(filename){
  'CREATE TABLE IF NOT EXISTS ags_outbox(id TEXT PRIMARY KEY,attempt_id TEXT NOT NULL,score_hash TEXT NOT NULL,payload_json TEXT NOT NULL,status TEXT NOT NULL,tries INTEGER NOT NULL DEFAULT 0,last_error TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,UNIQUE(attempt_id,score_hash))'
  ,'CREATE TABLE IF NOT EXISTS nrps_contexts(registration_id TEXT NOT NULL,tenant_id TEXT NOT NULL,deployment_id TEXT NOT NULL,context_id TEXT NOT NULL,membership_url TEXT NOT NULL,versions_json TEXT NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(registration_id,deployment_id,context_id))'
  ,'CREATE TABLE IF NOT EXISTS nrps_instructor_attempts(attempt_id TEXT PRIMARY KEY,allowed INTEGER NOT NULL,FOREIGN KEY(attempt_id) REFERENCES attempts(id))'
+  ,'CREATE TABLE IF NOT EXISTS ags_learner_attempts(attempt_id TEXT PRIMARY KEY,allowed INTEGER NOT NULL,FOREIGN KEY(attempt_id) REFERENCES attempts(id))'
  ,'CREATE TABLE IF NOT EXISTS nrps_registration_origins(registration_id TEXT PRIMARY KEY,origins_json TEXT NOT NULL,FOREIGN KEY(registration_id) REFERENCES platforms(id))'
+ ,'CREATE TABLE IF NOT EXISTS legacy_platforms(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,consumer_key TEXT NOT NULL UNIQUE,secret_encrypted TEXT NOT NULL,launch_url TEXT NOT NULL,issuer_origin TEXT NOT NULL,status TEXT NOT NULL)'
+ ,'CREATE TABLE IF NOT EXISTS legacy_nonces(registration_id TEXT NOT NULL,nonce_hash TEXT NOT NULL,seen_at INTEGER NOT NULL,PRIMARY KEY(registration_id,nonce_hash),FOREIGN KEY(registration_id) REFERENCES legacy_platforms(id))'
+
  ].join(';\n')+';');
  const sql=q=>db.prepare(q);
  function upsertPlatform(r){
@@ -39,6 +43,37 @@ export function createLtiStore(filename){
   sql('INSERT INTO nrps_registration_origins VALUES(?,?) ON CONFLICT(registration_id) DO UPDATE SET origins_json=excluded.origins_json').run(r.id,J(extra));
   return r.id;
  }
+
+ function upsertLegacyPlatform(r){
+  for(const key of ['id','tenantId','consumerKey','secretEncrypted','launchUrl','issuerOrigin'])req(r[key],key);
+  if(!r.id.startsWith('legacy:')||!['ACTIVE','DISABLED'].includes(r.status)||
+     r.secretEncrypted.length>4096)throw new TypeError('Invalid LTI legacy platform');
+  sql('INSERT INTO legacy_platforms VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET tenant_id=excluded.tenant_id,consumer_key=excluded.consumer_key,secret_encrypted=excluded.secret_encrypted,launch_url=excluded.launch_url,issuer_origin=excluded.issuer_origin,status=excluded.status')
+   .run(r.id,r.tenantId,r.consumerKey,r.secretEncrypted,r.launchUrl,r.issuerOrigin,r.status);
+  return r.id;
+ }
+ const getLegacyRegistrationById=id=>{
+  const r=sql('SELECT * FROM legacy_platforms WHERE id=?').get(id);
+  return r?{id:r.id,tenantId:r.tenant_id,consumerKey:r.consumer_key,secretEncrypted:r.secret_encrypted,
+   launchUrl:r.launch_url,issuerOrigin:r.issuer_origin,status:r.status,protocol:'legacy'}:null;
+ };
+ const getLegacyRegistrationByConsumerKey=key=>{
+  const r=sql('SELECT id FROM legacy_platforms WHERE consumer_key=?').get(key);
+  return r?getLegacyRegistrationById(r.id):null;
+ };
+ const listLegacyPlatforms=()=>sql('SELECT id,tenant_id,consumer_key,launch_url,issuer_origin,status FROM legacy_platforms ORDER BY id').all()
+  .map(r=>({id:r.id,tenantId:r.tenant_id,consumerKey:r.consumer_key,launchUrl:r.launch_url,issuerOrigin:r.issuer_origin,status:r.status,protocol:'legacy'}));
+ function consumeLegacyNonce(registrationId,nonceHash){
+  if(!/^[a-f0-9]{64}$/.test(nonceHash)||!getLegacyRegistrationById(registrationId))
+   throw new Error('INVALID_LEGACY_NONCE');
+  db.exec('BEGIN IMMEDIATE');
+  try{
+   sql('DELETE FROM legacy_nonces WHERE seen_at<?').run(t()-1200);
+   const stored=sql('INSERT OR IGNORE INTO legacy_nonces VALUES(?,?,?)').run(registrationId,nonceHash,t());
+   db.exec('COMMIT');return stored.changes===1;
+  }catch(err){db.exec('ROLLBACK');throw err;}
+ }
+
  const decodeReg=r=>r?{id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url??undefined,tokenUrl:r.token_url,jwks:P(r.jwks_json),deployments:P(r.deployments_json),deepLinkReturnOrigins:P(r.origins_json),nrpsAllowedOrigins:P(sql('SELECT origins_json FROM nrps_registration_origins WHERE registration_id=?').get(r.id)?.origins_json??'[]'),status:r.status}:null;
  const getRegistration=({issuer,clientId})=>decodeReg(sql('SELECT * FROM platforms WHERE issuer=? AND client_id=?').get(issuer,clientId));
  const getRegistrationById=id=>decodeReg(sql('SELECT * FROM platforms WHERE id=?').get(id));
@@ -98,10 +133,35 @@ export function createLtiStore(filename){
   if(!r||!P(r.entities_json).some(x=>x.id===r.entity_id))return null;
   return {id:r.id,tenantId:r.tenant_id,registrationId:r.registration_id,deploymentId:r.deployment_id,packageId:r.package_id,contentRoot:r.content_root,entityId:r.entity_id,status:'PUBLISHED',catalogId:r.catalog_id,entities:P(r.entities_json),filename:r.filename,bytes:r.bytes};
  }
+
+ function createLegacyBinding({tenantId,registrationId,catalogId,entityId}){
+  const c=getCatalog(catalogId,tenantId),r=getLegacyRegistrationById(registrationId);
+  if(!c||!P(c.entities_json).some(x=>x.id===entityId)||r?.status!=='ACTIVE'||r.tenantId!==tenantId)
+   throw new Error('Unapproved legacy P2LRN content selection');
+  const id=randomUUID().replaceAll('-','')+randomUUID().replaceAll('-','');
+  sql("INSERT INTO bindings VALUES(?,?,?,?,?,?,'PUBLISHED')").run(id,tenantId,registrationId,'legacy',catalogId,entityId);
+  return id;
+ }
+ function getLegacyBinding({id,tenantId,registrationId}){
+  const registration=getLegacyRegistrationById(registrationId);
+  if(registration?.status!=='ACTIVE'||registration.tenantId!==tenantId)return null;
+  const r=sql("SELECT b.*,c.package_id,c.content_root,c.entities_json,c.filename,c.bytes FROM bindings b JOIN catalog c ON c.id=b.catalog_id WHERE b.id=? AND b.tenant_id=? AND b.registration_id=? AND b.deployment_id='legacy' AND b.status='PUBLISHED' AND c.status='PUBLISHED'")
+   .get(id,tenantId,registrationId);
+  if(!r||!P(r.entities_json).some(e=>e.id===r.entity_id))return null;
+  return {id:r.id,tenantId:r.tenant_id,registrationId:r.registration_id,deploymentId:'legacy',
+   packageId:r.package_id,contentRoot:r.content_root,entityId:r.entity_id,
+   entities:P(r.entities_json),filename:r.filename,bytes:r.bytes,status:'PUBLISHED'};
+ }
+
  const createPicker=p=>sql('INSERT INTO pickers VALUES(?,?,?,?,?,?,?,NULL)').run(p.ticketHash,p.registrationId,p.tenantId,p.deploymentId,p.returnUrl,p.ltiData??null,p.expiresAt);
+ const peekPicker=hash=>{
+  const r=sql('SELECT * FROM pickers WHERE ticket_hash=? AND consumed_at IS NULL AND expires_at>?').get(hash,t());
+  return r?{registrationId:r.registration_id,tenantId:r.tenant_id,deploymentId:r.deployment_id,
+   returnUrl:r.return_url,ltiData:r.lti_data}:null;
+ };
  const consumePicker=hash=>{let r=sql('UPDATE pickers SET consumed_at=? WHERE ticket_hash=? AND consumed_at IS NULL AND expires_at>? RETURNING *').get(t(),hash,t());return r?{registrationId:r.registration_id,tenantId:r.tenant_id,deploymentId:r.deployment_id,returnUrl:r.return_url,ltiData:r.lti_data}:null;};
- function attachLaunch({launch,ags,tokenHash,csrfHash,expiresAt,canReadRoster=false}){
-  const b=getBinding({id:launch.bindingId,tenantId:launch.tenantId,registrationId:launch.registrationId,deploymentId:launch.deploymentId});
+ function attachLaunch({launch,ags,tokenHash,csrfHash,expiresAt,canReadRoster=false,canReceiveGrades=true,legacy=false}){
+  const b=legacy?getLegacyBinding({id:launch.bindingId,tenantId:launch.tenantId,registrationId:launch.registrationId}):getBinding({id:launch.bindingId,tenantId:launch.tenantId,registrationId:launch.registrationId,deploymentId:launch.deploymentId});
   if(!b||b.packageId!==launch.packageId||b.contentRoot!==launch.contentRoot||b.entityId!==launch.entityId)throw new Error('P2LRN content authorization changed');
   db.exec('BEGIN IMMEDIATE');
   try{
@@ -110,6 +170,8 @@ export function createLtiStore(filename){
    sql('INSERT INTO sessions VALUES(?,?,?,?,NULL)').run(tokenHash,result.id,csrfHash,expiresAt);
    sql('INSERT INTO nrps_instructor_attempts VALUES(?,?) ON CONFLICT(attempt_id) DO UPDATE SET allowed=excluded.allowed')
     .run(result.id,canReadRoster===true?1:0);
+    sql('INSERT INTO ags_learner_attempts VALUES(?,?) ON CONFLICT(attempt_id) DO UPDATE SET allowed=excluded.allowed')
+     .run(result.id,canReceiveGrades===true?1:0);
    db.exec('COMMIT');return {attemptId:result.id,expiresAt};
   }catch(e){db.exec('ROLLBACK');throw e;}
  }
@@ -122,7 +184,12 @@ export function createLtiStore(filename){
   db.exec('BEGIN IMMEDIATE');
   try{
    const prev=getState(a,e,s);
-   if(expectedRevision!==undefined&&prev.revision!==expectedRevision){db.exec('ROLLBACK');return {saved:false,conflict:true,revision:prev.revision};}
+   if(expectedRevision!==undefined&&prev.revision!==expectedRevision){
+     // A retry after an interrupted HTTP response may already have committed.
+     // Acknowledge identical state without incrementing the revision again.
+     if(J(prev.value)===J(v)){db.exec('ROLLBACK');return {saved:true,revision:prev.revision,unchanged:true};}
+     db.exec('ROLLBACK');return {saved:false,conflict:true,revision:prev.revision};
+    }
    sql('INSERT INTO snapshots VALUES(?,?,?,?,1,?) ON CONFLICT(attempt_id,entity_id,surface) DO UPDATE SET value_json=excluded.value_json,revision=revision+1,updated_at=excluded.updated_at').run(a,e,s,J(v),t());
    const revision=getState(a,e,s).revision;db.exec('COMMIT');return {saved:true,revision};
   }catch(err){try{db.exec('ROLLBACK');}catch{}throw err;}
@@ -135,7 +202,11 @@ export function createLtiStore(filename){
  function approveScore(attemptId,n,completed,scoreHash,payload){
   db.exec('BEGIN IMMEDIATE');
   try{
-   if(!sql("SELECT id FROM attempts WHERE id=? AND status='IN_PROGRESS'").get(attemptId))throw new Error('Unknown active LTI attempt');
+   const attempt=sql("SELECT a.id,a.ags_json,COALESCE(g.allowed,1) AS grade_allowed,l.id AS legacy_id FROM attempts a LEFT JOIN ags_learner_attempts g ON g.attempt_id=a.id JOIN bindings b ON b.id=a.binding_id LEFT JOIN legacy_platforms l ON l.id=b.registration_id WHERE a.id=? AND a.status='IN_PROGRESS'").get(attemptId);
+   if(!attempt)throw new Error('Unknown active LTI attempt');
+    if(attempt.grade_allowed!==1)throw new Error('LTI_GRADE_ROLE_DENIED');
+   if(attempt.legacy_id&&!P(attempt.ags_json)?.serviceUrl)
+    throw new Error('LEGACY_GRADE_SERVICE_NOT_AVAILABLE');
    sql('INSERT INTO assessments VALUES(?,?,?,1,?,?) ON CONFLICT(attempt_id) DO UPDATE SET normalized=excluded.normalized,completed=excluded.completed,approved=1,approved_at=excluded.approved_at,updated_at=excluded.updated_at').run(attemptId,n,completed?1:0,t(),t());
    sql("INSERT OR IGNORE INTO ags_outbox(id,attempt_id,score_hash,payload_json,status,tries,last_error,created_at,updated_at) VALUES(?,?,?,?,'PENDING',0,NULL,?,?)").run(randomUUID(),attemptId,scoreHash,J(payload),t(),t());
    const row=sql('SELECT id,status FROM ags_outbox WHERE attempt_id=? AND score_hash=?').get(attemptId,scoreHash);
@@ -143,14 +214,18 @@ export function createLtiStore(filename){
   }catch(e){try{db.exec('ROLLBACK');}catch{}throw e;}
  }
  function outboxById(id){
-  const r=sql('SELECT o.*,a.ags_json,a.subject,a.resource_link_id,p.token_url,p.client_id,p.issuer FROM ags_outbox o JOIN attempts a ON a.id=o.attempt_id JOIN bindings b ON b.id=a.binding_id JOIN platforms p ON p.id=b.registration_id WHERE o.id=?').get(id);
-  return r?{id:r.id,attemptId:r.attempt_id,status:r.status,tries:r.tries,payload:P(r.payload_json),ags:P(r.ags_json),subject:r.subject,resourceLinkId:r.resource_link_id,tokenUrl:r.token_url,clientId:r.client_id,issuer:r.issuer}:null;
+  const r=sql("SELECT o.*,a.ags_json,a.subject,a.resource_link_id,p.token_url,p.client_id,p.issuer,l.id AS legacy_id,l.consumer_key AS legacy_key,l.secret_encrypted AS legacy_secret,l.issuer_origin AS legacy_issuer FROM ags_outbox o JOIN attempts a ON a.id=o.attempt_id JOIN bindings b ON b.id=a.binding_id LEFT JOIN platforms p ON p.id=b.registration_id LEFT JOIN legacy_platforms l ON l.id=b.registration_id WHERE o.id=?").get(id);
+  return r?{id:r.id,attemptId:r.attempt_id,status:r.status,tries:r.tries,
+   payload:P(r.payload_json),ags:P(r.ags_json),subject:r.subject,resourceLinkId:r.resource_link_id,
+   protocol:r.legacy_id?'legacy':'lti1p3',legacyId:r.legacy_id,legacyConsumerKey:r.legacy_key,
+   legacySecretEncrypted:r.legacy_secret,legacyIssuer:r.legacy_issuer,
+   tokenUrl:r.token_url,clientId:r.client_id,issuer:r.issuer}:null;
  }
  const markOutbox=(id,status,error=null)=>sql('UPDATE ags_outbox SET status=?,tries=tries+1,last_error=?,updated_at=? WHERE id=?').run(status,error,t(),id);
  const listPending=()=>sql("SELECT id FROM ags_outbox WHERE status='PENDING' ORDER BY created_at LIMIT 50").all().map(r=>r.id);
  const listAttempts=tenantId=>sql('SELECT id,tenant_id,binding_id,context_id,status,created_at,updated_at FROM attempts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,contextId:r.context_id,status:r.status,createdAt:r.created_at,updatedAt:r.updated_at}));
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
- return Object.freeze({close:()=>db.close(),upsertPlatform,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
- publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,consumePicker,attachLaunch,getSession,
+ return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
+ publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,peekPicker,consumePicker,attachLaunch,getSession,
  getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,saveNrpsContext,getNrpsContext,listNrpsContexts,count});
 }

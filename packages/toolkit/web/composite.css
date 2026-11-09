@@ -8,3 +8,7 @@
 .p2lrn-composite__nav button:disabled, .p2lrn-composite__actions button:disabled { cursor: not-allowed; opacity: .5; }
 .p2lrn-composite__stage { min-width: 0; }
 .p2lrn-composite__actions { display: flex; gap: .5rem; justify-content: space-between; }
+
+.p2lrn-composite--stack .p2lrn-composite__stack-item{margin:1.2rem 0;padding:1rem;border:1px solid #dbe2eb;border-radius:10px;background:#fff;min-width:0}
+.p2lrn-composite--stack .p2lrn-composite__stack-item h3{margin:0 0 .75rem;font-size:1.15rem}
+.p2lrn-composite--stack .p2lrn-composite__stack-content{min-width:0;overflow-wrap:anywhere}

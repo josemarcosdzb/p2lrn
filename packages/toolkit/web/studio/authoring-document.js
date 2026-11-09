@@ -1,5 +1,6 @@
 import {getCourseRights,setCourseRights} from '../course-rights.js';
 import {questionnaireForLearner} from './questionnaire-grading.js';
+import {defaultAssembly,inspectAssemblyGLB} from '../assembly-3d-core.js';
 import {createDefaultComponentRegistry, CAPABILITY_ACTION_COMPONENT, COLLABORATION_COMPONENT} from '../component-registry.js';
 import {validateNativeComposite} from '../native-composite-core.js';
 import {HOST_CAPABILITY_EXTENSION, HOST_CAPABILITY_CONTRACT_VERSION, capabilityRequirements} from '../capability-broker.js';
@@ -394,7 +395,7 @@ export class P2LRNStudioDocument{
     return this.addComposite(parentId,{title,language,mode,completion});
   }
 
-  addComposite(parentId=this.rootId,{title='Compuesto',language='es',mode='sequence',completion='all'}={}){
+  addComposite(parentId=this.rootId,{title='Compuesto',language='es',mode='sequence',completion='all',presentation=null}={}){
     const name=String(title||'Compuesto');
     const normalizedMode=mode==='free'?'free':'sequence';
     const normalizedCompletion=completion==='any'?'any':'all';
@@ -406,6 +407,10 @@ export class P2LRNStudioDocument{
       navigation:normalizedMode==='free'?'open':'linear',
       title:name,
     };
+    if(presentation==='stack'){
+      if(normalizedMode!=='free')throw new Error('Las actividades en la misma p?gina deben permitir navegaci?n libre.');
+      payload.presentation='stack';
+    }
     // An empty group is an editable draft. #appendActivity makes it a native
     // composite once at least one activity has been added to its children.
     return this.addEmbeddedResource(parentId,{
@@ -415,6 +420,33 @@ export class P2LRNStudioDocument{
       bytes:encoder.encode(JSON.stringify(payload,null,2)+'\n'),
       profile:COMPOSITE_PROFILE,
     });
+  }
+
+  pageInsertionParent(activityId){
+    let selected=this.entity(activityId);
+    if(!selected)return this.rootId;
+    if(['course','unit'].includes(selected.type))return selected.id;
+    let parent=this.parentId(selected.id);
+    while(parent&&this.isCompositeActivity(parent))parent=this.parentId(parent);
+    const result=this.entity(parent);
+    if(!result||!['course','unit'].includes(result.type))throw new Error('No se encuentra la unidad del contenido.');
+    return result.id;
+  }
+
+  async samePageInsertionParent(activityId){
+    const current=this.entity(activityId);
+    if(!current||current.type!=='activity')throw new Error('Selecciona primero una lecci?n o actividad para a?adir contenido en la misma p?gina.');
+    const currentParent=this.parentId(current.id);
+    if(this.isCompositeActivity(currentParent)){
+      const existing=await this.readStructuredJson(currentParent);
+      if(existing?.payload?.presentation==='stack')return currentParent;
+    }
+    const parent=this.pageInsertionParent(current.id);
+    const original=this.entity(parent)?.children?.indexOf(currentParent===parent?current.id:currentParent)??-1;
+    const group=this.addComposite(parent,{title:this.title(current.id),language:'es',mode:'free',completion:'all',presentation:'stack'});
+    if(original>=0)this.reorderChild(parent,group.id,original);
+    this.moveActivity(currentParent===parent?current.id:currentParent,group.id,0);
+    return group.id;
   }
 
   moveActivity(activityId,newParentId,index=null){
@@ -509,13 +541,52 @@ export class P2LRNStudioDocument{
     return this.addEmbeddedResource(parentId,{title,language,filename:'questionnaire.json',mediaType:'application/vnd.p2lrn.questionnaire+json',bytes:encoder.encode(JSON.stringify(data,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-questionnaire',activityType:'https://p2lrn.org/type/assessment',renderer});
   }
 
+  async readAssemblyAsset(path){
+    const entry=this.manifest.files.find(file=>file.path===String(path)&&file.mediaType==='model/gltf-binary');
+    if(!entry)throw new Error('Modelo GLB no incluido en este curso');
+    const bytes=this.payloadOverrides.has(path)?this.payloadOverrides.get(path):await this.package?.zip.read(path);
+    if(!bytes)throw new Error('El modelo GLB no está disponible');
+    const result=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+    inspectAssemblyGLB(result);
+    return result;
+  }
+
+  async addAssemblyAsset({bytes,filename='modelo.glb'}={}){
+    const data=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes??[]);
+    const inspected=inspectAssemblyGLB(data);
+    const digest='sha256:'+Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',data)),n=>n.toString(16).padStart(2,'0')).join('');
+    for(const existing of this.manifest.files.filter(entry=>entry.path.endsWith('.glb'))){
+      const current=existing.byteDigest!=='sha256:'+'0'.repeat(64)?existing.byteDigest:null;
+      let actual=current;
+      if(!actual&&this.payloadOverrides.has(existing.path)){
+        const previous=this.payloadOverrides.get(existing.path);
+        actual='sha256:'+Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',previous)),n=>n.toString(16).padStart(2,'0')).join('');
+      }
+      if(actual!==digest)continue;
+      const resource=this.graph.entities.find(entity=>entity.type==='resource'&&entity.representations?.some(rep=>rep.location?.path===existing.path));
+      if(resource)return{id:resource.id,path:existing.path,size:data.byteLength,name:String(filename),digest,inspected};
+    }
+    const id='urn:uuid:'+crypto.randomUUID(),token=crypto.randomUUID(),path='content/resources/'+token+'.glb';
+    const resource={id,type:'resource',title:{es:String(filename)},representations:[{id:'urn:uuid:'+crypto.randomUUID(),role:'primary',location:{type:'embedded',path},originalName:String(filename),mediaType:'model/gltf-binary'}]};
+    this.graph.entities.push(resource);this.entities.set(id,resource);
+    const zero='sha256:'+'0'.repeat(64);
+    this.manifest.files.push({path,mediaType:'model/gltf-binary',size:data.byteLength,byteDigest:zero,contentDigest:zero});
+    this.payloadOverrides.set(path,data);
+    this.changeCount+=1;
+    return{id,path,size:data.byteLength,name:String(filename),digest,inspected};
+  }
+
   addGame(parentId=this.rootId,{kind='memory',title='Juego',language='es'}={}){
-    const threeDKind={'3d':'ordering','3d-matching':'matching','3d-classification':'classification'}[kind]??null;
+    const threeDKind={'3d':'ordering','3d-matching':'matching','3d-classification':'classification','assembly-3d':'assembly'}[kind]??null;
     const questionKind=threeDKind??kind;
     const renderers={memory:'https://p2lrn.org/renderer/questionnaire/memory',matching:'https://p2lrn.org/renderer/questionnaire/matching',ordering:'https://p2lrn.org/renderer/questionnaire/ordering',classification:'https://p2lrn.org/renderer/questionnaire/classification','true-false':'https://p2lrn.org/renderer/questionnaire/true-false','fill-blanks':'https://p2lrn.org/renderer/questionnaire/fill-blanks','word-search':'https://p2lrn.org/renderer/questionnaire/word-search',crossword:'https://p2lrn.org/renderer/questionnaire/crossword',rosco:'https://p2lrn.org/renderer/questionnaire/rosco','3d':'https://p2lrn.org/renderer/questionnaire/3d-order-match',standard:'https://p2lrn.org/renderer/questionnaire/standard'};
     const common={schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',version:'0.4.0',title:String(title||'Juego'),language,grading:{mode:'embedded-key'},presentation:{questionMode:'one-at-a-time',shuffleQuestions:false,showFeedback:'never'}};
     let questions;
-    if(questionKind==='ordering')questions=[{id:'q1',type:'ordering',prompt:'Ordena los elementos',points:1,items:[{id:'i1',text:'Primero'},{id:'i2',text:'Segundo'},{id:'i3',text:'Tercero'}],solution:{order:['i1','i2','i3']}}];
+    if(questionKind==='assembly'){
+      const scene=defaultAssembly();
+      questions=[{id:'q1',type:'classification',prompt:'Coloca las piezas en su posición y orientación',points:scene.pieces.length,items:scene.pieces.map(p=>({id:p.id,text:p.text})),categories:scene.targets.map(t=>({id:t.id,text:t.text})),solution:{assignments:scene.links.map(l=>({item:l.pieceId,category:l.targetId}))},assembly3d:scene}];
+    }
+    else if(questionKind==='ordering')questions=[{id:'q1',type:'ordering',prompt:'Ordena los elementos',points:1,items:[{id:'i1',text:'Primero'},{id:'i2',text:'Segundo'},{id:'i3',text:'Tercero'}],solution:{order:['i1','i2','i3']}}];
     else if(questionKind==='classification')questions=[{id:'q1',type:'classification',prompt:'Clasifica los elementos',points:1,items:[{id:'i1',text:'Elemento A'},{id:'i2',text:'Elemento B'}],categories:[{id:'c1',text:'Grupo 1'},{id:'c2',text:'Grupo 2'}],solution:{assignments:[{item:'i1',category:'c1'},{item:'i2',category:'c2'}]}}];
     else if(questionKind==='true-false')questions=[{id:'q1',type:'true-false',prompt:'La Tierra gira alrededor del Sol',points:1,choices:[{id:'t1',text:'Verdadero'},{id:'f1',text:'Falso'}],solution:{choiceIds:['t1']}},{id:'q2',type:'true-false',prompt:'El agua hierve a 20 °C al nivel del mar',points:1,choices:[{id:'t2',text:'Verdadero'},{id:'f2',text:'Falso'}],solution:{choiceIds:['f2']}}];
     else if(questionKind==='fill-blanks')questions=[{id:'q1',type:'fill-blanks',prompt:'Completa los huecos',body:'Escribe aquí una frase con {{b1}}.',inputMode:'text',points:1,blanks:[{id:'b1',label:'Hueco 1'}],solution:{answers:{b1:['Respuesta']}}}];

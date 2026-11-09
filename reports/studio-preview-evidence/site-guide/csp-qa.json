@@ -1,0 +1,51 @@
+{
+  "at": "2026-11-09T13:45:40.085Z",
+  "results": [
+    {
+      "route": "http://127.0.0.1:5544/crear-cursos-interactivos/",
+      "policy": "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; media-src 'self' blob: data: https:; connect-src 'self' https:; worker-src 'self' blob:; frame-src 'self' blob: data: https:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests",
+      "HTTP": 200,
+      "visible": true,
+      "styleLoaded": true,
+      "guideScriptPresent": true,
+      "violations": [],
+      "horizontalOverflow": 0,
+      "imagesBroken": 0
+    },
+    {
+      "route": "http://127.0.0.1:5544/en/create-interactive-courses/",
+      "policy": "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; media-src 'self' blob: data: https:; connect-src 'self' https:; worker-src 'self' blob:; frame-src 'self' blob: data: https:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests",
+      "HTTP": 200,
+      "visible": true,
+      "styleLoaded": true,
+      "guideScriptPresent": true,
+      "violations": [],
+      "horizontalOverflow": 0,
+      "imagesBroken": 0
+    },
+    {
+      "route": "http://127.0.0.1:5544/docs/studio/",
+      "policy": "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; media-src 'self' blob: data: https:; connect-src 'self' https:; worker-src 'self' blob:; frame-src 'self' blob: data: https:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests",
+      "HTTP": 200,
+      "visible": true,
+      "styleLoaded": true,
+      "guideScriptPresent": false,
+      "violations": [],
+      "horizontalOverflow": 0,
+      "imagesBroken": 0
+    },
+    {
+      "route": "http://127.0.0.1:5544/en/docs/studio/",
+      "policy": "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; media-src 'self' blob: data: https:; connect-src 'self' https:; worker-src 'self' blob:; frame-src 'self' blob: data: https:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests",
+      "HTTP": 200,
+      "visible": true,
+      "styleLoaded": true,
+      "guideScriptPresent": false,
+      "violations": [],
+      "horizontalOverflow": 0,
+      "imagesBroken": 0
+    }
+  ],
+  "errors": [],
+  "violations": []
+}

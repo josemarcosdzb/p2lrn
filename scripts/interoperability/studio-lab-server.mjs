@@ -1,0 +1,158 @@
+// Browser-only QA server for a REAL Studio-created course.
+// It never converts a destination-specific copy and never proxies credentials.
+// The H5P and SCORM sample imports are existing, independently validated P2LRN
+// wrappers of genuine external package formats; the import route is byte-for-byte.
+import {createServer} from 'node:http';
+import {readFile,stat} from 'node:fs/promises';
+import {resolve,relative,sep,join,extname} from 'node:path';
+import {createHash,randomBytes} from 'node:crypto';
+const sha=b=>createHash('sha256').update(b).digest('hex');
+const mediaTypes={
+ '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8',
+ '.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
+ '.json':'application/json; charset=utf-8','.svg':'image/svg+xml',
+ '.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg',
+ '.webp':'image/webp','.gif':'image/gif','.webm':'video/webm',
+ '.mp4':'video/mp4','.woff':'font/woff','.woff2':'font/woff2',
+ '.p2lrn':'application/vnd.p2lrn+zip','.wasm':'application/wasm',
+ '.ico':'image/x-icon','.bin':'application/octet-stream',
+};
+const responseHeaders={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',
+ 'Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex,nofollow'};
+const samples=Object.freeze({
+  'h5p-arithmetic.p2lrn':'examples/canonical/external/free/h5p-arithmetic.p2lrn',
+  'snack-safety-scorm12.p2lrn':'examples/canonical/external/free/snack-safety-scorm12.p2lrn',
+  'video.webm':'scripts/studio-media-test.webm',
+});
+export async function createInteropStudioServer({siteRoot,repoRoot,coursePath=null,versionTwoPath=null,stateHost=false}={}){
+  const root=resolve(siteRoot),repo=resolve(repoRoot);
+  const report={imports:[],requests:[],sourceFiles:{},draftSessions:0,draftWrites:0,officialGradeWrites:0,rejectedGradeSpoofs:0};
+  // This is a LOCAL QA Host, not an LMS: stores untrusted learner draft state
+  // but deliberately offers NO authoritative grade acceptance endpoint.
+  const learnerSessions=new Map();
+  const courseContentRoot='sha256:e0fb13f5092e0d1d9cf6cf552632279b30bf89c6364662b1dbdf5cfe80804323';
+  for(const [name,path] of Object.entries(samples)){
+    const bytes=await readFile(join(repo,path));
+    report.sourceFiles[name]={bytes:bytes.length,sha256:sha(bytes)};
+  }
+  const server=createServer(async(req,res)=>{
+    try{
+      const url=new URL(req.url,'http://127.0.0.1');
+      const pathname=decodeURIComponent(url.pathname);
+      const send=(status,body,type='text/plain; charset=utf-8')=>{
+        res.writeHead(status,{...responseHeaders,'Content-Type':type});
+        res.end(req.method==='HEAD'?undefined:body);
+      };
+      if(pathname==='/__interop_health'){
+        send(200,JSON.stringify({ok:true,kind:'real-studio-ui',samples:Object.keys(samples)}),'application/json');
+        return;
+      }
+      if(stateHost&&pathname.startsWith('/interop/host/')){
+        const hostname=req.headers.host||'';
+        if(!/^127\.0\.0\.1:\d+$/.test(hostname)){send(403,'Loopback host required');return;}
+        const token=/\bp2lrn_qa_session=([a-f0-9]{48})\b/.exec(req.headers.cookie||'')?.[1];
+        const actor=token?learnerSessions.get(token):null;
+        if(req.method==='POST'&&pathname==='/interop/host/login'){
+          const newToken=randomBytes(24).toString('hex');
+          learnerSessions.set(newToken,{actorId:'local-qa-'+randomBytes(8).toString('hex'),drafts:new Map(),scoreNotifications:0});
+          report.draftSessions=learnerSessions.size;
+          res.writeHead(200,{...responseHeaders,'Set-Cookie':'p2lrn_qa_session='+newToken+'; Path=/interop/host; HttpOnly; SameSite=Strict',
+            'Content-Type':'application/json','Cache-Control':'no-store'});
+          res.end(JSON.stringify({ok:true,gradeAuthority:false}));return;
+        }
+        if(!actor){send(401,JSON.stringify({error:'No QA learner session'}),'application/json');return;}
+        const key=url.searchParams.get('entityId');
+        const rootId=url.searchParams.get('contentRoot');
+        if(pathname==='/interop/host/official-grade'){
+          report.rejectedGradeSpoofs++;
+          send(403,JSON.stringify({error:'Client grade cannot create a trusted LMS result'}),'application/json');
+          return;
+        }
+        if(pathname==='/interop/host/audit'&&req.method==='GET'){
+          send(200,JSON.stringify({draftCount:actor.drafts.size,draftWrites:report.draftWrites,
+            scoreNotifications:actor.scoreNotifications,verifiedGrades:report.officialGradeWrites,
+            rejectedGradeSpoofs:report.rejectedGradeSpoofs}),'application/json');
+          return;
+        }
+        if(pathname==='/interop/host/state'){
+          if(!/^urn:uuid:[0-9a-f-]{36}$/i.test(key||'')||rootId!==courseContentRoot){
+            send(400,JSON.stringify({error:'Unknown original course or activity'}),'application/json');return;
+          }
+          if(req.method==='GET'){
+            const draft=actor.drafts.get(key);
+            send(draft?200:404,JSON.stringify(draft?{ok:true,state:draft}:{error:'No stored draft'}),'application/json');
+            return;
+          }
+          if(req.method==='POST'){
+            const origin=req.headers.origin;
+            if(origin&&origin!=='http://127.0.0.1:'+server.address().port){send(403,'Wrong origin');return;}
+            const chunks=[];let n=0;
+            for await(const chunk of req){
+              n+=chunk.length;if(n>65536){send(413,'State too large');return;}
+              chunks.push(chunk);
+            }
+            let data;
+            try{data=JSON.parse(Buffer.concat(chunks).toString('utf8'));}
+            catch{send(400,'Invalid JSON');return;}
+            if(!data||typeof data!=='object'||Array.isArray(data)||typeof data.state!=='object'||!data.state||Array.isArray(data.state)){
+              send(400,'Invalid draft');return;
+            }
+            actor.drafts.set(key,data.state);report.draftWrites++;
+            send(200,JSON.stringify({ok:true,untrustedDraft:true}),'application/json');return;
+          }
+        }
+        if(pathname==='/interop/host/untrusted-score'&&req.method==='POST'){
+          actor.scoreNotifications++;
+          send(202,JSON.stringify({received:true,verifiedGrade:false}),'application/json');return;
+        }
+        send(405,'Unsupported QA Host operation');return;
+      }
+      if(req.method==='POST'&&pathname==='/api/p2lrn/studio/import'){
+        const rawName=req.headers['x-p2lrn-filename'];
+        let name;
+        try{name=decodeURIComponent(String(rawName??''));}catch{send(400,'Invalid filename');return;}
+        if(!(name==='h5p-arithmetic.p2lrn'||name==='snack-safety-scorm12.p2lrn')){
+          send(422,JSON.stringify({error:'Only the two known real external-format samples are allowed in QA.'}),'application/json');
+          return;
+        }
+        const chunks=[];let size=0;
+        for await(const chunk of req){size+=chunk.length;if(size>8*1024*1024){send(413,'Too large');return;}chunks.push(chunk);}
+        const body=Buffer.concat(chunks);
+        const expected=await readFile(join(repo,samples[name]));
+        if(body.length!==expected.length||sha(body)!==sha(expected)){send(422,JSON.stringify({error:'Sample content digest mismatch'}),'application/json');return;}
+        report.imports.push({name,sha256:sha(body),byteIdentical:true,at:new Date().toISOString()});
+        send(200,body,'application/vnd.p2lrn+zip');
+        return;
+      }
+      if(!['GET','HEAD'].includes(req.method)){send(405,'Method not allowed');return;}
+      if(pathname.startsWith('/interop/sources/')){
+        const name=pathname.slice('/interop/sources/'.length);
+        if(!Object.hasOwn(samples,name)){send(404,'Not found');return;}
+        const bytes=await readFile(join(repo,samples[name]));
+        send(200,bytes,mediaTypes[extname(name)]||'application/octet-stream');return;
+      }
+      if(pathname==='/interop/seguridad-informatica.p2lrn'||pathname==='/interop/seguridad-informatica-v2.p2lrn'){
+        const resolvedCourse=pathname.endsWith('-v2.p2lrn')?versionTwoPath:coursePath;
+        if(!resolvedCourse){send(404,'Course not yet exported');return;}
+        const body=await readFile(resolvedCourse).catch(()=>null);
+        if(!body){send(404,'Course not yet exported');return;}
+        send(200,body,'application/vnd.p2lrn+zip');return;
+      }
+      if(pathname.includes('\0')||pathname.includes('\\')){send(400,'Bad request');return;}
+      const file=resolve(root,'.'+pathname);
+      const rel=relative(root,file);
+      if(rel==='..'||rel.startsWith('..'+sep)||rel.startsWith(sep)||rel.includes(':')){send(403,'Forbidden');return;}
+      let selected=file,info=await stat(selected).catch(()=>null);
+      if(info?.isDirectory()){selected=join(selected,'index.html');info=await stat(selected).catch(()=>null);}
+      if(!info?.isFile()){send(404,'Not found');return;}
+      const bytes=await readFile(selected);
+      send(200,bytes,mediaTypes[extname(selected).toLowerCase()]||'application/octet-stream');
+    }catch(error){
+      console.error('P2LRN QA HTTP:',String(error?.message||error).slice(0,300));
+      res.writeHead(500,responseHeaders);res.end('Internal QA error');
+    }
+  });
+  await new Promise((done,fail)=>{server.once('error',fail);server.listen(0,'127.0.0.1',done);});
+  const port=server.address().port;
+  return {port,base:'http://127.0.0.1:'+port,report,close:()=>new Promise(done=>server.close(done))};
+}

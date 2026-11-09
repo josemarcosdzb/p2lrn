@@ -8,6 +8,7 @@ import {
   validateConnection,
 } from '../game-3d-mechanics.js';
 import {createThreeGameScene} from '../game-3d/three-runtime.js';
+import {buildAssemblyControls} from './assembly-3d.js';
 import {el, finishPanel, setupGame, statusNode, stylesheets} from './game-common.js';
 
 export {stylesheets};
@@ -234,7 +235,6 @@ function buildOrderingControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='ordering-object'){
-        if(scene.playerDistanceTo(`order:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque para cogerlo.'));return true;}
         if(selected&&selected!==meta.id){setText(status,playerUiText('Ya llevas un objeto. Colócalo antes de coger otro.'));return true;}
         selected=meta.id;
         scene.highlight(`order:${selected}`,true);
@@ -243,7 +243,6 @@ function buildOrderingControls({trial,runtime,scene,status}) {
         return true;
       }
       if(meta.kind==='ordering-slot'){
-        if(scene.playerDistanceTo(`order-slot:${meta.index}`)>3.15){setText(status,playerUiText('Acércate al pedestal para colocar el bloque.'));return true;}
         const placedOk=place(selected,meta.index);
         if(placedOk && selected){
           scene.highlight(`order:${selected}`,false);
@@ -284,18 +283,33 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   const leftColumn=el('div',{class:'p2lrn-match-column'});
   const rightColumn=el('div',{class:'p2lrn-match-column'});
   const leftButtons=new Map();
+  const allMatched=()=>connections.length>=trial.connections.length;
+  const matchingLocked=()=>Boolean(runtime.state.completed||allMatched());
+  const completedMessage=()=>playerUiText('Todas las relaciones están completadas. Finaliza la actividad.');
 
   function chooseLeft(id) {
-    if(activeRope){scene.disconnect(activeRope);activeRope=null;}
-    if(selected) scene.highlight(`left:${selected}`,false);
+    // A solved source must not create another temporary rope, even before
+    // the learner presses the final Submit button.
+    if(matchingLocked()||connections.some((pair)=>pair.leftId===id)){
+      clearSelection();
+      setText(status,matchingLocked()?completedMessage():playerUiText('Esta pareja ya está conectada.'));
+      return false;
+    }
+    clearSelection();
     selected=id;
     scene.highlight(`left:${selected}`,true);
     activeRope=scene.connectToPlayer(`left:${selected}`);
     leftButtons.forEach((button,key)=>button.classList.toggle('is-selected',key===id));
-    setText(status,'Origen seleccionado. Elige su pareja.');
+    setText(status,playerUiText('Origen seleccionado. Elige su pareja.'));
+    return true;
   }
 
   function chooseRight(id) {
+    if(matchingLocked()){
+      clearSelection();
+      setText(status,completedMessage());
+      return false;
+    }
     if(!selected){setText(status,playerUiText('Selecciona primero un elemento de la izquierda.'));return false;}
     const validation=validateConnection(selected,id,expected,solved);
     if(!validation.ok){
@@ -317,7 +331,8 @@ function buildMatchingControls({trial,runtime,scene,status}) {
     scene.highlight(`left:${selected}`,false);
     selected=null;
     leftButtons.forEach((button)=>button.classList.remove('is-selected'));
-    setText(status,playerUiText(`Conexión correcta · ${connections.length}/${trial.connections.length}`));
+    setText(status,playerUiText(`Conexión correcta · ${connections.length}/${trial.connections.length}`)
+      +(allMatched()?` · ${completedMessage()}`:''));
     return true;
   }
 
@@ -357,16 +372,16 @@ function buildMatchingControls({trial,runtime,scene,status}) {
     drag(meta,phase,{position=null,target=null}={}){
       if(meta.kind!=='matching-left')return false;
       if(phase==='start'){
-        if(runtime.state.completed)return false;
-        chooseLeft(meta.id);
+        if(!chooseLeft(meta.id))return false;
         if(activeRope){scene.disconnect(activeRope);activeRope=null;}
         activeRope=scene.connectToPointer(`left:${meta.id}`);
         if(position)scene.setPointerTarget(position);
         setText(status,playerUiText('Lleva la cuerda hasta la pareja en la escena.'));
         return true;
       }
-      if(phase==='move'){if(position)scene.setPointerTarget(position);return true;}
+      if(phase==='move'){if(activeRope&&position)scene.setPointerTarget(position);return Boolean(activeRope);}
       if(phase==='end'){
+        if(!selected){clearSelection();return false;}
         if(target?.kind==='matching-right')chooseRight(target.id);
         else {clearSelection();setText(status,playerUiText('Suelta la cuerda encima de su pareja.'));}
         return true;
@@ -377,11 +392,9 @@ function buildMatchingControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='matching-left'){
-        if(scene.playerDistanceTo(`left:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque de origen para coger la cuerda.'));return true;}
         chooseLeft(meta.id);return true;
       }
       if(meta.kind==='matching-right'){
-        if(scene.playerDistanceTo(`right:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque de destino para enganchar la cuerda.'));return true;}
         chooseRight(meta.id);return true;
       }
       return false;
@@ -502,7 +515,6 @@ function buildClassificationControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='classification-object'){
-        if(scene.playerDistanceTo(`classify:${meta.id}`)>3.15){setText(status,playerUiText('Acércate al bloque para cogerlo.'));return true;}
         if(selected&&selected!==meta.id){setText(status,playerUiText('Ya llevas un objeto. Deposítalo antes de coger otro.'));return true;}
         selected=meta.id;
         scene.highlight(`classify:${selected}`,true);
@@ -511,7 +523,6 @@ function buildClassificationControls({trial,runtime,scene,status}) {
         return true;
       }
       if(meta.kind==='classification-category'){
-        if(scene.playerDistanceTo(`category:${meta.id}`)>3.25){setText(status,playerUiText('Acércate a la categoría para colocar el bloque.'));return true;}
         if(!selected){setText(status,playerUiText('Selecciona primero un objeto.'));return true;}
         const ok=moveToCategory(selected,meta.id);
         if(ok){
@@ -525,29 +536,133 @@ function buildClassificationControls({trial,runtime,scene,status}) {
   };
 }
 
+
+// The analog joystick is scoped to one scene. It never intercepts gestures
+// on the WebGL canvas, where taps and drags must remain available for gameplay.
+export function createVirtualJoystick(scene){
+  const pad=el('div',{
+    class:'p2lrn-3d-joystick',
+    role:'group',
+    'aria-label':playerUiText('Joystick de movimiento. Desliza la bola para caminar.'),
+  });
+  const base=el('div',{class:'p2lrn-3d-joystick-base','aria-hidden':'true'});
+  const knob=el('div',{class:'p2lrn-3d-joystick-knob'});
+  base.append(knob);
+  pad.append(base);
+  let pointerId=null;
+  const update=(event)=>{
+    const rect=base.getBoundingClientRect();
+    const radius=Math.max(1,rect.width*0.33);
+    const dx=event.clientX-(rect.left+rect.width/2);
+    const dy=event.clientY-(rect.top+rect.height/2);
+    const distance=Math.hypot(dx,dy);
+    const amount=Math.min(1,distance/radius);
+    const strength=amount<0.12?0:(amount-0.12)/0.88;
+    const nx=distance?dx/distance:0,ny=distance?dy/distance:0;
+    knob.style.transform='translate3d('+(nx*amount*radius)+'px,'+(ny*amount*radius)+'px,0)';
+    if(strength===0)scene.setMovementVector(0,0);
+    else scene.setMovementVector(nx*strength,-ny*strength);
+  };
+  const reset=()=>{
+    const held=pointerId;
+    pointerId=null;
+    scene.setMovementVector(0,0);
+    knob.style.transform='translate3d(0,0,0)';
+    if(held!==null)try{pad.releasePointerCapture?.(held);}catch{}
+  };
+  const start=(event)=>{
+    if(pointerId!==null || (event.pointerType==='mouse'&&event.button!==0))return;
+    event.preventDefault();
+    pointerId=event.pointerId;
+    try{pad.setPointerCapture?.(pointerId);}catch{}
+    update(event);
+  };
+  const move=(event)=>{
+    if(pointerId!==event.pointerId)return;
+    event.preventDefault();
+    update(event);
+  };
+  const end=(event)=>{
+    if(pointerId===event.pointerId)reset();
+  };
+  pad.addEventListener('pointerdown',start);
+  pad.addEventListener('pointermove',move);
+  pad.addEventListener('pointerup',end);
+  pad.addEventListener('pointercancel',end);
+  pad.addEventListener('lostpointercapture',end);
+  globalThis.addEventListener?.('blur',reset);
+  return {
+    element:pad,
+    reset,
+    destroy(){
+      reset();
+      globalThis.removeEventListener?.('blur',reset);
+      pad.removeEventListener('pointerdown',start);
+      pad.removeEventListener('pointermove',move);
+      pad.removeEventListener('pointerup',end);
+      pad.removeEventListener('pointercancel',end);
+      pad.removeEventListener('lostpointercapture',end);
+    },
+  };
+}
+
 // A WebGL failure must not make the entire authored exercise unusable.
 // The accessible fields still drive the same native questionnaire session.
 function createAccessibleOnlyScene() {
   return {
     physics:'none',
     reset(){},
-    addBox(){},addZone(){},addNode(){},
+    addBox(){},addZone(){},addNode(){},addCage(){},async addModel(){},setTransform(){},
     connect(){return null;},connectToPlayer(){return null;},connectToPointer(){return null;},
     setPointerTarget(){},disconnect(){return false;},
     carry(){return false;},setTranslation(){return false;},highlight(){},
-    playerDistanceTo(){return 0;},nudgePlayer(){},resetPlayer(){},destroy(){},
+    playerDistanceTo(){return 0;},nudgePlayer(){},setMovementVector(){},resetPlayer(){},destroy(){},
   };
 }
 
 export async function render(options) {
   const {game,runtime,shell}=await setupGame({...options,rendererId:THREE_D_RENDERER});
+  const packageSource=options.package;
+  shell.classList.add('p2lrn-3d-game');
   const layout=el('div',{class:'p2lrn-3d-layout'});
+  const directions=el('p',{class:'p2lrn-3d-directions',role:'note'});
+  const stage=el('div',{class:'p2lrn-3d-stage'});
   const canvas=el('canvas',{
     class:'p2lrn-3d-canvas',
     width:'960',
     height:'540',
     'aria-label':playerUiText('Escena 3D interactiva del ejercicio'),
   });
+  stage.append(canvas);
+  const fullscreen=el('button',{type:'button',class:'p2lrn-3d-fullscreen',
+    'aria-label':playerUiText('Ampliar escena 3D a pantalla completa')},
+    playerUiText('Pantalla completa'));
+  stage.append(fullscreen);
+  const getFullscreen=()=>stage.getRootNode()?.fullscreenElement===stage || document.fullscreenElement===stage;
+  const updateFullscreen=()=>{
+    const active=getFullscreen();
+    fullscreen.textContent=playerUiText(active?'Salir de pantalla completa':'Pantalla completa');
+    fullscreen.setAttribute('aria-label',playerUiText(active?'Salir de pantalla completa':'Ampliar escena 3D a pantalla completa'));
+    fullscreen.setAttribute('aria-pressed',String(active));
+  };
+  fullscreen.addEventListener('click',async()=>{
+    try{
+      if(getFullscreen())await document.exitFullscreen();
+      else if(typeof stage.requestFullscreen==='function')await stage.requestFullscreen();
+      else throw Error('Este navegador no permite pantalla completa.');
+    }catch(error){status.textContent=playerUiText('No se pudo activar pantalla completa: ')+(error?.message||String(error));}
+    updateFullscreen();
+  });
+  document.addEventListener('fullscreenchange',updateFullscreen);
+  const entryHint=el('div',{class:'p2lrn-3d-entry-hint',role:'note'},
+    playerUiText('Haz clic en la escena para entrar'));
+  entryHint.append(el('small',{},playerUiText('Usa WASD o las flechas para caminar y arrastra el fondo para mirar.')));
+  stage.append(entryHint);
+  const enterScene=()=>{stage.classList.add('is-entered');entryHint.setAttribute('aria-hidden','true');};
+  canvas.addEventListener('focus',enterScene);
+  canvas.addEventListener('pointerdown',enterScene);
+  canvas.addEventListener('click',enterScene);
+  const heading=el('header',{class:'p2lrn-3d-question-head'});
   const controls=el('div',{class:'p2lrn-3d-controls'});
   const status=statusNode(playerUiText('Preparando escena 3D…'));
   let trialIndex=0;
@@ -555,18 +670,23 @@ export async function render(options) {
   let currentDrag=()=>false;
 
   let scene;
+  let joystick=null;
   let accessibleOnly=false;
   try{
     scene=await createThreeGameScene(canvas,{
       onInteraction:(meta)=>currentInteraction(meta),
       onDrag:(meta,phase,info)=>currentDrag(meta,phase,info),
     });
+    layout.classList.add('p2lrn-3d-interactive');
+    joystick=createVirtualJoystick(scene);
+    stage.append(joystick.element);
   }catch(error){
     console.warn('P2LRN 3D renderer unavailable; accessible controls remain enabled:',error);
     scene=createAccessibleOnlyScene();
     accessibleOnly=true;
-    canvas.style.display='none';
-    layout.style.gridTemplateColumns='minmax(0,1fr)';
+    stage.hidden=true;
+    fullscreen.hidden=true;
+    layout.classList.add('p2lrn-3d-fallback');
     layout.append(el('p',{class:'p2lrn-game-description',role:'status'},
       playerUiText('La escena 3D no está disponible en este dispositivo. Puedes completar las mismas preguntas con los controles accesibles.')));
   }
@@ -576,24 +696,16 @@ export async function render(options) {
     :playerUiText(`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`));
   const help=el('p',{class:'p2lrn-game-description'},accessibleOnly
     ?playerUiText('Elige las respuestas usando los botones y selectores de cada prueba.')
-    :playerUiText('Muévete con WASD/flechas. Arrastra el fondo para girar la cámara; arrastra un bloque directamente a una posición o categoría, o lleva una cuerda desde el origen hasta la pareja. También puedes pulsar los bloques y usar los controles accesibles.'));
-  const movePad=el('div',{class:'p2lrn-3d-move-pad','aria-label':playerUiText('Controles de movimiento')});
-  for(const [label,direction] of [['▲','forward'],['◀','left'],['▼','back'],['▶','right']]){
-    const button=el('button',{type:'button',class:'p2lrn-game-button','aria-label':direction},label);
-    button.addEventListener('click',()=>scene.nudgePlayer(direction));
-    movePad.append(button);
-  }
-  const resetView=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Recentrar jugador'));
-  resetView.addEventListener('click',()=>scene.resetPlayer());
-  if(accessibleOnly){movePad.style.display='none';resetView.style.display='none';}
-  controls.append(technology,help,movePad,resetView);
+    :playerUiText('En móvil, mueve la bola para caminar y arrastra el fondo para mirar. En PC, haz clic en la escena y usa WASD o las flechas.'));
+  controls.append(technology,help);
 
-  const renderTrial=()=>{
+  const renderTrial=async()=>{
+    joystick?.reset();
     scene.reset();
     controls.querySelectorAll('.p2lrn-3d-trial').forEach((node)=>node.remove());
     const trial=game.data.trials[trialIndex];
     const wrap=el('div',{class:'p2lrn-3d-trial'});
-    wrap.append(
+    heading.replaceChildren(
       el('p',{class:'p2lrn-game-description'},playerUiText(`Prueba ${trialIndex+1} de ${game.data.trials.length}`)),
       el('h3',{},trial.prompt),
     );
@@ -602,31 +714,47 @@ export async function render(options) {
     if(trial.type==='ordering-3d') controller=buildOrderingControls({trial,runtime,scene,status});
     else if(trial.type==='matching-3d') controller=buildMatchingControls({trial,runtime,scene,status});
     else if(trial.type==='classification-3d') controller=buildClassificationControls({trial,runtime,scene,status});
+    else if(trial.type==='assembly-3d') controller=await buildAssemblyControls({trial,runtime,scene,status,pkg:packageSource});
     else throw new Error(`Unsupported P2LRN 3D trial: ${trial.type}`);
 
+    const instructions={
+      'ordering-3d':'Haz clic en una caja y después en el pedestal numerado, o arrastra la caja hasta él.',
+      'matching-3d':'Haz clic en una caja azul y luego en su pareja morada para enlazarlas, o arrastra la cuerda.',
+      'classification-3d':'Haz clic en una caja y después en su categoría, o arrastra la caja hasta la zona correcta.',
+      'assembly-3d':'Transporta y gira cada pieza hasta encajarla en su volumen de destino.',
+    };
+    setText(directions,playerUiText(instructions[trial.type]));
     currentInteraction=controller.interact;
     currentDrag=controller.drag??(()=>false);
-    wrap.append(controller.panel);
+    const alternative=el('div',{class:'p2lrn-3d-alternative'});
+    alternative.append(controller.panel);
+    wrap.append(alternative);
 
     const nav=el('div',{class:'p2lrn-game-actions'});
     const previous=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},playerUiText('Anterior'));
     const next=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===game.data.trials.length-1},playerUiText('Siguiente'));
-    previous.addEventListener('click',()=>{trialIndex-=1;renderTrial();});
-    next.addEventListener('click',()=>{trialIndex+=1;renderTrial();});
+    previous.addEventListener('click',()=>{trialIndex-=1;renderTrial().catch(error=>setText(status,error.message));});
+    next.addEventListener('click',()=>{trialIndex+=1;renderTrial().catch(error=>setText(status,error.message));});
     nav.append(previous,next);
-    wrap.append(nav);
+    if(game.data.trials.length>1)wrap.append(nav);
     controls.append(wrap);
-    setText(status,controller.summary??playerUiText('Selecciona elementos en la escena o utiliza los controles accesibles.'));
+    setText(status,controller.summary??playerUiText('Toca o arrastra las cajas en la escena para responder.'));
   };
 
-  renderTrial();
-  layout.append(canvas,controls);
+  await renderTrial();
+  layout.append(heading,directions,stage,controls);
   shell.append(layout);
   finishPanel(runtime,shell);
   shell.append(status);
 
   const originalDestroy=runtime.destroy.bind(runtime);
   runtime.destroy=()=>{
+    joystick?.destroy();
+    document.removeEventListener('fullscreenchange',updateFullscreen);
+    if(getFullscreen())void document.exitFullscreen().catch(()=>{});
+    canvas.removeEventListener('focus',enterScene);
+    canvas.removeEventListener('pointerdown',enterScene);
+    canvas.removeEventListener('click',enterScene);
     scene.destroy();
     originalDestroy();
   };

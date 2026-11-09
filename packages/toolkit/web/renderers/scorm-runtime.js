@@ -1,3 +1,4 @@
+import {withOpaqueRuntimeBootstrapNonce} from '../opaque-runtime-bootstrap-nonce.js';
 import {openNestedPackage, openPayloadPackage} from '../package-member.js';
 import {createScormApi, isScormRuntimeProtocol, normalizeScormVersion, SCORM_PROFILE, SCORM_RUNTIME_PROTOCOL} from '../scorm-runtime-core.js';
 import {createScorm2004Sequencer,parseScormManifest,inspectScorm2004SequencingSupport} from '../scorm2004-sequencing.js';
@@ -388,7 +389,7 @@ export async function render({container, payload, representation, package: pkg, 
   window.addEventListener('message', onMessage);
 
   if (isolatedRuntimeUrl) iframe.src = isolatedRuntimeUrl;
-  else iframe.srcdoc = createScormSandboxShell(fallbackToken, version);
+  else iframe.srcdoc = withOpaqueRuntimeBootstrapNonce(createScormSandboxShell(fallbackToken, version));
 
   container.replaceChildren(iframe);
   return Object.freeze({

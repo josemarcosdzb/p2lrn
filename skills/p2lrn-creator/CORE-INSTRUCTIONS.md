@@ -67,3 +67,36 @@ La carpeta `assets/ejemplo-curso.json` contiene un blueprint de muestra con lecc
 - Cada conversación debe entregar el archivo de unidad y el manifiesto actualizado como archivos reales. En otra conversación recuperar los archivos mediante las herramientas autorizadas o solicitar que se adjunten; nunca presumir que los binarios persisten en el historial.
 - Buscar información e imágenes en Internet cuando existan herramientas de búsqueda. Contrastar fuentes, registrar URL, autor, licencia y atribución; no incorporar imágenes con licencia incompatible ni afirmar que están embebidas sin verificar el paquete y el Player.
 - No generar ejecutables Windows mediante multipart. El empaquetado multipart es independiente de la exportación offline de Studio.
+
+## Diseño visual de lecciones y presentaciones (rama de desarrollo `mejorastudio`)
+
+- En Studio, `packages/toolkit/web/studio/command-bar.js` es la **única interfaz de edición** para la web y `@p2lrn/studio`. Ambos deben importar la misma barra, el selector de actividades y los mismos estilos; no mantener interfaces duplicadas ni eliminar capacidades al unificarlas.
+- Los bloques HTML se generan con `packages/toolkit/web/studio/visual-layout.js`: secciones, dos columnas, destacados, tablas y separadores. El editor guarda HTML semántico dentro del paquete `.p2lrn`, sin scripts incrustados.
+- En ambos entornos, el menú Archivo debe conservar Guardar, Guardar borrador local, Recuperar borrador, Eliminar borrador, exportación y revisión de entregas. El guardado remoto NPM sigue siendo dependiente de un Host autorizado. Usar el diálogo común con búsqueda para añadir juegos, cuestionarios, actividades y recursos.
+- Tratar estos bloques como una base de autoría visual, **no** como un editor PowerPoint completo. La Skill no debe prometer importación/exportación `.pptx`, exportación PDF, animaciones, capas o fidelidad de diapositivas mientras no existan comandos oficiales y pruebas reales.
+- Para lecciones con imágenes, combinar las herramientas visuales con el editor oficial de recursos. Para cuestionarios, juegos y formatos externos, conservar sus editores y perfiles existentes.
+- Seguir `docs/studio-visual-editor-roadmap.md` para el contrato pendiente de páginas/diapositivas, barra de menús SaaS, importadores y exportadores. No implementar la interfaz de Studio dentro de la Skill, ni copiar librerías de autoría de Office en el empaquetador Python limitado.
+- Para comprobar la interfaz compartida ejecutar `node --test packages/toolkit/test/studio-visual-layout.test.mjs`, `node packages/studio/scripts/build-dist.mjs` y `node scripts/verify-studio-unified-ui.mjs` con Chrome/Edge. Antes de fusionar, comprobar además las interfaces completas, el Player y los flujos de Studio web, NPM y host.
+- Prohibido realizar merge a `main`, publicar NPM o desplegar cambios de esta rama sin petición expresa del usuario.
+
+## Herramientas compartidas de Studio en la rama mejorastudio
+
+Ambos Studio deben usar exactamente la misma interfaz basada en command-bar.js y los módulos studio-advanced-tools.js, studio-object-tools.js, studio-history.js y visual-layout.js. Se pueden insertar bloques, cuadros de texto, formas y tablas, añadir o quitar filas y columnas no combinadas, dar formato a celdas, arrastrar y redimensionar objetos, y deshacer o rehacer cambios en el contenido HTML de la lección desde Inicio, Insertar, Tabla y Diseño.
+
+La Skill no debe prometer un historial global de todos los metadatos/actividades, combinaciones de celdas, diapositivas con capas libres, ni importación/exportación completa y editable de PPTX o PDF. Estas funciones no están verificadas. La nueva barra y el NPM son desarrollo de la rama, no una publicación pública; no fusionar, publicar ni desplegar sin orden expresa.
+
+Pruebas recomendadas desde el repositorio: node --test packages/toolkit/test/studio-advanced-history.test.mjs packages/toolkit/test/studio-visual-layout.test.mjs packages/studio/test/dist-dependencies.test.mjs; node scripts/verify-studio-unified-ui.mjs; y, si está activo el servidor local de dos vistas, node scripts/verify-studio-advanced-local-preview.mjs --port 5531 --output CARPETA_EXISTENTE.
+
+## Estado vigente de la UX de Studio en `mejorastudio` (5 de noviembre de 2026)
+
+**Esta sección sustituye las referencias antiguas a pestañas Inicio, Diseño y Tabla.** Los dos editores Studio web y componente NPM utilizan **Formato** e **Insertar**. Archivo concentra nuevo/abrir/borradores/exportar; Guardar y Vista alumno permanecen accesibles. Al seleccionar un objeto o tabla, sus acciones de tamaño, color, filas, columnas, celda y organización aparecen **en Formato**, junto al texto; nunca duplicar esos comandos en controles flotantes o nuevas pestañas. En móvil, Más formato despliega controles secundarios en el mismo apartado. Los controles flotantes solo arrastran y redimensionan; la multimedia usa los selectores de Insertar y muestra sus ajustes al seleccionar el recurso. No publicar NPM ni fusionar sin autorización del propietario.
+
+Fuente de verdad: `docs/studio-saas-oneplace-ux-2026-11-05.md`; reproducir QA con `scripts/verify-studio-unified-ui.mjs`, `scripts/verify-studio-saas-ui.mjs`, `scripts/verify-studio-advanced-local-preview.mjs` y `scripts/verify-studio-student-preview.mjs`.
+
+## Multimedia anidada y selección estable de Studio (`mejorastudio`)
+
+El Studio de la web y `@p2lrn/studio` comparten las mismas herramientas. Imágenes y vídeos deben mantener su selección y su barra con **Mover**, tamaño, eliminación y portada de vídeo después de soltar el puntero. El vídeo conserva los controles nativos; Mover no exige Alt y permite ajuste con flechas. Durante el arrastre usar transformaciones visuales provisionales y, solo al soltar, persistir posición o mover el elemento a un contenedor válido; no hacer que el destino cambie de posición mientras se arrastra.
+
+Se permiten estructuras HTML anidadas de sección, columnas, cuadros de texto, tablas, imágenes y vídeos, incluida inserción de multimedia dentro de `td`/`th`. Respetar la semántica HTML; nunca afirmar anidamiento si solo existe superposición. El inspector debe permanecer dentro del viewport aunque el recurso esté en una columna estrecha. Los límites siguen siendo 8 MB/imagen y 32 MB/vídeo.
+
+Fuente de verdad: `docs/studio-media-nesting-selection-2026-11-05.md`. QA: `node scripts/verify-studio-media-nesting.mjs --port 5531 --output CARPETA` y las regresiones previas; el recurso `scripts/studio-media-test.webm` comprueba reproducción WebM real en navegador, no certifica todos los MP4. No fusionar ni publicar NPM sin autorización expresa.

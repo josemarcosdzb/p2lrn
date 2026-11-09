@@ -1,0 +1,381 @@
+name: P2LRN LMS connectivity preflight (NOT full E2E certification)
+on:
+  workflow_dispatch:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'scripts/interoperability/**'
+      - 'integration/lms/**'
+      - '.github/workflows/p2lrn-interoperability-real.yml'
+permissions:
+  contents: read
+concurrency:
+  group: p2lrn-interoperability-real-${{ github.ref }}
+  # Preserve evidence: newer commits must not interrupt an active real LMS run.
+  cancel-in-progress: false
+jobs:
+  discover-real-lms:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Build full Player runtime required by LTI integration (3D, H5P and package assets)
+        shell: powershell
+        run: |
+          node packages/player/scripts/build-dist.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if(!(Test-Path 'packages/player/dist/vendor/rapier3d.mjs')){throw 'Missing LTI 3D physics runtime after build'}
+          if(!(Test-Path 'packages/player/dist/p2lrn.js')){throw 'Missing LTI Player after build'}
+      - name: Verify LTI 1.3 launch, state, retry, AGS and NRPS contracts (NOT real LMS certification)
+        shell: powershell
+        run: |
+          node --test --test-concurrency=2 integration/lms/lms-contracts.test.mjs integration/lms/lti-provider.test.mjs integration/lms/lti-store.test.mjs integration/lms/lti-ags.test.mjs integration/lms/lti-server.test.mjs integration/lms/lti-nrps.test.mjs integration/lms/lti-nrps-server.test.mjs integration/lms/lti-local-http.test.mjs integration/lms/lti-local-qa-gateway.test.mjs integration/lms/package-validation.test.mjs integration/lms/lti-legacy.test.mjs integration/lms/lti-legacy-integration.test.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Probe real Windows LMS without fake registration or grades
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $dir=Join-Path $env:RUNNER_TEMP 'p2lrn-interoperability-preflight'
+          $env:P2LRN_INTEROP_OUTPUT=$dir
+          node --check scripts/interoperability/probe-real-destinations.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node --test scripts/interoperability/lms-http-inspection.test.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/probe-real-destinations.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if(!(Test-Path (Join-Path $dir 'real-destination-preflight.json'))){throw 'Actual host report missing'}
+          Write-Output ('INTEROP_EVIDENCE_DIR='+$dir)
+
+  recover-existing-openedx-qa:
+    # Explicit, one-time recovery of the previously existing Docker containers.
+    # This is never run on normal pushes or from a different project.
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[qa-recover-existing-openedx]')
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Restore existing stopped Open edX core only after checking real memory
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $names = @(
+            'openedx-josemarcosdiaz-mysql-1',
+            'openedx-josemarcosdiaz-mongodb-1',
+            'openedx-josemarcosdiaz-redis-1',
+            'openedx-josemarcosdiaz-caddy-1',
+            'openedx-josemarcosdiaz-lms-1',
+            'openedx-josemarcosdiaz-mfe-1'
+          )
+          $started = New-Object 'System.Collections.Generic.List[string]'
+          function FreeGiB {
+            $bytes = & node -e "process.stdout.write(String(require('os').freemem()))"
+            if ($LASTEXITCODE -ne 0) { throw 'Unable to read Windows memory' }
+            return [math]::Round(([double]$bytes / 1GB), 2)
+          }
+          $before = FreeGiB
+          Write-Output ('OPENEDX_BEFORE_FREE_GIB=' + $before)
+          if ($before -lt 1.5) { throw 'Open edX ingress correction blocked: critical Windows memory pressure' }
+          $connectedByThisJob = $false
+          $routeCreatedByThisJob = $false
+          $network = 'openedx-josemarcosdiaz_default'
+          $routeDest = '/etc/caddy/tenant-routes/josemarcosdiaz.caddy'
+          $routeTemp = Join-Path $env:RUNNER_TEMP 'p2lrn-openedx-route.caddy'
+          try {
+            $networkState = & docker inspect --format '{{json .NetworkSettings.Networks}}' aulap2p-ingress-local
+            if ($LASTEXITCODE -ne 0) { throw 'Existing AulaP2P ingress not found' }
+            if (-not (Test-Path Env:CI)) { throw 'Recovery requires the existing self-hosted CI runner' }
+            if (-not (ConvertFrom-Json $networkState).PSObject.Properties[$network]) {
+              & docker network connect $network aulap2p-ingress-local
+              if ($LASTEXITCODE -ne 0) { throw 'Failed to attach existing ingress to existing Open edX network' }
+              $connectedByThisJob = $true
+            }
+            & docker exec aulap2p-ingress-local test -e $routeDest | Out-Null
+            if ($LASTEXITCODE -eq 0) { throw 'Open edX route already exists; cannot overwrite it without reconciliation' }
+            $route = @'
+          http://josemarcosdiaz.localhost, http://apps.josemarcosdiaz.localhost, http://studio-josemarcosdiaz.localhost, http://meilisearch.josemarcosdiaz.localhost {
+            encode zstd gzip
+            @local_lti_qa {
+              path /lti/login /lti/launch /lti/deep-link /lti/deep-link/confirm /lti/jwks /lti/health /lti/assets/* /lti/runtime/* /lti/legacy/launch
+            }
+            handle @local_lti_qa {
+              reverse_proxy p2lrn-lti-provider:37891
+            }
+            handle {
+              reverse_proxy openedx-josemarcosdiaz-caddy-1:80
+            }
+          }
+          '@
+            [System.IO.File]::WriteAllText($routeTemp,$route,(New-Object System.Text.UTF8Encoding($false)))
+            & docker cp $routeTemp ('aulap2p-ingress-local:' + $routeDest) | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot write Open edX QA route in existing ingress' }
+            $routeCreatedByThisJob = $true
+            & docker exec aulap2p-ingress-local caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Caddy refused the QA route configuration' }
+            & docker exec aulap2p-ingress-local caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile --address 127.0.0.1:2019 | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Caddy reload rejected; restoration required' }
+            Write-Output 'OPENEDX_EXISTING_NETWORK_AND_ROUTE_CONNECTED=YES'
+            $outputDir = Join-Path $env:RUNNER_TEMP 'p2lrn-interoperability-preflight'
+            $env:P2LRN_INTEROP_OUTPUT = $outputDir
+            node scripts/interoperability/probe-real-destinations.mjs | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot confirm repaired Open edX LTI route' }
+            $routeReport = Get-Content (Join-Path $outputDir 'real-destination-preflight.json') -Raw | ConvertFrom-Json
+            $routeEdx = $routeReport.cases | Where-Object { $_.id -eq 'openedx' }
+            if ($routeEdx.providerTransportReady -ne $true) { throw 'Provider still unreachable through corrected Open edX route' }
+            Write-Output 'OPENEDX_LTI_PROVIDER_ROUTING_VERIFIED=YES'
+            if ((FreeGiB) -lt 4.0) {
+              Write-Output ('OPENEDX_CORE_START_NOT_ATTEMPTED_LOW_MEMORY_GIB=' + (FreeGiB))
+              Remove-Item -LiteralPath $routeTemp -Force -ErrorAction SilentlyContinue
+              return
+            }
+            foreach ($name in $names) {
+              $exists = & docker inspect --format '{{.State.Running}}' $name
+              if ($LASTEXITCODE -ne 0) { throw ('Existing Open edX container not found: ' + $name) }
+              if (($exists | Out-String).Trim() -eq 'true') { continue }
+              if ((FreeGiB) -lt 2.2) { throw 'Open edX recovery stopped before low-memory threshold' }
+              & docker start $name | Out-Null
+              if ($LASTEXITCODE -ne 0) { throw ('Cannot restart existing Open edX container: ' + $name) }
+              $started.Add($name)
+              Start-Sleep -Seconds 3
+            }
+            $ready = $false
+            $outputDir = Join-Path $env:RUNNER_TEMP 'p2lrn-interoperability-preflight'
+            $env:P2LRN_INTEROP_OUTPUT = $outputDir
+            foreach ($attempt in 1..14) {
+              if ((FreeGiB) -lt 1.8) { throw 'Open edX recovery exceeded the safety memory margin' }
+              node scripts/interoperability/probe-real-destinations.mjs | Out-Null
+              if ($LASTEXITCODE -ne 0) { throw 'Cannot probe Open edX after recovering services' }
+              $report = Get-Content (Join-Path $outputDir 'real-destination-preflight.json') -Raw | ConvertFrom-Json
+              $edx = $report.cases | Where-Object { $_.id -eq 'openedx' }
+              Write-Output ('OPENEDX_RECOVERY_ATTEMPT=' + $attempt + '; SITE=' + $edx.state + '; LTI_PROVIDER=' + $edx.providerTransportReady + '; FREE_GIB=' + (FreeGiB))
+              if ($edx.state -eq 'PROXY_CONTENT_OBSERVED_NOT_AUTHENTICATED' -and $edx.providerTransportReady -eq $true) {
+                $ready = $true
+                break
+              }
+              Start-Sleep -Seconds 12
+            }
+            if (-not $ready) { throw 'Open edX did not expose working content and the P2LRN provider via the existing proxy' }
+            Remove-Item -LiteralPath $routeTemp -Force -ErrorAction SilentlyContinue
+            Write-Output ('OPENEDX_EXISTING_CORE_RECOVERED=YES; STARTED_COUNT=' + $started.Count)
+          } catch {
+            Write-Output 'OPENEDX_RECOVERY_FAILED_ROLLING_BACK_STARTED_CONTAINERS'
+            for ($index = $started.Count - 1; $index -ge 0; $index--) {
+              & docker stop --time 20 $started[$index] | Out-Null
+            }
+            if ($routeCreatedByThisJob) {
+              & docker exec aulap2p-ingress-local rm -f $routeDest | Out-Null
+              & docker exec aulap2p-ingress-local caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile --address 127.0.0.1:2019 | Out-Null
+            }
+            if ($connectedByThisJob) {
+              & docker network disconnect $network aulap2p-ingress-local | Out-Null
+            }
+            throw
+          }
+
+  create-one-real-studio-course:
+    # The canonical original SHA was already exported from real Studio.
+    # Avoid exporting new supposedly equivalent source packages on every push.
+    if: github.event_name == 'workflow_dispatch'
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Syntax-check the real browser and import lab
+        shell: powershell
+        run: |
+          foreach($file in @('scripts/interoperability/studio-lab-server.mjs','scripts/interoperability/chrome-visual.mjs','scripts/interoperability/create-one-course.mjs')){
+            node --check $file
+            if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          }
+      - name: Build real hosted Studio and Player without publishing
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $dir=Join-Path $env:USERPROFILE ('Downloads\P2LRN-INTEROP-'+$env:GITHUB_SHA.Substring(0,8))
+          $site=Join-Path (Join-Path $env:USERPROFILE 'Downloads') ('p2lrn-mejorastudio-preview-'+$env:GITHUB_SHA.Substring(0,8))
+          node scripts/build-studio-local-preview.mjs --output "$site"
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          "P2LRN_INTEROP_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "P2LRN_INTEROP_SITE=$site" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Operate actual Studio UI, import genuine H5P SCORM and export once
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          node scripts/interoperability/create-one-course.mjs --site "$env:P2LRN_INTEROP_SITE" --output "$env:P2LRN_INTEROP_DIR" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $file=Join-Path $env:P2LRN_INTEROP_DIR 'seguridad-informatica.p2lrn'
+          if(!(Test-Path $file)){throw 'Studio did not produce the ONE requested course'}
+          $hash=(Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+          $report=Get-Content (Join-Path $env:P2LRN_INTEROP_DIR 'course-creation-evidence.json') -Raw | ConvertFrom-Json
+          if($hash -ne $report.courseSha256){throw 'File changed after Studio export'}
+          Write-Output ('P2LRN_REAL_ONE_COURSE_SHA256='+$hash)
+          Write-Output ('P2LRN_REAL_ONE_COURSE_FILE='+$file)
+          Write-Output ('P2LRN_REAL_INTEROP_EVIDENCE_DIR='+$env:P2LRN_INTEROP_DIR)
+  verify-fixed-original-in-independent-web:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Open and exercise exact original course from earlier Studio run
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $homeDownloads=Join-Path $env:USERPROFILE 'Downloads'
+          $course=Join-Path $homeDownloads 'P2LRN-INTEROP-0474eb9b\seguridad-informatica.p2lrn'
+          $site=Join-Path $homeDownloads 'p2lrn-mejorastudio-preview-0474eb9b'
+          $out=Join-Path $homeDownloads ('P2LRN-INTEROP-WEB-'+$env:GITHUB_SHA.Substring(0,8))
+          if(!(Test-Path $course)){throw 'The ORIGINAL course file is missing: '+$course}
+          if(!(Test-Path (Join-Path $site 'preview-manifest.json'))){throw 'The original Player site is missing: '+$site}
+          $hash=(Get-FileHash -LiteralPath $course -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($hash -ne 'cce43503ea425ec4f1e6203c8ef6556beb999e71c08e59d5511091a6b931a380'){throw 'The source course changed. Refuse to adapt it.'}
+          node --check scripts/interoperability/verify-fixed-course-web.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/verify-fixed-course-web.mjs --course "$course" --site "$site" --output "$out" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          Write-Output ('REAL_INDEPENDENT_WEB_EVIDENCE='+$out)
+          Write-Output ('UNCHANGED_ORIGINAL_SHA256='+$hash)
+  verify-original-offline-windows:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Execute offline Windows launcher with ORIGINAL Studio package
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $downloads=Join-Path $env:USERPROFILE 'Downloads'
+          $course=Join-Path $downloads 'P2LRN-INTEROP-0474eb9b\seguridad-informatica.p2lrn'
+          $site=Join-Path $downloads 'p2lrn-mejorastudio-preview-0474eb9b'
+          $out=Join-Path $downloads ('P2LRN-INTEROP-OFFLINE-'+$env:GITHUB_SHA.Substring(0,8))
+          if(!(Test-Path $course)){throw 'The unchanged original P2LRN course was not found'}
+          $sha=(Get-FileHash -LiteralPath $course -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($sha -ne 'cce43503ea425ec4f1e6203c8ef6556beb999e71c08e59d5511091a6b931a380'){throw 'Original package SHA-256 mismatch'}
+          node --check scripts/interoperability/verify-fixed-course-offline.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/verify-fixed-course-offline.mjs --course "$course" --site "$site" --output "$out" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if(!(Test-Path (Join-Path $out 'offline-windows-report.json'))){throw 'Offline QA report missing'}
+          Write-Output ('ORIGINAL_COURSE_SHA256='+$sha)
+          Write-Output ('REAL_OFFLINE_REPORT_DIRECTORY='+$out)
+  create-version-two-in-real-studio:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Open exactly the original v1 in Studio and update one question
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $downloads=Join-Path $env:USERPROFILE 'Downloads'
+          $source=Join-Path $downloads 'P2LRN-INTEROP-0474eb9b\seguridad-informatica.p2lrn'
+          $site=Join-Path $downloads 'p2lrn-mejorastudio-preview-0474eb9b'
+          $out=Join-Path $downloads ('P2LRN-INTEROP-V2-'+$env:GITHUB_SHA.Substring(0,8))
+          if(!(Test-Path $source)){throw 'Original course not found'}
+          $digest=(Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($digest -ne 'cce43503ea425ec4f1e6203c8ef6556beb999e71c08e59d5511091a6b931a380'){throw 'V1 SHA changed'}
+          node --check scripts/interoperability/create-updated-version-in-studio.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/create-updated-version-in-studio.mjs --course "$source" --site "$site" --output "$out" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          if(!(Test-Path (Join-Path $out 'seguridad-informatica-v2.p2lrn'))){throw 'Updated version not exported by Studio'}
+          Write-Output ('UNTOUCHED_ORIGINAL_SHA256='+$digest)
+          Write-Output ('STUDIO_REAL_V2_DIRECTORY='+$out)
+  verify-original-h5p-scorm-and-drag-frames:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Interact through genuine Chrome iframe contexts, not mock activities
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $downloads=Join-Path $env:USERPROFILE 'Downloads'
+          $course=Join-Path $downloads 'P2LRN-INTEROP-0474eb9b\seguridad-informatica.p2lrn'
+          $site=Join-Path $downloads 'p2lrn-mejorastudio-preview-0474eb9b'
+          $out=Join-Path $downloads ('P2LRN-INTEROP-FRAMES-'+$env:GITHUB_SHA.Substring(0,8))
+          if(!(Test-Path $course)){throw 'The original course is missing'}
+          if((Get-FileHash -LiteralPath $course -Algorithm SHA256).Hash.ToLowerInvariant() -ne 'cce43503ea425ec4f1e6203c8ef6556beb999e71c08e59d5511091a6b931a380'){throw 'Content was modified'}
+          node --check scripts/interoperability/verify-original-subframes.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/verify-original-subframes.mjs --course "$course" --site "$site" --output "$out" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          Write-Output ('ORIGINAL_SUBFRAME_EVIDENCE='+$out)
+  verify-independent-web-reentry:
+    # Historical single-course evidence: manual only, never duplicate on each push.
+    if: github.event_name == 'workflow_dispatch'
+    needs: [discover-real-lms]
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Same original learner course, real QA Host draft re-entry and fake grade denial
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $downloads=Join-Path $env:USERPROFILE 'Downloads'
+          $course=Join-Path $downloads 'P2LRN-INTEROP-0474eb9b\seguridad-informatica.p2lrn'
+          $site=Join-Path $downloads 'p2lrn-mejorastudio-preview-0474eb9b'
+          $out=Join-Path $downloads ('P2LRN-INTEROP-REENTRY-'+$env:GITHUB_SHA.Substring(0,8))
+          if(!(Test-Path $course)){throw 'The unchanged original course is unavailable'}
+          $actual=(Get-FileHash -LiteralPath $course -Algorithm SHA256).Hash.ToLowerInvariant()
+          if($actual -ne 'cce43503ea425ec4f1e6203c8ef6556beb999e71c08e59d5511091a6b931a380'){throw 'Original course SHA changed'}
+          node --check scripts/interoperability/studio-lab-server.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node --check scripts/interoperability/verify-independent-web-reentry.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/interoperability/verify-independent-web-reentry.mjs --course "$course" --site "$site" --output "$out" --repo (Get-Location).Path
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          Write-Output ('WEB_REAL_LEARNER_REENTRY_REPORT='+$out)

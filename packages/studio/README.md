@@ -190,3 +190,19 @@ En corrección posterior no se puede condicionar el avance a «Superar» con una
 La verificación de las respuestas por un profesor o Host confiable sigue siendo necesaria para emitir una calificación oficial; el cifrado o un hash generado en el equipo del alumno no demuestran autoría de las respuestas.
 
 Consulte el contrato de [cuestionarios nativos](../../spec/NATIVE-QUESTIONNAIRE.md) y la [integración de un Host de confianza](../../docs/integration/INTEGRACION-SEGURA-HOST.md).
+
+## Herramientas avanzadas (rama de desarrollo mejorastudio)
+
+Studio NPM y Studio web comparten los mismos menús y componentes de edición. La pestaña contextual Tabla permite insertar o eliminar filas y columnas, modificar colores y alineaciones de celdas y alturas de fila. Las herramientas de objetos permiten seleccionar bloques, redimensionarlos por la esquina, moverlos, duplicarlos, cambiar su orden y alinearlos. Se incorporan cuadros de texto y formas, y un historial por lección que cubre acciones de Insertar, Tabla y Diseño.
+
+Se guarda HTML y CSS semántico dentro del paquete P2LRN; los controles de selección no se exportan. No se modifican estructuralmente tablas con celdas combinadas ni se exportan/importan PowerPoint o PDF editables. Funciones disponibles en la rama mejorastudio solamente; el paquete del registro NPM no cambia hasta publicación autorizada.
+
+## Experiencia de edición contextual actual (`mejorastudio`)
+
+Studio web y `@p2lrn/studio` local muestran la misma interfaz, con solo **Formato** e **Insertar**. Se ha sustituido la antigua navegación Inicio / Diseño / Tabla: las herramientas de texto y las del objeto seleccionado están juntas en Formato, con menús Filas, Columnas, Celda, Fondo, Objeto y Tamaño. En móvil, Más formato concentra las opciones secundarias sin abandonar el apartado. El marco flotante mantiene arrastre y redimensionado, pero no duplica comandos de la cinta; Archivo contiene operaciones del curso y Guardar aparece una vez. El componente NPM del registro público no cambia hasta publicación autorizada. Véase `docs/studio-saas-oneplace-ux-2026-11-05.md`.
+
+## Multimedia y composición anidada (`mejorastudio`)
+
+Selecciona una imagen o vídeo para mostrar un inspector persistente con Mover, redimensionado, eliminación y portada de vídeo. Las opciones de reproducción nativas se mantienen. Puedes insertar secciones, columnas, cuadros de texto, imágenes y vídeos dentro de otro bloque o celda seleccionada, o soltarlos sobre un contenedor válido para cambiar su jerarquía HTML. El arrastre usa una vista provisional que no desplaza otros contenedores. En móvil, el inspector no hereda el ancho de una celda pequeña. El mismo código se usa en Studio web y NPM local.
+
+Documentación y pruebas: `docs/studio-media-nesting-selection-2026-11-05.md` y `scripts/verify-studio-media-nesting.mjs`. El test de vídeo utiliza `scripts/studio-media-test.webm`, un recurso original reproducible. Sin publicación NPM ni fusión a `main`.

@@ -4,6 +4,7 @@ import {
   P2LRN_CORE_VERSION,
   DEFAULT_LIMITS,
   P2LRNPlayerElement,
+  create3DAuthoringScene,
   defaultDependencyRegistry,
   defaultRendererRegistry,
   defaultComponentRegistry,
@@ -13,6 +14,7 @@ import {
   cacheP2LRNPackageURL,
   openCachedP2LRNPackage,
 } from './p2lrn-player.js';
+import {negotiateP2LRNExecution,inspectP2LRNPackageExecution,P2LRN_EXECUTION_PLAN_SCHEMA,P2LRN_EXECUTION_PLAN_VERSION} from './execution-negotiation.js';
 import {createHostAdapter, HOST_ADAPTER_VERSION} from './host-adapter.js';
 import {createResultRecorder} from './result-recorder.js';
 import {createPlayerAnalyticsSession,createHttpResultHost,P2LRN_RESULT_HOST_VERSION} from './result-bridge.js';
@@ -54,6 +56,7 @@ export const coreVersion = P2LRN_CORE_VERSION;
 export {
   DEFAULT_LIMITS,
   P2LRNPlayerElement,
+  create3DAuthoringScene,
   HOST_ADAPTER_VERSION,
   createHostAdapter,
   createResultRecorder,
@@ -128,6 +131,10 @@ export {
 export const registerRenderer = (descriptor) => defaultRendererRegistry.register(descriptor);
 export const unregisterRenderer = (id) => defaultRendererRegistry.unregister(id);
 export const renderers = () => defaultRendererRegistry.list();
+export const negotiateExecution = (options = {}) => negotiateP2LRNExecution({...options,registry:defaultRendererRegistry});
+export const inspectPackageExecution = (pkg,options = {}) => inspectP2LRNPackageExecution(pkg,{...options,registry:defaultRendererRegistry});
+export const executionPlanSchema = P2LRN_EXECUTION_PLAN_SCHEMA;
+export const executionPlanVersion = P2LRN_EXECUTION_PLAN_VERSION;
 export const registerComponent = (descriptor) => defaultComponentRegistry.register(descriptor);
 export const unregisterComponent = (id, componentVersion) => defaultComponentRegistry.unregister(id, componentVersion);
 export const components = () => defaultComponentRegistry.list();

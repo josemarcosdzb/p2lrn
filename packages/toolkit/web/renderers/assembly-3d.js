@@ -1,0 +1,215 @@
+// The assembly mode plugs into the existing questionnaire 3D renderer/runtime.
+// Classification answers remain the authoritative, resumable grading contract.
+import {evaluateAssemblyPlacement,inspectAssemblyGLB,validateAssembly,assemblyPlacementTransform} from '../assembly-3d-core.js';
+import {playerUiText} from './ui-i18n.js';
+import {el} from './game-common.js';
+
+function quaternionTurn(q,axis,degrees){
+  const a=degrees*Math.PI/360,c=Math.cos(a),s=Math.sin(a);
+  const r=axis==='x'?[s,0,0,c]:axis==='y'?[0,s,0,c]:[0,0,s,c];
+  const [x,y,z,w]=q,[a1,b1,c1,d1]=r;
+  const result=[w*a1+x*d1+y*c1-z*b1,w*b1-x*c1+y*d1+z*a1,w*c1+x*b1-y*a1+z*d1,w*d1-x*a1-y*b1-z*c1];
+  const len=Math.hypot(...result);
+  return result.map(v=>v/len);
+}
+const fromJson=(o)=>structuredClone(o);
+const boxId=(id)=>'assembly:'+id;
+const zoneId=(id)=>'assembly-target:'+id;
+const reasonText={
+  'wrong-target':'La pieza no corresponde a ese destino.',
+  'prerequisite':'Antes hay que colocar las piezas previas de este montaje.',
+  'outside':'La pieza debe situarse dentro de la zona indicada.',
+  'rotation':'La orientación de la pieza no coincide con el montaje.',
+  'misaligned':'Ajusta el centro de la pieza dentro de la caja de encaje.',
+  'outside-volume':'Parte de la pieza queda fuera del volumen de encaje.',
+  'scale':'La pieza tiene un tamaño distinto del configurado por el profesor.',
+  'invalid-transform':'La posición de la pieza no es válida.',
+};
+
+export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
+  const config=validateAssembly(trial.scene);
+  const expected=new Map(config.links.map(l=>[l.pieceId,l.targetId]));
+  const targetById=new Map(config.targets.map(t=>[t.id,t]));
+  const pieceById=new Map(config.pieces.map(p=>[p.id,p]));
+  const stored=runtime.answer(trial.questionId)?.classifications??{};
+  const placements=Object.fromEntries(Object.entries(stored).filter(([id,target])=>expected.get(id)===target));
+  const transforms=new Map(config.pieces.map(p=>[p.id,fromJson(p.initialTransform)]));
+  const modelBytes=new Map();
+  let selected=null;
+  let sceneLoadWarning='';
+
+  async function embeddedAsset(assetId){
+    const asset=config.assets.find(a=>a.id===assetId);
+    if(!asset||!pkg?.payload)throw new Error('Recurso de modelo 3D no incorporado al curso');
+    if(!modelBytes.has(assetId)){
+      modelBytes.set(assetId,(async()=>{
+        const bytes=await pkg.payload(asset.path).read();
+        const info=inspectAssemblyGLB(bytes);
+        if(info.size!==asset.size)throw new Error('Los bytes del modelo no coinciden con los metadatos del curso');
+        return bytes;
+      })());
+    }
+    return modelBytes.get(assetId);
+  }
+  for(const dest of config.targets){
+    scene.addCage({
+      id:zoneId(dest.id),vertices:dest.vertices,
+      position:dest.transform.position,rotation:dest.transform.rotation,scale:dest.transform.scale,
+      visibility:dest.visibility,interaction:{kind:'assembly-target',id:dest.id},
+    });
+  }
+  for(const piece of config.pieces){
+    const id=boxId(piece.id),transform=transforms.get(piece.id);
+    if(piece.assetId){
+      try{
+        const bytes=await embeddedAsset(piece.assetId);
+        await scene.addModel({id,assetId:piece.assetId,bytes,nodeId:piece.nodeId??null,
+          position:transform.position,rotation:transform.rotation,scale:transform.scale,
+          interaction:{kind:'assembly-piece',id:piece.id}});
+      }catch(error){
+        sceneLoadWarning=playerUiText('Algún modelo 3D no se pudo cargar. Puedes completar el montaje con los controles accesibles.');
+        scene.addBox({id,text:piece.text,position:transform.position,size:[1.2,0.8,1],dynamic:false,physicsEnabled:false,interaction:{kind:'assembly-piece',id:piece.id}});
+        console.warn('P2LRN assembly 3D model load blocked:',error);
+      }
+    }else scene.addBox({id,text:piece.text,position:transform.position,size:[1.2,0.8,1],dynamic:false,physicsEnabled:false,interaction:{kind:'assembly-piece',id:piece.id}});
+  }
+  if(config.referenceAssetId){
+    try{
+      const bytes=await embeddedAsset(config.referenceAssetId);
+      await scene.addModel({id:'assembly-reference',assetId:config.referenceAssetId,bytes,
+        position:config.referenceTransform?.position??[0,0,0],
+        rotation:config.referenceTransform?.rotation??[0,0,0,1],
+        scale:config.referenceTransform?.scale??[1,1,1],opacity:0.36});
+    }catch(error){console.warn('P2LRN assembly reference model unavailable:',error);sceneLoadWarning=playerUiText('No se pudo cargar el modelo base de referencia.');}
+  }
+
+  const panel=el('div',{class:'p2lrn-3d-accessible'});
+  const instruction=el('p',{class:'p2lrn-game-description'},playerUiText('Selecciona una pieza, oriéntala y elige dónde colocarla. También puedes arrastrar las piezas sobre las zonas en el escenario.'));
+  const rows=el('div',{class:'p2lrn-q-fields'});
+  const controls=el('div',{class:'p2lrn-game-actions'});
+  const pieceSelect=el('select',{'aria-label':playerUiText('Pieza que vas a colocar')});
+  const targetSelect=el('select',{'aria-label':playerUiText('Zona donde colocar la pieza')});
+  for(const p of config.pieces)pieceSelect.append(el('option',{value:p.id},p.text));
+  for(const t of config.targets)targetSelect.append(el('option',{value:t.id},t.text));
+  const rotateInfo=el('p',{class:'p2lrn-game-description'},playerUiText('Gira la pieza por ejes de 15 grados:'));
+  const rotateButtons=el('div',{class:'p2lrn-game-actions'});
+  const progress=el('p',{class:'p2lrn-game-description',role:'status','aria-live':'polite'});
+  const placeButton=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Colocar pieza'));
+  const resetButton=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Restaurar orientación'));
+  const allPlaced=()=>Object.keys(placements).length===config.pieces.length;
+  const activeId=()=>selected??pieceSelect.value;
+  function setText(value){status.textContent=playerUiText(value);}
+  function update(){
+    progress.textContent=playerUiText('Piezas colocadas: ')+Object.keys(placements).length+'/'+config.pieces.length;
+    rows.replaceChildren();
+    for(const p of config.pieces){
+      const row=el('div',{class:'p2lrn-q-field'});
+      row.append(el('span',{},p.text));
+      row.append(el('strong',{},placements[p.id]?playerUiText('Encajada'):playerUiText('Pendiente')));
+      rows.append(row);
+    }
+    const locked=runtime.state.completed||allPlaced();
+    placeButton.disabled=locked||Boolean(placements[activeId()]);
+    resetButton.disabled=locked||Boolean(placements[activeId()]);
+    rotateButtons.querySelectorAll('button').forEach(b=>{b.disabled=locked||Boolean(placements[activeId()]);});
+    if(allPlaced())setText('Montaje completado. Puedes finalizar la actividad.');
+  }
+  function choosePiece(id){
+    if(!pieceById.has(id)||runtime.state.completed||placements[id])return false;
+    if(selected!==null){scene.carry(boxId(selected),false);scene.highlight(boxId(selected),false);}
+    selected=id;pieceSelect.value=id;
+    scene.highlight(boxId(id),true);
+    setText('Pieza seleccionada. Oriéntala y selecciona su destino.');
+    update();return true;
+  }
+  function place(id,targetId,{draggedPosition=null}={}){
+    if(runtime.state.completed||!pieceById.has(id)||placements[id])return false;
+    const target=targetById.get(targetId);
+    if(!target){setText('Selecciona un destino válido.');return false;}
+    const desired=assemblyPlacementTransform(config,id);
+    const current=transforms.get(id);
+    // Accessible selection uses the authored visual fitting pose, with the
+    // student's own orientation/scale. Physical dragging must validate its
+    // ACTUAL released location; it may never teleport to the answer first.
+    const placement={
+      position:draggedPosition?[...draggedPosition]:[...desired.position],
+      rotation:[...current.rotation],scale:[...current.scale],
+    };
+    const result=evaluateAssemblyPlacement(config,id,targetId,placement,placements);
+    if(!result.ok){setText(reasonText[result.reason]??'La pieza no encaja.');return false;}
+    placements[id]=targetId;
+    transforms.set(id,{...current,...fromJson(result.snap)});
+    runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId:id,categoryId:targetId});
+    scene.carry(boxId(id),false);
+    scene.highlight(boxId(id),false);
+    scene.setTransform(boxId(id),result.snap);
+    selected=null;
+    const next=config.pieces.find(p=>!placements[p.id]);
+    if(next)pieceSelect.value=next.id;
+    setText('Pieza encajada correctamente.');
+    update();return true;
+  }
+  function restore(id){
+    const p=pieceById.get(id);if(!p||placements[id])return;
+    const transform=transforms.get(id);
+    scene.carry(boxId(id),false);
+    scene.setTransform(boxId(id),transform);
+  }
+
+  for(const [axis,label] of [['x','X'],['y','Y'],['z','Z']]){
+    for(const turn of [-15,15]){
+      const button=el('button',{type:'button',class:'p2lrn-game-button'},label+(turn<0?' −15°':' +15°'));
+      button.addEventListener('click',()=>{
+        const id=activeId();if(!id||runtime.state.completed||placements[id])return;
+        choosePiece(id);
+        const transform=transforms.get(id);
+        transform.rotation=quaternionTurn(transform.rotation,axis,turn);
+        scene.setTransform(boxId(id),transform);
+        setText('Orientación actualizada en eje '+label+'.');
+      });
+      rotateButtons.append(button);
+    }
+  }
+  pieceSelect.addEventListener('change',()=>choosePiece(pieceSelect.value));
+  placeButton.addEventListener('click',()=>{const id=activeId();if(id)place(id,targetSelect.value);});
+  resetButton.addEventListener('click',()=>{
+    const id=activeId(),piece=pieceById.get(id);if(!piece||placements[id])return;
+    transforms.set(id,fromJson(piece.initialTransform));
+    scene.setTransform(boxId(id),transforms.get(id));
+    setText('Orientación restaurada.');
+  });
+  controls.append(pieceSelect,targetSelect,placeButton,resetButton);
+  panel.append(instruction,controls,rotateInfo,rotateButtons,progress,rows);
+  for(const [id,target] of Object.entries(placements)){
+    const t=targetById.get(target);
+    if(t)scene.setTransform(boxId(id),assemblyPlacementTransform(config,id)??t.transform);
+  }
+  if(sceneLoadWarning)panel.prepend(el('p',{class:'p2lrn-game-description',role:'alert'},sceneLoadWarning));
+  update();
+  return {
+    panel,
+    summary:sceneLoadWarning||playerUiText('Elige una pieza y colócala dentro de la estructura.'),
+    drag(meta,phase,{position=null,target=null}={}){
+      if(meta.kind!=='assembly-piece')return false;
+      const id=meta.id;
+      if(phase==='start')return choosePiece(id);
+      if(phase==='move'){if(position)scene.setTranslation(boxId(id),position);return true;}
+      if(phase==='end'){
+        const placed=target?.kind==='assembly-target'&&place(id,target.id,{draggedPosition:position});
+        if(!placed){restore(id);scene.highlight(boxId(id),false);selected=null;}
+        return true;
+      }
+      if(phase==='cancel'){restore(id);scene.highlight(boxId(id),false);selected=null;return true;}
+      return false;
+    },
+    interact(meta){
+      if(runtime.state.completed)return true;
+      if(meta.kind==='assembly-piece'){if(choosePiece(meta.id))scene.carry(boxId(meta.id),true);return true;}
+      if(meta.kind==='assembly-target'){
+        if(!selected){setText('Selecciona una pieza antes de elegir destino.');return true;}
+        place(selected,meta.id);return true;
+      }
+      return false;
+    },
+  };
+}

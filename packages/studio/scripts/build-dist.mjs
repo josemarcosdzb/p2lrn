@@ -15,15 +15,25 @@ await cp(join(repo,'packages','toolkit','web','studio','authoring-document.js'),
 await cp(join(repo,'packages','toolkit','web','studio','package-export.js'),join(out,'runtime','package-export.js'));
 await cp(join(repo,'packages','toolkit','web','studio','new-document.js'),join(out,'runtime','new-document.js'));
 await cp(join(repo,'packages','toolkit','web','studio','questionnaire-editor.js'),join(out,'runtime','questionnaire-editor.js'));
+await cp(join(repo,'packages','toolkit','web','studio','assembly-3d-editor.js'),join(out,'runtime','assembly-3d-editor.js'));
 await cp(join(repo,'packages','toolkit','web','studio','questionnaire-grading.js'),join(out,'runtime','questionnaire-grading.js'));
 await cp(join(repo,'packages','toolkit','web','studio','structured-editor.js'),join(out,'runtime','structured-editor.js'));
 await cp(join(repo,'packages','toolkit','web','studio','lesson-images.js'),join(out,'runtime','lesson-images.js'));
+await cp(join(repo,'packages','toolkit','web','studio','visual-layout.js'),join(out,'runtime','visual-layout.js'));
+await cp(join(repo,'packages','toolkit','web','studio','command-bar.js'),join(out,'runtime','command-bar.js'));
+for(const name of ['studio-history.js','studio-object-tools.js','studio-advanced-tools.js','studio-shapes.js','studio-drop-activity.js']){
+  await cp(join(repo,'packages','toolkit','web','studio',name),join(out,'runtime',name));
+}
+await cp(join(repo,'packages','toolkit','web','studio','browser-drafts.js'),join(out,'runtime','browser-drafts.js'));
 // Required by questionnaire, structured and lesson-image editors at module load.
 // Omitting it leaves the published Studio Web Component unregistered in browsers.
 await cp(join(repo,'packages','toolkit','web','studio','studio-ui-i18n.js'),join(out,'runtime','studio-ui-i18n.js'));
 await cp(join(repo,'packages','toolkit','web','studio','offline-assignment.js'),join(out,'runtime','offline-assignment.js'));
 await cp(join(repo,'packages','toolkit','web','studio','manual-grading.js'),join(out,'runtime','manual-grading.js'));
-for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','capability-broker.js','course-rights.js']){
+for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','assembly-3d-core.js','capability-broker.js','course-rights.js']){
   await cp(join(repo,'packages','toolkit','web',file),join(out,file));
 }
+// The copied course-rights module imports this transitive renderer localization module.
+await mkdir(join(out,'renderers'),{recursive:true});
+await cp(join(repo,'packages','toolkit','web','renderers','ui-i18n.js'),join(out,'renderers','ui-i18n.js'));
 console.log(JSON.stringify({ok:true,output:out},null,2));

@@ -1,0 +1,255 @@
+{
+  "timestamp": "2026-11-09T13:42:48.389Z",
+  "catalogSource": "actual pinned repository files; fixture injected into build-stage browser QA only",
+  "catalog": {
+    "schema": "https://p2lrn.org/schema/docs-example-catalog/1",
+    "version": "1",
+    "examples": [
+      {
+        "url": "/examples/canonical/external/free/dog-maths-scorm12.p2lrn",
+        "title": "Dog Maths 101 - three lessons (SCORM 1.2)",
+        "sourceFormat": "scorm",
+        "license": "MIT",
+        "bytes": 31846,
+        "browserVerified": false
+      },
+      {
+        "url": "/examples/canonical/external/free/h5p-arithmetic.p2lrn",
+        "title": "Arithmetic Quiz — Addition",
+        "sourceFormat": "h5p",
+        "license": "CC-BY-4.0",
+        "bytes": 981728,
+        "browserVerified": false
+      },
+      {
+        "url": "/examples/canonical/external/free/qti22-two-questions.p2lrn",
+        "title": "QTI 2.2 — Two Interactive Questions",
+        "sourceFormat": "qti",
+        "license": "MIT",
+        "bytes": 4698,
+        "browserVerified": false
+      },
+      {
+        "url": "/examples/canonical/external/cmi5-catapult-pre-post.p2lrn",
+        "title": "cmi5-catapult-pre-post",
+        "sourceFormat": "cmi5",
+        "license": null,
+        "bytes": 4094341,
+        "browserVerified": false
+      }
+    ]
+  },
+  "requests": [
+    {
+      "url": "/examples/canonical/external/free/dog-maths-scorm12.p2lrn",
+      "bytes": 31846
+    },
+    {
+      "url": "/examples/canonical/external/free/dog-maths-scorm12.p2lrn",
+      "bytes": 31846
+    },
+    {
+      "url": "/examples/canonical/external/free/h5p-arithmetic.p2lrn",
+      "bytes": 981728
+    },
+    {
+      "url": "/examples/canonical/external/free/h5p-arithmetic.p2lrn",
+      "bytes": 981728
+    },
+    {
+      "url": "/examples/canonical/external/free/qti22-two-questions.p2lrn",
+      "bytes": 4698
+    },
+    {
+      "url": "/examples/canonical/external/free/qti22-two-questions.p2lrn",
+      "bytes": 4698
+    },
+    {
+      "url": "/examples/canonical/external/cmi5-catapult-pre-post.p2lrn",
+      "bytes": 4094341
+    },
+    {
+      "url": "/examples/canonical/external/cmi5-catapult-pre-post.p2lrn",
+      "bytes": 4094341
+    },
+    {
+      "url": "/examples/canonical/external/free/dog-maths-scorm12.p2lrn",
+      "bytes": 31846
+    },
+    {
+      "url": "/examples/canonical/external/free/dog-maths-scorm12.p2lrn",
+      "bytes": 31846
+    },
+    {
+      "url": "/examples/canonical/external/free/h5p-arithmetic.p2lrn",
+      "bytes": 981728
+    },
+    {
+      "url": "/examples/canonical/external/free/h5p-arithmetic.p2lrn",
+      "bytes": 981728
+    },
+    {
+      "url": "/examples/canonical/external/free/qti22-two-questions.p2lrn",
+      "bytes": 4698
+    },
+    {
+      "url": "/examples/canonical/external/free/qti22-two-questions.p2lrn",
+      "bytes": 4698
+    },
+    {
+      "url": "/examples/canonical/external/cmi5-catapult-pre-post.p2lrn",
+      "bytes": 4094341
+    },
+    {
+      "url": "/examples/canonical/external/cmi5-catapult-pre-post.p2lrn",
+      "bytes": 4094341
+    }
+  ],
+  "cases": [
+    {
+      "locale": "es",
+      "label": "SCORM 1.2 Curso de varias lecciones",
+      "iframeCount": 1,
+      "status": "Estado del paquete: Reproducción e interacción completas pendientes de verificar",
+      "viewerUrl": "http://127.0.0.1:5544/demo/?embed=1&src=http%3A%2F%2F127.0.0.1%3A5544%2Fexamples%2Fcanonical%2Fexternal%2Ffree%2Fdog-maths-scorm12.p2lrn",
+      "playerCount": 1,
+      "loaded": true,
+      "embedded": {
+        "lang": "es",
+        "embeddable": "true",
+        "headerHidden": true,
+        "stageVisible": true,
+        "playerPresent": true
+      },
+      "oldChoiceUnpressed": true
+    },
+    {
+      "locale": "es",
+      "label": "H5P Cuestionario de aritmética",
+      "iframeCount": 1,
+      "status": "Estado del paquete: Reproducción e interacción completas pendientes de verificar",
+      "viewerUrl": "http://127.0.0.1:5544/demo/?embed=1&src=http%3A%2F%2F127.0.0.1%3A5544%2Fexamples%2Fcanonical%2Fexternal%2Ffree%2Fh5p-arithmetic.p2lrn",
+      "playerCount": 1,
+      "loaded": true,
+      "embedded": {
+        "lang": "es",
+        "embeddable": "true",
+        "headerHidden": true,
+        "stageVisible": true,
+        "playerPresent": true
+      },
+      "oldChoiceUnpressed": true
+    },
+    {
+      "locale": "es",
+      "label": "QTI 2.2 Dos preguntas",
+      "iframeCount": 1,
+      "status": "Estado del paquete: Reproducción e interacción completas pendientes de verificar",
+      "viewerUrl": "http://127.0.0.1:5544/demo/?embed=1&src=http%3A%2F%2F127.0.0.1%3A5544%2Fexamples%2Fcanonical%2Fexternal%2Ffree%2Fqti22-two-questions.p2lrn",
+      "playerCount": 1,
+      "loaded": true,
+      "embedded": {
+        "lang": "es",
+        "embeddable": "true",
+        "headerHidden": true,
+        "stageVisible": true,
+        "playerPresent": true
+      },
+      "oldChoiceUnpressed": true
+    },
+    {
+      "locale": "es",
+      "label": "cmi5 Curso de geología",
+      "iframeCount": 1,
+      "status": "Estado del paquete: Reproducción e interacción completas pendientes de verificar",
+      "viewerUrl": "http://127.0.0.1:5544/demo/?embed=1&src=http%3A%2F%2F127.0.0.1%3A5544%2Fexamples%2Fcanonical%2Fexternal%2Fcmi5-catapult-pre-post.p2lrn",
+      "playerCount": 1,
+      "loaded": true,
+      "embedded": {
+        "lang": "es",
+        "embeddable": "true",
+        "headerHidden": true,
+        "stageVisible": true,
+        "playerPresent": true
+      },
+      "oldChoiceUnpressed": true
+    },
+    {
+      "locale": "es",
+      "closeRemovesIframe": true
+    },
+    {
+      "locale": "en",
+      "label": "SCORM 1.2 Multi-lesson course",
+      "iframeCount": 1,
+      "status": "Package status: Full playback and interaction remain unverified",
+      "viewerUrl": "http://127.0.0.1:5544/en/demo/?embed=1&src=http%3A%2F%2F127.0.0.1%3A5544%2Fexamples%2Fcanonical%2Fexternal%2Ffree%2Fdog-maths-scorm12.p2lrn",
+      "playerCount": 1,
+      "loaded": true,
+      "embedded": {
+        "lang": "en",
+        "embeddable": "true",
+        "headerHidden": true,
+        "stageVisible": true,
+        "playerPresent": true
+      },
+      "oldChoiceUnpressed": true
+    },
+    {
+      "locale": "en",
+      "label": "H5P Arithmetic quiz",
+      "iframeCount": 1,
+      "status": "Package status: Full playback and interaction remain unverified",
+      "viewerUrl": "http://127.0.0.1:5544/en/demo/?embed=1&src=http%3A%2F%2F127.0.0.1%3A5544%2Fexamples%2Fcanonical%2Fexternal%2Ffree%2Fh5p-arithmetic.p2lrn",
+      "playerCount": 1,
+      "loaded": true,
+      "embedded": {
+        "lang": "en",
+        "embeddable": "true",
+        "headerHidden": true,
+        "stageVisible": true,
+        "playerPresent": true
+      },
+      "oldChoiceUnpressed": true
+    },
+    {
+      "locale": "en",
+      "label": "QTI 2.2 Two questions",
+      "iframeCount": 1,
+      "status": "Package status: Full playback and interaction remain unverified",
+      "viewerUrl": "http://127.0.0.1:5544/en/demo/?embed=1&src=http%3A%2F%2F127.0.0.1%3A5544%2Fexamples%2Fcanonical%2Fexternal%2Ffree%2Fqti22-two-questions.p2lrn",
+      "playerCount": 1,
+      "loaded": true,
+      "embedded": {
+        "lang": "en",
+        "embeddable": "true",
+        "headerHidden": true,
+        "stageVisible": true,
+        "playerPresent": true
+      },
+      "oldChoiceUnpressed": true
+    },
+    {
+      "locale": "en",
+      "label": "cmi5 Geology course",
+      "iframeCount": 1,
+      "status": "Package status: Full playback and interaction remain unverified",
+      "viewerUrl": "http://127.0.0.1:5544/en/demo/?embed=1&src=http%3A%2F%2F127.0.0.1%3A5544%2Fexamples%2Fcanonical%2Fexternal%2Fcmi5-catapult-pre-post.p2lrn",
+      "playerCount": 1,
+      "loaded": true,
+      "embedded": {
+        "lang": "en",
+        "embeddable": "true",
+        "headerHidden": true,
+        "stageVisible": true,
+        "playerPresent": true
+      },
+      "oldChoiceUnpressed": true
+    },
+    {
+      "locale": "en",
+      "closeRemovesIframe": true
+    }
+  ],
+  "errors": []
+}

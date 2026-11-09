@@ -133,7 +133,50 @@ export async function render(options) {
   for (const pair of pairs) {
     const button = el('button', {type: 'button', class: 'p2lrn-game-card'}, pair.left);
     button.dataset.p2lrnMatchLeft = pair.id;
-    button.addEventListener('click', () => chooseLeft(pair));
+    let drag=null,ignoreClick=false;
+    button.addEventListener('click', event =>{
+      if(ignoreClick){ignoreClick=false;event.preventDefault();return;}
+      chooseLeft(pair);
+    });
+    // The same scored native matching answer also supports drag gestures.
+    // Do not depend on HTML5 dragstart (unreliable in LMS iframes).
+    button.style.touchAction='none';
+    button.addEventListener('pointerdown',event=>{
+      if(runtime.state.completed||(event.pointerType==='mouse'&&event.button!==0))return;
+      ignoreClick=false;
+      drag={id:event.pointerId,x:event.clientX,y:event.clientY,ghost:null};
+      try{button.setPointerCapture(event.pointerId);}catch{}
+    });
+    button.addEventListener('pointermove',event=>{
+      if(!drag||drag.id!==event.pointerId)return;
+      if(Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<7&&!drag.ghost)return;
+      event.preventDefault();
+      if(!drag.ghost){
+        const ghost=button.cloneNode(true);ghost.removeAttribute('data-p2lrn-match-left');
+        ghost.setAttribute('aria-hidden','true');
+        Object.assign(ghost.style,{position:'fixed',zIndex:'2147483000',pointerEvents:'none',
+          opacity:'.88',left:'0',top:'0',margin:'0',transform:'translate(-50%,-50%)',
+          minWidth:Math.round(button.getBoundingClientRect().width)+'px'});
+        document.body.append(ghost);drag.ghost=ghost;
+      }
+      drag.ghost.style.left=event.clientX+'px';drag.ghost.style.top=event.clientY+'px';
+    });
+    const finishDrag=event=>{
+      if(!drag||drag.id!==event.pointerId)return;
+      const moving=Boolean(drag.ghost);drag.ghost?.remove();drag=null;
+      try{button.releasePointerCapture(event.pointerId);}catch{}
+      if(!moving||event.type==='pointercancel')return;
+      ignoreClick=true;
+      const target=document.elementFromPoint(event.clientX,event.clientY)
+        ?.closest?.('[data-p2lrn-match-right]');
+      if(target&&board.contains(target)){
+        const targetPair=pairs.find(item=>item.id===target.dataset.p2lrnMatchRight);
+        if(targetPair){chooseLeft(pair);chooseRight(targetPair);}
+      }else status.textContent=playerUiText('Suelta el elemento sobre una pareja de la derecha.');
+      event.preventDefault();
+    };
+    button.addEventListener('pointerup',finishDrag);
+    button.addEventListener('pointercancel',finishDrag);
     leftButtons.set(pair.id, button);
     left.append(button);
   }

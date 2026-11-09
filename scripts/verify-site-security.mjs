@@ -97,6 +97,19 @@ function scan(dir){
         assert.equal(schema.inLanguage,'es');
         assert.ok(typeof schema.name==='string'&&schema.name.includes('P2LRN'),'Invalid video title: '+rel);
         assert.ok(typeof schema.description==='string'&&schema.description.length>=30,'Invalid video description: '+rel);
+        if(isEarth){
+          assert.equal(schema.thumbnailUrl,'https://p2lrn.org/assets/studio-guide/demo-tierra-poster.webp');
+          assert.equal(schema.duration,'PT25.8S','The published video metadata must match the actual 25.8-second WebM');
+          assert.equal(schema.inLanguage,'es','The embedded Earth recording is in Spanish on both homepages');
+          assert.match(schema.name,rel.startsWith('en/')?/Earth/i:/Tierra/i,'Unrelated Earth video title: '+rel);
+          assert.ok(readFileSync(join(site,'assets','studio-guide','demo-tierra.webm')).byteLength>100000,
+            'Recorded Earth demonstration must actually be packaged');
+          assert.ok(readFileSync(join(site,'assets','studio-guide','demo-tierra-poster.webp')).byteLength>1000,
+            'Earth video poster is missing');
+        }else{
+          assert.equal(schema.thumbnailUrl,'https://p2lrn.org/assets/hero/video-reference.jpg');
+          assert.ok(typeof schema.name==='string'&&schema.name.includes('P2LRN'),'Invalid legacy video title: '+rel);
+        }
         continue;
       }
       assert.equal(schema['@type'],expected.type);

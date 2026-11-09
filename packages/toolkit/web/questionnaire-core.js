@@ -1,4 +1,5 @@
 import {identifierIs} from './identifiers.js';
+import {validateAssembly} from './assembly-3d-core.js';
 export const NATIVE_QUESTIONNAIRE_PROFILE = 'https://p2lrn.org/profile/native-questionnaire';
 export const NATIVE_QUESTIONNAIRE_SCHEMA = 'https://p2lrn.org/schema/native-questionnaire/0.4.0';
 export const NATIVE_QUESTIONNAIRE_MEDIA_TYPE = 'application/vnd.p2lrn.questionnaire+json';
@@ -146,6 +147,12 @@ function validateQuestionSemantics(question) {
     return;
   }
   if (question.type === 'classification') {
+    if(question.assembly3d){
+      validateAssembly(question.assembly3d,{requireReady:false});
+      invariant(Array.isArray(question.items)&&Array.isArray(question.categories)&&question.items.length===question.assembly3d.pieces.length && question.categories.length===question.assembly3d.targets.length, `${question.id}: las piezas y destinos deben coincidir con la escena`);
+      invariant(question.items.every((item)=>question.assembly3d.pieces.some((p)=>p.id===item.id)) && question.categories.every((category)=>question.assembly3d.targets.some((t)=>t.id===category.id)),`${question.id}: IDs de piezas/destinos incoherentes`);
+      if(question.solution)invariant(question.solution.assignments.every((assignment)=>question.assembly3d.links.some((l)=>l.pieceId===assignment.item&&l.targetId===assignment.category)),`${question.id}: soluciones de ensamblaje incoherentes`);
+    }
     invariant(Array.isArray(question.items) && question.items.length >= 2, `${question.id}: classification items are required`);
     invariant(Array.isArray(question.categories) && question.categories.length >= 2, `${question.id}: classification categories are required`);
     const items = uniqueIds(question.items, `${question.id} classification item`);

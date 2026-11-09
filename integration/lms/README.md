@@ -225,3 +225,105 @@ El proveedor de P2LRN incorpora `integration/lms/lti-nrps.mjs`, que consulta el 
 Pruebas automáticas: `node --test integration/lms/lti-nrps.test.mjs integration/lms/lti-nrps-server.test.mjs`.
 
 **Pruebas con AulaP2P, 3 de noviembre de 2026:** Moodle tiene el endpoint OAuth registrado inaccesible (`ECONNREFUSED`). Sakai también tiene mal el puerto del endpoint registrado; al probar el puerto 8080 sin modificar el registro, responde `invalid_scope` para NRPS. Chamilo responde `invalid_client`. Canvas y Open edX aparecen arrancados, pero no están registrados en el proveedor LTI de pruebas. La lectura de matrículas NRPS todavía **no se ha podido confirmar** frente a estas instalaciones. Falta corregir la configuración del LMS y completar un lanzamiento firmado con scope NRPS. NRPS no sustituye los archivos `.p2lrn-result` utilizados por Analytics.
+
+## Reproduccion H5P, SCORM y paquetes bajo LTI (diagnostico CSP)
+
+Un lanzamiento LTI puede autenticar correctamente, cargar el Player y mostrar el
+titulo, pero dejar vacio el marco de una actividad importada. El srcdoc de
+un iframe sandbox heredaba la Content-Security-Policy del documento LTI:
+el script de arranque interno de H5P/SCORM/paquete no tenia el nonce de la
+sesion. La misma politica bloqueaba hojas CSS blob: y el contenedor de
+altura fija podia recortar los botones de las actividades.
+
+La integracion usa una solucion acotada, no unsafe-inline global para scripts:
+
+- playerHtml publica un nonce generado por lanzamiento en la meta
+  p2lrn-opaque-runtime-nonce, ademas de usarlo en su propio script LTI.
+- withOpaqueRuntimeBootstrapNonce autoriza solamente el primer script del
+  shell srcdoc generado internamente. No altera HTML arbitrario del paquete.
+  El runtime normal sin meta LTI conserva su comportamiento.
+- CSP conserva script-src basado en nonce y mantiene el sandbox de origen
+  opaco (allow-scripts, sin allow-same-origin en esta modalidad), mientras
+  permite CSS, multimedia y fuentes locales blob:/data:.
+- El contenedor LTI crece con la altura real del Player para que los botones
+  de H5P y el contenido SCORM no queden cortados por un height:100% fijo.
+
+Al desplegar una modificacion, compilar el mismo Player existente con
+node packages/player/scripts/build-dist.mjs y actualizar el proveedor LTI
+sin regenerar sus claves, su base SQLite ni sus cursos. Confirmar en un
+navegador real (no solo HTTP 200): pregunta H5P visible y boton Check
+funcional; pagina SCORM visible y boton Next funcional; pruebas de
+packages/toolkit/test/opaque-runtime-bootstrap-nonce.test.mjs,
+packages/toolkit/test/opaque-runtime-security.test.mjs e
+integration/lms/lti-server.test.mjs superadas.
+
+Esta reparacion no certifica que el LMS haya recibido notas oficiales AGS.
+Tampoco autoriza desactivar CSP o SameSite para ocultar errores.
+
+## Diagnostico de DNS interno para LTI Advantage / AGS (7-11-2026)
+
+Las IP fijas en Docker ExtraHosts pueden quedar obsoletas cuando se recrean los servicios de Moodle, Chamilo o Sakai. Se comprobo que el nombre DNS local de Moodle apuntaba al contenedor cron en vez de al ingress. La peticion OAuth daba ECONNREFUSED. Usar fetch contra el dominio del proxy sin conservar Host produjo HTTP 200 con cuerpo vacio.
+
+La CLI del proveedor usa integration/lms/lti-local-qa-gateway.mjs cuando el modo local inseguro de QA esta autorizado mediante P2LRN_LTI_DEV_INSECURE=true. El modulo resuelve el alias interno del proxy y utiliza node:http preservando Host del LMS; exige un destino privado y no opera para HTTPS externos. Se permite configurar la etiqueta DNS mediante P2LRN_LTI_DEV_LMS_GATEWAY. El modo HTTPS de produccion conserva su transporte y sus controles existentes.
+
+Para comprobarlo, ejecutar los tests integration/lms/*.test.mjs y consultar el endpoint /lti/health mediante el Host original. Comparar recuentos de SQLite antes y despues de actualizar. El reintento oficial de AGS debe usar solo POST /lti/admin/ags/retry, con autenticacion administrativa y un intento calificable previamente aprobado por el servidor. Confirmar la nota tambien en el libro del LMS, no solo en el outbox.
+
+Resultado real: 44/44 pruebas LTI correctas, reintento del alumno QA de Moodle exitoso (HTTP 200, SENT) y 85/100 en grade_grades, curso historico 2. La nota de la cuenta administradora que no tiene rol de alumno sigue sin poder entregarse legitimamente. El curso nuevo de seguridad informatica y los otros LMS siguen pendientes de certificacion integral; consultar docs/interop/2026-11-07-prueba-real.md.
+
+## Compatibilidad dual LTI 1.0/1.1 y LTI 1.3 para Chamilo
+
+P2LRN conserva el proveedor **LTI 1.3** en `/lti/login`, `/lti/launch`, `/lti/deep-link`, `/lti/jwks`, AGS y NRPS; añade un canal **independiente y explícito** para los lanzamientos históricos `POST /lti/legacy/launch`. Los dos canales reutilizan los mismos paquetes `.p2lrn`, Player, estados, intentos y sistema de aprobación de notas, pero cada uno tiene registros, secretos y vinculaciones separados.
+
+### LTI 1.0/1.1: compatibilidad sin degradación automática
+
+- Para LTI 1.0/1.1, registrar un consumidor autorizado con `POST /lti/admin/legacy/platforms` (Bearer administrativo existente). El cuerpo JSON admite `id` con prefijo `legacy:`, `tenantId`, `consumerKey`, `sharedSecret` fuerte (24 caracteres o más), `issuerOrigin`, `launchUrl` terminado en `/lti/legacy/launch` y `status: "ACTIVE"`. La respuesta y `GET /lti/admin/legacy/platforms` **nunca muestran el secreto**; se cifra con AES-256-GCM mediante una clave derivada de la identidad RSA persistente del proveedor. Hay que conservar esa identidad para restaurar las inscripciones antiguas.
+- `POST /lti/admin/legacy/bindings` recibe `registrationId`, `catalogId` y `entityId` del catálogo real. Devuelve `p2lrn_binding_id`. En el campo de parámetros personalizados de Chamilo se introduce `p2lrn_binding_id=<id>`; Chamilo envía `custom_p2lrn_binding_id` en el formulario firmado. No se duplica el archivo del curso ni se reutiliza una vinculación JWT 1.3 como vinculación OAuth1.
+- El endpoint antiguo **solo acepta** formularios firmados por OAuth 1.0a con HMAC-SHA1 o HMAC-SHA256, marca temporal ±300 s, nonce de un solo uso persistido en SQLite, URL exacta permitida, clave de consumidor registrada, identificador de alumno y vínculo de contenido autorizado. Rechaza ausencia/alteración de firma, peticiones repetidas, mezcla con `id_token` o `state`, reuso de un vínculo de otra institución, secretos débiles y hosts de resultado no registrados. HTTP solo se admite en las instalaciones `.localhost` de QA con `P2LRN_LTI_DEV_INSECURE=true`.
+- Cuando el lanzamiento lleva `lis_outcome_service_url` y `lis_result_sourcedid` válidos, el servidor puede devolver notas por **LTI 1.1 Basic Outcomes** con XML POX, OAuth `oauth_body_hash`, y verificación de respuesta de éxito del LMS. El resultado de la actividad **no se envía** por el mero reporte del navegador: exige la misma autorización del servidor de notas que en LTI 1.3. Sin servicio de notas, una calificación no se marca oficial. El proveedor acepta el literal `LTI-1p0` emitido por Chamilo, pero la devolución de resultados sigue dependiendo del servicio Basic Outcomes declarado y de su aceptación efectiva.
+
+### LTI 1.3: sin cambios en la autenticación original
+
+Las herramientas LTI 1.3 siguen usando OIDC, RS256, validaciones de `issuer`, `audience`, `nonce`, `deployment_id`, y AGS OAuth2. **No existe fallback silencioso a OAuth 1.0a.** Un POST LTI 1.0 enviado a `/lti/launch` se rechaza; un `id_token` enviado al endpoint legado también.
+
+### Estado específico de Chamilo 2.0.3
+
+El código instalado de Chamilo 2.0.3 expone las dos opciones en `src/LtiBundle/Form/ExternalToolType.php` (`lti1p1` y `lti1p3`), pero el controlador `CourseController::launch()` emite literalmente `LTI-1p0` y usa `OAuth1Helper::buildSignedPostParams()` sin seleccionar un flujo OIDC por versión. Por eso **no puede considerarse validada una integración Chamilo 1.3 solo por marcar su opción en el formulario**. El nuevo canal legado de P2LRN cubre la interoperabilidad con la ruta OAuth1, pero para certificar el consumidor **Chamilo LTI 1.3** faltan generar y verificar lanzamientos OIDC/JWT desde Chamilo, publicar sus JWKS y servir AGS con resultados reales en su libro de notas. Se mantiene pendiente y separado del certificado de P2LRN.
+
+Referencias normativas: [1EdTech Basic Outcomes 1.1](https://www.imsglobal.org/spec/lti-bo/v1p1), [guía de migración LTI](https://standards.1edtech.org/lti/guides/migration/migration-guide) y [calendario de obsolescencia de las versiones anteriores](https://www.1edtech.org/lti-security-announcement-and-deprecation-schedule). Los estándares 1.0/1.1 están obsoletos para certificación oficial, aunque se mantiene soporte de compatibilidad exigido para instalaciones existentes.
+
+### Pruebas verificadas
+
+El test integrado `integration/lms/lti-legacy-integration.test.mjs` usa el servidor HTTP real, un paquete Toolkit auténtico, un registro legado cifrado y vinculado, sesión Player, reanudación de estado y aprobación de Basic Outcomes. Comprueba además protección anti-replay, aislamiento del endpoint 1.3 y que un resultado HTTP 200 no baste si el XML indica error. El test `lti-legacy.test.mjs` valida la firma, los secretos y los orígenes. Una prueba de laboratorio con un receptor simulado **no equivale** a la aceptación real de Chamilo; esa última exige la prueba estudiantil y la lectura del libro de notas.
+
+## Certificación de integración LMS: estado real del 9 de noviembre de 2026
+
+**Estado global: BLOQUEADO — 0 de 5 LMS certificados mediante el mismo curso.** La compilación y los contratos no sustituyen una sesión de alumno autenticada ni una nota verificada en el LMS. No marcar una instancia como lista para alumnos sin superar todos los criterios siguientes.
+
+Última regresión automática: [run 42587886973](https://github.com/josemarcosdzb/p2lrn/actions/runs/42587886973), rama `mejorastudio`: **56/56 pruebas de LTI 1.3, LTI 1.0/1.1 y paquetes reales**, 11/11 pruebas de clasificación y conectividad, Player con sus dependencias compiladas. Incluye reentrada LTI con el mismo alumno y restauración exacta de su respuesta y revisión; guardados idempotentes y alerta ante pérdida de conexión. **Estas pruebas usan un LMS firmante de laboratorio para los contratos, no las cinco instalaciones reales.** Los seis jobs históricos de creación/reproducción permanecen omitidos en los pushes ordinarios, y eso no equivale a aprobarlos.
+
+| LMS de AulaP2P | Evidencia de red más reciente | Pendiente para uso con alumnos |
+|---|---|---|
+| Moodle | Proxy accesible, redirección 303 al acceso institucional; entrega AGS **85/100 únicamente para un curso histórico** documentada el 7/11 | Autenticación real de alumno en el curso maestro, H5P/SCORM, reentrada y calificación oficial de ese mismo curso |
+| Chamilo | HTML visible y rutas del proveedor LTI compartido; **adaptador LTI 1.0/1.1 añadido y aprobado en pruebas de contrato** | El Chamilo instalado todavía debe aceptar un lanzamiento OAuth1 real y su Basic Outcomes firmado; no hay evidencia de alumno ni nota oficial en esa plataforma |
+| Sakai | HTML accesible y rutas del proveedor compartido | Configuración segura del sitio/herramienta, token CSRF de administración, inicio de alumno y resultado oficial |
+| Canvas | Redirección a login; rutas del proveedor compartido | Registrar herramienta LTI 1.3, Deployment ID, curso, alumno y AGS; inventario histórico sin Developer Keys |
+| Open edX | **HTTP 200 con cuerpo vacío** en el proxy de pruebas (regresión observada el 9/11); proveedor no validado en esa ruta | Restablecer respuesta HTTP real y registrar el consumidor, alumno, curso y AGS |
+
+**Criterios de autorización por LMS**: mismo SHA-256 de un único paquete exportado de Studio, importación/publicación exacta, Deep Linking o binding administrativo autorizado, JWT firmado y OIDC de profesor y de alumno, actividades de texto/imagen/drag-drop/cuestionario/H5P/SCORM que se ejecuten (no solo iframe visible), progreso guardado y restaurado después de salir y volver a entrar, calificación aprobada por el servidor y recibida en el libro oficial mediante AGS o, para legado LTI 1.0, el mecanismo de resultados soportado y autenticado por ese LMS. Repetir con otro alumno para descartar fugas entre identidades. No fabricar identidades ni resultados para obtener aprobación.
+
+**Política de entrega**: un LMS sin la evidencia anterior figura **NO CERTIFICADO** y debe conservar esa indicación en cualquier panel, catálogo, documentación o comunicación al usuario. Si algún paso falla, corregir la causa y repetir el recorrido completo antes de habilitarlo para alumnos. El servidor no convierte en calificación oficial un score enviado desde navegador: la nota necesita validación y aprobación de Host y entrega AGS confirmada. Comprobar los errores pendientes y la cola administrativa; un HTTP 200 de salud LTI, un paquete validado o un test unitario verde nunca reemplazan la recepción de notas.
+## Publicación sencilla desde cualquier LMS con Deep Linking
+
+Una vez que el administrador del centro instala la herramienta P2LRN LTI 1.3, el profesor no tiene que usar las APIs administrativas ni copiar claves o identificadores.
+
+1. En el curso del LMS elegir Añadir actividad > Herramienta externa > P2LRN.
+2. En el selector, elegir un curso existente y pulsar Añadir curso. Si el curso es nuevo, exportar desde Studio su archivo .p2lrn y pulsar Publicar y añadir.
+3. P2LRN valida el paquete con Toolkit oficial y devuelve al LMS un enlace Deep Linking firmado. El LMS guarda la actividad en el curso correspondiente.
+
+Ambas acciones utilizan el mismo endpoint existente POST /lti/deep-link/confirm: el selector envía un formulario normal y la subida utiliza multipart/form-data. No requiere configurar nuevas rutas en Caddy ni sustituir los enlaces anteriores.
+
+La subida acepta únicamente un ticket de profesor vigente, emitido después de un lanzamiento LTI Deep Linking firmado. El paquete se valida estrictamente, con un máximo de 64 MiB. Si el archivo es inválido, el ticket sigue disponible para que el profesor reintente. Un ticket utilizado no puede reutilizarse. El catálogo conserva un solo archivo físico por SHA-256 e institución: no se convierte a SCORM ni se duplica el .p2lrn al publicar repetidamente el mismo archivo. Los enlaces de actividades sí permanecen separados para que alumnos y calificaciones no se mezclen.
+
+El selector ofrece un botón principal por curso, búsqueda y acceso opcional a actividades individuales, con navegación por teclado y diseño adaptable a móvil. Los errores visibles explican el paso que debe seguir el usuario sin exponer secretos; el código de incidencia permite al administrador localizar el tipo de problema sin pedir contraseñas.
+
+Esta mejora facilita la publicación después de la configuración institucional inicial. No certifica por sí sola el inicio de sesión o las notas oficiales en los cinco LMS. Las pruebas HTTP con JWT firmados y las pruebas de Chrome se deben informar separadamente de la certificación integral de cada LMS.

@@ -1,0 +1,30 @@
+name: External cmi5 legacy markup audit (read-only)
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'scripts/audit-external-script-handlers.mjs'
+      - 'scripts/audit-community-imscc-sources.mjs'
+      - 'scripts/audit-community-video-origin.mjs'
+      - 'scripts/audit-h5p-base-creation.mjs'
+      - '.github/workflows/p2lrn-external-fixture-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Inspect source file without executing it
+        run: |
+          node scripts/audit-external-script-handlers.mjs
+          node scripts/audit-community-imscc-sources.mjs
+          node scripts/audit-community-video-origin.mjs
+          node scripts/audit-h5p-base-creation.mjs

@@ -21,13 +21,35 @@ test('Studio distribution copies localized UI and deferred-grading editor module
     const code=await source(path);
     for(const match of code.matchAll(/from\s+['"]\.\/([a-z0-9-]+\.js)['"]/g))imports.add(match[1]);
   }
-  assert.deepEqual([...imports].sort(),['questionnaire-grading.js','studio-ui-i18n.js'],
-    'UI editor module graph must include both shared modules');
+  assert.deepEqual([...imports].sort(),['assembly-3d-editor.js','questionnaire-grading.js','studio-ui-i18n.js','visual-layout.js'],
+    'UI editor module graph must include all shared modules, including nested layout');
+  assert.ok(build.includes("'assembly-3d-core.js'") && build.includes("join(out,file)"),
+    'Studio dist must copy assembly-3d-core.js through its canonical root-module loop');
   assert.ok(build.includes("join(out,'runtime','manual-grading.js')"),'Studio dist must include teacher manual-review helper');
   await source('packages/toolkit/web/studio/manual-grading.js');
   for(const file of imports){
     const marker="join(out,'runtime','"+file+"')";
     assert.ok(build.includes(marker),'Studio dist must copy runtime dependency '+file);
     await source('packages/toolkit/web/studio/'+file);
+  }
+});
+
+// Ensure dependencies of copied root modules are not omitted from the npm release.
+test('Studio npm build includes renderer localization required by course rights',async()=>{
+  const rights=await source('packages/toolkit/web/course-rights.js');
+  assert.match(rights,/from\s+['"]\.\/renderers\/ui-i18n\.js['"]/);
+  const build=await source('packages/studio/scripts/build-dist.mjs');
+  assert.ok(build.includes("join(out,'renderers','ui-i18n.js')"),
+    'The npm Studio dist must preserve the transitive renderers/ui-i18n.js import');
+  await source('packages/toolkit/web/renderers/ui-i18n.js');
+});
+
+test('Studio dist build copies the shared history, geometry and contextual table tools',async()=>{
+  const build=await source('packages/studio/scripts/build-dist.mjs');
+  const bar=await source('packages/toolkit/web/studio/command-bar.js');
+  assert.match(bar,/studio-advanced-tools\.js/);
+  for(const name of ['studio-history.js','studio-object-tools.js','studio-advanced-tools.js']){
+    assert.ok(build.includes(name),'Missing runtime asset in build: '+name);
+    await source('packages/toolkit/web/studio/'+name);
   }
 });

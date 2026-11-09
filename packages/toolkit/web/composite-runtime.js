@@ -82,6 +82,8 @@ export class CompositeRuntime {
   #buildUi() {
     this.container.replaceChildren();
     const shell = document.createElement('section'); shell.className = 'p2lrn-composite';
+    const stacked=this.payload.presentation==='stack';
+    if(stacked)shell.classList.add('p2lrn-composite--stack');
     const heading = document.createElement('div'); heading.className = 'p2lrn-composite__heading';
     const h2 = document.createElement('h2'); h2.textContent = this.payload.title ?? titleOf(this.entity);
     heading.append(h2);
@@ -93,6 +95,7 @@ export class CompositeRuntime {
     const prev = document.createElement('button'); prev.type = 'button'; prev.textContent = 'Anterior'; prev.addEventListener('click', () => void this.previous()); this.prevButton = prev;
     const next = document.createElement('button'); next.type = 'button'; next.textContent = 'Siguiente'; next.addEventListener('click', () => void this.next()); this.nextButton = next;
     actions.append(prev, next);
+    if(stacked){nav.hidden=true;actions.hidden=true;}
     shell.append(heading, nav, stage, actions);
     this.container.append(shell);
     this.#refreshUi();
@@ -141,6 +144,20 @@ export class CompositeRuntime {
 
   async #renderCurrent() {
     if (this.destroyed) return;
+    if(this.payload.presentation==='stack'){
+      this.childStage.replaceChildren();
+      for(const child of this.children){
+        if(this.destroyed)return;
+        const panel=document.createElement('section');panel.className='p2lrn-composite__stack-item';
+        panel.dataset.compositeChild=child.id;
+        const header=document.createElement('h3');header.textContent=titleOf(child);
+        panel.append(header);
+        const content=document.createElement('div');content.className='p2lrn-composite__stack-content';
+        panel.append(content);this.childStage.append(panel);
+        await this.renderActivity(child.id,content,{parentContext:this.context});
+      }
+      this.#refreshUi();return;
+    }
     const child = this.children[this.#index()];
     if (!child) return;
     this.state.currentChild = child.id;

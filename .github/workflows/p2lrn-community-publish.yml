@@ -1,0 +1,133 @@
+name: Publish certified P2LRN community examples to production main
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - '.github/workflows/p2lrn-community-publish.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: p2lrn-community-publish-main
+  cancel-in-progress: false
+jobs:
+  verify-then-publish:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 35
+    steps:
+      - name: Checkout production main with limited write access
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Verify production baseline and stage only approved files
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $expectedMain='6f8b672bcdbed557fc55979f4f699f4cc1759259'
+          $actualMain=(git rev-parse HEAD).Trim()
+          if($actualMain -ne $expectedMain) {throw "Main changed after 23/23 preview: $actualMain"}
+          $candidateSha='f305faf095902df82000b2a5f1dd7deb00b384ee'
+          git fetch --no-tags --depth=1 origin $candidateSha
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          $selected=@(
+            'examples/canonical/external/free',
+            'deploy/netlify/build-site.mjs',
+            'deploy/netlify/build-skill-downloads.mjs',
+            'deploy/netlify/site/docs/ejemplos',
+            'deploy/netlify/site/en/docs/ejemplos/index.html',
+            'packages/toolkit/web/h5p-auto-runtime.js',
+            'packages/toolkit/web/h5p-runtime-shell.js',
+            'packages/toolkit/web/h5p-package.js',
+            'packages/toolkit/web/renderers/h5p-runtime.js',
+            'packages/toolkit/web/package-runtime-shell.js',
+            'packages/toolkit/web/dependency-registry.js',
+            'packages/toolkit/web/execution-negotiation.js',
+            'packages/toolkit/web/p2lrn-player.js',
+            'packages/toolkit/web/built-in-renderers.js',
+            'packages/toolkit/web/renderers/qti-runtime.js',
+            'packages/toolkit/web/renderers/scorm-runtime.js',
+            'packages/toolkit/web/scorm2004-sequencing.js',
+            'packages/toolkit/web/qti-compatibility.js',
+            'scripts/verify-community-samples.mjs',
+            'scripts/browser-external-format-visual-qa.mjs'
+          )
+          git checkout $candidateSha -- $selected
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          git diff --stat --cached
+          Write-Host "PRODUCTION_BASELINE=$expectedMain"
+          Write-Host "VERIFIED_CANDIDATE=$candidateSha"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: '1.26'
+          cache: false
+      - name: Check all 19 package originals and SHA256 provenance
+        shell: powershell
+        run: |
+          node scripts/verify-community-samples.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Build real Netlify site and verify catalog
+        shell: powershell
+        run: |
+          cmd /d /c "node deploy/netlify/build-site.mjs > .release-build.log 2>&1"
+          $status=$LASTEXITCODE
+          Get-Content .release-build.log -Tail 100
+          if($status -ne 0){exit $status}
+          node --input-type=module -e "import fs from 'node:fs';let a=JSON.parse(fs.readFileSync('.netlify-cdn/examples/catalog.json'));let c=a.examples.filter(x=>x.sourceFormat&&x.url.startsWith('/examples/canonical/external/free/'));console.log('RELEASE_CATALOG_COUNT='+c.length);if(c.length!==19)process.exit(1)"
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Enforce production security invariants
+        shell: powershell
+        run: |
+          node scripts/verify-site-security.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Certify all 19 community packages in Chrome before publication
+        shell: powershell
+        run: |
+          npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save playwright-core@1.56.0
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/browser-external-format-visual-qa.mjs --community-only
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Publish only tested files to unchanged main without force
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $mainBefore='6f8b672bcdbed557fc55979f4f699f4cc1759259'
+          $remoteText=(git ls-remote origin refs/heads/main | Select-Object -First 1)
+          $remoteBefore=($remoteText -split '\s+')[0]
+          if($remoteBefore -ne $mainBefore){throw "Main changed during tests; no force push"}
+          $changes=git diff --cached --name-only
+          if(!$changes){Write-Host 'No changes to publish';exit 0}
+          $allowed=@(
+            'examples/canonical/external/free/',
+            'deploy/netlify/build-site.mjs',
+            'deploy/netlify/build-skill-downloads.mjs',
+            'deploy/netlify/site/docs/ejemplos/',
+            'deploy/netlify/site/en/docs/ejemplos/index.html',
+            'packages/toolkit/web/',
+            'scripts/verify-community-samples.mjs',
+            'scripts/browser-external-format-visual-qa.mjs'
+          )
+          foreach($file in $changes){
+            $ok=$false
+            foreach($prefix in $allowed){if($file.StartsWith($prefix)){$ok=$true;break}}
+            if(!$ok){throw "Unexpected staged path: $file"}
+          }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat(p2lrn): publish 19 browser-certified SCORM H5P QTI IMSCC samples'
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          git push origin HEAD:refs/heads/main
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          Write-Host "RELEASE_MAIN_COMMIT=$(git rev-parse HEAD)"
+      - name: Keep local evidence without GitHub artifacts
+        if: always()
+        shell: powershell
+        run: |
+          $dir=Join-Path $env:USERPROFILE "Downloads\P2LRN-QA-LOCAL\community-release\$env:GITHUB_RUN_ID"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          if(Test-Path '.release-build.log'){Copy-Item '.release-build.log' $dir -Force}
+          if(Test-Path '.p2lrn-external-visual-qa'){Copy-Item '.p2lrn-external-visual-qa\*' $dir -Recurse -Force}
+          Write-Host "RELEASE_QA_EVIDENCE=$dir"

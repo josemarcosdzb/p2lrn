@@ -1,0 +1,131 @@
+name: P2LRN Universal Runtime - mejorastudio
+
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'packages/toolkit/web/execution-negotiation.js'
+      - 'packages/toolkit/web/dependency-registry.js'
+      - 'packages/toolkit/web/p2lrn-player.js'
+      - 'packages/toolkit/web/h5p-package.js'
+      - 'packages/toolkit/web/renderers/h5p-runtime.js'
+      - 'packages/toolkit/test/universal-execution-negotiation.test.mjs'
+      - 'packages/toolkit/test/universal-runtime-public-api.test.mjs'
+      - 'packages/toolkit/web-sdk-src/p2lrn.esm.js'
+      - 'packages/player/src/p2lrn.esm.js'
+      - 'packages/player/types/index.d.ts'
+      - 'schemas/execution-plan.schema.json'
+      - 'packages/toolkit/test/h5p-dependency-closure.test.mjs'
+      - 'packages/toolkit/web/qti-compatibility.js'
+      - 'packages/toolkit/web/renderers/qti-runtime.js'
+      - 'packages/toolkit/test/qti-compatibility-preflight.test.mjs'
+      - 'packages/toolkit/web/scorm2004-sequencing.js'
+      - 'packages/toolkit/web/renderers/scorm-runtime.js'
+      - 'packages/toolkit/test/scorm2004-sequencing-preflight.test.mjs'
+      - 'scripts/verify-automatic-runtimes.mjs'
+      - 'spec/UNIVERSAL-RUNTIME-1.md'
+      - '.github/workflows/p2lrn-universal-runtime-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-universal-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  external-formats-browser:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Build canonical Player and pinned H5P libraries without publishing
+        shell: powershell
+        run: |
+          node packages/player/scripts/build-dist.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node packages/h5p-libraries/scripts/build.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Regress real imported SCORM, H5P, QTI and sandbox behavior in Chrome
+        shell: powershell
+        run: |
+          node scripts/verify-automatic-runtimes.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  universal-runtime:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Validate universal runtime source
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @(
+            'packages/toolkit/web/execution-negotiation.js',
+            'packages/toolkit/web/dependency-registry.js',
+            'packages/toolkit/web/renderer-registry.js',
+            'packages/toolkit/web/p2lrn-player.js',
+            'packages/toolkit/test/universal-execution-negotiation.test.mjs'
+          )) {
+            node --check $path
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Prove no silent fallbacks, exact versions, offline and host permissions
+        shell: powershell
+        run: |
+          node --test packages/toolkit/test/universal-execution-negotiation.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify H5P transitive closure and secure imported assets
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web/h5p-package.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/renderers/h5p-runtime.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/h5p-dependency-closure.test.mjs packages/toolkit/test/h5p-auto-runtime.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify QTI 3 support boundaries are explicit
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web/qti-compatibility.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/renderers/qti-runtime.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/qti-compatibility-preflight.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify SCORM 2004 sequencing semantics and honest compatibility limits
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web/scorm2004-sequencing.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/renderers/scorm-runtime.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/scorm2004-sequencing-preflight.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify browser SDK ESM and types expose the same preflight
+        shell: powershell
+        run: |
+          node --check packages/toolkit/web-sdk-src/p2lrn.esm.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/player/src/p2lrn.esm.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/universal-runtime-public-api.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify existing runtime boundary tests
+        shell: powershell
+        run: |
+          node --test packages/toolkit/test/host-capability-offline.test.mjs packages/toolkit/test/automatic-runtime-boundaries.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

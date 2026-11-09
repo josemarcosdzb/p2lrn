@@ -14,7 +14,7 @@
 
 <section class="doc-section" id="que-incluye"><h2>Qué hace la Skill y qué no</h2>
 <p>«P2LRN – Crear y descargar» utiliza Toolkit oficial cuando está instalado y autorizado, para crear, importar, editar y validar cursos; cuando falta Node conserva un generador Python autónomo limitado para cursos nuevos dentro del contrato <strong>P2LRN Core 0.4.0</strong>. Permite estructurar unidades y lecciones, crear cuestionarios, preguntas verdadero/falso con varias afirmaciones, juegos y metadatos de autoría, y entregar un archivo <code>.p2lrn</code> real.</p>
-<p><strong>Requisitos:</strong> Node 22+ y Toolkit 0.5.0-alpha.11 para autoría oficial; Python 3.10+ solo para el empaquetador limitado. Se necesita acceso a archivos y permiso de ejecución. Si la plataforma no permite ejecutar código, podrá redactar contenido, pero no debe afirmar que ha creado el paquete.</p>
+<p><strong>Requisitos:</strong> Node 22+ y Toolkit 0.5.0-alpha.12 para autoría oficial; Python 3.10+ solo para el empaquetador limitado. Se necesita acceso a archivos y permiso de ejecución. Si la plataforma no permite ejecutar código, podrá redactar contenido, pero no debe afirmar que ha creado el paquete.</p>
 <p>La Skill no sustituye a <a href="/docs/studio/">Studio</a>, la ejecución visual del <a href="/docs/player/">Player</a>, los juegos 3D del motor oficial ni las <a href="/docs/entrega-offline/">entregas Windows autoejecutables</a>. Para consultar cursos reales de una carpeta autorizada se usa el <a href="/docs/conectores/ia/">MCP de P2LRN</a> por separado.</p>
 </section>
 
@@ -50,8 +50,10 @@
 <p><strong>Grok web no es Grok Build.</strong> No se garantiza que la web importe este ZIP directamente ni que lo distribuya públicamente.</p>
 </section>
 
+<section class="doc-section" id="presentations"><h2>Crear presentaciones directamente dentro de P2LRN</h2><p>Las cinco Skills incluyen los mismos scripts e instrucciones: <code>references/presentations.md</code>, un ejemplo de diapositivas y exportadores PPTX/PDF opcionales. Crea un curso real con <code>python scripts/p2lrn_presentations.py build --input assets/presentacion-curso.json --output curso-diapositivas.p2lrn</code>. La exportación PowerPoint necesita PptxGenJS y PDF necesita ReportLab, instalados aparte con autorización; ninguno se instala automáticamente. Edita las diapositivas en Studio desde Insertar &gt; Presentación.</p></section>
+
 <section class="doc-section" id="comprobar"><h2>Verificar el ZIP y generar un curso de prueba</h2>
-<p>Antes de instalar, compara el SHA-256 del ZIP descargado con el <a href="/downloads/skills/manifest.json">manifiesto de descargas</a>. Los cuatro paquetes se reconstruyen a partir de las mismas fuentes versionadas, pero tienen estructuras de carpeta distintas.</p>
+<p>Antes de instalar, compara el SHA-256 del ZIP descargado con el <a href="/downloads/skills/manifest.json">manifiesto de descargas</a>. Los cinco paquetes se reconstruyen a partir de las mismas fuentes versionadas, pero tienen estructuras de carpeta distintas.</p>
 <div class="codebox"><div class="codebox-head"><span>Prueba con Python 3.10+</span><button type="button" data-copy>Copiar</button></div><pre><code>python -m unittest discover -s scripts -p "test_*.py"
 python scripts/p2lrn_package.py build --input assets/ejemplo-curso.json --output curso-prueba.p2lrn
 python scripts/p2lrn_package.py verify curso-prueba.p2lrn</code></pre></div>

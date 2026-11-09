@@ -1,0 +1,55 @@
+name: Import licensed H5P IMSCC and QTI samples
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'scripts/import-community-formats.mjs'
+      - 'examples/canonical/external/free/GENERATED-LICENSE.md'
+      - '.github/workflows/p2lrn-import-community-formats.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: community-formats-import-mejorastudio
+  cancel-in-progress: false
+
+jobs:
+  import-licensed-samples:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - name: Check out existing branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: mejorastudio
+          persist-credentials: true
+      - name: Set up Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Download, convert and inspect immutable licensed samples
+        shell: powershell
+        run: |
+          node --check scripts/import-community-formats.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/import-community-formats.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-community-samples.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record changes on the same branch
+        shell: powershell
+        run: |
+          git add -- examples/canonical/external/free
+          if (git diff --cached --quiet) {
+            Write-Host "No new examples"
+            exit 0
+          }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(samples): include verified H5P IMSCC QTI community packages"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git push origin HEAD:mejorastudio
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

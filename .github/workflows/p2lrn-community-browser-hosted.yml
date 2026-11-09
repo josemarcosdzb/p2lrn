@@ -1,0 +1,92 @@
+name: P2LRN community QA Windows hosted fallback (no artifacts)
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - '.github/workflows/p2lrn-community-browser-hosted.yml'
+      - 'packages/toolkit/test/opaque-runtime-security.test.mjs'
+      - 'packages/toolkit/web/package-runtime-shell.js'
+      - 'packages/toolkit/web/h5p-auto-runtime.js'
+      - 'packages/toolkit/web/h5p-runtime-shell.js'
+      - 'packages/toolkit/web/p2lrn-player.js'
+      - 'packages/toolkit/web/built-in-renderers.js'
+      - 'scripts/browser-external-format-visual-qa.mjs'
+      - 'deploy/netlify/site/demo/viewer.js'
+      - 'deploy/netlify/site/en/demo/viewer.js'
+      - 'deploy/netlify/site/docs/ejemplos/community-gallery.js'
+      - 'examples/canonical/external/free/provenance.json'
+      - 'scripts/verify-site-security.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-community-browser-hosted-fallback
+  cancel-in-progress: true
+
+jobs:
+  browser-certification-hosted:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Go 1.26
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: '1.26'
+          cache: false
+      - name: Verify package originals and security invariants
+        shell: pwsh
+        run: |
+          node scripts/verify-community-samples.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node --test packages/toolkit/test/opaque-runtime-security.test.mjs packages/toolkit/test/h5p-auto-runtime.test.mjs packages/toolkit/test/qti-compatibility-preflight.test.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+          node scripts/audit-community-h5p-media.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Build real site and runtime from source
+        shell: pwsh
+        run: |
+          node deploy/netlify/build-site.mjs *> .browser-build.log
+          $status=$LASTEXITCODE
+          Get-Content .browser-build.log -Tail 110
+          if($status -ne 0){exit $status}
+          node scripts/verify-site-security.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Chrome browser controller
+        shell: pwsh
+        run: |
+          npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save playwright-core@1.56.0
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Verify Canvas three-assignment fixture and TOPkit link in Chrome
+        shell: pwsh
+        run: |
+          node scripts/browser-external-format-visual-qa.mjs --case=community-imscc-canvas-cc-gem
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Test all real community samples, formats and cmi5 regression
+        shell: pwsh
+        run: |
+          node scripts/browser-external-format-visual-qa.mjs
+          if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+      - name: Print QA summary to persistent workflow logs (no artifacts)
+        if: always()
+        shell: pwsh
+        run: |
+          if(Test-Path '.p2lrn-external-visual-qa/report.json') {
+            $report=Get-Content '.p2lrn-external-visual-qa/report.json' -Raw | ConvertFrom-Json
+            $pass=@($report.results|Where-Object {$_.status -eq 'PASS'})
+            $fail=@($report.results|Where-Object {$_.status -eq 'FAIL'})
+            Write-Host "FINAL_QA_TOTAL=$($report.results.Count)"
+            Write-Host "FINAL_QA_PASS=$($pass.Count)"
+            Write-Host "FINAL_QA_FAIL=$($fail.Count)"
+            foreach($x in $fail){ Write-Host "FINAL_QA_FAILURE=$($x.case) :: $($x.reason)" }
+          }
+          else { Write-Host 'No browser report was generated.' }

@@ -86,10 +86,44 @@ test('distribution source contains no sandbox escape token',async()=>{
   }
 });
 
-test('only the canonical P2LRN workflows remain',async()=>{
+test('only audited P2LRN workflows remain; no hidden deploy or publish jobs',async()=>{
   const dir=resolve(root,'.github/workflows');
   const names=(await readdir(dir)).filter(name=>/\.ya?ml$/i.test(name)).sort();
-  assert.deepEqual(names,['p2lrn-ci.yml','p2lrn-grading-modes-qa.yml','p2lrn-license-design-qa.yml','p2lrn-native-offline-windows.yml','p2lrn-player-i18n.yml','p2lrn-portable-verification.yml','p2lrn-pr-safe.yml','p2lrn-site-i18n.yml']);
+  // Main's canonical CI and Studio's community/live QA are deliberately
+  // retained; new or renamed workflows require explicit security review.
+  const allowed=[
+      "p2lrn-ci.yml",
+      "p2lrn-community-browser-hosted.yml",
+      "p2lrn-community-browser-qa.yml",
+      "p2lrn-community-examples-qa.yml",
+      "p2lrn-community-live-audit.yml",
+      "p2lrn-community-production-preview.yml",
+      "p2lrn-community-publish.yml",
+      "p2lrn-embed-community-video.yml",
+      "p2lrn-enrich-community-imscc.yml",
+      "p2lrn-external-fixture-audit.yml",
+      "p2lrn-grading-modes-qa.yml",
+      "p2lrn-import-community-formats.yml",
+      "p2lrn-interoperability-real.yml",
+      "p2lrn-license-design-qa.yml",
+      "p2lrn-native-offline-windows.yml",
+      "p2lrn-player-i18n.yml",
+      "p2lrn-portable-verification.yml",
+      "p2lrn-pr-safe.yml",
+      "p2lrn-site-i18n.yml",
+      "p2lrn-universal-runtime-qa.yml",
+      "studio-local-preview.yml",
+      "studio-mejorastudio-qa.yml"
+  ];
+  assert.deepEqual(names,allowed);
+  for(const name of names){
+    const yaml=await readFile(resolve(dir,name),'utf8');
+    assert.doesNotMatch(yaml,/\bnetlify\s+deploy\b|\bnpm\s+publish\b/i,
+      'Unexpected direct production publish action in '+name);
+    if(name!=='p2lrn-site-i18n.yml'&&name!=='p2lrn-community-publish.yml')
+      assert.doesNotMatch(yaml,/git\s+push\s+origin\s+HEAD:(?:refs\/heads\/)?main\b/i,
+        'Unexpected ability to write main in '+name);
+  }
 });
 
 

@@ -1,0 +1,89 @@
+name: P2LRN Community Browser Certification
+
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'scripts/browser-external-format-visual-qa.mjs'
+      - 'scripts/verify-site-security.mjs'
+      - 'scripts/verify-community-samples.mjs'
+      - 'deploy/netlify/build-site.mjs'
+      - 'packages/toolkit/web/package-runtime-shell.js'
+      - 'packages/toolkit/web/h5p-runtime-shell.js'
+      - 'packages/toolkit/web/h5p-auto-runtime.js'
+      - 'packages/toolkit/web/p2lrn-player.js'
+      - 'packages/toolkit/web/built-in-renderers.js'
+      - 'packages/toolkit/web/renderers/package-runtime.js'
+      - 'scripts/audit-community-h5p-media.mjs'
+      - '.github/workflows/p2lrn-community-browser-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-community-browser-mejorastudio
+  cancel-in-progress: false
+
+jobs:
+  browser-certification:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout mejorastudio
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: mejorastudio
+          persist-credentials: false
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Setup Go 1.26 for the real website build
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: '1.26'
+          cache: false
+      - name: Validate sources and JS
+        shell: powershell
+        run: |
+          node scripts/verify-community-samples.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/browser-external-format-visual-qa.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check packages/toolkit/web/package-runtime-shell.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --test packages/toolkit/test/qti-compatibility-preflight.test.mjs packages/toolkit/test/h5p-auto-runtime.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/audit-community-h5p-media.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build the real Netlify website locally
+        shell: powershell
+        run: |
+          cmd /d /c "node deploy\netlify\build-site.mjs > .community-build.log 2>&1"
+          $status=$LASTEXITCODE
+          Get-Content .community-build.log -Tail 140
+          if ($status -ne 0) { exit $status }
+      - name: Prepare Playwright browser control
+        shell: powershell
+        run: |
+          npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save playwright-core@1.56.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test real viewer and embedded package DOM
+        shell: powershell
+        run: |
+          node scripts/verify-site-security.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/browser-external-format-visual-qa.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Keep screenshots and report on the Windows runner
+        if: always()
+        shell: powershell
+        run: |
+          $source=".p2lrn-external-visual-qa"
+          $root=Join-Path $env:USERPROFILE "Downloads\P2LRN-QA-LOCAL\community-browser"
+          $dest=Join-Path $root "$env:GITHUB_RUN_ID"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          if(Test-Path $source){ Copy-Item -Path "$source\*" -Destination $dest -Recurse -Force }
+          if(Test-Path ".community-build.log"){ Copy-Item ".community-build.log" $dest -Force }
+          Write-Host "LOCAL_QA_EVIDENCE=$dest"

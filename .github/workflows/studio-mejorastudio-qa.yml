@@ -1,0 +1,151 @@
+name: P2LRN Studio unified UI - mejorastudio
+
+on:
+  push:
+    branches: [mejorastudio]
+    paths:
+      - 'packages/toolkit/web/studio/**'
+      - 'packages/toolkit/test/studio-visual-layout.test.mjs'
+      - 'packages/toolkit/test/studio-shapes-drop.test.mjs'
+      - 'packages/toolkit/test/studio-advanced-history.test.mjs'
+      - 'packages/studio/**'
+      - 'packages/toolkit/web/game-3d/**'
+      - 'packages/toolkit/web/assembly-3d-core.js'
+      - 'packages/toolkit/web/renderers/assembly-3d.js'
+      - 'packages/toolkit/test/assembly-3d.test.mjs'
+      - 'packages/toolkit/web/renderers/questionnaire-3d.js'
+      - 'packages/toolkit/web/renderers/passive-text.js'
+      - 'packages/toolkit/web/renderers/lesson-drop-runtime.js'
+      - 'packages/toolkit/web/renderers/lesson-drop-sandbox.js'
+      - 'packages/toolkit/web/renderers/ui-i18n.js'
+      - 'packages/toolkit/web/questionnaire-games.css'
+      - 'packages/toolkit/test/quest-3d-*.test.mjs'
+      - 'deploy/netlify/site/studio/**'
+      - 'scripts/verify-studio-unified-ui.mjs'
+      - 'scripts/verify-studio-dnd-lms-csp.mjs'
+      - 'packages/player/scripts/build-dist.mjs'
+      - 'scripts/verify-local-viewer.mjs'
+      - 'scripts/prepare-quest3d-browser-qa.mjs'
+      - '.github/workflows/studio-mejorastudio-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p2lrn-studio-mejorastudio-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  studio-ui:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Check module syntax and integration
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @(
+            'packages/toolkit/web/studio/visual-layout.js',
+            'packages/toolkit/web/studio/studio-shapes.js',
+            'packages/toolkit/web/studio/studio-drop-activity.js',
+            'packages/toolkit/web/renderers/passive-text.js',
+            'packages/toolkit/web/renderers/lesson-drop-runtime.js',
+            'packages/toolkit/web/renderers/lesson-drop-sandbox.js',
+            'packages/toolkit/web/studio/command-bar.js',
+            'packages/studio/src/p2lrn-studio.js',
+            'deploy/netlify/site/studio/studio.js',
+            'scripts/verify-studio-unified-ui.mjs'
+          )) {
+            node --check $path
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: 3D assembly geometry, scoring and portable GLB validation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @('packages/toolkit/web/assembly-3d-core.js','packages/toolkit/web/studio/assembly-3d-editor.js','packages/toolkit/web/renderers/assembly-3d.js','packages/toolkit/test/assembly-3d.test.mjs')) {
+            node --check $path
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          node --test packages/toolkit/test/assembly-3d.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Quest 3D touch joystick, direct box interaction and desktop controls
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($path in @(
+            'packages/toolkit/web/game-3d/three-runtime.js',
+            'packages/toolkit/web/renderers/questionnaire-3d.js',
+            'packages/toolkit/web/renderers/ui-i18n.js',
+            'packages/toolkit/test/quest-3d-mobile-input.test.mjs'
+          )) {
+            node --check $path
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          node --test packages/toolkit/test/quest-3d-mobile-input.test.mjs packages/toolkit/test/quest-3d-aulap2p-parity.test.mjs packages/toolkit/test/quest-3d-player-physics.test.mjs packages/toolkit/test/quest-3d-matching-finished.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Studio interface regressions
+        run: node --test packages/toolkit/test/studio-visual-layout.test.mjs packages/toolkit/test/studio-shapes-drop.test.mjs packages/toolkit/test/studio-advanced-history.test.mjs packages/studio/test/dist-dependencies.test.mjs
+      - name: Build npm Studio including shared command bar
+        run: node packages/studio/scripts/build-dist.mjs
+      - name: Assert npm bundled editor assets
+        shell: powershell
+        run: |
+          if (!(Test-Path packages/studio/dist/runtime/command-bar.js)) { throw 'Shared Studio UI missing from dist' }
+          if (!(Test-Path packages/studio/dist/runtime/visual-layout.js)) { throw 'Shared visual layout missing from dist' }
+          foreach ($module in @('studio-history.js','studio-object-tools.js','studio-advanced-tools.js','studio-shapes.js','studio-drop-activity.js')) {
+            if (!(Test-Path ('packages/studio/dist/runtime/' + $module))) { throw ('Missing advanced Studio asset: ' + $module) }
+          }
+      - name: Build Player and test Drag & Drop in strict LMS iframe
+        shell: powershell
+        run: |
+          node packages/player/scripts/build-dist.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path 'packages/player/dist/renderers/lesson-drop-bootstrap.js')) { throw 'Missing trusted Drag & Drop bootstrap' }
+          node --test scripts/verify-studio-dnd-lms-csp.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Real Chrome / Edge Studio UI and portable course round-trip
+        run: node scripts/verify-studio-unified-ui.mjs
+  quest3d-browser:
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Check Quest 3D browser QA scripts
+        shell: powershell
+        run: |
+          node --check scripts/prepare-quest3d-browser-qa.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/verify-local-viewer.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build local Player with Three.js and Rapier without publishing
+        shell: powershell
+        run: |
+          node scripts/prepare-quest3d-browser-qa.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test actual 3D games at mobile and desktop dimensions in Chrome or Edge
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:P2LRN_QUEST3D_ONLY = '1'
+          $env:P2LRN_QUEST3D_OUTPUT_DIR = Join-Path $env:USERPROFILE ('Downloads\p2lrn-quest3d-qa-' + $env:GITHUB_SHA.Substring(0,8))
+          node scripts/verify-local-viewer.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($name in @('quest3d-report.json','quest-3d-mobile-390px.png','3d-three-modes-completed.png')) {
+            $file = Join-Path $env:P2LRN_QUEST3D_OUTPUT_DIR $name
+            if (!(Test-Path -LiteralPath $file)) { throw "Missing local QA evidence: $file" }
+          }
+          Write-Output ('QUEST3D_QA_LOCAL_EVIDENCE=' + $env:P2LRN_QUEST3D_OUTPUT_DIR)

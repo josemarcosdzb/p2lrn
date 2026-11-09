@@ -1,5 +1,6 @@
 import {WEB_CONTENT_PROFILE, webContentMapping, webEntrypointDirectory} from '../web-content-core.js';
 import {playerUiText} from './ui-i18n.js';
+import {prepareStudioDropSandbox} from './lesson-drop-sandbox.js';
 import {rewriteImportedHtmlAssets} from '../package-passive-assets.js';
 
 const decoder = new TextDecoder('utf-8', {fatal: true});
@@ -68,10 +69,11 @@ export async function render({container, bytes, payload, representation, resolve
       }
     }
 
+    const bootstrap=new URL('./lesson-drop-bootstrap.js',import.meta.url);
+    const allowedBootstrap=['http:','https:'].includes(bootstrap.protocol)?bootstrap.href:null;
     const iframe = document.createElement('iframe');
     iframe.className = 'p2lrn-html';
     iframe.title = playerUiText('Contenido HTML del paquete P2LRN');
-    iframe.setAttribute('sandbox', verifiedEntrypointUrl ? 'allow-same-origin' : '');
     iframe.referrerPolicy = 'no-referrer';
 
     let importedAssets=null;
@@ -80,6 +82,11 @@ export async function render({container, bytes, payload, representation, resolve
       if (importedAssets.missingAssets.length) console.warn('P2LRN imported HTML references files missing from its original package:', importedAssets.missingAssets);
     }
 
+    // Resolve imported assets BEFORE sanitizing the trusted Studio drop lesson.
+    const sourceHtml=importedAssets?.html ?? text;
+    const dropSandbox=verifiedEntrypointUrl?null:
+      prepareStudioDropSandbox(sourceHtml,{runtimeUrl:allowedBootstrap});
+    iframe.setAttribute('sandbox',verifiedEntrypointUrl?'allow-same-origin':(dropSandbox?.interactive?'allow-scripts':''));
     if (verifiedEntrypointUrl) {
       // Navigate the sandboxed iframe inside the Service Worker scope instead of
       // using srcdoc + <base>. This lets the verified virtual-resource Service
@@ -87,7 +94,7 @@ export async function render({container, bytes, payload, representation, resolve
       // coherent web bundle.
       iframe.src = verifiedEntrypointUrl;
     } else {
-      iframe.srcdoc = prepareHtml(importedAssets?.html ?? text);
+      iframe.srcdoc = dropSandbox?.html ?? prepareHtml(sourceHtml);
     }
 
     container.append(iframe);

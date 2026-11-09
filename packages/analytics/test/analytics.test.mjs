@@ -81,6 +81,25 @@ test('course-level completed attempts may complete a course',()=>{
   assert.equal(snap.courses[0].completed,1);
 });
 
+test('offline submission with events but no completion evidence must not become course completion',()=>{
+  const result={
+    schema:'https://p2lrn.org/schema/offline-result/1',version:'1',
+    assignment:{assignmentId:'urn:uuid:qa',packageId:'course-qa',contentRoot:'sha256:'+'a'.repeat(64),
+      title:'Curso QA',participantToken:'learner-qa',policy:{}},
+    attempt:{id:'a1',status:'submitted',number:1,startedAt:'2026-11-07T10:00:00Z',finishedAt:'2026-11-07T10:04:00Z'},
+    usage:{firstOpenedAt:'2026-11-07T10:00:00Z',openCount:1},
+    summary:{events:10,activeTimeMs:120000,latestScore:null},
+    analytics:{events:[{id:'e1',type:'event',value:{type:'p2lrn:interaction'},
+      timestamp:'2026-11-07T10:02:00Z'}],activeTimeMs:120000}
+  };
+  const data=analyticsDatasetFromOfflineResult(result);
+  assert.equal(data.attempts[0].status,'submitted','submission is preserved');
+  const snap=computeAnalyticsSnapshot(data,{now:Date.parse('2026-11-07T10:05:00Z')});
+  assert.equal(snap.courses[0].completed,0,'submitted result cannot certify all course activities');
+  assert.equal(snap.learners[0].progress,0,'no progress signal or completion proof');
+  assert.equal(snap.overview.averageGrade,null,'no official grade can be inferred');
+});
+
 test('offline results become Analytics datasets with openings and informative grades',()=>{
   const result={
     schema:'https://p2lrn.org/schema/offline-result/1',version:'1',

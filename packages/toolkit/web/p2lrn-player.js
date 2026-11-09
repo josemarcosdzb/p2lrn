@@ -462,6 +462,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     this._learningEventObserver = null;
     this._package = null;
     this._runtimeByContainer = new Map();
+    this._activityLoading = new Map();
     this._loadGeneration = 0;
     this._rendererStyleLinks = [];
     this._rendererStyles = new Set();
@@ -661,6 +662,12 @@ export class P2LRNPlayerElement extends HTMLElementBase {
 
   #refreshProgressionNav() {
     if (!this._progressionEnabled || !this._progressionModel) return;
+    for(const button of this.shadowRoot?.querySelectorAll('[data-p2lrn-lesson-target]')??[]){
+      const id=button.dataset.p2lrnLessonTarget;
+      const locked=this._progressionModel?.isLocked(id,this._progressionState)===true;
+      button.disabled=locked;
+      button.title=locked?this.#progressionLockMessage(id):'';
+    }
     for (const [entityId, item] of this._progressionButtons.entries()) {
       const {button, entity, baseTitle} = item;
       const locked = entity.type === 'activity' && this._progressionModel.isLocked(entityId, this._progressionState);
@@ -781,6 +788,17 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         return;
       }
       await this.#renderEntity(root, stage);
+      if(root.type==='activity'){
+        const ordered=[];const seenIds=new Set();
+        const visit=entity=>{
+          if(!entity||seenIds.has(entity.id))return;
+          seenIds.add(entity.id);
+          if(entity.type==='activity')ordered.push(entity);
+          for(const child of entity.children??[])visit(pkg.entities.get(child));
+        };
+        visit(progressionRoot??root);
+        this.#appendLessonNavigation(stage,root,ordered,target=>this.setAttribute('node',target.id));
+      }
       return;
     }
 
@@ -818,6 +836,16 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           nav.querySelectorAll('[aria-current="true"]').forEach((item) => item.removeAttribute('aria-current'));
           button.setAttribute('aria-current', 'true');
           await this.#renderEntity(entity, stage);
+          this.#appendLessonNavigation(stage,entity,activities,async target=>{
+            if(this._progressionModel?.isLocked(target.id,this._progressionState))return;
+            nav.querySelectorAll('[aria-current="true"]').forEach(item=>item.removeAttribute('aria-current'));
+            this._progressionButtons.get(target.id)?.button?.setAttribute('aria-current','true');
+            await this.#renderEntity(target,stage);
+            this.#appendLessonNavigation(stage,target,activities,async next=>{
+              const button=this._progressionButtons.get(next.id)?.button;
+              if(button&&!button.disabled)button.click();
+            });
+          });
         });
         nav.append(button);
       }
@@ -869,6 +897,10 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       if (firstActivity) {
         if (nav) this._progressionButtons.get(firstActivity.id)?.button?.setAttribute('aria-current', 'true');
         await this.#renderEntity(firstActivity, stage);
+        this.#appendLessonNavigation(stage,firstActivity,activities,target=>{
+          const button=this._progressionButtons.get(target.id)?.button;
+          if(button&&!button.disabled)button.click();
+        });
       } else {
         this.#stageMessage(stage, this.#progressionLockMessage(activities[0].id));
       }
@@ -879,6 +911,33 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     } else {
       const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = 'Este nodo no contiene actividades reproducibles.'; stage.append(message);
     }
+  }
+
+  #appendLessonNavigation(stage,current,activities,navigate){
+    const position=activities.findIndex(entry=>entry.id===current?.id);
+    if(position<0||activities.length<2)return;
+    stage.querySelector(':scope > .p2lrn-lesson-navigation')?.remove();
+    const bar=document.createElement('nav');
+    bar.className='p2lrn-lesson-navigation';
+    bar.setAttribute('aria-label',playerUiText('Navegaci?n entre lecciones'));
+    const add=(label,target)=>{
+      const button=document.createElement('button');button.type='button';
+      button.textContent=target?playerUiText(label)+': '+titleOf(target):playerUiText(label);
+      button.disabled=!target||this._progressionModel?.isLocked(target.id,this._progressionState)===true;
+      if(target)button.dataset.p2lrnLessonTarget=target.id;
+      if(button.disabled&&target)button.title=this.#progressionLockMessage(target.id);
+      button.addEventListener('click',()=>{
+        if(!target||this._progressionModel?.isLocked(target.id,this._progressionState))return;
+        void navigate(target);
+      });
+      bar.append(button);
+    };
+    add('Anterior',activities[position-1]??null);
+    const indicator=document.createElement('span');
+    indicator.textContent=playerUiText('Lecci\u00f3n ')+(position+1)+' / '+activities.length;
+    indicator.setAttribute('aria-live','polite');bar.append(indicator);
+    add('Siguiente',activities[position+1]??null);
+    stage.append(bar);
   }
 
   #rootCourseEntity() {
@@ -907,6 +966,42 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const blocked = Object.freeze(statuses.filter((status) => status.required && !status.available));
     dispatchRuntimeEvent(this, 'p2lrn:capability', {requests, statuses, blocked:blocked.map((item)=>item.id)}, context, {adapter:this._adapter});
     return Object.freeze({requests, statuses, blocked});
+  }
+
+  #startActivityLoading(stage, entity) {
+    this.#stopActivityLoading(stage);
+    const state={entityId:entity.id,ready:false,onReady:null,onError:null,timer:null};
+    state.onReady=event=>{
+      if(event.detail?.context?.entityId === entity.id){
+        state.ready=true;
+        this.#stopActivityLoading(stage,state);
+      }
+    };
+    state.onError=event=>{
+      if(event.detail?.context?.entityId === entity.id)this.#stopActivityLoading(stage,state);
+    };
+    this._activityLoading.set(stage,state);
+    stage.setAttribute('data-p2lrn-loading','true');
+    stage.dataset.p2lrnLoadingLabel=playerUiText('Cargando actividad?');
+    stage.setAttribute('aria-busy','true');
+    this.addEventListener('p2lrn:activityready', state.onReady);
+    this.addEventListener('p2lrn:error', state.onError);
+    state.timer=setTimeout(()=>{
+      if(this._activityLoading.get(stage)===state)
+        stage.dataset.p2lrnLoadingLabel=playerUiText('La actividad est? tardando m?s de lo habitual?');
+    },12000);
+    return state;
+  }
+
+  #stopActivityLoading(stage, waiting=this._activityLoading.get(stage)) {
+    if(!waiting||this._activityLoading.get(stage)!==waiting)return;
+    this._activityLoading.delete(stage);
+    this.removeEventListener('p2lrn:activityready',waiting.onReady);
+    this.removeEventListener('p2lrn:error',waiting.onError);
+    if(waiting.timer!==null)clearTimeout(waiting.timer);
+    delete stage.dataset.p2lrnLoading;
+    delete stage.dataset.p2lrnLoadingLabel;
+    stage.removeAttribute('aria-busy');
   }
 
   async #renderEntity(entity, stage, {requestedRenderer = undefined} = {}) {
@@ -942,6 +1037,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       return null;
     }
 
+    const waiting=this.#startActivityLoading(stage,entity);
     const excluded = new Set();
     const strictRenderer = requestedRenderer === undefined ? this.getAttribute('renderer') : requestedRenderer;
     const preflightContext = {
@@ -963,6 +1059,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       if (!candidate) {
         dispatchRuntimeEvent(this,'p2lrn:executionblocked',plan.report,preflightContext,{adapter:this._adapter});
         const last=plan.report.diagnostics.at(-1);
+        this.#stopActivityLoading(stage, waiting);
         this.#stageMessage(stage,last?.message??playerUiText('Este reproductor web todavía no tiene un renderer instalado compatible con las representaciones de esta actividad.'));
         return null;
       }
@@ -1042,6 +1139,11 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           },
         }) ?? null;
         if (runtime) this._runtimeByContainer.set(stage, runtime);
+        // External runtimes may return their iframe handle before the
+        // learner content is actually initialized. A rendered event is not
+        // equivalent to p2lrn:activityready.
+        if(!['h5p', 'scorm', 'external-package'].includes(runtime?.kind))
+          this.#stopActivityLoading(stage, waiting);
         dispatchRuntimeEvent(this, 'p2lrn:rendered', {
           rendererId: candidate.descriptor.id,
           representationId: rep.id,
@@ -1072,7 +1174,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           'P2LRN_REMOTE_RESOURCE_UNAVAILABLE',
           'P2LRN_REMOTE_RESOURCE_UNVERIFIED',
         ].includes(error?.code);
-        if (!canFallback) throw error;
+        if (!canFallback){this.#stopActivityLoading(stage,waiting);throw error;}
         excluded.add(candidate.descriptor.id);
         this.#cleanupRuntime(stage);
         stage.replaceChildren();
@@ -1129,6 +1231,11 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   }
 
   #cleanupRuntime(container = null) {
+    for(const [stage,waiting] of [...this._activityLoading.entries()]){
+      const matches=!container||stage===container||
+        (typeof container.contains==='function'&&container.contains(stage));
+      if(matches)this.#stopActivityLoading(stage,waiting);
+    }
     const entries = [...this._runtimeByContainer.entries()];
     for (const [stage, runtime] of entries) {
       const matches = !container || stage === container || (typeof container.contains === 'function' && container.contains(stage));
@@ -1144,6 +1251,13 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   }
 
   disconnectedCallback() { this.#cleanupRuntime(); this.stopActivityTracking(); this.stopLearningEventTracking(); this._resultRecorder?.stop(); }
+}
+
+// Authoring uses the same bundled 3D engine as the learner, loaded only
+// when the teacher opens a 3D assembly. No parallel renderer or CDN service.
+export async function create3DAuthoringScene(canvas,options={}) {
+  const {createThreeGameScene}=await import('./game-3d/three-runtime.js');
+  return createThreeGameScene(canvas,{...options,physics:'none',authoring:true});
 }
 
 export async function mountP2LRN(target, options = {}) {
@@ -1266,6 +1380,7 @@ if (!existingP2LRNApi) {
     configureRuntimeHost,
     getRuntimeHostConfig,
     installServiceWorker: installP2LRNServiceWorker,
+    create3DAuthoringScene,
   });
 }
 
