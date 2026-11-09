@@ -8,6 +8,7 @@ import {
   validateConnection,
 } from '../game-3d-mechanics.js';
 import {createThreeGameScene} from '../game-3d/three-runtime.js';
+import {buildAssemblyControls} from './assembly-3d.js';
 import {el, finishPanel, setupGame, statusNode, stylesheets} from './game-common.js';
 
 export {stylesheets};
@@ -611,7 +612,7 @@ function createAccessibleOnlyScene() {
   return {
     physics:'none',
     reset(){},
-    addBox(){},addZone(){},addNode(){},
+    addBox(){},addZone(){},addNode(){},addCage(){},async addModel(){},setTransform(){},
     connect(){return null;},connectToPlayer(){return null;},connectToPointer(){return null;},
     setPointerTarget(){},disconnect(){return false;},
     carry(){return false;},setTranslation(){return false;},highlight(){},
@@ -621,6 +622,7 @@ function createAccessibleOnlyScene() {
 
 export async function render(options) {
   const {game,runtime,shell}=await setupGame({...options,rendererId:THREE_D_RENDERER});
+  const packageSource=options.package;
   shell.classList.add('p2lrn-3d-game');
   const layout=el('div',{class:'p2lrn-3d-layout'});
   const directions=el('p',{class:'p2lrn-3d-directions',role:'note'});
@@ -675,7 +677,7 @@ export async function render(options) {
     :playerUiText('En móvil, mueve la bola para caminar y arrastra el fondo para mirar. En PC, haz clic en la escena y usa WASD o las flechas.'));
   controls.append(technology,help);
 
-  const renderTrial=()=>{
+  const renderTrial=async()=>{
     joystick?.reset();
     scene.reset();
     controls.querySelectorAll('.p2lrn-3d-trial').forEach((node)=>node.remove());
@@ -690,12 +692,14 @@ export async function render(options) {
     if(trial.type==='ordering-3d') controller=buildOrderingControls({trial,runtime,scene,status});
     else if(trial.type==='matching-3d') controller=buildMatchingControls({trial,runtime,scene,status});
     else if(trial.type==='classification-3d') controller=buildClassificationControls({trial,runtime,scene,status});
+    else if(trial.type==='assembly-3d') controller=await buildAssemblyControls({trial,runtime,scene,status,pkg:packageSource});
     else throw new Error(`Unsupported P2LRN 3D trial: ${trial.type}`);
 
     const instructions={
       'ordering-3d':'Haz clic en una caja y después en el pedestal numerado, o arrastra la caja hasta él.',
       'matching-3d':'Haz clic en una caja azul y luego en su pareja morada para enlazarlas, o arrastra la cuerda.',
       'classification-3d':'Haz clic en una caja y después en su categoría, o arrastra la caja hasta la zona correcta.',
+      'assembly-3d':'Transporta y gira cada pieza hasta encajarla en su volumen de destino.',
     };
     setText(directions,playerUiText(instructions[trial.type]));
     currentInteraction=controller.interact;
@@ -707,15 +711,15 @@ export async function render(options) {
     const nav=el('div',{class:'p2lrn-game-actions'});
     const previous=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===0},playerUiText('Anterior'));
     const next=el('button',{type:'button',class:'p2lrn-game-button',disabled:trialIndex===game.data.trials.length-1},playerUiText('Siguiente'));
-    previous.addEventListener('click',()=>{trialIndex-=1;renderTrial();});
-    next.addEventListener('click',()=>{trialIndex+=1;renderTrial();});
+    previous.addEventListener('click',()=>{trialIndex-=1;renderTrial().catch(error=>setText(status,error.message));});
+    next.addEventListener('click',()=>{trialIndex+=1;renderTrial().catch(error=>setText(status,error.message));});
     nav.append(previous,next);
     if(game.data.trials.length>1)wrap.append(nav);
     controls.append(wrap);
     setText(status,controller.summary??playerUiText('Toca o arrastra las cajas en la escena para responder.'));
   };
 
-  renderTrial();
+  await renderTrial();
   layout.append(directions,stage,controls);
   shell.append(layout);
   finishPanel(runtime,shell);
