@@ -566,7 +566,13 @@ async function verifyThreeGameInteractionAndResume(cdp){
         if(predicate())return true;
         await new Promise(resolve=>setTimeout(resolve,100));
       }
-      throw new Error(label+' timeout');
+      const diagnostic={
+        trial:root.querySelector('.p2lrn-3d-trial')?.textContent?.slice(0,350)??null,
+        message:[...root.querySelectorAll('[role=status]')].map(n=>n.textContent?.slice(0,350)),
+        current:root.querySelector('.p2lrn-stage')?.textContent?.slice(0,450)??null,
+        page:root.textContent?.slice(-700)??null
+      };
+      throw new Error(label+' timeout: '+JSON.stringify(diagnostic));
     };
     const open=[...root.querySelectorAll('.p2lrn-nav button')].find(button=>button.textContent.includes('Laboratorio 3D QA'));
     if(!open)throw new Error('3D QA activity missing from navigation');
