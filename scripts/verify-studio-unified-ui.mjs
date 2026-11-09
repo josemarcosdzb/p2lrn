@@ -61,7 +61,7 @@ async function browserScenario(){
         create:on('create'),open:on('open'),save:on('save'),
         export:on('export'),offline:on('offline'),
         review:on('review'),addUnit:on('unit'),addLesson:on('lesson'),
-        addContent:on('activity'),addKind:(kind)=>{actions.push('kind:'+kind);},preview:on('preview'),edit:on('edit')
+        addContent:on('activity'),addKind:(kind,options)=>{actions.push('kind:'+kind);actions.push('placement:'+options?.placement);},preview:on('preview'),edit:on('edit')
       },
       onStatus:msg=>actions.push('status:'+msg)
     });
@@ -94,11 +94,21 @@ async function browserScenario(){
     expect(picker?.open,'Activity picker did not open in its DOM root');
     const search=picker.querySelector('input[type=search]');search.value='crucigrama';
     search.dispatchEvent(new Event('input',{bubbles:true}));
+    expect(picker.querySelector('[data-activity-kind=drag-scored]'),
+      'The shared content catalog is missing the scored drag question');
     const crossword=picker.querySelector('[data-activity-kind=crossword]');
     expect(crossword&&!crossword.hidden,'Searching the shared activity catalog failed');
+    const pageChoices=picker.querySelectorAll('input[type=radio]');
+    expect(pageChoices.length===2,'The author was not asked whether to use this page or a new one');
+    const newPage=picker.querySelector('input[value="new-page"]');
+    expect(newPage&&!newPage.disabled,'New page must be a selectable destination');
+    newPage.click();
     crossword.click();
     await new Promise(done=>setTimeout(done,0));
     expect(item.actions.includes('kind:crossword'),'Shared activity picker did not dispatch the chosen game');
+    expect(item.actions.includes('placement:new-page'),'The chosen page destination was not passed to Studio');
+    expect(getComputedStyle(item.stage).overflowY==='auto',
+      'The teacher editor cannot scroll to reposition elements below the viewport');
     // Real table commands shared by both Studio entrypoints.
     const addTable=item.toolbar.querySelector('[data-ui-layout=table]');
     expect(addTable&&!addTable.disabled,'Table insertion is missing');
@@ -446,8 +456,33 @@ async function browserScenario(){
     expect(item.actions.includes('edit'),'Cannot return to editing from student view');
     expect(edit.getAttribute('aria-pressed')==='true'&&student.getAttribute('aria-pressed')==='false','Edit mode not restored');
     expect(item.surface.innerHTML===lessonBeforePreview,'Mode toggle modified the lesson content');
+    item.course.addLesson(item.course.rootId,{title:'Segunda leccion',language:'es'});
     const exported=await exportP2LRNPackage(item.course);
     const bytes=exported.bytes;
+    const player=document.createElement('p2lrn-player');
+    const playerUrl=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.p2lrn+zip'}));
+    player.setAttribute('src',playerUrl);
+    item.root.append(player);
+    let footer=null;
+    for(let n=0;n<65;n++){
+      footer=player.shadowRoot?.querySelector('.p2lrn-lesson-navigation');
+      if(footer?.querySelectorAll('button').length===2)break;
+      await new Promise(done=>setTimeout(done,70));
+    }
+    expect(footer?.querySelectorAll('button').length===2,
+      'The Player still has no Previous / Next controls below each lesson');
+    const nextLesson=footer.querySelectorAll('button')[1];
+    expect(!nextLesson.disabled,'The next lesson should be reachable from the footer');
+    nextLesson.click();
+    let afterNext=null;
+    for(let n=0;n<45;n++){
+      afterNext=player.shadowRoot?.querySelector('.p2lrn-lesson-navigation');
+      if(afterNext?.textContent.includes('2 / 3'))break;
+      await new Promise(done=>setTimeout(done,50));
+    }
+    expect(afterNext?.textContent.includes('2 / 3'),
+      'Next lesson footer did not navigate without the course tree');
+    player.remove();URL.revokeObjectURL(playerUrl);
     const reopened=await openP2LRNPackageBytes(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
     const activity=reopened.entities.get(item.lesson.id);
     const resource=reopened.entities.get(activity.resource);
@@ -519,6 +554,8 @@ async function browserScenario(){
   // Runtime intentionally removes the opaque backing from image-only cards
   // before capturing the reset baseline. Compare against that visible state.
   originalCardStyle=source[1].getAttribute('style');
+  expect(source[1].draggable===(typeof PointerEvent!=='function'),
+    'Mouse pointer drag must not be intercepted by native HTML5 drag within sandbox iframes');
   expect(source[1].style.backgroundColor==='transparent',
     'The Player flattened a transparent PNG onto an opaque tile');
   expect(source[1].getAttribute('aria-label')==='Ficha: Un puente de madera',
@@ -544,6 +581,36 @@ async function browserScenario(){
     !targets[1].querySelector('[data-p2lrn-dnd-label]').hidden,
     'Reset did not restore image card dimensions and destination labels');
   scene.remove();
+  // Optional Earth-layer puzzle uses the existing drop engine with a normalized
+  // full-board transparent overlay, not small rectangular answer cards.
+  const earthScene=createStudioDropActivity(document);
+  earthScene.dataset.p2lrnDndPuzzle='concentric';
+  document.body.append(earthScene);
+  const earthItems=[...earthScene.querySelectorAll('[data-p2lrn-dnd-item]')];
+  const earthZones=[...earthScene.querySelectorAll('[data-p2lrn-dnd-zone]')];
+  const earthPixel='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y7lMqYAAAAASUVORK5CYII=';
+  for(const tile of earthItems){
+    const photo=document.createElement('img');
+    photo.dataset.p2lrnDndItemImage='';
+    photo.src=earthPixel;
+    photo.alt='Capa geológica';
+    tile.prepend(photo);
+  }
+  bootStudioDropActivities();
+  const overlays=earthScene.querySelector('[data-p2lrn-dnd-stack]');
+  expect(overlays,'Layer puzzle lost its verified overlay stack');
+  earthItems[0].click();earthZones[1].click();
+  expect(overlays.querySelectorAll('img').length===0,'Wrong layer unexpectedly changed the assembled Earth');
+  earthZones[0].click();
+  expect(overlays.querySelectorAll('img').length===1,'Placed layer image did not overlay the actual Earth');
+  earthItems[1].click();earthZones[1].click();
+  expect(earthScene.dataset.p2lrnDndCompleted==='true','Earth layer assembly did not complete');
+  expect(overlays.querySelectorAll('img').length===2,'Earth lost one correctly assembled ring');
+  expect(earthZones.every(zone=>getComputedStyle(zone).borderTopWidth==='0px'),'Completed layer left visible destination boxes');
+  earthScene.querySelector('[data-p2lrn-dnd-status] + button').click();
+  expect(overlays.querySelectorAll('img').length===0&&!earthScene.dataset.p2lrnDndCompleted,
+    'Earth reset did not remove assembled layers');
+  earthScene.remove();
   const label=website.toolbar.querySelector('[role=tab][aria-selected=true]');
   expect(label.textContent==='Formato','Tab state is not consistent');
   const lightStyle=getComputedStyle(website.toolbar).fontFamily;

@@ -395,7 +395,7 @@ export class P2LRNStudioDocument{
     return this.addComposite(parentId,{title,language,mode,completion});
   }
 
-  addComposite(parentId=this.rootId,{title='Compuesto',language='es',mode='sequence',completion='all'}={}){
+  addComposite(parentId=this.rootId,{title='Compuesto',language='es',mode='sequence',completion='all',presentation=null}={}){
     const name=String(title||'Compuesto');
     const normalizedMode=mode==='free'?'free':'sequence';
     const normalizedCompletion=completion==='any'?'any':'all';
@@ -407,6 +407,10 @@ export class P2LRNStudioDocument{
       navigation:normalizedMode==='free'?'open':'linear',
       title:name,
     };
+    if(presentation==='stack'){
+      if(normalizedMode!=='free')throw new Error('Las actividades en la misma p?gina deben permitir navegaci?n libre.');
+      payload.presentation='stack';
+    }
     // An empty group is an editable draft. #appendActivity makes it a native
     // composite once at least one activity has been added to its children.
     return this.addEmbeddedResource(parentId,{
@@ -416,6 +420,33 @@ export class P2LRNStudioDocument{
       bytes:encoder.encode(JSON.stringify(payload,null,2)+'\n'),
       profile:COMPOSITE_PROFILE,
     });
+  }
+
+  pageInsertionParent(activityId){
+    let selected=this.entity(activityId);
+    if(!selected)return this.rootId;
+    if(['course','unit'].includes(selected.type))return selected.id;
+    let parent=this.parentId(selected.id);
+    while(parent&&this.isCompositeActivity(parent))parent=this.parentId(parent);
+    const result=this.entity(parent);
+    if(!result||!['course','unit'].includes(result.type))throw new Error('No se encuentra la unidad del contenido.');
+    return result.id;
+  }
+
+  async samePageInsertionParent(activityId){
+    const current=this.entity(activityId);
+    if(!current||current.type!=='activity')throw new Error('Selecciona primero una lecci?n o actividad para a?adir contenido en la misma p?gina.');
+    const currentParent=this.parentId(current.id);
+    if(this.isCompositeActivity(currentParent)){
+      const existing=await this.readStructuredJson(currentParent);
+      if(existing?.payload?.presentation==='stack')return currentParent;
+    }
+    const parent=this.pageInsertionParent(current.id);
+    const original=this.entity(parent)?.children?.indexOf(currentParent===parent?current.id:currentParent)??-1;
+    const group=this.addComposite(parent,{title:this.title(current.id),language:'es',mode:'free',completion:'all',presentation:'stack'});
+    if(original>=0)this.reorderChild(parent,group.id,original);
+    this.moveActivity(currentParent===parent?current.id:currentParent,group.id,0);
+    return group.id;
   }
 
   moveActivity(activityId,newParentId,index=null){

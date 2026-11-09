@@ -632,6 +632,26 @@ export async function render(options) {
     'aria-label':playerUiText('Escena 3D interactiva del ejercicio'),
   });
   stage.append(canvas);
+  const fullscreen=el('button',{type:'button',class:'p2lrn-3d-fullscreen',
+    'aria-label':playerUiText('Ampliar escena 3D a pantalla completa')},
+    playerUiText('Pantalla completa'));
+  stage.append(fullscreen);
+  const getFullscreen=()=>stage.getRootNode()?.fullscreenElement===stage || document.fullscreenElement===stage;
+  const updateFullscreen=()=>{
+    const active=getFullscreen();
+    fullscreen.textContent=playerUiText(active?'Salir de pantalla completa':'Pantalla completa');
+    fullscreen.setAttribute('aria-label',playerUiText(active?'Salir de pantalla completa':'Ampliar escena 3D a pantalla completa'));
+    fullscreen.setAttribute('aria-pressed',String(active));
+  };
+  fullscreen.addEventListener('click',async()=>{
+    try{
+      if(getFullscreen())await document.exitFullscreen();
+      else if(typeof stage.requestFullscreen==='function')await stage.requestFullscreen();
+      else throw Error('Este navegador no permite pantalla completa.');
+    }catch(error){status.textContent=playerUiText('No se pudo activar pantalla completa: ')+(error?.message||String(error));}
+    updateFullscreen();
+  });
+  document.addEventListener('fullscreenchange',updateFullscreen);
   const entryHint=el('div',{class:'p2lrn-3d-entry-hint',role:'note'},
     playerUiText('Haz clic en la escena para entrar'));
   entryHint.append(el('small',{},playerUiText('Usa WASD o las flechas para caminar y arrastra el fondo para mirar.')));
@@ -640,6 +660,7 @@ export async function render(options) {
   canvas.addEventListener('focus',enterScene);
   canvas.addEventListener('pointerdown',enterScene);
   canvas.addEventListener('click',enterScene);
+  const heading=el('header',{class:'p2lrn-3d-question-head'});
   const controls=el('div',{class:'p2lrn-3d-controls'});
   const status=statusNode(playerUiText('Preparando escena 3D…'));
   let trialIndex=0;
@@ -662,6 +683,7 @@ export async function render(options) {
     scene=createAccessibleOnlyScene();
     accessibleOnly=true;
     stage.hidden=true;
+    fullscreen.hidden=true;
     layout.classList.add('p2lrn-3d-fallback');
     layout.append(el('p',{class:'p2lrn-game-description',role:'status'},
       playerUiText('La escena 3D no está disponible en este dispositivo. Puedes completar las mismas preguntas con los controles accesibles.')));
@@ -681,7 +703,7 @@ export async function render(options) {
     controls.querySelectorAll('.p2lrn-3d-trial').forEach((node)=>node.remove());
     const trial=game.data.trials[trialIndex];
     const wrap=el('div',{class:'p2lrn-3d-trial'});
-    wrap.append(
+    heading.replaceChildren(
       el('p',{class:'p2lrn-game-description'},playerUiText(`Prueba ${trialIndex+1} de ${game.data.trials.length}`)),
       el('h3',{},trial.prompt),
     );
@@ -716,7 +738,7 @@ export async function render(options) {
   };
 
   renderTrial();
-  layout.append(directions,stage,controls);
+  layout.append(heading,directions,stage,controls);
   shell.append(layout);
   finishPanel(runtime,shell);
   shell.append(status);
@@ -724,6 +746,8 @@ export async function render(options) {
   const originalDestroy=runtime.destroy.bind(runtime);
   runtime.destroy=()=>{
     joystick?.destroy();
+    document.removeEventListener('fullscreenchange',updateFullscreen);
+    if(getFullscreen())void document.exitFullscreen().catch(()=>{});
     canvas.removeEventListener('focus',enterScene);
     canvas.removeEventListener('pointerdown',enterScene);
     canvas.removeEventListener('click',enterScene);

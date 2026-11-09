@@ -22,7 +22,8 @@ export const STUDIO_CONTENT_CATALOG=Object.freeze([
     ['shared-library','Biblioteca conectada','Selecciona recursos del host']
   ]},
   {group:'Evaluación',items:[
-    ['questionnaire','Cuestionario','Preguntas, corrección y seguimiento']
+    ['questionnaire','Cuestionario','Preguntas, corrección y seguimiento'],
+      ['drag-scored','Arrastrar con puntos','Pregunta de relacionar arrastrando, con puntuacion configurable']
   ]},
   {group:'Juegos',items:[
     ['memory','Memoria','Encuentra parejas'],
@@ -113,6 +114,11 @@ const CSS=[
   '.p2lrn-import-menu .add-pop{position:absolute!important;top:calc(100% + 7px)!important;left:0!important;z-index:120!important;width:min(680px,calc(100vw - 38px))!important;max-height:min(76vh,650px);overflow:auto;background:white;border:1px solid #dbe2eb;border-radius:10px;box-shadow:0 20px 45px rgba(15,23,42,.16)}',
   '.p2lrn-activity-picker{width:min(880px,calc(100vw - 28px));max-height:min(86vh,850px);padding:0;border:1px solid #e2e7ee;border-radius:14px;background:#fff;color:#1f2937;box-shadow:0 24px 70px rgba(15,23,42,.22);font:500 13px/1.4 Inter,system-ui,sans-serif}',
   '.p2lrn-activity-picker::backdrop{background:rgba(15,23,42,.34)}',
+  '.p2lrn-activity-placement{margin:0 24px 14px;border:1px solid #dbe2eb;border-radius:10px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px 20px}',
+  '.p2lrn-activity-placement legend{font-weight:700;color:#344054;padding:0 5px}',
+  '.p2lrn-activity-placement-choice{display:inline-flex;align-items:center;gap:7px;cursor:pointer}',
+  '.p2lrn-activity-placement-choice input{accent-color:#1d4ed8;width:18px;height:18px}',
+  '.p2lrn-activity-placement-choice:has(input:disabled){opacity:.45;cursor:not-allowed}',
   '.p2lrn-activity-picker-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:22px 24px 14px}',
   '.p2lrn-activity-picker-head h2{margin:0 0 5px;font-size:22px;letter-spacing:-.03em}',
   '.p2lrn-activity-picker-head p{margin:0;color:#667085}',
@@ -144,8 +150,8 @@ const CSS=[
   '.p2lrn-studio-outline nav button:hover,.p2lrn-studio-outline[data-tree] > button:hover{background:#f4f7fa}',
   '.p2lrn-studio-outline nav button[aria-current=true],.p2lrn-studio-outline[data-tree] > button[aria-current=true]{background:#eaf1fa;color:#243e64;font-weight:650}',
   '.p2lrn-studio-canvas{min-width:0;padding:0!important;border:1px solid #e2e7ee;border-radius:11px;background:#f0f3f7;overflow:hidden}',
-  '.p2lrn-studio-stage{min-height:630px;padding:20px;background:#f0f3f7}',
-  '.p2lrn-studio-sheet{width:100%;max-width:1040px;min-height:520px;margin:0 auto;padding:30px;background:#fff;border:1px solid #e5e9ef;border-radius:9px;box-shadow:0 3px 13px rgba(15,23,42,.045);overflow-wrap:anywhere}',
+  '.p2lrn-studio-stage{min-height:0!important;max-height:min(86dvh,1100px);padding:20px;background:#f0f3f7;overflow-x:clip;overflow-y:auto!important;overscroll-behavior-y:contain;scrollbar-gutter:stable}',
+  '.p2lrn-studio-sheet{width:100%;max-width:1040px;min-height:520px;margin:0 auto;padding:30px;background:#fff;border:1px solid #e5e9ef;border-radius:9px;box-shadow:0 3px 13px rgba(15,23,42,.045);overflow:visible!important;overflow-wrap:anywhere}',
   '.p2lrn-studio-sheet-head{display:grid;gap:7px;padding-bottom:20px;margin-bottom:22px;border-bottom:1px solid #edf0f4}',
   '.p2lrn-studio-sheet-head h1{font-size:clamp(24px,3vw,35px);font-weight:700;letter-spacing:-.035em;line-height:1.16}',
   '.p2lrn-studio-sheet-head p{font-size:14px;color:#667085}',
@@ -427,7 +433,16 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
       const search=node(doc,'input','p2lrn-activity-picker-search');
       search.type='search';search.placeholder='Buscar lecciones, juegos, preguntas…';
       search.setAttribute('aria-label','Buscar contenido');
-      const content=node(doc,'div','p2lrn-activity-picker-content');
+      const placement=node(doc,'fieldset','p2lrn-activity-placement');
+    const legend=node(doc,'legend','','\u00bfD\u00f3nde quieres a\u00f1adirlo?');
+    placement.append(legend);
+    for(const [value,text] of [['same-page','En esta misma p\u00e1gina'],['new-page','En una p\u00e1gina nueva']]){
+      const label=node(doc,'label','p2lrn-activity-placement-choice');
+      const radio=node(doc,'input');radio.type='radio';radio.name='p2lrn-placement-'+uid;
+      radio.value=value;
+      label.append(radio,node(doc,'span','',text));placement.append(label);
+    }
+    const content=node(doc,'div','p2lrn-activity-picker-content');
       const groups=[];
       for(const category of STUDIO_CONTENT_CATALOG){
         const section=node(doc,'section','p2lrn-activity-picker-group');
@@ -439,8 +454,10 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
           item.replaceChildren(node(doc,'strong','',label),node(doc,'small','',description));
           item.addEventListener('click',async()=>{
             if(typeof actions.addKind!=='function')return;
+            const choice=placement.querySelector('input[type=radio]:checked');
+            if(!choice){onStatus('Indica si quieres a\u00f1adir el contenido en la p\u00e1gina actual o en una nueva.');return;}
             dialog.close();
-            try{await actions.addKind(id);}
+            try{await actions.addKind(id,{placement:choice.value});}
             catch(error){onStatus(String(error?.message??error));}
           });
           grid.append(item);
@@ -457,12 +474,16 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
           section.hidden=![...section.querySelectorAll('[data-activity-kind]')].some(item=>!item.hidden);
         }
       });
-      dialog.append(header,search,content);
+      dialog.append(header,placement,search,content);
       (root===doc?doc.body:root).append(dialog);
       activityDialog=dialog;
     }
     for(const item of activityDialog.querySelectorAll('[data-activity-kind]'))
       item.disabled=typeof actions.canAddKind==='function'&&!actions.canAddKind(item.dataset.activityKind);
+    for(const radio of activityDialog.querySelectorAll('input[type=radio]')){
+      radio.checked=false;
+      radio.disabled=radio.value==='same-page'&&typeof actions.canAddSamePage==='function'&&!actions.canAddSamePage();
+    }
     activityDialog.querySelector('input[type=search]').value='';
     activityDialog.querySelector('input[type=search]').dispatchEvent(new Event('input',{bubbles:true}));
     activityDialog.showModal();

@@ -20,6 +20,10 @@ export function validateNativeComposite(payload) {
   if (!identifierIs(payload.schema, NATIVE_COMPOSITE_SCHEMA) || payload.version !== '0.1') throw new Error('Versión de composite P2LRN no soportada.');
   const requiredNavigation = compositeNavigationForMode(payload.mode);
   if (!['all', 'any'].includes(payload.completion)) throw new Error('Política de finalización del composite no válida.');
+  if(payload.presentation!=null&&payload.presentation!=='stack')
+    throw new Error('Presentaci?n del composite desconocida.');
+  if(payload.presentation==='stack'&&payload.mode!=='free')
+    throw new Error('Mostrar actividades en la misma p?gina requiere modo libre.');
   const navigation = payload.navigation ?? requiredNavigation;
   if (navigation !== requiredNavigation) throw new Error('El modo '+payload.mode+' requiere navegación '+requiredNavigation+'.');
   return Object.freeze({...payload, navigation});

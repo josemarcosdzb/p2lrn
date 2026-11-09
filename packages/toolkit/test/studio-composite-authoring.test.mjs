@@ -106,3 +106,38 @@ test('Studio refuses invalid nesting and composite mode/navigation conflicts',()
   const invalid={schema:'https://p2lrn.org/schema/native-composite/0.1',version:'0.1',mode:'sequence',completion:'all',navigation:'open'};
   assert.throws(()=>validateNativeComposite(invalid));
 });
+
+
+test('Same-page authored placement reuses the original lesson and survives a complete package export',async()=>{
+  const doc=createP2LRNStudioDocument({title:'Curso con actividades en una pagina'});
+  const unit=doc.children(doc.rootId)[0];
+  const initial=doc.children(unit.id)[0];
+  const original=await doc.readEditableText(initial.id);
+  const target=await doc.samePageInsertionParent(initial.id);
+  const group=doc.entity(target);
+  const policy=await doc.readStructuredJson(target);
+  assert.equal(policy.payload.presentation,'stack');
+  assert.equal(policy.payload.mode,'free');
+  assert.equal(validateNativeComposite(policy.payload).presentation,'stack');
+  assert.equal(doc.parentId(initial.id),target);
+  assert.equal(doc.children(target)[0].id,initial.id);
+  assert.equal((await doc.readEditableText(initial.id)).text,original.text);
+  const second=doc.addGame(target,{kind:'matching',title:'Arrastrar con puntuacion'});
+  const question=await doc.readQuestionnaire(second.id);
+  const scored=structuredClone(question.payload);
+  scored.questions[0].points=5;
+  doc.setQuestionnaire(second.id,scored);
+  assert.equal((await doc.samePageInsertionParent(second.id)),target);
+  assert.deepEqual(doc.entity(target).children,[initial.id,second.id]);
+  const third=doc.addLesson(doc.pageInsertionParent(second.id),{title:'Pagina siguiente'});
+  assert.equal(doc.parentId(third.id),unit.id);
+  assert.notEqual(doc.parentId(third.id),target);
+  const output=await exportP2LRNPackage(doc);
+  const reopened=await openP2LRNPackageBytes(buffer(output.bytes));
+  assert.deepEqual(reopened.entities.get(target).children,[initial.id,second.id]);
+  const blob=await reopened.payload(policy.path).read();
+  assert.equal(JSON.parse(new TextDecoder().decode(blob)).presentation,'stack');
+  const scoredPath=doc.representationForActivity(second.id).representation.location.path;
+  const scoredBlob=await reopened.payload(scoredPath).read();
+  assert.equal(JSON.parse(new TextDecoder().decode(scoredBlob)).questions[0].points,5);
+});

@@ -91,6 +91,29 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   resize.className='p2lrn-object-resize';
   frame.append(controls,resize);host.append(frame);
   let selected=null,selectedCell=null,drag=null;
+  const scrollPane=surface.closest('.p2lrn-studio-stage,.studio-editor-stage,.stage');
+  const ensureScrollRoom=el=>{
+    // Transforms do not grow scrollHeight. Expand only the editor's unsaved
+    // surface box, so a moved object below the fold remains reachable.
+    const bottom=el.getBoundingClientRect().bottom;
+    const area=surface.getBoundingClientRect();
+    const needed=Math.max(0,Math.ceil(bottom-area.bottom+96));
+    const existing=parseFloat(surface.style.paddingBottom)||0;
+    if(needed>existing)surface.style.paddingBottom=(needed+existing)+'px';
+  };
+  const safeDividerY=(el,desired)=>{
+    let y=desired;
+    const r=el.getBoundingClientRect(),current=positionOf(el).y;
+    for(const separator of surface.querySelectorAll('hr')){
+      if(el.contains(separator)||separator.contains(el))continue;
+      const b=separator.getBoundingClientRect();
+      if(r.bottom<=b.top-8&&r.bottom+(y-current)>b.top-8)
+        y=Math.min(y,current+(b.top-8-r.bottom));
+      if(r.top>=b.bottom+8&&r.top+(y-current)<b.bottom+8)
+        y=Math.max(y,current+(b.bottom+8-r.top));
+    }
+    return y;
+  };
   let dropTarget=null;
   function findDropTarget(event,source){
     const hits=(root.elementsFromPoint?.(event.clientX,event.clientY)||
@@ -111,6 +134,10 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     dropTarget?.classList.add('p2lrn-studio-drop-target');
   }
   const emit=()=>surface.dispatchEvent(new Event('input',{bubbles:true}));
+  // Recover objects already translated below the flow in an existing lesson.
+  for(const object of surface.querySelectorAll(OBJECT_SELECTOR)){
+    if(object.getClientRects().length)ensureScrollRoom(object);
+  }
   if(normalizeStudioShapeCaptions(surface))emit();
   function update(){
     if(!isObject(selected,surface)||!selected.getClientRects().length){
@@ -170,7 +197,8 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     if(action==='reset'){setPosition(el,0,0);change();return el;}
     if(action==='nudge'){
       const pos=positionOf(el),offset=value||{x:0,y:0};
-      setPosition(el,pos.x+offset.x,pos.y+offset.y);change();return el;
+      const y=safeDividerY(el,pos.y+offset.y);
+      setPosition(el,pos.x+offset.x,y);ensureScrollRoom(el);change();return el;
     }
     if(action==='width'){
       const px=between(positive(value,el.getBoundingClientRect().width),120,Math.max(120,surface.clientWidth));
@@ -207,19 +235,29 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     event.preventDefault();event.stopPropagation();
     const target=current(),geo=target.getBoundingClientRect();
     drag={pointerId:event.pointerId,kind,target,startX:event.clientX,startY:event.clientY,
-      position:positionOf(target),width:geo.width,height:geo.height,moved:false};
+      position:positionOf(target),width:geo.width,height:geo.height,moved:false,
+      initialScroll:scrollPane?.scrollTop||0};
     try{event.currentTarget.setPointerCapture?.(event.pointerId);}catch{}
   }
   function onPointerMove(event){
     if(!drag||drag.pointerId!==event.pointerId)return;
     event.preventDefault();
-    const dx=event.clientX-drag.startX,dy=event.clientY-drag.startY,el=drag.target;
+    const dx=event.clientX-drag.startX;
+    const el=drag.target,viewport=scrollPane?.getBoundingClientRect();
+    // Scroll inside the existing Studio stage while carrying an object.
+    if(viewport&&drag.kind==='drag'){
+      if(event.clientY>viewport.bottom-48)scrollPane.scrollTop+=24;
+      else if(event.clientY<viewport.top+48)scrollPane.scrollTop-=24;
+    }
+    const dy=event.clientY-drag.startY+((scrollPane?.scrollTop||0)-drag.initialScroll);
     if(drag.kind==='drag'){
       const cur=el.getBoundingClientRect(),box=surface.getBoundingClientRect();
       const minX=drag.position.x+box.left-cur.left+8;
       const maxX=drag.position.x+box.right-cur.right-8;
       const minY=drag.position.y+box.top-cur.top+8;
-      setPosition(el,between(drag.position.x+dx,minX,maxX),Math.max(minY,drag.position.y+dy));
+      const proposed=Math.max(minY,drag.position.y+dy);
+      setPosition(el,between(drag.position.x+dx,minX,maxX),safeDividerY(el,proposed));
+      ensureScrollRoom(el);
     }else{
       const maxWidth=Math.max(120,surface.clientWidth);
       el.style.width=Math.round(between(drag.width+dx,120,maxWidth))+'px';
@@ -239,8 +277,23 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     if(moved&&kind==='drag'&&parent&&parent!==target.parentElement&&!target.contains(parent)){
       parent.append(target);setPosition(target,0,0);
       select(target);onStatus('Elemento anidado dentro del contenedor de destino.');
+    }else if(moved&&kind==='drag'){
+      const holder=target.parentElement;
+      if(holder?.matches?.('[data-p2lrn-layout]:not([data-p2lrn-layout="drag-drop"])')){
+        const bounds=target.getBoundingClientRect(),space=holder.getBoundingClientRect();
+        const within=bounds.left>=space.left-6&&bounds.right<=space.right+6&&
+          bounds.top>=space.top-6&&bounds.bottom<=space.bottom+6;
+        if(!within){
+          // A visibly detached blue square must no longer move with its old
+          // parent. Preserve its screen position when making it a sibling.
+          holder.after(target);
+          const after=target.getBoundingClientRect(),pos=positionOf(target);
+          setPosition(target,pos.x+bounds.left-after.left,pos.y+bounds.top-after.top);
+          select(target);onStatus('Objeto separado de su contenedor anterior.');
+        }
+      }
     }
-    if(moved)change();
+    if(moved){ensureScrollRoom(target);change();}
   }
   const handle=controls.querySelector('[data-object-action=drag]');
   handle.addEventListener('pointerdown',event=>startDrag(event,'drag'));

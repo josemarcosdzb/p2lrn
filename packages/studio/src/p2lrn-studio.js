@@ -158,7 +158,7 @@ function filenameFromUrl(value){
 export class P2LRNStudioElement extends HTMLElement{
   static p2lrnStudioVersion=P2LRN_STUDIO_VERSION;
   static get observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path','offline-runtime-base-url'];}
-  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;#resourceLibrary=null;#unifiedBar=null;#savedRevision=0;
+  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;#resourceLibrary=null;#unifiedBar=null;#savedRevision=0;#pendingPlacement=null;
 
   constructor(){
     super();
@@ -253,7 +253,8 @@ export class P2LRNStudioElement extends HTMLElement{
         review:()=>q('[data-result-file]').click(),
         addUnit:()=>this.addUnit(),
         addLesson:()=>this.addLesson(),
-        addKind:(kind)=>this.addContent(kind),
+        addKind:(kind,options)=>this.addContent(kind,options),
+        canAddSamePage:()=>this.#studio?.entity(this.#selected)?.type==='activity',
         insertImage:()=>{const btn=q('[data-insert-lesson-image]');if(!btn)throw new Error('Selecciona una lección HTML para insertar imágenes.');btn.click();},
         insertVideo:()=>{const btn=q('[data-insert-lesson-video]');if(!btn)throw new Error('Selecciona una lección HTML para insertar vídeo.');btn.click();},
         canAddKind:(kind)=>kind!=='shared-library'||Boolean(this.#resourceLibrary),
@@ -360,7 +361,7 @@ export class P2LRNStudioElement extends HTMLElement{
     for(const item of items){const b=document.createElement('button');b.type='button';b.className='studio-choice-card';const strong=document.createElement('strong');strong.textContent=item.label;const small=document.createElement('small');small.textContent=item.description||'';b.append(strong,small);b.onclick=()=>Promise.resolve(onChoose(item)).then(()=>dialog.close()).catch((error)=>this.setStatus(error.message));grid.append(b);}
     shell.append(grid);dialog.append(shell);this.shadowRoot.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
   }
-  async _chooseSharedResource(){
+  async _chooseSharedResource(parent=this._insertionParent()){
     if(!this.#resourceLibrary)throw new Error('El host no ha conectado una biblioteca de recursos compartidos.');
     const listed=await this.#resourceLibrary.list();
     const items=(listed??[]).filter((entry)=>entry?.digest&&entry?.href).map((entry)=>({
@@ -368,7 +369,7 @@ export class P2LRNStudioElement extends HTMLElement{
     }));
     if(!items.length)throw new Error('La biblioteca no contiene recursos con URL de origen y digest verificable.');
     this._showChoice('Biblioteca compartida','El recurso quedará referenciado por URL y SHA-256. Puedes materializarlo después como fallback embebido.',items,async(item)=>{
-      const created=this.#studio.addSharedResource(this._insertionParent(),{title:item.label,href:item.href,digest:item.digest,mediaType:item.mediaType||'application/octet-stream',language:'es'});
+      const created=this.#studio.addSharedResource(parent,{title:item.label,href:item.href,digest:item.digest,mediaType:item.mediaType||'application/octet-stream',language:'es'});
       await this._selectCreated(created);
     });
   }
@@ -383,9 +384,9 @@ export class P2LRNStudioElement extends HTMLElement{
     const rep=this.#studio.materializeSharedResource(activityId,{bytes:new Uint8Array(entry.bytes),filename:inferred,mediaType:entry.mediaType});
     await this._renderEditor();this._updateState();return rep;
   }
-  _chooseComponent(){
+  _chooseComponent(parent=this._insertionParent()){
     const items=this.#studio.componentCatalog().map((entry)=>({id:entry.id,label:entry.authoring.label,description:entry.authoring.description}));
-    this._showChoice('Añadir componente','Elige el bloque nativo que quieres crear.',items,async(item)=>this._selectCreated(this.#studio.addNativeComponent(this._insertionParent(),{componentId:item.id,language:'es'})));
+    this._showChoice('Añadir componente','Elige el bloque nativo que quieres crear.',items,async(item)=>this._selectCreated(this.#studio.addNativeComponent(parent,{componentId:item.id,language:'es'})));
   }
   async addUnit(options={}){
     if(!this.#studio)throw new Error('No hay ningún curso P2LRN abierto.');
@@ -399,16 +400,38 @@ export class P2LRNStudioElement extends HTMLElement{
     const created=this.#studio.addLesson(this._insertionParent(),options);this.#selected=created.id;
     this._renderTree();await this._renderEditor();this._updateState();return created;
   }
+  async _queuedInsertionParent(){
+    const pending=this.#pendingPlacement;this.#pendingPlacement=null;
+    if(!pending)return this._insertionParent();
+    return pending.placement==='same-page'?
+      this.#studio.samePageInsertionParent(pending.sourceId):this.#studio.pageInsertionParent(pending.sourceId);
+  }
   async _selectCreated(entity){this.#selected=entity.id;this._renderTree();await this._renderEditor();this._updateState();const menu=this.shadowRoot.querySelector('[data-add-menu]');if(menu)menu.open=false;return entity;}
-  async addContent(kind){
+  async addContent(kind,{placement='new-page'}={}){
+    if(!['same-page','new-page'].includes(placement))throw new Error('Destino de inserci\u00f3n desconocido.');
     if(!this.#studio)throw new Error('Crea o abre un curso primero.');
+    const sourceId=this.#selected;
+    if(['file','reader','external'].includes(kind)){
+      if(kind==='external'&&placement==='same-page')throw new Error('Importa paquetes completos en una p\u00e1gina nueva.');
+      this.#pendingPlacement={placement,sourceId};
+      const selector={file:'resource-file',reader:'reader-file',external:'external-file'}[kind];
+      this.shadowRoot.querySelector('[data-'+selector+']').click();return null;
+    }
+    let scorePoints=null;
+    if(kind==='drag-scored'){
+      const raw=prompt('Puntos de la pregunta de arrastrar (1 a 100)','5');
+      if(raw===null)return null;
+      scorePoints=Number(raw);
+      if(!Number.isInteger(scorePoints)||scorePoints<1||scorePoints>100)throw new Error('Elige entre 1 y 100 puntos.');
+    }
+    const parent=placement==='same-page'?
+      await this.#studio.samePageInsertionParent(sourceId):this.#studio.pageInsertionParent(sourceId);
+    const old=this.#selected;this.#selected=parent;
+    try{
     if(kind==='lesson')return this._selectCreated(this.#studio.addLesson(this._insertionParent(),{title:'Nueva lección',language:'es'}));
     if(kind==='unit')return this.addUnit({title:'Nueva unidad',language:'es'});
-    if(kind==='file'){this.shadowRoot.querySelector('[data-resource-file]').click();return null;}
-    if(kind==='reader'){this.shadowRoot.querySelector('[data-reader-file]').click();return null;}
-    if(kind==='external'){this.shadowRoot.querySelector('[data-external-file]').click();return null;}
     if(kind==='url'){const url=prompt('URL del recurso');if(!url)return null;return this._selectCreated(this.#studio.addRemoteResource(this._insertionParent(),{title:'Recurso web',url}));}
-    if(kind==='shared-library'){await this._chooseSharedResource();return null;}
+    if(kind==='shared-library'){await this._chooseSharedResource(parent);return null;}
     if(kind==='shared-resource'){
       const url=prompt('URL lógica del recurso compartido');if(!url)return null;
       const digest=prompt('SHA-256 esperado (sha256:...)');if(!digest)return null;
@@ -416,26 +439,33 @@ export class P2LRNStudioElement extends HTMLElement{
       const title=prompt('Título','Recurso compartido')||'Recurso compartido';
       return this._selectCreated(this.#studio.addRemoteResource(this._insertionParent(),{title,url,mediaType,expectedDigest:digest}));
     }
+    if(kind==='drag-scored'){
+      const game=this.#studio.addGame(this._insertionParent(),{kind:'matching',title:'Arrastrar con puntos',language:'es'});
+      const source=await this.#studio.readQuestionnaire(game.id);
+      const payload=structuredClone(source.payload);payload.questions[0].points=scorePoints;
+      this.#studio.setQuestionnaire(game.id,payload);return this._selectCreated(game);
+    }
     if(kind==='questionnaire')return this._selectCreated(this.#studio.addQuestionnaire(this._insertionParent(),{title:'Cuestionario',language:'es'}));
     if(kind==='live-poll')return this._selectCreated(this.#studio.addCollaborationActivity(this._insertionParent(),{mode:'poll',language:'es'}));
     if(kind==='shared-board')return this._selectCreated(this.#studio.addCollaborationActivity(this._insertionParent(),{mode:'board',language:'es'}));
     if(kind==='peer-review')return this._selectCreated(this.#studio.addCollaborationActivity(this._insertionParent(),{mode:'peer-review',language:'es'}));
     if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const titles={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','fill-blanks':'Completar huecos','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D','3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D'};return this._selectCreated(this.#studio.addGame(this._insertionParent(),{kind,title:titles[kind]??'Juego',language:'es'}));}
-    if(kind==='component'){this._chooseComponent();return null;}
+    if(kind==='component'){this._chooseComponent(parent);return null;}
     if(kind==='composite')return this._selectCreated(this.#studio.addComposite(this._insertionParent(),{title:'Grupo de actividades',language:'es',mode:'free',completion:'all'}));
     return null;
+    }finally{if(this.#selected===parent)this.#selected=old;}
   }
-  async addResourceFile(file){const bytes=new Uint8Array(await file.arrayBuffer());const entity=this.#studio.addEmbeddedResource(this._insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:file.type||'application/octet-stream',bytes});return this._selectCreated(entity);}
+  async addResourceFile(file){const bytes=new Uint8Array(await file.arrayBuffer());const parent=await this._queuedInsertionParent();const entity=this.#studio.addEmbeddedResource(parent,{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:file.type||'application/octet-stream',bytes});return this._selectCreated(entity);}
   async importExternalPackage(file){
     if(!this.importEndpoint)throw new Error('import-endpoint is required for educational package import.');
     const response=await fetch(new URL(this.importEndpoint,document.baseURI).href,{method:'POST',headers:{'Content-Type':file.type||'application/zip','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
     if(!response.ok){let detail='';try{detail=(await response.json())?.error||''}catch{}throw new Error('Studio external package import failed'+(detail?': '+detail:' (HTTP '+response.status+')'));}
-    const bytes=await response.arrayBuffer();const pkg=await (await playerApi()).openPackageBytes(bytes);const root=(pkg.manifest.entrypoints.find((x)=>x.type==='course')??pkg.manifest.entrypoints[0])?.id;const title=pkg.entities.get(root)?.title?.en??pkg.entities.get(root)?.title?.es??file.name;const wrapper=await this.#studio.importPackage(pkg,this._insertionParent(),{title,language:'en'});return this._selectCreated(wrapper);
+    const bytes=await response.arrayBuffer();const pkg=await (await playerApi()).openPackageBytes(bytes);const root=(pkg.manifest.entrypoints.find((x)=>x.type==='course')??pkg.manifest.entrypoints[0])?.id;const title=pkg.entities.get(root)?.title?.en??pkg.entities.get(root)?.title?.es??file.name;const parent=await this._queuedInsertionParent();const wrapper=await this.#studio.importPackage(pkg,parent,{title,language:'en'});return this._selectCreated(wrapper);
   }
   async importDocument(file){
     if(!this.readerEndpoint)throw new Error('reader-endpoint is required for Reader document import.');
     const response=await fetch(new URL(this.readerEndpoint,document.baseURI).href,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
-    if(!response.ok)throw new Error('Studio Reader failed: HTTP '+response.status);const result=await response.json();const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');const html='<!doctype html><html><head><meta charset="utf-8"></head><body>'+result.blocks.map((b)=>b.type==='TITLE'?'<h2>'+esc(b.text)+'</h2>':b.type==='LIST'?'<li>'+esc(b.text)+'</li>':'<p>'+esc(b.text)+'</p>').join('')+'</body></html>';const title=result.metadata?.detectedTitle||file.name.replace(/\.[^.]+$/,'');return this._selectCreated(this.#studio.addEmbeddedResource(this._insertionParent(),{title,filename:'reader.html',mediaType:'text/html',bytes:new TextEncoder().encode(html)}));
+    if(!response.ok)throw new Error('Studio Reader failed: HTTP '+response.status);const result=await response.json();const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');const html='<!doctype html><html><head><meta charset="utf-8"></head><body>'+result.blocks.map((b)=>b.type==='TITLE'?'<h2>'+esc(b.text)+'</h2>':b.type==='LIST'?'<li>'+esc(b.text)+'</li>':'<p>'+esc(b.text)+'</p>').join('')+'</body></html>';const title=result.metadata?.detectedTitle||file.name.replace(/\.[^.]+$/,'');const parent=await this._queuedInsertionParent();return this._selectCreated(this.#studio.addEmbeddedResource(parent,{title,filename:'reader.html',mediaType:'text/html',bytes:new TextEncoder().encode(html)}));
   }
   async _renderEditor(){
     const stage=this.shadowRoot.querySelector('[data-stage]');stage.replaceChildren();

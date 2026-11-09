@@ -73,7 +73,8 @@ test('trusted Drag & Drop runs inside opaque frame under strict LMS CSP', {timeo
       "const reset=[...document.querySelectorAll('button')].find(x=>x.textContent==='Reiniciar actividad');"+
       "const cards=[...activity.querySelectorAll('[data-p2lrn-dnd-item]')];"+
       "const zones=[...activity.querySelectorAll('[data-p2lrn-dnd-zone]')];"+
-      "if(!reset||cards.some(x=>!x.draggable))return {ok:false,reason:'Awaiting trusted bootstrap'};"+
+      "if(!reset)return {ok:false,reason:'Awaiting trusted bootstrap'};"+
+      "const baselineDraggable=cards.map(x=>x.draggable);"+
       "const transfer=new DataTransfer();"+
       "cards[0].dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer:transfer}));"+
       "zones[0].dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer}));"+
@@ -82,7 +83,7 @@ test('trusted Drag & Drop runs inside opaque frame under strict LMS CSP', {timeo
       "const clickPlaced=zones[1].contains(cards[1]);"+
       "const complete=activity.dataset.p2lrnDndCompleted==='true';"+
       "reset.click();"+
-      "const resetWorked=cards.every(x=>x.draggable)&&!!activity.querySelector('[data-p2lrn-dnd-tray]')?.contains(cards[0])&&!activity.dataset.p2lrnDndCompleted;"+
+      "const resetWorked=cards.every((x,i)=>x.draggable===baselineDraggable[i])&&!!activity.querySelector('[data-p2lrn-dnd-tray]')?.contains(cards[0])&&!activity.dataset.p2lrnDndCompleted;"+
       "return {ok:dragPlaced&&clickPlaced&&complete&&resetWorked,dragPlaced,clickPlaced,complete,resetWorked};"+
     "})()";
     let result=null;

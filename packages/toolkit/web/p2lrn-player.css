@@ -4,3 +4,10 @@
 @media(max-width:720px){.p2lrn-layout{grid-template-columns:1fr}.p2lrn-nav{border-right:0;border-bottom:1px solid #e5e5e5;max-height:30vh}}
 
 .p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-runtime{display:block;width:100%!important;max-width:100%!important}
+
+.p2lrn-lesson-navigation{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.65rem;margin-top:1.8rem;padding:1rem 0 .25rem;border-top:1px solid #cbd5e1;font:600 .92rem/1.3 system-ui,sans-serif}
+.p2lrn-lesson-navigation button{padding:.65rem .9rem;border-radius:.55rem;border:1px solid #9ab3d1;background:#eef5ff;color:#123b72;cursor:pointer;max-width:100%;overflow-wrap:anywhere}
+.p2lrn-lesson-navigation button:disabled{cursor:not-allowed;background:#f4f4f4;border-color:#cbd5e1;color:#64748b}
+.p2lrn-lesson-navigation button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+.p2lrn-lesson-navigation span{color:#475569;font-size:.85rem}
+@media(max-width:620px){.p2lrn-lesson-navigation{justify-content:space-between}.p2lrn-lesson-navigation span{order:-1;width:100%;text-align:center}}

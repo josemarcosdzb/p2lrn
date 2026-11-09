@@ -661,6 +661,12 @@ export class P2LRNPlayerElement extends HTMLElementBase {
 
   #refreshProgressionNav() {
     if (!this._progressionEnabled || !this._progressionModel) return;
+    for(const button of this.shadowRoot?.querySelectorAll('[data-p2lrn-lesson-target]')??[]){
+      const id=button.dataset.p2lrnLessonTarget;
+      const locked=this._progressionModel?.isLocked(id,this._progressionState)===true;
+      button.disabled=locked;
+      button.title=locked?this.#progressionLockMessage(id):'';
+    }
     for (const [entityId, item] of this._progressionButtons.entries()) {
       const {button, entity, baseTitle} = item;
       const locked = entity.type === 'activity' && this._progressionModel.isLocked(entityId, this._progressionState);
@@ -781,6 +787,17 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         return;
       }
       await this.#renderEntity(root, stage);
+      if(root.type==='activity'){
+        const ordered=[];const seenIds=new Set();
+        const visit=entity=>{
+          if(!entity||seenIds.has(entity.id))return;
+          seenIds.add(entity.id);
+          if(entity.type==='activity')ordered.push(entity);
+          for(const child of entity.children??[])visit(pkg.entities.get(child));
+        };
+        visit(progressionRoot??root);
+        this.#appendLessonNavigation(stage,root,ordered,target=>this.setAttribute('node',target.id));
+      }
       return;
     }
 
@@ -818,6 +835,16 @@ export class P2LRNPlayerElement extends HTMLElementBase {
           nav.querySelectorAll('[aria-current="true"]').forEach((item) => item.removeAttribute('aria-current'));
           button.setAttribute('aria-current', 'true');
           await this.#renderEntity(entity, stage);
+          this.#appendLessonNavigation(stage,entity,activities,async target=>{
+            if(this._progressionModel?.isLocked(target.id,this._progressionState))return;
+            nav.querySelectorAll('[aria-current="true"]').forEach(item=>item.removeAttribute('aria-current'));
+            this._progressionButtons.get(target.id)?.button?.setAttribute('aria-current','true');
+            await this.#renderEntity(target,stage);
+            this.#appendLessonNavigation(stage,target,activities,async next=>{
+              const button=this._progressionButtons.get(next.id)?.button;
+              if(button&&!button.disabled)button.click();
+            });
+          });
         });
         nav.append(button);
       }
@@ -869,6 +896,10 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       if (firstActivity) {
         if (nav) this._progressionButtons.get(firstActivity.id)?.button?.setAttribute('aria-current', 'true');
         await this.#renderEntity(firstActivity, stage);
+        this.#appendLessonNavigation(stage,firstActivity,activities,target=>{
+          const button=this._progressionButtons.get(target.id)?.button;
+          if(button&&!button.disabled)button.click();
+        });
       } else {
         this.#stageMessage(stage, this.#progressionLockMessage(activities[0].id));
       }
@@ -879,6 +910,33 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     } else {
       const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = 'Este nodo no contiene actividades reproducibles.'; stage.append(message);
     }
+  }
+
+  #appendLessonNavigation(stage,current,activities,navigate){
+    const position=activities.findIndex(entry=>entry.id===current?.id);
+    if(position<0||activities.length<2)return;
+    stage.querySelector(':scope > .p2lrn-lesson-navigation')?.remove();
+    const bar=document.createElement('nav');
+    bar.className='p2lrn-lesson-navigation';
+    bar.setAttribute('aria-label',playerUiText('Navegaci?n entre lecciones'));
+    const add=(label,target)=>{
+      const button=document.createElement('button');button.type='button';
+      button.textContent=target?playerUiText(label)+': '+titleOf(target):playerUiText(label);
+      button.disabled=!target||this._progressionModel?.isLocked(target.id,this._progressionState)===true;
+      if(target)button.dataset.p2lrnLessonTarget=target.id;
+      if(button.disabled&&target)button.title=this.#progressionLockMessage(target.id);
+      button.addEventListener('click',()=>{
+        if(!target||this._progressionModel?.isLocked(target.id,this._progressionState))return;
+        void navigate(target);
+      });
+      bar.append(button);
+    };
+    add('Anterior',activities[position-1]??null);
+    const indicator=document.createElement('span');
+    indicator.textContent=playerUiText('Lecci\u00f3n ')+(position+1)+' / '+activities.length;
+    indicator.setAttribute('aria-live','polite');bar.append(indicator);
+    add('Siguiente',activities[position+1]??null);
+    stage.append(bar);
   }
 
   #rootCourseEntity() {

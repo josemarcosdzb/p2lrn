@@ -16,7 +16,13 @@ const BLOCKS=Object.freeze([
 const setStyle=(node,properties)=>{Object.assign(node.style,properties);return node;};
 const elt=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
 function makeBlock(kind){
-  if(kind==='divider')return elt('hr');
+  if(kind==='divider'){
+    const hr=elt('hr');
+    setStyle(hr,{display:'block',boxSizing:'border-box',width:'100%',height:'0',
+      border:'0',borderTop:'2px solid #94a3b8',margin:'30px 0',clear:'both'});
+    hr.setAttribute('aria-label','Separador de secciones');
+    return hr;
+  }
   if(kind==='drag-drop')return createStudioDropActivity(document);
   if(kind==='dropdown'){
     const details=elt('details');details.dataset.p2lrnLayout='dropdown';details.open=true;
