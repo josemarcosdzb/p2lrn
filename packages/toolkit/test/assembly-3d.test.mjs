@@ -66,7 +66,7 @@ test('native game converter and grading use existing classification authority',(
   assert.equal(game.data.trials[0].scene.targets.length,2);
   const right=scoreQuestionnaire(p,{q1:{classifications:{'piece-1':'target-1','piece-2':'target-2'}}});
   const wrong=scoreQuestionnaire(p,{q1:{classifications:{'piece-1':'target-2','piece-2':'target-1'}}});
-  assert.ok(right.pointsEarned>wrong.pointsEarned);
+  assert.ok(right.raw>wrong.raw);
 });
 function glb(doc){
   const text=new TextEncoder().encode(JSON.stringify(doc));
