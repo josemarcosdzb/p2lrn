@@ -237,6 +237,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   const dragWorld=new THREE.Vector3();
   const dragPointer=new THREE.Vector3();
   let alive=true;
+  let sceneEpoch=0;
   let raf=0;
   let last=performance.now();
 
@@ -333,6 +334,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   }
 
   function clearStage() {
+    sceneEpoch+=1;
     for (const object of [...stage.children]) {
       stage.remove(object);
       disposeObject(object);
@@ -439,6 +441,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
 
 
   async function addModel({id,assetId,bytes,nodeId=null,position=[0,0.9,0],rotation=[0,0,0,1],scale=[1,1,1],interaction=null,opacity=1}={}) {
+    const requestedEpoch=sceneEpoch;
     if(!bytes || !assetId)throw new Error('Modelo 3D no disponible dentro del paquete');
     let loading=modelCache.get(assetId);
     if(!loading){
@@ -448,9 +451,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       loading.catch(()=>{if(modelCache.get(assetId)===loading)modelCache.delete(assetId);});
     }
     const gltf=await loading;
-    if(!alive) return null;
+    if(!alive||requestedEpoch!==sceneEpoch)return null;
     const source=nodeId===null?gltf.scene:await gltf.parser.getDependency('node',Number(nodeId));
     if(!source)throw new Error('Submalla GLB inexistente: '+String(nodeId));
+    if(!alive||requestedEpoch!==sceneEpoch)return null;
     const root=new THREE.Group();
     // SkeletonUtils preserves the internal skeleton references for skinned GLBs.
     const visible=cloneRig(source);
