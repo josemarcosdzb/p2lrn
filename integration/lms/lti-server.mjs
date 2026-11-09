@@ -8,6 +8,8 @@ import {join,resolve,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createP2LRNLtiProvider} from './lti-provider.mjs';
 import {createLtiStore} from './lti-store.mjs';
+import {pickerHtml} from './lti-picker-ui.mjs';
+import {classifyLtiUserError,ltiErrorHtml} from './lti-user-errors.mjs';
 import {createLtiAgsClient} from './lti-ags.mjs';
 import {createLocalQaLmsFetch} from './lti-local-qa-gateway.mjs';
 import {createLtiNrpsClient,validateNrpsClaim,NRPS_CLAIM} from './lti-nrps.mjs';
@@ -82,23 +84,6 @@ const form=(url,jwt,nonceStr)=>[
  '<script nonce="',html(nonceStr),'">document.getElementById("p2lrn-return").submit()</script>',
  '<noscript><button form="p2lrn-return" type="submit">Volver al LMS</button></noscript></body></html>'
 ].join('');
-function pickerHtml({ticket,tenantId,contents,cspNonce}){
- const forms=contents.flatMap(c=>(c.entities||[])
-  .filter(e=>['course','unit','activity'].includes(e.type))
-  .slice(0,150).map(e=>[
-   '<form action="/lti/deep-link/confirm" method="post">',
-   '<input type="hidden" name="ticket" value="',html(ticket),'">',
-   '<input type="hidden" name="catalogId" value="',html(c.id),'">',
-   '<input type="hidden" name="entityId" value="',html(e.id),'">',
-   '<strong>',html(c.title),'</strong> · ',html(e.title||e.id),
-   ' <button type="submit">Insertar en LMS</button></form>'
-  ].join(''))).join('');
- return ['<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
- '<title>Seleccionar P2LRN</title><style>body{font:16px system-ui;margin:2rem;color:#17253b;background:#f4f7fb}main{max-width:900px;margin:auto}form{background:white;padding:14px;border:1px solid #cbd5e1;margin:12px 0;border-radius:10px}button{background:#1459ad;color:white;border:0;border-radius:6px;padding:10px 16px;margin-left:12px;cursor:pointer}</style>',
- '</head><body><main><h1>Insertar contenido P2LRN</h1><p>Centro: ',html(tenantId),'. Selecciona un curso o una actividad publicada.</p>',
- forms||'<p>No hay paquetes P2LRN publicados para esta institución.</p>',
- '</main></body></html>'].join('');
-}
 function playerHtml({entityId,csrf,playerScript}){
  const code=[
  '(()=>{const csrf=',safeJs(csrf),';const api="/lti/runtime";',
@@ -278,6 +263,46 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    return {delivered:false,error:'AGS_PENDING_RETRY'};
   }
  }
+ function inspectCourseBytes(bytes,titleHint=''){
+  if(!Buffer.isBuffer(bytes)||bytes.length===0||bytes.length>64*1024*1024)
+   throw new Error('INVALID_P2LRN_UPLOAD');
+  const parsed=validatePackageBytes(bytes,{strictProfiles:true,validateProfilePayloads:true});
+  const entities=parsed.graph.entities.filter(e=>['course','unit','activity'].includes(e.type))
+   .map(e=>({id:e.id,type:e.type,title:String(e.title||e.name||e.id).slice(0,200)}));
+  const course=entities.find(e=>e.type==='course')||entities[0];
+  if(!course)throw new Error('P2LRN package contains no publishable learning entities');
+  const title=String(titleHint||course.title||'Curso P2LRN').trim().slice(0,200);
+  return {parsed,entities,course,title,sha:digest(bytes)};
+ }
+ function persistCourse(tenantId,inspection,bytes){
+  const filename=inspection.sha+'.p2lrn';
+  const destination=join(packages,filename);
+  if(!existsSync(destination))writeFileSync(destination,bytes,{flag:'wx',mode:0o600});
+  const id=store.publishPackage({tenantId,title:inspection.title,
+   packageId:inspection.parsed.manifest.packageId,
+   contentRoot:inspection.parsed.manifest.integrity.contentRoot,
+   sha:inspection.sha,filename,bytes:bytes.length,entities:inspection.entities});
+  return {id,packageId:inspection.parsed.manifest.packageId,
+   contentRoot:inspection.parsed.manifest.integrity.contentRoot,
+   entities:inspection.entities.length,entityId:inspection.course.id};
+ }
+ async function finishDeepLink(entry,catalogId,entityId,req,res){
+  const pickerReg=store.getRegistrationById(entry.registrationId);
+  if(!pickerReg||pickerReg.status!=='ACTIVE')throw new Error('PICKER_PLATFORM_REVOKED');
+  checkLocalCohost(req,pickerReg.deepLinkLaunchUrl||pickerReg.launchUrl);
+  const c=store.getCatalog(catalogId,entry.tenantId);
+  if(!c||!JSON.parse(c.entities_json).some(e=>e.id===entityId))
+   throw new Error('UNAUTHORIZED_DEEP_LINK_CONTENT');
+  const bindingId=store.createBinding({tenantId:entry.tenantId,
+   registrationId:entry.registrationId,deploymentId:entry.deploymentId,
+   catalogId:c.id,entityId});
+  const launch=await provider.restoreDeepLink(entry);
+  const name=JSON.parse(c.entities_json).find(e=>e.id===entityId)?.title||c.title;
+  const signed=await provider.deepLinkResponse({launch,selected:[{bindingId,title:name}]});
+  const cspNonce=nonce(16);
+  return sendHtml(res,200,form(signed.returnUrl,signed.jwt,cspNonce),
+   policy(cspNonce,new URL(signed.returnUrl).origin));
+ }
  const routes=async(req,res)=>{
   try{
    const incoming=new URL(req.url||'/',canonicalBase);
@@ -386,26 +411,43 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
        secureCookie(sessionCookie+'-partitioned',token,true,3600,true)
       ]:secureCookie(sessionCookie,token,secure,3600,true)});
    }
+   if(method==='POST'&&path==='/lti/deep-link/confirm'&&String(req.headers['content-type']||'').startsWith('multipart/form-data;')){
+    const contentType=String(req.headers['content-type']||'');
+    if(!/^multipart\/form-data;\s*boundary=/i.test(contentType))
+     throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+    const body=await readBody(req,64*1024*1024+16384);
+    const upload=new Request('http://localhost/lti/deep-link/confirm',{
+     method:'POST',headers:{'Content-Type':contentType},body});
+    const fields=await upload.formData();
+    if(fields.getAll('ticket').length!==1||fields.getAll('course').length!==1)
+     throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+    const ticketHash=digest(valid(fields.get('ticket'),'picker ticket',128));
+    const pending=store.peekPicker(ticketHash);
+    if(!pending)throw new Error('PICKER_EXPIRED');
+    const reg=store.getRegistrationById(pending.registrationId);
+    if(!reg||reg.status!=='ACTIVE'||reg.tenantId!==pending.tenantId||
+       !reg.deployments.includes(pending.deploymentId))
+     throw new Error('PICKER_PLATFORM_REVOKED');
+    checkLocalCohost(req,reg.deepLinkLaunchUrl||reg.launchUrl);
+    const file=fields.get('course');
+    if(!file||typeof file.arrayBuffer!=='function'||typeof file.name!=='string'||
+       !file.name.toLowerCase().endsWith('.p2lrn')||file.size===0||file.size>64*1024*1024)
+     throw new Error('INVALID_P2LRN_UPLOAD_FILE');
+    const bytes=Buffer.from(await file.arrayBuffer());
+    const inspection=inspectCourseBytes(bytes);
+    const entry=store.consumePicker(ticketHash);
+    if(!entry)throw new Error('PICKER_EXPIRED');
+    const published=persistCourse(entry.tenantId,inspection,bytes);
+    return finishDeepLink(entry,published.id,published.entityId,req,res);
+   }
    if(method==='POST'&&path==='/lti/deep-link/confirm'){
     const formData=input(await readBody(req,32768),req);
-    const entry=store.consumePicker(digest(valid(formData.ticket,'picker ticket',128)));
+    const ticketHash=digest(valid(formData.ticket,'picker ticket',128));
+    const entry=store.consumePicker(ticketHash);
     if(!entry)throw new Error('PICKER_EXPIRED');
-    const pickerReg=store.getRegistrationById(entry.registrationId);
-    if(!pickerReg||pickerReg.status!=='ACTIVE')throw new Error('PICKER_PLATFORM_REVOKED');
-    checkLocalCohost(req,pickerReg.deepLinkLaunchUrl||pickerReg.launchUrl);
-    const c=store.getCatalog(valid(formData.catalogId,'catalogId',128),entry.tenantId);
-    const node=valid(formData.entityId,'entityId',2048);
-    if(!c||!JSON.parse(c.entities_json).some(e=>e.id===node))
-     throw new Error('UNAUTHORIZED_DEEP_LINK_CONTENT');
-    const bindingId=store.createBinding({tenantId:entry.tenantId,
-     registrationId:entry.registrationId,deploymentId:entry.deploymentId,catalogId:c.id,
-     entityId:node});
-    const launch=await provider.restoreDeepLink(entry);
-    const name=JSON.parse(c.entities_json).find(e=>e.id===node)?.title||c.title;
-    const signed=await provider.deepLinkResponse({launch,selected:[{bindingId,title:name}]});
-    const cspNonce=nonce(16);
-    return sendHtml(res,200,form(signed.returnUrl,signed.jwt,cspNonce),
-      policy(cspNonce,new URL(signed.returnUrl).origin));
+    return finishDeepLink(entry,
+     valid(formData.catalogId,'catalogId',128),
+     valid(formData.entityId,'entityId',2048),req,res);
    }
    if(method==='GET'&&path.startsWith('/lti/assets/player/')){
     const name=decodeURIComponent(path.slice('/lti/assets/player/'.length));
@@ -517,18 +559,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      const tenantId=valid(req.headers['x-p2lrn-tenant'],'x-p2lrn-tenant',128);
      const title=valid(req.headers['x-p2lrn-title'],'x-p2lrn-title',200);
      const bytes=await readBody(req,64*1024*1024);
-     const sourceSha=digest(bytes);
-     const parsed=validatePackageBytes(bytes,{strictProfiles:true,validateProfilePayloads:true});
-     const entities=parsed.graph.entities.filter(e=>['course','unit','activity'].includes(e.type))
-       .map(e=>({id:e.id,type:e.type,title:String(e.title||e.name||e.id).slice(0,200)}));
-     if(!entities.length)throw new Error('P2LRN package contains no publishable learning entities');
-     const filename=sourceSha+'.p2lrn';
-     const destination=join(packages,filename);
-     if(!existsSync(destination))writeFileSync(destination,bytes,{flag:'wx',mode:0o600});
-     const id=store.publishPackage({tenantId,title,packageId:parsed.manifest.packageId,
-      contentRoot:parsed.manifest.integrity.contentRoot,sha:sourceSha,filename,bytes:bytes.length,entities});
-     return sendJson(res,201,{id,packageId:parsed.manifest.packageId,
-      contentRoot:parsed.manifest.integrity.contentRoot,entities:entities.length});
+     const inspected=inspectCourseBytes(bytes,title);
+     const published=persistCourse(tenantId,inspected,bytes);
+     return sendJson(res,201,{id:published.id,packageId:published.packageId,
+      contentRoot:published.contentRoot,entities:published.entities});
     }
     if(method==='GET'&&path.startsWith('/lti/admin/catalog/')){
      const tenantId=valid(decodeURIComponent(path.slice('/lti/admin/catalog/'.length)),'tenantId',128);
@@ -581,6 +615,19 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    if(process.env.P2LRN_LEGACY_QA_TRACE==='1'&&String(req.url).startsWith('/lti/legacy/'))console.error('LTI_LEGACY_QA_ERROR_CODE',/^[A-Z0-9_]{3,120}$/.test(message)?message:'MASKED');
    const forbidden=/NRPS_ROLE_DENIED|NRPS_UNAUTHORIZED_CONTEXT|NRPS_PLATFORM_REVOKED|ADMIN_DENIED|UNAUTHORIZED|CROSS_SITE|INVALID_CSRF|SESSION_EXPIRED|PICKER_EXPIRED|LTI|JWT|OIDC|issuer|audience|nonce|binding|deployment|registered|registration|platform|signature|token|key|origin|LEGACY|P2LRN content authorization/i.test(message);
    const status=message==='REQUEST_TOO_LARGE'?413:forbidden?403:400;
+   const problem=classifyLtiUserError(error);
+   const incident=randomBytes(6).toString('hex').toUpperCase();
+   const path=new URL(req.url||'/',canonicalBase).pathname;
+   const isBrowser=String(req.headers.accept||'').includes('text/html');
+   const isLtiUserRoute=['/lti/login','/lti/launch','/lti/deep-link',
+    '/lti/deep-link/confirm','/lti/legacy/launch'].includes(path);
+   if(isLtiUserRoute&&isBrowser){
+    console.warn('P2LRN_LTI_ACCESS_DIAGNOSTIC',JSON.stringify({
+     reference:incident,category:problem.code,method:req.method,route:path,status
+    }));
+    return sendHtml(res,status,ltiErrorHtml({problem,reference:incident}),
+     "default-src 'none'; base-uri 'none'; form-action 'none'; style-src 'unsafe-inline'; frame-ancestors *");
+   }
    // Do not reflect secrets, JWTs, filesystem paths or untrusted form values.
    return sendJson(res,status,{error:status===403?'FORBIDDEN':status===413?'TOO_LARGE':'INVALID_REQUEST'});
   }

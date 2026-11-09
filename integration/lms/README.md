@@ -312,3 +312,18 @@ El test integrado `integration/lms/lti-legacy-integration.test.mjs` usa el servi
 **Criterios de autorización por LMS**: mismo SHA-256 de un único paquete exportado de Studio, importación/publicación exacta, Deep Linking o binding administrativo autorizado, JWT firmado y OIDC de profesor y de alumno, actividades de texto/imagen/drag-drop/cuestionario/H5P/SCORM que se ejecuten (no solo iframe visible), progreso guardado y restaurado después de salir y volver a entrar, calificación aprobada por el servidor y recibida en el libro oficial mediante AGS o, para legado LTI 1.0, el mecanismo de resultados soportado y autenticado por ese LMS. Repetir con otro alumno para descartar fugas entre identidades. No fabricar identidades ni resultados para obtener aprobación.
 
 **Política de entrega**: un LMS sin la evidencia anterior figura **NO CERTIFICADO** y debe conservar esa indicación en cualquier panel, catálogo, documentación o comunicación al usuario. Si algún paso falla, corregir la causa y repetir el recorrido completo antes de habilitarlo para alumnos. El servidor no convierte en calificación oficial un score enviado desde navegador: la nota necesita validación y aprobación de Host y entrega AGS confirmada. Comprobar los errores pendientes y la cola administrativa; un HTTP 200 de salud LTI, un paquete validado o un test unitario verde nunca reemplazan la recepción de notas.
+## Publicación sencilla desde cualquier LMS con Deep Linking
+
+Una vez que el administrador del centro instala la herramienta P2LRN LTI 1.3, el profesor no tiene que usar las APIs administrativas ni copiar claves o identificadores.
+
+1. En el curso del LMS elegir Añadir actividad > Herramienta externa > P2LRN.
+2. En el selector, elegir un curso existente y pulsar Añadir curso. Si el curso es nuevo, exportar desde Studio su archivo .p2lrn y pulsar Publicar y añadir.
+3. P2LRN valida el paquete con Toolkit oficial y devuelve al LMS un enlace Deep Linking firmado. El LMS guarda la actividad en el curso correspondiente.
+
+Ambas acciones utilizan el mismo endpoint existente POST /lti/deep-link/confirm: el selector envía un formulario normal y la subida utiliza multipart/form-data. No requiere configurar nuevas rutas en Caddy ni sustituir los enlaces anteriores.
+
+La subida acepta únicamente un ticket de profesor vigente, emitido después de un lanzamiento LTI Deep Linking firmado. El paquete se valida estrictamente, con un máximo de 64 MiB. Si el archivo es inválido, el ticket sigue disponible para que el profesor reintente. Un ticket utilizado no puede reutilizarse. El catálogo conserva un solo archivo físico por SHA-256 e institución: no se convierte a SCORM ni se duplica el .p2lrn al publicar repetidamente el mismo archivo. Los enlaces de actividades sí permanecen separados para que alumnos y calificaciones no se mezclen.
+
+El selector ofrece un botón principal por curso, búsqueda y acceso opcional a actividades individuales, con navegación por teclado y diseño adaptable a móvil. Los errores visibles explican el paso que debe seguir el usuario sin exponer secretos; el código de incidencia permite al administrador localizar el tipo de problema sin pedir contraseñas.
+
+Esta mejora facilita la publicación después de la configuración institucional inicial. No certifica por sí sola el inicio de sesión o las notas oficiales en los cinco LMS. Las pruebas HTTP con JWT firmados y las pruebas de Chrome se deben informar separadamente de la certificación integral de cada LMS.
