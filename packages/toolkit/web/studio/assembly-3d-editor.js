@@ -95,7 +95,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   const canvas=$('canvas','a3-webgl');canvas.hidden=false;canvas.tabIndex=0;canvas.style.cssText='width:100%;height:100%;display:block;touch-action:none';canvas.setAttribute('aria-label','Visor 3D editable; arrastra piezas, jaulas o vértices, y gira la cámara arrastrando el fondo');
   const note=$('div','a3-scene-note','La pieza aparece dentro de su destino. Arrástrala para ajustar el encaje; arrastra el fondo para girar.');
   const warning=$('p','a3-error');warning.setAttribute('role','status');warning.setAttribute('aria-live','polite');
-  let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0;
+  let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0,showAll=false;
   let yaw=0.55,pitch=0.73,zoom=46,drag=null;
   let threeRuntime=null,threeDestroyed=false,threeSignature=null,threePending=false,threeGeneration=0,threeDrag=null;
   const history=[JSON.stringify(scene)],redo=[];
@@ -129,6 +129,15 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   const fit=btn('Ajustar pieza dentro de la caja',()=>fitSelected());
   fit.classList.add('a3-primary');
   const frame=btn('Centrar encaje',()=>focusSelection());
+  const allPieces=btn('Ver todas las piezas',()=>{
+    showAll=!showAll;
+    allPieces.textContent=showAll?'Ver solo esta pieza':'Ver todas las piezas';
+    allPieces.setAttribute('aria-pressed',String(showAll));
+    syncThreeVisibility();
+    if(!showAll)focusSelection();
+    if(!svg.hidden)drawScene();
+  });
+  allPieces.setAttribute('aria-pressed','false');
   props.hidden=true;
   const settings=btn('Mostrar ajustes',()=>{
     props.hidden=!props.hidden;
@@ -139,7 +148,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   });
   settings.setAttribute('aria-expanded','false');
   settings.setAttribute('aria-pressed','false');
-  buttons.append(fit,frame,settings,undo,redoButton,add,remove);
+  buttons.append(fit,frame,allPieces,settings,undo,redoButton,add,remove);
   head.append($('strong',null,'Ensamblaje 3D · editor de piezas y jaulas'),buttons);
   root.append(head);
   tree.append($('summary',null,'Piezas y modelos'));
@@ -247,7 +256,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     entries.replaceChildren();
     for(const [name,kind,items] of [['Piezas','piece',scene.pieces],['Destinos','target',scene.targets]]){
       entries.append($('strong',null,name));
-      items.forEach(p=>{const b=btn(p.text,()=>{selected={kind,id:p.id};vertexIndex=0;tree.open=false;drawAll();focusSelection();});b.setAttribute('aria-pressed',selected.kind===kind&&selected.id===p.id?'true':'false');entries.append(b);});
+      items.forEach(p=>{const b=btn(p.text,()=>{selected={kind,id:p.id};vertexIndex=0;tree.open=false;drawAll();syncThreeVisibility();focusSelection();});b.setAttribute('aria-pressed',selected.kind===kind&&selected.id===p.id?'true':'false');entries.append(b);});
     }
     const importLabel=$('label');importLabel.append($('strong',null,'Importar modelo GLB'));
     const file=$('input');file.type='file';file.accept='.glb,model/gltf-binary';file.setAttribute('aria-label','Importar modelo 3D GLB');
@@ -284,7 +293,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       link.placement=fitAssemblyBounds(target,measured);
       piece.initialTransform.scale=[...link.placement.scale];
     });
-    if(success){selected={kind:'piece',id:piece.id};drawAll();focusSelection();}
+    if(success){selected={kind:'piece',id:piece.id};drawAll();syncThreeVisibility();focusSelection();}
     return success;
   }
   function focusSelection(){
@@ -304,6 +313,18 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     targets:scene.targets.map(t=>t.id),
     reference:scene.referenceAssetId??null,
   });
+  function syncThreeVisibility(){
+    if(!threeRuntime)return;
+    const current=paired(selected.id);
+    for(const target of scene.targets){
+      const active=current?.target?.id===target.id;
+      threeRuntime.setObjectVisibility('author-target:'+target.id,showAll||active);
+      threeRuntime.setCageHandlesVisible('author-target:'+target.id,active);
+    }
+    for(const piece of scene.pieces){
+      threeRuntime.setObjectVisibility('author-piece:'+piece.id,showAll||current?.piece?.id===piece.id);
+    }
+  }
   function syncThreeTransforms(){
     if(!threeRuntime)return;
     for(const target of scene.targets){
@@ -315,6 +336,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     if(scene.referenceAssetId)threeRuntime.setTransform('author-reference',scene.referenceTransform??{
       position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1],
     });
+    syncThreeVisibility();
   }
   async function rebuildThree(){
     const runtime=threeRuntime;
@@ -400,7 +422,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       selected={kind:'target',id:meta.id};vertexIndex=meta.index;
     }else if(meta.kind==='assembly-editor-target')selected={kind:'target',id:meta.id};
     else if(meta.kind==='assembly-editor-piece')selected={kind:'piece',id:meta.id};
-    treePanel();propertyPanel();
+    treePanel();propertyPanel();syncThreeVisibility();
     return true;
   }
   function onThreeInteraction(meta){
