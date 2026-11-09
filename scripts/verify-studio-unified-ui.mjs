@@ -595,7 +595,7 @@ async function browserScenario(){
     question.assembly3d.pieces[0].nodeId='0';
     item.course.setQuestionnaire(activity.id,modified.payload);
     const exported=await exportP2LRNPackage(item.course);
-    const opened=await openP2LRNPackageBytes(exported.bytes);
+    const opened=await openP2LRNPackageBytes(exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength));
     const rendered=opened.entities.get(activity.id);
     expect(rendered?.type==='activity','Round-trip removed assembly activity');
     const resource=opened.entities.get(rendered.resource);
