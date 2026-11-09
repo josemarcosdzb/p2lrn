@@ -1,0 +1,165 @@
+{
+  "origin": "http://127.0.0.1:5544",
+  "at": "2026-11-09T13:46:48.968Z",
+  "results": [
+    {
+      "path": "/",
+      "viewport": "desktop",
+      "status": 200,
+      "images": 2,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": {
+        "duration": 25.8,
+        "canPlay": true,
+        "elapsed": 0.851,
+        "hasCaptionTrack": true
+      },
+      "pageErrors": []
+    },
+    {
+      "path": "/en/",
+      "viewport": "desktop",
+      "status": 200,
+      "images": 2,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": {
+        "duration": 25.8,
+        "canPlay": true,
+        "elapsed": 0.8506,
+        "hasCaptionTrack": true
+      },
+      "pageErrors": []
+    },
+    {
+      "path": "/crear-cursos-interactivos/",
+      "viewport": "desktop",
+      "status": 200,
+      "images": 15,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": {
+        "duration": 25.8,
+        "canPlay": true,
+        "elapsed": 0.8509,
+        "hasCaptionTrack": true
+      },
+      "pageErrors": []
+    },
+    {
+      "path": "/en/create-interactive-courses/",
+      "viewport": "desktop",
+      "status": 200,
+      "images": 13,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": {
+        "duration": 25.8,
+        "canPlay": true,
+        "elapsed": 0.851,
+        "hasCaptionTrack": true
+      },
+      "pageErrors": []
+    },
+    {
+      "path": "/docs/studio/",
+      "viewport": "desktop",
+      "status": 200,
+      "images": 9,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": null,
+      "pageErrors": []
+    },
+    {
+      "path": "/en/docs/studio/",
+      "viewport": "desktop",
+      "status": 200,
+      "images": 8,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": null,
+      "pageErrors": []
+    },
+    {
+      "path": "/docs/juegos-3d/",
+      "viewport": "desktop",
+      "status": 200,
+      "images": 4,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": null,
+      "pageErrors": []
+    },
+    {
+      "path": "/en/docs/3d-games/",
+      "viewport": "desktop",
+      "status": 200,
+      "images": 3,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": null,
+      "pageErrors": []
+    },
+    {
+      "path": "/crear-cursos-interactivos/",
+      "viewport": "mobile",
+      "status": 200,
+      "images": 15,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": null,
+      "pageErrors": []
+    },
+    {
+      "path": "/docs/studio/",
+      "viewport": "mobile",
+      "status": 200,
+      "images": 9,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": null,
+      "pageErrors": []
+    },
+    {
+      "path": "/en/docs/studio/",
+      "viewport": "mobile",
+      "status": 200,
+      "images": 8,
+      "broken": 0,
+      "missingAlt": 0,
+      "missingDims": 0,
+      "overflow": 0,
+      "video": null,
+      "pageErrors": []
+    },
+    {
+      "path": "/crear-cursos-interactivos/#no-js",
+      "status": 200,
+      "sections": 6,
+      "images": 14,
+      "visible": true
+    }
+  ]
+}

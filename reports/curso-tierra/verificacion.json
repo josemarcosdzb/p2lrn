@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "package": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\curso-tierra\\viaje-al-centro-de-la-tierra.p2lrn",
+  "preview": "C:\\Users\\Usuario\\Downloads\\p2lrn-mejorastudio-preview\\courses\\viaje-al-centro-de-la-tierra.p2lrn",
+  "sha256": "cf601f3cfe6050c6aba1bef9efa2f2aa17b97131040be42a9fe44d23ae610757",
+  "previousSha256": "2e279a0e848f1bb2c152cfc116c27e0307b659eb667f1f04ec5b67343f7b8c3d",
+  "files": 19,
+  "retainedFileDigests": 19,
+  "updatedLessons": 2,
+  "questions": 16,
+  "originalImages": 10,
+  "puzzleMode": "concentric",
+  "packageBytes": 11078241,
+  "contentRoot": "sha256:13fa1ce0d37ede151252741fc74d56ab0758768a84c2a28b2585ca05772737eb",
+  "projectRoot": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\curso-tierra\\workspace",
+  "buildValidation": "P2LRN"
+}

@@ -1,0 +1,106 @@
+{
+  "source": "Chrome, real /en/studio/ user interface",
+  "initial": {
+    "lang": "en",
+    "newCourse": true,
+    "toolbar": "Edit\nLearner preview\nAdd content\n+ New unit\n+ New lesson\nParagraph\nTitle 1\nTitle 2\nTitle 3\nArial\nCalibri\nGeorgia\nTimes New Roman\nVerdana\n12\n14\n16\n18\n20\n24\n28\n32\n40\n48\nB\nI\nU\nS\nA\nNew course — not saved\nNo changes\nSave draft\nExport .p2lrn\nOffline delivery\nReview delivery"
+  },
+  "entries": [
+    {
+      "name": "en-editor-real",
+      "file": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\studio-preview-evidence\\site-guide\\en-editor-real.png",
+      "bytes": 42371,
+      "sha256": "44aeeb902050f53c5c297273407033e9f0a34409deadd0281cdaed3f47cf9ec0",
+      "description": "Real English editor with the new course controls, format ribbon, course tree and lesson",
+      "x": 16,
+      "y": 370,
+      "width": 1408,
+      "height": 590
+    },
+    {
+      "name": "en-new-open",
+      "file": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\studio-preview-evidence\\site-guide\\en-new-open.png",
+      "bytes": 10703,
+      "sha256": "beba40d1d9d961c921d7d3b1871a80a52d901accb27772e624f350187af05913",
+      "description": "New course, Open file, Open URL options",
+      "x": 15,
+      "y": 435,
+      "width": 1410,
+      "height": 85
+    },
+    {
+      "name": "en-action-toolbar",
+      "file": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\studio-preview-evidence\\site-guide\\en-action-toolbar.png",
+      "bytes": 8622,
+      "sha256": "4c5701a00cf969ddd706f0eb23528c633294ce8aeedef6fa2dc5a9b0675e789e",
+      "description": "Edit, Learner preview, Add content, New unit, New lesson and Save/Export",
+      "x": 16,
+      "y": 532,
+      "width": 1408,
+      "height": 65
+    },
+    {
+      "name": "en-format-toolbar",
+      "file": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\studio-preview-evidence\\site-guide\\en-format-toolbar.png",
+      "bytes": 4679,
+      "sha256": "bbac91b08d08d2e4932e021b1998bf6d1cc8f2fa6643d9e2b1293c761a63bc04",
+      "description": "Paragraph, font, size, bold, italics, underline, strikethrough and alignment",
+      "x": 16,
+      "y": 596,
+      "width": 1408,
+      "height": 64
+    },
+    {
+      "name": "en-course-tree",
+      "file": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\studio-preview-evidence\\site-guide\\en-course-tree.png",
+      "bytes": 5831,
+      "sha256": "eb4b8e5f098653ca9102a2b68f0d2754d337375a82d938fa6679b71553df7497",
+      "description": "Course tree with New course, Unit 1 and First lesson",
+      "x": 16,
+      "y": 674,
+      "width": 280,
+      "height": 285
+    },
+    {
+      "name": "en-lesson-canvas",
+      "file": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\studio-preview-evidence\\site-guide\\en-lesson-canvas.png",
+      "bytes": 8921,
+      "sha256": "4342746d47cb2cab09d03d422d50deeda323bc5e491072ecb7b661571e0d5eda",
+      "description": "First lesson editor, new course without made-up content",
+      "x": 309,
+      "y": 674,
+      "width": 1114,
+      "height": 285
+    },
+    {
+      "name": "en-save-export",
+      "file": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\studio-preview-evidence\\site-guide\\en-save-export.png",
+      "bytes": 3903,
+      "sha256": "0da135499b6aabc0b0466f573338d67bfeac6963ef651d316bf345a4180ebb9f",
+      "description": "Save draft, Export .p2lrn, Offline delivery and Review delivery",
+      "x": 890,
+      "y": 532,
+      "width": 532,
+      "height": 65
+    },
+    {
+      "name": "en-add-content-dialog",
+      "file": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\studio-preview-evidence\\site-guide\\en-add-content-dialog.png",
+      "bytes": 40723,
+      "sha256": "2deb331a87042af24c635d022a279dcb809d982b4185be8b6ce279f6d7e176a9",
+      "description": "Real Add content dialog in English"
+    },
+    {
+      "name": "en-learner-preview",
+      "file": "C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106\\reports\\studio-preview-evidence\\site-guide\\en-learner-preview.png",
+      "bytes": 46854,
+      "sha256": "0f3fc1e3df98949aa413515a3eed286a8726a57aeaad2813afb7513ee6c6240f",
+      "description": "Learner preview for a blank sample; no claims of results or scoring",
+      "x": 16,
+      "y": 370,
+      "width": 1408,
+      "height": 590
+    }
+  ],
+  "errors": []
+}

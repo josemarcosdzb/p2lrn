@@ -15,7 +15,10 @@ test('Studio saves local drafts only on explicit user action and warns about uns
   assert.doesNotMatch(studio,/setTimeout\([^\n]*persistDraft/);
   assert.match(studio,/beforeunload/);
   assert.match(studio,/event\.returnValue/);
-  assert.match(html,/Cambios sin guardar/);
+  assert.match(html,/<strong data-save-state>No guardado<\/strong>/,
+    'The unsaved draft must be visually identified before any edit');
+  assert.match(studio,/saveState\.textContent=studioUiText\('No guardado'\)/,
+    'Unsaved changes must retain a localized, explicit status');
   assert.match(html,/Guardar borrador/);
   assert.match(html,/Eliminar borrador/);
   assert.match(studio,/confirm\(/);
