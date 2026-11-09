@@ -103,7 +103,7 @@ async function inspectExistingLmsContainers(){
   const {stdout}=await run('docker',['ps','--all','--format','{{.Names}}|{{.State}}|{{.Status}}'],{
    timeout:8000,windowsHide:true,maxBuffer:256*1024
   });
-  const relevant=/moodle|chamilo|sakai|canvas|edx|caddy|ingress|p2lrn|lti|tutor/i;
+  const relevant=/moodle|chamilo|sakai|canvas|edx|caddy|ingress|p2lrn|lti|tutor|^aulap2p-(api|backend)/i;
   const services=stdout.split(/\r?\n/).map(row=>row.trim()).filter(Boolean)
    .map(row=>{const [name,state,status]=row.split('|');return {name,state,status};})
    .filter(row=>relevant.test(row.name)).slice(0,80);
@@ -150,6 +150,7 @@ async function inspectExistingLmsContainers(){
     timeout:5000,windowsHide:true,maxBuffer:256*1024});
    topology.caddyConfigPresent=true;
    const rows=config.stdout.split(/\r?\n/).map(x=>x.trim());
+   topology.caddyImports=rows.filter(x=>/^import\s+/.test(x)).slice(0,12).map(x=>x.slice(0,180));
    // Only expose route names/targets, never raw proxy configuration or headers.
    topology.caddyOpenEdxRoutes=rows.filter(x=>
     /josemarcosdiaz|openedx-josemarcosdiaz|p2lrn-lti-provider/i.test(x))
@@ -199,6 +200,14 @@ async function inspectExistingLmsContainers(){
     routeCount:hostRouting.length
    };
   }catch(e){topology.caddyLiveConfig={available:false,reason:limit(e.code||e.message,130)};}
+  topology.existingCaddyRoutes=[];
+  try{
+   const listing=await run('docker',['exec','aulap2p-ingress-local','sh','-c',
+    'ls -1 /etc/caddy/routes /etc/caddy/tenants 2>/dev/null'],{
+    timeout:6000,windowsHide:true,maxBuffer:64*1024});
+   topology.existingCaddyRoutes=listing.stdout.split(/\r?\n/).filter(x=>/\.caddy$/.test(x))
+    .map(x=>x.trim()).slice(0,65);
+  }catch{}
   resources.topology=topology;
   return {available:true,services,resources};
  }catch(e){
