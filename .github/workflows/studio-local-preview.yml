@@ -52,8 +52,8 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $sha = $env:GITHUB_SHA.Substring(0,8)
-          $dir = Join-Path (Join-Path $env:USERPROFILE 'Downloads') ('p2lrn-mejorastudio-preview-' + $sha)
+          # Rebuild the one stable preview directory; never make a per-commit copy.
+          $dir = Join-Path (Join-Path $env:USERPROFILE 'Downloads') 'p2lrn-mejorastudio-preview'
           node scripts/build-studio-local-preview.mjs --output "$dir"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "P2LRN_STUDIO_PREVIEW_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
@@ -66,35 +66,34 @@ jobs:
           $worker = Join-Path $dir 'p2lrn-sw.js'
           if (!(Test-Path -LiteralPath $worker)) { throw ('Missing compiled Player service worker: '+$worker) }
           Write-Output ('LOCAL_PREVIEW_WORKER=' + $worker)
-          # Test the actual IPv4 loopback bind; Get-NetTCPConnection can report
-          # a candidate as free while an older preview still serves requests.
-          $free = $null
-          foreach ($candidate in 5550..5599) {
-            $probe = $null
-            try {
-              $probe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $candidate)
-              $probe.Start()
-              $free = $candidate
-              break
-            } catch [System.Net.Sockets.SocketException] {
-              continue
-            } finally {
-              if ($probe) { $probe.Stop() }
-            }
-          }
-          if (!$free) { throw 'No free loopback ports in 5550-5599. No processes were stopped.' }
+          # Reuse the same running preview instead of allocating a new port
+          # and a new persistent Windows process on every Studio change.
+          $free = 5533
           $script = Join-Path $dir 'preview-server.mjs'
-          $node = (Get-Command node).Source
-          # GitHub's runner job object terminates Start-Process children during
-          # cleanup. Win32_Process.Create is invoked via the Windows management
-          # service, outside that job; this is an on-demand local process, NOT
-          # a scheduled task, Windows service installation or public deploy.
-          $commandLine = ('"{0}" "{1}" --root "{2}" --port {3}' -f $node,$script,$dir,$free)
-          $launch = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $commandLine; CurrentDirectory = $dir } -ErrorAction Stop
-          if ($launch.ReturnValue -ne 0 -or !$launch.ProcessId) {
-            throw ('Windows could not launch the independent local Studio process. WMI code=' + $launch.ReturnValue)
+          $existing = @(Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" |
+            Where-Object {
+              $_.CommandLine -and
+              $_.CommandLine.Contains($script) -and
+              $_.CommandLine.Contains($dir) -and
+              $_.CommandLine -match '(?:^|\s)--port\s+5533(?:\s|$)'
+            })
+          if ($existing.Count -gt 1) { throw 'Duplicate canonical Studio server processes on port 5533; refusing to add another.' }
+          if ($existing.Count -eq 1) {
+            $serverPid = [int]$existing[0].ProcessId
+            Write-Output ('REUSED_EXISTING_STUDIO_PID=' + $serverPid)
+          } else {
+            $busy = @(Get-NetTCPConnection -State Listen -LocalPort $free -ErrorAction SilentlyContinue)
+            if ($busy.Count) { throw 'Port 5533 belongs to another process. Refusing to interrupt it or allocate another preview port.' }
+            $node = (Get-Command node).Source
+            $commandLine = ('"{0}" "{1}" --root "{2}" --port {3}' -f $node,$script,$dir,$free)
+            # Start only if none exists. No scheduled task or Windows service.
+            $launch = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $commandLine; CurrentDirectory = $dir } -ErrorAction Stop
+            if ($launch.ReturnValue -ne 0 -or !$launch.ProcessId) {
+              throw ('Unable to launch the canonical Studio server. WMI code=' + $launch.ReturnValue)
+            }
+            $serverPid = [int]$launch.ProcessId
+            Write-Output ('STARTED_MISSING_STUDIO_PID=' + $serverPid)
           }
-          $serverPid = [int]$launch.ProcessId
           $serverPid | Out-File (Join-Path $dir 'preview-server.pid') -Encoding ascii
           $base = 'http://127.0.0.1:' + $free
           $ok = $false

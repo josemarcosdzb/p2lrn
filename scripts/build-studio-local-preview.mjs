@@ -16,9 +16,10 @@ if(outputFlag<0||!args[outputFlag+1])throw Error('Usage: node scripts/build-stud
 const output=resolve(args[outputFlag+1]);
 const home=resolve(process.env.USERPROFILE||process.env.HOME||repository);
 const downloads=resolve(home,'Downloads');
+const previewName=output.split(/[\\/]/).at(-1);
 if(!output.toLowerCase().startsWith((downloads+'\\').toLowerCase())||
-   !/^p2lrn-mejorastudio-preview-[a-f0-9]{7,16}$/i.test(output.split(/[\\/]/).at(-1)))
-  throw Error('Output must be a dedicated versioned p2lrn-mejorastudio-preview-<sha> directory under Downloads');
+   !/^p2lrn-mejorastudio-preview(?:-[a-f0-9]{7,16})?$/i.test(previewName))
+  throw Error('Output must be the canonical p2lrn-mejorastudio-preview directory under Downloads (legacy versioned QA directories remain readable).');
 await mkdir(output,{recursive:true});
 
 console.log('1/5 Build canonical Player locally');
