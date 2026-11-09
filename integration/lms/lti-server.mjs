@@ -11,6 +11,7 @@ import {createLtiStore} from './lti-store.mjs';
 import {createLtiAgsClient} from './lti-ags.mjs';
 import {createLocalQaLmsFetch} from './lti-local-qa-gateway.mjs';
 import {createLtiNrpsClient,validateNrpsClaim,NRPS_CLAIM} from './lti-nrps.mjs';
+import {decryptLegacySecret,encryptLegacySecret,parseLegacyForm,validateLegacyPlatform,verifyLegacyLaunch,sendLegacyOutcome} from './lti-legacy.mjs';
 import {validatePackageBytes} from '../../packages/toolkit/dist/core/validator.js';
 
 const ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
@@ -241,7 +242,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   const hash=digest(String(value||''));
   const s=store.getSession(hash);
   if(!s)throw new Error('SESSION_EXPIRED');
-  const reg=store.getRegistrationById(s.registrationId);
+  const reg=store.getRegistrationById(s.registrationId)||store.getLegacyRegistrationById(s.registrationId);
   if(!reg||reg.status!=='ACTIVE')throw new Error('SESSION_PLATFORM_REVOKED');
   checkLocalCohost(req,reg.launchUrl);
   if(csrf)csrfGuard(req,s,new URL(reg.launchUrl).origin);
@@ -252,6 +253,17 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   if(!pending)throw new Error('Unknown AGS delivery');
   if(pending.status==='SENT')return {delivered:true,duplicate:false};
   try{
+   if(pending.protocol==='legacy'){
+    if(!pending.ags?.serviceUrl||!pending.ags?.sourceId)throw new Error('LEGACY_OUTCOME_NOT_AVAILABLE');
+    const result=await sendLegacyOutcome({
+     serviceUrl:pending.ags.serviceUrl,sourceId:pending.ags.sourceId,
+     consumerKey:pending.legacyConsumerKey,
+     secret:decryptLegacySecret(pending.legacySecretEncrypted,tool.privateKeyPem),
+     issuerOrigin:pending.legacyIssuer,normalized:pending.payload.normalized,
+     fetchImpl,allowInsecureLocal:allowInsecureLoopback
+    });
+    store.markOutbox(id,'SENT');return {delivered:true,status:result.http,protocol:'legacy'};
+   }
    const result=await ags.postScore({
     ags:pending.ags,subject:pending.subject,resourceLinkId:pending.resourceLinkId,clientId:pending.clientId,
     tokenUrl:pending.tokenUrl,issuer:pending.issuer,
@@ -269,6 +281,40 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    const path=incoming.pathname,method=req.method;
    if(method==='GET'&&path==='/lti/health')
     return sendJson(res,200,{status:'ok',provider:'P2LRN LTI 1.3',standalone:true});
+   if(method==='POST'&&path==='/lti/legacy/launch'){
+    if(String(req.headers['content-type']||'').split(';')[0]!=='application/x-www-form-urlencoded')
+     throw new Error('LEGACY_FORM_REQUIRED');
+    const params=parseLegacyForm((await readBody(req,65536)).toString('utf8'));
+    const registration=store.getLegacyRegistrationByConsumerKey(valid(params.oauth_consumer_key,'oauth_consumer_key',256));
+    if(!registration||registration.status!=='ACTIVE')throw new Error('UNREGISTERED_LEGACY_PLATFORM');
+    const actualHost=valid(req.headers.host,'legacy Host',255).toLowerCase();
+    if(actualHost!==new URL(registration.launchUrl).host)
+     throw new Error('LEGACY_LAUNCH_HOST_MISMATCH');
+    checkLocalCohost(req,registration.launchUrl);
+    const verified=verifyLegacyLaunch({
+     params,registration,requestUrl:registration.launchUrl,
+     secret:decryptLegacySecret(registration.secretEncrypted,tool.privateKeyPem),
+     consumeNonce:store.consumeLegacyNonce,allowInsecureLocal:allowInsecureLoopback
+    });
+    const binding=store.getLegacyBinding({id:verified.bindingId,
+     tenantId:registration.tenantId,registrationId:registration.id});
+    if(!binding)throw new Error('UNAUTHORIZED_LEGACY_BINDING');
+    const token=nonce(),csrf=nonce();
+    store.attachLaunch({
+     legacy:true,
+     launch:{...verified,packageId:binding.packageId,contentRoot:binding.contentRoot,entityId:binding.entityId},
+     ags:verified.basicOutcome,tokenHash:digest(token),csrfHash:digest(csrf),expiresAt:time()+3600
+    });
+    const cohost=isLmsCohost({issuer:registration.issuerOrigin},registration.launchUrl);
+    const cspNonce=nonce(16);
+    const page=playerHtml({entityId:binding.entityId,csrf,playerScript:'/lti/assets/player/p2lrn.js'})
+     .replaceAll('__CSP_NONCE__',html(cspNonce));
+    return sendHtml(res,200,page,policy(cspNonce,registration.issuerOrigin),
+     {'Set-Cookie':cohost?secureCookie(sessionCookie,token,false,3600):localHttp?[
+      secureCookie(sessionCookie,token,true,3600),
+      secureCookie(sessionCookie+'-partitioned',token,true,3600,true)
+     ]:secureCookie(sessionCookie,token,secure,3600,true)});
+   }
    if(method==='GET'&&path==='/lti/jwks')
     return sendJson(res,200,provider.publicJwks());
    if((method==='GET'||method==='POST')&&path==='/lti/login'){
@@ -436,7 +482,29 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       if(!service)return sendJson(res,404,{error:'NRPS_NOT_AVAILABLE'});
       return sendJson(res,200,await nrps.listMembers({registration,service,contextId}));
      }
-     if(method==='GET'&&path==='/lti/admin/platforms')
+     if(method==='GET'&&path==='/lti/admin/legacy/platforms')
+     return sendJson(res,200,{platforms:store.listLegacyPlatforms()});
+    if(method==='POST'&&path==='/lti/admin/legacy/platforms'){
+     const data=input(await readBody(req,32768),req);
+     const reg=validateLegacyPlatform(data,{allowInsecureLocal:allowInsecureLoopback});
+     const sealed=encryptLegacySecret(valid(data.sharedSecret,'legacy shared secret',512),tool.privateKeyPem);
+     store.upsertLegacyPlatform({...reg,secretEncrypted:sealed});
+     return sendJson(res,201,{id:reg.id,status:reg.status,protocols:['LTI-1p0','LTI-1p1']});
+    }
+    if(method==='POST'&&path==='/lti/admin/legacy/bindings'){
+     const data=input(await readBody(req,16384),req);
+     const registrationId=valid(data.registrationId,'legacy registrationId',128);
+     const registration=store.getLegacyRegistrationById(registrationId);
+     if(registration?.status!=='ACTIVE')throw new Error('UNREGISTERED_LEGACY_PLATFORM');
+     const bindingId=store.createLegacyBinding({
+      registrationId,tenantId:registration.tenantId,
+      catalogId:valid(data.catalogId,'catalogId',128),
+      entityId:valid(data.entityId,'entityId',2048)
+     });
+     return sendJson(res,201,{bindingId,registrationId,protocol:'legacy',
+      customParameters:{p2lrn_binding_id:bindingId}});
+    }
+    if(method==='GET'&&path==='/lti/admin/platforms')
      return sendJson(res,200,{platforms:store.listPlatforms()});
     if(method==='POST'&&path==='/lti/admin/platforms'){
      const reg=assertTrustedReg(input(await readBody(req,131072),req),canonicalBase,allowInsecureLoopback);
@@ -507,7 +575,8 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    return sendJson(res,404,{error:'NOT_FOUND'});
   }catch(error){
    const message=String(error?.message||error).slice(0,300);
-   const forbidden=/NRPS_ROLE_DENIED|NRPS_UNAUTHORIZED_CONTEXT|NRPS_PLATFORM_REVOKED|ADMIN_DENIED|UNAUTHORIZED|CROSS_SITE|INVALID_CSRF|SESSION_EXPIRED|PICKER_EXPIRED|LTI|JWT|OIDC|issuer|audience|nonce|binding|deployment|registered|registration|platform|signature|token|key|origin|P2LRN content authorization/i.test(message);
+   if(process.env.P2LRN_LEGACY_QA_TRACE==='1'&&String(req.url).startsWith('/lti/legacy/'))console.error('LTI_LEGACY_QA_ERROR_CODE',/^[A-Z0-9_]{3,120}$/.test(message)?message:'MASKED');
+   const forbidden=/NRPS_ROLE_DENIED|NRPS_UNAUTHORIZED_CONTEXT|NRPS_PLATFORM_REVOKED|ADMIN_DENIED|UNAUTHORIZED|CROSS_SITE|INVALID_CSRF|SESSION_EXPIRED|PICKER_EXPIRED|LTI|JWT|OIDC|issuer|audience|nonce|binding|deployment|registered|registration|platform|signature|token|key|origin|LEGACY|P2LRN content authorization/i.test(message);
    const status=message==='REQUEST_TOO_LARGE'?413:forbidden?403:400;
    // Do not reflect secrets, JWTs, filesystem paths or untrusted form values.
    return sendJson(res,status,{error:status===403?'FORBIDDEN':status===413?'TOO_LARGE':'INVALID_REQUEST'});
