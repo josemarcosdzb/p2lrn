@@ -984,6 +984,9 @@ try{
     ws.send(JSON.stringify({id,method,params}));
   });
   await send('Runtime.enable');await send('Page.enable');
+  // Set the actual target viewport BEFORE creating the Three renderer;
+  // resizing only after the authoring scene rendered can invalidate capture.
+  await send('Emulation.setDeviceMetricsOverride',{width:1480,height:980,deviceScaleFactor:1,mobile:false});
   await send('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/'});
   for(let i=0;i<60;i++){
     const r=await send('Runtime.evaluate',{expression:'document.readyState',returnByValue:true});
@@ -997,7 +1000,6 @@ try{
   assert.equal(r.result?.value?.ok,true);
   // Reusable evidence file in the existing Studio preview workspace. This is
   // captured from headless Chrome's REAL WebGL canvas, not generated art.
-  await send('Emulation.setDeviceMetricsOverride',{width:1480,height:980,deviceScaleFactor:1,mobile:false});
   await sleep(350);
   const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
   const dest=process.env.P2LRN_STUDIO_QA_SCREENSHOT||
