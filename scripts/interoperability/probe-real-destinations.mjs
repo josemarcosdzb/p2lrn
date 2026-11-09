@@ -202,12 +202,25 @@ async function inspectExistingLmsContainers(){
   }catch(e){topology.caddyLiveConfig={available:false,reason:limit(e.code||e.message,130)};}
   topology.existingCaddyRoutes=[];
   try{
-   const listing=await run('docker',['exec','aulap2p-ingress-local','sh','-c',
-    'ls -1 /etc/caddy/routes /etc/caddy/tenants 2>/dev/null'],{
+   const listing=await run('docker',['exec','aulap2p-ingress-local','ls','-1','/etc/caddy/tenant-routes'],{
     timeout:6000,windowsHide:true,maxBuffer:64*1024});
    topology.existingCaddyRoutes=listing.stdout.split(/\r?\n/).filter(x=>/\.caddy$/.test(x))
     .map(x=>x.trim()).slice(0,65);
   }catch{}
+  topology.knownRouteShapes=[];
+  for(const name of ['jose-moodle-qa-20261017.caddy','chamilojose.caddy',
+   'p2lrn-lti.caddy','josemarcosdiaz.caddy']){
+   if(!topology.existingCaddyRoutes.includes(name))continue;
+   try{
+    const route=await run('docker',['exec','aulap2p-ingress-local','cat',
+     '/etc/caddy/tenant-routes/'+name],{
+     timeout:4000,windowsHide:true,maxBuffer:96*1024});
+    const directives=route.stdout.split(/\r?\n/).map(x=>x.trim())
+     .filter(x=>/^(?:http:\/\/|https:\/\/|handle(?:_path)?\b|@[-a-z0-9]+\s|path\s|reverse_proxy\s|encode\s)/i.test(x))
+     .slice(0,30).map(x=>x.slice(0,170));
+    topology.knownRouteShapes.push({name,directives});
+   }catch{topology.knownRouteShapes.push({name,inspect:'UNAVAILABLE'});}
+  }
   resources.topology=topology;
   return {available:true,services,resources};
  }catch(e){
