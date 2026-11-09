@@ -8,6 +8,12 @@ for(const d of ['X-Content-Type-Options: nosniff','Referrer-Policy:','Permission
 assert.ok(headers.includes('/player/')===false,'Runtime headers must not inherit restrictive iframe policy');
 assert.ok(headers.includes('/docs/*')&&headers.includes('/studio/*')&&headers.includes('/demo/*')&&headers.includes('/analytics/*'),'Missing protected web sections');
 const sections=headers.replaceAll('\r\n','\n').split('\n');
+// Netlify headers require explicit route coverage: never rely on a catch-all
+// page CSP because executable Player iframes need their separate policies.
+for(const route of ["/skills/*","/crear-cursos-interactivos/*","/cursos-offline/*","/juegos-educativos-3d/*","/en/","/en/docs/*","/en/analytics/*","/en/skills/*","/en/crear-cursos-interactivos/*","/en/cursos-offline/*","/en/juegos-educativos-3d/*","/en/aviso-legal/*","/en/cookies/*","/en/licencia/*","/en/privacidad/*","/en/terminos/*","/en/contacto/*","/en/contact/*","/en/create-interactive-courses/*","/en/offline-courses/*","/en/3d-educational-games/*"]){
+  assert.ok(headers.split(/\r?\n/u).includes(route),'Missing protected HTML route '+route);
+}
+
 const cspForRoute=(route)=>{
   const pos=sections.findIndex(line=>line===route);
   assert.ok(pos>=0,'Missing route '+route);
@@ -15,6 +21,14 @@ const cspForRoute=(route)=>{
   assert.ok(policy,'Missing policy for '+route);
   return policy;
 };
+for(const route of ["/skills/*","/crear-cursos-interactivos/*","/cursos-offline/*","/juegos-educativos-3d/*","/en/","/en/docs/*","/en/analytics/*","/en/skills/*","/en/crear-cursos-interactivos/*","/en/cursos-offline/*","/en/juegos-educativos-3d/*","/en/aviso-legal/*","/en/cookies/*","/en/licencia/*","/en/privacidad/*","/en/terminos/*","/en/contacto/*","/en/contact/*","/en/create-interactive-courses/*","/en/offline-courses/*","/en/3d-educational-games/*"]){
+  const policy=cspForRoute(route);
+  assert.match(policy,/frame-ancestors 'self'/u,'Missing frame-ancestors '+route);
+  assert.ok(!policy.includes("script-src 'unsafe-eval'"),'Executable CSP not allowed on information page: '+route);
+  const connect=/connect-src ([^;]+)/u.exec(policy)?.[1]??'';
+  if(route.includes('contact')) assert.equal(connect,"'self' https://yurtnmtesugykrqtujdx.supabase.co");
+  else assert.equal(connect,"'self'");
+}
 for(const route of ['/studio/*','/demo/*']){
   const policy=cspForRoute(route);
   const connect=/connect-src ([^;]+)/u.exec(policy)?.[1]??'';
@@ -73,14 +87,30 @@ function scan(dir){
       // Its URLs and exact keys are checked; executable inline scripts remain forbidden.
       if(expected.kind==='root'&&schema['@type']==='VideoObject'){
         homeVideoObjects++;
-        const allowed=['@context','@type','@id','name','description','thumbnailUrl','contentUrl','url'];
-        assert.deepEqual(Object.keys(schema).sort(),allowed.sort(),'Unexpected VideoObject metadata: '+rel);
+        const coreKeys=['@context','@type','@id','name','description','thumbnailUrl','contentUrl','url'];
+        const legacyVideo='https://p2lrn.org/assets/hero/preview.mp4';
+        const earthVideo='https://p2lrn.org/assets/studio-guide/demo-tierra.webm';
+        const isEarth=schema.contentUrl===earthVideo;
+        assert.ok(isEarth||schema.contentUrl===legacyVideo,'Unapproved VideoObject media source: '+rel);
+        assert.deepEqual(Object.keys(schema).sort(),
+          [...coreKeys,...(isEarth?['duration','inLanguage']:[])].sort(),
+          'Unexpected VideoObject metadata: '+rel);
         assert.equal(schema.url,expected.url+'#course-preview-video');
         assert.equal(schema['@id'],schema.url);
-        assert.equal(schema.thumbnailUrl,'https://p2lrn.org/assets/hero/video-reference.jpg');
-        assert.equal(schema.contentUrl,'https://p2lrn.org/assets/hero/preview.mp4');
-        assert.ok(typeof schema.name==='string'&&schema.name.includes('P2LRN'),'Invalid video title: '+rel);
         assert.ok(typeof schema.description==='string'&&schema.description.length>=30,'Invalid video description: '+rel);
+        if(isEarth){
+          assert.equal(schema.thumbnailUrl,'https://p2lrn.org/assets/studio-guide/demo-tierra-poster.webp');
+          assert.equal(schema.duration,'PT25.8S','The published video metadata must match the actual 25.8-second WebM');
+          assert.equal(schema.inLanguage,'es','The embedded Earth recording is in Spanish on both homepages');
+          assert.match(schema.name,rel.startsWith('en/')?/Earth/i:/Tierra/i,'Unrelated Earth video title: '+rel);
+          assert.ok(readFileSync(join(site,'assets','studio-guide','demo-tierra.webm')).byteLength>100000,
+            'Recorded Earth demonstration must actually be packaged');
+          assert.ok(readFileSync(join(site,'assets','studio-guide','demo-tierra-poster.webp')).byteLength>1000,
+            'Earth video poster is missing');
+        }else{
+          assert.equal(schema.thumbnailUrl,'https://p2lrn.org/assets/hero/video-reference.jpg');
+          assert.ok(typeof schema.name==='string'&&schema.name.includes('P2LRN'),'Invalid legacy video title: '+rel);
+        }
         continue;
       }
       assert.equal(schema['@type'],expected.type);

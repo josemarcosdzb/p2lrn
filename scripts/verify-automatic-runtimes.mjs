@@ -60,7 +60,8 @@ async function browserSuite() {
     records.push({test:'missing H5P library',result:'explicit failure'});
     host.replaceChildren();
     const reports = new Map();
-    window.addEventListener('message',e=>{if(e.data?.protocol==='p2lrn-security-test') reports.set(e.data.id,{origin:e.origin,...e.data.result});});
+    const importedAssets = new Map();
+    window.addEventListener('message',e=>{if(e.data?.protocol==='p2lrn-security-test') reports.set(e.data.id,{origin:e.origin,...e.data.result});if(e.data?.protocol==='p2lrn-imscc-asset-test')importedAssets.set(e.data.id,{origin:e.origin,loaded:e.data.loaded});});
     const probe = function(id) {
       const out={};
       try { out.parentDOM=!!parent.document; } catch { out.parentDOM=false; }
@@ -79,7 +80,7 @@ async function browserSuite() {
     };
     const encoder=new TextEncoder();
     const nestedFor=(files)=>({archive:{entries:new Map(Object.entries(files).map(([name,text])=>[name,{uncompressedSize:encoder.encode(text).length}]))},names:()=>Object.keys(files),read:async name=>encoder.encode(files[name])});
-    for (const kind of ['scorm12','scorm2004','html','cmi5','h5p']) {
+    for (const kind of ['scorm12','scorm2004','html','cmi5','h5p','imscc']) {
       const target=new EventTarget();const state=[];const ready=[];const completed=[];
       target.addEventListener('p2lrn:complete',e=>completed.push(e.detail));
       target.addEventListener('p2lrn:activityready',e=>ready.push(e.detail));
@@ -92,15 +93,22 @@ async function browserSuite() {
       // SCORM 2004 requires a valid sequencing manifest even in hostile-content probes.
       // Preserve the strict production runtime and repair the old synthetic fixture.
       if(kind==='scorm2004')files['imsmanifest.xml']="<manifest identifier=\"SECURITY-CONTENT\"><metadata><schema>ADL SCORM</schema><schemaversion>2004 4th Edition</schemaversion></metadata><organizations default=\"ORG\"><organization identifier=\"ORG\"><title>Security runtime fixture</title><item identifier=\"ITEM\" identifierref=\"RES\"><title>Security SCO</title></item></organization></organizations><resources><resource identifier=\"RES\" href=\"index.html\"><file href=\"index.html\"/><file href=\"code.js\"/></resource></resources></manifest>";
+      if(kind==='imscc'){
+        const svg='<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="#145"/></svg>';
+        files['web_resources/images/icon.svg']=svg;
+        files['wiki_content/index.html']='<!doctype html><html><head><meta charset="utf-8"></head><body><img id="imscc-asset" src="$IMS-CC-FILEBASE$/images/icon.svg?canvas_download=1" alt="Cartridge asset"><script src="code.js"></script></body></html>';
+        files['wiki_content/code.js']=code+';const asset=document.getElementById("imscc-asset");const sendAsset=()=>parent.postMessage({protocol:"p2lrn-imscc-asset-test",id:"imscc",loaded:asset.naturalWidth===8},"*");asset.addEventListener("load",sendAsset,{once:true});asset.addEventListener("error",sendAsset,{once:true});if(asset.complete)setTimeout(sendAsset,0);';
+      }
       if(kind==='h5p'){Object.assign(files,{'h5p.json':JSON.stringify({mainLibrary:'H5P.IsolationTest',embedTypes:['div'],preloadedDependencies:[{machineName:'H5P.IsolationTest',majorVersion:1,minorVersion:0}]}),'content/content.json':'{}','H5P.IsolationTest-1.0/library.json':JSON.stringify({machineName:'H5P.IsolationTest',majorVersion:1,minorVersion:0,patchVersion:0,runnable:1,preloadedJs:[{path:'test.js'}]}),'H5P.IsolationTest-1.0/test.js':code});}
       const profile='https://p2lrn.org/profile/'+(kind.startsWith('scorm')?'scorm':kind==='cmi5'?'cmi5':kind==='h5p'?'h5p':'ims-content-package');
-      const representation={profile,location:{type:'embedded',path:'nested.zip'},extensions:{[profile]:{member:'index.html',scormVersion:kind==='scorm2004'?'2004':'1.2'}}};
+      const representation={profile,location:{type:'embedded',path:'nested.zip'},extensions:{[profile]:{member:kind==='imscc'?'wiki_content/index.html':'index.html',scormVersion:kind==='scorm2004'?'2004':'1.2'}}};
       const runtime=await module.render({container:host,payload:{nested:nestedFor(files)},representation,eventTarget:target,adapter:{loadState:async()=>kind==='h5p'?{bookmark:1}:kind==='cmi5'?{protocol:'p2lrn-cmi5-preview-state/1',states:{bookmark:{page:1}}}:kind.startsWith('scorm')?{values:{'cmi.core.student_id':'secret-user','cmi.core.student_name':'Private User','cmi.learner_id':'secret-user','cmi.learner_name':'Private User','cmi.core.lesson_location':'resume-marker','cmi.location':'resume-marker'}}:null,saveState:async value=>state.push(value)},context:{learnerId:'secret-user',learnerName:'Private User',packageId:'test',entityId:kind}});
       await wait(()=>reports.has(kind)&&ready.length,'runtime/probe '+kind);
       const report=reports.get(kind);assert(report.origin==='null','runtime inherited host origin '+kind);
       for(const [key,value] of Object.entries(report))if(key!=='origin')assert(value===false,kind+' leaked '+key);
       if(kind.startsWith('scorm')) {await wait(()=>state.some(x=>Object.values(x.values??{}).includes('bookmark')),'SCORM persistence '+kind);assert(!JSON.stringify(state).includes('secret-user'),'SCORM received platform identity');}
       if(kind==='html')await wait(()=>ready.some(x=>x.launchMember==='next.html'),'local HTML navigation');
+      if(kind==='imscc'){await wait(()=>importedAssets.has(kind),'IMSCC portable asset');assert(importedAssets.get(kind).origin==='null'&&importedAssets.get(kind).loaded,'IMSCC asset must load inside isolated runtime');}
       if(kind==='cmi5'){await wait(()=>state.some(x=>x.states?.bookmark?.page===2)&&completed.some(x=>x.authoritative===false),'cmi5 preview persistence/completion');}
       if(kind==='h5p')await wait(()=>state.some(x=>x.bookmark===2),'H5P isolated state');
       assert(!state.some(x=>x.forged),'forged global state accepted');

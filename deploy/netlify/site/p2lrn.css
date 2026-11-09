@@ -880,12 +880,16 @@ main{max-width:1220px;margin:0 auto;padding:0 24px}
 
 
 /* Pending documentation blocks */
-.viewer-controls{grid-template-columns:230px 220px minmax(300px,1fr) auto}
+.viewer-controls{grid-template-columns:minmax(240px,1fr) minmax(190px,220px) minmax(250px,1fr) auto}
+.viewer-file-picker{display:grid;align-content:end;justify-items:start;gap:7px;min-width:0}
+.viewer-file-picker [data-load]{min-height:42px;white-space:nowrap}
+.viewer-file-picker [data-file-summary]{display:block;max-width:100%;overflow-wrap:anywhere}
+.viewer-file-picker [data-file-input].sr-only{width:1px!important;min-height:0!important;height:1px!important;padding:0!important}
 .capability-table code{font-size:.72rem}
 .doc-content .example-actions .button{color:var(--ink);text-decoration:none}
 .doc-content .example-actions .button.primary{color:#fff}
-@media(max-width:1100px){.viewer-controls{grid-template-columns:1fr 1fr}.viewer-url{grid-column:1/-1}.viewer-buttons{grid-column:1/-1}}
-@media(max-width:650px){.viewer-controls{grid-template-columns:1fr}.viewer-url,.viewer-buttons{grid-column:1}}
+@media(max-width:1100px){.viewer-controls{grid-template-columns:1fr 1fr}.viewer-file-picker{grid-column:1/-1}.viewer-buttons{grid-column:1/-1}}
+@media(max-width:650px){.viewer-controls{grid-template-columns:1fr}.viewer-file-picker,.viewer-buttons{grid-column:1}.viewer-file-picker [data-load]{width:100%}}
 
 /* Playback viewport: prioritize course content; diagnostics stay below it. */
 .viewer-page .viewer-main{max-width:1560px}

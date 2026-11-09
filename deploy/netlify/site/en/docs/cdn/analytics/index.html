@@ -16,7 +16,7 @@
   code: 'ALU-007',
   label: 'Ana'
 }</code></pre></div><p><strong>Important:</strong> if two people enter the same code, Analytics may group their results together. A code links result files; it does not authenticate who completed the activity.</p></section>
-<section class="doc-section" id="web-capture"><h2>4. Generate a result in Player via CDN</h2><p>A web page using Player can enable result capture and download the file when an attempt ends. This example uses a teacher code; replace <code>ALU-007</code> with the correct individual code and enable capture <strong>before the learner starts</strong>.</p><div class="codebox"><div class="codebox-head"><span>HTML + JavaScript</span><button type="button" data-copy>Copy</button></div><pre><code>&lt;script src="https://p2lrn.org/player/current/dist/p2lrn.js"&gt;&lt;/script&gt;
+<section class="doc-section" id="web-capture"><h2>4. Generate a result in Player via CDN</h2><p>A web page using Player can enable result capture and download the file when an attempt ends. This example uses a teacher code; replace <code>ALU-007</code> with the correct individual code and enable capture <strong>before the learner starts</strong>.</p><div class="codebox"><div class="codebox-head"><span>HTML + JavaScript</span><button type="button" data-copy>Copy</button></div><pre><code>&lt;script src="__P2LRN_PINNED_PLAYER_URL__" integrity="__P2LRN_PINNED_PLAYER_SRI__" crossorigin="anonymous" referrerpolicy="no-referrer"&gt;&lt;/script&gt;
 &lt;p2lrn-player id="course-player" src="/courses/course.p2lrn"&gt;&lt;/p2lrn-player&gt;
 &lt;button id="download-result" type="button"&gt;Download my result&lt;/button&gt;
 &lt;script&gt;

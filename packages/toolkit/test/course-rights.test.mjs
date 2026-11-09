@@ -15,7 +15,7 @@ import {STUDIO_RUNTIME_SHARED_FILES} from '../../../deploy/netlify/studio-runtim
 
 const toBuffer=bytes=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
 const date=/^\d{4}-\d{2}-\d{2}$/;
-const fixture=resolve('../../examples/canonical/minimal-course.p2lrn');
+const fixture=resolve('../../examples/canonical/external/qti3-minimal.p2lrn');
 const rights={author:'María López',createdAt:'2025-11-18',license:'CC BY 4.0',copyrightHolder:'María López'};
 const nonRights=['generatedBy','ai','createdWith','publisher','institution','creator','tool'];
 

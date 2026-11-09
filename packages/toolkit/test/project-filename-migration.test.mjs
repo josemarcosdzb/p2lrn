@@ -1,18 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
+import {existsSync,mkdtempSync,readFileSync,renameSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join, resolve} from 'node:path';
+import {join} from 'node:path';
 import {upgradeProjectWorkspace} from '../dist/creator/project.js';
+import {P2LRNAuthoringWorkspace} from '../dist/authoring/index.js';
 
-const legacyProject=resolve('../../examples/legacy-alpha15/creator-project/p2rln.project.json');
-
-test('workspace upgrade replaces the legacy P2RLN project filename with the canonical P2LRN filename',()=>{
+test('workspace upgrade replaces a legacy P2RLN filename with the canonical P2LRN filename',()=>{
   const dir=mkdtempSync(join(tmpdir(),'p2lrn-project-name-'));
   try{
-    const root=join(dir,'workspace'),legacy=join(root,'p2rln.project.json'),canonical=join(root,'p2lrn.project.json');
-    mkdirSync(root,{recursive:true});
-    copyFileSync(legacyProject,legacy);
+    const root=join(dir,'workspace');
+    const legacy=join(root,'p2rln.project.json'),canonical=join(root,'p2lrn.project.json');
+    const workspace=P2LRNAuthoringWorkspace.create(root,{title:'Migración de proyecto',language:'es'});
+    workspace.addUrl({key:'first',title:'Primera lección',url:'https://example.invalid/lesson'});
+    renameSync(workspace.projectFile,legacy);
     const result=upgradeProjectWorkspace(root);
     assert.equal(result.sourcePath,legacy);
     assert.equal(result.projectPath,canonical);

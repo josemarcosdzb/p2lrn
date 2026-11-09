@@ -915,6 +915,29 @@
   }
 
   document.querySelectorAll('[data-contact-form]').forEach((form) => {
+    // Opt-in: set data-turnstile-sitekey on the form and configure the matching
+    // server-side TURNSTILE_SECRET_KEY. The public sitekey is not a credential.
+    const sitekey=(form.dataset.turnstileSitekey||'').trim();
+    let turnstileToken='';
+    let turnstileWidgetId=null;
+    if(sitekey){
+      const mount=document.createElement('div');
+      mount.className='p2lrn-contact-turnstile';
+      form.querySelector('button[type="submit"]')?.before(mount);
+      const script=document.createElement('script');
+      script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async=true;
+      script.onload=()=>{
+        turnstileWidgetId=window.turnstile?.render(mount,{
+          sitekey,action:'contact',
+          callback:token=>{turnstileToken=String(token||'')},
+          'expired-callback':()=>{turnstileToken=''},
+          'error-callback':()=>{turnstileToken=''},
+        });
+      };
+      document.head.append(script);
+    }
+
     const status = form.querySelector('[data-form-status]');
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -927,6 +950,10 @@
         return;
       }
 
+      if(sitekey&&!turnstileToken){
+        if(status)status.textContent='Completa la verificación antes de enviar.';
+        return;
+      }
       const button = form.querySelector('button[type="submit"]');
       const payload = {
         name: form.elements.name.value.trim(),
@@ -934,6 +961,7 @@
         subject: form.elements.subject.value.trim(),
         message: form.elements.message.value.trim(),
         page: window.location.pathname,
+        ...(sitekey ? {turnstileToken} : {}),
       };
 
       if (button) button.disabled = true;
@@ -956,6 +984,10 @@
       } catch (error) {
         if (status) status.textContent = error?.message === 'contact_rate_limited' ? 'Límite de envíos alcanzado. Inténtalo más tarde.' : 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
       } finally {
+        if(sitekey){
+          turnstileToken='';
+          if(turnstileWidgetId!==null)window.turnstile?.reset(turnstileWidgetId);
+        }
         if (button) button.disabled = false;
       }
     });

@@ -1,23 +1,6 @@
 name: P2LRN CI
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'packages/toolkit/**'
-      - 'integration/mcp/**'
-      - 'integration/lms/**'
-      - 'packages/player/**'
-      - 'packages/studio/**'
-      - 'packages/analytics/**'
-      - 'packages/h5p-libraries/**'
-      - 'deploy/netlify/**'
-      - 'PUBLISHING.md'
-      - 'LICENSE'
-      - 'NOTICE.md'
-      - 'scripts/**'
-      - '.github/workflows/p2lrn-ci.yml'
-      - '.github/workflows/p2lrn-public-cdn.yml'
   push:
     branches: [main]
     paths:
@@ -62,7 +45,7 @@ concurrency:
 
 jobs:
   security-windows:
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 25
     steps:
@@ -82,6 +65,8 @@ jobs:
         run: node scripts/verify-site-security.mjs
       - name: Verify contact server route and anti-abuse frontend contract
         run: node scripts/verify-contact-security.mjs
+      - name: Verify contact Turnstile policy, replay and failure scenarios
+        run: node --test scripts/test-contact-turnstile.test.mjs scripts/test-security-hardening.test.mjs
       - name: Check native 3D game modules and physics contract
         shell: powershell
         run: |
@@ -147,7 +132,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
   public-npm-registry:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]') }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify public npm]')) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     env:
@@ -246,7 +231,7 @@ jobs:
 
 
   automatic-runtime:
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || github.event_name == 'pull_request') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 20
     steps:
@@ -265,9 +250,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify real playback and hostile-content isolation
         run: node scripts/verify-automatic-runtimes.mjs
+      - name: Verify real cmi5 CATAPULT content and navigation in isolated frame
+        run: node scripts/verify-cmi5-browser-runtime.mjs
+      - name: Verify imported H5P and Common Cartridge with real Chrome
+        run: |
+          node scripts/verify-imported-formats-browser.mjs h5p-boardgame
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-imported-formats-browser.mjs common-cartridge-topkit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-imported-formats-browser.mjs common-cartridge-plan
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-imported-formats-browser.mjs scorm12-bilan-moodle
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   license-integrity:
-    if: ${{ contains(github.event.head_commit.message, '[license verify]') || (github.event_name == 'workflow_dispatch' && inputs.license_only) }}
+    if: ${{ github.event_name != 'pull_request' && (contains(github.event.head_commit.message, '[license verify]') || (github.event_name == 'workflow_dispatch' && inputs.license_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 10
     steps:
@@ -299,7 +296,7 @@ jobs:
         run: node scripts/verify-license-integration.mjs
 
   focused-local:
-    if: ${{ contains(github.event.head_commit.message, '[focused local]') || (github.event_name == 'workflow_dispatch' && inputs.focused_only) }}
+    if: ${{ github.event_name != 'pull_request' && (contains(github.event.head_commit.message, '[focused local]') || (github.event_name == 'workflow_dispatch' && inputs.focused_only)) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 25
     steps:
@@ -335,7 +332,7 @@ jobs:
         run: node scripts/verify-local-viewer.mjs
 
   toolkit-and-cdn:
-    if: ${{ !contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !contains(github.event.head_commit.message, '[lms design]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only)) }}
+    if: ${{ github.event_name != 'pull_request' && (!contains(github.event.head_commit.message, '[local viewer sync]') && !contains(github.event.head_commit.message, '[verify public npm]') && !contains(github.event.head_commit.message, '[license verify]') && !contains(github.event.head_commit.message, '[focused local]') && !contains(github.event.head_commit.message, '[verify deployments]') && !contains(github.event.head_commit.message, '[lms design]') && !(github.event_name == 'workflow_dispatch' && (inputs.license_only || inputs.focused_only))) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
@@ -721,7 +718,7 @@ jobs:
           node scripts/stage-npm-release.mjs
 
   public-cdn:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify live CDN]') }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify live CDN]')) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 20
     steps:
@@ -741,7 +738,7 @@ jobs:
         run: node scripts/verify-public-cdn.mjs
 
   local-viewer-revision:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[local viewer sync]') }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' && contains(github.event.head_commit.message, '[local viewer sync]')) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 16
     steps:
@@ -768,7 +765,7 @@ jobs:
         run: node scripts/verify-live-local-4183.mjs
 
   deployment-state-windows:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[verify deployments]') }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' && contains(github.event.head_commit.message, '[verify deployments]')) }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 10
     steps:
@@ -785,7 +782,7 @@ jobs:
         run: node scripts/verify-deployment-state.mjs
 
   lms-contracts-windows:
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || github.event_name == 'pull_request') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 20
     steps:
@@ -868,7 +865,7 @@ jobs:
 
   mcp-connectors-windows:
     # Independent gate to isolate MCP results from unrelated Studio/Player CI failures.
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || github.event_name == 'pull_request') }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 20
     steps:

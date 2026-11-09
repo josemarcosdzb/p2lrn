@@ -11,3 +11,30 @@
 .p2lrn-lesson-navigation button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
 .p2lrn-lesson-navigation span{color:#475569;font-size:.85rem}
 @media(max-width:620px){.p2lrn-lesson-navigation{justify-content:space-between}.p2lrn-lesson-navigation span{order:-1;width:100%;text-align:center}}
+/* A visible progress state while external SCORM, cmi5, H5P and other renderers initialize.
+   Pure CSS: renderers can replace stage children without removing the indicator. */
+.p2lrn-loading-message{display:flex;align-items:center;gap:12px}
+.p2lrn-loading-spinner,.p2lrn-stage[data-p2lrn-loading="true"]::before{
+  display:block;width:30px;height:30px;flex:none;border:3px solid #d7e4f5;
+  border-top-color:#2463c9;border-radius:50%;animation:p2lrn-loading-rotate .85s linear infinite
+}
+.p2lrn-stage[data-p2lrn-loading="true"]{position:relative;isolation:isolate;min-height:260px}
+.p2lrn-stage[data-p2lrn-loading="true"]::after{
+  content:attr(data-p2lrn-loading-label);position:absolute;z-index:9;
+  left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(300px,calc(100% - 28px));min-height:104px;
+  display:flex;align-items:flex-end;justify-content:center;
+  text-align:center;padding:55px 16px 17px;
+  color:#30445c;font-size:14px;font-weight:500;line-height:1.4;
+  background:rgba(255,255,255,.98);border:1px solid #dce6f3;
+  border-radius:12px;box-shadow:0 7px 28px rgba(35,57,82,.10);
+  pointer-events:none
+}
+.p2lrn-stage[data-p2lrn-loading="true"]::before{
+  content:"";position:absolute;z-index:10;top:calc(50% - 16px);left:50%;
+  margin-left:-15px;margin-top:-15px;pointer-events:none
+}
+@keyframes p2lrn-loading-rotate{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){
+  .p2lrn-loading-spinner,.p2lrn-stage[data-p2lrn-loading="true"]::before{animation:none}
+}

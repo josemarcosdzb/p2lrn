@@ -39,6 +39,15 @@ jobs:
         run: node scripts/inspect-external-visual-qa.mjs
       - name: Syntax-check visual browser contract before expensive release builds
         run: node --check scripts/browser-external-format-visual-qa.mjs
+      - name: Make official Toolkit available for verifying uploaded external packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p2lrn-official-toolkit-converter
+          path: |
+            packages/toolkit/dist/
+            packages/toolkit/package.json
+          retention-days: 2
+          if-no-files-found: error
       - name: Run full Toolkit security and regression suite
         working-directory: packages/toolkit
         run: node --test --test-concurrency=2 test/*.test.mjs

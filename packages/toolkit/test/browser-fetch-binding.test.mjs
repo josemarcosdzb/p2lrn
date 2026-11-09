@@ -16,7 +16,7 @@ const LIMITS = Object.freeze({
 });
 
 test('RemoteZipArchive preserves the platform fetch receiver', async () => {
-  const bytes = readFileSync(new URL('../../../examples/canonical/minimal-course.p2lrn', import.meta.url));
+  const bytes = readFileSync(new URL('../../../examples/canonical/external/qti3-minimal.p2lrn', import.meta.url));
   const originalFetch = globalThis.fetch;
   let calls = 0;
 
