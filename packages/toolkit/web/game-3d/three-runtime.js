@@ -435,13 +435,18 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     const root=new THREE.Group();
     // SkeletonUtils preserves the internal skeleton references for skinned GLBs.
     const visible=cloneRig(source);
-    visible.traverse((part)=>{if(part.isMesh){part.castShadow=true;part.receiveShadow=true;}});
+    visible.traverse((part)=>{if(part.isMesh){
+      part.castShadow=true;part.receiveShadow=true;
+      // Keep GPU geometry and texture buffers shared, but material state
+      // independent so highlighting a piece never recolors every instance.
+      part.material=Array.isArray(part.material)?part.material.map(m=>m.clone()):part.material.clone();
+    }});
     root.add(visible);
     root.position.fromArray(normalizePosition(position));
     root.quaternion.fromArray(rotation);
     root.scale.fromArray(scale);
     root.userData.p2lrnInteraction=interaction;
-    if(opacity<1)visible.traverse(part=>{if(part.isMesh){part.material=Array.isArray(part.material)?part.material.map(m=>m.clone()):part.material.clone();const materials=Array.isArray(part.material)?part.material:[part.material];materials.forEach(m=>{m.transparent=true;m.opacity=opacity;m.depthWrite=false;});}});
+    if(opacity<1)visible.traverse(part=>{if(part.isMesh){const materials=Array.isArray(part.material)?part.material:[part.material];materials.forEach(m=>{m.transparent=true;m.opacity=opacity;m.depthWrite=false;});}});
     stage.add(root);
     meshes.set(String(id),root);
     if(interaction)interactables.push(root);
