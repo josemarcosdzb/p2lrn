@@ -223,7 +223,6 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       if(asset?.nodes?.length){
         const m=$('label');m.append($('span',null,'Submalla del modelo'));const nodeSel=$('select');[['','Modelo completo'],...asset.nodes.map(x=>[x.nodeId,x.name])].forEach(([id,text])=>{const o=$('option');o.value=id;o.textContent=text;o.selected===(obj.nodeId??'');nodeSel.append(o);});nodeSel.addEventListener('change',()=>apply(()=>{obj.nodeId=nodeSel.value||null}));m.append(nodeSel);props.append(m);
       }
-      const link=scene.links.find(l=>l.pieceId===obj.id);
       if(link){
         const targetField=$('label');targetField.append($('span',null,'Destino correcto'));const selects=$('select');scene.targets.forEach(x=>{const o=$('option');o.value=x.id;o.textContent=x.text;o.selected=x.id===link.targetId;selects.append(o)});selects.addEventListener('change',()=>apply(()=>{link.targetId=selects.value;delete link.placement;}));targetField.append(selects);props.append(targetField);
         props.append(fieldset('Tolerancias', [link.positionTolerance,link.rotationToleranceDeg,0],(axis,n)=>{if(axis===2)return;apply(()=>{if(axis===0)link.positionTolerance=n;else link.rotationToleranceDeg=n})},{min:0,max:180,step:0.05}));
