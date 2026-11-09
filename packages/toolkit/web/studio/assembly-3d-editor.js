@@ -280,8 +280,8 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     const pair=paired(selected.id);
     if(!pair?.target)return;
     const target=pair.target,coords=target.vertices.map(v=>toWorld(v,target.transform));
-    const radius=Math.max(3.4,...coords.map(v=>Math.hypot(...v.map((n,i)=>n-target.transform.position[i]))))*2.6;
-    threeRuntime.focusOn(target.transform.position,Math.max(4.2,radius));
+    const extent=Math.max(0.8,...coords.map(v=>Math.hypot(...v.map((n,i)=>n-target.transform.position[i]))));
+    threeRuntime.focusOn(target.transform.position,Math.max(3.8,extent*2.8));
   }
   function drawAll(){if(!svg.hidden)drawScene();treePanel();propertyPanel();}
 
@@ -321,6 +321,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       if(generation!==threeGeneration||threeDestroyed)return;
       const asset=assets.find(a=>a.id===piece.assetId);
       const id='author-piece:'+piece.id;
+      let modelLoaded=!asset;
       if(asset){
         try{
           const bytes=await model.readAssemblyAsset(asset.path);
@@ -332,6 +333,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
             interaction:{kind:'assembly-editor-piece',id:piece.id},
           });
           if(generation!==threeGeneration||threeDestroyed)return;
+          modelLoaded=true;
         }catch(error){
           if(generation!==threeGeneration||threeDestroyed)return;
           message('No se pudo mostrar '+asset.name+': '+String(error.message||error));
@@ -345,7 +347,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       // Use measured GLB geometry for the initial correct pose. The saved
       // student start position stays separate; the editor shows the fit.
       const pair=paired(piece.id),bounds=runtime.getObjectLocalBounds?.(id);
-      if(pair&&!pair.link.placement&&bounds){
+      if(pair&&modelLoaded&&!pair.link.placement&&bounds){
         try{
           pair.link.placement=fitAssemblyBounds(pair.target,bounds);
           piece.initialTransform.scale=[...pair.link.placement.scale];
