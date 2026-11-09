@@ -1,0 +1,251 @@
+import {
+  ASSEMBLY_MAX_PIECES,CAGE_EDGES,cageVertices,validCage,toWorld,toLocal,
+  validateAssembly,inspectAssemblyGLB,
+} from '../assembly-3d-core.js';
+
+// The authoring viewport is a lightweight geometric overlay. The same
+// vertices, pivots and transforms feed the Player's Three.js runtime.
+// It is not a second scene model or a static image.
+const ns='http://www.w3.org/2000/svg';
+const $=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=String(text);return n;};
+const style=String.raw\`
+.p2lrn-assembly-editor{font-family:inherit;color:inherit;display:grid;gap:12px}
+.p2lrn-assembly-editor .a3-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.p2lrn-assembly-editor .a3-toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.p2lrn-assembly-editor button,.p2lrn-assembly-editor select,.p2lrn-assembly-editor input{font:inherit;border:1px solid #7b91a9;border-radius:7px;padding:7px 8px;color:inherit;background:transparent;min-width:0}
+.p2lrn-assembly-editor button{cursor:pointer;min-height:34px}
+.p2lrn-assembly-editor button[aria-pressed=true]{background:#0f766e;color:#fff;border-color:#0f766e}
+.p2lrn-assembly-editor button:focus-visible,.p2lrn-assembly-editor select:focus-visible,.p2lrn-assembly-editor input:focus-visible{outline:3px solid #0d9488;outline-offset:2px}
+.p2lrn-assembly-editor .a3-main{display:grid;grid-template-columns:minmax(145px,0.85fr) minmax(260px,2fr) minmax(225px,1.1fr);gap:10px;align-items:start}
+.p2lrn-assembly-editor .a3-pane{border:1px solid #7b91a958;border-radius:12px;padding:10px;min-width:0;display:grid;gap:10px}
+.p2lrn-assembly-editor .a3-tree{max-height:390px;overflow:auto;display:grid;gap:5px}
+.p2lrn-assembly-editor .a3-tree button{width:100%;text-align:left}
+.p2lrn-assembly-editor .a3-scene{background:radial-gradient(ellipse at 45% 45%,#183348,#071522);border-radius:12px;overflow:hidden;position:relative}
+.p2lrn-assembly-editor .a3-scene svg{width:100%;aspect-ratio:16/11;display:block;touch-action:none;cursor:grab}
+.p2lrn-assembly-editor .a3-scene svg:active{cursor:grabbing}
+.p2lrn-assembly-editor .a3-scene-note{position:absolute;bottom:8px;left:12px;color:#e2e8f0;font-size:11px;pointer-events:none}
+.p2lrn-assembly-editor .a3-panel-title{font-weight:700;font-size:14px}
+.p2lrn-assembly-editor .a3-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.p2lrn-assembly-editor label{display:grid;gap:3px;font-size:12px;font-weight:600}
+.p2lrn-assembly-editor .a3-fields input{width:100%;box-sizing:border-box}
+.p2lrn-assembly-editor .a3-property{display:grid;gap:7px}
+.p2lrn-assembly-editor .a3-property select,.p2lrn-assembly-editor .a3-property input{width:100%;box-sizing:border-box}
+.p2lrn-assembly-editor .a3-hint{font-size:12px;line-height:1.45;opacity:.84}
+.p2lrn-assembly-editor .a3-error{color:#b91c1c;min-height:1.3em;display:block}
+.p2lrn-assembly-editor .a3-scene:focus-within{outline:2px solid #0d9488}
+@media(max-width:950px){.p2lrn-assembly-editor .a3-main{grid-template-columns:1fr 1fr}.p2lrn-assembly-editor .a3-scene{grid-column:1 / -1;grid-row:1}}
+@media(max-width:620px){.p2lrn-assembly-editor .a3-main{grid-template-columns:1fr}.p2lrn-assembly-editor .a3-scene{grid-column:1;grid-row:auto}}
+\`.slice(1,-1);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const degrees=180/Math.PI;
+function eulerQuat(a){const [x,y,z]=a.map(n=>n/degrees/2),cx=Math.cos(x),cy=Math.cos(y),cz=Math.cos(z),sx=Math.sin(x),sy=Math.sin(y),sz=Math.sin(z);return[
+  sx*cy*cz-cx*sy*sz,cx*sy*cz+sx*cy*sz,cx*cy*sz-sx*sy*cz,cx*cy*cz+sx*sy*sz
+];}
+function quatEuler(q){const [x,y,z,w]=q;return[
+  Math.atan2(2*(w*x+y*z),1-2*(x*x+y*y))*degrees,
+  Math.asin(clamp(2*(w*y-z*x),-1,1))*degrees,
+  Math.atan2(2*(w*z+x*y),1-2*(y*y+z*z))*degrees,
+];}
+function syncQuestion(question){
+  const scene=question.assembly3d;
+  question.items=scene.pieces.map(p=>({id:p.id,text:p.text}));
+  question.categories=scene.targets.map(t=>({id:t.id,text:t.text}));
+  question.solution={assignments:scene.links.map(l=>({item:l.pieceId,category:l.targetId}))};
+}
+function nextId(prefix,things){let n=1;while(things.some(x=>x.id===prefix+'-'+n))n++;return prefix+'-'+n}
+function mountStyle(root){
+  const owner=root instanceof ShadowRoot?root:document.head;
+  if(owner.querySelector('style[data-p2lrn-assembly-style]'))return;
+  const tag=$('style');tag.dataset.p2lrnAssemblyStyle='1';tag.textContent=style;owner.append(tag);
+}
+function numeric(value,callback,{min=-1000,max=1000,step=0.05}={}){
+  const field=$('input');field.type='number';field.step=String(step);field.min=String(min);field.max=String(max);field.value=String(Math.round(value*1000)/1000);
+  field.addEventListener('change',()=>{const n=Number(field.value);if(Number.isFinite(n)&&n>=min&&n<=max)callback(n);else field.value=String(Math.round(value*1000)/1000);});
+  return field;
+}
+
+export function renderAssembly3DEditor(container,{question,model,commit,onStatus=()=>{}}={}){
+  if(!question?.assembly3d)throw Error('La actividad no tiene escena de montaje');
+  mountStyle(container.getRootNode());
+  const scene=question.assembly3d,root=$('section','p2lrn-assembly-editor');
+  const head=$('div','a3-head'),buttons=$('div','a3-toolbar'),main=$('div','a3-main');
+  const tree=$('aside','a3-pane'),center=$('div','a3-scene'),props=$('aside','a3-pane');
+  const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 600 410');svg.setAttribute('role','img');svg.setAttribute('aria-label','Editor 3D de piezas y volúmenes de encaje; gira arrastrando el fondo');
+  svg.tabIndex=0;const note=$('div','a3-scene-note','Arrastra puntos verdes para editar · Mayús: altura · Fondo: girar vista');
+  const warning=$('p','a3-error');warning.setAttribute('role','status');warning.setAttribute('aria-live','polite');
+  let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0;
+  let yaw=0.55,pitch=0.73,zoom=46,drag=null;
+  const history=[JSON.stringify(scene)],redo=[];
+  const btn=(name,callback)=>{const b=$('button',null,name);b.type='button';b.addEventListener('click',callback);return b;};
+  const message=(s)=>{warning.textContent=s;onStatus(s);};
+  const snapshot=()=>{const value=JSON.stringify(scene);if(history.at(-1)!==value){history.push(value);if(history.length>50)history.shift();redo.length=0;}};
+  function restore(value){
+    const loaded=JSON.parse(value);
+    for(const key of Object.keys(scene))delete scene[key];
+    Object.assign(scene,loaded);syncQuestion(question);commit();drawAll();
+  }
+  function apply(mutator,{redraw=true,save=true}={}){
+    const previous=JSON.stringify(scene);
+    try{mutator();validateAssembly(scene,{requireReady:false});syncQuestion(question);
+      if(save){commit();snapshot();}if(redraw)drawAll();message('');return true;
+    }catch(error){const loaded=JSON.parse(previous);for(const k of Object.keys(scene))delete scene[k];Object.assign(scene,loaded);message(error.message||'Geometría inválida');if(redraw)drawAll();return false;}
+  }
+  const undo=btn('Deshacer',()=>{if(history.length<2)return;const current=history.pop();redo.push(current);restore(history.at(-1));});
+  const redoButton=btn('Rehacer',()=>{if(!redo.length)return;const next=redo.pop();history.push(next);restore(next);});
+  const add=btn('+ Pieza y destino',()=>{
+    if(scene.pieces.length>=ASSEMBLY_MAX_PIECES){message('Máximo de piezas alcanzado');return;}
+    const item=nextId('piece',scene.pieces),dest=nextId('target',scene.targets),n=scene.pieces.length;
+    apply(()=>{scene.pieces.push({id:item,text:'Pieza '+(n+1),assetId:null,nodeId:null,initialTransform:{position:[(n%5-2)*1.9,0.85,2.5+Math.floor(n/5)],rotation:[0,0,0,1],scale:[1,1,1]}});scene.targets.push({id:dest,text:'Destino '+(n+1),vertices:cageVertices(),transform:{position:[(n%5-2)*1.85,1.2,-2.5-Math.floor(n/5)*1.8],rotation:[0,0,0,1],scale:[1,1,1]},visibility:'outline'});scene.links.push({pieceId:item,targetId:dest,positionTolerance:0.18,rotationToleranceDeg:22,prerequisites:[]});selected={kind:'target',id:dest};});
+  });
+  const remove=btn('Eliminar pareja',()=>{
+    if(scene.pieces.length<=2)return message('El juego necesita al menos dos piezas');
+    const link=scene.links.find(x=>x.pieceId===selected.id||x.targetId===selected.id);
+    if(!link)return;
+    apply(()=>{scene.links=scene.links.filter(x=>x!==link);scene.pieces=scene.pieces.filter(x=>x.id!==link.pieceId);scene.targets=scene.targets.filter(x=>x.id!==link.targetId);scene.links.forEach(x=>x.prerequisites=x.prerequisites.filter(y=>y!==link.pieceId));selected={kind:'target',id:scene.targets[0].id};});
+  });
+  buttons.append(undo,redoButton,add,remove);
+  head.append($('strong',null,'Ensamblaje 3D · editor de piezas y jaulas'),buttons);
+  root.append(head);
+  tree.append($('strong',null,'Escena / piezas / destinos'));
+  const entries=$('div','a3-tree');tree.append(entries);
+  center.append(svg,note);props.append($('strong',null,'Propiedades'));
+  main.append(tree,center,props);root.append(main,warning);container.replaceChildren(root);
+  const centerPoint={x:300,y:212};
+  const project=(p)=>{
+    const rx=p[0]*Math.cos(yaw)-p[2]*Math.sin(yaw),rz=p[0]*Math.sin(yaw)+p[2]*Math.cos(yaw);
+    return [centerPoint.x+zoom*rx,centerPoint.y-zoom*(p[1]*Math.cos(pitch)-rz*Math.sin(pitch)),rz];
+  };
+  const pointer=(e)=>{const r=svg.getBoundingClientRect();return[(e.clientX-r.left)*600/r.width,(e.clientY-r.top)*410/r.height];};
+  const element=(tag,attrs={},parent=svg)=>{const n=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,String(v));parent.append(n);return n;};
+  const path=(pts,color,width=2,opacity=1)=>element('path',{d:pts.map(([x,y],i)=>(i?'L':'M')+x.toFixed(2)+' '+y.toFixed(2)).join(''),stroke:color,'stroke-width':width,'stroke-opacity':opacity,fill:'none'});
+  function deltaWorld(dx,dy,vertical){
+    if(vertical)return[0,-dy/(zoom*Math.cos(pitch)),0];
+    const rx=dx/zoom,rz=dy/(zoom*Math.sin(pitch));
+    return[rx*Math.cos(yaw)+rz*Math.sin(yaw),0,-rx*Math.sin(yaw)+rz*Math.cos(yaw)];
+  }
+  function drawScene(){
+    svg.replaceChildren();
+    const g=element('g',{'aria-hidden':'true'});
+    const grid=Array.from({length:15},(_,i)=>i-7);
+    grid.forEach(v=>{const line1=[[-7,0,v],[7,0,v]],line2=[[v,0,-7],[v,0,7]];const a=line1.map(project),b=line2.map(project);element('path',{d:'M'+a[0][0]+' '+a[0][1]+'L'+a[1][0]+' '+a[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);element('path',{d:'M'+b[0][0]+' '+b[0][1]+'L'+b[1][0]+' '+b[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);});
+    const sortItems=[];
+    scene.targets.forEach(target=>{const world=target.vertices.map(v=>toWorld(v,target.transform)),coords=world.map(project);sortItems.push({depth:project(target.transform.position)[2],run:()=>{
+      const active=selected.kind==='target'&&selected.id===target.id;
+      const group=element('g',{'data-kind':'target','data-id':target.id});
+      CAGE_EDGES.forEach(([a,b])=>{const c=coords[a],d=coords[b];const line=element('path',{d:'M'+c[0]+' '+c[1]+' L'+d[0]+' '+d[1],stroke:active?'#5eead4':'#6bbac0','stroke-width':active?2.8:1.8,fill:'none','stroke-opacity':target.visibility==='hidden'?0.45:0.9},group);line.dataset.kind='target';line.dataset.id=target.id;line.style.cursor='move';});
+      if(active)coords.forEach(([x,y],index)=>{const n=element('circle',{cx:x,cy:y,r:6,fill:index===vertexIndex?'#fef08a':'#14b8a6',stroke:'#ffffff','stroke-width':1.4,tabindex:'0',role:'button','aria-label':'Vértice '+(index+1)},group);n.dataset.kind='vertex';n.dataset.id=target.id;n.dataset.index=String(index);n.style.cursor='move';});
+      const loc=project(target.transform.position);
+      element('text',{x:loc[0]+7,y:loc[1]+8,fill:'#ccfbf1','font-size':12},group).textContent=target.text;
+    }});});
+    scene.pieces.forEach(piece=>{const p=project(piece.initialTransform.position);sortItems.push({depth:p[2],run:()=>{
+      const active=selected.kind==='piece'&&selected.id===piece.id;
+      const node=element('g',{'data-kind':'piece','data-id':piece.id});const box=element('rect',{x:p[0]-12,y:p[1]-12,width:24,height:24,rx:5,fill:active?'#fcd34d':'#60a5fa',stroke:'#e2e8f0','stroke-width':active?2:1},node);box.dataset.kind='piece';box.dataset.id=piece.id;box.style.cursor='move';element('text',{x:p[0]+16,y:p[1]+5,fill:'#eff6ff','font-size':12},node).textContent=piece.text;
+    }});});
+    sortItems.sort((a,b)=>b.depth-a.depth).forEach(item=>item.run());
+  }
+  function fieldset(label,values,onEdit,options={}){
+    const wrap=$('div','a3-property'),cap=$('span','a3-panel-title',label),row=$('div','a3-fields');
+    values.forEach((value,i)=>{const field=$('label');field.append($('span',null,['X','Y','Z'][i]));field.append(numeric(value,n=>onEdit(i,n),options));row.append(field);});
+    wrap.append(cap,row);return wrap;
+  }
+  function propertyPanel(){
+    props.replaceChildren($('strong',null,'Propiedades'));
+    const obj=selected.kind==='piece'?scene.pieces.find(x=>x.id===selected.id):scene.targets.find(x=>x.id===selected.id);
+    if(!obj){props.append($('p','a3-hint','Selecciona una pieza o destino.'));return}
+    props.append($('div','a3-panel-title',(selected.kind==='piece'?'Pieza · ':'Destino · ')+obj.id));
+    const name=$('label');name.append($('span',null,'Nombre educativo'));const nameInput=$('input');nameInput.type='text';nameInput.maxLength=100;nameInput.value=obj.text;nameInput.addEventListener('change',()=>apply(()=>{obj.text=nameInput.value.trim()||obj.text}));name.append(nameInput);props.append(name);
+    const t=selected.kind==='piece'?obj.initialTransform:obj.transform;
+    props.append(fieldset('Posición (m)',t.position,(axis,n)=>apply(()=>{t.position[axis]=n}),{step:0.1}));
+    props.append(fieldset('Rotación (°)',quatEuler(t.rotation),(axis,n)=>apply(()=>{const xyz=quatEuler(t.rotation);xyz[axis]=n;t.rotation=eulerQuat(xyz)}),{min:-180,max:180,step:5}));
+    props.append(fieldset('Escala',t.scale,(axis,n)=>apply(()=>{t.scale[axis]=n}),{min:0.001,max:100,step:0.1}));
+    if(selected.kind==='target'){
+      const pick=$('label');pick.append($('span',null,'Vértice editable'));
+      const sel=$('select');obj.vertices.forEach((v,i)=>{const o=$('option');o.value=String(i);o.textContent='V'+(i+1);o.selected=vertexIndex===i;sel.append(o);});sel.addEventListener('change',()=>{vertexIndex=Number(sel.value);drawScene();propertyPanel();});pick.append(sel);props.append(pick);
+      props.append(fieldset('Vértice V'+(vertexIndex+1)+' (local)',obj.vertices[vertexIndex],(axis,n)=>apply(()=>{obj.vertices[vertexIndex][axis]=n}),{min:-100,max:100,step:0.1}));
+      const vis=$('label');vis.append($('span',null,'Ayuda visual al alumno'));const vs=$('select');[['outline','Contorno'],['hint','Pista al aproximarse'],['hidden','Invisible']].forEach(([id,label])=>{const o=$('option');o.value=id;o.textContent=label;o.selected=obj.visibility===id;vs.append(o);});vs.addEventListener('change',()=>apply(()=>{obj.visibility=vs.value}));vis.append(vs);props.append(vis);
+    }else{
+      const assetLabel=$('label');assetLabel.append($('span',null,'Modelo GLB de la pieza'));const sel=$('select');
+      [['','Forma básica'] ,...scene.assets.map(a=>[a.id,a.name])].forEach(([id,text])=>{const o=$('option');o.value=id;o.textContent=text;o.selected===(obj.assetId??'');sel.append(o);});
+      sel.addEventListener('change',()=>apply(()=>{obj.assetId=sel.value||null;obj.nodeId=null}));assetLabel.append(sel);props.append(assetLabel);
+      const asset=scene.assets.find(x=>x.id===obj.assetId);
+      if(asset?.nodes?.length){
+        const m=$('label');m.append($('span',null,'Submalla del modelo'));const nodeSel=$('select');[['','Modelo completo'],...asset.nodes.map(x=>[x.nodeId,x.name])].forEach(([id,text])=>{const o=$('option');o.value=id;o.textContent=text;o.selected===(obj.nodeId??'');nodeSel.append(o);});nodeSel.addEventListener('change',()=>apply(()=>{obj.nodeId=nodeSel.value||null}));m.append(nodeSel);props.append(m);
+      }
+      const link=scene.links.find(l=>l.pieceId===obj.id);
+      if(link){
+        const targetField=$('label');targetField.append($('span',null,'Destino correcto'));const selects=$('select');scene.targets.forEach(x=>{const o=$('option');o.value=x.id;o.textContent=x.text;o.selected=x.id===link.targetId;selects.append(o)});selects.addEventListener('change',()=>apply(()=>{link.targetId=selects.value}));targetField.append(selects);props.append(targetField);
+        props.append(fieldset('Tolerancias', [link.positionTolerance,link.rotationToleranceDeg,0],(axis,n)=>{if(axis===2)return;apply(()=>{if(axis===0)link.positionTolerance=n;else link.rotationToleranceDeg=n})},{min:0,max:180,step:0.05}));
+        const prerequisites=$('label');prerequisites.append($('span',null,'Requiere colocar primero'));
+        const dep=$('select');[['','Ninguna'],...scene.pieces.filter(x=>x.id!==obj.id).map(x=>[x.id,x.text])].forEach(([v,name])=>{const o=$('option');o.value=v;o.textContent=name;o.selected===(link.prerequisites[0]??'');dep.append(o);});dep.addEventListener('change',()=>apply(()=>{link.prerequisites=dep.value?[dep.value]:[]}));prerequisites.append(dep);props.append(prerequisites);
+      }
+    }
+  }
+  function treePanel(){
+    entries.replaceChildren();
+    for(const [name,kind,items] of [['Piezas','piece',scene.pieces],['Destinos','target',scene.targets]]){
+      entries.append($('strong',null,name));
+      items.forEach(p=>{const b=btn(p.text,()=>{selected={kind,id:p.id};vertexIndex=0;drawAll();});b.setAttribute('aria-pressed',selected.kind===kind&&selected.id===p.id?'true':'false');entries.append(b);});
+    }
+    const importLabel=$('label');importLabel.append($('strong',null,'Importar modelo GLB'));
+    const file=$('input');file.type='file';file.accept='.glb,model/gltf-binary';file.setAttribute('aria-label','Importar modelo 3D GLB');
+    file.addEventListener('change',async()=>{const selectedFile=file.files?.[0];if(!selectedFile)return;try{
+      if(selectedFile.size>24*1024*1024)throw Error('Archivo GLB demasiado grande (máximo 24 MiB)');
+      const bytes=new Uint8Array(await selectedFile.arrayBuffer());
+      const metadata=inspectAssemblyGLB(bytes);
+      const resource=await model.addAssemblyAsset({bytes,filename:selectedFile.name});
+      apply(()=>{if(!scene.assets.some(a=>a.id===resource.id))scene.assets.push({id:resource.id,path:resource.path,name:selectedFile.name,size:resource.size,nodes:metadata.nodes});
+        const piece=scene.pieces.find(p=>p.id===selected.id);if(piece){piece.assetId=resource.id;piece.nodeId=metadata.nodes.length===1?metadata.nodes[0].nodeId:null;}
+      });
+    }catch(error){message(error.message||String(error));}finally{file.value='';}});
+    importLabel.append(file);entries.append(importLabel);
+    const reference=$('label');reference.append($('span',null,'Modelo base (referencia)'));const refSelect=$('select');
+    [['','Sin modelo base'],...scene.assets.map(a=>[a.id,a.name])].forEach(([id,text])=>{const o=$('option');o.value=id;o.textContent=text;o.selected=== (scene.referenceAssetId??'');refSelect.append(o);});
+    refSelect.addEventListener('change',()=>apply(()=>{scene.referenceAssetId=refSelect.value||null}));reference.append(refSelect);entries.append(reference);
+    entries.append($('small','a3-hint','El archivo GLB se incorpora al curso. Si contiene varios nodos, selecciona qué submalla corresponde a cada pieza. Las jaulas son los destinos, no una copia del modelo.'));
+  }
+  function drawAll(){drawScene();treePanel();propertyPanel();}
+  svg.addEventListener('pointerdown',e=>{
+    if(e.button!==0&&e.pointerType==='mouse')return;
+    const kind=e.target?.dataset?.kind,id=e.target?.dataset?.id,index=Number(e.target?.dataset?.index??-1),p=pointer(e);
+    if(kind==='vertex'){selected={kind:'target',id};vertexIndex=index;}
+    else if(kind==='piece'||kind==='target')selected={kind,id};
+    drag={kind:kind??'orbit',id,index,initial:p,last:p,changed:false,original:JSON.stringify(scene)};
+    svg.setPointerCapture?.(e.pointerId);drawAll();e.preventDefault();
+  });
+  svg.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    const p=pointer(e),dx=p[0]-drag.last[0],dy=p[1]-drag.last[1];drag.last=p;
+    if(Math.abs(dx)+Math.abs(dy)<0.1)return;
+    if(drag.kind==='orbit'){yaw+=dx*0.008;pitch=clamp(pitch-dy*0.006,0.28,1.35);drawScene();return;}
+    const worldDelta=deltaWorld(dx,dy,e.shiftKey);
+    const obj=drag.kind==='piece'?scene.pieces.find(x=>x.id===drag.id):scene.targets.find(x=>x.id===drag.id);
+    if(!obj)return;
+    if(drag.kind==='vertex'){
+      const target=scene.targets.find(x=>x.id===drag.id);
+      const p0=toWorld(target.vertices[drag.index],target.transform);
+      const local=toLocal(p0.map((x,i)=>x+worldDelta[i]),target.transform);
+      const before=[...target.vertices[drag.index]];target.vertices[drag.index]=local;
+      if(!validCage(target.vertices))target.vertices[drag.index]=before;else drag.changed=true;
+    }else{
+      const t=drag.kind==='piece'?obj.initialTransform:obj.transform;
+      t.position=t.position.map((n,i)=>n+worldDelta[i]);drag.changed=true;
+    }
+    drawScene();e.preventDefault();
+  });
+  const finishDrag=(e,cancel=false)=>{if(!drag)return;
+    const original=JSON.parse(drag.original),changed=drag.changed;drag=null;
+    if(cancel){for(const k of Object.keys(scene))delete scene[k];Object.assign(scene,original);drawAll();return;}
+    if(changed){try{validateAssembly(scene,{requireReady:false});syncQuestion(question);commit();snapshot();message('');}catch(error){for(const k of Object.keys(scene))delete scene[k];Object.assign(scene,original);message(error.message);}}
+    drawAll();
+    if(e){try{svg.releasePointerCapture?.(e.pointerId);}catch{}}
+  };
+  svg.addEventListener('pointerup',e=>finishDrag(e));
+  svg.addEventListener('pointercancel',e=>finishDrag(e,true));
+  svg.addEventListener('wheel',e=>{e.preventDefault();zoom=clamp(zoom*(e.deltaY>0?0.93:1.07),18,130);drawScene();},{passive:false});
+  svg.addEventListener('keydown',e=>{if(!selected.id||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;
+    e.preventDefault();const step=e.shiftKey?0.2:0.05,axis=e.shiftKey?1:(e.key==='ArrowLeft'||e.key==='ArrowRight'?0:2),amount=e.key==='ArrowLeft'||e.key==='ArrowDown'?-step:step;
+    apply(()=>{const obj=selected.kind==='piece'?scene.pieces.find(x=>x.id===selected.id):scene.targets.find(x=>x.id===selected.id);const t=selected.kind==='piece'?obj.initialTransform:obj.transform;t.position[axis]+=amount;});
+  });
+  drawAll();
+  return {destroy(){if(root.isConnected)root.remove()}};
+}
