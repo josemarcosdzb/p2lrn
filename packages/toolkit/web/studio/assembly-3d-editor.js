@@ -21,7 +21,8 @@ const style=`
 .p2lrn-assembly-editor .a3-tree{max-height:390px;overflow:auto;display:grid;gap:5px}
 .p2lrn-assembly-editor .a3-tree button{width:100%;text-align:left}
 .p2lrn-assembly-editor .a3-scene{background:radial-gradient(ellipse at 45% 45%,#183348,#071522);border-radius:12px;overflow:hidden;position:relative}
-.p2lrn-assembly-editor .a3-scene svg{width:100%;aspect-ratio:16/11;display:block;touch-action:none;cursor:grab}
+ .p2lrn-assembly-editor .a3-scene svg,.p2lrn-assembly-editor .a3-scene canvas{width:100%;aspect-ratio:16/11;display:block;touch-action:none;cursor:grab}
+.p2lrn-assembly-editor .a3-scene [hidden]{display:none!important}
 .p2lrn-assembly-editor .a3-scene svg:active{cursor:grabbing}
 .p2lrn-assembly-editor .a3-scene-note{position:absolute;bottom:8px;left:12px;color:#e2e8f0;font-size:11px;pointer-events:none}
 .p2lrn-assembly-editor .a3-panel-title{font-weight:700;font-size:14px}
@@ -64,7 +65,7 @@ function numeric(value,callback,{min=-1000,max=1000,step=0.05}={}){
   return field;
 }
 
-export function renderAssembly3DEditor(container,{question,model,commit,onStatus=()=>{}}={}){
+export function renderAssembly3DEditor(container,{question,model,commit,onStatus=()=>{},createScene=null}={}){
   if(!question?.assembly3d)throw Error('La actividad no tiene escena de montaje');
   // Cards are assembled detached from the DOM; wait until the editor is
   // attached so its styles reach either Document or the npm ShadowRoot.
@@ -73,10 +74,13 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   const head=$('div','a3-head'),buttons=$('div','a3-toolbar'),main=$('div','a3-main');
   const tree=$('aside','a3-pane'),center=$('div','a3-scene'),props=$('aside','a3-pane');
   const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 600 410');svg.setAttribute('role','img');svg.setAttribute('aria-label','Editor 3D de piezas y volúmenes de encaje; gira arrastrando el fondo');
-  svg.tabIndex=0;const note=$('div','a3-scene-note','Arrastra puntos verdes para editar · Mayús: altura · Fondo: girar vista');
+  svg.tabIndex=0;
+  const canvas=$('canvas','a3-webgl');canvas.hidden=true;canvas.tabIndex=0;canvas.setAttribute('aria-label','Visor 3D editable; arrastra piezas, jaulas o vértices, y gira la cámara arrastrando el fondo');
+  const note=$('div','a3-scene-note','Arrastra puntos verdes para editar · Mayús: altura · Fondo: girar vista');
   const warning=$('p','a3-error');warning.setAttribute('role','status');warning.setAttribute('aria-live','polite');
   let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0;
   let yaw=0.55,pitch=0.73,zoom=46,drag=null;
+  let threeRuntime=null,threeDestroyed=false,threeSignature=null,threePending=false,threeGeneration=0,threeDrag=null;
   const history=[JSON.stringify(scene)],redo=[];
   const btn=(name,callback)=>{const b=$('button',null,name);b.type='button';b.addEventListener('click',callback);return b;};
   const message=(s)=>{warning.textContent=s;onStatus(s);};
@@ -84,13 +88,13 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   function restore(value){
     const loaded=JSON.parse(value);
     for(const key of Object.keys(scene))delete scene[key];
-    Object.assign(scene,loaded);syncQuestion(question);commit();drawAll();
+    Object.assign(scene,loaded);syncQuestion(question);commit();drawAll();scheduleThreeSync();
   }
   function apply(mutator,{redraw=true,save=true}={}){
     const previous=JSON.stringify(scene);
     try{mutator();validateAssembly(scene,{requireReady:false});syncQuestion(question);
-      if(save){commit();snapshot();}if(redraw)drawAll();message('');return true;
-    }catch(error){const loaded=JSON.parse(previous);for(const k of Object.keys(scene))delete scene[k];Object.assign(scene,loaded);message(error.message||'Geometría inválida');if(redraw)drawAll();return false;}
+      if(save){commit();snapshot();}if(redraw)drawAll();scheduleThreeSync();message('');return true;
+    }catch(error){const loaded=JSON.parse(previous);for(const k of Object.keys(scene))delete scene[k];Object.assign(scene,loaded);message(error.message||'Geometría inválida');if(redraw)drawAll();scheduleThreeSync();return false;}
   }
   const undo=btn('Deshacer',()=>{if(history.length<2)return;const current=history.pop();redo.push(current);restore(history.at(-1));});
   const redoButton=btn('Rehacer',()=>{if(!redo.length)return;const next=redo.pop();history.push(next);restore(next);});
@@ -110,7 +114,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   root.append(head);
   tree.append($('strong',null,'Escena / piezas / destinos'));
   const entries=$('div','a3-tree');tree.append(entries);
-  center.append(svg,note);props.append($('strong',null,'Propiedades'));
+  center.append(svg,canvas,note);props.append($('strong',null,'Propiedades'));
   main.append(tree,center,props);root.append(main,warning);container.replaceChildren(root);
   const centerPoint={x:300,y:212};
   const project=(p)=>{
@@ -205,7 +209,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     refSelect.addEventListener('change',()=>apply(()=>{scene.referenceAssetId=refSelect.value||null}));reference.append(refSelect);entries.append(reference);
     entries.append($('small','a3-hint','El archivo GLB se incorpora al curso. Si contiene varios nodos, selecciona qué submalla corresponde a cada pieza. Las jaulas son los destinos, no una copia del modelo.'));
   }
-  function drawAll(){drawScene();treePanel();propertyPanel();}
+  function drawAll(){if(!svg.hidden)drawScene();treePanel();propertyPanel();}
   svg.addEventListener('pointerdown',e=>{
     if(e.button!==0&&e.pointerType==='mouse')return;
     const kind=e.target?.dataset?.kind,id=e.target?.dataset?.id,index=Number(e.target?.dataset?.index??-1),p=pointer(e);
