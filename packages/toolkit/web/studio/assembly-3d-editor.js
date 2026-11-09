@@ -85,9 +85,14 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   const scene=question.assembly3d,root=$('section','p2lrn-assembly-editor');
   const head=$('div','a3-head'),buttons=$('div','a3-toolbar'),main=$('div','a3-main');
   const tree=$('details','a3-assets'),center=$('div','a3-scene'),props=$('aside','a3-pane a3-properties');
+  // A definite camera viewport prevents the canvas intrinsic 16:11 ratio
+  // from making a second, scroll-length screen with the cage far below view.
+  center.style.height='clamp(400px,65vh,720px)';
+  center.style.position='relative';
+  center.style.overflow='hidden';
   const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 600 410');svg.setAttribute('role','img');svg.setAttribute('aria-label','Editor 3D de piezas y volúmenes de encaje; gira arrastrando el fondo');
-  svg.tabIndex=0;svg.hidden=true;
-  const canvas=$('canvas','a3-webgl');canvas.hidden=false;canvas.tabIndex=0;canvas.setAttribute('aria-label','Visor 3D editable; arrastra piezas, jaulas o vértices, y gira la cámara arrastrando el fondo');
+  svg.tabIndex=0;svg.hidden=true;svg.style.cssText='width:100%;height:100%;display:block;touch-action:none';
+  const canvas=$('canvas','a3-webgl');canvas.hidden=false;canvas.tabIndex=0;canvas.style.cssText='width:100%;height:100%;display:block;touch-action:none';canvas.setAttribute('aria-label','Visor 3D editable; arrastra piezas, jaulas o vértices, y gira la cámara arrastrando el fondo');
   const note=$('div','a3-scene-note','La pieza aparece dentro de su destino. Arrástrala para ajustar el encaje; arrastra el fondo para girar.');
   const warning=$('p','a3-error');warning.setAttribute('role','status');warning.setAttribute('aria-live','polite');
   let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0;
