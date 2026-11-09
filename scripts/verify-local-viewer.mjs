@@ -639,7 +639,7 @@ async function verifyThreeGameInteractionAndResume(cdp){
     // Real assembly scene, real GLB and same exported course, in the actual
     // Player/Three.js/Rapier browser runtime. Check no fallback model warning.
     go('Siguiente');
-    await wait(()=>title()==='Ensambla las piezas en el espacio','3D assembly scene');
+    await wait(()=>title()==='Ensambla las piezas en el espacio' && Boolean(trial()?.querySelector('select[aria-label="Pieza que vas a colocar"]')),'3D assembly scene');
     if(!root.querySelector('.p2lrn-3d-interactive'))throw new Error('3D assembly silently entered fallback mode');
     const assemblyTrial=trial();
     const warning=assemblyTrial.querySelector('[role=alert]');
