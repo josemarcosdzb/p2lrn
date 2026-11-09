@@ -85,7 +85,7 @@ jobs:
           }
           $before = FreeGiB
           Write-Output ('OPENEDX_BEFORE_FREE_GIB=' + $before)
-          if ($before -lt 4.0) { throw 'Open edX recovery blocked: Windows has less than 4 GiB free' }
+          if ($before -lt 1.5) { throw 'Open edX ingress correction blocked: critical Windows memory pressure' }
           $connectedByThisJob = $false
           $routeCreatedByThisJob = $false
           $network = 'openedx-josemarcosdiaz_default'
@@ -125,6 +125,19 @@ jobs:
             & docker exec aulap2p-ingress-local caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile --address 127.0.0.1:2019 | Out-Null
             if ($LASTEXITCODE -ne 0) { throw 'Caddy reload rejected; restoration required' }
             Write-Output 'OPENEDX_EXISTING_NETWORK_AND_ROUTE_CONNECTED=YES'
+            $outputDir = Join-Path $env:RUNNER_TEMP 'p2lrn-interoperability-preflight'
+            $env:P2LRN_INTEROP_OUTPUT = $outputDir
+            node scripts/interoperability/probe-real-destinations.mjs | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot confirm repaired Open edX LTI route' }
+            $routeReport = Get-Content (Join-Path $outputDir 'real-destination-preflight.json') -Raw | ConvertFrom-Json
+            $routeEdx = $routeReport.cases | Where-Object { $_.id -eq 'openedx' }
+            if ($routeEdx.providerTransportReady -ne $true) { throw 'Provider still unreachable through corrected Open edX route' }
+            Write-Output 'OPENEDX_LTI_PROVIDER_ROUTING_VERIFIED=YES'
+            if ((FreeGiB) -lt 4.0) {
+              Write-Output ('OPENEDX_CORE_START_NOT_ATTEMPTED_LOW_MEMORY_GIB=' + (FreeGiB))
+              Remove-Item -LiteralPath $routeTemp -Force -ErrorAction SilentlyContinue
+              return
+            }
             foreach ($name in $names) {
               $exists = & docker inspect --format '{{.State.Running}}' $name
               if ($LASTEXITCODE -ne 0) { throw ('Existing Open edX container not found: ' + $name) }
