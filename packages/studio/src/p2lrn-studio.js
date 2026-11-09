@@ -479,7 +479,7 @@ export class P2LRNStudioElement extends HTMLElement{
       const questionnaire=await this.#studio.readQuestionnaire(entity.id);
       if(questionnaire){
         const renderer=entity.extensions?.['https://p2lrn.org/ext/renderer-preference/1']?.preferred??'https://p2lrn.org/renderer/questionnaire/standard';
-        renderQuestionnaireVisualEditor(sheet,{model:this.#studio,activityId:entity.id,payload:questionnaire.payload,renderer,onChange:()=>this._updateState(),onStatus:(message)=>this.setStatus(message)});
+        renderQuestionnaireVisualEditor(sheet,{model:this.#studio,activityId:entity.id,payload:questionnaire.payload,renderer,onChange:()=>this._updateState(),onStatus:(message)=>this.setStatus(message),createScene:async(canvas,options)=>{const api=await playerApi();if(typeof api?.create3DAuthoringScene!=='function')throw new Error('El Player 3D no está disponible en esta instalación');return api.create3DAuthoringScene(canvas,options);}});
         stage.append(sheet);return;
       }
       const structured=await this.#studio.readStructuredJson(entity.id);
