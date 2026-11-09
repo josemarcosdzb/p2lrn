@@ -329,7 +329,7 @@ async function renderEditor(){
   const questionnaire=await studio.readQuestionnaire(entity.id);
   if(questionnaire){
     const renderer=entity.extensions?.['https://p2lrn.org/ext/renderer-preference/1']?.preferred??'https://p2lrn.org/renderer/questionnaire/standard';
-    renderQuestionnaireVisualEditor(content,{model:studio,activityId:entity.id,payload:questionnaire.payload,renderer,onChange:()=>updateChanges(),onStatus:setStatus});
+    renderQuestionnaireVisualEditor(content,{model:studio,activityId:entity.id,payload:questionnaire.payload,renderer,onChange:()=>updateChanges(),onStatus:setStatus,createScene:async(canvas,options)=>{const api=await (globalThis.P2LRNReady??Promise.resolve(globalThis.P2LRN));if(typeof api?.create3DAuthoringScene!=='function')throw new Error('El Player 3D no está disponible en este Studio');return api.create3DAuthoringScene(canvas,options);}});
     return;
   }
   const structured=await studio.readStructuredJson(entity.id);
@@ -581,7 +581,7 @@ async function addContentKind(kind,{placement='new-page'}={}){
   if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'es'});return selectCreated(a,'Votación en directo añadida');}
   if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'es'});return selectCreated(a,'Pizarra compartida añadida');}
   if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'es'});return selectCreated(a,'Revisión entre pares añadida');}
-  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification'].includes(kind)){const names={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','fill-blanks':'Rellenar huecos','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D','3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'es'});return selectCreated(a,names[kind]+' añadido');}
+  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification','assembly-3d'].includes(kind)){const names={memory:'Memoria',matching:'Relacionar',ordering:'Ordenar',classification:'Clasificar','true-false':'Verdadero / Falso','fill-blanks':'Rellenar huecos','word-search':'Sopa de letras',crossword:'Crucigrama',rosco:'Rosco','3d':'Juego 3D','3d-matching':'Relacionar 3D','3d-classification':'Clasificar 3D','assembly-3d':'Ensamblaje 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'es'});return selectCreated(a,names[kind]+' añadido');}
   if(kind==='component'){chooseComponent();return;}
   if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:'Grupo de actividades',language:'es',mode:'free',completion:'all'});return selectCreated(activity,'Grupo de actividades añadido');}
   }finally{if(selectedId===target)selectedId=previous;}

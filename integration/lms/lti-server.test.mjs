@@ -263,6 +263,94 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.deepEqual(calls.map(x=>x.path),['/token','/ags/items/1/scores']);
   const pending=await (await req('/lti/admin/ags/pending',{headers:admin})).json();
   assert.equal(pending.pending.length,0);
+
+  // One-step teacher upload from the actual signed LTI Deep Linking picker.
+  // No administrative bearer token may be present in the browser request.
+  const secondTeacher=await begin('LtiDeepLinkingRequest');
+  const teacherPicker=await req('/lti/deep-link',{method:'POST',headers:{
+   'Content-Type':'application/x-www-form-urlencoded','Cookie':secondTeacher.browserCookie
+  },body:new URLSearchParams({state:secondTeacher.state,id_token:signedPlatformToken({
+   nonce:secondTeacher.nonce,kind:'LtiDeepLinkingRequest',target:secondTeacher.target
+  })})});
+  assert.equal(teacherPicker.status,200);
+  const pickerMarkup=await teacherPicker.text();
+  assert.match(pickerMarkup,/Publicar y añadir/);
+  assert.match(pickerMarkup,/enctype="multipart\/form-data"/);
+  assert.match(pickerMarkup,/name="course"/);
+  const uploadTicket=/name="ticket" value="([^"]+)"/.exec(pickerMarkup)?.[1];
+  assert.ok(uploadTicket,'signed teacher picker must issue an upload ticket');
+  const uploadForm=(ticket,buffer,name='mi-curso.p2lrn')=>{
+   const formData=new FormData();
+   formData.set('ticket',ticket);
+   formData.set('course',new Blob([buffer],{type:'application/vnd.p2lrn+zip'}),name);
+   return formData;
+  };
+  const badUpload=await req('/lti/deep-link/confirm',{method:'POST',
+   body:uploadForm(uploadTicket,Buffer.from('invalid archive'))});
+  assert.equal(badUpload.status,400,'invalid course must not be published');
+  const validUpload=await req('/lti/deep-link/confirm',{method:'POST',
+   body:uploadForm(uploadTicket,course)});
+  assert.equal(validUpload.status,200,await validUpload.clone().text());
+  const uploadedHtml=await validUpload.text();
+  const uploadedJwt=/name="JWT" value="([^"]+)"/.exec(uploadedHtml)?.[1];
+  assert.ok(uploadedJwt,'successful teacher upload must return signed LMS content');
+  const parts=uploadedJwt.split('.');
+  assert.equal(verify('RSA-SHA256',Buffer.from(parts[0]+'.'+parts[1]),TOOL.publicKey,
+   Buffer.from(parts[2],'base64url')),true);
+  const uploadedClaim=JSON.parse(Buffer.from(parts[1],'base64url').toString());
+  const uploadedBindingId=uploadedClaim[C.items][0].custom.p2lrn_binding_id;
+  assert.equal(gateway.store.getBinding({id:uploadedBindingId,tenantId:'school',
+   registrationId:'moodle',deploymentId:'D1'}).contentRoot,catalogue.contentRoot);
+  assert.equal((await req('/lti/deep-link/confirm',{method:'POST',
+   body:uploadForm(uploadTicket,course)})).status,403,
+   'one teacher ticket cannot be replayed to create another link');
+
+  const uploadedLearner=await begin('LtiResourceLinkRequest');
+  const uploadedLaunch=await req('/lti/launch',{method:'POST',headers:{
+   'Content-Type':'application/x-www-form-urlencoded','Cookie':uploadedLearner.browserCookie
+  },body:new URLSearchParams({state:uploadedLearner.state,id_token:signedPlatformToken({
+   nonce:uploadedLearner.nonce,kind:'LtiResourceLinkRequest',
+   target:uploadedLearner.target,bindingId:uploadedBindingId
+  })})});
+  assert.equal(uploadedLaunch.status,200,'student must enter the newly published course');
+  const uploadedPlayerHtml=await uploadedLaunch.text();
+  assert.match(uploadedPlayerHtml,/<p2lrn-player/);
+  const uploadedSessionCookie=uploadedLaunch.headers.get('set-cookie').split(';')[0];
+  const uploadedCsrf=/const csrf="([^"]+)"/.exec(uploadedPlayerHtml)?.[1];
+  assert.ok(uploadedCsrf,'student gets a bound CSRF token');
+  const uploadedPackage=await req('/lti/runtime/package',{headers:{Cookie:uploadedSessionCookie}});
+  assert.equal(uploadedPackage.status,200);
+  assert.deepEqual(Buffer.from(await uploadedPackage.arrayBuffer()),course,
+   'the LMS Player receives the identical unconverted .p2lrn bytes');
+  const uploadedStateContext={packageId:catalogue.packageId,
+   contentRoot:catalogue.contentRoot,entityId:selected.id,rendererId:'course'};
+  const uploadedRuntime=(operation,body)=>req('/lti/runtime/'+operation,{method:'POST',
+   headers:{Cookie:uploadedSessionCookie,'Content-Type':'application/json',
+    'X-P2LRN-CSRF':uploadedCsrf},body:JSON.stringify(body)});
+  const saveUploaded=await uploadedRuntime('state/save',
+   {context:uploadedStateContext,state:{lesson:'intro',answered:true}});
+  assert.equal(saveUploaded.status,200,'newly uploaded course must persist real learner state');
+  const reloadUploaded=await uploadedRuntime('state/load',{context:uploadedStateContext});
+  assert.deepEqual((await reloadUploaded.json()).value,{lesson:'intro',answered:true});
+  const unverifiedScore=await uploadedRuntime('score',
+   {context:uploadedStateContext,score:{normalized:0.95,completed:true}});
+  assert.equal(unverifiedScore.status,200);
+  assert.equal((await unverifiedScore.json()).authoritative,false,
+   'browser-reported grades must not be official before approval');
+  const afterUpload=await (await req('/lti/admin/catalog/school',{headers:admin})).json();
+  assert.equal(afterUpload.courses.length,1,
+   'uploading an already published identical package must reuse the same bytes and catalog');
+  const forbiddenUpload=await req('/lti/deep-link/confirm',{method:'POST',
+   body:uploadForm('forged-ticket',course)});
+  assert.equal(forbiddenUpload.status,403,'teacher uploads require signed LTI authority');
+  const browserFailure=await req('/lti/launch',{method:'POST',headers:{
+   'Content-Type':'application/x-www-form-urlencoded',Accept:'text/html'
+  },body:new URLSearchParams({state:'not-a-real-state',id_token:'not-a-token'})});
+  assert.equal(browserFailure.status,403);
+  const failureHtml=await browserFailure.text();
+  assert.match(failureHtml,/Incidencia/);
+  assert.match(failureHtml,/Vuelve a tu aula virtual|Vuelve al curso de tu aula virtual/);
+  assert.doesNotMatch(failureHtml,/not-a-token/);
  }finally{
   await gateway.close();rmSync(folder,{recursive:true,force:true});
  }

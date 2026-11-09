@@ -1,6 +1,7 @@
 import {fillBlankDistractors,fillBlankInputMode,fillBlankTemplate} from '../fill-blanks-core.js';
 import {studioUiText,studioNewDefaults,studioLanguage} from './studio-ui-i18n.js';
 import {questionnaireForLearner} from './questionnaire-grading.js';
+import {renderAssembly3DEditor} from './assembly-3d-editor.js';
 const TYPE_LABELS={
   'single-choice':'Elección única','multiple-choice':'Elección múltiple','true-false':'Verdadero / falso','text':'Respuesta de texto','fill-blanks':'Completar huecos','ordering':'Ordenar','matching':'Relacionar','classification':'Clasificar',
 };
@@ -286,7 +287,7 @@ function renderClassificationEditor(box,question,commit,rerender,manual=false){
   });
   items.append(rowButton('+ Añadir elemento',()=>{question.items.push({id:uid('i'),text:'Nuevo elemento'});ensureSolution(question);commit();rerender();}));box.append(items);
 }
-export function renderQuestionnaireVisualEditor(container,{model,activityId,payload,renderer,onChange,onStatus}={}){
+export function renderQuestionnaireVisualEditor(container,{model,activityId,payload,renderer,onChange,onStatus,createScene=null}={}){
   const report=(message)=>onStatus?.(studioUiText(message));
   const render=()=>{
     container.replaceChildren();
@@ -355,6 +356,7 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
       else if(question.type==='fill-blanks')renderBlankEditor(body,question,commit,render,manual);
       else if(question.type==='ordering')renderOrderingEditor(body,question,commit,render);
       else if(question.type==='matching')renderMatchingEditor(body,question,commit,render,manual);
+      else if(question.type==='classification'&&question.assembly3d)renderAssembly3DEditor(body,{question,model,commit,onStatus:report,createScene});
       else if(question.type==='classification')renderClassificationEditor(body,question,commit,render,manual);
       card.append(body);list.append(card);
     });

@@ -611,6 +611,101 @@ async function browserScenario(){
   expect(overlays.querySelectorAll('img').length===0&&!earthScene.dataset.p2lrnDndCompleted,
     'Earth reset did not remove assembled layers');
   earthScene.remove();
+  // Assembly authoring must be a real shared editor, not an inert screenshot,
+  // and its GLB must survive a complete .p2lrn round-trip in both DOM modes.
+  const {renderQuestionnaireVisualEditor}=await import('/studio/questionnaire-editor.js');
+  const {buildQuestionnaireGame}=await import('/questionnaire-games-core.js');
+  const {create3DAuthoringScene}=await import('/player/current/dist/p2lrn.esm.js');
+  const makeGLB=()=>{
+    const body=new Uint8Array(44),dv=new DataView(body.buffer);
+    const xyz=[0,0,0,0.8,0,0,0,0.8,0];
+    xyz.forEach((v,i)=>dv.setFloat32(i*4,v,true));
+    [0,1,2].forEach((v,i)=>dv.setUint16(36+i*2,v,true));
+    const json={
+      asset:{version:'2.0'},scene:0,scenes:[{nodes:[0]}],
+      nodes:[{name:'Pieza geométrica',mesh:0}],
+      meshes:[{primitives:[{attributes:{POSITION:0},indices:1,mode:4}]}],
+      buffers:[{byteLength:44}],
+      bufferViews:[{buffer:0,byteOffset:0,byteLength:36,target:34962},{buffer:0,byteOffset:36,byteLength:6,target:34963}],
+      accessors:[{bufferView:0,componentType:5126,count:3,type:'VEC3',min:[0,0,0],max:[0.8,0.8,0]},{bufferView:1,componentType:5123,count:3,type:'SCALAR'}],
+    };
+    const encoded=new TextEncoder().encode(JSON.stringify(json)),length=(encoded.length+3)&~3;
+    const out=new Uint8Array(12+8+length+8+body.length);
+    const h=new DataView(out.buffer);
+    h.setUint32(0,0x46546c67,true);h.setUint32(4,2,true);h.setUint32(8,out.length,true);
+    h.setUint32(12,length,true);h.setUint32(16,0x4e4f534a,true);
+    out.fill(32,20,20+length);out.set(encoded,20);
+    h.setUint32(20+length,body.length,true);h.setUint32(24+length,0x004e4942,true);
+    out.set(body,28+length);
+    return out;
+  };
+  for(const item of [website,npm]){
+    const activity=item.course.addGame(item.course.rootId,{kind:'assembly-3d',title:'Ensamblaje validado'});
+    const current=await item.course.readQuestionnaire(activity.id);
+    expect(current.payload.questions[0].assembly3d?.targets?.length===2,'Assembly 3D activity was not created');
+    const inspector=document.createElement('div');item.root.append(inspector);
+    renderQuestionnaireVisualEditor(inspector,{model:item.course,activityId:activity.id,payload:current.payload,
+      renderer:'https://p2lrn.org/renderer/questionnaire/3d-order-match',createScene:create3DAuthoringScene});
+    await Promise.resolve();
+    expect(inspector.querySelector('.p2lrn-assembly-editor svg'),'Native assembly geometry editor missing');
+    const selected=inspector.querySelector('.a3-fields input');
+    expect(selected,'Authoring transform field missing');
+    const previous=Number(selected.value);
+    selected.value=String(previous-0.45);
+    selected.dispatchEvent(new Event('change',{bubbles:true}));
+    const modified=await item.course.readQuestionnaire(activity.id);
+    expect(Math.abs(modified.payload.questions[0].assembly3d.targets[0].transform.position[0]-(previous-0.45))<0.001,
+      '3D authoring did not persist XYZ edits to native questionnaire bytes');
+    const pieceSelect=[...inspector.querySelectorAll('.a3-tree button')].find(button=>button.textContent==='Pieza 1');
+    expect(pieceSelect,'Teacher cannot select a piece for GLB assignment');
+    pieceSelect.click();
+    const upload=inspector.querySelector('input[type=file]');
+    expect(upload,'Shared editor cannot import GLB through the visible UI');
+    const transfer=new DataTransfer();
+    transfer.items.add(new File([makeGLB()],'pieza.glb',{type:'model/gltf-binary'}));
+    upload.files=transfer.files;
+    upload.dispatchEvent(new Event('change',{bubbles:true}));
+    let imported=null;
+    for(let i=0;i<100;i++){
+      await new Promise(done=>setTimeout(done,75));
+      imported=await item.course.readQuestionnaire(activity.id);
+      if(imported.payload.questions[0].assembly3d.assets[0]?.path&&imported.payload.questions[0].assembly3d.pieces[0].assetId)break;
+    }
+    const sceneDataImported=imported?.payload.questions[0].assembly3d;
+    expect(sceneDataImported?.assets?.length===1&&sceneDataImported.pieces[0].assetId===sceneDataImported.assets[0].id,
+      'Visible Studio import did not bind GLB asset to its selected piece');
+    const asset=sceneDataImported.assets[0];
+    const webgl=inspector.querySelector('canvas.a3-webgl');
+    // Visibility flips before Three.js finishes sizing its drawing buffer.
+    // Require the actual WebGL2 canvas to be ready, not only unhidden.
+    for(let i=0;i<100;i++){
+      if(webgl&&!webgl.hidden&&webgl.width>=320&&webgl.getContext('webgl2'))break;
+      await new Promise(done=>setTimeout(done,75));
+    }
+    expect(webgl&&!webgl.hidden&&webgl.width>=320&&Boolean(webgl.getContext('webgl2')),
+      'Shared professor editor did not initialize a real Three.js WebGL2 scene: '+JSON.stringify({webgl:!!webgl,hidden:webgl?.hidden,width:webgl?.width,context:!!webgl?.getContext('webgl2'),error:inspector.querySelector('.a3-error')?.textContent,sceneWebGL:inspector.querySelector('.a3-scene')?.outerHTML.slice(-1000),sceneFactory:typeof create3DAuthoringScene,assetCount:inspector.querySelectorAll('input[type=file]').length}));
+    for(let i=0;i<100;i++){
+      const warning=inspector.querySelector('.a3-error')?.textContent??'';
+      if(warning.includes('No se pudo mostrar')||warning.includes('Vista 3D no disponible'))throw new Error(warning);
+      if(!inspector.querySelector('.a3-scene svg')?.hidden)throw new Error('Three.js authoring unexpectedly switched back to SVG fallback');
+      await new Promise(done=>setTimeout(done,40));
+      if(i===7)break;
+    }
+    const exported=await exportP2LRNPackage(item.course);
+    const opened=await openP2LRNPackageBytes(exported.bytes.buffer.slice(exported.bytes.byteOffset,exported.bytes.byteOffset+exported.bytes.byteLength));
+    const rendered=opened.entities.get(activity.id);
+    expect(rendered?.type==='activity','Round-trip removed assembly activity');
+    const resource=opened.entities.get(rendered.resource);
+    const file=resource?.representations.find(r=>r.role==='primary')?.location?.path;
+    const data=JSON.parse(new TextDecoder().decode(await opened.payload(file).read()));
+    const sceneData=data.questions[0].assembly3d;
+    expect(sceneData.targets.length===2&&sceneData.assets[0].path===asset.path,'3D geometry or GLB references were lost on export');
+    const glbBytes=await opened.payload(asset.path).read();
+    expect(glbBytes.byteLength===asset.size,'GLB model bytes missing from portable P2LRN course');
+    const game=buildQuestionnaireGame(data,'https://p2lrn.org/renderer/questionnaire/3d-order-match');
+    expect(game.compatible&&game.data.trials[0].type==='assembly-3d','Exported assembly is not playable');
+    inspector.remove();
+  }
   const label=website.toolbar.querySelector('[role=tab][aria-selected=true]');
   expect(label.textContent==='Formato','Tab state is not consistent');
   const lightStyle=getComputedStyle(website.toolbar).fontFamily;
@@ -629,8 +724,11 @@ try{
     let url;
     try{url=new URL(req.url,'http://127.0.0.1');}catch{res.writeHead(400);res.end();return;}
     if(url.pathname==='/'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end('<!doctype html><html lang="es"><head><meta charset="utf-8"></head><body></body></html>');return;}
-    const path=resolve(webRoot,'.'+decodeURIComponent(url.pathname));
-    if(!path.startsWith(webRoot+sep)){res.writeHead(403);res.end();return;}
+    const isPlayer=url.pathname.startsWith('/player/current/dist/');
+    const root=isPlayer?resolve('packages/player/dist'):webRoot;
+    const requested=isPlayer?url.pathname.slice('/player/current/dist/'.length):'.'+url.pathname;
+    const path=resolve(root,decodeURIComponent(requested));
+    if(!path.startsWith(root+sep)){res.writeHead(403);res.end();return;}
     readFile(path).then(bytes=>{res.writeHead(200,{'Content-Type':'text/javascript; charset=utf-8','Cache-Control':'no-store'});res.end(bytes);}).catch(()=>{res.writeHead(404);res.end();});
   });
   await new Promise((done,fail)=>{server.once('error',fail);server.listen(0,'127.0.0.1',done);});

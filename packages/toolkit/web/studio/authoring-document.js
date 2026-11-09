@@ -541,18 +541,33 @@ export class P2LRNStudioDocument{
     return this.addEmbeddedResource(parentId,{title,language,filename:'questionnaire.json',mediaType:'application/vnd.p2lrn.questionnaire+json',bytes:encoder.encode(JSON.stringify(data,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-questionnaire',activityType:'https://p2lrn.org/type/assessment',renderer});
   }
 
+  async readAssemblyAsset(path){
+    const entry=this.manifest.files.find(file=>file.path===String(path)&&file.mediaType==='model/gltf-binary');
+    if(!entry)throw new Error('Modelo GLB no incluido en este curso');
+    const bytes=this.payloadOverrides.has(path)?this.payloadOverrides.get(path):await this.package?.zip.read(path);
+    if(!bytes)throw new Error('El modelo GLB no está disponible');
+    const result=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+    inspectAssemblyGLB(result);
+    return result;
+  }
+
   async addAssemblyAsset({bytes,filename='modelo.glb'}={}){
     const data=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes??[]);
     const inspected=inspectAssemblyGLB(data);
     const digest='sha256:'+Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',data)),n=>n.toString(16).padStart(2,'0')).join('');
-    const existing=this.manifest.files.find((entry)=>(entry.byteDigest===digest||this.payloadOverrides.has(entry.path)&&entry.path.endsWith('.glb')&&this.payloadOverrides.get(entry.path).byteLength===data.byteLength)
-      &&entry.path.endsWith('.glb'));
-    if(existing){
-      const resource=this.graph.entities.find((entity)=>entity.type==='resource'&&entity.representations?.some(rep=>rep.location?.path===existing.path));
-      if(resource&&existing.byteDigest===digest)return{id:resource.id,path:existing.path,size:data.byteLength,name:String(filename),digest,inspected};
+    for(const existing of this.manifest.files.filter(entry=>entry.path.endsWith('.glb'))){
+      const current=existing.byteDigest!=='sha256:'+'0'.repeat(64)?existing.byteDigest:null;
+      let actual=current;
+      if(!actual&&this.payloadOverrides.has(existing.path)){
+        const previous=this.payloadOverrides.get(existing.path);
+        actual='sha256:'+Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',previous)),n=>n.toString(16).padStart(2,'0')).join('');
+      }
+      if(actual!==digest)continue;
+      const resource=this.graph.entities.find(entity=>entity.type==='resource'&&entity.representations?.some(rep=>rep.location?.path===existing.path));
+      if(resource)return{id:resource.id,path:existing.path,size:data.byteLength,name:String(filename),digest,inspected};
     }
     const id='urn:uuid:'+crypto.randomUUID(),token=crypto.randomUUID(),path='content/resources/'+token+'.glb';
-    const resource={id,type:'resource',title:{es:String(filename)},representations:[{id:'urn:uuid:'+crypto.randomUUID(),role:'source',location:{type:'embedded',path},originalName:String(filename),mediaType:'model/gltf-binary'}]};
+    const resource={id,type:'resource',title:{es:String(filename)},representations:[{id:'urn:uuid:'+crypto.randomUUID(),role:'primary',location:{type:'embedded',path},originalName:String(filename),mediaType:'model/gltf-binary'}]};
     this.graph.entities.push(resource);this.entities.set(id,resource);
     const zero='sha256:'+'0'.repeat(64);
     this.manifest.files.push({path,mediaType:'model/gltf-binary',size:data.byteLength,byteDigest:zero,contentDigest:zero});

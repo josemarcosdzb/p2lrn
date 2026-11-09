@@ -10,6 +10,7 @@ import {
   mountP2LRN,
   openP2LRNPackageBytes,
   openP2LRNPackageURL,
+  create3DAuthoringScene,
 } from './p2lrn-player.js';
 import {negotiateP2LRNExecution,inspectP2LRNPackageExecution,P2LRN_EXECUTION_PLAN_SCHEMA,P2LRN_EXECUTION_PLAN_VERSION} from './execution-negotiation.js';
 import {createHostAdapter, HOST_ADAPTER_VERSION} from './host-adapter.js';
@@ -52,6 +53,7 @@ export {
   mountP2LRN,
   openP2LRNPackageBytes,
   openP2LRNPackageURL,
+  create3DAuthoringScene,
   installP2LRNServiceWorker,
   configureRuntimeHost,
   getRuntimeHostConfig,

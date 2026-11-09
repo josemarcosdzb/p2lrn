@@ -21,8 +21,10 @@ test('Studio distribution copies localized UI and deferred-grading editor module
     const code=await source(path);
     for(const match of code.matchAll(/from\s+['"]\.\/([a-z0-9-]+\.js)['"]/g))imports.add(match[1]);
   }
-  assert.deepEqual([...imports].sort(),['questionnaire-grading.js','studio-ui-i18n.js','visual-layout.js'],
+  assert.deepEqual([...imports].sort(),['assembly-3d-editor.js','questionnaire-grading.js','studio-ui-i18n.js','visual-layout.js'],
     'UI editor module graph must include all shared modules, including nested layout');
+  assert.ok(build.includes("'assembly-3d-core.js'") && build.includes("join(out,file)"),
+    'Studio dist must copy assembly-3d-core.js through its canonical root-module loop');
   for(const file of imports){
     const marker="join(out,'runtime','"+file+"')";
     assert.ok(build.includes(marker),'Studio dist must copy runtime dependency '+file);

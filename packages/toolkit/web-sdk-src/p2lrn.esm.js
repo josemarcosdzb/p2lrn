@@ -4,6 +4,7 @@ import {
   P2LRN_CORE_VERSION,
   DEFAULT_LIMITS,
   P2LRNPlayerElement,
+  create3DAuthoringScene,
   defaultDependencyRegistry,
   defaultRendererRegistry,
   defaultComponentRegistry,
@@ -55,6 +56,7 @@ export const coreVersion = P2LRN_CORE_VERSION;
 export {
   DEFAULT_LIMITS,
   P2LRNPlayerElement,
+  create3DAuthoringScene,
   HOST_ADAPTER_VERSION,
   createHostAdapter,
   createResultRecorder,

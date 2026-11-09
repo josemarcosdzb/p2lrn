@@ -149,7 +149,7 @@ function validateQuestionSemantics(question) {
   if (question.type === 'classification') {
     if(question.assembly3d){
       validateAssembly(question.assembly3d,{requireReady:false});
-      invariant(question.items.length===question.assembly3d.pieces.length && question.categories.length===question.assembly3d.targets.length, `${question.id}: las piezas y destinos deben coincidir con la escena`);
+      invariant(Array.isArray(question.items)&&Array.isArray(question.categories)&&question.items.length===question.assembly3d.pieces.length && question.categories.length===question.assembly3d.targets.length, `${question.id}: las piezas y destinos deben coincidir con la escena`);
       invariant(question.items.every((item)=>question.assembly3d.pieces.some((p)=>p.id===item.id)) && question.categories.every((category)=>question.assembly3d.targets.some((t)=>t.id===category.id)),`${question.id}: IDs de piezas/destinos incoherentes`);
       if(question.solution)invariant(question.solution.assignments.every((assignment)=>question.assembly3d.links.some((l)=>l.pieceId===assignment.item&&l.targetId===assignment.category)),`${question.id}: soluciones de ensamblaje incoherentes`);
     }

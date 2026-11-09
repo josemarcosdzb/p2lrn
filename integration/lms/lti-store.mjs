@@ -153,6 +153,11 @@ export function createLtiStore(filename){
  }
 
  const createPicker=p=>sql('INSERT INTO pickers VALUES(?,?,?,?,?,?,?,NULL)').run(p.ticketHash,p.registrationId,p.tenantId,p.deploymentId,p.returnUrl,p.ltiData??null,p.expiresAt);
+ const peekPicker=hash=>{
+  const r=sql('SELECT * FROM pickers WHERE ticket_hash=? AND consumed_at IS NULL AND expires_at>?').get(hash,t());
+  return r?{registrationId:r.registration_id,tenantId:r.tenant_id,deploymentId:r.deployment_id,
+   returnUrl:r.return_url,ltiData:r.lti_data}:null;
+ };
  const consumePicker=hash=>{let r=sql('UPDATE pickers SET consumed_at=? WHERE ticket_hash=? AND consumed_at IS NULL AND expires_at>? RETURNING *').get(t(),hash,t());return r?{registrationId:r.registration_id,tenantId:r.tenant_id,deploymentId:r.deployment_id,returnUrl:r.return_url,ltiData:r.lti_data}:null;};
  function attachLaunch({launch,ags,tokenHash,csrfHash,expiresAt,canReadRoster=false,legacy=false}){
   const b=legacy?getLegacyBinding({id:launch.bindingId,tenantId:launch.tenantId,registrationId:launch.registrationId}):getBinding({id:launch.bindingId,tenantId:launch.tenantId,registrationId:launch.registrationId,deploymentId:launch.deploymentId});
@@ -217,6 +222,6 @@ export function createLtiStore(filename){
  const listAttempts=tenantId=>sql('SELECT id,tenant_id,binding_id,context_id,status,created_at,updated_at FROM attempts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,contextId:r.context_id,status:r.status,createdAt:r.created_at,updatedAt:r.updated_at}));
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
  return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
- publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,consumePicker,attachLaunch,getSession,
+ publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,peekPicker,consumePicker,attachLaunch,getSession,
  getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,saveNrpsContext,getNrpsContext,listNrpsContexts,count});
 }
