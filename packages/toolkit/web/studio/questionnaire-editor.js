@@ -289,6 +289,55 @@ function renderClassificationEditor(box,question,commit,rerender,manual=false){
 }
 export function renderQuestionnaireVisualEditor(container,{model,activityId,payload,renderer,onChange,onStatus,createScene=null}={}){
   const report=(message)=>onStatus?.(studioUiText(message));
+  // A native assembly is ONE 3D activity. Rendering it inside the generic
+  // questionnaire question-card produced a second full editor above the 3D
+  // workspace, and pushed the actual mesh out of view. Keep a single editor
+  // surface for this game in hosted Studio and in the npm component.
+  if(payload.questions?.length===1&&payload.questions[0]?.type==='classification'&&payload.questions[0]?.assembly3d){
+    const question=payload.questions[0];
+    ensureSolution(question);
+    const root=node('div','q-assembly-only');
+    const commit=()=>{ensureSolution(question);save(model,activityId,payload,onChange);};
+    renderAssembly3DEditor(root,{question,model,commit,onStatus:report,createScene});
+    const toolbar=root.querySelector('.a3-toolbar');
+    const details=document.createElement('details');
+    details.className='a3-activity-settings';
+    const summary=document.createElement('summary');
+    summary.textContent='Enunciado y evaluación';
+    details.append(summary);
+    const inner=node('div','a3-activity-settings-fields');
+    const prompt=textAreaInput(question.prompt,'Instrucciones de montaje',2);
+    prompt.addEventListener('change',()=>{question.prompt=prompt.value;commit();});
+    const title=textInput(payload.title??'','Título de la evaluación');
+    title.addEventListener('change',()=>{payload.title=title.value;commit();});
+    const points=numberInput(question.points,0,1);
+    points.addEventListener('change',()=>{question.points=Math.max(0,Number(points.value)||0);commit();});
+    const time=numberInput(question.timeLimitSeconds??null,1,1);
+    time.placeholder='Sin límite';
+    time.addEventListener('change',()=>{
+      if(!time.value)delete question.timeLimitSeconds;
+      else question.timeLimitSeconds=Math.max(1,Math.floor(Number(time.value)||1));
+      commit();
+    });
+    const attempts=numberInput(payload.attemptPolicy?.maxAttempts??null,1,1);
+    attempts.placeholder='Ilimitados';
+    attempts.addEventListener('change',()=>{
+      if(!attempts.value)delete payload.attemptPolicy;
+      else payload.attemptPolicy={...(payload.attemptPolicy??{}),maxAttempts:Math.max(1,Math.floor(Number(attempts.value)||1))};
+      commit();
+    });
+    const feedback=selectInput(payload.presentation?.showFeedback??'never',[
+      ['never','No mostrar resultados antes de terminar'],
+      ['after-submit','Mostrar corrección al finalizar'],
+    ]);
+    feedback.addEventListener('change',()=>{payload.presentation??={};payload.presentation.showFeedback=feedback.value;commit();});
+    inner.append(labeled('Enunciado',prompt),labeled('Título',title),labeled('Puntos',points),
+      labeled('Tiempo (s)',time),labeled('Intentos',attempts),labeled('Corrección',feedback));
+    details.append(inner);
+    toolbar?.append(details);
+    container.replaceChildren(root);
+    return;
+  }
   const render=()=>{
     container.replaceChildren();
     const root=node('div','questionnaire-visual-editor');
