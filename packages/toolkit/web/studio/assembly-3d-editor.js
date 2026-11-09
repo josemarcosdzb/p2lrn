@@ -66,7 +66,9 @@ function numeric(value,callback,{min=-1000,max=1000,step=0.05}={}){
 
 export function renderAssembly3DEditor(container,{question,model,commit,onStatus=()=>{}}={}){
   if(!question?.assembly3d)throw Error('La actividad no tiene escena de montaje');
-  mountStyle(container.getRootNode());
+  // Cards are assembled detached from the DOM; wait until the editor is
+  // attached so its styles reach either Document or the npm ShadowRoot.
+  queueMicrotask(()=>mountStyle(container.getRootNode()));
   const scene=question.assembly3d,root=$('section','p2lrn-assembly-editor');
   const head=$('div','a3-head'),buttons=$('div','a3-toolbar'),main=$('div','a3-main');
   const tree=$('aside','a3-pane'),center=$('div','a3-scene'),props=$('aside','a3-pane');
