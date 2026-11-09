@@ -1,4 +1,7 @@
 [build]
+  # Release freeze: skip Git-triggered Netlify builds until explicitly lifted.
+  # Exit code 0 skips a build; this does not disable manual build hooks.
+  ignore = "exit 0"
   command = "node deploy/netlify/build-site.mjs"
   publish = ".netlify-cdn"
 
