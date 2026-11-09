@@ -36,7 +36,8 @@ export const STUDIO_CONTENT_CATALOG=Object.freeze([
     ['rosco','Rosco','Responde a las pistas del alfabeto'],
     ['3d','Juego 3D','Ordena objetos 3D'],
     ['3d-matching','Relacionar 3D','Conecta objetos 3D'],
-    ['3d-classification','Clasificar 3D','Clasifica objetos 3D']
+    ['3d-classification','Clasificar 3D','Clasifica objetos 3D'],
+    ['assembly-3d','Ensamblaje 3D','Monta estructuras y edita destinos por vértices XYZ']
   ]},
   {group:'Colaboración',items:[
     ['live-poll','Votación en directo','Participación conectada al host'],
