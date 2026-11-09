@@ -133,6 +133,29 @@ async function inspectExistingLmsContainers(){
     resources.stoppedOpenEdx.push({name:row.name,exitCode:Number(exitCode),oomKilled:oomKilled==='true',restartPolicy});
    }catch{resources.stoppedOpenEdx.push({name:row.name,inspect:'UNAVAILABLE'});}
   }
+  // The Docker bridge and active Caddy route are checked without reading
+  // container secrets or changing networking.
+  const topology={networks:[],caddyOpenEdxRoutes:[],caddyConfigPresent:false};
+  for(const name of ['aulap2p-ingress-local','p2lrn-lti-provider',
+   'openedx-josemarcosdiaz-caddy-1','openedx-josemarcosdiaz-lms-1']){
+   try{
+    const item=await run('docker',['inspect','--format','{{json .NetworkSettings.Networks}}',name],{
+     timeout:4000,windowsHide:true,maxBuffer:64*1024});
+    const nets=JSON.parse(item.stdout.trim()||'{}');
+    topology.networks.push({name,networks:Object.keys(nets||{}).sort()});
+   }catch{topology.networks.push({name,networks:[],inspect:'UNAVAILABLE'});}
+  }
+  try{
+   const config=await run('docker',['exec','aulap2p-ingress-local','cat','/etc/caddy/Caddyfile'],{
+    timeout:5000,windowsHide:true,maxBuffer:256*1024});
+   topology.caddyConfigPresent=true;
+   const rows=config.stdout.split(/\r?\n/).map(x=>x.trim());
+   // Only expose route names/targets, never raw proxy configuration or headers.
+   topology.caddyOpenEdxRoutes=rows.filter(x=>
+    /josemarcosdiaz|openedx-josemarcosdiaz|p2lrn-lti-provider/i.test(x))
+    .slice(0,30).map(x=>x.slice(0,180).replace(/[;#].*$/,'').trim());
+  }catch{}
+  resources.topology=topology;
   return {available:true,services,resources};
  }catch(e){
   return {available:false,reason:limit(e.code||e.message,110)};
