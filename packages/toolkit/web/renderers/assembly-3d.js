@@ -65,10 +65,10 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
           interaction:{kind:'assembly-piece',id:piece.id}});
       }catch(error){
         sceneLoadWarning=playerUiText('Algún modelo 3D no se pudo cargar. Puedes completar el montaje con los controles accesibles.');
-        scene.addBox({id,text:piece.text,position:transform.position,size:[1.2,0.8,1],dynamic:false,interaction:{kind:'assembly-piece',id:piece.id}});
+        scene.addBox({id,text:piece.text,position:transform.position,size:[1.2,0.8,1],dynamic:false,physicsEnabled:false,interaction:{kind:'assembly-piece',id:piece.id}});
         console.warn('P2LRN assembly 3D model load blocked:',error);
       }
-    }else scene.addBox({id,text:piece.text,position:transform.position,size:[1.2,0.8,1],dynamic:false,interaction:{kind:'assembly-piece',id:piece.id}});
+    }else scene.addBox({id,text:piece.text,position:transform.position,size:[1.2,0.8,1],dynamic:false,physicsEnabled:false,interaction:{kind:'assembly-piece',id:piece.id}});
   }
   if(config.referenceAssetId){
     try{
