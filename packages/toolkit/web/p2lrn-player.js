@@ -1146,6 +1146,13 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   disconnectedCallback() { this.#cleanupRuntime(); this.stopActivityTracking(); this.stopLearningEventTracking(); this._resultRecorder?.stop(); }
 }
 
+// Authoring uses the same bundled 3D engine as the learner, loaded only
+// when the teacher opens a 3D assembly. No parallel renderer or CDN service.
+export async function create3DAuthoringScene(canvas,options={}) {
+  const {createThreeGameScene}=await import('./game-3d/three-runtime.js');
+  return createThreeGameScene(canvas,{...options,physics:'none',authoring:true});
+}
+
 export async function mountP2LRN(target, options = {}) {
   const host = typeof target === 'string' ? document.querySelector(target) : target;
   if (!host) throw new Error('P2LRN mount target not found.');
@@ -1266,6 +1273,7 @@ if (!existingP2LRNApi) {
     configureRuntimeHost,
     getRuntimeHostConfig,
     installServiceWorker: installP2LRNServiceWorker,
+    create3DAuthoringScene,
   });
 }
 
