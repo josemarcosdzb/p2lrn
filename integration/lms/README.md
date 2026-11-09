@@ -294,3 +294,21 @@ Referencias normativas: [1EdTech Basic Outcomes 1.1](https://www.imsglobal.org/s
 ### Pruebas verificadas
 
 El test integrado `integration/lms/lti-legacy-integration.test.mjs` usa el servidor HTTP real, un paquete Toolkit auténtico, un registro legado cifrado y vinculado, sesión Player, reanudación de estado y aprobación de Basic Outcomes. Comprueba además protección anti-replay, aislamiento del endpoint 1.3 y que un resultado HTTP 200 no baste si el XML indica error. El test `lti-legacy.test.mjs` valida la firma, los secretos y los orígenes. Una prueba de laboratorio con un receptor simulado **no equivale** a la aceptación real de Chamilo; esa última exige la prueba estudiantil y la lectura del libro de notas.
+
+## Certificación de integración LMS: estado real del 9 de noviembre de 2026
+
+**Estado global: BLOQUEADO — 0 de 5 LMS certificados mediante el mismo curso.** La compilación y los contratos no sustituyen una sesión de alumno autenticada ni una nota verificada en el LMS. No marcar una instancia como lista para alumnos sin superar todos los criterios siguientes.
+
+Última regresión automática: [run 42587579215](https://github.com/josemarcosdzb/p2lrn/actions/runs/42587579215), rama `mejorastudio`: **44/44 pruebas LTI y de paquetes reales**, 11/11 pruebas de clasificación y conectividad, Player con sus dependencias compiladas. Incluye reentrada LTI con el mismo alumno y restauración exacta de su respuesta y revisión; guardados idempotentes y alerta ante pérdida de conexión. **Estas pruebas usan un LMS firmante de laboratorio para los contratos, no las cinco instalaciones reales.** Los seis jobs históricos de creación/reproducción permanecen omitidos en los pushes ordinarios, y eso no equivale a aprobarlos.
+
+| LMS de AulaP2P | Evidencia de red más reciente | Pendiente para uso con alumnos |
+|---|---|---|
+| Moodle | Proxy accesible, redirección 303 al acceso institucional; entrega AGS **85/100 únicamente para un curso histórico** documentada el 7/11 | Autenticación real de alumno en el curso maestro, H5P/SCORM, reentrada y calificación oficial de ese mismo curso |
+| Chamilo | HTML visible y rutas del proveedor LTI compartido | Consumidor observado LTI-1p0, no LTI 1.3 Advantage; resolver compatibilidad 1.0/1.3 y probar el envío de resultados correspondiente |
+| Sakai | HTML accesible y rutas del proveedor compartido | Configuración segura del sitio/herramienta, token CSRF de administración, inicio de alumno y resultado oficial |
+| Canvas | Redirección a login; rutas del proveedor compartido | Registrar herramienta LTI 1.3, Deployment ID, curso, alumno y AGS; inventario histórico sin Developer Keys |
+| Open edX | **HTTP 200 con cuerpo vacío** en el proxy de pruebas (regresión observada el 9/11); proveedor no validado en esa ruta | Restablecer respuesta HTTP real y registrar el consumidor, alumno, curso y AGS |
+
+**Criterios de autorización por LMS**: mismo SHA-256 de un único paquete exportado de Studio, importación/publicación exacta, Deep Linking o binding administrativo autorizado, JWT firmado y OIDC de profesor y de alumno, actividades de texto/imagen/drag-drop/cuestionario/H5P/SCORM que se ejecuten (no solo iframe visible), progreso guardado y restaurado después de salir y volver a entrar, calificación aprobada por el servidor y recibida en el libro oficial mediante AGS o, para legado LTI 1.0, el mecanismo de resultados soportado y autenticado por ese LMS. Repetir con otro alumno para descartar fugas entre identidades. No fabricar identidades ni resultados para obtener aprobación.
+
+**Política de entrega**: un LMS sin la evidencia anterior figura **NO CERTIFICADO** y debe conservar esa indicación en cualquier panel, catálogo, documentación o comunicación al usuario. Si algún paso falla, corregir la causa y repetir el recorrido completo antes de habilitarlo para alumnos. El servidor no convierte en calificación oficial un score enviado desde navegador: la nota necesita validación y aprobación de Host y entrega AGS confirmada. Comprobar los errores pendientes y la cola administrativa; un HTTP 200 de salud LTI, un paquete validado o un test unitario verde nunca reemplazan la recepción de notas.
