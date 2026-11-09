@@ -400,8 +400,12 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       selectThree(meta);
       const target=scene.targets.find(t=>t.id===meta.id),piece=scene.pieces.find(p=>p.id===meta.id);
       if(!target&&!piece)return false;
-      const t=piece?.initialTransform??target.transform;
-      threeDrag={meta,initial:JSON.stringify(scene),point:position??hit?.point?.toArray()??[...t.position],start:[...t.position],changed:false};
+      const startPose=piece?(assemblyPlacementTransform(scene,piece.id)??piece.initialTransform):target.transform;
+      threeDrag={
+        meta,initial:JSON.stringify(scene),
+        point:position??hit?.point?.toArray()??[...startPose.position],
+        start:[...startPose.position],changed:false,
+      };
       return true;
     }
     if(!threeDrag||threeDrag.meta.id!==meta.id||threeDrag.meta.kind!==meta.kind)return false;
@@ -418,12 +422,19 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
           threeRuntime?.updateCage('author-target:'+target.id,target.vertices,target.transform);
         }
       }else{
-        const t=piece?.initialTransform??target?.transform;
-        if(!t)return false;
         const moved=threeDrag.start.map((n,i)=>n+position[i]-threeDrag.point[i]);
         if(moved.every(n=>Number.isFinite(n)&&Math.abs(n)<=1000)){
-          t.position=moved;
-          threeRuntime?.setTransform((piece?'author-piece:':'author-target:')+meta.id,t);
+          if(piece){
+            const pair=paired(piece.id),pose=pair?.link?.placement;
+            if(!pose)return false;
+            const final=assemblyPlacementTransform(scene,piece.id);
+            const anchor=pose.bounds?[0,1,2].map(i=>(pose.bounds.min[i]+pose.bounds.max[i])/2):[0,0,0];
+            pose.offset=toLocal(toWorld(anchor,{...final,position:moved}),pair.target.transform);
+            threeRuntime?.setTransform('author-piece:'+piece.id,assemblyPlacementTransform(scene,piece.id));
+          }else if(target){
+            target.transform.position=moved;
+            syncThreeTransforms();
+          }else return false;
           threeDrag.changed=true;
         }
       }
@@ -438,8 +449,13 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       return true;
     }
     try{
-      validateAssembly(scene,{requireReady:false});syncQuestion(question);
-      commit();snapshot();drawAll();message('');return true;
+      validateAssembly(scene,{requireReady:false});
+      syncQuestion(question);commit();snapshot();
+      syncThreeTransforms();drawAll();
+      const candidate=meta.kind==='assembly-editor-piece'?
+        assemblyFitStatus(scene,meta.id,assemblyPlacementTransform(scene,meta.id)):null;
+      message(candidate&&!candidate.ok?'La pieza no queda dentro del encaje: '+candidate.reason:'');
+      return true;
     }catch(error){
       const previous=JSON.parse(state.initial);
       Object.assign(scene,previous);
@@ -454,11 +470,11 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       const runtime=await createScene(canvas,{onInteraction:onThreeInteraction,onDrag:onThreeDrag});
       if(threeDestroyed||!root.isConnected){runtime.destroy();return;}
       threeRuntime=runtime;
-      note.textContent='Arrastra puntos para editar vértices · Arrastra fondo para girar · Rueda para zoom';
+      note.textContent='La pieza está en su caja: arrástrala para afinar · Puntos: ajustar volumen · Rueda: zoom';
       await rebuildThree();
     }catch(error){
       threeRuntime?.destroy();threeRuntime=null;svg.hidden=false;canvas.hidden=true;
-      drawScene();note.textContent='Edición geométrica sin WebGL disponible';
+      drawScene();note.textContent='Sin WebGL: vista geométrica alternativa del mismo encaje';
       message('Vista 3D no disponible: '+String(error.message||error));
     }
   }
@@ -501,8 +517,19 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       const before=[...target.vertices[drag.index]];target.vertices[drag.index]=local;
       if(!validCage(target.vertices))target.vertices[drag.index]=before;else drag.changed=true;
     }else{
-      const t=drag.kind==='piece'?obj.initialTransform:obj.transform;
-      t.position=t.position.map((n,i)=>n+worldDelta[i]);drag.changed=true;
+      if(drag.kind==='piece'){
+        const pair=paired(obj.id),pose=pair?.link?.placement;
+        if(pose){
+          const final=assemblyPlacementTransform(scene,obj.id);
+          const moved=final.position.map((n,i)=>n+worldDelta[i]);
+          const anchor=pose.bounds?[0,1,2].map(i=>(pose.bounds.min[i]+pose.bounds.max[i])/2):[0,0,0];
+          pose.offset=toLocal(toWorld(anchor,{...final,position:moved}),pair.target.transform);
+          drag.changed=true;
+        }
+      }else{
+        obj.transform.position=obj.transform.position.map((n,i)=>n+worldDelta[i]);
+        drag.changed=true;
+      }
     }
     drawScene();e.preventDefault();
   });
