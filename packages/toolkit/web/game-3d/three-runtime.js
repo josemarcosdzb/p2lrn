@@ -458,7 +458,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     // Invisible volume for pointer picking; the actual acceptance test uses
     // the authored oriented convex polyhedron, never this rough AABB.
     const lows=[0,1,2].map(i=>Math.min(...vertices.map(p=>p[i]))),highs=[0,1,2].map(i=>Math.max(...vertices.map(p=>p[i])));
-    const box=new THREE.Mesh(new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i]))),new THREE.MeshBasicMaterial({visible:false,depthWrite:false}));
+    const box=new THREE.Mesh(new THREE.BoxGeometry(...highs.map((v,i)=>Math.max(0.02,v-lows[i]))),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
     box.position.fromArray(highs.map((v,i)=>(v+lows[i])/2));
     group.add(box);
     group.position.fromArray(normalizePosition(position));
