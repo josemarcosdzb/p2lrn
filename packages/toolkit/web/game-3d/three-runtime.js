@@ -267,17 +267,18 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     player.position.x=clamp(player.position.x,-10.2,10.2);
     player.position.z=clamp(player.position.z,-7.8,11.8);
   }
+  function updateAuthoringCamera(){
+    const elevation=clamp(cameraPitch,-1.38,1.38),slope=Math.cos(elevation);
+    camera.position.set(
+      orbitFocus.x+Math.sin(cameraYaw)*orbitDistance*slope,
+      orbitFocus.y+Math.sin(elevation)*orbitDistance,
+      orbitFocus.z+Math.cos(cameraYaw)*orbitDistance*slope,
+    );
+    camera.lookAt(orbitFocus);
+    camera.updateMatrixWorld(true);
+  }
   function updatePlayer(delta){
-    if(authoring){
-      const elevation=clamp(cameraPitch,-1.38,1.38),slope=Math.cos(elevation);
-      camera.position.set(
-        orbitFocus.x+Math.sin(cameraYaw)*orbitDistance*slope,
-        orbitFocus.y+Math.sin(elevation)*orbitDistance,
-        orbitFocus.z+Math.cos(cameraYaw)*orbitDistance*slope,
-      );
-      camera.lookAt(orbitFocus);
-      return;
-    }
+    if(authoring){updateAuthoringCamera();return;}
     const previous=player.position.clone();
     const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
@@ -580,6 +581,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     orbitDistance=clamp(Number(radius)||14,2.5,350);
     camera.far=Math.max(120,orbitDistance*12);
     camera.updateProjectionMatrix();
+    // Framing must take effect in the same browser task as selection. A
+    // queued RAF can otherwise render stale camera coordinates during GLB
+    // imports and resize, leaving the cage below the visible viewport.
+    updateAuthoringCamera();
     if(authoring)requestFrame();
     return true;
   }
