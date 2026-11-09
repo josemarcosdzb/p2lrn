@@ -299,7 +299,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       threeRuntime.updateCage('author-target:'+target.id,target.vertices,target.transform);
     }
     for(const piece of scene.pieces){
-      threeRuntime.setTransform('author-piece:'+piece.id,piece.initialTransform);
+      threeRuntime.setTransform('author-piece:'+piece.id,assemblyPlacementTransform(scene,piece.id)??piece.initialTransform);
     }
     if(scene.referenceAssetId)threeRuntime.setTransform('author-reference',scene.referenceTransform??{
       position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1],
@@ -317,6 +317,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       rotation:target.transform.rotation,scale:target.transform.scale,editable:true,
       interaction:{kind:'assembly-editor-target',id:target.id},visibility:'outline',
     });
+    let fittedAny=false;
     for(const piece of pieces){
       if(generation!==threeGeneration||threeDestroyed)return;
       const asset=assets.find(a=>a.id===piece.assetId);
@@ -325,22 +326,33 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
         try{
           const bytes=await model.readAssemblyAsset(asset.path);
           if(generation!==threeGeneration||threeDestroyed)return;
+          const fittedPose=assemblyPlacementTransform(scene,piece.id)??piece.initialTransform;
           await runtime.addModel({
             id,assetId:asset.id,bytes,nodeId:piece.nodeId??null,
-            ...{position:piece.initialTransform.position,rotation:piece.initialTransform.rotation,scale:piece.initialTransform.scale},
+            position:fittedPose.position,rotation:fittedPose.rotation,scale:fittedPose.scale,
             interaction:{kind:'assembly-editor-piece',id:piece.id},
           });
           if(generation!==threeGeneration||threeDestroyed)return;
         }catch(error){
           if(generation!==threeGeneration||threeDestroyed)return;
           message('No se pudo mostrar '+asset.name+': '+String(error.message||error));
-          runtime.addBox({id,text:piece.text,position:piece.initialTransform.position,
+          runtime.addBox({id,text:piece.text,position:(assemblyPlacementTransform(scene,piece.id)??piece.initialTransform).position,
             dynamic:false,physicsEnabled:false,size:[1.25,0.9,1],
             interaction:{kind:'assembly-editor-piece',id:piece.id}});
         }
-      }else runtime.addBox({id,text:piece.text,position:piece.initialTransform.position,
+      }else runtime.addBox({id,text:piece.text,position:(assemblyPlacementTransform(scene,piece.id)??piece.initialTransform).position,
         dynamic:false,physicsEnabled:false,size:[1.25,0.9,1],
         interaction:{kind:'assembly-editor-piece',id:piece.id}});
+      // Use measured GLB geometry for the initial correct pose. The saved
+      // student start position stays separate; the editor shows the fit.
+      const pair=paired(piece.id),bounds=runtime.getObjectLocalBounds?.(id);
+      if(pair&&!pair.link.placement&&bounds){
+        try{
+          pair.link.placement=fitAssemblyBounds(pair.target,bounds);
+          piece.initialTransform.scale=[...pair.link.placement.scale];
+          fittedAny=true;
+        }catch(error){message('Revisa las dimensiones de '+piece.text+': '+error.message);}
+      }
     }
     const ref=assets.find(a=>a.id===scene.referenceAssetId);
     if(ref){
@@ -353,11 +365,12 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       }catch(error){if(generation===threeGeneration)message('Modelo base no visible: '+String(error.message||error));}
     }
     if(generation!==threeGeneration||threeDestroyed)return;
-    const locations=[...scene.pieces.map(p=>p.initialTransform.position),...scene.targets.map(t=>t.transform.position)];
-    const center=locations.length?[0,1,2].map(axis=>locations.reduce((sum,p)=>sum+p[axis],0)/locations.length):[0,1,0];
-    const extent=Math.max(4,...locations.map(p=>Math.hypot(...p.map((n,i)=>n-center[i]))));
-    runtime.focusOn(center,Math.max(9,extent*2.2+5));
+    if(fittedAny){
+      validateAssembly(scene,{requireReady:false});
+      syncQuestion(question);commit();snapshot();
+    }
     syncThreeTransforms();
+    focusSelection();
   }
   function scheduleThreeSync(){
     if(!threeRuntime||threeDestroyed||threePending)return;
