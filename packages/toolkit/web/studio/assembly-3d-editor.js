@@ -8,7 +8,7 @@ import {
 // It is not a second scene model or a static image.
 const ns='http://www.w3.org/2000/svg';
 const $=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=String(text);return n;};
-const style=
+const style=`
 .p2lrn-assembly-editor{box-sizing:border-box;display:flex;flex-direction:column;gap:10px;width:100%;min-width:0;font-family:inherit;color:inherit}
 .p2lrn-assembly-editor *{box-sizing:border-box}
 .p2lrn-assembly-editor [hidden]{display:none!important}
