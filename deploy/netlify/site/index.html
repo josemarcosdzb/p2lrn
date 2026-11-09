@@ -17,9 +17,9 @@
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebSite","@id":"https://p2lrn.org/#website","name":"P2LRN","alternateName":"p2lrn.org","url":"https://p2lrn.org/","inLanguage":"es","description":"Crea, edita y reproduce cursos interactivos con P2LRN Studio y Player."}
   </script>
-  <link rel="stylesheet" href="/p2lrn.css?v=restored-inward-carousel-20261021">
+  <link rel="stylesheet" href="/p2lrn.css?v=restored-inward-carousel-20261021"><link rel="stylesheet" href="/assets/studio-guide/guide.css">
   <script src="/p2lrn.js?v=restored-inward-carousel-20261021" defer></script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoObject","@id":"https://p2lrn.org/#course-preview-video","name":"Vista previa en vídeo de cursos interactivos P2LRN","description":"Vista breve de la reproducción de cursos interactivos P2LRN.","thumbnailUrl":"https://p2lrn.org/assets/hero/video-reference.jpg","contentUrl":"https://p2lrn.org/assets/hero/preview.mp4","url":"https://p2lrn.org/#course-preview-video"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoObject","@id":"https://p2lrn.org/#course-preview-video","name":"Demostración grabada del curso sobre la Tierra","description":"Se recorre una actividad de las capas de la Tierra, otra de las capas de la atm\u00f3sfera y la evaluaci\u00f3n final. No se demuestra una nota final.","thumbnailUrl":"https://p2lrn.org/assets/studio-guide/demo-tierra-poster.webp","contentUrl":"https://p2lrn.org/assets/studio-guide/demo-tierra.webm","url":"https://p2lrn.org/#course-preview-video","duration":"PT25.8S","inLanguage":"es"}</script>
 </head>
 <body>
   <header class="site-header">
@@ -32,7 +32,7 @@
       <a href="/docs/toolkit/">Toolkit</a>
       <a href="/docs/integracion/">Integración</a>
     </nav>
-    
+
     <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
   </header>
 
@@ -75,17 +75,17 @@
               <figcaption><strong>Player</strong><span>Reproducci&oacute;n del paquete</span></figcaption>
             </figure>
             <figure class="hero-slide" data-hero-slide>
-              <div class="hero-slide-media"><img src="/assets/hero/studio.png" alt="Interfaz del editor visual P2LRN Studio para crear cursos"></div>
+              <div class="hero-slide-media"><img src="/assets/studio-guide/editor-real.webp" width="1408" height="852" alt="Interfaz del editor visual P2LRN Studio para crear cursos"></div>
               <figcaption><strong>Studio</strong><span>Edici&oacute;n visual</span></figcaption>
             </figure>
             <figure class="hero-slide" data-hero-slide data-video-slide>
               <div class="hero-slide-media">
-                <video controls title="Vista previa en vídeo de cursos interactivos P2LRN" muted loop playsinline preload="metadata" poster="/assets/hero/video-reference.jpg">
-                  <source src="/assets/hero/preview.mp4" type="video/mp4">
+                <video controls title="Vista previa en vídeo de cursos interactivos P2LRN" muted playsinline preload="none" poster="/assets/studio-guide/demo-tierra-poster.webp">
+                  <source src="/assets/studio-guide/demo-tierra.webm" type="video/webm"><track kind="captions" src="/assets/studio-guide/demo-tierra-es.vtt" srclang="es" label="Descripciones en espa\u00f1ol" default>
                 </video>
                 <span class="hero-video-badge">VIDEO</span>
               </div>
-              <figcaption><strong>Paquete en movimiento</strong><span>Verificar y reproducir</span></figcaption>
+              <figcaption><strong>Recorrido del curso de la Tierra</strong><span>Actividades terrestres y evaluaci\u00f3n</span></figcaption>
             </figure>
             <figure class="hero-slide" data-hero-slide>
               <div class="hero-slide-media"><img src="/assets/hero/games.png" alt="Página de P2LRN dedicada a actividades y juegos educativos 3D"></div>
@@ -199,7 +199,10 @@
         </div>
       </div>
     </section>
-  </main>
+
+
+<section class="studio-guide-section" id="homepage-studio-guide" aria-labelledby="homepage-studio-guide-title"><div class="studio-guide-overview"><div><p class="studio-guide-eyebrow">P2LRN STUDIO</p><h2 id="homepage-studio-guide-title">Mira cómo funciona Studio</h2><p>Capturas auténticas de menús, botones, edición, juegos 3D y vídeo de un curso real.</p><a class="button primary" href="/crear-cursos-interactivos/">Explorar Studio y las demostraciones</a></div><figure><a href="/assets/studio-guide/editor-real.webp" class="studio-guide-image-link" target="_blank" rel="noopener noreferrer" aria-label="Ampliar captura - Mira cómo funciona Studio"><img src="/assets/studio-guide/editor-real.webp" width="1408" height="852" alt="Captura real de Studio con un curso de geología abierto. Corresponde a una sesión local de desarrollo; la versión publicada puede variar." loading="lazy" decoding="async"></a><figcaption>Mira cómo funciona Studio</figcaption></figure></div></section>
+</main>
 
   <footer><strong>P2LRN</strong><span>Formato portable · Player web · Toolkit Node/TypeScript</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/index.json">index.json ↗</a></div><nav class="footer-legal" data-legal-links aria-label="Información legal"><a href="/licencia/">Licencia</a><a href="/terminos/">Términos</a><a href="/aviso-legal/">Aviso legal</a><a href="/cookies/">Cookies</a><a href="/cookies/#configuracion">Configurar cookies</a></nav></footer>
 </body>

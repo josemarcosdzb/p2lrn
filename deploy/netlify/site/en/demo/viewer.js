@@ -21,6 +21,8 @@
   const nav=document.getElementById('nav');
   const fields={package:document.querySelector('[data-inspect-package]'),format:document.querySelector('[data-inspect-format]'),version:document.querySelector('[data-inspect-version]'),integrity:document.querySelector('[data-inspect-integrity]'),transport:document.querySelector('[data-inspect-transport]'),entrypoints:document.querySelector('[data-inspect-entrypoints]'),profiles:document.querySelector('[data-inspect-profiles]'),renderer:document.querySelector('[data-inspect-renderer]'),entity:document.querySelector('[data-inspect-entity]'),representation:document.querySelector('[data-inspect-representation]')};
   const params=new URLSearchParams(location.search);
+  // Compact presentation when embedded by the English Studio guide.
+  if(params.get('embed')==='1')document.documentElement.dataset.p2lrnEmbedded='true';
   const initialSrc=params.get('src');
   const initialRenderer=params.get('renderer')||'';
   // The Player already isolates executable content in an opaque sandbox by default.

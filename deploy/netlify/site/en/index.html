@@ -13,9 +13,9 @@
   <meta name="twitter:image" content="https://p2lrn.org/p2lrn-mark.png">
   <meta property="og:site_name" content="P2LRN">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","@id":"https://p2lrn.org/en/#website","name":"P2LRN","alternateName":"p2lrn.org","url":"https://p2lrn.org/en/","inLanguage":"en","description":"Create, edit and play interactive courses with P2LRN Studio and Player."}</script>
-  <link rel="stylesheet" href="/p2lrn.css?v=restored-inward-carousel-20261021">
+  <link rel="stylesheet" href="/p2lrn.css?v=restored-inward-carousel-20261021"><link rel="stylesheet" href="/assets/studio-guide/guide.css">
   <script src="/en/p2lrn.js?v=restored-inward-carousel-20261021" defer=""></script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoObject","@id":"https://p2lrn.org/en/#course-preview-video","name":"P2LRN interactive course video preview","description":"Short visual preview of P2LRN interactive course playback.","thumbnailUrl":"https://p2lrn.org/assets/hero/video-reference.jpg","contentUrl":"https://p2lrn.org/assets/hero/preview.mp4","url":"https://p2lrn.org/en/#course-preview-video"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoObject","@id":"https://p2lrn.org/en/#course-preview-video","name":"Recorded Earth science course demonstration","description":"The Spanish-language recording navigates an Earth interior activity, an atmosphere activity and a final assessment. It does not show complete course authoring or final scoring.","thumbnailUrl":"https://p2lrn.org/assets/studio-guide/demo-tierra-poster.webp","contentUrl":"https://p2lrn.org/assets/studio-guide/demo-tierra.webm","url":"https://p2lrn.org/en/#course-preview-video","duration":"PT25.8S","inLanguage":"es"}</script>
 </head>
 <body>
   <header class="site-header">
@@ -28,7 +28,7 @@
       <a href="/en/docs/toolkit/">Toolkit</a>
       <a href="/en/docs/integration/">Integration</a>
     </nav>
-    
+
     <button class="menu" type="button" data-menu="" aria-expanded="false" aria-controls="nav">Menu</button>
   </header>
 
@@ -71,17 +71,17 @@
               <figcaption><strong>Player</strong><span>Playing the package</span></figcaption>
             </figure>
             <figure class="hero-slide" data-hero-slide="">
-              <div class="hero-slide-media"><img src="/assets/hero/studio.png" alt="P2LRN Studio visual course editor interface"></div>
+              <div class="hero-slide-media"><img src="/assets/studio-guide/en-editor-real.webp" width="1408" height="590" alt="Real English Studio editing toolbar, blank first lesson and course tree"></div>
               <figcaption><strong>Studio</strong><span>Visual editing</span></figcaption>
             </figure>
             <figure class="hero-slide" data-hero-slide="" data-video-slide="">
               <div class="hero-slide-media">
-                <video controls title="P2LRN interactive course video preview" muted="" loop="" playsinline="" preload="metadata" poster="/assets/hero/video-reference.jpg">
-                  <source src="/assets/hero/preview.mp4" type="video/mp4">
+                <video controls title="Earth science activities and quiz in P2LRN Studio" muted="" playsinline="" preload="none" poster="/assets/studio-guide/demo-tierra-poster.webp">
+                  <source src="/assets/studio-guide/demo-tierra.webm" type="video/webm"><track kind="captions" src="/assets/studio-guide/demo-tierra-en.vtt" srclang="en" label="English descriptions" default>
                 </video>
                 <span class="hero-video-badge">VIDEO</span>
               </div>
-              <figcaption><strong>Package in motion</strong><span>Check and play</span></figcaption>
+              <figcaption><strong>Earth science course walkthrough</strong><span>Earth layers, atmosphere and quiz</span></figcaption>
             </figure>
             <figure class="hero-slide" data-hero-slide="">
               <div class="hero-slide-media"><img src="/assets/hero/games.png" alt="P2LRN page about 3D educational activities and games"></div>
@@ -195,7 +195,10 @@
         </div>
       </div>
     </section>
-  </main>
+
+
+<section class="studio-guide-section" id="homepage-studio-guide" aria-labelledby="homepage-studio-guide-title"><div class="studio-guide-overview"><div><p class="studio-guide-eyebrow">P2LRN STUDIO</p><h2 id="homepage-studio-guide-title">See Studio in action</h2><p>Real English-editor screenshots. The Earth science activity recording was made in Spanish Studio and is labelled accordingly.</p><a class="button primary" href="/en/crear-cursos-interactivos/">Explore Studio screenshots and demos</a></div><figure><a href="/assets/studio-guide/en-editor-real.webp" class="studio-guide-image-link" target="_blank" rel="noopener noreferrer" aria-label="Zoom screenshot - See Studio in action"><img src="/assets/studio-guide/en-editor-real.webp" width="1408" height="899" alt="Actual English Studio screenshot with a new course. Captured from Chrome in the development branch, not certified production." loading="lazy" decoding="async"></a><figcaption>See Studio in action</figcaption></figure></div></section>
+</main>
 
   <footer><strong>P2LRN</strong><span>Portable format · Web player · Toolkit Node/TypeScript</span><div><span data-footer-version="">0.5.0-alpha.11</span><a href="/index.json">index.json ↗</a></div><nav class="footer-legal" data-legal-links="" aria-label="Legal information"><a href="/en/license/">License</a><a href="/en/terms/">Terms</a><a href="/en/legal-notice/">Legal notice</a><a href="/en/cookies/">Cookies</a><a href="/en/cookies/#configuracion">Set cookies</a></nav></footer>
 

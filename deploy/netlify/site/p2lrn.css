@@ -2178,3 +2178,19 @@ body.landing-page a:focus-visible,.doc-card:focus-visible{outline:3px solid #125
 .viewer-source-notice a{color:#1747a6;text-decoration:underline;text-underline-offset:3px;font-weight:750}
 .viewer-source-notice a:focus-visible{outline:3px solid #1747a6;outline-offset:3px}
 @media(max-width:650px){.viewer-source-notice{padding:15px;margin:10px 0 16px}}
+
+
+/* Studio guide embedding: one Player canvas, no nested navigation or diagnostic sidebar. */
+html[data-p2lrn-embedded="true"] .viewer-page > .site-header,
+html[data-p2lrn-embedded="true"] .viewer-intro,
+html[data-p2lrn-embedded="true"] .viewer-controls,
+html[data-p2lrn-embedded="true"] .viewer-inspector,
+html[data-p2lrn-embedded="true"] .viewer-console,
+html[data-p2lrn-embedded="true"] .viewer-context,
+html[data-p2lrn-embedded="true"] .viewer-help,
+html[data-p2lrn-embedded="true"] .viewer-page > footer {display:none!important}
+html[data-p2lrn-embedded="true"] .viewer-page {margin:0;background:#fff}
+html[data-p2lrn-embedded="true"] .viewer-main {width:100%;max-width:none;margin:0;padding:0}
+html[data-p2lrn-embedded="true"] .viewer-workbench {display:block;margin:0}
+html[data-p2lrn-embedded="true"] .viewer-stage {width:100%;min-width:0;border:0;border-radius:0;box-shadow:none}
+html[data-p2lrn-embedded="true"] .viewer-stage-head {padding:10px 18px;min-height:45px}
