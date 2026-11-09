@@ -86,7 +86,45 @@ jobs:
           $before = FreeGiB
           Write-Output ('OPENEDX_BEFORE_FREE_GIB=' + $before)
           if ($before -lt 4.0) { throw 'Open edX recovery blocked: Windows has less than 4 GiB free' }
+          $connectedByThisJob = $false
+          $routeCreatedByThisJob = $false
+          $network = 'openedx-josemarcosdiaz_default'
+          $routeDest = '/etc/caddy/tenant-routes/josemarcosdiaz.caddy'
+          $routeTemp = Join-Path $env:RUNNER_TEMP 'p2lrn-openedx-route.caddy'
           try {
+            $networkState = & docker inspect --format '{{json .NetworkSettings.Networks}}' aulap2p-ingress-local
+            if ($LASTEXITCODE -ne 0) { throw 'Existing AulaP2P ingress not found' }
+            if (-not (Test-Path Env:CI)) { throw 'Recovery requires the existing self-hosted CI runner' }
+            if (-not (ConvertFrom-Json $networkState).PSObject.Properties[$network]) {
+              & docker network connect $network aulap2p-ingress-local
+              if ($LASTEXITCODE -ne 0) { throw 'Failed to attach existing ingress to existing Open edX network' }
+              $connectedByThisJob = $true
+            }
+            & docker exec aulap2p-ingress-local test -e $routeDest | Out-Null
+            if ($LASTEXITCODE -eq 0) { throw 'Open edX route already exists; cannot overwrite it without reconciliation' }
+            $route = @'
+http://josemarcosdiaz.localhost, http://apps.josemarcosdiaz.localhost, http://studio-josemarcosdiaz.localhost, http://meilisearch.josemarcosdiaz.localhost {
+  encode zstd gzip
+  @local_lti_qa {
+    path /lti/login /lti/launch /lti/deep-link /lti/deep-link/confirm /lti/jwks /lti/health /lti/assets/* /lti/runtime/* /lti/legacy/launch
+  }
+  handle @local_lti_qa {
+    reverse_proxy p2lrn-lti-provider:37891
+  }
+  handle {
+    reverse_proxy openedx-josemarcosdiaz-caddy-1:80
+  }
+}
+'@
+            [System.IO.File]::WriteAllText($routeTemp,$route,(New-Object System.Text.UTF8Encoding($false)))
+            & docker cp $routeTemp ('aulap2p-ingress-local:' + $routeDest) | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot write Open edX QA route in existing ingress' }
+            $routeCreatedByThisJob = $true
+            & docker exec aulap2p-ingress-local caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Caddy refused the QA route configuration' }
+            & docker exec aulap2p-ingress-local caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile --address 127.0.0.1:2019 | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Caddy reload rejected; restoration required' }
+            Write-Output 'OPENEDX_EXISTING_NETWORK_AND_ROUTE_CONNECTED=YES'
             foreach ($name in $names) {
               $exists = & docker inspect --format '{{.State.Running}}' $name
               if ($LASTEXITCODE -ne 0) { throw ('Existing Open edX container not found: ' + $name) }
@@ -114,11 +152,19 @@ jobs:
               Start-Sleep -Seconds 12
             }
             if (-not $ready) { throw 'Open edX did not expose working content and the P2LRN provider via the existing proxy' }
+            Remove-Item -LiteralPath $routeTemp -Force -ErrorAction SilentlyContinue
             Write-Output ('OPENEDX_EXISTING_CORE_RECOVERED=YES; STARTED_COUNT=' + $started.Count)
           } catch {
             Write-Output 'OPENEDX_RECOVERY_FAILED_ROLLING_BACK_STARTED_CONTAINERS'
             for ($index = $started.Count - 1; $index -ge 0; $index--) {
               & docker stop --time 20 $started[$index] | Out-Null
+            }
+            if ($routeCreatedByThisJob) {
+              & docker exec aulap2p-ingress-local rm -f $routeDest | Out-Null
+              & docker exec aulap2p-ingress-local caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile --address 127.0.0.1:2019 | Out-Null
+            }
+            if ($connectedByThisJob) {
+              & docker network disconnect $network aulap2p-ingress-local | Out-Null
             }
             throw
           }
