@@ -87,12 +87,14 @@ function scan(dir){
       // Its URLs and exact keys are checked; executable inline scripts remain forbidden.
       if(expected.kind==='root'&&schema['@type']==='VideoObject'){
         homeVideoObjects++;
-        const allowed=['@context','@type','@id','name','description','thumbnailUrl','contentUrl','url'];
+        const allowed=['@context','@type','@id','name','description','thumbnailUrl','contentUrl','url','duration','inLanguage'];
         assert.deepEqual(Object.keys(schema).sort(),allowed.sort(),'Unexpected VideoObject metadata: '+rel);
         assert.equal(schema.url,expected.url+'#course-preview-video');
         assert.equal(schema['@id'],schema.url);
-        assert.equal(schema.thumbnailUrl,'https://p2lrn.org/assets/hero/video-reference.jpg');
-        assert.equal(schema.contentUrl,'https://p2lrn.org/assets/hero/preview.mp4');
+        assert.equal(schema.thumbnailUrl,'https://p2lrn.org/assets/studio-guide/demo-tierra-poster.webp');
+        assert.equal(schema.contentUrl,'https://p2lrn.org/assets/studio-guide/demo-tierra.webm');
+        assert.equal(schema.duration,'PT25.8S');
+        assert.equal(schema.inLanguage,'es');
         assert.ok(typeof schema.name==='string'&&schema.name.includes('P2LRN'),'Invalid video title: '+rel);
         assert.ok(typeof schema.description==='string'&&schema.description.length>=30,'Invalid video description: '+rel);
         continue;

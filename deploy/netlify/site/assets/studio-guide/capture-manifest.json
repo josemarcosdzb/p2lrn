@@ -1,0 +1,296 @@
+{
+  "status": "dev_branch_reference_not_production_certification",
+  "gitHead": "baf75a867d4e143a75fb754f624d9125a34b143c",
+  "screens": [
+    {
+      "name": "editor-real",
+      "captureSource": "reports/studio-preview-evidence/site-guide/01-editor-overview.png",
+      "captureSha256": "5bb581abf51ce3530d7f8d5301f8b7d64b0e81181fe9ddf3c54263206c7a99b4",
+      "publicationSha256": "e0a0ed6edd192462e934bb11394793871307da6296a67f5434ab810ab2695ed3",
+      "width": 1408,
+      "height": 852,
+      "bytes": 58184
+    },
+    {
+      "name": "acciones-superiores",
+      "captureSource": "reports/studio-preview-evidence/site-guide/02-header-controls.png",
+      "captureSha256": "0a93030539281f55afbb92e045740a2e57c47ce4acc3782c21fb7a70beb36682",
+      "publicationSha256": "022ad97f9b4d026d903297674325a98100da6bcdd463f6a422249ec6c1fe545a",
+      "width": 1410,
+      "height": 100,
+      "bytes": 5038
+    },
+    {
+      "name": "barra-formato",
+      "captureSource": "reports/studio-preview-evidence/site-guide/03-format-toolbar.png",
+      "captureSha256": "0db5fa855f21a625610fbf4a6abc0bf3c7c2127bfe969884b4ef21cd2cd1f107",
+      "publicationSha256": "c8c8aaeb2d6f89d3d40af958ace07c8b1043c9e0a4a7095287b6bd3a7a93e089",
+      "width": 1050,
+      "height": 126,
+      "bytes": 6002
+    },
+    {
+      "name": "arbol-lecciones",
+      "captureSource": "reports/studio-preview-evidence/site-guide/04-course-tree.png",
+      "captureSha256": "55b7aa6d9a5c9e09d8eea16d9698a640b7b36b9444c7b2b3e2bf523eee628f96",
+      "publicationSha256": "13f09214fb6c5cf1cfc513244c5ed49f00f301c3d6f54aef3e06e1d56af3fe30",
+      "width": 262,
+      "height": 400,
+      "bytes": 11854
+    },
+    {
+      "name": "edicion-leccion",
+      "captureSource": "reports/studio-preview-evidence/site-guide/05-lesson-canvas.png",
+      "captureSha256": "226b5e079c152aa0764a5873492db492450a1688c066b3fddf52e756811bc923",
+      "publicationSha256": "48ee33be9764a00c5097bad1fb3cf08183c80021135d4d08e1f3a0121816422a",
+      "width": 1110,
+      "height": 510,
+      "bytes": 32134
+    },
+    {
+      "name": "menu-insertar",
+      "captureSource": "reports/studio-preview-evidence/site-guide/06-insert-menu.png",
+      "captureSha256": "21d5ea1ad81c0d330c6f82761216397cfc1ef33a4ce65996ec4ea4d5f11afb5a",
+      "publicationSha256": "51808c5c2de156831536e88afb911f6648aa4c7abf6f417e015604bb32bdf9ad",
+      "width": 1310,
+      "height": 165,
+      "bytes": 11204
+    },
+    {
+      "name": "vista-alumno",
+      "captureSource": "reports/studio-preview-evidence/site-guide/08-student-view.png",
+      "captureSha256": "9213c7c31399e10848b8c7292f20aed027258b6135c91b3d465f2abc421fb2e4",
+      "publicationSha256": "e5ad007c92d954eba073a02347bafe4fc25a931f6ebff5ab1cd68795d196e8fe",
+      "width": 1408,
+      "height": 850,
+      "bytes": 60252
+    },
+    {
+      "name": "studio-movil",
+      "captureSource": "reports/studio-preview-evidence/site-guide/10-studio-mobile.png",
+      "captureSha256": "8c9a7ece18eacf24bb044658aeb6e93b7ee2e566e9221de9926dca7f860787d6",
+      "publicationSha256": "0f85ade345dab9d713ff67b7f8446e6bec2679af384abc734e776e2759cd4c40",
+      "width": 390,
+      "height": 844,
+      "bytes": 19204
+    },
+    {
+      "name": "menu-archivo",
+      "captureSource": "reports/studio-preview-evidence/site-guide/11-file-menu.png",
+      "captureSha256": "1d654ad5e3448712129099a88b094962559ccdcfa65e8786d6f807174fd41150",
+      "publicationSha256": "7c6b24569799a62c0165c10f9f80d32b9a07de60d9694634a726a0b7add1b423",
+      "width": 365,
+      "height": 520,
+      "bytes": 11090
+    },
+    {
+      "name": "juego-3d-ordenar-menu",
+      "captureSource": "reports/studio-preview-evidence/site-guide/14-3d-option.png",
+      "captureSha256": "c66141fa0a51429e63e54c31d352b8bc2d19775f91af55ec96183d667a27516c",
+      "publicationSha256": "451eafa6aa82c8ca1c1b9229397712818b6aa40ff0392e2d6336388066fe2783",
+      "width": 202,
+      "height": 82,
+      "bytes": 1492,
+      "scope": "menu-option-only-not-a-3d-session"
+    },
+    {
+      "name": "juego-3d-relacionar-menu",
+      "captureSource": "reports/studio-preview-evidence/site-guide/14-3d-matching-option.png",
+      "captureSha256": "f306e3da39297697b1a79a4d212590e860cf2a468a7e4925a71bc7eb6712e784",
+      "publicationSha256": "462fc5a60b5570ffb1421886f993f4620ff26800d4d7bcebbb2128ae729f794f",
+      "width": 202,
+      "height": 82,
+      "bytes": 1662,
+      "scope": "menu-option-only-not-a-3d-session"
+    },
+    {
+      "name": "juego-3d-clasificar-menu",
+      "captureSource": "reports/studio-preview-evidence/site-guide/14-3d-classification-option.png",
+      "captureSha256": "a540b1f523c0261bf513d3b95fbaf2d2929addd42edd2a63bcf0c315dbf59b4d",
+      "publicationSha256": "7576f265038797eacc34dca51263ec47db2d792bed0793cffc7ae58fd8c52d64",
+      "width": 201,
+      "height": 82,
+      "bytes": 1648,
+      "scope": "menu-option-only-not-a-3d-session"
+    },
+    {
+      "name": "juego-3d-ensamblar-menu",
+      "captureSource": "reports/studio-preview-evidence/site-guide/14-assembly-3d-option.png",
+      "captureSha256": "4e6b0ff4f67d2e9d669cf7c0f85651aa540b706f2954c391c82495491b7e3497",
+      "publicationSha256": "670d2905af15c82316907f21b2845052f9a0834e9957b395292e4b82ff86eb21",
+      "width": 201,
+      "height": 82,
+      "bytes": 2864,
+      "scope": "menu-option-only-not-a-3d-session"
+    },
+    {
+      "name": "selector-actividades",
+      "captureSource": "reports/studio-preview-evidence/site-guide/12-add-content-dialog.png",
+      "captureSha256": "a2d750f74811813a53e3d41ad112e3eeba517504f925685a161a1fc3ac92cf89",
+      "publicationSha256": "a9571a51965d7e94faf9ebcb89e3ff5a8e81d5578513bc65b5208f2bac19a050",
+      "width": 880,
+      "height": 822,
+      "bytes": 43494,
+      "scope": "real_content_picker_dialog_scrolled_to_top"
+    },
+    {
+      "name": "en-editor-real",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-editor-real.png",
+      "captureSha256": "96d8df441517134dd416612a35cf9ad06be6881f043c598377991d82312989c8",
+      "publicationSha256": "2ca9024d4bfd9f32df27d234b617e9f73ae5f9abc03e5e4a10b3a4cc3865b209",
+      "width": 1408,
+      "height": 899,
+      "bytes": 34150,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-new-open",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-new-open.png",
+      "captureSha256": "e6f0e9f04d0f7bdbe27ab9d3cfdb386e401d41e469e5b69284d1f6b8b9dc4d2d",
+      "publicationSha256": "21398c75379bdb22810fcb2a2cb794080cd230914e166c6a6802a914bf2bdd7e",
+      "width": 765,
+      "height": 80,
+      "bytes": 3928,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-action-toolbar",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-action-toolbar.png",
+      "captureSha256": "4c5701a00cf969ddd706f0eb23528c633294ce8aeedef6fa2dc5a9b0675e789e",
+      "publicationSha256": "de78cfae78f231180e1c738917741cb7d9e882639b9fec3496d0f3302839e68c",
+      "width": 1408,
+      "height": 65,
+      "bytes": 8878,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-format-toolbar",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-format-toolbar.png",
+      "captureSha256": "bbac91b08d08d2e4932e021b1998bf6d1cc8f2fa6643d9e2b1293c761a63bc04",
+      "publicationSha256": "1d235004e2af7ea0830ea0d149af6139f3ad229039df38c75294bc733f1491f0",
+      "width": 1408,
+      "height": 64,
+      "bytes": 4030,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-course-tree",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-course-tree.png",
+      "captureSha256": "eb4b8e5f098653ca9102a2b68f0d2754d337375a82d938fa6679b71553df7497",
+      "publicationSha256": "69929e73e04180cc3204aeb55dd740f280bc58757217dd854703f973c4d9065c",
+      "width": 280,
+      "height": 285,
+      "bytes": 3620,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-lesson-canvas",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-lesson-canvas.png",
+      "captureSha256": "4342746d47cb2cab09d03d422d50deeda323bc5e491072ecb7b661571e0d5eda",
+      "publicationSha256": "1296fd8cb7119ab854d600ad43033423e40489aa2a7a5b3df300401bbc19ae1f",
+      "width": 1114,
+      "height": 285,
+      "bytes": 8428,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-save-export",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-save-export.png",
+      "captureSha256": "0da135499b6aabc0b0466f573338d67bfeac6963ef651d316bf345a4180ebb9f",
+      "publicationSha256": "88e1404e523db6a7530c80be14604642e818b251a615f2c31b4064296ce46e9f",
+      "width": 532,
+      "height": 65,
+      "bytes": 3930,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-add-content-dialog",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-add-content-dialog.png",
+      "captureSha256": "2deb331a87042af24c635d022a279dcb809d982b4185be8b6ce279f6d7e176a9",
+      "publicationSha256": "270176164e009bcc07484cb16227a20d22dab0c5a30710f63e15193298e01ac9",
+      "width": 920,
+      "height": 826,
+      "bytes": 43066,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-learner-preview",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-learner-preview.png",
+      "captureSha256": "0f3fc1e3df98949aa413515a3eed286a8726a57aeaad2813afb7513ee6c6240f",
+      "publicationSha256": "29aedc8bb0e98e580621c9864899eac952491c2a12a2a73616f734876e92c0eb",
+      "width": 1408,
+      "height": 590,
+      "bytes": 35924,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-3d-sort-menu",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-3d-sort-menu.png",
+      "captureSha256": "d1064ae14469550f88d9706439404833e271c3b6f76ffa3ed1161bc08e29f00c",
+      "publicationSha256": "183d843c16c2f4c756b26f3a8c119d3fc4b14c961a0eda17ec2b7cd59a5d7fee",
+      "width": 170,
+      "height": 59,
+      "bytes": 1270,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-3d-match-menu",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-3d-match-menu.png",
+      "captureSha256": "6b6569dcb3201d13f073ab9dbc5be3153aee4b1c1ef80786942708ad4846b0e1",
+      "publicationSha256": "c251b63baf6f39a5cd7810d5d9346ef4dfedffc30c3ea53fb035c4298491c2ac",
+      "width": 170,
+      "height": 59,
+      "bytes": 1098,
+      "scope": "real-english-Studio-interface"
+    },
+    {
+      "name": "en-3d-classify-menu",
+      "captureSource": "reports/studio-preview-evidence/site-guide/en-3d-classify-menu.png",
+      "captureSha256": "4967c05c7dab28a8534f4c00e060ae4aebb137a0b72b511b5fed8049c0dc8633",
+      "publicationSha256": "c4909ea9ffaccf0075e2301a91e21cba1daf104907112c64a1240a6cdd1d6dfb",
+      "width": 170,
+      "height": 59,
+      "bytes": 1484,
+      "scope": "real-english-Studio-interface"
+    }
+  ],
+  "video": {
+    "source": "reports/curso-tierra/evidencias/demostracion-interactiva-tierra.webm",
+    "bytes": 2052985,
+    "sha256": "15dfa7e63433de3f82ca168726b0bd39a45aead6c6b75df656a812d9462d02e6",
+    "durationSeconds": 25.8,
+    "fps": 25.0,
+    "frameCount": 645,
+    "poster": "demo-tierra-poster.webp"
+  },
+  "review": {
+    "screensByVisualInspection": true,
+    "videoFramesReviewedSeconds": [
+      1.1,
+      3.2,
+      5.4,
+      7.5,
+      9.7,
+      11.8,
+      14.0,
+      16.1,
+      18.3,
+      20.4,
+      22.6,
+      24.7
+    ],
+    "videoTruth": "Studio navigates Earth inner layers, atmosphere layers, and final assessment. Not full course creation or proven final score.",
+    "3dTruth": "3D screenshots show the genuine menu only; no playable gameplay evidence.",
+    "genericVideoRejected": "assets/hero/preview.mp4 displays only a loading animation and is not used by the updated homepage."
+  },
+  "localization": {
+    "englishStudioDiffersFromSpanish": true,
+    "english3dOptionsVisible": [
+      "3D game (sort)",
+      "3D matching",
+      "3D classification"
+    ],
+    "englishAssemblyOptionVisible": false,
+    "source": "actual Chrome capture of /en/studio/; no Spanish screenshot reused to describe English controls"
+  }
+}
