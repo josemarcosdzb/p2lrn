@@ -177,7 +177,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     const grid=Array.from({length:15},(_,i)=>i-7);
     grid.forEach(v=>{const line1=[[-7,0,v],[7,0,v]],line2=[[v,0,-7],[v,0,7]];const a=line1.map(project),b=line2.map(project);element('path',{d:'M'+a[0][0]+' '+a[0][1]+'L'+a[1][0]+' '+a[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);element('path',{d:'M'+b[0][0]+' '+b[0][1]+'L'+b[1][0]+' '+b[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);});
     const sortItems=[];
-    scene.targets.forEach(target=>{const world=target.vertices.map(v=>toWorld(v,target.transform)),coords=world.map(project);sortItems.push({depth:project(target.transform.position)[2],run:()=>{
+    scene.targets.forEach(target=>{if(!showAll&&paired(selected.id)?.target?.id!==target.id)return;const world=target.vertices.map(v=>toWorld(v,target.transform)),coords=world.map(project);sortItems.push({depth:project(target.transform.position)[2],run:()=>{
       const active=selected.kind==='target'&&selected.id===target.id;
       const group=element('g',{'data-kind':'target','data-id':target.id});
       CAGE_EDGES.forEach(([a,b])=>{const c=coords[a],d=coords[b];const line=element('path',{d:'M'+c[0]+' '+c[1]+' L'+d[0]+' '+d[1],stroke:active?'#5eead4':'#6bbac0','stroke-width':active?2.8:1.8,fill:'none','stroke-opacity':target.visibility==='hidden'?0.45:0.9},group);line.dataset.kind='target';line.dataset.id=target.id;line.style.cursor='move';});
@@ -185,7 +185,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       const loc=project(target.transform.position);
       element('text',{x:loc[0]+7,y:loc[1]+8,fill:'#ccfbf1','font-size':12},group).textContent=target.text;
     }});});
-    scene.pieces.forEach(piece=>{const p=project(assemblyPlacementTransform(scene,piece.id)?.position??piece.initialTransform.position);sortItems.push({depth:p[2],run:()=>{
+    scene.pieces.forEach(piece=>{if(!showAll&&paired(selected.id)?.piece?.id!==piece.id)return;const p=project(assemblyPlacementTransform(scene,piece.id)?.position??piece.initialTransform.position);sortItems.push({depth:p[2],run:()=>{
       const active=selected.kind==='piece'&&selected.id===piece.id;
       const node=element('g',{'data-kind':'piece','data-id':piece.id});const box=element('rect',{x:p[0]-12,y:p[1]-12,width:24,height:24,rx:5,fill:active?'#fcd34d':'#60a5fa',stroke:'#e2e8f0','stroke-width':active?2:1},node);box.dataset.kind='piece';box.dataset.id=piece.id;box.style.cursor='move';element('text',{x:p[0]+16,y:p[1]+5,fill:'#eff6ff','font-size':12},node).textContent=piece.text;
     }});});
@@ -318,11 +318,11 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     const current=paired(selected.id);
     for(const target of scene.targets){
       const active=current?.target?.id===target.id;
-      threeRuntime.setObjectVisibility('author-target:'+target.id,showAll||active);
-      threeRuntime.setCageHandlesVisible('author-target:'+target.id,active);
+      threeRuntime.setObjectVisibility?.('author-target:'+target.id,showAll||active);
+      threeRuntime.setCageHandlesVisible?.('author-target:'+target.id,active);
     }
     for(const piece of scene.pieces){
-      threeRuntime.setObjectVisibility('author-piece:'+piece.id,showAll||current?.piece?.id===piece.id);
+      threeRuntime.setObjectVisibility?.('author-piece:'+piece.id,showAll||current?.piece?.id===piece.id);
     }
   }
   function syncThreeTransforms(){
