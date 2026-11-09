@@ -24,6 +24,7 @@ export function createLtiStore(filename){
  'CREATE TABLE IF NOT EXISTS ags_outbox(id TEXT PRIMARY KEY,attempt_id TEXT NOT NULL,score_hash TEXT NOT NULL,payload_json TEXT NOT NULL,status TEXT NOT NULL,tries INTEGER NOT NULL DEFAULT 0,last_error TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,UNIQUE(attempt_id,score_hash))'
  ,'CREATE TABLE IF NOT EXISTS nrps_contexts(registration_id TEXT NOT NULL,tenant_id TEXT NOT NULL,deployment_id TEXT NOT NULL,context_id TEXT NOT NULL,membership_url TEXT NOT NULL,versions_json TEXT NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(registration_id,deployment_id,context_id))'
  ,'CREATE TABLE IF NOT EXISTS nrps_instructor_attempts(attempt_id TEXT PRIMARY KEY,allowed INTEGER NOT NULL,FOREIGN KEY(attempt_id) REFERENCES attempts(id))'
+  ,'CREATE TABLE IF NOT EXISTS ags_learner_attempts(attempt_id TEXT PRIMARY KEY,allowed INTEGER NOT NULL,FOREIGN KEY(attempt_id) REFERENCES attempts(id))'
  ,'CREATE TABLE IF NOT EXISTS nrps_registration_origins(registration_id TEXT PRIMARY KEY,origins_json TEXT NOT NULL,FOREIGN KEY(registration_id) REFERENCES platforms(id))'
  ,'CREATE TABLE IF NOT EXISTS legacy_platforms(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,consumer_key TEXT NOT NULL UNIQUE,secret_encrypted TEXT NOT NULL,launch_url TEXT NOT NULL,issuer_origin TEXT NOT NULL,status TEXT NOT NULL)'
  ,'CREATE TABLE IF NOT EXISTS legacy_nonces(registration_id TEXT NOT NULL,nonce_hash TEXT NOT NULL,seen_at INTEGER NOT NULL,PRIMARY KEY(registration_id,nonce_hash),FOREIGN KEY(registration_id) REFERENCES legacy_platforms(id))'
@@ -159,7 +160,7 @@ export function createLtiStore(filename){
    returnUrl:r.return_url,ltiData:r.lti_data}:null;
  };
  const consumePicker=hash=>{let r=sql('UPDATE pickers SET consumed_at=? WHERE ticket_hash=? AND consumed_at IS NULL AND expires_at>? RETURNING *').get(t(),hash,t());return r?{registrationId:r.registration_id,tenantId:r.tenant_id,deploymentId:r.deployment_id,returnUrl:r.return_url,ltiData:r.lti_data}:null;};
- function attachLaunch({launch,ags,tokenHash,csrfHash,expiresAt,canReadRoster=false,legacy=false}){
+ function attachLaunch({launch,ags,tokenHash,csrfHash,expiresAt,canReadRoster=false,canReceiveGrades=true,legacy=false}){
   const b=legacy?getLegacyBinding({id:launch.bindingId,tenantId:launch.tenantId,registrationId:launch.registrationId}):getBinding({id:launch.bindingId,tenantId:launch.tenantId,registrationId:launch.registrationId,deploymentId:launch.deploymentId});
   if(!b||b.packageId!==launch.packageId||b.contentRoot!==launch.contentRoot||b.entityId!==launch.entityId)throw new Error('P2LRN content authorization changed');
   db.exec('BEGIN IMMEDIATE');
@@ -169,6 +170,8 @@ export function createLtiStore(filename){
    sql('INSERT INTO sessions VALUES(?,?,?,?,NULL)').run(tokenHash,result.id,csrfHash,expiresAt);
    sql('INSERT INTO nrps_instructor_attempts VALUES(?,?) ON CONFLICT(attempt_id) DO UPDATE SET allowed=excluded.allowed')
     .run(result.id,canReadRoster===true?1:0);
+    sql('INSERT INTO ags_learner_attempts VALUES(?,?) ON CONFLICT(attempt_id) DO UPDATE SET allowed=excluded.allowed')
+     .run(result.id,canReceiveGrades===true?1:0);
    db.exec('COMMIT');return {attemptId:result.id,expiresAt};
   }catch(e){db.exec('ROLLBACK');throw e;}
  }
@@ -199,8 +202,9 @@ export function createLtiStore(filename){
  function approveScore(attemptId,n,completed,scoreHash,payload){
   db.exec('BEGIN IMMEDIATE');
   try{
-   const attempt=sql("SELECT a.id,a.ags_json,l.id AS legacy_id FROM attempts a JOIN bindings b ON b.id=a.binding_id LEFT JOIN legacy_platforms l ON l.id=b.registration_id WHERE a.id=? AND a.status='IN_PROGRESS'").get(attemptId);
+   const attempt=sql("SELECT a.id,a.ags_json,COALESCE(g.allowed,1) AS grade_allowed,l.id AS legacy_id FROM attempts a LEFT JOIN ags_learner_attempts g ON g.attempt_id=a.id JOIN bindings b ON b.id=a.binding_id LEFT JOIN legacy_platforms l ON l.id=b.registration_id WHERE a.id=? AND a.status='IN_PROGRESS'").get(attemptId);
    if(!attempt)throw new Error('Unknown active LTI attempt');
+    if(attempt.grade_allowed!==1)throw new Error('LTI_GRADE_ROLE_DENIED');
    if(attempt.legacy_id&&!P(attempt.ags_json)?.serviceUrl)
     throw new Error('LEGACY_GRADE_SERVICE_NOT_AVAILABLE');
    sql('INSERT INTO assessments VALUES(?,?,?,1,?,?) ON CONFLICT(attempt_id) DO UPDATE SET normalized=excluded.normalized,completed=excluded.completed,approved=1,approved_at=excluded.approved_at,updated_at=excluded.updated_at').run(attemptId,n,completed?1:0,t(),t());

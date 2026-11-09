@@ -240,6 +240,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   const pending=store.outboxById(id);
   if(!pending)throw new Error('Unknown AGS delivery');
   if(pending.status==='SENT')return {delivered:true,duplicate:false};
+   if(pending.status==='REJECTED')return {delivered:false,error:'AGS_RECIPIENT_NOT_ELIGIBLE',terminal:true};
   try{
    if(pending.protocol==='legacy'){
     if(!pending.ags?.serviceUrl||!pending.ags?.sourceId)throw new Error('LEGACY_OUTCOME_NOT_AVAILABLE');
@@ -397,9 +398,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       registrationId:verified.launch.registrationId,tenantId:verified.launch.tenantId,
       deploymentId:verified.launch.deploymentId,contextId:verified.launch.contextId,service:nrpsService});
      const roles=claims[ROLES_CLAIM];
-     const canReadRoster=Array.isArray(roles)&&roles.some(role=>
+     const canReceiveGrades=Array.isArray(roles)&&roles.some(role=>typeof role==='string'&&/#Learner$/i.test(role));
+      const canReadRoster=Array.isArray(roles)&&roles.some(role=>
       typeof role==='string'&&/#(Instructor|Administrator|TeachingAssistant)$/i.test(role));
-     store.attachLaunch({launch:verified.launch,ags:agsData,canReadRoster,tokenHash:digest(token),
+     store.attachLaunch({launch:verified.launch,ags:agsData,canReadRoster,canReceiveGrades,tokenHash:digest(token),
       csrfHash:digest(csrf),expiresAt:time()+3600});
     const cspNonce=nonce(16);
     const body=playerHtml({entityId:verified.launch.entityId,csrf,

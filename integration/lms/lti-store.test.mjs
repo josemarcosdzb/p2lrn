@@ -87,3 +87,26 @@ test('tenant isolation, durable Player snapshots and idempotent client events',(
   assert.equal(f.store.listPending().length,0);
  }finally{f.clean()}
 });
+
+test('signed instructor launch cannot enqueue an official learner score across restarts',()=>{
+ const f=fixture();
+ try{
+  const catalogId=f.store.publishPackage({tenantId:'school1',title:'Official score access',
+   packageId:'urn:uuid:grade-role',contentRoot:root,sha:'c'.repeat(64),
+   filename:'c'.repeat(64)+'.p2lrn',bytes:512,
+   entities:[{id:'course1',type:'course',title:'Course'},{id:'lesson1',type:'activity',title:'Activity'}]});
+  const bindingId=f.store.createBinding({tenantId:'school1',registrationId:'lms1',
+   deploymentId:'deploy1',catalogId,entityId:'lesson1',id:issueP2LRNBindingId()});
+  const launch={tenantId:'school1',registrationId:'lms1',deploymentId:'deploy1',bindingId,
+   packageId:'urn:uuid:grade-role',contentRoot:root,entityId:'lesson1',
+   learnerKey:'1'.repeat(64),platformSubject:'instructor',contextId:'course1',resourceLinkId:'link1'};
+  const attempt=f.store.attachLaunch({launch,ags:null,canReceiveGrades:false,
+   tokenHash:'2'.repeat(64),csrfHash:'3'.repeat(64),expiresAt:Math.floor(Date.now()/1000)+3600});
+  const grade=()=>f.store.approveScore(attempt.attemptId,0.85,true,'attempt-85',{normalized:0.85,completed:true});
+  assert.throws(grade,/LTI_GRADE_ROLE_DENIED/);
+  assert.equal(f.store.listPending().length,0);
+  f.store.close();f.store=createLtiStore(f.path);
+  assert.throws(grade,/LTI_GRADE_ROLE_DENIED/);
+  assert.equal(f.store.listPending().length,0);
+ }finally{f.clean()}
+});
