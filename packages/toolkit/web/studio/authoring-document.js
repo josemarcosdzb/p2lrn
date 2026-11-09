@@ -510,6 +510,16 @@ export class P2LRNStudioDocument{
     return this.addEmbeddedResource(parentId,{title,language,filename:'questionnaire.json',mediaType:'application/vnd.p2lrn.questionnaire+json',bytes:encoder.encode(JSON.stringify(data,null,2)+'\n'),profile:'https://p2lrn.org/profile/native-questionnaire',activityType:'https://p2lrn.org/type/assessment',renderer});
   }
 
+  async readAssemblyAsset(path){
+    const entry=this.manifest.files.find(file=>file.path===String(path)&&file.mediaType==='model/gltf-binary');
+    if(!entry)throw new Error('Modelo GLB no incluido en este curso');
+    const bytes=this.payloadOverrides.has(path)?this.payloadOverrides.get(path):await this.package?.zip.read(path);
+    if(!bytes)throw new Error('El modelo GLB no está disponible');
+    const result=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+    inspectAssemblyGLB(result);
+    return result;
+  }
+
   async addAssemblyAsset({bytes,filename='modelo.glb'}={}){
     const data=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes??[]);
     const inspected=inspectAssemblyGLB(data);
