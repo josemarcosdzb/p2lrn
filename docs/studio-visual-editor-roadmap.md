@@ -69,3 +69,56 @@ La web y el componente NPM comparten los mismos módulos y la misma interfaz. No
 Pruebas realizadas: node --test del historial, bloques y dependencias, Chrome/Edge con DOM normal y Shadow DOM, cambios de filas y columnas, diseño de celdas, movimiento y redimensionado mediante puntero, historial reversible y exportación/reapertura P2LRN en el componente NPM. La corrección diferida de cuestionarios y las pruebas de exportación de paquetes han pasado. La prueba de medios reales grabados en Chrome headless ha fallado con un WebM de prueba no reproducible y, en otro intento, un bloqueo temporal de DevTools; no se considera validada esa parte.
 
 Límites: no existe aún un historial global que abarque todos los metadatos, cuestionarios y juegos; tampoco un motor completo de páginas, capas y animaciones de PowerPoint, combinaciones de celdas, ni importación o exportación editable PPTX/PDF. No afirmar dichas capacidades. Prohibido fusionar, publicar NPM o desplegar la rama sin autorización expresa del usuario.
+
+## Juego nativo de ensamblaje 3D por piezas — especificación de diseño (9 de noviembre de 2026)
+
+**Estado:** DISEÑADO; NO IMPLEMENTADO ni validado en Studio/Player/LMS/offline. Esta sección define el contrato funcional y criterios de aceptación, no resultados de pruebas. Extender los componentes existentes; prohibido crear un segundo editor/motor/formato/checkout.
+
+### Experiencia del profesor y alumno
+
+El profesor importa un modelo humano, mecánico, geológico o de cualquier estructura, crea piezas independientes y establece las zonas 3D donde el alumno debe encajarlas. Cada destino se muestra en edición como una **jaula wireframe** con vértices y aristas, nunca como caja opaca obligatoria. La zona inicial tiene ocho vértices, editables individualmente, y se puede mover, escalar y rotar en X/Y/Z en cualquier punto del espacio. No debe limitarse a plataformas X/Z ni a una cámara prefijada.
+
+La zona se construye con un hexaedro convexo editable. Para órganos y piezas cóncavas se permiten varios volúmenes convexos unidos en un solo destino lógico. Se editan los puntos/volúmenes, no la malla visual de alta resolución: así el coste de picking y validación sigue siendo bajo. La edición debe impedir volúmenes invertidos, caras degeneradas, autointersecciones y transformaciones no finitas. Ante una geometría inválida se revierte únicamente el gesto, sin perder el trabajo ya válido.
+
+Modos de alumno: arrastrar directamente, seleccionar/transportar la pieza por el escenario, girarla hasta la orientación válida y montar en secuencia cuando existan dependencias. El docente configura si los objetivos se ven como contorno sutil, silueta de referencia, pista de proximidad u objetivo invisible. No desvelar respuestas correctas antes de la interacción. Ejemplos: esqueleto con huesos; torso con órganos; motor con engranajes, ejes y carcasa; planeta con capas.
+
+### Editor visual único para Studio web y NPM
+
+Extender el editor de cuestionarios y la interfaz compartida; no montar otro Studio. Nueva actividad «Ensamblaje 3D» en el catálogo basado en addGame. Escena editable en directo con acciones: Añadir modelo; separar nodos/submallas importadas en piezas; Añadir destino; Asignar pieza al destino; Mover; Rotar; Escalar; Editar vértices; bloquear ejes; ajustar dimensiones XYZ con campos numéricos; ajustar pivote y origen; deshacer/rehacer; Vista alumno. Todas las operaciones ocurren dentro del mismo visor de edición, sin obligar a cambiar de vista para mover piezas o jaulas.
+
+Panel único «Escena / Modelos / Piezas / Zonas / Relaciones» con árbol de selección y jerarquía, coordenadas locales y globales, tolerancia de colocación, giro aceptado, puntuación, intentos, orden de ensamblaje y ayudas. Los vértices se muestran como asas de arrastre y sus coordenadas pueden teclearse con precisión. Gizmos y paneles deben permanecer visibles encima del lienzo sin bloquear menú ni controles previos. La edición con ratón, táctil y teclado debe ser equivalente en funciones esenciales.
+
+### Contrato de datos y geometría
+
+Extensión versionada y aditiva del cuestionario nativo: scene3d contiene units, referenceAssets, pieces, targets, links, placementRules y interactionMode. Cada pieza contiene id, assetId, nodeId (submalla opcional), initialTransform (posición + cuaternión + escala), pivot y collider simplificado. Cada destino contiene id, position XYZ, rotationQuaternion, scale XYZ, localVertices (vértices en coordenadas locales), convexParts opcionales, visibility. Cada relación contiene pieceId, targetId, positionTolerance, rotationToleranceDeg, scaleTolerance, snapMode y prerequisites.
+
+El motor transforma los vértices locales a coordenadas globales de forma determinista. Validar primero AABB/esfera delimitadora y después volumen convexo orientado y tolerancia de orientación; solo al superar las condiciones se activa el snap. Tolerancias y unidades ajustables por docente, valores por defecto conservadores. El resultado no puede depender del zoom o la cámara. Validar IDs únicos, existencia de referencias, forma convexa no degenerada, escala positiva, cuaternión válido, ausencia de ciclos de dependencias y límites de complejidad. Si la zona requiere superficie irregular, combinar convexParts en lugar de calcular contacto costoso contra cada triángulo visual.
+
+Integrar el estado con la evaluación/reanudación P2LRN existente. Cada colocación guarda pieza, destino, transformación final cuantizada, intento y resultado. Usar los eventos de actividad y puntuación del Player, sin generar un sistema paralelo ni registrar movimientos de cursor o datos personales innecesarios. Una caída de WebGL/física nunca concede automáticamente nota. Fallback HTML accesible: seleccionar pieza/destino, orientar mediante controles y confirmar encaje, con las mismas reglas de evaluación.
+
+### Activos 3D seguros y optimizados
+
+Importar GLB/glTF 2.0 desde ficheros y recursos P2LRN, con verificación de buffers, URI, extensiones, tamaños, texturas, licencia y geometría. Rechazar scripts, referencias externas no autorizadas, rutas absolutas y archivos malformados. En un modelo GLB compuesto, permitir seleccionar submallas/nodos existentes como piezas preservando sus pivotes; NO inventar segmentación automática si el GLB no está separado. El paquete offline debe contener todos los modelos y decodificadores requeridos, no solicitar recursos remotos para funcionar.
+
+Optimización medible: normalizar escala/ejes/pivotes; eliminar atributos y nodos no usados sin destruir rig o animación requerida; compartir buffers/materiales/texturas por digest; mallas de colisión simplificadas; instancing de piezas repetidas; LOD; frustum culling; cargas diferidas; adaptación de sombras y pixel ratio; pausar render si el visor no está visible. Meshopt y KTX2/Basis solo si sus decodificadores están incluidos y pasan pruebas en web, NPM y offline. Medir memoria GPU, bytes, FPS y tiempo de carga antes/después; no prometer ratios inventados. Mantener un recurso canónico por activo más representaciones técnicas necesarias, no duplicaciones indefinidas. Rapier para física de piezas cuando se necesite, zonas de destino estáticas/cinemáticas.
+
+### Integrar en módulos existentes
+
+- packages/toolkit/web/studio/questionnaire-editor.js: un solo editor visual, gizmos y propiedades.
+- packages/toolkit/web/studio/authoring-document.js: nuevo tipo de juego a través de addGame, no nuevo formato de curso.
+- packages/toolkit/web/questionnaire-games-core.js: validar scene3d y normalizar actividades reproducibles.
+- packages/toolkit/web/game-3d/three-runtime.js: visor Three.js existente con jaulas wireframe editables, picking, transformaciones XYZ, snap y modelos GLB; preservar anteriores juegos, cámara y joystick.
+- packages/toolkit/web/renderers/questionnaire-3d.js: ejecución del nuevo modo, evaluación, reanudación y accesibilidad.
+- packages/studio/scripts/build-dist.mjs y builds Player/web/offline: verificar que empaquetan exactamente los mismos módulos, sin copiar implementación entre interfaces.
+
+### Criterios de aceptación
+
+1. Crear visualmente 1 modelo de referencia, al menos 5 piezas y 5 destinos a diferentes alturas y orientaciones; asignar relaciones reales.
+2. Mover, rotar, escalar y desplazar vértices sin abandonar edición; deshacer/rehacer; impedir geometría inválida sin destruir cambios anteriores.
+3. Guardar un único archivo .p2lrn, reabrirlo en Studio web y NPM, comprobar IDs, hashes, geometría, pivotes y soluciones; Player debe usar exactamente el mismo paquete.
+4. Comprobar acierto, fallo, distancia, giro insuficiente, dependencias, pistas, reanudación y nota. Las pistas no deben revelar la clave incorrectamente.
+5. Probar ratón, táctil y teclado/lector de pantalla; el fallback HTML ha de producir la misma nota sin WebGL.
+6. Ejecutar offline sin red y registrar progreso/resultados; probar también LMS reales con el mismo paquete, sin certificar hasta obtener evidencia.
+7. Medir cargas y rendimiento de GLB grandes, validar manejo de fallos y ejecutar regresiones de ordenar/relacionar/clasificar 3D.
+
+**No declarar hecho el juego por escribir esta especificación.** No crear prototipo desechable que no persista, exporte ni funcione en el Player; no fusionar ni publicar la rama sin pruebas y autorización.
