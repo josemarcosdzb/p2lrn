@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   cageVertices,validCage,defaultAssembly,validateAssembly,
   evaluateAssemblyPlacement,rotateVector,toWorld,toLocal,
-  inspectAssemblyGLB,rotationErrorDegrees,
+  inspectAssemblyGLB,rotationErrorDegrees,fitAssemblyBounds,assemblyPlacementTransform,assemblyFitStatus,cageContains,
 } from '../web/assembly-3d-core.js';
 import {validateQuestionnaire,scoreQuestionnaire} from '../web/questionnaire-core.js';
 import {buildQuestionnaireGame} from '../web/questionnaire-games-core.js';
@@ -89,4 +89,37 @@ test('embedded GLB inspection rejects external URLs, unknown compression and cor
   assert.throws(()=>inspectAssemblyGLB(glb(compressed)),/decodificador/);
   const broken=glb(doc);broken[0]=0;
   assert.throws(()=>inspectAssemblyGLB(broken),/cabecera/);
+});
+
+test('real glTF bounds fit inside the target even with an off-centre pivot',()=>{
+  const scene=defaultAssembly(),target=scene.targets[0],piece=scene.pieces[0];
+  target.transform.position=[3,2,-4];
+  target.transform.rotation=[0,Math.sin(Math.PI/4),0,Math.cos(Math.PI/4)];
+  const bounds={min:[10,-2,5],max:[14,4,8]};
+  const fitted=fitAssemblyBounds(target,bounds);
+  scene.links[0].placement=fitted;
+  piece.initialTransform.scale=[...fitted.scale];
+  const correct=assemblyPlacementTransform(scene,piece.id);
+  const center=bounds.min.map((n,i)=>(n+bounds.max[i])/2);
+  assert.equal(cageContains(toWorld(center,correct),target),true);
+  assert.equal(evaluateAssemblyPlacement(scene,piece.id,target.id,correct).ok,true);
+  const pivotWrong={...correct,position:[...target.transform.position]};
+  assert.equal(evaluateAssemblyPlacement(scene,piece.id,target.id,pivotWrong).ok,false);
+  const scaleWrong={...correct,scale:correct.scale.map(v=>v*1.4)};
+  assert.equal(evaluateAssemblyPlacement(scene,piece.id,target.id,scaleWrong).ok,false);
+  const oldStart=[...piece.initialTransform.position];
+  target.transform.position[0]+=2.5;
+  const followed=assemblyPlacementTransform(scene,piece.id);
+  assert.ok(Math.abs(followed.position[0]-correct.position[0]-2.5)<1e-8);
+  assert.deepEqual(piece.initialTransform.position,oldStart,'Moving a destination must not move the student start position');
+  validateAssembly(scene);
+});
+test('fits flat educational geometry and isolates fitting from assembly sequence order',()=>{
+  const scene=defaultAssembly(),target=scene.targets[1];
+  const flat={min:[0,0,0],max:[0.8,0.8,0]};
+  scene.links[1].placement=fitAssemblyBounds(target,flat);
+  scene.links[1].prerequisites=['piece-1'];
+  const pose=assemblyPlacementTransform(scene,'piece-2');
+  assert.equal(assemblyFitStatus(scene,'piece-2',pose).ok,true,'The teacher must see geometry fit even if a learner must assemble other pieces first');
+  assert.equal(evaluateAssemblyPlacement(scene,'piece-2','target-2',pose).reason,'prerequisite');
 });
