@@ -504,7 +504,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     group.add(box);
     const handles=[];
     if(editable){
-      const geometry=new THREE.SphereGeometry(0.105,10,8);
+      const geometry=new THREE.SphereGeometry(0.075,10,8);
       const material=new THREE.MeshBasicMaterial({color:'#22d3ee',depthTest:false});
       vertices.forEach((point,index)=>{
         const handle=new THREE.Mesh(geometry,material);
@@ -547,6 +547,26 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     }
     if(transform)setTransform(id,transform);
     if(authoring)requestFrame();
+    return true;
+  }
+
+  function setObjectVisibility(id,visible=true){
+    const object=meshes.get(String(id));
+    if(!object)return false;
+    const next=Boolean(visible);
+    if(object.visible!==next){object.visible=next;if(authoring)requestFrame();}
+    return true;
+  }
+
+  function setCageHandlesVisible(id,visible=true){
+    const data=meshes.get(String(id))?.userData?.p2lrnCage;
+    if(!data)return false;
+    const next=Boolean(visible);
+    let changed=false;
+    for(const handle of data.handles){
+      if(handle.visible!==next){handle.visible=next;changed=true;}
+    }
+    if(changed&&authoring)requestFrame();
     return true;
   }
 
@@ -855,6 +875,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     setTransform,
     updateCage,
     getObjectLocalBounds,
+    setObjectVisibility,
+    setCageHandlesVisible,
     focusOn,
     connect,
     connectToPlayer,
