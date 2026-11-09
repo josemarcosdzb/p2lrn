@@ -8,7 +8,7 @@ import {
 // It is not a second scene model or a static image.
 const ns='http://www.w3.org/2000/svg';
 const $=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=String(text);return n;};
-const style=String.raw\`
+const style=`
 .p2lrn-assembly-editor{font-family:inherit;color:inherit;display:grid;gap:12px}
 .p2lrn-assembly-editor .a3-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .p2lrn-assembly-editor .a3-toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
@@ -35,7 +35,7 @@ const style=String.raw\`
 .p2lrn-assembly-editor .a3-scene:focus-within{outline:2px solid #0d9488}
 @media(max-width:950px){.p2lrn-assembly-editor .a3-main{grid-template-columns:1fr 1fr}.p2lrn-assembly-editor .a3-scene{grid-column:1 / -1;grid-row:1}}
 @media(max-width:620px){.p2lrn-assembly-editor .a3-main{grid-template-columns:1fr}.p2lrn-assembly-editor .a3-scene{grid-column:1;grid-row:auto}}
-\`.slice(1,-1);
+`;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const degrees=180/Math.PI;
 function eulerQuat(a){const [x,y,z]=a.map(n=>n/degrees/2),cx=Math.cos(x),cy=Math.cos(y),cz=Math.cos(z),sx=Math.sin(x),sy=Math.sin(y),sz=Math.sin(z);return[
