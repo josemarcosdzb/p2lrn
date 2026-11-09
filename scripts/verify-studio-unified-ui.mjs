@@ -902,7 +902,8 @@ async function browserScenario(){
   expect(finalCanvas&&!finalCanvas.hidden&&finalCanvas.width>=320&&finalCanvas.getContext('webgl2'),
     'Visual evidence is not a rendered real WebGL assembler');
   const resultForScreenshot=await website.course.readQuestionnaire(visualGame.id);
-  expect(assemblyFitStatus(resultForScreenshot.payload.questions[0].assembly3d,'piece-1').ok,
+  const {assemblyFitStatus:finalAssemblyFitStatus}=await import('/assembly-3d-core.js');
+  expect(finalAssemblyFitStatus(resultForScreenshot.payload.questions[0].assembly3d,'piece-1').ok,
     'Visual evidence GLB does not fit in its configured cage');
   return {ok:true,sameUI:true,sharedControls:website.toolbar.querySelectorAll('button').length,
     persisted:website.writes>0&&npm.writes>0,roundTrip:true,shadowDOM:true,stylesMatch:true,
