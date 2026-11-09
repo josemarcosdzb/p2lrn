@@ -155,6 +155,50 @@ async function inspectExistingLmsContainers(){
     /josemarcosdiaz|openedx-josemarcosdiaz|p2lrn-lti-provider/i.test(x))
     .slice(0,30).map(x=>x.slice(0,180).replace(/[;#].*$/,'').trim());
   }catch{}
+  try{
+   const network=await run('docker',['network','inspect','openedx-josemarcosdiaz_default'],{
+    timeout:5000,windowsHide:true,maxBuffer:256*1024});
+   const d=JSON.parse(network.stdout)[0];
+   topology.openEdxNetwork={
+    exists:true,driver:d?.Driver??null,internal:d?.Internal===true,
+    members:Object.values(d?.Containers??{}).map(x=>String(x.Name||''))
+     .filter(name=>/openedx|ingress|p2lrn/i.test(name)).slice(0,20)
+   };
+  }catch(e){topology.openEdxNetwork={exists:false,reason:limit(e.code||e.message,100)};}
+  try{
+   let raw;
+   try{
+    raw=await run('docker',['exec','aulap2p-ingress-local','wget','-qO-',
+     'http://127.0.0.1:2019/config/'],{
+     timeout:7000,windowsHide:true,maxBuffer:3*1024*1024});
+   }catch{
+    raw=await run('docker',['exec','aulap2p-ingress-local','curl','-fsS',
+     'http://127.0.0.1:2019/config/'],{
+     timeout:7000,windowsHide:true,maxBuffer:3*1024*1024});
+   }
+   const loaded=JSON.parse(raw.stdout);
+   const servers=loaded?.apps?.http?.servers??{};
+   const hostRouting=[];
+   function findRoutes(value){
+    if(!value||typeof value!=='object')return;
+    if(Array.isArray(value)){for(const item of value)findRoutes(item);return;}
+    const host=Array.isArray(value.match)?
+     [...new Set(value.match.flatMap(m=>Array.isArray(m?.host)?m.host:[]))]:[];
+    if(host.length){
+     const h=host.filter(x=>/localhost$/i.test(String(x))||x==='*');
+     if(h.length)hostRouting.push(...h.map(x=>String(x)));
+    }
+    for(const item of Object.values(value))findRoutes(item);
+   }
+   findRoutes(servers);
+   topology.caddyLiveConfig={
+    available:true,servers:Object.keys(servers),
+    matchedHosts:[...new Set(hostRouting)].filter(x=>
+     /josemarcosdiaz|moodle|chamilo|sakai|canvas|josemarcos|p2lrn/i.test(x)).slice(0,45),
+    openEdxMentioned:JSON.stringify(servers).toLowerCase().includes('josemarcosdiaz'),
+    routeCount:hostRouting.length
+   };
+  }catch(e){topology.caddyLiveConfig={available:false,reason:limit(e.code||e.message,130)};}
   resources.topology=topology;
   return {available:true,services,resources};
  }catch(e){
