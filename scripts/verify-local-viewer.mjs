@@ -803,6 +803,111 @@ async function verifyAssemblyLiveInput(cdp){
   }
 }
 
+// Exercise the actual 3D controllers with real scene meshes. Unlike a
+// controller mock, this proves that an old box stops following the player when
+// a different box is picked. The same contract covers Ordering and Classify.
+async function browserExclusiveCarry(){
+  const [{createThreeGameScene},{buildOrderingControls,buildClassificationControls}]=await Promise.all([
+    import('/player/current/dist/game-3d/three-runtime.js'),
+    import('/player/current/dist/renderers/questionnaire-3d.js'),
+  ]);
+  const canvas=document.createElement('canvas');
+  canvas.id='p2lrn-exclusive-carry-live-qa';
+  Object.assign(canvas.style,{position:'fixed',top:'24px',left:'24px',width:'740px',
+    height:'420px',zIndex:'2147483599',background:'#070f20'});
+  canvas.width=740;canvas.height=420;document.body.append(canvas);
+  let game=null;
+  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const getMesh=(kind,id)=>{
+    let found=null;
+    game.scene.traverse(node=>{
+      if(node.userData?.p2lrnInteraction?.kind===kind&&node.userData?.p2lrnInteraction?.id===id)
+        found=node;
+    });
+    if(!found)throw Error('3D mesh missing: '+kind+'/'+id);
+    return found;
+  };
+  const trialObjects=[{id:'a',text:'A'},{id:'b',text:'B'},{id:'c',text:'C'}];
+  const runtime={
+    state:{completed:false},
+    getGameState:(key,fallback)=>fallback,
+    setGameState:()=>{},
+    answer:()=>({order:[],classifications:{}}),
+    replaceAnswer:()=>{},
+    applyPatch:(questionId,patch)=>runtime.patches.push(patch),
+    patches:[],
+  };
+  const status=document.createElement('p');
+  const select=(control,kind,id)=>control.interact({kind,id});
+  async function exercise(kind,controls){
+    const a=getMesh(kind,'a'),b=getMesh(kind,'b');
+    select(controls,kind,'a');
+    await sleep(180);
+    select(controls,kind,'b');
+    if(status.textContent.includes('Ya llevas un objeto'))
+      throw Error('Picking B incorrectly refuses to release A: '+status.textContent);
+    await sleep(180);
+    const oldBefore=a.position.clone(),newBefore=b.position.clone();
+    game.setMovementVector(0,1);
+    await sleep(450);
+    game.setMovementVector(0,0);
+    const oldTravel=a.position.distanceTo(oldBefore);
+    const newTravel=b.position.distanceTo(newBefore);
+    if(oldTravel>0.15||newTravel<0.6)
+      throw Error('3D boxes still stack/follow player: '+kind+' '+JSON.stringify({oldTravel,newTravel}));
+    return {releasedFirstTravel:oldTravel,selectedSecondTravel:newTravel};
+  }
+  try{
+    game=await createThreeGameScene(canvas,{physics:'none'});
+    const ordering={questionId:'carry-order',prompt:'Ordenar cajas',objects:trialObjects,
+      correctOrder:['a','b','c']};
+    const order=buildOrderingControls({trial:ordering,runtime,scene:game,status});
+    const orderResult=await exercise('ordering-object',order);
+    select(order,'ordering-slot',0);
+    if(runtime.patches.length!==0)throw Error('Partial ordering accidentally awarded a classification score');
+    game.reset();
+    game.resetPlayer();
+    const classification={questionId:'carry-class',prompt:'Clasificar cajas',objects:trialObjects,
+      categories:[{id:'group-1',text:'Grupo 1'},{id:'group-2',text:'Grupo 2'}],
+      assignments:[{itemId:'a',categoryId:'group-1'},
+        {itemId:'b',categoryId:'group-2'},{itemId:'c',categoryId:'group-1'}]};
+    const classify=buildClassificationControls({trial:classification,runtime,scene:game,status});
+    const classResult=await exercise('classification-object',classify);
+    select(classify,'classification-category','group-2');
+    if(runtime.patches.length!==1||
+      runtime.patches[0]?.kind!=='classification-set'||
+      runtime.patches[0]?.itemId!=='b')
+      throw Error('Switching carried boxes corrupted classification grading');
+    const scoredBox=getMesh('classification-object','b');
+    const scoredPosition=scoredBox.position.clone();
+    game.setMovementVector(1,0);
+    await sleep(300);
+    game.setMovementVector(0,0);
+    if(scoredBox.position.distanceTo(scoredPosition)>0.15)
+      throw Error('Already scored box still follows the player');
+    globalThis.__p2lrnExclusiveCarryQA={game,canvas};
+    return {ordering:orderResult,classification:classResult,scoredOnce:true};
+  }catch(error){game?.destroy();canvas.remove();throw error;}
+}
+async function verifyExclusiveCarryInBrowser(cdp){
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
+  await waitForEval(cdp,"Boolean(customElements.get('p2lrn-player'))",
+    '3D exclusive carry browser startup',30000);
+  const result=await evalTop(cdp,'('+browserExclusiveCarry.toString()+')()');
+  try{
+    invariant(result?.scoredOnce&&result.ordering?.releasedFirstTravel<0.15&&
+      result.ordering?.selectedSecondTravel>0.6&&
+      result.classification?.releasedFirstTravel<0.15&&
+      result.classification?.selectedSecondTravel>0.6,
+      'Multiple objects followed the player: '+JSON.stringify(result));
+    const screenshot=await captureElementVisualEvidence(cdp,'3d-single-carried-box-live',
+      "document.getElementById('p2lrn-exclusive-carry-live-qa')",{maxHeight:900});
+    return {...result,screenshot};
+  }finally{
+    await evalTop(cdp,"(()=>{const qa=globalThis.__p2lrnExclusiveCarryQA;qa?.game?.destroy();qa?.canvas?.remove();delete globalThis.__p2lrnExclusiveCarryQA;return true;})()");
+  }
+}
+
 async function verifyThreePointerDragAndRope(cdp){
   await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
   await waitForEval(cdp,"Boolean(globalThis.P2LRN?.createCapabilityBroker&&customElements.get('p2lrn-player'))",'3D pointer test runtime',30000);
@@ -1799,8 +1904,9 @@ try{
     const assemblyStart=await verifyAssemblyScatteredViewport(cdp);
     const pointerDrag=await verifyThreePointerDragAndRope(cdp);
     const assemblyLive=await verifyAssemblyLiveInput(cdp);
+    const singleCarry=await verifyExclusiveCarryInBrowser(cdp);
     const threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);
-    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,assemblyLive,threeMobile};
+    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,assemblyLive,singleCarry,threeMobile};
     await mkdir(visualEvidenceRoot,{recursive:true});
     await writeFile(join(visualEvidenceRoot,'quest3d-report.json'),JSON.stringify(report,null,2)+'\n');
     console.log('P2LRN_QUEST3D_BROWSER_REPORT='+JSON.stringify(report));
@@ -1837,6 +1943,9 @@ try{
   let assemblyLive=null;
   try{assemblyLive=await verifyAssemblyLiveInput(cdp);}
   catch(error){failures.push({name:'assembly-real-pointer-and-navigation',message:String(error?.message||error)});}
+  let singleCarry=null;
+  try{singleCarry=await verifyExclusiveCarryInBrowser(cdp);}
+  catch(error){failures.push({name:'single-carry-real-physics-and-score',message:String(error?.message||error)});}
   let threeMobile=null;
   try{threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);}
   catch(error){failures.push({name:'three-mobile-joystick-and-desktop-entry',message:String(error?.message||error)});}
