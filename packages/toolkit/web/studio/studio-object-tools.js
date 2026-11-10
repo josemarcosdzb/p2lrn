@@ -184,7 +184,8 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
         handle.addEventListener('pointerdown',event=>{
           if(event.button!==0)return;
           event.preventDefault();event.stopPropagation();
-          drag={pointerId:event.pointerId,kind:'vertex',target:selected,index,moved:false};
+          drag={pointerId:event.pointerId,kind:'vertex',target:selected,index,moved:false,
+          startX:event.clientX,startY:event.clientY,initialScroll:scrollPane?.scrollTop||0};
           try{pointLayer.setPointerCapture(event.pointerId);}catch{}
         });
         handle.addEventListener('keydown',event=>{
@@ -334,7 +335,11 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     }
     if(action==='remove'){el.remove();select(null);emit();return null;}
     if(action==='front'){
-      el.parentElement?.append(el);change();return el;
+      const parent=el.parentElement;
+      const caret=parent?.querySelector(':scope > p[data-p2lrn-end-caret]');
+      if(caret&&caret!==el)caret.before(el);
+      else parent?.append(el);
+      change();return el;
     }
     if(action==='back'){
       el.parentElement?.prepend(el);change();return el;
