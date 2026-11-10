@@ -261,6 +261,15 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  const root=resolve(dataDir),packages=join(root,'packages');
  mkdirSync(packages,{recursive:true});
  const store=createLtiStore(join(root,'lti.sqlite'));
+ let activeUploads=0;
+ const maxConcurrentUploads=4;
+ function secureAdmission(req,operation,perSocket,globalLimit){
+  const peer=String(req.socket?.remoteAddress||'missing-socket-address');
+  const rules=[{scope:'lti:'+operation+':remote:'+digest(peer),limit:perSocket,seconds:60},
+   {scope:'lti:'+operation+':global',limit:globalLimit,seconds:60}];
+  if(!store.admitSecurityRequest(rules))throw new Error('LTI_RATE_LIMITED');
+ }
+
  const refreshedAt=new Map(),refreshFlights=new Map();
  async function refreshRegistrationKeys(reg){
   const current=store.getRegistrationById(reg.id);
@@ -434,6 +443,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    if(method==='GET'&&path==='/lti/health')
     return sendJson(res,200,{status:'ok',provider:'P2LRN LTI 1.3',standalone:true});
    if(method==='POST'&&path==='/lti/legacy/launch'){
+    secureAdmission(req,'legacy-launch',3000,12000);
     if(String(req.headers['content-type']||'').split(';')[0]!=='application/x-www-form-urlencoded')
      throw new Error('LEGACY_FORM_REQUIRED');
     const params=parseLegacyForm((await readBody(req,65536)).toString('utf8'));
@@ -468,6 +478,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      ]:secureCookie(sessionCookie,token,secure,3600,true)});
    }
        if(method==='GET'&&path==='/lti/register/canvas'){
+     secureAdmission(req,'canvas-registration',30,240);
      const result=await installCanvasDynamicRegistration({
       openidConfiguration:incoming.searchParams.get('openid_configuration'),
       registrationToken:incoming.searchParams.get('registration_token'),
@@ -495,6 +506,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     if(method==='GET'&&path==='/lti/jwks')
     return sendJson(res,200,provider.publicJwks());
    if((method==='GET'||method==='POST')&&path==='/lti/login'){
+    secureAdmission(req,'oidc-login',3000,12000);
     const login=method==='GET'?Object.fromEntries(incoming.searchParams):
       input(await readBody(req,32768),req);
     let binding=nonce();
@@ -509,6 +521,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      'Referrer-Policy':'no-referrer'});return res.end();
    }
    if(method==='POST'&&(path==='/lti/launch'||path==='/lti/deep-link')){
+    secureAdmission(req,'signed-launch',3000,12000);
     const data=input(await readBody(req,131072),req);
     const verified=await provider.verifyLaunch({
      state:valid(data.state,'state',512),idToken:valid(data.id_token,'id_token',65536),
@@ -562,6 +575,12 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       ]:secureCookie(sessionCookie,token,secure,3600,true)});
    }
    if(method==='POST'&&path==='/lti/deep-link/confirm'&&String(req.headers['content-type']||'').startsWith('multipart/form-data;')){
+    if(activeUploads>=maxConcurrentUploads)throw new Error('LTI_UPLOAD_CAPACITY_LIMIT');
+    activeUploads++;
+    try{
+    const length=String(req.headers['content-length']||'');
+    if(length&&(!/^\d+$/.test(length)||Number(length)>64*1024*1024+16384))
+     throw new Error('REQUEST_TOO_LARGE');
     const contentType=String(req.headers['content-type']||'');
     const authorized=await readAuthorizedMultipart(req,contentType,ticket=>{
      const pending=store.peekPicker(digest(ticket));
@@ -571,6 +590,11 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
         !reg.deployments.includes(pending.deploymentId))
       throw new Error('PICKER_PLATFORM_REVOKED');
      checkLocalCohost(req,reg.deepLinkLaunchUrl||reg.launchUrl);
+     if(!store.admitSecurityRequest([
+      {scope:'lti:upload:ticket:'+digest(ticket),limit:20,seconds:60},
+      {scope:'lti:upload:tenant:'+digest(pending.tenantId),limit:120,seconds:60},
+      {scope:'lti:upload:global',limit:600,seconds:60}
+     ]))throw new Error('LTI_RATE_LIMITED');
     });
     const body=authorized.body;
     const upload=new Request('http://localhost/lti/deep-link/confirm',{
@@ -606,6 +630,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     if(!entry)throw new Error('PICKER_EXPIRED');
     const published=persistCourse(entry.tenantId,inspection,bytes);
     return finishDeepLink(entry,published.id,published.entityId,req,res);
+    }finally{activeUploads--;}
    }
    if(method==='POST'&&path==='/lti/deep-link/confirm'){
     const formData=input(await readBody(req,32768),req);
@@ -781,7 +806,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    const message=String(error?.message||error).slice(0,300);
    if(process.env.P2LRN_LEGACY_QA_TRACE==='1'&&String(req.url).startsWith('/lti/legacy/'))console.error('LTI_LEGACY_QA_ERROR_CODE',/^[A-Z0-9_]{3,120}$/.test(message)?message:'MASKED');
    const forbidden=/NRPS_ROLE_DENIED|NRPS_UNAUTHORIZED_CONTEXT|NRPS_PLATFORM_REVOKED|ADMIN_DENIED|UNAUTHORIZED|CROSS_SITE|INVALID_CSRF|SESSION_EXPIRED|PICKER_EXPIRED|LTI|JWT|OIDC|issuer|audience|nonce|binding|deployment|registered|registration|platform|signature|token|key|origin|LEGACY|P2LRN content authorization/i.test(message);
-   const status=message==='REQUEST_TOO_LARGE'?413:forbidden?403:400;
+   const status=message==='REQUEST_TOO_LARGE'?413:/^LTI_(RATE_LIMITED|UPLOAD_CAPACITY_LIMIT)$/.test(message)?429:forbidden?403:400;
    const problem=classifyLtiUserError(error);
    const incident=randomBytes(6).toString('hex').toUpperCase();
    const path=new URL(req.url||'/',canonicalBase).pathname;
@@ -796,12 +821,17 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      "default-src 'none'; base-uri 'none'; form-action 'none'; style-src 'unsafe-inline'; frame-ancestors *");
    }
    // Do not reflect secrets, JWTs, filesystem paths or untrusted form values.
-   return sendJson(res,status,{error:status===403?'FORBIDDEN':status===413?'TOO_LARGE':'INVALID_REQUEST'});
+   return sendJson(res,status,{error:status===403?'FORBIDDEN':status===413?'TOO_LARGE':status===429?'RATE_LIMITED':'INVALID_REQUEST'});
   }
  };
  const server=http.createServer((req,res)=>{routes(req,res).catch(()=>{
   if(!res.headersSent)sendJson(res,500,{error:'INTERNAL_ERROR'});else res.destroy();
  });});
+ server.headersTimeout=15000;
+ server.requestTimeout=60000;
+ server.keepAliveTimeout=5000;
+ server.maxHeadersCount=64;
+ server.maxRequestsPerSocket=100;
  return Object.freeze({server,store,provider,deliver,async listen(address=port,hostname=bindHost){
   if(!Number.isInteger(address)||address<0||address>65535)throw new TypeError('Invalid port');
   await new Promise((ok,fail)=>{server.once('error',fail);server.listen(address,hostname,()=>{server.off('error',fail);ok();});});
