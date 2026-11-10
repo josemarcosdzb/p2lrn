@@ -268,7 +268,21 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  function inspectCourseBytes(bytes,titleHint=''){
   if(!Buffer.isBuffer(bytes)||bytes.length===0||bytes.length>64*1024*1024)
    throw new Error('INVALID_P2LRN_UPLOAD');
-  const parsed=validatePackageBytes(bytes,{strictProfiles:true,validateProfilePayloads:true});
+  // Upload and nested package expansion share explicit resource ceilings.
+  // Only the untrusted LTI publication path receives these tighter limits.
+  const zipLimits={
+   entries:5000,entryBytes:64*1024*1024,
+   totalUncompressedBytes:512*1024*1024,
+   centralDirectoryBytes:16*1024*1024,compressionRatio:100
+  };
+  const nestedZipLimits={
+   entries:10000,entryBytes:64*1024*1024,
+   totalUncompressedBytes:512*1024*1024,
+   centralDirectoryBytes:16*1024*1024,compressionRatio:100
+  };
+  const parsed=validatePackageBytes(bytes,{
+   strictProfiles:true,validateProfilePayloads:true,zipLimits,nestedZipLimits
+  });
   const entities=parsed.graph.entities.filter(e=>['course','unit','activity'].includes(e.type))
    .map(e=>({id:e.id,type:e.type,title:String(e.title||e.name||e.id).slice(0,200)}));
   const course=entities.find(e=>e.type==='course')||entities[0];
