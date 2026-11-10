@@ -64,3 +64,15 @@
 .p2lrn-3d-example-row h3{color:var(--ink);font-size:1.16rem;margin:0 0 .45rem}
 .p2lrn-3d-example-row>p{max-width:850px;color:var(--muted);line-height:1.6}
 @media(max-width:760px){.p2lrn-example-pair{grid-template-columns:1fr}.p2lrn-author-figure{padding-top:1rem}.p2lrn-example-pair img{max-height:none}}
+
+/* Expand one 3D activity at a time; keep the site's simple documentation style. */
+.p2lrn-3d-activities{border-top:1px solid var(--line);margin:1.25rem 0}
+.p2lrn-activity-disclosure{border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;margin:0}
+.p2lrn-activity-disclosure>summary{padding:1rem 0;min-height:52px;cursor:pointer;color:var(--ink);outline-offset:4px}
+.p2lrn-activity-disclosure>summary strong{font-size:1.07rem}
+.p2lrn-activity-disclosure>summary:focus-visible{outline:2px solid var(--blue)}
+.p2lrn-activity-disclosure-content{padding:0 0 1.4rem}
+.p2lrn-activity-disclosure-content>p{color:var(--muted);line-height:1.6;max-width:850px}
+.p2lrn-author-figure h4,.p2lrn-example-shot h4{font-size:1.05rem;color:var(--ink);margin:0 0 .7rem}
+.p2lrn-activity-disclosure-content .p2lrn-author-figure{margin-top:1.15rem}
+.p2lrn-activity-disclosure-content .p2lrn-example-shot{margin-top:1.35rem}
