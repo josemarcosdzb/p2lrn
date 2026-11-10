@@ -609,6 +609,49 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     return true;
   }
 
+  // Frame every authored piece and destination at ONCE in the one Three
+  // viewport. Fit against the true world-space AABBs, for any current orbit
+  // angle and aspect ratio; never substitute a single selected cage.
+  function frameObjects(ids=null,{padding=1.18}={}){
+    if(!authoring)return false;
+    const targets=Array.isArray(ids)?ids.map(id=>meshes.get(String(id))).filter(Boolean):[...meshes.values()];
+    const box=new THREE.Box3(),part=new THREE.Box3();
+    stage.updateMatrixWorld(true);
+    let found=0;
+    for(const object of targets){
+      part.setFromObject(object);
+      if(part.isEmpty()||![...part.min,...part.max].every(Number.isFinite))continue;
+      box.union(part);found++;
+    }
+    if(!found||box.isEmpty())return false;
+    const focus=box.getCenter(new THREE.Vector3());
+    const elevation=clamp(cameraPitch,-1.38,1.38);
+    const ce=Math.cos(elevation),se=Math.sin(elevation),cy=Math.cos(cameraYaw),sy=Math.sin(cameraYaw);
+    const towardCamera=new THREE.Vector3(sy*ce,se,cy*ce);
+    const right=new THREE.Vector3(cy,0,-sy);
+    const up=new THREE.Vector3(-sy*se,ce,-cy*se);
+    const aspect=Math.max(320,canvas.clientWidth||720)/Math.max(260,canvas.clientHeight||420);
+    const tanV=Math.tan(THREE.MathUtils.degToRad(camera.fov)/2);
+    const tanH=tanV*aspect;
+    const corners=[];
+    for(const x of [box.min.x,box.max.x])
+      for(const y of [box.min.y,box.max.y])
+        for(const z of [box.min.z,box.max.z])
+          corners.push(new THREE.Vector3(x,y,z));
+    let required=2.5;
+    for(const corner of corners){
+      corner.sub(focus);
+      const forward=corner.dot(towardCamera);
+      required=Math.max(required,
+        forward+Math.abs(corner.dot(right))/tanH,
+        forward+Math.abs(corner.dot(up))/tanV);
+    }
+    const safePadding=Number.isFinite(padding)?clamp(padding,1.05,2):1.18;
+    const distance=clamp(required*safePadding+0.5,2.5,350);
+    focusOn(focus.toArray(),distance);
+    return {center:focus.toArray(),distance,objectCount:found};
+  }
+
   function playerHandPosition(distance=0.82,height=1.18) {
     const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     return player.position.clone().add(forward.multiplyScalar(distance)).add(new THREE.Vector3(0,height,0));
@@ -878,6 +921,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     setObjectVisibility,
     setCageHandlesVisible,
     focusOn,
+    frameObjects,
     connect,
     connectToPlayer,
     connectToPointer,
