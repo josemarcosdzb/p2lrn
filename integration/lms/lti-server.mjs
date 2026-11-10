@@ -105,7 +105,7 @@ const input=(raw,req)=>{
 };
 const valid=(x,name,max=2048)=>{if(typeof x!=='string'||!x.trim()||x.length>max)throw new TypeError('Invalid '+name);return x;};
 const sendJson=(res,status,value)=>{
- res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
+ res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff'});
  res.end(JSON.stringify(value));
 };
 const sendHtml=(res,status,body,csp,headers={})=>{
@@ -497,7 +497,8 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       html(result.issuer),
       '. Confirma y activa la instalacion en Canvas.</p>',
       '<script nonce="',html(cspNonce),'">',
-      'window.parent.postMessage({subject:"org.imsglobal.lti.close"},"*")',
+      'try{history.replaceState(null,"","/lti/register/canvas")}catch{};',
+       'window.parent.postMessage({subject:"org.imsglobal.lti.close"},"*")',
       '</script></body></html>'
      ].join('');
      return sendHtml(res,200,page,
