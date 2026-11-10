@@ -29,6 +29,7 @@ export function createLtiStore(filename){
  ,'CREATE TABLE IF NOT EXISTS nrps_registration_origins(registration_id TEXT PRIMARY KEY,origins_json TEXT NOT NULL,FOREIGN KEY(registration_id) REFERENCES platforms(id))'
  ,'CREATE TABLE IF NOT EXISTS legacy_platforms(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,consumer_key TEXT NOT NULL UNIQUE,secret_encrypted TEXT NOT NULL,launch_url TEXT NOT NULL,issuer_origin TEXT NOT NULL,status TEXT NOT NULL)'
  ,'CREATE TABLE IF NOT EXISTS legacy_nonces(registration_id TEXT NOT NULL,nonce_hash TEXT NOT NULL,seen_at INTEGER NOT NULL,PRIMARY KEY(registration_id,nonce_hash),FOREIGN KEY(registration_id) REFERENCES legacy_platforms(id))'
+ ,'CREATE TABLE IF NOT EXISTS security_buckets(bucket_hash TEXT PRIMARY KEY,window_end INTEGER NOT NULL,requests INTEGER NOT NULL)'
 
  ].join(';\n')+';');
  const sql=q=>db.prepare(q);
@@ -193,6 +194,50 @@ export function createLtiStore(filename){
    .all(tenantId).map(row=>({registrationId:row.registration_id,tenantId:row.tenant_id,
     deploymentId:row.deployment_id,contextId:row.context_id,updatedAt:row.updated_at}));
  }
+
+ // Per-database fixed windows remain effective across workers sharing SQLite.
+ // The source IP is derived from the socket, never from client request headers.
+ let securityLastPrune=0;
+ function pruneExpiredSecurityState(now=t()){
+  if(!Number.isSafeInteger(now)||now<0)throw new TypeError('Invalid cleanup time');
+  db.exec('BEGIN IMMEDIATE');
+  try{
+   const state=sql('DELETE FROM oidc WHERE expires_at<=?').run(now).changes;
+   const pickers=sql('DELETE FROM pickers WHERE expires_at<=?').run(now).changes;
+   const sessions=sql('DELETE FROM sessions WHERE expires_at<=? OR revoked_at IS NOT NULL').run(now).changes;
+   const buckets=sql('DELETE FROM security_buckets WHERE window_end<=?').run(now).changes;
+   db.exec('COMMIT');
+   securityLastPrune=now;
+   return {state,pickers,sessions,buckets};
+  }catch(error){db.exec('ROLLBACK');throw error;}
+ }
+ function admitSecurityRequest(rules){
+  if(!Array.isArray(rules)||rules.length<1||rules.length>6)throw new TypeError('Invalid request limits');
+  const now=t();
+  // Cleanup does not delete attempts, scores, snapshots, events or outbox.
+  if(now-securityLastPrune>=60)pruneExpiredSecurityState(now);
+  const requests=rules.map(rule=>{
+   if(typeof rule?.scope!=='string'||rule.scope.length>256||!rule.scope||
+      !Number.isInteger(rule.limit)||rule.limit<1||rule.limit>100000||
+      !Number.isInteger(rule.seconds)||rule.seconds<1||rule.seconds>3600)
+    throw new TypeError('Invalid security rate policy');
+   const end=(Math.floor(now/rule.seconds)+1)*rule.seconds;
+   return {hash:createHash('sha256').update(rule.scope+'|'+end).digest('hex'),
+    limit:rule.limit,windowEnd:end};
+  });
+  db.exec('BEGIN IMMEDIATE');
+  try{
+   for(const r of requests){
+    const row=sql('SELECT requests FROM security_buckets WHERE bucket_hash=?').get(r.hash);
+    if(row?.requests>=r.limit){db.exec('COMMIT');return false;}
+   }
+   for(const r of requests)
+    sql('INSERT INTO security_buckets(bucket_hash,window_end,requests) VALUES(?,?,1) ON CONFLICT(bucket_hash) DO UPDATE SET requests=requests+1')
+     .run(r.hash,r.windowEnd);
+   db.exec('COMMIT');return true;
+  }catch(error){db.exec('ROLLBACK');throw error;}
+ }
+
  const transactions={
   create(v){sql('INSERT INTO oidc(state_hash,nonce_hash,browser_hash,issuer,client_id,registration_id,deployment_hint,target_link_uri,expires_at) VALUES(?,?,?,?,?,?,?,?,?)').run(v.stateHash,v.nonceHash,v.browserHash,v.issuer,v.clientId,v.registrationId,v.deploymentHint,v.targetLinkUri,v.expiresAt);},
   consume(hash){const r=sql('UPDATE oidc SET consumed_at=? WHERE state_hash=? AND consumed_at IS NULL AND expires_at>? RETURNING *').get(t(),hash,t());return r?{nonceHash:r.nonce_hash,browserHash:r.browser_hash,issuer:r.issuer,clientId:r.client_id,registrationId:r.registration_id,deploymentHint:r.deployment_hint,targetLinkUri:r.target_link_uri,expiresAt:r.expires_at}:null;}
@@ -319,5 +364,5 @@ export function createLtiStore(filename){
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
  return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,replacePlatformJwks,registerCanvasDynamicPlatform,activateCanvasDynamicDeployment,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
  publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,peekPicker,consumePicker,attachLaunch,getSession,
- getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,saveNrpsContext,getNrpsContext,listNrpsContexts,count});
+ getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,saveNrpsContext,getNrpsContext,listNrpsContexts,pruneExpiredSecurityState,admitSecurityRequest,count});
 }
