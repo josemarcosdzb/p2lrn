@@ -135,7 +135,7 @@ function signToolJwt(privateKey, kid, payload) {
 // {id,tenantId,issuer,clientId,authUrl,launchUrl,deepLinkLaunchUrl?,
 //  deployments,jwks:{keys:[...]},deepLinkReturnOrigins:[...] }.
 // getBinding({id,tenantId,registrationId,deploymentId}) -> published P2LRN binding.
-export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer, getRegistrationById, transactions, getBinding, tool, activateDynamicDeployment, allowInsecureLocal = false, now = () => Math.floor(Date.now() / 1000)}) {
+export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer, getRegistrationById, transactions, getBinding, tool, activateDynamicDeployment, refreshRegistrationKeys, allowInsecureLocal = false, now = () => Math.floor(Date.now() / 1000)}) {
   if (typeof getRegistration !== 'function' || typeof getBinding !== 'function' ||
       typeof transactions?.create !== 'function' || typeof transactions?.consume !== 'function')
     throw new TypeError('Trusted registration, binding and atomic transaction adapters are required');
@@ -193,11 +193,29 @@ export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer
     if (!constantEqualHex(transaction.browserHash,
       digest(required(browserBinding, 'browserBinding', 512))))
       throw new Error('LTI browser binding mismatch');
-    const reg = assertRegistration(await getRegistration({
+    let reg = assertRegistration(await getRegistration({
       issuer: transaction.issuer, clientId: transaction.clientId
     }), transaction.issuer, transaction.clientId, allowInsecureLocal);
     if (reg.id !== transaction.registrationId) throw new Error('LTI registration changed');
-    const claims = verifyPlatformJwt(idToken, reg, transaction.nonceHash, now());
+    let claims;
+    try {
+      claims = verifyPlatformJwt(idToken, reg, transaction.nonceHash, now());
+    } catch(error) {
+      // Only an unknown kid triggers a registered JWKS refresh. Bad signatures
+      // for existing keys, duplicate ids or other errors must fail closed.
+      if(error?.message!=='Unknown or ambiguous LMS signing key' ||
+         !reg.jwksUrl || typeof refreshRegistrationKeys!=='function')
+        throw error;
+      const kid=parseJwt(idToken).header.kid;
+      if(reg.jwks?.keys?.some(key=>key?.kid===kid))throw error;
+      const previous=reg;
+      reg=assertRegistration(await refreshRegistrationKeys(previous),
+        transaction.issuer,transaction.clientId,allowInsecureLocal);
+      if(reg.id!==previous.id||reg.tenantId!==previous.tenantId||
+         reg.jwksUrl!==previous.jwksUrl)
+        throw new Error('LTI_JWKS_REGISTRATION_CHANGED');
+      claims=verifyPlatformJwt(idToken,reg,transaction.nonceHash,now());
+    }
     const deployment = claims[LTI_CLAIMS.deploymentId];
     if (typeof deployment !== 'string' || deployment.length>256 ||
         transaction.deploymentHint && transaction.deploymentHint !== deployment)
