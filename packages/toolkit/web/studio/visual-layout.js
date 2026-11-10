@@ -1,5 +1,6 @@
 import {createStudioShape,getStudioShape,STUDIO_SHAPES} from './studio-shapes.js';
 import {createStudioDropActivity} from './studio-drop-activity.js';
+import {studioUiText} from './studio-ui-i18n.js';
 // Shared visual composition tools for HTML lessons.
 // The saved output is ordinary semantic HTML: no scripts or embedded runtimes.
 const BLOCKS=Object.freeze([
@@ -16,19 +17,19 @@ const BLOCKS=Object.freeze([
   ['divider','Separador','Separador horizontal'],
 ]);
 const setStyle=(node,properties)=>{Object.assign(node.style,properties);return node;};
-const elt=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
+const elt=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=studioUiText(text,node.ownerDocument);return node;};
 function makeBlock(kind){
   if(kind==='diagram-canvas'){
     const wrap=elt('section');
     wrap.dataset.p2lrnLayout='diagram-scroll';
     wrap.setAttribute('role','region');
-    wrap.setAttribute('aria-label','Diagrama desplazable horizontalmente en pantallas pequeñas');
+    wrap.setAttribute('aria-label',studioUiText('Diagrama desplazable horizontalmente en pantallas pequeñas',wrap.ownerDocument));
     setStyle(wrap,{width:'100%',maxWidth:'min(100%, calc(100vw - 48px))',overflowX:'auto',overflowY:'hidden',
       boxSizing:'border-box',margin:'18px 0',padding:'0'});
     const scene=elt('section');
     scene.dataset.p2lrnLayout='diagram-canvas';
     scene.setAttribute('role','group');
-    scene.setAttribute('aria-label','Lienzo de diagrama editable');
+    scene.setAttribute('aria-label',studioUiText('Lienzo de diagrama editable',scene.ownerDocument));
     setStyle(scene,{position:'relative',display:'block',width:'100%',minWidth:'640px',
       aspectRatio:'16 / 9',boxSizing:'border-box',margin:'18px 0',padding:'0',
       border:'1px solid #cbd5e1',borderRadius:'12px',backgroundColor:'#f8fbff',
@@ -39,7 +40,7 @@ function makeBlock(kind){
     const hr=elt('hr');
     setStyle(hr,{display:'block',boxSizing:'border-box',width:'100%',height:'0',
       border:'0',borderTop:'2px solid #94a3b8',margin:'30px 0',clear:'both'});
-    hr.setAttribute('aria-label','Separador de secciones');
+    hr.setAttribute('aria-label',studioUiText('Separador de secciones',hr.ownerDocument));
     return hr;
   }
   if(kind==='drag-drop')return createStudioDropActivity(document);
@@ -159,7 +160,7 @@ export function ensureStudioEndCaret(surface){
     tail.append(surface.ownerDocument.createElement('br'));
   }
   tail.setAttribute('data-p2lrn-end-caret','1');
-  tail.setAttribute('aria-label','Escribir o insertar después de la última actividad');
+  tail.setAttribute('aria-label',studioUiText('Escribir o insertar después de la última actividad',tail.ownerDocument));
   if(!tail.hasChildNodes())tail.append(surface.ownerDocument.createElement('br'));
   if(root.lastElementChild!==tail)root.append(tail);
   return tail;
@@ -234,12 +235,12 @@ export function insertVisualLayoutBlock(surface,kind,{anchorNode=null,targetElem
 export function mountVisualLayoutTools({host,surface,onStatus}={}){
   if(!host||!surface)throw new TypeError('Studio visual tools require host and editable surface.');
   const bar=elt('div');bar.className='p2lrn-layout-toolbar';
-  bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Insertar diseño visual');
+  bar.setAttribute('role','toolbar');bar.setAttribute('aria-label',studioUiText('Insertar diseño visual',bar.ownerDocument));
   setStyle(bar,{display:'flex',flexWrap:'wrap',gap:'7px',alignItems:'center',padding:'10px',margin:'0 0 12px',border:'1px solid #d0d5dd',borderRadius:'9px',backgroundColor:'#fff'});
   const heading=elt('strong','Diseño visual');setStyle(heading,{fontSize:'13px',marginRight:'8px'});bar.append(heading);
   for(const [kind,label,help] of BLOCKS){
     const button=elt('button',label);button.type='button';button.title=help;
-    button.setAttribute('aria-label','Insertar '+label.toLowerCase());
+    button.setAttribute('aria-label',studioUiText('Insertar',button.ownerDocument)+' '+studioUiText(label,button.ownerDocument).toLowerCase());
     setStyle(button,{minHeight:'34px',padding:'6px 10px',border:'1px solid #cfd5de',borderRadius:'6px',backgroundColor:'#fff',cursor:'pointer'});
     button.addEventListener('mousedown',(event)=>event.preventDefault());
     button.addEventListener('click',()=>{
