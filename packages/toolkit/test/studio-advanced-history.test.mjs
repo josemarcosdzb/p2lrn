@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createStudioHistory} from '../web/studio/studio-history.js';
-import {modifyStudioTable,objectTransform} from '../web/studio/studio-object-tools.js';
+import {modifyStudioTable,objectTransform,percentDiagramGeometry} from '../web/studio/studio-object-tools.js';
 
 const make=(key,html='<p>Original</p>')=>({
   dataset:{studioHtmlKey:key},innerHTML:html,isContentEditable:true,
@@ -81,4 +81,13 @@ test('object rotation composes with translation and rejects invalid geometry',()
   assert.equal(objectTransform(-40,30,225),'translate(-40px, 30px) rotate(225deg)');
   assert.throws(()=>objectTransform(NaN,0,0),/Invalid object transform/);
   assert.throws(()=>objectTransform(0,0,Infinity),/Invalid object transform/);
+});
+
+test('responsive diagram geometry preserves proportions across viewport widths',()=>{
+  const original=percentDiagramGeometry(100,50,200,120,1000,600);
+  const scaled=percentDiagramGeometry(50,25,100,60,500,300);
+  assert.deepEqual(original,scaled);
+  assert.deepEqual(original,{left:10,top:8.3333,width:20,height:20});
+  assert.throws(()=>percentDiagramGeometry(1,2,3,4,0,600),/Invalid diagram geometry/);
+  assert.throws(()=>percentDiagramGeometry(1,2,3,4,NaN,600),/Invalid diagram geometry/);
 });
