@@ -16,6 +16,7 @@ import {createLocalQaLmsFetch} from './lti-local-qa-gateway.mjs';
 import {createLtiNrpsClient,validateNrpsClaim,NRPS_CLAIM} from './lti-nrps.mjs';
 import {pinnedLmsFetch,trustedLmsJwksUrl} from './lti-safe-fetch.mjs';
 import {deriveLtiContentScope} from './lti-content-scope.mjs';
+import {createLtiAdminAuthorizer} from './lti-admin-auth.mjs';
 import {decryptLegacySecret,encryptLegacySecret,parseLegacyForm,validateLegacyPlatform,verifyLegacyLaunch,sendLegacyOutcome} from './lti-legacy.mjs';
 import {validatePackageBytes} from '../../packages/toolkit/dist/core/validator.js';
 
@@ -229,7 +230,7 @@ function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
  return reg;
 }
 export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindHost='127.0.0.1',
- fetchImpl,lookup,allowInsecureLoopback=false}){
+ fetchImpl,lookup,allowInsecureLoopback=false,adminScopes=null}){
  valid(dataDir,'dataDir',4096);valid(baseUrl,'baseUrl');
  if(!tool||typeof tool.privateKeyPem!=='string'||!tool.kid)throw new TypeError('Persistent P2LRN RSA tool identity required');
  if(typeof adminToken!=='string'||adminToken.length<32)throw new TypeError('Secure P2LRN admin token must contain at least 32 characters');
@@ -261,6 +262,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  const root=resolve(dataDir),packages=join(root,'packages');
  mkdirSync(packages,{recursive:true});
  const store=createLtiStore(join(root,'lti.sqlite'));
+ const adminAuthorizer=createLtiAdminAuthorizer({masterToken:adminToken,scopedKeys:adminScopes});
  let activeUploads=0;
  const maxConcurrentUploads=4;
  function secureAdmission(req,operation,perSocket,globalLimit){
@@ -317,8 +319,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  const oidcCookie=secure?'__Host-p2lrn-oidc':'p2lrn_oidc';
  const playerDist=resolve(ROOT,'packages/player/dist');
  function requireAdmin(req){
-  const raw=String(req.headers.authorization||'');
-  if(!raw.startsWith('Bearer ')||!compare(raw.slice(7),adminToken))throw new Error('ADMIN_DENIED');
+  return adminAuthorizer.authenticate(String(req.headers.authorization||''));
+ }
+ function adminGuard(identity,permission,tenantId){
+  adminAuthorizer.requirePermission(identity,permission,tenantId);
  }
  function requireSession(req,csrf=false){
   const cookieValues=cookies(req);
@@ -703,16 +707,18 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     }
    }
    if(path.startsWith('/lti/admin/')){
-    requireAdmin(req);
+    const administrator=requireAdmin(req);
     if(method==='GET'&&path==='/lti/admin/nrps/contexts'){
       const tenantId=valid(incoming.searchParams.get('tenantId'),'tenantId',128);
-      return sendJson(res,200,{contexts:store.listNrpsContexts(tenantId)});
+      adminGuard(administrator,'roster:read',tenantId);
+       return sendJson(res,200,{contexts:store.listNrpsContexts(tenantId)});
      }
      if(method==='GET'&&path==='/lti/admin/nrps/memberships'){
       const tenantId=valid(incoming.searchParams.get('tenantId'),'tenantId',128);
       const registrationId=valid(incoming.searchParams.get('registrationId'),'registrationId',128);
       const deploymentId=valid(incoming.searchParams.get('deploymentId'),'deploymentId',256);
       const contextId=valid(incoming.searchParams.get('contextId'),'contextId',1024);
+       adminGuard(administrator,'roster:read',tenantId);
       const registration=store.getRegistrationById(registrationId);
       if(!registration||registration.status!=='ACTIVE'||registration.tenantId!==tenantId||
          !registration.deployments.includes(deploymentId))throw new Error('NRPS_UNAUTHORIZED_CONTEXT');
@@ -721,10 +727,11 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       return sendJson(res,200,await nrps.listMembers({registration,service,contextId}));
      }
      if(method==='GET'&&path==='/lti/admin/legacy/platforms')
-     return sendJson(res,200,{platforms:store.listLegacyPlatforms()});
+     return sendJson(res,200,{platforms:adminAuthorizer.filterTenant(administrator,store.listLegacyPlatforms(),'platform:read')});
     if(method==='POST'&&path==='/lti/admin/legacy/platforms'){
      const data=input(await readBody(req,32768),req);
      const reg=validateLegacyPlatform(data,{allowInsecureLocal:allowInsecureLoopback});
+     adminGuard(administrator,'platform:write',reg.tenantId);
      const sealed=encryptLegacySecret(valid(data.sharedSecret,'legacy shared secret',512),tool.privateKeyPem);
      store.upsertLegacyPlatform({...reg,secretEncrypted:sealed});
      return sendJson(res,201,{id:reg.id,status:reg.status,protocols:['LTI-1p0','LTI-1p1']});
@@ -734,6 +741,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      const registrationId=valid(data.registrationId,'legacy registrationId',128);
      const registration=store.getLegacyRegistrationById(registrationId);
      if(registration?.status!=='ACTIVE')throw new Error('UNREGISTERED_LEGACY_PLATFORM');
+     adminGuard(administrator,'content:write',registration.tenantId);
      const bindingId=store.createLegacyBinding({
       registrationId,tenantId:registration.tenantId,
       catalogId:valid(data.catalogId,'catalogId',128),
@@ -743,13 +751,15 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       customParameters:{p2lrn_binding_id:bindingId}});
     }
     if(method==='GET'&&path==='/lti/admin/platforms')
-     return sendJson(res,200,{platforms:store.listPlatforms()});
+     return sendJson(res,200,{platforms:adminAuthorizer.filterTenant(administrator,store.listPlatforms(),'platform:read')});
     if(method==='POST'&&path==='/lti/admin/platforms'){
      const reg=assertTrustedReg(input(await readBody(req,131072),req),canonicalBase,allowInsecureLoopback);
+     adminGuard(administrator,'platform:write',reg.tenantId);
      store.upsertPlatform(reg);return sendJson(res,201,{id:reg.id,status:reg.status});
     }
     if(method==='POST'&&path==='/lti/admin/catalog'){
      const tenantId=valid(req.headers['x-p2lrn-tenant'],'x-p2lrn-tenant',128);
+     adminGuard(administrator,'content:write',tenantId);
      const title=valid(req.headers['x-p2lrn-title'],'x-p2lrn-title',200);
      const bytes=await readBody(req,64*1024*1024);
      const inspected=inspectCourseBytes(bytes,title);
@@ -759,6 +769,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     }
     if(method==='GET'&&path.startsWith('/lti/admin/catalog/')){
      const tenantId=valid(decodeURIComponent(path.slice('/lti/admin/catalog/'.length)),'tenantId',128);
+     adminGuard(administrator,'content:read',tenantId);
      return sendJson(res,200,{courses:store.listCatalog(tenantId)});
     }
     // For LMS instances where a teacher cannot use Deep Linking, an explicitly
@@ -773,6 +784,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      const entityId=valid(reqData.entityId,'entityId',2048);
      const registration=store.getRegistrationById(registrationId);
      if(!registration||registration.status!=='ACTIVE')throw new Error('Unregistered LMS');
+     adminGuard(administrator,'content:write',registration.tenantId);
      const bindingId=store.createBinding({
       tenantId:registration.tenantId,registrationId,deploymentId,catalogId,entityId
      });
@@ -782,13 +794,17 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     }
     if(method==='GET'&&path==='/lti/admin/attempts'){
      const tenantId=valid(incoming.searchParams.get('tenantId'),'tenantId',128);
+     adminGuard(administrator,'grades:read',tenantId);
      return sendJson(res,200,{attempts:store.listAttempts(tenantId)});
     }
-    if(method==='GET'&&path==='/lti/admin/ags/pending')
-     return sendJson(res,200,{pending:store.listPending()});
+    if(method==='GET'&&path==='/lti/admin/ags/pending'){
+     adminGuard(administrator,'grades:read',administrator.tenantId);
+     return sendJson(res,200,{pending:store.listPending(administrator.tenantId==='*'?null:administrator.tenantId)});
+    }
     if(method==='POST'&&path==='/lti/admin/grades'){
      const data=input(await readBody(req,32768),req);
      const attemptId=valid(data.attemptId,'attemptId',128),n=data.normalized;
+     adminGuard(administrator,'grades:approve',store.getAttemptTenant(attemptId));
      if(typeof n!=='number'||!Number.isFinite(n)||n<0||n>1)throw new Error('INVALID_SCORE');
      const completed=data.completed===true;
      const payload={normalized:n,completed};
@@ -798,7 +814,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
     }
     if(method==='POST'&&path==='/lti/admin/ags/retry'){
      const data=input(await readBody(req,4096),req);
-     const delivery=await deliver(valid(data.outboxId,'outboxId',128));
+     const outboxId=valid(data.outboxId,'outboxId',128);
+     const outbox=store.outboxById(outboxId);
+     adminGuard(administrator,'grades:retry',outbox&&store.getAttemptTenant(outbox.attemptId));
+     const delivery=await deliver(outboxId);
      return sendJson(res,delivery.delivered?200:202,delivery);
     }
    }
