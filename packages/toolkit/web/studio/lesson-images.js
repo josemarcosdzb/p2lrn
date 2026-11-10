@@ -561,7 +561,7 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   ensureStudioEndCaret(surface);
   surface.addEventListener('input',()=>ensureStudioEndCaret(surface));
   style.textContent+='\n'+'.p2lrn-lesson-image-editor p[data-p2lrn-end-caret]{min-height:32px;padding:5px 2px;margin:16px 0 0;cursor:text;outline-offset:3px}'+
-    '\n'+'.p2lrn-lesson-image-editor p[data-p2lrn-end-caret]:not(:focus)::before{content:"Escribe o inserta aquí, después de la última actividad";pointer-events:none;color:#64748b;font:400 12px/1.5 system-ui,sans-serif}';
+    '\n'+'.p2lrn-lesson-image-editor p[data-p2lrn-end-caret]:not(:focus)::before{content:'+JSON.stringify(studioUiText('Escribe o inserta aquí, después de la última actividad',surface.ownerDocument))+';pointer-events:none;color:#64748b;font:400 12px/1.5 system-ui,sans-serif}';
   refresh();
   return {openPicker:()=>picker.click(),openVideoPicker:()=>videoPicker.click(),insertImage,insertVideo,element:wrapper};
 }
