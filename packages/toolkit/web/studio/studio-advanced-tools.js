@@ -51,7 +51,8 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
   objectGroup.setAttribute('role','group');objectGroup.setAttribute('aria-label','Posición, tamaño y orden del objeto');
   objectGroup.append(actionMenu(doc,'Objeto',[
     ['left','Alinear izquierda'],['center','Centrar'],['right','Alinear derecha'],
-    ['up','Adelantar'],['down','Atrasar'],['duplicate','Duplicar'],
+    ['up','Adelantar'],['down','Atrasar'],['front','Traer al frente'],['back','Enviar al fondo'],
+    ['group','Agrupar seleccionados'],['ungroup','Desagrupar'],['duplicate','Duplicar'],
     ['reset','Restablecer posición'],['remove','Eliminar objeto']
   ],'objeto').details);
   const size=actionMenu(doc,'Tamaño',[],'tamano');
