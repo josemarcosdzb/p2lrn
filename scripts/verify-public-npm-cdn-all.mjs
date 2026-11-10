@@ -9,6 +9,7 @@ const origin=(process.env.P2LRN_PUBLIC_ORIGIN||'https://p2lrn.org').replace(/\/+
 const modules=join(root,'.npm-pack-gate','install','node_modules','@p2lrn');
 const reportPath=join(root,'.npm-pack-gate','public-npm-cdn-all-report.json');
 const distributionNames=['player','h5p-libraries','studio','analytics'];
+const studioSharedFiles=['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','assembly-3d-core.js','capability-broker.js','course-rights.js','renderers/ui-i18n.js'];
 const sha=data=>'sha256:'+createHash('sha256').update(data).digest('hex');
 const report={kind:'complete-bidirectional-public-npm-cdn-inventory',origin,status:'FAIL',startedAt:new Date().toISOString(),components:{},errors:[]};
 
@@ -97,7 +98,7 @@ async function check(){
     }
     const declared=[...expected.keys()].sort();
     assert.deepEqual(declared,npmPaths,'Bidirectional file list mismatch for '+name);
-    const item={package:component.package,version,fileCount:declared.length,totalBytes:0,verifiedNpmBytes:0,verifiedCdnBytes:0,verifiedCurrentCdnBytes:0};
+    const item={package:component.package,version,fileCount:declared.length,totalBytes:0,verifiedNpmBytes:0,verifiedCdnBytes:0,verifiedCurrentCdnBytes:0,verifiedStudioSiteBytes:0};
     report.components[name]=item;
     // All local bytes are validated before network transfer. This detects an
     // incorrect public manifest even if the CDN serves exactly that manifest.
@@ -127,6 +128,13 @@ async function check(){
         assert.equal(current.length,row.bytes,'CDN current byte length differs: '+name+'/'+path);
         assert.equal(sha(current),row.sha256,'CDN current checksum differs: '+name+'/'+path);
         item.verifiedCurrentCdnBytes++;
+        if(name==='studio'&&(path.startsWith('runtime/')||studioSharedFiles.includes(path))){
+          const sitePath=path.startsWith('runtime/')?'/studio/'+path:'/studio/'+path;
+          const site=await request(sitePath.split('/').map((part,i)=>i===0?'':encodeURIComponent(part)).join('/'));
+          assert.equal(site.length,row.bytes,'Studio website byte length differs from npm: '+path);
+          assert.equal(sha(site),row.sha256,'Studio website resource differs from npm: '+path);
+          item.verifiedStudioSiteBytes++;
+        }
       }
     }));
     console.log('P2LRN_FULL_DISTRIBUTION_PARITY',JSON.stringify(item));
