@@ -84,6 +84,15 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
   corner.popup.append(element(doc,'span','p2lrn-ribbon-caption','Radio px'),cornerInput,
     button(doc,'Aplicar esquinas redondeadas','cornerRadius'));
   objectGroup.append(corner.details);
+  const panel=actionMenu(doc,'Panel y listas',[],'panel-listas');
+  const panelInsetInput=numberField(doc,'Margen interior superior en cqw',0,0,8);
+  const listSpacingInput=numberField(doc,'Separación entre líneas de lista en cqw',0,0,4);
+  panelInsetInput.step='0.1';listSpacingInput.step='0.1';
+  panel.popup.append(element(doc,'span','p2lrn-ribbon-caption','Margen interior cqw'),panelInsetInput,
+    button(doc,'Aplicar margen interior del panel','panelInset'),
+    element(doc,'span','p2lrn-ribbon-caption','Espacio entre elementos de lista'),listSpacingInput,
+    button(doc,'Aplicar separación de lista','listSpacing'));
+  objectGroup.append(panel.details);
   const typography=actionMenu(doc,'Texto del diagrama',[],'texto-diagrama');
   const textScale=numberField(doc,'Tamaño de texto proporcional al lienzo (cqw)',1.7,0.8,9.5);
   textScale.step='0.1';
@@ -250,6 +259,9 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     const isDiagram=['diagram-canvas','diagram-group'].includes(node?.parentElement?.dataset?.p2lrnLayout);
     diagramXInput.disabled=!isDiagram;diagramYInput.disabled=!isDiagram;
     corner.details.hidden=!isDiagram;
+    panel.details.hidden=!isDiagram||node?.dataset?.p2lrnLayout!=='text-box';
+    panelInsetInput.value=String(Number.parseFloat(node?.style?.paddingTop)||0);
+    listSpacingInput.value=String(Number.parseFloat(node?.querySelector('li')?.style?.marginBottom)||0);
     cornerInput.value=String(Number.parseFloat(node?.style?.borderRadius)||0);
     diagramWidthInput.disabled=!isDiagram;diagramHeightInput.disabled=!isDiagram;
     diagramWidthInput.value=String(Number.parseFloat(node?.style?.width)||20);
@@ -311,7 +323,9 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     if(!target||!bar.contains(target))return;
     refresh();if(!objectTools)return;
     const action=target.dataset.studioAdvancedAction;
-    const value=action==='cornerRadius'?Number(cornerInput.value):
+    const value=action==='panelInset'?Number(panelInsetInput.value):
+      action==='listSpacing'?Number(listSpacingInput.value):
+      action==='cornerRadius'?Number(cornerInput.value):
       action==='diagramWidth'?Number(diagramWidthInput.value):
       action==='diagramHeight'?Number(diagramHeightInput.value):
       action==='diagramX'?Number(diagramXInput.value):
