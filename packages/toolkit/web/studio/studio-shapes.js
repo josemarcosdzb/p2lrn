@@ -68,7 +68,7 @@ export const STUDIO_SHAPES=Object.freeze([
   {id:'arrow-up',label:'Flecha arriba',clip:'polygon(50% 0,100% 40%,73% 40%,73% 100%,27% 100%,27% 40%,0 40%)'},
   {id:'arrow-down',label:'Flecha abajo',clip:'polygon(27% 0,73% 0,73% 60%,100% 60%,50% 100%,0 60%,27% 60%)'},
   {id:'curved-arrow',label:'Flecha curva',kind:'curved-arrow'},
-  {id:'bezier-arrow',label:'Flecha Bézier',kind:'bezier-arrow'},
+  {id:'bezier-arrow',label:'Flecha curva ajustable',kind:'bezier-arrow'},
   {id:'star-4',label:'Estrella de cuatro puntas',clip:star(4,.35)},
   {id:'star-5',label:'Estrella de cinco puntas',clip:star(5,.47)},
   {id:'star-6',label:'Estrella de seis puntas',clip:star(6,.56)},
