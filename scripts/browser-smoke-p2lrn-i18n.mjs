@@ -366,6 +366,7 @@ async function analyticsChrome(language){
       grades:[
         {id:'grade-a',learnerId:'ana',courseId:'course-1',value:4,maxValue:10,authoritative:true,updatedAt:past},
         {id:'grade-l',learnerId:'leo',courseId:'course-1',value:9,maxValue:10,authoritative:true,updatedAt:recent},
+        {id:'grade-quiz',learnerId:'ana',courseId:'course-1',entityId:'quiz-1',value:10,maxValue:10,authoritative:true,updatedAt:recent},
         {id:'grade-offline',learnerId:'ana',courseId:'course-2',value:10,maxValue:10,authoritative:false,updatedAt:recent}
       ],
       events:[{id:'event-a',type:'p2lrn:interaction',learnerId:'ana',courseId:'course-1',timestamp:past}]
@@ -383,9 +384,13 @@ async function analyticsChrome(language){
   assert.match(learnersCsv,/Ana Example/);
   assert.doesNotMatch(learnersCsv,/Leo Example|leo@school/,'Filtered CSV cannot include hidden learners');
   await page.screenshot({path:join(folder,'analytics-'+suffix+'-filtered-learners.png'),fullPage:false});
+  await panel.locator('[data-learner="ana"]').first().click();
+  const official=await panel.locator('.detail .detail-stat').filter({hasText:/Nota oficial|Official grade/}).innerText();
+  assert.match(official,/40\s*%/,'A recent activity grade must not replace the course-level official grade');
+  await panel.locator('[data-close-detail]').click();
   await panel.locator('[data-view="grades"]').click();
   await panel.locator('[data-course-filter]').selectOption('course-1');
-  assert.equal(await panel.locator('.main table tbody tr').count(),1,'Gradebook must follow active learner filter and course');
+  assert.equal(await panel.locator('.main table tbody tr').count(),2,'Gradebook must follow active learner filter and course');
   const gradesCsv=await page.evaluate(()=>window.analyticsQA.exportCsv('grades'));
   assert.match(gradesCsv,/grade-a/);
   assert.doesNotMatch(gradesCsv,/grade-l|Leo Example/);

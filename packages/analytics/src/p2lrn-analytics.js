@@ -95,7 +95,7 @@ function initials(name){
 function courseFor(dataset,id){return dataset.courses.find((item)=>item.id===id);}
 function learnerFor(dataset,id){return dataset.learners.find((item)=>item.id===id);}
 function gradeFor(dataset,learnerId,courseId){
-  return dataset.grades.filter((item)=>item.learnerId===learnerId&&item.courseId===courseId&&item.authoritative)
+  return dataset.grades.filter((item)=>item.learnerId===learnerId&&item.courseId===courseId&&item.authoritative&&(!item.entityId||item.entityId===courseId))
     .sort((a,b)=>new Date(b.updatedAt??0)-new Date(a.updatedAt??0))[0]??null;
 }
 function gradeRatio(grade){
