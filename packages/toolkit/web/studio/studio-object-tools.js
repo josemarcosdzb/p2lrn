@@ -102,6 +102,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   resize.className='p2lrn-object-resize';
   frame.append(controls,resize);host.append(frame);
   let selected=null,selectedCell=null,drag=null;
+  const selectionSet=new Set();
   const scrollPane=surface.closest('.p2lrn-studio-stage,.studio-editor-stage,.stage');
   const ensureScrollRoom=el=>{
     // Transforms do not grow scrollHeight. Expand only the editor's unsaved
@@ -161,10 +162,23 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     frame.dataset.visible='true';
     const table=selected.matches('table');
     // Table operations belong to the unified contextual inspector.
-    status.textContent=table?'TABLA':selected.dataset.p2lrnLayout==='columns'?'COLUMNAS':'OBJETO';
+    status.textContent=selectionSet.size>1?selectionSet.size+' OBJETOS':
+      table?'TABLA':selected.dataset.p2lrnLayout==='columns'?'COLUMNAS':'OBJETO';
   }
-  function select(element,cell=null){
-    selected=isObject(element,surface)?element:null;
+  function select(element,cell=null,extend=false){
+    const candidate=isObject(element,surface)?element:null;
+    if(!extend||!candidate||selectionSet.size===0){
+      selectionSet.clear();
+      if(candidate)selectionSet.add(candidate);
+      selected=candidate;
+    }else if([...selectionSet].every(item=>item.parentElement===candidate.parentElement)){
+      if(selectionSet.has(candidate))selectionSet.delete(candidate);
+      else selectionSet.add(candidate);
+      selected=selectionSet.has(candidate)?candidate:[...selectionSet].at(-1)||null;
+    }else{
+      onStatus('Para agrupar, selecciona elementos del mismo contenedor.');
+      return selected;
+    }
     selectedCell=selected?.matches('table')?(cell?.closest?.('td,th')||selected.querySelector('td,th')):null;
     update();
     onSelection({element:selected,table:selected?.matches('table')?selected:null,cell:selectedCell});
@@ -194,11 +208,42 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       selectedCell.parentElement.style.height=Math.round(between(positive(value,42),28,320))+'px';
       change();return el;
     }
+    if(action==='group'){
+      const items=[...selectionSet].filter(node=>surface.contains(node));
+      if(items.length<2)throw new Error('Selecciona dos o más objetos manteniendo Mayús.');
+      const parent=items[0].parentElement;
+      if(items.some(node=>node.parentElement!==parent))throw new Error('Los objetos deben estar en el mismo contenedor.');
+      const siblings=[...parent.children];
+      items.sort((a,b)=>siblings.indexOf(a)-siblings.indexOf(b));
+      const start=siblings.indexOf(items[0]);
+      if(siblings.slice(start,start+items.length).some((node,index)=>node!==items[index]))
+        throw new Error('Los objetos deben ser consecutivos. Muévelos juntos antes de agrupar.');
+      const group=doc.createElement('section');
+      group.dataset.p2lrnLayout='group';
+      group.setAttribute('role','group');group.setAttribute('aria-label','Grupo de objetos');
+      Object.assign(group.style,{display:'flow-root',position:'relative',boxSizing:'border-box',
+        width:'100%',maxWidth:'100%',padding:'0',margin:'16px 0'});
+      items[0].before(group);
+      for(const item of items)group.append(item);
+      select(group);change();return group;
+    }
+    if(action==='ungroup'){
+      if(el.dataset.p2lrnLayout!=='group')throw new Error('Selecciona un grupo para desagrupar.');
+      const children=[...el.childNodes];
+      el.replaceWith(...children);
+      select(children.find(node=>isObject(node,surface))||null);change();return children;
+    }
     if(action==='duplicate'){
       const clone=el.cloneNode(true);for(const node of [clone,...clone.querySelectorAll('[id]')])node.removeAttribute('id');
       el.after(clone);select(clone);change();return clone;
     }
     if(action==='remove'){el.remove();select(null);emit();return null;}
+    if(action==='front'){
+      el.parentElement?.append(el);change();return el;
+    }
+    if(action==='back'){
+      el.parentElement?.prepend(el);change();return el;
+    }
     if(action==='up'){
       const previous=el.previousElementSibling;if(previous){previous.before(el);change();}return el;
     }
@@ -249,8 +294,8 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     // the enclosing section's object tools when selecting an image/video.
     if(event.target.closest?.('img[data-p2lrn-lesson-image],video[data-p2lrn-lesson-video]')){select(null);return;}
     const element=event.target.closest?.(OBJECT_SELECTOR);
-    if(element&&surface.contains(element))select(element,event.target.closest?.('td,th'));
-    else select(null);
+    if(element&&surface.contains(element))select(element,event.target.closest?.('td,th'),event.shiftKey);
+    else if(!event.shiftKey)select(null);
   };
   function startDrag(event,kind){
     if(!current()||event.button!==0)return;
