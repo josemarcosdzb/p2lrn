@@ -164,11 +164,11 @@ test('direct Analytics import detects post-generation tampering',async()=>{
 
 test('CSV neutralizes formulas hidden behind whitespace and tabs',()=>{
   const csv=analyticsToCsv({...seed,learners:[
-    {id:'u1',name:' =2+2',email:'\t@evil',group:'\r=1+1'},
+    {id:'u1',name:'\u200B=2+2',email:'\t@evil',group:'\r=1+1'},
   ]},{kind:'learners'});
-  assert.match(csv,/' =2\+2/);
-  assert.match(csv,/'\t@evil/);
-  assert.match(csv,/'\r=1\+1/);
+  assert.match(csv,/'\u200B=2\+2/);
+  assert.match(csv,/'@evil/);
+  assert.match(csv,/'=1\+1/);
 });
 test('date bounds include the final day and reject invalid/inverted ranges',()=>{
   const daily=filterAnalyticsDataset(seed,{from:'2026-10-27',to:'2026-10-27'});
