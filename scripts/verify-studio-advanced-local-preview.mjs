@@ -218,8 +218,33 @@ async function diagramCase(){
     assert(foundCanvas&&foundCloud&&foundDroplet&&foundImage,'Saved package lost authored diagram or image geometry');
     geometry.packageRoundTrip=true;
   }
-  canvas.scrollIntoView({block:'center'});
-  const desktop=canvas.getBoundingClientRect();
+  const previewButton=ribbon.querySelector('[data-ui-action=preview]');
+  const editButton=ribbon.querySelector('[data-ui-action=edit]');
+  assert(previewButton&&editButton,'Editor and student preview controls missing');
+  previewButton.click();
+  let player=null;
+  for(let attempt=0;attempt<90;attempt++){
+    player=root.querySelector('[data-preview-stage] p2lrn-player')||
+      root.querySelector('[data-stage] p2lrn-player');
+    if(player?.shadowRoot?.childNodes.length&&player.getAttribute('src')?.startsWith('blob:'))break;
+    await new Promise(resolve=>setTimeout(resolve,125));
+  }
+  assert(player?.shadowRoot?.childNodes.length,'Real Player did not render exported course');
+  assert(player.getAttribute('src')?.startsWith('blob:'),'Real Player did not receive saved package');
+  geometry.playerOpened=true;
+  editButton.click();
+  for(let attempt=0;attempt<90;attempt++){
+    if(editButton.getAttribute('aria-pressed')==='true'&&
+      surface.isConnected&&surface.querySelector('[data-p2lrn-layout="diagram-canvas"]'))break;
+    await new Promise(resolve=>setTimeout(resolve,125));
+  }
+  assert(editButton.getAttribute('aria-pressed')==='true'&&surface.isConnected,
+    'Studio did not recover editing after student playback');
+  const restored=surface.querySelector('[data-p2lrn-layout="diagram-canvas"]');
+  assert(restored&&restored.querySelector('[data-p2lrn-lesson-image]'),
+    'Returning from Player lost authored diagram or embedded image');
+  restored.scrollIntoView({block:'center'});
+  const desktop=restored.getBoundingClientRect();
   geometry.desktopWidth=desktop.width;
   return {ok:true,...geometry};
 }
