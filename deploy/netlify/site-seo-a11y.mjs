@@ -37,15 +37,15 @@ export const SEO_PAGE_METADATA=Object.freeze({
   },
   "/en/docs/developers/activities/": {
     "title": "P2LRN game developer reference: JSON and renderers",
-    "description": "Developer reference for P2LRN games: JSON contracts, validation, scoring and renderers."
+    "description": "Technical reference for P2LRN educational activities: JSON structures, renderer contracts, validation, scoring and browser integration checks."
   },
   "/docs/desarrolladores/juegos-3d/": {
     "title": "Motor de juegos 3D y arquitectura para desarrolladores",
-    "description": "Referencia de integración 3D de P2LRN: motor, físicas, modelos y contratos técnicos."
+    "description": "Guía técnica de los juegos 3D de P2LRN para desarrolladores: escenas, modelos, físicas, interacción accesible y pruebas de integración con Player."
   },
   "/en/docs/developers/3d-games/": {
     "title": "P2LRN 3D game engine and developer architecture",
-    "description": "Developer reference for 3D P2LRN: engine, physics, models and integration contracts."
+    "description": "Technical guide to P2LRN 3D games: scene setup, models, physics, accessible controls, Player integration and validation requirements."
   },
   "/docs/studio/": {
     "title": "Cómo usar P2LRN Studio: guía visual paso a paso",
