@@ -1,0 +1,71 @@
+{
+  "source": "Browser-driven real P2LRN Studio authoring interface, local preview 127.0.0.1:5533/studio/",
+  "source_studio_index_git_blob": "bdee5ffed4e9658e6c5a78c83356dc8e47440d52",
+  "source_studio_js_git_blob": "799b724bdb15ad810eb92093e5dafe112f01facd",
+  "type": "real editor UI screenshots with example data entered via visible HTML fields; not generated or artistically recreated",
+  "distinction": "These authoring images do not come from the 15-activity learner-play video; learner result images are separately sourced from that video",
+  "export_verified": false,
+  "rights": "P2LRN project screenshots for its own documentation",
+  "screenshots": [
+    {
+      "filename": "configuracion-cuestionario-studio.webp",
+      "git_blob": "f0f004d98e55998a849a594149250e82a7290e7a"
+    },
+    {
+      "filename": "configuracion-memoria-studio.webp",
+      "git_blob": "ec1e168d3cf20887bd8b1f5655a89b1ca9f920a6"
+    },
+    {
+      "filename": "configuracion-relacionar-studio.webp",
+      "git_blob": "721482d3aaf9250f5843a6073f1d289ee2a60a10"
+    },
+    {
+      "filename": "configuracion-ordenar-studio.webp",
+      "git_blob": "279893ab2fd58fa6fa5eaee9e515330946d237d5"
+    },
+    {
+      "filename": "configuracion-clasificar-studio.webp",
+      "git_blob": "c402db8e47a05caaf8272bd6fe8328bfdf8879f9"
+    },
+    {
+      "filename": "configuracion-verdadero-falso-studio.webp",
+      "git_blob": "f777865862c7b9bbab6a3e2d64d11c009cf3c6e3"
+    },
+    {
+      "filename": "configuracion-huecos-studio.webp",
+      "git_blob": "e56af61275aa35b2a1c6082986659d2d4a5dea96"
+    },
+    {
+      "filename": "configuracion-sopa-de-letras-studio.webp",
+      "git_blob": "6702974d59d546e39b8a24598286bbeb748ab5e7"
+    },
+    {
+      "filename": "configuracion-crucigrama-studio.webp",
+      "git_blob": "2526e9ec47cdb3151faa0aab24cff2664ccaf47f"
+    },
+    {
+      "filename": "configuracion-rosco-studio.webp",
+      "git_blob": "5dbc35c6987b9bb330b59f922a591c2c0af8a85e"
+    },
+    {
+      "filename": "configuracion-ordenar-3d-studio.webp",
+      "git_blob": "dafb13a510f83e0969d747a89bbf90371e7adc64"
+    },
+    {
+      "filename": "configuracion-relacionar-3d-studio.webp",
+      "git_blob": "303eb21a52588cd79bc390ab28b2a61d2be9ba6a"
+    },
+    {
+      "filename": "configuracion-clasificar-3d-studio.webp",
+      "git_blob": "4f7049c7f50abd86657a93edae96971a534c23ab"
+    },
+    {
+      "filename": "configuracion-ensamblaje-3d-studio.webp",
+      "git_blob": "89ec42364126695760e75bbab0e260dda08a33f6"
+    },
+    {
+      "filename": "configuracion-arrastrar-soltar-studio.webp",
+      "git_blob": "3a0c0914a99d8cd6b11c44d35566109b7023c301"
+    }
+  ]
+}

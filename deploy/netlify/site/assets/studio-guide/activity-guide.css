@@ -44,3 +44,23 @@
 .p2lrn-example-3d-grid figure img{object-fit:contain}
 .p2lrn-example-section{border-top:1px solid var(--line);padding-top:1.4rem}
 @media(max-width:780px){.p2lrn-example-3d-grid{grid-template-columns:1fr;gap:1.5rem}.p2lrn-example-shot{margin:1.3rem 0}}
+
+/* Activity guide: genuine authoring form beside actual learner outcome. */
+.p2lrn-author-figure{border-top:1px solid var(--line);margin:1.25rem 0;padding:1.25rem 0 0;max-width:1020px}
+.p2lrn-author-figure h3{margin:0 0 .45rem;color:var(--ink);font-size:1.13rem;line-height:1.35}
+.p2lrn-author-figure figure{margin:0}
+.p2lrn-author-figure>a,.p2lrn-author-figure figure>a{display:block;outline-offset:4px}
+.p2lrn-author-figure img{display:block;width:100%;max-width:100%;height:auto;border:1px solid var(--line);border-radius:2px}
+.p2lrn-author-figure figcaption{color:var(--muted);line-height:1.6;font-size:.87rem;margin:.6rem 0 .2rem}
+.p2lrn-author-figure p{color:var(--muted);line-height:1.6}
+.p2lrn-activity-studio .p2lrn-example-shot{margin-top:1.8rem}
+.p2lrn-example-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.15rem;margin:1.4rem 0 1.7rem}
+.p2lrn-example-pair>figure{margin:0;min-width:0}
+.p2lrn-example-pair img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:2px}
+.p2lrn-example-pair a{display:block;outline-offset:3px}
+.p2lrn-example-pair figcaption{font-size:.86rem;color:var(--muted);margin:.5rem 0;line-height:1.55}
+.p2lrn-example-pair strong{color:var(--ink)}
+.p2lrn-3d-example-row{border-top:1px solid var(--line);padding:1.4rem 0}
+.p2lrn-3d-example-row h3{color:var(--ink);font-size:1.16rem;margin:0 0 .45rem}
+.p2lrn-3d-example-row>p{max-width:850px;color:var(--muted);line-height:1.6}
+@media(max-width:760px){.p2lrn-example-pair{grid-template-columns:1fr}.p2lrn-author-figure{padding-top:1rem}.p2lrn-example-pair img{max-height:none}}
