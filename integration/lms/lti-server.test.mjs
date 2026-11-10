@@ -357,6 +357,11 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.match(failureHtml,/Incidencia/);
   assert.match(failureHtml,/Vuelve a tu aula virtual|Vuelve al curso de tu aula virtual/);
   assert.doesNotMatch(failureHtml,/not-a-token/);
+  // Revoking a deployment invalidates already issued session cookies.
+  gateway.store.upsertPlatform({...registration,deployments:['D2']});
+  assert.equal((await req('/lti/runtime/package',{headers:{Cookie:cookie}})).status,403);
+  assert.equal((await req('/lti/runtime/package',{headers:{Cookie:uploadedSessionCookie}})).status,403);
+  assert.equal((await postRuntime('state/load',{context:playerContext})).status,403);
  }finally{
   await gateway.close();rmSync(folder,{recursive:true,force:true});
  }
