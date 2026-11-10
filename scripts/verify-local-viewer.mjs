@@ -689,6 +689,120 @@ async function verifyAssemblyScatteredViewport(cdp){
   return {...result,screenshot};
 }
 
+// A real Three.js canvas, not a mocked 3D diagram: dispatches browser pointer
+// and keyboard events against the same assembly controller used by Player.
+async function browserAssemblyInteraction(){
+  const [{createThreeGameScene},{buildAssemblyControls},{defaultAssembly}]=await Promise.all([
+    import('/player/current/dist/game-3d/three-runtime.js'),
+    import('/player/current/dist/renderers/assembly-3d.js'),
+    import('/player/current/dist/assembly-3d-core.js'),
+  ]);
+  const canvas=document.createElement('canvas');
+  canvas.id='p2lrn-assembly-live-qa';
+  canvas.width=900;canvas.height=540;
+  canvas.tabIndex=0;
+  Object.assign(canvas.style,{position:'fixed',left:'20px',top:'20px',width:'780px',height:'460px',
+    display:'block',background:'#0b1526',zIndex:'2147483600'});
+  document.body.append(canvas);
+  // Synthetic CDP events have no operating-system pointer capture record.
+  canvas.setPointerCapture=()=>{};
+  canvas.releasePointerCapture=()=>{};
+  let game=null;
+  try{
+    let controller=null;
+    game=await createThreeGameScene(canvas,{physics:'none',
+      onDrag:(meta,phase,info)=>controller?.drag(meta,phase,info)??false,
+      onInteraction:meta=>controller?.interact(meta)??false});
+    game.setAssemblyMode(true);
+    const config=defaultAssembly(),patches=[];
+    const saved=new Map();
+    const runtime={
+      state:{completed:false,attemptsCompleted:0},
+      answer:()=>null,
+      getGameState:(key,fallback)=>saved.has(key)?saved.get(key):fallback,
+      setGameState:(key,value)=>saved.set(key,value),
+      applyPatch:(questionId,patch)=>patches.push({questionId,patch}),
+    };
+    const status=document.createElement('p');
+    controller=await buildAssemblyControls({trial:{scene:config,questionId:'qa-assembly'},
+      runtime,scene:game,status,pkg:null});
+    game.frameObjects(['assembly:piece-1','assembly:piece-2',
+      'assembly-target:target-1','assembly-target:target-2'],{padding:1.3});
+    const piece=game.scene.getObjectByProperty('name','__never__');
+    let source=null;
+    game.scene.traverse(node=>{
+      if(node.userData?.p2lrnInteraction?.kind==='assembly-piece' &&
+        node.userData.p2lrnInteraction.id==='piece-1')source=node;
+    });
+    if(!source)throw Error('Real assembly piece is missing from the Three scene');
+    const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+    await sleep(200);
+    function screenPoint(object){
+      game.camera.updateMatrixWorld(true);
+      const world=object.getWorldPosition(object.position.clone().set(0,0,0));
+      const screen=world.project(game.camera),rect=canvas.getBoundingClientRect();
+      return {x:rect.left+(screen.x+1)*rect.width/2,
+        y:rect.top+(1-screen.y)*rect.height/2};
+    }
+    function emit(type,point){
+      canvas.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:81,
+        pointerType:'mouse',button:0,buttons:type==='pointerup'?0:1,
+        clientX:point.x,clientY:point.y}));
+    }
+    function movePiece(){
+      const from=screenPoint(source),rect=canvas.getBoundingClientRect();
+      if(from.x<rect.left+15||from.x>rect.right-15||from.y<rect.top+15||from.y>rect.bottom-15)
+        throw Error('Assembly piece not visible for pointer interaction');
+      const to={x:from.x+(from.x>rect.left+rect.width/2?-62:62),
+        y:from.y+(from.y>rect.top+rect.height/2?-20:20)};
+      const before=source.position.clone();
+      emit('pointerdown',from);
+      emit('pointermove',to);
+      emit('pointerup',to);
+      const delta=source.position.distanceTo(before);
+      if(delta<0.2)throw Error('Real assembly pointer drag reverted its position: '+delta);
+      if(patches.length)throw Error('Free drag incorrectly awarded assembly points');
+      return delta;
+    }
+    const firstDelta=movePiece();
+    const secondDelta=movePiece();
+    if(!status.textContent.includes('Pieza desplazada'))
+      throw Error('Assembly drag did not report its retained position: '+status.textContent);
+    const cameraBefore=game.camera.position.clone();
+    game.setMovementVector(0,1);
+    await sleep(350);
+    game.setMovementVector(0,0);
+    const joystickDistance=game.camera.position.distanceTo(cameraBefore);
+    if(joystickDistance<0.2)throw Error('Assembly analog navigation did not move the Three camera');
+    canvas.focus();
+    const keyboardBefore=game.camera.position.clone();
+    canvas.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,code:'KeyD',key:'d'}));
+    await sleep(350);
+    canvas.dispatchEvent(new KeyboardEvent('keyup',{bubbles:true,code:'KeyD',key:'d'}));
+    const keyboardDistance=game.camera.position.distanceTo(keyboardBefore);
+    if(keyboardDistance<0.2)throw Error('Assembly WASD did not move the Three camera');
+    globalThis.__p2lrnAssemblyQA={game,canvas};
+    return {realWebGL:true,firstDelta,secondDelta,joystickDistance,keyboardDistance,
+      noUnearnedScores:patches.length===0};
+  }catch(error){game?.destroy();canvas.remove();throw error;}
+}
+async function verifyAssemblyLiveInput(cdp){
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
+  await waitForEval(cdp,"Boolean(customElements.get('p2lrn-player'))",
+    '3D assembly live browser startup',30000);
+  const result=await evalTop(cdp,'('+browserAssemblyInteraction.toString()+')()');
+  try{
+    invariant(result?.realWebGL&&result.firstDelta>0.2&&result.secondDelta>0.2&&
+      result.joystickDistance>0.2&&result.keyboardDistance>0.2&&result.noUnearnedScores,
+      'Assembly real drag/navigation regression: '+JSON.stringify(result));
+    const screenshot=await captureElementVisualEvidence(cdp,'3d-assembly-live-drag-and-navigation',
+      "document.getElementById('p2lrn-assembly-live-qa')",{maxHeight:1000});
+    return {...result,screenshot};
+  }finally{
+    await evalTop(cdp,"(()=>{const qa=globalThis.__p2lrnAssemblyQA;qa?.game?.destroy();qa?.canvas?.remove();delete globalThis.__p2lrnAssemblyQA;return true;})()");
+  }
+}
+
 async function verifyThreePointerDragAndRope(cdp){
   await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
   await waitForEval(cdp,"Boolean(globalThis.P2LRN?.createCapabilityBroker&&customElements.get('p2lrn-player'))",'3D pointer test runtime',30000);
@@ -1684,8 +1798,9 @@ try{
     const threeGame=await verifyThreeGameInteractionAndResume(cdp);
     const assemblyStart=await verifyAssemblyScatteredViewport(cdp);
     const pointerDrag=await verifyThreePointerDragAndRope(cdp);
+    const assemblyLive=await verifyAssemblyLiveInput(cdp);
     const threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);
-    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,threeMobile};
+    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,assemblyLive,threeMobile};
     await mkdir(visualEvidenceRoot,{recursive:true});
     await writeFile(join(visualEvidenceRoot,'quest3d-report.json'),JSON.stringify(report,null,2)+'\n');
     console.log('P2LRN_QUEST3D_BROWSER_REPORT='+JSON.stringify(report));
@@ -1719,6 +1834,9 @@ try{
   let pointerDrag=null;
   try{pointerDrag=await verifyThreePointerDragAndRope(cdp);}
   catch(error){failures.push({name:'three-pointer-drag-and-rope',message:String(error?.message||error)});}
+  let assemblyLive=null;
+  try{assemblyLive=await verifyAssemblyLiveInput(cdp);}
+  catch(error){failures.push({name:'assembly-real-pointer-and-navigation',message:String(error?.message||error)});}
   let threeMobile=null;
   try{threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);}
   catch(error){failures.push({name:'three-mobile-joystick-and-desktop-entry',message:String(error?.message||error)});}
