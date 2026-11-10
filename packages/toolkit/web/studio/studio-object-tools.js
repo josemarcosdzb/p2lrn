@@ -167,37 +167,43 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     if(object.getClientRects().length)ensureScrollRoom(object);
   }
   if(normalizeStudioShapeCaptions(surface))emit();
+  let renderedFreeform=null;
   function renderPolygonHandles(){
-    pointLayer.replaceChildren();
-    if(selected?.dataset?.p2lrnShape!=='freeform')return;
+    if(selected?.dataset?.p2lrnShape!=='freeform'){
+      pointLayer.replaceChildren();renderedFreeform=null;return;
+    }
     const art=selected.querySelector('[data-p2lrn-shape-art]');
     const points=polygonPoints(art);
-    if(!points.length)return;
+    if(!points.length){pointLayer.replaceChildren();renderedFreeform=null;return;}
     const outer=selected.getBoundingClientRect(),inside=art.getBoundingClientRect();
+    if(renderedFreeform!==selected||pointLayer.children.length!==points.length){
+      pointLayer.replaceChildren();renderedFreeform=selected;
+      for(const [index] of points.entries()){
+        const handle=button(doc,'','vertex','Mover vértice '+(index+1));
+        handle.className='p2lrn-freeform-point';handle.dataset.vertexIndex=String(index);
+        handle.addEventListener('pointerdown',event=>{
+          if(event.button!==0)return;
+          event.preventDefault();event.stopPropagation();
+          drag={pointerId:event.pointerId,kind:'vertex',target:selected,index,moved:false};
+          try{pointLayer.setPointerCapture(event.pointerId);}catch{}
+        });
+        handle.addEventListener('keydown',event=>{
+          const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
+          if(!delta)return;
+          event.preventDefault();
+          const current=polygonPoints(art),step=event.shiftKey?5:1;
+          current[index]={x:between(current[index].x+delta[0]*step,0,100),
+            y:between(current[index].y+delta[1]*step,0,100)};
+          writePolygonPoints(art,current);change();
+          pointLayer.querySelector('[data-vertex-index="'+index+'"]')?.focus();
+        });
+        pointLayer.append(handle);
+      }
+    }
     for(const [index,point] of points.entries()){
-      const handle=button(doc,'','vertex','Mover vértice '+(index+1));
-      handle.className='p2lrn-freeform-point';handle.dataset.vertexIndex=String(index);
+      const handle=pointLayer.children[index];
       handle.style.left=(inside.left-outer.left+inside.width*point.x/100)+'px';
       handle.style.top=(inside.top-outer.top+inside.height*point.y/100)+'px';
-      handle.addEventListener('pointerdown',event=>{
-        if(event.button!==0)return;
-        event.preventDefault();event.stopPropagation();
-        drag={pointerId:event.pointerId,kind:'vertex',target:selected,index,moved:false};
-        try{handle.setPointerCapture(event.pointerId);}catch{}
-      });
-      handle.addEventListener('pointermove',onPointerMove);
-      handle.addEventListener('pointerup',finishDrag);
-      handle.addEventListener('pointercancel',finishDrag);
-      handle.addEventListener('keydown',event=>{
-        const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
-        if(!delta)return;
-        event.preventDefault();
-        const current=polygonPoints(art),step=event.shiftKey?5:1;
-        current[index]={x:between(current[index].x+delta[0]*step,0,100),y:between(current[index].y+delta[1]*step,0,100)};
-        writePolygonPoints(art,current);change();
-        pointLayer.querySelector('[data-vertex-index="'+index+'"]')?.focus();
-      });
-      pointLayer.append(handle);
     }
   }
   function update(){
@@ -424,6 +430,9 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   const handle=controls.querySelector('[data-object-action=drag]');
   handle.addEventListener('pointerdown',event=>startDrag(event,'drag'));
   resize.addEventListener('pointerdown',event=>startDrag(event,'resize'));
+  pointLayer.addEventListener('pointermove',onPointerMove);
+  pointLayer.addEventListener('pointerup',finishDrag);
+  pointLayer.addEventListener('pointercancel',finishDrag);
   for(const part of [handle,resize]){
     part.addEventListener('pointermove',onPointerMove);
     part.addEventListener('pointerup',finishDrag);
