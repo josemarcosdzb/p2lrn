@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
-import {readFile,stat,readdir,mkdir} from 'node:fs/promises';
+import {readFile,stat,readdir,mkdir,writeFile} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import {dirname,extname,join,resolve,sep} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
@@ -285,6 +285,24 @@ async function studioChrome(language){
     const instruction=await endCaret.evaluate(node=>getComputedStyle(node,'::before').content);
     assert.match(instruction,language==='en'?/Write or insert/:/Escribe o inserta/,'Lesson end-caret language mismatch');
     await page.screenshot({path:join(evidence,prefix+'-editor.png'),fullPage:false});
+    // Real-browser WCAG inspection, not a substitute for screen-reader review.
+    const auditStudio=async(label)=>{
+      await page.addScriptTag({path:join(repo,'.p2lrn-i18n-ci','node_modules','axe-core','axe.min.js')});
+      const report=await page.evaluate(async()=>{
+        const data=await window.axe.run(document,{runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa','wcag22aa']}});
+        return {violations:data.violations.map(({id,impact,description,nodes})=>({id,impact,description,nodes:nodes.map(n=>({target:n.target,summary:n.failureSummary})).slice(0,15)})),
+          incomplete:data.incomplete.map(({id,impact,nodes})=>({id,impact,count:nodes.length}))};
+      });
+      await writeFile(join(evidence,prefix+'-'+label+'-wcag.json'),JSON.stringify(report,null,2));
+      console.log('BROWSER_STUDIO_'+language.toUpperCase()+'_'+label.toUpperCase()+'_WCAG_ISSUES='+report.violations.length);
+    };
+    await auditStudio('editor');
+    await page.setViewportSize({width:390,height:844});
+    await page.screenshot({path:join(evidence,prefix+'-mobile.png'),fullPage:false});
+    const mobile=await page.evaluate(()=>({width:window.innerWidth,scrollWidth:document.documentElement.scrollWidth}));
+    await writeFile(join(evidence,prefix+'-mobile.json'),JSON.stringify(mobile,null,2));
+    console.log('BROWSER_STUDIO_'+language.toUpperCase()+'_MOBILE_OVERFLOW='+(mobile.scrollWidth-mobile.width));
+    await page.setViewportSize({width:1280,height:800});
     await ribbon.getByRole('button',{name:language==='en'?'Add content':'Añadir contenido',exact:true}).click();
     const dialog=page.locator('dialog.p2lrn-activity-picker');
     await dialog.waitFor({state:'visible',timeout:10000});
@@ -301,6 +319,7 @@ async function studioChrome(language){
     assert.ok(treeTitles.includes(language==='en'?'Activity page':'Página de actividades'),
       'Stacked page should not reuse the lesson title: '+treeTitles.join(', '));
     await page.screenshot({path:join(evidence,prefix+'-activity.png'),fullPage:false});
+    await auditStudio('activity');
     console.log('BROWSER_STUDIO_'+language.toUpperCase()+'_PICKER=PASS');
   }catch(error){
     await page.screenshot({path:join(evidence,prefix+'-error.png'),fullPage:false}).catch(()=>{});
