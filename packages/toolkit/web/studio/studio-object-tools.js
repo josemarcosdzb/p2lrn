@@ -68,7 +68,24 @@ function button(doc,label,action,title=label){
   el.dataset.objectAction=action;el.title=title;el.setAttribute('aria-label',title);return el;
 }
 const isObject=(node,surface)=>Boolean(node&&surface.contains(node)&&node.matches?.(OBJECT_SELECTOR));
-const positionOf=el=>({x:positive(el.dataset.p2lrnObjectX,0),y:positive(el.dataset.p2lrnObjectY,0)});
+const isDiagramChild=el=>el?.parentElement?.dataset?.p2lrnLayout==='diagram-canvas';
+export function percentDiagramGeometry(x,y,width,height,containerWidth,containerHeight){
+  if([x,y,width,height,containerWidth,containerHeight].some(v=>!Number.isFinite(v))||containerWidth<=0||containerHeight<=0)
+    throw new RangeError('Invalid diagram geometry');
+  const round=n=>Math.round(n*10000)/10000;
+  return {left:round(between(x/containerWidth*100,0,100)),
+    top:round(between(y/containerHeight*100,0,100)),
+    width:round(between(width/containerWidth*100,1,100)),
+    height:round(between(height/containerHeight*100,1,100))};
+}
+const positionOf=el=>{
+  if(isDiagramChild(el)){
+    const box=el.parentElement.getBoundingClientRect();
+    return {x:positive(parseFloat(el.style.left),0)*box.width/100,
+      y:positive(parseFloat(el.style.top),0)*box.height/100};
+  }
+  return {x:positive(el.dataset.p2lrnObjectX,0),y:positive(el.dataset.p2lrnObjectY,0)};
+};
 const angleOf=el=>positive(el.dataset.p2lrnObjectRotation,0);
 const polygonPoints=art=>{
   const value=art?.style?.clipPath||'';
@@ -90,9 +107,20 @@ export function objectTransform(x,y,angle=0){
 }
 function applyObjectTransform(el){
   const {x,y}=positionOf(el),angle=angleOf(el);
-  el.style.transform=objectTransform(x,y,angle);
+  el.style.transform=isDiagramChild(el)?(angle?'rotate('+angle+'deg)':'none'):objectTransform(x,y,angle);
 }
 function setPosition(el,x,y){
+  if(isDiagramChild(el)){
+    const container=el.parentElement.getBoundingClientRect();
+    if(!container.width||!container.height)return;
+    const element=el.getBoundingClientRect();
+    const left=between(x/container.width*100,0,Math.max(0,100-element.width/container.width*100));
+    const top=between(y/container.height*100,0,Math.max(0,100-element.height/container.height*100));
+    el.style.left=left.toFixed(4)+'%';el.style.top=top.toFixed(4)+'%';
+    el.style.position='absolute';
+    delete el.dataset.p2lrnObjectX;delete el.dataset.p2lrnObjectY;
+    applyObjectTransform(el);return;
+  }
   x=Math.round(between(x,-4000,4000));y=Math.round(between(y,-4000,4000));
   el.dataset.p2lrnObjectX=String(x);el.dataset.p2lrnObjectY=String(y);
   applyObjectTransform(el);
@@ -392,12 +420,17 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       setPosition(el,pos.x+offset.x,y);ensureScrollRoom(el);change();return el;
     }
     if(action==='width'){
-      const px=between(positive(value,el.getBoundingClientRect().width),120,Math.max(120,surface.clientWidth));
-      el.style.width=Math.round(px)+'px';el.style.maxWidth='100%';change();return el;
+      const scene=isDiagramChild(el)?el.parentElement.getBoundingClientRect():null;
+      const px=between(positive(value,el.getBoundingClientRect().width),scene?12:120,scene?scene.width:Math.max(120,surface.clientWidth));
+      el.style.width=scene?(px/scene.width*100).toFixed(4)+'%':Math.round(px)+'px';
+      el.style.maxWidth=scene?'none':'100%';change();return el;
     }
     if(action==='height'){
       if(el.matches('table'))throw new Error('La altura de las tablas se regula con sus filas.');
-      el.style.minHeight=Math.round(between(positive(value,el.getBoundingClientRect().height),40,1800))+'px';
+      const scene=isDiagramChild(el)?el.parentElement.getBoundingClientRect():null;
+      const height=between(positive(value,el.getBoundingClientRect().height),scene?12:40,scene?scene.height:1800);
+      if(scene){el.style.height=(height/scene.height*100).toFixed(4)+'%';el.style.minHeight='0';}
+      else el.style.minHeight=Math.round(height)+'px';
       change();return el;
     }
     if(['left','center','right'].includes(action)){
@@ -451,7 +484,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       writePolygonPoints(art,points);drag.moved=true;update();return;
     }
     if(drag.kind==='drag'){
-      const cur=el.getBoundingClientRect(),box=surface.getBoundingClientRect();
+      const cur=el.getBoundingClientRect(),box=(isDiagramChild(el)?el.parentElement:surface).getBoundingClientRect();
       const minX=drag.position.x+box.left-cur.left+8;
       const maxX=drag.position.x+box.right-cur.right-8;
       const minY=drag.position.y+box.top-cur.top+8;
@@ -460,11 +493,18 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       ensureScrollRoom(el);
     }else{
       const maxWidth=Math.max(120,surface.clientWidth);
-      el.style.width=Math.round(between(drag.width+dx,120,maxWidth))+'px';
-      el.style.maxWidth='100%';
-      if(!el.matches('table'))el.style.minHeight=Math.round(between(drag.height+dy,40,1800))+'px';
+      if(isDiagramChild(el)){
+        const bounds=el.parentElement.getBoundingClientRect();
+        el.style.width=(between(drag.width+dx,12,bounds.width)/bounds.width*100).toFixed(4)+'%';
+        el.style.height=(between(drag.height+dy,12,bounds.height)/bounds.height*100).toFixed(4)+'%';
+        el.style.minHeight='0';el.style.maxWidth='none';
+      }else{
+        el.style.width=Math.round(between(drag.width+dx,120,maxWidth))+'px';
+        el.style.maxWidth='100%';
+        if(!el.matches('table'))el.style.minHeight=Math.round(between(drag.height+dy,40,1800))+'px';
+      }
     }
-    if(drag.kind==='drag')markDropTarget(findDropTarget(event,el));
+    if(drag.kind==='drag'&&!isDiagramChild(el))markDropTarget(findDropTarget(event,el));
     drag.moved=true;update();
   }
   function finishDrag(event){
@@ -472,7 +512,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     const {moved,kind,target}=drag;drag=null;
     try{event.currentTarget.releasePointerCapture?.(event.pointerId);}catch{}
     // Re-hit-test on release because nested layouts can shift during a drag.
-    if(moved&&kind==='drag')markDropTarget(findDropTarget(event,target));
+    if(moved&&kind==='drag'&&!isDiagramChild(target))markDropTarget(findDropTarget(event,target));
     const parent=dropTarget;markDropTarget(null);
     if(moved&&kind==='drag'&&parent&&parent!==target.parentElement&&!target.contains(parent)){
       parent.append(target);setPosition(target,0,0);
