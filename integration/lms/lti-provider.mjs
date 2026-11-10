@@ -243,7 +243,7 @@ export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer
         throw new Error('The LMS does not accept LTI resource links');
       const returnUrl = url(settings.deep_link_return_url, 'deep_link_return_url', allowInsecureLocal).toString();
       const origins = reg.deepLinkReturnOrigins;
-      if (!reg.dynamicCanvas && (!Array.isArray(origins) || !origins.includes(new URL(returnUrl).origin)))
+      if (!Array.isArray(origins) || !origins.includes(new URL(returnUrl).origin))
         throw new Error('Unapproved LMS Deep Linking return origin');
       const result = Object.freeze({kind: 'deep-link', tenantId: reg.tenantId,
         registrationId: reg.id, deploymentId: deployment, returnUrl});
@@ -308,7 +308,7 @@ export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer
         !reg.deployments?.includes(picker.deploymentId))
       throw new Error('Revoked LTI Deep Linking registration or deployment');
     const returnUrl = url(required(picker.returnUrl,'returnUrl'),'returnUrl',allowInsecureLocal).toString();
-    if (!reg.dynamicCanvas && !reg.deepLinkReturnOrigins?.includes(new URL(returnUrl).origin))
+    if (!reg.deepLinkReturnOrigins?.includes(new URL(returnUrl).origin))
       throw new Error('Unapproved LMS Deep Linking return origin');
     const result = Object.freeze({kind:'deep-link',tenantId:reg.tenantId,
       registrationId:reg.id,deploymentId:picker.deploymentId,returnUrl});
