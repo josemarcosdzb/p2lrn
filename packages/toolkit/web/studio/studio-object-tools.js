@@ -169,7 +169,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   if(normalizeStudioShapeCaptions(surface))emit();
   let renderedFreeform=null;
   function renderPolygonHandles(){
-    if(selected?.dataset?.p2lrnShape!=='freeform'){
+    if(selected?.dataset?.p2lrnShape!=='freeform'||angleOf(selected)!==0){
       pointLayer.replaceChildren();renderedFreeform=null;return;
     }
     const art=selected.querySelector('[data-p2lrn-shape-art]');
@@ -322,9 +322,10 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       select(group);change();return group;
     }
     if(action==='ungroup'){
-      if(el.dataset.p2lrnLayout!=='group')throw new Error('Selecciona un grupo para desagrupar.');
-      const children=[...el.childNodes];
-      el.replaceWith(...children);
+      const group=el.dataset.p2lrnLayout==='group'?el:el.closest('[data-p2lrn-layout="group"]');
+      if(!group||!surface.contains(group))throw new Error('Selecciona un grupo para desagrupar.');
+      const children=[...group.childNodes];
+      group.replaceWith(...children);
       select(children.find(node=>isObject(node,surface))||null);change();return children;
     }
     if(action==='duplicate'){
