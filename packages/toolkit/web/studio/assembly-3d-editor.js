@@ -9,60 +9,45 @@ import {
 const ns='http://www.w3.org/2000/svg';
 const $=(tag,className,text)=>{const n=document.createElement(tag);if(className)n.className=className;if(text!==undefined)n.textContent=String(text);return n;};
 const style=`
-.p2lrn-assembly-editor{font-family:inherit;color:inherit;display:grid;gap:12px}
-.p2lrn-assembly-editor .a3-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.p2lrn-assembly-editor .a3-toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
-.p2lrn-assembly-editor button,.p2lrn-assembly-editor select,.p2lrn-assembly-editor input{font:inherit;border:1px solid #7b91a9;border-radius:7px;padding:7px 8px;color:inherit;background:transparent;min-width:0}
-.p2lrn-assembly-editor button{cursor:pointer;min-height:34px}
-.p2lrn-assembly-editor button[aria-pressed=true]{background:#0f766e;color:#fff;border-color:#0f766e}
-.p2lrn-assembly-editor button:focus-visible,.p2lrn-assembly-editor select:focus-visible,.p2lrn-assembly-editor input:focus-visible{outline:3px solid #0d9488;outline-offset:2px}
-.p2lrn-assembly-editor .a3-main{display:grid;grid-template-columns:minmax(145px,0.85fr) minmax(260px,2fr) minmax(225px,1.1fr);gap:10px;align-items:start}
-.p2lrn-assembly-editor .a3-pane{border:1px solid #7b91a958;border-radius:12px;padding:10px;min-width:0;display:grid;gap:10px}
-.p2lrn-assembly-editor .a3-tree{max-height:390px;overflow:auto;display:grid;gap:5px}
-.p2lrn-assembly-editor .a3-tree button{width:100%;text-align:left}
-.p2lrn-assembly-editor .a3-scene{background:radial-gradient(ellipse at 45% 45%,#183348,#071522);border-radius:12px;overflow:hidden;position:relative}
- .p2lrn-assembly-editor .a3-scene svg,.p2lrn-assembly-editor .a3-scene canvas{width:100%;aspect-ratio:16/11;display:block;touch-action:none;cursor:grab}
-.p2lrn-assembly-editor .a3-scene [hidden]{display:none!important}
-.p2lrn-assembly-editor .a3-scene svg:active{cursor:grabbing}
-.p2lrn-assembly-editor .a3-scene-note{position:absolute;bottom:8px;left:12px;color:#e2e8f0;font-size:11px;pointer-events:none}
+.p2lrn-assembly-editor{box-sizing:border-box;display:flex;flex-direction:column;gap:10px;width:100%;min-width:0;font-family:inherit;color:inherit}
+.p2lrn-assembly-editor *{box-sizing:border-box}
+.p2lrn-assembly-editor [hidden]{display:none!important}
+.p2lrn-assembly-editor .a3-head{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.p2lrn-assembly-editor .a3-head>strong{font-size:15px}
+.p2lrn-assembly-editor .a3-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.p2lrn-assembly-editor button,.p2lrn-assembly-editor select,.p2lrn-assembly-editor input,.p2lrn-assembly-editor textarea{font:inherit;border:1px solid #8295aa;border-radius:7px;padding:7px 9px;color:inherit;background:transparent;min-width:0}
+.p2lrn-assembly-editor button{cursor:pointer;min-height:36px}
+.p2lrn-assembly-editor button:focus-visible,.p2lrn-assembly-editor select:focus-visible,.p2lrn-assembly-editor input:focus-visible,.p2lrn-assembly-editor textarea:focus-visible,.p2lrn-assembly-editor summary:focus-visible{outline:3px solid #0d9488;outline-offset:2px}
+.p2lrn-assembly-editor button[aria-pressed=true],.p2lrn-assembly-editor .a3-primary{background:#0f766e;color:#fff;border-color:#0f766e}
+.p2lrn-assembly-editor .a3-main{display:block;min-width:0;width:100%}
+.p2lrn-assembly-editor .a3-scene{position:relative;min-width:0;width:100%;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 45% 45%,#183348,#071522)}
+.p2lrn-assembly-editor .a3-scene>canvas,.p2lrn-assembly-editor .a3-scene>svg{display:block;width:100%;height:clamp(390px,65vh,780px);aspect-ratio:auto;touch-action:none;cursor:grab}
+.p2lrn-assembly-editor .a3-scene:focus-within{outline:2px solid #0d9488}
+.p2lrn-assembly-editor .a3-scene-note{position:absolute;z-index:2;bottom:8px;left:12px;right:12px;width:max-content;max-width:calc(100% - 24px);padding:6px 10px;border-radius:7px;color:#f8fafc;background:#071522e0;font-size:12px;pointer-events:none}
+.p2lrn-assembly-editor .a3-pane{border:1px solid #90a1b474;border-radius:11px;padding:10px;min-width:0;display:grid;gap:8px}
+.p2lrn-assembly-editor .a3-assets{position:absolute;z-index:5;top:12px;left:12px;max-height:calc(100% - 62px);overflow:auto;width:min(295px,calc(100% - 24px));border:1px solid #8998ae;background:#f8fafcee;color:#17263c;box-shadow:0 8px 24px #0206176e;border-radius:10px}
+.p2lrn-assembly-editor .a3-assets:not([open]){width:auto;max-width:calc(100% - 24px)}
+.p2lrn-assembly-editor .a3-assets>summary{cursor:pointer;padding:9px 13px;font-weight:700;list-style-position:inside}
+.p2lrn-assembly-editor .a3-assets .a3-tree{display:grid;gap:5px;max-height:min(50vh,440px);overflow:auto;padding:6px 10px 10px}
+.p2lrn-assembly-editor .a3-tree>button{width:100%;text-align:left}
+.p2lrn-assembly-editor .a3-tree>label{display:grid;gap:4px}
+.p2lrn-assembly-editor .a3-assets input,.p2lrn-assembly-editor .a3-assets select{width:100%;background:#fff;color:#17263c}
+.p2lrn-assembly-editor .a3-properties{position:absolute;z-index:4;top:12px;right:12px;bottom:48px;max-height:calc(100% - 60px);overflow-y:auto;width:min(300px,calc(100% - 24px));background:#f8fafcf5;color:#17263c;box-shadow:0 8px 24px #02061780;align-content:start}
 .p2lrn-assembly-editor .a3-panel-title{font-weight:700;font-size:14px}
 .p2lrn-assembly-editor .a3-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
-.p2lrn-assembly-editor label{display:grid;gap:3px;font-size:12px;font-weight:600}
-.p2lrn-assembly-editor .a3-fields input{width:100%;box-sizing:border-box}
+.p2lrn-assembly-editor label{display:grid;gap:4px;font-size:12px;font-weight:600}
+.p2lrn-assembly-editor .a3-fields input{width:100%;padding:6px 4px}
 .p2lrn-assembly-editor .a3-property{display:grid;gap:7px}
-.p2lrn-assembly-editor .a3-property select,.p2lrn-assembly-editor .a3-property input{width:100%;box-sizing:border-box}
-.p2lrn-assembly-editor .a3-hint{font-size:12px;line-height:1.45;opacity:.84}
-.p2lrn-assembly-editor .a3-error{color:#b91c1c;min-height:1.3em;display:block}
-.p2lrn-assembly-editor .a3-scene:focus-within{outline:2px solid #0d9488}
-@media(max-width:950px){.p2lrn-assembly-editor .a3-main{grid-template-columns:1fr 1fr}.p2lrn-assembly-editor .a3-scene{grid-column:1 / -1;grid-row:1}}
-@media(max-width:620px){.p2lrn-assembly-editor .a3-main{grid-template-columns:1fr}.p2lrn-assembly-editor .a3-scene{grid-column:1;grid-row:auto}}
-
-/* One workshop, one actual 3D viewport. The navigator and precision controls
-   are docks for that same scene, never a second preview canvas. */
-.p2lrn-assembly-editor .a3-main{grid-template-columns:minmax(0,1fr);grid-template-areas:"scene" "navigator" "inspector"}
-.p2lrn-assembly-editor .a3-main>.a3-scene{grid-area:scene;min-width:0}
-.p2lrn-assembly-editor .a3-main>.a3-pane:first-child{grid-area:navigator}
-.p2lrn-assembly-editor .a3-main>.a3-pane:last-child{grid-area:inspector}
-.p2lrn-assembly-editor .a3-scene canvas,.p2lrn-assembly-editor .a3-scene svg{width:100%;height:clamp(380px,59vh,740px);aspect-ratio:auto}
-.p2lrn-assembly-editor .a3-tree{display:flex;flex-wrap:wrap;max-height:160px;align-items:center}
-.p2lrn-assembly-editor .a3-tree>strong{width:100%}
-.p2lrn-assembly-editor .a3-tree>button{width:auto;max-width:220px;white-space:normal}
-.p2lrn-assembly-editor .a3-tree>label{max-width:min(100%,320px)}
-.p2lrn-assembly-editor .a3-main>.a3-pane:last-child{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));align-items:start}
-.p2lrn-assembly-editor .a3-main>.a3-pane:last-child>.a3-panel-title{grid-column:1/-1}
-.p2lrn-assembly-editor .a3-main>.a3-pane:last-child details{grid-column:1/-1}
-.p2lrn-assembly-editor .a3-toolbar .a3-primary{background:#0f766e;color:#fff;border-color:#0f766e}
-.p2lrn-assembly-editor .a3-scene-note{padding:6px 10px;border-radius:7px;background:#071522c9;font-size:12px;max-width:calc(100% - 32px)}
-@media(max-width:620px){.p2lrn-assembly-editor .a3-scene canvas,.p2lrn-assembly-editor .a3-scene svg{height:360px}.p2lrn-assembly-editor .a3-main{grid-template-areas:"scene" "navigator" "inspector"}}
-
-/* Precision controls remain OVER the same 3D canvas, not below another screen.
-   They can be dismissed without destroying the user's camera or selection. */
-.p2lrn-assembly-editor .a3-main{grid-template-areas:"scene" "navigator"}
-.p2lrn-assembly-editor .a3-scene>.a3-pane{position:absolute;z-index:4;right:12px;top:12px;bottom:48px;width:min(300px,35%);max-height:calc(100% - 62px);overflow-y:auto;background:rgba(247,250,252,.96);color:#15263b;box-shadow:0 8px 24px #02061780;align-content:start;display:grid;gap:8px}
-.p2lrn-assembly-editor .a3-scene>.a3-pane input,.p2lrn-assembly-editor .a3-scene>.a3-pane select{color:#15263b}
-.p2lrn-assembly-editor .a3-scene>.a3-pane>.a3-panel-title{grid-column:1/-1}
-.p2lrn-assembly-editor .a3-scene>.a3-pane[hidden]{display:none!important}
-@media(max-width:620px){.p2lrn-assembly-editor .a3-scene>.a3-pane{width:min(270px,71%);top:8px;bottom:42px;right:8px;max-height:calc(100% - 50px)}}
+.p2lrn-assembly-editor .a3-property select,.p2lrn-assembly-editor .a3-property input{width:100%;color:#17263c}
+.p2lrn-assembly-editor .a3-hint{font-size:12px;line-height:1.45;opacity:.88}
+.p2lrn-assembly-editor .a3-error{color:#b91c1c;min-height:1.3em;margin:0}
+.p2lrn-assembly-editor .a3-activity-settings{position:relative;max-width:min(370px,90vw);z-index:8}
+.p2lrn-assembly-editor .a3-activity-settings>summary{cursor:pointer;padding:8px 10px;border:1px solid #8295aa;border-radius:7px;list-style-position:inside;white-space:nowrap;font-size:13px}
+.p2lrn-assembly-editor .a3-activity-settings[open]{background:#fff;border:1px solid #8295aa;border-radius:9px;padding:0 8px 8px}
+.p2lrn-assembly-editor .a3-activity-settings-fields{display:grid;gap:7px;grid-template-columns:repeat(2,minmax(0,1fr));padding:8px;max-width:350px}
+.p2lrn-assembly-editor .a3-activity-settings-fields>label:nth-child(-n+2){grid-column:1/-1}
+.p2lrn-assembly-editor .a3-activity-settings-fields input,.p2lrn-assembly-editor .a3-activity-settings-fields select,.p2lrn-assembly-editor .a3-activity-settings-fields textarea{width:100%;background:#fff;color:#17263c}
+@media(max-width:700px){.p2lrn-assembly-editor .a3-head{align-items:flex-start}.p2lrn-assembly-editor .a3-head>strong{width:100%}.p2lrn-assembly-editor .a3-scene>canvas,.p2lrn-assembly-editor .a3-scene>svg{height:clamp(340px,57vh,600px)}.p2lrn-assembly-editor .a3-properties{width:min(265px,70%)}.p2lrn-assembly-editor .a3-assets{width:min(250px,65%)}}
 `;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const degrees=180/Math.PI;
@@ -99,13 +84,18 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   queueMicrotask(()=>mountStyle(container.getRootNode()));
   const scene=question.assembly3d,root=$('section','p2lrn-assembly-editor');
   const head=$('div','a3-head'),buttons=$('div','a3-toolbar'),main=$('div','a3-main');
-  const tree=$('aside','a3-pane'),center=$('div','a3-scene'),props=$('aside','a3-pane');
+  const tree=$('details','a3-assets'),center=$('div','a3-scene'),props=$('aside','a3-pane a3-properties');
+  // A definite camera viewport prevents the canvas intrinsic 16:11 ratio
+  // from making a second, scroll-length screen with the cage far below view.
+  center.style.height='clamp(400px,65vh,720px)';
+  center.style.position='relative';
+  center.style.overflow='hidden';
   const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 600 410');svg.setAttribute('role','img');svg.setAttribute('aria-label','Editor 3D de piezas y volúmenes de encaje; gira arrastrando el fondo');
-  svg.tabIndex=0;
-  const canvas=$('canvas','a3-webgl');canvas.hidden=true;canvas.tabIndex=0;canvas.setAttribute('aria-label','Visor 3D editable; arrastra piezas, jaulas o vértices, y gira la cámara arrastrando el fondo');
+  svg.tabIndex=0;svg.hidden=true;svg.style.cssText='width:100%;height:100%;display:block;touch-action:none';
+  const canvas=$('canvas','a3-webgl');canvas.hidden=false;canvas.tabIndex=0;canvas.style.cssText='width:100%;height:100%;display:block;touch-action:none';canvas.setAttribute('aria-label','Visor 3D editable; arrastra piezas, jaulas o vértices, y gira la cámara arrastrando el fondo');
   const note=$('div','a3-scene-note','La pieza aparece dentro de su destino. Arrástrala para ajustar el encaje; arrastra el fondo para girar.');
   const warning=$('p','a3-error');warning.setAttribute('role','status');warning.setAttribute('aria-live','polite');
-  let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0;
+  let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0,showAll=false;
   let yaw=0.55,pitch=0.73,zoom=46,drag=null;
   let threeRuntime=null,threeDestroyed=false,threeSignature=null,threePending=false,threeGeneration=0,threeDrag=null;
   const history=[JSON.stringify(scene)],redo=[];
@@ -139,21 +129,35 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   const fit=btn('Ajustar pieza dentro de la caja',()=>fitSelected());
   fit.classList.add('a3-primary');
   const frame=btn('Centrar encaje',()=>focusSelection());
-  const settings=btn('Ocultar ajustes',()=>{
+  const allPieces=btn('Ver todas las piezas',()=>{
+    showAll=!showAll;
+    allPieces.textContent=showAll?'Ver solo esta pieza':'Ver todas las piezas';
+    allPieces.setAttribute('aria-pressed',String(showAll));
+    syncThreeVisibility();
+    if(!showAll)focusSelection();
+    if(!svg.hidden)drawScene();
+  });
+  allPieces.setAttribute('aria-pressed','false');
+  props.hidden=true;
+  const settings=btn('Mostrar ajustes',()=>{
     props.hidden=!props.hidden;
+    if(!props.hidden)tree.open=false;
     settings.textContent=props.hidden?'Mostrar ajustes':'Ocultar ajustes';
     settings.setAttribute('aria-expanded',String(!props.hidden));
     settings.setAttribute('aria-pressed',String(!props.hidden));
   });
-  settings.setAttribute('aria-expanded','true');
-  settings.setAttribute('aria-pressed','true');
-  buttons.append(fit,frame,settings,undo,redoButton,add,remove);
+  settings.setAttribute('aria-expanded','false');
+  settings.setAttribute('aria-pressed','false');
+  buttons.append(fit,frame,allPieces,settings,undo,redoButton,add,remove);
   head.append($('strong',null,'Ensamblaje 3D · editor de piezas y jaulas'),buttons);
   root.append(head);
-  tree.append($('strong',null,'Escena / piezas / destinos'));
+  tree.append($('summary',null,'Piezas y modelos'));
   const entries=$('div','a3-tree');tree.append(entries);
-  center.append(svg,canvas,note,props);props.append($('strong',null,'Propiedades'));
-  main.append(tree,center);root.append(main,warning);container.replaceChildren(root);
+  // Never mount both render surfaces. The fallback SVG stays detached unless
+  // WebGL actually fails; a hidden second surface used to take up 637px and
+  // pushed the real cage off-screen despite looking 'hidden' in DOM tests.
+  center.append(canvas,note,tree,props);props.append($('strong',null,'Propiedades'));
+  main.append(center);root.append(main,warning);container.replaceChildren(root);
   const centerPoint={x:300,y:212};
   const project=(p)=>{
     const rx=p[0]*Math.cos(yaw)-p[2]*Math.sin(yaw),rz=p[0]*Math.sin(yaw)+p[2]*Math.cos(yaw);
@@ -173,7 +177,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     const grid=Array.from({length:15},(_,i)=>i-7);
     grid.forEach(v=>{const line1=[[-7,0,v],[7,0,v]],line2=[[v,0,-7],[v,0,7]];const a=line1.map(project),b=line2.map(project);element('path',{d:'M'+a[0][0]+' '+a[0][1]+'L'+a[1][0]+' '+a[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);element('path',{d:'M'+b[0][0]+' '+b[0][1]+'L'+b[1][0]+' '+b[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);});
     const sortItems=[];
-    scene.targets.forEach(target=>{const world=target.vertices.map(v=>toWorld(v,target.transform)),coords=world.map(project);sortItems.push({depth:project(target.transform.position)[2],run:()=>{
+    scene.targets.forEach(target=>{if(!showAll&&paired(selected.id)?.target?.id!==target.id)return;const world=target.vertices.map(v=>toWorld(v,target.transform)),coords=world.map(project);sortItems.push({depth:project(target.transform.position)[2],run:()=>{
       const active=selected.kind==='target'&&selected.id===target.id;
       const group=element('g',{'data-kind':'target','data-id':target.id});
       CAGE_EDGES.forEach(([a,b])=>{const c=coords[a],d=coords[b];const line=element('path',{d:'M'+c[0]+' '+c[1]+' L'+d[0]+' '+d[1],stroke:active?'#5eead4':'#6bbac0','stroke-width':active?2.8:1.8,fill:'none','stroke-opacity':target.visibility==='hidden'?0.45:0.9},group);line.dataset.kind='target';line.dataset.id=target.id;line.style.cursor='move';});
@@ -181,7 +185,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       const loc=project(target.transform.position);
       element('text',{x:loc[0]+7,y:loc[1]+8,fill:'#ccfbf1','font-size':12},group).textContent=target.text;
     }});});
-    scene.pieces.forEach(piece=>{const p=project(assemblyPlacementTransform(scene,piece.id)?.position??piece.initialTransform.position);sortItems.push({depth:p[2],run:()=>{
+    scene.pieces.forEach(piece=>{if(!showAll&&paired(selected.id)?.piece?.id!==piece.id)return;const p=project(assemblyPlacementTransform(scene,piece.id)?.position??piece.initialTransform.position);sortItems.push({depth:p[2],run:()=>{
       const active=selected.kind==='piece'&&selected.id===piece.id;
       const node=element('g',{'data-kind':'piece','data-id':piece.id});const box=element('rect',{x:p[0]-12,y:p[1]-12,width:24,height:24,rx:5,fill:active?'#fcd34d':'#60a5fa',stroke:'#e2e8f0','stroke-width':active?2:1},node);box.dataset.kind='piece';box.dataset.id=piece.id;box.style.cursor='move';element('text',{x:p[0]+16,y:p[1]+5,fill:'#eff6ff','font-size':12},node).textContent=piece.text;
     }});});
@@ -252,7 +256,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     entries.replaceChildren();
     for(const [name,kind,items] of [['Piezas','piece',scene.pieces],['Destinos','target',scene.targets]]){
       entries.append($('strong',null,name));
-      items.forEach(p=>{const b=btn(p.text,()=>{selected={kind,id:p.id};vertexIndex=0;drawAll();focusSelection();});b.setAttribute('aria-pressed',selected.kind===kind&&selected.id===p.id?'true':'false');entries.append(b);});
+      items.forEach(p=>{const b=btn(p.text,()=>{selected={kind,id:p.id};vertexIndex=0;tree.open=false;drawAll();syncThreeVisibility();focusSelection();});b.setAttribute('aria-pressed',selected.kind===kind&&selected.id===p.id?'true':'false');entries.append(b);});
     }
     const importLabel=$('label');importLabel.append($('strong',null,'Importar modelo GLB'));
     const file=$('input');file.type='file';file.accept='.glb,model/gltf-binary';file.setAttribute('aria-label','Importar modelo 3D GLB');
@@ -289,7 +293,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       link.placement=fitAssemblyBounds(target,measured);
       piece.initialTransform.scale=[...link.placement.scale];
     });
-    if(success){selected={kind:'piece',id:piece.id};drawAll();focusSelection();}
+    if(success){selected={kind:'piece',id:piece.id};drawAll();syncThreeVisibility();focusSelection();}
     return success;
   }
   function focusSelection(){
@@ -309,6 +313,18 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     targets:scene.targets.map(t=>t.id),
     reference:scene.referenceAssetId??null,
   });
+  function syncThreeVisibility(){
+    if(!threeRuntime)return;
+    const current=paired(selected.id);
+    for(const target of scene.targets){
+      const active=current?.target?.id===target.id;
+      threeRuntime.setObjectVisibility?.('author-target:'+target.id,showAll||active);
+      threeRuntime.setCageHandlesVisible?.('author-target:'+target.id,active);
+    }
+    for(const piece of scene.pieces){
+      threeRuntime.setObjectVisibility?.('author-piece:'+piece.id,showAll||current?.piece?.id===piece.id);
+    }
+  }
   function syncThreeTransforms(){
     if(!threeRuntime)return;
     for(const target of scene.targets){
@@ -320,6 +336,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     if(scene.referenceAssetId)threeRuntime.setTransform('author-reference',scene.referenceTransform??{
       position:[0,0,0],rotation:[0,0,0,1],scale:[1,1,1],
     });
+    syncThreeVisibility();
   }
   async function rebuildThree(){
     const runtime=threeRuntime;
@@ -405,7 +422,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       selected={kind:'target',id:meta.id};vertexIndex=meta.index;
     }else if(meta.kind==='assembly-editor-target')selected={kind:'target',id:meta.id};
     else if(meta.kind==='assembly-editor-piece')selected={kind:'piece',id:meta.id};
-    treePanel();propertyPanel();
+    treePanel();propertyPanel();syncThreeVisibility();
     return true;
   }
   function onThreeInteraction(meta){
@@ -492,6 +509,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       await rebuildThree();
     }catch(error){
       threeRuntime?.destroy();threeRuntime=null;svg.hidden=false;canvas.hidden=true;
+      if(canvas.isConnected)canvas.replaceWith(svg);
       drawScene();note.textContent='Sin WebGL: vista geométrica alternativa del mismo encaje';
       message('Vista 3D no disponible: '+String(error.message||error));
     }
@@ -511,6 +529,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     });
     detachObserver.observe(root.getRootNode(),{subtree:true,childList:true});
     if(typeof createScene==='function')void startThree();
+    else {canvas.hidden=true;svg.hidden=false;if(canvas.isConnected)canvas.replaceWith(svg);drawScene();message('WebGL no está disponible: edición de zonas mediante la vista geométrica.');}
   });
   svg.addEventListener('pointerdown',e=>{
     if(e.button!==0&&e.pointerType==='mouse')return;

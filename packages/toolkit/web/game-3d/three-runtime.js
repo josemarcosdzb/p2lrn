@@ -267,17 +267,18 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     player.position.x=clamp(player.position.x,-10.2,10.2);
     player.position.z=clamp(player.position.z,-7.8,11.8);
   }
+  function updateAuthoringCamera(){
+    const elevation=clamp(cameraPitch,-1.38,1.38),slope=Math.cos(elevation);
+    camera.position.set(
+      orbitFocus.x+Math.sin(cameraYaw)*orbitDistance*slope,
+      orbitFocus.y+Math.sin(elevation)*orbitDistance,
+      orbitFocus.z+Math.cos(cameraYaw)*orbitDistance*slope,
+    );
+    camera.lookAt(orbitFocus);
+    camera.updateMatrixWorld(true);
+  }
   function updatePlayer(delta){
-    if(authoring){
-      const elevation=clamp(cameraPitch,-1.38,1.38),slope=Math.cos(elevation);
-      camera.position.set(
-        orbitFocus.x+Math.sin(cameraYaw)*orbitDistance*slope,
-        orbitFocus.y+Math.sin(elevation)*orbitDistance,
-        orbitFocus.z+Math.cos(cameraYaw)*orbitDistance*slope,
-      );
-      camera.lookAt(orbitFocus);
-      return;
-    }
+    if(authoring){updateAuthoringCamera();return;}
     const previous=player.position.clone();
     const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
@@ -503,7 +504,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     group.add(box);
     const handles=[];
     if(editable){
-      const geometry=new THREE.SphereGeometry(0.105,10,8);
+      const geometry=new THREE.SphereGeometry(0.075,10,8);
       const material=new THREE.MeshBasicMaterial({color:'#22d3ee',depthTest:false});
       vertices.forEach((point,index)=>{
         const handle=new THREE.Mesh(geometry,material);
@@ -549,6 +550,26 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     return true;
   }
 
+  function setObjectVisibility(id,visible=true){
+    const object=meshes.get(String(id));
+    if(!object)return false;
+    const next=Boolean(visible);
+    if(object.visible!==next){object.visible=next;if(authoring)requestFrame();}
+    return true;
+  }
+
+  function setCageHandlesVisible(id,visible=true){
+    const data=meshes.get(String(id))?.userData?.p2lrnCage;
+    if(!data)return false;
+    const next=Boolean(visible);
+    let changed=false;
+    for(const handle of data.handles){
+      if(handle.visible!==next){handle.visible=next;changed=true;}
+    }
+    if(changed&&authoring)requestFrame();
+    return true;
+  }
+
   function setTransform(id,transform){
     const mesh=meshes.get(String(id));
     if(!mesh||!transform)return false;
@@ -580,6 +601,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     orbitDistance=clamp(Number(radius)||14,2.5,350);
     camera.far=Math.max(120,orbitDistance*12);
     camera.updateProjectionMatrix();
+    // Framing must take effect in the same browser task as selection. A
+    // queued RAF can otherwise render stale camera coordinates during GLB
+    // imports and resize, leaving the cage below the visible viewport.
+    updateAuthoringCamera();
     if(authoring)requestFrame();
     return true;
   }
@@ -850,6 +875,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     setTransform,
     updateCage,
     getObjectLocalBounds,
+    setObjectVisibility,
+    setCageHandlesVisible,
     focusOn,
     connect,
     connectToPlayer,
