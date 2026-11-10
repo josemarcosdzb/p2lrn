@@ -2,7 +2,8 @@
 import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync} from 'node:fs';
 import {dirname} from 'node:path';
-import {createHash,randomUUID} from 'node:crypto';
+import {createHash,randomUUID,createPublicKey} from 'node:crypto';
+import {trustedLmsJwksUrl} from './lti-safe-fetch.mjs';
 import {CANVAS_PENDING_DEPLOYMENT} from './lti-canvas-registration.mjs';
 const J=JSON.stringify, P=s=>s==null?null:JSON.parse(s), t=()=>Math.floor(Date.now()/1000);
 const req=(v,n)=>{if(typeof v!=='string'||!v.trim()||v.length>4096)throw new TypeError('Invalid '+n);return v;};
@@ -40,6 +41,8 @@ export function createLtiStore(filename){
    db.exec('ALTER TABLE sessions ADD COLUMN can_read_roster INTEGER NOT NULL DEFAULT 0');
   if(!sql('PRAGMA table_info(sessions)').all().some(c=>c.name==='can_receive_grades'))
    db.exec('ALTER TABLE sessions ADD COLUMN can_receive_grades INTEGER NOT NULL DEFAULT 0');
+  if(!sql('PRAGMA table_info(platforms)').all().some(c=>c.name==='jwks_url'))
+   db.exec('ALTER TABLE platforms ADD COLUMN jwks_url TEXT');
   db.exec('DROP INDEX IF EXISTS attempts_active');
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS attempts_active_role ON attempts(binding_id,learner_key,context_id,access_profile) WHERE status='IN_PROGRESS'");
   db.exec('COMMIT');
@@ -47,10 +50,11 @@ export function createLtiStore(filename){
   db.exec('CREATE TABLE IF NOT EXISTS canvas_dynamic_platforms(registration_id TEXT PRIMARY KEY,created_at INTEGER NOT NULL,FOREIGN KEY(registration_id) REFERENCES platforms(id))');
  function upsertPlatform(r){
   for(const field of ['id','tenantId','issuer','clientId','authUrl','launchUrl','tokenUrl'])req(r[field],field);
+  if(r.jwksUrl!==undefined&&r.jwksUrl!==null)trustedLmsJwksUrl(r.jwksUrl,r,{allowInsecureLoopback:new URL(r.launchUrl).protocol==='http:'});
   if(!['ACTIVE','DISABLED'].includes(r.status)||!Array.isArray(r.deployments)||!r.deployments.length||
      !Array.isArray(r.jwks?.keys)||!r.jwks.keys.length||!Array.isArray(r.deepLinkReturnOrigins))
     throw new TypeError('Invalid trusted platform registration');
-  sql('INSERT INTO platforms VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET tenant_id=excluded.tenant_id,issuer=excluded.issuer,client_id=excluded.client_id,auth_url=excluded.auth_url,launch_url=excluded.launch_url,deep_link_launch_url=excluded.deep_link_launch_url,token_url=excluded.token_url,jwks_json=excluded.jwks_json,deployments_json=excluded.deployments_json,origins_json=excluded.origins_json,status=excluded.status').run(r.id,r.tenantId,r.issuer,r.clientId,r.authUrl,r.launchUrl,r.deepLinkLaunchUrl??null,r.tokenUrl,J(r.jwks),J(r.deployments),J(r.deepLinkReturnOrigins),r.status);
+  sql('INSERT INTO platforms(id,tenant_id,issuer,client_id,auth_url,launch_url,deep_link_launch_url,token_url,jwks_json,deployments_json,origins_json,status,jwks_url) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET tenant_id=excluded.tenant_id,issuer=excluded.issuer,client_id=excluded.client_id,auth_url=excluded.auth_url,launch_url=excluded.launch_url,deep_link_launch_url=excluded.deep_link_launch_url,token_url=excluded.token_url,jwks_json=excluded.jwks_json,deployments_json=excluded.deployments_json,origins_json=excluded.origins_json,status=excluded.status,jwks_url=excluded.jwks_url').run(r.id,r.tenantId,r.issuer,r.clientId,r.authUrl,r.launchUrl,r.deepLinkLaunchUrl??null,r.tokenUrl,J(r.jwks),J(r.deployments),J(r.deepLinkReturnOrigins),r.status,r.jwksUrl??null);
   const extra=r.nrpsAllowedOrigins??[];
   if(!Array.isArray(extra)||extra.length>12||extra.some(v=>typeof v!=='string'||!v.trim()||v.length>512))
    throw new TypeError('Invalid NRPS service-origin allowlist');
@@ -88,7 +92,37 @@ export function createLtiStore(filename){
   }catch(err){db.exec('ROLLBACK');throw err;}
  }
 
- const decodeReg=r=>r?{id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url??undefined,tokenUrl:r.token_url,jwks:P(r.jwks_json),deployments:P(r.deployments_json),deepLinkReturnOrigins:P(r.origins_json),nrpsAllowedOrigins:P(sql('SELECT origins_json FROM nrps_registration_origins WHERE registration_id=?').get(r.id)?.origins_json??'[]'),dynamicCanvas:!!sql('SELECT 1 FROM canvas_dynamic_platforms WHERE registration_id=?').get(r.id),status:r.status}:null;
+ const decodeReg=r=>r?{id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url??undefined,tokenUrl:r.token_url,jwksUrl:r.jwks_url??undefined,jwks:P(r.jwks_json),deployments:P(r.deployments_json),deepLinkReturnOrigins:P(r.origins_json),nrpsAllowedOrigins:P(sql('SELECT origins_json FROM nrps_registration_origins WHERE registration_id=?').get(r.id)?.origins_json??'[]'),dynamicCanvas:!!sql('SELECT 1 FROM canvas_dynamic_platforms WHERE registration_id=?').get(r.id),status:r.status}:null;
+  // Refresh is atomic and cannot modify deployment, tenant, OAuth or routing.
+  // A key set cannot contain duplicate kid values or weak RSA keys.
+  function replacePlatformJwks({registrationId,jwksUrl,jwks}){
+   const reg=getRegistrationById(registrationId);
+   if(!reg||reg.status!=='ACTIVE'||reg.jwksUrl!==jwksUrl)
+    throw new Error('LTI_JWKS_REGISTRATION_REVOKED');
+   trustedLmsJwksUrl(jwksUrl,reg,{allowInsecureLoopback:new URL(reg.launchUrl).protocol==='http:'});
+   if(!Array.isArray(jwks?.keys)||jwks.keys.length<1||jwks.keys.length>50)
+    throw new Error('LTI_INVALID_REMOTE_JWKS');
+   const ids=new Set();
+   for(const key of jwks.keys){
+    if(key?.kty!=='RSA'||typeof key.kid!=='string'||!key.kid||
+       key.kid.length>256||ids.has(key.kid)||
+       typeof key.n!=='string'||typeof key.e!=='string'||
+       (key.use&&key.use!=='sig')||(key.alg&&key.alg!=='RS256')||
+       (key.key_ops&&(!Array.isArray(key.key_ops)||!key.key_ops.includes('verify'))))
+     throw new Error('LTI_INVALID_REMOTE_JWKS');
+    ids.add(key.kid);
+    let publicKey;
+    try{publicKey=createPublicKey({key,format:'jwk'});}
+    catch{throw new Error('LTI_INVALID_REMOTE_JWKS');}
+    if(publicKey.asymmetricKeyType!=='rsa'||
+       (publicKey.asymmetricKeyDetails?.modulusLength??0)<2048)
+     throw new Error('LTI_WEAK_REMOTE_JWKS');
+   }
+   const result=sql("UPDATE platforms SET jwks_json=? WHERE id=? AND jwks_url=? AND status='ACTIVE'")
+    .run(J({keys:jwks.keys}),registrationId,jwksUrl);
+   if(result.changes!==1)throw new Error('LTI_JWKS_REGISTRATION_REVOKED');
+   return getRegistrationById(registrationId);
+  }
    function registerCanvasDynamicPlatform(registration){
    const existing=sql('SELECT id FROM platforms WHERE issuer=? AND client_id=?').get(registration.issuer,registration.clientId);
    if(existing)throw new Error('CANVAS_REGISTRATION_ALREADY_EXISTS');
@@ -283,7 +317,7 @@ export function createLtiStore(filename){
  const listPending=()=>sql("SELECT id FROM ags_outbox WHERE status='PENDING' ORDER BY created_at LIMIT 50").all().map(r=>r.id);
  const listAttempts=tenantId=>sql('SELECT id,tenant_id,binding_id,context_id,status,created_at,updated_at FROM attempts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,contextId:r.context_id,status:r.status,createdAt:r.created_at,updatedAt:r.updated_at}));
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
- return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,registerCanvasDynamicPlatform,activateCanvasDynamicDeployment,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
+ return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,replacePlatformJwks,registerCanvasDynamicPlatform,activateCanvasDynamicDeployment,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
  publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,peekPicker,consumePicker,attachLaunch,getSession,
  getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,saveNrpsContext,getNrpsContext,listNrpsContexts,count});
 }
