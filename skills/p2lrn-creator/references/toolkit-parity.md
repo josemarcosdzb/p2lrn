@@ -1,6 +1,6 @@
 # Matriz de cobertura — Skill instalada, Toolkit, MCP y Studio
 
-Verificado en `josemarcosdzb/p2lrn` (rama de diseño), 03-11-2026; Toolkit `0.5.0-alpha.12`, P2LRN Core `0.4.0`, MCP Node `0.1.0`.
+Revisado contra el código fuente de `main` el 10-11-2026; paquetes Toolkit/Player/Studio/Analytics `0.5.0-alpha.12`, Core `0.4.0`. La revisión del código no certifica el empaquetado publicado ni la UI ejecutada.
 
 **Regla:** no equiparar una Skill instalada con un conector MCP conectado; no anunciar funcionamiento visual sin pruebas del Player. Si cambian las versiones, volver a comprobar las fuentes, pruebas oficiales y el estado de `main`.
 
@@ -10,7 +10,11 @@ Verificado en `josemarcosdzb/p2lrn` (rama de diseño), 03-11-2026; Toolkit `0.5.
 | Autor, fecha de creación, licencia y titular | Sí (solo esos cuatro) | Sí, `p2lrn_draft_set_rights` | Sí |
 | Verdadero/falso con varias afirmaciones | Sí, `trueFalseMode: multiple` | Sí, por payload nativo validado (no herramienta específica) | Sí |
 | Rellenar huecos en modo texto/arrastre | Declara payload compatible; no prueba UI | Sí, por payload nativo validado | Sí |
-| Juegos 2D y 3D | Declara renderizadores sin probar WebGL | Catálogo dinámico y actividades nativas; test de paridad | Ejecución visual en Player |
+| Juegos 2D y 3D clásicos | Declara renderizadores sin probar WebGL | Catálogo dinámico y actividades nativas; test de paridad | Ejecución visual en Player |
+| Arrastrar objetos y ajustar capas en Studio | No edita la UI | No controla interfaz gráfica | `studio-object-tools.js`, `visual-layout.js`, `studio-advanced-tools.js` en web/npm |
+| Actividad de arrastrar y soltar sobre imagen | No la diseña visualmente; requiere Studio | Puede recibir actividad nativa compatible; no mueve zonas | `studio-drop-activity.js` crea fichas/destinos; `lesson-drop-runtime.js` ejecuta |
+| «Arrastrar con puntos» (`drag-scored`) | No reemplaza su UI | Solo operaciones nativas permitidas | Catálogo y editor de preguntas nativas, distinto del juego de zonas |
+| Ensamblaje 3D de GLB, piezas y jaulas | No crea ni edita malla con Python | No edita geometría interactiva | `assembly-3d-editor.js`, `assembly-3d-core.js`, `renderers/assembly-3d.js`; ejecución requiere Player real |
 | Componentes | Callout simple | Actividades/composites validados | Más tipos y editor visual |
 | Imágenes movibles, WYSIWYG, colaboración | No | No edita la UI; solo estructura/borradores | Studio |
 | Eventos de aprendizaje, telemetría y Host autoritativo | No, no opera una sesión | No hay herramientas MCP específicas de eventos/Host | API Toolkit/Player/Host (`learning-events`, `reference-authoritative-host`) |
@@ -21,6 +25,10 @@ Verificado en `josemarcosdzb/p2lrn` (rama de diseño), 03-11-2026; Toolkit `0.5.
 | LTI 1.3 / AGS / conexión LMS | No | No, herramientas de curso local, sin publicación LMS | `integration/lms` aparte |
 | Leer/editar cursos del PC | No; archivos de chat únicamente | Sí, tras configurar carpeta explícita y permisos | Studio/Reader local |
 | Firma digital de resultados anti-manipulación | No | No | El SHA-256 del resultado offline no es firma de confianza |
+
+## Límite real de Studio y los juegos nuevos
+
+Las cinco variantes de la Skill comparten el mismo contrato y deben incluir `references/studio-arrastre-ensamblaje-3d.md` dentro de su ZIP. Esa referencia detalla acciones de la interfaz, contratos de arrastre y de ensamblaje con GLB, pruebas de guardado y criterios de validación del Player. El empaquetador Python limitado y el MCP de borradores **no** montan el editor visual ni ejecutan física 3D. El Toolkit permite operaciones de autoría tipadas con payload válido, pero la Skill no debe afirmar haber hecho interacciones del profesor o del alumno sin navegador real.
 
 ## Adaptador oficial de Authoring en esta Skill
 
