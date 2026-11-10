@@ -82,7 +82,31 @@ function setText(node,value) {
   node.textContent=String(value);
 }
 
-export function buildOrderingControls({trial,runtime,scene,status}) {
+export function incompleteThreeDTrials(trials, answerFor){
+  return trials.flatMap((trial,index)=>{
+    const answer=answerFor(trial.questionId)??{};
+    let total=0,done=0;
+    if(trial.type==='ordering-3d'){
+      total=trial.objects.length;
+      const ids=new Set(trial.objects.map(item=>item.id));
+      const order=Array.isArray(answer.order)?answer.order:[];
+      done=new Set(order.filter(id=>ids.has(id))).size;
+    }else if(trial.type==='matching-3d'){
+      total=trial.connections.length;
+      done=trial.connections.filter(pair=>answer.pairs?.[pair.leftId]===pair.rightId).length;
+    }else if(trial.type==='classification-3d'){
+      total=trial.assignments.length;
+      done=trial.assignments.filter(item=>answer.classifications?.[item.itemId]===item.categoryId).length;
+    }else if(trial.type==='assembly-3d'){
+      total=trial.scene.links.length;
+      done=trial.scene.links.filter(link=>answer.classifications?.[link.pieceId]===link.targetId).length;
+    }else throw Error('Unsupported 3D trial: '+trial.type);
+    const remaining=Math.max(0,total-done);
+    return remaining?[{index,label:trial.prompt,remaining}]:[];
+  });
+}
+
+export function buildOrderingControls({trial,runtime,scene,status,onProgress=()=>{}}) {
   const saveKey=`3d:ordering:${trial.questionId}`;
   const validIds=new Set(trial.objects.map((item)=>item.id));
   const stored=runtime.getGameState(saveKey,null);
@@ -143,6 +167,7 @@ export function buildOrderingControls({trial,runtime,scene,status}) {
   function persistPlacement(){
     runtime.setGameState(saveKey,[...placed]);
     runtime.replaceAnswer(trial.questionId,{order:currentOrder()??[]});
+    onProgress();
   }
 
   function refreshSelects() {
@@ -264,7 +289,7 @@ export function buildOrderingControls({trial,runtime,scene,status}) {
   };
 }
 
-function buildMatchingControls({trial,runtime,scene,status}) {
+function buildMatchingControls({trial,runtime,scene,status,onProgress=()=>{}}) {
   const expected=new Set(trial.connections.map((item)=>connectionKey(item.leftId,item.rightId)));
   const solved=new Set();
   let connections=[];
@@ -332,6 +357,7 @@ function buildMatchingControls({trial,runtime,scene,status}) {
       solved.add(key);
       connections=appendUniqueConnection(connections,{leftId:selected,rightId:id});
       runtime.applyPatch(trial.questionId,{kind:'pair-set',leftId:selected,rightId:id});
+      onProgress();
       if(activeRope){scene.disconnect(activeRope);activeRope=null;}
       scene.connect(`left:${selected}`,`right:${id}`);
     }
@@ -411,7 +437,7 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   };
 }
 
-export function buildClassificationControls({trial,runtime,scene,status}) {
+export function buildClassificationControls({trial,runtime,scene,status,onProgress=()=>{}}) {
   const expected=new Map(trial.assignments.map((item)=>[item.itemId,item.categoryId]));
   const saved=runtime.answer(trial.questionId).classifications??{};
   const values=Object.fromEntries(Object.entries(saved).filter(([itemId,categoryId])=>
@@ -468,6 +494,7 @@ export function buildClassificationControls({trial,runtime,scene,status}) {
     scene.highlight(`classify:${itemId}`,false);
     if(selected===itemId)selected=null;
     runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId,categoryId});
+    onProgress();
     syncClassifiedPosition(itemId,categoryId);
     selects.get(itemId).value=categoryId;
     setText(status,classificationIsCorrect(values,expected)?playerUiText('Clasificación completada correctamente.'):playerUiText('Objeto clasificado correctamente.'));
@@ -688,6 +715,7 @@ export async function render(options) {
   let trialIndex=0;
   let currentInteraction=()=>false;
   let currentDrag=()=>false;
+  let refreshFinish=()=>{};
 
   let scene;
   let joystick=null;
@@ -723,6 +751,7 @@ export async function render(options) {
   const renderTrial=async()=>{
     joystick?.reset();
     scene.reset();
+    scene.resetPlayer?.();
     controls.querySelectorAll('.p2lrn-3d-trial').forEach((node)=>node.remove());
     const trial=game.data.trials[trialIndex];
     const assembly=trial.type==='assembly-3d';
@@ -744,10 +773,11 @@ export async function render(options) {
     );
 
     let controller;
-    if(trial.type==='ordering-3d') controller=buildOrderingControls({trial,runtime,scene,status});
-    else if(trial.type==='matching-3d') controller=buildMatchingControls({trial,runtime,scene,status});
-    else if(trial.type==='classification-3d') controller=buildClassificationControls({trial,runtime,scene,status});
-    else if(trial.type==='assembly-3d') controller=await buildAssemblyControls({trial,runtime,scene,status,pkg:packageSource});
+    const onProgress=()=>refreshFinish();
+    if(trial.type==='ordering-3d') controller=buildOrderingControls({trial,runtime,scene,status,onProgress});
+    else if(trial.type==='matching-3d') controller=buildMatchingControls({trial,runtime,scene,status,onProgress});
+    else if(trial.type==='classification-3d') controller=buildClassificationControls({trial,runtime,scene,status,onProgress});
+    else if(trial.type==='assembly-3d') controller=await buildAssemblyControls({trial,runtime,scene,status,pkg:packageSource,onProgress});
     else throw new Error(`Unsupported P2LRN 3D trial: ${trial.type}`);
 
     const instructions={
@@ -786,7 +816,15 @@ export async function render(options) {
       ...(game.data.trials[trialIndex].scene.referenceAssetId?['assembly-reference']:[]),
     ],{padding:1.28}));
   }
-  finishPanel(runtime,shell);
+  const finish=finishPanel(runtime,shell,{
+    checkPending:()=>incompleteThreeDTrials(game.data.trials,id=>runtime.answer(id)),
+    onIncomplete:({index})=>{
+      if(trialIndex===index)return;
+      trialIndex=index;
+      void renderTrial().catch(error=>setText(status,error.message));
+    },
+  });
+  refreshFinish=()=>finish.refresh();
   shell.append(status);
 
   const originalDestroy=runtime.destroy.bind(runtime);
