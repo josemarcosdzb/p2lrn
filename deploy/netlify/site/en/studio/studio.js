@@ -424,7 +424,7 @@ async function materializeSelectedSharedResource(activityId=selectedId){
   if(!entry?.bytes)throw new Error("The resource is not available locally for materialization.");
   const filename=entry.href?.split("/en/").filter(Boolean).at(-1)||'resource.bin';
   const representation=studio.materializeSharedResource(activityId,{bytes:new Uint8Array(entry.bytes),filename,mediaType:entry.mediaType});
-  await renderEditor();updateChanges();setStatus('Fallback embebido materializado');return representation;
+  await renderEditor();updateChanges();setStatus('The resource is now available inside the course');return representation;
 }
 globalThis.P2LRNStudioMaterializeSharedResource=materializeSelectedSharedResource;
 
