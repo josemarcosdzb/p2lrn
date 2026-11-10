@@ -459,10 +459,15 @@ export function buildClassificationControls({trial,runtime,scene,status,onProgre
     expected.get(itemId)===categoryId));
   const randomPositions=randomRoomPositions(trial.objects.length,seedText(`classify:${trial.questionId}:${trial.prompt}`),{zMin:2.5,zMax:9.2});
   const staging=new Map(trial.objects.map((item,index)=>[item.id,randomPositions[index]]));
-  let selected=null;
+  const loose=createLooseDropState({
+    scene,runtime,storageKey:`3d:classification:${trial.questionId}:free-positions`,
+    staging,objectId:id=>`classify:${id}`,
+  });
+  let selected=null,activeDrag=null;
   function releaseSelected(){
     if(selected===null)return;
     scene.carry(`classify:${selected}`,false);
+    loose.remember(selected);
     scene.highlight(`classify:${selected}`,false);
     selected=null;
   }
@@ -481,7 +486,7 @@ export function buildClassificationControls({trial,runtime,scene,status,onProgre
     scene.addBox({
       id:`classify:${item.id}`,
       text:item.text,
-      position:staging.get(item.id),
+      position:loose.position(item.id),
       interaction:{kind:'classification-object',id:item.id},
     });
   });
@@ -505,6 +510,7 @@ export function buildClassificationControls({trial,runtime,scene,status,onProgre
       return false;
     }
     values[itemId]=categoryId;
+    loose.forget(itemId);
     scene.carry(`classify:${itemId}`,false);
     scene.highlight(`classify:${itemId}`,false);
     if(selected===itemId)selected=null;
@@ -545,27 +551,25 @@ export function buildClassificationControls({trial,runtime,scene,status,onProgre
       if(phase==='start'){
         if(runtime.state.completed||values[meta.id])return false;
         releaseSelected();
-        selected=meta.id;
         scene.carry(`classify:${meta.id}`,false);
+        activeDrag=loose.start(meta.id,position);
+        if(!activeDrag)return false;
+        selected=meta.id;
         scene.highlight(`classify:${meta.id}`,true);
         setText(status,playerUiText('Arrastra el objeto hasta su categoría.'));
         return true;
       }
-      if(phase==='move'){if(position)scene.setTranslation(`classify:${meta.id}`,position);return true;}
-      if(phase==='end'){
-        const ok=target?.kind==='classification-category'&&moveToCategory(meta.id,target.id);
-        if(!ok){
-          scene.setTranslation(`classify:${meta.id}`,staging.get(meta.id));
-          scene.highlight(`classify:${meta.id}`,false);
-          if(target?.kind!=='classification-category')setText(status,playerUiText('Suelta el bloque sobre una categoría.'));
-        }
-        selected=null;
-        return true;
-      }
-      if(phase==='cancel'){
-        scene.setTranslation(`classify:${meta.id}`,staging.get(meta.id));
+      if(!activeDrag||activeDrag.id!==meta.id)return false;
+      if(phase==='move'){loose.move(activeDrag,position);return true;}
+      if(phase==='end'||phase==='cancel'){
+        // Wrong categories and interrupted gestures are not automatic resets.
+        loose.end(activeDrag,phase==='end'?position:null);
+        const ok=phase==='end'&&target?.kind==='classification-category'&&
+          moveToCategory(meta.id,target.id);
+        if(!ok&&(phase==='cancel'||target?.kind!=='classification-category'))
+          setText(status,playerUiText('Objeto soltado donde lo has dejado. Sigue buscando su categoría.'));
         scene.highlight(`classify:${meta.id}`,false);
-        selected=null;
+        activeDrag=null;selected=null;
         return true;
       }
       return false;
@@ -578,6 +582,7 @@ export function buildClassificationControls({trial,runtime,scene,status,onProgre
           return true;
         }
         if(selected!==null&&selected!==meta.id)releaseSelected();
+        loose.remember(meta.id);
         selected=meta.id;
         scene.highlight(`classify:${selected}`,true);
         scene.carry(`classify:${selected}`,true);
