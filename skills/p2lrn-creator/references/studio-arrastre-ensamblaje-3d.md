@@ -24,7 +24,7 @@ Si una Skill recibe «quiero arrastrar elementos», identificar por contexto qu�
 
 ## Actividad «Arrastrar y soltar» con imagen y zonas
 
-1. Insertar el bloque de **Arrastrar y soltar** en una lección real (el generador es `createStudioDropActivity` en `studio-drop-activity.js`), no simularlo mediante imágenes compuestas.
+1. Insertar el bloque **`drag-drop` («Arrastrar y soltar»)** en una lección real (el generador es `createStudioDropActivity` en `studio-drop-activity.js`), no simularlo mediante imágenes compuestas.
 2. Seleccionar el área de ejercicio y, en **Zonas de arrastre**, configurar fondo opcional, pares ficha/destino, texto e imagen de fichas. Se aceptan formatos raster controlados; confirmar tipo, tamaño y texto alternativo antes de incorporar imágenes. El editor limita la actividad a **20 destinos**.
 3. Posicionar las zonas arrastrándolas sobre el fondo; cambiar su tamaño mediante el tirador. Para fichas con imagen, editar el texto alternativo. Una ficha de imagen sin rótulo no debe recibir una leyenda heredada ficticia.
 4. El identificador de respuesta correcta es la relación `data-p2lrn-dnd-accept` ↔ `data-p2lrn-dnd-item`. No intercambiar identificadores al cambiar la posición visual; mover la ficha a la imagen en autoría coloca el destino sin sacar la ficha de su bandeja.
