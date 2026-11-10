@@ -293,6 +293,10 @@
   -webkit-user-select:none;
   -webkit-tap-highlight-color:transparent;
 }
+/* Assembly offers the same analog navigation on desktop as on touch screens.
+   Scope this to assembly: all existing ordering/matching/classification input
+   and their touch-only joystick visibility remain unchanged. */
+.p2lrn-3d-layout.p2lrn-3d-assembly .p2lrn-3d-joystick { display:flex; }
 .p2lrn-3d-joystick-base {
   position:relative;
   box-sizing:border-box;
