@@ -1,6 +1,22 @@
 // Player/interactive renderer UI labels, reviewed for both site languages.
 // This is used only at the call site of generated UI, never on course content.
 const EN={
+  "Todas las piezas empiezan separadas y desordenadas fuera de las cajas. Arrastra cada pieza a su destino en esta misma vista 3D. Puedes girar la escena y acercar la cámara.": "All pieces start separated and shuffled outside their targets. Drag each piece to its target in this 3D view. You can rotate the scene and zoom in.",
+  "Pieza que vas a colocar": "Piece to place",
+  "Zona donde colocar la pieza": "Target area for the piece",
+  "Gira la pieza por ejes de 15 grados:": "Rotate the piece in 15-degree steps:",
+  "Colocar pieza": "Place piece",
+  "Restaurar orientación": "Reset orientation",
+  "Piezas colocadas: ": "Pieces placed: ",
+  "Encajada": "Placed",
+  "Pendiente": "Pending",
+  "Montaje completado. Puedes finalizar la actividad.": "Assembly complete. You can finish the activity.",
+  "Pieza seleccionada. Oriéntala y selecciona su destino.": "Piece selected. Adjust its orientation and choose a target.",
+  "Selecciona un destino válido.": "Choose a valid target.",
+  "No se pudo cargar el modelo base de referencia.": "The reference model could not be loaded.",
+  "Algún modelo 3D no se pudo cargar. Puedes completar el montaje con los controles accesibles.": "A 3D model could not be loaded. You can complete the assembly using the accessible controls.",
+  "Curso listo": "Course ready",
+  "La escena 3D está lista. También puedes responder con los controles accesibles.": "The 3D scene is ready. You can also answer using the accessible controls.",
   "El renderer de juego no implementa tiempo por pregunta; se requiere el renderer estándar.": "This game renderer does not support per-question time limits; use the standard renderer.",
   "Tiempo agotado · actividad finalizada": "Time expired · activity finished",
   "Finalizar actividad": "Finish activity",
