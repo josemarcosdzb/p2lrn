@@ -979,21 +979,73 @@ async function verifyThreePointerDragAndRope(cdp){
       const moved=phases.some(item=>item.phase==='move'&&item.id==='qa-object');
       const ended=phases.some(item=>item.phase==='end'&&item.target==='ordering-slot');
       if(!began||!moved||!ended)throw new Error('3D pointer drag failed: '+JSON.stringify({phases,from,to}));
+      // Repeat real pointer events for the OTHER 3D games. A generic drag
+      // 'end' is not enough: its destination must be the correct game target.
+      const extraTargets=[];
+      async function realDrop({sourceKind,targetKind,install}){
+        game.reset();game.resetPlayer();
+        const ids=install();
+        await new Promise(resolve=>setTimeout(resolve,180));
+        const sourceNode=game.scene.getObjectByProperty('name','__none__');
+        let fromNode=null,toNode=null;
+        game.scene.traverse(node=>{
+          const m=node.userData?.p2lrnInteraction;
+          if(m?.kind===sourceKind&&m.id===ids.source)fromNode=node;
+          if(m?.kind===targetKind&&m.id===ids.target)toNode=node;
+        });
+        if(!fromNode||!toNode)throw Error('3D drop cannot find '+sourceKind+'/'+targetKind);
+        const before=phases.length;
+        const from=point(fromNode),to=point(toNode);
+        pointer('pointerdown',from);
+        pointer('pointermove',to);
+        pointer('pointerup',to);
+        const events=phases.slice(before);
+        if(!events.some(x=>x.phase==='start'&&x.id===ids.source)||
+           !events.some(x=>x.phase==='end'&&x.target===targetKind))
+          throw Error('Real '+sourceKind+' did not drop into '+targetKind+': '+
+            JSON.stringify({events,from,to}));
+        extraTargets.push(targetKind);
+      }
+      await realDrop({
+        sourceKind:'classification-object',targetKind:'classification-category',
+        install:()=>{
+          game.addBox({id:'qa-classify',text:'Clasificar',position:[-2,0.78,4.2],
+            dynamic:false,physicsEnabled:false,
+            interaction:{kind:'classification-object',id:'qa-classify'}});
+          game.addZone({id:'qa-category',text:'Grupo 1',position:[-2,0.14,1.5],
+            size:[4.1,0.24,2.5],
+            interaction:{kind:'classification-category',id:'qa-category'}});
+          return {source:'qa-classify',target:'qa-category'};
+        },
+      });
+      await realDrop({
+        sourceKind:'matching-left',targetKind:'matching-right',
+        install:()=>{
+          game.addNode({id:'qa-left',text:'España',position:[-3,0.7,4.1],
+            interaction:{kind:'matching-left',id:'qa-left'}});
+          game.addNode({id:'qa-right',text:'Madrid',position:[3,0.7,3.1],
+            interaction:{kind:'matching-right',id:'qa-right'}});
+          return {source:'qa-left',target:'qa-right'};
+        },
+      });
       // The same real Three.js scene must respond to navigation in assembly
       // without stealing movement or drag handlers from ordering/matching.
       game.setAssemblyMode(true);
-      game.frameObjects(['qa-object','qa-target'],{padding:1.2});
+      game.frameObjects(null,{padding:1.2});
       const cameraBefore=game.camera.position.clone();
       game.setMovementVector(0,1);
       await new Promise(resolve=>setTimeout(resolve,380));
       game.setMovementVector(0,0);
       const movedCamera=game.camera.position.distanceTo(cameraBefore);
       if(movedCamera<0.2)throw new Error('Assembly analog navigation did not move the real camera: '+movedCamera);
-      return {finiteRope:true,dragPhases:phases.map(item=>item.phase),target:'ordering-slot',
+      return {finiteRope:true,dragPhases:phases.map(item=>item.phase),
+        target:'ordering-slot',additionalDrops:extraTargets,
         assemblyCameraDistance:movedCamera,syntheticPointer:true};
     }finally{game?.destroy();canvas.remove();}
   })()`);
-  invariant(result?.finiteRope&&result?.dragPhases?.includes('end')&&result?.assemblyCameraDistance>0.2,
+  invariant(result?.finiteRope&&result?.dragPhases?.includes('end')&&
+    result.additionalDrops?.includes('classification-category')&&
+    result.additionalDrops?.includes('matching-right')&&result?.assemblyCameraDistance>0.2,
     '3D pointer-drag scene test failed: '+JSON.stringify(result));
   return result;
 }
