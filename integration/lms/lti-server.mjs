@@ -14,6 +14,7 @@ import {classifyLtiUserError,ltiErrorHtml} from './lti-user-errors.mjs';
 import {createLtiAgsClient} from './lti-ags.mjs';
 import {createLocalQaLmsFetch} from './lti-local-qa-gateway.mjs';
 import {createLtiNrpsClient,validateNrpsClaim,NRPS_CLAIM} from './lti-nrps.mjs';
+import {pinnedLmsFetch,trustedLmsJwksUrl} from './lti-safe-fetch.mjs';
 import {decryptLegacySecret,encryptLegacySecret,parseLegacyForm,validateLegacyPlatform,verifyLegacyLaunch,sendLegacyOutcome} from './lti-legacy.mjs';
 import {validatePackageBytes} from '../../packages/toolkit/dist/core/validator.js';
 
@@ -167,6 +168,7 @@ function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
   throw new Error('LTI launch URL must match this independent P2LRN server or its registered LMS-origin local proxy');
  for(const v of [reg.issuer,reg.authUrl,reg.tokenUrl,...(reg.deepLinkReturnOrigins||[])])
   if(!(new URL(v).protocol==='https:'||(allowInsecureLocal&&new URL(v).protocol==='http:'&&/^(localhost|127\.0\.0\.1|(?:[a-z0-9-]+\.)+localhost)$/.test(new URL(v).hostname))))throw new Error('LTI platform endpoints must use HTTPS outside the local test lab');
+ trustedLmsJwksUrl(reg.jwksUrl,reg,{allowInsecureLoopback:allowInsecureLocal});
  const extra=reg.nrpsAllowedOrigins??[];
  if(!Array.isArray(extra)||extra.length>12)throw new Error('Invalid additional NRPS origins');
  for(const origin of extra){
@@ -211,10 +213,46 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  const root=resolve(dataDir),packages=join(root,'packages');
  mkdirSync(packages,{recursive:true});
  const store=createLtiStore(join(root,'lti.sqlite'));
+ const refreshedAt=new Map(),refreshFlights=new Map();
+ async function refreshRegistrationKeys(reg){
+  const current=store.getRegistrationById(reg.id);
+  if(!current||current.status!=='ACTIVE'||current.issuer!==reg.issuer||
+     current.clientId!==reg.clientId||current.jwksUrl!==reg.jwksUrl)
+   throw new Error('LTI_JWKS_REGISTRATION_REVOKED');
+  // Concurrent launches reuse one refresh and never re-register the LMS.
+  if(JSON.stringify(current.jwks)!==JSON.stringify(reg.jwks))return current;
+  const existing=refreshFlights.get(reg.id);
+  if(existing)return existing;
+  if(Date.now()-(refreshedAt.get(reg.id)||0)<30000)
+   throw new Error('LTI_JWKS_REFRESH_THROTTLED');
+  const location=trustedLmsJwksUrl(reg.jwksUrl,reg,{allowInsecureLoopback});
+  if(!location)throw new Error('LTI_JWKS_URL_REQUIRED');
+  refreshedAt.set(reg.id,Date.now());
+  const flight=(async()=>{
+   const request=fetchImpl??((u,o)=>pinnedLmsFetch(u,o,{
+    lookup,allowInsecureLoopback,maxResponseBytes:262144
+   }));
+   const response=await request(location,{method:'GET',redirect:'manual',
+    headers:{Accept:'application/json'},signal:AbortSignal.timeout(8000)});
+   if(!response.ok||response.status>=300)throw new Error('LTI_JWKS_FETCH_FAILED');
+   const declared=Number(response.headers?.get?.('content-length')||0);
+   if(declared>262144)throw new Error('LTI_JWKS_TOO_LARGE');
+   const bytes=await response.arrayBuffer();
+   if(bytes.byteLength>262144)throw new Error('LTI_JWKS_TOO_LARGE');
+   let keys;
+   try{keys=JSON.parse(Buffer.from(bytes).toString('utf8'));}
+   catch{throw new Error('LTI_JWKS_INVALID_RESPONSE');}
+   return store.replacePlatformJwks({
+    registrationId:reg.id,jwksUrl:location,jwks:keys
+   });
+  })();
+  refreshFlights.set(reg.id,flight);
+  try{return await flight;}finally{refreshFlights.delete(reg.id);}
+ }
  const provider=createP2LRNLtiProvider({
   getRegistration:store.getRegistration,getRegistrationByIssuer:store.getRegistrationByIssuer,
   getRegistrationById:store.getRegistrationById,
-  transactions:store.transactions,getBinding:store.getBinding,tool,activateDynamicDeployment:store.activateCanvasDynamicDeployment,allowInsecureLocal:allowInsecureLoopback
+  transactions:store.transactions,getBinding:store.getBinding,tool,activateDynamicDeployment:store.activateCanvasDynamicDeployment,refreshRegistrationKeys,allowInsecureLocal:allowInsecureLoopback
  });
  const ags=createLtiAgsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
  const nrps=createLtiNrpsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
