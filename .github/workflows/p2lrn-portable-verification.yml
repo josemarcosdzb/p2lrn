@@ -91,7 +91,8 @@ jobs:
           node --test integration/lms/lti-canvas-registration.test.mjs integration/lms/lti-ags.test.mjs integration/lms/lti-nrps.test.mjs
           node --test integration/lms/lti-server.test.mjs integration/lms/lti-admin-auth.test.mjs
           node --test integration/lms/lti-safe-fetch.test.mjs integration/lms/lti-content-scope.test.mjs
-          node --test scripts/test-contact-turnstile.test.mjs
+          node --test scripts/test-contact-turnstile.test.mjs scripts/test-contact-frontend.test.mjs
+          node scripts/verify-contact-security.mjs
       - name: Studio security and integration regression
         run: |
           node --test --test-concurrency=2 packages/studio/test/*.test.mjs
