@@ -178,7 +178,9 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     let target=explicit&&surface.contains(explicit)?explicit:(getInsertionTarget?.()||selected?.parentElement||null);
     // A visible caret after the last activity wins over a stale media/object
     // selection; do not insert new media back inside an old block.
-    if(caret&&target&&!target.contains(caret)&&target!==caret)target=null;
+    const diagramTarget=target?.matches?.('[data-p2lrn-layout="diagram-canvas"],[data-p2lrn-layout="diagram-group"]')||
+      target?.closest?.('[data-p2lrn-layout="diagram-canvas"],[data-p2lrn-layout="diagram-group"]');
+    if(caret&&target&&!target.contains(caret)&&target!==caret&&!diagramTarget)target=null;
     return studioNestedInsertionContainer(surface,{targetElement:target,anchorNode:caret});
   };
   const refresh=()=>{
