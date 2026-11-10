@@ -90,7 +90,9 @@ export async function pinnedLmsFetch(url,options={},config={}){
    timeout:8000,
    agent:false,
    // Native TLS continues to use u.hostname as servername for certificate checks.
-   lookup:(host,opts,cb)=>cb(null,selected.address,selected.family)
+   lookup:(host,opts,cb)=>opts?.all?
+    cb(null,[{address:selected.address,family:selected.family}]):
+    cb(null,selected.address,selected.family)
   },reply=>{
    const chunks=[];let size=0;
    const declared=Number(reply.headers['content-length']||0);
