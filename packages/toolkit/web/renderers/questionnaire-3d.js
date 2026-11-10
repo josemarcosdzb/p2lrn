@@ -281,6 +281,13 @@ export function buildOrderingControls({trial,runtime,scene,status,onProgress=()=
     },
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
+      if(meta.kind==='scene-empty'){
+        if(selected!==null){
+          releaseSelected();
+          setText(status,playerUiText('Objeto soltado aquí. Puedes recoger otro.'));
+        }
+        return true;
+      }
       if(meta.kind==='ordering-object'){
         if(selected!==null&&selected!==meta.id)releaseSelected();
         loose.remember(meta.id);
@@ -441,6 +448,10 @@ function buildMatchingControls({trial,runtime,scene,status,onProgress=()=>{}}) {
     },
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
+      if(meta.kind==='scene-empty'){
+        clearSelection();
+        return true;
+      }
       if(meta.kind==='matching-left'){
         chooseLeft(meta.id);return true;
       }
@@ -576,6 +587,13 @@ export function buildClassificationControls({trial,runtime,scene,status,onProgre
     },
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
+      if(meta.kind==='scene-empty'){
+        if(selected!==null){
+          releaseSelected();
+          setText(status,playerUiText('Objeto soltado aquí. Puedes recoger otro.'));
+        }
+        return true;
+      }
       if(meta.kind==='classification-object'){
         if(values[meta.id]){
           setText(status,playerUiText('Objeto clasificado correctamente.'));
