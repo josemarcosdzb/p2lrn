@@ -70,7 +70,7 @@ export async function render(options) {
       void runtime.finish().then((score)=>{
         const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
         status.textContent=score&&reveal
-          ? playerUiText(`Sopa completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`)
+          ? playerUiText(`Sopa completada: ${score.raw}/${score.max} puntos.`)
           : 'Sopa completada. Actividad enviada.';
       });
     }
