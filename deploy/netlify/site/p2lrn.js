@@ -183,113 +183,15 @@
     { label: 'Contacto', href: '/contacto/', active: ['/contacto/'] },
   ];
 
+  // Separate authoring and integration in visible first-level navigation.
+  // Technical references remain reachable from the developer sidebar.
   const GLOBAL_NAV = [
+    {label:'Documentación',href:'/docs/',active:['/docs/']},
+    {label:'Profesores',href:'/docs/empezar-facil/',active:['/docs/empezar/','/docs/empezar-facil/']},
+    {label:'Studio',href:'/docs/studio/',active:['/docs/studio/']},
+    {label:'Juegos educativos',href:'/docs/questionnaires/',active:['/docs/questionnaires/*','/docs/juegos-3d/','/docs/colaboracion/']},
+    {label:'Visor',href:'/demo/',active:['/demo/']},
     {label:'Desarrolladores',href:'/docs/desarrolladores/',active:['/docs/desarrolladores/*']},
-    {
-      label: 'Documentación',
-      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/formato-portable-cursos-interactivos/'],
-      items: [
-        ['/docs/','Inicio'],
-        ['/docs/empezar/','Antes de empezar'],
-        ['/docs/que-usar/','Mapa de componentes'],
-        ['/docs/conceptos/','Conceptos'],
-        ['/docs/formato/','Formato P2LRN'],
-        ['/docs/formato-portable-cursos-interactivos/','Guía de portabilidad'],
-      ],
-    },
-    {
-      label: 'Instalar',
-      active: ['/docs/instalar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*'],
-      items: [
-        ['/docs/instalar/','Elegir instalación'],
-        ['/docs/npm/','NPM'],
-        ['/docs/npm/studio/','Studio con NPM'],
-        ['/docs/npm/analytics/','Analytics con NPM'],
-        ['/docs/cdn/','CDN'],
-        ['/docs/cdn/studio/','Studio mediante CDN'],
-        ['/docs/cdn/analytics/','Analytics mediante CDN'],
-      ],
-    },
-    {
-      label: 'Crear',
-      active: ['/studio/','/crear-cursos-interactivos/','/cursos-offline/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
-      items: [
-        ['/studio/','Abrir Studio'],
-        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
-        ['/cursos-offline/','Cursos offline sin LMS'],
-        ['/docs/studio/','Guía de Studio'],
-        ['/docs/entrega-offline/','Entrega offline'],
-      ['/docs/colaboracion/','Colaboración en Studio'],
-        ['/docs/paquetes/','Crear paquetes'],
-        ['/docs/paquetes/multipart/','Multipart'],
-        ['/docs/toolkit/','Toolkit'],
-        ['/docs/cli/','CLI'],
-      ],
-    },
-    { label: 'Visor', href: '/demo/', active: ['/demo/'] },
-    {
-      label: 'Reproducir',
-      active: ['/docs/player/','/demo/','/juegos-educativos-3d/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],
-      wide: true,
-      items: [
-        ['/docs/player/','Player'],
-        ['/demo/','Visor'],
-        ['/juegos-educativos-3d/','Juegos educativos 3D'],
-        ['/docs/questionnaires/','Cuestionarios y juegos'],
-        ['/docs/questionnaires/standard/','Cuestionario estándar'],
-        ['/docs/questionnaires/memory/','Memoria'],
-        ['/docs/questionnaires/matching/','Relacionar'],
-        ['/docs/questionnaires/ordering/','Ordenar'],
-        ['/docs/questionnaires/classification/','Clasificar'],
-        ['/docs/questionnaires/true-false/','Verdadero / Falso'],
-        ['/docs/questionnaires/word-search/','Sopa de letras'],
-        ['/docs/questionnaires/crossword/','Crucigrama'],
-        ['/docs/questionnaires/rosco/','Rosco'],
-        ['/docs/questionnaires/3d/','Juego 3D'],
-        ['/docs/juegos-3d/','Arquitectura 3D'],
-        ['/docs/ejemplos/','Ejemplos'],
-      ],
-    },
-    {
-      label: 'Integrar',
-      active: ['/docs/integracion/','/docs/desarrolladores/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
-      items: [
-        ['/docs/integracion/','Integración'],
-        ['/docs/desarrolladores/colaboracion/','Colaboración técnica'],
-        ['/docs/eventos/','Eventos'],
-        ['/docs/conectores/','Conectores: visión general'],
-        ['/docs/conectores/ia/','Conectores para IA'],
-        ['/docs/conectores/lms/','Plataformas LMS'],
-        ['/docs/conectores/lti/','LTI 1.3'],
-      ],
-    },
-    {
-      label: 'Seguimiento',
-      active: ['/docs/progresion/','/docs/metricas/'],
-      items: [
-        ['/docs/progresion/','Progresión'],
-        ['/docs/metricas/','Métricas y analítica'],
-      ],
-    },
-    {
-      label: 'Analytics',
-      active: ['/docs/analytics/','/analytics/'],
-      items: [
-        ['/docs/analytics/','Guía de Analytics'],
-        ['/analytics/','Abrir Analytics'],
-      ],
-    },
-    {
-      label: 'Referencia',
-      active: ['/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
-      items: [
-        ['/docs/compatibilidad/','Compatibilidad'],
-        ['/docs/recetas/','Recetas'],
-        ['/docs/glosario/','Glosario'],
-        ['/docs/referencia/','Referencia técnica'],
-        ['/docs/troubleshooting/','Solución de problemas'],
-      ],
-    },
   ];
 
   const normalizePath = (value) => {
@@ -639,7 +541,19 @@
     const current = normalizePath(window.location.pathname);
     const selected = sidebarPath(current);
     const fragment = document.createDocumentFragment();
+    // A teacher should never need to browse API, npm or Host menus to find
+    // course authoring help. Developers get their own complete navigation.
+    const teacherRoutes=new Set([
+      '/docs/','/docs/empezar/','/docs/empezar-facil/',
+      '/docs/studio/','/docs/entrega-offline/','/docs/ejemplos/',
+      '/docs/colaboracion/','/docs/juegos-3d/',
+    ]);
+    const forTeachers=teacherRoutes.has(current)||current.startsWith('/docs/questionnaires/');
+    const visibleSections=forTeachers
+      ?new Set(['EMPEZAR','CREAR','REPRODUCIR','DESARROLLADORES','RECURSOS'])
+      :new Set(['DESARROLLADORES','INSTALAR','INTEGRAR','CONECTORES','REFERENCIA','RECURSOS']);
     for (const [section,items] of GLOBAL_SIDEBAR) {
+      if(!visibleSections.has(section))continue;
       const label=document.createElement('span');
       label.textContent=section;
       fragment.append(label);
