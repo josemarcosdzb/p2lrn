@@ -98,33 +98,60 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     if(!scene)return;
     layers.popup.replaceChildren();
     const entries=[...scene.children].filter(child=>
-      child.matches?.('[data-p2lrn-layout],figure'));
+      child.matches?.('[data-p2lrn-layout],figure,img[data-p2lrn-lesson-image],video[data-p2lrn-lesson-video]'));
     for(const [index,entry] of entries.entries()){
       const row=element(doc,'div','p2lrn-layer-entry');
       row.style.cssText='display:flex;align-items:center;gap:4px;min-height:34px';
-      const name=entry.dataset.p2lrnShape||entry.dataset.p2lrnLayout||entry.localName;
+      const name=entry.dataset.p2lrnShape||entry.dataset.p2lrnLayout||
+        (entry.matches('img')?'Imagen':entry.matches('video')?'Vídeo':entry.localName);
       const text=entry.dataset.p2lrnLayout==='text-box'?
-        (entry.textContent||'Texto').trim().slice(0,26):name;
+        (entry.textContent||'Texto').trim().slice(0,26):
+        entry.matches('img')?(entry.alt||'Imagen').slice(0,26):name;
+      const media=entry.matches('img[data-p2lrn-lesson-image],video[data-p2lrn-lesson-video]');
+      const saveMedia=()=>surface()?.dispatchEvent(new Event('input',{bubbles:true}));
       const choose=element(doc,'button','',String(index+1)+' · '+text);
       choose.type='button';choose.title='Seleccionar '+text;
       choose.setAttribute('aria-label','Seleccionar capa '+text);
       choose.style.cssText='flex:1;text-align:left';
       choose.addEventListener('click',()=>{
-        objectTools?.select(entry);layers.details.open=false;choose.focus();
+        if(media)entry.click();
+        else objectTools?.select(entry);
+        layers.details.open=false;
       });
       const hide=element(doc,'button','',entry.style.visibility==='hidden'?'Mostrar':'Ocultar');
       hide.type='button';hide.setAttribute('aria-label',(entry.style.visibility==='hidden'?'Mostrar ':'Ocultar ')+text);
       hide.addEventListener('click',()=>{
-        objectTools?.select(entry);objectTools?.perform('layerHide');
+        if(media){
+          entry.style.visibility=entry.style.visibility==='hidden'?'visible':'hidden';
+          saveMedia();
+        }else{objectTools?.select(entry);objectTools?.perform('layerHide');}
         updateLayers(entry);layers.details.open=true;
       });
       const lock=element(doc,'button','',entry.dataset.p2lrnLayerLocked==='true'?'Desbloquear':'Bloquear');
       lock.type='button';lock.setAttribute('aria-label',(entry.dataset.p2lrnLayerLocked==='true'?'Desbloquear ':'Bloquear ')+text);
       lock.addEventListener('click',()=>{
-        objectTools?.select(entry);objectTools?.perform('layerLock');
+        if(media){
+          const locked=entry.dataset.p2lrnLayerLocked==='true';
+          entry.dataset.p2lrnLayerLocked=locked?'false':'true';
+          entry.style.pointerEvents=locked?'auto':'none';saveMedia();
+        }else{objectTools?.select(entry);objectTools?.perform('layerLock');}
         updateLayers(entry);layers.details.open=true;
       });
-      row.append(choose,hide,lock);layers.popup.append(row);
+      const moveLayer=(direction)=>{
+        const sibling=direction<0?entry.previousElementSibling:entry.nextElementSibling;
+        if(!sibling)return;
+        if(direction<0)sibling.before(entry);
+        else sibling.after(entry);
+        saveMedia();
+        updateLayers(entry);layers.details.open=true;
+      };
+      const down=element(doc,'button','','Bajar');down.type='button';
+      down.title='Enviar capa detrás';down.setAttribute('aria-label','Enviar detrás '+text);
+      down.addEventListener('click',()=>moveLayer(-1));
+      const up=element(doc,'button','','Subir');up.type='button';
+      up.title='Traer capa delante';up.setAttribute('aria-label','Traer delante '+text);
+      up.addEventListener('click',()=>moveLayer(1));
+      row.append(choose,down,up,hide,lock);layers.popup.append(row);
     }
   }
   const tableGroup=element(doc,'div','p2lrn-ribbon-group p2lrn-context-table');
