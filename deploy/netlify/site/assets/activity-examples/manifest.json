@@ -1,0 +1,114 @@
+{
+  "source_video": "P2LRN_partida_resuelta_15_actividades(3).mp4",
+  "source_sha256": "1e65bc30d572cc48b7612ea75d4e8ec4fc51a8171a685f5e4939dc14779188ea",
+  "recorded_interface_language": "es",
+  "origin": "Fotogramas extraídos de una grabación real de Studio y Vista alumno",
+  "certification": "Las imágenes no certifican por sí solas la publicación pública ni las calificaciones oficiales LMS",
+  "frames": [
+    {
+      "name": "01-cuestionario.webp",
+      "time_sec": 11.5,
+      "width": 1070,
+      "height": 915,
+      "git_blob_sha": "9fee84c098b729c34b3331aa294a6a751f60b68e"
+    },
+    {
+      "name": "02-memoria.webp",
+      "time_sec": 17.75,
+      "width": 1000,
+      "height": 430,
+      "git_blob_sha": "c9e610fae2909de615b0c71acfd988a31032dea0"
+    },
+    {
+      "name": "03-relacionar.webp",
+      "time_sec": 21.5,
+      "width": 1000,
+      "height": 560,
+      "git_blob_sha": "391221cf435fde97f884c0b9c4de18ad790cebb8"
+    },
+    {
+      "name": "04-ordenar.webp",
+      "time_sec": 24.5,
+      "width": 1000,
+      "height": 565,
+      "git_blob_sha": "0c66cefac6b9ebc6277ee1864d2f1a092d26db66"
+    },
+    {
+      "name": "05-clasificar.webp",
+      "time_sec": 28.5,
+      "width": 1000,
+      "height": 420,
+      "git_blob_sha": "bf16b8f134ffc2b474a993402cb82529160cd94c"
+    },
+    {
+      "name": "06-verdadero-falso.webp",
+      "time_sec": 32.5,
+      "width": 1000,
+      "height": 380,
+      "git_blob_sha": "74c28c418fa5022cd994d79f5928d732811a070b"
+    },
+    {
+      "name": "07-completar-huecos.webp",
+      "time_sec": 33.5,
+      "width": 1000,
+      "height": 510,
+      "git_blob_sha": "d14fcfc679f36ff8e27fad28f11f719519fe650c"
+    },
+    {
+      "name": "08-arrastrar-soltar.webp",
+      "time_sec": 39.75,
+      "width": 1110,
+      "height": 640,
+      "git_blob_sha": "a0d23f7d9ff9f4f40a8629cb3a8a1c7d95c92943"
+    },
+    {
+      "name": "09-sopa-letras.webp",
+      "time_sec": 43.75,
+      "width": 1000,
+      "height": 1050,
+      "git_blob_sha": "45de8d82ee00138cc398e410080b70e64fe315d5"
+    },
+    {
+      "name": "10-crucigrama.webp",
+      "time_sec": 47,
+      "width": 1010,
+      "height": 1025,
+      "git_blob_sha": "eb2e91c99d4e5bb94b97eeae3679442b157f1bfe"
+    },
+    {
+      "name": "11-rosco.webp",
+      "time_sec": 67,
+      "width": 1010,
+      "height": 455,
+      "git_blob_sha": "2d16ad29ddeb079a41a55920f9058fc9f33e872e"
+    },
+    {
+      "name": "12-3d-ordenar.webp",
+      "time_sec": 69.5,
+      "width": 1270,
+      "height": 985,
+      "git_blob_sha": "4bde6ee0a23bbe89959c34a33addf54fc51ae261"
+    },
+    {
+      "name": "13-3d-relacionar.webp",
+      "time_sec": 71,
+      "width": 1270,
+      "height": 1015,
+      "git_blob_sha": "929bf4bd7e84e778a737f04b740bb295b94afc87"
+    },
+    {
+      "name": "14-3d-clasificar.webp",
+      "time_sec": 74.5,
+      "width": 1270,
+      "height": 1045,
+      "git_blob_sha": "5e017625934dc984564a1e74fa7290e1b8f26c2c"
+    },
+    {
+      "name": "15-3d-ensamblar.webp",
+      "time_sec": 77.5,
+      "width": 1270,
+      "height": 1035,
+      "git_blob_sha": "b536d0e096917cd91452a7e632c51dbc979ffeb6"
+    }
+  ]
+}

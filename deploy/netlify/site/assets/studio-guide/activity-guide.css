@@ -29,3 +29,18 @@
 
 /* 3D step rows need the same two-column grid as the standard Studio path. */
 .p2lrn-activity-steps li{display:grid!important;align-items:start}
+
+/* Recorded example frames from the real 15-activity Studio session. */
+.p2lrn-example-shot{max-width:1080px;padding:1.25rem 0 .35rem;border-top:1px solid var(--line);margin:1.6rem 0}
+.p2lrn-example-shot>h3{color:var(--ink);font-size:1.16rem;margin:0 0 .35rem}
+.p2lrn-example-shot>p{font-size:.93rem;color:var(--muted);margin:0 0 1rem;line-height:1.55}
+.p2lrn-example-shot figure,.p2lrn-example-3d-grid figure{margin:0}
+.p2lrn-example-shot a,.p2lrn-example-3d-grid a{display:block;outline-offset:4px}
+.p2lrn-example-shot img,.p2lrn-example-3d-grid img{display:block;width:100%;height:auto;max-width:100%;border:1px solid var(--line);border-radius:2px;background:var(--panel)}
+.p2lrn-example-shot figcaption,.p2lrn-example-3d-grid figcaption{color:var(--muted);font-size:.84rem;line-height:1.55;margin:.55rem 0 0}
+.p2lrn-example-3d-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.8rem 1.2rem;margin:1.4rem 0}
+.p2lrn-example-3d-grid figure{min-width:0;padding-top:.75rem;border-top:1px solid var(--line)}
+.p2lrn-example-3d-grid h3{font-size:1.02rem;color:var(--ink);margin:0 0 .65rem}
+.p2lrn-example-3d-grid figure img{object-fit:contain}
+.p2lrn-example-section{border-top:1px solid var(--line);padding-top:1.4rem}
+@media(max-width:780px){.p2lrn-example-3d-grid{grid-template-columns:1fr;gap:1.5rem}.p2lrn-example-shot{margin:1.3rem 0}}
