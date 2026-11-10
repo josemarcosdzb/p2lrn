@@ -19,6 +19,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  postgres-live:
+    name: LTI real PostgreSQL database, persistence and AGS
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: p2lrn_test
+          POSTGRES_PASSWORD: p2lrn_test_only
+          POSTGRES_DB: p2lrn_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U p2lrn_test -d p2lrn_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      P2LRN_TEST_POSTGRES_URL: postgres://p2lrn_test:p2lrn_test_only@127.0.0.1:5432/p2lrn_test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install native SQL drivers (never use SQLite as fallback)
+        working-directory: integration/lms
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Exercise genuine PostgreSQL transactions, session reload and grade outbox
+        run: node --test integration/lms/lti-postgres-live.test.mjs
+
   toolkit-security:
     name: Toolkit ZIP, Player runtime security and Creator
     runs-on: ubuntu-latest
