@@ -126,6 +126,24 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   const bigger=button('+ Tamaño','data-lesson-image-bigger');
   const remove=button('Eliminar recurso','data-lesson-image-remove');
   const move=button('Mover','data-lesson-media-move');move.title='Arrastra para mover la imagen o vídeo. Flechas para ajustes precisos.';
+  const diagramGeometry=doc.createElement('fieldset');
+  diagramGeometry.setAttribute('data-lesson-media-diagram-geometry','');
+  diagramGeometry.setAttribute('aria-label','Posición y tamaño de la imagen en el diagrama');
+  diagramGeometry.style.cssText='display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;padding:3px 6px;border:1px solid #d5e3ee;border-radius:8px';
+  const mediaField=(labelText,attr)=>{
+    const label=doc.createElement('label');label.textContent=labelText;
+    label.style.cssText='display:inline-flex;align-items:center;gap:3px;font-size:12px';
+    const input=doc.createElement('input');input.type='number';input.min='0';input.max='100';input.step='0.1';
+    input.style.cssText='width:59px;font:inherit;padding:3px';
+    input.setAttribute(attr,'');input.setAttribute('aria-label',labelText+' de imagen en porcentaje');
+    label.append(input);diagramGeometry.append(label);return input;
+  };
+  const mediaX=mediaField('X','data-lesson-media-x');
+  const mediaY=mediaField('Y','data-lesson-media-y');
+  const mediaWidth=mediaField('Ancho','data-lesson-media-width');
+  const mediaApply=doc.createElement('button');mediaApply.type='button';mediaApply.textContent='Aplicar imagen';
+  mediaApply.setAttribute('data-lesson-media-apply','');
+  diagramGeometry.append(mediaApply);toolbar.append(diagramGeometry);
   const cover=button('Portada del vídeo','data-lesson-video-poster');
   const hint=doc.createElement('span');hint.textContent=studioUiText('Selecciona la imagen o vídeo; la barra permanece visible. Usa Mover o las flechas para colocarlo.',doc);
   toolbar.append(hint);
@@ -186,6 +204,13 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   const refresh=()=>{
     for(const b of [smaller,bigger,remove])b.disabled=!selected||!surface.contains(selected);
     cover.disabled=!selected?.matches?.(VIDEO);
+    const diagram=!!selected&&isDiagramMedia(selected);
+    diagramGeometry.hidden=!diagram;
+    if(diagram){
+      mediaX.value=String(Number.parseFloat(selected.style.left)||0);
+      mediaY.value=String(Number.parseFloat(selected.style.top)||0);
+      mediaWidth.value=String(Number.parseFloat(selected.style.width)||20);
+    }
     syncSelectionPosition();
   };
   const hydratedMedia=new WeakSet();
@@ -327,6 +352,22 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   }
   const choose=img=>{if(!img||!surface.contains(img))return;const same=selected===img;selected=img;refresh();if(!same&&!img.matches(VIDEO))try{img.focus({preventScroll:true});}catch{}};
   const changed=()=>{ensureStudioEndCaret(surface);onChange();};
+  mediaApply.addEventListener('click',()=>{
+    if(!selected||!isDiagramMedia(selected)||!surface.contains(selected))return;
+    const values=[Number(mediaX.value),Number(mediaY.value),Number(mediaWidth.value)];
+    if(values.some(v=>!Number.isFinite(v))||values[0]<0||values[1]<0||
+       values[2]<0.5||values[0]+values[2]>100||values[1]>100){
+      onStatus('Introduce X, Y y ancho válidos dentro del lienzo.');return;
+    }
+    selected.style.position='absolute';
+    selected.style.left=values[0].toFixed(4)+'%';
+    selected.style.top=values[1].toFixed(4)+'%';
+    selected.style.width=values[2].toFixed(4)+'%';
+    selected.style.maxWidth='none';
+    selected.dataset.p2lrnDiagramMedia='1';
+    changed();refresh();
+    onStatus('Posición y tamaño de imagen guardados.');
+  });
   async function insertImage(file,point=null,explicitTarget=null){
     const data=await lessonImageData(file);
     const box=ensureCanvas();
