@@ -178,8 +178,14 @@ export function prepareStudioDiagramChild(parent,element){
     if(art){art.style.minHeight='0';art.style.height='100%';art.style.flex='1 1 auto';}
   }
   if(element.dataset.p2lrnLayout==='text-box'){
-    element.style.fontSize='clamp(12px, 1.7cqw, 22px)';
-    element.style.overflow='hidden';
+    // Diagram labels are transparent, independently positioned text—not white
+    // WYSIWYG placeholder cards. Keep selection affordances in editor overlays.
+    element.style.fontSize='clamp(12px, 1.7cqw, 96px)';
+    element.style.backgroundColor='transparent';
+    element.style.border='0';
+    element.style.borderRadius='0';
+    element.style.padding='0';
+    element.style.overflow='visible';
   }
   return true;
 }
