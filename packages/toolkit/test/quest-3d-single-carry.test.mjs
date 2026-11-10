@@ -75,7 +75,7 @@ test('ordering 3D releases the previous carried object on picking a different on
     assert.deepEqual(sorted(c.held),['order:b'],'A must drop before B is picked');
     assert.deepEqual(sorted(c.highlights),['order:b'],'former highlight must clear');
     click(c.controls,'ordering-object','b');
-    assert.deepEqual(sorted(c.held),[],'clicking the carried object again should release it');
+    assert.deepEqual(sorted(c.held),['order:b'],'reselecting the same piece must not duplicate it');
     click(c.controls,'ordering-object','c');
     assert.deepEqual(sorted(c.held),['order:c']);
     assert.equal(c.orderAnswers.length,0,'switching carried objects must not submit a response');
