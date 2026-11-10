@@ -279,6 +279,53 @@ for(const rel of ['p2lrn.js','studio/studio.js','demo/viewer.js','analytics/demo
   });
 }
 
+
+// Editorial regression gate: authoring and developer documentation have separate,
+// visible pages, not a collapsed technical example inside the teacher tutorial.
+const checkAudiencePage=async (relativePath,{teacher=false,developer=false}={})=>{
+  const html=await readFile(join(siteRoot,...relativePath.split('/')),'utf8').catch(()=>null);
+  if(!html){errors.push('Missing role-specific documentation: '+relativePath);return;}
+  const article=html.match(/<article class="doc-content">([\s\S]*?)<\/article>/)?.[1]||'';
+  if(!article)errors.push('Role-specific guide has no article: '+relativePath);
+  if(teacher){
+    if(/<pre\b/i.test(article))errors.push('Teacher guide requires a code block: '+relativePath);
+    if(!/\/studio\//.test(article))errors.push('Teacher guide does not lead to Studio: '+relativePath);
+    if(!/\/docs\/desarrolladores\/|\/en\/docs\/developers\//.test(article))
+      errors.push('Teacher guide does not link to the independent developer section: '+relativePath);
+  }
+  if(developer){
+    if(!/\/docs\/colaboracion\/|\/en\/docs\/colaboracion\//.test(article))
+      errors.push('Developer collaboration guide is not connected to teacher documentation: '+relativePath);
+    if((article.match(/<pre\b/gi)||[]).length<2)
+      errors.push('Developer collaboration guide has lost its original browser/server examples: '+relativePath);
+  }
+};
+await Promise.all([
+  checkAudiencePage('docs/colaboracion/index.html',{teacher:true}),
+  checkAudiencePage('en/docs/colaboracion/index.html',{teacher:true}),
+  checkAudiencePage('docs/desarrolladores/colaboracion/index.html',{developer:true}),
+  checkAudiencePage('en/docs/desarrolladores/colaboracion/index.html',{developer:true}),
+]);
+if(englishRouteFor('/docs/desarrolladores/colaboracion/')!=='/en/docs/developers/collaboration/')
+  errors.push('Developer collaboration English canonical route is missing.');
+for(const [relativePath,required] of [
+  ['docs/desarrolladores/index.html','/docs/desarrolladores/colaboracion/'],
+  ['en/docs/desarrolladores/index.html','/en/docs/developers/collaboration/'],
+]){
+  const html=await readFile(join(siteRoot,...relativePath.split('/')),'utf8');
+  if(!html.includes(required))errors.push('Developer hub does not link to the full technical collaboration guide: '+relativePath);
+}
+const componentEnglish=await readFile(join(enRoot,'docs/que-usar/index.html'),'utf8');
+if(/license plates|Host autoritativo|resolver verificado|Player\/Host directo/.test(componentEnglish))
+  errors.push('English component documentation has untranslated or misleading text.');
+const recipesEnglish=await readFile(join(enRoot,'docs/recetas/index.html'),'utf8');
+if(/\basigna\b|\bescucha\b|\busa\b|\bFACILITY\b/.test(recipesEnglish))
+  errors.push('English developer recipes contain Spanish instructions.');
+const navSource=await readFile(join(siteRoot,'p2lrn.js'),'utf8');
+if(!navSource.includes("const visibleSections=forTeachers")||
+   !navSource.includes("label:'Desarrolladores',href:'/docs/desarrolladores/'"))
+  errors.push('Documentation navigation no longer separates teachers and developers.');
+
 if(errors.length){
   console.error('P2LRN bilingual site verification failed with '+errors.length+' problem(s).');
   for(const item of errors.slice(0,250))console.error('- '+item);
