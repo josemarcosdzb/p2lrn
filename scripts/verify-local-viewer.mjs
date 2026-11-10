@@ -851,8 +851,10 @@ async function browserExclusiveCarry(){
     game.setMovementVector(0,1);
     await sleep(450);
     game.setMovementVector(0,0);
-    const oldTravel=a.position.distanceTo(oldBefore);
-    const newTravel=b.position.distanceTo(newBefore);
+    // Measure horizontal tracking: real Rapier may let a dropped box fall
+    // vertically, which is correct and must not count as following a player.
+    const oldTravel=Math.hypot(a.position.x-oldBefore.x,a.position.z-oldBefore.z);
+    const newTravel=Math.hypot(b.position.x-newBefore.x,b.position.z-newBefore.z);
     if(oldTravel>0.15||newTravel<0.6)
       throw Error('3D boxes still stack/follow player: '+kind+' '+JSON.stringify({oldTravel,newTravel}));
     return {releasedFirstTravel:oldTravel,selectedSecondTravel:newTravel};
