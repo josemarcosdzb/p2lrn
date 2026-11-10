@@ -5,6 +5,7 @@ import {createStudioDropActivity} from './studio-drop-activity.js';
 const BLOCKS=Object.freeze([
   ['section','Sección','Sección visual con título y texto'],
   ['columns','Dos columnas','Comparación visual en dos columnas'],
+  ['three-columns','Tres columnas','Composición adaptable con tres paneles'],
   ['callout','Destacado','Recuadro para ideas importantes'],
   ['table','Tabla','Tabla editable de dos columnas'],
   ['text-box','Cuadro de texto','Texto independiente que puedes mover y redimensionar'],
@@ -65,11 +66,12 @@ function makeBlock(kind){
   if(kind==='callout'){
     setStyle(section,{backgroundColor:'#eff6ff',borderLeft:'4px solid #2563eb'});
     section.append(elt('h2','Idea clave'),elt('p','Escribe aquí el contenido destacado.'));
-  }else if(kind==='columns'){
-    const heading=elt('h2','Comparación');
+  }else if(kind==='columns'||kind==='three-columns'){
+    const three=kind==='three-columns';
+    const heading=elt('h2',three?'Composición visual':'Comparación');
     const grid=elt('div');
-    setStyle(grid,{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'18px'});
-    for(const title of ['Primera columna','Segunda columna']){
+    setStyle(grid,{display:'grid',gridTemplateColumns:three?'repeat(auto-fit,minmax(min(100%,180px),1fr))':'repeat(auto-fit,minmax(min(100%,220px),1fr))',gap:'18px'});
+    for(const title of (three?['Panel izquierdo','Panel central','Panel derecho']:['Primera columna','Segunda columna'])){
       const cell=elt('div');
       setStyle(cell,{padding:'16px',boxSizing:'border-box',minWidth:'0',border:'1px solid #d0d5dd',borderRadius:'8px'});
       cell.append(elt('h3',title),elt('p','Escribe aquí.'));
@@ -103,7 +105,7 @@ export function studioNestedInsertionContainer(surface,{anchorNode=null,targetEl
     const inside=anchor?.closest?.('td,th');
     return inside&&scope.contains(inside)?inside:scope.querySelector('td,th');
   }
-  if(kind==='columns'){
+  if(kind==='columns'||kind==='three-columns'){
     const grid=scope.querySelector(':scope > div');
     if(!grid)return scope;
     const column=[...grid.children].find(child=>child.contains(anchor));
