@@ -98,6 +98,102 @@ async function advancedCase(){
     undoRedo:true,shape:true,npmRoundTrip:!!component};
 }
 
+
+async function diagramCase(){
+  const assert=(ok,message)=>{if(!ok)throw Error(message);};
+  const component=document.querySelector('p2lrn-studio');
+  const root=component?.shadowRoot||document;
+  const ribbon=root.querySelector('.p2lrn-studio-ribbon');
+  const surface=root.querySelector('[data-studio-html-surface=true]');
+  assert(ribbon&&surface,'No active HTML lesson for diagram');
+  const tab=id=>ribbon.querySelector('[role=tab][aria-controls$="-'+id+'"]');
+  tab('insert').click();
+  const insert=kind=>{
+    const trigger=ribbon.querySelector('[data-ui-layout="'+kind+'"]');
+    assert(trigger,'Insert palette lacks '+kind);
+    trigger.click();
+  };
+  insert('diagram-canvas');
+  const canvas=surface.querySelector('[data-p2lrn-layout=diagram-canvas]');
+  assert(canvas,'Diagram canvas was not inserted');
+  const scroll=canvas.closest('[data-p2lrn-layout=diagram-scroll]');
+  assert(scroll,'Diagram lacks independent scroll wrapper');
+  canvas.click();
+  tab('insert').click();
+  insert('shape:cloud');
+  let cloud=canvas.querySelector(':scope > figure[data-p2lrn-shape=cloud]');
+  assert(cloud,'Cloud was not inserted as direct canvas layer');
+  assert(cloud.style.position==='absolute'&&cloud.style.left.endsWith('%'),'Cloud position is not responsive');
+  cloud.click();
+  tab('insert').click();
+  insert('shape:droplet');
+  let drop=canvas.querySelector(':scope > figure[data-p2lrn-shape=droplet]');
+  assert(drop,'Droplet was not inserted as sibling layer');
+  const prev={x:parseFloat(drop.style.left),y:parseFloat(drop.style.top)};
+  drop.click();
+  const drag=root.querySelector('[data-object-action=drag]');
+  assert(drag,'Object movement control missing');
+  const pointer=(target,type,x,y,id)=>target.dispatchEvent(new PointerEvent(type,{
+    bubbles:true,pointerId:id,pointerType:'mouse',button:0,
+    buttons:type==='pointerup'?0:1,clientX:x,clientY:y
+  }));
+  const box=drag.getBoundingClientRect();
+  pointer(drag,'pointerdown',box.x+10,box.y+10,300);
+  pointer(drag,'pointermove',box.x+50,box.y+30,300);
+  pointer(drag,'pointerup',box.x+50,box.y+30,300);
+  assert(parseFloat(drop.style.left)!==prev.x||parseFloat(drop.style.top)!==prev.y,
+    'Moving diagram element did not change percentage coordinates');
+  drop.click();
+  const angles=ribbon.querySelector('input[aria-label="Ángulo del objeto en grados"]');
+  assert(angles,'Rotation inspector is missing');
+  angles.value='40';
+  ribbon.querySelector('[data-studio-advanced-action=rotate]').click();
+  assert(drop.style.transform.includes('rotate(40deg)'),'Rotation lost after editing');
+  cloud.click();
+  drop.dispatchEvent(new MouseEvent('click',{bubbles:true,shiftKey:true}));
+  const groupButton=ribbon.querySelector('[data-studio-advanced-action=group]');
+  assert(groupButton,'Group action missing');
+  groupButton.click();
+  const group=canvas.querySelector(':scope > [data-p2lrn-layout=diagram-group]');
+  assert(group&&group.children.length===2,'Group did not preserve two independent shapes');
+  assert(group.style.width.endsWith('%')&&group.style.height.endsWith('%'),
+    'Group lost responsive dimensions');
+  group.click();
+  ribbon.querySelector('[data-studio-advanced-action=ungroup]').click();
+  assert(canvas.querySelectorAll(':scope > figure').length===2,'Ungroup did not restore both layers');
+  cloud=canvas.querySelector('figure[data-p2lrn-shape=cloud]');
+  const before=cloud.getBoundingClientRect();
+  const layerItem=cloud;
+  cloud.click();
+  const layerMenu=ribbon.querySelector('[data-studio-context-menu=capas]');
+  assert(layerMenu&&!layerMenu.hidden,'Layer inspector unavailable');
+  const count=layerMenu.querySelectorAll('.p2lrn-layer-entry').length;
+  assert(count>=2,'Layer inspector did not list both shapes');
+  const shape=canvas.querySelector(':scope > figure[data-p2lrn-shape=droplet]');
+  const leftPct=parseFloat(shape.style.left),widthPct=parseFloat(shape.style.width);
+  assert(leftPct>=0&&widthPct>0,'Diagram shape lacks persistent percentages');
+  const geometry={shapeCount:count,leftPct,widthPct};
+  if(component){
+    const exported=await component.exportPackage();
+    const bytes=exported.bytes;
+    const pkg=await (await window.P2LRNReady).openPackageBytes(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
+    const decoder=new TextDecoder();
+    let foundCanvas=false,foundCloud=false,foundDroplet=false;
+    for(const entity of pkg.entities.values())for(const rep of entity.representations||[]){
+      if(!rep.location?.path)continue;
+      const html=decoder.decode(await pkg.payload(rep.location.path).read());
+      if(html.includes('data-p2lrn-layout="diagram-canvas"'))foundCanvas=true;
+      if(html.includes('data-p2lrn-shape="cloud"'))foundCloud=true;
+      if(html.includes('data-p2lrn-shape="droplet"'))foundDroplet=true;
+    }
+    assert(foundCanvas&&foundCloud&&foundDroplet,'Saved package lost authored diagram geometry');
+    geometry.packageRoundTrip=true;
+  }
+  const desktop=canvas.getBoundingClientRect();
+  geometry.desktopWidth=desktop.width;
+  return {ok:true,...geometry};
+}
+
 let profile=null,browser=null,ws=null;
 try{
   profile=await mkdtemp(join(tmpdir(),'p2lrn-studio-local-'));
@@ -165,6 +261,9 @@ try{
     const advanced=await evalExpr('('+advancedCase.toString()+')()');
     assert.equal(advanced.ok,true);
     info.advanced=advanced;
+    const diagram=await evalExpr('('+diagramCase.toString()+')()');
+    assert.equal(diagram.ok,true,sample.id+' diagram interaction failed');
+    info.diagram=diagram;
     if(out){
       await sleep(500);
       const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
