@@ -173,6 +173,10 @@ export function prepareStudioDiagramChild(parent,element){
   Object.assign(element.style,{position:'absolute',left:left+'%',top:top+'%',
     width:'20%',height:'24%',minHeight:'0',maxWidth:'none',margin:'0',padding:'0',
     boxSizing:'border-box'});
+  if(element.dataset.p2lrnLayout==='shape'){
+    const art=element.querySelector(':scope > [data-p2lrn-shape-art]');
+    if(art){art.style.minHeight='0';art.style.height='100%';art.style.flex='1 1 auto';}
+  }
   if(element.dataset.p2lrnLayout==='text-box'){
     element.style.fontSize='clamp(12px, 1.7cqw, 22px)';
     element.style.overflow='hidden';
