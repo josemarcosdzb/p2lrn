@@ -59,7 +59,7 @@ export async function render(options){
     const correct=[...states.values()].filter(state=>state==='correct').length;
     status.textContent=showFeedback?playerUiText('Rosco completado: ')+correct+playerUiText(' aciertos de ')+elements.length+'.':playerUiText('Rosco completado. Respuestas enviadas.');
     void runtime.finish({allowMissingRequired:true}).then(score=>{
-      if(score&&showFeedback)status.textContent=playerUiText('Rosco completado: ')+correct+playerUiText(' aciertos de ')+elements.length+' · '+score.pointsEarned+'/'+score.pointsPossible+playerUiText(' puntos.');
+      if(score&&showFeedback)status.textContent=playerUiText('Rosco completado: ')+correct+playerUiText(' aciertos de ')+elements.length+' · '+score.raw+'/'+score.max+playerUiText(' puntos.');
     });
     return true;
   };
