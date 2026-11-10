@@ -704,6 +704,12 @@ export async function render(options) {
     scene.reset();
     controls.querySelectorAll('.p2lrn-3d-trial').forEach((node)=>node.remove());
     const trial=game.data.trials[trialIndex];
+    const assembly=trial.type==='assembly-3d';
+    scene.setAssemblyMode?.(assembly);
+    if(joystick?.element)joystick.element.hidden=assembly;
+    help.textContent=playerUiText(assembly
+      ?'Todas las piezas y sus destinos están visibles. Arrastra una pieza hasta su caja; gira la cámara con el fondo y usa la rueda para acercarte.'
+      :'En móvil, mueve la bola para caminar y arrastra el fondo para mirar. En PC, usa WASD o las flechas.');
     const wrap=el('div',{class:'p2lrn-3d-trial'});
     heading.replaceChildren(
       el('p',{class:'p2lrn-game-description'},playerUiText(`Prueba ${trialIndex+1} de ${game.data.trials.length}`)),
@@ -721,7 +727,7 @@ export async function render(options) {
       'ordering-3d':'Haz clic en una caja y después en el pedestal numerado, o arrastra la caja hasta él.',
       'matching-3d':'Haz clic en una caja azul y luego en su pareja morada para enlazarlas, o arrastra la cuerda.',
       'classification-3d':'Haz clic en una caja y después en su categoría, o arrastra la caja hasta la zona correcta.',
-      'assembly-3d':'Transporta y gira cada pieza hasta encajarla en su volumen de destino.',
+      'assembly-3d':'Todas las piezas empiezan desordenadas; arrástralas desde su zona de salida hasta los destinos correctos.',
     };
     setText(directions,playerUiText(instructions[trial.type]));
     currentInteraction=controller.interact;
