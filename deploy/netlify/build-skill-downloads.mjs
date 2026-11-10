@@ -12,6 +12,7 @@ const names=['NOTICE.md','CORE-INSTRUCTIONS.md','scripts/p2lrn_package.py','scri
  'assets/icon.svg','agents/openai.yaml',
  'scripts/p2lrn_official.mjs','scripts/test_p2lrn_official_real.mjs',
  'references/official-packages.json','references/official-runtime.md',
+ 'references/studio-arrastre-ensamblaje-3d.md',
  'scripts/multipart.py','references/multipart-research.md'];
 const assets=new Map();
 for(const name of names){
@@ -35,19 +36,19 @@ for(const name of ['toolkit','studio','player','analytics']){
 const platforms={
  chatgpt:{file:'p2lrn-chatgpt-plugin.zip',prefix:'skills/p2lrn-creator/',
   about:'Instalar como Skill de ChatGPT/Codex o enviar el plugin Skills only a revisión de OpenAI. La importación no supone aprobación ni publicación pública.',
-  desc:'Crear cursos y presentaciones editables .p2lrn, con diapositivas, PPTX y PDF opcionales y validación real.'},
+  desc:'Crear y verificar cursos .p2lrn; guiar el uso real de Studio para editar por arrastre, actividades de soltar y ensamblaje 3D.'},
  codex:{file:'p2lrn-codex-skill.zip',prefix:'.agents/skills/p2lrn-creator/',
   about:'Extraer en la raíz del repositorio bajo .agents/skills/p2lrn-creator/. Requiere permisos de ejecución explícitos.',
-  desc:'Crear presentaciones y cursos .p2lrn editables, validar y exportar PPTX/PDF con bibliotecas autorizadas en Codex.'},
+  desc:'Crear y validar cursos .p2lrn con Toolkit; guiar en Studio la edición visual, el arrastre y el ensamblaje 3D.'},
  claude:{file:'p2lrn-claude-skill.zip',prefix:'p2lrn-creator/',
   about:'Importar este ZIP como Skill personalizada donde Claude admita la función, o extraer la carpeta para Claude Code. Python 3.10+ y permisos de archivos son necesarios.',
-  desc:'Crear diapositivas, presentaciones y cursos P2LRN usando Toolkit y exportadores PPTX/PDF opcionales con Claude.'},
+  desc:'Crear cursos P2LRN usando Toolkit y guiar su edición interactiva en Studio, incluidas piezas GLB y juegos de arrastre.'},
  gemini:{file:'p2lrn-gemini-skill.zip',prefix:'',
   about:'Extraer esta Skill en .gemini/skills/p2lrn-creator/ para Gemini CLI. La importación web está sujeta a disponibilidad y no garantiza la ejecución Python.',
-  desc:'Crear presentaciones y cursos P2LRN, PPTX/PDF opcionales, con Toolkit oficial en Gemini CLI.'},
+  desc:'Crear y validar cursos P2LRN con Toolkit; usar Studio real para diseño visual, arrastre y ensamblaje 3D.'},
  grok:{file:'p2lrn-grok-skill.zip',prefix:'.grok/skills/p2lrn-creator/',
   about:'Extraer el ZIP en la raíz de un proyecto con Grok Build y comprobar el descubrimiento de .grok/skills/p2lrn-creator/. Grok web tiene funciones separadas.',
-  desc:'Crear presentaciones y cursos P2LRN, PPTX/PDF opcionales, con Toolkit oficial en Grok Build.'}
+  desc:'Crear cursos P2LRN con Toolkit y guiar actividades de arrastre y ensamblaje 3D en Studio y Player.'}
 };
 const table=Uint32Array.from({length:256},(_,v)=>{for(let k=0;k<8;k++)v=(v&1)?(0xedb88320^(v>>>1)):(v>>>1);return v>>>0;});
 function crc32(bytes){let v=0xffffffff;for(const b of bytes)v=table[(v^b)&255]^(v>>>8);return (v^0xffffffff)>>>0;}
@@ -80,6 +81,7 @@ const common=['NOTICE.md','scripts/p2lrn_package.py','scripts/test_p2lrn_package
  'scripts/p2lrn_official.mjs','scripts/test_p2lrn_official_real.mjs',
  'references/blueprint.md','references/toolkit-parity.md','references/plataformas.md',
  'references/official-packages.json','references/official-runtime.md',
+ 'references/studio-arrastre-ensamblaje-3d.md',
  'scripts/multipart.py','references/multipart-research.md',
  'assets/ejemplo-curso.json','assets/icon.svg'];
 const logo=await readFile(join(root,'deploy/netlify/site/favicon.png'));
@@ -103,7 +105,7 @@ for(const [platform,info] of Object.entries(platforms)){
    homepage:'https://p2lrn.org/skills/',repository:'https://github.com/josemarcosdzb/p2lrn',
    license:'P2LRN-NCSL-1.0',keywords:['p2lrn','cursos','educacion','quizzes','games'],
    extensions:{'com.openai':{interface:{displayName:'P2LRN – Crear y descargar',shortDescription:'Crear cursos .p2lrn con IA',
-    longDescription:'Usa Toolkit oficial instalado para crear, importar, editar y validar cursos. Mantiene Python como alternativa limitada. Las funciones visuales usan Studio y Player; Analytics, MCP y LMS requieren sus entornos y permisos.',
+    longDescription:'Usa Toolkit oficial instalado para crear, importar, editar y validar cursos. La Skill incluye guías actualizadas para Studio visual, arrastrar fichas sobre imágenes y ensamblar piezas GLB 3D, que requieren Studio y Player reales. Python es una alternativa limitada; Analytics, MCP y LMS requieren sus entornos y permisos.',
     developerName:'P2LRN',category:'Education & Research',brandColor:'#4D4D4D',
     composerIcon:'./assets/p2lrn-logo.png',logo:'./assets/p2lrn-logo.png'},
     publication:{release_notes:'Skill autónoma; requiere aprobación de OpenAI antes de publicarse.'}}}};
@@ -113,6 +115,13 @@ for(const [platform,info] of Object.entries(platforms)){
   bytes:utf8('# P2LRN para Codex\n\nExtraer en .agents/skills/p2lrn-creator/ y comprobar el descubrimiento de SKILL.md. La Skill no instala dependencias ni abre conexiones.\n')});
  if(platform==='grok')files.push({path:'README-GROK.md',
   bytes:utf8('# P2LRN para Grok Build\n\nExtraer en la raíz del proyecto y verificar la ruta .grok/skills/p2lrn-creator/. No implica disponibilidad en Grok web ni publicación global.\n')});
+ const skillFile=files.find(item=>item.path===info.prefix+'SKILL.md');
+ const interactiveGuide=info.prefix+'references/studio-arrastre-ensamblaje-3d.md';
+ if(!skillFile||!skillFile.bytes.toString('utf8').includes('studio-arrastre-ensamblaje-3d.md')||
+    files.filter(item=>item.path===interactiveGuide).length!==1||
+    !files.find(item=>item.path===interactiveGuide).bytes.toString('utf8').includes('assembly-3d')){
+  throw Error('Incomplete Studio/assembly skill bundle: '+platform);
+ }
  const bytes=zip(files);await writeFile(join(dest,info.file),bytes);
  manifest.packages.push({platform,filename:info.file,url:'/downloads/skills/'+info.file,bytes:bytes.length,
   sha256:createHash('sha256').update(bytes).digest('hex'),members:files.length});
