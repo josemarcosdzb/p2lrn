@@ -173,22 +173,49 @@ async function diagramCase(){
   const leftPct=parseFloat(shape.style.left),widthPct=parseFloat(shape.style.width);
   assert(leftPct>=0&&widthPct>0,'Diagram shape lacks persistent percentages');
   const geometry={shapeCount:count,leftPct,widthPct};
+  // Import a real PNG via Studio's existing image picker, not an embedded
+  // drawing masquerading as a raster lesson resource.
+  canvas.click();
+  const picker=root.querySelector('input[data-lesson-image-file]');
+  assert(picker,'Native lesson image picker unavailable');
+  const graphic=document.createElement('canvas');
+  graphic.width=48;graphic.height=48;
+  const brush=graphic.getContext('2d');brush.fillStyle='#facc15';
+  brush.beginPath();brush.arc(24,24,21,0,Math.PI*2);brush.fill();
+  const blob=await new Promise(resolve=>graphic.toBlob(resolve,'image/png'));
+  assert(blob,'PNG generation failed');
+  const transfer=new DataTransfer();
+  transfer.items.add(new File([blob],'sol-prueba.png',{type:'image/png'}));
+  picker.files=transfer.files;picker.dispatchEvent(new Event('change',{bubbles:true}));
+  await new Promise(resolve=>setTimeout(resolve,420));
+  const image=canvas.querySelector(':scope > img[data-p2lrn-lesson-image]');
+  assert(image,'Raster image was not inserted inside native diagram canvas');
+  assert(image.style.position==='absolute'&&image.style.left.endsWith('%')&&image.style.width.endsWith('%'),
+    'Diagram image is not positioned proportionally');
+  const oldImageWidth=parseFloat(image.style.width);
+  image.click();
+  const bigger=root.querySelector('[data-lesson-image-bigger]');
+  assert(bigger,'Existing image resize control unavailable');bigger.click();
+  assert(parseFloat(image.style.width)>oldImageWidth,'Resizing diagram raster image failed');
+  geometry.imagePercent=true;
   if(component){
     const exported=await component.exportPackage();
     const bytes=exported.bytes;
     const pkg=await (await window.P2LRNReady).openPackageBytes(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.length));
     const decoder=new TextDecoder();
-    let foundCanvas=false,foundCloud=false,foundDroplet=false;
+    let foundCanvas=false,foundCloud=false,foundDroplet=false,foundImage=false;
     for(const entity of pkg.entities.values())for(const rep of entity.representations||[]){
       if(!rep.location?.path)continue;
       const html=decoder.decode(await pkg.payload(rep.location.path).read());
       if(html.includes('data-p2lrn-layout="diagram-canvas"'))foundCanvas=true;
       if(html.includes('data-p2lrn-shape="cloud"'))foundCloud=true;
       if(html.includes('data-p2lrn-shape="droplet"'))foundDroplet=true;
+      if(html.includes('data-p2lrn-lesson-image'))foundImage=true;
     }
-    assert(foundCanvas&&foundCloud&&foundDroplet,'Saved package lost authored diagram geometry');
+    assert(foundCanvas&&foundCloud&&foundDroplet&&foundImage,'Saved package lost authored diagram or image geometry');
     geometry.packageRoundTrip=true;
   }
+  canvas.scrollIntoView({block:'center'});
   const desktop=canvas.getBoundingClientRect();
   geometry.desktopWidth=desktop.width;
   return {ok:true,...geometry};
@@ -268,12 +295,31 @@ try{
       await sleep(500);
       const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
       await writeFile(join(out,'qa-'+sample.id+'.png'),Buffer.from(shot.data,'base64'));
+      await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+      await sleep(220);
+      const responsive=await evalExpr(`(()=>{
+        const root=document.querySelector('p2lrn-studio')?.shadowRoot||document;
+        const canvas=root.querySelector('[data-p2lrn-layout="diagram-canvas"]');
+        const scroll=canvas?.closest('[data-p2lrn-layout="diagram-scroll"]');
+        const image=canvas?.querySelector('img[data-p2lrn-lesson-image]');
+        return {canvasWidth:canvas?.getBoundingClientRect().width,
+          scrollWidth:scroll?.getBoundingClientRect().width,
+          imageWidth:image?.getBoundingClientRect().width,
+          imageWidthPercent:parseFloat(image?.style.width||'0'),
+          overflow:scroll?.scrollWidth>scroll?.clientWidth};
+      })()`);
+      assert(responsive.canvasWidth>=640&&responsive.scrollWidth<=390&&responsive.overflow,
+        sample.id+' mobile viewport did not preserve proportional diagram inside scroll region');
+      info.diagram.mobile=responsive;
+      const mobileShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
+      await writeFile(join(out,'qa-'+sample.id+'-mobile.png'),Buffer.from(mobileShot.data,'base64'));
+      await send('Emulation.setDeviceMetricsOverride',{width:1440,height:950,deviceScaleFactor:1,mobile:false});
     }
     results.push({id:sample.id,...info});
   }
   assert.deepEqual(results[0].tabs,results[1].tabs,'Web and NPM UI tabs differ');
   console.log(JSON.stringify({ok:true,port,results,
-    screenshots:out?['qa-web.png','qa-npm.png']:[]},null,2));
+    screenshots:out?['qa-web.png','qa-npm.png','qa-web-mobile.png','qa-npm-mobile.png']:[]},null,2));
 }finally{
   try{ws?.close();}catch{}
   try{browser?.kill();}catch{}
