@@ -8,6 +8,7 @@ import {join,resolve,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createP2LRNLtiProvider} from './lti-provider.mjs';
 import {createLtiStore} from './lti-store.mjs';
+import {installCanvasDynamicRegistration} from './lti-canvas-registration.mjs';
 import {pickerHtml} from './lti-picker-ui.mjs';
 import {classifyLtiUserError,ltiErrorHtml} from './lti-user-errors.mjs';
 import {createLtiAgsClient} from './lti-ags.mjs';
@@ -213,7 +214,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  const provider=createP2LRNLtiProvider({
   getRegistration:store.getRegistration,getRegistrationByIssuer:store.getRegistrationByIssuer,
   getRegistrationById:store.getRegistrationById,
-  transactions:store.transactions,getBinding:store.getBinding,tool,allowInsecureLocal:allowInsecureLoopback
+  transactions:store.transactions,getBinding:store.getBinding,tool,activateDynamicDeployment:store.activateCanvasDynamicDeployment,allowInsecureLocal:allowInsecureLoopback
  });
  const ags=createLtiAgsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
  const nrps=createLtiNrpsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
@@ -344,7 +345,32 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
       secureCookie(sessionCookie+'-partitioned',token,true,3600,true)
      ]:secureCookie(sessionCookie,token,secure,3600,true)});
    }
-   if(method==='GET'&&path==='/lti/jwks')
+       if(method==='GET'&&path==='/lti/register/canvas'){
+     const result=await installCanvasDynamicRegistration({
+      openidConfiguration:incoming.searchParams.get('openid_configuration'),
+      registrationToken:incoming.searchParams.get('registration_token'),
+      baseUrl:canonicalBase,fetchImpl:fetchImpl||fetch,
+      allowInsecureLocal:allowInsecureLoopback,
+      allowedHosts:String(process.env.P2LRN_LTI_CANVAS_ALLOWED_HOSTS||'').split(',').map(v=>v.trim()).filter(Boolean),
+      registerPlatform:store.registerCanvasDynamicPlatform
+     });
+     const cspNonce=nonce(16);
+     const page=[
+      '<!doctype html><html lang="es"><head><meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width,initial-scale=1">',
+      '<title>P2LRN instalado en Canvas</title></head>',
+      '<body style="font:16px system-ui,sans-serif;padding:24px;line-height:1.5">',
+      '<h1>P2LRN conectado</h1><p>La herramienta se ha registrado para ',
+      html(result.issuer),
+      '. Confirma y activa la instalacion en Canvas.</p>',
+      '<script nonce="',html(cspNonce),'">',
+      'window.parent.postMessage({subject:"org.imsglobal.lti.close"},"*")',
+      '</script></body></html>'
+     ].join('');
+     return sendHtml(res,200,page,
+      "default-src 'none'; base-uri 'none'; object-src 'none'; form-action 'none'; script-src 'nonce-"+cspNonce+"'; style-src 'unsafe-inline'; frame-ancestors *");
+    }
+    if(method==='GET'&&path==='/lti/jwks')
     return sendJson(res,200,provider.publicJwks());
    if((method==='GET'||method==='POST')&&path==='/lti/login'){
     const login=method==='GET'?Object.fromEntries(incoming.searchParams):

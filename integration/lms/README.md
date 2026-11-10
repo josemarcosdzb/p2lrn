@@ -9,6 +9,47 @@ Componentes:
 - lti-ags.mjs: token OAuth2 firmado y envío de notas oficiales aprobadas por el servidor.
 - Los paquetes .p2lrn siguen siendo portables: ni tokens, ni matrículas, ni nombres privados se escriben en el archivo del curso.
 
+### Instalacion sin scripts en Canvas (LTI 1.3 Dynamic Registration)
+
+El proveedor P2LRN se despliega una sola vez con su propia identidad RSA,
+almacenamiento persistente y dominio HTTPS. No se modifica el codigo ni la
+base de datos de Canvas y no hacen falta claves manuales en el navegador.
+
+1. Un administrador de Canvas abre Apps / Registrations (la opcion exacta
+   depende de la version), elige Dynamic Registration y utiliza una URL:
+
+       https://TU_DOMINIO_P2LRN/lti/register/canvas
+
+2. Canvas entrega al proveedor un token temporal y sus datos OpenID. P2LRN
+   obtiene y comprueba su emisor, endpoints y JWKS y registra la herramienta
+   en Canvas con los permisos LTI necesarios. No revela el token temporal
+   ni solicita copiar client_id, claves o deployment_id.
+3. Canvas muestra la confirmacion al administrador, que activa el registro
+   segun la politica de su institucion. La autorizacion del LMS es obligatoria.
+4. El profesor crea una actividad con herramienta externa P2LRN / Deep Linking,
+   selecciona la leccion, curso o cuestionario y guarda. El enlace autorizado
+   se crea automaticamente desde el selector P2LRN, sin scripts Ruby/Rails.
+5. El alumno abre la actividad directamente en Canvas. La identidad se
+   valida con LTI 1.3 y el avance se guarda en P2LRN; una nota oficial
+   requiere que AGS este autorizado y que el resultado se apruebe.
+
+Los nuevos despliegues de Canvas se activan en P2LRN solo tras recibir un
+lanzamiento con JWT firmado, audiencia, emisor, estado, nonce y destino validos.
+La lista de despliegues se guarda en SQLite y sobrevive a reinicios.
+Las instalaciones previas creadas manualmente se conservan; no se eliminan
+Developer Keys ni actividades existentes sin una migracion verificada.
+
+Para sitios Canvas autoalojados o con dominio propio, el administrador del
+proveedor puede agregar una sola vez el FQDN exacto a
+P2LRN_LTI_CANVAS_ALLOWED_HOSTS (lista separada por comas). Sin esa
+autorizacion se rechaza el registro por motivos de seguridad. El modo HTTP
+solo es valido para QA en localhost, nunca para una instalacion publica.
+
+Pendiente de certificacion real: una instalacion nueva aprobada desde el
+panel Canvas de una institucion, seleccion Deep Linking, entrada de alumno y
+entrega AGS a su libro de calificaciones. Las pruebas automatizadas del
+protocolo no sustituyen esa demostracion de extremo a extremo.
+
 ## Preparación
 
 Requiere Node.js 22.13 o posterior y las distribuciones compiladas de Toolkit y Player.

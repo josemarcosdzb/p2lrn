@@ -1,6 +1,7 @@
 // P2LRN LTI 1.3 platform-neutral authentication and Deep Linking core.
 // This is server-only. The caller supplies a trusted platform registry and a
 // durable, atomically consumed OIDC transaction store; it is not an HTTP server.
+import {CANVAS_PENDING_DEPLOYMENT} from './lti-canvas-registration.mjs';
 import {
   createHash, createPrivateKey, createPublicKey, randomBytes, sign, timingSafeEqual, verify
 } from 'node:crypto';
@@ -134,7 +135,7 @@ function signToolJwt(privateKey, kid, payload) {
 // {id,tenantId,issuer,clientId,authUrl,launchUrl,deepLinkLaunchUrl?,
 //  deployments,jwks:{keys:[...]},deepLinkReturnOrigins:[...] }.
 // getBinding({id,tenantId,registrationId,deploymentId}) -> published P2LRN binding.
-export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer, getRegistrationById, transactions, getBinding, tool, allowInsecureLocal = false, now = () => Math.floor(Date.now() / 1000)}) {
+export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer, getRegistrationById, transactions, getBinding, tool, activateDynamicDeployment, allowInsecureLocal = false, now = () => Math.floor(Date.now() / 1000)}) {
   if (typeof getRegistration !== 'function' || typeof getBinding !== 'function' ||
       typeof transactions?.create !== 'function' || typeof transactions?.consume !== 'function')
     throw new TypeError('Trusted registration, binding and atomic transaction adapters are required');
@@ -154,9 +155,12 @@ export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer
     const reg = assertRegistration(selected, issuer, clientId, allowInsecureLocal);
     const targets = [reg.launchUrl, reg.deepLinkLaunchUrl].filter(Boolean);
     if (!targets.includes(target)) throw new Error('Unregistered LTI target_link_uri');
-    const deploymentHint = request.lti_deployment_id == null
-      ? null : required(request.lti_deployment_id, 'lti_deployment_id');
-    if (deploymentHint && !reg.deployments.includes(deploymentHint))
+    const deploymentRaw=request.lti_deployment_id??request.deployment_id;
+    if(request.lti_deployment_id&&request.deployment_id&&request.lti_deployment_id!==request.deployment_id)
+      throw new Error('Conflicting LTI deployment hints');
+    const deploymentHint=deploymentRaw == null?null:required(deploymentRaw,'lti_deployment_id');
+    if (deploymentHint && !reg.deployments.includes(deploymentHint) &&
+        !(reg.dynamicCanvas&&reg.deployments.includes(CANVAS_PENDING_DEPLOYMENT)))
       throw new Error('Unknown LTI deployment');
     const state = bytes(32), nonce = bytes(32), expiresAt = now() + STATE_LIFETIME;
     await transactions.create({
@@ -195,12 +199,21 @@ export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer
     if (reg.id !== transaction.registrationId) throw new Error('LTI registration changed');
     const claims = verifyPlatformJwt(idToken, reg, transaction.nonceHash, now());
     const deployment = claims[LTI_CLAIMS.deploymentId];
-    if (typeof deployment !== 'string' || !reg.deployments.includes(deployment) ||
+    if (typeof deployment !== 'string' || deployment.length>256 ||
         transaction.deploymentHint && transaction.deploymentHint !== deployment)
       throw new Error('Unregistered LTI deployment');
     if (claims[LTI_CLAIMS.version] !== '1.3.0' ||
         claims[LTI_CLAIMS.targetLinkUri] !== transaction.targetLinkUri)
       throw new Error('LTI protocol or target mismatch');
+    if(!reg.deployments.includes(deployment)){
+      if(!reg.dynamicCanvas || !reg.deployments.includes(CANVAS_PENDING_DEPLOYMENT) ||
+         typeof activateDynamicDeployment!=='function')
+        throw new Error('Unregistered LTI deployment');
+      // Persist only after the platform signature, OIDC state, nonce, issuer,
+      // audience, protocol and target have all been verified.
+      await activateDynamicDeployment({registrationId:reg.id,tenantId:reg.tenantId,deploymentId:deployment});
+      reg.deployments.push(deployment);
+    }
     const kind = claims[LTI_CLAIMS.messageType];
     if (kind === 'LtiResourceLinkRequest') {
       if (transaction.targetLinkUri !== reg.launchUrl)
@@ -230,7 +243,7 @@ export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer
         throw new Error('The LMS does not accept LTI resource links');
       const returnUrl = url(settings.deep_link_return_url, 'deep_link_return_url', allowInsecureLocal).toString();
       const origins = reg.deepLinkReturnOrigins;
-      if (!Array.isArray(origins) || !origins.includes(new URL(returnUrl).origin))
+      if (!reg.dynamicCanvas && (!Array.isArray(origins) || !origins.includes(new URL(returnUrl).origin)))
         throw new Error('Unapproved LMS Deep Linking return origin');
       const result = Object.freeze({kind: 'deep-link', tenantId: reg.tenantId,
         registrationId: reg.id, deploymentId: deployment, returnUrl});
@@ -295,7 +308,7 @@ export function createP2LRNLtiProvider({getRegistration, getRegistrationByIssuer
         !reg.deployments?.includes(picker.deploymentId))
       throw new Error('Revoked LTI Deep Linking registration or deployment');
     const returnUrl = url(required(picker.returnUrl,'returnUrl'),'returnUrl',allowInsecureLocal).toString();
-    if (!reg.deepLinkReturnOrigins?.includes(new URL(returnUrl).origin))
+    if (!reg.dynamicCanvas && !reg.deepLinkReturnOrigins?.includes(new URL(returnUrl).origin))
       throw new Error('Unapproved LMS Deep Linking return origin');
     const result = Object.freeze({kind:'deep-link',tenantId:reg.tenantId,
       registrationId:reg.id,deploymentId:picker.deploymentId,returnUrl});

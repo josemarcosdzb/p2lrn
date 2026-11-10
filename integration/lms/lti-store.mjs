@@ -3,6 +3,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync} from 'node:fs';
 import {dirname} from 'node:path';
 import {randomUUID} from 'node:crypto';
+import {CANVAS_PENDING_DEPLOYMENT} from './lti-canvas-registration.mjs';
 const J=JSON.stringify, P=s=>s==null?null:JSON.parse(s), t=()=>Math.floor(Date.now()/1000);
 const req=(v,n)=>{if(typeof v!=='string'||!v.trim()||v.length>4096)throw new TypeError('Invalid '+n);return v;};
 export function createLtiStore(filename){
@@ -31,6 +32,7 @@ export function createLtiStore(filename){
 
  ].join(';\n')+';');
  const sql=q=>db.prepare(q);
+  db.exec('CREATE TABLE IF NOT EXISTS canvas_dynamic_platforms(registration_id TEXT PRIMARY KEY,created_at INTEGER NOT NULL,FOREIGN KEY(registration_id) REFERENCES platforms(id))');
  function upsertPlatform(r){
   for(const field of ['id','tenantId','issuer','clientId','authUrl','launchUrl','tokenUrl'])req(r[field],field);
   if(!['ACTIVE','DISABLED'].includes(r.status)||!Array.isArray(r.deployments)||!r.deployments.length||
@@ -74,8 +76,45 @@ export function createLtiStore(filename){
   }catch(err){db.exec('ROLLBACK');throw err;}
  }
 
- const decodeReg=r=>r?{id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url??undefined,tokenUrl:r.token_url,jwks:P(r.jwks_json),deployments:P(r.deployments_json),deepLinkReturnOrigins:P(r.origins_json),nrpsAllowedOrigins:P(sql('SELECT origins_json FROM nrps_registration_origins WHERE registration_id=?').get(r.id)?.origins_json??'[]'),status:r.status}:null;
- const getRegistration=({issuer,clientId})=>decodeReg(sql('SELECT * FROM platforms WHERE issuer=? AND client_id=?').get(issuer,clientId));
+ const decodeReg=r=>r?{id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url??undefined,tokenUrl:r.token_url,jwks:P(r.jwks_json),deployments:P(r.deployments_json),deepLinkReturnOrigins:P(r.origins_json),nrpsAllowedOrigins:P(sql('SELECT origins_json FROM nrps_registration_origins WHERE registration_id=?').get(r.id)?.origins_json??'[]'),dynamicCanvas:!!sql('SELECT 1 FROM canvas_dynamic_platforms WHERE registration_id=?').get(r.id),status:r.status}:null;
+   function registerCanvasDynamicPlatform(registration){
+   const existing=sql('SELECT id FROM platforms WHERE issuer=? AND client_id=?').get(registration.issuer,registration.clientId);
+   if(existing)throw new Error('CANVAS_REGISTRATION_ALREADY_EXISTS');
+   if(registration.deployments?.length!==1||
+      registration.deployments[0]!==CANVAS_PENDING_DEPLOYMENT||
+      registration.id!==('canvas-dr-'+registration.tenantId.slice('canvas-'.length)))
+    throw new Error('INVALID_CANVAS_DYNAMIC_REGISTRATION');
+   db.exec('BEGIN IMMEDIATE');
+   try{
+    upsertPlatform(registration);
+    sql('INSERT INTO canvas_dynamic_platforms VALUES(?,?)').run(registration.id,t());
+    db.exec('COMMIT');
+    return registration.id;
+   }catch(e){db.exec('ROLLBACK');throw e;}
+  }
+  function activateCanvasDynamicDeployment({registrationId,tenantId,deploymentId}){
+   req(registrationId,'registrationId');req(tenantId,'tenantId');
+   if(typeof deploymentId!=='string'||deploymentId.length>256||
+      !/^[A-Za-z0-9][A-Za-z0-9:_-]{0,255}$/.test(deploymentId)||
+      deploymentId===CANVAS_PENDING_DEPLOYMENT)
+    throw new Error('INVALID_CANVAS_DEPLOYMENT');
+   db.exec('BEGIN IMMEDIATE');
+   try{
+    const row=sql("SELECT p.deployments_json FROM platforms p JOIN canvas_dynamic_platforms d ON p.id=d.registration_id WHERE p.id=? AND p.tenant_id=? AND p.status='ACTIVE'").get(registrationId,tenantId);
+    if(!row)throw new Error('NOT_APPROVED_CANVAS_DYNAMIC_PLATFORM');
+    const deployments=P(row.deployments_json);
+    if(!deployments.includes(CANVAS_PENDING_DEPLOYMENT))
+     throw new Error('CANVAS_DYNAMIC_NOT_ENABLED');
+    if(!deployments.includes(deploymentId)){
+     if(deployments.length>=128)throw new Error('CANVAS_DEPLOYMENT_LIMIT');
+     deployments.push(deploymentId);
+     sql('UPDATE platforms SET deployments_json=? WHERE id=?').run(J(deployments),registrationId);
+    }
+    db.exec('COMMIT');
+    return true;
+   }catch(e){db.exec('ROLLBACK');throw e;}
+  }
+  const getRegistration=({issuer,clientId})=>decodeReg(sql('SELECT * FROM platforms WHERE issuer=? AND client_id=?').get(issuer,clientId));
  const getRegistrationById=id=>decodeReg(sql('SELECT * FROM platforms WHERE id=?').get(id));
  const getRegistrationByIssuer=issuer=>{const rows=sql("SELECT * FROM platforms WHERE issuer=? AND status='ACTIVE' LIMIT 2").all(issuer);return rows.length===1?decodeReg(rows[0]):null;};
  const listPlatforms=()=>sql('SELECT id,tenant_id,issuer,client_id,auth_url,launch_url,deep_link_launch_url,token_url,deployments_json,status FROM platforms ORDER BY tenant_id,id').all().map(r=>({id:r.id,tenantId:r.tenant_id,issuer:r.issuer,clientId:r.client_id,authUrl:r.auth_url,launchUrl:r.launch_url,deepLinkLaunchUrl:r.deep_link_launch_url,tokenUrl:r.token_url,deployments:P(r.deployments_json),status:r.status}));
@@ -225,7 +264,7 @@ export function createLtiStore(filename){
  const listPending=()=>sql("SELECT id FROM ags_outbox WHERE status='PENDING' ORDER BY created_at LIMIT 50").all().map(r=>r.id);
  const listAttempts=tenantId=>sql('SELECT id,tenant_id,binding_id,context_id,status,created_at,updated_at FROM attempts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,contextId:r.context_id,status:r.status,createdAt:r.created_at,updatedAt:r.updated_at}));
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
- return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
+ return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,registerCanvasDynamicPlatform,activateCanvasDynamicDeployment,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
  publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,peekPicker,consumePicker,attachLaunch,getSession,
  getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,saveNrpsContext,getNrpsContext,listNrpsContexts,count});
 }
