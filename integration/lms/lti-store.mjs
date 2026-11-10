@@ -154,10 +154,21 @@ export function createLtiStore(filename){
  function publishPackage(c){
   for(const field of ['tenantId','title','packageId','contentRoot','sha','filename'])req(c[field],field);
   if(!Array.isArray(c.entities)||!c.entities.length||!Number.isSafeInteger(c.bytes)||c.bytes<1)throw new TypeError('Invalid P2LRN catalogue');
-  sql("INSERT INTO catalog VALUES(?,?,?,?,?,?,?,?,?,'PUBLISHED',?) ON CONFLICT(tenant_id,sha) DO UPDATE SET title=excluded.title").run(c.id??randomUUID(),c.tenantId,c.title,c.packageId,c.contentRoot,c.sha,c.filename,c.bytes,J(c.entities),t());
+  sql("INSERT INTO catalog VALUES(?,?,?,?,?,?,?,?,?,'PUBLISHED',?) ON CONFLICT(tenant_id,sha) DO UPDATE SET title=CASE WHEN catalog.title='[object Object]' OR catalog.title='' THEN excluded.title ELSE catalog.title END, entities_json=CASE WHEN instr(catalog.entities_json,'[object Object]')>0 THEN excluded.entities_json ELSE catalog.entities_json END").run(c.id??randomUUID(),c.tenantId,c.title,c.packageId,c.contentRoot,c.sha,c.filename,c.bytes,J(c.entities),t());
   return sql('SELECT id FROM catalog WHERE tenant_id=? AND sha=?').get(c.tenantId,c.sha).id;
  }
- const getCatalog=(id,tenantId)=>sql("SELECT * FROM catalog WHERE id=? AND tenant_id=? AND status='PUBLISHED'").get(id,tenantId);
+   function listCorruptCatalogPackages(){
+   return sql("SELECT DISTINCT sha,filename,package_id,content_root,bytes FROM catalog WHERE status='PUBLISHED' AND (title='[object Object]' OR instr(entities_json,'[object Object]')>0)").all();
+  }
+  function repairCorruptCatalogBySha({sha,filename,packageId,contentRoot,bytes,title,entities}){
+   for(const [field,value] of Object.entries({sha,filename,packageId,contentRoot,title}))req(value,field);
+   if(!Number.isSafeInteger(bytes)||bytes<1||!Array.isArray(entities)||entities.length<1||
+      entities.some(e=>typeof e.title!=='string'||!e.title||e.title==='[object Object]'))
+    throw new TypeError('INVALID_REPAIRED_PACKAGE_METADATA');
+   return sql("UPDATE catalog SET title=CASE WHEN title='[object Object]' THEN ? ELSE title END, entities_json=CASE WHEN instr(entities_json,'[object Object]')>0 THEN ? ELSE entities_json END WHERE sha=? AND filename=? AND package_id=? AND content_root=? AND bytes=? AND status='PUBLISHED' AND (title='[object Object]' OR instr(entities_json,'[object Object]')>0)")
+    .run(title,J(entities),sha,filename,packageId,contentRoot,bytes).changes;
+  }
+const getCatalog=(id,tenantId)=>sql("SELECT * FROM catalog WHERE id=? AND tenant_id=? AND status='PUBLISHED'").get(id,tenantId);
  const listCatalog=tenantId=>sql("SELECT * FROM catalog WHERE tenant_id=? AND status='PUBLISHED' ORDER BY created_at DESC").all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,title:r.title,packageId:r.package_id,contentRoot:r.content_root,entities:P(r.entities_json)}));
  function createBinding({tenantId,registrationId,deploymentId,catalogId,entityId,id}){
   const c=getCatalog(catalogId,tenantId),r=getRegistrationById(registrationId);
@@ -265,6 +276,6 @@ export function createLtiStore(filename){
  const listAttempts=tenantId=>sql('SELECT id,tenant_id,binding_id,context_id,status,created_at,updated_at FROM attempts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,contextId:r.context_id,status:r.status,createdAt:r.created_at,updatedAt:r.updated_at}));
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
  return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,registerCanvasDynamicPlatform,activateCanvasDynamicDeployment,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
- publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,peekPicker,consumePicker,attachLaunch,getSession,
+ publishPackage,getCatalog,listCatalog,listCorruptCatalogPackages,repairCorruptCatalogBySha,createBinding,getBinding,createPicker,peekPicker,consumePicker,attachLaunch,getSession,
  getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,saveNrpsContext,getNrpsContext,listNrpsContexts,count});
 }

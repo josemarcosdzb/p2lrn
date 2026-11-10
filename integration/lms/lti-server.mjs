@@ -265,18 +265,58 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    return {delivered:false,error:'AGS_PENDING_RETRY'};
   }
  }
- function inspectCourseBytes(bytes,titleHint=''){
+ function learningTitle(value,fallback=''){
+   if(typeof value==='string'&&value.trim())return value.trim().slice(0,200);
+   if(value&&typeof value==='object'&&!Array.isArray(value)){
+    const entries=Object.entries(value);
+    for(const key of ['es','es-ES','en','und']){
+     const found=entries.find(([locale,title])=>locale===key&&typeof title==='string'&&title.trim());
+     if(found)return found[1].trim().slice(0,200);
+    }
+    const first=entries.find(([,title])=>typeof title==='string'&&title.trim());
+    if(first)return first[1].trim().slice(0,200);
+   }
+   return typeof fallback==='string'?fallback.trim().slice(0,200):'';
+  }
+  function inspectCourseBytes(bytes,titleHint=''){
   if(!Buffer.isBuffer(bytes)||bytes.length===0||bytes.length>64*1024*1024)
    throw new Error('INVALID_P2LRN_UPLOAD');
   const parsed=validatePackageBytes(bytes,{strictProfiles:true,validateProfilePayloads:true});
   const entities=parsed.graph.entities.filter(e=>['course','unit','activity'].includes(e.type))
-   .map(e=>({id:e.id,type:e.type,title:String(e.title||e.name||e.id).slice(0,200)}));
+   .map(e=>({id:e.id,type:e.type,title:learningTitle(e.title,learningTitle(e.name,e.id))}));
   const course=entities.find(e=>e.type==='course')||entities[0];
   if(!course)throw new Error('P2LRN package contains no publishable learning entities');
-  const title=String(titleHint||course.title||'Curso P2LRN').trim().slice(0,200);
+  const title=learningTitle(titleHint,course.title||'Curso P2LRN');
   return {parsed,entities,course,title,sha:digest(bytes)};
  }
- function persistCourse(tenantId,inspection,bytes){
+ function repairStoredCatalogMetadata(){
+   const malformed=store.listCorruptCatalogPackages();
+   let repaired=0,skipped=0;
+   for(const row of malformed.slice(0,150)){
+    try{
+     if(!/^[a-f0-9]{64}\.p2lrn$/.test(row.filename)||row.sha+'.p2lrn'!==row.filename)
+      throw new Error('INVALID_STORED_PACKAGE_NAME');
+     const filename=join(packages,row.filename);
+     if(!existsSync(filename)||!statSync(filename).isFile()||
+        statSync(filename).size!==row.bytes||row.bytes>64*1024*1024)
+      throw new Error('STORED_PACKAGE_UNAVAILABLE');
+     const source=readFileSync(filename);
+     const inspection=inspectCourseBytes(source);
+     if(inspection.sha!==row.sha||inspection.parsed.manifest.packageId!==row.package_id||
+        inspection.parsed.manifest.integrity.contentRoot!==row.content_root)
+      throw new Error('STORED_PACKAGE_INTEGRITY_MISMATCH');
+     repaired+=store.repairCorruptCatalogBySha({
+      sha:row.sha,filename:row.filename,packageId:row.package_id,
+      contentRoot:row.content_root,bytes:row.bytes,title:inspection.title,entities:inspection.entities
+     });
+    }catch{skipped++;}
+   }
+   if(repaired||skipped||malformed.length>150)
+    console.log('P2LRN_CATALOG_LABEL_REPAIR',JSON.stringify({
+     repaired,skipped,pending:Math.max(0,malformed.length-150)}));
+  }
+  repairStoredCatalogMetadata();
+  function persistCourse(tenantId,inspection,bytes){
   const filename=inspection.sha+'.p2lrn';
   const destination=join(packages,filename);
   if(!existsSync(destination))writeFileSync(destination,bytes,{flag:'wx',mode:0o600});

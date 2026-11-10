@@ -110,3 +110,26 @@ test('signed instructor launch cannot enqueue an official learner score across r
   assert.equal(f.store.listPending().length,0);
  }finally{f.clean()}
 });
+test('repairs only corrupted P2LRN titles without duplicating courses or changing custom titles',()=>{
+ const f=fixture();
+ try{
+  const sha='e'.repeat(64);
+  const base={tenantId:'school1',packageId:'urn:uuid:metadata-repair',
+   contentRoot:root,sha,filename:sha+'.p2lrn',bytes:1024};
+  const bad=[{id:'course1',type:'course',title:'[object Object]'},
+   {id:'lesson1',type:'activity',title:'[object Object]'}];
+  const good=[{id:'course1',type:'course',title:'Curso de seguridad'},
+   {id:'lesson1',type:'activity',title:'Primera lección'}];
+  const id=f.store.publishPackage({...base,title:'[object Object]',entities:bad});
+  assert.equal(f.store.listCorruptCatalogPackages().length,1);
+  assert.equal(f.store.repairCorruptCatalogBySha({...base,title:'Curso de seguridad',entities:good}),1);
+  assert.equal(f.store.getCatalog(id,'school1').title,'Curso de seguridad');
+  assert.deepEqual(JSON.parse(f.store.getCatalog(id,'school1').entities_json),good);
+  assert.equal(f.store.listCorruptCatalogPackages().length,0);
+  const same=f.store.publishPackage({...base,title:'Otro nombre',entities:good});
+  assert.equal(same,id);
+  assert.equal(f.store.getCatalog(id,'school1').title,'Curso de seguridad');
+  assert.equal(f.store.count('catalog'),1);
+  assert.equal(f.store.repairCorruptCatalogBySha({...base,title:'Nuevo',entities:good}),0);
+ }finally{f.clean()}
+});
