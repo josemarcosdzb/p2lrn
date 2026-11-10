@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   cageVertices,validCage,defaultAssembly,validateAssembly,
   evaluateAssemblyPlacement,rotateVector,toWorld,toLocal,
-  inspectAssemblyGLB,rotationErrorDegrees,fitAssemblyBounds,assemblyPlacementTransform,assemblyFitStatus,cageContains,scatterAssemblyStarts,
+  inspectAssemblyGLB,rotationErrorDegrees,fitAssemblyBounds,assemblyPlacementTransform,assemblyFitStatus,cageContains,scatterAssemblyStarts,stagedAssemblyVisualTransform,
 } from '../web/assembly-3d-core.js';
 import {validateQuestionnaire,scoreQuestionnaire} from '../web/questionnaire-core.js';
 import {buildQuestionnaireGame} from '../web/questionnaire-games-core.js';
@@ -151,4 +151,20 @@ test('learner pieces scatter into distinct random positions outside ALL destinat
     assert.ok(Math.hypot(list[i].position[0]-list[j].position[0],list[i].position[2]-list[j].position[2])>1.5,
       'Two learner pieces overlap at the start');
   assert.deepEqual(scene.pieces[0].initialTransform.position,[-2.5,0.8,2.5],'Student randomization mutated the authoring scene');
+});
+
+test('random staging uses glTF visual bounds rather than distant mesh pivots',()=>{
+  const initial={position:[6,0.9,8],rotation:[0,Math.sin(Math.PI/4),0,Math.cos(Math.PI/4)],scale:[0.22,0.22,0.22]};
+  const bounds={min:[10,-2,5],max:[14,4,8]};
+  const moved=stagedAssemblyVisualTransform(initial,bounds);
+  const center=bounds.min.map((n,i)=>(n+bounds.max[i])/2);
+  const visibleCenter=toWorld(center,moved);
+  assert.ok(Math.abs(visibleCenter[0]-6)<1e-8);
+  assert.ok(Math.abs(visibleCenter[2]-8)<1e-8);
+  assert.ok(visibleCenter[1]>=0.9);
+  for(const x of [bounds.min[0],bounds.max[0]])
+    for(const y of [bounds.min[1],bounds.max[1]])
+      for(const z of [bounds.min[2],bounds.max[2]])
+        assert.ok(toWorld([x,y,z],moved)[1]>=0.149999,'Mesh intersects the staging floor');
+  assert.deepEqual(initial.position,[6,0.9,8],'Correct author pose was modified by staging');
 });
