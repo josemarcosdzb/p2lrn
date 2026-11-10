@@ -1,39 +1,25 @@
 import {cp,mkdir,readFile,rm,writeFile} from 'node:fs/promises';
 import {dirname,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {STUDIO_RUNTIME_SHARED_FILES} from '../../../deploy/netlify/studio-runtime-assets.mjs';
 
 const here=dirname(fileURLToPath(import.meta.url));
 const root=resolve(here,'..');
 const repo=resolve(root,'..','..');
 const out=join(root,'dist');
 await rm(out,{recursive:true,force:true});
-await mkdir(join(out,'runtime'),{recursive:true});
+await mkdir(out,{recursive:true});
+
 const source=await readFile(join(root,'src','p2lrn-studio.js'),'utf8');
 await writeFile(join(out,'p2lrn-studio.esm.js'),source);
 await cp(join(root,'src','p2lrn-studio.loader.js'),join(out,'p2lrn-studio.js'));
-await cp(join(repo,'packages','toolkit','web','studio','authoring-document.js'),join(out,'runtime','authoring-document.js'));
-await cp(join(repo,'packages','toolkit','web','studio','package-export.js'),join(out,'runtime','package-export.js'));
-await cp(join(repo,'packages','toolkit','web','studio','new-document.js'),join(out,'runtime','new-document.js'));
-await cp(join(repo,'packages','toolkit','web','studio','questionnaire-editor.js'),join(out,'runtime','questionnaire-editor.js'));
-await cp(join(repo,'packages','toolkit','web','studio','assembly-3d-editor.js'),join(out,'runtime','assembly-3d-editor.js'));
-await cp(join(repo,'packages','toolkit','web','studio','questionnaire-grading.js'),join(out,'runtime','questionnaire-grading.js'));
-await cp(join(repo,'packages','toolkit','web','studio','structured-editor.js'),join(out,'runtime','structured-editor.js'));
-await cp(join(repo,'packages','toolkit','web','studio','lesson-images.js'),join(out,'runtime','lesson-images.js'));
-await cp(join(repo,'packages','toolkit','web','studio','visual-layout.js'),join(out,'runtime','visual-layout.js'));
-await cp(join(repo,'packages','toolkit','web','studio','command-bar.js'),join(out,'runtime','command-bar.js'));
-for(const name of ['studio-history.js','studio-object-tools.js','studio-advanced-tools.js','studio-shapes.js','studio-drop-activity.js']){
-  await cp(join(repo,'packages','toolkit','web','studio',name),join(out,'runtime',name));
+
+// Publish every Studio browser runtime module, not a hand-picked subset.
+// This is the exact canonical tree used by the public /studio/runtime/ app.
+await cp(join(repo,'packages','toolkit','web','studio'),join(out,'runtime'),{recursive:true});
+for(const relative of STUDIO_RUNTIME_SHARED_FILES){
+  const destination=join(out,...relative.split('/'));
+  await mkdir(dirname(destination),{recursive:true});
+  await cp(join(repo,'packages','toolkit','web',...relative.split('/')),destination);
 }
-await cp(join(repo,'packages','toolkit','web','studio','browser-drafts.js'),join(out,'runtime','browser-drafts.js'));
-// Required by questionnaire, structured and lesson-image editors at module load.
-// Omitting it leaves the published Studio Web Component unregistered in browsers.
-await cp(join(repo,'packages','toolkit','web','studio','studio-ui-i18n.js'),join(out,'runtime','studio-ui-i18n.js'));
-await cp(join(repo,'packages','toolkit','web','studio','offline-assignment.js'),join(out,'runtime','offline-assignment.js'));
-await cp(join(repo,'packages','toolkit','web','studio','manual-grading.js'),join(out,'runtime','manual-grading.js'));
-for(const file of ['native-composite-core.js','component-registry.js','identifiers.js','renderer-registry.js','fill-blanks-core.js','assembly-3d-core.js','capability-broker.js','course-rights.js']){
-  await cp(join(repo,'packages','toolkit','web',file),join(out,file));
-}
-// The copied course-rights module imports this transitive renderer localization module.
-await mkdir(join(out,'renderers'),{recursive:true});
-await cp(join(repo,'packages','toolkit','web','renderers','ui-i18n.js'),join(out,'renderers','ui-i18n.js'));
-console.log(JSON.stringify({ok:true,output:out},null,2));
+console.log(JSON.stringify({ok:true,output:out,runtime:'complete canonical studio runtime'},null,2));
