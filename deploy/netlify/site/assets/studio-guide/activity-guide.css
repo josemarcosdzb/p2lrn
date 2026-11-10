@@ -26,3 +26,6 @@
 .p2lrn-3d-modes>div:nth-child(even){border-left:1px solid var(--line);padding-left:1rem}
 .p2lrn-3d-modes dt{font-weight:750;color:var(--ink)}.p2lrn-3d-modes dd{margin:.3rem 0 0;color:var(--muted);font-size:.91rem;line-height:1.55}
 @media(max-width:640px){.p2lrn-3d-modes{grid-template-columns:1fr}.p2lrn-3d-modes>div:nth-child(even){border-left:0;padding-left:0}}
+
+/* 3D step rows need the same two-column grid as the standard Studio path. */
+.p2lrn-activity-steps li{display:grid!important;align-items:start}
