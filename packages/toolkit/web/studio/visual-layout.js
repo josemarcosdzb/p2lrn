@@ -119,6 +119,12 @@ export function studioNestedInsertionContainer(surface,{anchorNode=null,targetEl
   // A drag/drop exercise is an interactive component, not a general layout
   // container. Clicking its empty background must insert AFTER the exercise.
   if(kind==='drag-drop')return null;
+  // A selected shape remains an object, never a container for a second shape.
+  // Insert diagram objects at the same scene level to preserve layer ordering.
+  if(['shape','text-box'].includes(kind)){
+    const diagram=scope.closest('[data-p2lrn-layout="diagram-canvas"], [data-p2lrn-layout="diagram-group"]');
+    if(diagram)return diagram;
+  }
   if(kind==='table'||scope.tagName==='TABLE'){
     const inside=anchor?.closest?.('td,th');
     return inside&&scope.contains(inside)?inside:scope.querySelector('td,th');
@@ -159,7 +165,7 @@ export function ensureStudioEndCaret(surface){
   return tail;
 }
 export function prepareStudioDiagramChild(parent,element){
-  if(parent?.dataset?.p2lrnLayout!=='diagram-canvas')return false;
+  if(!['diagram-canvas','diagram-group'].includes(parent?.dataset?.p2lrnLayout))return false;
   if(!element?.matches?.('[data-p2lrn-layout="shape"],[data-p2lrn-layout="text-box"],figure'))return false;
   const index=parent.querySelectorAll(':scope > [data-p2lrn-layout],:scope > figure').length;
   const left=8+(index%4)*22,top=10+(Math.floor(index/4)%3)*28;
