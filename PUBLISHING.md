@@ -53,6 +53,21 @@ The browser gate uses installed tarballs (not source aliases), exercises Studio'
 
 Netlify uses the same Player and H5P-library builders. It does not have a second runtime implementation.
 
+## Exhaustive CDN/npm browser distribution parity
+
+The canonical browser assets from the five version-aligned source packages are published by **one build pipeline**. The CDN publishes `/distribution-parity.json` with the exact immutable-version paths, lengths and SHA-256 digests of **every** Player, H5P library, Studio and Analytics distribution file. The Toolkit is version-locked and tracked as source/Node interfaces; a static CDN is not a Node.js executable distribution.
+
+Before release, `node scripts/verify-distribution-identity.mjs` compares all staged npm `dist/` files against their corresponding locally generated CDN files, and checks the public inventory. On the installed public npm release, `node scripts/verify-public-npm-cdn-all.mjs` checks both directions of the complete installed/npm versus CDN filename inventory, then downloads **all** versioned CDN resources and verifies their exact SHA-256 digest and byte size. The existing `verify-public-npm-cdn.mjs` checks remain as focused smoke diagnostics.
+
+The full public check requires the new CDN manifest to have been deployed and all five immutable npm versions to have been published from the same release. It intentionally **fails** when either side is stale or incomplete. Run the full check only for publication/release verification, not every documentation-only change: it downloads the complete third-party H5P corpus as well as all first-party browser assets. Evidence is saved in `.npm-pack-gate/public-npm-cdn-all-report.json`.
+
+CDN-only `.html.raw` mirrors exist solely to retrieve Netlify's unmodified runtime HTML bytes; they are verified separately against their HTML originals. Standalone H5P library files belong to `@p2lrn/h5p-libraries` rather than being duplicated inside the Player npm package.
+
+**Not the same thing as functional UI parity:** the public `/studio/` application and the `<p2lrn-studio>` npm component have different application shells. The shared editor/runtime modules and command-bar behavior are covered by browser regression tests, but full interactive parity still requires comparing every authoring, save, import, offline, analytics, responsive and accessibility flow in both surfaces. No file inventory, npm pack result or green static checksum can certify that by itself.
+
+**Publication is separate:** a successful build and Git commit do not update the public npm registry or Netlify CDN automatically. Publish only after passing release gates, using the release owner's authorized process, and verify the actual live resources afterward.
+
+
 ## Lightweight document Reader
 
 There is no standalone `@p2lrn/document-reader` package. The single canonical implementation is:
