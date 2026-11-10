@@ -138,6 +138,12 @@ test('click-to-carry also leaves previous object at last hand coordinates when s
     assert.deepEqual(o.positions.get('order:a'),[4.1,1.42,4.1]);
     assert.deepEqual(o.state.get('3d:ordering:order-retain:free-positions').a,[4.1,1.42,4.1]);
     assert.deepEqual([...o.carried],['order:b'],'only B may be carried');
+    o.positions.set('order:b',[3.5,1.42,5.1]);
+    o.controller.interact({kind:'scene-empty'});
+    assert.deepEqual([...o.carried],[],'clicking empty ground must release B');
+    assert.deepEqual(o.positions.get('order:b'),[3.5,1.42,5.1]);
+    assert.deepEqual(o.state.get('3d:ordering:order-retain:free-positions').b,[3.5,1.42,5.1]);
+    assert.deepEqual(o.positions.get('order:a'),[4.1,1.42,4.1]);
   }finally{o.restore();}
 });
 
@@ -152,5 +158,18 @@ test('stored 3D coordinates must be finite, in-range and cannot poison mesh phys
   try{
     assert.ok(validLoose3DPosition(c.positions.get('order:a')));
     assert.ok(validLoose3DPosition(c.positions.get('order:b')));
+  }finally{c.restore();}
+});
+
+test('classification click on empty ground releases only the carried item without scoring',()=>{
+  const c=setup(buildClassificationControls,classificationTrial);
+  try{
+    c.controller.interact({kind:'classification-object',id:'a'});
+    c.positions.set('classify:a',[-3.1,1.42,4]);
+    c.controller.interact({kind:'scene-empty'});
+    assert.deepEqual([...c.carried],[]);
+    assert.deepEqual(c.positions.get('classify:a'),[-3.1,1.42,4]);
+    assert.deepEqual(c.state.get('3d:classification:class-retain:free-positions').a,[-3.1,1.42,4]);
+    assert.equal(c.patches.length,0);
   }finally{c.restore();}
 });
