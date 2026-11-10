@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
 import {createLtiStore} from './lti-store.mjs';
 import {issueP2LRNBindingId} from './launch-contract.mjs';
 const root='sha256:'+'a'.repeat(64);
@@ -108,5 +109,68 @@ test('signed instructor launch cannot enqueue an official learner score across r
   f.store.close();f.store=createLtiStore(f.path);
   assert.throws(grade,/LTI_GRADE_ROLE_DENIED/);
   assert.equal(f.store.listPending().length,0);
+ }finally{f.clean()}
+});
+test('LTI sessions have immutable roles, content links and grade privileges',()=>{
+ const f=fixture();
+ try{
+  const catalogId=f.store.publishPackage({tenantId:'school1',title:'Role isolation',
+   packageId:'urn:uuid:roles',contentRoot:root,sha:'b'.repeat(64),
+   filename:'b'.repeat(64)+'.p2lrn',bytes:512,
+   entities:[{id:'course1',type:'course',title:'Course'}]});
+  const bindingId=f.store.createBinding({tenantId:'school1',registrationId:'lms1',
+   deploymentId:'deploy1',catalogId,entityId:'course1'});
+  const launch={tenantId:'school1',registrationId:'lms1',deploymentId:'deploy1',
+   bindingId,packageId:'urn:uuid:roles',contentRoot:root,entityId:'course1',
+   learnerKey:'e'.repeat(64),platformSubject:'person',contextId:'context',
+   resourceLinkId:'link-1'};
+  const expiresAt=Math.floor(Date.now()/1000)+3600;
+  const learner=f.store.attachLaunch({launch,ags:null,tokenHash:'4'.repeat(64),
+   csrfHash:'5'.repeat(64),expiresAt,canReadRoster:false,canReceiveGrades:true});
+  const instructor=f.store.attachLaunch({launch,ags:null,tokenHash:'6'.repeat(64),
+   csrfHash:'7'.repeat(64),expiresAt,canReadRoster:true,canReceiveGrades:false});
+  assert.notEqual(learner.attemptId,instructor.attemptId);
+  const a=f.store.getSession('4'.repeat(64)),b=f.store.getSession('6'.repeat(64));
+  assert.deepEqual([a.canReadRoster,a.canReceiveGrades],[false,true]);
+  assert.deepEqual([b.canReadRoster,b.canReceiveGrades],[true,false]);
+  assert.throws(()=>f.store.approveScore(instructor.attemptId,0.8,true,
+   'instructor-grade',{normalized:0.8,completed:true}),/LTI_GRADE_ROLE_DENIED/);
+  const differentLink=f.store.attachLaunch({launch:{...launch,resourceLinkId:'link-2'},
+   ags:null,tokenHash:'8'.repeat(64),csrfHash:'9'.repeat(64),expiresAt,
+   canReadRoster:false,canReceiveGrades:true});
+  assert.notEqual(learner.attemptId,differentLink.attemptId);
+  f.store.close();f.store=createLtiStore(f.path);
+  assert.equal(f.store.getSession('4'.repeat(64)).attemptId,learner.attemptId);
+  assert.deepEqual([f.store.getSession('6'.repeat(64)).canReadRoster,
+   f.store.getSession('6'.repeat(64)).canReceiveGrades],[true,false]);
+  assert.equal(f.store.listAttempts('school1').length,3);
+ }finally{f.clean()}
+});
+
+test('browser reports do not revoke or overwrite an approved grade',()=>{
+ const f=fixture();
+ try{
+  const catalogId=f.store.publishPackage({tenantId:'school1',title:'Grade',
+   packageId:'urn:uuid:approved',contentRoot:root,sha:'d'.repeat(64),
+   filename:'d'.repeat(64)+'.p2lrn',bytes:512,
+   entities:[{id:'course1',type:'course',title:'Course'}]});
+  const bindingId=f.store.createBinding({tenantId:'school1',registrationId:'lms1',
+   deploymentId:'deploy1',catalogId,entityId:'course1'});
+  const launch={tenantId:'school1',registrationId:'lms1',deploymentId:'deploy1',
+   bindingId,packageId:'urn:uuid:approved',contentRoot:root,entityId:'course1',
+   learnerKey:'9'.repeat(64),platformSubject:'learner',contextId:'context',
+   resourceLinkId:'resource'};
+  const attempt=f.store.attachLaunch({launch,ags:null,tokenHash:'1'.repeat(64),
+   csrfHash:'2'.repeat(64),expiresAt:Math.floor(Date.now()/1000)+3600});
+  f.store.observeScore(attempt.attemptId,0.7,true);
+  f.store.approveScore(attempt.attemptId,0.7,true,'approved',
+   {normalized:0.7,completed:true});
+  f.store.observeScore(attempt.attemptId,0.01,false);
+  const inspector=new DatabaseSync(f.path);
+  try{
+   const r=inspector.prepare('SELECT approved,normalized,completed FROM assessments WHERE attempt_id=?')
+    .get(attempt.attemptId);
+   assert.deepEqual([r.approved,r.normalized,r.completed],[1,0.7,1]);
+  }finally{inspector.close()}
  }finally{f.clean()}
 });
