@@ -1,0 +1,18 @@
+{
+  "name": "@p2lrn/lti-database-drivers",
+  "private": true,
+  "type": "module",
+  "description": "Database connectors for the standalone P2LRN LTI provider; independent from Studio and Player",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "pg": "^8.23.1",
+    "mysql2": "^3.15.2",
+    "mariadb": "^3.4.5",
+    "mssql": "^11.0.1"
+  },
+  "scripts": {
+    "test:postgres": "node --test lti-postgres-live.test.mjs"
+  }
+}
