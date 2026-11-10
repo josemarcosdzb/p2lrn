@@ -195,13 +195,13 @@ for(const [locale,prefix] of [['es',''],['en','en/']]){
       if(locale==='en'&&token==='Vista alumno')continue;
       if(!guide.includes(token))failures.push(locale+': fill-blanks example misses '+token);
     }
-    if(/\\{\\{b\\d+\\}\\}/u.test(guide.replace(/<details\\b[\\s\\S]*?<\\/details>/i,'')))
+    if(guide.includes('{{'))
       failures.push(locale+': fill blanks teacher-facing instructions must not ask for manual placeholders');
     if(guide.indexOf('<ol')<0||guide.indexOf('<ol')>guide.indexOf('<details'))
       failures.push(locale+': editing steps must precede the old screenshot');
     if(!guide.includes('<details')||!guide.includes('configuracion-huecos-studio.webp'))
       failures.push(locale+': real editor evidence must be kept with accurate mode label');
-    if((guide.match(/<img\\b/gi)||[]).length!==2)
+    if((guide.split('<img ').length-1)!==2)
       failures.push(locale+': authoring and learner images must remain available');
     if(!studioGuide.includes('/'+prefix+'docs/questionnaires/#crear-rellenar-huecos'))
       failures.push(locale+': Studio guide needs link to the fill-blanks walkthrough');
