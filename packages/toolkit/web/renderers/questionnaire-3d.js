@@ -707,6 +707,10 @@ export async function render(options) {
     const assembly=trial.type==='assembly-3d';
     scene.setAssemblyMode?.(assembly);
     if(joystick?.element){joystick.element.hidden=assembly;joystick.element.style.display=assembly?'none':'';}
+    // Assembly is a directly manipulable model, not a walking simulation.
+    // No entry overlay may cover a destination or staging piece.
+    entryHint.hidden=assembly;
+    entryHint.style.display=assembly?'none':'';
     entryHint.querySelector('small').textContent=playerUiText(assembly
       ?'Todas las piezas están a la vista: arrastra una pieza a una caja. Arrastra el fondo para girar la cámara.'
       :'Usa WASD o las flechas para caminar y arrastra el fondo para mirar.');
