@@ -1061,6 +1061,125 @@ async function verifyRealQuest3DDrops(cdp){
   }
 }
 
+// Real Rapier regression for the most important shared rule: an invalid
+// release keeps the object's horizontal world coordinates even after physics
+// steps, after another object is picked, and after a trial is reopened.
+async function browserRetained3DDrops(){
+  const [{createThreeGameScene},{buildOrderingControls,buildClassificationControls}]=await Promise.all([
+    import('/player/current/dist/game-3d/three-runtime.js'),
+    import('/player/current/dist/renderers/questionnaire-3d.js'),
+  ]);
+  const canvas=document.createElement('canvas');
+  canvas.id='p2lrn-physical-free-drop-qa';
+  canvas.width=800;canvas.height=510;canvas.tabIndex=0;
+  Object.assign(canvas.style,{position:'fixed',left:'20px',top:'20px',width:'800px',
+    height:'510px',display:'block',zIndex:'2147483600'});
+  canvas.setPointerCapture=()=>{};canvas.releasePointerCapture=()=>{};
+  document.body.append(canvas);
+  const store=new Map(),answers=new Map(),patches=[];
+  const runtime={
+    state:{completed:false},
+    getGameState:(key,fallback)=>store.has(key)?store.get(key):fallback,
+    setGameState:(key,value)=>store.set(key,structuredClone(value)),
+    answer:id=>answers.get(id)??{order:[],classifications:{}},
+    replaceAnswer:(id,answer)=>{answers.set(id,structuredClone(answer));return true;},
+    applyPatch:(id,patch)=>{patches.push(patch);return true;},
+  };
+  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const horizontal=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
+  let game=null,controller=null,blankClicks=0;
+  try{
+    game=await createThreeGameScene(canvas,{physics:'rapier',
+      onInteraction:(meta)=>{
+        if(meta.kind==='scene-empty')blankClicks++;
+        return controller?.interact(meta)??false;
+      },
+      onDrag:(meta,phase,info)=>controller?.drag(meta,phase,info)??false});
+    if(game.physics!=='rapier')throw Error('True Rapier physics unavailable for free-drop regression');
+    const modes=[
+      {trial:{questionId:'qa-drop-order',type:'ordering-3d',prompt:'Ordena',
+          objects:[{id:'a',text:'A'},{id:'b',text:'B'}],correctOrder:['a','b']},
+        builder:buildOrderingControls,prefix:'order:',kind:'ordering-object',
+        target:[-3.1,0.76,1.9],scoreKey:'order'},
+      {trial:{questionId:'qa-drop-class',type:'classification-3d',prompt:'Clasifica',
+          objects:[{id:'a',text:'A'},{id:'b',text:'B'}],
+          categories:[{id:'green',text:'Verde'},{id:'blue',text:'Azul'}],
+          assignments:[{itemId:'a',categoryId:'green'},{itemId:'b',categoryId:'blue'}]},
+        builder:buildClassificationControls,prefix:'classify:',kind:'classification-object',
+        target:[-3.0,0.76,2.3],scoreKey:'classifications'},
+    ];
+    const results=[];
+    for(const {trial,builder,prefix,kind,target} of modes){
+      game.reset();game.resetPlayer();
+      const status=document.createElement('p');
+      controller=builder({trial,runtime,scene:game,status});
+      await sleep(190);
+      const a=game.getTranslation(prefix+'a');
+      if(!a)throw Error('Missing real Rapier box in '+kind);
+      if(!controller.drag({kind,id:'a'},'start',{position:a}))
+        throw Error('Could not start physical drag in '+kind);
+      controller.drag({kind,id:'a'},'move',{position:target});
+      controller.drag({kind,id:'a'},'end',{position:target,
+        target:kind==='classification-object'?{kind:'classification-category',id:'blue'}:null});
+      await sleep(450);
+      const afterDrop=game.getTranslation(prefix+'a');
+      if(horizontal(afterDrop,target)>0.24)
+        throw Error('Released '+kind+' snapped/rolled away from drop: '+
+          JSON.stringify({target,afterDrop}));
+      if(patches.length!==0||runtime.answer(trial.questionId).order?.length)
+        throw Error('Invalid physical drop was scored in '+kind);
+      controller.interact({kind,id:'b'});
+      await sleep(100);
+      const afterNext=game.getTranslation(prefix+'a');
+      if(horizontal(afterNext,target)>0.24)
+        throw Error('Picking B moved the released A in '+kind);
+      // Click on the empty upper part of the canvas, never on a game object.
+      const rect=canvas.getBoundingClientRect(),pt={clientX:rect.left+rect.width/2,clientY:rect.top+9};
+      for(const type of ['pointerdown','pointerup']){
+        canvas.dispatchEvent(new PointerEvent(type,{bubbles:true,
+          pointerId:91,pointerType:'mouse',button:0,buttons:type==='pointerup'?0:1,...pt}));
+      }
+      if(blankClicks<results.length+1)
+        throw Error('Empty ground click did not release the click-carried box: '+kind);
+      await sleep(160);
+      const bReleased=game.getTranslation(prefix+'b');
+      game.setMovementVector(0,1);
+      await sleep(260);
+      game.setMovementVector(0,0);
+      if(horizontal(game.getTranslation(prefix+'b'),bReleased)>0.32)
+        throw Error('Box B is still carried after a click on empty ground: '+kind);
+      game.reset();game.resetPlayer();
+      controller=builder({trial,runtime,scene:game,status:document.createElement('p')});
+      await sleep(220);
+      const restored=game.getTranslation(prefix+'a');
+      if(horizontal(restored,target)>0.24)
+        throw Error('Reopening '+kind+' lost saved free position: '+JSON.stringify({target,restored}));
+      results.push({mode:kind,dropXZ:[...target],restoredXZ:[...restored],
+        releaseDrift:horizontal(afterDrop,target),switchDrift:horizontal(afterNext,target),
+        restoredDrift:horizontal(restored,target),blankClickReleases:true});
+    }
+    globalThis.__p2lrnRetainedDropQA={game,canvas};
+    return {physics:game.physics,results,scoredInvalidDrops:patches.length};
+  }catch(error){game?.destroy();canvas.remove();throw error;}
+}
+async function verifyRetained3DDrops(cdp){
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
+  await waitForEval(cdp,"Boolean(customElements.get('p2lrn-player'))",
+    'real 3D free-drop/physics startup',30000);
+  const result=await evalTop(cdp,'('+browserRetained3DDrops.toString()+')()');
+  try{
+    invariant(result?.physics==='rapier'&&result.results?.length===2&&
+      result.results.every(item=>item.blankClickReleases&&item.restoredDrift<0.24)&&
+      result.scoredInvalidDrops===0,
+      'Physical drop contract failed: '+JSON.stringify(result));
+    const screenshot=await captureElementVisualEvidence(cdp,'3d-rapier-free-drop-persistence',
+      "document.getElementById('p2lrn-physical-free-drop-qa')",{maxHeight:900});
+    return {...result,screenshot};
+  }finally{
+    await evalTop(cdp,"(()=>{const qa=globalThis.__p2lrnRetainedDropQA;qa?.game?.destroy();qa?.canvas?.remove();delete globalThis.__p2lrnRetainedDropQA;return true;})()");
+  }
+}
+
 async function verifyThreePointerDragAndRope(cdp){
   await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
   await waitForEval(cdp,"Boolean(globalThis.P2LRN?.createCapabilityBroker&&customElements.get('p2lrn-player'))",'3D pointer test runtime',30000);
@@ -2109,10 +2228,11 @@ try{
     const assemblyStart=await verifyAssemblyScatteredViewport(cdp);
     const pointerDrag=await verifyThreePointerDragAndRope(cdp);
     const scoredDrops=await verifyRealQuest3DDrops(cdp);
+    const retainedDrops=await verifyRetained3DDrops(cdp);
     const assemblyLive=await verifyAssemblyLiveInput(cdp);
     const singleCarry=await verifyExclusiveCarryInBrowser(cdp);
     const threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);
-    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,scoredDrops,assemblyLive,singleCarry,threeMobile};
+    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,scoredDrops,retainedDrops,assemblyLive,singleCarry,threeMobile};
     await mkdir(visualEvidenceRoot,{recursive:true});
     await writeFile(join(visualEvidenceRoot,'quest3d-report.json'),JSON.stringify(report,null,2)+'\n');
     console.log('P2LRN_QUEST3D_BROWSER_REPORT='+JSON.stringify(report));
