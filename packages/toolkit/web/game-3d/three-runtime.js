@@ -279,8 +279,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     camera.updateMatrixWorld(true);
   }
   function updatePlayer(delta){
-    if(authoring||assemblyMode){updateAuthoringCamera();return;}
-    const previous=player.position.clone();
+    if(authoring){updateAuthoringCamera();return;}
     const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
     const velocity=new THREE.Vector3();
@@ -290,6 +289,18 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(movement.right)velocity.add(right);
     velocity.addScaledVector(forward,analogMovement.y);
     velocity.addScaledVector(right,analogMovement.x);
+    if(assemblyMode){
+      // Assembly keeps its full-scene orbit and direct manipulation, but
+      // keyboard/joystick movement pans the actual camera through the level.
+      // Unlike other games, there is no physics avatar to collide with pieces.
+      if(velocity.lengthSq()>0){
+        const speed=clamp(orbitDistance*0.75,4.3,28);
+        orbitFocus.add(velocity.clampLength(0,1).multiplyScalar(speed*delta));
+      }
+      updateAuthoringCamera();
+      return;
+    }
+    const previous=player.position.clone();
     if(velocity.lengthSq()>0){
       // Preserve the stick's analog speed and never make diagonals faster.
       velocity.clampLength(0,1).multiplyScalar(4.3*delta);
