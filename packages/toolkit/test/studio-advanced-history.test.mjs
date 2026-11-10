@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createStudioHistory} from '../web/studio/studio-history.js';
-import {modifyStudioTable} from '../web/studio/studio-object-tools.js';
+import {modifyStudioTable,objectTransform} from '../web/studio/studio-object-tools.js';
 
 const make=(key,html='<p>Original</p>')=>({
   dataset:{studioHtmlKey:key},innerHTML:html,isContentEditable:true,
@@ -73,4 +73,12 @@ test('large embedded images remain undoable without duplicating base64 in every 
   assert.equal(surface.innerHTML.length,media.length+'<img src="data:image/png;base64,">'.length);
   assert.equal(surface.innerHTML.includes('p2lrn-history-media:'),false,'internal history tokens must never leak into course content');
   history.reset();
+});
+
+test('object rotation composes with translation and rejects invalid geometry',()=>{
+  assert.equal(objectTransform(20,-15,0),'translate(20px, -15px)');
+  assert.equal(objectTransform(20,-15,90),'translate(20px, -15px) rotate(90deg)');
+  assert.equal(objectTransform(-40,30,225),'translate(-40px, 30px) rotate(225deg)');
+  assert.throws(()=>objectTransform(NaN,0,0),/Invalid object transform/);
+  assert.throws(()=>objectTransform(0,0,Infinity),/Invalid object transform/);
 });
