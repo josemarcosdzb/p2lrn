@@ -12,6 +12,29 @@ const handAuthoredEnglishPages=new Set([
   'docs/formato-portable-cursos-interactivos/index.html',
   'crear-cursos-interactivos/index.html',
   'skills/index.html',
+  // Bilingual editorial and teacher-facing guides have been reviewed and corrected
+  // in both languages. Never overwrite their manually edited English with MT.
+  'juegos-educativos-3d/index.html',
+  'docs/index.html',
+  'docs/empezar/index.html',
+  'docs/empezar-facil/index.html',
+  'docs/instalar/index.html',
+  'docs/que-usar/index.html',
+  'docs/studio/index.html',
+  'docs/juegos-3d/index.html',
+  'docs/questionnaires/index.html',
+  'docs/questionnaires/3d/index.html',
+  'docs/questionnaires/classification/index.html',
+  'docs/questionnaires/crossword/index.html',
+  'docs/questionnaires/matching/index.html',
+  'docs/questionnaires/memory/index.html',
+  'docs/questionnaires/ordering/index.html',
+  'docs/questionnaires/rosco/index.html',
+  'docs/questionnaires/standard/index.html',
+  'docs/questionnaires/true-false/index.html',
+  'docs/questionnaires/word-search/index.html',
+  'docs/cli/index.html',
+  'docs/compatibilidad/index.html',
   // Legal summaries are manually reviewed and must not be rewritten by machine translation.
   'licencia/index.html',
 ]);
@@ -468,6 +491,19 @@ for(const rel of handAuthoredEnglishPages){
      !english.includes('skill-capabilities-title')||
      !english.includes('href="/en/docs/getting-started/"')))
     throw Error('Manually edited English Skills landing is missing its SEO content or canonical links');
+  if(rel==='juegos-educativos-3d/index.html'&&
+    (!english.includes('Assemble in 3D')||
+      !english.includes('configuracion-ensamblaje-3d-studio.webp')||
+      !english.includes('15-3d-ensamblar.webp')))
+    throw Error('Manually reviewed English 3D sales guide has lost assembly or real screenshots');
+  if(rel==='docs/empezar-facil/index.html'&&
+    (!english.includes('id="primer-curso"')||
+      !english.includes('id="integracion-desarrolladores"')||
+      !english.includes('<details class="p2lrn-dev-details">')))
+    throw Error('Manually reviewed English quick-start has lost the teacher/developer split');
+  if(rel==='docs/cli/index.html'&&
+    (english.includes('with him')||english.includes('Converts a supported font')))
+    throw Error('Manually reviewed English CLI copy has regressed');
   preservedEnglishPages.set(rel,english);
 }
 console.log('P2LRN_I18N_PHASE=scan-source-html pages='+allSourceHtmlFiles.length+' translated='+htmlFiles.length+' authored='+preservedEnglishPages.size);
