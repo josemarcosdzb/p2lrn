@@ -118,6 +118,8 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
   const progress=el('p',{class:'p2lrn-game-description',role:'status','aria-live':'polite'});
   const placeButton=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Colocar pieza'));
   const resetButton=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Restaurar orientación'));
+  const restartButton=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Reiniciar pieza'));
+  const frameButton=el('button',{type:'button',class:'p2lrn-game-button'},playerUiText('Centrar montaje'));
   const allPlaced=()=>Object.keys(placements).length===config.pieces.length;
   const activeId=()=>selected??pieceSelect.value;
   function setText(value){status.textContent=playerUiText(value);}
@@ -133,6 +135,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
     const locked=runtime.state.completed||allPlaced();
     placeButton.disabled=locked||Boolean(placements[activeId()]);
     resetButton.disabled=locked||Boolean(placements[activeId()]);
+    restartButton.disabled=locked||Boolean(placements[activeId()]);
     rotateButtons.querySelectorAll('button').forEach(b=>{b.disabled=locked||Boolean(placements[activeId()]);});
     if(allPlaced())setText('Montaje completado. Puedes finalizar la actividad.');
   }
@@ -196,21 +199,34 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
   placeButton.addEventListener('click',()=>{const id=activeId();if(id)place(id,targetSelect.value);});
   resetButton.addEventListener('click',()=>{
     const id=activeId(),piece=pieceById.get(id);if(!piece||placements[id])return;
-    transforms.set(id,fromJson(startPositions[id]));
-    scene.setTransform(boxId(id),transforms.get(id));
+    const current=transforms.get(id);
+    // Reset orientation only. Moving a piece must never be undone by this action.
+    const next={...current,rotation:[...startPositions[id].rotation]};
+    transforms.set(id,next);scene.setTransform(boxId(id),next);
     setText('Orientación restaurada.');
   });
-  controls.append(pieceSelect,targetSelect,placeButton,resetButton);
+  restartButton.addEventListener('click',()=>{
+    const id=activeId();if(!pieceById.has(id)||placements[id])return;
+    transforms.set(id,fromJson(startPositions[id]));
+    scene.setTransform(boxId(id),transforms.get(id));
+    setText('Pieza reiniciada.');
+  });
+  const assemblyObjects=[
+    ...config.targets.map(t=>zoneId(t.id)),
+    ...config.pieces.map(p=>boxId(p.id)),
+    ...(config.referenceAssetId?['assembly-reference']:[]),
+  ];
+  frameButton.addEventListener('click',()=>{
+    scene.frameObjects?.(assemblyObjects,{padding:1.28});
+    setText('Vista del montaje centrada.');
+  });
+  controls.append(pieceSelect,targetSelect,placeButton,resetButton,restartButton,frameButton);
   panel.append(instruction,controls,rotateInfo,rotateButtons,progress,rows);
   for(const [id,target] of Object.entries(placements)){
     const t=targetById.get(target);
     if(t)scene.setTransform(boxId(id),assemblyPlacementTransform(config,id)??t.transform);
   }
-  scene.frameObjects?.([
-    ...config.targets.map(t=>zoneId(t.id)),
-    ...config.pieces.map(p=>boxId(p.id)),
-    ...(config.referenceAssetId?['assembly-reference']:[]),
-  ],{padding:1.28});
+  scene.frameObjects?.(assemblyObjects,{padding:1.28});
   if(sceneLoadWarning)panel.prepend(el('p',{class:'p2lrn-game-description',role:'alert'},sceneLoadWarning));
   update();
   return {
@@ -222,7 +238,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
       if(phase==='start'){
         if(!choosePiece(id))return false;
         const from=transforms.get(id);
-        dragging={id,original:fromJson(from),
+        dragging={id,original:fromJson(from),lastPosition:[...from.position],
           offset:position?from.position.map((n,i)=>n-position[i]):[0,0,0]};
         return true;
       }
@@ -230,17 +246,26 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
       if(phase==='move'){
         if(position){
           const moving=position.map((n,i)=>n+dragging.offset[i]);
-          if(moving.every(Number.isFinite))scene.setTranslation(boxId(id),moving);
+          if(moving.every(Number.isFinite)){
+            dragging.lastPosition=moving;
+            scene.setTranslation(boxId(id),moving);
+          }
         }
         return true;
       }
       if(phase==='end'){
-        // Releasing over a cage expresses an actual spatial drop. Its
-        // authored pose is used for the final snap only after matching
-        // piece, prerequisite, scale and rotation have been checked.
-        const completed=target?.kind==='assembly-target'&&place(id,target.id);
-        if(!completed){transforms.set(id,dragging.original);restore(id);
-          scene.highlight(boxId(id),false);selected=null;}
+        // The piece stays where it was released. Only a valid physical
+        // placement into a target can snap it; a missed drop is NOT a reset.
+        const release=position?position.map((n,i)=>n+dragging.offset[i]):dragging.lastPosition;
+        const finalPosition=release.every(Number.isFinite)?release:dragging.lastPosition;
+        const current={...dragging.original,position:[...finalPosition]};
+        transforms.set(id,current);
+        scene.setTransform(boxId(id),current);
+        const overTarget=target?.kind==='assembly-target';
+        const completed=overTarget&&place(id,target.id,{draggedPosition:finalPosition});
+        if(!completed&&!overTarget)setText('Pieza desplazada. Sigue acercándola a su destino.');
+        // Preserve selection and progress after a failed placement so the
+        // player can rotate and move the same piece again.
         dragging=null;
         return true;
       }
