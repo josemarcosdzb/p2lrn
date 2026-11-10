@@ -17,6 +17,36 @@ const star=(points,inner=.43,rotation=-90)=>{
   }
   return 'polygon('+items.join(',')+')';
 };
+// A cubic Bezier connector becomes inert, portable CSS geometry at authoring time.
+// The Player only reads the resulting clip-path; it does not execute editor code.
+export function bezierArrowClip(leftHeight=18,rightHeight=18){
+  if(![leftHeight,rightHeight].every(value=>Number.isFinite(value)&&value>=0&&value<=100))
+    throw new RangeError('Bezier control heights must be between 0 and 100.');
+  const p=[{x:8,y:78},{x:28,y:leftHeight},{x:72,y:rightHeight},{x:92,y:78}];
+  const at=t=>{
+    const u=1-t;
+    return {x:u*u*u*p[0].x+3*u*u*t*p[1].x+3*u*t*t*p[2].x+t*t*t*p[3].x,
+      y:u*u*u*p[0].y+3*u*u*t*p[1].y+3*u*t*t*p[2].y+t*t*t*p[3].y};
+  };
+  const normal=t=>{
+    const u=1-t,dx=3*u*u*(p[1].x-p[0].x)+6*u*t*(p[2].x-p[1].x)+3*t*t*(p[3].x-p[2].x);
+    const dy=3*u*u*(p[1].y-p[0].y)+6*u*t*(p[2].y-p[1].y)+3*t*t*(p[3].y-p[2].y);
+    const length=Math.hypot(dx,dy)||1;
+    return {x:-dy/length,y:dx/length};
+  };
+  const left=[],right=[],count=24,end=.86;
+  for(let i=0;i<=count;i++){
+    const t=end*i/count,q=at(t),n=normal(t);
+    left.push({x:q.x+n.x*2.8,y:q.y+n.y*2.8});
+    right.push({x:q.x-n.x*2.8,y:q.y-n.y*2.8});
+  }
+  const base=at(end),direction=normal(end),tip=at(1);
+  const outline=[...left,{x:base.x+direction.x*9,y:base.y+direction.y*9},
+    tip,{x:base.x-direction.x*9,y:base.y-direction.y*9},...right.reverse()];
+  return 'polygon('+outline.map(point=>
+    Math.max(0,Math.min(100,point.x)).toFixed(2)+'% '+
+    Math.max(0,Math.min(100,point.y)).toFixed(2)+'%').join(',')+')';
+}
 export const STUDIO_SHAPES=Object.freeze([
   {id:'line',label:'Línea',kind:'stroke'},
   {id:'curve',label:'Arco',kind:'curve'},
@@ -38,6 +68,7 @@ export const STUDIO_SHAPES=Object.freeze([
   {id:'arrow-up',label:'Flecha arriba',clip:'polygon(50% 0,100% 40%,73% 40%,73% 100%,27% 100%,27% 40%,0 40%)'},
   {id:'arrow-down',label:'Flecha abajo',clip:'polygon(27% 0,73% 0,73% 60%,100% 60%,50% 100%,0 60%,27% 60%)'},
   {id:'curved-arrow',label:'Flecha curva',kind:'curved-arrow'},
+  {id:'bezier-arrow',label:'Flecha Bézier',kind:'bezier-arrow'},
   {id:'star-4',label:'Estrella de cuatro puntas',clip:star(4,.35)},
   {id:'star-5',label:'Estrella de cinco puntas',clip:star(5,.47)},
   {id:'star-6',label:'Estrella de seis puntas',clip:star(6,.56)},
@@ -88,6 +119,10 @@ export function styleStudioShapeArt(art,id){
       backgroundColor:'#2563eb',clipPath:'polygon(50% 0,100% 60%,67% 60%,67% 100%,33% 100%,33% 60%,0 60%)',
       display:'block',
     });
+  }else if(shape.kind==='bezier-arrow'){
+    art.style.clipPath=bezierArrowClip();
+    art.style.minHeight='56px';
+    art.style.flex='1 1 auto';
   }else if(shape.kind==='curve'||shape.kind==='wave'){
     art.style.backgroundColor='transparent';
     art.style.borderBottom='8px solid #2563eb';
