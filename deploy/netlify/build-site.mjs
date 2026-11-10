@@ -504,22 +504,45 @@ for(const page of functionalPages){
 // p2lrn.js replaces this with the full localised sidebar when it loads, but
 // loss of JS, a blocked bundle or a slow connection must never leave the
 // documentation without any navigation or indexable internal links.
-const fallbackDocSections=[
+// Keep navigation readable and role-appropriate even if site JavaScript is disabled.
+// This fallback uses the same teacher/developer division as p2lrn.js.
+const teacherDocSections=[
   ['/docs/','Documentación','Documentation'],
-  ['/docs/empezar-facil/','Primeros pasos','Quick start'],
-  ['/docs/desarrolladores/','Desarrolladores','Developers'],
-  ['/docs/instalar/','Instalación','Installation'],
-  ['/docs/studio/','Crear cursos','Authoring with Studio'],
-  ['/docs/player/','Reproducción','Playing packages'],
-  ['/docs/ejemplos/','Ejemplos reales','Real examples'],
-  ['/docs/compatibilidad/','Compatibilidad','Compatibility'],
-  ['/docs/integracion/','Integración','Integration'],
-  ['/docs/analytics/','Seguimiento','Analytics'],
-  ['/docs/referencia/','Referencia técnica','Technical reference']
+  ['/docs/empezar-facil/','Primer curso con Studio','First course in Studio'],
+  ['/docs/studio/','Guía de Studio','Studio guide'],
+  ['/docs/questionnaires/','Cuestionarios y juegos','Quizzes and games'],
+  ['/docs/colaboracion/','Colaboración en Studio','Collaboration in Studio'],
+  ['/docs/entrega-offline/','Entrega offline','Offline delivery'],
+  ['/docs/ejemplos/','Cursos de ejemplo','Example courses'],
+  ['/docs/desarrolladores/','Para desarrolladores','For developers'],
 ];
-const staticDocSidebar=(english)=>{
-  const heading=english?'Documentation guides':'Guías de documentación';
-  const links=fallbackDocSections.map(([path,es,en])=>
+const developerDocSections=[
+  ['/docs/desarrolladores/','Desarrolladores','Developers'],
+  ['/docs/desarrolladores/primeros-pasos/','HTML y CDN','HTML and CDN'],
+  ['/docs/instalar/','Instalación','Installation'],
+  ['/docs/integracion/','Identidad y Host','Identity and Host'],
+  ['/docs/player/','Player para aplicaciones','Player integration'],
+  ['/docs/conectores/lti/','LTI 1.3 y LMS','LTI 1.3 and LMS'],
+  ['/docs/analytics/','Analytics y seguridad','Analytics and security'],
+  ['/docs/progresion/','Reglas de progresión','Progression rules'],
+  ['/docs/metricas/','Datos y métricas','Data and metrics'],
+  ['/docs/referencia/','Referencia de API','API reference'],
+  ['/docs/','Guías para profesores','Teacher guides'],
+];
+const teacherDocPaths=new Set([
+  '/docs/','/docs/empezar/','/docs/empezar-facil/',
+  '/docs/studio/','/docs/entrega-offline/','/docs/ejemplos/',
+  '/docs/colaboracion/','/docs/juegos-3d/',
+]);
+const staticDocSidebar=(english,relativePath)=>{
+  const route='/'+relativePath.replace(/(?:^|\\/)index\\.html$/,'');
+  const normalized=route.endsWith('/')?route:route+'/';
+  const spanish=english?spanishRouteFor(normalized):normalized;
+  const teacher=teacherDocPaths.has(spanish)||spanish.startsWith('/docs/questionnaires/');
+  const sections=teacher?teacherDocSections:developerDocSections;
+  const heading=teacher?(english?'Teacher guides':'Guías para profesores')
+    :(english?'Developer guides':'Guías para desarrolladores');
+  const links=sections.map(([path,es,en])=>
     '<a href="'+(english?englishRouteFor(path):path)+'">'+(english?en:es)+'</a>').join('');
   return '<aside class="doc-sidebar" aria-label="'+(english?'Documentation navigation':'Navegación de documentación')+'">'+
     '<span>'+heading+'</span><nav class="doc-fallback-nav" aria-label="'+heading+'">'+links+'</nav></aside>';
@@ -537,7 +560,8 @@ for (const htmlPath of docsHtmlFilesForSidebar) {
     continue;
   }
   const english=relative(outputRoot,htmlPath).replaceAll('\\','/').startsWith('en/');
-  html = html.replace(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/i,staticDocSidebar(english));
+  const rel=relative(outputRoot,htmlPath).replaceAll('\\','/');
+  html = html.replace(/<aside\s+class=["']doc-sidebar["'][^>]*>[\s\S]*?<\/aside>/i,staticDocSidebar(english,rel));
   await writeFile(htmlPath,html);
 }
 for (const htmlPath of docsHtmlFilesForSidebar) {
@@ -547,7 +571,8 @@ for (const htmlPath of docsHtmlFilesForSidebar) {
   if (!sidebar) {
     sidebarProblems.push(rel + ': sidebar missing after normalization');
   } else if (!sidebar[1].includes('class="doc-fallback-nav"') ||
-      (sidebar[1].match(/<a\s+href=/g)||[]).length!==fallbackDocSections.length) {
+      (sidebar[1].match(/<a\s+href=/g)||[]).length!==
+        (staticDocSidebar(rel.startsWith('en/'),rel).match(/<a\s+href=/g)||[]).length) {
     sidebarProblems.push(rel + ': static navigation fallback missing or incomplete');
   }
   const expectedScript=rel.startsWith('en/')?'/en/p2lrn.js':'/p2lrn.js';

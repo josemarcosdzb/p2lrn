@@ -386,8 +386,27 @@ for(const [file,locale] of [
      (index.match(/\/examples\/canonical\/external\/free\/[a-z0-9-]+\.p2lrn/gu)||[]).length<19)
     errors.push('Examples static fallback lacks 19 crawlable package links: '+locale);
   const sidebar=/<nav class="doc-fallback-nav"[^>]*>([\s\S]*?)<\/nav>/u.exec(html)?.[1]??'';
-  if((sidebar.match(/<a\b/gu)||[]).length!==11)
-    errors.push('Documentation must expose fallback navigation without JS: '+locale);
+  const links=[...sidebar.matchAll(/<a\\b[^>]*href="([^"]+)"/gu)].map(x=>x[1]);
+  const developer=locale==='en'?'/en/docs/developers/':'/docs/desarrolladores/';
+  const quickstart=locale==='en'?'/en/docs/quickstart/':'/docs/empezar-facil/';
+  const npm=locale==='en'?'/en/docs/installation/':'/docs/instalar/';
+  if(links.length!==8||!links.includes(quickstart)||!links.includes(developer)||links.includes(npm))
+    errors.push('Teacher docs fallback must expose authoring, not installation menus: '+locale);
+}
+
+for(const [file,locale] of [
+  ['docs/desarrolladores/colaboracion/index.html','es'],
+  ['en/docs/developers/collaboration/index.html','en']
+]){
+  const html=await readFile(join(out,...file.split('/')),'utf8').catch(()=>null);
+  if(!html){errors.push('Developer documentation fallback missing: '+file);continue;}
+  const sidebar=/<nav class="doc-fallback-nav"[^>]*>([\\s\\S]*?)<\\/nav>/u.exec(html)?.[1]??'';
+  const links=[...sidebar.matchAll(/<a\\b[^>]*href="([^"]+)"/gu)].map(x=>x[1]);
+  const developer=locale==='en'?'/en/docs/developers/':'/docs/desarrolladores/';
+  const technical=locale==='en'?'/en/docs/developers/quickstart/':'/docs/desarrolladores/primeros-pasos/';
+  const teacher=locale==='en'?'/en/docs/quickstart/':'/docs/empezar-facil/';
+  if(links.length!==11||!links.includes(developer)||!links.includes(technical)||links.includes(teacher))
+    errors.push('Developer docs fallback must show technical guides separately: '+file);
 }
 
 
