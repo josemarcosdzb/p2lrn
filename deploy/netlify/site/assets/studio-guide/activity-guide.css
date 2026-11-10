@@ -76,3 +76,11 @@
 .p2lrn-author-figure h4,.p2lrn-example-shot h4{font-size:1.05rem;color:var(--ink);margin:0 0 .7rem}
 .p2lrn-activity-disclosure-content .p2lrn-author-figure{margin-top:1.15rem}
 .p2lrn-activity-disclosure-content .p2lrn-example-shot{margin-top:1.35rem}
+
+/* Filled-blank authoring example uses the documentation's existing neutral palette. */
+.p2lrn-blank-example{margin:1.25rem 0;padding:.6rem 0;border-block:1px solid var(--line)}
+.p2lrn-blank-example h4{color:var(--ink);margin:.25rem 0 1rem}
+.p2lrn-blank-example p{margin:.5rem 0;color:var(--muted);line-height:1.6}
+.p2lrn-blank-example strong{color:var(--ink)}
+.p2lrn-example-section details.p2lrn-activity-disclosure>summary{min-height:48px}
+.p2lrn-example-section details.p2lrn-activity-disclosure .p2lrn-author-figure{margin:.75rem 0}
