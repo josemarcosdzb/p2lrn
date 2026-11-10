@@ -477,6 +477,18 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       el.style.fontSize=scale.toFixed(2)+'cqw';
       change();return el;
     }
+    if(action==='textColor'){
+      if(el.dataset.p2lrnLayout!=='text-box')
+        throw new Error('Selecciona un cuadro de texto.');
+      const hex=String(value||'').trim();
+      if(!/^#[0-9A-Fa-f]{6}$/.test(hex))
+        throw new RangeError('Usa un color hexadecimal de seis dígitos.');
+      el.style.color=hex;
+      el.dataset.p2lrnTextColor=hex;
+      const paragraph=el.querySelector(':scope > p');
+      if(paragraph)paragraph.style.color=hex;
+      change();return el;
+    }
     if(action==='textCenter'||action==='textLeft'){
       if(el.dataset.p2lrnLayout!=='text-box')
         throw new Error('Selecciona un cuadro de texto.');
