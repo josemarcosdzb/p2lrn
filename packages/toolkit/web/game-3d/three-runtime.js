@@ -907,8 +907,16 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(!drag||drag.pointerId!==event.pointerId)return;
     if(drag.mode==='object'){
       if(drag.moved){
+        const destinationKinds={
+          'ordering-object':'ordering-slot',
+          'classification-object':'classification-category',
+          'matching-left':'matching-right',
+          'assembly-piece':'assembly-target',
+        };
+        // A dragged box can overlap its destination or another box. On drop,
+        // raycast only the expected target type, never the obstructing object.
         const hit=raycastInteraction(event,{dispatch:false,exclude:drag.source,
-          targetKind:drag.source.kind==='assembly-piece'?'assembly-target':null});
+          targetKind:destinationKinds[drag.source.kind]??null});
         onDrag(drag.source,'end',{position:pointerWorldPosition(event),target:hit?.meta??null,event});
       }else{
         onDrag(drag.source,'cancel',{event});
