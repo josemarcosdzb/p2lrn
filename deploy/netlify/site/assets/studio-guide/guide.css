@@ -172,3 +172,9 @@ body.studio-doc-page .studio-guide-practice-next a{color:#234c76}
 body.studio-doc-page .studio-guide-step .studio-guide-inline-link{font-weight:750;text-underline-offset:3px}
 @media(max-width:940px){body.studio-doc-page .studio-guide-jump{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){body.studio-doc-page .studio-guide-option-list,body.studio-doc-page .studio-guide-practice>ol{grid-template-columns:1fr}body.studio-doc-page .studio-guide-jump{grid-template-columns:1fr}body.studio-doc-page .studio-guide-option{padding:.8rem}body.studio-doc-page .studio-guide-canvas-video video{border-radius:8px}}
+
+/* Contrast QA: previous end-of-practice paragraph selector had higher specificity. */
+body.studio-doc-page .studio-guide-practice>p.studio-guide-practice-next{color:#303942;background:#f5f5f3}
+body.studio-doc-page .studio-guide-practice>p.studio-guide-practice-next strong{color:#20262d}
+body.studio-doc-page .studio-guide-practice>p.studio-guide-practice-next a{color:#234c76;text-decoration:underline;text-underline-offset:3px}
+body.studio-doc-page .studio-guide-practice>p.studio-guide-practice-next a:focus-visible{outline:2px solid #31577d;outline-offset:3px}
