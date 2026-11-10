@@ -8,6 +8,7 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 const repo=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const site=join(repo,'deploy','netlify','site');
 const toolkit=join(repo,'packages','toolkit','web');
+const analyticsSrc=join(repo,'packages','analytics','src');
 const playwrightFile=join(repo,'.p2lrn-i18n-ci','node_modules','playwright-core','index.mjs');
 const {chromium}=await import(pathToFileURL(playwrightFile).href);
 const contentTypes={'.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png'};
@@ -42,6 +43,7 @@ async function fileFor(urlPath){
   if(Object.hasOwn(addons,clean))return existsSync(addons[clean])?addons[clean]:null;
   const routes=[
     ['/toolkit-web/',toolkit],
+    ['/analytics-src/',analyticsSrc],
     ['/studio/runtime/',join(toolkit,'studio')],
     ['/studio/',join(toolkit,'')], // fallback only, source site takes precedence
   ];
@@ -338,6 +340,71 @@ async function studioChrome(language){
   }
 }
 
+
+async function analyticsChrome(language){
+  const folder=join(repo,'.p2lrn-i18n-ci','evidence');
+  await mkdir(folder,{recursive:true});
+  const suffix=language==='en'?'en':'es';
+  const response=await page.goto(base+(suffix==='en'?'/en/analytics/':'/analytics/'),{waitUntil:'domcontentloaded'});
+  assert.equal(response?.status(),200,'Analytics site must load');
+  await page.evaluate(async lang=>{
+    await import('/analytics-src/p2lrn-analytics.js');
+    const panel=document.createElement('p2lrn-analytics');
+    panel.setAttribute('locale',lang==='en'?'en-US':'es-ES');
+    document.body.replaceChildren(panel);
+    const past=new Date(Date.now()-35*86_400_000).toISOString();
+    const recent=new Date().toISOString();
+    panel.data={
+      learners:[{id:'ana',name:'Ana Example',email:'ana@school.example'},{id:'leo',name:'Leo Example',email:'leo@school.example'}],
+      courses:[{id:'course-1',title:'Learning course'},{id:'course-2',title:'Second course'}],
+      enrollments:[{learnerId:'ana',courseId:'course-1',progress:.2},{learnerId:'leo',courseId:'course-1',progress:1,completedAt:recent}],
+      attempts:[
+        {id:'ana-1',learnerId:'ana',courseId:'course-1',status:'failed',progress:.2,startedAt:past,activeTimeMs:10000},
+        {id:'ana-2',learnerId:'ana',courseId:'course-1',status:'failed',progress:.2,startedAt:past,activeTimeMs:8000},
+        {id:'leo-1',learnerId:'leo',courseId:'course-1',status:'completed',progress:1,startedAt:recent,completedAt:recent}
+      ],
+      grades:[
+        {id:'grade-a',learnerId:'ana',courseId:'course-1',value:4,maxValue:10,authoritative:true,updatedAt:past},
+        {id:'grade-l',learnerId:'leo',courseId:'course-1',value:9,maxValue:10,authoritative:true,updatedAt:recent},
+        {id:'grade-offline',learnerId:'ana',courseId:'course-2',value:10,maxValue:10,authoritative:false,updatedAt:recent}
+      ],
+      events:[{id:'event-a',type:'p2lrn:interaction',learnerId:'ana',courseId:'course-1',timestamp:past}]
+    };
+    panel.view='learners';
+    window.analyticsQA=panel;
+  },suffix);
+  const panel=page.locator('p2lrn-analytics');
+  const query=panel.locator('[data-query]');
+  await query.pressSequentially('Ana',{delay:40});
+  assert.equal(await query.inputValue(),'Ana','Full multi-character search must retain its value');
+  assert.equal(await query.evaluate(el=>el.getRootNode().activeElement===el),true,'Search must retain keyboard focus');
+  assert.equal(await panel.locator('.main tbody tr').count(),1,'Filtered list must show only Ana');
+  const learnersCsv=await page.evaluate(()=>window.analyticsQA.exportCsv('learners'));
+  assert.match(learnersCsv,/Ana Example/);
+  assert.doesNotMatch(learnersCsv,/Leo Example|leo@school/,'Filtered CSV cannot include hidden learners');
+  await page.screenshot({path:join(folder,'analytics-'+suffix+'-filtered-learners.png'),fullPage:false});
+  await panel.locator('[data-view="grades"]').click();
+  assert.equal(await panel.locator('.main table tbody tr').count(),1,'Gradebook must follow active learner filter and course');
+  const gradesCsv=await page.evaluate(()=>window.analyticsQA.exportCsv('grades'));
+  assert.match(gradesCsv,/grade-a/);
+  assert.doesNotMatch(gradesCsv,/grade-l|Leo Example/);
+  await page.screenshot({path:join(folder,'analytics-'+suffix+'-filtered-grades.png'),fullPage:false});
+  await query.fill('');
+  await panel.locator('[data-risk-filter]').selectOption('high');
+  await panel.locator('[data-view="learners"]').click();
+  assert.equal(await panel.locator('.main tbody tr').count(),1,'Risk filter must select the high-risk learner only');
+  assert.match(await panel.locator('.main tbody').innerText(),/Ana Example/);
+  const riskCsv=await page.evaluate(()=>window.analyticsQA.exportCsv('learners'));
+  assert.doesNotMatch(riskCsv,/Leo Example/,'Risk CSV cannot export excluded learners');
+  await panel.locator('[data-risk-filter]').selectOption('all');
+  await panel.locator('[data-course-filter]').selectOption('course-2');
+  assert.equal(await panel.locator('.main tbody tr').count(),1,'Course filter must exclude unrelated learners');
+  assert.match(await panel.locator('.main tbody').innerText(),/Ana Example/);
+  assert.equal((await page.evaluate(()=>window.analyticsQA.data.grades.find(x=>x.id==='grade-offline')?.authoritative)),false,
+    'Offline grades must stay informational');
+  console.log('BROWSER_ANALYTICS_'+suffix.toUpperCase()+'_FILTERS_CSV_SECURITY=PASS');
+}
+
 try{
   await siteParity();
   await browserNavigation();
@@ -349,6 +416,8 @@ try{
   await additionalGameRenderers('es');
   await studioChrome('es');
   await studioChrome('en');
+  await analyticsChrome('es');
+  await analyticsChrome('en');
   assert.deepEqual(exceptions,[],'Browser uncaught errors: '+exceptions.join('; '));
   console.log('P2LRN_BROWSER_I18N_SUITE=PASS');
 }finally{

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {createP2LRNAnalyticsDatasetHandler} from '../server/dataset-http.mjs';
+import {createHttpAnalyticsDataSource} from '../src/model.js';
 
 const origins=['https://app.example.test'];
 const data={
@@ -103,4 +104,16 @@ test('analytics Host rejects method misuse and response flooding',async t=>{
  assert.equal((await fetch(server.url,{method:'POST',headers:auth})).status,405);
  const output=await fetch(server.url,{headers:auth});
  assert.equal(output.status,413);
+});
+test('real HTTP Analytics datasource enforces Host ACL and tenant/course scope',async t=>{
+  const server=await live();t.after(server.close);
+  const source=createHttpAnalyticsDataSource({
+    url:server.url.replace('&courseId=course-1',''),
+    headers:auth,
+  });
+  const dataset=await source.load({courseId:'course-1'});
+  assert.deepEqual(dataset.learners.map(x=>x.id),['learner-a']);
+  assert.deepEqual(dataset.courses.map(x=>x.id),['course-1']);
+  assert.equal(dataset.grades[0].authoritative,false);
+  await assert.rejects(()=>source.load({courseId:'forbidden course'}),/HTTP 400/);
 });
