@@ -318,6 +318,16 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       applyObjectTransform(el);ensureScrollRoom(el);change();return el;
     }
     if(action==='rotateStep')return act('rotate',angleOf(el)+Number(value||0));
+    if(action==='curve'){
+      if(el.dataset.p2lrnShape!=='curved-arrow')throw new Error('Selecciona una flecha curva.');
+      const bend=Number(value);
+      if(!Number.isFinite(bend)||bend<0||bend>100)throw new RangeError('Curvatura entre 0 y 100.');
+      const art=el.querySelector('[data-p2lrn-shape-art]');
+      if(!art)throw new Error('La flecha curva no tiene contorno.');
+      art.style.borderRadius='0 0 '+Math.round(bend)+'% 0';
+      el.dataset.p2lrnCurve=String(Math.round(bend));
+      change();return el;
+    }
     if(action==='nudge'){
       const pos=positionOf(el),offset=value||{x:0,y:0};
       const y=safeDividerY(el,pos.y+offset.y);
