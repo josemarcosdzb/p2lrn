@@ -83,7 +83,7 @@ El resultado se convierte en un dataset de Analytics con alumno, curso, intento,
 
 ## Frontera de confianza
 
-El paquete no guarda identidades ni historial del alumno dentro de `.p2lrn`. Analytics recibe archivos de resultados verificados. Un Host también puede entregar un dataset de métricas en una integración avanzada. Una nota sólo se trata como oficial cuando `grades[].authoritative === true`. Los scores de navegador, progreso, actividad e intentos se muestran como evidencia separada.
+El paquete no guarda identidades ni historial del alumno dentro de `.p2lrn`. Analytics recibe archivos de resultados verificados. Un Host también puede entregar un dataset de métricas en una integración avanzada. Una nota sólo puede tratarse como oficial cuando **un Host autenticado y autorizado ha verificado su procedencia** y entrega `grades[].authoritative === true` mediante `panel.dataSource` o un dataset institucional suministrado directamente por el Host. Un JSON estático leído mediante `src` no demuestra esa autorización: Analytics rebaja sus notas a informativas aunque el archivo declare `authoritative: true`. Los scores de navegador, progreso, actividad e intentos se muestran como evidencia separada.
 
 Las señales de seguimiento son reglas transparentes de inactividad, progreso, nota e intentos; no son un modelo predictivo opaco.
 
