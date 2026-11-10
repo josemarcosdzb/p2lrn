@@ -163,6 +163,13 @@ jobs:
         run: |
           node --check scripts/verify-public-npm-cdn.mjs
           node scripts/verify-public-npm-cdn.mjs
+      - name: Compare every public npm browser file with live immutable CDN resources
+        if: always()
+        run: |
+          node --check scripts/verify-public-npm-cdn-all.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-public-npm-cdn-all.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Visually exercise real CDN Studio, Player, H5P and SCORM
         if: always()
         env:
@@ -202,6 +209,7 @@ jobs:
           $items = @(
             @{ source='public-npm-report.json'; destination='public-npm-report.json' },
             @{ source='public-npm-cdn-report.json'; destination='public-npm-cdn-report.json' },
+            @{ source='public-npm-cdn-all-report.json'; destination='public-npm-cdn-all-report.json' },
             @{ source='public-npm-native-visual.json'; destination='public-npm-native-visual.json' },
             @{ source='version-parity.json'; destination='version-parity.json' },
             @{ source='three-way-browser-qa.json'; destination='three-way-browser-qa.json' },
