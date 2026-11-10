@@ -926,7 +926,12 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
         onDrag(drag.source,'cancel',{event});
         raycastInteraction(event);
       }
-    }else if(!drag.moved)raycastInteraction(event);
+    }else if(!drag.moved){
+      const picked=raycastInteraction(event);
+      // Clicking empty ground releases the current object just like releasing
+      // a drag. No scorer or destination is invoked by a blank click.
+      if(!picked&&!authoring)onInteraction({kind:'scene-empty'},{event});
+    }
     cameraDrag=null;
     try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
   }
