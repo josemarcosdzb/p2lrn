@@ -19,6 +19,12 @@ const setStyle=(node,properties)=>{Object.assign(node.style,properties);return n
 const elt=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
 function makeBlock(kind){
   if(kind==='diagram-canvas'){
+    const wrap=elt('section');
+    wrap.dataset.p2lrnLayout='diagram-scroll';
+    wrap.setAttribute('role','region');
+    wrap.setAttribute('aria-label','Diagrama desplazable horizontalmente en pantallas pequeñas');
+    setStyle(wrap,{width:'100%',maxWidth:'100%',overflowX:'auto',overflowY:'hidden',
+      boxSizing:'border-box',margin:'18px 0',padding:'0'});
     const scene=elt('section');
     scene.dataset.p2lrnLayout='diagram-canvas';
     scene.setAttribute('role','group');
@@ -27,7 +33,7 @@ function makeBlock(kind){
       aspectRatio:'16 / 9',boxSizing:'border-box',margin:'18px 0',padding:'0',
       border:'1px solid #cbd5e1',borderRadius:'12px',backgroundColor:'#f8fbff',
       overflow:'hidden',containerType:'inline-size'});
-    return scene;
+    wrap.append(scene);return wrap;
   }
   if(kind==='divider'){
     const hr=elt('hr');
