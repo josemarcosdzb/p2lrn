@@ -232,7 +232,9 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   const s=store.getSession(hash);
   if(!s)throw new Error('SESSION_EXPIRED');
   const reg=store.getRegistrationById(s.registrationId)||store.getLegacyRegistrationById(s.registrationId);
-  if(!reg||reg.status!=='ACTIVE')throw new Error('SESSION_PLATFORM_REVOKED');
+  if(!reg||reg.status!=='ACTIVE'||reg.tenantId!==s.tenantId||
+   (s.deploymentId!=='legacy'&&!reg.deployments?.includes(s.deploymentId)))
+   throw new Error('SESSION_PLATFORM_REVOKED');
   checkLocalCohost(req,reg.launchUrl);
   if(csrf)csrfGuard(req,s,new URL(reg.launchUrl).origin);
   return s;
