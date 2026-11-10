@@ -340,7 +340,7 @@ async function renderEditor(){
   const editable=await studio.readEditableText(entity.id);
   if(!editable){
     const message=document.createElement('div');message.className='studio-readonly';
-    message.textContent='Este contenido se reproduce con el Player pero no se edita internamente en Studio 1. SCORM, H5P, cmi5, QTI, multimedia y paquetes externos permanecen encapsulados.';
+    message.textContent='Puedes utilizar este contenido en el curso y verlo en el visor, pero no modificarlo desde el editor.';
     content.append(message);
     const inline=document.createElement('p2lrn-player');inline.className='studio-inline-player';inline.setAttribute('src',studio.sourceUrl);inline.setAttribute('node',entity.id);inline.setAttribute('navigation','external');content.append(inline);
     return;
@@ -525,7 +525,7 @@ async function materializeSelectedSharedResource(activityId=selectedId){
   if(!entry?.bytes)throw new Error('El recurso no está disponible localmente para materializarlo.');
   const filename=entry.href?.split('/').filter(Boolean).at(-1)||'resource.bin';
   const representation=studio.materializeSharedResource(activityId,{bytes:new Uint8Array(entry.bytes),filename,mediaType:entry.mediaType});
-  await renderEditor();updateChanges();setStatus('Fallback embebido materializado');return representation;
+  await renderEditor();updateChanges();setStatus('El recurso ya está disponible dentro del curso');return representation;
 }
 globalThis.P2LRNStudioMaterializeSharedResource=materializeSelectedSharedResource;
 
