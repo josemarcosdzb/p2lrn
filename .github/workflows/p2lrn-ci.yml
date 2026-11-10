@@ -958,3 +958,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/verify-skill-downloads.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve five checked Skill ZIPs before any deployment
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p2lrn-skills-predeploy-five-providers
+          path: |
+            .netlify-cdn/downloads/skills/*.zip
+            .netlify-cdn/downloads/skills/manifest.json
+          if-no-files-found: error
+          retention-days: 7
