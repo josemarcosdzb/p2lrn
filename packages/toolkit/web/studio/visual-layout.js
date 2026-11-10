@@ -196,6 +196,19 @@ export function insertStudioNestedElement(surface,element,{anchorNode=null,targe
   return parent;
 }
 function insertAtSelection(surface,block,{anchorNode=null,targetElement=null}={}){
+  // A new scene is always a lesson-level surface. Nesting it inside the
+  // previously selected table/shape makes the entire diagram only 240px wide.
+  if(block?.dataset?.p2lrnLayout==='diagram-scroll'){
+    const contentRoot=surface.querySelector(':scope > [data-p2lrn-lesson-canvas]')||surface;
+    const selected=normalizeElement(targetElement||anchorNode);
+    let direct=selected&&contentRoot.contains(selected)?selected:null;
+    while(direct&&direct.parentElement!==contentRoot)direct=direct.parentElement;
+    if(direct?.parentElement===contentRoot)direct.after(block);
+    else contentRoot.append(block);
+    ensureStudioEndCaret(surface);
+    surface.dispatchEvent(new Event('input',{bubbles:true}));
+    return block;
+  }
   if(insertStudioNestedElement(surface,block,{anchorNode,targetElement}))return block;
   const domRoot=surface.getRootNode();
   const selection=typeof domRoot.getSelection==='function'?domRoot.getSelection():surface.ownerDocument.getSelection();
