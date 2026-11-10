@@ -4,6 +4,20 @@
 
 Embeddable visual authoring surface for P2LRN.
 
+## Composición visual en las lecciones
+
+En una lección editable, abre **Insertar** para añadir cuadros de texto, formas y composiciones de dos o tres columnas. Los objetos se pueden mover, redimensionar y recolorear desde el editor. Selecciona una forma o un cuadro de texto y usa **Girar** en el menú de edición para ajustar su orientación sin perder la posición.
+
+Para crear diagramas:
+- **Nube, gota y flechas** son formas editables; no requieren imágenes.
+- **Forma libre** muestra puntos que puedes arrastrar. También puedes mover cada punto con las flechas del teclado (Mayús acelera el desplazamiento). Si has girado la forma, devuelve el giro a 0° antes de editar esos puntos.
+- **Flecha curva ajustable** permite modificar por separado los dos tramos de la curva desde **Editar curva**.
+- Para seleccionar varios bloques del mismo contenedor, mantén **Mayús** al pulsar sobre ellos. El menú **Objeto** permite alinearlos, distribuirlos, agrupar objetos contiguos y desagruparlos.
+- El menú **Objeto** también permite adelantar o atrasar bloques dentro de su contenedor. Esto cambia el orden de los elementos, no crea un lienzo de capas independiente.
+- **Tres columnas** adapta los paneles al ancho disponible. Evita colocar textos importantes fuera del flujo de lectura cuando el curso se usará en pantallas pequeñas.
+
+Las figuras y sus ajustes se guardan como HTML y CSS permitidos dentro de la lección; no introducen scripts ni SVG incrustado. Las posiciones movidas manualmente usan coordenadas en píxeles: para diseños destinados a móvil, comprueba la vista del alumno en un ancho reducido antes de publicar. Estas herramientas no convierten automáticamente cualquier composición fija en un diagrama responsive.
+
 ## Browser integration: NPM
 
 Install Studio and its Player peer dependency:
