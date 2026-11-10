@@ -67,8 +67,14 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
   const typography=actionMenu(doc,'Texto del diagrama',[],'texto-diagrama');
   const textScale=numberField(doc,'Tamaño de texto proporcional al lienzo (cqw)',1.7,0.8,9.5);
   textScale.step='0.1';
+  const diagramTextColor=element(doc,'input');
+  diagramTextColor.type='text';diagramTextColor.value='#092b4a';
+  diagramTextColor.setAttribute('aria-label','Color hexadecimal del texto de diagrama');
+  diagramTextColor.maxLength=7;
   typography.popup.append(element(doc,'span','p2lrn-ribbon-caption','Texto proporcional (cqw)'),
     textScale,button(doc,'Aplicar tamaño proporcional','fontScale'),
+    element(doc,'span','p2lrn-ribbon-caption','Color hexadecimal'),diagramTextColor,
+    button(doc,'Aplicar color del texto','textColor'),
     button(doc,'Centrar texto','textCenter'),
     button(doc,'Alinear texto a la izquierda','textLeft'));
   objectGroup.append(typography.details);
@@ -211,6 +217,7 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     typography.details.hidden=node?.dataset?.p2lrnLayout!=='text-box'||
       !['diagram-canvas','diagram-group'].includes(node?.parentElement?.dataset?.p2lrnLayout);
     textScale.value=String(Number(node?.style?.fontSize?.match(/([\d.]+)cqw/)?.[1]??1.7));
+    diagramTextColor.value=node?.dataset?.p2lrnTextColor||'#092b4a';
     rotationInput.value=String(Number(node?.dataset?.p2lrnObjectRotation)||0);
     curve.details.hidden=node?.dataset?.p2lrnShape!=='curved-arrow';
     curveInput.value=String(Number(node?.dataset?.p2lrnCurve??75));
@@ -275,7 +282,8 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     if(!target||!bar.contains(target))return;
     refresh();if(!objectTools)return;
     const action=target.dataset.studioAdvancedAction;
-    const value=action==='fontScale'?Number(textScale.value):
+    const value=action==='textColor'?diagramTextColor.value:
+      action==='fontScale'?Number(textScale.value):
       action==='width'?Number(widthInput.value):
       action==='height'?Number(heightInput.value):
       action==='rotate'?Number(rotationInput.value):
