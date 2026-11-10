@@ -4,6 +4,7 @@ import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
+import {generateKeyPairSync} from 'node:crypto';
 import {createLtiStore} from './lti-store.mjs';
 import {issueP2LRNBindingId} from './launch-contract.mjs';
 const root='sha256:'+'a'.repeat(64);
@@ -172,5 +173,29 @@ test('browser reports do not revoke or overwrite an approved grade',()=>{
     .get(attempt.attemptId);
    assert.deepEqual([r.approved,r.normalized,r.completed],[1,0.7,1]);
   }finally{inspector.close()}
+ }finally{f.clean()}
+});
+
+test('platform JWKS rotation preserves tenant, deployments and previously stored attempts',()=>{
+ const f=fixture();
+ try{
+  const current=f.store.getRegistrationById('lms1');
+  const jwksUrl=current.issuer+'/jwks.json';
+  f.store.upsertPlatform({...current,jwksUrl});
+  const rsa=generateKeyPairSync('rsa',{modulusLength:2048});
+  const jwks={keys:[{...rsa.publicKey.export({format:'jwk'}),kid:'rotated',alg:'RS256',use:'sig'}]};
+  assert.throws(()=>f.store.replacePlatformJwks({
+   registrationId:'lms1',jwksUrl:'https://attacker.example/jwks',jwks
+  }),/REVOKED/);
+  const refreshed=f.store.replacePlatformJwks({registrationId:'lms1',jwksUrl,jwks});
+  assert.equal(refreshed.jwks.keys[0].kid,'rotated');
+  assert.deepEqual(refreshed.deployments,['deploy1']);
+  assert.equal(refreshed.tenantId,'school1');
+  assert.throws(()=>f.store.replacePlatformJwks({
+   registrationId:'lms1',jwksUrl,jwks:{keys:[jwks.keys[0],jwks.keys[0]]}
+  }),/INVALID_REMOTE_JWKS/);
+  f.store.close();f.store=createLtiStore(f.path);
+  assert.equal(f.store.getRegistrationById('lms1').jwks.keys[0].kid,'rotated');
+  assert.equal(f.store.getRegistrationById('lms1').jwksUrl,jwksUrl);
  }finally{f.clean()}
 });
