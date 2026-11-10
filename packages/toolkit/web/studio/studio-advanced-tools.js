@@ -68,6 +68,12 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     button(doc,'Aplicar giro','rotate'),button(doc,'Girar 15° a la izquierda','rotateLeft'),
     button(doc,'Girar 15° a la derecha','rotateRight'));
   objectGroup.append(rotation.details);
+  const curve=actionMenu(doc,'Curvatura',[],'curvatura');
+  const curveInput=numberField(doc,'Curvatura de la flecha en porcentaje',75,0,100);
+  curveInput.step='1';
+  curve.popup.append(element(doc,'span','p2lrn-ribbon-caption','Curvatura %'),curveInput,
+    button(doc,'Aplicar curvatura','curve'));
+  objectGroup.append(curve.details);
   const tableGroup=element(doc,'div','p2lrn-ribbon-group p2lrn-context-table');
   tableGroup.setAttribute('role','group');tableGroup.setAttribute('aria-label','Estructura y estilo de tabla');
   const rows=actionMenu(doc,'Filas',[
@@ -114,6 +120,8 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     const canRotate=Boolean(node?.matches?.('[data-p2lrn-layout="shape"],[data-p2lrn-layout="text-box"],figure'));
     rotation.details.hidden=!canRotate;
     rotationInput.value=String(Number(node?.dataset?.p2lrnObjectRotation)||0);
+    curve.details.hidden=node?.dataset?.p2lrnShape!=='curved-arrow';
+    curveInput.value=String(Number(node?.dataset?.p2lrnCurve??75));
     objectGroup.querySelector('[data-studio-advanced-action=height]').disabled=Boolean(table);
     const width=Math.round(node?.getBoundingClientRect()?.width||420);
     widthInput.value=String(Math.max(120,width));
@@ -175,6 +183,7 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     const value=action==='width'?Number(widthInput.value):
       action==='height'?Number(heightInput.value):
       action==='rotate'?Number(rotationInput.value):
+      action==='curve'?Number(curveInput.value):
       action==='rotateLeft'?-15:
       action==='rotateRight'?15:
       action==='cellFill'?cellFill.value:
