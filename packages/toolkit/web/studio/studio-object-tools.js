@@ -468,6 +468,26 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       const y=safeDividerY(el,pos.y+offset.y);
       setPosition(el,pos.x+offset.x,y);ensureScrollRoom(el);change();return el;
     }
+    if(action==='fontScale'){
+      if(el.dataset.p2lrnLayout!=='text-box'||!isDiagramChild(el))
+        throw new Error('Selecciona un cuadro de texto dentro del lienzo de diagrama.');
+      const scale=Number(value);
+      if(!Number.isFinite(scale)||scale<0.8||scale>9.5)
+        throw new RangeError('Escala de texto válida: 0,8 a 9,5 cqw.');
+      el.style.fontSize=scale.toFixed(2)+'cqw';
+      change();return el;
+    }
+    if(action==='textCenter'||action==='textLeft'){
+      if(el.dataset.p2lrnLayout!=='text-box')
+        throw new Error('Selecciona un cuadro de texto.');
+      const center=action==='textCenter';
+      el.style.textAlign=center?'center':'left';
+      el.style.display='flex';el.style.alignItems='center';
+      el.style.justifyContent=center?'center':'flex-start';
+      const paragraph=el.querySelector(':scope > p');
+      if(paragraph)paragraph.style.textAlign=center?'center':'left';
+      change();return el;
+    }
     if(action==='width'){
       const scene=isDiagramChild(el)?el.parentElement.getBoundingClientRect():null;
       const px=between(positive(value,el.getBoundingClientRect().width),scene?12:120,scene?scene.width:Math.max(120,surface.clientWidth));
