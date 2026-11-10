@@ -458,7 +458,8 @@ for(const rel of handAuthoredEnglishPages){
   if(!english||!/<html\s+lang="en"/i.test(english))
     throw Error('Missing manually reviewed English editorial source: '+rel);
   if(rel==='crear-cursos-interactivos/index.html'&&
-    (!english.includes('/assets/hero/studio.png')||
+    (!english.includes('/assets/studio-guide/guide.css')||
+      !english.includes('/assets/studio-guide/guide.js')||
      !english.includes('/en/offline-courses/')||
      !english.includes('Which question types can I create?')))
     throw Error('The manually reviewed English course creation page is out of date');
