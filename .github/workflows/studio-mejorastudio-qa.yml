@@ -133,6 +133,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/record-studio-complete-activities-demo.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Export reusable real Player and Studio browser runtime for solved-game video
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: p2lrn-studio-runtime-para-video
+          path: |
+            .netlify-cdn/player/current/dist/**
+            .netlify-cdn/studio/**
+            .netlify-cdn/p2lrn-sw.js
+            .visual-evidence/studio-curso-integral/laboratorio-cuestionarios-y-juegos.p2lrn
+          if-no-files-found: warn
+          retention-days: 2
       - name: Upload complete demo course and quality report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
