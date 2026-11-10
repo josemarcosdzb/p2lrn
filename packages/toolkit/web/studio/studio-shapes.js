@@ -24,6 +24,7 @@ export const STUDIO_SHAPES=Object.freeze([
   {id:'ellipse',label:'Óvalo',radius:'50%'},
   {id:'droplet',label:'Gota',clip:'polygon(50% 0,73% 25%,88% 47%,96% 65%,95% 77%,87% 90%,73% 98%,50% 100%,27% 98%,13% 90%,5% 77%,4% 65%,12% 47%,27% 25%)'},
   {id:'cloud',label:'Nube',clip:'polygon(9% 79%,3% 72%,1% 59%,5% 47%,14% 41%,21% 42%,25% 29%,36% 20%,49% 20%,60% 28%,65% 39%,72% 34%,83% 36%,93% 45%,99% 58%,97% 73%,90% 83%,77% 87%,22% 87%)'},
+  {id:'freeform',label:'Forma libre',clip:'polygon(10% 25%,42% 5%,88% 18%,98% 62%,60% 92%,15% 75%)'},
   {id:'square',label:'Cuadrado',clip:'inset(0)'},
   {id:'rectangle',label:'Rectángulo',clip:'inset(0)'},
   {id:'parallelogram',label:'Paralelogramo',clip:'polygon(20% 0,100% 0,80% 100%,0 100%)'},
