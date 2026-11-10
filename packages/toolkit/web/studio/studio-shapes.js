@@ -57,6 +57,8 @@ export const STUDIO_SHAPES=Object.freeze([
   {id:'freeform',label:'Forma libre',clip:'polygon(10% 25%,42% 5%,88% 18%,98% 62%,60% 92%,15% 75%)'},
   {id:'square',label:'Cuadrado',clip:'inset(0)'},
   {id:'rectangle',label:'Rectángulo',clip:'inset(0)'},
+  {id:'rounded-rectangle',label:'Rectángulo redondeado',radius:'24px'},
+  {id:'pill',label:'Etiqueta ovalada',radius:'999px'},
   {id:'parallelogram',label:'Paralelogramo',clip:'polygon(20% 0,100% 0,80% 100%,0 100%)'},
   {id:'triangle',label:'Triángulo',clip:regular(3)},
   {id:'right-triangle',label:'Triángulo rectángulo',clip:'polygon(0 100%,0 0,100% 100%)'},
