@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
-import {readFile,stat,readdir} from 'node:fs/promises';
+import {readFile,stat,readdir,mkdir} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import {dirname,extname,join,resolve,sep} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
@@ -262,6 +262,39 @@ async function additionalGameRenderers(language){
   }
 }
 
+async function studioChrome(language){
+  const evidence=join(repo,'.p2lrn-i18n-ci','evidence');
+  await mkdir(evidence,{recursive:true});
+  const prefix='studio-'+language;
+  try{
+    const response=await page.goto(base+(language==='en'?'/en/studio/':'/studio/'),{waitUntil:'domcontentloaded'});
+    assert.equal(response?.status(),200,'Studio page did not load: '+language);
+    assert.equal(await page.locator('html').getAttribute('lang'),language);
+    await page.waitForFunction(()=>document.documentElement.dataset.p2lrnStudioReady==='true',null,{timeout:20000});
+    const ribbon=page.locator('.p2lrn-studio-ribbon');
+    await ribbon.waitFor({timeout:15000});
+    await page.locator('[data-studio-html-surface="true"]').waitFor({timeout:12000});
+    await ribbon.getByRole('tab',{name:language==='en'?'Insert':'Insertar'}).click();
+    await page.screenshot({path:join(evidence,prefix+'-editor.png'),fullPage:false});
+    await ribbon.getByRole('button',{name:language==='en'?'Add content':'Añadir contenido',exact:true}).click();
+    const dialog=page.locator('dialog.p2lrn-activity-picker');
+    await dialog.waitFor({state:'visible',timeout:10000});
+    const samePage=dialog.locator('input[type="radio"][value="same-page"]');
+    assert.equal(await samePage.isDisabled(),false,'Same-page authoring is unavailable: '+language);
+    await samePage.check();
+    await page.screenshot({path:join(evidence,prefix+'-picker.png'),fullPage:false});
+    await dialog.locator('[data-activity-kind="memory"]').click();
+    await page.waitForFunction(()=>/^(Memory|Memoria)$/.test(document.querySelector('h1.studio-title')?.textContent?.trim()??''),null,{timeout:15000});
+    assert.equal((await page.locator('h1.studio-title').textContent()).trim(),language==='en'?'Memory':'Memoria');
+    assert.equal(await dialog.evaluate(el=>el.open),false,'Activity picker did not close');
+    await page.screenshot({path:join(evidence,prefix+'-activity.png'),fullPage:false});
+    console.log('BROWSER_STUDIO_'+language.toUpperCase()+'_PICKER=PASS');
+  }catch(error){
+    await page.screenshot({path:join(evidence,prefix+'-error.png'),fullPage:false}).catch(()=>{});
+    throw error;
+  }
+}
+
 try{
   await siteParity();
   await browserNavigation();
@@ -271,6 +304,8 @@ try{
   await trueFalseGame('es');
   await additionalGameRenderers('en');
   await additionalGameRenderers('es');
+  await studioChrome('es');
+  await studioChrome('en');
   assert.deepEqual(exceptions,[],'Browser uncaught errors: '+exceptions.join('; '));
   console.log('P2LRN_BROWSER_I18N_SUITE=PASS');
 }finally{

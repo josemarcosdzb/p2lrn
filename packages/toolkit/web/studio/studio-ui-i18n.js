@@ -415,4 +415,4 @@ export function studioNewDefaults(value,doc=globalThis.document){
   );
   return value;
 }
-export const STUDIO_UI_TRANSLATION_COUNT=230;
+export const STUDIO_UI_TRANSLATION_COUNT=Object.keys(EN).length;

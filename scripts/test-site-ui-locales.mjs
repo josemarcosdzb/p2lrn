@@ -54,4 +54,10 @@ test('English runtime has stable absolute Studio imports, no extra private runti
   assert.doesNotMatch(demoJs,/Introduce una URL de paquete|CARGANDO|MOSTRANDO/);
   assert.match(studio,/from ['"]\/studio\/runtime\/studio-ui-i18n\.js['"]/);
   assert.doesNotMatch(studio,/from ['"]\.\/runtime\//);
+  const esStudio=await readFile('deploy/netlify/site/studio/studio.js','utf8');
+  assert.match(esStudio,/mountStudioCommandBar\(/,'Spanish Studio must mount the shared toolbar');
+  assert.match(studio,/mountStudioCommandBar\(/,'English Studio must mount the shared toolbar');
+  assert.match(esStudio,/samePageInsertionParent\(/,'Spanish Studio must support same-page insertion');
+  assert.match(studio,/samePageInsertionParent\(/,'English Studio must support same-page insertion');
+  assert.match(studio,/assembly-3d/,'English Studio must expose 3D assembly');
 });

@@ -54,11 +54,20 @@ jobs:
           npm install --prefix .p2lrn-i18n-ci --no-save --package-lock=false playwright-core@1.64.1 three@0.186.1 @dimforge/rapier3d-compat@0.21.0
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Test ES-EN site, language switch, standard quiz and game in Chrome
+      - name: Test ES-EN site, Player and real Studio controls in Chrome
         shell: powershell
         run: |
           node scripts/browser-smoke-p2lrn-i18n.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Keep actual Chrome screenshots of Studio Spanish and English
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: p2lrn-studio-es-en-real-chrome
+          path: .p2lrn-i18n-ci/evidence
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Clear temporary browser testing dependencies
         if: always()
