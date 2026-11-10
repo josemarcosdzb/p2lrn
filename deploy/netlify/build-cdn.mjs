@@ -195,7 +195,7 @@ for(const item of parityRoots){
     fileCount:files.length,files,
   };
 }
-await writeFile(join(outputRoot,'distribution-parity.json'),JSON.stringify(distributionParity,null,2)+'\\n');
+await writeFile(join(outputRoot,'distribution-parity.json'),JSON.stringify(distributionParity,null,2)+'\n');
 
 const index = {
   schema:'https://p2lrn.org/schema/cdn-index/1',
