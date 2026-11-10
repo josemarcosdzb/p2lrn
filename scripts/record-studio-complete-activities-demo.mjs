@@ -41,7 +41,9 @@ async function wait(expression,label){
 }
 async function show(label,expression,ms=1200){const r=await evaluate(expression);must(r!==false,'No se puede abrir '+label);events.push(label);console.log('REAL_UI_STEP '+label);await delay(ms);return r;}
 function teacher(name){return '(()=>{const b=[...document.querySelectorAll("[data-tree] button")].find(x=>x.textContent.includes('+JSON.stringify(name)+'));if(!b)return false;b.click();return true;})()';}
-function learner(name){return '(()=>{const r=document.querySelector("[data-player]")?.shadowRoot;const b=[...r?.querySelectorAll(".p2lrn-nav button")??[]].find(x=>x.textContent.includes('+JSON.stringify(name)+'));if(!b)return false;b.click();return true;})()';}
+// Studio owns the course outline: the embedded Player deliberately hides
+// its duplicate navigation. Select each learner activity using Studio's tree.
+function learner(name){return teacher(name);}
 async function frameLoop(){
   while(active){
     try{const img=await send('Page.captureScreenshot',{format:'jpeg',quality:64,captureBeyondViewport:false});if(img?.data)await writeFile(join(framesFolder,String(count++).padStart(6,'0')+'.jpg'),Buffer.from(img.data,'base64'));}catch{}
@@ -96,7 +98,7 @@ try{
   await delay(2500);
   const previewDiagnostic=await evaluate('(()=>{const player=document.querySelector("[data-player]");const r=player?.shadowRoot;return {status:document.querySelector("[data-studio-status]")?.textContent,playerElement:player?.tagName,playerSrc:player?.getAttribute("src")?.slice(0,75),playerNode:player?.getAttribute("node"),shadow:!!r,shadowContent:r?.textContent?.slice(0,900),navButtons:r?.querySelectorAll(".p2lrn-nav button").length,previewVisible:!document.querySelector("[data-preview-stage]")?.hidden,stage:document.querySelector("[data-preview-stage]")?.textContent?.slice(0,300)};})()');
   console.log('PLAYER_PREVIEW_DIAGNOSTIC='+JSON.stringify(previewDiagnostic));
-  await wait('Boolean(document.querySelector("[data-player]")?.shadowRoot?.querySelector(".p2lrn-nav button"))','Player integrado');
+  await wait('Boolean(document.querySelector("[data-player]")?.shadowRoot?.querySelector(".p2lrn-stage"))','Player integrado');
 
   for(const name of ['Cuestionario completo',...names]){
     await show('Alumno · '+name,learner(name),1800);
