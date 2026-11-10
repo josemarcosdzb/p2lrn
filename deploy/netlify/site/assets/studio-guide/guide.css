@@ -126,3 +126,49 @@ body.studio-doc-page .studio-guide-feature-notes{padding:1rem}
 body.studio-doc-page .studio-guide-feature-notes ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;list-style:none;padding:0;margin:1.25rem 0}
 body.studio-doc-page .studio-guide-feature-notes li{padding-top:.75rem;border-top:3px solid #2c70b5}
 @media(max-width:760px){body.studio-doc-page .studio-guide-feature-notes ol{grid-template-columns:1fr;gap:.75rem}}
+
+/* Studio documentation 2026-11: neutral visual system, full picker, real canvas video. */
+body.studio-doc-page .studio-guide-documentation{background:#fafaf9;border-color:#e4e4e0;box-shadow:none;color:#22272c}
+body.studio-doc-page .studio-guide-documentation h2,body.studio-doc-page .studio-guide-documentation h3{color:#1c222a}
+body.studio-doc-page .studio-guide-intro,body.studio-doc-page .studio-guide-explain{color:#3f4852}
+body.studio-doc-page .studio-guide-eyebrow,body.studio-doc-page .studio-guide-step-label{color:#5a626c}
+body.studio-doc-page .studio-guide-step{border-color:#e0e2e4;box-shadow:0 7px 22px rgba(24,28,35,.035);background:#fff}
+body.studio-doc-page .studio-guide-step p,body.studio-doc-page .studio-guide-step li{color:#3a414b}
+body.studio-doc-page .studio-guide-outcome{background:#f6f6f4;border-left-color:#92979c;color:#3e4750}
+body.studio-doc-page .studio-guide-step .studio-guide-outcome strong{color:#24292f}
+body.studio-doc-page .studio-guide-warning{background:#f7f7f5;border-left-color:#b7b9b9;color:#535c65}
+body.studio-doc-page .studio-guide-jump{grid-template-columns:repeat(5,minmax(0,1fr))}
+body.studio-doc-page .studio-guide-jump a{color:#303840!important;border-color:#dedfdd;background:#fff}
+body.studio-doc-page .studio-guide-jump a:hover,body.studio-doc-page .studio-guide-jump a:focus-visible{background:#f1f2f0;border-color:#9da3a8}
+body.studio-doc-page .studio-guide-jump span{color:#646b72}
+body.studio-doc-page .studio-guide-step--picker .studio-guide-step-media{grid-row:1}
+body.studio-doc-page .studio-guide-step--picker .studio-guide-step-copy{grid-row:2}
+body.studio-doc-page .studio-guide-picker-figure{max-width:940px;width:100%;margin:0 auto}
+body.studio-doc-page .studio-guide-step--picker .studio-guide-picker-figure img{width:100%;height:auto;max-height:none;max-width:100%;object-fit:contain}
+body.studio-doc-page .studio-guide-option-catalog{display:grid;gap:1.55rem;margin:1.5rem 0 1rem}
+body.studio-doc-page .studio-guide-option-group{min-width:0}
+body.studio-doc-page .studio-guide-option-heading{display:flex;gap:1rem;align-items:baseline;justify-content:space-between;border-bottom:1px solid #dedfdd;padding:0 0 .65rem;margin-bottom:.85rem}
+body.studio-doc-page .studio-guide-option-heading h4{font-size:1.2rem;color:#21262c;margin:0}
+body.studio-doc-page .studio-guide-option-heading span{font-size:.82rem;color:#66707a;white-space:nowrap}
+body.studio-doc-page .studio-guide-option-list{margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}
+body.studio-doc-page .studio-guide-option{min-width:0;padding:.85rem 1rem;background:#fff;border:1px solid #e5e6e5;border-radius:11px}
+body.studio-doc-page .studio-guide-option dt{color:#22292f;font-weight:750;font-size:.98rem;line-height:1.42}
+body.studio-doc-page .studio-guide-option dd{color:#4b5661;line-height:1.55;font-size:.91rem;margin:.3rem 0 0}
+body.studio-doc-page .studio-guide-canvas-video{margin:0 auto;max-width:1152px}
+body.studio-doc-page .studio-guide-canvas-video video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#14181c;border:1px solid #d6d8dc;border-radius:12px}
+body.studio-doc-page .studio-guide-canvas-video figcaption{margin:.7rem 0;color:#5f6973;font-size:.88rem}
+body.studio-doc-page .studio-guide-canvas-still{max-width:1152px;margin:1rem auto 0;border:1px solid #e5e5e3;background:#fafafa;border-radius:10px}
+body.studio-doc-page .studio-guide-canvas-still summary{padding:.9rem 1.1rem;cursor:pointer;color:#3f4750}
+body.studio-doc-page .studio-guide-canvas-still figure{padding:0 1rem 1rem}
+body.studio-doc-page .studio-guide-practice{background:#fff;border:1px solid #e0e2e3;color:#28313a;box-shadow:0 8px 23px rgba(29,34,40,.03);border-radius:16px}
+body.studio-doc-page .studio-guide-practice h3{color:#20272d;max-width:initial}
+body.studio-doc-page .studio-guide-practice .studio-guide-eyebrow{color:#666e75}
+body.studio-doc-page .studio-guide-practice .studio-guide-practice-intro{color:#4c5661;line-height:1.6}
+body.studio-doc-page .studio-guide-practice>ol{grid-template-columns:repeat(3,minmax(0,1fr));gap:1.05rem;margin:1.5rem 0}
+body.studio-doc-page .studio-guide-practice li{color:#4c5661;border-top:2px solid #d3d6d9;line-height:1.6;padding:.9rem 0 0}
+body.studio-doc-page .studio-guide-practice li strong{color:#20282f;font-size:1.02rem}
+body.studio-doc-page .studio-guide-practice .studio-guide-practice-next{padding:1rem 1.1rem;background:#f7f7f5;border-radius:10px;color:#303942;line-height:1.62}
+body.studio-doc-page .studio-guide-practice-next a{color:#234c76}
+body.studio-doc-page .studio-guide-step .studio-guide-inline-link{font-weight:750;text-underline-offset:3px}
+@media(max-width:940px){body.studio-doc-page .studio-guide-jump{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){body.studio-doc-page .studio-guide-option-list,body.studio-doc-page .studio-guide-practice>ol{grid-template-columns:1fr}body.studio-doc-page .studio-guide-jump{grid-template-columns:1fr}body.studio-doc-page .studio-guide-option{padding:.8rem}body.studio-doc-page .studio-guide-canvas-video video{border-radius:8px}}
