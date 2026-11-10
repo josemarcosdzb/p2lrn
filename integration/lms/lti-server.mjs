@@ -50,6 +50,53 @@ async function readBody(req,maxBytes=1024*1024){
  }
  return Buffer.concat(chunks);
 }
+// Validate the signed, single-use teacher picker before consuming large uploads.
+// HTML emitted by pickerHtml places ticket before course. Reject any other
+// ordering rather than buffering an unauthenticated ZIP.
+async function readAuthorizedMultipart(req,contentType,authorize){
+ const boundaryMatch=/^multipart\/form-data;\s*boundary=(?:"([A-Za-z0-9'()+_,./:=?-]{1,70})"|([A-Za-z0-9'()+_,./:=?-]{1,70}))\s*$/i.exec(contentType);
+ if(!boundaryMatch)throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+ const boundary=boundaryMatch[1]||boundaryMatch[2];
+ const marker=Buffer.from('\r\n--'+boundary+'\r\n','ascii');
+ const begin='--'+boundary+'\r\n';
+ const iterator=req[Symbol.asyncIterator]();
+ const chunks=[];let total=0,prefix=Buffer.alloc(0),ticket=null;
+ const maxBytes=64*1024*1024+16384;
+ while(ticket===null){
+  const step=await iterator.next();
+  if(step.done)throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+  const chunk=Buffer.from(step.value);
+  total+=chunk.length;
+  if(total>maxBytes)throw new Error('REQUEST_TOO_LARGE');
+  chunks.push(chunk);
+  prefix=Buffer.concat([prefix,chunk.subarray(0,Math.max(0,8192-prefix.length))]);
+  const finish=prefix.indexOf(marker);
+  if(finish<0){
+   if(prefix.length>=8192)throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+   continue;
+  }
+  const text=prefix.subarray(0,finish).toString('utf8');
+  if(!text.startsWith(begin))throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+  const offset=text.indexOf('\r\n\r\n');
+  if(offset<begin.length||offset>1024)throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+  const headers=text.slice(begin.length,offset);
+  if(!/^Content-Disposition:\s*form-data;\s*name="ticket"(?:\r\nContent-Type:\s*text\/plain)?$/i.test(headers))
+   throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+  ticket=text.slice(offset+4);
+  if(!/^[A-Za-z0-9_-]{16,128}$/.test(ticket))
+   throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+  await authorize(ticket);
+ }
+ while(true){
+  const step=await iterator.next();
+  if(step.done)break;
+  const chunk=Buffer.from(step.value);
+  total+=chunk.length;
+  if(total>maxBytes)throw new Error('REQUEST_TOO_LARGE');
+  chunks.push(chunk);
+ }
+ return {ticket,body:Buffer.concat(chunks,total)};
+}
 const input=(raw,req)=>{
  const type=String(req.headers['content-type']||'').split(';')[0];
  if(type==='application/json')return JSON.parse(raw.toString('utf8'));
@@ -516,14 +563,22 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    }
    if(method==='POST'&&path==='/lti/deep-link/confirm'&&String(req.headers['content-type']||'').startsWith('multipart/form-data;')){
     const contentType=String(req.headers['content-type']||'');
-    if(!/^multipart\/form-data;\s*boundary=/i.test(contentType))
-     throw new Error('INVALID_P2LRN_UPLOAD_FORM');
-    const body=await readBody(req,64*1024*1024+16384);
+    const authorized=await readAuthorizedMultipart(req,contentType,ticket=>{
+     const pending=store.peekPicker(digest(ticket));
+     if(!pending)throw new Error('PICKER_EXPIRED');
+     const reg=store.getRegistrationById(pending.registrationId);
+     if(!reg||reg.status!=='ACTIVE'||reg.tenantId!==pending.tenantId||
+        !reg.deployments.includes(pending.deploymentId))
+      throw new Error('PICKER_PLATFORM_REVOKED');
+     checkLocalCohost(req,reg.deepLinkLaunchUrl||reg.launchUrl);
+    });
+    const body=authorized.body;
     const upload=new Request('http://localhost/lti/deep-link/confirm',{
      method:'POST',headers:{'Content-Type':contentType},body});
     const fields=await upload.formData();
     if(fields.getAll('ticket').length!==1||fields.getAll('course').length!==1)
      throw new Error('INVALID_P2LRN_UPLOAD_FORM');
+    if(fields.get('ticket')!==authorized.ticket)throw new Error('INVALID_P2LRN_UPLOAD_FORM');
     const ticketHash=digest(valid(fields.get('ticket'),'picker ticket',128));
     const pending=store.peekPicker(ticketHash);
     if(!pending)throw new Error('PICKER_EXPIRED');
