@@ -1,8 +1,8 @@
 import {execFile} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import {cp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
+import {cp, mkdir, readFile, readdir, rm, writeFile} from 'node:fs/promises';
 import {promisify} from 'node:util';
-import {join, resolve} from 'node:path';
+import {join, relative, resolve} from 'node:path';
 import {buildPlayerDistribution, H5P_STANDALONE_VERSION, THREE_VERSION, RAPIER3D_VERSION} from '../../packages/player/scripts/build-dist.mjs';
 import {cleanPlayerSourceSnapshot, preparePlayerSourceSnapshot} from '../../packages/player/scripts/prepare-source-snapshot.mjs';
 import {buildH5pLibraries, LUMI_H5P_LIBRARY_COMMIT} from '../../packages/h5p-libraries/scripts/build.mjs';
@@ -141,8 +141,65 @@ await cp(versionedSource, join(outputRoot, 'player', 'current', 'source'), {
   force:true,
 });
 
+
+/**
+ * npm and the public CDN must expose the same *browser distributable* bytes.
+ * Node-only Toolkit APIs, CLI commands and server adapters are not static web
+ * assets; their package version and corresponding-source revisions remain
+ * separately tracked. The full inventory covers every shipped browser asset,
+ * not just the top-level Player/Studio/Analytics loaders.
+ */
+async function enumerateDistributionFiles(directory, base = directory) {
+  const files=[];
+  const entries=(await readdir(directory,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name,'en'));
+  for(const entry of entries){
+    const full=join(directory,entry.name);
+    if(entry.isSymbolicLink())throw new Error('Distribution symlinks are forbidden: '+full);
+    if(entry.isDirectory())files.push(...await enumerateDistributionFiles(full,base));
+    else if(entry.isFile())files.push(relative(base,full).replaceAll('\\','/'));
+    else throw new Error('Unsupported distribution entry: '+full);
+  }
+  return files;
+}
+const parityRoots=[
+  {name:'player',package:'@p2lrn/player',root:versionedDist,base:`/player/${version}/dist/`,current:'/player/current/dist/',
+    exclude:path=>path.endsWith('.html.raw')||path.startsWith('runtime-host/h5p-libraries/')},
+  {name:'h5p-libraries',package:'@p2lrn/h5p-libraries',
+    root:join(versionedDist,'runtime-host','h5p-libraries'),
+    base:`/player/${version}/dist/runtime-host/h5p-libraries/`,
+    current:'/player/current/dist/runtime-host/h5p-libraries/',exclude:()=>false},
+  {name:'studio',package:'@p2lrn/studio',root:join(outputRoot,'studio',version,'dist'),
+    base:`/studio/${version}/dist/`,current:'/studio/current/dist/',exclude:()=>false},
+  {name:'analytics',package:'@p2lrn/analytics',root:join(outputRoot,'analytics',version,'dist'),
+    base:`/analytics/${version}/dist/`,current:'/analytics/current/dist/',exclude:()=>false},
+];
+const distributionParity={
+  schema:'https://p2lrn.org/schema/distribution-parity/1',
+  version,
+  toolkit:{package:'@p2lrn/toolkit',version:toolkitPackage.version},
+  components:{},
+};
+for(const item of parityRoots){
+  const files=[];
+  for(const path of (await enumerateDistributionFiles(item.root)).filter(path=>!item.exclude(path))){
+    const bytes=await readFile(join(item.root,...path.split('/')));
+    files.push({
+      path,
+      bytes:bytes.length,
+      sha256:'sha256:'+createHash('sha256').update(bytes).digest('hex'),
+    });
+  }
+  if(!files.length)throw new Error('Empty npm/CDN distribution inventory: '+item.name);
+  distributionParity.components[item.name]={
+    package:item.package,version,versionedBasePath:item.base,currentBasePath:item.current,
+    fileCount:files.length,files,
+  };
+}
+await writeFile(join(outputRoot,'distribution-parity.json'),JSON.stringify(distributionParity,null,2)+'\\n');
+
 const index = {
   schema:'https://p2lrn.org/schema/cdn-index/1',
+  distributionParityManifest:'/distribution-parity.json',
   generatedFrom:{
     playerPackage:'@p2lrn/player',
     playerVersion:version,
@@ -317,6 +374,12 @@ headers += [
   '  X-Content-Type-Options: nosniff',
   '  Referrer-Policy: no-referrer',
   '',
+  '/distribution-parity.json',
+  '  Access-Control-Allow-Origin: *',
+  '  Cache-Control: no-store',
+  '  X-Content-Type-Options: nosniff',
+  '  Referrer-Policy: no-referrer',
+  '',
   '/health.json',
   '  Access-Control-Allow-Origin: *',
   '  Cache-Control: no-store',
@@ -337,6 +400,7 @@ console.log(JSON.stringify({
   studioVersion:studioPackage.version,
   analyticsVersion:analyticsPackage.version,
   playerFiles:playerBuild.release.files.length,
+  parityInventoryFiles:Object.fromEntries(Object.entries(distributionParity.components).map(([key,value])=>[key,value.fileCount])),
   sharedH5pLibraryCount:h5pManifest.libraryCount,
   h5pStandaloneVersion:H5P_STANDALONE_VERSION,
 }, null, 2));
