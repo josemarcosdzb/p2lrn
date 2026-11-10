@@ -1,4 +1,4 @@
-﻿/* Real Studio captures and the existing Player: visual guide, no second editor. */
+/* Real Studio captures and the existing Player: visual guide, no second editor. */
 .studio-guide-section{margin:clamp(2.5rem,5vw,5rem) auto;padding:clamp(1rem,2.8vw,2.5rem);border:1px solid #d6dfed;border-radius:24px;background:linear-gradient(160deg,#f8fbff,#f2f6fc);color:#17263f;max-width:1240px}
 .studio-guide-section *{box-sizing:border-box}
 .studio-guide-section h2{font-size:clamp(1.65rem,3.3vw,2.45rem);line-height:1.18;max-width:28ch;letter-spacing:-.03em;margin:.35rem 0 1rem;color:#10213a}
@@ -42,3 +42,71 @@
 @media(max-width:1000px){.studio-guide-3d-grid,.studio-demo-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.studio-guide-section{border-radius:14px;padding:1rem;margin:2rem 0}.studio-guide-overview,.studio-guide-gallery,.studio-guide-3d-grid,.studio-demo-choices{grid-template-columns:1fr}.studio-guide-card .studio-guide-image-link img{max-height:300px}.studio-demo-stage iframe{height:580px}.studio-guide-section h2{font-size:1.7rem}}
 @media(prefers-reduced-motion:reduce){.studio-guide-section *, .studio-guide-section *::before,.studio-guide-section *::after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
+
+/* Studio documentation: scoped editorial layout. Keep the site and Player styles unchanged. */
+body.studio-doc-page .doc-main{width:min(calc(100% - 48px),1880px);grid-template-columns:minmax(180px,220px) minmax(0,1fr) minmax(170px,208px);gap:clamp(20px,2vw,38px)}
+body.studio-doc-page .doc-content{max-width:none}
+body.studio-doc-page .doc-content>.doc-section:not(.studio-guide-documentation){font-size:1rem;line-height:1.72}
+body.studio-doc-page .studio-guide-documentation{max-width:none;margin:2.2rem 0 3rem;padding:clamp(1.25rem,2.6vw,3.2rem);border-radius:22px;border-color:#c9d7e9;background:linear-gradient(160deg,#f7faff 0%,#fff 56%,#f4f8ff 100%)}
+body.studio-doc-page .studio-guide-documentation h2{max-width:28ch;margin:0 0 1rem;font-size:clamp(2rem,3.4vw,3.1rem);letter-spacing:-.045em;line-height:1.08}
+body.studio-doc-page .studio-guide-documentation h3{color:#102745;line-height:1.2}
+body.studio-doc-page .studio-guide-intro{max-width:70ch;font-size:clamp(1.08rem,1.55vw,1.2rem);line-height:1.7;color:#3d526f;margin:.6rem 0 1.3rem}
+body.studio-doc-page .studio-guide-eyebrow{font-size:.76rem;letter-spacing:.13em;font-weight:800;color:#1d5595}
+body.studio-doc-page .studio-guide-lead-actions{display:flex;align-items:center;flex-wrap:wrap;gap:1rem;margin:1.35rem 0 1.8rem}
+body.studio-doc-page .studio-guide-lead-actions>a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:.7rem 1.1rem;border-radius:9px;font-weight:750;text-decoration:none!important;color:#154b83}
+body.studio-doc-page .studio-guide-lead-actions>.studio-guide-primary{background:#12519b;color:#fff!important;box-shadow:0 5px 18px rgba(18,81,155,.12)}
+body.studio-doc-page .studio-guide-feature{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(235px,.65fr);gap:1.5rem;align-items:stretch;margin:1.7rem 0 1.8rem;padding:1rem;border:1px solid #d9e3f1;border-radius:18px;background:#fff;box-shadow:0 12px 28px rgba(20,51,91,.06)}
+body.studio-doc-page .studio-guide-feature-image{min-width:0}
+body.studio-doc-page .studio-guide-frame{margin:0;min-width:0}
+body.studio-doc-page .studio-guide-frame figcaption{font-size:.84rem;line-height:1.5;color:#62718a;margin-top:.5rem}
+body.studio-doc-page .studio-guide-image-link{display:block;position:relative;max-width:100%;border-radius:12px;border:1px solid #cbd7e7;overflow:hidden;background:#fff}
+body.studio-doc-page .studio-guide-image-link:hover{border-color:#4e80bb;box-shadow:0 0 0 3px rgba(24,100,181,.08)}
+body.studio-doc-page .studio-guide-image-link:focus-visible{outline:3px solid #1262b9;outline-offset:3px}
+body.studio-doc-page .studio-guide-image-link img{display:block;max-width:100%;width:100%;height:auto;max-height:none;object-fit:contain}
+body.studio-doc-page .studio-guide-feature-notes{padding:clamp(.4rem,1vw,1.1rem);align-self:center}
+body.studio-doc-page .studio-guide-feature-notes h3{font-size:1.5rem}
+body.studio-doc-page .studio-guide-feature-notes ol{padding-left:1.2rem;display:grid;gap:.75rem;line-height:1.6}
+body.studio-doc-page .studio-guide-feature-notes>p:last-child{font-size:.9rem;color:#52647f}
+body.studio-doc-page .studio-guide-jump{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;margin:1.5rem 0 2.5rem}
+body.studio-doc-page .studio-guide-jump a{display:flex;align-items:center;gap:.7rem;padding:.9rem .8rem;border:1px solid #d3deec;border-radius:10px;text-decoration:none!important;background:#fff;color:#173957!important;font-weight:700;font-size:.9rem;min-height:52px}
+body.studio-doc-page .studio-guide-jump a:hover,body.studio-doc-page .studio-guide-jump a:focus-visible{border-color:#4385c9;background:#edf5ff}
+body.studio-doc-page .studio-guide-jump span{font-size:.8rem;color:#145caa;font-weight:850}
+body.studio-doc-page .studio-guide-workflow{display:grid;gap:1.8rem}
+body.studio-doc-page .studio-guide-step{scroll-margin-top:100px;display:grid;grid-template-columns:minmax(245px,.9fr) minmax(0,1.2fr);gap:clamp(1.2rem,2vw,2.4rem);align-items:center;padding:clamp(1rem,2vw,2.1rem);border:1px solid #d8e1ed;border-radius:17px;background:#fff;box-shadow:0 10px 26px rgba(31,56,94,.045)}
+body.studio-doc-page .studio-guide-step--wide,body.studio-doc-page .studio-guide-step--toolbar{grid-template-columns:1fr;gap:1rem}
+body.studio-doc-page .studio-guide-step--wide .studio-guide-step-media,body.studio-doc-page .studio-guide-step--toolbar .studio-guide-step-media{grid-row:2}
+body.studio-doc-page .studio-guide-step--wide .studio-guide-step-copy,body.studio-doc-page .studio-guide-step--toolbar .studio-guide-step-copy{grid-row:1}
+body.studio-doc-page .studio-guide-step--portrait .studio-guide-step-media{display:flex;justify-content:center;align-items:flex-start}
+body.studio-doc-page .studio-guide-step--portrait .studio-guide-frame{width:min(100%,500px)}
+body.studio-doc-page .studio-guide-step--portrait .studio-guide-image-link img{width:auto;max-width:100%;max-height:560px;margin:auto}
+body.studio-doc-page .studio-guide-step--toolbar .studio-guide-image-link{overflow-x:auto}
+body.studio-doc-page .studio-guide-step--toolbar .studio-guide-image-link img{min-width:min(1120px,115vw);width:100%;max-width:none}
+body.studio-doc-page .studio-guide-step--wide .studio-guide-image-link img{max-height:680px;object-fit:contain}
+body.studio-doc-page .studio-guide-step-label{font-size:.75rem;font-weight:850;letter-spacing:.11em;text-transform:uppercase;color:#225b99;margin:0 0 .4rem}
+body.studio-doc-page .studio-guide-step-copy h3{font-size:clamp(1.4rem,2vw,1.88rem);margin:0 0 .8rem;letter-spacing:-.025em}
+body.studio-doc-page .studio-guide-explain{font-size:1.04rem;max-width:75ch;color:#314b68;line-height:1.65;margin:0 0 .9rem}
+body.studio-doc-page .studio-guide-instructions{display:grid;gap:.65rem;padding-left:1.3rem;line-height:1.62;color:#2f445f;margin:.6rem 0 1.1rem}
+body.studio-doc-page .studio-guide-instructions li{padding-left:.2rem}
+body.studio-doc-page .studio-guide-outcome{margin:1rem 0 0;padding:.85rem 1rem;border-left:3px solid #266fb5;border-radius:0 9px 9px 0;background:#f0f6fe;font-size:.95rem;line-height:1.6;color:#274865}
+body.studio-doc-page .studio-guide-practice{margin:2rem 0 1.4rem;padding:clamp(1.2rem,2vw,2rem);background:#112742;color:#eef5ff;border-radius:18px}
+body.studio-doc-page .studio-guide-practice .studio-guide-eyebrow{color:#93c7ff}
+body.studio-doc-page .studio-guide-practice h3{color:#fff;font-size:clamp(1.5rem,2vw,2rem);max-width:32ch}
+body.studio-doc-page .studio-guide-practice>ol{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1rem;list-style:none;padding:0;margin:1.6rem 0}
+body.studio-doc-page .studio-guide-practice li{display:grid;align-content:start;gap:.5rem;position:relative;padding-top:1rem;border-top:2px solid #6488b2;line-height:1.52;font-size:.91rem;color:#d7e6fa}
+body.studio-doc-page .studio-guide-practice li strong{color:#fff;font-size:1.05rem}
+body.studio-doc-page .studio-guide-practice>p:last-child{color:#c6d9f3;line-height:1.6}
+body.studio-doc-page .studio-guide-warning{border-left-color:#2b629e;background:#e7f1fc;font-size:.9rem;line-height:1.6}
+.studio-doc-lightbox{width:min(96vw,1750px);max-width:96vw;max-height:96vh;padding:0;border:1px solid #738ba8;border-radius:14px;background:#fff;box-shadow:0 24px 90px rgba(3,13,27,.45);color:#152844}
+.studio-doc-lightbox::backdrop{background:rgba(8,18,32,.83)}
+.studio-doc-lightbox-toolbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.8rem 1.2rem;border-bottom:1px solid #d9e2ef}
+.studio-doc-lightbox-toolbar>strong{font-size:1rem;line-height:1.3}
+.studio-doc-lightbox-toolbar>button{font:inherit;padding:.5rem .9rem;border-radius:8px;border:1px solid #9aabbf;background:#fff;cursor:pointer}
+.studio-doc-lightbox-viewport{max-height:78vh;overflow:auto;overscroll-behavior:contain;background:#f6f8fb;padding:.8rem}
+.studio-doc-lightbox-viewport img{display:block;width:auto;height:auto;max-width:none;max-height:none;margin:0 auto;background:#fff}
+.studio-doc-lightbox-foot{padding:.75rem 1.2rem;font-size:.87rem;color:#4b617d}
+.studio-doc-lightbox-foot a{color:#155a9d}
+@media(max-width:1450px){body.studio-doc-page .studio-guide-feature{grid-template-columns:1fr}body.studio-doc-page .studio-guide-feature-notes{padding:.4rem 1rem}}
+@media(max-width:1180px){body.studio-doc-page .doc-main{width:min(calc(100% - 38px),1120px);grid-template-columns:210px minmax(0,1fr);gap:24px}body.studio-doc-page .doc-page-toc{grid-column:2;grid-row:1;position:static}body.studio-doc-page .doc-content{grid-column:2;grid-row:2}body.studio-doc-page .studio-guide-step{grid-template-columns:1fr}body.studio-doc-page .studio-guide-step .studio-guide-step-copy{grid-row:1}body.studio-doc-page .studio-guide-step .studio-guide-step-media{grid-row:2}body.studio-doc-page .studio-guide-jump{grid-template-columns:repeat(2,minmax(0,1fr))}body.studio-doc-page .studio-guide-practice>ol{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){body.studio-doc-page .doc-main{width:min(calc(100% - 28px),760px);grid-template-columns:1fr;gap:14px}body.studio-doc-page .doc-page-toc{grid-column:1;grid-row:auto}body.studio-doc-page .doc-content{grid-column:1;grid-row:auto}body.studio-doc-page .studio-guide-documentation{padding:1.05rem;margin:1.3rem 0 2rem}}
+@media(max-width:600px){body.studio-doc-page .studio-guide-documentation{border-radius:12px}body.studio-doc-page .studio-guide-feature{padding:.7rem}body.studio-doc-page .studio-guide-jump{grid-template-columns:1fr}body.studio-doc-page .studio-guide-step{padding:1rem;gap:.9rem}body.studio-doc-page .studio-guide-instructions{padding-left:1.1rem}body.studio-doc-page .studio-guide-practice>ol{grid-template-columns:1fr}body.studio-doc-page .studio-guide-feature-notes ol{padding-left:1rem}}
+@media(prefers-reduced-motion:reduce){body.studio-doc-page .studio-guide-documentation *{scroll-behavior:auto!important;transition:none!important}}

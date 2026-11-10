@@ -1,4 +1,4 @@
-﻿/* Enhanced package selector. Uses the existing P2LRN catalog and /demo/ Player. */
+/* Enhanced package selector. Uses the existing P2LRN catalog and /demo/ Player. */
 (() => {
   const section = document.querySelector('[data-studio-demo]');
   if (!section) return;
@@ -89,4 +89,39 @@
   }
   choices.forEach(c=>{c.setAttribute('aria-pressed','false');c.addEventListener('click',()=>{void open(c)})});
   status.textContent=labels.choose;
+})();
+/* Accessible zoom for the real Studio guide images; normal links work without JavaScript. */
+(() => {
+  const links=[...document.querySelectorAll('body.studio-doc-page .studio-guide-image-link')];
+  if(!links.length||typeof HTMLDialogElement==='undefined')return;
+  const english=document.documentElement.lang?.toLowerCase().startsWith('en');
+  const dialog=document.createElement('dialog');
+  dialog.className='studio-doc-lightbox';
+  const bar=document.createElement('div');bar.className='studio-doc-lightbox-toolbar';
+  const title=document.createElement('strong');title.id='studio-doc-lightbox-title';
+  const close=document.createElement('button');close.type='button';close.textContent=english?'Close':'Cerrar';
+  close.addEventListener('click',()=>dialog.close());
+  bar.append(title,close);
+  const viewport=document.createElement('div');viewport.className='studio-doc-lightbox-viewport';
+  const image=document.createElement('img');viewport.append(image);
+  const foot=document.createElement('div');foot.className='studio-doc-lightbox-foot';
+  const original=document.createElement('a');original.target='_blank';original.rel='noopener noreferrer';
+  original.textContent=english?'Open original image in a new tab':'Abrir imagen original en otra pestaña';
+  foot.append(original);dialog.append(bar,viewport,foot);
+  dialog.setAttribute('aria-labelledby',title.id);
+  document.body.append(dialog);
+  let previous=null;
+  for(const link of links){
+    link.addEventListener('click',event=>{
+      if(event.defaultPrevented||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+      const preview=link.querySelector('img');if(!preview)return;
+      event.preventDefault();previous=link;
+      title.textContent=link.getAttribute('aria-label')||(english?'Studio screenshot':'Captura de Studio');
+      image.src=link.href;image.alt=preview.alt||title.textContent;
+      original.href=link.href;
+      dialog.showModal();viewport.scrollTo(0,0);close.focus();
+    });
+  }
+  dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close()});
+  dialog.addEventListener('close',()=>{image.removeAttribute('src');previous?.focus();previous=null});
 })();

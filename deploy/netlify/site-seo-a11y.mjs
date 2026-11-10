@@ -15,6 +15,14 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "P2LRN documentation: create interactive courses",
     "description": "Learn to build interactive courses with P2LRN: use Studio and Player, prepare .p2lrn packages, integrate with your LMS and track learning progress."
   },
+  "/docs/studio/": {
+    "title": "Cómo usar P2LRN Studio: guía visual paso a paso",
+    "description": "Guía visual de P2LRN Studio con capturas reales ampliables y pasos para crear un curso, editar lecciones, añadir actividades, probar y exportar .p2lrn."
+  },
+  "/en/docs/studio/": {
+    "title": "How to use P2LRN Studio: step-by-step visual guide",
+    "description": "Learn P2LRN Studio with enlarged real screenshots and practical steps for lessons, assessments, learner preview, saving and .p2lrn course export."
+  },
   "/docs/paquetes/": {
     "title": "Cómo crear y exportar paquetes .p2lrn | P2LRN",
     "description": "Aprende a crear y exportar paquetes .p2lrn: organiza lecciones, actividades y recursos, comprueba su integridad y ábrelos con P2LRN Player."
