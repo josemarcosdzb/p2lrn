@@ -547,11 +547,11 @@
   ];
 
   const DOC_SIDEBAR_CHILDREN = new Map([
-    ['/docs/empezar/',[
-      ['/docs/que-usar/','Mapa de componentes'],
-      ['/docs/conceptos/','Conceptos fundamentales'],
+    ['/docs/desarrolladores/',[
+      ['/docs/que-usar/','Mapa técnico de componentes'],
+      ['/docs/conceptos/','Conceptos del formato'],
       ['/docs/formato/','Formato P2LRN'],
-      ['/docs/formato-portable-cursos-interactivos/','Guía de portabilidad'],
+      ['/docs/formato-portable-cursos-interactivos/','Portabilidad y versiones'],
     ]],
     ['/docs/conectores/',[
       ['/docs/conectores/ia/','Conectores para IA'],
