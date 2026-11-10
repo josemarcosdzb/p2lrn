@@ -218,6 +218,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     analogMovement.x=Number.isFinite(x)?Math.max(-1,Math.min(1,x)):0;
     analogMovement.y=Number.isFinite(y)?Math.max(-1,Math.min(1,y)):0;
   }
+  let assemblyMode=false;
   let cameraYaw=authoring?0.55:0;
   let cameraPitch=authoring?0.51:-0.05;
   let cameraDrag=null;
@@ -278,7 +279,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     camera.updateMatrixWorld(true);
   }
   function updatePlayer(delta){
-    if(authoring){updateAuthoringCamera();return;}
+    if(authoring||assemblyMode){updateAuthoringCamera();return;}
     const previous=player.position.clone();
     const forward=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     const right=new THREE.Vector3(Math.cos(cameraYaw),0,-Math.sin(cameraYaw));
@@ -596,7 +597,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   }
 
   function focusOn(position=[0,1,0],radius=14){
-    if(!authoring)return false;
+    if(!authoring&&!assemblyMode)return false;
     orbitFocus.fromArray(normalizePosition(position));
     orbitDistance=clamp(Number(radius)||14,2.5,350);
     camera.far=Math.max(120,orbitDistance*12);
@@ -613,7 +614,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   // viewport. Fit against the true world-space AABBs, for any current orbit
   // angle and aspect ratio; never substitute a single selected cage.
   function frameObjects(ids=null,{padding=1.18}={}){
-    if(!authoring)return false;
+    if(!authoring&&!assemblyMode)return false;
     const targets=Array.isArray(ids)?ids.map(id=>meshes.get(String(id))).filter(Boolean):[...meshes.values()];
     const box=new THREE.Box3(),part=new THREE.Box3();
     stage.updateMatrixWorld(true);
@@ -650,6 +651,18 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     const distance=clamp(required*safePadding+0.5,2.5,350);
     focusOn(focus.toArray(),distance);
     return {center:focus.toArray(),distance,objectCount:found};
+  }
+
+  function setAssemblyMode(enabled=true){
+    assemblyMode=Boolean(enabled);
+    player.visible=!authoring&&!assemblyMode;
+    if(assemblyMode){
+      cameraYaw=0.55;
+      cameraPitch=0.7;
+      updateAuthoringCamera();
+    }
+    requestFrame();
+    return assemblyMode;
   }
 
   function playerHandPosition(distance=0.82,height=1.18) {
@@ -791,12 +804,13 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       if(!meta)continue;
       if(exclude&&meta.kind===exclude.kind&&meta.id===exclude.id)continue;
       const priority=authoring?
-        (meta.kind==='assembly-editor-vertex'?30:meta.kind==='assembly-editor-piece'?20:meta.kind==='assembly-editor-target'?10:15):0;
+        (meta.kind==='assembly-editor-vertex'?30:meta.kind==='assembly-editor-piece'?20:meta.kind==='assembly-editor-target'?10:15):
+        assemblyMode?(meta.kind==='assembly-piece'?20:meta.kind==='assembly-target'?10:0):0;
       if(picked&&priority<=best)continue;
       best=priority;
       picked={meta,point:hit.point,event,playerDistance:player.position.distanceTo(hit.point)};
       if(priority===30)break;
-      if(!authoring)break;
+      if(!authoring&&!assemblyMode)break;
     }
     if(picked&&dispatch)onInteraction(picked.meta,picked);
     return picked;
@@ -807,9 +821,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
     pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
     raycaster.setFromCamera(pointer,camera);
-    const hit=raycaster.ray.intersectPlane(authoring?authorDragPlane:dragPlane,dragWorld);
+    const hit=raycaster.ray.intersectPlane(authoring||assemblyMode?authorDragPlane:dragPlane,dragWorld);
     if(!hit)return null;
-    return authoring?[hit.x,hit.y,hit.z]:[clamp(hit.x,-11.2,11.2),0.78,clamp(hit.z,-12,12)];
+    return authoring||assemblyMode?[hit.x,hit.y,hit.z]:[clamp(hit.x,-11.2,11.2),0.78,clamp(hit.z,-12,12)];
   }
   function onPointerDown(event){
     if(event.button!==0&&event.pointerType==='mouse')return;
@@ -822,7 +836,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       ['ordering-object','classification-object','matching-left','assembly-piece'].includes(hit.meta.kind)||
       (authoring&&['assembly-editor-piece','assembly-editor-target','assembly-editor-vertex'].includes(hit.meta.kind))
     );
-    if(authoring&&hit)authorDragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()),hit.point);
+    if((authoring||assemblyMode)&&hit)authorDragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()),hit.point);
     if(authoring)requestFrame();
     const objectDrag=Boolean(draggable&&onDrag(hit.meta,'start',{position:pointerWorldPosition(event),event,hit}));
     cameraDrag={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,moved:false,
@@ -837,8 +851,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(drag.mode==='object'){
       if(drag.moved)onDrag(drag.source,'move',{position:pointerWorldPosition(event),event});
     } else if(drag.moved) {
-      cameraYaw-=dx*(authoring?0.008:0.006);
-      cameraPitch=authoring?clamp(cameraPitch+dy*0.006,-1.38,1.38):clamp(cameraPitch-dy*0.004,-0.58,0.24);
+      cameraYaw-=dx*(authoring||assemblyMode?0.008:0.006);
+      cameraPitch=authoring||assemblyMode?clamp(cameraPitch+dy*0.006,-1.38,1.38):clamp(cameraPitch-dy*0.004,-0.58,0.24);
       if(authoring)requestFrame();
     }
     drag.x=event.clientX;drag.y=event.clientY;
@@ -859,7 +873,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     try{canvas.releasePointerCapture?.(event.pointerId);}catch{}
   }
   function onWheel(event){
-    if(!authoring)return;
+    if(!authoring&&!assemblyMode)return;
     event.preventDefault();
     orbitDistance=clamp(orbitDistance*Math.exp(event.deltaY*0.001),2.5,350);
     camera.far=Math.max(120,orbitDistance*12);
@@ -896,7 +910,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   canvas.addEventListener('pointermove',onPointerMove);
   canvas.addEventListener('pointerup',onPointerUp);
   canvas.addEventListener('pointercancel',onPointerCancel);
-  if(authoring)canvas.addEventListener('wheel',onWheel,{passive:false});
+  canvas.addEventListener('wheel',onWheel,{passive:false});
   canvas.addEventListener('keydown',onKeyDown);
   canvas.addEventListener('keyup',onKeyUp);
   if(authoring&&typeof ResizeObserver==='function'){
@@ -922,6 +936,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     setCageHandlesVisible,
     focusOn,
     frameObjects,
+    setAssemblyMode,
     connect,
     connectToPlayer,
     connectToPointer,
@@ -944,7 +959,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       canvas.removeEventListener('pointermove',onPointerMove);
       canvas.removeEventListener('pointerup',onPointerUp);
       canvas.removeEventListener('pointercancel',onPointerCancel);
-      if(authoring)canvas.removeEventListener('wheel',onWheel);
+      canvas.removeEventListener('wheel',onWheel);
       canvas.removeEventListener('keydown',onKeyDown);
       canvas.removeEventListener('keyup',onKeyUp);
       canvas.removeEventListener('blur',clearKeys);
