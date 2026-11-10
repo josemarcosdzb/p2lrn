@@ -914,14 +914,19 @@ async function browserScenario(){
     'Visual evidence GLB does not fit in its configured cage');
   const actualRuntime=globalThis.__p2lrnAssemblyQaRuntime;
   const secondCage=actualRuntime?.scene?.children?.find(n=>n.type==='Group'&&n.children?.some(c=>c.userData?.p2lrnInteraction?.id==='target-2'))?.children?.find(c=>c.userData?.p2lrnInteraction?.id==='target-2');
-  const showAllButton=[...viewer.querySelectorAll('.a3-toolbar button')].find(b=>b.textContent==='Ver todas las piezas');
-  expect(showAllButton,'The one-screen assembly needs a show-all control');
-  expect(secondCage?.visible===false,'Unselected cage still crowds the focused one-piece workspace');
-  showAllButton.click();
+  const frameAll=[...viewer.querySelectorAll('.a3-toolbar button')].find(b=>b.textContent==='Ver montaje completo');
+  expect(frameAll,'The assembly requires a frame-all control in the same viewport');
+  expect(secondCage?.visible===true,'Every target must be visible immediately, without clicking a button');
+  const bothPieces=[];
+  actualRuntime.scene.traverse(node=>{
+    const meta=node.userData?.p2lrnInteraction;
+    if(meta?.kind==='assembly-editor-piece')bothPieces.push(node);
+  });
+  expect(bothPieces.length>=2&&bothPieces.every(node=>node.visible===true),
+    'Every imported piece must remain visible while editing another piece');
+  frameAll.click();
   expect(secondCage.visible===true&&viewer.querySelectorAll('.a3-scene').length===1,
-    'Show-all must reveal all pieces IN THE SAME 3D SCENE');
-  showAllButton.click();
-  expect(secondCage.visible===false,'Focused editing did not restore its uncluttered single cage');
+    'Framing the complete mechanism must never hide other pieces or split the viewport');
   const camera=actualRuntime?.camera;
   const objects=[];
   if(camera&&actualRuntime?.scene){
