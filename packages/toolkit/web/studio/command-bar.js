@@ -2,6 +2,7 @@ import {VISUAL_LAYOUT_BLOCKS,insertVisualLayoutBlock,STUDIO_SHAPES} from './visu
 import {styleStudioShapeArt} from './studio-shapes.js';
 import {addStudioDropPair,isStudioDropActivity,removeStudioDropPair,setStudioDropBackground,removeStudioDropBackground,mountStudioDropAuthoring,getStudioDropItemText,setStudioDropItemText,setStudioDropItemImage,setStudioDropItemImageAlt,removeStudioDropItemImage} from './studio-drop-activity.js';
 import {mountAdvancedStudioTools} from './studio-advanced-tools.js';
+import {studioUiText} from './studio-ui-i18n.js';
 
 // Canonical Studio chrome. Both the hosted Studio and @p2lrn/studio mount
 // this exact control tree and CSS; platform-specific commands stay adapters.
@@ -219,17 +220,17 @@ const CSS=[
 function node(doc,tag,cls,text){
   const el=doc.createElement(tag);
   if(cls)el.className=cls;
-  if(text!==undefined)el.textContent=text;
+  if(text!==undefined)el.textContent=studioUiText(text,doc);
   return el;
 }
 function button(doc,label,{title,cls,action,pressed}={}){
   const el=node(doc,'button',cls||'',label);
-  el.type='button';if(title)el.title=title;if(action)el.dataset.uiAction=action;
+  el.type='button';if(title)el.title=studioUiText(title,doc);if(action)el.dataset.uiAction=action;
   if(pressed!==undefined)el.setAttribute('aria-pressed',String(pressed));
   return el;
 }
 function select(doc,items,label){
-  const el=node(doc,'select');el.setAttribute('aria-label',label);
+  const el=node(doc,'select');el.setAttribute('aria-label',studioUiText(label,doc));
   for(const [key,text] of items){
     const o=node(doc,'option','',text);o.value=String(key);el.append(o);
   }
@@ -240,13 +241,13 @@ export function collapseStudioLessonProperties({header,title}={}){
   const doc=header.ownerDocument;
   const details=doc.createElement('details');details.className='p2lrn-studio-lesson-properties';
   const summary=doc.createElement('summary');
-  summary.setAttribute('aria-label','Editar título y descripción de la lección');
+  summary.setAttribute('aria-label',studioUiText('Editar título y descripción de la lección',doc));
   const label=doc.createElement('span');label.className='p2lrn-studio-property-label';label.textContent='Propiedades de lección';
   const name=doc.createElement('strong');name.className='p2lrn-studio-property-name';
   const sync=()=>{name.textContent=title.textContent?.trim()||'Lección sin título';};
   sync();title.addEventListener('input',sync);
   const affordance=doc.createElement('span');affordance.className='p2lrn-studio-property-edit';affordance.textContent='Editar título y descripción';
-  label.textContent='Lección';affordance.textContent='Editar título y descripción';
+  label.textContent=studioUiText('Lección',doc);affordance.textContent=studioUiText('Editar título y descripción',doc);
   summary.append(label,affordance);
   header.replaceWith(details);details.append(summary,header);
   return details;
