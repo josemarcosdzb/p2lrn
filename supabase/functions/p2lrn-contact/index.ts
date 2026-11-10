@@ -21,6 +21,27 @@ async function verifyTurnstile(token:string,hostname:string){
 }
 const baseHeaders={'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'content-type, apikey, authorization','Vary':'Origin','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Type':'application/json; charset=utf-8'};
 
+// Abort oversized chunked bodies before accumulating them in memory.
+// Content-Length is only a hint; the actual byte stream is authoritative.
+async function limitedBodyText(request:Request,maxBytes:number){
+ const reader=request.body?.getReader();
+ if(!reader)return '';
+ let size=0;
+ const chunks=[];
+ try{
+  while(true){
+   const {done,value}=await reader.read();
+   if(done)break;
+   size+=value.byteLength;
+   if(size>maxBytes){await reader.cancel();throw new Error('request_too_large');}
+   chunks.push(value);
+  }
+ }finally{reader.releaseLock();}
+ const all=new Uint8Array(size);
+ let offset=0;
+ for(const chunk of chunks){all.set(chunk,offset);offset+=chunk.byteLength;}
+ return new TextDecoder('utf-8',{fatal:true}).decode(all);
+}
 async function hash(value:string){const data=new TextEncoder().encode(value);return [...new Uint8Array(await crypto.subtle.digest('SHA-256',data))].map(n=>n.toString(16).padStart(2,'0')).join('');}
 Deno.serve(async(request:Request)=>{
  const origin=request.headers.get('origin');
@@ -33,8 +54,7 @@ Deno.serve(async(request:Request)=>{
  if(length&&(!/^\d+$/.test(length)||Number(length)>12000))return reply(413,'request_too_large');
  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))return reply(415,'unsupported_media_type');
  try{
-  const body=await request.text();
-  if(body.length>12000)return reply(413,'request_too_large');
+  const body=await limitedBodyText(request,12000);
   const data=JSON.parse(body);
   if(!data||typeof data!=='object'||Array.isArray(data))return reply(400,'invalid_request');
   if(Object.keys(data).some(k=>!['name','email','subject','message','page','company','turnstileToken'].includes(k)))return reply(400,'invalid_request');
@@ -55,5 +75,6 @@ Deno.serve(async(request:Request)=>{
   if(response.status===400||err.includes('invalid_contact_request'))return reply(400,'invalid_request');
   console.error('contact submission failed',response.status);
   return reply(503,'service_unavailable');
- }catch{return reply(400,'invalid_request');}
+ }catch(error){return error instanceof Error&&error.message==='request_too_large'?
+  reply(413,'request_too_large'):reply(400,'invalid_request');}
 });
