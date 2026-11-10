@@ -252,7 +252,7 @@ async function renderEditor(){
   const editable=await studio.readEditableText(entity.id);
   if(!editable){
     const message=document.createElement('div');message.className='studio-readonly';
-    message.textContent="The Player can run this content, but Studio 1 does not edit it internally. SCORM, H5P, cmi5, QTI, multimedia and external packages remain encapsulated.";
+    message.textContent="You can use and preview this content in the course, but you cannot change it in the editor.";
     content.append(message);
     const inline=document.createElement('p2lrn-player');inline.className='studio-inline-player';inline.setAttribute('src',studio.sourceUrl);inline.setAttribute('node',entity.id);inline.setAttribute('navigation','external');content.append(inline);
     return;
