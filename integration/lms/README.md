@@ -91,8 +91,14 @@ oficial de calificaciones.
   la abre en Player y un alumno de QA entrega una respuesta. Al volver
   a abrir se mantiene el estado. Se usó la opción oficial Log in as
   del administrador: NO equivale al login independiente del alumno.
-- Chamilo: login administrativo y lanzamiento LTI existente comprobados;
-  no certificada la nueva subida de archivo como profesor.
+- Chamilo: login administrativo y lanzamiento OIDC/LTI 1.3 real
+  comprobados; el selector global P2LRN abre la subida .p2lrn.
+  La configuración nativa del curso devolvía HTTP 500 por incompatibilidades
+  de IMS/LTI 1.9.0 con Doctrine Persistence 3 y Gradebook. Se corrigió
+  en la instancia QA y ahora responde HTTP 200. La imagen Docker fue
+  reconstruida con correcciones de respuesta firmada y enlaces nativos,
+  pero aún NO se ha demostrado una nueva publicación desde el profesor
+  ni una nota AGS oficial. El laboratorio redirige al SSO de AulaP2P.
 - Canvas: registro LTI y actividades existentes; Dynamic Registration
   implementado, falta instalación nueva desde el panel real; SSO central
   impide dar por verificado el recorrido del alumno.
@@ -450,10 +456,47 @@ P2LRN conserva el proveedor **LTI 1.3** en `/lti/login`, `/lti/launch`, `/lti/de
 
 Las herramientas LTI 1.3 siguen usando OIDC, RS256, validaciones de `issuer`, `audience`, `nonce`, `deployment_id`, y AGS OAuth2. **No existe fallback silencioso a OAuth 1.0a.** Un POST LTI 1.0 enviado a `/lti/launch` se rechaza; un `id_token` enviado al endpoint legado también.
 
-### Estado específico de Chamilo 2.0.3
+### Estado específico de Chamilo 2.0.3 / IMS-LTI 1.9.0
 
-El código instalado de Chamilo 2.0.3 expone las dos opciones en `src/LtiBundle/Form/ExternalToolType.php` (`lti1p1` y `lti1p3`), pero el controlador `CourseController::launch()` emite literalmente `LTI-1p0` y usa `OAuth1Helper::buildSignedPostParams()` sin seleccionar un flujo OIDC por versión. Por eso **no puede considerarse validada una integración Chamilo 1.3 solo por marcar su opción en el formulario**. El nuevo canal legado de P2LRN cubre la interoperabilidad con la ruta OAuth1, pero para certificar el consumidor **Chamilo LTI 1.3** faltan generar y verificar lanzamientos OIDC/JWT desde Chamilo, publicar sus JWKS y servir AGS con resultados reales en su libro de notas. Se mantiene pendiente y separado del certificado de P2LRN.
+**Lanzamiento comprobado:** la ruta nativa /plugin/ImsLti/start.php
+selecciona OIDC para LTI 1.3; Chrome recibió un JWT firmado de Chamilo.
+CourseController::launch() heredado enviaba OAuth1 para herramientas
+1.3 y la imagen QA incorpora una adaptación para la ruta nativa.
+Eso NO certifica AGS ni todos los accesos de alumnos.
 
+**Errores reproducidos desde la interfaz:**
+- IMS/LTI utiliza el alias antiguo ChamiloCourseBundle:CTool y los
+  campos cId y link, retirados de la entidad moderna de Doctrine.
+  La configuración devolvía HTTP 500; coincide con
+  https://github.com/chamilo/chamilo-lms/issues/9130.
+- Category::load() recibe el código textual del curso aunque espera
+  un identificador numérico.
+- item_return2.php usa una firma antigua de JWT::decode y requiere
+  Firebase JWT Key RS256 para la versión instalada.
+- LtiResourceLink descarta custom cuando es un objeto JSON y pierde
+  p2lrn_binding_id; el guardado usa métodos retirados de CTool.
+- El retorno Deep Linking debe conservar el contexto del curso. El
+  modelo nativo actual usa ExternalTool, ResourceLink y CShortcut.
+
+**Solución aplicada en QA:** se reconstruyó la imagen local
+local/chamilo:2.0.3-p2lrn-lti-qa con parches de búsqueda de herramientas,
+Gradebook, selector y retorno JWT. Los archivos PHP pasan la validación
+de sintaxis. La pantalla configure.php?cid=4 volvió a HTTP 200,
+y /lti/deep-link llegó a abrir el selector real con cursos existentes
+y el campo de subida. No se ha recreado el contenedor de producción
+local ni se ha probado una nueva selección firmada de extremo a extremo.
+
+**Autenticación del laboratorio:** el proxy de AulaP2P redirige
+GET /login de Chamilo al acceso central /lms/acceder/chamilojose,
+incluida la opción de recuperación local skipForcedRedirect=1.
+La validación desde navegador requiere una cuenta autorizada de
+AulaP2P. No fabricar sesiones ni evitar la política del SSO.
+Las instalaciones externas de Chamilo mantienen el login que
+su institución utilice; P2LRN no les obliga a usar AulaP2P.
+
+**Pendiente:** profesor autenticado, selección .p2lrn firmada,
+guardado y apertura de la actividad desde Chamilo, sesión de alumno,
+reentrada, calificación oficial AGS y certificación visual.
 Referencias normativas: [1EdTech Basic Outcomes 1.1](https://www.imsglobal.org/spec/lti-bo/v1p1), [guía de migración LTI](https://standards.1edtech.org/lti/guides/migration/migration-guide) y [calendario de obsolescencia de las versiones anteriores](https://www.1edtech.org/lti-security-announcement-and-deprecation-schedule). Los estándares 1.0/1.1 están obsoletos para certificación oficial, aunque se mantiene soporte de compatibilidad exigido para instalaciones existentes.
 
 ### Pruebas verificadas
