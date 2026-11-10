@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   cageVertices,validCage,defaultAssembly,validateAssembly,
   evaluateAssemblyPlacement,rotateVector,toWorld,toLocal,
-  inspectAssemblyGLB,rotationErrorDegrees,fitAssemblyBounds,assemblyPlacementTransform,assemblyFitStatus,cageContains,
+  inspectAssemblyGLB,rotationErrorDegrees,fitAssemblyBounds,assemblyPlacementTransform,assemblyFitStatus,cageContains,scatterAssemblyStarts,
 } from '../web/assembly-3d-core.js';
 import {validateQuestionnaire,scoreQuestionnaire} from '../web/questionnaire-core.js';
 import {buildQuestionnaireGame} from '../web/questionnaire-games-core.js';
@@ -122,4 +122,33 @@ test('fits flat educational geometry and isolates fitting from assembly sequence
   const pose=assemblyPlacementTransform(scene,'piece-2');
   assert.equal(assemblyFitStatus(scene,'piece-2',pose).ok,true,'The teacher must see geometry fit even if a learner must assemble other pieces first');
   assert.equal(evaluateAssemblyPlacement(scene,'piece-2','target-2',pose).reason,'prerequisite');
+});
+
+test('learner pieces scatter into distinct random positions outside ALL destination volumes',()=>{
+  const scene=defaultAssembly();
+  for(let n=3;n<=12;n++){
+    const id='piece-'+n,tid='target-'+n;
+    scene.pieces.push({id,text:'Pieza '+n,assetId:null,nodeId:null,initialTransform:{
+      position:[0,1,0],rotation:[0,0,0,1],scale:[1,1,1],
+    }});
+    scene.targets.push({id:tid,text:'Caja '+n,vertices:cageVertices(),transform:{
+      position:[(n%4)*2,1,-Math.floor(n/4)*2],rotation:[0,0,0,1],scale:[1,1,1]},visibility:'outline'});
+    scene.links.push({pieceId:id,targetId:tid,positionTolerance:0.18,rotationToleranceDeg:22,prerequisites:[]});
+  }
+  const first=scatterAssemblyStarts(scene,0x12345678);
+  const same=scatterAssemblyStarts(scene,0x12345678);
+  const different=scatterAssemblyStarts(scene,0x23456789);
+  assert.deepEqual(first,same,'Resume must keep the same positions for a saved seed');
+  assert.notDeepEqual(first,different,'New attempt must reshuffle the staging area');
+  const list=Object.values(first);
+  assert.equal(list.length,scene.pieces.length);
+  const maxDestZ=Math.max(...scene.targets.flatMap(t=>t.vertices.map(v=>toWorld(v,t.transform)[2])));
+  for(const p of list){
+    assert.ok(p.position[2]>maxDestZ+1,'Learner piece is already inside or beside a target');
+    assert.ok(scene.targets.every(t=>!cageContains(p.position,t,0.5)),'Learner piece begins inside a target');
+  }
+  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++)
+    assert.ok(Math.hypot(list[i].position[0]-list[j].position[0],list[i].position[2]-list[j].position[2])>1.5,
+      'Two learner pieces overlap at the start');
+  assert.deepEqual(scene.pieces[0].initialTransform.position,[-2.5,0.8,2.5],'Student randomization mutated the authoring scene');
 });
