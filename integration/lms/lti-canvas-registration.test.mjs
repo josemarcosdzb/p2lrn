@@ -171,10 +171,13 @@ test('Canvas administrator one-URL installation is exposed by the actual P2LRN H
   const html=await result.text();
   assert(html.includes('P2LRN conectado'));
   assert(html.includes('org.imsglobal.lti.close'));
+  assert(html.includes('history.replaceState'),'installer token must not remain visible in history');
   assert(!html.includes(DEV_TOKEN));
   assert.equal(result.headers.get('cache-control'),'no-store');
   const reg=gateway.store.getRegistration({issuer:LMS,clientId:'canvas-install-client-22'});
   assert.equal(reg.dynamicCanvas,true);
+  const duplicate=new URL(u);duplicate.searchParams.append('registration_token','forged');
+  assert.equal((await fetch(duplicate)).status,403,'ambiguous registration tokens are rejected');
   const invalid=await fetch('http://127.0.0.1:'+addr.port+'/lti/register/canvas');
   assert.equal(invalid.status,403);
   assert.equal(gateway.store.count('platforms'),1);
