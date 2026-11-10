@@ -110,3 +110,12 @@ body.studio-doc-page .studio-guide-warning{border-left-color:#2b629e;background:
 @media(max-width:900px){body.studio-doc-page .doc-main{width:min(calc(100% - 28px),760px);grid-template-columns:1fr;gap:14px}body.studio-doc-page .doc-page-toc{grid-column:1;grid-row:auto}body.studio-doc-page .doc-content{grid-column:1;grid-row:auto}body.studio-doc-page .studio-guide-documentation{padding:1.05rem;margin:1.3rem 0 2rem}}
 @media(max-width:600px){body.studio-doc-page .studio-guide-documentation{border-radius:12px}body.studio-doc-page .studio-guide-feature{padding:.7rem}body.studio-doc-page .studio-guide-jump{grid-template-columns:1fr}body.studio-doc-page .studio-guide-step{padding:1rem;gap:.9rem}body.studio-doc-page .studio-guide-instructions{padding-left:1.1rem}body.studio-doc-page .studio-guide-practice>ol{grid-template-columns:1fr}body.studio-doc-page .studio-guide-feature-notes ol{padding-left:1rem}}
 @media(prefers-reduced-motion:reduce){body.studio-doc-page .studio-guide-documentation *{scroll-behavior:auto!important;transition:none!important}}
+
+/* QA: a 1120px intrinsic toolbar must scroll inside its image frame, never enlarge the article grid. */
+body.studio-doc-page .studio-guide-workflow{grid-template-columns:minmax(0,1fr);min-width:0}
+body.studio-doc-page .studio-guide-step,
+body.studio-doc-page .studio-guide-step-media,
+body.studio-doc-page .studio-guide-step-copy,
+body.studio-doc-page .studio-guide-frame{min-width:0;max-width:100%}
+body.studio-doc-page .studio-guide-step--toolbar .studio-guide-frame,
+body.studio-doc-page .studio-guide-step--toolbar .studio-guide-image-link{width:100%;max-width:100%}
