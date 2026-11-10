@@ -365,7 +365,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      const result=await installCanvasDynamicRegistration({
       openidConfiguration:incoming.searchParams.get('openid_configuration'),
       registrationToken:incoming.searchParams.get('registration_token'),
-      baseUrl:canonicalBase,fetchImpl:fetchImpl||fetch,
+      baseUrl:canonicalBase,fetchImpl,
       allowInsecureLocal:allowInsecureLoopback,
       allowedHosts:String(process.env.P2LRN_LTI_CANVAS_ALLOWED_HOSTS||'').split(',').map(v=>v.trim()).filter(Boolean),
       registerPlatform:store.registerCanvasDynamicPlatform
