@@ -5,10 +5,10 @@ import {setStudioDropBackground,createStudioDropActivity,addStudioDropPair,setSt
 import {studioDropRuntimeSource} from '../web/renderers/lesson-drop-runtime.js';
 
 test('Every reference palette form is unique, scalable and safe without inline SVG',()=>{
-  assert.equal(STUDIO_SHAPES.length,28);
-  assert.equal(new Set(STUDIO_SHAPE_IDS).size,28);
+  assert.equal(STUDIO_SHAPES.length,30);
+  assert.equal(new Set(STUDIO_SHAPE_IDS).size,30);
   for(const id of [
-    'line','curve','wave','ellipse','cloud','droplet','curved-arrow','bezier-arrow','freeform','square','rectangle','parallelogram',
+    'line','curve','wave','ellipse','cloud','droplet','curved-arrow','bezier-arrow','rounded-rectangle','pill','freeform','square','rectangle','parallelogram',
     'triangle','right-triangle','diamond','pentagon','hexagon',
     'arrow-right','arrow-left','arrow-up','arrow-down',
     'star-4','star-5','star-6','star-8','speech-rect','speech-oval','thought',
