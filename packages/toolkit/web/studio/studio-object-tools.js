@@ -363,14 +363,14 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     }
     if(action==='rotateStep')return act('rotate',angleOf(el)+Number(value||0));
     if(action==='bezierLeft'||action==='bezierRight'){
-      if(el.dataset.p2lrnShape!=='bezier-arrow')throw new Error('Selecciona una flecha Bézier.');
+      if(el.dataset.p2lrnShape!=='bezier-arrow')throw new Error('Selecciona una flecha curva ajustable.');
       const number=Number(value);
       if(!Number.isFinite(number)||number<0||number>100)
         throw new RangeError('La altura debe estar entre 0 y 100.');
       const left=action==='bezierLeft'?number:positive(el.dataset.p2lrnBezierLeft,18);
       const right=action==='bezierRight'?number:positive(el.dataset.p2lrnBezierRight,18);
       const art=el.querySelector('[data-p2lrn-shape-art]');
-      if(!art)throw new Error('No se ha encontrado la flecha Bézier.');
+      if(!art)throw new Error('No se ha encontrado la flecha curva.');
       art.style.clipPath=bezierArrowClip(left,right);
       el.dataset.p2lrnBezierLeft=String(left);
       el.dataset.p2lrnBezierRight=String(right);
