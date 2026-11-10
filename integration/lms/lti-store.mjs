@@ -1,15 +1,12 @@
 // Durable LTI 1.3 storage. Node 22.13+ built-in SQLite, independent of AulaP2P.
-import {DatabaseSync} from 'node:sqlite';
-import {mkdirSync} from 'node:fs';
-import {dirname} from 'node:path';
+import {openLtiDatabase} from './lti-database.mjs';
 import {createHash,randomUUID,createPublicKey} from 'node:crypto';
 import {trustedLmsJwksUrl} from './lti-safe-fetch.mjs';
 import {CANVAS_PENDING_DEPLOYMENT} from './lti-canvas-registration.mjs';
 const J=JSON.stringify, P=s=>s==null?null:JSON.parse(s), t=()=>Math.floor(Date.now()/1000);
 const req=(v,n)=>{if(typeof v!=='string'||!v.trim()||v.length>4096)throw new TypeError('Invalid '+n);return v;};
-export function createLtiStore(filename){
- mkdirSync(dirname(req(filename,'database path')),{recursive:true});
- const db=new DatabaseSync(filename,{timeout:5000});
+export function createLtiStore(filename,options={}){
+ const db=openLtiDatabase(req(filename,'database path'),options);
  db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
  db.exec([
  'CREATE TABLE IF NOT EXISTS platforms(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,issuer TEXT NOT NULL,client_id TEXT NOT NULL,auth_url TEXT NOT NULL,launch_url TEXT NOT NULL,deep_link_launch_url TEXT,token_url TEXT NOT NULL,jwks_json TEXT NOT NULL,deployments_json TEXT NOT NULL,origins_json TEXT NOT NULL,status TEXT NOT NULL,UNIQUE(issuer,client_id))',
