@@ -59,11 +59,11 @@ function sceneFixture(){
   };
   return {scene,positions,patches,frames,runtime};
 }
-async function setup(){
+async function setup({fixture=sceneFixture()}={}){
   const previous=globalThis.document;
   globalThis.document={documentElement:{lang:'es'},createElement:tag=>new FakeElement(tag)};
   try{
-    const config=defaultAssembly(),fixture=sceneFixture(),status=new FakeElement('p');
+    const config=defaultAssembly(),status=new FakeElement('p');
     const controls=await buildAssemblyControls({
       trial:{questionId:'q1',scene:config},runtime:fixture.runtime,
       scene:fixture.scene,status,pkg:null,
@@ -148,5 +148,40 @@ test('reset orientation preserves movement, explicit reset restores the piece, f
     button(ctx.controls.panel,'Centrar montaje').click();
     assert.equal(ctx.frames.length,before+1,'camera can return to an assembly overview');
     assert.equal(ctx.patches.length,0);
+  }finally{ctx.restore();}
+});
+
+test('assembly restores invalid free pose across navigation, keeps cancelled pose and only explicit restart rewinds',async()=>{
+  const ctx=await setup();
+  try{
+    const id='piece-1',key='assembly:'+id;
+    const original=structuredClone(ctx.positions.get(key));
+    const first=[original.position[0]+1.5,original.position[1],original.position[2]-1.5];
+    drag(ctx.controls,id,original.position,first);
+    const storeKey='3d:assembly:free-poses:q1:attempt-1';
+    assert.deepEqual(ctx.runtime.getGameState(storeKey,null)[id].position,first);
+    const reentered=await setup({fixture:ctx});
+    try{
+      assert.deepEqual(reentered.positions.get(key).position,first,
+        'returning to assembly should preserve the free released pose');
+      const second=[first[0]+1,first[1],first[2]-0.8];
+      assert.equal(reentered.controls.drag(hit(id),'start',{position:first}),true);
+      reentered.controls.drag(hit(id),'move',{position:second});
+      reentered.controls.drag(hit(id),'cancel');
+      assert.deepEqual(reentered.positions.get(key).position,second,
+        'pointercancel means release, not restore to starting pose');
+      reentered.controls.interact({kind:'scene-empty'});
+      assert.deepEqual(reentered.positions.get(key).position,second,
+        'clicking an empty region must not shift assembly pieces');
+      const reopened=await setup({fixture:ctx});
+      try{
+        assert.deepEqual(reopened.positions.get(key).position,second);
+        button(reopened.controls.panel,'Reiniciar pieza').click();
+        assert.deepEqual(reopened.positions.get(key).position,original.position,
+          'only explicit restart must return to original staging point');
+        assert.equal(ctx.runtime.getGameState(storeKey,null)[id],undefined,
+          'reset removes saved free pose');
+      }finally{reopened.restore();}
+    }finally{reentered.restore();}
   }finally{ctx.restore();}
 });
