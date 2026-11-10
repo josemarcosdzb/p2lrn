@@ -94,7 +94,12 @@ for(const file of sourcePages){
  if(named(head,'meta','name','description').length!==1)errors.push(route+' missing description');
  if((html.match(/<h1\b/gi)||[]).length!==1)errors.push(route+' invalid h1 count');
  if(!id||attr(main,'tabindex')!=='-1'||jumps.length!==1||attr(jumps[0]||'','href')!=='#'+id)errors.push(route+' broken keyboard skip target');
- for(const tag of tags(html,'img'))if(attr(tag,'alt')===null)errors.push(route+' image without alt');
+ for(const tag of tags(html,'img')){
+   if(attr(tag,'alt')===null)errors.push(route+' image without alt');
+   const width=Number(attr(tag,'width')),height=Number(attr(tag,'height'));
+   if(!Number.isSafeInteger(width)||width<=0||!Number.isSafeInteger(height)||height<=0)
+     errors.push(route+' image missing valid intrinsic width/height: '+String(attr(tag,'src')));
+ }
  if(pageIndexable){
   const url=CANONICAL_ORIGIN+route;
   if(canonical.length!==1||attr(canonical[0],'href')!==url)errors.push(route+' canonical missing, repeated or mismatched');
