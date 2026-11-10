@@ -15,6 +15,7 @@ import {createLtiAgsClient} from './lti-ags.mjs';
 import {createLocalQaLmsFetch} from './lti-local-qa-gateway.mjs';
 import {createLtiNrpsClient,validateNrpsClaim,NRPS_CLAIM} from './lti-nrps.mjs';
 import {pinnedLmsFetch,trustedLmsJwksUrl} from './lti-safe-fetch.mjs';
+import {deriveLtiContentScope} from './lti-content-scope.mjs';
 import {decryptLegacySecret,encryptLegacySecret,parseLegacyForm,validateLegacyPlatform,verifyLegacyLaunch,sendLegacyOutcome} from './lti-legacy.mjs';
 import {validatePackageBytes} from '../../packages/toolkit/dist/core/validator.js';
 
@@ -148,11 +149,11 @@ function playerHtml({entityId,csrf,playerScript}){
  '<script nonce="__CSP_NONCE__">',code,'</script></body></html>'
  ].join('');
 }
-function contextFor(body,session){
+function contextFor(body,session,authorized){
  const ctx=body?.context;
  if(!ctx||typeof ctx!=='object'||Array.isArray(ctx)||
     ctx.packageId!==session.packageId||ctx.contentRoot!==session.contentRoot||
-    !session.entities.some(e=>e.id===ctx.entityId))throw new Error('UNAUTHORIZED_PLAYER_CONTEXT');
+    !authorized.has(ctx.entityId))throw new Error('UNAUTHORIZED_PLAYER_CONTEXT');
  const surface=String(ctx.profile||ctx.rendererId||ctx.runtime||'package');
  if(surface.length>180||!surface.trim())throw new Error('INVALID_PLAYER_SURFACE');
  return {entityId:ctx.entityId,surface};
@@ -329,6 +330,26 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   if(!course)throw new Error('P2LRN package contains no publishable learning entities');
   const title=String(titleHint||course.title||'Curso P2LRN').trim().slice(0,200);
   return {parsed,entities,course,title,sha:digest(bytes)};
+ }
+ const verifiedGraphs=new Map();
+ function authorizedEntityIds(session){
+  const file=resolve(packages,session.filename);
+  if(!file.startsWith(packages+sep)||!existsSync(file))
+   throw new Error('UNAUTHORIZED_PLAYER_CONTEXT');
+  let graph=verifiedGraphs.get(session.filename);
+  if(!graph){
+   // Existing published packages also work: no destructive catalogue migration.
+   // Revalidate full content integrity before accepting graph parent-child edges.
+   const inspection=inspectCourseBytes(readFileSync(file));
+   if(inspection.parsed.manifest.packageId!==session.packageId||
+      inspection.parsed.manifest.integrity.contentRoot!==session.contentRoot)
+    throw new Error('UNAUTHORIZED_PLAYER_CONTEXT');
+   graph=inspection.parsed.graph;
+   verifiedGraphs.set(session.filename,graph);
+   if(verifiedGraphs.size>16)
+    verifiedGraphs.delete(verifiedGraphs.keys().next().value);
+  }
+  return deriveLtiContentScope(graph.entities,session.entityId);
  }
  function persistCourse(tenantId,inspection,bytes){
   const filename=inspection.sha+'.p2lrn';
@@ -577,7 +598,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
      && data.context&&typeof data.context==='object'&&!Array.isArray(data.context)
      && data.context.entityId==null;
     const scoped=packageLifecycle?{...data,context:{...data.context,entityId:s.entityId}}:data;
-    const {entityId,surface}=contextFor(scoped,s);
+    const {entityId,surface}=contextFor(scoped,s,authorizedEntityIds(s));
     if(path==='/lti/runtime/state/load')
      return sendJson(res,200,store.getState(s.attemptId,entityId,surface));
     if(path==='/lti/runtime/state/save'){
