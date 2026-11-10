@@ -91,3 +91,28 @@ test('responsive diagram geometry preserves proportions across viewport widths',
   assert.throws(()=>percentDiagramGeometry(1,2,3,4,0,600),/Invalid diagram geometry/);
   assert.throws(()=>percentDiagramGeometry(1,2,3,4,NaN,600),/Invalid diagram geometry/);
 });
+
+test('preview caret normalization does not insert a fake undo step',()=>{
+  const history=createStudioHistory();
+  const surface=make('preview-caret','<p>Texto original</p>');
+  history.activate(surface);
+  surface.innerHTML+='<p>Nuevo contenido</p>';
+  history.record(surface,{kind:'command'});
+  assert.equal(history.size,2);
+  surface.innerHTML+='<p data-p2lrn-end-caret="1" aria-label="Escribir después"><br></p>';
+  assert.equal(history.record(surface),false,'empty trailing caret is not authored content');
+  assert.equal(history.size,2);
+  const reopened=make('preview-caret',surface.innerHTML);
+  history.activate(reopened);
+  assert.equal(history.size,2,'rehydrating the preview must not create a snapshot');
+  assert.equal(history.undo(reopened),true);
+  assert.doesNotMatch(reopened.innerHTML,/Nuevo contenido/);
+});
+test('reopening identical lesson with embedded media does not create undo history',()=>{
+  const history=createStudioHistory();
+  const html='<p>Curso</p><img src="data:image/png;base64,AAAA" alt="Ilustración">';
+  history.activate(make('media-preview',html));
+  history.activate(make('media-preview',html));
+  assert.equal(history.size,1);
+  assert.equal(history.canUndo(),false);
+});
