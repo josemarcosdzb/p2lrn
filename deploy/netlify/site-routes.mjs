@@ -12,6 +12,7 @@ export const ENGLISH_ROUTES=Object.freeze({
   '/docs/empezar/':'/en/docs/getting-started/',
   '/docs/empezar-facil/':'/en/docs/quickstart/',
   '/docs/desarrolladores/':'/en/docs/developers/',
+  '/docs/desarrolladores/colaboracion/':'/en/docs/developers/collaboration/',
   '/docs/desarrolladores/primeros-pasos/':'/en/docs/developers/quickstart/',
   '/docs/desarrolladores/actividades/':'/en/docs/developers/activities/',
   '/docs/desarrolladores/juegos-3d/':'/en/docs/developers/3d-games/',

@@ -219,6 +219,7 @@
         ['/cursos-offline/','Cursos offline sin LMS'],
         ['/docs/studio/','Guía de Studio'],
         ['/docs/entrega-offline/','Entrega offline'],
+      ['/docs/colaboracion/','Colaboración en Studio'],
         ['/docs/paquetes/','Crear paquetes'],
         ['/docs/paquetes/multipart/','Multipart'],
         ['/docs/toolkit/','Toolkit'],
@@ -251,10 +252,10 @@
     },
     {
       label: 'Integrar',
-      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
+      active: ['/docs/integracion/','/docs/desarrolladores/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
       items: [
         ['/docs/integracion/','Integración'],
-        ['/docs/colaboracion/','Colaboración'],
+        ['/docs/desarrolladores/colaboracion/','Colaboración técnica'],
         ['/docs/eventos/','Eventos'],
         ['/docs/conectores/','Conectores: visión general'],
         ['/docs/conectores/ia/','Conectores para IA'],
@@ -497,6 +498,7 @@
       ['/docs/studio/','Guía visual de Studio'],
       ['/docs/questionnaires/','Cuestionarios y juegos'],
       ['/docs/entrega-offline/','Entrega sin LMS'],
+      ['/docs/colaboracion/','Colaboración para profesores'],
     ]],
     ['REPRODUCIR', [
       ['/docs/ejemplos/','Cursos de ejemplo'],
@@ -520,7 +522,7 @@
     ['INTEGRAR', [
       ['/docs/integracion/','Host, identidad y permisos'],
       ['/docs/player/','Player embebido'],
-      ['/docs/colaboracion/','Colaboración y Host'],
+      ['/docs/desarrolladores/colaboracion/','Colaboración y Host'],
       ['/docs/eventos/','Eventos del Player'],
       ['/docs/juegos-3d/','Arquitectura de juegos 3D'],
       ['/docs/progresion/','Reglas de progresión'],
@@ -550,6 +552,7 @@
     ['/docs/desarrolladores/',[
       ['/docs/desarrolladores/actividades/','Referencia técnica de juegos'],
       ['/docs/desarrolladores/juegos-3d/','Motor 3D para desarrolladores'],
+      ['/docs/desarrolladores/colaboracion/','Colaboración, API y permisos'],
       ['/docs/que-usar/','Mapa técnico de componentes'],
       ['/docs/conceptos/','Conceptos del formato'],
       ['/docs/formato/','Formato P2LRN'],
@@ -589,6 +592,7 @@
   const DOC_BREADCRUMB_PARENTS = new Map([
     ['/docs/desarrolladores/actividades/',['/docs/desarrolladores/','Desarrolladores']],
     ['/docs/desarrolladores/juegos-3d/',['/docs/desarrolladores/','Desarrolladores']],
+    ['/docs/desarrolladores/colaboracion/',['/docs/desarrolladores/','Desarrolladores']],
     ['/docs/que-usar/',['/docs/desarrolladores/','Desarrolladores']],
     ['/docs/conceptos/',['/docs/desarrolladores/','Desarrolladores']],
     ['/docs/formato/',['/docs/desarrolladores/','Desarrolladores']],

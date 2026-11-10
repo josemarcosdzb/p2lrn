@@ -22,6 +22,8 @@ const handAuthoredEnglishPages=new Set([
   'docs/desarrolladores/primeros-pasos/index.html',
   'docs/desarrolladores/actividades/index.html',
   'docs/desarrolladores/juegos-3d/index.html',
+  'docs/colaboracion/index.html',
+  'docs/desarrolladores/colaboracion/index.html',
   'docs/instalar/index.html',
   'docs/que-usar/index.html',
   'docs/studio/index.html',
