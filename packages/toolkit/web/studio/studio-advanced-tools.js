@@ -53,6 +53,9 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     ['left','Alinear izquierda'],['center','Centrar'],['right','Alinear derecha'],
     ['up','Adelantar'],['down','Atrasar'],['front','Traer al frente'],['back','Enviar al fondo'],
     ['group','Agrupar seleccionados'],['ungroup','Desagrupar'],['duplicate','Duplicar'],
+    ['alignTop','Alinear arriba'],['alignMiddle','Alinear al centro vertical'],
+    ['alignBottom','Alinear abajo'],['distributeX','Distribuir horizontalmente'],
+    ['distributeY','Distribuir verticalmente'],
     ['reset','Restablecer posición'],['remove','Eliminar objeto']
   ],'objeto').details);
   const size=actionMenu(doc,'Tamaño',[],'tamano');
