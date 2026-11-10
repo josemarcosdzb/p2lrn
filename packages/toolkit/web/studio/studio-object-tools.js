@@ -1,5 +1,5 @@
 import {studioNestedInsertionContainer} from './visual-layout.js';
-import {normalizeStudioShapeCaptions} from './studio-shapes.js';
+import {normalizeStudioShapeCaptions,bezierArrowClip} from './studio-shapes.js';
 // One object toolbar shared by Studio web and the embedded NPM component.
 // Editing controls are outside the saved HTML; only standard HTML and
 // constrained inline styles are serialized to a P2LRN lesson.
@@ -362,6 +362,20 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       applyObjectTransform(el);ensureScrollRoom(el);change();return el;
     }
     if(action==='rotateStep')return act('rotate',angleOf(el)+Number(value||0));
+    if(action==='bezierLeft'||action==='bezierRight'){
+      if(el.dataset.p2lrnShape!=='bezier-arrow')throw new Error('Selecciona una flecha Bézier.');
+      const number=Number(value);
+      if(!Number.isFinite(number)||number<0||number>100)
+        throw new RangeError('La altura debe estar entre 0 y 100.');
+      const left=action==='bezierLeft'?number:positive(el.dataset.p2lrnBezierLeft,18);
+      const right=action==='bezierRight'?number:positive(el.dataset.p2lrnBezierRight,18);
+      const art=el.querySelector('[data-p2lrn-shape-art]');
+      if(!art)throw new Error('No se ha encontrado la flecha Bézier.');
+      art.style.clipPath=bezierArrowClip(left,right);
+      el.dataset.p2lrnBezierLeft=String(left);
+      el.dataset.p2lrnBezierRight=String(right);
+      change();return el;
+    }
     if(action==='curve'){
       if(el.dataset.p2lrnShape!=='curved-arrow')throw new Error('Selecciona una flecha curva.');
       const bend=Number(value);
