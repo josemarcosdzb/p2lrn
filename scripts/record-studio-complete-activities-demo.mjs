@@ -131,7 +131,7 @@ try{
   for(const name of ['Cuestionario completo',...names]){
     await show('Alumno · '+name,learner(name),solvedMode?450:1800);
     await evaluate('(()=>{const r=document.querySelector("[data-player]")?.shadowRoot;const x=r?.querySelector(".p2lrn-rosco-layout,.p2lrn-3d-layout,.p2lrn-game-shell");x?.scrollIntoView({block:"center"});return true;})()');
-    if(name==='Rosco'){
+    if(name==='Rosco'&&!solvedMode){
       await wait('document.querySelector("[data-player]")?.shadowRoot?.querySelectorAll(".p2lrn-rosco-letter").length>=16','rosco del alumno');
       const label=await show('Rosco alumno · Contiene la Ñ','(()=>{const r=document.querySelector("[data-player]").shadowRoot,b=[...r.querySelectorAll(".p2lrn-rosco-letter")].find(x=>x.textContent==="Ñ");b?.click();return r.querySelector(".p2lrn-rosco-prompt")?.textContent??false;})()',2600);
       must(String(label).includes('Contiene'),'Vista alumno no presenta Contiene la Ñ');
