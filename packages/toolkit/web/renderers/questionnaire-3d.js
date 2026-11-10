@@ -12,6 +12,7 @@ import {buildAssemblyControls} from './assembly-3d.js';
 import {el, finishPanel, setupGame, statusNode, stylesheets} from './game-common.js';
 
 export {stylesheets};
+export {buildMatchingControls};
 
 function seedText(value){
   let hash=2166136261;
@@ -289,7 +290,7 @@ export function buildOrderingControls({trial,runtime,scene,status,onProgress=()=
   };
 }
 
-export function buildMatchingControls({trial,runtime,scene,status,onProgress=()=>{}}) {
+function buildMatchingControls({trial,runtime,scene,status,onProgress=()=>{}}) {
   const expected=new Set(trial.connections.map((item)=>connectionKey(item.leftId,item.rightId)));
   const solved=new Set();
   let connections=[];
