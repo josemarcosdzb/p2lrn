@@ -64,8 +64,8 @@ for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(','doc-page-subn
 }
 
 const expectedSections=['EMPEZAR','CREAR','REPRODUCIR','DESARROLLADORES','INSTALAR','INTEGRAR','CONECTORES','REFERENCIA','RECURSOS'];
-const sidebarBlock=/const GLOBAL_SIDEBAR = \\[([\\s\\S]*?)\\n  \\];/.exec(js)?.[1]??'';
-const sectionNames=[...sidebarBlock.matchAll(/\\['([^']+)', \\[/g)].map(x=>x[1]);
+const sidebarBlock=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1]??'';
+const sectionNames=[...sidebarBlock.matchAll(/\['([^']+)', \[/g)].map(x=>x[1]);
 if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections))
   failures.push('sidebar role groups mismatch: '+JSON.stringify(sectionNames));
 const sectionChunks=new Map();
@@ -74,7 +74,7 @@ for(let i=0;i<sectionNames.length;i++){
   const b=i+1<sectionNames.length?sidebarBlock.indexOf("['"+sectionNames[i+1]+"', [",a+1):sidebarBlock.length;
   sectionChunks.set(sectionNames[i],sidebarBlock.slice(a,b));
 }
-const sidebarLinks=[...sidebarBlock.matchAll(/\\['(\\/[^']*)','([^']+)'\\]/g)].map(x=>({href:x[1],label:x[2]}));
+const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map(x=>({href:x[1],label:x[2]}));
 const hrefs=sidebarLinks.map(x=>x.href);
 if(hrefs.length!==38)failures.push('expected 38 global role-grouped links, found '+hrefs.length);
 const duplicates=hrefs.filter((href,i)=>hrefs.indexOf(href)!==i);
@@ -95,8 +95,8 @@ if(order.some(x=>x<0)||order.some((x,i)=>i>0&&x<=order[i-1]))
 for(const route of ['/docs/analytics/','/docs/progresion/','/docs/metricas/'])
   if(!(sectionChunks.get('INTEGRAR')||'').includes("['"+route+"'"))
     failures.push('advanced analytics and progression must live under developer integration: '+route);
-const childBlock=/const DOC_SIDEBAR_CHILDREN = new Map\\(\\[([\\s\\S]*?)\\n  \\]\\);/.exec(js)?.[1]??'';
-const childLinks=[...childBlock.matchAll(/\\['(\\/docs\\/[^']+\\/)','([^']+)'\\]/g)].map(x=>({href:x[1],label:x[2]}));
+const childBlock=/const DOC_SIDEBAR_CHILDREN = new Map\(\[([\s\S]*?)\n  \]\);/.exec(js)?.[1]??'';
+const childLinks=[...childBlock.matchAll(/\['(\/docs\/[^']+\/)','([^']+)'\]/g)].map(x=>({href:x[1],label:x[2]}));
 const foundation=['/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/formato-portable-cursos-interactivos/'];
 for(const route of foundation){
   if(!childBlock.includes("['"+route+"'"))failures.push('missing developer reference child: '+route);
