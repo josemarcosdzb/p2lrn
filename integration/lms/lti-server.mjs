@@ -483,6 +483,9 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    }
        if(method==='GET'&&path==='/lti/register/canvas'){
      secureAdmission(req,'canvas-registration',30,240);
+     if(incoming.searchParams.getAll('openid_configuration').length!==1||
+        incoming.searchParams.getAll('registration_token').length!==1)
+      throw new Error('INVALID_CANVAS_REGISTRATION_PARAMETERS');
      const result=await installCanvasDynamicRegistration({
       openidConfiguration:incoming.searchParams.get('openid_configuration'),
       registrationToken:incoming.searchParams.get('registration_token'),
