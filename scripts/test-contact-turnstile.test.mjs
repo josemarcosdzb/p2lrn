@@ -8,7 +8,7 @@ const VALID_BODY=Object.freeze({
   page:'/contacto/',turnstileToken:'test-token',
 });
 let counter=0;
-async function harness({secret='test-secret',required='true',siteResult={success:true,hostname:'p2lrn.org',action:'contact'},siteError=false}={}){
+async function harness({secret='test-secret',sitekey='public-test-sitekey',required='true',siteResult={success:true,hostname:'p2lrn.org',action:'contact'},siteError=false}={}){
   let handler=null;
   const calls=[];
   const priorDeno=globalThis.Deno,priorFetch=globalThis.fetch;
@@ -16,7 +16,7 @@ async function harness({secret='test-secret',required='true',siteResult={success
     env:{get(key){
       return {SUPABASE_URL:'https://test.supabase.invalid',
         SUPABASE_SERVICE_ROLE_KEY:'test-only-not-secret',
-        TURNSTILE_SECRET_KEY:secret,TURNSTILE_REQUIRED:required}[key]??'';
+        TURNSTILE_SECRET_KEY:secret,TURNSTILE_SITE_KEY:sitekey,TURNSTILE_REQUIRED:required}[key]??'';
     }},
     serve(fn){handler=fn},
   };
@@ -104,6 +104,25 @@ test('oversized chunked contact JSON is rejected before challenge verification o
   });
   const response=await ctx.handler(request);
   assert.equal(response.status,413);
+  assert.equal(ctx.calls.length,0);
+ }finally{ctx.restore()}
+});
+
+test('contact config exposes only the public sitekey and requires a complete CAPTCHA setup',async()=>{
+ const ctx=await harness();
+ try{
+  const res=await ctx.handler(new Request('https://test.supabase.invalid/functions/v1/p2lrn-contact?config=1',{
+   headers:{origin:'https://p2lrn.org'}
+  }));
+  assert.equal(res.status,200);
+  assert.deepEqual(await res.json(),{sitekey:'public-test-sitekey',required:true});
+  assert.equal(ctx.calls.length,0);
+ }finally{ctx.restore()}
+});
+test('missing public CAPTCHA key with a live server secret never falls back to unverified submissions',async()=>{
+ const ctx=await harness({sitekey:'',secret:'test-secret'});
+ try{
+  assert.equal((await ctx.handler(ctx.request(VALID_BODY))).status,503);
   assert.equal(ctx.calls.length,0);
  }finally{ctx.restore()}
 });
