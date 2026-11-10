@@ -69,7 +69,7 @@ export function sqlserverSchemas(sql,columnsByTable){
   if(table==='attempts'){
    stmts.push("IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id=OBJECT_ID(N'dbo.attempts') "+
     "AND name=N'uq_attempts_active_hash') CREATE UNIQUE INDEX [uq_attempts_active_hash] "+
-    "ON dbo.[attempts]([active_hash]) WHERE [status]='IN_PROGRESS' AND [active_hash] IS NOT NULL");
+    "ON dbo.[attempts]([active_hash]) WHERE [status]='IN_PROGRESS'");
   }
  }
  return stmts;
