@@ -31,6 +31,7 @@ const RENDERER_TYPES={
   'https://p2lrn.org/renderer/questionnaire/rosco':['text'],
   'https://p2lrn.org/renderer/questionnaire/3d-order-match':['ordering','matching','classification'],
 };
+const ROSCO_LETTERS='ABCDEFGHIJKLMNÑOPQRSTUVWXYZ';
 const uid=(prefix='id')=>prefix+'-'+crypto.randomUUID().slice(0,8);
 const node=(tag,className,text)=>{const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=studioUiText(text);return el;};
 const labeled=(label,control)=>{const wrap=node('label','q-field');wrap.append(node('span','q-label',label),control);return wrap;};
@@ -407,6 +408,31 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
       else if(question.type==='matching')renderMatchingEditor(body,question,commit,render,manual);
       else if(question.type==='classification'&&question.assembly3d)renderAssembly3DEditor(body,{question,model,commit,onStatus:report,createScene});
       else if(question.type==='classification')renderClassificationEditor(body,question,commit,render,manual);
+      if(renderer==='https://p2lrn.org/renderer/questionnaire/rosco'&&question.type==='text'){
+        const rosco=node('div','q-rosco-metadata');
+        const current=question.roscoLetter??'';
+        const letter=selectInput(current,[['','Asignación automática'],...[...ROSCO_LETTERS].map(ch=>[ch,ch])]);
+        letter.setAttribute('aria-label','Letra del rosco');
+        const mode=selectInput(question.roscoMode??'starts',[
+          ['starts','Empieza por la letra'],
+          ['contains','Contiene la letra'],
+        ]);
+        mode.setAttribute('aria-label','Tipo de pista del rosco');
+        const preview=node('p','q-help');
+        const saveRosco=()=>{
+          if(letter.value){question.roscoLetter=letter.value;question.roscoMode=mode.value;}
+          else{delete question.roscoLetter;delete question.roscoMode;}
+          preview.textContent=question.roscoLetter
+            ?(question.roscoMode==='starts'?'Empieza por ':'Contiene la ')+question.roscoLetter+' — '+question.prompt
+            :'Letra automática: el Player la asignará según la respuesta.';
+          commit();
+        };
+        letter.addEventListener('change',saveRosco);
+        mode.addEventListener('change',saveRosco);
+        rosco.append(labeled('Letra de esta pregunta',letter),labeled('Condición',mode),preview);
+        saveRosco();
+        body.append(rosco);
+      }
       card.append(body);list.append(card);
     });
     const add=node('div','q-add-row');const allowed=RENDERER_TYPES[renderer]??Object.keys(TYPE_LABELS);const addType=allowed.length===1?null:selectInput(allowed[0],allowed.map((key)=>[key,TYPE_LABELS[key]??key]));const addButton=rowButton('+ Añadir pregunta',()=>{const q=defaultQuestion(addType?.value??allowed[0]);ensureSolution(q);payload.questions.push(q);save(model,activityId,payload,onChange);render();});if(addType)add.append(addType);add.append(addButton);list.append(add);root.append(list);
