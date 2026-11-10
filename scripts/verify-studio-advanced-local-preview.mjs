@@ -118,6 +118,9 @@ async function diagramCase(){
   assert(canvas,'Diagram canvas was not inserted');
   const scroll=canvas.closest('[data-p2lrn-layout=diagram-scroll]');
   assert(scroll,'Diagram lacks independent scroll wrapper');
+  const lessonRoot=surface.querySelector(':scope > [data-p2lrn-lesson-canvas]')||surface;
+  assert(scroll.parentElement===lessonRoot,'Diagram was incorrectly nested in an earlier selected element');
+  assert(scroll.getBoundingClientRect().width>500,'Diagram occupies a narrow fragment instead of the lesson');
   canvas.click();
   tab('insert').click();
   insert('shape:cloud');
