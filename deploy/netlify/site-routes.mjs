@@ -11,6 +11,8 @@ export const ENGLISH_ROUTES=Object.freeze({
   '/licencia/':'/en/license/',
   '/docs/empezar/':'/en/docs/getting-started/',
   '/docs/empezar-facil/':'/en/docs/quickstart/',
+  '/docs/desarrolladores/':'/en/docs/developers/',
+  '/docs/desarrolladores/primeros-pasos/':'/en/docs/developers/quickstart/',
   '/docs/instalar/':'/en/docs/installation/',
   '/docs/formato/':'/en/docs/file-format/',
   '/docs/formato-portable-cursos-interactivos/':'/en/docs/portable-course-format/',

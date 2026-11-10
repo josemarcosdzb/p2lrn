@@ -18,6 +18,8 @@ const handAuthoredEnglishPages=new Set([
   'docs/index.html',
   'docs/empezar/index.html',
   'docs/empezar-facil/index.html',
+  'docs/desarrolladores/index.html',
+  'docs/desarrolladores/primeros-pasos/index.html',
   'docs/instalar/index.html',
   'docs/que-usar/index.html',
   'docs/studio/index.html',
@@ -498,9 +500,18 @@ for(const rel of handAuthoredEnglishPages){
     throw Error('Manually reviewed English 3D sales guide has lost assembly or real screenshots');
   if(rel==='docs/empezar-facil/index.html'&&
     (!english.includes('id="primer-curso"')||
-      !english.includes('id="integracion-desarrolladores"')||
-      !english.includes('<details class="p2lrn-dev-details">')))
-    throw Error('Manually reviewed English quick-start has lost the teacher/developer split');
+     !english.includes('href="/en/docs/developers/"')||
+      english.includes('<details class="p2lrn-dev-details">')))
+    throw Error('English teacher quick-start must not embed developer instructions');
+  if(rel==='docs/desarrolladores/index.html'&&
+    (!english.includes('Developer documentation')||
+      !english.includes('href="/en/docs/developers/quickstart/"')))
+    throw Error('English developer hub is incomplete');
+  if(rel==='docs/desarrolladores/primeros-pasos/index.html'&&
+    (!english.includes('scorm12-browser-demo.p2lrn')||
+      !english.includes('&lt;p2lrn-player')||
+      !english.includes('file://')))
+    throw Error('English developer first integration is missing its executable walkthrough');
   if(rel==='docs/cli/index.html'&&
     (english.includes('with him')||english.includes('Converts a supported font')))
     throw Error('Manually reviewed English CLI copy has regressed');
