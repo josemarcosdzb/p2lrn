@@ -624,15 +624,25 @@ export function filterAnalyticsDataset(input={},filters={}){
   const dataset=input?.schema===ANALYTICS_DATASET_SCHEMA?input:normalizeAnalyticsDataset(input);
   const courseId=semantic(filters.courseId,'');
   const learnerId=semantic(filters.learnerId,'');
-  const from=filters.from?new Date(filters.from).getTime():null;
-  const to=filters.to?new Date(filters.to).getTime():null;
+  const parseBoundary=(value,last)=>{
+    if(value==null||value==='')return null;
+    if(typeof value!=='string'&&typeof value!=='number'&&!(value instanceof Date))
+      throw new TypeError('Invalid Analytics date boundary.');
+    const dateOnly=typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value);
+    const ms=new Date(value).getTime();
+    if(!Number.isFinite(ms))throw new RangeError('Invalid Analytics date boundary.');
+    return last&&dateOnly?ms+86_399_999:ms;
+  };
+  const from=parseBoundary(filters.from,false);
+  const to=parseBoundary(filters.to,true);
+  if(from!=null&&to!=null&&from>to)throw new RangeError('Analytics date range is inverted.');
   const acceptCourse=(value)=>!courseId||value===courseId;
   const acceptLearner=(value)=>!learnerId||value===learnerId;
   const acceptDate=(value)=>{
-    if(!from&&!to)return true;
+    if(from==null&&to==null)return true;
     const time=new Date(value??0).getTime();
     if(!Number.isFinite(time))return false;
-    return (!from||time>=from)&&(!to||time<=to);
+    return (from==null||time>=from)&&(to==null||time<=to);
   };
   let learnerIds=new Set(dataset.learners.filter((item)=>acceptLearner(item.id)).map((item)=>item.id));
   let courseIds=new Set(dataset.courses.filter((item)=>acceptCourse(item.id)).map((item)=>item.id));
@@ -712,7 +722,9 @@ export function createHttpAnalyticsDataSource({
       const base=globalThis.location?.href??'http://localhost/';
       const target=new URL(url,base);
       for(const [name,value] of Object.entries(filters)){
-        if(value!=null&&value!=='')target.searchParams.set(name,String(value));
+        if(name==='signal')continue;
+        if(value!=null&&value!==''&&['string','number','boolean'].includes(typeof value))
+          target.searchParams.set(name,String(value));
       }
       const resolvedHeaders=typeof headers==='function'?await headers(filters):headers;
       const response=await fetchImpl(target.href,{
@@ -729,7 +741,7 @@ export function createHttpAnalyticsDataSource({
 
 function csvCell(value){
   let text=String(value??'');
-  if(/^[=+\-@]/u.test(text))text="'"+text;
+  if(/^[\s\uFEFF\u200B-\u200D]*[=+\-@]/u.test(text)||/^[\t\r\n]/u.test(text))text="'"+text;
   return /[",\n\r]/.test(text)?'"'+text.replaceAll('"','""')+'"':text;
 }
 export function analyticsToCsv(snapshotOrDataset,{kind='learners',locale='es-ES'}={}){

@@ -161,3 +161,30 @@ test('direct Analytics import detects post-generation tampering',async()=>{
     'direct Analytics import must reject a result whose payloadDigest no longer matches',
   );
 });
+
+test('CSV neutralizes formulas hidden behind whitespace and tabs',()=>{
+  const csv=analyticsToCsv({...seed,learners:[
+    {id:'u1',name:' =2+2',email:'\t@evil',group:'\r=1+1'},
+  ]},{kind:'learners'});
+  assert.match(csv,/' =2\+2/);
+  assert.match(csv,/'\t@evil/);
+  assert.match(csv,/'\r=1\+1/);
+});
+test('date bounds include the final day and reject invalid/inverted ranges',()=>{
+  const daily=filterAnalyticsDataset(seed,{from:'2026-10-27',to:'2026-10-27'});
+  assert.equal(daily.events.length,2);
+  assert.equal(daily.attempts.length,0);
+  assert.throws(()=>filterAnalyticsDataset(seed,{from:'wrong'}),/Invalid Analytics date boundary/);
+  assert.throws(()=>filterAnalyticsDataset(seed,{from:'2026-11-01',to:'2026-10-01'}),/inverted/);
+});
+test('HTTP datasource does not leak AbortSignal or objects into query string',async()=>{
+  const controller=new AbortController();
+  let called='',sentSignal=null;
+  const dataSource=createHttpAnalyticsDataSource({url:'https://host.example/api/analytics',fetch:async(url,options)=>{
+    called=url;sentSignal=options.signal;return {ok:true,json:async()=>seed};
+  }});
+  await dataSource.load({courseId:'math',signal:controller.signal,internal:{token:'private'}});
+  assert.match(called,/courseId=math/);
+  assert.doesNotMatch(called,/signal=|internal=|private/);
+  assert.equal(sentSignal,controller.signal);
+});

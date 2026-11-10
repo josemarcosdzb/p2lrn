@@ -145,8 +145,10 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   }
   attributeChangedCallback(name,oldValue,newValue){
     if(oldValue===newValue)return;
-    if(name==='src'&&this.#connected&&newValue)this.refresh().catch(()=>{});
-    else if(this.#connected){if(name==='course-id'||name==='page-size'){this.#learnerPage=1;this.#gradePage=1;}this.#recompute();}
+    if(name==='src'&&this.#connected){
+      if(newValue)this.refresh().catch(()=>{});
+      else{++this.#loadGeneration;this.#loading=false;this.#render();}
+    }else if(this.#connected){if(name==='course-id'||name==='page-size'){this.#learnerPage=1;this.#gradePage=1;}this.#recompute();}
   }
   get src(){return this.getAttribute?.('src')??'';}
   set src(value){if(value)this.setAttribute('src',value);else this.removeAttribute('src');}
@@ -161,9 +163,9 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   get pageSize(){return Math.max(10,Math.min(200,Math.floor(Number(this.getAttribute?.('page-size'))||50)));}
   set pageSize(value){this.setAttribute('page-size',String(Math.max(10,Math.min(200,Math.floor(Number(value)||50)))));}
   get data(){return this.#dataset;}
-  set data(value){this.#dataset=normalizeAnalyticsDataset(value??{});this.#error='';this.#recompute();}
+  set data(value){++this.#loadGeneration;this.#loading=false;this.#dataset=normalizeAnalyticsDataset(value??{});this.#error='';this.#recompute();}
   get dataSource(){return this.#dataSource;}
-  set dataSource(value){this.#dataSource=value??null;}
+  set dataSource(value){++this.#loadGeneration;this.#loading=false;this.#dataSource=value??null;}
 
   async refresh(){
     const generation=++this.#loadGeneration;
@@ -189,7 +191,8 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   selectLearner(id){this.#selected={type:'learner',id:String(id)};this.#render();}
   selectCourse(id){this.#selected={type:'course',id:String(id)};this.#render();}
   exportCsv(kind='learners'){
-    const csv=analyticsToCsv(this.#snapshot,{kind,locale:this.locale});
+    const snapshot=kind==='learners'||kind==='grades'?this.#scopedLearnerSnapshot():this.#snapshot;
+    const csv=analyticsToCsv(snapshot,{kind,locale:this.locale});
     download('p2lrn-analytics-'+kind+'.csv',csv);
     this.dispatchEvent(new CustomEvent('p2lrn-analytics-export',{detail:{kind},bubbles:true,composed:true}));
     return csv;
@@ -257,14 +260,15 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   #onInput(event){
     const target=event.target;
     if(target.matches?.('[data-offline-file]')||target.matches?.('[data-offline-folder]')){
+      if(event.type!=='change')return;
       const files=Array.from(target.files??[]).filter(f=>f.name.endsWith('.p2lrn-result'));
       target.value='';
       if(files.length)this.importOfflineResults(files).catch((error)=>{this.#error=String(error?.message??error);this.#render();});
       else{this.#error='No se seleccionaron archivos .p2lrn-result.';this.#render();}
     }
-    else if(target.matches?.('[data-query]')){this.#query=target.value;this.#learnerPage=1;this.#render();}
-    else if(target.matches?.('[data-course-filter]')){this.#learnerPage=1;this.#gradePage=1;this.courseId=target.value;}
-    else if(target.matches?.('[data-risk-filter]')){this.#risk=target.value;this.#learnerPage=1;this.#render();}
+    else if(target.matches?.('[data-query]')){if(event.type==='input'){this.#query=target.value;this.#learnerPage=1;this.#gradePage=1;this.#renderContent();}}
+    else if(target.matches?.('[data-course-filter]')){if(event.type==='change'){this.#learnerPage=1;this.#gradePage=1;this.courseId=target.value;}}
+    else if(target.matches?.('[data-risk-filter]')){if(event.type==='change'){this.#risk=target.value;this.#learnerPage=1;this.#gradePage=1;this.#renderContent();}}
     else if(target.matches?.('[data-period]'))this.period=target.value;
   }
   #emitSelection(type,id){this.dispatchEvent(new CustomEvent('p2lrn-analytics-select',{detail:{type,id},bubbles:true,composed:true}));}
@@ -320,6 +324,29 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
       return [item.learner.name,item.learner.email,item.learner.group,item.learner.cohort,item.learner.id].some((value)=>String(value??'').toLocaleLowerCase(this.locale).includes(q));
     });
   }
+  #scopedLearnerSnapshot(){
+    // Search and risk filters apply to learner records and grades, including CSV.
+    // Never export students omitted from the visible learner selection.
+    const permitted=new Set(this.#filteredLearners().map(item=>item.id));
+    const dataset=this.#snapshot.dataset;
+    if(permitted.size===dataset.learners.length)return this.#snapshot;
+    const belongs=item=>permitted.has(item.learnerId);
+    const scoped=normalizeAnalyticsDataset({
+      ...dataset,
+      learners:dataset.learners.filter(item=>permitted.has(item.id)),
+      enrollments:dataset.enrollments.filter(belongs),
+      attempts:dataset.attempts.filter(belongs),
+      grades:dataset.grades.filter(belongs),
+      events:dataset.events.filter(belongs),
+    });
+    return computeAnalyticsSnapshot(scoped,{activityDays:Math.max(7,Math.min(90,Number(this.period)||14))});
+  }
+  #renderContent(){
+    const container=this.#root?.querySelector('.main');
+    if(!container){this.#render();return;}
+    container.innerHTML=this.#content()+this.#detail();
+    localizeAnalyticsInterface(this.#root,this.locale);
+  }
   #learners(){
     const allRows=this.#filteredLearners();
     if(!allRows.length)return '<div class="empty"><div><strong>No hay alumnos que coincidan</strong><span>Cambia los filtros o conecta otro dataset.</span></div></div>';
@@ -332,11 +359,12 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
     return '<section class="panel"><div class="panel-head"><div><h2>Cursos</h2><p>Progreso, notas, intentos y actividad</p></div><button class="icon-button" type="button" data-export="courses">CSV</button></div><div class="table-wrap"><table><thead><tr><th>Curso</th><th>Alumnos</th><th>Iniciados</th><th>Completados</th><th>Progreso</th><th>Nota media</th><th>Aprobados</th><th>Intentos</th><th>Actividad</th><th>Señales</th></tr></thead><tbody>'+rows.map((item)=>'<tr><td><button class="row-button" type="button" data-course="'+attr(item.id)+'"><span class="avatar">'+esc(initials(item.course.title))+'</span><span><strong>'+esc(item.course.title)+'</strong><small>'+esc(item.course.code||item.id)+'</small></span></button></td><td>'+integer(item.enrolled,this.locale)+'</td><td>'+integer(item.started,this.locale)+'</td><td>'+integer(item.completed,this.locale)+'</td><td>'+esc(pct(item.averageProgress,this.locale))+'</td><td>'+esc(pct(item.averageGrade,this.locale))+'</td><td>'+esc(pct(item.passRate,this.locale))+'</td><td>'+integer(item.attempts,this.locale)+'</td><td>'+esc(duration(item.activeTimeMs,this.locale))+'</td><td>'+integer(item.riskCount,this.locale)+'</td></tr>').join('')+'</tbody></table></div></section>';
   }
   #grades(){
-    const bins=this.#snapshot.gradeDistribution,max=Math.max(1,...this.#snapshot.gradeDistribution.map((bin)=>bin.count));
+    const gradeSnapshot=this.#scopedLearnerSnapshot();
+    const bins=gradeSnapshot.gradeDistribution,max=Math.max(1,...gradeSnapshot.gradeDistribution.map((bin)=>bin.count));
     const chart='<section class="panel"><div class="panel-head"><div><h2>Distribución de notas</h2><p>Sólo calificaciones autoritativas del Host</p></div></div><div class="panel-body"><div class="grade-grid">'+bins.map((bin)=>'<div class="grade-bin"><div class="column" style="height:'+Math.max(4,Math.round((bin.count/max)*130))+'px"></div><strong>'+integer(bin.count,this.locale)+'</strong><span>'+esc(bin.key)+'%</span></div>').join('')+'</div></div></section>';
-    const allGrades=[...this.#snapshot.dataset.grades].sort((a,b)=>new Date(b.updatedAt??0)-new Date(a.updatedAt??0));
+    const allGrades=[...gradeSnapshot.dataset.grades].sort((a,b)=>new Date(b.updatedAt??0)-new Date(a.updatedAt??0));
     const page=this.#paginate(allGrades,'grades'),grades=page.items;
-    const table='<section class="panel"><div class="panel-head"><div><h2>Libro de notas</h2><p>'+integer(allGrades.length,this.locale)+' calificaciones · oficiales e informativas diferenciadas</p></div><button class="icon-button" type="button" data-export="grades">CSV</button></div><div class="table-wrap"><table><thead><tr><th>Alumno</th><th>Curso</th><th>Elemento</th><th>Nota</th><th>Estado</th><th>Fuente</th><th>Actualizada</th></tr></thead><tbody>'+grades.map((grade)=>{const learner=learnerFor(this.#snapshot.dataset,grade.learnerId),course=courseFor(this.#snapshot.dataset,grade.courseId);const value=Number.isFinite(grade.value)&&Number.isFinite(grade.maxValue)?decimal(grade.value,this.locale)+' / '+decimal(grade.maxValue,this.locale):'—';return '<tr><td>'+esc(learner?.name??grade.learnerId)+'</td><td>'+esc(course?.title??grade.courseId)+'</td><td>'+esc(grade.entityId&&grade.entityId!==grade.courseId?grade.entityId:'Curso')+'</td><td><strong>'+esc(value)+'</strong></td><td><span class="badge '+(grade.authoritative?'good':'muted')+'">'+(grade.authoritative?'Oficial':'Informativa')+'</span></td><td>'+esc(grade.source)+'</td><td>'+esc(dateText(grade.updatedAt,this.locale))+'</td></tr>';}).join('')+'</tbody></table></div>'+this.#pager('grades',page)+'</section>';
+    const table='<section class="panel"><div class="panel-head"><div><h2>Libro de notas</h2><p>'+integer(allGrades.length,this.locale)+' calificaciones · oficiales e informativas diferenciadas</p></div><button class="icon-button" type="button" data-export="grades">CSV</button></div><div class="table-wrap"><table><thead><tr><th>Alumno</th><th>Curso</th><th>Elemento</th><th>Nota</th><th>Estado</th><th>Fuente</th><th>Actualizada</th></tr></thead><tbody>'+grades.map((grade)=>{const learner=learnerFor(gradeSnapshot.dataset,grade.learnerId),course=courseFor(gradeSnapshot.dataset,grade.courseId);const value=Number.isFinite(grade.value)&&Number.isFinite(grade.maxValue)?decimal(grade.value,this.locale)+' / '+decimal(grade.maxValue,this.locale):'—';return '<tr><td>'+esc(learner?.name??grade.learnerId)+'</td><td>'+esc(course?.title??grade.courseId)+'</td><td>'+esc(grade.entityId&&grade.entityId!==grade.courseId?grade.entityId:'Curso')+'</td><td><strong>'+esc(value)+'</strong></td><td><span class="badge '+(grade.authoritative?'good':'muted')+'">'+(grade.authoritative?'Oficial':'Informativa')+'</span></td><td>'+esc(grade.source)+'</td><td>'+esc(dateText(grade.updatedAt,this.locale))+'</td></tr>';}).join('')+'</tbody></table></div>'+this.#pager('grades',page)+'</section>';
     return '<div class="grid-2">'+chart+table+'</div>';
   }
   #eventList(limit=20){
@@ -350,25 +378,25 @@ export class P2LRNAnalyticsElement extends HTMLElementBase{
   }
   #detail(){
     if(!this.#selected)return '';
-    if(this.#selected.type==='learner')return this.#learnerDetail(this.#selected.id);
-    if(this.#selected.type==='course')return this.#courseDetail(this.#selected.id);
+    if(this.#selected.type==='learner')return this.#filteredLearners().some(item=>item.id===this.#selected.id)?this.#learnerDetail(this.#selected.id):'';
+    if(this.#selected.type==='course')return this.#snapshot.courses.some(item=>item.id===this.#selected.id)?this.#courseDetail(this.#selected.id):'';
     return '';
   }
   #learnerDetail(id){
-    const metric=this.#snapshot.learners.find((item)=>item.id===id)??computeAnalyticsSnapshot(filterAnalyticsDataset(this.#dataset,{learnerId:id})).learners[0];
-    const learner=learnerFor(this.#dataset,id);if(!metric||!learner)return '';
-    const rows=learnerCourses(this.#dataset,id).map((courseId)=>{const course=courseFor(this.#dataset,courseId);const filtered=computeAnalyticsSnapshot(filterAnalyticsDataset(this.#dataset,{learnerId:id,courseId}));const item=filtered.learners[0];const grade=gradeFor(this.#dataset,id,courseId);return '<tr><td>'+esc(course?.title??courseId)+'</td><td>'+esc(pct(item?.progress??0,this.locale))+'</td><td>'+esc(pct(gradeRatio(grade),this.locale))+'</td><td>'+integer(item?.attempts??0,this.locale)+'</td><td>'+esc(duration(item?.activeTimeMs??0,this.locale))+'</td></tr>';}).join('');
+    const metric=this.#snapshot.learners.find((item)=>item.id===id)??computeAnalyticsSnapshot(filterAnalyticsDataset(this.#snapshot.dataset,{learnerId:id})).learners[0];
+    const learner=learnerFor(this.#snapshot.dataset,id);if(!metric||!learner)return '';
+    const rows=learnerCourses(this.#snapshot.dataset,id).map((courseId)=>{const course=courseFor(this.#snapshot.dataset,courseId);const filtered=computeAnalyticsSnapshot(filterAnalyticsDataset(this.#snapshot.dataset,{learnerId:id,courseId}));const item=filtered.learners[0];const grade=gradeFor(this.#snapshot.dataset,id,courseId);return '<tr><td>'+esc(course?.title??courseId)+'</td><td>'+esc(pct(item?.progress??0,this.locale))+'</td><td>'+esc(pct(gradeRatio(grade),this.locale))+'</td><td>'+integer(item?.attempts??0,this.locale)+'</td><td>'+esc(duration(item?.activeTimeMs??0,this.locale))+'</td></tr>';}).join('');
     const signals=metric.risk.reasons.length?metric.risk.reasons.map((reason)=>'<span class="badge '+metric.risk.level+'">'+esc(reason.label)+'</span>').join(''):'<span class="badge good">Sin señales</span>';
-    const offlineAttempt=this.#dataset.attempts.find((item)=>item.learnerId===id&&item.metadata?.offline);
+    const offlineAttempt=this.#snapshot.dataset.attempts.find((item)=>item.learnerId===id&&item.metadata?.offline);
     const offlineMeta=offlineAttempt?.metadata??null;
     const offlineSessions=Array.isArray(offlineMeta?.sessions)?offlineMeta.sessions:[];
     const offlineUsage=offlineMeta?'<div class="detail-section"><h3>Uso offline</h3><div class="detail-grid"><div class="detail-stat"><span>Aperturas</span><strong>'+integer(Math.max(0,Number(offlineMeta.openings)||0),this.locale)+'</strong></div><div class="detail-stat"><span>Primera apertura</span><strong>'+esc(dateText(offlineMeta.firstOpenedAt,this.locale))+'</strong></div><div class="detail-stat"><span>Última apertura</span><strong>'+esc(dateText(offlineMeta.lastOpenedAt,this.locale))+'</strong></div><div class="detail-stat"><span>Caducidad</span><strong>'+esc(dateText(offlineMeta.expiresAt,this.locale))+'</strong></div></div><p class="detail-note">Dispositivo local: '+esc(offlineMeta.deviceBindingId||'no disponible')+'</p>'+(offlineSessions.length?'<div class="table-wrap"><table><thead><tr><th>#</th><th>Apertura</th><th>Origen</th><th>Sesión</th></tr></thead><tbody>'+offlineSessions.map((session,index)=>'<tr><td>'+integer(index+1,this.locale)+'</td><td>'+esc(dateText(session.openedAt,this.locale))+'</td><td>'+esc(session.source==='windows-native'?'Windows':'Navegador')+'</td><td>'+esc(session.id||'—')+'</td></tr>').join('')+'</tbody></table></div>':'<p class="detail-note">No hay sesiones individuales disponibles en este resultado.</p>')+'</div>':'';
     return '<aside class="detail"><div class="detail-head"><div class="detail-title"><div class="avatar">'+esc(initials(learner.name))+'</div><div><h2>'+esc(learner.name)+'</h2><p>'+esc([learner.email,learner.group,learner.cohort].filter(Boolean).join(' · ')||learner.id)+'</p></div></div><button class="close" type="button" data-close-detail aria-label="Cerrar">×</button></div><div class="detail-grid"><div class="detail-stat"><span>Progreso</span><strong>'+esc(pct(metric.progress,this.locale))+'</strong></div><div class="detail-stat"><span>Nota oficial</span><strong>'+esc(pct(metric.gradeRatio,this.locale))+'</strong></div><div class="detail-stat"><span>Intentos</span><strong>'+integer(metric.attempts,this.locale)+'</strong></div><div class="detail-stat"><span>Tiempo activo</span><strong>'+esc(duration(metric.activeTimeMs,this.locale))+'</strong></div></div><div class="detail-section"><h3>Señales</h3><div class="signal-list">'+signals+'</div></div>'+offlineUsage+'<div class="detail-section"><h3>Cursos</h3><div class="table-wrap"><table><thead><tr><th>Curso</th><th>Progreso</th><th>Nota</th><th>Intentos</th><th>Actividad</th></tr></thead><tbody>'+rows+'</tbody></table></div></div></aside>';
   }
   #courseDetail(id){
-    const metric=this.#snapshot.courses.find((item)=>item.id===id)??computeAnalyticsSnapshot(filterAnalyticsDataset(this.#dataset,{courseId:id})).courses[0];
-    const course=courseFor(this.#dataset,id);if(!metric||!course)return '';
-    const filtered=computeAnalyticsSnapshot(filterAnalyticsDataset(this.#dataset,{courseId:id}));
+    const metric=this.#snapshot.courses.find((item)=>item.id===id)??computeAnalyticsSnapshot(filterAnalyticsDataset(this.#snapshot.dataset,{courseId:id})).courses[0];
+    const course=courseFor(this.#snapshot.dataset,id);if(!metric||!course)return '';
+    const filtered=computeAnalyticsSnapshot(filterAnalyticsDataset(this.#snapshot.dataset,{courseId:id}));
     const rows=filtered.learners.slice(0,100).map((item)=>'<tr><td><button class="row-button" type="button" data-learner="'+attr(item.id)+'"><span class="avatar">'+esc(initials(item.learner.name))+'</span><span><strong>'+esc(item.learner.name)+'</strong><small>'+esc(item.learner.email||item.learner.group||item.id)+'</small></span></button></td><td>'+esc(pct(item.progress,this.locale))+'</td><td>'+esc(pct(item.gradeRatio,this.locale))+'</td><td>'+integer(item.attempts,this.locale)+'</td><td><span class="badge '+item.risk.level+'">'+esc(riskLabel(item.risk.level))+'</span></td></tr>').join('');
     return '<aside class="detail"><div class="detail-head"><div class="detail-title"><div class="avatar">'+esc(initials(course.title))+'</div><div><h2>'+esc(course.title)+'</h2><p>'+esc(course.code||course.id)+'</p></div></div><button class="close" type="button" data-close-detail aria-label="Cerrar">×</button></div><div class="detail-grid"><div class="detail-stat"><span>Alumnos</span><strong>'+integer(metric.enrolled,this.locale)+'</strong></div><div class="detail-stat"><span>Finalización</span><strong>'+esc(pct(metric.completionRate,this.locale))+'</strong></div><div class="detail-stat"><span>Nota media</span><strong>'+esc(pct(metric.averageGrade,this.locale))+'</strong></div><div class="detail-stat"><span>Tiempo activo</span><strong>'+esc(duration(metric.activeTimeMs,this.locale))+'</strong></div></div><div class="detail-section"><h3>Alumnos del curso</h3><div class="table-wrap"><table><thead><tr><th>Alumno</th><th>Progreso</th><th>Nota</th><th>Intentos</th><th>Señal</th></tr></thead><tbody>'+rows+'</tbody></table></div></div></aside>';
   }
