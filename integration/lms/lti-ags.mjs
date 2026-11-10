@@ -2,6 +2,7 @@
 import {createHash,createPrivateKey,randomUUID,sign} from 'node:crypto';
 import {isIP} from 'node:net';
 import {lookup as dnsLookup} from 'node:dns/promises';
+import {pinnedLmsFetch} from './lti-safe-fetch.mjs';
 const SCORE_SCOPE='https://purl.imsglobal.org/spec/lti-ags/scope/score';
 const LINEITEM_SCOPE='https://purl.imsglobal.org/spec/lti-ags/scope/lineitem';
 const LINEITEM_READ_SCOPE='https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly';
@@ -33,7 +34,7 @@ function signAssertion(tool,clientId,tokenUrl){
  });
  return jwt+'.'+sign('RSA-SHA256',Buffer.from(jwt),privateKey).toString('base64url');
 }
-export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowInsecureLoopback=false}){
+export function createLtiAgsClient({tool,fetchImpl,lookup=dnsLookup,allowInsecureLoopback=false}){
  if(!tool?.privateKeyPem||!tool?.kid)throw new TypeError('P2LRN RSA identity required');
  async function checkHost(u){
   if(allowInsecureLoopback&&/^(localhost|127\.0\.0\.1|.*\.localhost)$/.test(u.hostname))return;
@@ -50,7 +51,7 @@ export function createLtiAgsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowI
   }
  }
  async function requestLms(phase,url,options){
-  try{return await fetchImpl(url,options);}
+  try{return await (fetchImpl??((u,o)=>pinnedLmsFetch(u,o,{lookup,allowInsecureLoopback})))(url,options);}
   catch(error){
    const reason=error?.name==='TimeoutError'||error?.name==='AbortError'?'TIMEOUT':'NETWORK_ERROR';
    // Never include access tokens, signed assertions, request bodies or LMS response text.
