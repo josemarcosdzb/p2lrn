@@ -68,7 +68,7 @@ function button(doc,label,action,title=label){
   el.dataset.objectAction=action;el.title=title;el.setAttribute('aria-label',title);return el;
 }
 const isObject=(node,surface)=>Boolean(node&&surface.contains(node)&&node.matches?.(OBJECT_SELECTOR));
-const isDiagramChild=el=>el?.parentElement?.dataset?.p2lrnLayout==='diagram-canvas';
+const isDiagramChild=el=>['diagram-canvas','diagram-group'].includes(el?.parentElement?.dataset?.p2lrnLayout);
 export function percentDiagramGeometry(x,y,width,height,containerWidth,containerHeight){
   if([x,y,width,height,containerWidth,containerHeight].some(v=>!Number.isFinite(v))||containerWidth<=0||containerHeight<=0)
     throw new RangeError('Invalid diagram geometry');
@@ -342,20 +342,69 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       if(siblings.slice(start,start+items.length).some((node,index)=>node!==items[index]))
         throw new Error('Los objetos deben ser consecutivos. Muévelos juntos antes de agrupar.');
       const group=doc.createElement('section');
-      group.dataset.p2lrnLayout='group';
+      const inDiagram=parent.dataset?.p2lrnLayout==='diagram-canvas'||parent.dataset?.p2lrnLayout==='diagram-group';
+      group.dataset.p2lrnLayout=inDiagram?'diagram-group':'group';
       group.setAttribute('role','group');group.setAttribute('aria-label','Grupo de objetos');
-      Object.assign(group.style,{display:'flow-root',position:'relative',boxSizing:'border-box',
-        width:'100%',maxWidth:'100%',padding:'0',margin:'16px 0'});
-      items[0].before(group);
-      for(const item of items)group.append(item);
+      if(inDiagram){
+        const geometry=items.map(item=>({
+          item,left:positive(parseFloat(item.style.left),0),
+          top:positive(parseFloat(item.style.top),0),
+          width:positive(parseFloat(item.style.width),20),
+          height:positive(parseFloat(item.style.height),24)
+        }));
+        const left=Math.min(...geometry.map(g=>g.left)),top=Math.min(...geometry.map(g=>g.top));
+        const right=Math.max(...geometry.map(g=>g.left+g.width));
+        const bottom=Math.max(...geometry.map(g=>g.top+g.height));
+        const width=Math.max(right-left,1),height=Math.max(bottom-top,1);
+        Object.assign(group.style,{position:'absolute',left:left+'%',top:top+'%',
+          width:width+'%',height:height+'%',maxWidth:'none',minHeight:'0',margin:'0',
+          padding:'0',boxSizing:'border-box',overflow:'visible'});
+        items[0].before(group);
+        for(const g of geometry){
+          group.append(g.item);
+          g.item.style.left=((g.left-left)/width*100).toFixed(4)+'%';
+          g.item.style.top=((g.top-top)/height*100).toFixed(4)+'%';
+          g.item.style.width=(g.width/width*100).toFixed(4)+'%';
+          g.item.style.height=(g.height/height*100).toFixed(4)+'%';
+        }
+      }else{
+        Object.assign(group.style,{display:'flow-root',position:'relative',boxSizing:'border-box',
+          width:'100%',maxWidth:'100%',padding:'0',margin:'16px 0'});
+        items[0].before(group);
+        for(const item of items)group.append(item);
+      }
       select(group);change();return group;
     }
     if(action==='ungroup'){
-      const group=el.dataset.p2lrnLayout==='group'?el:el.closest('[data-p2lrn-layout="group"]');
+      const group=['group','diagram-group'].includes(el.dataset.p2lrnLayout)?el:
+        el.closest('[data-p2lrn-layout="group"],[data-p2lrn-layout="diagram-group"]');
       if(!group||!surface.contains(group))throw new Error('Selecciona un grupo para desagrupar.');
       const children=[...group.childNodes];
+      if(group.dataset.p2lrnLayout==='diagram-group'){
+        const left=positive(parseFloat(group.style.left),0),top=positive(parseFloat(group.style.top),0);
+        const width=positive(parseFloat(group.style.width),100),height=positive(parseFloat(group.style.height),100);
+        for(const child of children){
+          if(!child.style)continue;
+          const cx=positive(parseFloat(child.style.left),0),cy=positive(parseFloat(child.style.top),0);
+          const cw=positive(parseFloat(child.style.width),100),ch=positive(parseFloat(child.style.height),100);
+          child.style.left=(left+cx*width/100).toFixed(4)+'%';
+          child.style.top=(top+cy*height/100).toFixed(4)+'%';
+          child.style.width=(cw*width/100).toFixed(4)+'%';
+          child.style.height=(ch*height/100).toFixed(4)+'%';
+        }
+      }
       group.replaceWith(...children);
       select(children.find(node=>isObject(node,surface))||null);change();return children;
+    }
+    if(action==='layerHide'){
+      el.style.visibility=el.style.visibility==='hidden'?'visible':'hidden';
+      change();return el;
+    }
+    if(action==='layerLock'){
+      const locked=el.dataset.p2lrnLayerLocked==='true';
+      el.dataset.p2lrnLayerLocked=locked?'false':'true';
+      el.style.pointerEvents=locked?'auto':'none';
+      change();return el;
     }
     if(action==='duplicate'){
       const clone=el.cloneNode(true);for(const node of [clone,...clone.querySelectorAll('[id]')])node.removeAttribute('id');
@@ -451,7 +500,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     // the enclosing section's object tools when selecting an image/video.
     if(event.target.closest?.('img[data-p2lrn-lesson-image],video[data-p2lrn-lesson-video]')){select(null);return;}
     const element=event.target.closest?.(OBJECT_SELECTOR);
-    if(element&&surface.contains(element))select(element,event.target.closest?.('td,th'),event.shiftKey);
+    if(element&&surface.contains(element)&&element.dataset.p2lrnLayerLocked!=='true')select(element,event.target.closest?.('td,th'),event.shiftKey);
     else if(!event.shiftKey)select(null);
   };
   function startDrag(event,kind){
