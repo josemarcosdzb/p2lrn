@@ -69,9 +69,13 @@ const positionOf=el=>({x:positive(el.dataset.p2lrnObjectX,0),y:positive(el.datas
 const angleOf=el=>positive(el.dataset.p2lrnObjectRotation,0);
 // Keep translation and rotation in a single authored transform so moving an
 // already rotated object never discards its orientation.
+export function objectTransform(x,y,angle=0){
+  for(const value of [x,y,angle])if(!Number.isFinite(value))throw new TypeError('Invalid object transform');
+  return 'translate('+x+'px, '+y+'px)'+(angle?' rotate('+angle+'deg)':'');
+}
 function applyObjectTransform(el){
   const {x,y}=positionOf(el),angle=angleOf(el);
-  el.style.transform='translate('+x+'px, '+y+'px)'+(angle?' rotate('+angle+'deg)':'');
+  el.style.transform=objectTransform(x,y,angle);
 }
 function setPosition(el,x,y){
   x=Math.round(between(x,-4000,4000));y=Math.round(between(y,-4000,4000));
