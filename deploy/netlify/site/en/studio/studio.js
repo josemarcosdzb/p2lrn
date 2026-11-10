@@ -375,6 +375,14 @@ async function openRemote(){
   const pkg=await api.openPackageURL(url);
   await openPackage(pkg,{name:new URL(url).pathname.split("/en/").filter(Boolean).at(-1)||"course.p2lrn",url});
 }
+let pendingContentPlacement=null;
+async function preparePendingPlacement(){
+  const choice=pendingContentPlacement;pendingContentPlacement=null;
+  if(!choice)return;
+  selectedId=choice.placement==='same-page'
+    ?await studio.samePageInsertionParent(choice.sourceId)
+    :studio.pageInsertionParent(choice.sourceId);
+}
 function insertionParent(){
   const current=studio?.entity(selectedId);if(!current)return studio?.rootId??null;
   if(['course','unit'].includes(current.type)||studio.isCompositeActivity(current.id))return current.id;
@@ -382,9 +390,10 @@ function insertionParent(){
 }
 async function selectCreated(activity,statusText){selectedId=activity.id;renderTree();await renderEditor();updateChanges();setStatus(statusText);addDialog?.close();}
 function mediaTypeForFile(file){return file.type||({'md':'text/markdown','markdown':'text/markdown','txt':'text/plain','html':'text/html','htm':'text/html','json':'application/json','mp4':'video/mp4','webm':'video/webm','mp3':'audio/mpeg','wav':'audio/wav','png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','gif':'image/gif','webp':'image/webp','svg':'image/svg+xml'}[file.name.split('.').pop().toLowerCase()]||'application/octet-stream');}
-async function addResourceFile(file){const activity=studio.addEmbeddedResource(insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:mediaTypeForFile(file),bytes:new Uint8Array(await file.arrayBuffer())});await selectCreated(activity,"File added");}
+async function addResourceFile(file){await preparePendingPlacement();const activity=studio.addEmbeddedResource(insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:mediaTypeForFile(file),bytes:new Uint8Array(await file.arrayBuffer())});await selectCreated(activity,"File added");}
 function extractedDocumentHtml(result){const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');return "<meta charset=\"utf-8\">"+result.blocks.map((b)=>b.type==='TITLE'?"<h2></h2>"+esc(b.text)+"":b.type==='LIST'?"<li></li>"+esc(b.text)+"":b.type==='SEPARATOR'?'<hr>':"<p></p>"+esc(b.text)+"<p></p>").join('')+"";}
 async function importExternalFile(file){
+  await preparePendingPlacement();
   if(studio.isCompositeActivity(insertionParent()))throw new Error("Imported educational packages create units. Select a unit to import them.");
   const endpoint=document.body.dataset.importEndpoint||'/api/p2lrn/studio/import';
   const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':file.type||'application/zip','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
@@ -395,6 +404,7 @@ async function importExternalFile(file){
   selectedId=wrapper.id;renderTree();await renderEditor();updateChanges();setStatus("Educational package imported");addDialog?.close();
 }
 async function addReaderFile(file){
+  await preparePendingPlacement();
   let result;
   const endpoint=document.body.dataset.readerEndpoint||'/api/p2lrn/studio/read';
   const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
@@ -439,32 +449,67 @@ function chooseComponent(){
   const items=studio.componentCatalog().map((entry)=>({id:entry.id,label:entry.authoring.label,description:entry.authoring.description}));
   showStudioChoice("Add component","Choose the native block you want to create.",items,async(item)=>{const activity=studio.addNativeComponent(insertionParent(),{componentId:item.id,language:'en'});await selectCreated(activity,item.label+" added");});
 }
-async function addContentKind(kind){
-  if(!studio)throw new Error("Create or open a course first.");
-  if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:"New lesson",language:'en'});return selectCreated(a,"Lesson added");}
-  if(kind==='file'){resourceFileInput.click();return;}
-  if(kind==='reader'){readerFileInput.click();return;}
-  if(kind==='external'){
-    if(studio.isCompositeActivity(insertionParent()))throw new Error("Complete educational packages are imported as units, not child activities. Select a unit.");
-    externalFileInput.click();return;
+async function addContentKind(kind,{placement='new-page'}={}){
+  if(!studio)throw new Error('Create or open a course first.');
+  if(!['same-page','new-page'].includes(placement))throw new Error('Choose a valid location for the new content.');
+  const sourceId=selectedId;
+  if(['file','reader','external'].includes(kind)){
+    if(kind==='external'&&placement==='same-page')
+      throw new Error('Import educational packages on a new page, not inside this activity.');
+    pendingContentPlacement={placement,sourceId};
+    if(kind==='file')resourceFileInput.click();
+    if(kind==='reader')readerFileInput.click();
+    if(kind==='external')externalFileInput.click();
+    return;
   }
-  if(kind==='url'){const url=prompt("Resource URL");if(!url)return;const title=prompt("Title","Web resource")||"Web resource";const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,"URL added");}
-  if(kind==='shared-library'){await chooseSharedResource();return;}
-  if(kind==='shared-resource'){
-    const url=prompt("Logical URL for shared resource");if(!url)return;
-    const expectedDigest=prompt("Expected SHA-256 (sha256:...)");if(!expectedDigest)return;
-    const mediaType=prompt("MIME type",'video/mp4')||'application/octet-stream';
-    const title=prompt("Title","Shared resource")||"Shared resource";
-    const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType,expectedDigest});
-    return selectCreated(a,"Shared resource added");
+  let scorePoints=null;
+  if(kind==='drag-scored'){
+    const answer=prompt('Points for this drag-and-drop question (1–100)','5');
+    if(answer===null)return;
+    scorePoints=Number(answer);
+    if(!Number.isInteger(scorePoints)||scorePoints<1||scorePoints>100)
+      throw new Error('Enter a whole number from 1 to 100.');
   }
-  if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:"Questionnaire",language:'en'});return selectCreated(a,"Questionnaire added");}
-  if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'en'});return selectCreated(a,"Live poll added");}
-  if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'en'});return selectCreated(a,"Shared board added");}
-  if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'en'});return selectCreated(a,"Peer review added");}
-  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword',"word wheel",'3d','3d-matching','3d-classification'].includes(kind)){const names={memory:"Memory",matching:"Matching",ordering:"Ordering",classification:"Classification",'true-false':"True / false",'fill-blanks':"Fill in the blanks",'word-search':"Word search",crossword:"Crossword",rosco:"Word wheel",'3d':"3D game",'3d-matching':"3D matching",'3d-classification':"3D classification"};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});return selectCreated(a,names[kind]+" added");}
-  if(kind==='component'){chooseComponent();return;}
-  if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:"Activity group",language:'en',mode:'free',completion:'all'});return selectCreated(activity,"Activity group added");}
+  const previous=selectedId;
+  const target=placement==='same-page'
+    ?await studio.samePageInsertionParent(sourceId)
+    :studio.pageInsertionParent(sourceId);
+  selectedId=target;
+  try{
+    if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:'New lesson',language:'en'});return selectCreated(a,'Lesson added');}
+    if(kind==='url'){const url=prompt('Resource URL');if(!url)return;const title=prompt('Title','Web resource')||'Web resource';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL added');}
+    if(kind==='shared-library'){await chooseSharedResource();return;}
+    if(kind==='shared-resource'){
+      const url=prompt('Logical URL for the shared resource');if(!url)return;
+      const expectedDigest=prompt('Expected SHA-256 (sha256:...)');if(!expectedDigest)return;
+      const mediaType=prompt('Media type','video/mp4')||'application/octet-stream';
+      const title=prompt('Title','Shared resource')||'Shared resource';
+      const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType,expectedDigest});
+      return selectCreated(a,'Shared resource added');
+    }
+    if(kind==='drag-scored'){
+      const a=studio.addGame(insertionParent(),{kind:'matching',title:'Scored drag and drop',language:'en'});
+      const questionnaire=await studio.readQuestionnaire(a.id);
+      const payload=structuredClone(questionnaire.payload);
+      payload.questions[0].points=scorePoints;
+      studio.setQuestionnaire(a.id,payload);
+      return selectCreated(a,'Scored drag-and-drop question added');
+    }
+    if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:'Questionnaire',language:'en'});return selectCreated(a,'Questionnaire added');}
+    if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'en'});return selectCreated(a,'Live poll added');}
+    if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'en'});return selectCreated(a,'Shared board added');}
+    if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'en'});return selectCreated(a,'Peer review added');}
+    if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification','assembly-3d'].includes(kind)){
+      const names={memory:'Memory',matching:'Matching',ordering:'Ordering',classification:'Classification',
+        'true-false':'True / false','fill-blanks':'Fill in the blanks','word-search':'Word search',crossword:'Crossword',
+        rosco:'Word wheel','3d':'3D ordering','3d-matching':'3D matching','3d-classification':'3D classification','assembly-3d':'3D assembly'};
+      const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});
+      return selectCreated(a,names[kind]+' added');
+    }
+    if(kind==='component'){chooseComponent();return;}
+    if(kind==='composite'){const a=studio.addComposite(insertionParent(),{title:'Activity group',language:'en',mode:'free',completion:'all'});return selectCreated(a,'Activity group added');}
+    throw new Error('This content type is not supported: '+kind);
+  }finally{if(selectedId===target)selectedId=previous;}
 }
 function emitFormatInput(name){
   captureSelection();
@@ -732,6 +777,7 @@ addLessonButton?.addEventListener('click',()=>void addLesson().catch((error)=>se
 addContentButton?.addEventListener('click',()=>{if(!studio){setStatus("Create or open a course first");return;}addDialog?.showModal();});
 addDialog?.querySelector('[data-add-close]')?.addEventListener('click',()=>addDialog.close());
 addDialog?.querySelectorAll('[data-add-kind]').forEach((button)=>button.addEventListener('click',()=>void addContentKind(button.dataset.addKind).catch((error)=>setStatus(error.message))));
+for(const input of [resourceFileInput,readerFileInput,externalFileInput])input?.addEventListener('cancel',()=>{pendingContentPlacement=null;});
 resourceFileInput?.addEventListener('change',()=>{const file=resourceFileInput.files?.[0];if(file)void addResourceFile(file).catch((error)=>setStatus(error.message));resourceFileInput.value='';});
 readerFileInput?.addEventListener('change',()=>{const file=readerFileInput.files?.[0];if(file)void addReaderFile(file).catch((error)=>setStatus(error.message));readerFileInput.value='';});
 externalFileInput?.addEventListener('change',()=>{const file=externalFileInput.files?.[0];if(file)void importExternalFile(file).catch((error)=>setStatus(error.message));externalFileInput.value='';});
