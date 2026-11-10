@@ -21,7 +21,7 @@ test('teacher sees one primary Add course button per package',()=>{
  assert.match(markup,/name="ticket" value="ticket-123"/);
  assert.match(markup,/name="catalogId" value="catalog-a"/);
  assert.match(markup,/name="entityId" value="course-root"/);
- assert.match(markup,/No necesitas descargar archivos ni configurar nada más/);
+ assert.match(markup,/No necesitas introducir claves, direcciones técnicas ni identificadores LTI/);
  assert.match(markup,/<script nonce="csp-123">/);
 });
 
@@ -71,4 +71,16 @@ test('fallback message does not reflect unknown internal exception',()=>{
  const html=ltiErrorHtml({problem:unknown,reference:'REF123'});
  assert.doesNotMatch(html,/\/private\/path|jwt=secret/);
  assert.match(html,/Vuelve a tu aula virtual/);
+});
+
+test('teacher upload has accessible native file and drag-drop controls',()=>{
+ const markup=pickerHtml({ticket:'teacher-picker',contents:[],cspNonce:'p2lrn-nonce'});
+ assert.match(markup,/id="p2lrn-dropzone"/);
+ assert.match(markup,/id="p2lrn-file" type="file" name="course"/);
+ assert.match(markup,/aria-describedby="p2lrn-file-help p2lrn-file-status"/);
+ assert.match(markup,/id="p2lrn-file-status" role="status" aria-live="polite"/);
+ assert.match(markup,/zone\.addEventListener\("drop"/);
+ assert.match(markup,/f\.size>67108864/);
+ assert.match(markup,/name="ticket" value="teacher-picker"/);
+ assert.doesNotMatch(markup,/admin_token|client_secret|private_key/);
 });

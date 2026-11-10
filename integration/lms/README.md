@@ -50,6 +50,49 @@ panel Canvas de una institucion, seleccion Deep Linking, entrada de alumno y
 entrega AGS a su libro de calificaciones. Las pruebas automatizadas del
 protocolo no sustituyen esa demostracion de extremo a extremo.
 
+## Instalacion institucional y publicacion por el profesor
+
+**Un proveedor instalado una vez, sin configuraciones por curso.** El responsable
+del LMS autoriza la herramienta P2LRN LTI 1.3 y habilita OIDC, Deep Linking y
+AGS cuando el LMS ofrece calificaciones. Es una operacion administrativa
+inicial; no se repite por cada archivo, alumno o profesor.
+
+* **Canvas:** instalacion mediante el enlace de registro dinamico publicado
+  arriba. El administrador aprueba y activa la herramienta para la cuenta.
+* **Moodle:** una sola herramienta de sitio LTI 1.3. El administrador entra en
+  Gestionar herramientas / Herramientas externas LTI y activa
+  **Mostrar en selector de actividades**. En Moodle, la opcion correcta es
+  LTI_COURSEVISIBLE_ACTIVITYCHOOSER (valor 2). El modo preconfigurado
+  (valor 1) no hace aparecer P2LRN en el selector. No usar SQL para cambiarlo.
+* **Chamilo y Sakai:** usar sus funciones oficiales de registro de herramientas
+  y publicacion LTI 1.3. Los ajustes de prueba mediante SQL o parches internos
+  no son procedimientos de instalacion para clientes.
+* **Open edX:** el administrador habilita el componente LTI 1.3 compatible.
+  Su selector integrado de profesor todavia debe certificarse con el LMS real.
+
+**Profesor:** abre su LMS, elige Añadir actividad / Herramienta externa P2LRN,
+sube un archivo .p2lrn directamente desde el selector o elige uno ya cargado
+y pulsa **Publicar y añadir**. El proveedor valida el archivo con Toolkit,
+almacena los bytes originales por SHA-256, evita duplicados del mismo paquete
+por institucion y devuelve un enlace Deep Linking firmado a ese mismo LMS.
+El profesor no aporta client_id, claves, deployment_id ni identificadores
+tecnicos, ni necesita instalar Studio para publicar un .p2lrn existente.
+
+**Alumno:** abre la actividad desde el LMS, sin una cuenta P2LRN aparte.
+Su progreso y eventos quedan asociados al lanzamiento LTI autenticado.
+Una nota oficial solo se declara entregada cuando el LMS acepta la
+transferencia AGS autorizada; las notas de navegador no equivalen al libro
+oficial de calificaciones.
+
+**Estado y limites:** la subida, deduplicacion, autorizacion de profesor,
+Deep Linking firmado y recuperacion de progreso tienen pruebas E2E del
+proveedor. La interfaz de subida tambien se ha comprobado en Chrome.
+Falta certificar visualmente la publicacion y el libro de calificaciones
+con profesores y alumnos reales de los cinco LMS. En el Moodle local de QA
+se ha comprobado que P2LRN esta configurado como coursevisible=1; la
+activacion administrativa de coursevisible=2 sigue pendiente. No declarar
+instalacion integral terminada hasta validar esos pasos.
+
 ## Preparación
 
 Requiere Node.js 22.13 o posterior y las distribuciones compiladas de Toolkit y Player.
