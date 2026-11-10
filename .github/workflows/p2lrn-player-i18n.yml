@@ -51,7 +51,7 @@ jobs:
       - name: Install pinned browser automation and open-source 3D runtime
         shell: powershell
         run: |
-          npm install --prefix .p2lrn-i18n-ci --no-save --package-lock=false playwright-core@1.64.1 three@0.186.1 @dimforge/rapier3d-compat@0.21.0
+          npm install --prefix .p2lrn-i18n-ci --no-save --package-lock=false playwright-core@1.64.1 three@0.186.1 @dimforge/rapier3d-compat@0.21.0 axe-core@4.10.3
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Test ES-EN site, Player and real Studio controls in Chrome
