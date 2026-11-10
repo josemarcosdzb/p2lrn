@@ -13,10 +13,12 @@ Para crear diagramas:
 - **Forma libre** muestra puntos que puedes arrastrar. También puedes mover cada punto con las flechas del teclado (Mayús acelera el desplazamiento). Si has girado la forma, devuelve el giro a 0° antes de editar esos puntos.
 - **Flecha curva ajustable** permite modificar por separado los dos tramos de la curva desde **Editar curva**.
 - Para seleccionar varios bloques del mismo contenedor, mantén **Mayús** al pulsar sobre ellos. El menú **Objeto** permite alinearlos, distribuirlos, agrupar objetos contiguos y desagruparlos.
-- El menú **Objeto** también permite adelantar o atrasar bloques dentro de su contenedor. Esto cambia el orden de los elementos, no crea un lienzo de capas independiente.
+- **Lienzo de diagrama** crea una superficie independiente dentro de la lección. Sus objetos, imágenes y grupos guardan posición y tamaño en porcentajes; fuera de ese lienzo, los elementos tradicionales conservan su comportamiento de flujo y desplazamiento en píxeles.
+- **Capas** permite seleccionar, subir, bajar, ocultar y bloquear figuras e imágenes del lienzo, incluso si están superpuestas. Se guarda el orden real de los objetos, sin CSS `z-index` ni código ejecutable.
+- **Agrupar** convierte figuras consecutivas seleccionadas en un grupo proporcional; **Desagrupar** recupera sus posiciones. La composición no modifica otros bloques del documento.
 - **Tres columnas** adapta los paneles al ancho disponible. Evita colocar textos importantes fuera del flujo de lectura cuando el curso se usará en pantallas pequeñas.
 
-Las figuras y sus ajustes se guardan como HTML y CSS permitidos dentro de la lección; no introducen scripts ni SVG incrustado. Las posiciones movidas manualmente usan coordenadas en píxeles: para diseños destinados a móvil, comprueba la vista del alumno en un ancho reducido antes de publicar. Estas herramientas no convierten automáticamente cualquier composición fija en un diagrama responsive.
+Las figuras y sus ajustes se guardan como HTML y CSS permitidos dentro de la lección; no introducen scripts ni SVG incrustado. El **Lienzo de diagrama** conserva las proporciones desde 640 px de ancho y ofrece desplazamiento horizontal dentro de su propia región en móviles para evitar textos microscópicos o deformaciones. Una lección tradicional fuera del lienzo sigue usando sus reglas de texto y objetos existentes. Para exportar, usa **Vista alumno** y comprueba el Player antes de entregar el curso.
 
 ## Browser integration: NPM
 
