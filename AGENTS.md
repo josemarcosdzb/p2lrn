@@ -50,6 +50,11 @@ Versión 1.0 — 2026-11-07. APLICABLE A TODO CAMBIO EN ESTE REPOSITORIO.
 - No declarar éxito solo porque el código compile o se haya desplegado. Comprobar visualmente/interactuar con los flujos afectados y sus regresiones, cuando se disponga del navegador/dispositivo.
 - Si una corrección de seguridad rompe una función legítima, corregir el diseño del aislamiento en lugar de quitar seguridad o sacrificar la función.
 
+### Contrato obligatorio de interacción y físicas de los juegos 3D
+- Los juegos de ordenar, relacionar, clasificar y ensamblar comparten el mismo motor Three.js/Rapier, avatar visible y navegación de tercera persona. El joystick es solo para dispositivos táctiles; en escritorio se usa teclado y ratón. Cada tipo mantiene sus propias reglas de encaje, relaciones y evaluación sin duplicar el motor.
+- **Recoger → mover → soltar:** solo puede transportarse un objeto a la vez. Al recoger otro, el anterior se suelta. Al soltar sobre suelo vacío, zona equivocada o interrumpir el gesto, el objeto **se queda donde se soltó** (con asentamiento vertical normal si interviene la gravedad), no regresa al origen, no desaparece y no concede puntos. Hacer clic en suelo vacío también lo suelta. Las posiciones libres han de persistir al volver a una prueba; solo un botón explícito «Reiniciar pieza» puede devolverlo al inicio.
+- Únicamente un destino válido permite encaje/snapping y modifica la respuesta educativa. Relacionar usa cuerda entre nodos en lugar de trasladar la caja; ensamblar preserva geometría/rotación/escala GLB y tolerancias de montaje. Nunca declarar estas reglas comprobadas sin regresiones de controladores Y prueba real Chrome/WebGL/Rapier, incluidos soltado incorrecto, selección consecutiva, recarga, puntuación y joystick móvil.
+
 ## 7. Git, CI y publicación
 - Revisar git diff y git diff --check, los archivos afectados y el estado del remoto antes de escribir o publicar. Los commits han de ser coherentes, trazables y sin artefactos o credenciales.
 - Trabajar sobre la rama de autoridad ya existente, sin crear otra salvo instrucción expresa. Sincronizar con el remoto preservando cambios concurrentes; no sobrescribir el trabajo ajeno.
