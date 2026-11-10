@@ -188,6 +188,15 @@ export function prepareStudioDiagramChild(parent,element){
     element.style.borderRadius='0';
     element.style.padding='0';
     element.style.overflow='visible';
+    element.style.fontFamily='Arial, sans-serif';
+    element.style.color='#092b4a';
+    const paragraph=element.querySelector(':scope > p');
+    if(paragraph){
+      paragraph.style.margin='0';
+      paragraph.style.padding='0';
+      paragraph.style.lineHeight='1.25';
+      paragraph.style.fontFamily='inherit';
+    }
   }
   return true;
 }
