@@ -232,6 +232,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   const interactables=[];
   const connectors=[];
   const carried=new Map();
+  // A freshly released object must stop following the player and must not
+  // receive the walk-collision impulse until the player moves away from it.
+  const releasedCarried=new Set();
   const raycaster=new THREE.Raycaster();
   const pointer=new THREE.Vector2();
   const dragPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-0.78);
@@ -318,6 +321,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
         const dx=mesh.position.x-player.position.x;
         const dz=mesh.position.z-player.position.z;
         const distance=Math.hypot(dx,dz);
+        if(releasedCarried.has(id)){
+          if(distance<1.7)continue;
+          releasedCarried.delete(id);
+        }
         if(distance>=1.12)continue;
         const inv=distance>0.0001?1/distance:1;
         const nx=distance>0.0001?dx*inv:1;
@@ -361,6 +368,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     interactables.length=0;
     connectors.length=0;
     carried.clear();
+    releasedCarried.clear();
     dragPointer.set(0,0.78,0);
     if(authoring)requestFrame();
   }
@@ -681,13 +689,28 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     return player.position.clone().add(forward.multiplyScalar(distance)).add(new THREE.Vector3(0,height,0));
   }
 
+  function releaseCarried(keyId){
+    if(!carried.delete(keyId))return;
+    releasedCarried.add(keyId);
+    // The deterministic fallback has no gravity. Rest a released box on the
+    // floor there instead of leaving it floating at hand height.
+    if(physicsWorld.kind==='none'){
+      const mesh=meshes.get(keyId);
+      if(mesh?.isMesh&&mesh.geometry){
+        if(!mesh.geometry.boundingBox)mesh.geometry.computeBoundingBox();
+        const bounds=mesh.geometry.boundingBox;
+        const halfHeight=Math.max(0.1,(bounds.max.y-bounds.min.y)*Math.abs(mesh.scale.y)/2);
+        setTranslation(keyId,[mesh.position.x,halfHeight,mesh.position.z]);
+      }
+    }
+  }
   function carry(id,active=true,{distance=1.18,height=1.42}={}) {
     const keyId=String(id);
-    if(!active){carried.delete(keyId);return false;}
+    if(!active){releaseCarried(keyId);return false;}
     if(!meshes.has(keyId))return false;
-    // At most one physical box can follow the player. Previously the map
-    // accumulated held boxes at identical hand coordinates.
-    carried.clear();
+    // Exclusivity is enforced at the physics/scene boundary, not only in UI.
+    for(const previous of [...carried.keys()])releaseCarried(previous);
+    releasedCarried.delete(keyId);
     carried.set(keyId,{distance,height});
     return true;
   }
