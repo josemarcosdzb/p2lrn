@@ -40,7 +40,8 @@ nav small{display:block;color:#667085;text-transform:uppercase;font:600 10px ui-
 .tree-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 0 8px;margin-bottom:6px;border-bottom:1px solid #e5e7eb}.tree-actions button{border:1px solid #d9dee7;background:#f8fafc;text-align:center;padding:6px;font-size:11px}
 .stage{padding:18px;min-width:0}
 .sheet{max-width:980px;min-height:520px;margin:auto;background:#fff;border-radius:8px;padding:26px}
-.title,.description,.surface{outline:0}
+.title,.description,.surface{outline:2px solid transparent;outline-offset:3px}
+.title:focus-visible,.description:focus-visible,.surface:focus-visible{outline:3px solid #0f766e;outline-offset:3px;background:#f0fdfa}
 .title{font-size:34px;margin:0 0 8px}
 .description{color:#667085;margin:0 0 18px;min-height:1.4em}
 .surface{min-height:340px;border:1px dashed #98a2b3;border-radius:7px;padding:16px;line-height:1.6}
@@ -170,25 +171,25 @@ export class P2LRNStudioElement extends HTMLElement{
         <div class="toolbar">
           <button type="button" data-create class="primary">Crear curso</button>
           <label><button type="button" data-open>Abrir .p2lrn</button><input data-file type="file" accept=".p2lrn,application/vnd.p2lrn+zip" hidden></label>
-          <details class="add-menu" data-add-menu><summary><span role="button">Añadir contenido</span></summary><div class="add-pop">
+          <details class="add-menu" data-add-menu><summary>Añadir contenido</summary><div class="add-pop">
             <div class="add-section"><strong>Contenido</strong><div class="add-grid">
               <button type="button" data-add-kind="lesson" data-help="Crea una lección editable para redactar y dar formato al contenido del curso.">Lección</button>
               <button type="button" data-add-kind="file" data-help="Añade una imagen, vídeo, audio u otro recurso local al curso.">Archivo / multimedia</button>
               <button type="button" data-add-kind="url" data-help="Enlaza un recurso web externo sin copiarlo dentro del paquete.">URL</button>
-              <button type="button" data-add-kind="shared-resource" data-help="Referencia un recurso compartido por URL y SHA-256 para que el host pueda reutilizar una sola copia verificada.">Recurso compartido</button>
-              <button type="button" data-add-kind="shared-library" data-shared-library hidden data-help="Selecciona un recurso ya verificado por SHA-256 de la biblioteca compartida conectada por el host.">Biblioteca compartida</button>
-              <button type="button" data-add-kind="reader" data-help="Importa documentos como PDF, DOCX, PPTX, EPUB, TXT o Markdown mediante el servicio Reader de la plataforma.">Reader / documento</button>
+              <button type="button" data-add-kind="shared-resource" data-help="Añade un recurso ya guardado en tu centro para reutilizarlo en varios cursos.">Recurso compartido</button>
+              <button type="button" data-add-kind="shared-library" data-shared-library hidden data-help="Elige un recurso de la biblioteca de tu centro para utilizarlo en este curso.">Biblioteca compartida</button>
+              <button type="button" data-add-kind="reader" data-help="Añade un documento y convierte su contenido en lecciones que puedas revisar y editar.">Reader / documento</button>
               <button type="button" data-add-kind="external" data-help="Importa un paquete educativo existente como SCORM, H5P, cmi5, QTI, Common Cartridge o IMS Content Package.">Paquete educativo</button>
             </div></div>
             <div class="add-section"><strong>Evaluación</strong><div class="add-grid"><button type="button" data-add-kind="questionnaire" data-help="Crea una evaluación flexible que puede combinar los tipos de pregunta compatibles.">Cuestionario</button></div></div>
             <div class="add-section"><strong>Juegos</strong><div class="add-grid">
               <button type="button" data-add-kind="memory" data-help="Juego de memoria basado en parejas.">Memoria</button><button type="button" data-add-kind="matching" data-help="Relaciona elementos de dos columnas, como conceptos y definiciones.">Relacionar</button><button type="button" data-add-kind="ordering" data-help="Coloca pasos, fechas o elementos en el orden correcto.">Ordenar</button><button type="button" data-add-kind="classification" data-help="Asigna cada elemento a su categoría correcta.">Clasificar</button><button type="button" data-add-kind="true-false" data-help="Indica si una serie de afirmaciones es verdadera o falsa.">Verdadero / Falso</button><button type="button" data-add-kind="fill-blanks" data-help="Completa uno o más huecos con las respuestas aceptadas.">Completar huecos</button><button type="button" data-add-kind="word-search" data-help="Genera una sopa de letras a partir de respuestas textuales.">Sopa de letras</button><button type="button" data-add-kind="crossword" data-help="Genera un crucigrama a partir de pistas y respuestas textuales.">Crucigrama</button><button type="button" data-add-kind="rosco" data-help="Crea una secuencia tipo rosco con pistas y respuestas textuales.">Rosco</button><button type="button" data-add-kind="3d" data-help="Ordena objetos 3D. Puedes cambiar el tipo de pregunta a Relacionar o Clasificar.">Juego 3D (ordenar)</button>
               <button type="button" data-add-kind="3d-matching" data-help="Conecta parejas de objetos dentro del entorno 3D.">Relacionar 3D</button>
-              <button type="button" data-add-kind="3d-classification" data-help="Clasifica objetos en zonas dentro del entorno 3D.">Clasificar 3D</button><button type="button" data-add-kind="assembly-3d" data-help="Monta modelos 3D; edita las zonas en XYZ y sus vértices.">Ensamblaje 3D</button>
+              <button type="button" data-add-kind="3d-classification" data-help="Clasifica objetos en zonas dentro del entorno 3D.">Clasificar 3D</button><button type="button" data-add-kind="assembly-3d" data-help="Crea un montaje 3D por piezas y marca la posición donde encaja cada una.">Ensamblaje 3D</button>
             </div></div>
-            <div class="add-section"><strong>Colaboración</strong><p>Actividades ligeras conectadas por el host. Sin servidores ni credenciales dentro del paquete.</p><div class="add-grid">
-              <button type="button" data-add-kind="live-poll" data-help="Votación sincronizada entre participantes con fallback individual.">Votación en directo</button>
-              <button type="button" data-add-kind="shared-board" data-help="Pizarra de notas compartidas mediante la capacidad collaboration.room.">Pizarra compartida</button>
+            <div class="add-section"><strong>Colaboración</strong><p>Actividades para colaborar y participar con otros alumnos desde el aula.</p><div class="add-grid">
+              <button type="button" data-add-kind="live-poll" data-help="Plantea una pregunta para que los alumnos voten y compartan sus respuestas.">Votación en directo</button>
+              <button type="button" data-add-kind="shared-board" data-help="Los participantes comparten ideas y notas en una pizarra del curso.">Pizarra compartida</button>
               <button type="button" data-add-kind="peer-review" data-help="Aportaciones y comentarios entre pares sin acoplar el curso al transporte.">Revisión entre pares</button>
             </div></div>
             <div class="add-section"><strong>Estructura avanzada</strong><p>Añade componentes nativos o agrupa varias actividades en un mismo recorrido. Usa + Unidad para las secciones normales.</p><div class="add-grid">
@@ -755,7 +756,7 @@ export class P2LRNStudioElement extends HTMLElement{
     dialog.append(shell);this.shadowRoot.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
   }
   async saveCourse(){
-    if(!this.saveEndpoint)throw new Error('save-endpoint is required to save to the host server.');
+    if(!this.saveEndpoint)throw new Error('No se ha configurado el guardado en línea. Descarga una copia del curso para conservar tus cambios.');
     const exported=await this.exportPackage();
     const endpoint=new URL(this.saveEndpoint,document.baseURI).href;
     const response=await fetch(endpoint,{method:'POST',headers:{
@@ -763,7 +764,7 @@ export class P2LRNStudioElement extends HTMLElement{
       'X-P2LRN-Path':this.coursePath,
       'X-P2LRN-Filename':exported.filename,
     },body:exported.bytes});
-    if(!response.ok)throw new Error('Studio save failed: HTTP '+response.status);
+    if(!response.ok)throw new Error('No se pudo guardar el curso en línea. Comprueba la conexión y vuelve a intentarlo.');
     let result=null;try{result=await response.json();}catch{}
     this.#savedRevision=this.#studio.changeCount;
     this._updateState();this.setStatus('Curso guardado en servidor');
