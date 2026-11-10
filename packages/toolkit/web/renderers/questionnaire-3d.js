@@ -289,7 +289,7 @@ export function buildOrderingControls({trial,runtime,scene,status,onProgress=()=
   };
 }
 
-function buildMatchingControls({trial,runtime,scene,status,onProgress=()=>{}}) {
+export function buildMatchingControls({trial,runtime,scene,status,onProgress=()=>{}}) {
   const expected=new Set(trial.connections.map((item)=>connectionKey(item.leftId,item.rightId)));
   const solved=new Set();
   let connections=[];
