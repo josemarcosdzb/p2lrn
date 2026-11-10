@@ -7,6 +7,7 @@ export const MAX_LESSON_VIDEO_BYTES=32*1024*1024;
 const IMAGE='img[data-p2lrn-lesson-image]';
 const VIDEO='video[data-p2lrn-lesson-video]';
 const MEDIA=IMAGE+','+VIDEO;
+const isDiagramMedia=media=>['diagram-canvas','diagram-group'].includes(media?.parentElement?.dataset?.p2lrnLayout);
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 export function lessonImageMediaType(bytes){
@@ -187,6 +188,10 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   };
   const hydratedMedia=new WeakSet();
   function imagePosition(img){
+    if(isDiagramMedia(img))return {
+      x:clamp(parseFloat(img.style.left)||0,0,100),
+      y:clamp(parseFloat(img.style.top)||0,0,100)
+    };
     const rawX=img.dataset.p2lrnImageX;
     const rawY=img.dataset.p2lrnImageY;
     return {
@@ -194,9 +199,29 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
       y:clamp(Number.isFinite(parseFloat(rawY))?parseFloat(rawY):(parseFloat(img.style.top)||0),0,6000),
     };
   }
+  function positiveMediaRatio(media){
+    const w=media.matches(VIDEO)?media.videoWidth:media.naturalWidth;
+    const h=media.matches(VIDEO)?media.videoHeight:media.naturalHeight;
+    return Math.max(.05,Math.min(20,w>0&&h>0?w/h:(parseFloat(media.dataset.p2lrnImageRatio)||1.5)));
+  }
   function reflowNestedMedia(media){
     const parent=media?.parentElement;
     if(!parent||parent===currentCanvas())return;
+    if(isDiagramMedia(media)){
+      if(!hydratedMedia.has(media)){
+        hydratedMedia.add(media);
+        media.addEventListener('click',()=>choose(media));
+      }
+      const ratio=positiveMediaRatio(media);
+      media.style.position='absolute';media.style.float='none';media.style.clear='none';
+      media.style.display='block';media.style.maxWidth='none';media.style.height='auto';
+      media.style.margin='0';media.style.objectFit='contain';
+      if(!media.style.left)media.style.left='8%';
+      if(!media.style.top)media.style.top='8%';
+      if(!media.style.width.endsWith('%'))media.style.width='20%';
+      media.style.aspectRatio=String(ratio);
+      return;
+    }
     if(!hydratedMedia.has(media)){
       hydratedMedia.add(media);
       media.addEventListener('click',()=>choose(media));
@@ -279,6 +304,17 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   }
   function place(img,box,left,top){
     const scope=img.parentElement&&img.parentElement!==currentCanvas()?img.parentElement:box;
+    if(isDiagramMedia(img)){
+      const bounds=scope.getBoundingClientRect();
+      if(!bounds.width||!bounds.height)return;
+      const mediaWidth=img.getBoundingClientRect().width||bounds.width*.2;
+      const mediaHeight=img.getBoundingClientRect().height||bounds.height*.2;
+      img.style.left=(clamp(left,0,Math.max(0,bounds.width-mediaWidth))/bounds.width*100).toFixed(4)+'%';
+      img.style.top=(clamp(top,0,Math.max(0,bounds.height-mediaHeight))/bounds.height*100).toFixed(4)+'%';
+      img.dataset.p2lrnDiagramMedia='1';
+      if(selected===img)syncSelectionPosition();
+      return;
+    }
     const width=Math.max(1,scope.getBoundingClientRect().width||scope.clientWidth);
     const imageWidth=img.getBoundingClientRect().width||Math.min(280,width);
     const x=clamp(left,0,Math.max(0,width-imageWidth));
@@ -305,7 +341,12 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     img.tabIndex=0;img.title=studioUiText('Arrastra para colocar esta imagen en la lección',doc);
     img.style.cssText='position:relative;float:left;clear:both;width:280px;max-width:calc(100% - 12px);height:auto;';
     if(nested)parent.append(img);else box.prepend(img);
-    place(img,nested?parent:box,nested?0:point?point.x:0,top);
+    if(nested&&isDiagramMedia(img)){
+      img.style.width='20%';img.style.maxWidth='none';
+      img.style.float='none';img.style.clear='none';img.style.margin='0';
+      img.style.position='absolute';
+      place(img,parent,parent.clientWidth*.08,parent.clientHeight*.08);
+    }else place(img,nested?parent:box,nested?0:point?point.x:0,top);
     img.addEventListener('load',()=>{if(box.isConnected){reflow(box);changed();}},{once:true});
     choose(img);changed();
     onStatus(nested?'Imagen insertada dentro del elemento seleccionado.':'Imagen insertada. Usa Mover para recolocarla.');
@@ -369,8 +410,16 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   const resize=step=>{
     if(!selected||!surface.contains(selected))return;
     const box=currentCanvas();if(!box)return;
-    selected.style.width=clamp((parseInt(selected.style.width,10)||280)+step,80,800)+'px';
-    place(selected,box,box.clientWidth*imagePosition(selected).x/100,imagePosition(selected).y);
+    if(isDiagramMedia(selected)){
+      const parent=selected.parentElement,rect=parent.getBoundingClientRect();
+      const before=imagePosition(selected);
+      const current=selected.getBoundingClientRect().width;
+      selected.style.width=(clamp(current+step,32,rect.width)/rect.width*100).toFixed(4)+'%';
+      place(selected,parent,rect.width*before.x/100,rect.height*before.y/100);
+    }else{
+      selected.style.width=clamp((parseInt(selected.style.width,10)||280)+step,80,800)+'px';
+      place(selected,box,box.clientWidth*imagePosition(selected).x/100,imagePosition(selected).y);
+    }
     changed();syncSelectionPosition();
   };
   smaller.addEventListener('click',()=>resize(-60));bigger.addEventListener('click',()=>resize(60));
@@ -406,7 +455,8 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     const position=imagePosition(img);
     drag={img,box,startX:event.clientX,startY:event.clientY,
       baseX:(box.clientWidth||box.getBoundingClientRect().width)*position.x/100,
-      baseY:position.y,oldTransform:img.style.transform||'',
+      baseY:isDiagramMedia(img)?(box.clientHeight||box.getBoundingClientRect().height)*position.y/100:position.y,
+      oldTransform:img.style.transform||'',
       moved:false,pointerId:event.pointerId,owner};
     try{owner.setPointerCapture?.(event.pointerId);}catch{}
   }
@@ -420,7 +470,7 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     drag.img.style.transform=(drag.oldTransform?drag.oldTransform+' ':'')+
       'translate3d('+Math.round(dx)+'px,'+Math.round(dy)+'px,0)';
     drag.img.style.willChange='transform';
-    markMediaDrop(possibleMediaDrop(event,drag.img));
+    if(!isDiagramMedia(drag.img))markMediaDrop(possibleMediaDrop(event,drag.img));
     syncSelectionPosition();
   }
   function finishDrag(event){
@@ -429,7 +479,7 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     try{result.owner.releasePointerCapture?.(event.pointerId);}catch{}
     const dx=event.clientX-result.startX,dy=event.clientY-result.startY;
     // Re-evaluate the target with the stable source layout before committing.
-    if(result.moved)markMediaDrop(possibleMediaDrop(event,result.img));
+    if(result.moved&&!isDiagramMedia(result.img))markMediaDrop(possibleMediaDrop(event,result.img));
     const destination=pendingMediaDrop;markMediaDrop(null);
     result.img.style.transform=result.oldTransform;result.img.style.willChange='';
     if(result.moved&&destination&&destination!==result.img.parentElement&&!result.img.contains(destination)){
@@ -466,7 +516,8 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     const box=selected.parentElement&&selected.parentElement!==currentCanvas()?selected.parentElement:currentCanvas();
     if(!box)return;
     const pos=imagePosition(selected);
-    place(selected,box,box.clientWidth*pos.x/100+delta[0]*step,pos.y+delta[1]*step);
+    place(selected,box,box.clientWidth*pos.x/100+delta[0]*step,
+      isDiagramMedia(selected)?box.clientHeight*pos.y/100+delta[1]*step:pos.y+delta[1]*step);
     changed();syncSelectionPosition();
   }
   const keyDelta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
