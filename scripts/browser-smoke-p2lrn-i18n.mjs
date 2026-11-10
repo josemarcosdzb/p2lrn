@@ -30,6 +30,16 @@ async function fileFor(urlPath){
     '/toolkit-web/vendor/rapier3d.mjs':join(repo,'.p2lrn-i18n-ci','node_modules','@dimforge','rapier3d-compat','dist','rapier.mjs')
   };
   if(Object.hasOwn(vendor,clean))return existsSync(vendor[clean])?vendor[clean]:null;
+  // The real Player vendor build also copies these Three.js addons and
+  // rewrites their bare "three" imports. Reproduce that exact import layout
+  // in the isolated browser test instead of serving incomplete source files.
+  const addonRoot=join(repo,'.p2lrn-i18n-ci','node_modules','three','examples','jsm');
+  const addons={
+    '/toolkit-web/vendor/loaders/GLTFLoader.js':join(addonRoot,'loaders','GLTFLoader.js'),
+    '/toolkit-web/vendor/utils/BufferGeometryUtils.js':join(addonRoot,'utils','BufferGeometryUtils.js'),
+    '/toolkit-web/vendor/utils/SkeletonUtils.js':join(addonRoot,'utils','SkeletonUtils.js'),
+  };
+  if(Object.hasOwn(addons,clean))return existsSync(addons[clean])?addons[clean]:null;
   const routes=[
     ['/toolkit-web/',toolkit],
     ['/studio/runtime/',join(toolkit,'studio')],
@@ -50,9 +60,15 @@ async function fileFor(urlPath){
 }
 const server=createServer(async(req,res)=>{
   try{
-    const target=await fileFor(new URL(req.url,'http://localhost').pathname);
+    const pathname=new URL(req.url,'http://localhost').pathname;
+    const target=await fileFor(pathname);
     if(!target){res.writeHead(404);res.end('Not found');return;}
-    const bytes=await readFile(target);
+    let bytes=await readFile(target);
+    if(/^\/toolkit-web\/vendor\/(?:loaders|utils)\/(?:GLTFLoader|SkeletonUtils|BufferGeometryUtils)\.js$/.test(pathname)){
+      const source=bytes.toString('utf8');
+      if(!source.includes("from 'three'"))throw Error('Pinned Three.js addon imports changed: '+pathname);
+      bytes=Buffer.from(source.replaceAll("from 'three'","from '../three.module.js'"));
+    }
     res.writeHead(200,{'Content-Type':contentTypes[extname(target)]||'application/octet-stream','Cache-Control':'no-store'});
     res.end(bytes);
   }catch(e){res.writeHead(500);res.end(String(e));}
