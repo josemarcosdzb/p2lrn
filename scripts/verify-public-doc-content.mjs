@@ -175,6 +175,38 @@ const questionnaireOverviewDocs=article(await readFile(join(root,'deploy/netlify
 if(!questionnaireOverviewDocs.includes('Completar huecos')){
   failures.push('deploy/netlify/site/docs/questionnaires/index.html: fill-blanks game is missing from the overview');
 }
+
+/* Keep the ordinary teacher workflow aligned with actual Studio controls.
+   The screenshot from type-answer mode must not be the only explanation of drag mode. */
+const fillBlankEditorSource=await readFile(join(root,'packages/toolkit/web/studio/questionnaire-editor.js'),'utf8');
+for(const uiToken of ['Convertir selección en hueco','Arrastrar palabras','Palabras extra / distractores','Hueco ']){
+  if(!fillBlankEditorSource.includes(uiToken))
+    failures.push('fill blanks editor control changed; re-verify teacher docs: '+uiToken);
+}
+for(const [locale,prefix] of [['es',''],['en','en/']]){
+  const overview=await readFile(join(root,'deploy/netlify/site',prefix,'docs','questionnaires','index.html'),'utf8');
+  const studioGuide=await readFile(join(root,'deploy/netlify/site',prefix,'docs','studio','index.html'),'utf8');
+  const anchor='id="crear-rellenar-huecos"';
+  const start=overview.indexOf(anchor),end=overview.indexOf('</article>',start);
+  if(start<0||end<start)failures.push(locale+': fill-blanks authoring walkthrough not present');
+  else{
+    const guide=overview.slice(start,end);
+    for(const token of ['Hueco 1','Sol','Luna','Marte','Convertir selección en hueco','Arrastrar palabras','Palabras extra / distractores','Vista alumno']){
+      if(locale==='en'&&token==='Vista alumno')continue;
+      if(!guide.includes(token))failures.push(locale+': fill-blanks example misses '+token);
+    }
+    if(/\\{\\{b\\d+\\}\\}/u.test(guide.replace(/<details\\b[\\s\\S]*?<\\/details>/i,'')))
+      failures.push(locale+': fill blanks teacher-facing instructions must not ask for manual placeholders');
+    if(guide.indexOf('<ol')<0||guide.indexOf('<ol')>guide.indexOf('<details'))
+      failures.push(locale+': editing steps must precede the old screenshot');
+    if(!guide.includes('<details')||!guide.includes('configuracion-huecos-studio.webp'))
+      failures.push(locale+': real editor evidence must be kept with accurate mode label');
+    if((guide.match(/<img\\b/gi)||[]).length!==2)
+      failures.push(locale+': authoring and learner images must remain available');
+    if(!studioGuide.includes('/'+prefix+'docs/questionnaires/#crear-rellenar-huecos'))
+      failures.push(locale+': Studio guide needs link to the fill-blanks walkthrough');
+  }
+}
 const analyticsDocs=article(await readFile(join(root,'deploy/netlify/site/docs/analytics/index.html'),'utf8'));
 for(const token of ['P2LRN Analytics','@p2lrn/analytics','authoritative: true','createHttpAnalyticsDataSource','p2lrn-analytics-refresh']){
   if(!analyticsDocs.includes(token))failures.push('deploy/netlify/site/docs/analytics/index.html: missing Analytics contract '+token);
