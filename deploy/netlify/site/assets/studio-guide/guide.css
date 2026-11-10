@@ -119,3 +119,10 @@ body.studio-doc-page .studio-guide-step-copy,
 body.studio-doc-page .studio-guide-frame{min-width:0;max-width:100%}
 body.studio-doc-page .studio-guide-step--toolbar .studio-guide-frame,
 body.studio-doc-page .studio-guide-step--toolbar .studio-guide-image-link{width:100%;max-width:100%}
+
+/* Visual QA: the complete Studio screenshot must be readable, never a half-width thumbnail. */
+body.studio-doc-page .studio-guide-feature{grid-template-columns:minmax(0,1fr)}
+body.studio-doc-page .studio-guide-feature-notes{padding:1rem}
+body.studio-doc-page .studio-guide-feature-notes ol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;list-style:none;padding:0;margin:1.25rem 0}
+body.studio-doc-page .studio-guide-feature-notes li{padding-top:.75rem;border-top:3px solid #2c70b5}
+@media(max-width:760px){body.studio-doc-page .studio-guide-feature-notes ol{grid-template-columns:1fr;gap:.75rem}}
