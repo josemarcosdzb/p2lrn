@@ -199,3 +199,25 @@ test('platform JWKS rotation preserves tenant, deployments and previously stored
   assert.equal(f.store.getRegistrationById('lms1').jwksUrl,jwksUrl);
  }finally{f.clean()}
 });
+
+test('security admission is durable, finite and independent from education records',()=>{
+ const f=fixture();
+ try{
+  const quota=[{scope:'oidc:ip:test',limit:2,seconds:60},
+   {scope:'oidc:global',limit:10000,seconds:60}];
+  assert.equal(f.store.admitSecurityRequest(quota),true);
+  assert.equal(f.store.admitSecurityRequest(quota),true);
+  assert.equal(f.store.admitSecurityRequest(quota),false);
+  f.store.transactions.create({stateHash:'c'.repeat(64),nonceHash:'b'.repeat(64),
+   browserHash:'e'.repeat(64),issuer:f.reg.issuer,clientId:f.reg.clientId,
+   registrationId:'lms1',deploymentHint:'deploy1',targetLinkUri:f.reg.launchUrl,
+   expiresAt:Math.floor(Date.now()/1000)+300});
+  f.store.close();f.store=createLtiStore(f.path);
+  assert.equal(f.store.admitSecurityRequest(quota),false,'an app restart cannot reset the quota');
+  const result=f.store.pruneExpiredSecurityState(Math.floor(Date.now()/1000)+4000);
+  assert.equal(result.state,1);
+  assert.equal(result.buckets>0,true);
+  assert.equal(f.store.getRegistrationById('lms1').tenantId,'school1');
+  assert.equal(f.store.admitSecurityRequest(quota),true);
+ }finally{f.clean()}
+});
