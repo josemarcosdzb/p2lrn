@@ -490,6 +490,30 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       const y=safeDividerY(el,pos.y+offset.y);
       setPosition(el,pos.x+offset.x,y);ensureScrollRoom(el);change();return el;
     }
+    if(action==='panelInset'){
+      if(el.dataset.p2lrnLayout!=='text-box'||!isDiagramChild(el))
+        throw new Error('Selecciona un panel de texto del diagrama.');
+      const amount=Number(value);
+      if(!Number.isFinite(amount)||amount<0||amount>8)
+        throw new RangeError('Margen interno válido: entre 0 y 8 cqw.');
+      el.style.paddingTop=amount.toFixed(2)+'cqw';
+      el.style.paddingLeft='1.1cqw';
+      el.style.paddingRight='1.1cqw';
+      el.style.paddingBottom='0.6cqw';
+      el.style.boxSizing='border-box';
+      change();return el;
+    }
+    if(action==='listSpacing'){
+      if(el.dataset.p2lrnLayout!=='text-box'||!isDiagramChild(el))
+        throw new Error('Selecciona una lista dentro de un panel de texto.');
+      const amount=Number(value);
+      if(!Number.isFinite(amount)||amount<0||amount>4)
+        throw new RangeError('Separación válida: entre 0 y 4 cqw.');
+      const entries=el.querySelectorAll('li');
+      if(!entries.length)throw new Error('El cuadro seleccionado no contiene ninguna lista.');
+      for(const li of entries)li.style.marginBottom=amount.toFixed(2)+'cqw';
+      change();return el;
+    }
     if(action==='cornerRadius'){
       if(!isDiagramChild(el))
         throw new Error('Selecciona un panel o figura dentro del lienzo.');
