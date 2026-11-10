@@ -86,6 +86,47 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     element(doc,'span','p2lrn-ribbon-caption','Curva derecha'),bezierRight,
     button(doc,'Aplicar curva derecha','bezierRight'));
   objectGroup.append(bezier.details);
+  const layers=actionMenu(doc,'Capas',[],'capas');
+  layers.popup.style.maxHeight='350px';
+  layers.popup.style.overflowY='auto';
+  layers.popup.style.minWidth='240px';
+  objectGroup.append(layers.details);
+  function updateLayers(node){
+    const scene=node?.matches?.('[data-p2lrn-layout="diagram-canvas"],[data-p2lrn-layout="diagram-group"]')?
+      node:node?.closest?.('[data-p2lrn-layout="diagram-canvas"],[data-p2lrn-layout="diagram-group"]');
+    layers.details.hidden=!scene;
+    if(!scene)return;
+    layers.popup.replaceChildren();
+    const entries=[...scene.children].filter(child=>
+      child.matches?.('[data-p2lrn-layout],figure'));
+    for(const [index,entry] of entries.entries()){
+      const row=element(doc,'div','p2lrn-layer-entry');
+      row.style.cssText='display:flex;align-items:center;gap:4px;min-height:34px';
+      const name=entry.dataset.p2lrnShape||entry.dataset.p2lrnLayout||entry.localName;
+      const text=entry.dataset.p2lrnLayout==='text-box'?
+        (entry.textContent||'Texto').trim().slice(0,26):name;
+      const choose=element(doc,'button','',String(index+1)+' · '+text);
+      choose.type='button';choose.title='Seleccionar '+text;
+      choose.setAttribute('aria-label','Seleccionar capa '+text);
+      choose.style.cssText='flex:1;text-align:left';
+      choose.addEventListener('click',()=>{
+        objectTools?.select(entry);layers.details.open=false;choose.focus();
+      });
+      const hide=element(doc,'button','',entry.style.visibility==='hidden'?'Mostrar':'Ocultar');
+      hide.type='button';hide.setAttribute('aria-label',(entry.style.visibility==='hidden'?'Mostrar ':'Ocultar ')+text);
+      hide.addEventListener('click',()=>{
+        objectTools?.select(entry);objectTools?.perform('layerHide');
+        updateLayers(entry);layers.details.open=true;
+      });
+      const lock=element(doc,'button','',entry.dataset.p2lrnLayerLocked==='true'?'Desbloquear':'Bloquear');
+      lock.type='button';lock.setAttribute('aria-label',(entry.dataset.p2lrnLayerLocked==='true'?'Desbloquear ':'Bloquear ')+text);
+      lock.addEventListener('click',()=>{
+        objectTools?.select(entry);objectTools?.perform('layerLock');
+        updateLayers(entry);layers.details.open=true;
+      });
+      row.append(choose,hide,lock);layers.popup.append(row);
+    }
+  }
   const tableGroup=element(doc,'div','p2lrn-ribbon-group p2lrn-context-table');
   tableGroup.setAttribute('role','group');tableGroup.setAttribute('aria-label','Estructura y estilo de tabla');
   const rows=actionMenu(doc,'Filas',[
@@ -122,6 +163,7 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     const selected=Boolean(node);
     context.hidden=!selected;
     if(!selected)return;
+    updateLayers(node);
     if(table)context.append(tableGroup,palette,objectGroup);
     else context.append(objectGroup,palette,tableGroup);
     const kind=table?'Tabla':node?.dataset.p2lrnLayout==='text-box'?'Cuadro de texto':
@@ -206,6 +248,7 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
       action==='cellFill'?cellFill.value:
       action==='rowHeight'?Number(rowHeight.value):null;
     objectTools.perform(action==='rotateLeft'||action==='rotateRight'?'rotateStep':action,value);
+    if(currentSelection)updateLayers(currentSelection);
     const menu=target.closest('.p2lrn-context-menu');if(menu)menu.open=false;
     refreshHistoryButtons();
   }
