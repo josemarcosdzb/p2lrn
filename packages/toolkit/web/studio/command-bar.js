@@ -53,7 +53,7 @@ export const STUDIO_CONTENT_CATALOG=Object.freeze([
 ]);
 
 const FONT_FAMILIES=['Arial','Calibri','Georgia','Verdana','Times New Roman'];
-const FONT_SIZES=[12,14,16,18,20,24,28,32,40,48];
+const FONT_SIZES=[12,14,16,18,20,24,28,32,40,48,56,64,72,80,96];
 const BLOCK_STYLES=[['p','Párrafo'],['h1','Título 1'],['h2','Título 2'],['h3','Título 3'],['blockquote','Cita']];
 let instance=0;
 const CSS=[
