@@ -74,7 +74,7 @@ export async function render(options) {
         refresh();
         if(solved.size===pairs.length){
           status.textContent=playerUiText('Memoria completada.');
-          void runtime.finish().then((score)=>{const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';if(score&&reveal)status.textContent=playerUiText(`Memoria completada: ${score.pointsEarned}/${score.pointsPossible} puntos.`);else status.textContent=playerUiText('Memoria completada. Actividad enviada.');});
+          void runtime.finish().then((score)=>{const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';if(score&&reveal)status.textContent=playerUiText(`Memoria completada: ${score.raw}/${score.max} puntos.`);else status.textContent=playerUiText('Memoria completada. Actividad enviada.');});
         }else status.textContent=playerUiText(`Pareja correcta. ${solved.size}/${pairs.length} parejas.`);
       },350);
       return;
