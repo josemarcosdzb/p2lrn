@@ -45,6 +45,8 @@ Si una Skill recibe «quiero arrastrar elementos», identificar por contexto qu�
 - Con Node 22+, `@p2lrn/toolkit` oficial y permisos, `scripts/p2lrn_official.mjs` permite crear/editar/verificar con operaciones tipadas (incluido `addQuestionnaire`). Para crear un ensamblaje debe respetarse el esquema nativo completo, el GLB embebido y las comprobaciones del Toolkit. **El adaptador CLI de la Skill no tiene un comando específico que sustituya al editor visual de jaulas o de fichas.**
 - Sin Studio en un navegador real no se puede afirmar «he pulsado y arrastrado», «he generado la malla» o «lo he grabado». Si solo hay el empaquetador Python del subconjunto Core 0.4.0, no atribuirle edición por capas, colocación de zonas, importación GLB ni pruebas de física 3D.
 - Para un modelo 3D externo, usar una malla real con derechos apropiados; validar su geometría, materiales, pivotes y submallas. No equiparar un diagrama 2D, una imagen o un fichero JSON a un GLB jugable.
+- Si está instalada la Skill `modelador-3d`, utilizarla para crear/auditar las piezas GLB antes de importarlas en Studio, conservando unidades, materiales, submallas y geometría real; no asumir que está disponible por mencionarla aquí.
+- Si está instalada `visual-engineering-studio`, usarla para anotaciones SVG, explicaciones o capturas reales. Sus renders 2.5D/Canvas **no** sustituyen la escena WebGL ni las comprobaciones de encaje de P2LRN.
 
 ## Puerta de aceptación antes de afirmar «terminado»
 
