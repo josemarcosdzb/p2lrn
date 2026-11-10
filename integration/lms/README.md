@@ -368,3 +368,73 @@ La subida acepta únicamente un ticket de profesor vigente, emitido después de 
 El selector ofrece un botón principal por curso, búsqueda y acceso opcional a actividades individuales, con navegación por teclado y diseño adaptable a móvil. Los errores visibles explican el paso que debe seguir el usuario sin exponer secretos; el código de incidencia permite al administrador localizar el tipo de problema sin pedir contraseñas.
 
 Esta mejora facilita la publicación después de la configuración institucional inicial. No certifica por sí sola el inicio de sesión o las notas oficiales en los cinco LMS. Las pruebas HTTP con JWT firmados y las pruebas de Chrome se deben informar separadamente de la certificación integral de cada LMS.
+
+
+## Seguridad de administración y publicación (2026-11-10)
+
+El proveedor LTI dispone de cuotas de solicitudes persistentes en SQLite, limpieza
+de transacciones OIDC/tickets/sesiones caducadas y un máximo de cuatro cargas
+de cursos simultáneas. La limpieza conserva intentos, progreso y calificaciones.
+Las cuotas son compartidas solo entre procesos que utilizan el mismo SQLite.
+El proxy HTTPS todavía debe imponer límites de conexiones, tamaños y tráfico.
+
+### Credenciales del registro de Canvas
+
+Canvas envía registration_token en la URL de la solicitud inicial GET.
+P2LRN elimina estos parámetros del historial visible tras registrar la
+herramienta y desactiva la transferencia de la URL mediante Referrer-Policy.
+Sin embargo, no controla el registro de entrada del proxy. En Nginx registre
+$uri, no $request_uri, y no capture argumentos de solicitud, cabeceras de
+autorización ni tokens en sistemas de observabilidad.
+
+### Administración delegada con permisos mínimos
+
+Configure P2LRN_LTI_ADMIN_SCOPES_FILE con la ruta de un archivo JSON
+privado que contenga un array de entradas, cada una con los siguientes
+campos: id único, sha256 (hex SHA-256 de una clave Bearer aleatoria de
+al menos 32 bytes), tenantId exacto, permissions, expiresAt (Unix
+segundos) y revoked (booleano opcional). No coloque el Bearer real ni
+el archivo de claves dentro del repositorio.
+
+Permisos válidos: platform:read, platform:write, content:read,
+content:write, roster:read, grades:read, grades:approve y grades:retry.
+El tenantId especial '*' debe reservarse a una cuenta global excepcional.
+
+Cuando P2LRN_LTI_ADMIN_SCOPES_FILE está configurado, el token maestro
+antiguo deja de autorizar las rutas administrativas, aunque todavía se
+exige para arrancar en esta transición. No reutilice su secreto. Sin
+configuración delegada persiste el comportamiento maestro anterior para
+preservar instalaciones existentes; la puesta en producción de claves
+delegadas sigue siendo un paso obligatorio para cerrar ese riesgo.
+
+Las vistas de plataformas y pendientes se filtran por institución.
+La aprobación y el reenvío de notas comprueban la institución del intento
+antes de ejecutar la operación.
+
+### Contacto y protección de IP
+
+La web obtiene solo la clave pública Turnstile mediante la configuración
+del endpoint. Establezca TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY y
+TURNSTILE_REQUIRED=true como secretos de Supabase. La clave privada no
+debe aparecer en JavaScript, el CDN o Git. Una configuración parcial se
+rechaza, pero, sin estas variables, el formulario conserva las cuotas SQL
+existentes y Turnstile NO está realmente activo.
+
+P2LRN_CONTACT_TRUSTED_IP_HEADER solo debe habilitarse si una pasarela
+autenticada elimina cualquier cabecera enviada por el visitante y la
+reemplaza por la IP verificada. El comportamiento por defecto no confía
+en cabeceras IP que el cliente pueda falsificar.
+
+### Respuestas confidenciales y protección de main
+
+El Player actual recibe el paquete .p2lrn completo para la reproducción
+online. Si ese paquete incorpora soluciones de examen, el contenido se
+puede inspeccionar. La firma/integridad del paquete y la aprobación de
+notas no eliminan este riesgo. Una modalidad de examen secreto requiere
+proyección de preguntas sin soluciones, soluciones custodiadas por el
+servidor y evaluación autorizada del lado del servidor.
+
+La protección obligatoria de main (PR revisadas, controles requeridos,
+sin force-push ni cambios directos) se debe configurar en la
+administración del repositorio GitHub. La existencia de CI no configura
+por sí misma esta protección.
