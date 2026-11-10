@@ -92,7 +92,34 @@ const h5pFiles = await compareTrees(npmH5p, cdnH5p);
 const studioFiles = await compareTrees(npmStudio, cdnStudio);
 const analyticsFiles = await compareTrees(npmAnalytics, cdnAnalytics);
 
+const parityManifest=JSON.parse(await readFile(join(root,'.netlify-cdn','distribution-parity.json'),'utf8'));
+if(parityManifest.version!==version||parityManifest.toolkit?.version!==toolkitPackage.version)
+  throw new Error('CDN parity inventory version mismatch.');
+const parityInputs=[
+  {name:'player',root:npmPlayer,exclude:path=>path.startsWith('runtime-host/h5p-libraries/')||path.endsWith('.html.raw')},
+  {name:'h5p-libraries',root:npmH5p,exclude:()=>false},
+  {name:'studio',root:npmStudio,exclude:()=>false},
+  {name:'analytics',root:npmAnalytics,exclude:()=>false},
+];
+for(const item of parityInputs){
+  const component=parityManifest.components?.[item.name];
+  if(!component||component.package!=='@p2lrn/'+item.name||component.version!==version)
+    throw new Error('Missing or incorrect CDN parity component: '+item.name);
+  const npmFiles=(await walk(item.root)).filter(path=>!item.exclude(path));
+  const inventoryFiles=component.files?.map(row=>row.path).sort();
+  if(!Array.isArray(inventoryFiles)||component.fileCount!==inventoryFiles.length||
+     JSON.stringify(npmFiles)!==JSON.stringify(inventoryFiles))
+    throw new Error('CDN parity manifest does not enumerate all npm files: '+item.name);
+  for(const row of component.files){
+    const file=join(item.root,...row.path.split('/'));
+    const bytes=await readFile(file);
+    const actual='sha256:'+createHash('sha256').update(bytes).digest('hex');
+    if(bytes.length!==row.bytes||actual!==row.sha256)
+      throw new Error('CDN parity manifest differs from npm artifact: '+item.name+'/'+row.path);
+  }
+}
 const index = JSON.parse(await readFile(join(root,'.netlify-cdn','index.json'),'utf8'));
+if(index.distributionParityManifest!=='/distribution-parity.json')throw new Error('CDN index lacks full parity inventory.');
 if (index.player?.version !== version) throw new Error('CDN index Player version mismatch.');
 if (index.generatedFrom?.toolkitVersion !== toolkitPackage.version) throw new Error('CDN index Toolkit version mismatch.');
 if (index.h5p?.sharedLibraryPackageVersion !== h5pPackage.version) throw new Error('CDN index H5P package version mismatch.');
@@ -106,6 +133,7 @@ await import('./verify-cdn-sri.mjs');
 console.log(JSON.stringify({
   ok:true,
   version,
+  completeManifestFilesCompared:Object.fromEntries(parityInputs.map(item=>[item.name,parityManifest.components[item.name].fileCount])),
   playerFilesCompared:playerFiles,
   cdnHtmlMirrors,
   h5pFilesCompared:h5pFiles,
