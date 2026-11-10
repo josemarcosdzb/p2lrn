@@ -685,6 +685,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     const keyId=String(id);
     if(!active){carried.delete(keyId);return false;}
     if(!meshes.has(keyId))return false;
+    // At most one physical box can follow the player. Previously the map
+    // accumulated held boxes at identical hand coordinates.
+    carried.clear();
     carried.set(keyId,{distance,height});
     return true;
   }
