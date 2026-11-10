@@ -22,7 +22,7 @@ const style=`
 .p2lrn-assembly-editor .a3-main{display:block;min-width:0;width:100%}
 .p2lrn-assembly-editor .a3-scene{position:relative;min-width:0;width:100%;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 45% 45%,#183348,#071522)}
 .p2lrn-assembly-editor .a3-scene>canvas,.p2lrn-assembly-editor .a3-scene>svg{display:block;width:100%;height:clamp(390px,65vh,780px);aspect-ratio:auto;touch-action:none;cursor:grab}
-.p2lrn-assembly-editor .a3-scene:focus-within{outline:2px solid #0d9488}
+.p2lrn-assembly-editor .a3-scene:focus-within{outline:3px solid #0f766e;outline-offset:2px}
 .p2lrn-assembly-editor .a3-scene-note{position:absolute;z-index:2;bottom:8px;left:12px;right:12px;width:max-content;max-width:calc(100% - 24px);padding:6px 10px;border-radius:7px;color:#f8fafc;background:#071522e0;font-size:12px;pointer-events:none}
 .p2lrn-assembly-editor .a3-pane{border:1px solid #90a1b474;border-radius:11px;padding:10px;min-width:0;display:grid;gap:8px}
 .p2lrn-assembly-editor .a3-assets{position:absolute;z-index:5;top:12px;left:12px;max-height:calc(100% - 62px);overflow:auto;width:min(295px,calc(100% - 24px));border:1px solid #8998ae;background:#f8fafcee;color:#17263c;box-shadow:0 8px 24px #0206176e;border-radius:10px}
@@ -165,7 +165,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   }
   function drawScene(){
     svg.replaceChildren();
-    const g=element('g',{'aria-hidden':'true'});
+    const g=element('g',{'aria-hidden':'true'}); // Decorative grid only; interactive alternatives stay in the labelled HTML fields.
     const grid=Array.from({length:15},(_,i)=>i-7);
     grid.forEach(v=>{const line1=[[-7,0,v],[7,0,v]],line2=[[v,0,-7],[v,0,7]];const a=line1.map(project),b=line2.map(project);element('path',{d:'M'+a[0][0]+' '+a[0][1]+'L'+a[1][0]+' '+a[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);element('path',{d:'M'+b[0][0]+' '+b[0][1]+'L'+b[1][0]+' '+b[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);});
     const sortItems=[];
@@ -173,7 +173,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       const active=selected.kind==='target'&&selected.id===target.id;
       const group=element('g',{'data-kind':'target','data-id':target.id});
       CAGE_EDGES.forEach(([a,b])=>{const c=coords[a],d=coords[b];const line=element('path',{d:'M'+c[0]+' '+c[1]+' L'+d[0]+' '+d[1],stroke:active?'#5eead4':'#6bbac0','stroke-width':active?2.8:1.8,fill:'none','stroke-opacity':target.visibility==='hidden'?0.45:0.9},group);line.dataset.kind='target';line.dataset.id=target.id;line.style.cursor='move';});
-      if(active)coords.forEach(([x,y],index)=>{const n=element('circle',{cx:x,cy:y,r:6,fill:index===vertexIndex?'#fef08a':'#14b8a6',stroke:'#ffffff','stroke-width':1.4,tabindex:'0',role:'button','aria-label':'Vértice '+(index+1)},group);n.dataset.kind='vertex';n.dataset.id=target.id;n.dataset.index=String(index);n.style.cursor='move';});
+      if(active)coords.forEach(([x,y],index)=>{const n=element('circle',{cx:x,cy:y,r:6,fill:index===vertexIndex?'#fef08a':'#14b8a6',stroke:'#ffffff','stroke-width':1.4},group);n.dataset.kind='vertex';n.dataset.id=target.id;n.dataset.index=String(index);n.style.cursor='move';});
       const loc=project(target.transform.position);
       element('text',{x:loc[0]+7,y:loc[1]+8,fill:'#ccfbf1','font-size':12},group).textContent=target.text;
     }});});
