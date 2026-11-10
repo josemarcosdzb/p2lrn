@@ -693,7 +693,7 @@ export async function render(options) {
 
   const technology=el('p',{class:'p2lrn-3d-runtime'},accessibleOnly
     ?playerUiText('Escena 3D no disponible · modo accesible')
-    :playerUiText(`Three.js · física: ${scene.physics==='rapier'?'Rapier':'fallback sin físicas'}`));
+    :playerUiText('La escena 3D está lista. También puedes responder con los controles accesibles.'));
   const help=el('p',{class:'p2lrn-game-description'},accessibleOnly
     ?playerUiText('Elige las respuestas usando los botones y selectores de cada prueba.')
     :playerUiText('En móvil, mueve la bola para caminar y arrastra el fondo para mirar. En PC, haz clic en la escena y usa WASD o las flechas.'));
