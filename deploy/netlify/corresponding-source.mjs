@@ -2,12 +2,9 @@ import {createHash} from 'node:crypto';
 import {cp, lstat, mkdir, readFile, readdir, stat, writeFile} from 'node:fs/promises';
 import {dirname, join, relative, resolve, sep} from 'node:path';
 
-const SOURCE_DIRS=Object.freeze({
-  toolkit:['src','config','web','web-sdk-src','web-build'],
-  studio:['src','scripts','server','types','templates'],
-  analytics:['src','scripts','types'],
-});
-const SOURCE_FILES=['package.json','README.md','LICENSE','NOTICE.md'];
+const FIRST_PARTY_PACKAGES=new Set(['toolkit','studio','analytics']);
+// package.json.files is the single source of truth for distributed source.
+// A new bin/server/script directory cannot be omitted from the CDN snapshot.
 const BLOCKED_NAME=/(?:^|\/)(?:node_modules|\.git|\.env(?:\..*)?|\.npmrc|dist|\.netlify-cdn)(?:\/|$)|\.(?:p12|pfx|pem|key)$/i;
 const sha256=buffer=>'sha256:'+createHash('sha256').update(buffer).digest('hex');
 
@@ -27,7 +24,7 @@ async function scanFiles(directory,base=directory){
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 
 export async function publishPackageCorrespondingSource({root,outputRoot,name,version,sourceRef=null}){
-  if(!Object.hasOwn(SOURCE_DIRS,name))throw new Error('Unsupported source package: '+name);
+  if(!FIRST_PARTY_PACKAGES.has(name))throw new Error('Unsupported source package: '+name);
   if(!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version))throw new Error('Invalid version');
   const packageRoot=resolve(root,'packages',name);
   const targetRoot=resolve(outputRoot,name,version,'source');
@@ -35,10 +32,16 @@ export async function publishPackageCorrespondingSource({root,outputRoot,name,ve
   const packageManifest=JSON.parse(await readFile(join(packageRoot,'package.json'),'utf8'));
   if(packageManifest.version!==version||packageManifest.license!=='SEE LICENSE IN LICENSE')
     throw new Error('Version or license mismatch in '+name);
-  const sourceFiles=[...SOURCE_FILES];
-  if(name==='toolkit')sourceFiles.push('tsconfig.json');
-  const allowlist=[...SOURCE_DIRS[name],...sourceFiles];
-  for(const part of allowlist){
+  const publishedFiles=packageManifest.files;
+  if(!Array.isArray(publishedFiles)||publishedFiles.length===0)
+    throw new Error('Missing published files declaration in '+name);
+  const paths=publishedFiles.map(path=>String(path).replace(/\/+$/,''));
+  const sourceFiles=[...new Set(['package.json',...paths.filter(path=>path!=='dist')])];
+  for(const part of sourceFiles){
+    if(!/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/.test(part)||
+       part.split('/').some(segment=>segment==='.'||segment==='..')||
+       part==='source'||part.startsWith('source/'))
+      throw new Error('Unsafe published source path for '+name+': '+part);
     const source=join(packageRoot,part);
     const info=await lstat(source);
     if(info.isSymbolicLink())throw new Error('Symlink in source input: '+source);

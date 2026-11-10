@@ -19,6 +19,16 @@ test('source manifests cover all three first-party packages with SHA-256',async(
       assert.equal(manifest.sourceRef,'qa');
       assert.equal(verified.valid,true);
       assert(verified.fileCount>5);
+      const declared=JSON.parse(await readFile(join(root,'packages',name,'package.json'),'utf8'));
+      const entries=manifest.files.map(entry=>entry.path);
+      for(const file of declared.files){
+        const path=file.replace(/\/+$/,'');
+        if(path==='dist')continue; // Built JavaScript is covered by the binary distribution.
+        const prefix='packages/'+name+'/'+path;
+        assert(entries.some(entry=>entry===prefix||entry.startsWith(prefix+'/')),
+          'Corresponding Source omitted a published npm input: '+prefix);
+      }
+      assert(entries.includes('packages/'+name+'/package.json'));
       const target=join(out,name,version,'source','packages',name,'LICENSE');
       const original=await readFile(join(root,'LICENSE'));
       assert((await readFile(target)).equals(original));

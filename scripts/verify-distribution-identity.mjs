@@ -118,6 +118,59 @@ for(const item of parityInputs){
       throw new Error('CDN parity manifest differs from npm artifact: '+item.name+'/'+row.path);
   }
 }
+// Verify corresponding source in BOTH distribution channels as well as dist/.
+// Node-only Toolkit/Studio/Analytics APIs cannot execute from a static CDN,
+// but their published sources must be mirrored without omissions.
+const npmModules=join(root,'.npm-pack-gate','install','node_modules','@p2lrn');
+const cdnRoot=join(root,'.netlify-cdn');
+const playerSourceFiles=await compareTrees(
+  join(npmModules,'player','source'),
+  join(cdnRoot,'player',version,'source'));
+await compareTrees(
+  join(npmModules,'player','source'),
+  join(cdnRoot,'player','current','source'));
+const sourceFilesCompared={player:playerSourceFiles};
+for(const name of ['toolkit','studio','analytics']){
+  const packageRoot=join(npmModules,name);
+  const packageJson=JSON.parse(await readFile(join(packageRoot,'package.json'),'utf8'));
+  const cdnSource=join(cdnRoot,name,version,'source');
+  const manifest=JSON.parse(await readFile(join(cdnSource,'SOURCE-MANIFEST.json'),'utf8'));
+  if(manifest.package!=='@p2lrn/'+name||manifest.packageVersion!==version)
+    throw new Error('Corresponding Source version/package mismatch: '+name);
+  const declared=new Set();
+  for(const raw of [...new Set(['package.json',...(packageJson.files??[])])]){
+    const part=String(raw).replace(/\/+$/,'');
+    if(part==='dist')continue;
+    if(!/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/.test(part)||
+       part.split('/').some(segment=>segment==='.'||segment==='..'))
+      throw new Error('Invalid published path: '+name+'/'+part);
+    const file=join(packageRoot,...part.split('/'));
+    const info=await stat(file);
+    if(info.isFile())declared.add(part);
+    else if(info.isDirectory())
+      for(const entry of await walk(file))declared.add(part+'/'+entry);
+    else throw new Error('Unsupported npm source path: '+name+'/'+part);
+  }
+  const matched=new Set();
+  for(const item of manifest.files??[]){
+    const prefix='packages/'+name+'/';
+    if(!item.path.startsWith(prefix))throw new Error('Unsafe source manifest path: '+item.path);
+    const path=item.path.slice(prefix.length);
+    if(!declared.has(path)||matched.has(path))
+      throw new Error('CDN source manifest missing/duplicate npm source: '+name+'/'+path);
+    const npmBytes=await readFile(join(packageRoot,...path.split('/')));
+    const cdnBytes=await readFile(join(cdnSource,...item.path.split('/')));
+    const digest='sha256:'+createHash('sha256').update(npmBytes).digest('hex');
+    if(npmBytes.length!==item.bytes||digest!==item.sha256||!npmBytes.equals(cdnBytes))
+      throw new Error('CDN/npm Corresponding Source bytes differ: '+name+'/'+path);
+    matched.add(path);
+  }
+  if(declared.size!==matched.size)
+    throw new Error('Corresponding Source coverage incomplete: '+name+' npm='+declared.size+' CDN='+matched.size);
+  sourceFilesCompared[name]=matched.size;
+  const currentSource=join(cdnRoot,name,'current','source');
+  await compareTrees(cdnSource,currentSource);
+}
 const index = JSON.parse(await readFile(join(root,'.netlify-cdn','index.json'),'utf8'));
 if(index.distributionParityManifest!=='/distribution-parity.json')throw new Error('CDN index lacks full parity inventory.');
 if (index.player?.version !== version) throw new Error('CDN index Player version mismatch.');
@@ -134,6 +187,7 @@ console.log(JSON.stringify({
   ok:true,
   version,
   completeManifestFilesCompared:Object.fromEntries(parityInputs.map(item=>[item.name,parityManifest.components[item.name].fileCount])),
+  sourceFilesCompared,
   playerFilesCompared:playerFiles,
   cdnHtmlMirrors,
   h5pFilesCompared:h5pFiles,

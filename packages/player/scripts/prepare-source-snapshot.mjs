@@ -53,6 +53,7 @@ export async function preparePlayerSourceSnapshot({output = defaultOutput} = {})
 
   for (const [from,to] of [
     [join(playerRoot,'src'), join(output,'packages','player','src')],
+    [join(playerRoot,'bin'), join(output,'packages','player','bin')],
     [join(playerRoot,'scripts'), join(output,'packages','player','scripts')],
     [join(playerRoot,'server'), join(output,'packages','player','server')],
     [join(playerRoot,'schemas'), join(output,'packages','player','schemas')],
@@ -66,6 +67,7 @@ export async function preparePlayerSourceSnapshot({output = defaultOutput} = {})
 
   for (const [from,to] of [
     [join(playerRoot,'package.json'), join(output,'packages','player','package.json')],
+    [join(playerRoot,'README.md'), join(output,'packages','player','README.md')],
     [join(playerRoot,'LICENSE'), join(output,'packages','player','LICENSE')],
     [join(playerRoot,'NOTICE.md'), join(output,'packages','player','NOTICE.md')],
     [join(playerRoot,'THIRD_PARTY_NOTICES.md'), join(output,'packages','player','THIRD_PARTY_NOTICES.md')],
