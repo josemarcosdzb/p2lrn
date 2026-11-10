@@ -121,6 +121,18 @@ jobs:
         run: |
           node scripts/create-studio-complete-activities-demo.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Prepare real local Player and Studio for the demo recording
+        shell: powershell
+        run: |
+          node scripts/prepare-quest3d-browser-qa.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record actual Studio and student Player walkthrough
+        shell: powershell
+        run: |
+          node --check scripts/record-studio-complete-activities-demo.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/record-studio-complete-activities-demo.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload complete demo course and quality report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
