@@ -60,7 +60,9 @@ async function postgresEngine(){
     return action==='all'?result.rows:action==='get'?result.rows[0]||null:{changes:0};
    }
    const prepared=postgresQuery(statement,args);
-   const result=await client.query(prepared.replace('revision=revision+1','revision=snapshots.revision+1'),args);
+   const result=await client.query(prepared
+    .replace('revision=revision+1','revision=snapshots.revision+1')
+    .replace('requests=requests+1','requests=security_buckets.requests+1'),args);
    if(action==='run')return {changes:result.rowCount??0};
    if(action==='get')return result.rows[0]??null;
    if(action==='all')return result.rows;
