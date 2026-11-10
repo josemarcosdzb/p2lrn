@@ -107,6 +107,39 @@ oficial de calificaciones.
 - Calificaciones: observar una nota en P2LRN no demuestra recepción AGS.
   El libro oficial del LMS sigue pendiente de verificar.
 
+### Curso nuevo creado en Studio y resuelto en Player (10-11-2026)
+
+Se ha creado un curso nuevo mediante la interfaz visual real de Studio,
+sin reutilizar el antiguo paquete de Seguridad Informática:
+
+- Título: Curso nuevo - Evaluación real de interoperabilidad LTI.
+- Paquete: curso-nuevo-evaluacion-interoperabilidad-lti.p2lrn.
+- SHA-256: d163609727827e53ce076993a4e8708e34f1ef7dc8010131af5e0ce92332881d.
+- Tamaño: 6.559 bytes; Core 0.4.0; 1 unidad, lección HTML
+  y cuestionario nativo de una pregunta de respuesta única, 1 punto.
+- Verificación: exportación desde Studio, apertura del archivo descargado
+  con el lector oficial, reimportación desde la interfaz del editor,
+  reproducción en Player y entrega de la respuesta correcta. La
+  pantalla final dice "Respuestas entregadas" y reserva la corrección
+  al profesor. Se observó sin errores JavaScript.
+- Evidencia local original:
+  P2LRN-CERT-20261107/lti-curso-nuevo-resultado-real.md
+  y videos/lti-new-course-studio-authoring-real-v4.webm,
+  videos/lti-new-course-learner-answer-real.webm.
+
+**No se ha publicado aún en ningún LMS**: el intento de iniciar la
+sesión administrativa de Moodle quedó bloqueado por los controles
+de acceso de la herramienta; Chamilo, Sakai y Open edX siguen
+necesitando una sesión autorizada de profesor mediante SSO.
+En el momento de la inspección, Canvas conservaba sus volúmenes pero
+no tenía contenedores de aplicación levantados. No se han utilizado
+SQL ni tokens inventados para aparentar un resultado.
+
+Los dominios de los cinco LMS respondieron HTTP 200 al acceder al
+endpoint /lti/health del proveedor; esto NO demuestra que sus
+aplicaciones LMS estén sanas ni que acepten notas AGS. Queda
+pendiente publicar realmente este paquete, acceder como alumno y
+observar una calificación en el libro de notas de cada plataforma.
 ## Despliegue Docker mantenible
 
 Este repositorio contiene un único servicio Docker Compose para el proveedor:
