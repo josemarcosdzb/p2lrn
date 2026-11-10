@@ -102,6 +102,7 @@ test('legacy eval permission is restricted to the H5P opaque sandbox, never the 
   assert.doesNotMatch(runtimeHtml,/allow-same-origin|connect-src https?:/u);
   assert.doesNotMatch(genericHtml,/(?:^|\s)'unsafe-eval'(?:\s|;)/u);
   const fallback=createOpaqueH5PRuntimeDocument();
-  assert.match(fallback,/script-src 'unsafe-inline' blob: 'unsafe-eval'/u);
+  assert.match(fallback,/script-src 'unsafe-inline' blob:/u);
+  assert.doesNotMatch(fallback,/script-src [^;]*'unsafe-eval'/u,'srcdoc fallback must never allow arbitrary evaluation');
   assert.doesNotMatch(fallback,/connect-src https?:/u);
 });
