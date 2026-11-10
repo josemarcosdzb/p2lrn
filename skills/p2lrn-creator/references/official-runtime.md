@@ -27,12 +27,22 @@ Las fuentes para cuestionarios y componentes deben cumplir el esquema oficial. V
 
 ## Interfaz Player, Studio, Reader y Analytics
 
-- **Studio:** web `https://p2lrn.netlify.app/studio/` o componente `@p2lrn/studio` y peer Player. Contiene importaciones, edición WYSIWYG, vista alumno y exportación de cursos y entregas `.p2lrn-offline.exe` Windows, ZIP y CMD legado. No reproducir el editor dentro de la Skill.
-- **Player:** `https://p2lrn.netlify.app/demo/` o `@p2lrn/player` / `<p2lrn-player src="/courses/curso.p2lrn">`. Se necesita navegador y prueba visual real para afirmar que un juego 2D/3D funciona.
+- **Studio:** web `https://p2lrn.org/studio/` o componente `@p2lrn/studio` y peer Player. Contiene importaciones, edición WYSIWYG, vista alumno y exportación de cursos y entregas `.p2lrn-offline.exe` Windows, ZIP y CMD legado. No reproducir el editor dentro de la Skill.
+- **Player:** `https://p2lrn.org/demo/` o `@p2lrn/player` / `<p2lrn-player src="/courses/curso.p2lrn">`. Se necesita navegador y prueba visual real para afirmar que un juego 2D/3D funciona.
 - **Reader documental:** `readDocument` de Toolkit. Dependencias opcionales pueden limitar PDF; no prometer OCR.
 - **Analytics:** `@p2lrn/analytics`, necesita una fuente de datos de Host autorizado. Sólo grades con `authoritative === true` son oficiales.
 - **MCP:** servicio opcional independiente con 23 herramientas; lectura y escritura con permisos separados. La Skill no registra servidores ni activa escritura automáticamente.
 - **LMS/LTI 1.3:** `integration/lms`, requiere credenciales/Host y pruebas reales. No simular transferencias.
+
+## Novedades del Studio visual y ensamblaje
+
+La Skill distribuida incluye `references/studio-arrastre-ensamblaje-3d.md`, con los tres recorridos distintos de arrastre: **mover objetos en el editor**, **arrastrar fichas a zonas sobre una imagen** y **ensamblar GLB en 3D**. Es guía para usar la interfaz oficial; el adaptador CLI no ejecuta pulsaciones ni sustituye la edición interactiva.
+
+- Editor WYSIWYG: `command-bar.js` y `studio-object-tools.js` compartidos entre Studio web y npm, con `Archivo`, `Formato`, `Insertar`, posición, tamaño, formas y contenedores.
+- Arrastrar y soltar: `studio-drop-activity.js` (autoría), `renderers/lesson-drop-runtime.js` (Player en iframe aislado); `drag-scored` y `fill-blanks` modo arrastre son otros contratos.
+- Ensamblaje 3D: juego `assembly-3d`, pregunta nativa `classification` con `assembly3d`, GLB incrustado, piezas/submallas, jaulas de destino, encaje geométrico y validación del Player. Usar `studio/assembly-3d-editor.js` y `assembly-3d-core.js`; `addQuestionnaire` por sí solo no demuestra la escena jugable.
+
+**No atribuir la versión del código fuente a lo publicado.** Validar en navegador real, exportar/reabrir y comprobar npm/CDN antes de anunciar compatibilidad.
 
 ## Seguridad y licencia
 
