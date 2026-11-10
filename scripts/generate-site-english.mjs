@@ -41,6 +41,8 @@ const handAuthoredEnglishPages=new Set([
   'docs/questionnaires/word-search/index.html',
   'docs/cli/index.html',
   'docs/compatibilidad/index.html',
+  'docs/recetas/index.html',
+  'docs/glosario/index.html',
   // Legal summaries are manually reviewed and must not be rewritten by machine translation.
   'licencia/index.html',
 ]);
