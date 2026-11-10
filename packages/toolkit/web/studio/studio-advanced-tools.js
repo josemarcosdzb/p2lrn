@@ -63,6 +63,13 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
   const heightInput=numberField(doc,'Altura mínima del elemento en píxeles',100,40,1800);
   size.popup.append(element(doc,'span','p2lrn-ribbon-caption','Ancho px'),widthInput,button(doc,'Aplicar ancho','width'));
   size.popup.append(element(doc,'span','p2lrn-ribbon-caption','Alto px'),heightInput,button(doc,'Aplicar alto','height'));
+  const diagramXInput=numberField(doc,'Posición horizontal del diagrama en porcentaje',0,0,100);
+  const diagramYInput=numberField(doc,'Posición vertical del diagrama en porcentaje',0,0,100);
+  diagramXInput.step='0.1';diagramYInput.step='0.1';
+  size.popup.append(element(doc,'span','p2lrn-ribbon-caption','X %'),diagramXInput,
+    button(doc,'Aplicar X porcentual','diagramX'),
+    element(doc,'span','p2lrn-ribbon-caption','Y %'),diagramYInput,
+    button(doc,'Aplicar Y porcentual','diagramY'));
   objectGroup.append(size.details);
   const typography=actionMenu(doc,'Texto del diagrama',[],'texto-diagrama');
   const textScale=numberField(doc,'Tamaño de texto proporcional al lienzo (cqw)',1.7,0.8,9.5);
@@ -227,6 +234,10 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     objectGroup.querySelector('[data-studio-advanced-action=height]').disabled=Boolean(table);
     const width=Math.round(node?.getBoundingClientRect()?.width||420);
     widthInput.value=String(Math.max(120,width));
+    const isDiagram=['diagram-canvas','diagram-group'].includes(node?.parentElement?.dataset?.p2lrnLayout);
+    diagramXInput.disabled=!isDiagram;diagramYInput.disabled=!isDiagram;
+    diagramXInput.value=String(Number.parseFloat(node?.style?.left)||0);
+    diagramYInput.value=String(Number.parseFloat(node?.style?.top)||0);
     if(!formatTab.getAttribute('aria-selected')||formatTab.getAttribute('aria-selected')==='false')formatTab.click();
   }
   updateSelection();
@@ -282,7 +293,9 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     if(!target||!bar.contains(target))return;
     refresh();if(!objectTools)return;
     const action=target.dataset.studioAdvancedAction;
-    const value=action==='textColor'?diagramTextColor.value:
+    const value=action==='diagramX'?Number(diagramXInput.value):
+      action==='diagramY'?Number(diagramYInput.value):
+      action==='textColor'?diagramTextColor.value:
       action==='fontScale'?Number(textScale.value):
       action==='width'?Number(widthInput.value):
       action==='height'?Number(heightInput.value):
