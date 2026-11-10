@@ -490,6 +490,21 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       const y=safeDividerY(el,pos.y+offset.y);
       setPosition(el,pos.x+offset.x,y);ensureScrollRoom(el);change();return el;
     }
+    if(action==='diagramWidth'||action==='diagramHeight'){
+      if(!isDiagramChild(el))throw new Error('Selecciona un objeto del lienzo.');
+      const pct=Number(value);
+      if(!Number.isFinite(pct)||pct<0.05||pct>100)
+        throw new RangeError('El tamaño porcentual debe estar entre 0,05 y 100.');
+      const horizontal=action==='diagramWidth';
+      const position=Number.parseFloat(horizontal?el.style.left:el.style.top)||0;
+      const maximum=Math.max(0.05,100-position);
+      el.style[horizontal?'width':'height']=Math.min(pct,maximum).toFixed(4)+'%';
+      if(horizontal)el.style.maxWidth='none';
+      else el.style.minHeight='0';
+      const art=el.querySelector(':scope > [data-p2lrn-shape-art]');
+      if(art)art.style.minHeight='0';
+      change();return el;
+    }
     if(action==='diagramX'||action==='diagramY'){
       if(!isDiagramChild(el))throw new Error('Selecciona un objeto del lienzo de diagrama.');
       const pct=Number(value);
