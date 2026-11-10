@@ -66,23 +66,48 @@ export function actionButton(text, onClick, className = 'p2lrn-game-button') {
   return button;
 }
 
-export function finishPanel(runtime, shell, {label = 'Finalizar actividad'} = {}) {
+export function finishPanel(runtime, shell, {
+  label = 'Finalizar actividad', checkPending = null, onIncomplete = null,
+} = {}) {
   const actions = el('div', {class: 'p2lrn-game-actions'});
   const status = statusNode('');
+  const pendingNote=typeof checkPending==='function'?statusNode(''):null;
+  let submitting=false;
   const finish = actionButton(label, async () => {
-    const score = await runtime.finish();
-    if (!score) {
-      status.textContent = playerUiText('Faltan respuestas obligatorias.');
+    if(submitting||runtime.state.completed)return;
+    const pending=checkPending?.()??[];
+    if(pending.length){
+      status.textContent=playerUiText('No puedes finalizar: quedan pruebas sin completar.');
+      onIncomplete?.(pending[0]);
+      refresh();
       return;
     }
-    const reveal=(runtime.payload?.presentation?.showFeedback ?? 'never') !== 'never';
-    status.textContent = playerUiText(reveal && score.graded !== false
-      ? `Resultado: ${score.pointsEarned} / ${score.pointsPossible} puntos (${Math.round((score.normalized ?? 0) * 100)}%).`
-      : 'Actividad entregada. La corrección no está disponible para el alumno.');
-    finish.disabled = true;
-    shell.querySelectorAll('button,input,textarea,select').forEach(control=>{control.disabled=true;});
+    submitting=true;
+    try{
+      const score = await runtime.finish();
+      if (!score) {
+        status.textContent = playerUiText('Faltan respuestas obligatorias.');
+        return;
+      }
+      const reveal=(runtime.payload?.presentation?.showFeedback ?? 'never') !== 'never';
+      status.textContent = playerUiText(reveal && score.graded !== false
+        ? `Resultado: ${score.pointsEarned} / ${score.pointsPossible} puntos (${Math.round((score.normalized ?? 0) * 100)}%).`
+        : 'Actividad entregada. La corrección no está disponible para el alumno.');
+      finish.disabled = true;
+      shell.querySelectorAll('button,input,textarea,select').forEach(control=>{control.disabled=true;});
+    }finally{submitting=false;}
   });
+  function refresh(){
+    if(!pendingNote||runtime.state.completed)return;
+    const pending=checkPending?.()??[];
+    finish.textContent=playerUiText(pending.length?'Revisar pendientes':label);
+    pendingNote.textContent=pending.length
+      ?playerUiText('Pruebas pendientes: ')+pending.map(p=>`${p.index+1}. ${p.label} (${p.remaining})`).join(' · ')
+      :playerUiText('Todas las pruebas completadas. Ya puedes finalizar.');
+  }
   actions.append(finish);
+  if(pendingNote)shell.append(pendingNote);
   shell.append(actions, status);
-  return {actions, status, finish};
+  refresh();
+  return {actions, status, finish, refresh};
 }
