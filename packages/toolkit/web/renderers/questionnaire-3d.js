@@ -706,7 +706,10 @@ export async function render(options) {
     const trial=game.data.trials[trialIndex];
     const assembly=trial.type==='assembly-3d';
     scene.setAssemblyMode?.(assembly);
-    if(joystick?.element)joystick.element.hidden=assembly;
+    if(joystick?.element){joystick.element.hidden=assembly;joystick.element.style.display=assembly?'none':'';}
+    entryHint.querySelector('small').textContent=playerUiText(assembly
+      ?'Todas las piezas están a la vista: arrastra una pieza a una caja. Arrastra el fondo para girar la cámara.'
+      :'Usa WASD o las flechas para caminar y arrastra el fondo para mirar.');
     help.textContent=playerUiText(assembly
       ?'Todas las piezas y sus destinos están visibles. Arrastra una pieza hasta su caja; gira la cámara con el fondo y usa la rueda para acercarte.'
       :'En móvil, mueve la bola para caminar y arrastra el fondo para mirar. En PC, usa WASD o las flechas.');
@@ -750,6 +753,15 @@ export async function render(options) {
   await renderTrial();
   layout.append(heading,directions,stage,controls);
   shell.append(layout);
+  // For a single-trial assembly the canvas is only attached now. Frame it
+  // using its actual rendered aspect ratio, not the off-DOM fallback size.
+  if(game.data.trials[trialIndex]?.type==='assembly-3d'&&!accessibleOnly){
+    requestAnimationFrame(()=>scene.frameObjects?.([
+      ...game.data.trials[trialIndex].scene.targets.map(t=>'assembly-target:'+t.id),
+      ...game.data.trials[trialIndex].scene.pieces.map(p=>'assembly:'+p.id),
+      ...(game.data.trials[trialIndex].scene.referenceAssetId?['assembly-reference']:[]),
+    ],{padding:1.28}));
+  }
   finishPanel(runtime,shell);
   shell.append(status);
 
