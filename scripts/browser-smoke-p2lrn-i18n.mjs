@@ -384,6 +384,7 @@ async function analyticsChrome(language){
   assert.doesNotMatch(learnersCsv,/Leo Example|leo@school/,'Filtered CSV cannot include hidden learners');
   await page.screenshot({path:join(folder,'analytics-'+suffix+'-filtered-learners.png'),fullPage:false});
   await panel.locator('[data-view="grades"]').click();
+  await panel.locator('[data-course-filter]').selectOption('course-1');
   assert.equal(await panel.locator('.main table tbody tr').count(),1,'Gradebook must follow active learner filter and course');
   const gradesCsv=await page.evaluate(()=>window.analyticsQA.exportCsv('grades'));
   assert.match(gradesCsv,/grade-a/);
