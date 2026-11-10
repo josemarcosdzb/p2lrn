@@ -26,7 +26,7 @@ const reasonText={
   'invalid-transform':'La posición de la pieza no es válida.',
 };
 
-export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
+export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onProgress=()=>{}}){
   const config=validateAssembly(trial.scene);
   const expected=new Map(config.links.map(l=>[l.pieceId,l.targetId]));
   const targetById=new Map(config.targets.map(t=>[t.id,t]));
@@ -165,6 +165,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
     placements[id]=targetId;
     transforms.set(id,{...current,...fromJson(result.snap)});
     runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId:id,categoryId:targetId});
+    onProgress();
     scene.carry(boxId(id),false);
     scene.highlight(boxId(id),false);
     scene.setTransform(boxId(id),result.snap);
