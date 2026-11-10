@@ -84,15 +84,96 @@ Una nota oficial solo se declara entregada cuando el LMS acepta la
 transferencia AGS autorizada; las notas de navegador no equivalen al libro
 oficial de calificaciones.
 
-**Estado y limites:** la subida, deduplicacion, autorizacion de profesor,
-Deep Linking firmado y recuperacion de progreso tienen pruebas E2E del
-proveedor. La interfaz de subida tambien se ha comprobado en Chrome.
-Falta certificar visualmente la publicacion y el libro de calificaciones
-con profesores y alumnos reales de los cinco LMS. En el Moodle local de QA
-se ha comprobado que P2LRN esta configurado como coursevisible=1; la
-activacion administrativa de coursevisible=2 sigue pendiente. No declarar
-instalacion integral terminada hasta validar esos pasos.
+**Estado verificado el 10-11-2026:**
+- Moodle: instalación visible desde su administración, cambio de
+  coursevisible=1 a coursevisible=2 guardado desde la interfaz; profesor
+  publica un .p2lrn real mediante Deep Linking, guarda la actividad,
+  la abre en Player y un alumno de QA entrega una respuesta. Al volver
+  a abrir se mantiene el estado. Se usó la opción oficial Log in as
+  del administrador: NO equivale al login independiente del alumno.
+- Chamilo: login administrativo y lanzamiento LTI existente comprobados;
+  no certificada la nueva subida de archivo como profesor.
+- Canvas: registro LTI y actividades existentes; Dynamic Registration
+  implementado, falta instalación nueva desde el panel real; SSO central
+  impide dar por verificado el recorrido del alumno.
+- Sakai: enlaces publicados; falta sesión de profesor/alumno real.
+- Open edX: curso con bloque LTI; falta sesión de profesor/alumno real.
+- Calificaciones: observar una nota en P2LRN no demuestra recepción AGS.
+  El libro oficial del LMS sigue pendiente de verificar.
 
+## Despliegue Docker mantenible
+
+Este repositorio contiene un único servicio Docker Compose para el proveedor:
+integration/lms/compose.yaml. El laboratorio local con cinco redes
+independientes usa el override opcional compose.local-qa.yaml. No son
+copias del producto ni proveedores diferentes.
+
+Instalación nueva (no ejecutar encima del servicio existente):
+
+1. Compilar Toolkit y Player antes de iniciar el contenedor. Tener un
+   dominio HTTPS con reverse proxy configurado hacia el puerto local 37891.
+2. Crear fuera del repositorio el archivo PEM RSA y un archivo de token
+   administrativo aleatorio. Restringir permisos y guardarlos para
+   restauraciones: nunca incluirlos en Git ni en cursos.
+3. Definir las rutas absolutas del host
+   P2LRN_LTI_PRIVATE_KEY_PATH, P2LRN_LTI_ADMIN_TOKEN_PATH y
+   P2LRN_LTI_BASE_URL=https://lti.dominio-del-centro.
+   P2LRN_LTI_HOST_PORT es opcional, por defecto 37891.
+4. Desde la raíz del repositorio:
+
+       docker compose -f integration/lms/compose.yaml config
+       docker compose -f integration/lms/compose.yaml up -d
+       docker compose -f integration/lms/compose.yaml ps
+
+5. Verificar en el dominio público GET /lti/health, GET /lti/jwks
+   y el lanzamiento real desde el LMS. No publicar 37891 fuera de
+   loopback: TLS debe terminar en el proxy. Conservar el volumen
+   p2lrn-lti-data, el PEM y la configuración del proxy al actualizar.
+
+En pruebas locales con varios Compose separados, especificar también
+-f integration/lms/compose.local-qa.yaml y los nombres reales de las redes:
+P2LRN_LTI_QA_EDGE_NETWORK, P2LRN_LTI_QA_MOODLE_NETWORK,
+P2LRN_LTI_QA_CANVAS_NETWORK, P2LRN_LTI_QA_CHAMILO_NETWORK,
+P2LRN_LTI_QA_SAKAI_NETWORK, P2LRN_LTI_QA_OPENEDX_NETWORK.
+Todas las redes deben existir previamente y declararse external: true.
+HTTP local solo está autorizado en QA con *.localhost.
+Las instituciones que acceden por HTTPS NO necesitan
+compartir una red Docker con P2LRN.
+
+### Comprobación de red efectuada en el laboratorio
+
+Consulta de solo lectura desde el contenedor P2LRN hacia los cinco LMS
+(10-11-2026). El DNS interno resolvió los cinco servicios. Respuestas
+HTTP directas: Moodle 303, Canvas 302, Chamilo 200, Sakai 200,
+Open edX 400. La URL de entrada pública local de Open edX respondió
+303, por lo que la respuesta 400 del servicio interno no demuestra por
+sí sola un problema DNS: hay que verificar la ruta de proxy, la cabecera
+Host y la configuración de aplicación antes de diagnosticar el error.
+Estos códigos NO demuestran autorización LTI, sesión de profesor ni
+la devolución de calificaciones. El proveedor actual sigue conectado
+a las seis redes externas y el proxy responde HTTP 200 en /lti/health.
+### Incidencias Docker y recuperaciones
+
+- 502/host no resuelto: verificar el estado del proveedor, DNS, proxy y
+  redes declaradas en Compose. Evitar docker network connect manual como
+  configuración permanente: se pierde al recrear el contenedor.
+- Contenedor reiniciado pero alumno sin sesión: inspeccionar cookies de
+  terceros/iframe y URLs OIDC; no deshabilitar state ni nonce.
+- Datos o intentos ausentes: comprobar que se reutilizó el volumen
+  persistente y la misma clave RSA. No crear SQLite nuevos ni borrar
+  volúmenes previos para ocultar una incidencia.
+- Curso mayor de 64 MB/error 413: revisar límites del proveedor y
+  reverse proxy; mantener validación de paquetes.
+- AGS sin nota: verificar servicios autorizados, roles, salida del
+  proveedor y libro oficial, sin fabricar notas mediante SQL.
+- Contenedor QA original: creado sin etiquetas de Compose y unido
+  manualmente a seis redes. Operativo, pero NO migrado todavía a estas
+  definiciones para no alterar cursos y alumnos. Ambas definiciones
+  pasan docker compose config, no una recreación real. Antes de migrar
+  comprobar respaldo, volúmenes e identidad.
+
+Referencia sobre redes externas:
+https://docs.docker.com/compose/how-tos/networking/
 ## Preparación
 
 Requiere Node.js 22.13 o posterior y las distribuciones compiladas de Toolkit y Player.

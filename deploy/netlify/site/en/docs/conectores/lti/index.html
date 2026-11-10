@@ -7,6 +7,30 @@
 <button class="menu" type="button" data-menu="" aria-expanded="false" aria-controls="nav">Menu</button></header>
 <main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Documentation navigation"></aside>
 <article class="doc-content"><header class="doc-hero"><p class="eyebrow">CONNECTORS / LTI 1.3</p><h1>P2LRN LTI 1.3 Module</h1><p>P2LRN includes a universal, self-hosted LTI 1.3 provider: it validates OIDC/JWT launches, publishes JWKS, offers catalog and Deep Linking, runs the same Player, persists state per learner/attempt, and can deliver grades via AGS. It is not a separate plugin for each LMS nor is it part of the course ZIP.</p></header>
+<section class="doc-section" id="docker-provider">
+<h2>Install one provider with Docker</h2>
+<p>A technician installs the provider once for the institution. There is no separate P2LRN plugin for each LMS and no need to convert the course into different packages for Moodle, Canvas, Chamilo, Sakai or Open edX. Teachers then work from their LMS.</p>
+<ol>
+<li><strong>Prepare the server:</strong> use an HTTPS hostname reachable by the LMS and have compiled Toolkit and Player assets. Store the RSA private key and administrative token outside the repository in restricted files.</li>
+<li><strong>Configure the service:</strong> use <code>integration/lms/compose.yaml</code>. Set <code>P2LRN_LTI_BASE_URL</code>, <code>P2LRN_LTI_PRIVATE_KEY_PATH</code> and <code>P2LRN_LTI_ADMIN_TOKEN_PATH</code> in the administrator's environment. Never include secrets in a course package or public documentation.</li>
+<li><strong>Validate and start:</strong> run <code>docker compose -f integration/lms/compose.yaml config</code> and, for a fresh installation, <code>docker compose -f integration/lms/compose.yaml up -d</code>. Do not start a second provider alongside one serving learners.</li>
+<li><strong>Check connectivity:</strong> the HTTPS proxy must serve <code>/lti/health</code> and <code>/lti/jwks</code>, as well as OIDC and Deep Linking endpoints. Internal port 37891 is published only on the server's loopback interface.</li>
+<li><strong>Authorize in the LMS:</strong> the administrator approves the tool once. Canvas Dynamic Registration starts at <code>/lti/register/canvas</code>; Moodle can add P2LRN to its activity chooser.</li>
+</ol>
+<p>SQLite, course packages and other persistent data live in a Docker volume. Preserve the private key across upgrades; replacing it without controlled key rotation can invalidate existing installations.</p>
+<div class="example-actions"><a class="button" href="/en/docs/conectores/lms/#instalacion-centro">Teacher workflow</a><a class="button" href="/en/docs/troubleshooting/#problemas-lms">Installation troubleshooting</a></div>
+</section>
+<section class="doc-section" id="docker-redes">
+<h2>Docker networking, restarts and upgrades</h2>
+<p>In production, the LMS can run on another server and communicate over HTTPS. Moodle, Canvas and the other platforms do not need to share a Docker network with the provider.</p>
+<p>For local labs with several independent Compose projects, declare existing <strong>external networks</strong> using <code>integration/lms/compose.local-qa.yaml</code> and the corresponding network variables. Avoid relying on <code>docker network connect</code> after container recreation. Manually attached networks may be lost when the container is replaced, even if they survive a restart.</p>
+<div class="reference-table">
+<div><strong>Restarts</strong><p>Preserve the SQLite and course volume. Restarting the same container keeps its network attachments; recreating it requires networks to be declared in Compose.</p></div>
+<div><strong>DNS and reverse proxy</strong><p>Use a stable HTTPS hostname with a trusted certificate. Verify that the LMS resolves it and the proxy reaches the provider. Do not mix HTTP and HTTPS within one LTI transaction.</p></div>
+<div><strong>Security and grades</strong><p>Keep OIDC, JWT signatures, state and nonce validation enabled. Approve AGS in the LMS and confirm the gradebook accepted the score; a submitted Player answer is not an official grade.</p></div>
+</div>
+<p><strong>Warning:</strong> optional laboratory settings allow HTTP only on <code>*.localhost</code>. This must never be used for a public deployment.</p>
+</section>
 <section class="doc-section"><h2>LTI 1.3 Provider Source Code</h2>
 <p>The technical ZIP includes the current code of <code>integration/lms</code>: cryptographic provider, HTTP server, SQLite store, AGS client, launch and testing contracts. It also includes the Host Adapter needed to border with Player. <strong>It is not a specific Moodle/Canvas/Sakai/Chamilo/Open edX plugin nor a precompiled binary.</strong></p>
 <div class="example-actions"><a class="button primary" href="/downloads/p2lrn-lti-contratos.zip" download="">Download LTI source (.zip)</a><a class="button" href="/downloads/manifest.json">Verify SHA-256</a></div>
@@ -51,7 +75,7 @@ curl --fail-with-body -X POST https://lti.example.edu/lti/admin/platforms \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   --data-binary @platform.json</code></pre></div><p>Inspect the response and call <code>GET /lti/admin/platforms</code> with the same Bearer authorization. P2LRN rejects unknown issuers, unapproved deployments and incompatible keys. <strong>Never</strong> bypass JWT signatures, expiration, nonce or state to work around registration failures.</p></section>
-<section class="doc-section" id="lti-publish"><h2>4. Publish a .p2lrn course for the institution</h2><p>Export and validate the course in Studio/Toolkit. The administrator sends the <strong>actual binary file</strong> to <code>POST /lti/admin/catalog</code>; headers select the institution and visible title:</p><div class="codebox"><div class="codebox-head"><span>Terminal · publish package</span><button type="button" data-copy>Copy</button></div><pre><code>curl --fail-with-body -X POST https://lti.example.edu/lti/admin/catalog \
+<section class="doc-section" id="lti-publish"><h2>4. Publish a .p2lrn course for the institution</h2><p><strong>Recommended workflow:</strong> the teacher uploads the file through the P2LRN content picker inside the LMS without administrator intervention. The administrative API below is an exceptional technical fallback for installations without Deep Linking; it is not part of the normal teacher process.</p><p>Export and validate the course in Studio/Toolkit. The administrator sends the <strong>actual binary file</strong> to <code>POST /lti/admin/catalog</code>; headers select the institution and visible title:</p><div class="codebox"><div class="codebox-head"><span>Terminal · publish package</span><button type="button" data-copy>Copy</button></div><pre><code>curl --fail-with-body -X POST https://lti.example.edu/lti/admin/catalog \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-p2lrn-tenant: school-001" \
   -H "x-p2lrn-title: Sample course" \

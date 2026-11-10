@@ -1,0 +1,35 @@
+# LOCAL LAB ONLY: existing LMSs are separate Docker Compose projects.
+# Never enable HTTP or attach untrusted networks in production.
+# Configure the actual network names via environment; no SQL changes needed.
+services:
+  p2lrn-lti-provider:
+    environment:
+      P2LRN_LTI_DEV_INSECURE: "true"
+    networks:
+      - default
+      - edge
+      - moodle
+      - canvas
+      - sakai
+      - chamilo
+      - openedx
+
+networks:
+  edge:
+    external: true
+    name: ${P2LRN_LTI_QA_EDGE_NETWORK:?Required local ingress network}
+  moodle:
+    external: true
+    name: ${P2LRN_LTI_QA_MOODLE_NETWORK:?Required Moodle network}
+  canvas:
+    external: true
+    name: ${P2LRN_LTI_QA_CANVAS_NETWORK:?Required Canvas network}
+  sakai:
+    external: true
+    name: ${P2LRN_LTI_QA_SAKAI_NETWORK:?Required Sakai network}
+  chamilo:
+    external: true
+    name: ${P2LRN_LTI_QA_CHAMILO_NETWORK:?Required Chamilo network}
+  openedx:
+    external: true
+    name: ${P2LRN_LTI_QA_OPENEDX_NETWORK:?Required Open edX network}
