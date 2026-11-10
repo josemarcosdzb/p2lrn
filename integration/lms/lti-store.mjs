@@ -2,7 +2,7 @@
 import {DatabaseSync} from 'node:sqlite';
 import {mkdirSync} from 'node:fs';
 import {dirname} from 'node:path';
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {CANVAS_PENDING_DEPLOYMENT} from './lti-canvas-registration.mjs';
 const J=JSON.stringify, P=s=>s==null?null:JSON.parse(s), t=()=>Math.floor(Date.now()/1000);
 const req=(v,n)=>{if(typeof v!=='string'||!v.trim()||v.length>4096)throw new TypeError('Invalid '+n);return v;};
@@ -17,7 +17,6 @@ export function createLtiStore(filename){
  'CREATE TABLE IF NOT EXISTS bindings(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,registration_id TEXT NOT NULL,deployment_id TEXT NOT NULL,catalog_id TEXT NOT NULL,entity_id TEXT NOT NULL,status TEXT NOT NULL,FOREIGN KEY(catalog_id) REFERENCES catalog(id))',
  'CREATE TABLE IF NOT EXISTS pickers(ticket_hash TEXT PRIMARY KEY,registration_id TEXT NOT NULL,tenant_id TEXT NOT NULL,deployment_id TEXT NOT NULL,return_url TEXT NOT NULL,lti_data TEXT,expires_at INTEGER NOT NULL,consumed_at INTEGER)',
  'CREATE TABLE IF NOT EXISTS attempts(id TEXT PRIMARY KEY,binding_id TEXT NOT NULL,tenant_id TEXT NOT NULL,learner_key TEXT NOT NULL,subject TEXT NOT NULL,context_id TEXT NOT NULL,resource_link_id TEXT NOT NULL,ags_json TEXT,status TEXT NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,FOREIGN KEY(binding_id) REFERENCES bindings(id))',
- "CREATE UNIQUE INDEX IF NOT EXISTS attempts_active ON attempts(binding_id,learner_key,context_id) WHERE status='IN_PROGRESS'",
  'CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,attempt_id TEXT NOT NULL,csrf_hash TEXT NOT NULL,expires_at INTEGER NOT NULL,revoked_at INTEGER,FOREIGN KEY(attempt_id) REFERENCES attempts(id))',
  'CREATE TABLE IF NOT EXISTS snapshots(attempt_id TEXT NOT NULL,entity_id TEXT NOT NULL,surface TEXT NOT NULL,value_json TEXT NOT NULL,revision INTEGER NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(attempt_id,entity_id,surface))',
  'CREATE TABLE IF NOT EXISTS events(attempt_id TEXT NOT NULL,event_id TEXT NOT NULL,entity_id TEXT NOT NULL,event_json TEXT NOT NULL,received_at INTEGER NOT NULL,PRIMARY KEY(attempt_id,event_id))',
@@ -32,6 +31,19 @@ export function createLtiStore(filename){
 
  ].join(';\n')+';');
  const sql=q=>db.prepare(q);
+ // Atomic, non-destructive migration of existing production SQLite files.
+ db.exec('BEGIN IMMEDIATE');
+ try{
+  if(!sql('PRAGMA table_info(attempts)').all().some(c=>c.name==='access_profile'))
+   db.exec("ALTER TABLE attempts ADD COLUMN access_profile TEXT NOT NULL DEFAULT 'legacy'");
+  if(!sql('PRAGMA table_info(sessions)').all().some(c=>c.name==='can_read_roster'))
+   db.exec('ALTER TABLE sessions ADD COLUMN can_read_roster INTEGER NOT NULL DEFAULT 0');
+  if(!sql('PRAGMA table_info(sessions)').all().some(c=>c.name==='can_receive_grades'))
+   db.exec('ALTER TABLE sessions ADD COLUMN can_receive_grades INTEGER NOT NULL DEFAULT 0');
+  db.exec('DROP INDEX IF EXISTS attempts_active');
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS attempts_active_role ON attempts(binding_id,learner_key,context_id,access_profile) WHERE status='IN_PROGRESS'");
+  db.exec('COMMIT');
+ }catch(e){db.exec('ROLLBACK');db.close();throw e;}
   db.exec('CREATE TABLE IF NOT EXISTS canvas_dynamic_platforms(registration_id TEXT PRIMARY KEY,created_at INTEGER NOT NULL,FOREIGN KEY(registration_id) REFERENCES platforms(id))');
  function upsertPlatform(r){
   for(const field of ['id','tenantId','issuer','clientId','authUrl','launchUrl','tokenUrl'])req(r[field],field);
@@ -204,19 +216,26 @@ export function createLtiStore(filename){
   if(!b||b.packageId!==launch.packageId||b.contentRoot!==launch.contentRoot||b.entityId!==launch.entityId)throw new Error('P2LRN content authorization changed');
   db.exec('BEGIN IMMEDIATE');
   try{
+   // Roles, resource links and grade destinations are immutable per attempt.
+   // A differently authorized launch receives a distinct attempt and session.
+   const accessProfile=createHash('sha256').update(J([
+    launch.platformSubject,launch.resourceLinkId,legacy===true,
+    canReadRoster===true,canReceiveGrades===true,ags??null
+   ])).digest('hex');
    const id=randomUUID();
-   const result=sql("INSERT INTO attempts(id,binding_id,tenant_id,learner_key,subject,context_id,resource_link_id,ags_json,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,'IN_PROGRESS',?,?) ON CONFLICT(binding_id,learner_key,context_id) WHERE status='IN_PROGRESS' DO UPDATE SET subject=excluded.subject,resource_link_id=excluded.resource_link_id,ags_json=excluded.ags_json,updated_at=excluded.updated_at RETURNING id").get(id,launch.bindingId,launch.tenantId,launch.learnerKey,launch.platformSubject,launch.contextId??'',launch.resourceLinkId,J(ags??null),t(),t());
-   sql('INSERT INTO sessions VALUES(?,?,?,?,NULL)').run(tokenHash,result.id,csrfHash,expiresAt);
-   sql('INSERT INTO nrps_instructor_attempts VALUES(?,?) ON CONFLICT(attempt_id) DO UPDATE SET allowed=excluded.allowed')
+   const result=sql("INSERT INTO attempts(id,binding_id,tenant_id,learner_key,subject,context_id,resource_link_id,ags_json,status,created_at,updated_at,access_profile) VALUES(?,?,?,?,?,?,?,?,'IN_PROGRESS',?,?,?) ON CONFLICT(binding_id,learner_key,context_id,access_profile) WHERE status='IN_PROGRESS' DO UPDATE SET updated_at=excluded.updated_at RETURNING id").get(id,launch.bindingId,launch.tenantId,launch.learnerKey,launch.platformSubject,launch.contextId??'',launch.resourceLinkId,J(ags??null),t(),t(),accessProfile);
+   sql('INSERT INTO sessions(token_hash,attempt_id,csrf_hash,expires_at,revoked_at,can_read_roster,can_receive_grades) VALUES(?,?,?,?,NULL,?,?)')
+    .run(tokenHash,result.id,csrfHash,expiresAt,canReadRoster===true?1:0,canReceiveGrades===true?1:0);
+   sql('INSERT INTO nrps_instructor_attempts VALUES(?,?) ON CONFLICT(attempt_id) DO NOTHING')
     .run(result.id,canReadRoster===true?1:0);
-    sql('INSERT INTO ags_learner_attempts VALUES(?,?) ON CONFLICT(attempt_id) DO UPDATE SET allowed=excluded.allowed')
-     .run(result.id,canReceiveGrades===true?1:0);
+   sql('INSERT INTO ags_learner_attempts VALUES(?,?) ON CONFLICT(attempt_id) DO NOTHING')
+    .run(result.id,canReceiveGrades===true?1:0);
    db.exec('COMMIT');return {attemptId:result.id,expiresAt};
   }catch(e){db.exec('ROLLBACK');throw e;}
  }
  function getSession(hash){
-  const r=sql("SELECT s.csrf_hash,s.expires_at,a.*,b.registration_id,b.deployment_id,b.entity_id,c.package_id,c.content_root,c.entities_json,c.filename,c.bytes FROM sessions s JOIN attempts a ON a.id=s.attempt_id JOIN bindings b ON b.id=a.binding_id JOIN catalog c ON c.id=b.catalog_id WHERE s.token_hash=? AND s.expires_at>? AND s.revoked_at IS NULL AND a.status='IN_PROGRESS' AND b.status='PUBLISHED' AND c.status='PUBLISHED'").get(hash,t());
-  return r?{attemptId:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,registrationId:r.registration_id,deploymentId:r.deployment_id,contextId:r.context_id,canReadRoster:sql('SELECT allowed FROM nrps_instructor_attempts WHERE attempt_id=?').get(r.id)?.allowed===1,subject:r.subject,ags:P(r.ags_json),packageId:r.package_id,contentRoot:r.content_root,entityId:r.entity_id,entities:P(r.entities_json),filename:r.filename,bytes:r.bytes,csrfHash:r.csrf_hash,expiresAt:r.expires_at}:null;
+  const r=sql("SELECT s.csrf_hash,s.expires_at,s.can_read_roster,s.can_receive_grades,a.*,b.registration_id,b.deployment_id,b.entity_id,c.package_id,c.content_root,c.entities_json,c.filename,c.bytes FROM sessions s JOIN attempts a ON a.id=s.attempt_id JOIN bindings b ON b.id=a.binding_id JOIN catalog c ON c.id=b.catalog_id WHERE s.token_hash=? AND s.expires_at>? AND s.revoked_at IS NULL AND a.status='IN_PROGRESS' AND b.status='PUBLISHED' AND c.status='PUBLISHED'").get(hash,t());
+  return r?{attemptId:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,registrationId:r.registration_id,deploymentId:r.deployment_id,contextId:r.context_id,canReadRoster:r.can_read_roster===1,canReceiveGrades:r.can_receive_grades===1,subject:r.subject,ags:P(r.ags_json),packageId:r.package_id,contentRoot:r.content_root,entityId:r.entity_id,entities:P(r.entities_json),filename:r.filename,bytes:r.bytes,csrfHash:r.csrf_hash,expiresAt:r.expires_at}:null;
  }
  const getState=(a,e,s)=>{const r=sql('SELECT value_json,revision FROM snapshots WHERE attempt_id=? AND entity_id=? AND surface=?').get(a,e,s);return r?{value:P(r.value_json),revision:r.revision}:{value:null,revision:0};};
  function saveState(a,e,s,v,expectedRevision){
@@ -235,13 +254,13 @@ export function createLtiStore(filename){
  }
  const appendEvent=(a,id,e,v)=>({saved:sql('INSERT OR IGNORE INTO events VALUES(?,?,?,?,?)').run(a,id,e,J(v),t()).changes>0,authoritative:false});
  const observeScore=(a,n,completed)=>{
-  sql('INSERT INTO assessments VALUES(?,?,?,0,NULL,?) ON CONFLICT(attempt_id) DO UPDATE SET normalized=excluded.normalized,completed=excluded.completed,approved=0,approved_at=NULL,updated_at=excluded.updated_at').run(a,n,completed?1:0,t());
+  sql('INSERT INTO assessments VALUES(?,?,?,0,NULL,?) ON CONFLICT(attempt_id) DO UPDATE SET normalized=excluded.normalized,completed=excluded.completed,updated_at=excluded.updated_at WHERE assessments.approved=0').run(a,n,completed?1:0,t());
   return {received:true,authoritative:false,gradeSent:false};
  };
  function approveScore(attemptId,n,completed,scoreHash,payload){
   db.exec('BEGIN IMMEDIATE');
   try{
-   const attempt=sql("SELECT a.id,a.ags_json,COALESCE(g.allowed,1) AS grade_allowed,l.id AS legacy_id FROM attempts a LEFT JOIN ags_learner_attempts g ON g.attempt_id=a.id JOIN bindings b ON b.id=a.binding_id LEFT JOIN legacy_platforms l ON l.id=b.registration_id WHERE a.id=? AND a.status='IN_PROGRESS'").get(attemptId);
+   const attempt=sql("SELECT a.id,a.ags_json,COALESCE(g.allowed,0) AS grade_allowed,l.id AS legacy_id FROM attempts a LEFT JOIN ags_learner_attempts g ON g.attempt_id=a.id JOIN bindings b ON b.id=a.binding_id LEFT JOIN legacy_platforms l ON l.id=b.registration_id WHERE a.id=? AND a.status='IN_PROGRESS'").get(attemptId);
    if(!attempt)throw new Error('Unknown active LTI attempt');
     if(attempt.grade_allowed!==1)throw new Error('LTI_GRADE_ROLE_DENIED');
    if(attempt.legacy_id&&!P(attempt.ags_json)?.serviceUrl)
