@@ -2,6 +2,7 @@
 // An LMS administrator initiates the installation inside Canvas. Its short-lived
 // registration token is used server-side only and is never written to a log or DB.
 import {createHash} from 'node:crypto';
+import {pinnedLmsFetch} from './lti-safe-fetch.mjs';
 
 export const CANVAS_PENDING_DEPLOYMENT='__p2lrn_canvas_dynamic_pending__';
 const CONFIG_CLAIM='https://purl.imsglobal.org/spec/lti-tool-configuration';
@@ -87,10 +88,11 @@ async function readJsonResponse(fetchImpl,url,options,label){
 }
 
 export async function installCanvasDynamicRegistration({
- openidConfiguration,registrationToken,baseUrl,fetchImpl=fetch,
+ openidConfiguration,registrationToken,baseUrl,fetchImpl,
  allowInsecureLocal=false,allowedHosts=[],registerPlatform
 }){
- if(typeof fetchImpl!=='function'||typeof registerPlatform!=='function')
+ const remoteFetch=fetchImpl??((url,options)=>pinnedLmsFetch(url,options,{allowInsecureLoopback:allowInsecureLocal}));
+ if(typeof remoteFetch!=='function'||typeof registerPlatform!=='function')
   throw new TypeError('Canvas registration requires trusted fetch and durable registration');
  if(typeof registrationToken!=='string'||registrationToken.length<16||
     registrationToken.length>8192||/[\r\n]/.test(registrationToken))
@@ -98,7 +100,7 @@ export async function installCanvasDynamicRegistration({
  const allowed={allowInsecureLocal,allowedHosts};
  const oidc=trustedCanvasUrl(openidConfiguration,allowed);
  const authHeaders={Authorization:'Bearer '+registrationToken};
- const config=await readJsonResponse(fetchImpl,oidc.toString(),
+ const config=await readJsonResponse(remoteFetch,oidc.toString(),
   {method:'GET',headers:authHeaders},'CANVAS_OIDC');
  const issuer=trustedCanvasUrl(config.issuer,allowed);
  const auth=trustedCanvasUrl(config.authorization_endpoint,allowed);
@@ -111,14 +113,14 @@ export async function installCanvasDynamicRegistration({
  // discoverable Canvas installation that issued the token.
  if(endpoint.origin!==oidc.origin)
   throw new Error('CANVAS_REGISTRATION_HOST_MISMATCH');
- const jwks=await readJsonResponse(fetchImpl,jwksUrl.toString(),
+ const jwks=await readJsonResponse(remoteFetch,jwksUrl.toString(),
   {method:'GET'},'CANVAS_JWKS');
  if(!Array.isArray(jwks.keys)||jwks.keys.length===0||jwks.keys.length>50||
     jwks.keys.some(k=>k?.kty!=='RSA'||typeof k.kid!=='string'||
       typeof k.n!=='string'||k.n.length<300||typeof k.e!=='string'||
       k.alg&&k.alg!=='RS256'))
   throw new Error('CANVAS_INVALID_SIGNING_KEYS');
- const posted=await readJsonResponse(fetchImpl,endpoint.toString(),
+ const posted=await readJsonResponse(remoteFetch,endpoint.toString(),
   {method:'POST',headers:{...authHeaders,'Content-Type':'application/json'},
    body:JSON.stringify(canvasDynamicRegistrationBody(baseUrl))},'CANVAS_REGISTRATION');
  const clientId=String(posted.client_id??'');
