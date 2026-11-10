@@ -53,7 +53,7 @@ function hashedKey(keys){
   "LENGTH("+quoteId(name)+"),':',"+quoteId(name)).join(",")+"),256))";
 }
 export function mysqlSchemas(bootstrap,columnsByTable){
- const definitions=bootstrap.split(/;\s*\n/).map(v=>v.trim()).filter(Boolean);
+ const definitions=bootstrap.split(/;\s*\n/).map(v=>v.trim().replace(/;$/,'')).filter(Boolean);
  const statements=[];
  for(const definition of definitions){
   const match=/^CREATE TABLE IF NOT EXISTS (\w+)\(([\s\S]*)\)$/i.exec(definition);
