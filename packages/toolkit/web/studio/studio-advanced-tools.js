@@ -64,6 +64,14 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
   size.popup.append(element(doc,'span','p2lrn-ribbon-caption','Ancho px'),widthInput,button(doc,'Aplicar ancho','width'));
   size.popup.append(element(doc,'span','p2lrn-ribbon-caption','Alto px'),heightInput,button(doc,'Aplicar alto','height'));
   objectGroup.append(size.details);
+  const typography=actionMenu(doc,'Texto del diagrama',[],'texto-diagrama');
+  const textScale=numberField(doc,'Tamaño de texto proporcional al lienzo (cqw)',1.7,0.8,9.5);
+  textScale.step='0.1';
+  typography.popup.append(element(doc,'span','p2lrn-ribbon-caption','Texto proporcional (cqw)'),
+    textScale,button(doc,'Aplicar tamaño proporcional','fontScale'),
+    button(doc,'Centrar texto','textCenter'),
+    button(doc,'Alinear texto a la izquierda','textLeft'));
+  objectGroup.append(typography.details);
   const rotation=actionMenu(doc,'Girar',[],'giro');
   const rotationInput=numberField(doc,'Ángulo del objeto en grados',0,-3600,3600);
   rotationInput.step='1';
@@ -200,6 +208,9 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     heightInput.disabled=Boolean(table);
     const canRotate=Boolean(node?.matches?.('[data-p2lrn-layout="shape"],[data-p2lrn-layout="text-box"],figure'));
     rotation.details.hidden=!canRotate;
+    typography.details.hidden=node?.dataset?.p2lrnLayout!=='text-box'||
+      !['diagram-canvas','diagram-group'].includes(node?.parentElement?.dataset?.p2lrnLayout);
+    textScale.value=String(Number(node?.style?.fontSize?.match(/([\d.]+)cqw/)?.[1]??1.7));
     rotationInput.value=String(Number(node?.dataset?.p2lrnObjectRotation)||0);
     curve.details.hidden=node?.dataset?.p2lrnShape!=='curved-arrow';
     curveInput.value=String(Number(node?.dataset?.p2lrnCurve??75));
@@ -264,7 +275,8 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     if(!target||!bar.contains(target))return;
     refresh();if(!objectTools)return;
     const action=target.dataset.studioAdvancedAction;
-    const value=action==='width'?Number(widthInput.value):
+    const value=action==='fontScale'?Number(textScale.value):
+      action==='width'?Number(widthInput.value):
       action==='height'?Number(heightInput.value):
       action==='rotate'?Number(rotationInput.value):
       action==='curve'?Number(curveInput.value):
