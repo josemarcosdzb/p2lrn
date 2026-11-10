@@ -65,7 +65,14 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
   size.popup.append(element(doc,'span','p2lrn-ribbon-caption','Alto px'),heightInput,button(doc,'Aplicar alto','height'));
   const diagramXInput=numberField(doc,'Posición horizontal del diagrama en porcentaje',0,0,100);
   const diagramYInput=numberField(doc,'Posición vertical del diagrama en porcentaje',0,0,100);
+  const diagramWidthInput=numberField(doc,'Ancho del diagrama en porcentaje',20,0.05,100);
+  const diagramHeightInput=numberField(doc,'Alto del diagrama en porcentaje',24,0.05,100);
   diagramXInput.step='0.1';diagramYInput.step='0.1';
+  diagramWidthInput.step='0.05';diagramHeightInput.step='0.05';
+  size.popup.append(element(doc,'span','p2lrn-ribbon-caption','Ancho %'),diagramWidthInput,
+    button(doc,'Aplicar ancho porcentual','diagramWidth'),
+    element(doc,'span','p2lrn-ribbon-caption','Alto %'),diagramHeightInput,
+    button(doc,'Aplicar alto porcentual','diagramHeight'));
   size.popup.append(element(doc,'span','p2lrn-ribbon-caption','X %'),diagramXInput,
     button(doc,'Aplicar X porcentual','diagramX'),
     element(doc,'span','p2lrn-ribbon-caption','Y %'),diagramYInput,
@@ -236,6 +243,9 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     widthInput.value=String(Math.max(120,width));
     const isDiagram=['diagram-canvas','diagram-group'].includes(node?.parentElement?.dataset?.p2lrnLayout);
     diagramXInput.disabled=!isDiagram;diagramYInput.disabled=!isDiagram;
+    diagramWidthInput.disabled=!isDiagram;diagramHeightInput.disabled=!isDiagram;
+    diagramWidthInput.value=String(Number.parseFloat(node?.style?.width)||20);
+    diagramHeightInput.value=String(Number.parseFloat(node?.style?.height)||24);
     diagramXInput.value=String(Number.parseFloat(node?.style?.left)||0);
     diagramYInput.value=String(Number.parseFloat(node?.style?.top)||0);
     if(!formatTab.getAttribute('aria-selected')||formatTab.getAttribute('aria-selected')==='false')formatTab.click();
@@ -293,7 +303,9 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     if(!target||!bar.contains(target))return;
     refresh();if(!objectTools)return;
     const action=target.dataset.studioAdvancedAction;
-    const value=action==='diagramX'?Number(diagramXInput.value):
+    const value=action==='diagramWidth'?Number(diagramWidthInput.value):
+      action==='diagramHeight'?Number(diagramHeightInput.value):
+      action==='diagramX'?Number(diagramXInput.value):
       action==='diagramY'?Number(diagramYInput.value):
       action==='textColor'?diagramTextColor.value:
       action==='fontScale'?Number(textScale.value):
