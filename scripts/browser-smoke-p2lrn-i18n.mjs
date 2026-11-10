@@ -302,6 +302,7 @@ async function studioChrome(language){
       });
       await writeFile(join(evidence,prefix+'-'+label+'-wcag.json'),JSON.stringify(report,null,2));
       console.log('BROWSER_STUDIO_'+language.toUpperCase()+'_'+label.toUpperCase()+'_WCAG_ISSUES='+report.violations.length);
+      assert.equal(report.violations.length,0,'WCAG automated violations in '+language+' '+label+': '+JSON.stringify(report.violations));
     };
     await auditStudio('editor');
     await page.setViewportSize({width:390,height:844});
@@ -309,7 +310,10 @@ async function studioChrome(language){
     const mobile=await page.evaluate(()=>({width:window.innerWidth,scrollWidth:document.documentElement.scrollWidth}));
     await writeFile(join(evidence,prefix+'-mobile.json'),JSON.stringify(mobile,null,2));
     console.log('BROWSER_STUDIO_'+language.toUpperCase()+'_MOBILE_OVERFLOW='+(mobile.scrollWidth-mobile.width));
+    assert.ok(mobile.scrollWidth<=mobile.width+1,'Studio has horizontal mobile overflow: '+JSON.stringify(mobile));
     await page.setViewportSize({width:1280,height:800});
+    // Inserting a layout selects its formatting tab. Re-enter Insert before adding content.
+    await ribbon.getByRole('tab',{name:language==='en'?'Insert':'Insertar'}).click();
     await ribbon.getByRole('button',{name:language==='en'?'Add content':'Añadir contenido',exact:true}).click();
     const dialog=page.locator('dialog.p2lrn-activity-picker');
     await dialog.waitFor({state:'visible',timeout:10000});
