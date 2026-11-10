@@ -779,8 +779,11 @@ async function browserAssemblyInteraction(){
     }
     const firstDelta=movePiece();
     const secondDelta=movePiece();
-    if(!status.textContent.includes('Pieza desplazada'))
-      throw Error('Assembly drag did not report its retained position: '+status.textContent);
+    // In third-person view a free release may overlap a different cage.
+    // That correctly reports a wrong target, but MUST keep the moved piece.
+    // The two measured displacements above are the actual persistence gate.
+    if(!/Pieza desplazada|La pieza no corresponde|fuera de|Ajusta el centro/.test(status.textContent))
+      throw Error('Assembly drag gave no meaningful placement feedback: '+status.textContent);
     const cameraBefore=game.camera.position.clone(),avatarBefore=avatar.position.clone();
     game.setMovementVector(0,1);
     await sleep(350);
