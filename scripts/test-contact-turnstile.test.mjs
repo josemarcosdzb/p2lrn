@@ -91,3 +91,19 @@ test('cross-origin submission rejected before Turnstile and SQL',async()=>{
   assert.equal(res.status,403);assert.equal(ctx.calls.length,0);
  }finally{ctx.restore()}
 });
+
+test('oversized chunked contact JSON is rejected before challenge verification or SQL',async()=>{
+ const ctx=await harness();
+ try{
+  const request=new Request('https://test.supabase.invalid/functions/v1/p2lrn-contact',{
+   method:'POST',headers:{origin:'https://p2lrn.org','content-type':'application/json'},
+   body:new ReadableStream({start(controller){
+    controller.enqueue(new TextEncoder().encode('{"name":"'+('X'.repeat(16000))));
+    controller.close();
+   }}),duplex:'half'
+  });
+  const response=await ctx.handler(request);
+  assert.equal(response.status,413);
+  assert.equal(ctx.calls.length,0);
+ }finally{ctx.restore()}
+});
