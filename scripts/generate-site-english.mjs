@@ -43,6 +43,9 @@ const handAuthoredEnglishPages=new Set([
   'docs/compatibilidad/index.html',
   'docs/recetas/index.html',
   'docs/glosario/index.html',
+  'docs/progresion/index.html',
+  'docs/metricas/index.html',
+  'docs/conceptos/index.html',
   // Legal summaries are manually reviewed and must not be rewritten by machine translation.
   'licencia/index.html',
 ]);
