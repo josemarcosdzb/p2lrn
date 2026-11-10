@@ -16,6 +16,9 @@ const STYLES=[
  '.p2lrn-object-controls button[data-object-action=drag]:active{cursor:grabbing}',
  '.p2lrn-object-controls .p2lrn-object-label{color:#64748b;font-size:10px;padding:0 6px;font-family:system-ui,sans-serif}',
  '.p2lrn-object-resize{position:absolute;right:-8px;bottom:-8px;pointer-events:auto;width:17px;height:17px;padding:0;border:2px solid #fff;border-radius:4px;background:#4776b6;box-shadow:0 0 0 1px #4776b6;cursor:nwse-resize}',
+  '.p2lrn-freeform-points{position:absolute;inset:0;pointer-events:none}',
+  '.p2lrn-freeform-point{position:absolute;width:18px;height:18px;min-height:18px;min-width:18px;border:2px solid white;box-shadow:0 0 0 1px #1453a0;border-radius:50%;background:#2563eb;pointer-events:auto;cursor:move;transform:translate(-50%,-50%)}',
+  '.p2lrn-freeform-point:focus-visible{outline:3px solid #111827;outline-offset:3px}',
   '.p2lrn-studio-drop-target{outline:2px dashed #3a73bd!important;outline-offset:3px!important}'
 ].join('\n');
 const between=(x,min,max)=>Math.max(min,Math.min(max,x));
@@ -67,6 +70,18 @@ function button(doc,label,action,title=label){
 const isObject=(node,surface)=>Boolean(node&&surface.contains(node)&&node.matches?.(OBJECT_SELECTOR));
 const positionOf=el=>({x:positive(el.dataset.p2lrnObjectX,0),y:positive(el.dataset.p2lrnObjectY,0)});
 const angleOf=el=>positive(el.dataset.p2lrnObjectRotation,0);
+const polygonPoints=art=>{
+  const value=art?.style?.clipPath||'';
+  if(!/^polygon\(/i.test(value))return [];
+  const matches=[...value.matchAll(/([\d.]+)%\s+([\d.]+)%/g)];
+  if(matches.length<3||matches.length>64)return [];
+  return matches.map(match=>({x:between(Number(match[1]),0,100),y:between(Number(match[2]),0,100)}));
+};
+const writePolygonPoints=(art,points)=>{
+  if(points.length<3||points.length>64||points.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))
+    throw new RangeError('La forma debe tener entre 3 y 64 vértices válidos.');
+  art.style.clipPath='polygon('+points.map(p=>p.x.toFixed(2)+'% '+p.y.toFixed(2)+'%').join(',')+')';
+};
 // Keep translation and rotation in a single authored transform so moving an
 // already rotated object never discards its orientation.
 export function objectTransform(x,y,angle=0){
@@ -100,7 +115,8 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   controls.append(button(doc,'Mover','drag','Arrastrar objeto'));
   const resize=button(doc,'','resize','Arrastrar para redimensionar objeto');
   resize.className='p2lrn-object-resize';
-  frame.append(controls,resize);host.append(frame);
+  const pointLayer=doc.createElement('div');pointLayer.className='p2lrn-freeform-points';
+  frame.append(controls,resize,pointLayer);host.append(frame);
   let selected=null,selectedCell=null,drag=null;
   const selectionSet=new Set();
   const scrollPane=surface.closest('.p2lrn-studio-stage,.studio-editor-stage,.stage');
@@ -151,15 +167,49 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     if(object.getClientRects().length)ensureScrollRoom(object);
   }
   if(normalizeStudioShapeCaptions(surface))emit();
+  function renderPolygonHandles(){
+    pointLayer.replaceChildren();
+    if(selected?.dataset?.p2lrnShape!=='freeform')return;
+    const art=selected.querySelector('[data-p2lrn-shape-art]');
+    const points=polygonPoints(art);
+    if(!points.length)return;
+    const outer=selected.getBoundingClientRect(),inside=art.getBoundingClientRect();
+    for(const [index,point] of points.entries()){
+      const handle=button(doc,'','vertex','Mover vértice '+(index+1));
+      handle.className='p2lrn-freeform-point';handle.dataset.vertexIndex=String(index);
+      handle.style.left=(inside.left-outer.left+inside.width*point.x/100)+'px';
+      handle.style.top=(inside.top-outer.top+inside.height*point.y/100)+'px';
+      handle.addEventListener('pointerdown',event=>{
+        if(event.button!==0)return;
+        event.preventDefault();event.stopPropagation();
+        drag={pointerId:event.pointerId,kind:'vertex',target:selected,index,moved:false};
+        try{handle.setPointerCapture(event.pointerId);}catch{}
+      });
+      handle.addEventListener('pointermove',onPointerMove);
+      handle.addEventListener('pointerup',finishDrag);
+      handle.addEventListener('pointercancel',finishDrag);
+      handle.addEventListener('keydown',event=>{
+        const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[event.key];
+        if(!delta)return;
+        event.preventDefault();
+        const current=polygonPoints(art),step=event.shiftKey?5:1;
+        current[index]={x:between(current[index].x+delta[0]*step,0,100),y:between(current[index].y+delta[1]*step,0,100)};
+        writePolygonPoints(art,current);change();
+        pointLayer.querySelector('[data-vertex-index="'+index+'"]')?.focus();
+      });
+      pointLayer.append(handle);
+    }
+  }
   function update(){
     if(!isObject(selected,surface)||!selected.getClientRects().length){
-      frame.dataset.visible='false';return;
+      frame.dataset.visible='false';pointLayer.replaceChildren();return;
     }
     const geo=selected.getBoundingClientRect(),container=host.getBoundingClientRect();
     frame.style.left=(geo.left-container.left+host.scrollLeft)+'px';
     frame.style.top=(geo.top-container.top+host.scrollTop)+'px';
     frame.style.width=geo.width+'px';frame.style.height=geo.height+'px';
     frame.dataset.visible='true';
+    renderPolygonHandles();
     const table=selected.matches('table');
     // Table operations belong to the unified contextual inspector.
     status.textContent=selectionSet.size>1?selectionSet.size+' OBJETOS':
@@ -317,6 +367,15 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       else if(event.clientY<viewport.top+48)scrollPane.scrollTop-=24;
     }
     const dy=event.clientY-drag.startY+((scrollPane?.scrollTop||0)-drag.initialScroll);
+    if(drag.kind==='vertex'){
+      const art=el.querySelector('[data-p2lrn-shape-art]');
+      const bounds=art?.getBoundingClientRect();
+      const points=polygonPoints(art);
+      if(!bounds?.width||!bounds?.height||!points[drag.index])return;
+      points[drag.index]={x:between((event.clientX-bounds.left)/bounds.width*100,0,100),
+        y:between((event.clientY-bounds.top)/bounds.height*100,0,100)};
+      writePolygonPoints(art,points);drag.moved=true;update();return;
+    }
     if(drag.kind==='drag'){
       const cur=el.getBoundingClientRect(),box=surface.getBoundingClientRect();
       const minX=drag.position.x+box.left-cur.left+8;
