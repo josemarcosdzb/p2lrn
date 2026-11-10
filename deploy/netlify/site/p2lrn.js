@@ -917,12 +917,16 @@
   }
 
   document.querySelectorAll('[data-contact-form]').forEach((form) => {
-    // Opt-in: set data-turnstile-sitekey on the form and configure the matching
-    // server-side TURNSTILE_SECRET_KEY. The public sitekey is not a credential.
-    const sitekey=(form.dataset.turnstileSitekey||'').trim();
+    const status = form.querySelector('[data-form-status]');
+    let sitekey=(form.dataset.turnstileSitekey||'').trim();
+    let required=Boolean(sitekey);
+    let unavailable=false;
     let turnstileToken='';
     let turnstileWidgetId=null;
-    if(sitekey){
+    let mounted=false;
+    const mountChallenge=()=>{
+      if(!sitekey||mounted)return;
+      mounted=true;
       const mount=document.createElement('div');
       mount.className='p2lrn-contact-turnstile';
       form.querySelector('button[type="submit"]')?.before(mount);
@@ -937,10 +941,23 @@
           'error-callback':()=>{turnstileToken=''},
         });
       };
+      script.onerror=()=>{unavailable=true;if(status)status.textContent='No se pudo cargar la verificación de seguridad.';};
       document.head.append(script);
-    }
+    };
+    if(sitekey)mountChallenge();
+    // The public configuration is returned by the actual server; never ship a
+    // Turnstile secret in site assets. Missing/failed config stops submission.
+    const setup=fetch(SUPABASE_URL+'/functions/v1/p2lrn-contact?config=1',{
+      headers:{apikey:SUPABASE_PUBLISHABLE_KEY},cache:'no-store'
+    }).then(async response=>{
+      if(!response.ok)throw new Error('contact_config_unavailable');
+      const config=await response.json();
+      required=config.required===true;
+      if(!sitekey&&typeof config.sitekey==='string')sitekey=config.sitekey.trim();
+      if(required&&!sitekey)unavailable=true;
+      mountChallenge();
+    }).catch(()=>{unavailable=true;});
 
-    const status = form.querySelector('[data-form-status]');
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (form.elements.company?.value) return;
@@ -952,7 +969,12 @@
         return;
       }
 
-      if(sitekey&&!turnstileToken){
+      await setup;
+      if(unavailable||(required&&!sitekey)){
+        if(status)status.textContent='No está disponible la verificación de seguridad. Inténtalo más tarde.';
+        return;
+      }
+      if((required||sitekey)&&!turnstileToken){
         if(status)status.textContent='Completa la verificación antes de enviar.';
         return;
       }
