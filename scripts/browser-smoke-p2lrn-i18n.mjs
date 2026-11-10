@@ -285,6 +285,13 @@ async function studioChrome(language){
     const instruction=await endCaret.evaluate(node=>getComputedStyle(node,'::before').content);
     assert.match(instruction,language==='en'?/Write or insert/:/Escribe o inserta/,'Lesson end-caret language mismatch');
     await page.screenshot({path:join(evidence,prefix+'-editor.png'),fullPage:false});
+    await ribbon.getByRole('button',{name:language==='en'?'Two columns':'Dos columnas',exact:true}).click();
+    const section=page.locator('[data-p2lrn-layout="columns"]');
+    await section.waitFor({timeout:12000});
+    assert.equal((await section.locator('h2').first().textContent()).trim(),language==='en'?'Comparison':'Comparación');
+    assert.equal((await section.locator('h3').first().textContent()).trim(),language==='en'?'First column':'Primera columna');
+    await page.screenshot({path:join(evidence,prefix+'-two-columns.png'),fullPage:false});
+
     // Real-browser WCAG inspection, not a substitute for screen-reader review.
     const auditStudio=async(label)=>{
       await page.addScriptTag({path:join(repo,'.p2lrn-i18n-ci','node_modules','axe-core','axe.min.js')});
