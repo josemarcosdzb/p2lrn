@@ -7,7 +7,7 @@ import {join,resolve,dirname,extname,sep} from 'node:path';
 import {tmpdir} from 'node:os';
 import {STUDIO_RUNTIME_SHARED_FILES} from '../deploy/netlify/studio-runtime-assets.mjs';
 const root=resolve('.'),site=join(root,'.netlify-cdn'),out=resolve(process.env.P2LRN_DEMO_OUTPUT_DIR||join(root,'.visual-evidence','studio-curso-integral'));
-const course=join(out,'laboratorio-cuestionarios-y-juegos.p2lrn'),video=join(out,'studio-creacion-y-vista-alumno.mp4'),framesFolder=join(out,'.video-frames');
+const course=join(out,'laboratorio-cuestionarios-y-juegos.p2lrn'),video=join(out,'studio-creacion-y-vista-alumno.mp4'),framesFolder=join(out,'video-frames');
 const delay=ms=>new Promise(r=>setTimeout(r,ms)),must=(value,message)=>{if(!value)throw Error(message);},events=[];
 await stat(course);await stat(join(site,'player/current/dist/p2lrn.js'));
 await cp(join(root,'packages/toolkit/web/studio'),join(site,'studio/runtime'),{recursive:true,force:true});
@@ -73,7 +73,7 @@ try{
   await show('Cuestionario con todas las variantes',teacher('Cuestionario completo'),1400);
   await wait('document.querySelectorAll(".q-card").length>=10','diez preguntas');
   for(let i=0;i<10;i++)await show('Profesor · pregunta '+(i+1),'(()=>{const c=document.querySelectorAll(".q-card")['+i+'];c?.scrollIntoView({block:"center"});return Boolean(c);})()',650);
-  const names=['Memoria','Emparejar','Ordenar','Clasificar','Verdadero y falso','Completar huecos','Sopa de letras','Crucigrama','Rosco','3D · ordenar','3D · relacionar','3D · clasificar','3D · ensamblar'];
+  const names=['Memoria','Emparejar','Ordenar','Clasificar','Verdadero y falso','Completar huecos','Arrastrar y soltar','Sopa de letras','Crucigrama','Rosco','3D · ordenar','3D · relacionar','3D · clasificar','3D · ensamblar'];
   for(const name of names){
     await show('Profesor · '+name,teacher(name),1100);
     if(name==='Rosco'){
@@ -97,10 +97,17 @@ try{
   await delay(1250);active=false;await job;
   must(count>90,'La grabación es demasiado corta: '+count);
   const ff=spawnSync('ffmpeg',['-y','-hide_banner','-loglevel','error','-framerate','4','-i',join(framesFolder,'%06d.jpg'),'-vf','scale=1280:720:flags=lanczos,format=yuv420p','-c:v','libx264','-preset','veryfast','-crf','24','-movflags','+faststart',video],{windowsHide:true,encoding:'utf8',timeout:180000});
-  must(ff.status===0&&existsSync(video),'No se ha codificado MP4 con ffmpeg: '+(ff.error?.message||ff.stderr));
+  if(ff.status!==0||!existsSync(video)){
+    const details={ok:false,needsEncoding:true,reason:'ffmpeg no disponible o codificación fallida',frames:count,frameRate:4,
+      frameDirectory:'video-frames',activities:names.length+1,events,
+      encoderError:String(ff.error?.message||ff.stderr||'sin salida').slice(0,1000)};
+    await writeFile(join(out,'video-report.json'),JSON.stringify(details,null,2)+'\n');
+    console.log('DEMO_VIDEO_FRAMES_READY='+JSON.stringify(details));
+  }else{
   const size=(await stat(video)).size;
   await writeFile(join(out,'video-report.json'),JSON.stringify({ok:true,video:'studio-creacion-y-vista-alumno.mp4',seconds:count/4,frames:count,render:'1280x720',realStudio:true,realPlayer:true,activities:names.length+1,events},null,2)+'\n');
   console.log('DEMO_VIDEO='+JSON.stringify({file:video,size,seconds:count/4,frames:count}));
+  }
 }finally{
   active=false;if(job)await job.catch(()=>{});
   try{socket?.close();}catch{}try{chrome?.kill();}catch{}
