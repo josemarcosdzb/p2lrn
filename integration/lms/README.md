@@ -170,6 +170,42 @@ El libro oficial del LMS debe confirmar la nota como último paso.
 No se ha realizado una prueba end-to-end autorizada del nuevo curso.
 Evidencia ampliada en el informe QA reutilizable
 P2LRN-CERT-20261107/lti-curso-nuevo-resultado-real.md.
+### Moodle: Deep Linking, alumno y nota oficial (10-11-2026)
+
+Se ha completado una prueba real de Moodle con el mismo archivo P2LRN
+exportado desde Studio (SHA-256
+d163609727827e53ce076993a4e8708e34f1ef7dc8010131af5e0ce92332881d).
+
+**Profesor:** entrar a Moodle desde la sesión autenticada de AulaP2P,
+abrir el curso, activar edición, seleccionar P2LRN LTI 1.3 en
+Añadir actividad o recurso, pulsar Select content, subir el archivo
+.p2lrn y Publicar y añadir. Moodle devuelve el contenido seleccionado
+y rellena automáticamente el título. En el apartado Grade, marcar
+Allow P2LRN LTI 1.3 to add grades in the gradebook y máximo 100.
+Guardar con Save and display. Actividad creada: /mod/lti/view.php?id=59.
+
+**Alumno:** abrir la nueva actividad, lanzar P2LRN, seleccionar la
+respuesta del cuestionario y pulsar Finalizar. El alumno de pruebas,
+previamente matriculado, se abrió mediante la función logged in as
+de Moodle, no con acceso independiente por contraseña. El Player
+registró la entrega y el resultado 1/1 (100 %).
+
+**AGS:** una aprobación administrativa autorizada utilizó esa
+entrega real, no una nota sintética. El proveedor obtuvo AGS HTTP 200,
+outbox SENT. El informe oficial de Moodle mostró 100/100 para
+P2LRN QA Student y conservó la calificación después de recargar.
+La consulta read-only de Moodle también confirmó 100/100.
+
+**Problemas detectados:** el marcador provisional completed=0 no
+reflejaba el evento p2lrn:complete. La aprobación administrativa
+fue necesaria para el envío oficial; esto no certifica calificaciones
+automáticas ni inicio de sesión independiente del alumno. Mantener
+pendientes Chamilo, Canvas, Sakai y Open edX.
+
+Las capturas reales, el hash, las pruebas de profesor/alumno, los
+registros del proveedor y la verificación del libro oficial están
+registrados en el informe existente
+P2LRN-CERT-20261107/lti-curso-nuevo-resultado-real.md.
 ## Despliegue Docker mantenible
 
 Este repositorio contiene un único servicio Docker Compose para el proveedor:
