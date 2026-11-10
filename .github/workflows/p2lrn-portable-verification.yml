@@ -325,6 +325,23 @@ jobs:
         run: |
           node scripts/browser-external-format-visual-qa.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify real 3D assembly movement, drag persistence and other 3D games in Chrome/Edge
+        env:
+          P2LRN_QUEST3D_ONLY: '1'
+          P2LRN_QUEST3D_OUTPUT_DIR: .visual-evidence/quest3d-hosted
+        run: |
+          node --check scripts/verify-local-viewer.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-local-viewer.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Preserve genuine 3D browser and assembly screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: p2lrn-assembly-3d-browser-qa
+          path: .visual-evidence/quest3d-hosted/
+          retention-days: 7
+          if-no-files-found: warn
       - name: Preserve external format screenshot evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
