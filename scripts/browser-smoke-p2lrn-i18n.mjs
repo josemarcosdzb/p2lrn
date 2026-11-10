@@ -137,6 +137,31 @@ async function browserNavigation(){
   assert.equal(await page.locator('html').getAttribute('lang'),'en');
   console.log('BROWSER_LANGUAGE_SWITCH=pass');
 }
+async function docsRoleNavigationChrome(language){
+  const isEnglish=language==='en';
+  const evidence=join(repo,'.p2lrn-i18n-ci','evidence');
+  await mkdir(evidence,{recursive:true});
+  const teacher=isEnglish?'/en/docs/colaboracion/':'/docs/colaboracion/';
+  const developer=isEnglish?'/en/docs/desarrolladores/colaboracion/':'/docs/desarrolladores/colaboracion/';
+  const portal=isEnglish?'/en/docs/developers/':'/docs/desarrolladores/';
+  const npm=isEnglish?'/en/docs/npm/':'/docs/npm/';
+  const teacherResponse=await page.goto(base+teacher,{waitUntil:'domcontentloaded'});
+  assert.equal(teacherResponse?.status(),200,'Teacher collaboration page not found');
+  await page.locator('.doc-sidebar a').first().waitFor({timeout:10000});
+  await page.locator('#nav > a[href="'+portal+'"]').waitFor({timeout:10000});
+  assert.equal(await page.locator('#nav > details').count(),0,'Developer access must not be hidden in a dropdown');
+  assert.equal(await page.locator('.doc-sidebar a[href="'+npm+'"]').count(),0,'Teacher sidebar must not display npm instructions');
+  assert.equal(await page.locator('article.doc-content pre').count(),0,'Teacher guide must not require code');
+  await page.screenshot({path:join(evidence,'docs-'+language+'-teacher.png'),fullPage:false});
+  const devResponse=await page.goto(base+developer,{waitUntil:'domcontentloaded'});
+  assert.equal(devResponse?.status(),200,'Developer collaboration page not found');
+  await page.locator('.doc-sidebar a[href="'+npm+'"]').waitFor({timeout:10000});
+  assert.ok(await page.locator('article.doc-content pre').count()>=2,'Developer reference lost its browser/server examples');
+  assert.equal(await page.locator('#nav > details').count(),0,'Developer navigation must be directly visible');
+  await page.screenshot({path:join(evidence,'docs-'+language+'-developer.png'),fullPage:false});
+  console.log('BROWSER_DOCS_'+language.toUpperCase()+'_AUDIENCE_SEPARATION=PASS');
+}
+
 async function standardQuiz(language){
   await page.goto(base+(language==='en'?'/en/':'/'),{waitUntil:'domcontentloaded'});
   await page.locator('body > nav.language-switch').waitFor();
@@ -414,6 +439,8 @@ async function analyticsChrome(language){
 try{
   await siteParity();
   await browserNavigation();
+  await docsRoleNavigationChrome('es');
+  await docsRoleNavigationChrome('en');
   await standardQuiz('en');
   await standardQuiz('es');
   await trueFalseGame('en');
