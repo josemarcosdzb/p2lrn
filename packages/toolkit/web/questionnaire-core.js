@@ -73,6 +73,11 @@ export function validateQuestionnaire(payload) {
     if (question.scoring !== undefined) invariant(SCORING_MODES.has(question.scoring), `${question.id}: invalid scoring mode`);
     if (question.timeLimitSeconds !== undefined) positiveInteger(question.timeLimitSeconds, `${question.id}: timeLimitSeconds`);
     if (question.required !== undefined) invariant(typeof question.required === 'boolean', `${question.id}: required must be boolean`);
+    if (question.roscoLetter !== undefined || question.roscoMode !== undefined) {
+      invariant(question.type === 'text', `${question.id}: la letra del rosco se configura en preguntas de texto`);
+      invariant(typeof question.roscoLetter === 'string' && /^[A-ZÑ]$/u.test(question.roscoLetter), `${question.id}: letra del rosco no válida`);
+      invariant(['starts','contains'].includes(question.roscoMode), `${question.id}: modo del rosco no válido`);
+    }
     if (payload.grading.mode === 'embedded-key') invariant(question.solution, `${question.id}: embedded-key grading requires solution`);
     validateQuestionSemantics(question);
   }

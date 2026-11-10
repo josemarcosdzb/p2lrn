@@ -392,18 +392,68 @@ function buildCrossword(payload, seedSource) {
 
 function buildRosco(payload, seedSource) {
   if (!requireEmbeddedKey(payload)) return result(ROSCO_RENDERER,'Rosco',false,null,['Necesita soluciones embebidas.']);
-  const evaluated=lexicalCompatibility(payload,'rosco'); if(evaluated.reasons.length)return result(ROSCO_RENDERER,'Rosco',false,null,evaluated.reasons);
-  const candidates=evaluated.entries.filter((entry)=>entry.word.length>=2&&[...entry.word].some((ch)=>SPANISH_ALPHABET.includes(ch)));
-  const represented=new Set(candidates.map((entry)=>entry.questionId));
-  if(candidates.length!==payload.questions.length||represented.size!==payload.questions.length)return result(ROSCO_RENDERER,'Rosco',false,null,['El rosco exige exactamente una letra y un reto por cada pregunta.']);
-  if(candidates.length>SPANISH_ALPHABET.length)return result(ROSCO_RENDERER,'Rosco',false,null,[`Hay más retos (${candidates.length}) que letras distintas disponibles (${SPANISH_ALPHABET.length}).`]);
-  const byEntry=new Map(candidates.map((entry)=>[entry.id,entry])); const owner=new Map(); const letterByEntry=new Map();
-  const possible=(entry)=>unique([...entry.word]).filter((letter)=>SPANISH_ALPHABET.includes(letter)).sort((a,b)=>(entry.word.startsWith(a)?0:1)-(entry.word.startsWith(b)?0:1)||SPANISH_ALPHABET.indexOf(a)-SPANISH_ALPHABET.indexOf(b));
-  const assign=(entry,visited)=>{for(const letter of possible(entry)){if(visited.has(letter))continue;visited.add(letter);const current=owner.get(letter);if(!current){owner.set(letter,entry.id);letterByEntry.set(entry.id,letter);return true;}const currentEntry=byEntry.get(current);if(currentEntry&&assign(currentEntry,visited)){owner.set(letter,entry.id);letterByEntry.set(entry.id,letter);return true;}}return false;};
-  const order=[...candidates].sort((a,b)=>possible(a).length-possible(b).length||a.id.localeCompare(b.id));
-  for(const entry of order) if(!assign(entry,new Set())) return result(ROSCO_RENDERER,'Rosco',false,null,['No se puede asignar una letra distinta a cada reto usando sus propias respuestas.']);
-  const elements=candidates.map((entry)=>{const letter=letterByEntry.get(entry.id);return letter?{...entry,letter,mode:entry.word.startsWith(letter)?'starts':'contains'}:null;}).filter(Boolean).sort((a,b)=>SPANISH_ALPHABET.indexOf(a.letter)-SPANISH_ALPHABET.indexOf(b.letter));
-  if(elements.length!==payload.questions.length||new Set(elements.map((item)=>item.letter)).size!==payload.questions.length)return result(ROSCO_RENDERER,'Rosco',false,null,['No se pudo mantener la correspondencia exacta 1:1 entre preguntas y letras.']);
+  const evaluated=lexicalCompatibility(payload,'rosco');
+  if(evaluated.reasons.length)return result(ROSCO_RENDERER,'Rosco',false,null,evaluated.reasons);
+  const candidates=evaluated.entries.filter(entry=>entry.word.length>=2&&[...entry.word].some(ch=>SPANISH_ALPHABET.includes(ch)));
+  const represented=new Set(candidates.map(entry=>entry.questionId));
+  if(candidates.length!==payload.questions.length||represented.size!==payload.questions.length)
+    return result(ROSCO_RENDERER,'Rosco',false,null,['El rosco exige exactamente una letra y un reto por cada pregunta.']);
+  if(candidates.length>SPANISH_ALPHABET.length)
+    return result(ROSCO_RENDERER,'Rosco',false,null,['Hay más retos ('+candidates.length+') que letras distintas disponibles.']);
+  const byEntry=new Map(candidates.map(entry=>[entry.id,entry]));
+  const questionById=new Map(payload.questions.map(q=>[q.id,q]));
+  const owner=new Map(),letterByEntry=new Map(),fixed=new Set(),issues=[];
+  // Teacher-specified letter and mode take precedence over inferred letters.
+  // Older games without these metadata preserve the matching algorithm.
+  for(const entry of candidates){
+    const q=questionById.get(entry.questionId);
+    if(!q?.roscoLetter)continue;
+    const letter=q.roscoLetter,mode=q.roscoMode;
+    const isFirst=entry.word.startsWith(letter);
+    if(!SPANISH_ALPHABET.includes(letter)||!entry.word.includes(letter)){
+      issues.push(q.id+': la respuesta '+entry.answer+' no contiene la letra '+letter+'.');continue;
+    }
+    if(mode==='starts'&&!isFirst){
+      issues.push(q.id+': Empieza por '+letter+' no corresponde a '+entry.answer+'.');continue;
+    }
+    if(mode==='contains'&&isFirst){
+      issues.push(q.id+': Contiene la '+letter+' debe aparecer después de la primera letra.');continue;
+    }
+    if(mode!=='starts'&&mode!=='contains'){issues.push(q.id+': indica Empieza por o Contiene.');continue;}
+    if(owner.has(letter)){issues.push(q.id+': la letra '+letter+' ya está asignada a otra pregunta.');continue;}
+    owner.set(letter,entry.id);letterByEntry.set(entry.id,letter);fixed.add(entry.id);
+  }
+  if(issues.length)return result(ROSCO_RENDERER,'Rosco',false,null,issues);
+  const possible=entry=>unique([...entry.word]).filter(letter=>SPANISH_ALPHABET.includes(letter))
+    .sort((a,b)=>(entry.word.startsWith(a)?0:1)-(entry.word.startsWith(b)?0:1)||SPANISH_ALPHABET.indexOf(a)-SPANISH_ALPHABET.indexOf(b));
+  const assign=(entry,visited)=>{
+    for(const letter of possible(entry)){
+      if(visited.has(letter))continue;
+      visited.add(letter);
+      const current=owner.get(letter);
+      if(!current){
+        owner.set(letter,entry.id);letterByEntry.set(entry.id,letter);
+        return true;
+      }
+      if(fixed.has(current))continue;
+      const currentEntry=byEntry.get(current);
+      if(currentEntry&&assign(currentEntry,visited)){
+        owner.set(letter,entry.id);letterByEntry.set(entry.id,letter);
+        return true;
+      }
+    }
+    return false;
+  };
+  const pending=candidates.filter(entry=>!fixed.has(entry.id))
+    .sort((a,b)=>possible(a).length-possible(b).length||a.id.localeCompare(b.id));
+  for(const entry of pending)if(!assign(entry,new Set()))
+    return result(ROSCO_RENDERER,'Rosco',false,null,['No se puede asignar una letra diferente por pregunta respetando las elecciones del profesor.']);
+  const elements=candidates.map(entry=>{
+    const letter=letterByEntry.get(entry.id),q=questionById.get(entry.questionId);
+    return letter?{...entry,letter,mode:q?.roscoMode??(entry.word.startsWith(letter)?'starts':'contains')}:null;
+  }).filter(Boolean).sort((a,b)=>SPANISH_ALPHABET.indexOf(a.letter)-SPANISH_ALPHABET.indexOf(b.letter));
+  if(elements.length!==payload.questions.length||new Set(elements.map(item=>item.letter)).size!==payload.questions.length)
+    return result(ROSCO_RENDERER,'Rosco',false,null,['No se pudo mantener una letra distinta por pregunta.']);
   return result(ROSCO_RENDERER,'Rosco',true,{elements,seed:seedFor(payload,'rosco',seedSource)});
 }
 

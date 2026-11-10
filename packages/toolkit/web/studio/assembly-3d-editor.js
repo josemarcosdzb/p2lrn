@@ -93,9 +93,9 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 600 410');svg.setAttribute('role','img');svg.setAttribute('aria-label','Editor 3D de piezas y volúmenes de encaje; gira arrastrando el fondo');
   svg.tabIndex=0;svg.hidden=true;svg.style.cssText='width:100%;height:100%;display:block;touch-action:none';
   const canvas=$('canvas','a3-webgl');canvas.hidden=false;canvas.tabIndex=0;canvas.style.cssText='width:100%;height:100%;display:block;touch-action:none';canvas.setAttribute('aria-label','Visor 3D editable; arrastra piezas, jaulas o vértices, y gira la cámara arrastrando el fondo');
-  const note=$('div','a3-scene-note','La pieza aparece dentro de su destino. Arrástrala para ajustar el encaje; arrastra el fondo para girar.');
+  const note=$('div','a3-scene-note','Todas las piezas y cajas visibles. Selecciona una para editarla; arrastra el fondo para girar.');
   const warning=$('p','a3-error');warning.setAttribute('role','status');warning.setAttribute('aria-live','polite');
-  let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0,showAll=false;
+  let selected={kind:'target',id:scene.targets[0]?.id},vertexIndex=0;
   let yaw=0.55,pitch=0.73,zoom=46,drag=null;
   let threeRuntime=null,threeDestroyed=false,threeSignature=null,threePending=false,threeGeneration=0,threeDrag=null;
   const history=[JSON.stringify(scene)],redo=[];
@@ -129,15 +129,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
   const fit=btn('Ajustar pieza dentro de la caja',()=>fitSelected());
   fit.classList.add('a3-primary');
   const frame=btn('Centrar encaje',()=>focusSelection());
-  const allPieces=btn('Ver todas las piezas',()=>{
-    showAll=!showAll;
-    allPieces.textContent=showAll?'Ver solo esta pieza':'Ver todas las piezas';
-    allPieces.setAttribute('aria-pressed',String(showAll));
-    syncThreeVisibility();
-    if(!showAll)focusSelection();
-    if(!svg.hidden)drawScene();
-  });
-  allPieces.setAttribute('aria-pressed','false');
+  const allPieces=btn('Ver montaje completo',()=>focusAssembly());
   props.hidden=true;
   const settings=btn('Mostrar ajustes',()=>{
     props.hidden=!props.hidden;
@@ -177,7 +169,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     const grid=Array.from({length:15},(_,i)=>i-7);
     grid.forEach(v=>{const line1=[[-7,0,v],[7,0,v]],line2=[[v,0,-7],[v,0,7]];const a=line1.map(project),b=line2.map(project);element('path',{d:'M'+a[0][0]+' '+a[0][1]+'L'+a[1][0]+' '+a[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);element('path',{d:'M'+b[0][0]+' '+b[0][1]+'L'+b[1][0]+' '+b[1][1],stroke:'#315069','stroke-width':1,opacity:0.6},g);});
     const sortItems=[];
-    scene.targets.forEach(target=>{if(!showAll&&paired(selected.id)?.target?.id!==target.id)return;const world=target.vertices.map(v=>toWorld(v,target.transform)),coords=world.map(project);sortItems.push({depth:project(target.transform.position)[2],run:()=>{
+    scene.targets.forEach(target=>{const world=target.vertices.map(v=>toWorld(v,target.transform)),coords=world.map(project);sortItems.push({depth:project(target.transform.position)[2],run:()=>{
       const active=selected.kind==='target'&&selected.id===target.id;
       const group=element('g',{'data-kind':'target','data-id':target.id});
       CAGE_EDGES.forEach(([a,b])=>{const c=coords[a],d=coords[b];const line=element('path',{d:'M'+c[0]+' '+c[1]+' L'+d[0]+' '+d[1],stroke:active?'#5eead4':'#6bbac0','stroke-width':active?2.8:1.8,fill:'none','stroke-opacity':target.visibility==='hidden'?0.45:0.9},group);line.dataset.kind='target';line.dataset.id=target.id;line.style.cursor='move';});
@@ -185,7 +177,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       const loc=project(target.transform.position);
       element('text',{x:loc[0]+7,y:loc[1]+8,fill:'#ccfbf1','font-size':12},group).textContent=target.text;
     }});});
-    scene.pieces.forEach(piece=>{if(!showAll&&paired(selected.id)?.piece?.id!==piece.id)return;const p=project(assemblyPlacementTransform(scene,piece.id)?.position??piece.initialTransform.position);sortItems.push({depth:p[2],run:()=>{
+    scene.pieces.forEach(piece=>{const p=project(assemblyPlacementTransform(scene,piece.id)?.position??piece.initialTransform.position);sortItems.push({depth:p[2],run:()=>{
       const active=selected.kind==='piece'&&selected.id===piece.id;
       const node=element('g',{'data-kind':'piece','data-id':piece.id});const box=element('rect',{x:p[0]-12,y:p[1]-12,width:24,height:24,rx:5,fill:active?'#fcd34d':'#60a5fa',stroke:'#e2e8f0','stroke-width':active?2:1},node);box.dataset.kind='piece';box.dataset.id=piece.id;box.style.cursor='move';element('text',{x:p[0]+16,y:p[1]+5,fill:'#eff6ff','font-size':12},node).textContent=piece.text;
     }});});
@@ -256,7 +248,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     entries.replaceChildren();
     for(const [name,kind,items] of [['Piezas','piece',scene.pieces],['Destinos','target',scene.targets]]){
       entries.append($('strong',null,name));
-      items.forEach(p=>{const b=btn(p.text,()=>{selected={kind,id:p.id};vertexIndex=0;tree.open=false;drawAll();syncThreeVisibility();focusSelection();});b.setAttribute('aria-pressed',selected.kind===kind&&selected.id===p.id?'true':'false');entries.append(b);});
+      items.forEach(p=>{const b=btn(p.text,()=>{selected={kind,id:p.id};vertexIndex=0;tree.open=false;drawAll();syncThreeVisibility();});b.setAttribute('aria-pressed',selected.kind===kind&&selected.id===p.id?'true':'false');entries.append(b);});
     }
     const importLabel=$('label');importLabel.append($('strong',null,'Importar modelo GLB'));
     const file=$('input');file.type='file';file.accept='.glb,model/gltf-binary';file.setAttribute('aria-label','Importar modelo 3D GLB');
@@ -293,7 +285,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       link.placement=fitAssemblyBounds(target,measured);
       piece.initialTransform.scale=[...link.placement.scale];
     });
-    if(success){selected={kind:'piece',id:piece.id};drawAll();syncThreeVisibility();focusSelection();}
+    if(success){selected={kind:'piece',id:piece.id};drawAll();syncThreeVisibility();}
     return success;
   }
   function focusSelection(){
@@ -303,6 +295,30 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     const target=pair.target,coords=target.vertices.map(v=>toWorld(v,target.transform));
     const extent=Math.max(0.8,...coords.map(v=>Math.hypot(...v.map((n,i)=>n-target.transform.position[i]))));
     threeRuntime.focusOn(target.transform.position,Math.max(3.8,extent*2.8));
+  }
+  function frameSvgAssembly(){
+    const points=scene.targets.flatMap(t=>t.vertices.map(v=>toWorld(v,t.transform)));
+    if(!points.length)return;
+    const projected=points.map(v=>{
+      const rx=v[0]*Math.cos(yaw)-v[2]*Math.sin(yaw);
+      const rz=v[0]*Math.sin(yaw)+v[2]*Math.cos(yaw);
+      return [rx,v[1]*Math.cos(pitch)-rz*Math.sin(pitch)];
+    });
+    const min=[Math.min(...projected.map(p=>p[0])),Math.min(...projected.map(p=>p[1]))];
+    const max=[Math.max(...projected.map(p=>p[0])),Math.max(...projected.map(p=>p[1]))];
+    zoom=clamp(Math.min(520/Math.max(0.01,max[0]-min[0]),330/Math.max(0.01,max[1]-min[1])),12,130);
+    centerPoint.x=300-zoom*(min[0]+max[0])/2;
+    centerPoint.y=205+zoom*(min[1]+max[1])/2;
+    drawScene();
+  }
+  function focusAssembly(){
+    if(threeRuntime){
+      threeRuntime.frameObjects?.([
+        ...scene.targets.map(t=>'author-target:'+t.id),
+        ...scene.pieces.map(p=>'author-piece:'+p.id),
+        ...(scene.referenceAssetId?['author-reference']:[]),
+      ],{padding:1.2});
+    }else if(!svg.hidden)frameSvgAssembly();
   }
   function drawAll(){if(!svg.hidden)drawScene();treePanel();propertyPanel();}
 
@@ -318,11 +334,11 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     const current=paired(selected.id);
     for(const target of scene.targets){
       const active=current?.target?.id===target.id;
-      threeRuntime.setObjectVisibility?.('author-target:'+target.id,showAll||active);
+      threeRuntime.setObjectVisibility?.('author-target:'+target.id,true);
       threeRuntime.setCageHandlesVisible?.('author-target:'+target.id,active);
     }
     for(const piece of scene.pieces){
-      threeRuntime.setObjectVisibility?.('author-piece:'+piece.id,showAll||current?.piece?.id===piece.id);
+      threeRuntime.setObjectVisibility?.('author-piece:'+piece.id,true);
     }
   }
   function syncThreeTransforms(){
@@ -405,7 +421,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
       syncQuestion(question);commit();snapshot();
     }
     syncThreeTransforms();
-    focusSelection();
+    focusAssembly();
   }
   function scheduleThreeSync(){
     if(!threeRuntime||threeDestroyed||threePending)return;
@@ -510,7 +526,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     }catch(error){
       threeRuntime?.destroy();threeRuntime=null;svg.hidden=false;canvas.hidden=true;
       if(canvas.isConnected)canvas.replaceWith(svg);
-      drawScene();note.textContent='Sin WebGL: vista geométrica alternativa del mismo encaje';
+      frameSvgAssembly();note.textContent='Sin WebGL: vista geométrica alternativa del mismo encaje';
       message('Vista 3D no disponible: '+String(error.message||error));
     }
   }
@@ -529,7 +545,7 @@ export function renderAssembly3DEditor(container,{question,model,commit,onStatus
     });
     detachObserver.observe(root.getRootNode(),{subtree:true,childList:true});
     if(typeof createScene==='function')void startThree();
-    else {canvas.hidden=true;svg.hidden=false;if(canvas.isConnected)canvas.replaceWith(svg);drawScene();message('WebGL no está disponible: edición de zonas mediante la vista geométrica.');}
+    else {canvas.hidden=true;svg.hidden=false;if(canvas.isConnected)canvas.replaceWith(svg);frameSvgAssembly();message('WebGL no está disponible: edición de zonas mediante la vista geométrica.');}
   });
   svg.addEventListener('pointerdown',e=>{
     if(e.button!==0&&e.pointerType==='mouse')return;

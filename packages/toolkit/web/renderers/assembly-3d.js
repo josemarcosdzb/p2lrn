@@ -1,6 +1,6 @@
 // The assembly mode plugs into the existing questionnaire 3D renderer/runtime.
 // Classification answers remain the authoritative, resumable grading contract.
-import {evaluateAssemblyPlacement,inspectAssemblyGLB,validateAssembly,assemblyPlacementTransform} from '../assembly-3d-core.js';
+import {evaluateAssemblyPlacement,inspectAssemblyGLB,validateAssembly,assemblyPlacementTransform,scatterAssemblyStarts,stagedAssemblyVisualTransform} from '../assembly-3d-core.js';
 import {playerUiText} from './ui-i18n.js';
 import {el} from './game-common.js';
 
@@ -33,7 +33,18 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
   const pieceById=new Map(config.pieces.map(p=>[p.id,p]));
   const stored=runtime.answer(trial.questionId)?.classifications??{};
   const placements=Object.fromEntries(Object.entries(stored).filter(([id,target])=>expected.get(id)===target));
-  const transforms=new Map(config.pieces.map(p=>[p.id,fromJson(p.initialTransform)]));
+  const attempt=Number(runtime.state.attemptsCompleted??0)+1;
+  const scatterKey='3d:assembly:scatter:'+trial.questionId+':attempt-'+attempt;
+  const previouslySaved=runtime.getGameState(scatterKey,null);
+  const seed=Number.isInteger(previouslySaved?.seed)&&previouslySaved.seed>=0&&previouslySaved.seed<=0xffffffff
+    ?previouslySaved.seed:
+    (typeof globalThis.crypto?.getRandomValues==='function'
+      ?globalThis.crypto.getRandomValues(new Uint32Array(1))[0]
+      :Math.floor(Math.random()*0x100000000));
+  if(!previouslySaved&&!runtime.state.completed)runtime.setGameState(scatterKey,{seed});
+  const startPositions=scatterAssemblyStarts(config,seed);
+  const transforms=new Map(config.pieces.map(p=>[p.id,fromJson(startPositions[p.id])]));
+  let dragging=null;
   const modelBytes=new Map();
   let selected=null;
   let sceneLoadWarning='';
@@ -72,6 +83,17 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
         console.warn('P2LRN assembly 3D model load blocked:',error);
       }
     }else scene.addBox({id,text:piece.text,position:transform.position,size:[1.2,0.8,1],dynamic:false,physicsEnabled:false,interaction:{kind:'assembly-piece',id:piece.id}});
+    const measured=scene.getObjectLocalBounds?.(id);
+    if(measured){
+      try{
+        const aligned=stagedAssemblyVisualTransform(transform,measured);
+        transforms.set(piece.id,aligned);
+        startPositions[piece.id]=fromJson(aligned);
+        scene.setTransform(id,aligned);
+      }catch(error){
+        console.warn('P2LRN assembly staging pivot adjustment rejected:',error);
+      }
+    }
   }
   if(config.referenceAssetId){
     try{
@@ -84,7 +106,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
   }
 
   const panel=el('div',{class:'p2lrn-3d-accessible'});
-  const instruction=el('p',{class:'p2lrn-game-description'},playerUiText('Selecciona una pieza, oriéntala y elige dónde colocarla. También puedes arrastrar las piezas sobre las zonas en el escenario.'));
+  const instruction=el('p',{class:'p2lrn-game-description'},playerUiText('Todas las piezas empiezan separadas y desordenadas fuera de las cajas. Arrastra cada pieza a su destino en esta misma vista 3D. Puedes girar la escena y acercar la cámara.'));
   const rows=el('div',{class:'p2lrn-q-fields'});
   const controls=el('div',{class:'p2lrn-game-actions'});
   const pieceSelect=el('select',{'aria-label':playerUiText('Pieza que vas a colocar')});
@@ -174,7 +196,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
   placeButton.addEventListener('click',()=>{const id=activeId();if(id)place(id,targetSelect.value);});
   resetButton.addEventListener('click',()=>{
     const id=activeId(),piece=pieceById.get(id);if(!piece||placements[id])return;
-    transforms.set(id,fromJson(piece.initialTransform));
+    transforms.set(id,fromJson(startPositions[id]));
     scene.setTransform(boxId(id),transforms.get(id));
     setText('Orientación restaurada.');
   });
@@ -184,6 +206,11 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
     const t=targetById.get(target);
     if(t)scene.setTransform(boxId(id),assemblyPlacementTransform(config,id)??t.transform);
   }
+  scene.frameObjects?.([
+    ...config.targets.map(t=>zoneId(t.id)),
+    ...config.pieces.map(p=>boxId(p.id)),
+    ...(config.referenceAssetId?['assembly-reference']:[]),
+  ],{padding:1.28});
   if(sceneLoadWarning)panel.prepend(el('p',{class:'p2lrn-game-description',role:'alert'},sceneLoadWarning));
   update();
   return {
@@ -192,19 +219,41 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
     drag(meta,phase,{position=null,target=null}={}){
       if(meta.kind!=='assembly-piece')return false;
       const id=meta.id;
-      if(phase==='start')return choosePiece(id);
-      if(phase==='move'){if(position)scene.setTranslation(boxId(id),position);return true;}
-      if(phase==='end'){
-        const placed=target?.kind==='assembly-target'&&place(id,target.id,{draggedPosition:position});
-        if(!placed){restore(id);scene.highlight(boxId(id),false);selected=null;}
+      if(phase==='start'){
+        if(!choosePiece(id))return false;
+        const from=transforms.get(id);
+        dragging={id,original:fromJson(from),
+          offset:position?from.position.map((n,i)=>n-position[i]):[0,0,0]};
         return true;
       }
-      if(phase==='cancel'){restore(id);scene.highlight(boxId(id),false);selected=null;return true;}
+      if(!dragging||dragging.id!==id)return false;
+      if(phase==='move'){
+        if(position){
+          const moving=position.map((n,i)=>n+dragging.offset[i]);
+          if(moving.every(Number.isFinite))scene.setTranslation(boxId(id),moving);
+        }
+        return true;
+      }
+      if(phase==='end'){
+        // Releasing over a cage expresses an actual spatial drop. Its
+        // authored pose is used for the final snap only after matching
+        // piece, prerequisite, scale and rotation have been checked.
+        const completed=target?.kind==='assembly-target'&&place(id,target.id);
+        if(!completed){transforms.set(id,dragging.original);restore(id);
+          scene.highlight(boxId(id),false);selected=null;}
+        dragging=null;
+        return true;
+      }
+      if(phase==='cancel'){
+        transforms.set(id,dragging.original);restore(id);
+        scene.highlight(boxId(id),false);selected=null;dragging=null;
+        return true;
+      }
       return false;
     },
     interact(meta){
       if(runtime.state.completed)return true;
-      if(meta.kind==='assembly-piece'){if(choosePiece(meta.id))scene.carry(boxId(meta.id),true);return true;}
+      if(meta.kind==='assembly-piece'){choosePiece(meta.id);return true;}
       if(meta.kind==='assembly-target'){
         if(!selected){setText('Selecciona una pieza antes de elegir destino.');return true;}
         place(selected,meta.id);return true;

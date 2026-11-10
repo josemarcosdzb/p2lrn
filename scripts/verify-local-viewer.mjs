@@ -677,6 +677,20 @@ async function verifyThreeGameInteractionAndResume(cdp){
   return {...outcome,screenshot};
 }
 
+async function verifyAssemblyScatteredViewport(cdp){
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/?src='+encodeURIComponent('/examples/game-ui-3d-mixed.p2lrn')});
+  await waitForEval(cdp,"document.getElementById('demo-player')?.shadowRoot?.querySelectorAll('.p2lrn-nav button').length>0",'assembly random start navigation',30000);
+  const result=await evalTop(cdp,"(async()=>{\n    const root=document.getElementById('demo-player')?.shadowRoot;\n    const wait=async(check,label)=>{\n      for(let i=0;i<200;i++){\n        if(check())return true;\n        await new Promise(r=>setTimeout(r,100));\n      }\n      throw Error('Student assembly view unavailable: '+label);\n    };\n    const button=[...root.querySelectorAll('.p2lrn-nav button')].find(b=>b.textContent.includes('Laboratorio 3D QA'));\n    if(!button)throw Error('Assembly sample is missing from student course');\n    button.click();\n    const stage=()=>root.querySelector('.p2lrn-stage');\n    const next=()=>[...stage()?.querySelectorAll('.p2lrn-3d-trial button')??[]].find(b=>b.textContent==='Siguiente');\n    const title=()=>stage()?.querySelector('.p2lrn-3d-question-head h3')?.textContent;\n    await wait(()=>title()==='Ordena los tres bloques','first trial');\n    for(const heading of ['Relaciona país y capital','Clasifica los objetos','Ensambla las piezas en el espacio']){\n      const b=next();\n      if(!b||b.disabled)throw Error('Next 3D trial unavailable');\n      b.click();await wait(()=>title()===heading,heading);\n    }\n    await wait(()=>stage()?.querySelector('.p2lrn-3d-trial select[aria-label=\"Pieza que vas a colocar\"]'),'assembly controls');\n    const ui=stage()?.querySelector('.p2lrn-3d-layout');\n    const canvas=ui?.querySelector('canvas.p2lrn-3d-canvas');\n    const help=ui?.textContent??'';\n    const joystick=ui?.querySelector('.p2lrn-joystick,.p2lrn-3d-joystick,[data-p2lrn-joystick]');\n    if(!canvas||!canvas.getContext('webgl2'))throw Error('Real Three.js student canvas did not start');\n    if(!help.includes('desordenadas'))throw Error('Student game still advertises preassembled pieces');\n    if(joystick&&!joystick.hidden)throw Error('Third-person joystick occupies the assembly overview');
+    const entry=ui?.querySelector('.p2lrn-3d-entry-hint');
+    if(entry&&getComputedStyle(entry).display!=='none')throw Error('Walk-to-enter overlay obscures the assembly pieces');\n    const rect=canvas.getBoundingClientRect();\n    if(rect.width<360||rect.height<200)throw Error('Student assembly viewport is too small');\n    const status=stage().querySelector('.p2lrn-3d-trial p[role=status]')?.textContent??'';\n    if(!status.includes('0/2'))throw Error('Student sees already-completed assembly before touching any piece: '+status);\n    return {allPiecesStartUnplaced:true,orbitalStudentView:true,joystickHidden:!joystick||joystick.hidden,\n      viewport:[rect.width,rect.height],progress:status};\n  })()");
+  invariant(result.allPiecesStartUnplaced&&result.orbitalStudentView&&result.joystickHidden,
+    'Initial assembly visualization failed: '+JSON.stringify(result));
+  const screenshot=await captureElementVisualEvidence(cdp,'3d-assembly-scattered-student-start',
+    "document.getElementById('demo-player')",{maxHeight:1450});
+  return {...result,screenshot};
+}
+
 async function verifyThreePointerDragAndRope(cdp){
   await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
   await waitForEval(cdp,"Boolean(globalThis.P2LRN?.createCapabilityBroker&&customElements.get('p2lrn-player'))",'3D pointer test runtime',30000);
@@ -1660,9 +1674,10 @@ try{
 
   if(process.env.P2LRN_QUEST3D_ONLY==='1'){
     const threeGame=await verifyThreeGameInteractionAndResume(cdp);
+    const assemblyStart=await verifyAssemblyScatteredViewport(cdp);
     const pointerDrag=await verifyThreePointerDragAndRope(cdp);
     const threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);
-    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,pointerDrag,threeMobile};
+    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,threeMobile};
     await mkdir(visualEvidenceRoot,{recursive:true});
     await writeFile(join(visualEvidenceRoot,'quest3d-report.json'),JSON.stringify(report,null,2)+'\n');
     console.log('P2LRN_QUEST3D_BROWSER_REPORT='+JSON.stringify(report));
@@ -1690,6 +1705,9 @@ try{
   let threeGame=null;
   try{threeGame=await verifyThreeGameInteractionAndResume(cdp);}
   catch(error){failures.push({name:'three-games-restore-and-complete',message:String(error?.message||error)});}
+  let assemblyStart=null;
+  try{assemblyStart=await verifyAssemblyScatteredViewport(cdp);}
+  catch(error){failures.push({name:'assembly-student-scattered-all-pieces',message:String(error?.message||error)});}
   let pointerDrag=null;
   try{pointerDrag=await verifyThreePointerDragAndRope(cdp);}
   catch(error){failures.push({name:'three-pointer-drag-and-rope',message:String(error?.message||error)});}
