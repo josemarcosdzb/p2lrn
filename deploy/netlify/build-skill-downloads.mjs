@@ -117,10 +117,15 @@ for(const [platform,info] of Object.entries(platforms)){
   bytes:utf8('# P2LRN para Grok Build\n\nExtraer en la raíz del proyecto y verificar la ruta .grok/skills/p2lrn-creator/. No implica disponibilidad en Grok web ni publicación global.\n')});
  const skillFile=files.find(item=>item.path===info.prefix+'SKILL.md');
  const interactiveGuide=info.prefix+'references/studio-arrastre-ensamblaje-3d.md';
- if(!skillFile||!skillFile.bytes.toString('utf8').includes('studio-arrastre-ensamblaje-3d.md')||
-    files.filter(item=>item.path===interactiveGuide).length!==1||
-    !files.find(item=>item.path===interactiveGuide).bytes.toString('utf8').includes('assembly-3d')){
-  throw Error('Incomplete Studio/assembly skill bundle: '+platform);
+ const guideFiles=files.filter(item=>item.path===interactiveGuide);
+ const content=skillFile?.bytes.toString('utf8')??'';
+ const guide=guideFiles[0]?.bytes.toString('utf8')??'';
+ const requiredTopics=['drag-drop','drag-scored','assembly-3d','GLB','studio-object-tools.js',
+   'studio-drop-activity.js','assembly-3d-editor.js','Player'];
+ if(!content.includes('studio-arrastre-ensamblaje-3d.md')||guideFiles.length!==1||
+   requiredTopics.some(topic=>!guide.includes(topic))||
+   !files.some(item=>item.path===info.prefix+'references/toolkit-parity.md')){
+   throw Error('Incomplete Studio/drag-drop/assembly skill bundle: '+platform);
  }
  const bytes=zip(files);await writeFile(join(dest,info.file),bytes);
  manifest.packages.push({platform,filename:info.file,url:'/downloads/skills/'+info.file,bytes:bytes.length,
