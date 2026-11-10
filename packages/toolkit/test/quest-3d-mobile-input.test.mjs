@@ -116,3 +116,18 @@ test('3D input is scene-first on PC and mobile, while retaining WebGL fallback',
   assert.match(css,/p2lrn-3d-alternative:focus-within/);
   assert.match(locales,/"Haz clic en la escena para entrar": "Click the scene to enter"/);
 });
+
+test('assembly restores desktop joystick only for assembly without stealing other 3D controls',async()=>{
+  const [render,engine,css]=await Promise.all([
+    source('../web/renderers/questionnaire-3d.js'),
+    source('../web/game-3d/three-runtime.js'),
+    source('../web/questionnaire-games.css'),
+  ]);
+  assert.match(render,/layout\.classList\.toggle\('p2lrn-3d-assembly',assembly\)/);
+  assert.doesNotMatch(render,/joystick\.element\.hidden=assembly/);
+  assert.match(css,/\.p2lrn-3d-joystick\s*\{[\s\S]*?display:none/);
+  assert.match(css,/\.p2lrn-3d-layout\.p2lrn-3d-assembly \.p2lrn-3d-joystick\s*\{\s*display:flex;/);
+  assert.match(css,/@media \(hover:none\) and \(pointer:coarse\)/);
+  assert.match(engine,/if\(assemblyMode\)\s*\{[\s\S]*?orbitFocus\.add\(velocity\.clampLength\(0,1\)/);
+  assert.match(engine,/targetKind:drag\.source\.kind==='assembly-piece'\?'assembly-target':null/);
+});
