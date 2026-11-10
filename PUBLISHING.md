@@ -63,6 +63,8 @@ The full public check requires the new CDN manifest to have been deployed and al
 
 CDN-only `.html.raw` mirrors exist solely to retrieve Netlify's unmodified runtime HTML bytes; they are verified separately against their HTML originals. Standalone H5P library files belong to `@p2lrn/h5p-libraries` rather than being duplicated inside the Player npm package.
 
+The Studio npm build also includes the complete canonical `packages/toolkit/web/studio/` runtime tree plus the shared browser modules used by the actual `/studio/` website. The public parity check verifies those website runtime bytes against the installed `@p2lrn/studio/dist/` copies, not only the versioned component CDN.
+
 **Not the same thing as functional UI parity:** the public `/studio/` application and the `<p2lrn-studio>` npm component have different application shells. The shared editor/runtime modules and command-bar behavior are covered by browser regression tests, but full interactive parity still requires comparing every authoring, save, import, offline, analytics, responsive and accessibility flow in both surfaces. No file inventory, npm pack result or green static checksum can certify that by itself.
 
 **Publication is separate:** a successful build and Git commit do not update the public npm registry or Netlify CDN automatically. Publish only after passing release gates, using the release owner's authorized process, and verify the actual live resources afterward.
