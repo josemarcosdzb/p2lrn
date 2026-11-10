@@ -189,6 +189,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   scene.add(stage);
 
   const player=new THREE.Group();
+  player.name='p2lrn-3d-student-avatar';
   const playerBody=new THREE.Mesh(
     new THREE.CylinderGeometry(0.42,0.52,1.15,18),
     new THREE.MeshStandardMaterial({color:'#e2e8f0',roughness:0.7,metalness:0.05}),
@@ -224,6 +225,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   let cameraDrag=null;
   const orbitFocus=new THREE.Vector3(0,1,0);
   let orbitDistance=14;
+  let assemblyZoom=1;
   const authorDragPlane=new THREE.Plane();
 
   const meshes=new Map();
@@ -292,17 +294,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(movement.right)velocity.add(right);
     velocity.addScaledVector(forward,analogMovement.y);
     velocity.addScaledVector(right,analogMovement.x);
-    if(assemblyMode){
-      // Assembly keeps its full-scene orbit and direct manipulation, but
-      // keyboard/joystick movement pans the actual camera through the level.
-      // Unlike other games, there is no physics avatar to collide with pieces.
-      if(velocity.lengthSq()>0){
-        const speed=clamp(orbitDistance*0.75,4.3,28);
-        orbitFocus.add(velocity.clampLength(0,1).multiplyScalar(speed*delta));
-      }
-      updateAuthoringCamera();
-      return;
-    }
+    // All four student games share the same visible avatar and third-person
+    // movement. Assembly mode changes picking/placement only, not locomotion.
     const previous=player.position.clone();
     if(velocity.lengthSq()>0){
       // Preserve the stick's analog speed and never make diagonals faster.
@@ -336,7 +329,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     const forwardLook=new THREE.Vector3(-Math.sin(cameraYaw),0,-Math.cos(cameraYaw));
     const height=5.4+Math.sin(Math.abs(cameraPitch))*2.6;
     const distance=9.8-Math.sin(Math.abs(cameraPitch))*1.8;
-    const targetCamera=player.position.clone().add(new THREE.Vector3(0,height,0)).add(forwardLook.clone().multiplyScalar(-distance));
+    const zoom=assemblyMode?assemblyZoom:1;
+    const targetCamera=player.position.clone().add(new THREE.Vector3(0,height*zoom,0)).add(forwardLook.clone().multiplyScalar(-distance*zoom));
     camera.position.lerp(targetCamera,1-Math.exp(-delta*7.5));
     const lookAt=player.position.clone().add(forwardLook.multiplyScalar(4.2)).add(new THREE.Vector3(0,1.2+cameraPitch*1.8,0));
     camera.lookAt(lookAt);
@@ -645,6 +639,19 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     }
     if(!found||box.isEmpty())return false;
     const focus=box.getCenter(new THREE.Vector3());
+    if(assemblyMode&&!authoring){
+      // 'Center assembly' repositions the same third-person player/camera.
+      // It must never switch into the orbit-only view that hides the avatar.
+      const bounds=box.getSize(new THREE.Vector3());
+      const approach=Math.max(2.2,Math.min(5.5,bounds.z*0.15+1));
+      player.position.set(clamp(focus.x,-9.5,9.5),0,clamp(box.max.z+approach,-6,11));
+      cameraYaw=0;cameraPitch=-0.05;assemblyZoom=1;
+      player.rotation.y=0;
+      camera.position.set(player.position.x,5.4,player.position.z+9.8);
+      camera.lookAt(player.position.x,1.11,player.position.z-4.2);
+      camera.updateMatrixWorld(true);
+      return {center:focus.toArray(),distance:camera.position.distanceTo(focus),objectCount:found};
+    }
     const elevation=clamp(cameraPitch,-1.38,1.38);
     const ce=Math.cos(elevation),se=Math.sin(elevation),cy=Math.cos(cameraYaw),sy=Math.sin(cameraYaw);
     const towardCamera=new THREE.Vector3(sy*ce,se,cy*ce);
@@ -674,12 +681,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
 
   function setAssemblyMode(enabled=true){
     assemblyMode=Boolean(enabled);
-    player.visible=!authoring&&!assemblyMode;
-    if(assemblyMode){
-      cameraYaw=0.55;
-      cameraPitch=0.7;
-      updateAuthoringCamera();
-    }
+    // Student avatar stays visible exactly as in ordering/classification.
+    player.visible=!authoring;
+    assemblyZoom=1;
+    if(!authoring)resetPlayer();
     requestFrame();
     return assemblyMode;
   }
@@ -891,8 +896,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(drag.mode==='object'){
       if(drag.moved)onDrag(drag.source,'move',{position:pointerWorldPosition(event),event});
     } else if(drag.moved) {
-      cameraYaw-=dx*(authoring||assemblyMode?0.008:0.006);
-      cameraPitch=authoring||assemblyMode?clamp(cameraPitch+dy*0.006,-1.38,1.38):clamp(cameraPitch-dy*0.004,-0.58,0.24);
+      cameraYaw-=dx*(authoring?0.008:0.006);
+      cameraPitch=authoring?clamp(cameraPitch+dy*0.006,-1.38,1.38):clamp(cameraPitch-dy*0.004,-0.58,0.24);
       if(authoring)requestFrame();
     }
     drag.x=event.clientX;drag.y=event.clientY;
@@ -916,10 +921,14 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   function onWheel(event){
     if(!authoring&&!assemblyMode)return;
     event.preventDefault();
+    if(!authoring){
+      assemblyZoom=clamp(assemblyZoom*Math.exp(event.deltaY*0.001),0.5,2.5);
+      return;
+    }
     orbitDistance=clamp(orbitDistance*Math.exp(event.deltaY*0.001),2.5,350);
     camera.far=Math.max(120,orbitDistance*12);
     camera.updateProjectionMatrix();
-    if(authoring)requestFrame();
+    requestFrame();
   }
   function onPointerCancel(event){
     if(!cameraDrag||cameraDrag.pointerId!==event.pointerId)return;
