@@ -72,6 +72,13 @@ async function check(){
     assert.equal(component.package,'@p2lrn/'+name);
     assert.equal(component.version,version);
     assert.equal(component.versionedBasePath,expectedBase[name]);
+    const expectedCurrent={
+      player:'/player/current/dist/',
+      'h5p-libraries':'/player/current/dist/runtime-host/h5p-libraries/',
+      studio:'/studio/current/dist/',
+      analytics:'/analytics/current/dist/',
+    };
+    assert.equal(component.currentBasePath,expectedCurrent[name],'Unexpected current CDN path');
     assert(Array.isArray(component.files)&&component.files.length>0,'Empty CDN inventory: '+name);
     assert.equal(component.fileCount,component.files.length,'CDN inventory count mismatch');
     const npmRoot=join(modules,name,'dist');
@@ -90,7 +97,7 @@ async function check(){
     }
     const declared=[...expected.keys()].sort();
     assert.deepEqual(declared,npmPaths,'Bidirectional file list mismatch for '+name);
-    const item={package:component.package,version,fileCount:declared.length,totalBytes:0,verifiedNpmBytes:0,verifiedCdnBytes:0};
+    const item={package:component.package,version,fileCount:declared.length,totalBytes:0,verifiedNpmBytes:0,verifiedCdnBytes:0,verifiedCurrentCdnBytes:0};
     report.components[name]=item;
     // All local bytes are validated before network transfer. This detects an
     // incorrect public manifest even if the CDN serves exactly that manifest.
@@ -114,6 +121,12 @@ async function check(){
         assert.equal(bytes.length,row.bytes,'CDN byte length differs: '+name+'/'+path);
         assert.equal(sha(bytes),row.sha256,'CDN checksum differs: '+name+'/'+path);
         item.verifiedCdnBytes++;
+        // Mutable /current/ must agree with the exact public npm release too.
+        // A newer or stale current deployment is a failed release parity gate.
+        const current=await request(component.currentBasePath+path.split('/').map(encodeURIComponent).join('/'));
+        assert.equal(current.length,row.bytes,'CDN current byte length differs: '+name+'/'+path);
+        assert.equal(sha(current),row.sha256,'CDN current checksum differs: '+name+'/'+path);
+        item.verifiedCurrentCdnBytes++;
       }
     }));
     console.log('P2LRN_FULL_DISTRIBUTION_PARITY',JSON.stringify(item));
