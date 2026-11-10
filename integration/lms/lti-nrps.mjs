@@ -3,6 +3,7 @@
 import {createPrivateKey,randomUUID,sign} from 'node:crypto';
 import {isIP} from 'node:net';
 import {lookup as dnsLookup} from 'node:dns/promises';
+import {pinnedLmsFetch} from './lti-safe-fetch.mjs';
 
 export const NRPS_CLAIM='https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice';
 export const NRPS_SCOPE='https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly';
@@ -100,7 +101,7 @@ function member(m){
  }
  return value;
 }
-export function createLtiNrpsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allowInsecureLoopback=false}={}){
+export function createLtiNrpsClient({tool,fetchImpl,lookup=dnsLookup,allowInsecureLoopback=false}={}){
  if(!tool?.privateKeyPem||!tool?.kid)throw new TypeError('Persistent P2LRN tool key required');
  async function checkDns(u){
   if(allowInsecureLoopback&&localHost(u.hostname))return;
@@ -120,7 +121,7 @@ export function createLtiNrpsClient({tool,fetchImpl=fetch,lookup=dnsLookup,allow
   }
  }
  async function request(phase,url,options){
-  try{return await fetchImpl(url,{...options,redirect:'manual',signal:AbortSignal.timeout(8000)});}
+  try{return await (fetchImpl??((u,o)=>pinnedLmsFetch(u,o,{lookup,allowInsecureLoopback})))(url,{...options,redirect:'manual',signal:AbortSignal.timeout(8000)});}
   catch(error){throw new Error('NRPS '+phase+' '+(['AbortError','TimeoutError'].includes(error?.name)?'TIMEOUT':'NETWORK_ERROR'));}
  }
  async function listMembers({registration,service,contextId}={}){
