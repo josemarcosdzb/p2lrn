@@ -19,3 +19,7 @@ packages/document-reader/package-lock.json
 /examples/canonical/*.p2lrn
 /examples/legacy-alpha15/*.p2rln
 /packages/toolkit/examples/
+
+# Private, generated LTI credentials and per-tenant administrative policies
+/integration/lms/.secrets/
+/integration/lms/admin-scopes.local.json
