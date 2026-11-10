@@ -914,6 +914,43 @@
 
   document.querySelectorAll('[data-contact-form]').forEach((form) => {
     const status = form.querySelector('[data-form-status]');
+    let sitekey=(form.dataset.turnstileSitekey||'').trim();
+    let required=Boolean(sitekey);
+    let unavailable=false;
+    let turnstileToken='';
+    let turnstileWidgetId=null;
+    let mounted=false;
+    const mountChallenge=()=>{
+      if(!sitekey||mounted)return;
+      mounted=true;
+      const mount=document.createElement('div');
+      mount.className='p2lrn-contact-turnstile';
+      form.querySelector('button[type="submit"]')?.before(mount);
+      const script=document.createElement('script');
+      script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async=true;
+      script.onload=()=>{
+        turnstileWidgetId=window.turnstile?.render(mount,{
+          sitekey,action:'contact',
+          callback:token=>{turnstileToken=String(token||'')},
+          'expired-callback':()=>{turnstileToken=''},
+          'error-callback':()=>{turnstileToken=''},
+        });
+      };
+      script.onerror=()=>{unavailable=true;if(status)status.textContent='Unable to load security verification.';};
+      document.head.append(script);
+    };
+    if(sitekey)mountChallenge();
+    const setup=fetch(SUPABASE_URL+'/functions/v1/p2lrn-contact?config=1',{
+      headers:{apikey:SUPABASE_PUBLISHABLE_KEY},cache:'no-store'
+    }).then(async response=>{
+      if(!response.ok)throw new Error('contact_config_unavailable');
+      const config=await response.json();
+      required=config.required===true;
+      if(!sitekey&&typeof config.sitekey==='string')sitekey=config.sitekey.trim();
+      if(required&&!sitekey)unavailable=true;
+      mountChallenge();
+    }).catch(()=>{unavailable=true;});
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       if (form.elements.company?.value) return;
@@ -925,6 +962,15 @@
         return;
       }
 
+      await setup;
+      if(unavailable||(required&&!sitekey)){
+        if(status)status.textContent='Security verification is temporarily unavailable. Please try later.';
+        return;
+      }
+      if((required||sitekey)&&!turnstileToken){
+        if(status)status.textContent='Complete the security verification before sending.';
+        return;
+      }
       const button = form.querySelector('button[type="submit"]');
       const payload = {
         name: form.elements.name.value.trim(),
@@ -932,6 +978,7 @@
         subject: form.elements.subject.value.trim(),
         message: form.elements.message.value.trim(),
         page: window.location.pathname,
+        ...(sitekey?{turnstileToken}:{}),
       };
 
       if (button) button.disabled = true;
@@ -954,6 +1001,7 @@
       } catch (error) {
         if (status) status.textContent = error?.message === 'contact_rate_limited' ? "Submission limit reached. Please try again later." : "Could not send the message. Please try again.";
       } finally {
+        if(sitekey){turnstileToken='';if(turnstileWidgetId!==null)window.turnstile?.reset(turnstileWidgetId);}
         if (button) button.disabled = false;
       }
     });
