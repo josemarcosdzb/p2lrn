@@ -875,7 +875,9 @@ if(script){
    baseUrl,tool:{privateKeyPem,kid:keyId},adminToken:process.env.P2LRN_LTI_ADMIN_TOKEN_FILE
     ? readFileSync(process.env.P2LRN_LTI_ADMIN_TOKEN_FILE,'utf8').trim()
     : process.env.P2LRN_LTI_ADMIN_TOKEN,
-   port,bindHost:process.env.P2LRN_LTI_HOST||'127.0.0.1',allowInsecureLoopback:dev,fetchImpl:outboundLmsFetch
+   port,bindHost:process.env.P2LRN_LTI_HOST||'127.0.0.1',allowInsecureLoopback:dev,fetchImpl:outboundLmsFetch,
+   adminScopes:process.env.P2LRN_LTI_ADMIN_SCOPES_FILE?
+    JSON.parse(readFileSync(process.env.P2LRN_LTI_ADMIN_SCOPES_FILE,'utf8')):null
   });
   await gateway.listen();
   console.log('P2LRN LTI server ready on '+baseUrl+' (bind port '+port+')');
