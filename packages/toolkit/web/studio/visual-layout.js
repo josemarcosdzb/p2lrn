@@ -6,6 +6,7 @@ const BLOCKS=Object.freeze([
   ['section','Sección','Sección visual con título y texto'],
   ['columns','Dos columnas','Comparación visual en dos columnas'],
   ['three-columns','Tres columnas','Composición adaptable con tres paneles'],
+  ['diagram-canvas','Lienzo de diagrama','Composición proporcional con elementos superpuestos y editables'],
   ['callout','Destacado','Recuadro para ideas importantes'],
   ['table','Tabla','Tabla editable de dos columnas'],
   ['text-box','Cuadro de texto','Texto independiente que puedes mover y redimensionar'],
@@ -17,6 +18,17 @@ const BLOCKS=Object.freeze([
 const setStyle=(node,properties)=>{Object.assign(node.style,properties);return node;};
 const elt=(tag,text)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
 function makeBlock(kind){
+  if(kind==='diagram-canvas'){
+    const scene=elt('section');
+    scene.dataset.p2lrnLayout='diagram-canvas';
+    scene.setAttribute('role','group');
+    scene.setAttribute('aria-label','Lienzo de diagrama editable');
+    setStyle(scene,{position:'relative',display:'block',width:'100%',minWidth:'640px',
+      aspectRatio:'16 / 9',boxSizing:'border-box',margin:'18px 0',padding:'0',
+      border:'1px solid #cbd5e1',borderRadius:'12px',backgroundColor:'#f8fbff',
+      overflow:'hidden',containerType:'inline-size'});
+    return scene;
+  }
   if(kind==='divider'){
     const hr=elt('hr');
     setStyle(hr,{display:'block',boxSizing:'border-box',width:'100%',height:'0',
@@ -140,11 +152,28 @@ export function ensureStudioEndCaret(surface){
   if(root.lastElementChild!==tail)root.append(tail);
   return tail;
 }
+export function prepareStudioDiagramChild(parent,element){
+  if(parent?.dataset?.p2lrnLayout!=='diagram-canvas')return false;
+  if(!element?.matches?.('[data-p2lrn-layout="shape"],[data-p2lrn-layout="text-box"],figure'))return false;
+  const index=parent.querySelectorAll(':scope > [data-p2lrn-layout],:scope > figure').length;
+  const left=8+(index%4)*22,top=10+(Math.floor(index/4)%3)*28;
+  Object.assign(element.style,{position:'absolute',left:left+'%',top:top+'%',
+    width:'20%',height:'24%',minHeight:'0',maxWidth:'none',margin:'0',padding:'0',
+    boxSizing:'border-box'});
+  if(element.dataset.p2lrnLayout==='text-box'){
+    element.style.fontSize='clamp(12px, 1.7cqw, 22px)';
+    element.style.overflow='hidden';
+  }
+  return true;
+}
 export function insertStudioNestedElement(surface,element,{anchorNode=null,targetElement=null}={}){
   const parent=studioNestedInsertionContainer(surface,{anchorNode,targetElement});
   if(!parent)return null;
   const anchor=normalizeElement(anchorNode);
-  if(anchor&&parent.contains(anchor)&&anchor!==parent){
+  if(parent.dataset?.p2lrnLayout==='diagram-canvas'){
+    prepareStudioDiagramChild(parent,element);
+    parent.append(element);
+  }else if(anchor&&parent.contains(anchor)&&anchor!==parent){
     let direct=anchor;
     while(direct?.parentElement!==parent)direct=direct?.parentElement;
     if(direct?.parentElement===parent)direct.after(element);
