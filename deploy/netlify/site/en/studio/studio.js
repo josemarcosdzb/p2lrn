@@ -806,6 +806,41 @@ offlineAnalyticsButton?.addEventListener('click',()=>{
 saveDraftButton?.addEventListener('click',()=>void persistDraft().catch((error)=>setStatus("Could not save the local draft: "+error.message)));
 recoverDraftButton?.addEventListener('click',()=>void recoverLatestDraft().catch((error)=>setStatus(error.message)));
 clearDraftButton?.addEventListener('click',()=>void discardLocalDraft().catch((error)=>setStatus(error.message)));
+applyUnifiedStudioWorkspace({
+  workspace,
+  outline:workspace.querySelector('.studio-outline'),
+  canvas:workspace.querySelector('.studio-canvas'),
+  stage:editorStage
+});
+workspace.querySelector('.studio-outline-head')?.classList.add('p2lrn-studio-outline-title');
+document.querySelector('.studio-topbar')?.classList.add('p2lrn-studio-legacy-topbar');
+sharedCommandBar=mountStudioCommandBar({
+  mount:toolbar,
+  resolveSurface:()=>editorStage.querySelector('[data-studio-html-surface="true"]'),
+  onStatus:setStatus,
+  actions:{
+    create:()=>createCourseButton.click(),
+    open:()=>openFileButton.click(),
+    openUrl:(url)=>{urlInput.value=url;return openRemote();},
+    save:()=>persistDraft(),
+    saveDraft:()=>persistDraft(),
+    recoverDraft:()=>recoverLatestDraft(),
+    clearDraft:()=>discardLocalDraft(),
+    export:()=>exportPackage(),
+    offline:()=>offlineButton.click(),
+    review:()=>offlineResultButton.click(),
+    addUnit:()=>addUnit(),
+    addLesson:()=>addLesson(),
+    addContent:()=>addContentButton.click(),
+    addKind:(kind,options)=>addContentKind(kind,options),
+    canAddSamePage:()=>studio?.entity(selectedId)?.type==='activity',
+    insertImage:()=>{const btn=editorStage.querySelector('[data-insert-lesson-image]');if(!btn)throw new Error('Select an HTML lesson to add an image.');btn.click();},
+    insertVideo:()=>{const btn=editorStage.querySelector('[data-insert-lesson-video]');if(!btn)throw new Error('Select an HTML lesson to add a video.');btn.click();},
+    canAddKind:(kind)=>kind!=='shared-library'||Boolean(connectedResourceLibrary),
+    preview:()=>setMode('preview'),
+    edit:()=>setMode('edit')
+  }
+});
 async function initializeStudioWorkspace(){
   const guarded=[createCourseButton,openFileButton,openUrlButton];
   guarded.forEach((button)=>{if(button)button.disabled=true;});
