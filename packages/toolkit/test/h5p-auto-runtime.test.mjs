@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 
 import {
@@ -90,4 +91,17 @@ test('automatic H5P runtime hydrates the H5P core script, stylesheet and fonts i
     '__p2lrn_runtime__/styles/h5p.css',
   ]);
   assert.equal(hydrated.transfers.length,3);
+});
+
+test('legacy eval permission is restricted to the H5P opaque sandbox, never the ordinary package runtime',()=>{
+  const runtimeHtml=readFileSync(new URL('../web/runtime-host/h5p-opaque.html',import.meta.url),'utf8');
+  const genericHtml=readFileSync(new URL('../web/runtime-host/package-opaque.html',import.meta.url),'utf8');
+  assert.match(runtimeHtml,/script-src 'self' blob: 'unsafe-eval'/u);
+  assert.match(runtimeHtml,/connect-src blob:; frame-src about: blob:/u);
+  assert.match(runtimeHtml,/form-action 'none'; base-uri 'none'/u);
+  assert.doesNotMatch(runtimeHtml,/allow-same-origin|connect-src https?:/u);
+  assert.doesNotMatch(genericHtml,/(?:^|\s)'unsafe-eval'(?:\s|;)/u);
+  const fallback=createOpaqueH5PRuntimeDocument();
+  assert.match(fallback,/script-src 'unsafe-inline' blob: 'unsafe-eval'/u);
+  assert.doesNotMatch(fallback,/connect-src https?:/u);
 });

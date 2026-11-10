@@ -300,8 +300,19 @@ export async function render({container, payload, representation, package:pkg, e
     iframe.contentWindow.postMessage({protocol:runtimeProtocol, action:'connect'}, opaqueMode ? '*' : runtimeOrigin, [channel.port2]);
   };
   window.addEventListener('message', onMessage);
-  if (opaqueMode) iframe.srcdoc = withOpaqueRuntimeBootstrapNonce(createOpaqueH5PRuntimeDocument({hostScriptUrl:resolvedSession.hostScriptUrl}));
-  else iframe.src = runtimeUrl;
+  if (opaqueMode) {
+    // On HTTP(S), navigate to a dedicated sandboxed H5P host rather than srcdoc.
+    // A srcdoc frame inherits its embedding page CSP, blocking legacy H5P
+    // libraries even when the child declares a narrower compatibility policy.
+    // The dedicated host has an opaque origin (sandbox=allow-scripts only),
+    // network disabled and a compatibility exception scoped to H5P alone.
+    const isolatedHost = new URL(['..','runtime-host','h5p-opaque.html'].join('/'), import.meta.url);
+    if (isolatedHost.protocol === 'http:' || isolatedHost.protocol === 'https:') {
+      iframe.src = isolatedHost.href;
+    } else {
+      iframe.srcdoc = withOpaqueRuntimeBootstrapNonce(createOpaqueH5PRuntimeDocument({hostScriptUrl:resolvedSession.hostScriptUrl}));
+    }
+  } else iframe.src = runtimeUrl;
   container.replaceChildren(iframe);
 
   return Object.freeze({

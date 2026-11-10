@@ -283,7 +283,7 @@ const runtimeCsp = "default-src 'none'; script-src 'self' blob:; style-src 'self
  // This exception is exclusive to the sandboxed opaque-origin H5P frame.
  // H5P EmbeddedJS requires eval; the embedding app and all other runtimes
  // retain their strict CSP without unsafe-eval.
-const opaqueH5pCsp = "default-src 'none'; script-src 'self' blob: 'unsafe-eval'; style-src 'unsafe-inline' blob:; img-src blob: data:; font-src blob: data:; media-src blob: data:; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
+const opaqueH5pCsp = "default-src 'none'; script-src 'self' blob: 'unsafe-eval'; style-src 'unsafe-inline' blob:; img-src blob: data:; font-src blob: data:; media-src blob: data:; connect-src blob:; frame-src about: blob:; object-src 'none'; form-action 'none'; base-uri 'none'";
 const executablePackageCsp = "default-src 'none'; script-src 'self' 'unsafe-inline' blob:; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: data:; font-src 'self' blob: data:; connect-src 'self'; frame-src 'self' blob: data: about:; worker-src 'self' blob:; base-uri 'none'; object-src 'none'; form-action 'none'";
 const opaquePackageCsp = "default-src 'none'; script-src 'self' blob: 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; connect-src blob:; frame-src blob: data: about:; object-src 'none'; form-action 'none'; base-uri 'none'";
 for (const channel of [version, 'current']) {
