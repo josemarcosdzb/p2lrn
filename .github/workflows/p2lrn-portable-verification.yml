@@ -50,6 +50,51 @@ jobs:
       - name: Exercise genuine PostgreSQL transactions, session reload and grade outbox
         run: node --test integration/lms/lti-postgres-live.test.mjs
 
+  mysql-mariadb-live:
+    name: LTI real MySQL 8.4 and MariaDB 11.8 persistence
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: p2lrn_test_root_only
+          MYSQL_DATABASE: p2lrn_test
+          MYSQL_USER: p2lrn_test
+          MYSQL_PASSWORD: p2lrn_test_only
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval 5s --health-timeout 5s --health-retries 18
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: p2lrn_test_root_only
+          MARIADB_DATABASE: p2lrn_test
+          MARIADB_USER: p2lrn_test
+          MARIADB_PASSWORD: p2lrn_test_only
+        ports:
+          - 3308:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s --health-timeout 5s --health-retries 18
+    env:
+      P2LRN_TEST_MYSQL_URL: mysql://p2lrn_test:p2lrn_test_only@127.0.0.1:3307/p2lrn_test
+      P2LRN_TEST_MARIADB_URL: mariadb://p2lrn_test:p2lrn_test_only@127.0.0.1:3308/p2lrn_test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install native SQL drivers
+        working-directory: integration/lms
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Run genuine MySQL and MariaDB storage, grades and restart checks
+        run: node --test integration/lms/lti-mysql-live.test.mjs
+
   toolkit-security:
     name: Toolkit ZIP, Player runtime security and Creator
     runs-on: ubuntu-latest
