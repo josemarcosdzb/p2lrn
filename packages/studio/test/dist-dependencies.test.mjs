@@ -1,55 +1,56 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
 import {join,resolve} from 'node:path';
 
 const root=resolve(fileURLToPath(new URL('../../..',import.meta.url)));
-const source=path=>readFile(join(root,path),'utf8');
+const source=path=>readFile(join(root,path));
+const execute=promisify(execFile);
+let buildPromise;
+const ensureBuild=()=>buildPromise??=execute(process.execPath,
+ ['packages/studio/scripts/build-dist.mjs'],{cwd:root,timeout:90000});
+async function mirrored(input,output){
+ const [expected,actual]=await Promise.all([
+  source('packages/toolkit/web/'+input),
+  source('packages/studio/dist/'+output),
+ ]);
+ assert.deepEqual(actual,expected,'npm Studio distribution does not preserve '+input);
+}
 
-test('Studio distribution copies localized UI and deferred-grading editor modules',async()=>{
-  const build=await source('packages/studio/scripts/build-dist.mjs');
-  const editorSources=[
-    'packages/toolkit/web/studio/questionnaire-editor.js',
-    'packages/toolkit/web/studio/structured-editor.js',
-    'packages/toolkit/web/studio/lesson-images.js',
-    'packages/toolkit/web/studio/package-export.js',
-    'packages/toolkit/web/studio/authoring-document.js',
-  ];
-  const imports=new Set();
-  for(const path of editorSources){
-    const code=await source(path);
-    for(const match of code.matchAll(/from\s+['"]\.\/([a-z0-9-]+\.js)['"]/g))imports.add(match[1]);
-  }
-  assert.deepEqual([...imports].sort(),['assembly-3d-editor.js','questionnaire-grading.js','studio-ui-i18n.js','visual-layout.js'],
-    'UI editor module graph must include all shared modules, including nested layout');
-  assert.ok(build.includes("'assembly-3d-core.js'") && build.includes("join(out,file)"),
-    'Studio dist must copy assembly-3d-core.js through its canonical root-module loop');
-  assert.ok(build.includes("join(out,'runtime','manual-grading.js')"),'Studio dist must include teacher manual-review helper');
-  await source('packages/toolkit/web/studio/manual-grading.js');
-  for(const file of imports){
-    const marker="join(out,'runtime','"+file+"')";
-    assert.ok(build.includes(marker),'Studio dist must copy runtime dependency '+file);
-    await source('packages/toolkit/web/studio/'+file);
-  }
+test('Studio distribution preserves every imported editor module, manual grading and geometry',async()=>{
+ const editorSources=[
+  'questionnaire-editor.js','structured-editor.js','lesson-images.js',
+  'package-export.js','authoring-document.js'
+ ];
+ const imports=new Set();
+ for(const file of editorSources){
+  const code=(await source('packages/toolkit/web/studio/'+file)).toString('utf8');
+  for(const match of code.matchAll(/from\s+['"]\.\/([a-z0-9-]+\.js)['"]/g))imports.add(match[1]);
+ }
+ assert.deepEqual([...imports].sort(),[
+  'assembly-3d-editor.js','questionnaire-grading.js','studio-ui-i18n.js','visual-layout.js'
+ ]);
+ await ensureBuild();
+ for(const file of imports)await mirrored('studio/'+file,'runtime/'+file);
+ await mirrored('studio/manual-grading.js','runtime/manual-grading.js');
+ await mirrored('assembly-3d-core.js','assembly-3d-core.js');
 });
 
-// Ensure dependencies of copied root modules are not omitted from the npm release.
-test('Studio npm build includes renderer localization required by course rights',async()=>{
-  const rights=await source('packages/toolkit/web/course-rights.js');
-  assert.match(rights,/from\s+['"]\.\/renderers\/ui-i18n\.js['"]/);
-  const build=await source('packages/studio/scripts/build-dist.mjs');
-  assert.ok(build.includes("join(out,'renderers','ui-i18n.js')"),
-    'The npm Studio dist must preserve the transitive renderers/ui-i18n.js import');
-  await source('packages/toolkit/web/renderers/ui-i18n.js');
+test('npm Studio includes the exact renderer locale and course rights modules',async()=>{
+ const rights=(await source('packages/toolkit/web/course-rights.js')).toString('utf8');
+ assert.match(rights,/from\s+['"]\.\/renderers\/ui-i18n\.js['"]/);
+ await ensureBuild();
+ await mirrored('renderers/ui-i18n.js','renderers/ui-i18n.js');
+ await mirrored('course-rights.js','course-rights.js');
 });
 
-test('Studio dist build copies the shared history, geometry and contextual table tools',async()=>{
-  const build=await source('packages/studio/scripts/build-dist.mjs');
-  const bar=await source('packages/toolkit/web/studio/command-bar.js');
-  assert.match(bar,/studio-advanced-tools\.js/);
-  for(const name of ['studio-history.js','studio-object-tools.js','studio-advanced-tools.js']){
-    assert.ok(build.includes(name),'Missing runtime asset in build: '+name);
-    await source('packages/toolkit/web/studio/'+name);
-  }
+test('npm Studio copies actual history, object geometry and contextual table tools',async()=>{
+ const bar=(await source('packages/toolkit/web/studio/command-bar.js')).toString('utf8');
+ assert.match(bar,/studio-advanced-tools\.js/);
+ await ensureBuild();
+ for(const file of ['studio-history.js','studio-object-tools.js','studio-advanced-tools.js'])
+  await mirrored('studio/'+file,'runtime/'+file);
 });
