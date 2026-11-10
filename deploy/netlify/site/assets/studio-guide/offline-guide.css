@@ -13,3 +13,13 @@
 .offline-field-number{font:750 .75rem/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;color:#1d5a98;margin-right:.4rem}
 .offline-config-section .offline-field-note{max-width:none;padding:1rem 1.2rem;border-left:3px solid #336dae;background:#f0f5fc;border-radius:0 9px 9px 0;margin:1rem 0;line-height:1.65;color:#243a52}
 @media(max-width:740px){.offline-field-grid{grid-template-columns:1fr}.offline-field{padding:1rem}.offline-form-figure{padding:.5rem}.offline-form-figure figcaption{font-size:.83rem}}
+
+/* Match the neutral, square-cornered site documentation styles. */
+.offline-form-figure{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:clamp(.5rem,1.2vw,.85rem)}
+.offline-form-figure>a{border-color:var(--line);border-radius:3px}
+.offline-form-figure figcaption{color:var(--muted)}
+.offline-field{border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none;padding:1rem 0}
+.offline-field dt{color:var(--ink)}
+.offline-field dd{color:var(--muted)}
+.offline-field-number{color:var(--muted)}
+.offline-config-section .offline-field-note{background:var(--panel);border-left:2px solid var(--line);border-radius:0;color:var(--ink)}
