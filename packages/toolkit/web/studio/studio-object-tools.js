@@ -264,6 +264,44 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       selectedCell.parentElement.style.height=Math.round(between(positive(value,42),28,320))+'px';
       change();return el;
     }
+    if(['alignTop','alignMiddle','alignBottom','distributeX','distributeY'].includes(action)){
+      const elements=[...selectionSet].filter(node=>isObject(node,surface));
+      if(elements.length<2)throw new Error('Selecciona varios objetos manteniendo Mayús.');
+      if(elements.some(node=>node.parentElement!==elements[0].parentElement))
+        throw new Error('Los objetos deben compartir el mismo contenedor.');
+      const rects=elements.map(node=>node.getBoundingClientRect());
+      const reference=rects[0];
+      if(action.startsWith('align')){
+        const top=action==='alignTop'?reference.top:
+          action==='alignMiddle'?(reference.top+reference.bottom)/2:reference.bottom;
+        for(let i=1;i<elements.length;i++){
+          const r=rects[i],current=action==='alignTop'?r.top:
+            action==='alignMiddle'?(r.top+r.bottom)/2:r.bottom;
+          const pos=positionOf(elements[i]);
+          setPosition(elements[i],pos.x,pos.y+top-current);
+        }
+      }else{
+        if(elements.length<3)throw new Error('Selecciona al menos tres objetos para distribuir.');
+        const horizontal=action==='distributeX';
+        const items=elements.map((node,i)=>({node,r:rects[i]}))
+          .sort((a,b)=>horizontal?a.r.left-b.r.left:a.r.top-b.r.top);
+        const begin=horizontal?items[0].r.left:items[0].r.top;
+        const end=horizontal?items.at(-1).r.right:items.at(-1).r.bottom;
+        const extent=items.reduce((sum,item)=>sum+(horizontal?item.r.width:item.r.height),0);
+        const gap=(end-begin-extent)/(items.length-1);
+        if(gap<0)throw new Error('No hay espacio suficiente para distribuir los objetos.');
+        let cursor=begin;
+        for(const [index,item] of items.entries()){
+          if(index>0&&index<items.length-1){
+            const p=positionOf(item.node),current=horizontal?item.r.left:item.r.top;
+            const delta=cursor-current;
+            setPosition(item.node,horizontal?p.x+delta:p.x,horizontal?p.y:p.y+delta);
+          }
+          cursor+=(horizontal?item.r.width:item.r.height)+gap;
+        }
+      }
+      change();return elements;
+    }
     if(action==='group'){
       const items=[...selectionSet].filter(node=>surface.contains(node));
       if(items.length<2)throw new Error('Selecciona dos o más objetos manteniendo Mayús.');
