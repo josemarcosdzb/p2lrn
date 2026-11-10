@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {normalizeAnalyticsDataset,computeAnalyticsSnapshot,filterAnalyticsDataset,createAnalyticsStore,createHttpAnalyticsDataSource,analyticsToCsv,analyticsDatasetFromOfflineResult,verifyOfflineResultIntegrity} from '../src/model.js';
+import {normalizeAnalyticsDataset,computeAnalyticsSnapshot,filterAnalyticsDataset,createAnalyticsStore,createHttpAnalyticsDataSource,analyticsToCsv,analyticsDatasetFromOfflineResult,verifyOfflineResultIntegrity,loadAnalyticsResultSource} from '../src/model.js';
 
 const seed={
   generatedAt:'2026-10-28T10:00:00Z',
@@ -187,4 +187,16 @@ test('HTTP datasource does not leak AbortSignal or objects into query string',as
   assert.match(called,/courseId=math/);
   assert.doesNotMatch(called,/signal=|internal=|private/);
   assert.equal(sentSignal,controller.signal);
+});
+test('unverified static JSON src cannot forge official course grades',async()=>{
+  const raw={schema:'https://p2lrn.org/schema/analytics-dataset/1',
+    learners:[{id:'ana',name:'Ana'}],courses:[{id:'math',title:'Math'}],
+    grades:[{id:'faked-grade',learnerId:'ana',courseId:'math',value:10,maxValue:10,authoritative:true}]};
+  const data=await loadAnalyticsResultSource('/static/analytics.json',{
+    baseURL:'https://school.example/',
+    fetcher:async()=>({ok:true,json:async()=>raw}),
+  });
+  assert.equal(data.grades[0].authoritative,false);
+  assert.equal(computeAnalyticsSnapshot(data).overview.averageGrade,null);
+  assert.equal(data.metadata.unverifiedStaticDataset,true);
 });

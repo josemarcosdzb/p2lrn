@@ -860,7 +860,15 @@ export async function loadAnalyticsResultSource(src,{fetcher=globalThis.fetch,ba
     return analyticsDatasetFromResultFiles(contents);
   }
   if(main?.schema===ANALYTICS_DATASET_SCHEMA||(
-    Array.isArray(main?.learners)&&Array.isArray(main?.courses)))
-    return normalizeAnalyticsDataset(main);
+    Array.isArray(main?.learners)&&Array.isArray(main?.courses))){
+    // A standalone JSON file is not proof of institutional grade approval.
+    // Only a Host-authorized dataSource can declare authoritative grades.
+    const data=normalizeAnalyticsDataset(main);
+    return normalizeAnalyticsDataset({
+      ...data,
+      grades:data.grades.map(grade=>({...grade,authoritative:false})),
+      metadata:{...data.metadata,unverifiedStaticDataset:true},
+    });
+  }
   throw new TypeError('La ruta src debe apuntar a un .p2lrn-result, un índice de resultados o un JSON de métricas compatible.');
 }
