@@ -16,8 +16,8 @@ const binding={id:issueP2LRNBindingId(),tenantId:'school1',registrationId:'reg1'
   deploymentId:'deployment-1',packageId:'urn:uuid:course1',contentRoot:root,
   entityId:'urn:uuid:unit1',status:'PUBLISHED'};
 const now=1800000000;
-function createFixture({dynamicCanvas=false}={}){
- const registration={...reg,dynamicCanvas};
+function createFixture({dynamicCanvas=false,jwksUrl,refreshRegistrationKeys}={}){
+ const registration={...reg,dynamicCanvas,jwksUrl};
  const states=new Map();
  let record;
  const tool={privateKeyPem:toolKey.export({format:'pem',type:'pkcs8'}),kid:'tool-1'};
@@ -29,9 +29,9 @@ function createFixture({dynamicCanvas=false}={}){
    },
    getBinding:async({id,tenantId,registrationId,deploymentId})=>
      id===binding.id&&tenantId===binding.tenantId&&registrationId===binding.registrationId&&deploymentId===binding.deploymentId?binding:null,
-   tool,now:()=>now
+   tool,refreshRegistrationKeys,now:()=>now
  });
- function token({nonce,kind='LtiResourceLinkRequest',changes={}}){
+ function token({nonce,kind='LtiResourceLinkRequest',changes={},kid='lms-1',key=platformKey}){
    const claims={
     iss:issuer,aud:clientId,sub:'learner1',iat:now,exp:now+300,nonce,
     [LTI_CLAIMS.version]:'1.3.0',[LTI_CLAIMS.messageType]:kind,
@@ -48,8 +48,8 @@ function createFixture({dynamicCanvas=false}={}){
     },...changes
    };
    const b64=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
-   const input=b64({alg:'RS256',kid:'lms-1',typ:'JWT'})+'.'+b64(claims);
-   return input+'.'+sign('RSA-SHA256',Buffer.from(input),platformKey).toString('base64url');
+   const input=b64({alg:'RS256',kid,typ:'JWT'})+'.'+b64(claims);
+   return input+'.'+sign('RSA-SHA256',Buffer.from(input),key).toString('base64url');
  }
  async function start(kind='LtiResourceLinkRequest'){
    const target=kind==='LtiDeepLinkingRequest'?deepLinkLaunchUrl:launchUrl;
@@ -148,4 +148,46 @@ test('dynamic Canvas Deep Linking refuses unregistered callback origins',async()
     accept_types:['ltiResourceLink']
    }
   }})}),/origin/);
+});
+
+test('unknown signing kid refreshes registered JWKS but never weakens signature checks',async()=>{
+ const newer=generateKeyPairSync('rsa',{modulusLength:2048});
+ let requests=0;
+ const f=createFixture({jwksUrl:issuer+'/jwks',refreshRegistrationKeys:async current=>{
+  requests++;
+  assert.equal(current.issuer,issuer);
+  return {...current,jwks:{keys:[
+   {...platformPublic.export({format:'jwk'}),kid:'lms-1',use:'sig',alg:'RS256'},
+   {...newer.publicKey.export({format:'jwk'}),kid:'lms-2',use:'sig',alg:'RS256'}
+  ]}};
+ }});
+ const first=await f.start();
+ const verified=await f.provider.verifyLaunch({
+  state:first.state,browserBinding:'browser-secret',
+  idToken:f.token({nonce:first.nonce,kid:'lms-2',key:newer.privateKey})
+ });
+ assert.equal(verified.kind,'resource');
+ assert.equal(requests,1);
+ const second=await f.start();
+ await assert.rejects(f.provider.verifyLaunch({
+  state:second.state,browserBinding:'browser-secret',
+  idToken:f.token({nonce:second.nonce,kid:'lms-1',key:newer.privateKey})
+ }),/signature/);
+ assert.equal(requests,1);
+ await assert.rejects(f.provider.verifyLaunch({
+  state:first.state,browserBinding:'browser-secret',
+  idToken:f.token({nonce:first.nonce,kid:'lms-2',key:newer.privateKey})
+ }),/consumed/);
+});
+
+test('JWKS refresh cannot substitute another registration or tenant',async()=>{
+ const newer=generateKeyPairSync('rsa',{modulusLength:2048});
+ const f=createFixture({jwksUrl:issuer+'/jwks',
+  refreshRegistrationKeys:async current=>({...current,tenantId:'attacker',jwks:{keys:[
+   {...newer.publicKey.export({format:'jwk'}),kid:'lms-2'}
+  ]}})
+ });
+ const {state,nonce}=await f.start();
+ await assert.rejects(f.provider.verifyLaunch({state,browserBinding:'browser-secret',
+  idToken:f.token({nonce,kid:'lms-2',key:newer.privateKey})}),/REGISTRATION_CHANGED/);
 });
