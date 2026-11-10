@@ -797,7 +797,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(!authoring)requestFrame();
   }
 
-  function raycastInteraction(event,{dispatch=true,exclude=null}={}) {
+  function raycastInteraction(event,{dispatch=true,exclude=null,targetKind=null}={}) {
     const rect=canvas.getBoundingClientRect();
     if(!rect.width||!rect.height)return null;
     pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
@@ -814,6 +814,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       const meta=node?.userData?.p2lrnInteraction;
       if(!meta)continue;
       if(exclude&&meta.kind===exclude.kind&&meta.id===exclude.id)continue;
+      // While dragging an assembly piece, identify its destination cage
+      // rather than an unrelated piece in front of that cage.
+      if(targetKind&&meta.kind!==targetKind)continue;
       const priority=authoring?
         (meta.kind==='assembly-editor-vertex'?30:meta.kind==='assembly-editor-piece'?20:meta.kind==='assembly-editor-target'?10:15):
         assemblyMode?(meta.kind==='assembly-piece'?20:meta.kind==='assembly-target'?10:0):0;
@@ -873,7 +876,8 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     if(!drag||drag.pointerId!==event.pointerId)return;
     if(drag.mode==='object'){
       if(drag.moved){
-        const hit=raycastInteraction(event,{dispatch:false,exclude:drag.source});
+        const hit=raycastInteraction(event,{dispatch:false,exclude:drag.source,
+          targetKind:drag.source.kind==='assembly-piece'?'assembly-target':null});
         onDrag(drag.source,'end',{position:pointerWorldPosition(event),target:hit?.meta??null,event});
       }else{
         onDrag(drag.source,'cancel',{event});
