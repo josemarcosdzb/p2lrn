@@ -1,6 +1,6 @@
 // The assembly mode plugs into the existing questionnaire 3D renderer/runtime.
 // Classification answers remain the authoritative, resumable grading contract.
-import {evaluateAssemblyPlacement,inspectAssemblyGLB,validateAssembly,assemblyPlacementTransform,scatterAssemblyStarts} from '../assembly-3d-core.js';
+import {evaluateAssemblyPlacement,inspectAssemblyGLB,validateAssembly,assemblyPlacementTransform,scatterAssemblyStarts,stagedAssemblyVisualTransform} from '../assembly-3d-core.js';
 import {playerUiText} from './ui-i18n.js';
 import {el} from './game-common.js';
 
@@ -83,6 +83,17 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg}){
         console.warn('P2LRN assembly 3D model load blocked:',error);
       }
     }else scene.addBox({id,text:piece.text,position:transform.position,size:[1.2,0.8,1],dynamic:false,physicsEnabled:false,interaction:{kind:'assembly-piece',id:piece.id}});
+    const measured=scene.getObjectLocalBounds?.(id);
+    if(measured){
+      try{
+        const aligned=stagedAssemblyVisualTransform(transform,measured);
+        transforms.set(piece.id,aligned);
+        startPositions[piece.id]=fromJson(aligned);
+        scene.setTransform(id,aligned);
+      }catch(error){
+        console.warn('P2LRN assembly staging pivot adjustment rejected:',error);
+      }
+    }
   }
   if(config.referenceAssetId){
     try{
