@@ -443,7 +443,9 @@ export class P2LRNStudioDocument{
     }
     const parent=this.pageInsertionParent(current.id);
     const original=this.entity(parent)?.children?.indexOf(currentParent===parent?current.id:currentParent)??-1;
-    const group=this.addComposite(parent,{title:this.title(current.id),language:'es',mode:'free',completion:'all',presentation:'stack'});
+    const language=current.languages?.[0]??this.entity(this.rootId)?.languages?.[0]??'es';
+    const english=/^en(?:-|$)/i.test(language);
+    const group=this.addComposite(parent,{title:english?'Activity page':'Página de actividades',language:english?'en':'es',mode:'free',completion:'all',presentation:'stack'});
     if(original>=0)this.reorderChild(parent,group.id,original);
     this.moveActivity(currentParent===parent?current.id:currentParent,group.id,0);
     return group.id;
