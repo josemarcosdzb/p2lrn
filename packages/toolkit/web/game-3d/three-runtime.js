@@ -785,6 +785,10 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
       connector.line.geometry.computeBoundingSphere();
     }
   }
+  function getTranslation(id){
+    const mesh=meshes.get(String(id));
+    return mesh?[mesh.position.x,mesh.position.y,mesh.position.z]:null;
+  }
   function setTranslation(id,position) {
     const mesh=meshes.get(String(id));
     if (!mesh) return false;
@@ -1001,6 +1005,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     setPointerTarget,
     disconnect,
     carry,
+    getTranslation,
     setTranslation,
     highlight,
     playerDistanceTo,
