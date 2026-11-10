@@ -706,6 +706,9 @@ export async function render(options) {
     const trial=game.data.trials[trialIndex];
     const assembly=trial.type==='assembly-3d';
     scene.setAssemblyMode?.(assembly);
+    // Desktop otherwise hides the touch pad; assembly deliberately exposes it
+    // without changing ordinary 3D game input and pointer interactions.
+    layout.classList.toggle('p2lrn-3d-assembly',assembly);
     // Keep the same independent joystick for EVERY 3D trial. In assembly it
     // navigates the orbital viewpoint while dragging still manipulates pieces.
     if(joystick?.element){joystick.element.hidden=false;joystick.element.style.display='';}
