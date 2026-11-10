@@ -136,7 +136,6 @@ jobs:
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     env:
-      P2LRN_PUBLIC_NPM_VERSION: 0.5.0-alpha.11
       P2LRN_PUBLIC_ORIGIN: https://p2lrn.org
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
