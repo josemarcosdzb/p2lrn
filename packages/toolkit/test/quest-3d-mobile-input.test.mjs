@@ -130,5 +130,7 @@ test('mobile joystick is touch-only in ALL 3D modes; desktop retains keyboard an
   assert.match(render,/joystick\.element\.hidden=false;joystick\.element\.style\.display=''/);
   assert.match(engine,/if\(assemblyMode\)\s*\{[\s\S]*?orbitFocus\.add\(velocity\.clampLength\(0,1\)/);
   assert.match(engine,/targetKind:drag\.source\.kind==='assembly-piece'\?'assembly-target':null/);
-  assert.match(engine,/carried\.clear\(\);\s*carried\.set\(keyId/);
+  assert.match(engine,/for\(const previous of \[\.\.\.carried\.keys\(\)\]\)releaseCarried\(previous\)/);
+  assert.match(engine,/releasedCarried\.add\(keyId\)/);
+  assert.match(engine,/if\(releasedCarried\.has\(id\)\)/);
 });
