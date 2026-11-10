@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {STUDIO_SHAPES,STUDIO_SHAPE_IDS,getStudioShape} from '../web/studio/studio-shapes.js';
+import {STUDIO_SHAPES,STUDIO_SHAPE_IDS,getStudioShape,bezierArrowClip} from '../web/studio/studio-shapes.js';
 import {setStudioDropBackground,createStudioDropActivity,addStudioDropPair,setStudioDropItemImage,setStudioDropItemImageAlt,removeStudioDropItemImage,getStudioDropItemText,normalizeStudioDropImageTile} from '../web/studio/studio-drop-activity.js';
 import {studioDropRuntimeSource} from '../web/renderers/lesson-drop-runtime.js';
 
 test('Every reference palette form is unique, scalable and safe without inline SVG',()=>{
-  assert.equal(STUDIO_SHAPES.length,27);
-  assert.equal(new Set(STUDIO_SHAPE_IDS).size,27);
+  assert.equal(STUDIO_SHAPES.length,28);
+  assert.equal(new Set(STUDIO_SHAPE_IDS).size,28);
   for(const id of [
-    'line','curve','wave','ellipse','cloud','droplet','curved-arrow','freeform','square','rectangle','parallelogram',
+    'line','curve','wave','ellipse','cloud','droplet','curved-arrow','bezier-arrow','freeform','square','rectangle','parallelogram',
     'triangle','right-triangle','diamond','pentagon','hexagon',
     'arrow-right','arrow-left','arrow-up','arrow-down',
     'star-4','star-5','star-6','star-8','speech-rect','speech-oval','thought',
@@ -87,4 +87,16 @@ test('Image-only cards remove inherited Ficha N captions and preserve PNG alpha'
   assert.equal(style.borderColor,'transparent');
   assert.equal(style.padding,'0px');
   assert.equal(normalizeStudioDropImageTile(item),false,'Normalization must be idempotent');
+});
+
+test('Bezier connector uses bounded inert CSS geometry at both control extremes',()=>{
+  const normal=bezierArrowClip(18,18);
+  const steep=bezierArrowClip(0,100);
+  assert.match(normal,/^polygon\(/);
+  assert.notEqual(normal,steep);
+  assert.doesNotMatch(normal,/url|javascript|<svg|NaN|Infinity/);
+  assert.ok([...normal.matchAll(/%/g)].length>80,'Bezier path should be smooth');
+  assert.throws(()=>bezierArrowClip(-1,18),/between 0 and 100/);
+  assert.throws(()=>bezierArrowClip(18,101),/between 0 and 100/);
+  assert.throws(()=>bezierArrowClip(NaN,18),/between 0 and 100/);
 });
