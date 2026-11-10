@@ -201,6 +201,24 @@ async function diagramCase(){
   assert(bigger,'Existing image resize control unavailable');bigger.click();
   assert(parseFloat(image.style.width)>oldImageWidth,'Resizing diagram raster image failed');
   geometry.imagePercent=true;
+  canvas.click();
+  const mediaLayers=ribbon.querySelector('[data-studio-context-menu=capas]');
+  assert(mediaLayers&&!mediaLayers.hidden,'Media layer inspector is not available');
+  const imageLayer=[...mediaLayers.querySelectorAll('.p2lrn-layer-entry')]
+    .find(row=>row.textContent.includes('sol-prueba'));
+  assert(imageLayer,'Imported raster image was not listed as a layer');
+  const selectLayerButton=(label)=>[...mediaLayers.querySelectorAll('.p2lrn-layer-entry button')]
+    .find(btn=>btn.getAttribute('aria-label')===label);
+  selectLayerButton('Ocultar sol-prueba').click();
+  assert(image.style.visibility==='hidden','Hiding a raster layer did not persist');
+  selectLayerButton('Mostrar sol-prueba').click();
+  assert(image.style.visibility!=='hidden','Showing a raster layer failed');
+  selectLayerButton('Bloquear sol-prueba').click();
+  assert(image.dataset.p2lrnLayerLocked==='true'&&image.style.pointerEvents==='none',
+    'Locking an image layer did not disable editing');
+  selectLayerButton('Desbloquear sol-prueba').click();
+  assert(image.dataset.p2lrnLayerLocked==='false','Unlocking image layer failed');
+  geometry.mediaLayerControls=true;
   if(component){
     const exported=await component.exportPackage();
     const bytes=exported.bytes;
