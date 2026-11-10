@@ -86,7 +86,7 @@ try{
   await wait('Boolean(document.querySelector("[data-player]")?.shadowRoot?.querySelector(".p2lrn-nav"))','Player integrado');
   for(const name of ['Cuestionario completo',...names]){
     await show('Alumno · '+name,learner(name),1800);
-    await evaluate('(()=>{const r=document.querySelector("[data-player]")?.shadowRoot;x=r?.querySelector(".p2lrn-rosco-layout,.p2lrn-3d-layout,.p2lrn-game-shell");x?.scrollIntoView({block:"center"});return true;})()'.replace('x=r?','const x=r?'));
+    await evaluate('(()=>{const r=document.querySelector("[data-player]")?.shadowRoot;const x=r?.querySelector(".p2lrn-rosco-layout,.p2lrn-3d-layout,.p2lrn-game-shell");x?.scrollIntoView({block:"center"});return true;})()');
     if(name==='Rosco'){
       await wait('document.querySelector("[data-player]")?.shadowRoot?.querySelectorAll(".p2lrn-rosco-letter").length>=16','rosco del alumno');
       const label=await show('Rosco alumno · Contiene la Ñ','(()=>{const r=document.querySelector("[data-player]").shadowRoot,b=[...r.querySelectorAll(".p2lrn-rosco-letter")].find(x=>x.textContent==="Ñ");b?.click();return r.querySelector(".p2lrn-rosco-prompt")?.textContent??false;})()',2600);
@@ -106,5 +106,7 @@ try{
   try{socket?.close();}catch{}try{chrome?.kill();}catch{}
   await new Promise(done=>server.close(done));
   if(profile)await rm(profile,{recursive:true,force:true}).catch(()=>{});
-  await rm(framesFolder,{recursive:true,force:true}).catch(()=>{});
+  // Preserve real browser frames if ffmpeg was unavailable, so an
+  // externally generated video can still be encoded without replaying.
+  if(existsSync(video))await rm(framesFolder,{recursive:true,force:true}).catch(()=>{});
 }
