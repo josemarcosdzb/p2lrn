@@ -72,6 +72,21 @@ export function styleStudioShapeArt(art,id){
     art.style.borderRadius='0 0 75% 0';
     art.style.minHeight='54px';
     art.style.flex='1 1 auto';
+    art.style.position='relative';
+    // The arrowhead is an ordinary, inert HTML span. The exact same markup
+    // persists in lessons and works in the Player without an SVG or runtime.
+    let tip=art.querySelector(':scope > [data-p2lrn-connector-tip]');
+    if(!tip){
+      tip=art.ownerDocument.createElement('span');
+      tip.dataset.p2lrnConnectorTip='1';
+      tip.setAttribute('aria-hidden','true');
+      art.append(tip);
+    }
+    Object.assign(tip.style,{
+      position:'absolute',right:'-18px',top:'-9px',width:'30px',height:'33px',
+      backgroundColor:'#2563eb',clipPath:'polygon(50% 0,100% 60%,67% 60%,67% 100%,33% 100%,33% 60%,0 60%)',
+      display:'block',
+    });
   }else if(shape.kind==='curve'||shape.kind==='wave'){
     art.style.backgroundColor='transparent';
     art.style.borderBottom='8px solid #2563eb';
