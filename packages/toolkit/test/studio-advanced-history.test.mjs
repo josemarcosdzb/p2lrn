@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createStudioHistory} from '../web/studio/studio-history.js';
-import {modifyStudioTable,objectTransform,percentDiagramGeometry} from '../web/studio/studio-object-tools.js';
+import {modifyStudioTable,objectTransform,percentDiagramGeometry,fitStudioObjectWidth} from '../web/studio/studio-object-tools.js';
 
 const make=(key,html='<p>Original</p>')=>({
   dataset:{studioHtmlKey:key},innerHTML:html,isContentEditable:true,
@@ -115,4 +115,14 @@ test('reopening identical lesson with embedded media does not create undo histor
   history.activate(make('media-preview',html));
   assert.equal(history.size,1);
   assert.equal(history.canUndo(),false);
+});
+
+test('object resizing respects remaining horizontal room in regular and nested canvases',()=>{
+  assert.equal(fitStudioObjectWidth(350,650,800,120),150);
+  assert.equal(fitStudioObjectWidth(400,380,400,120),20,'small viewports may shrink below desktop minimum');
+  assert.equal(fitStudioObjectWidth(250,10,800,120),250);
+  assert.equal(fitStudioObjectWidth(500,0,400,120),400);
+  assert.deepEqual(percentDiagramGeometry(900,50,300,120,1000,600),
+    {left:90,top:8.3333,width:10,height:20},'diagram width cannot exceed the right edge');
+  assert.throws(()=>fitStudioObjectWidth(NaN,0,400),/Invalid object bounds/);
 });
