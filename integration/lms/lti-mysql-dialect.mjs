@@ -100,8 +100,9 @@ export function mysqlInsert(sql,columnsByTable){
  });
  const upsert=/\s+ON CONFLICT\([^)]*\)(?: WHERE [\s\S]*?)? DO UPDATE SET ([\s\S]*?)(?: RETURNING id)?$/i.exec(text);
  if(upsert){
-  const conditional=/\bWHERE assessments\.approved=0\b/i.test(upsert[0]);
-  const columns=splitSqlParts(upsert[1]).map(item=>{
+  const conditional=/\s+WHERE assessments\.approved=0$/i.test(upsert[1]);
+  const assignments=upsert[1].replace(/\s+WHERE assessments\.approved=0$/i,'');
+  const columns=splitSqlParts(assignments).map(item=>{
    const m=/^(\w+)=([\s\S]+)$/.exec(item);
    if(!m)throw new Error('LTI_SQL_INVALID_UPSERT');
    let expr=m[2].replace(/\bexcluded\.(\w+)\b/gi,'VALUES($1)');
