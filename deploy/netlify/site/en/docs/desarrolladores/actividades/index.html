@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="P2LRN developer reference for questionnaire schemas, game renderers, validation and JSON examples."><title>P2LRN activity developer reference</title><link rel="stylesheet" href="/p2lrn.css"><script src="/en/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Skip to content</a><header class="site-header"><a class="brand" href="/en/">P2LRN</a><nav class="nav" id="nav" aria-label="Main navigation"></nav><button type="button" class="menu" data-menu aria-controls="nav" aria-expanded="false">Menu</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Documentation navigation"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">DEVELOPERS / ACTIVITIES</p><h1>Technical reference for quizzes and games</h1><p>Schemas, scoring and Player integration, separate from the teacher authoring guide.</p></header><section class="doc-section"><h2>Choose an activity</h2><div class="example-actions"><a class="button" href="#general">Common activity contract</a><a class="button" href="#standard">Standard quiz</a><a class="button" href="#memory">Memory</a><a class="button" href="#matching">Matching</a><a class="button" href="#ordering">Ordering</a></div></section><section class="doc-section" id="general"><h2>Common activity contract</h2><p>Data contract, code examples and Player integration for this activity. The visual authoring walkthrough is in the separate teacher guide.</p><p>Technical gap markers can be written as <code>{{id}}</code> or <code>___</code>.</p><section class="p2lrn-dev-chapter"><h3>The same questionnaire, different experiences</h3><p>Questions are saved as <code>application/vnd.p2lrn.questionnaire+json</code>. The chosen presentation does not create another copy of the content: it tells the Player how to display that questionnaire.</p><div class="doc-callout"><strong>The presentation should never miss questions.</strong><p>If the entire questionnaire cannot be faithfully represented mechanically, that presentation is considered incompatible. P2LRN does not eliminate questions or invent answers to make it fit.</p></div></section><section class="p2lrn-dev-chapter"><h3>Status and score</h3><p>All submissions update the same questionnaire status. To hear punctuation and completion use <a href="/en/docs/eventos/">Events</a>; To persist them on a platform, configure <a href="/en/docs/integracion/">Host Adapter</a>.</p></section><section class="p2lrn-dev-chapter"><h3>Test before integrating</h3><p>The viewer allows you to open example packages and change presentation when the content is compatible.</p><p>Create and verify your own exercises in Studio. Native test courses are no longer published.</p></section><p><a href="/en/docs/questionnaires/">Teacher guide for this activity</a></p></section>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="P2LRN developer reference for questionnaire schemas, game renderers, validation and JSON examples."><title>P2LRN activity developer reference</title><link rel="stylesheet" href="/p2lrn.css"><script src="/en/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Skip to content</a><header class="site-header"><a class="brand" href="/en/">P2LRN</a><nav class="nav" id="nav" aria-label="Main navigation"></nav><button type="button" class="menu" data-menu aria-controls="nav" aria-expanded="false">Menu</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Documentation navigation"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">DEVELOPERS / ACTIVITIES</p><h1>Technical reference for quizzes and games</h1><p>Schemas, scoring and Player integration, separate from the teacher authoring guide.</p></header><section class="doc-section"><h2>Choose an activity</h2><div class="example-actions"><a class="button" href="#general">Common activity contract</a><a class="button" href="#standard">Standard quiz</a><a class="button" href="#memory">Memory</a><a class="button" href="#matching">Matching</a><a class="button" href="#ordering">Ordering</a><a class="button" href="#classification">Classification</a><a class="button" href="#true-false">True or false</a><a class="button" href="#word-search">Word search</a><a class="button" href="#crossword">Crossword</a><a class="button" href="#rosco">Word wheel</a><a class="button" href="#3d">3D game</a></div></section><section class="doc-section" id="general"><h2>Common activity contract</h2><p>Data contract, code examples and Player integration for this activity. The visual authoring walkthrough is in the separate teacher guide.</p><p>Technical gap markers can be written as <code>{{id}}</code> or <code>___</code>.</p><section class="p2lrn-dev-chapter"><h3>The same questionnaire, different experiences</h3><p>Questions are saved as <code>application/vnd.p2lrn.questionnaire+json</code>. The chosen presentation does not create another copy of the content: it tells the Player how to display that questionnaire.</p><div class="doc-callout"><strong>The presentation should never miss questions.</strong><p>If the entire questionnaire cannot be faithfully represented mechanically, that presentation is considered incompatible. P2LRN does not eliminate questions or invent answers to make it fit.</p></div></section><section class="p2lrn-dev-chapter"><h3>Status and score</h3><p>All submissions update the same questionnaire status. To hear punctuation and completion use <a href="/en/docs/eventos/">Events</a>; To persist them on a platform, configure <a href="/en/docs/integracion/">Host Adapter</a>.</p></section><section class="p2lrn-dev-chapter"><h3>Test before integrating</h3><p>The viewer allows you to open example packages and change presentation when the content is compatible.</p><p>Create and verify your own exercises in Studio. Native test courses are no longer published.</p></section><p><a href="/en/docs/questionnaires/">Teacher guide for this activity</a></p></section>
 <section class="doc-section" id="standard"><h2>Standard quiz</h2><p>Data contract, code examples and Player integration for this activity. The visual authoring walkthrough is in the separate teacher guide.</p><section class="p2lrn-dev-chapter"><h3 id="standard-3-content-requirements">Content requirements</h3><ul class="doc-list"><li>Supports native quiz question types.</li><li>You can use embedded solution remediation or platform-managed remediation.</li><li>The presentation can show one question at a time or all at once.</li></ul></section><section class="p2lrn-dev-chapter"><h3 id="standard-4-valid-data-example">Valid data example</h3><p>This example shows the data used by the activity for CLI authoring. In Studio, configure the corresponding content using the visual editor.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy="">Copy</button></div><pre><code>{
   "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
   "version": "0.4.0",
@@ -215,4 +215,327 @@ p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></di
   --title "Ordering" \
   --renderer "https://p2lrn.org/renderer/questionnaire/ordering"
 
-p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> Select the preferred presentation. It does not create a second copy of the questions: the content remains the native questionnaire.</p></section><section class="p2lrn-dev-chapter"><h3 id="ordering-7-technical-presentation-identifier">Technical presentation identifier</h3><p>Typically Studio sets this up for you. You only need this identifier when you select presentation from code, CLI, or the viewer.</p><div class="reference-table"><div><strong>Technical identifier</strong><p><code>https://p2lrn.org/renderer/questionnaire/ordering</code></p></div><div><strong>Profile</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Content type</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><p><a href="/en/docs/questionnaires/ordering/">Teacher guide for this activity</a></p></section><nav class="doc-pager"><a class="prev" href="/en/docs/developers/"><span>← Previous</span><strong>Developers</strong></a><a class="next" href="/en/docs/reference/"><span>Next →</span><strong>API reference</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Developer documentation</span></footer></body></html>
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> Select the preferred presentation. It does not create a second copy of the questions: the content remains the native questionnaire.</p></section><section class="p2lrn-dev-chapter"><h3 id="ordering-7-technical-presentation-identifier">Technical presentation identifier</h3><p>Typically Studio sets this up for you. You only need this identifier when you select presentation from code, CLI, or the viewer.</p><div class="reference-table"><div><strong>Technical identifier</strong><p><code>https://p2lrn.org/renderer/questionnaire/ordering</code></p></div><div><strong>Profile</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Content type</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><p><a href="/en/docs/questionnaires/ordering/">Teacher guide for this activity</a></p></section><section class="doc-section" id="classification"><h2>Classification</h2><p>Technical requirements, data examples and renderer integration. Course authors use the separate Studio guide.</p><section class="p2lrn-dev-chapter"><h3 id="classification-3-content-requirements">Content requirements</h3><ul class="doc-list"><li>In Studio it is created as a question of type <strong>Classification</strong>.</li><li>Each question needs at least two objects and two categories.</li><li>The solution must map all objects to a valid category.</li><li>The activity requires embedded solutions.</li></ul></section><section class="p2lrn-dev-chapter"><h3 id="classification-4-valid-data-example">Valid data example</h3><p>This example shows the data used by the activity for CLI authoring. In Studio, configure the corresponding content using the visual editor.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy="">Copy</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "Classify living things",
+  "language": "en",
+  "grading": {
+    "mode": "embedded-key"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "classification",
+      "prompt": "Classify each item",
+      "points": 2,
+      "items": [
+        {
+          "id": "dog",
+          "text": "Dog"
+        },
+        {
+          "id": "oak",
+          "text": "Oak"
+        }
+      ],
+      "categories": [
+        {
+          "id": "animal",
+          "text": "Animal"
+        },
+        {
+          "id": "plant",
+          "text": "Plant"
+        }
+      ],
+      "solution": {
+        "assignments": [
+          {
+            "item": "dog",
+            "category": "animal"
+          },
+          {
+            "item": "oak",
+            "category": "plant"
+          }
+        ]
+      }
+    }
+  ]
+}</code></pre></div></section><section class="p2lrn-dev-chapter"><h3 id="classification-5-how-to-read-the-example">How to read the example</h3><p><code>items</code> are the objects, <code>categories</code> are the destinations and <code>solution.assignments</code> contains one assignment per object.</p></section><section class="p2lrn-dev-chapter"><h3 id="classification-6-create-by-cli-advanced-alternative">Create by CLI — advanced alternative</h3><p>Use these commands for code-based authoring with Toolkit installed via npm. The <code>quiz.json</code> file must contain a valid questionnaire like the example above.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy="">Copy</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
+  --key quiz \
+  --title "Classification" \
+  --renderer "https://p2lrn.org/renderer/questionnaire/classification"
+
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> Select the preferred presentation. It does not create a second copy of the questions: the content remains the native questionnaire.</p></section><section class="p2lrn-dev-chapter"><h3 id="classification-7-technical-presentation-identifier">Technical presentation identifier</h3><p>Typically Studio sets this up for you. You only need this identifier when you select presentation from code, CLI, or the viewer.</p><div class="reference-table"><div><strong>Technical identifier</strong><p><code>https://p2lrn.org/renderer/questionnaire/classification</code></p></div><div><strong>Profile</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Content type</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><p><a href="/en/docs/questionnaires/classification/">Teacher authoring guide</a></p></section>
+<section class="doc-section" id="true-false"><h2>True or false</h2><p>Technical requirements, data examples and renderer integration. Course authors use the separate Studio guide.</p><section class="p2lrn-dev-chapter"><h3 id="true-false-3-content-requirements">Content requirements</h3><ul class="doc-list"><li>In Studio it is created with questions of type <strong>True / false</strong>.</li><li>At least two questions are needed.</li><li>Each question must have exactly two unambiguous options and one embedded solution.</li></ul></section><section class="p2lrn-dev-chapter"><h3 id="true-false-4-valid-data-example">Valid data example</h3><p>This example shows the data used by the activity for CLI authoring. In Studio, configure the corresponding content using the visual editor.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy="">Copy</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "True or false",
+  "language": "en",
+  "grading": {
+    "mode": "embedded-key"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "true-false",
+      "prompt": "Earth orbits the Sun",
+      "points": 1,
+      "choices": [
+        {
+          "id": "t1",
+          "text": "True"
+        },
+        {
+          "id": "f1",
+          "text": "False"
+        }
+      ],
+      "solution": {
+        "choiceIds": [
+          "t1"
+        ]
+      }
+    },
+    {
+      "id": "q2",
+      "type": "true-false",
+      "prompt": "Mars is a star",
+      "points": 1,
+      "choices": [
+        {
+          "id": "t2",
+          "text": "True"
+        },
+        {
+          "id": "f2",
+          "text": "False"
+        }
+      ],
+      "solution": {
+        "choiceIds": [
+          "f2"
+        ]
+      }
+    }
+  ]
+}</code></pre></div></section><section class="p2lrn-dev-chapter"><h3 id="true-false-5-how-to-read-the-example">How to read the example</h3><p>Each question has two <code>choices</code>. The solution points out which of your identifiers is correct using <code>solution.choiceIds</code>.</p></section><section class="p2lrn-dev-chapter"><h3 id="true-false-6-create-by-cli-advanced-alternative">Create by CLI — advanced alternative</h3><p>Use these commands for code-based authoring with Toolkit installed via npm. The <code>quiz.json</code> file must contain a valid questionnaire like the example above.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy="">Copy</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
+  --key quiz \
+  --title "True / False" \
+  --renderer "https://p2lrn.org/renderer/questionnaire/true-false"
+
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> Select the preferred presentation. It does not create a second copy of the questions: the content remains the native questionnaire.</p></section><section class="p2lrn-dev-chapter"><h3 id="true-false-7-technical-presentation-identifier">Technical presentation identifier</h3><p>Typically Studio sets this up for you. You only need this identifier when you select presentation from code, CLI, or the viewer.</p><div class="reference-table"><div><strong>Technical identifier</strong><p><code>https://p2lrn.org/renderer/questionnaire/true-false</code></p></div><div><strong>Profile</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Content type</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><p><a href="/en/docs/questionnaires/true-false/">Teacher authoring guide</a></p></section>
+<section class="doc-section" id="word-search"><h2>Word search</h2><p>Technical requirements, data examples and renderer integration. Course authors use the separate Studio guide.</p><section class="p2lrn-dev-chapter"><h3 id="word-search-3-content-requirements">Content requirements</h3><ul class="doc-list"><li>In Studio it is edited with questions of type <strong>Text answer</strong>.</li><li>At least three answers are needed.</li><li>Each standard response must be between 3 and 16 characters.</li><li>All words must be placeable: P2LRN does not remove questions to force the board.</li></ul></section><section class="p2lrn-dev-chapter"><h3 id="word-search-4-valid-data-example">Valid data example</h3><p>This example shows the data used by the activity for CLI authoring. In Studio, configure the corresponding content using the visual editor.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy="">Copy</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "Planets",
+  "language": "en",
+  "grading": {
+    "mode": "embedded-key"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "text",
+      "prompt": "Closest planet to the Sun",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "MERCURY"
+        ]
+      }
+    },
+    {
+      "id": "q2",
+      "type": "text",
+      "prompt": "Second planet in the Solar System",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "VENUS"
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "type": "text",
+      "prompt": "Our planet",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "EARTH"
+        ]
+      }
+    }
+  ]
+}</code></pre></div></section><section class="p2lrn-dev-chapter"><h3 id="word-search-5-how-to-read-the-example">How to read the example</h3><p>Each textual question provides a clue and an accepted answer. The Player normalizes the responses and constructs the grid only if it can represent the entire set.</p></section><section class="p2lrn-dev-chapter"><h3 id="word-search-6-create-by-cli-advanced-alternative">Create by CLI — advanced alternative</h3><p>Use these commands for code-based authoring with Toolkit installed via npm. The <code>quiz.json</code> file must contain a valid questionnaire like the example above.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy="">Copy</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
+  --key quiz \
+  --title "Word Search" \
+  --renderer "https://p2lrn.org/renderer/questionnaire/word-search"
+
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> Select the preferred presentation. It does not create a second copy of the questions: the content remains the native questionnaire.</p></section><section class="p2lrn-dev-chapter"><h3 id="word-search-7-technical-presentation-identifier">Technical presentation identifier</h3><p>Typically Studio sets this up for you. You only need this identifier when you select presentation from code, CLI, or the viewer.</p><div class="reference-table"><div><strong>Technical identifier</strong><p><code>https://p2lrn.org/renderer/questionnaire/word-search</code></p></div><div><strong>Profile</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Content type</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><p><a href="/en/docs/questionnaires/word-search/">Teacher authoring guide</a></p></section>
+<section class="doc-section" id="crossword"><h2>Crossword</h2><p>Technical requirements, data examples and renderer integration. Course authors use the separate Studio guide.</p><section class="p2lrn-dev-chapter"><h3 id="crossword-3-content-requirements">Content requirements</h3><ul class="doc-list"><li>In Studio it is edited with questions of type <strong>Text answer</strong>.</li><li>You need between 4 and 80 responses.</li><li>Each standardized response must be between 3 and 17 characters and a non-empty clue.</li><li>All words must form a single connected crossword puzzle. If there is no complete provision, the submission is rejected.</li></ul></section><section class="p2lrn-dev-chapter"><h3 id="crossword-4-valid-data-example">Valid data example</h3><p>This example shows the data used by the activity for CLI authoring. In Studio, configure the corresponding content using the visual editor.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy="">Copy</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "Crossword",
+  "language": "en",
+  "grading": {
+    "mode": "embedded-key"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "text",
+      "prompt": "Place where people live",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "HOME"
+        ]
+      }
+    },
+    {
+      "id": "q2",
+      "type": "text",
+      "prompt": "Amphibian that jumps",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "TOAD"
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "type": "text",
+      "prompt": "Water bird",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "DUCK"
+        ]
+      }
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "prompt": "Container with a handle",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "CUP"
+        ]
+      }
+    }
+  ]
+}</code></pre></div></section><section class="p2lrn-dev-chapter"><h3 id="crossword-5-how-to-read-the-example">How to read the example</h3><p>The four questions provide the clues and the words HOUSE, TOAD, DUCK and CUP. They are answers compatible with the construction of the connected board.</p></section><section class="p2lrn-dev-chapter"><h3 id="crossword-6-create-by-cli-advanced-alternative">Create by CLI — advanced alternative</h3><p>Use these commands for code-based authoring with Toolkit installed via npm. The <code>quiz.json</code> file must contain a valid questionnaire like the example above.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy="">Copy</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
+  --key quiz \
+  --title "Crossword" \
+  --renderer "https://p2lrn.org/renderer/questionnaire/crossword"
+
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> Select the preferred presentation. It does not create a second copy of the questions: the content remains the native questionnaire.</p></section><section class="p2lrn-dev-chapter"><h3 id="crossword-7-technical-presentation-identifier">Technical presentation identifier</h3><p>Typically Studio sets this up for you. You only need this identifier when you select presentation from code, CLI, or the viewer.</p><div class="reference-table"><div><strong>Technical identifier</strong><p><code>https://p2lrn.org/renderer/questionnaire/crossword</code></p></div><div><strong>Profile</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Content type</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><p><a href="/en/docs/questionnaires/crossword/">Teacher authoring guide</a></p></section>
+<section class="doc-section" id="rosco"><h2>Word wheel</h2><p>Technical requirements, data examples and renderer integration. Course authors use the separate Studio guide.</p><section class="p2lrn-dev-chapter"><h3 id="rosco-3-content-requirements">Content requirements</h3><ul class="doc-list"><li>In Studio it is edited with questions of type <strong>Text answer</strong>.</li><li>Every question needs exactly one usable textual answer.</li><li>The response must have at least two standard characters.</li><li>Each challenge needs a different letter that is present in its own answer. P2LRN does not invent answers or eliminate questions.</li></ul></section><section class="p2lrn-dev-chapter"><h3 id="rosco-4-valid-data-example">Valid data example</h3><p>This example shows the data used by the activity for CLI authoring. In Studio, configure the corresponding content using the visual editor.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy="">Copy</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "Vocabulary Word Wheel",
+  "language": "en",
+  "grading": {
+    "mode": "embedded-key"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "text",
+      "prompt": "Home",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "HOME"
+        ]
+      }
+    },
+    {
+      "id": "q2",
+      "type": "text",
+      "prompt": "Domestic animal that barks",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "DOG"
+        ]
+      }
+    },
+    {
+      "id": "q3",
+      "type": "text",
+      "prompt": "Furniture used for eating or working",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "TABLE"
+        ]
+      }
+    },
+    {
+      "id": "q4",
+      "type": "text",
+      "prompt": "Earth's natural satellite",
+      "points": 1,
+      "solution": {
+        "acceptedAnswers": [
+          "MOON"
+        ]
+      }
+    }
+  ]
+}</code></pre></div></section><section class="p2lrn-dev-chapter"><h3 id="rosco-5-how-to-read-the-example">How to read the example</h3><p>HOUSE, DOG, TABLE and MOON allow you to assign, for example, C, P, M and L. The Player calculates this association from the real answers; This block is a valid questionnaire, not a list of comments.</p></section><section class="p2lrn-dev-chapter"><h3 id="rosco-6-create-by-cli-advanced-alternative">Create by CLI — advanced alternative</h3><p>Use these commands for code-based authoring with Toolkit installed via npm. The <code>quiz.json</code> file must contain a valid questionnaire like the example above.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy="">Copy</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
+  --key quiz \
+  --title "Word Wheel" \
+  --renderer "https://p2lrn.org/renderer/questionnaire/rosco"
+
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> Select the preferred presentation. It does not create a second copy of the questions: the content remains the native questionnaire.</p></section><section class="p2lrn-dev-chapter"><h3 id="rosco-7-technical-presentation-identifier">Technical presentation identifier</h3><p>Typically Studio sets this up for you. You only need this identifier when you select presentation from code, CLI, or the viewer.</p><div class="reference-table"><div><strong>Technical identifier</strong><p><code>https://p2lrn.org/renderer/questionnaire/rosco</code></p></div><div><strong>Profile</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Content type</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><p><a href="/en/docs/questionnaires/rosco/">Teacher authoring guide</a></p></section>
+<section class="doc-section" id="3d"><h2>3D game</h2><p>Technical requirements, data examples and renderer integration. Course authors use the separate Studio guide.</p><section class="p2lrn-dev-chapter"><h3 id="3d-3-content-requirements">Content requirements</h3><ul class="doc-list"><li>The Studio preset creates a question of type <strong>Ordering</strong> with complete solution.</li><li>The activity requires embedded solutions and distinguishable texts.</li><li>The Player can also reproduce 3D activities of type <strong>Matching</strong> and <strong>Classification</strong> when they are generated by Toolkit and fulfill their full contracts.</li><li>If the physics cannot be initiated, the experience preserves a functional alternative.</li></ul></section><section class="p2lrn-dev-chapter"><h3 id="3d-4-valid-data-example">Valid data example</h3><p>This example shows the data used by the activity for CLI authoring. In Studio, configure the corresponding content using the visual editor.</p><div class="codebox"><div class="codebox-head"><span>quiz.json</span><button type="button" data-copy="">Copy</button></div><pre><code>{
+  "schema": "https://p2lrn.org/schema/native-questionnaire/0.4.0",
+  "version": "0.4.0",
+  "title": "Order the water cycle",
+  "language": "en",
+  "grading": {
+    "mode": "embedded-key"
+  },
+  "questions": [
+    {
+      "id": "q1",
+      "type": "ordering",
+      "prompt": "Order the stages",
+      "points": 3,
+      "items": [
+        {
+          "id": "i1",
+          "text": "Evaporation"
+        },
+        {
+          "id": "i2",
+          "text": "Condensation"
+        },
+        {
+          "id": "i3",
+          "text": "Precipitation"
+        }
+      ],
+      "solution": {
+        "order": [
+          "i1",
+          "i2",
+          "i3"
+        ]
+      }
+    }
+  ]
+}</code></pre></div></section><section class="p2lrn-dev-chapter"><h3 id="3d-5-how-to-read-the-example">How to read the example</h3><p>The example uses sort because it is the path that Studio currently offers to create a 3D Game. The three elements and <code>solution.order</code> produce a complete test.</p></section><section class="p2lrn-dev-chapter"><h3 id="3d-6-create-by-cli-advanced-alternative">Create by CLI — advanced alternative</h3><p>Use these commands for code-based authoring with Toolkit installed via npm. The <code>quiz.json</code> file must contain a valid questionnaire like the example above.</p><div class="codebox"><div class="codebox-head"><span>Terminal</span><button type="button" data-copy="">Copy</button></div><pre><code>p2lrn-create add-questionnaire ./workspace ./quiz.json \
+  --key quiz \
+  --title "3D Game" \
+  --renderer "https://p2lrn.org/renderer/questionnaire/3d-order-match"
+
+p2lrn-create build ./workspace ./course.p2lrn --strict-profiles</code></pre></div><p><code>--renderer</code> Select the preferred presentation. It does not create a second copy of the questions: the content remains the native questionnaire.</p></section><section class="p2lrn-dev-chapter"><h3 id="3d-7-technical-presentation-identifier">Technical presentation identifier</h3><p>Typically Studio sets this up for you. You only need this identifier when you select presentation from code, CLI, or the viewer.</p><div class="reference-table"><div><strong>Technical identifier</strong><p><code>https://p2lrn.org/renderer/questionnaire/3d-order-match</code></p></div><div><strong>Profile</strong><p><code>https://p2lrn.org/profile/native-questionnaire</code></p></div><div><strong>Content type</strong><p><code>application/vnd.p2lrn.questionnaire+json</code></p></div></div></section><p><a href="/en/docs/questionnaires/3d/">Teacher authoring guide</a></p></section><nav class="doc-pager"><a class="prev" href="/en/docs/developers/"><span>← Previous</span><strong>Developers</strong></a><a class="next" href="/en/docs/reference/"><span>Next →</span><strong>API reference</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Developer documentation</span></footer></body></html>
