@@ -3,6 +3,7 @@ import {THREE_D_RENDERER} from '../renderer-registry.js';
 import {
   appendUniqueConnection,
   classificationIsCorrect,
+  createLooseDropState,
   connectionKey,
   orderingIsCorrect,
   validateConnection,
@@ -119,19 +120,32 @@ export function buildOrderingControls({trial,runtime,scene,status,onProgress=()=
   const placed=restored?restored.map((id)=>id===null?null:String(id)):Array(trial.objects.length).fill(null);
   const randomPositions=randomRoomPositions(trial.objects.length,seedText(`order:${trial.questionId}:${trial.prompt}`));
   const staging=new Map(trial.objects.map((item,index)=>[item.id,randomPositions[index]]));
-  let selected=null;
+  const loose=createLooseDropState({
+    scene,runtime,storageKey:saveKey+':free-positions',staging,
+    objectId:id=>`order:${id}`,
+  });
+  let selected=null,activeDrag=null;
   function releaseSelected(){
     if(selected===null)return;
     scene.carry(`order:${selected}`,false);
+    loose.remember(selected);
     scene.highlight(`order:${selected}`,false);
     selected=null;
+  }
+  function detachPlacedObject(id){
+    const current=placed.indexOf(id);
+    if(current<0)return;
+    placed[current]=null;
+    // Picking an answered box invalidates that slot until a new drop succeeds.
+    persistPlacement();
+    refreshSelects();
   }
 
   trial.objects.forEach((item,index)=>{
     scene.addBox({
       id:`order:${item.id}`,
       text:item.text,
-      position:staging.get(item.id),
+      position:loose.position(item.id),
       interaction:{kind:'ordering-object',id:item.id},
     });
   });
@@ -188,6 +202,7 @@ export function buildOrderingControls({trial,runtime,scene,status,onProgress=()=
     }
     if (current>=0) placed[current]=null;
     placed[slotIndex]=itemId;
+    loose.forget(itemId);
     scene.carry(`order:${itemId}`,false);
     scene.highlight(`order:${itemId}`,false);
     if(selected===itemId)selected=null;
@@ -213,6 +228,7 @@ export function buildOrderingControls({trial,runtime,scene,status,onProgress=()=
       if(select.value===''){
         const current=placed.indexOf(item.id);
         if(current>=0) placed[current]=null;
+        loose.forget(item.id); // Accessible explicit reset is intentional.
         scene.carry(`order:${item.id}`,false);
         scene.highlight(`order:${item.id}`,false);
         if(selected===item.id)selected=null;
@@ -239,30 +255,26 @@ export function buildOrderingControls({trial,runtime,scene,status,onProgress=()=
       if(meta.kind!=='ordering-object')return false;
       if(phase==='start'){
         if(runtime.state.completed)return false;
-        // A pointer drag can start while another object is click-carried.
-        // Release that object before manipulating the new one.
         releaseSelected();
-        selected=meta.id;
         scene.carry(`order:${meta.id}`,false);
+        activeDrag=loose.start(meta.id,position);
+        if(!activeDrag)return false;
+        detachPlacedObject(meta.id);
+        selected=meta.id;
         scene.highlight(`order:${meta.id}`,true);
         setText(status,playerUiText('Arrastra el bloque hasta una posición.'));
         return true;
       }
-      if(phase==='move'){if(position)scene.setTranslation(`order:${meta.id}`,position);return true;}
-      if(phase==='end'){
-        const success=target?.kind==='ordering-slot'&&place(meta.id,target.index);
-        if(!success){
-          syncObject(meta.id);
-          scene.highlight(`order:${meta.id}`,false);
-          setText(status,playerUiText('Suelta el bloque sobre una posición disponible.'));
-        }
-        selected=null;
-        return true;
-      }
-      if(phase==='cancel'){
-        syncObject(meta.id);
+      if(!activeDrag||activeDrag.id!==meta.id)return false;
+      if(phase==='move'){loose.move(activeDrag,position);return true;}
+      if(phase==='end'||phase==='cancel'){
+        // Invalid target, empty floor and interrupted pointers all keep the
+        // last physical pose; only an accepted slot snaps to its position.
+        loose.end(activeDrag,phase==='end'?position:null);
+        const success=phase==='end'&&target?.kind==='ordering-slot'&&place(meta.id,target.index);
         scene.highlight(`order:${meta.id}`,false);
-        selected=null;
+        if(!success)setText(status,playerUiText('Bloque soltado donde lo has dejado. Sigue buscando su posición.'));
+        activeDrag=null;selected=null;
         return true;
       }
       return false;
@@ -271,6 +283,8 @@ export function buildOrderingControls({trial,runtime,scene,status,onProgress=()=
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='ordering-object'){
         if(selected!==null&&selected!==meta.id)releaseSelected();
+        loose.remember(meta.id);
+        detachPlacedObject(meta.id);
         selected=meta.id;
         scene.highlight(`order:${selected}`,true);
         scene.carry(`order:${selected}`,true);
