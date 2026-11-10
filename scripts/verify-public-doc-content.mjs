@@ -194,11 +194,11 @@ for(const [prefix,locale] of [['','es'],['en/','en']]){
   const home=await readFile(join(root,'deploy/netlify/site',prefix,'docs','index.html'),'utf8');
   const quick=await readFile(join(root,'deploy/netlify/site',prefix,'docs','empezar-facil','index.html'),'utf8');
   const landing=await readFile(join(root,'deploy/netlify/site',prefix,'juegos-educativos-3d','index.html'),'utf8');
-  const imageCount=(landing.match(/<img\\b/gi)||[]).length;
+  const imageCount=(landing.match(/<img\b/gi)||[]).length;
   if(!quick.includes('id="primer-curso"')||!quick.includes('id="integracion-desarrolladores"')||
      quick.indexOf('id="primer-curso"')>quick.indexOf('id="integracion-desarrolladores"')||
      !quick.includes('<details class="p2lrn-dev-details">')||
-     (quick.match(/<pre\\b/gi)||[]).length!==1)
+     (quick.match(/<pre\b/gi)||[]).length!==1)
     failures.push(locale+': quick start does not separate visual Studio course authoring from preserved developer HTML');
   if(imageCount<4||!landing.includes('configuracion-ensamblaje-3d-studio.webp')||
      !landing.includes('15-3d-ensamblar.webp')||
