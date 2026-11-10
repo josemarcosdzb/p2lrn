@@ -275,10 +275,20 @@ async function studioChrome(language){
     await ribbon.waitFor({timeout:15000});
     await page.locator('[data-studio-html-surface="true"]').waitFor({timeout:12000});
     await ribbon.getByRole('tab',{name:language==='en'?'Insert':'Insertar'}).click();
+    if(language==='en'){
+      await ribbon.getByRole('button',{name:'Two columns',exact:true}).waitFor();
+      await ribbon.getByText('Drop zones',{exact:true}).waitFor();
+      assert.equal(await ribbon.getByText('Dos columnas',{exact:true}).count(),0,'English visual block buttons still contain Spanish text');
+    }
+    const endCaret=page.locator('p[data-p2lrn-end-caret]').first();
+    await endCaret.waitFor({timeout:10000});
+    const instruction=await endCaret.evaluate(node=>getComputedStyle(node,'::before').content);
+    assert.match(instruction,language==='en'?/Write or insert/:/Escribe o inserta/,'Lesson end-caret language mismatch');
     await page.screenshot({path:join(evidence,prefix+'-editor.png'),fullPage:false});
     await ribbon.getByRole('button',{name:language==='en'?'Add content':'Añadir contenido',exact:true}).click();
     const dialog=page.locator('dialog.p2lrn-activity-picker');
     await dialog.waitFor({state:'visible',timeout:10000});
+    if(language==='en')assert.match(await dialog.locator('input[type=search]').getAttribute('placeholder'),/Search lessons/,'Picker search placeholder not translated');
     const samePage=dialog.locator('input[type="radio"][value="same-page"]');
     assert.equal(await samePage.isDisabled(),false,'Same-page authoring is unavailable: '+language);
     await samePage.check();
@@ -287,6 +297,9 @@ async function studioChrome(language){
     await page.waitForFunction(()=>/^(Memory|Memoria)$/.test(document.querySelector('h1.studio-title')?.textContent?.trim()??''),null,{timeout:15000});
     assert.equal((await page.locator('h1.studio-title').textContent()).trim(),language==='en'?'Memory':'Memoria');
     assert.equal(await dialog.evaluate(el=>el.open),false,'Activity picker did not close');
+    const treeTitles=await page.locator('.studio-tree-node .title').allTextContents();
+    assert.ok(treeTitles.includes(language==='en'?'Activity page':'Página de actividades'),
+      'Stacked page should not reuse the lesson title: '+treeTitles.join(', '));
     await page.screenshot({path:join(evidence,prefix+'-activity.png'),fullPage:false});
     console.log('BROWSER_STUDIO_'+language.toUpperCase()+'_PICKER=PASS');
   }catch(error){
