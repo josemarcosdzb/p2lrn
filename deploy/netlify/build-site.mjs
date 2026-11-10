@@ -345,6 +345,26 @@ const htmlFiles = allHtmlFiles.filter((path)=>!isCorrespondingSourcePath(path)
   && !/^google[0-9a-f]+\.html$/i.test(relative(outputRoot,path).replaceAll('\\','/')));
 const bilingualSite=htmlFiles.some(path=>relative(outputRoot,path).replaceAll('\\','/').startsWith('en/'));
 
+// Keep the Supabase/Turnstile integration physically limited to both contact pages.
+// The production English route is /en/contact/ after legacy route relocation.
+const contactOnlyPath='/assets/contact/contact-form.js';
+const contactPages=new Set(['contacto/index.html','en/contact/index.html']);
+if(!await exists(join(outputRoot,'assets','contact','contact-form.js')))
+  throw new Error('Missing isolated contact form bundle');
+for(const htmlPath of htmlFiles){
+  const rel=relative(outputRoot,htmlPath).replaceAll('\\','/');
+  const html=await readFile(htmlPath,'utf8');
+  const count=(html.match(/<script\b[^>]*\bsrc=["']\/assets\/contact\/contact-form\.js["'][^>]*><\/script>/gi)||[]).length;
+  if(count!==(contactPages.has(rel)?1:0))
+    throw new Error('Contact-only JS unexpectedly loaded or missing: '+rel);
+}
+for(const publicJs of ['p2lrn.js','en/p2lrn.js']){
+  const shared=await readFile(join(outputRoot,...publicJs.split('/')),'utf8');
+  if(/\bSUPABASE_|p2lrn-contact|data-contact-form|turnstile/i.test(shared))
+    throw new Error('Supabase integration leaked into shared site script: '+publicJs);
+}
+
+
 const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
 const brandHeadFor=(locale='es')=>[
   '<link rel="icon" type="image/png" sizes="96x96" href="/favicon.png">',
