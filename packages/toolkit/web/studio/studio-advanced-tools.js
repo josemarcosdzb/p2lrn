@@ -77,6 +77,15 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
   curve.popup.append(element(doc,'span','p2lrn-ribbon-caption','Curvatura %'),curveInput,
     button(doc,'Aplicar curvatura','curve'));
   objectGroup.append(curve.details);
+  const bezier=actionMenu(doc,'Curva Bézier',[],'bezier');
+  const bezierLeft=numberField(doc,'Altura del primer punto de control',18,0,100);
+  const bezierRight=numberField(doc,'Altura del segundo punto de control',18,0,100);
+  bezierLeft.step='1';bezierRight.step='1';
+  bezier.popup.append(element(doc,'span','p2lrn-ribbon-caption','Curva izquierda'),bezierLeft,
+    button(doc,'Aplicar curva izquierda','bezierLeft'),
+    element(doc,'span','p2lrn-ribbon-caption','Curva derecha'),bezierRight,
+    button(doc,'Aplicar curva derecha','bezierRight'));
+  objectGroup.append(bezier.details);
   const tableGroup=element(doc,'div','p2lrn-ribbon-group p2lrn-context-table');
   tableGroup.setAttribute('role','group');tableGroup.setAttribute('aria-label','Estructura y estilo de tabla');
   const rows=actionMenu(doc,'Filas',[
@@ -125,6 +134,9 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     rotationInput.value=String(Number(node?.dataset?.p2lrnObjectRotation)||0);
     curve.details.hidden=node?.dataset?.p2lrnShape!=='curved-arrow';
     curveInput.value=String(Number(node?.dataset?.p2lrnCurve??75));
+    bezier.details.hidden=node?.dataset?.p2lrnShape!=='bezier-arrow';
+    bezierLeft.value=String(Number(node?.dataset?.p2lrnBezierLeft??18));
+    bezierRight.value=String(Number(node?.dataset?.p2lrnBezierRight??18));
     objectGroup.querySelector('[data-studio-advanced-action=height]').disabled=Boolean(table);
     const width=Math.round(node?.getBoundingClientRect()?.width||420);
     widthInput.value=String(Math.max(120,width));
@@ -187,6 +199,8 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
       action==='height'?Number(heightInput.value):
       action==='rotate'?Number(rotationInput.value):
       action==='curve'?Number(curveInput.value):
+      action==='bezierLeft'?Number(bezierLeft.value):
+      action==='bezierRight'?Number(bezierRight.value):
       action==='rotateLeft'?-15:
       action==='rotateRight'?15:
       action==='cellFill'?cellFill.value:
