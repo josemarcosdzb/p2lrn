@@ -863,7 +863,7 @@ async function browserExclusiveCarry(){
       correctOrder:['a','b','c']};
     const order=buildOrderingControls({trial:ordering,runtime,scene:game,status});
     const orderResult=await exercise('ordering-object',order);
-    select(order,'ordering-slot',0);
+    order.interact({kind:'ordering-slot',index:0});
     if(runtime.patches.length!==0)throw Error('Partial ordering accidentally awarded a classification score');
     game.reset();
     game.resetPlayer();
