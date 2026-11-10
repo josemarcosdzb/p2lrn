@@ -95,6 +95,12 @@ export function buildOrderingControls({trial,runtime,scene,status}) {
   const randomPositions=randomRoomPositions(trial.objects.length,seedText(`order:${trial.questionId}:${trial.prompt}`));
   const staging=new Map(trial.objects.map((item,index)=>[item.id,randomPositions[index]]));
   let selected=null;
+  function releaseSelected(){
+    if(selected===null)return;
+    scene.carry(`order:${selected}`,false);
+    scene.highlight(`order:${selected}`,false);
+    selected=null;
+  }
 
   trial.objects.forEach((item,index)=>{
     scene.addBox({
@@ -207,6 +213,9 @@ export function buildOrderingControls({trial,runtime,scene,status}) {
       if(meta.kind!=='ordering-object')return false;
       if(phase==='start'){
         if(runtime.state.completed)return false;
+        // A pointer drag can start while another object is click-carried.
+        // Release that object before manipulating the new one.
+        releaseSelected();
         selected=meta.id;
         scene.carry(`order:${meta.id}`,false);
         scene.highlight(`order:${meta.id}`,true);
@@ -235,7 +244,7 @@ export function buildOrderingControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='ordering-object'){
-        if(selected&&selected!==meta.id){setText(status,playerUiText('Ya llevas un objeto. Colócalo antes de coger otro.'));return true;}
+        if(selected!==null&&selected!==meta.id)releaseSelected();
         selected=meta.id;
         scene.highlight(`order:${selected}`,true);
         scene.carry(`order:${selected}`,true);
@@ -410,6 +419,12 @@ export function buildClassificationControls({trial,runtime,scene,status}) {
   const randomPositions=randomRoomPositions(trial.objects.length,seedText(`classify:${trial.questionId}:${trial.prompt}`),{zMin:2.5,zMax:9.2});
   const staging=new Map(trial.objects.map((item,index)=>[item.id,randomPositions[index]]));
   let selected=null;
+  function releaseSelected(){
+    if(selected===null)return;
+    scene.carry(`classify:${selected}`,false);
+    scene.highlight(`classify:${selected}`,false);
+    selected=null;
+  }
 
   trial.categories.forEach((category,index)=>{
     scene.addZone({
@@ -487,6 +502,7 @@ export function buildClassificationControls({trial,runtime,scene,status}) {
       if(meta.kind!=='classification-object')return false;
       if(phase==='start'){
         if(runtime.state.completed||values[meta.id])return false;
+        releaseSelected();
         selected=meta.id;
         scene.carry(`classify:${meta.id}`,false);
         scene.highlight(`classify:${meta.id}`,true);
@@ -515,7 +531,11 @@ export function buildClassificationControls({trial,runtime,scene,status}) {
     interact(meta) {
       if(runtime.state.completed){setText(status,playerUiText('Esta actividad ya está finalizada.'));return true;}
       if(meta.kind==='classification-object'){
-        if(selected&&selected!==meta.id){setText(status,playerUiText('Ya llevas un objeto. Deposítalo antes de coger otro.'));return true;}
+        if(values[meta.id]){
+          setText(status,playerUiText('Objeto clasificado correctamente.'));
+          return true;
+        }
+        if(selected!==null&&selected!==meta.id)releaseSelected();
         selected=meta.id;
         scene.highlight(`classify:${selected}`,true);
         scene.carry(`classify:${selected}`,true);
