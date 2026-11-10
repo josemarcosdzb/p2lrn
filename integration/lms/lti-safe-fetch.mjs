@@ -30,6 +30,27 @@ export function publicLmsAddress(value){
  return false;
 }
 
+// Only the approved LMS registry may select a JWKS endpoint. JWT header
+// jku/x5u values are never used to pick a network destination.
+export function trustedLmsJwksUrl(value,registration,{allowInsecureLoopback=false}={}){
+ if(value==null||value==='')return undefined;
+ if(typeof value!=='string'||value.length>4096)throw new Error('LTI_UNTRUSTED_JWKS_URL');
+ let u;
+ try{u=new URL(value);}catch{throw new Error('LTI_UNTRUSTED_JWKS_URL');}
+ const dev=allowInsecureLoopback&&LOCAL.test(u.hostname);
+ if((u.protocol!=='https:'&&!(dev&&u.protocol==='http:'))||
+    u.username||u.password||u.hash||!u.hostname||
+    (isIP(u.hostname)&&!dev))throw new Error('LTI_UNTRUSTED_JWKS_URL');
+ const origins=new Set();
+ try{
+  for(const field of ['issuer','authUrl','tokenUrl']){
+   if(registration?.[field])origins.add(new URL(registration[field]).origin);
+  }
+ }catch{throw new Error('LTI_UNTRUSTED_JWKS_URL');}
+ if(!origins.has(u.origin))throw new Error('LTI_UNTRUSTED_JWKS_ORIGIN');
+ return u.href;
+}
+
 export async function validatedLmsAddresses(url,{lookup=dnsLookup,allowInsecureLoopback=false}={}){
  const u=url instanceof URL?url:new URL(url);
  const dev=allowInsecureLoopback&&LOCAL.test(u.hostname);
