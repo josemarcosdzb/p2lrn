@@ -168,6 +168,7 @@
 
   const PUBLIC_NAV = [
     { label: 'Studio', href: '/studio/', active: ['/studio/'] },
+    { label: 'Visor', href: '/demo/', active: ['/demo/'] },
     {
       label: 'Soluciones',
       active: ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'],
@@ -224,6 +225,7 @@
         ['/docs/cli/','CLI'],
       ],
     },
+    { label: 'Visor', href: '/demo/', active: ['/demo/'] },
     {
       label: 'Reproducir',
       active: ['/docs/player/','/demo/','/juegos-educativos-3d/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],

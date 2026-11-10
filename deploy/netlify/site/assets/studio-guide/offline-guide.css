@@ -1,0 +1,15 @@
+/* Actual Studio offline form: image, precise settings and responsive reading. */
+.offline-config-section{scroll-margin-top:104px}
+.offline-config-section>p{max-width:75ch;line-height:1.72}
+.offline-form-figure{max-width:780px;margin:1.6rem auto 2rem;padding:clamp(.6rem,1.4vw,1.1rem);background:#f7faff;border:1px solid #d5e1ee;border-radius:16px}
+.offline-form-figure>a{display:block;max-width:720px;margin:auto;border:1px solid #c5d3e3;border-radius:10px;overflow:hidden;background:#fff;outline-offset:4px}
+.offline-form-figure>a:focus-visible{outline:3px solid #1764ae}
+.offline-form-figure img{display:block;width:100%;height:auto;object-fit:contain}
+.offline-form-figure figcaption{margin:.75rem 0 .2rem;text-align:center;color:#52677f;font-size:.87rem;line-height:1.55}
+.offline-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:1.3rem 0 1.6rem}
+.offline-field{min-width:0;padding:1.1rem 1.25rem;border:1px solid #dce4ee;border-radius:12px;background:#fff;box-shadow:0 7px 22px rgba(19,43,72,.035)}
+.offline-field dt{font-weight:750;font-size:1rem;line-height:1.45;color:#13253d}
+.offline-field dd{margin:.55rem 0 0;color:#3c526e;line-height:1.65;font-size:.95rem}
+.offline-field-number{font:750 .75rem/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;color:#1d5a98;margin-right:.4rem}
+.offline-config-section .offline-field-note{max-width:none;padding:1rem 1.2rem;border-left:3px solid #336dae;background:#f0f5fc;border-radius:0 9px 9px 0;margin:1rem 0;line-height:1.65;color:#243a52}
+@media(max-width:740px){.offline-field-grid{grid-template-columns:1fr}.offline-field{padding:1rem}.offline-form-figure{padding:.5rem}.offline-form-figure figcaption{font-size:.83rem}}
