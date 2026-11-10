@@ -22,6 +22,8 @@ on:
       - 'packages/toolkit/test/quest-3d-*.test.mjs'
       - 'deploy/netlify/site/studio/**'
       - 'scripts/verify-studio-unified-ui.mjs'
+      - 'scripts/create-studio-complete-activities-demo.mjs'
+      - 'scripts/record-studio-complete-activities-demo.mjs'
       - 'scripts/verify-studio-dnd-lms-csp.mjs'
       - 'packages/player/scripts/build-dist.mjs'
       - 'scripts/verify-local-viewer.mjs'
@@ -114,6 +116,31 @@ jobs:
 
       - name: Real Chrome / Edge Studio UI and portable course round-trip
         run: node scripts/verify-studio-unified-ui.mjs
+      - name: Build and validate a complete interactive demo course
+        shell: powershell
+        run: |
+          node scripts/create-studio-complete-activities-demo.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Prepare real local Player and Studio for the demo recording
+        shell: powershell
+        run: |
+          node scripts/prepare-quest3d-browser-qa.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Record actual Studio and student Player walkthrough
+        shell: powershell
+        run: |
+          node --check scripts/record-studio-complete-activities-demo.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/record-studio-complete-activities-demo.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload complete demo course and quality report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: p2lrn-studio-demo-integral
+          path: .visual-evidence/studio-curso-integral/*
+          if-no-files-found: warn
+          retention-days: 7
   quest3d-browser:
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 25

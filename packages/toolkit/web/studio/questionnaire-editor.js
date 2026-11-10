@@ -419,18 +419,20 @@ export function renderQuestionnaireVisualEditor(container,{model,activityId,payl
         ]);
         mode.setAttribute('aria-label','Tipo de pista del rosco');
         const preview=node('p','q-help');
-        const saveRosco=()=>{
-          if(letter.value){question.roscoLetter=letter.value;question.roscoMode=mode.value;}
-          else{delete question.roscoLetter;delete question.roscoMode;}
+        const refreshRoscoPreview=()=>{
           preview.textContent=question.roscoLetter
             ?(question.roscoMode==='starts'?'Empieza por ':'Contiene la ')+question.roscoLetter+' — '+question.prompt
             :'Letra automática: el Player la asignará según la respuesta.';
-          commit();
+        };
+        const saveRosco=()=>{
+          if(letter.value){question.roscoLetter=letter.value;question.roscoMode=mode.value;}
+          else{delete question.roscoLetter;delete question.roscoMode;}
+          refreshRoscoPreview();commit();
         };
         letter.addEventListener('change',saveRosco);
         mode.addEventListener('change',saveRosco);
         rosco.append(labeled('Letra de esta pregunta',letter),labeled('Condición',mode),preview);
-        saveRosco();
+        refreshRoscoPreview();
         body.append(rosco);
       }
       card.append(body);list.append(card);
