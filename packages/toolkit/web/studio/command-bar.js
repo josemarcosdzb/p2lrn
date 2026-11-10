@@ -425,7 +425,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     if(!hasDocument){onStatus('Crea o abre un curso primero.');return;}
     if(!activityDialog){
       const dialog=node(doc,'dialog','p2lrn-activity-picker');
-      dialog.setAttribute('aria-label','Añadir contenido al curso');
+      dialog.setAttribute('aria-label',studioUiText('Añadir contenido al curso',doc));
       const header=node(doc,'header','p2lrn-activity-picker-head');
       const heading=node(doc,'div');
       heading.append(node(doc,'h2','','Añadir contenido'),node(doc,'p','','Elige una actividad o un recurso para el curso.'));
@@ -433,8 +433,8 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
       close.addEventListener('click',()=>dialog.close());
       header.append(heading,close);
       const search=node(doc,'input','p2lrn-activity-picker-search');
-      search.type='search';search.placeholder='Buscar lecciones, juegos, preguntas…';
-      search.setAttribute('aria-label','Buscar contenido');
+      search.type='search';search.placeholder=studioUiText('Buscar lecciones, juegos, preguntas…',doc);
+      search.setAttribute('aria-label',studioUiText('Buscar contenido',doc));
       const placement=node(doc,'fieldset','p2lrn-activity-placement');
     const legend=node(doc,'legend','','\u00bfD\u00f3nde quieres a\u00f1adirlo?');
     placement.append(legend);
