@@ -16,12 +16,13 @@ const binding={id:issueP2LRNBindingId(),tenantId:'school1',registrationId:'reg1'
   deploymentId:'deployment-1',packageId:'urn:uuid:course1',contentRoot:root,
   entityId:'urn:uuid:unit1',status:'PUBLISHED'};
 const now=1800000000;
-function createFixture(){
+function createFixture({dynamicCanvas=false}={}){
+ const registration={...reg,dynamicCanvas};
  const states=new Map();
  let record;
  const tool={privateKeyPem:toolKey.export({format:'pem',type:'pkcs8'}),kid:'tool-1'};
  const provider=createP2LRNLtiProvider({
-   getRegistration:async({issuer:iss,clientId:id})=>iss===issuer&&id===clientId?reg:null,
+   getRegistration:async({issuer:iss,clientId:id})=>iss===issuer&&id===clientId?registration:null,
    transactions:{
      async create(tx){record=tx;states.set(tx.stateHash,tx);},
      async consume(hash){let v=states.get(hash);states.delete(hash);return v??null;}
@@ -135,4 +136,16 @@ test('signed Deep Linking is restricted to approved instructor and registered re
   idToken:denied.token({nonce:s.nonce,kind:'LtiDeepLinkingRequest',
     changes:{'https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings':{
       deep_link_return_url:'https://evil.example/return',accept_types:['ltiResourceLink']}}})}),/origin/);
+});
+
+test('dynamic Canvas Deep Linking refuses unregistered callback origins',async()=>{
+ const f=createFixture({dynamicCanvas:true});
+ const {state,nonce}=await f.start('LtiDeepLinkingRequest');
+ await assert.rejects(f.provider.verifyLaunch({state,browserBinding:'browser-secret',
+  idToken:f.token({nonce,kind:'LtiDeepLinkingRequest',changes:{
+   'https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings':{
+    deep_link_return_url:'https://unauthorized.example/callback',
+    accept_types:['ltiResourceLink']
+   }
+  }})}),/origin/);
 });
