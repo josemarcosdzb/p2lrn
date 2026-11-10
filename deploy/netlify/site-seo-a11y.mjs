@@ -48,12 +48,12 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "description": "Understand P2LRN courses: the .p2lrn package, manifest, lessons, resources, Player and integration with your learning platform."
   },
   "/docs/juegos-3d/": {
-    "title": "Juegos educativos 3D: actividades y ejemplos | P2LRN",
-    "description": "Descubre cómo crear y reproducir juegos educativos 3D con P2LRN, incluyendo actividades de ordenar, relacionar y clasificar en tus cursos."
+    "title": "Juegos 3D educativos: crear y practicar | P2LRN",
+    "description": "Configura juegos educativos 3D de ordenar, relacionar, clasificar y ensamblar. Sigue capturas reales del editor y conoce la experiencia del alumno."
   },
   "/en/docs/3d-games/": {
-    "title": "3D educational games: activities and examples | P2LRN",
-    "description": "Explore how to create and play 3D educational games with P2LRN, including ordering, matching and classification activities in your courses."
+    "title": "3D learning games: create and practise | P2LRN",
+    "description": "Set up 3D ordering, matching, classification and assembly activities. Follow real editor screenshots and see how learners use the games."
   },
   "/docs/formato/": {
     "title": "Formato .p2lrn: estructura de un curso | P2LRN",
