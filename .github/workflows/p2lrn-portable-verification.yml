@@ -95,6 +95,37 @@ jobs:
       - name: Run genuine MySQL and MariaDB storage, grades and restart checks
         run: node --test integration/lms/lti-mysql-live.test.mjs
 
+  sqlserver-live:
+    name: LTI real Microsoft SQL Server 2022 database and AGS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: 'P2lrn_Test_2026_Secure!'
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "bash -c 'echo > /dev/tcp/127.0.0.1/1433'"
+          --health-interval 8s --health-timeout 5s --health-retries 30
+    env:
+      P2LRN_TEST_SQLSERVER_URL: 'sqlserver://sa:P2lrn_Test_2026_Secure%21@127.0.0.1:1433/p2lrn_test?encrypt=false&trustServerCertificate=true'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - name: Install Microsoft SQL Server driver
+        working-directory: integration/lms
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Create and exercise real SQL Server database, courses, sessions and approved grades
+        run: node --test integration/lms/lti-sqlserver-live.test.mjs
+
   toolkit-security:
     name: Toolkit ZIP, Player runtime security and Creator
     runs-on: ubuntu-latest
