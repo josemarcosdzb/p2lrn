@@ -490,6 +490,17 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       const y=safeDividerY(el,pos.y+offset.y);
       setPosition(el,pos.x+offset.x,y);ensureScrollRoom(el);change();return el;
     }
+    if(action==='cornerRadius'){
+      if(!isDiagramChild(el))
+        throw new Error('Selecciona un panel o figura dentro del lienzo.');
+      const px=Number(value);
+      if(!Number.isFinite(px)||px<0||px>999)
+        throw new RangeError('Radio de esquina válido: 0 a 999 píxeles.');
+      el.style.borderRadius=px.toFixed(1)+'px';
+      const art=el.querySelector(':scope > [data-p2lrn-shape-art]');
+      if(art)art.style.borderRadius=px.toFixed(1)+'px';
+      change();return el;
+    }
     if(action==='diagramWidth'||action==='diagramHeight'){
       if(!isDiagramChild(el))throw new Error('Selecciona un objeto del lienzo.');
       const pct=Number(value);
