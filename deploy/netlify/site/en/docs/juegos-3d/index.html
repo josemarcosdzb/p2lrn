@@ -4,7 +4,7 @@
   <meta name="theme-color" content="#0d1117">
   <meta name="description" content="P2LRN 3D games with Three.js, Rapier and order, relate and classify mechanics.">
   <title>3D Games — P2LRN</title>
-  <link rel="stylesheet" href="/p2lrn.css"><link rel="stylesheet" href="/assets/studio-guide/guide.css">
+  <link rel="stylesheet" href="/p2lrn.css"><link rel="stylesheet" href="/assets/studio-guide/activity-guide.css"><link rel="stylesheet" href="/assets/studio-guide/guide.css">
   <script src="/en/p2lrn.js" defer=""></script>
 </head>
 <body><a class="skip-link" href="#contenido">Skip to content</a>
@@ -24,22 +24,19 @@
       <h1>Portable 3D games</h1>
       <p>The P2LRN 3D environment uses Three.js for the scene and Rapier for the physics, with the Player's own integration layer.</p>
     </header>
-<section class="doc-section studio-guide-section" id="capturas-juegos-3d" aria-labelledby="capturas-juegos-3d-heading"><p class="studio-guide-eyebrow">3D / STUDIO</p><h2 id="capturas-juegos-3d-heading">3D games: available Studio menu controls</h2><p>The English dialog has 3D sorting, matching and classification. Assembly 3D is absent from the inspected English interface. These are menu captures, not gameplay.</p><div class="studio-guide-3d-grid">
-<article class="studio-guide-card"><span class="studio-guide-chip">STUDIO / MENU</span>
-<figure><a href="/assets/studio-guide/en-3d-sort-menu.webp" class="studio-guide-image-link" target="_blank" rel="noopener noreferrer" aria-label="Zoom screenshot - 3D sorting"><img src="/assets/studio-guide/en-3d-sort-menu.webp" width="170" height="59" alt="Actual English 3D game (sort) menu item; gameplay unverified." loading="lazy" decoding="async"></a></figure>
-<h3>3D sorting</h3><p>Actual English 3D game (sort) menu item; gameplay unverified.</p></article>
-<article class="studio-guide-card"><span class="studio-guide-chip">STUDIO / MENU</span>
-<figure><a href="/assets/studio-guide/en-3d-match-menu.webp" class="studio-guide-image-link" target="_blank" rel="noopener noreferrer" aria-label="Zoom screenshot - 3D matching"><img src="/assets/studio-guide/en-3d-match-menu.webp" width="170" height="59" alt="Actual English 3D matching menu item; gameplay unverified." loading="lazy" decoding="async"></a></figure>
-<h3>3D matching</h3><p>Actual English 3D matching menu item; gameplay unverified.</p></article>
-<article class="studio-guide-card"><span class="studio-guide-chip">STUDIO / MENU</span>
-<figure><a href="/assets/studio-guide/en-3d-classify-menu.webp" class="studio-guide-image-link" target="_blank" rel="noopener noreferrer" aria-label="Zoom screenshot - 3D classification"><img src="/assets/studio-guide/en-3d-classify-menu.webp" width="170" height="59" alt="Actual English 3D classification menu item; gameplay unverified." loading="lazy" decoding="async"></a></figure>
-<h3>3D classification</h3><p>Actual English 3D classification menu item; gameplay unverified.</p></article>
-</div><p class="studio-guide-warning">3D interaction, correction and scoring remain unverified. Assembly 3D was not present in the actual English menu.</p></section>
-
-
-
-    <section class="doc-section">
-      <h2>Architecture</h2>
+<nav class="p2lrn-audience-paths" aria-label="Documentation audience"><a href="#crear-con-studio"><strong>Create with Studio</strong><span>No programming required.</span></a><a href="#referencia-desarrolladores"><strong>For developers</strong><span>Rendering, physics, JSON and Toolkit.</span></a></nav><section class="doc-section p2lrn-3d-studio" id="crear-con-studio"><p class="p2lrn-audience-label">FOR TEACHERS AND CREATORS</p><h2>Build a 3D activity from Studio</h2><p>Start in the visual editor. These are the four entries currently present in Studio's Games menu; choosing an entry alone does not certify scoring or a complete learner run.</p><figure class="p2lrn-activity-screenshot"><a href="/assets/studio-guide/selector-juegos-en.webp" target="_blank" rel="noopener noreferrer"><img src="/assets/studio-guide/selector-juegos-en.webp" width="895" height="233" loading="lazy" decoding="async" alt="Real Games menu with 3D modes"></a><figcaption>Actual Studio Games menu. Select to enlarge.</figcaption></figure><dl class="p2lrn-3d-modes"><div><dt>3D sorting</dt><dd>Set the order and target positions of objects.</dd></div><div><dt>3D matching</dt><dd>Connect the correct objects or nodes.</dd></div><div><dt>3D classification</dt><dd>Place each object in its proper category.</dd></div><div><dt>3D assembly</dt><dd>Define the pieces and the positions where they belong.</dd></div></dl><ol class="p2lrn-activity-steps"><li><strong>Choose the activity</strong><span>Open your course in Studio. Select the unit or lesson, then choose Add content → Games and one of the four 3D modes.</span></li><li><strong>Configure the task</strong><span>For sorting, matching and classification, edit each question, its objects and the correct solution. 3D assembly has a separate piece-and-position setup.</span></li><li><strong>Check the learner experience</strong><span>Open Learner preview. Verify that the instructions, positions and accessible controls work with keyboard and touch as appropriate.</span></li><li><strong>Export and reopen</strong><span>Save or download the .p2lrn file. Open that file in Viewer and complete the activity before sharing it.</span></li></ol><p>Changing the question type can replace its type-specific elements and solutions. Review the answers again before export.</p><p><a href="/en/studio/">Open Studio</a> · <a href="/en/demo/">Open Viewer</a></p></section><section class="doc-section">
+      <h2>Accessible interaction and alternatives</h2>
+      <p>The 3D scene is not the only control. Sorting, matching and classification maintain equivalent HTML controls next to the canvas. The learner can complete the same activity without depending exclusively on graphic precision or 3D pointer.</p>
+    </section><section class="doc-section">
+      <h2>Runnable example</h2>
+      <p>The canonical example contains all three mechanics in a single, strictly validated package.</p>
+      <div class="example-actions">
+        <a class="button primary" href="/en/studio/">Create in Studio</a>
+        <a class="button" href="/en/studio/">Create with Studio</a>
+        <a class="button" href="/examples/source/developer-game-3d/create-game-3d.mjs">Creation code</a>
+      </div>
+    </section><section class="doc-section p2lrn-dev-reference" id="referencia-desarrolladores"><h2>For developers: Three.js, Rapier, JSON and Toolkit</h2><p>Architecture and code examples are separate from the teacher's course-creation flow.</p><details class="p2lrn-dev-details"><summary>Open 3D developer documentation</summary><section class="p2lrn-dev-chapter">
+      <h3>Architecture</h3>
       <div class="integration-chain">
         <span>native questionnaire</span><b>→</b>
         <span>game compiler</span><b>→</b>
@@ -49,26 +46,15 @@
         <span>P2LRN events / score</span>
       </div>
       <p>Educational logic is separated from rendering and physics. Three.js draw; Rapier calculates bodies and collisions; The quiz runtime maintains answers, scores, progress, and attempts.</p>
-    </section>
-
-    <section class="doc-section">
-      <h2>Available mechanics</h2>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Available mechanics</h3>
       <div class="reference-table">
         <div><code>ordering-3d</code><p>Physical objects that are placed in ordered positions.</p></div>
         <div><code>matching-3d</code><p>Left and right nodes that connect without altering the response model.</p></div>
         <div><code>classification-3d</code><p>Objects that are deposited in categories. It is a native type of the P2LRN questionnaire.</p></div>
       </div>
-    </section>
-
-    <section class="doc-section">
-      <h2>Create and edit 3D games from Studio</h2>
-      <p>In <strong>Add content → Games</strong> selects <strong>3D game (sort)</strong>, <strong>3D matching</strong> or <strong>3D classification</strong>. They all use the same Player 3D engine; They are not different engines.</p>
-      <p>Open the activity in the course tree. In each question, the field <strong>Type</strong> permite cambiar entre <strong>Ordering</strong>, <strong>Matching</strong> and <strong>Classification</strong>. You can combine questions from the three modalities in the same activity.</p>
-      <p>Changing the type of a question replaces its specific elements and solutions, because their formats are different. The personalized utterance, tense, and punctuation are preserved; check the new answers before exporting the file <code>.p2lrn</code>. Test the result with <strong>Learner preview</strong>.</p>
-    </section>
-
-    <section class="doc-section">
-      <h2>Classification question</h2><p>This example shows the form of a rating question that can be represented within a 3D experience.</p>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Classification question</h3><p>This example shows the form of a rating question that can be represented within a 3D experience.</p>
       <div class="codebox">
         <div class="codebox-head"><span>questionnaire.json</span><button type="button" data-copy="">Copy</button></div>
         <pre><code>{
@@ -94,10 +80,8 @@
 }</code></pre>
       </div>
       <p>The same type can be resolved with the standard renderer using accessible selectors or with the 3D renderer. The logical answer remains <code>{ classifications: { itemId: categoryId } }</code>.</p>
-    </section>
-
-    <section class="doc-section">
-      <h2>Create a 3D package</h2><p>If you generate the course by code, add the quiz to the workspace and request the 3D presentation before building the package.</p>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Create a 3D package</h3><p>If you generate the course by code, add the quiz to the workspace and request the 3D presentation before building the package.</p>
       <div class="codebox">
         <div class="codebox-head"><span>Node.js</span><button type="button" data-copy="">Copy</button></div>
         <pre><code>import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
@@ -122,21 +106,17 @@ workspace.build('./quest-3d-course.p2lrn', {
         <strong>Identificador estable</strong>
         <p>The renderer preserves the historical identifier for compatibility <code>3d-order-match</code>, although now it also supports classification.</p>
       </div>
-    </section>
-
-    <section class="doc-section">
-      <h2>Three.js and Rapier are within the distribution</h2>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Three.js and Rapier are within the distribution</h3>
       <p>The Player build fixes and verifies the versions before copying them to <code>dist/vendor/</code>. They are not downloaded from a third-party CDN during gameplay.</p>
       <div class="reference-table">
         <div><code>Three.js 0.186.1</code><p>Scene, camera, lights, materials, raycasting and WebGL.</p></div>
         <div><code>Rapier 3D 0.21.0</code><p>Rigid bodies, colliders, gravity and physical step.</p></div>
         <div><code>no-physics</code><p>Local fallback if the physical engine cannot be initialized; maintains representation and controls.</p></div>
       </div>
-    </section>
-
-    <section class="doc-section">
-      <h2>Logic does not depend on physics</h2>
-      <p>Operations like sorting, connecting, classifying, and ownership live in <code>game-3d-mechanics.js</code>. A change in physical motor does not change the answers or the educational calculation.</p>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Logic does not depend on physics</h3>
+      <p>Operations like sorting, connecting, classifying, and ownership live in <code>game-3d-mechanics.js</code>. A change in physics engine does not change the answers or the educational calculation.</p>
       <div class="doc-terminal">
         <span>separation of concerns</span>
         <pre><code>visual interaction
@@ -149,31 +129,10 @@ questionnaire answer
       ↓
 score / progress / complete</code></pre>
       </div>
-    </section>
-
-    <section class="doc-section">
-      <h2>Accessibility and alternative mode</h2>
-      <p>The 3D scene is not the only control. Sort, relate, and sort maintain equivalent HTML controls next to the canvas. The learner can complete the same activity without depending exclusively on graphic precision or 3D pointer.</p>
-    </section>
-
-    <section class="doc-section">
-      <h2>Runnable example</h2>
-      <p>The canonical example contains all three mechanics in a single, strictly validated package.</p>
-      <div class="example-actions">
-        <a class="button primary" href="/en/studio/">Create in Studio</a>
-        <a class="button" href="/en/studio/">Create with Studio</a>
-        <a class="button" href="/examples/source/developer-game-3d/create-game-3d.mjs">Creation code</a>
-      </div>
-    </section>
-
-    <section class="doc-section">
-      <h2>Limitations</h2>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Limitations</h3>
       <p>This runtime does not yet declare WebXR/Meta Quest or multiplayer sync as a P2LRN capability. The architecture leaves separate physical and mechanical inputs so they can be added later without linking the format to a specific LMS.</p>
-    </section>
-
-    <nav class="doc-pager"><a class="prev" href="/en/docs/questionnaires/3d/"><span>← Previous</span><strong>3D game</strong></a><a class="next" href="/en/docs/ejemplos/"><span>Next →</span><strong>Examples</strong></a></nav>
-
-    <section class="doc-contact compact-contact">
+    </section></details></section><section class="doc-contact compact-contact">
       <h2>Do you need to integrate a new mechanic?</h2>
       <a class="button" href="/en/contacto/">Contact</a>
     </section>
@@ -183,4 +142,4 @@ score / progress / complete</code></pre>
 <footer><strong>P2LRN</strong><span>Portable 3D games</span><div><span data-footer-version="">0.5.0-alpha.11</span><a href="/en/studio/">Viewer</a></div></footer>
 
 
-</body></html>
+<script src="/assets/studio-guide/activity-guide.js" defer></script></body></html>

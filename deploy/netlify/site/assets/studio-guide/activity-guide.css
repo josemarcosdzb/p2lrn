@@ -20,3 +20,9 @@
 .p2lrn-dev-chapter pre,.p2lrn-dev-chapter .codebox{min-width:0;max-width:100%;overflow-x:auto}
 .p2lrn-example-more .doc-section{border:0;padding:1rem 0}
 @media(max-width:690px){.p2lrn-audience-paths{grid-template-columns:1fr}.p2lrn-audience-paths>a+a{border-left:0;border-top:1px solid var(--line);padding-left:0}.p2lrn-activity-steps li{grid-template-columns:1fr!important;gap:.25rem!important}}
+
+.p2lrn-3d-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--line);margin:1.25rem 0}
+.p2lrn-3d-modes>div{padding:.85rem 1rem .9rem 0;border-bottom:1px solid var(--line);min-width:0}
+.p2lrn-3d-modes>div:nth-child(even){border-left:1px solid var(--line);padding-left:1rem}
+.p2lrn-3d-modes dt{font-weight:750;color:var(--ink)}.p2lrn-3d-modes dd{margin:.3rem 0 0;color:var(--muted);font-size:.91rem;line-height:1.55}
+@media(max-width:640px){.p2lrn-3d-modes{grid-template-columns:1fr}.p2lrn-3d-modes>div:nth-child(even){border-left:0;padding-left:0}}
