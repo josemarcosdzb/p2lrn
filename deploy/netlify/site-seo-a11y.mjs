@@ -31,6 +31,22 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "title": "Embed P2LRN Player in HTML using CDN: developer guide",
     "description": "Developer quickstart: download a course, embed Player in HTML, serve the page over HTTP and verify playback."
   },
+  "/docs/desarrolladores/actividades/": {
+    "title": "Referencia técnica de cuestionarios y juegos | P2LRN",
+    "description": "Documentación para desarrolladores: esquemas JSON, validación, puntuación y renderizadores de los juegos P2LRN."
+  },
+  "/en/docs/developers/activities/": {
+    "title": "P2LRN game developer reference: JSON and renderers",
+    "description": "Developer reference for P2LRN games: JSON contracts, validation, scoring and renderers."
+  },
+  "/docs/desarrolladores/juegos-3d/": {
+    "title": "Motor de juegos 3D y arquitectura para desarrolladores",
+    "description": "Referencia de integración 3D de P2LRN: motor, físicas, modelos y contratos técnicos."
+  },
+  "/en/docs/developers/3d-games/": {
+    "title": "P2LRN 3D game engine and developer architecture",
+    "description": "Developer reference for 3D P2LRN: engine, physics, models and integration contracts."
+  },
   "/docs/studio/": {
     "title": "Cómo usar P2LRN Studio: guía visual paso a paso",
     "description": "Guía visual de P2LRN Studio con capturas reales ampliables y pasos para crear un curso, editar lecciones, añadir actividades, probar y exportar .p2lrn."

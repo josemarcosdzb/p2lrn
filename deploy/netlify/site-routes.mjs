@@ -14,6 +14,7 @@ export const ENGLISH_ROUTES=Object.freeze({
   '/docs/desarrolladores/':'/en/docs/developers/',
   '/docs/desarrolladores/primeros-pasos/':'/en/docs/developers/quickstart/',
   '/docs/desarrolladores/actividades/':'/en/docs/developers/activities/',
+  '/docs/desarrolladores/juegos-3d/':'/en/docs/developers/3d-games/',
   '/docs/instalar/':'/en/docs/installation/',
   '/docs/formato/':'/en/docs/file-format/',
   '/docs/formato-portable-cursos-interactivos/':'/en/docs/portable-course-format/',

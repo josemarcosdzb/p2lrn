@@ -548,6 +548,8 @@
 
   const DOC_SIDEBAR_CHILDREN = new Map([
     ['/docs/desarrolladores/',[
+      ['/docs/desarrolladores/actividades/','Referencia técnica de juegos'],
+      ['/docs/desarrolladores/juegos-3d/','Motor 3D para desarrolladores'],
       ['/docs/que-usar/','Mapa técnico de componentes'],
       ['/docs/conceptos/','Conceptos del formato'],
       ['/docs/formato/','Formato P2LRN'],
@@ -585,6 +587,8 @@
     REFERENCIA:'Referencia',
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
+    ['/docs/desarrolladores/actividades/',['/docs/desarrolladores/','Desarrolladores']],
+    ['/docs/desarrolladores/juegos-3d/',['/docs/desarrolladores/','Desarrolladores']],
     ['/docs/que-usar/',['/docs/desarrolladores/','Desarrolladores']],
     ['/docs/conceptos/',['/docs/desarrolladores/','Desarrolladores']],
     ['/docs/formato/',['/docs/desarrolladores/','Desarrolladores']],

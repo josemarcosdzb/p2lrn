@@ -1,0 +1,99 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="P2LRN 3D game developer reference: Three.js, Rapier, renderer integration, models and runtime limits."><title>3D game architecture for developers | P2LRN</title><link rel="stylesheet" href="/p2lrn.css"><script src="/en/p2lrn.js" defer></script></head><body><a class="skip-link" href="#contenido">Skip to content</a><header class="site-header"><a class="brand" href="/en/">P2LRN</a><nav class="nav" id="nav" aria-label="Main navigation"></nav><button type="button" class="menu" data-menu aria-controls="nav" aria-expanded="false">Menu</button></header><main class="doc-main" id="contenido"><aside class="doc-sidebar" aria-label="Documentation navigation"></aside><article class="doc-content"><header class="doc-hero"><p class="eyebrow">DEVELOPERS / 3D</p><h1>3D game runtime and integration</h1><p>Technical guide for developers implementing or integrating 3D mechanics. The Studio teacher guide is a separate page.</p></header><section class="doc-section"><h2>Architecture, content and limits</h2><p>Technical notes for custom 3D integrations.</p><p>For programmatic authoring, see the <a href="/examples/source/developer-game-3d/create-game-3d.mjs">Node.js creation example</a>.</p>
+<section class="p2lrn-dev-chapter">
+      <h3>Architecture</h3>
+      <div class="integration-chain">
+        <span>native questionnaire</span><b>→</b>
+        <span>game compiler</span><b>→</b>
+        <span>3D mechanics</span><b>→</b>
+        <span>Three.js</span><b>→</b>
+        <span>Rapier</span><b>→</b>
+        <span>P2LRN events / score</span>
+      </div>
+      <p>Educational logic is separated from rendering and physics. Three.js draw; Rapier calculates bodies and collisions; The quiz runtime maintains answers, scores, progress, and attempts.</p>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Available mechanics</h3>
+      <div class="reference-table">
+        <div><code>ordering-3d</code><p>Physical objects that are placed in ordered positions.</p></div>
+        <div><code>matching-3d</code><p>Left and right nodes that connect without altering the response model.</p></div>
+        <div><code>classification-3d</code><p>Objects that are deposited in categories. It is a native type of the P2LRN questionnaire.</p></div>
+      </div>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Classification question</h3><p>This example shows the form of a rating question that can be represented within a 3D experience.</p>
+      <div class="codebox">
+        <div class="codebox-head"><span>questionnaire.json</span><button type="button" data-copy="">Copy</button></div>
+        <pre><code>{
+  "id": "classify",
+  "type": "classification",
+  "prompt": "Classify the items by type.",
+  "points": 4,
+  "required": true,
+  "items": [
+    {"id": "dog", "text": "Dog"},
+    {"id": "oak", "text": "Oak"}
+  ],
+  "categories": [
+    {"id": "animal", "text": "Animal"},
+    {"id": "plant", "text": "Plant"}
+  ],
+  "solution": {
+    "assignments": [
+      {"item": "dog", "category": "animal"},
+      {"item": "oak", "category": "plant"}
+    ]
+  }
+}</code></pre>
+      </div>
+      <p>The same type can be resolved with the standard renderer using accessible selectors or with the 3D renderer. The logical answer remains <code>{ classifications: { itemId: categoryId } }</code>.</p>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Create a 3D package</h3><p>If you generate the course by code, add the quiz to the workspace and request the 3D presentation before building the package.</p>
+      <div class="codebox">
+        <div class="codebox-head"><span>Node.js</span><button type="button" data-copy="">Copy</button></div>
+        <pre><code>import {P2LRNAuthoringWorkspace} from '@p2lrn/toolkit/authoring';
+
+const workspace = P2LRNAuthoringWorkspace.create('./workspace', {
+  title: 'Quest 3D portable',
+  language: 'en'
+});
+
+workspace.addQuestionnaire({
+  source: './quest-3d.json',
+  key: 'quest-3d',
+  title: 'Laboratorio Quest 3D',
+  renderer: 'https://p2lrn.org/renderer/questionnaire/3d-order-match'
+});
+
+workspace.build('./quest-3d-course.p2lrn', {
+  strictProfiles: true
+});</code></pre>
+      </div>
+      <div class="doc-callout">
+        <strong>Identificador estable</strong>
+        <p>The renderer preserves the historical identifier for compatibility <code>3d-order-match</code>, although now it also supports classification.</p>
+      </div>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Three.js and Rapier are within the distribution</h3>
+      <p>The Player build fixes and verifies the versions before copying them to <code>dist/vendor/</code>. They are not downloaded from a third-party CDN during gameplay.</p>
+      <div class="reference-table">
+        <div><code>Three.js 0.186.1</code><p>Scene, camera, lights, materials, raycasting and WebGL.</p></div>
+        <div><code>Rapier 3D 0.21.0</code><p>Rigid bodies, colliders, gravity and physical step.</p></div>
+        <div><code>no-physics</code><p>Local fallback if the physical engine cannot be initialized; maintains representation and controls.</p></div>
+      </div>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Logic does not depend on physics</h3>
+      <p>Operations like sorting, connecting, classifying, and ownership live in <code>game-3d-mechanics.js</code>. A change in physics engine does not change the answers or the educational calculation.</p>
+      <div class="doc-terminal">
+        <span>separation of concerns</span>
+        <pre><code>visual interaction
+      ↓
+{ kind: "classification-set",
+  itemId: "dog",
+  categoryId: "animal" }
+      ↓
+questionnaire answer
+      ↓
+score / progress / complete</code></pre>
+      </div>
+    </section><section class="p2lrn-dev-chapter">
+      <h3>Limitations</h3>
+      <p>This runtime does not yet declare WebXR/Meta Quest or multiplayer sync as a P2LRN capability. The architecture leaves separate physical and mechanical inputs so they can be added later without linking the format to a specific LMS.</p>
+    </section></section><section class="doc-section"><h2>Teacher authoring and testing</h2><p>To configure a 3D activity using the editor, follow the step-by-step teacher guide and check the learner preview before publishing.</p><div class="example-actions"><a class="button" href="/en/docs/3d-games/">3D teacher guide</a></div></section><nav class="doc-pager"><a class="prev" href="/en/docs/developers/"><span>← Previous</span><strong>Developers</strong></a><a class="next" href="/en/docs/developers/activities/"><span>Next →</span><strong>Game data contracts</strong></a></nav></article></main><footer><strong>P2LRN</strong><span>Developer documentation</span></footer></body></html>
