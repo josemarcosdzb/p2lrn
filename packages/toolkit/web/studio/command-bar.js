@@ -798,8 +798,14 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     if(!block||!s.contains(block)){onStatus('Selecciona un bloque visual antes de cambiar su fondo.');return;}
     const art=block.querySelector?.('[data-p2lrn-shape-art]');
     if(art){
-      if(['line','curve','wave'].includes(art.dataset.p2lrnShapeArt))art.style.borderBottomColor=color;
-      else art.style.backgroundColor=color;
+      if(['line','curve','wave','curved-arrow'].includes(art.dataset.p2lrnShapeArt)){
+        art.style.borderBottomColor=color;
+        if(art.dataset.p2lrnShapeArt==='curved-arrow'){
+          art.style.borderRightColor=color;
+          const tip=art.querySelector('[data-p2lrn-connector-tip]');
+          if(tip)tip.style.backgroundColor=color;
+        }
+      }else art.style.backgroundColor=color;
     }else block.style.backgroundColor=color;
     changed(s);
     onStatus('Diseño del bloque actualizado.');
