@@ -230,7 +230,7 @@ function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
  return reg;
 }
 export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindHost='127.0.0.1',
- fetchImpl,lookup,allowInsecureLoopback=false,adminScopes=null}){
+ fetchImpl,lookup,allowInsecureLoopback=false,adminScopes=null,dbEngine='sqlite',dbUrl}){
  valid(dataDir,'dataDir',4096);valid(baseUrl,'baseUrl');
  if(!tool||typeof tool.privateKeyPem!=='string'||!tool.kid)throw new TypeError('Persistent P2LRN RSA tool identity required');
  if(typeof adminToken!=='string'||adminToken.length<32)throw new TypeError('Secure P2LRN admin token must contain at least 32 characters');
@@ -261,7 +261,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  const isLmsCohost=(reg,target)=>localHttp&&new URL(reg.issuer).origin===new URL(target).origin;
  const root=resolve(dataDir),packages=join(root,'packages');
  mkdirSync(packages,{recursive:true});
- const store=createLtiStore(join(root,'lti.sqlite'));
+ const store=createLtiStore(join(root,'lti.sqlite'),{engine:dbEngine,connectionString:dbUrl});
  const adminAuthorizer=createLtiAdminAuthorizer({masterToken:adminToken,scopedKeys:adminScopes});
  let activeUploads=0;
  const maxConcurrentUploads=4;
@@ -880,7 +880,9 @@ if(script){
     : process.env.P2LRN_LTI_ADMIN_TOKEN,
    port,bindHost:process.env.P2LRN_LTI_HOST||'127.0.0.1',allowInsecureLoopback:dev,fetchImpl:outboundLmsFetch,
    adminScopes:process.env.P2LRN_LTI_ADMIN_SCOPES_FILE?
-    JSON.parse(readFileSync(process.env.P2LRN_LTI_ADMIN_SCOPES_FILE,'utf8')):null
+    JSON.parse(readFileSync(process.env.P2LRN_LTI_ADMIN_SCOPES_FILE,'utf8')):null,
+   dbEngine:process.env.P2LRN_LTI_DB_ENGINE||'sqlite',
+   dbUrl:process.env.P2LRN_LTI_DB_URL
   });
   await gateway.listen();
   console.log('P2LRN LTI server ready on '+baseUrl+' (bind port '+port+')');
