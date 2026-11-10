@@ -101,7 +101,7 @@ const RoscoItems=[
   ['Z','contains','Ozono','Gas compuesto por tres átomos de oxígeno.'],
 ];
 const roscoQuestion=(letter,mode,answer,clue)=>({
-  ...text(clue,answer,'rosco-'+letter),roscoLetter:letter,roscoMode:mode,
+  ...text(clue,answer,'rosco-'+(letter==='Ñ'?'ENYE':letter)),roscoLetter:letter,roscoMode:mode,
 });
 const crossWords=[
   ['Astro que ilumina la Tierra.','Sol'],
