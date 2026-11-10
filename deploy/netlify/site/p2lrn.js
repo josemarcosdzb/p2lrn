@@ -179,10 +179,12 @@
     { label: 'Analytics', href: '/analytics/', active: ['/analytics/'] },
     { label: 'Skills para IA', href: '/skills/', active: ['/skills/'] },
     { label: 'Documentación', href: '/docs/', active: ['/docs/'] },
+    { label: 'Desarrolladores', href: '/docs/desarrolladores/', active: ['/docs/desarrolladores/*'] },
     { label: 'Contacto', href: '/contacto/', active: ['/contacto/'] },
   ];
 
   const GLOBAL_NAV = [
+    {label:'Desarrolladores',href:'/docs/desarrolladores/',active:['/docs/desarrolladores/*']},
     {
       label: 'Documentación',
       active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/formato-portable-cursos-interactivos/'],
@@ -488,59 +490,59 @@
   const GLOBAL_SIDEBAR = [
     ['EMPEZAR', [
       ['/docs/','Documentación'],
-      ['/docs/empezar/','Antes de empezar'],
-      ['/docs/empezar-facil/','Empezar fácil'],
-    ]],
-    ['INSTALAR', [
-      ['/docs/instalar/','Instalación'],
-      ['/docs/cdn/','CDN'],
-      ['/docs/cdn/studio/','Studio mediante CDN'],
-        ['/docs/cdn/analytics/','Analytics mediante CDN'],
-      ['/docs/npm/','NPM'],
-      ['/docs/npm/studio/','Studio con NPM'],
-        ['/docs/npm/analytics/','Analytics con NPM'],
+      ['/docs/empezar/','Antes de crear'],
+      ['/docs/empezar-facil/','Primer curso con Studio'],
     ]],
     ['CREAR', [
-      ['/docs/studio/','Studio visual'],
-      ['/docs/entrega-offline/','Entrega offline'],
-      ['/docs/paquetes/','Crear paquetes'],
-      ['/docs/paquetes/multipart/','Multipart'],
-      ['/docs/toolkit/','Toolkit'],
-      ['/docs/cli/','CLI'],
+      ['/docs/studio/','Guía visual de Studio'],
+      ['/docs/questionnaires/','Cuestionarios y juegos'],
+      ['/docs/entrega-offline/','Entrega sin LMS'],
     ]],
     ['REPRODUCIR', [
-      ['/docs/player/','Player'],
-      ['/docs/questionnaires/','Cuestionarios y juegos'],
-      ['/docs/juegos-3d/','Juegos 3D'],
-      ['/docs/ejemplos/','Ejemplos'],
+      ['/docs/ejemplos/','Cursos de ejemplo'],
+      ['/juegos-educativos-3d/','Juegos educativos 3D'],
+    ]],
+    ['DESARROLLADORES', [
+      ['/docs/desarrolladores/','Inicio para desarrolladores'],
+      ['/docs/desarrolladores/primeros-pasos/','Primer ejemplo HTML'],
+    ]],
+    ['INSTALAR', [
+      ['/docs/instalar/','Componentes y versiones'],
+      ['/docs/cdn/','CDN'],
+      ['/docs/cdn/studio/','Studio mediante CDN'],
+      ['/docs/cdn/analytics/','Analytics mediante CDN'],
+      ['/docs/npm/','NPM'],
+      ['/docs/npm/studio/','Studio con NPM'],
+      ['/docs/npm/analytics/','Analytics con NPM'],
+      ['/docs/toolkit/','Toolkit y Reader'],
+      ['/docs/cli/','Herramientas de consola'],
     ]],
     ['INTEGRAR', [
-      ['/docs/integracion/','Integración'],
-      ['/docs/colaboracion/','Colaboración'],
-      ['/docs/eventos/','Eventos'],
+      ['/docs/integracion/','Host, identidad y permisos'],
+      ['/docs/player/','Player embebido'],
+      ['/docs/colaboracion/','Colaboración y Host'],
+      ['/docs/eventos/','Eventos del Player'],
+      ['/docs/juegos-3d/','Arquitectura de juegos 3D'],
+      ['/docs/progresion/','Reglas de progresión'],
+      ['/docs/metricas/','Eventos y métricas'],
+      ['/docs/analytics/','Analytics para plataformas'],
     ]],
     ['CONECTORES', [
-      ['/docs/conectores/','Conectores e integración'],
-    ]],
-    ['SEGUIMIENTO', [
-      ['/docs/progresion/','Progresión'],
-      ['/docs/metricas/','Métricas y analítica'],
-    ]],
-    ['ANALYTICS', [
-      ['/docs/analytics/','P2LRN Analytics'],
-      ['/analytics/','Abrir panel demo ↗'],
+      ['/docs/conectores/','Conectores: elegir integración'],
     ]],
     ['REFERENCIA', [
       ['/docs/compatibilidad/','Compatibilidad'],
-      ['/docs/recetas/','Recetas'],
+      ['/docs/paquetes/','Estructura de paquetes'],
+      ['/docs/paquetes/multipart/','Multipart'],
+      ['/docs/recetas/','Recetas técnicas'],
       ['/docs/glosario/','Glosario'],
-      ['/docs/referencia/','Referencia técnica'],
+      ['/docs/referencia/','Referencia de API'],
       ['/docs/troubleshooting/','Solución de problemas'],
     ]],
     ['RECURSOS', [
       ['/studio/','Abrir Studio ↗'],
-      ['/demo/','Visor ↗'],
-      ['/examples/catalog.json','Catálogo de ejemplos ↗'],
+      ['/demo/','Visor del alumno ↗'],
+      ['/examples/catalog.json','Catálogo de cursos ↗'],
     ]],
   ];
 
@@ -572,7 +574,8 @@
   ]);
 
   const DOC_SECTION_LABELS = Object.freeze({
-    EMPEZAR:'Empezar',
+    EMPEZAR:'Para profesores',
+    DESARROLLADORES:'Para desarrolladores',
     INSTALAR:'Instalar',
     CREAR:'Crear',
     REPRODUCIR:'Reproducir',
@@ -582,9 +585,9 @@
     REFERENCIA:'Referencia',
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
-    ['/docs/que-usar/',['/docs/empezar/','Antes de empezar']],
-    ['/docs/conceptos/',['/docs/empezar/','Antes de empezar']],
-    ['/docs/formato/',['/docs/empezar/','Antes de empezar']],
+    ['/docs/que-usar/',['/docs/desarrolladores/','Desarrolladores']],
+    ['/docs/conceptos/',['/docs/desarrolladores/','Desarrolladores']],
+    ['/docs/formato/',['/docs/desarrolladores/','Desarrolladores']],
     ['/docs/formato-portable-cursos-interactivos/',['/docs/formato/','Formato P2LRN']],
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/npm/analytics/',['/docs/npm/','NPM']],

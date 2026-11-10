@@ -507,6 +507,7 @@ for(const page of functionalPages){
 const fallbackDocSections=[
   ['/docs/','Documentación','Documentation'],
   ['/docs/empezar-facil/','Primeros pasos','Quick start'],
+  ['/docs/desarrolladores/','Desarrolladores','Developers'],
   ['/docs/instalar/','Instalación','Installation'],
   ['/docs/studio/','Crear cursos','Authoring with Studio'],
   ['/docs/player/','Reproducción','Playing packages'],

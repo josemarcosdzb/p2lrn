@@ -386,7 +386,7 @@ for(const [file,locale] of [
      (index.match(/\/examples\/canonical\/external\/free\/[a-z0-9-]+\.p2lrn/gu)||[]).length<19)
     errors.push('Examples static fallback lacks 19 crawlable package links: '+locale);
   const sidebar=/<nav class="doc-fallback-nav"[^>]*>([\s\S]*?)<\/nav>/u.exec(html)?.[1]??'';
-  if((sidebar.match(/<a\b/gu)||[]).length!==10)
+  if((sidebar.match(/<a\b/gu)||[]).length!==11)
     errors.push('Documentation must expose fallback navigation without JS: '+locale);
 }
 

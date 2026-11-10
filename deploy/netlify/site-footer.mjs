@@ -13,6 +13,7 @@ const ES_GROUPS=Object.freeze([
   {label:'Documentación',links:[
     ['/docs/','Centro de documentación'],
     ['/docs/empezar/','Antes de empezar'],
+    ['/docs/desarrolladores/','Desarrolladores'],
     ['/docs/instalar/','Instalación'],
     ['/docs/conectores/','Conectores e integración'],
   ]},
@@ -34,6 +35,7 @@ const EN_GROUPS=Object.freeze([
   {label:'Documentation',links:[
     ['/docs/','Documentation center'],
     ['/docs/empezar/','Before you start'],
+    ['/docs/desarrolladores/','Developers'],
     ['/docs/instalar/','Installation'],
     ['/docs/conectores/','Connectors and integration'],
   ]},
