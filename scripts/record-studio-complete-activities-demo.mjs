@@ -7,9 +7,12 @@ import {join,resolve,dirname,extname,sep} from 'node:path';
 import {tmpdir} from 'node:os';
 import {STUDIO_RUNTIME_SHARED_FILES} from '../deploy/netlify/studio-runtime-assets.mjs';
 const root=resolve('.'),site=join(root,'.netlify-cdn'),out=resolve(process.env.P2LRN_DEMO_OUTPUT_DIR||join(root,'.visual-evidence','studio-curso-integral'));
-const course=join(out,'laboratorio-cuestionarios-y-juegos.p2lrn'),video=join(out,'studio-creacion-y-vista-alumno.mp4'),framesFolder=join(out,'video-frames');
+const solvedMode=process.env.P2LRN_RECORD_SOLVE==='1';
+const course=join(out,'laboratorio-cuestionarios-y-juegos.p2lrn'),video=join(out,solvedMode?'studio-partida-resuelta.mp4':'studio-creacion-y-vista-alumno.mp4'),framesFolder=join(out,solvedMode?'partida-resuelta-frames':'video-frames');
+const reportPath=join(out,solvedMode?'partida-resuelta-report.json':'video-report.json');
+const solvedActivities=[];
 const delay=ms=>new Promise(r=>setTimeout(r,ms)),must=(value,message)=>{if(!value)throw Error(message);},events=[];
-const resume=process.env.P2LRN_RECORD_RESUME==='1';
+const resume=solvedMode||process.env.P2LRN_RECORD_RESUME==='1';
 await stat(course);await stat(join(site,'player/current/dist/p2lrn.js'));
 await cp(join(root,'packages/toolkit/web/studio'),join(site,'studio/runtime'),{recursive:true,force:true});
 for(const rel of STUDIO_RUNTIME_SHARED_FILES){
@@ -52,7 +55,8 @@ async function frameLoop(){
 }
 try{
   await mkdir(out,{recursive:true});
-  if(!resume)await rm(framesFolder,{recursive:true,force:true});
+  if(!solvedMode&&!resume)await rm(framesFolder,{recursive:true,force:true});
+  if(solvedMode)await rm(framesFolder,{recursive:true,force:true});
   await mkdir(framesFolder,{recursive:true});
   if(resume){const previous=(await readdir(framesFolder)).filter(name=>/^\d{6}\.jpg$/u.test(name));count=previous.length;console.log('P2LRN_VIDEO_RESUME_FRAMES='+count);}
   profile=await mkdtemp(join(tmpdir(),'p2lrn-recording-'));
@@ -83,7 +87,7 @@ try{
   for(let i=0;i<10;i++)await show('Profesor · pregunta '+(i+1),'(()=>{const c=document.querySelectorAll(".q-card")['+i+'];c?.scrollIntoView({block:"center"});return Boolean(c);})()',650);
   for(const name of names){
     await show('Profesor · '+name,teacher(name),1100);
-    if(name==='Rosco'){
+    if(name==='Rosco'&&!solvedMode){
       await wait('document.querySelectorAll(".q-card").length>=16','rosco de 16');
       for(const i of [0,1,3,5,8,12,13,14,15])await show('Rosco · pregunta '+(i+1),'(()=>{const x=document.querySelectorAll(".q-card")['+i+'];x?.scrollIntoView({block:"center"});return Boolean(x);})()',700);
     }
@@ -93,7 +97,7 @@ try{
       '(()=>{document.querySelector("[data-url]").value='+JSON.stringify(host+pkgUrl)+';document.querySelector("[data-open-url]").click();return true;})()',1800);
     await wait('[...document.querySelectorAll("[data-tree] button")].some(b=>b.textContent.includes("Rosco"))','curso recuperado');
   }
-  await show('Curso completo','(()=>{const b=document.querySelector("[data-tree] button");b?.click();return Boolean(b);})()',700);
+  await show('Curso completo','(()=>{const b=document.querySelector("[data-tree] button");b?.click();return Boolean(b);})()',solvedMode?350:700);
   await show('Vista alumno dentro de Studio','(()=>{document.querySelector("[data-mode-preview]").click();return true;})()',1600);
   await delay(2500);
   const previewDiagnostic=await evaluate('(()=>{const player=document.querySelector("[data-player]");const r=player?.shadowRoot;return {status:document.querySelector("[data-studio-status]")?.textContent,playerElement:player?.tagName,playerSrc:player?.getAttribute("src")?.slice(0,75),playerNode:player?.getAttribute("node"),shadow:!!r,shadowContent:r?.textContent?.slice(0,900),navButtons:r?.querySelectorAll(".p2lrn-nav button").length,previewVisible:!document.querySelector("[data-preview-stage]")?.hidden,stage:document.querySelector("[data-preview-stage]")?.textContent?.slice(0,300)};})()');
@@ -101,27 +105,37 @@ try{
   await wait('Boolean(document.querySelector("[data-player]")?.shadowRoot?.querySelector(".p2lrn-stage"))','Player integrado');
 
   for(const name of ['Cuestionario completo',...names]){
-    await show('Alumno · '+name,learner(name),1800);
+    await show('Alumno · '+name,learner(name),solvedMode?450:1800);
     await evaluate('(()=>{const r=document.querySelector("[data-player]")?.shadowRoot;const x=r?.querySelector(".p2lrn-rosco-layout,.p2lrn-3d-layout,.p2lrn-game-shell");x?.scrollIntoView({block:"center"});return true;})()');
     if(name==='Rosco'){
       await wait('document.querySelector("[data-player]")?.shadowRoot?.querySelectorAll(".p2lrn-rosco-letter").length>=16','rosco del alumno');
       const label=await show('Rosco alumno · Contiene la Ñ','(()=>{const r=document.querySelector("[data-player]").shadowRoot,b=[...r.querySelectorAll(".p2lrn-rosco-letter")].find(x=>x.textContent==="Ñ");b?.click();return r.querySelector(".p2lrn-rosco-prompt")?.textContent??false;})()',2600);
       must(String(label).includes('Contiene'),'Vista alumno no presenta Contiene la Ñ');
     }
-    if(name.startsWith('3D'))await delay(650);
+    if(solvedMode){
+      let outcome;
+      try{
+        outcome=name==='Arrastrar y soltar'?await solveDropFrame():await solveVisibleGame(name);
+      }catch(error){outcome={ok:false,error:String(error?.stack||error).slice(0,1200)};}
+      solvedActivities.push({name,...outcome});
+      console.log('P2LRN_SOLVED_ACTIVITY='+JSON.stringify({name,...outcome}));
+      await delay(1100);
+    }
+    if(name.startsWith('3D'))await delay(solvedMode?300:650);
   }
   await delay(1250);active=false;await job;
   must(count>90,'La grabación es demasiado corta: '+count);
   const ff=spawnSync('ffmpeg',['-y','-hide_banner','-loglevel','error','-framerate','4','-i',join(framesFolder,'%06d.jpg'),'-vf','scale=1280:720:flags=lanczos,format=yuv420p','-c:v','libx264','-preset','veryfast','-crf','24','-movflags','+faststart',video],{windowsHide:true,encoding:'utf8',timeout:180000});
   if(ff.status!==0||!existsSync(video)){
     const details={ok:false,needsEncoding:true,reason:'ffmpeg no disponible o codificación fallida',frames:count,frameRate:4,
-      frameDirectory:'video-frames',activities:names.length+1,events,
+      frameDirectory:solvedMode?'partida-resuelta-frames':'video-frames',activities:names.length+1,events,
+      solvedMode,solvedActivities,
       encoderError:String(ff.error?.message||ff.stderr||'sin salida').slice(0,1000)};
-    await writeFile(join(out,'video-report.json'),JSON.stringify(details,null,2)+'\n');
+    await writeFile(reportPath,JSON.stringify(details,null,2)+'\n');
     console.log('DEMO_VIDEO_FRAMES_READY='+JSON.stringify(details));
   }else{
   const size=(await stat(video)).size;
-  await writeFile(join(out,'video-report.json'),JSON.stringify({ok:true,video:'studio-creacion-y-vista-alumno.mp4',seconds:count/4,frames:count,render:'1280x720',realStudio:true,realPlayer:true,activities:names.length+1,events},null,2)+'\n');
+  await writeFile(reportPath,JSON.stringify({ok:!solvedMode||solvedActivities.every(a=>a.ok),video:solvedMode?'studio-partida-resuelta.mp4':'studio-creacion-y-vista-alumno.mp4',seconds:count/4,frames:count,render:'1280x720',realStudio:true,realPlayer:true,activities:names.length+1,events,solvedMode,solvedActivities},null,2)+'\n');
   console.log('DEMO_VIDEO='+JSON.stringify({file:video,size,seconds:count/4,frames:count}));
   }
 }finally{
