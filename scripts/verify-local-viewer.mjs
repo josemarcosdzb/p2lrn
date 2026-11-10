@@ -930,6 +930,137 @@ async function verifyExclusiveCarryInBrowser(cdp){
   }
 }
 
+// Test the ORIGINAL game controllers, not just raycast metadata or select UI.
+// The pointer drops must update the same native answer contract Player scores.
+async function browserRealQuest3DDrops(){
+  const [{createThreeGameScene},gameControllers]=await Promise.all([
+    import('/player/current/dist/game-3d/three-runtime.js'),
+    import('/player/current/dist/renderers/questionnaire-3d.js'),
+  ]);
+  const canvas=document.createElement('canvas');
+  canvas.id='p2lrn-real-scored-drops-qa';
+  Object.assign(canvas.style,{position:'fixed',left:'20px',top:'20px',
+    width:'800px',height:'510px',display:'block',zIndex:'2147483600'});
+  canvas.width=800;canvas.height=510;
+  canvas.tabIndex=0;
+  document.body.append(canvas);
+  canvas.setPointerCapture=()=>{};
+  canvas.releasePointerCapture=()=>{};
+  let game=null,controller=null;
+  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const answers=new Map(),patches=[],traces=[];
+  const runtime={
+    state:{completed:false},
+    answer:id=>answers.get(id)??{order:[],pairs:{},classifications:{}},
+    getGameState:(k,fallback)=>fallback,
+    setGameState:()=>{},
+    replaceAnswer:(id,answer)=>{answers.set(id,answer);return true;},
+    applyPatch:(id,patch)=>{
+      patches.push({...patch,questionId:id});
+      const answer=runtime.answer(id);
+      if(patch.kind==='pair-set')answers.set(id,{...answer,pairs:{...answer.pairs,[patch.leftId]:patch.rightId}});
+      if(patch.kind==='classification-set')
+        answers.set(id,{...answer,classifications:{...answer.classifications,[patch.itemId]:patch.categoryId}});
+      return answer;
+    },
+  };
+  function find(kind,id){
+    let hit=null;
+    game.scene.traverse(node=>{
+      const interaction=node.userData?.p2lrnInteraction;
+      if(interaction?.kind===kind&&interaction?.id===id)hit=node;
+    });
+    if(!hit)throw Error('Missing scored-drop object '+kind+'/'+id);
+    return hit;
+  }
+  function point(node){
+    game.camera.updateMatrixWorld(true);
+    const world=node.getWorldPosition(node.position.clone().set(0,0,0));
+    const screen=world.project(game.camera),rect=canvas.getBoundingClientRect();
+    return {x:rect.left+(screen.x+1)*rect.width/2,
+      y:rect.top+(1-screen.y)*rect.height/2};
+  }
+  function pointer(type,position){
+    canvas.dispatchEvent(new PointerEvent(type,{bubbles:true,
+      pointerId:89,pointerType:'mouse',button:0,buttons:type==='pointerup'?0:1,
+      clientX:position.x,clientY:position.y}));
+  }
+  async function run({trial,builder,sourceKind,sourceId,targetKind,targetId,arrange,verify}){
+    game.reset();game.resetPlayer();
+    const status=document.createElement('p');
+    controller=builder({trial,runtime,scene:game,status});
+    arrange?.();
+    await sleep(260);
+    const from=point(find(sourceKind,sourceId)),to=point(find(targetKind,targetId));
+    const rect=canvas.getBoundingClientRect();
+    for(const pt of [from,to]){
+      if(pt.x<rect.left+3||pt.x>rect.right-3||pt.y<rect.top+3||pt.y>rect.bottom-3)
+        throw Error('Scored 3D drag is outside visible canvas: '+JSON.stringify({sourceKind,targetKind,from,to}));
+    }
+    const old=patches.length;
+    pointer('pointerdown',from);pointer('pointermove',to);pointer('pointerup',to);
+    await sleep(60);
+    if(!verify())throw Error('Real '+sourceKind+' to '+targetKind+' did not score: '+
+      JSON.stringify({from,to,patches:patches.slice(old),answer:runtime.answer(trial.questionId),
+        status:status.textContent}));
+    traces.push({mode:trial.type,scored:true,sourceKind,targetKind});
+  }
+  try{
+    game=await createThreeGameScene(canvas,{physics:'none',
+      onDrag:(meta,phase,details)=>controller?.drag(meta,phase,details)??false,
+      onInteraction:meta=>controller?.interact(meta)??false});
+    await run({
+      trial:{type:'ordering-3d',questionId:'qa-order',prompt:'Ordena',
+        objects:[{id:'first',text:'Primero'}],correctOrder:['first']},
+      builder:gameControllers.buildOrderingControls,
+      sourceKind:'ordering-object',sourceId:'first',
+      targetKind:'ordering-slot',targetId:undefined,
+      arrange:()=>game.setTranslation('order:first',[0,0.78,4.2]),
+      verify:()=>runtime.answer('qa-order').order?.[0]==='first',
+    });
+    await run({
+      trial:{type:'matching-3d',questionId:'qa-match',prompt:'Relaciona',
+        left:[{id:'spain',text:'España'}],right:[{id:'madrid',text:'Madrid'}],
+        connections:[{leftId:'spain',rightId:'madrid'}]},
+      builder:gameControllers.buildMatchingControls,
+      sourceKind:'matching-left',sourceId:'spain',targetKind:'matching-right',targetId:'madrid',
+      arrange:()=>{
+        game.setTranslation('left:spain',[-2,0.7,4.1]);
+        game.setTranslation('right:madrid',[2,0.7,3.1]);
+      },
+      verify:()=>runtime.answer('qa-match').pairs?.spain==='madrid',
+    });
+    await run({
+      trial:{type:'classification-3d',questionId:'qa-classify',prompt:'Clasifica',
+        objects:[{id:'circle',text:'Círculo'}],
+        categories:[{id:'shapes',text:'Formas'}],
+        assignments:[{itemId:'circle',categoryId:'shapes'}]},
+      builder:gameControllers.buildClassificationControls,
+      sourceKind:'classification-object',sourceId:'circle',
+      targetKind:'classification-category',targetId:'shapes',
+      arrange:()=>game.setTranslation('classify:circle',[0,0.78,4.2]),
+      verify:()=>runtime.answer('qa-classify').classifications?.circle==='shapes',
+    });
+    globalThis.__p2lrnRealDropsQA={game,canvas};
+    return {realWebGL:true,scoredModes:traces,nativePatches:patches.length};
+  }catch(error){game?.destroy();canvas.remove();throw error;}
+}
+async function verifyRealQuest3DDrops(cdp){
+  await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
+  await waitForEval(cdp,"Boolean(customElements.get('p2lrn-player'))",
+    'real scored 3D drop startup',30000);
+  const result=await evalTop(cdp,'('+browserRealQuest3DDrops.toString()+')()');
+  try{
+    invariant(result?.realWebGL&&result.scoredModes?.length===3&&result.nativePatches===2,
+      'Real drag-to-score regressions: '+JSON.stringify(result));
+    const screenshot=await captureElementVisualEvidence(cdp,'3d-real-scored-drops',
+      "document.getElementById('p2lrn-real-scored-drops-qa')",{maxHeight:900});
+    return {...result,screenshot};
+  }finally{
+    await evalTop(cdp,"(()=>{const qa=globalThis.__p2lrnRealDropsQA;qa?.game?.destroy();qa?.canvas?.remove();delete globalThis.__p2lrnRealDropsQA;return true;})()");
+  }
+}
+
 async function verifyThreePointerDragAndRope(cdp){
   await cdp.send('Page.navigate',{url:APP_ORIGIN+'/demo/'});
   await waitForEval(cdp,"Boolean(globalThis.P2LRN?.createCapabilityBroker&&customElements.get('p2lrn-player'))",'3D pointer test runtime',30000);
@@ -1977,10 +2108,11 @@ try{
     const threeGame=await verifyThreeGameInteractionAndResume(cdp);
     const assemblyStart=await verifyAssemblyScatteredViewport(cdp);
     const pointerDrag=await verifyThreePointerDragAndRope(cdp);
+    const scoredDrops=await verifyRealQuest3DDrops(cdp);
     const assemblyLive=await verifyAssemblyLiveInput(cdp);
     const singleCarry=await verifyExclusiveCarryInBrowser(cdp);
     const threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);
-    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,assemblyLive,singleCarry,threeMobile};
+    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,scoredDrops,assemblyLive,singleCarry,threeMobile};
     await mkdir(visualEvidenceRoot,{recursive:true});
     await writeFile(join(visualEvidenceRoot,'quest3d-report.json'),JSON.stringify(report,null,2)+'\n');
     console.log('P2LRN_QUEST3D_BROWSER_REPORT='+JSON.stringify(report));
