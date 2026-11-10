@@ -197,6 +197,30 @@ for(const entry of rosco.data.elements){
 }
 addActivity(unitGames,'Rosco · 16 letras con empieza/contiene',ren('rosco'),roscoPayload,'rosco');
 
+// Native Studio Drag & Drop lesson: same data attributes and trusted Player
+// sandbox used by studio-drop-activity.js. No script is packaged in the HTML.
+const dragPairs=[['Gases','Atmósfera'],['Agua','Hidrosfera'],['Rocas','Geosfera']];
+const dragEsc=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+const dragZones=dragPairs.map(([,label],i)=>{
+  const x=5+(i%3)*32;
+  return '<div data-p2lrn-dnd-zone="zone-item-'+(i+1)+'" data-p2lrn-dnd-accept="item-'+(i+1)+'" role="group" aria-label="Destino '+(i+1)+'" style="position:absolute;left:'+x+'%;top:25%;width:28%;height:48%;box-sizing:border-box;border:2px dashed #2563eb;border-radius:14px;display:flex;justify-content:center;align-items:center;padding:12px;background:#dbeafe;color:#172554;font-size:21px;font-weight:700"><span data-p2lrn-dnd-label>'+dragEsc(label)+'</span></div>';
+}).join('');
+const dragItems=dragPairs.map(([name],i)=>'<span data-p2lrn-dnd-item="item-'+(i+1)+'" role="listitem" style="display:inline-flex;align-items:center;justify-content:center;min-width:140px;min-height:64px;padding:9px 17px;background:white;border:1px solid #64748b;border-radius:12px;cursor:grab;font-size:20px;font-weight:650;color:#0f172a"><span data-p2lrn-dnd-text>'+dragEsc(name)+'</span></span>').join('');
+const dragHtml=[
+  '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+  '<title>Arrastrar y soltar: capas de la Tierra</title></head><body style="margin:0;padding:18px;background:#f8fafc;color:#0f172a;font-family:Arial,sans-serif">',
+  '<section data-p2lrn-layout="drag-drop" data-p2lrn-dnd="1" style="max-width:1050px;margin:auto">',
+  '<h1 style="font-size:30px;margin:0 0 12px">Arrastrar y soltar · capas de la Tierra</h1>',
+  '<p style="font-size:18px;margin:0 0 22px">Lleva cada ficha hasta su capa. También puedes seleccionar una ficha y pulsar la zona correspondiente.</p>',
+  '<div data-p2lrn-dnd-board role="group" aria-label="Zonas de destino" style="width:100%;aspect-ratio:16/7;min-height:250px;position:relative;background:#e0f2fe;border:1px solid #94a3b8;border-radius:16px">',
+  dragZones,'</div><div data-p2lrn-dnd-tray role="list" aria-label="Fichas para arrastrar" style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;padding:22px 14px;margin-top:14px;background:#e2e8f0;border-radius:14px">',
+  dragItems,'</div><p data-p2lrn-dnd-status role="status" aria-live="polite" style="padding:14px;font-size:17px">Selecciona una ficha y colócala en su destino.</p>',
+  '</section></body></html>',
+].join('');
+const nativeDrag=doc.addEmbeddedResource(unitGames.id,{title:'Arrastrar y soltar · capas de la Tierra',language:'es',
+  filename:'arrastrar-fichas.html',mediaType:'text/html',bytes:encoder.encode(dragHtml)});
+activityList.push({id:nativeDrag.id,title:'Arrastrar y soltar · capas de la Tierra',renderer:'trusted-player-lesson-drop',questions:3,kind:'drag-drop'});
+
 const threeGames=[
   ['3d','3D · ordenar etapas del ciclo del agua'],
   ['3d-matching','3D · relacionar países y capitales'],
