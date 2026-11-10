@@ -6,6 +6,7 @@ import {renderQuestionnaireVisualEditor} from '/studio/runtime/questionnaire-edi
 import {renderStructuredVisualEditor} from '/studio/runtime/structured-editor.js';
 import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from '/studio/runtime/browser-drafts.js';
 import {mountLessonImageEditor} from '/studio/runtime/lesson-images.js';
+import {mountStudioCommandBar,applyUnifiedStudioWorkspace,collapseStudioLessonProperties} from '/studio/runtime/command-bar.js';
 import {studioUiText} from '/studio/runtime/studio-ui-i18n.js';
 
 const createCourseButton=document.querySelector('[data-create-course]');
@@ -76,9 +77,10 @@ let mode='edit';
 let draftMetadata=null;
 let savedRevision=0;
 let exportedRevision=0;
+let sharedCommandBar=null;
 
 const titleOf=(entity)=>studio?.title(entity.id)??entity.id;
-const setStatus=(value)=>{status.textContent=studioUiText(value);};
+const setStatus=(value)=>{const message=studioUiText(value);status.textContent=message;sharedCommandBar?.setMessage(message);};
 const hasUnsavedChanges=()=>Boolean(studio&&studio.changeCount>savedRevision&&studio.changeCount>exportedRevision&&!(studio.createdFromScratch&&studio.changeCount===1));
 const updateChanges=()=>{
   if(!studio){
@@ -189,10 +191,11 @@ function renderTree(){
 }
 async function renderEditor(){
   editorStage.replaceChildren();activeEditable=null;
+  sharedCommandBar?.refresh();
   const entity=studio.entity(selectedId);
   if(!entity)return;
-  const sheet=document.createElement('article');sheet.className='studio-sheet';
-  const head=document.createElement('header');head.className='studio-sheet-head';
+  const sheet=document.createElement('article');sheet.className='studio-sheet p2lrn-studio-sheet';
+  const head=document.createElement('header');head.className='studio-sheet-head p2lrn-studio-sheet-head';
   const type=document.createElement('span');type.className='studio-entity-type';type.textContent=entity.type;
   const title=document.createElement('h1');title.className='studio-title';title.textContent=titleOf(entity);
   title.setAttribute('role','textbox');title.setAttribute('aria-label',"Title");title.setAttribute('aria-multiline','true');
@@ -262,12 +265,13 @@ async function renderEditor(){
     bindEditable(surface,()=>studio.setPayloadText(editable.path,surface.textContent||''));content.append(surface);return;
   }
   const source=sanitizeHtml(editable.text);
-  const surface=document.createElement('article');surface.className='studio-wysiwyg';surface.innerHTML=source.body.innerHTML;
+  collapseStudioLessonProperties({header:head,title});
+  const surface=document.createElement('article');surface.className='studio-wysiwyg';surface.dataset.studioHtmlSurface='true';surface.dataset.studioHtmlKey=editable.path;surface.innerHTML=source.body.innerHTML;
   bindEditable(surface,()=>{
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,"\n"+source.documentElement.outerHTML);
   });
-  mountLessonImageEditor({host:content,surface,onChange:()=>{
+  mountLessonImageEditor({preferRibbonInsert:true,getInsertionTarget:()=>sharedCommandBar?.selectedObject?.()||null,host:content,surface,onChange:()=>{
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,"\n"+source.documentElement.outerHTML);
     updateChanges();
@@ -296,17 +300,20 @@ async function setMode(next){
   mode=next;
   const preview=next==='preview';
   document.documentElement.dataset.studioMode=preview?'preview':'edit';
+  sharedCommandBar?.setPreviewMode(preview);
   editorStage.hidden=preview;previewStage.hidden=!preview;
   editButton.setAttribute('aria-pressed',String(!preview));previewButton.setAttribute('aria-pressed',String(preview));
   editButton.classList.toggle('primary',!preview);previewButton.classList.toggle('primary',preview);
   if(preview)await refreshPreview();else setStatus("Editing course");
 }
 async function activateStudio(document,{name,recoveredSelectedId=null}={}){
+  sharedCommandBar?.resetHistory();
   studio=document;
   selectedId=recoveredSelectedId&&studio.entity(recoveredSelectedId)?recoveredSelectedId:studio.rootId;
   savedRevision=0;exportedRevision=0;
   packageName.textContent=name||studio.sourceName||"course.p2lrn";
   toolbar.hidden=false;workspace.hidden=false;
+  sharedCommandBar?.setDocument(true,name||studio.sourceName||'P2LRN course');
   renderTree();await renderEditor();updateChanges();await setMode('edit');
 }
 async function openPackage(pkg,{name,url,recoveredSelectedId=null}){
