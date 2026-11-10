@@ -231,6 +231,7 @@ for(const [kind,title] of threeGames){
   const activity=doc.addGame(unit3d.id,{kind,title});
   const record=await doc.readQuestionnaire(activity.id);
   assert(record?.payload,'La actividad '+kind+' no tiene cuestionario');
+  record.payload.presentation={...record.payload.presentation,showFeedback:'after-submit'};
   if(kind==='3d')record.payload.questions[0]=ordering('Ordena las etapas del ciclo del agua',[
     'Evaporación','Condensación','Precipitación','Acumulación']);
   else if(kind==='3d-matching')record.payload.questions[0]=matching('Relaciona país y capital',worldPairs);
