@@ -44,6 +44,22 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
   if(!previouslySaved&&!runtime.state.completed)runtime.setGameState(scatterKey,{seed});
   const startPositions=scatterAssemblyStarts(config,seed);
   const transforms=new Map(config.pieces.map(p=>[p.id,fromJson(startPositions[p.id])]));
+  // Same released-pose rule as ordering/classification. Assembly also keeps
+  // the authored orientation and scale for custom glTF geometry.
+  const poseKey=`3d:assembly:free-poses:${trial.questionId}:attempt-${attempt}`;
+  const savedPoses=runtime.getGameState(poseKey,null);
+  const freePoses=new Map();
+  const finite=(values,n)=>Array.isArray(values)&&values.length===n&&values.every(Number.isFinite);
+  const validPose=pose=>pose&&finite(pose.position,3)&&finite(pose.rotation,4)&&
+    finite(pose.scale,3)&&pose.scale.every(value=>value>0&&value<=10000)&&
+    pose.position.every(value=>Math.abs(value)<100000)&&
+    Math.hypot(...pose.rotation)>0.0001;
+  function persistFreePose(id,pose){
+    if(!pieceById.has(id))return;
+    if(validPose(pose))freePoses.set(id,fromJson(pose));
+    else freePoses.delete(id);
+    runtime.setGameState(poseKey,Object.fromEntries(freePoses));
+  }
   let dragging=null;
   const modelBytes=new Map();
   let selected=null;
@@ -93,6 +109,15 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
       }catch(error){
         console.warn('P2LRN assembly staging pivot adjustment rejected:',error);
       }
+    }
+    // Restore free movement AFTER measuring the GLB/pivot; never overwrite
+    // a completed placement or trust malformed saved transforms.
+    const saved=savedPoses&&Object.hasOwn(savedPoses,piece.id)?savedPoses[piece.id]:null;
+    if(!placements[piece.id]&&validPose(saved)){
+      const pose=fromJson(saved);
+      freePoses.set(piece.id,pose);
+      transforms.set(piece.id,pose);
+      scene.setTransform(id,pose);
     }
   }
   if(config.referenceAssetId){
@@ -163,6 +188,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
     const result=evaluateAssemblyPlacement(config,id,targetId,placement,placements);
     if(!result.ok){setText(reasonText[result.reason]??'La pieza no encaja.');return false;}
     placements[id]=targetId;
+    persistFreePose(id,null);
     transforms.set(id,{...current,...fromJson(result.snap)});
     runtime.applyPatch(trial.questionId,{kind:'classification-set',itemId:id,categoryId:targetId});
     onProgress();
@@ -191,6 +217,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
         const transform=transforms.get(id);
         transform.rotation=quaternionTurn(transform.rotation,axis,turn);
         scene.setTransform(boxId(id),transform);
+        persistFreePose(id,transform);
         setText('Orientación actualizada en eje '+label+'.');
       });
       rotateButtons.append(button);
@@ -204,12 +231,14 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
     // Reset orientation only. Moving a piece must never be undone by this action.
     const next={...current,rotation:[...startPositions[id].rotation]};
     transforms.set(id,next);scene.setTransform(boxId(id),next);
+    persistFreePose(id,next);
     setText('Orientación restaurada.');
   });
   restartButton.addEventListener('click',()=>{
     const id=activeId();if(!pieceById.has(id)||placements[id])return;
     transforms.set(id,fromJson(startPositions[id]));
     scene.setTransform(boxId(id),transforms.get(id));
+    persistFreePose(id,null); // The explicit restart discards the free pose.
     setText('Pieza reiniciada.');
   });
   const assemblyObjects=[
@@ -262,6 +291,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
         const current={...dragging.original,position:[...finalPosition]};
         transforms.set(id,current);
         scene.setTransform(boxId(id),current);
+        persistFreePose(id,current);
         const overTarget=target?.kind==='assembly-target';
         const completed=overTarget&&place(id,target.id,{draggedPosition:finalPosition});
         if(!completed&&!overTarget)setText('Pieza desplazada. Sigue acercándola a su destino.');
@@ -271,7 +301,11 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
         return true;
       }
       if(phase==='cancel'){
-        transforms.set(id,dragging.original);restore(id);
+        // An interrupted pointer gesture is a release, NOT a teleport.
+        const current={...dragging.original,position:[...dragging.lastPosition]};
+        transforms.set(id,current);
+        scene.setTransform(boxId(id),current);
+        persistFreePose(id,current);
         scene.highlight(boxId(id),false);selected=null;dragging=null;
         return true;
       }
