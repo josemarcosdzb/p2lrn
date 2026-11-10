@@ -82,7 +82,7 @@ function setText(node,value) {
   node.textContent=String(value);
 }
 
-function buildOrderingControls({trial,runtime,scene,status}) {
+export function buildOrderingControls({trial,runtime,scene,status}) {
   const saveKey=`3d:ordering:${trial.questionId}`;
   const validIds=new Set(trial.objects.map((item)=>item.id));
   const stored=runtime.getGameState(saveKey,null);
@@ -402,7 +402,7 @@ function buildMatchingControls({trial,runtime,scene,status}) {
   };
 }
 
-function buildClassificationControls({trial,runtime,scene,status}) {
+export function buildClassificationControls({trial,runtime,scene,status}) {
   const expected=new Map(trial.assignments.map((item)=>[item.itemId,item.categoryId]));
   const saved=runtime.answer(trial.questionId).classifications??{};
   const values=Object.fromEntries(Object.entries(saved).filter(([itemId,categoryId])=>
