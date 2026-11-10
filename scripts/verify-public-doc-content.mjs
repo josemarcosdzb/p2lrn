@@ -188,5 +188,27 @@ for(const rel of ['deploy/netlify/site/docs/player/index.html','deploy/netlify/s
   const html=article(await readFile(join(root,rel),'utf8'));
   for(const pattern of [/npm install/u,/p2lrn\.netlify\.app/u])if(pattern.test(html))failures.push(rel+': installation implementation leaked into reference page '+pattern);
 }
+
+// Teacher-first editorial and multilingual SEO checks protect the real predeploy pages.
+for(const [prefix,locale] of [['','es'],['en/','en']]){
+  const home=await readFile(join(root,'deploy/netlify/site',prefix,'docs','index.html'),'utf8');
+  const quick=await readFile(join(root,'deploy/netlify/site',prefix,'docs','empezar-facil','index.html'),'utf8');
+  const landing=await readFile(join(root,'deploy/netlify/site',prefix,'juegos-educativos-3d','index.html'),'utf8');
+  const imageCount=(landing.match(/<img\\b/gi)||[]).length;
+  if(!quick.includes('id="primer-curso"')||!quick.includes('id="integracion-desarrolladores"')||
+     quick.indexOf('id="primer-curso"')>quick.indexOf('id="integracion-desarrolladores"')||
+     !quick.includes('<details class="p2lrn-dev-details">')||
+     (quick.match(/<pre\\b/gi)||[]).length!==1)
+    failures.push(locale+': quick start does not separate visual Studio course authoring from preserved developer HTML');
+  if(imageCount<4||!landing.includes('configuracion-ensamblaje-3d-studio.webp')||
+     !landing.includes('15-3d-ensamblar.webp')||
+     !landing.includes(locale==='es'?'Ensamblar en 3D':'Assemble in 3D'))
+    failures.push(locale+': 3D sales page lacks four game modes and authentic teacher/learner screenshots');
+  if(!home.includes(locale==='es'?'No necesitas programar.':'No programming required.'))
+    failures.push(locale+': documentation no longer points beginners to the visual Studio route');
+}
+const englishCLI=await readFile(join(root,'deploy/netlify/site/en/docs/cli/index.html'),'utf8');
+for(const text of ['with him','supported font','4. Validate, inspect and read a packet','<strong>Salida</strong>'])
+  if(englishCLI.includes(text))failures.push('English CLI contains machine-translated editorial copy: '+text);
 if(failures.length)throw new Error('Public documentation content audit failed:\n'+failures.join('\n'));
 console.log(JSON.stringify({ok:true,pages:files.length,noAulaP2P:true,noInternalDevelopmentCopy:true,strictChannelSeparation:true,studioPublicCopy:true,studioVisibleUiLanguage:'es',noCommentOnlyCode:true,noUnexplainedCodeBlocks:true,executableExamplesDownloadable:true,automaticRuntimeDocs:true,metricsDocsDetailed:true,trackingInformationArchitecture:true,analyticsInformationArchitecture:true,editorNeutralLocalServer:true},null,2));
