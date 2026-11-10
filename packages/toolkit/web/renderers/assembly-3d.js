@@ -313,6 +313,16 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
     },
     interact(meta){
       if(runtime.state.completed)return true;
+      if(meta.kind==='scene-empty'){
+        if(selected!==null){
+          scene.highlight(boxId(selected),false);
+          persistFreePose(selected,transforms.get(selected));
+          selected=null;
+          setText('Pieza soltada donde la has dejado.');
+          update();
+        }
+        return true;
+      }
       if(meta.kind==='assembly-piece'){choosePiece(meta.id);return true;}
       if(meta.kind==='assembly-target'){
         if(!selected){setText('Selecciona una pieza antes de elegir destino.');return true;}
