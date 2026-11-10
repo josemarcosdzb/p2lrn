@@ -535,7 +535,7 @@ const teacherDocPaths=new Set([
   '/docs/colaboracion/','/docs/juegos-3d/',
 ]);
 const staticDocSidebar=(english,relativePath)=>{
-  const route='/'+relativePath.replace(/(?:^|\\/)index\\.html$/,'');
+  const route='/'+(relativePath.endsWith('index.html')?relativePath.slice(0,-'index.html'.length):relativePath);
   const normalized=route.endsWith('/')?route:route+'/';
   const spanish=english?spanishRouteFor(normalized):normalized;
   const teacher=teacherDocPaths.has(spanish)||spanish.startsWith('/docs/questionnaires/');

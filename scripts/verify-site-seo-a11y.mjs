@@ -386,7 +386,7 @@ for(const [file,locale] of [
      (index.match(/\/examples\/canonical\/external\/free\/[a-z0-9-]+\.p2lrn/gu)||[]).length<19)
     errors.push('Examples static fallback lacks 19 crawlable package links: '+locale);
   const sidebar=/<nav class="doc-fallback-nav"[^>]*>([\s\S]*?)<\/nav>/u.exec(html)?.[1]??'';
-  const links=[...sidebar.matchAll(/<a\\b[^>]*href="([^"]+)"/gu)].map(x=>x[1]);
+  const links=[...sidebar.matchAll(/<a\b[^>]*href="([^"]+)"/gu)].map(x=>x[1]);
   const developer=locale==='en'?'/en/docs/developers/':'/docs/desarrolladores/';
   const quickstart=locale==='en'?'/en/docs/quickstart/':'/docs/empezar-facil/';
   const npm=locale==='en'?'/en/docs/installation/':'/docs/instalar/';
@@ -400,8 +400,8 @@ for(const [file,locale] of [
 ]){
   const html=await readFile(join(out,...file.split('/')),'utf8').catch(()=>null);
   if(!html){errors.push('Developer documentation fallback missing: '+file);continue;}
-  const sidebar=/<nav class="doc-fallback-nav"[^>]*>([\\s\\S]*?)<\\/nav>/u.exec(html)?.[1]??'';
-  const links=[...sidebar.matchAll(/<a\\b[^>]*href="([^"]+)"/gu)].map(x=>x[1]);
+  const sidebar=/<nav class="doc-fallback-nav"[^>]*>([\s\S]*?)<\/nav>/u.exec(html)?.[1]??'';
+  const links=[...sidebar.matchAll(/<a\b[^>]*href="([^"]+)"/gu)].map(x=>x[1]);
   const developer=locale==='en'?'/en/docs/developers/':'/docs/desarrolladores/';
   const technical=locale==='en'?'/en/docs/developers/quickstart/':'/docs/desarrolladores/primeros-pasos/';
   const teacher=locale==='en'?'/en/docs/quickstart/':'/docs/empezar-facil/';
