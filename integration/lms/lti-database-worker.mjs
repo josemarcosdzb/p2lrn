@@ -78,6 +78,9 @@ try{
  else if(engine==='mysql'||engine==='mariadb'){
   const {createMysqlEngine}=await import('./lti-mysql-connection.mjs');
   database=await createMysqlEngine(engine,connectionString);
+ }else if(engine==='sqlserver'){
+  const {createSqlserverEngine}=await import('./lti-sqlserver-connection.mjs');
+  database=await createSqlserverEngine(connectionString);
  }else throw new Error('LTI_UNIMPLEMENTED_SQL_DIALECT');
  signal({ready:true,engine},readyFlag);
 }catch(err){
