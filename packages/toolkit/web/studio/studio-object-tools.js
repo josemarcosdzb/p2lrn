@@ -66,10 +66,17 @@ function button(doc,label,action,title=label){
 }
 const isObject=(node,surface)=>Boolean(node&&surface.contains(node)&&node.matches?.(OBJECT_SELECTOR));
 const positionOf=el=>({x:positive(el.dataset.p2lrnObjectX,0),y:positive(el.dataset.p2lrnObjectY,0)});
+const angleOf=el=>positive(el.dataset.p2lrnObjectRotation,0);
+// Keep translation and rotation in a single authored transform so moving an
+// already rotated object never discards its orientation.
+function applyObjectTransform(el){
+  const {x,y}=positionOf(el),angle=angleOf(el);
+  el.style.transform='translate('+x+'px, '+y+'px)'+(angle?' rotate('+angle+'deg)':'');
+}
 function setPosition(el,x,y){
   x=Math.round(between(x,-4000,4000));y=Math.round(between(y,-4000,4000));
   el.dataset.p2lrnObjectX=String(x);el.dataset.p2lrnObjectY=String(y);
-  el.style.transform='translate('+x+'px, '+y+'px)';
+  applyObjectTransform(el);
 }
 export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection=()=>{}}={}){
   if(!host||!surface?.isContentEditable)throw new TypeError('Object tools require an editable HTML surface.');
@@ -195,6 +202,17 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       const next=el.nextElementSibling;if(next){next.after(el);change();}return el;
     }
     if(action==='reset'){setPosition(el,0,0);change();return el;}
+    if(action==='rotate'){
+      if(!el.matches('[data-p2lrn-layout="shape"], [data-p2lrn-layout="text-box"], figure'))
+        throw new Error('La rotación solo está disponible para formas, imágenes y cuadros de texto.');
+      const degrees=Number(value);
+      if(!Number.isFinite(degrees)||Math.abs(degrees)>3600)
+        throw new Error('Introduce un ángulo válido entre -3600 y 3600 grados.');
+      const normalized=((Math.round(degrees)%360)+360)%360;
+      el.dataset.p2lrnObjectRotation=String(normalized);
+      applyObjectTransform(el);ensureScrollRoom(el);change();return el;
+    }
+    if(action==='rotateStep')return act('rotate',angleOf(el)+Number(value||0));
     if(action==='nudge'){
       const pos=positionOf(el),offset=value||{x:0,y:0};
       const y=safeDividerY(el,pos.y+offset.y);
