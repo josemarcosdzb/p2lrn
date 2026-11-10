@@ -8,12 +8,28 @@ export const CANONICAL_ORIGIN='https://p2lrn.org';
 // Search-intent copy is applied only to compiled pages; the authored guides remain unchanged.
 export const SEO_PAGE_METADATA=Object.freeze({
   "/docs/": {
-    "title": "Documentación para crear cursos interactivos | P2LRN",
-    "description": "Aprende a crear cursos interactivos con P2LRN: usa Studio y Player, prepara paquetes .p2lrn, integra tu LMS y revisa progreso y analítica."
+    "title": "Documentación P2LRN para profesores y desarrolladores",
+    "description": "Guías independientes para profesores que crean cursos en Studio y desarrolladores que integran Player, Toolkit, Host y LTI."
   },
   "/en/docs/": {
-    "title": "P2LRN documentation: create interactive courses",
-    "description": "Learn to build interactive courses with P2LRN: use Studio and Player, prepare .p2lrn packages, integrate with your LMS and track learning progress."
+    "title": "P2LRN documentation for teachers and developers",
+    "description": "Separate authoring guides for teachers using Studio and technical documentation for developers integrating Player, Host, Toolkit and LTI."
+  },
+  "/docs/desarrolladores/": {
+    "title": "P2LRN para desarrolladores: Player, Host, CDN, NPM y LTI",
+    "description": "Documentación técnica para integrar P2LRN: guía HTML, API de Player y Toolkit, seguridad del Host, Analytics y LTI."
+  },
+  "/en/docs/developers/": {
+    "title": "P2LRN developer docs: Player, Host, npm, CDN and LTI",
+    "description": "Technical developer guides for P2LRN: HTML, Player and Toolkit APIs, secure Host services, Analytics and LTI."
+  },
+  "/docs/desarrolladores/primeros-pasos/": {
+    "title": "Integrar P2LRN Player en HTML con CDN paso a paso",
+    "description": "Ejemplo para desarrolladores: descarga un curso, incrusta Player en HTML, abre la página mediante HTTP y comprueba su reproducción."
+  },
+  "/en/docs/developers/quickstart/": {
+    "title": "Embed P2LRN Player in HTML using CDN: developer guide",
+    "description": "Developer quickstart: download a course, embed Player in HTML, serve the page over HTTP and verify playback."
   },
   "/docs/studio/": {
     "title": "Cómo usar P2LRN Studio: guía visual paso a paso",
@@ -80,20 +96,20 @@ export const SEO_PAGE_METADATA=Object.freeze({
     "description": "Follow practical examples to create, validate, play and integrate interactive courses with P2LRN Studio, Player and Toolkit."
   },
   "/docs/empezar/": {
-    "title": "Cómo empezar con P2LRN y crear tu primer curso",
-    "description": "Empieza con P2LRN: descubre qué herramienta necesitas para crear un curso interactivo, probarlo en Player y compartirlo en una web o LMS."
+    "title": "Cómo crear tu primer curso con Studio | P2LRN",
+    "description": "Primeros pasos para profesores: crea una lección, añade una actividad en Studio y comprueba el curso desde la vista del alumno."
   },
   "/en/docs/getting-started/": {
-    "title": "Get started with P2LRN interactive courses",
-    "description": "Get started with P2LRN: choose a tool to create an interactive course, test it in Player and share it on a website or learning platform."
+    "title": "How to create your first course in Studio | P2LRN",
+    "description": "Teacher guide for creating lessons, adding activities and checking the learner view in P2LRN Studio."
   },
   "/docs/instalar/": {
     "title": "Instalar P2LRN Player y Studio: CDN y npm",
-    "description": "Instala P2LRN Player, Studio y Toolkit en tu web o LMS con guías para CDN y npm, o crea cursos directamente con Studio online."
+    "description": "Guía para desarrolladores: instala P2LRN Player, Studio y Toolkit en una web o LMS mediante CDN o NPM, con versiones y requisitos."
   },
   "/en/docs/installation/": {
     "title": "Install P2LRN Player and Studio: CDN and npm",
-    "description": "Install P2LRN Player, Studio and Toolkit on your website or LMS using CDN or npm, or create courses directly in the online Studio."
+    "description": "Developer guide to installing P2LRN Player, Studio and Toolkit in websites and LMSs using CDN or npm, with version requirements."
   },
   "/docs/player/": {
     "title": "P2LRN Player: reproducir cursos en web y LMS",
