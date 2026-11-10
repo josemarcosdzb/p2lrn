@@ -408,7 +408,7 @@ function showStudioChoice(title,subtitle,items,onChoose){
 }
 async function chooseSharedResource(){
   const library=connectedResourceLibrary;
-  if(!library||typeof library.list!=='function'||typeof library.get!=='function')throw new Error("No shared resource library is connected to Studio.");
+  if(!library||typeof library.list!=='function'||typeof library.get!=='function')throw new Error("Your institution has not connected a shared resource library to this editor.");
   const listed=await library.list();
   const items=(listed??[]).filter((entry)=>entry?.digest&&entry?.href).map((entry)=>({...entry,id:entry.digest,label:entry.href.split("/en/").filter(Boolean).at(-1)||entry.digest,description:(entry.mediaType||'application/octet-stream')+' · '+entry.digest.slice(0,22)+'…'}));
   if(!items.length)throw new Error("The library has no resources with a source URL and a verifiable digest.");
@@ -632,8 +632,8 @@ async function reviewOfflineDelivery(file){
     content.append(warning);
   }
   addOfflineReviewRow(content,"File",file.name);
-  addOfflineReviewRow(content,"Result SHA-256",parsed.integrityValid?'Coincide':'NO coincide');
-  addOfflineReviewRow(content,"Original course",parsed.courseMatches?'Coincide':'NO coincide');
+  addOfflineReviewRow(content,"Result SHA-256",parsed.integrityValid?'Matches':'Does not match');
+  addOfflineReviewRow(content,"Original course",parsed.courseMatches?'Matches':'Does not match');
   addOfflineReviewRow(content,"Assignment signature",parsed.signatureValid===true
     ?(parsed.assignmentAuthenticated===true?"Ed25519 signature valid and verified":"Ed25519 signature valid; issuer not yet verified")
     :parsed.signatureValid===false?"INVALID":"Unsigned delivery");
