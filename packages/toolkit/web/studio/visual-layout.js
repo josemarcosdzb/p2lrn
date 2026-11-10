@@ -160,7 +160,9 @@ export function ensureStudioEndCaret(surface){
     tail.append(surface.ownerDocument.createElement('br'));
   }
   tail.setAttribute('data-p2lrn-end-caret','1');
-  tail.setAttribute('aria-label',studioUiText('Escribir o insertar después de la última actividad',tail.ownerDocument));
+  // A plain paragraph cannot have an aria-label (WCAG axe aria-prohibited-attr).
+  // Keep its visible placeholder in the editor, but do not serialize invalid ARIA.
+  tail.removeAttribute('aria-label');
   if(!tail.hasChildNodes())tail.append(surface.ownerDocument.createElement('br'));
   if(root.lastElementChild!==tail)root.append(tail);
   return tail;
