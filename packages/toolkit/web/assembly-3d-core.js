@@ -132,6 +132,29 @@ export function assemblyFitStatus(scene,pieceId,placement){
   return evaluateAssemblyPlacement(scene,pieceId,link.targetId,placement??assemblyPlacementTransform(scene,pieceId),
     Object.fromEntries(scene.links.map(l=>[l.pieceId,l.targetId])));
 }
+// glTF pivots are not necessarily in their mesh. Convert the randomized
+// VISUAL staging centre to a mesh-root position without modifying authoring
+// coordinates, and lift the bottom of the geometry above the floor.
+export function stagedAssemblyVisualTransform(transform,bounds){
+  if(!transform||!vec(transform.position,3)||!validQuat(transform.rotation)||
+    !vec(transform.scale,3,100)||!transform.scale.every(n=>n>=0.001))
+    fail('transformación de inicio inválida');
+  if(!bounds||!vec(bounds.min,3,100000)||!vec(bounds.max,3,100000)||
+    !bounds.min.every((v,i)=>bounds.max[i]>=v))fail('límites del modelo inválidos');
+  const center=[0,1,2].map(i=>(bounds.min[i]+bounds.max[i])/2);
+  const offset=rotateVector(center.map((v,i)=>v*transform.scale[i]),transform.rotation);
+  const points=[];
+  for(const x of [bounds.min[0],bounds.max[0]])
+    for(const y of [bounds.min[1],bounds.max[1]])
+      for(const z of [bounds.min[2],bounds.max[2]])
+        points.push(rotateVector([x,y,z].map((v,i)=>(v-center[i])*transform.scale[i]),transform.rotation));
+  const minHeight=Math.min(...points.map(v=>v[1]));
+  const visualY=Math.max(transform.position[1],0.15-minHeight);
+  const position=transform.position.map((v,i)=>(i===1?visualY:v)-offset[i]);
+  if(!vec(position,3))fail('el modelo excede los límites de la escena de montaje');
+  return {...structuredClone(transform),position};
+}
+
 // Start positions belong only to a learner attempt, never to the professor's
 // correct placement. Randomize a staging area OUTSIDE the destination mesh,
 // keeping all pieces visible and non-overlapping in one camera view.
