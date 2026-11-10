@@ -468,6 +468,20 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       const y=safeDividerY(el,pos.y+offset.y);
       setPosition(el,pos.x+offset.x,y);ensureScrollRoom(el);change();return el;
     }
+    if(action==='diagramX'||action==='diagramY'){
+      if(!isDiagramChild(el))throw new Error('Selecciona un objeto del lienzo de diagrama.');
+      const pct=Number(value);
+      if(!Number.isFinite(pct)||pct<0||pct>100)
+        throw new RangeError('La coordenada debe estar entre 0 y 100 %.');
+      const horizontal=action==='diagramX';
+      const sizePct=Number.parseFloat(horizontal?el.style.width:el.style.height);
+      const maximum=Number.isFinite(sizePct)?Math.max(0,100-sizePct):100;
+      el.style[horizontal?'left':'top']=Math.min(pct,maximum).toFixed(4)+'%';
+      el.style.position='absolute';
+      delete el.dataset.p2lrnObjectX;delete el.dataset.p2lrnObjectY;
+      applyObjectTransform(el);
+      change();return el;
+    }
     if(action==='fontScale'){
       if(el.dataset.p2lrnLayout!=='text-box'||!isDiagramChild(el))
         throw new Error('Selecciona un cuadro de texto dentro del lienzo de diagrama.');
