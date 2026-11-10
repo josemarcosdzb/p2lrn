@@ -78,6 +78,12 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     element(doc,'span','p2lrn-ribbon-caption','Y %'),diagramYInput,
     button(doc,'Aplicar Y porcentual','diagramY'));
   objectGroup.append(size.details);
+  const corner=actionMenu(doc,'Esquinas',[],'esquinas');
+  const cornerInput=numberField(doc,'Radio de esquina en píxeles',18,0,999);
+  cornerInput.step='1';
+  corner.popup.append(element(doc,'span','p2lrn-ribbon-caption','Radio px'),cornerInput,
+    button(doc,'Aplicar esquinas redondeadas','cornerRadius'));
+  objectGroup.append(corner.details);
   const typography=actionMenu(doc,'Texto del diagrama',[],'texto-diagrama');
   const textScale=numberField(doc,'Tamaño de texto proporcional al lienzo (cqw)',1.7,0.8,9.5);
   textScale.step='0.1';
@@ -243,6 +249,8 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     widthInput.value=String(Math.max(120,width));
     const isDiagram=['diagram-canvas','diagram-group'].includes(node?.parentElement?.dataset?.p2lrnLayout);
     diagramXInput.disabled=!isDiagram;diagramYInput.disabled=!isDiagram;
+    corner.details.hidden=!isDiagram;
+    cornerInput.value=String(Number.parseFloat(node?.style?.borderRadius)||0);
     diagramWidthInput.disabled=!isDiagram;diagramHeightInput.disabled=!isDiagram;
     diagramWidthInput.value=String(Number.parseFloat(node?.style?.width)||20);
     diagramHeightInput.value=String(Number.parseFloat(node?.style?.height)||24);
@@ -303,7 +311,8 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
     if(!target||!bar.contains(target))return;
     refresh();if(!objectTools)return;
     const action=target.dataset.studioAdvancedAction;
-    const value=action==='diagramWidth'?Number(diagramWidthInput.value):
+    const value=action==='cornerRadius'?Number(cornerInput.value):
+      action==='diagramWidth'?Number(diagramWidthInput.value):
       action==='diagramHeight'?Number(diagramHeightInput.value):
       action==='diagramX'?Number(diagramXInput.value):
       action==='diagramY'?Number(diagramYInput.value):
