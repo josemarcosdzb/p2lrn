@@ -47,6 +47,7 @@ function contactHarness({language='es',config={sitekey:'public-site-key',require
   setItem(key,value){storage.set(key,value)}
  };
  const location={pathname:language==='en'?'/en/contact/':'/contacto/'};
+ window.location=location;
  const fetch=async(url,options)=>{
   const text=String(url);
   if(text.endsWith('?config=1')){
