@@ -83,7 +83,7 @@ async function readAuthorizedMultipart(req,contentType,authorize){
   if(!/^Content-Disposition:\s*form-data;\s*name="ticket"(?:\r\nContent-Type:\s*text\/plain)?$/i.test(headers))
    throw new Error('INVALID_P2LRN_UPLOAD_FORM');
   ticket=text.slice(offset+4);
-  if(!/^[A-Za-z0-9_-]{16,128}$/.test(ticket))
+  if(!/^[A-Za-z0-9_-]{1,128}$/.test(ticket))
    throw new Error('INVALID_P2LRN_UPLOAD_FORM');
   await authorize(ticket);
  }
