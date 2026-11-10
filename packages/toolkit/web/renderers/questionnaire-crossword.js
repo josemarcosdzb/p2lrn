@@ -154,7 +154,7 @@ export async function render(options){
     const score=await runtime.finish({allowMissingRequired:true});
     const reveal=(runtime.payload.presentation?.showFeedback??'never')!=='never';
     status.textContent=score&&reveal
-      ?playerUiText('Crucigrama entregado: ')+score.pointsEarned+'/'+score.pointsPossible+playerUiText(' puntos.')
+      ?playerUiText('Crucigrama entregado: ')+score.raw+'/'+score.max+playerUiText(' puntos.')
       :playerUiText('Crucigrama entregado. La corrección no está disponible para el alumno.');
   });
   reset.addEventListener('click',()=>{
