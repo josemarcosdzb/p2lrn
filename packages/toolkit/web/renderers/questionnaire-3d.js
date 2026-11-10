@@ -7,7 +7,7 @@ import {
   orderingIsCorrect,
   validateConnection,
 } from '../game-3d-mechanics.js';
-import {createThreeGameScene} from '../game-3d/three-runtime.js';
+// WebGL and vendor runtime load only when an actual 3D scene is created.
 import {buildAssemblyControls} from './assembly-3d.js';
 import {el, finishPanel, setupGame, statusNode, stylesheets} from './game-common.js';
 
@@ -673,6 +673,7 @@ export async function render(options) {
   let joystick=null;
   let accessibleOnly=false;
   try{
+    const {createThreeGameScene}=await import('../game-3d/three-runtime.js');
     scene=await createThreeGameScene(canvas,{
       onInteraction:(meta)=>currentInteraction(meta),
       onDrag:(meta,phase,info)=>currentDrag(meta,phase,info),
