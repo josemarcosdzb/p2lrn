@@ -14,6 +14,8 @@ const EN={
   "Pieza desplazada. Sigue acercándola a su destino.": "Piece moved. Keep dragging it towards its target.",
   "Arrastra las piezas hacia sus cajas. Muévete con WASD, las flechas o el joystick; gira el fondo y acerca con la rueda.": "Drag the pieces towards their targets. Move with WASD, the arrow keys or joystick; drag the background to orbit and use the wheel to zoom.",
   "Usa WASD, las flechas o el joystick para recorrer el montaje, arrastra una pieza y suéltala. Gira el fondo para orientar la cámara y usa la rueda para acercarte.": "Use WASD, the arrow keys or joystick to move around the assembly, then drag and drop a piece. Drag the background to orbit and use the wheel to zoom.",
+  "En móvil, mueve la bola para desplazarte. En PC, usa WASD o las flechas. Arrastra las piezas a sus destinos y el fondo para girar la cámara.": "On mobile, use the thumbstick to move. On desktop, use WASD or the arrow keys. Drag pieces to their targets and drag the background to rotate the camera.",
+  "En móvil, mueve la bola para caminar y arrastra el fondo para mirar. En PC, usa WASD o las flechas.": "On mobile, use the thumbstick to walk and drag the background to look around. On desktop, use WASD or the arrow keys.",
   "Piezas colocadas: ": "Pieces placed: ",
   "Encajada": "Placed",
   "Pendiente": "Pending",
