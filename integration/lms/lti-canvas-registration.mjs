@@ -2,7 +2,7 @@
 // An LMS administrator initiates the installation inside Canvas. Its short-lived
 // registration token is used server-side only and is never written to a log or DB.
 import {createHash} from 'node:crypto';
-import {pinnedLmsFetch} from './lti-safe-fetch.mjs';
+import {pinnedLmsFetch,trustedLmsJwksUrl} from './lti-safe-fetch.mjs';
 
 export const CANVAS_PENDING_DEPLOYMENT='__p2lrn_canvas_dynamic_pending__';
 const CONFIG_CLAIM='https://purl.imsglobal.org/spec/lti-tool-configuration';
@@ -107,6 +107,7 @@ export async function installCanvasDynamicRegistration({
  const token=trustedCanvasUrl(config.token_endpoint,allowed);
  const jwksUrl=trustedCanvasUrl(config.jwks_uri,allowed);
  const endpoint=trustedCanvasUrl(config.registration_endpoint,allowed);
+ trustedLmsJwksUrl(jwksUrl.href,{issuer:issuer.origin,authUrl:auth.href,tokenUrl:token.href},{allowInsecureLoopback:allowInsecureLocal});
  if(issuer.username||issuer.password||issuer.search||issuer.hash)
   throw new Error('CANVAS_UNTRUSTED_ISSUER');
  // A registration token must never be sent to a host unrelated to the
@@ -132,7 +133,7 @@ export async function installCanvasDynamicRegistration({
   issuer:issuer.origin,clientId,authUrl:auth.toString(),
   launchUrl:new URL('/lti/launch',baseUrl).toString(),
   deepLinkLaunchUrl:new URL('/lti/deep-link',baseUrl).toString(),
-  tokenUrl:token.toString(),jwks,
+  tokenUrl:token.toString(),jwksUrl:jwksUrl.href,jwks,
   deployments:[CANVAS_PENDING_DEPLOYMENT],
   deepLinkReturnOrigins:[issuer.origin],
   status:'ACTIVE'
