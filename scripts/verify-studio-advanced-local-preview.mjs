@@ -233,14 +233,16 @@ async function diagramCase(){
   assert(player.getAttribute('src')?.startsWith('blob:'),'Real Player did not receive saved package');
   geometry.playerOpened=true;
   editButton.click();
+  let returnSurface=null;
   for(let attempt=0;attempt<90;attempt++){
+    returnSurface=root.querySelector('[data-studio-html-surface=true]');
     if(editButton.getAttribute('aria-pressed')==='true'&&
-      surface.isConnected&&surface.querySelector('[data-p2lrn-layout="diagram-canvas"]'))break;
+      returnSurface?.isConnected&&returnSurface.querySelector('[data-p2lrn-layout="diagram-canvas"]'))break;
     await new Promise(resolve=>setTimeout(resolve,125));
   }
-  assert(editButton.getAttribute('aria-pressed')==='true'&&surface.isConnected,
+  assert(editButton.getAttribute('aria-pressed')==='true'&&returnSurface?.isConnected,
     'Studio did not recover editing after student playback');
-  const restored=surface.querySelector('[data-p2lrn-layout="diagram-canvas"]');
+  const restored=returnSurface.querySelector('[data-p2lrn-layout="diagram-canvas"]');
   assert(restored&&restored.querySelector('[data-p2lrn-lesson-image]'),
     'Returning from Player lost authored diagram or embedded image');
   restored.scrollIntoView({block:'center'});
