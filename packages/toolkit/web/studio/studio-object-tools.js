@@ -15,7 +15,7 @@ const STYLES=[
  '.p2lrn-object-controls button[data-object-action=drag]{background:#edf4fc;border-color:#d2deeb;cursor:grab}',
  '.p2lrn-object-controls button[data-object-action=drag]:active{cursor:grabbing}',
  '.p2lrn-object-controls .p2lrn-object-label{color:#64748b;font-size:10px;padding:0 6px;font-family:system-ui,sans-serif}',
- '.p2lrn-object-resize{position:absolute;right:-8px;bottom:-8px;pointer-events:auto;width:26px;height:26px;min-width:26px;min-height:26px;padding:0;border:2px solid #fff;border-radius:4px;background:#4776b6;box-shadow:0 0 0 1px #4776b6;cursor:nwse-resize}',
+ '.p2lrn-object-resize{position:absolute;right:1px;bottom:1px;pointer-events:auto;width:26px;height:26px;min-width:26px;min-height:26px;padding:0;border:2px solid #fff;border-radius:4px;background:#4776b6;box-shadow:0 0 0 1px #4776b6;cursor:nwse-resize}',
   '.p2lrn-freeform-points{position:absolute;inset:0;pointer-events:none}',
   '.p2lrn-freeform-point{position:absolute;width:26px;height:26px;min-height:26px;min-width:26px;border:2px solid white;box-shadow:0 0 0 1px #1453a0;border-radius:50%;background:#2563eb;pointer-events:auto;cursor:move;transform:translate(-50%,-50%)}',
   '.p2lrn-freeform-point:focus-visible{outline:3px solid #111827;outline-offset:3px}',
@@ -69,13 +69,31 @@ function button(doc,label,action,title=label){
 }
 const isObject=(node,surface)=>Boolean(node&&surface.contains(node)&&node.matches?.(OBJECT_SELECTOR));
 const isDiagramChild=el=>['diagram-canvas','diagram-group'].includes(el?.parentElement?.dataset?.p2lrnLayout);
+export function fitStudioObjectWidth(width,offset,containerWidth,minimumWidth=0){
+  if(![width,offset,containerWidth,minimumWidth].every(Number.isFinite)||containerWidth<=0||minimumWidth<0)
+    throw new RangeError('Invalid object bounds');
+  const remaining=Math.max(0,containerWidth-Math.max(0,offset));
+  return between(width,Math.min(minimumWidth,remaining),remaining);
+}
+function horizontalBounds(el){
+  const parent=el.parentElement,rect=parent.getBoundingClientRect();
+  const style=parent.ownerDocument.defaultView?.getComputedStyle(parent);
+  const px=v=>parseFloat(v)||0;
+  const left=rect.left+px(style?.borderLeftWidth)+px(style?.paddingLeft);
+  const right=rect.right-px(style?.borderRightWidth)-px(style?.paddingRight);
+  return {left,right,width:Math.max(0,right-left)};
+}
+function translatedX(el){
+  const match=/^translate\(\s*(-?\d+(?:\.\d+)?)px,\s*-?\d+(?:\.\d+)?px\)/.exec(el.style.transform);
+  return match?Number(match[1]):0;
+}
 export function percentDiagramGeometry(x,y,width,height,containerWidth,containerHeight){
   if([x,y,width,height,containerWidth,containerHeight].some(v=>!Number.isFinite(v))||containerWidth<=0||containerHeight<=0)
     throw new RangeError('Invalid diagram geometry');
   const round=n=>Math.round(n*10000)/10000;
-  return {left:round(between(x/containerWidth*100,0,100)),
-    top:round(between(y/containerHeight*100,0,100)),
-    width:round(between(width/containerWidth*100,1,100)),
+  const left=between(x/containerWidth*100,0,99);
+  return {left:round(left),top:round(between(y/containerHeight*100,0,100)),
+    width:round(fitStudioObjectWidth(width/containerWidth*100,left,100,1)),
     height:round(between(height/containerHeight*100,1,100))};
 }
 const positionOf=el=>{
@@ -121,7 +139,11 @@ function setPosition(el,x,y){
     delete el.dataset.p2lrnObjectX;delete el.dataset.p2lrnObjectY;
     applyObjectTransform(el);return;
   }
+  const bounds=horizontalBounds(el),rect=el.getBoundingClientRect(),prev=translatedX(el);
+  const lower=Math.ceil(bounds.left-(rect.left-prev)),upper=Math.floor(bounds.right-(rect.right-prev));
   x=Math.round(between(x,-4000,4000));y=Math.round(between(y,-4000,4000));
+  if(upper>=lower)x=between(x,lower,upper);
+  else x=lower;
   el.dataset.p2lrnObjectX=String(x);el.dataset.p2lrnObjectY=String(y);
   applyObjectTransform(el);
 }
@@ -516,7 +538,8 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     }
     if(action==='width'){
       const scene=isDiagramChild(el)?el.parentElement.getBoundingClientRect():null;
-      const px=between(positive(value,el.getBoundingClientRect().width),scene?12:120,scene?scene.width:Math.max(120,surface.clientWidth));
+      const bounds=horizontalBounds(el),rect=el.getBoundingClientRect();
+      const px=fitStudioObjectWidth(positive(value,rect.width),rect.left-bounds.left,bounds.width,scene?12:120);
       el.style.width=scene?(px/scene.width*100).toFixed(4)+'%':Math.round(px)+'px';
       el.style.maxWidth=scene?'none':'100%';change();return el;
     }
@@ -587,14 +610,15 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       setPosition(el,between(drag.position.x+dx,minX,maxX),safeDividerY(el,proposed));
       ensureScrollRoom(el);
     }else{
-      const maxWidth=Math.max(120,surface.clientWidth);
+      const bounds=horizontalBounds(el),rect=el.getBoundingClientRect();
+      const width=fitStudioObjectWidth(drag.width+dx,rect.left-bounds.left,bounds.width,isDiagramChild(el)?12:120);
       if(isDiagramChild(el)){
-        const bounds=el.parentElement.getBoundingClientRect();
-        el.style.width=(between(drag.width+dx,12,bounds.width)/bounds.width*100).toFixed(4)+'%';
-        el.style.height=(between(drag.height+dy,12,bounds.height)/bounds.height*100).toFixed(4)+'%';
+        const scene=el.parentElement.getBoundingClientRect();
+        el.style.width=(width/scene.width*100).toFixed(4)+'%';
+        el.style.height=(between(drag.height+dy,12,scene.height)/scene.height*100).toFixed(4)+'%';
         el.style.minHeight='0';el.style.maxWidth='none';
       }else{
-        el.style.width=Math.round(between(drag.width+dx,120,maxWidth))+'px';
+        el.style.width=Math.round(width)+'px';
         el.style.maxWidth='100%';
         if(!el.matches('table'))el.style.minHeight=Math.round(between(drag.height+dy,40,1800))+'px';
       }
