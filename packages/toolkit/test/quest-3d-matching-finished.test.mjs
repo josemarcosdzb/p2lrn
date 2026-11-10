@@ -26,7 +26,10 @@ function createMatchingHarness(source,{savedPairs={}}={}){
     click(){this.events.get('click')?.();}
   }
   const start=source.indexOf('function buildMatchingControls(');
-  const end=source.indexOf('function buildClassificationControls(',start);
+  // Stop at the COMPLETE following declaration, including an optional ES
+  // module export keyword. Otherwise the vm receives a dangling 'export'.
+  const boundary=source.slice(start).search(/\n(?:export\s+)?function buildClassificationControls\(/);
+  const end=boundary<0?-1:start+boundary+1;
   assert.ok(start>=0&&end>start,'matching scene constructor must exist');
   const ctor=runInNewContext(source.slice(start,end)+'\nbuildMatchingControls;',{
     el:(tag,attrs,text)=>new FakeElement(tag,attrs,text),
