@@ -74,10 +74,6 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npm run build
-      - name: Studio security and integration regression
-        run: |
-          node --test --test-concurrency=2 packages/studio/test/*.test.mjs
-          node --test --test-concurrency=2 packages/toolkit/test/studio-server-save.test.mjs
       - name: Analytics data isolation, role checks and privacy
         run: |
           node --test --test-concurrency=2 packages/analytics/test/*.test.mjs
@@ -96,6 +92,10 @@ jobs:
           node --test integration/lms/lti-server.test.mjs integration/lms/lti-admin-auth.test.mjs
           node --test integration/lms/lti-safe-fetch.test.mjs integration/lms/lti-content-scope.test.mjs
           node --test scripts/test-contact-turnstile.test.mjs
+      - name: Studio security and integration regression
+        run: |
+          node --test --test-concurrency=2 packages/studio/test/*.test.mjs
+          node --test --test-concurrency=2 packages/toolkit/test/studio-server-save.test.mjs
       - name: TypeScript and JavaScript syntax checks
         run: |
           node --check packages/toolkit/web/zip-source.js
