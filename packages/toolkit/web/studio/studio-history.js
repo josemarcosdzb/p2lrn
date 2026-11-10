@@ -22,6 +22,10 @@ export function createStudioHistory({onChange=()=>{},onApply=()=>{}}={}){
   let restoring=false;
   let usedBytes=0;
   const countBytes=html=>html.length*2;
+  // Editor-only empty caret paragraphs must not become separate undo steps
+  // when leaving Player preview and reconstructing the authoring surface.
+  const semanticHtml=html=>html.replace(/<p\b(?=[^>]*\bdata-p2lrn-end-caret(?:=(?:"[^"]*"|'[^']*'))?)[^>]*>(?:\s|<br\s*\/?\s*>)*<\/p>/gi,'');
+  const sameHtml=(a,b)=>semanticHtml(a)===semanticHtml(b);
   function notify(){onChange({canUndo:canUndo(),canRedo:canRedo(),key:activeKey});}
   function keyFor(surface){
     return surface?.dataset?.studioHtmlKey || surface?.dataset?.studioHtmlSurfaceKey || 'lesson';
@@ -43,7 +47,7 @@ export function createStudioHistory({onChange=()=>{},onApply=()=>{}}={}){
       history={items:[initial],index:0};
       documents.set(key,history);
       usedBytes+=countBytes(initial.html);
-    }else if(history.items[history.index].html!==surface.innerHTML){
+    }else if(!sameHtml(history.items[history.index].html,toStored(surface.innerHTML))){
       record(surface,{kind:'external'});
     }
     notify();return true;
@@ -66,7 +70,7 @@ export function createStudioHistory({onChange=()=>{},onApply=()=>{}}={}){
   function record(surface,{kind='edit'}={}){
     if(restoring||!ensure(surface))return false;
     const current=state(),html=toStored(surface.innerHTML);
-    if(current.items[current.index].html===html)return false;
+    if(sameHtml(current.items[current.index].html,html))return false;
     const size=countBytes(html);
     if(size>MAX_SNAPSHOT_BYTES){
       // Still preserve the last valid snapshot and current lesson data. The
