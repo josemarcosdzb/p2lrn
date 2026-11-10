@@ -585,6 +585,16 @@ async function verifyThreeGameInteractionAndResume(cdp){
     // Player layouts; inspect the active stage heading, not a panel child.
     const title=()=>stage()?.querySelector('.p2lrn-3d-layout h3')?.textContent||'';
     await wait(()=>Boolean(trial())&&title()==='Ordena los tres bloques','3D ordering scene');
+    // The public Player must NEVER submit unplayed 3D challenges.
+    const action=()=>[...root.querySelectorAll('.p2lrn-game-shell button')].find(x=>
+      ['Revisar pendientes','Finalizar actividad'].includes(x.textContent));
+    if(action()?.textContent!=='Revisar pendientes')
+      throw Error('An incomplete 3D activity incorrectly offers Finalizar actividad');
+    action().click();
+    await wait(()=>root.querySelector('.p2lrn-game-shell')?.textContent?.includes('No puedes finalizar: quedan pruebas sin completar.'),
+      'unfinished 3D finish was not refused');
+    if(document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:score'))
+      throw Error('Incomplete 3D activity emitted an illegal score');
     const status=()=>[...root.querySelectorAll('.p2lrn-game-status')].at(-1)?.textContent??'';
     const select=(name,value)=>{
       const label=[...trial().querySelectorAll('label')].find(node=>node.querySelector('span')?.textContent===name);
@@ -660,7 +670,9 @@ async function verifyThreeGameInteractionAndResume(cdp){
     const assemblyProgress=assemblyTrial.querySelector('p[role=status]')?.textContent??'';
     if(!assemblyProgress.includes('2/2'))throw new Error('Assembly did not persist both pieces: '+assemblyProgress);
     const finish=[...root.querySelectorAll('.p2lrn-game-shell button')].find(x=>x.textContent==='Finalizar actividad');
-    if(!finish)throw new Error('3D scoring action missing');
+    if(!finish)throw new Error('3D scoring action missing after ALL challenges were completed');
+    if(root.querySelector('.p2lrn-game-shell')?.textContent?.includes('Pruebas pendientes: 1.'))
+      throw Error('3D completion count not updated after solving all trials');
     finish.click();
     await wait(()=>root.querySelector('.p2lrn-game-shell')?.textContent?.includes('Resultado:')||
       document.querySelector('[data-event-log]')?.textContent?.includes('p2lrn:score'),'3D final score');
@@ -728,7 +740,8 @@ async function browserAssemblyInteraction(){
       runtime,scene:game,status,pkg:null});
     game.frameObjects(['assembly:piece-1','assembly:piece-2',
       'assembly-target:target-1','assembly-target:target-2'],{padding:1.3});
-    const piece=game.scene.getObjectByProperty('name','__never__');
+    const avatar=game.scene.getObjectByName('p2lrn-3d-student-avatar');
+    if(!avatar?.visible)throw Error('Assembly hides its 3D player, unlike the other games');
     let source=null;
     game.scene.traverse(node=>{
       if(node.userData?.p2lrnInteraction?.kind==='assembly-piece' &&
@@ -768,12 +781,14 @@ async function browserAssemblyInteraction(){
     const secondDelta=movePiece();
     if(!status.textContent.includes('Pieza desplazada'))
       throw Error('Assembly drag did not report its retained position: '+status.textContent);
-    const cameraBefore=game.camera.position.clone();
+    const cameraBefore=game.camera.position.clone(),avatarBefore=avatar.position.clone();
     game.setMovementVector(0,1);
     await sleep(350);
     game.setMovementVector(0,0);
     const joystickDistance=game.camera.position.distanceTo(cameraBefore);
-    if(joystickDistance<0.2)throw Error('Assembly analog navigation did not move the Three camera');
+    const avatarDistance=avatar.position.distanceTo(avatarBefore);
+    if(joystickDistance<0.2||avatarDistance<0.2)
+      throw Error('Assembly did not move player AND third-person camera: '+JSON.stringify({joystickDistance,avatarDistance}));
     canvas.focus();
     const keyboardBefore=game.camera.position.clone();
     canvas.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,code:'KeyD',key:'d'}));
@@ -782,7 +797,8 @@ async function browserAssemblyInteraction(){
     const keyboardDistance=game.camera.position.distanceTo(keyboardBefore);
     if(keyboardDistance<0.2)throw Error('Assembly WASD did not move the Three camera');
     globalThis.__p2lrnAssemblyQA={game,canvas};
-    return {realWebGL:true,firstDelta,secondDelta,joystickDistance,keyboardDistance,
+    return {realWebGL:true,avatarVisible:true,avatarDistance,
+      firstDelta,secondDelta,joystickDistance,keyboardDistance,
       noUnearnedScores:patches.length===0};
   }catch(error){game?.destroy();canvas.remove();throw error;}
 }
@@ -792,7 +808,8 @@ async function verifyAssemblyLiveInput(cdp){
     '3D assembly live browser startup',30000);
   const result=await evalTop(cdp,'('+browserAssemblyInteraction.toString()+')()');
   try{
-    invariant(result?.realWebGL&&result.firstDelta>0.2&&result.secondDelta>0.2&&
+    invariant(result?.realWebGL&&result.avatarVisible&&result.avatarDistance>0.2&&
+      result.firstDelta>0.2&&result.secondDelta>0.2&&
       result.joystickDistance>0.2&&result.keyboardDistance>0.2&&result.noUnearnedScores,
       'Assembly real drag/navigation regression: '+JSON.stringify(result));
     const screenshot=await captureElementVisualEvidence(cdp,'3d-assembly-live-drag-and-navigation',
