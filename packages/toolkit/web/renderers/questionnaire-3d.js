@@ -706,16 +706,18 @@ export async function render(options) {
     const trial=game.data.trials[trialIndex];
     const assembly=trial.type==='assembly-3d';
     scene.setAssemblyMode?.(assembly);
-    if(joystick?.element){joystick.element.hidden=assembly;joystick.element.style.display=assembly?'none':'';}
-    // Assembly is a directly manipulable model, not a walking simulation.
+    // Keep the same independent joystick for EVERY 3D trial. In assembly it
+    // navigates the orbital viewpoint while dragging still manipulates pieces.
+    if(joystick?.element){joystick.element.hidden=false;joystick.element.style.display='';}
     // No entry overlay may cover a destination or staging piece.
+    // The user can still navigate with the visible joystick, WASD or arrows.
     entryHint.hidden=assembly;
     entryHint.style.display=assembly?'none':'';
     entryHint.querySelector('small').textContent=playerUiText(assembly
-      ?'Todas las piezas están a la vista: arrastra una pieza a una caja. Arrastra el fondo para girar la cámara.'
+      ?'Arrastra las piezas hacia sus cajas. Muévete con WASD, las flechas o el joystick; gira el fondo y acerca con la rueda.'
       :'Usa WASD o las flechas para caminar y arrastra el fondo para mirar.');
     help.textContent=playerUiText(assembly
-      ?'Todas las piezas y sus destinos están visibles. Arrastra una pieza hasta su caja; gira la cámara con el fondo y usa la rueda para acercarte.'
+      ?'Usa WASD, las flechas o el joystick para recorrer el montaje, arrastra una pieza y suéltala. Gira el fondo para orientar la cámara y usa la rueda para acercarte.'
       :'En móvil, mueve la bola para caminar y arrastra el fondo para mirar. En PC, usa WASD o las flechas.');
     const wrap=el('div',{class:'p2lrn-3d-trial'});
     heading.replaceChildren(
