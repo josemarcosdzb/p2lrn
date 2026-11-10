@@ -20,6 +20,7 @@ const handAuthoredEnglishPages=new Set([
   'docs/empezar-facil/index.html',
   'docs/desarrolladores/index.html',
   'docs/desarrolladores/primeros-pasos/index.html',
+  'docs/desarrolladores/actividades/index.html',
   'docs/instalar/index.html',
   'docs/que-usar/index.html',
   'docs/studio/index.html',

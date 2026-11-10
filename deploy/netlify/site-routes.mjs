@@ -13,6 +13,7 @@ export const ENGLISH_ROUTES=Object.freeze({
   '/docs/empezar-facil/':'/en/docs/quickstart/',
   '/docs/desarrolladores/':'/en/docs/developers/',
   '/docs/desarrolladores/primeros-pasos/':'/en/docs/developers/quickstart/',
+  '/docs/desarrolladores/actividades/':'/en/docs/developers/activities/',
   '/docs/instalar/':'/en/docs/installation/',
   '/docs/formato/':'/en/docs/file-format/',
   '/docs/formato-portable-cursos-interactivos/':'/en/docs/portable-course-format/',
