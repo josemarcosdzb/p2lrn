@@ -494,6 +494,34 @@ AulaP2P. No fabricar sesiones ni evitar la política del SSO.
 Las instalaciones externas de Chamilo mantienen el login que
 su institución utilice; P2LRN no les obliga a usar AulaP2P.
 
+### Acceso LMS comprobado en Chrome (10-11-2026)
+
+Navegación real sin reutilizar sesiones ni fabricar autenticación:
+
+- Chamilo: /plugin/ImsLti/configure.php?cid=4 responde 302 hacia
+  /login, que responde 303 hacia
+  http://127.0.0.1:3000/lms/acceder/chamilojose.
+- Canvas: /login responde 303 hacia /lms/acceder/josemarcos,
+  y el navegador llega al formulario central /entrar.
+- Sakai: /portal/login responde 303 hacia
+  /lms/acceder/josesakai y el formulario central /entrar.
+- Open edX: /login responde 303 hacia
+  /lms/acceder/josemarcosdiaz y el formulario central /entrar.
+
+Capturas tomadas en el equipo de pruebas (no incorporan credenciales):
+P2LRN-CERT-20261107/videos/lti-sso-{chamilo,canvas,sakai,openedx}-browser-current.png.
+
+El navegador confirma que el centro exige su SSO, no que el LTI
+Provider esté averiado. La ruta Chamilo original de configuración
+contiene el curso cid=4; la redirección al portal de acceso no muestra
+ese destino original. Cuando exista una sesión central autorizada,
+comprobar también que el regreso lleva al mismo curso y no solo al
+inicio del LMS. No desactivar Caddy ni modificar la autenticación para
+simular un aprobado.
+
+La solución para centros externos sigue siendo independiente de
+AulaP2P: instalar P2LRN como herramienta LTI 1.3 autorizada en el LMS
+y utilizar la autenticación habitual de la institución.
 **Pendiente:** profesor autenticado, selección .p2lrn firmada,
 guardado y apertura de la actividad desde Chamilo, sesión de alumno,
 reentrada, calificación oficial AGS y certificación visual.
