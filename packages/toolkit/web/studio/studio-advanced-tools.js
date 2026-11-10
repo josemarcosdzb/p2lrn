@@ -77,7 +77,7 @@ export function mountAdvancedStudioTools({bar,root,resolveSurface,onStatus=()=>{
   curve.popup.append(element(doc,'span','p2lrn-ribbon-caption','Curvatura %'),curveInput,
     button(doc,'Aplicar curvatura','curve'));
   objectGroup.append(curve.details);
-  const bezier=actionMenu(doc,'Curva Bézier',[],'bezier');
+  const bezier=actionMenu(doc,'Editar curva',[],'bezier');
   const bezierLeft=numberField(doc,'Altura del primer punto de control',18,0,100);
   const bezierRight=numberField(doc,'Altura del segundo punto de control',18,0,100);
   bezierLeft.step='1';bezierRight.step='1';
