@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'packages/toolkit/web/**'
+      - 'packages/analytics/**'
+      - 'packages/player/server/results-http.mjs'
+      - 'packages/player/test/results-http.test.mjs'
       - 'packages/toolkit/test/player-ui-i18n.test.mjs'
       - 'packages/toolkit/test/questionnaire-all-types-audit.test.mjs'
       - 'deploy/netlify/site/p2lrn.js'
@@ -46,6 +49,12 @@ jobs:
         shell: powershell
         run: |
           node --test packages/toolkit/test/player-ui-i18n.test.mjs packages/toolkit/test/questionnaire-all-types-audit.test.mjs packages/toolkit/test/questionnaire-classification.test.mjs packages/toolkit/test/quest-3d-player-physics.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify Analytics filters, Host authorization, Player sync and result integrity
+        shell: powershell
+        run: |
+          node --test packages/analytics/test/analytics.test.mjs packages/analytics/test/course-data-source.test.mjs packages/analytics/test/secure-dataset-http.test.mjs packages/analytics/test/result-files.test.mjs packages/player/test/results-http.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Install pinned browser automation and open-source 3D runtime

@@ -111,29 +111,66 @@ await panel.refresh();
 Este origen se limita al curso indicado. Los eventos deben proceder de Player y los archivos `.p2lrn-result` deben validarse previamente con las herramientas oficiales. La información de un archivo `.p2lrn` no contiene por sí sola notas históricas de estudiantes. Las puntuaciones locales se mantienen informativas y nunca se convierten en notas oficiales automáticamente. El origen HTTP sigue disponible para plataformas con datos institucionales autorizados.
 
 
-## Sincronizaci?n autom?tica con Player en plataformas propias
+## Sincronización con Player, filtros y tareas programadas
 
-Con createPlayerAnalyticsSession de @p2lrn/player, los resultados
-.p2lrn-result se guardan en el backend de la plataforma. El alumno
-no descarga ni env?a archivos. Analytics lee el ?ndice privado que
-proporciona el mismo Host con permisos del profesor:
+La integración con un Host autorizado es **por eventos y guardados**: `createPlayerAnalyticsSession`
+recoge el progreso de Player, `createHttpResultHost` guarda los resultados en una
+ruta privada y Analytics lee el índice de resultados del profesor autorizado.
+No es necesario que el alumno descargue y envíe archivos si el Host dispone
+de identidad autenticada, almacenamiento privado y permisos reales.
 
-~~~js
+```js
 import '@p2lrn/analytics';
 import {createHttpResultHost} from '@p2lrn/player';
 const host=createHttpResultHost({baseUrl:'/api/p2lrn/results'});
 const panel=document.getElementById('panel.analytics');
 panel.src=host.indexUrl(curso.packageId);
 await panel.refresh();
-~~~
+```
 
-in_progress es progreso pendiente, no una calificaci?n; submitted
-significa intento terminado, todav?a informativo hasta confirmaci?n
-de un Host acad?mico. El ?ndice vac?o presenta un panel sin datos.
-El servidor de referencia es @p2lrn/player/server/results. La ruta de
-los resultados debe ser privada, no accesible por alumnado ajeno.
-Consultar spec/RESULTS-ANALYTICS.md.
+Para un dataset institucional en lugar de un índice de resultados, el Host
+puede utilizar `createP2LRNAnalyticsDatasetHandler` con callbacks obligatorios
+`authenticate`, `authorize` y `loadDataset` que verifican **centro, curso y alumno**
+en cada petición. El cliente sólo recibe datos previamente autorizados:
 
+```js
+import '@p2lrn/analytics';
+import {createHttpAnalyticsDataSource} from '@p2lrn/analytics/model';
+const panel=document.querySelector('p2lrn-analytics');
+// Estos identificadores proceden de la sesión autorizada del Host.
+panel.courseId=authorizedCourseId;
+panel.dataSource=createHttpAnalyticsDataSource({
+  url:'/api/p2lrn/analytics/dataset?tenantId='+encodeURIComponent(authorizedTenantId),
+  credentials:'same-origin',
+});
+await panel.refresh();
+```
+
+**Filtros del panel:** el selector de curso delimita todas las vistas; búsqueda
+de alumno y señal de riesgo delimitan las tablas de Alumnos y Libro de notas
+y sus exportaciones CSV, aunque no reescriben los indicadores globales de la
+portada. El selector `Actividad: 7/14/30/90 días` controla el rango del gráfico
+de actividad, no elimina expedientes históricos. La función
+`filterAnalyticsDataset({from,to})` también admite fechas explícitas y toma
+el día final completo cuando se indica `AAAA-MM-DD`.
+
+**Seguridad:** los alumnos fuera del filtro no se exportan por error, las
+celdas CSV con fórmulas se neutralizan, las notas de un cuestionario no
+sustituyen las notas oficiales del curso y los archivos `.p2lrn-result`
+siguen siendo informativos hasta confirmación del Host. Protege las rutas
+mediante sesión, autorización por rol y curso, HTTPS, CORS restrictivo y
+`Cache-Control: private, no-store`. No utilices valores de rol o alumno
+recibidos desde el navegador para tomar decisiones de acceso.
+
+**Cron:** `@p2lrn/analytics` no instala ni ejecuta ninguna tarea cron propia.
+La sincronización ordinaria se produce cuando Player envía resultados y
+cuando Analytics solicita una actualización. Si el centro necesita
+retención, consolidación o limpieza periódica, debe gestionarlo con su
+backend autorizado, con auditoría y políticas de conservación: **no hay
+ningún cron automático de Analytics que se deba activar para usarlo**.
+
+El estado de publicación en NPM/CDN debe verificarse por separado del
+código en desarrollo; la compilación local no demuestra un despliegue.
 
 ## Dataset privado desde un servidor autenticado (contrato seguro opcional)
 
