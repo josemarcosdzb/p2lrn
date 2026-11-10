@@ -140,6 +140,36 @@ endpoint /lti/health del proveedor; esto NO demuestra que sus
 aplicaciones LMS estén sanas ni que acepten notas AGS. Queda
 pendiente publicar realmente este paquete, acceder como alumno y
 observar una calificación en el libro de notas de cada plataforma.
+### LMS activos frente a registros LTI (10-11-2026)
+
+El curso nuevo de interoperabilidad (SHA-256
+d163609727827e53ce076993a4e8708e34f1ef7dc8010131af5e0ce92332881d)
+continúa sin aparecer en el catálogo del proveedor: búsqueda de solo
+lectura en SQLite => cero filas, pese a cinco registros LTI con estado
+ACTIVE. Estos registros no significan que el LMS de AulaP2P esté
+administrativamente activo.
+
+Se recuperó Moodle usando su definición Compose original, con los
+volúmenes PostgreSQL y Moodledata existentes. DB y app quedaron
+healthy y la app respondió 21.410 bytes HTML desde dentro del
+contenedor. El dominio público siguió devolviendo HTTP 200 vacío,
+porque el ingreso Caddy carece de ruta de Moodle.
+
+El reconciliador backend/scripts/lms-factory-reconcile-routes.mjs
+lee solo las instancias de AulaP2P donde
+lms_hosting_instances.status = 'ACTIVE'; elimina rutas de LMS
+inactivos. En su última ejecución: una instancia reconciliada.
+No hay que crear rutas temporales ni modificar esa tabla con SQL.
+La activación debe ocurrir desde la gestión autorizada del campus.
+
+AGS tampoco puede certificarse por pulsar Finalizar: la nota que
+recibe /lti/runtime/score no es autoritativa; solo un administrador
+puede aprobarla y enviarla mediante /lti/admin/grades.
+El libro oficial del LMS debe confirmar la nota como último paso.
+
+No se ha realizado una prueba end-to-end autorizada del nuevo curso.
+Evidencia ampliada en el informe QA reutilizable
+P2LRN-CERT-20261107/lti-curso-nuevo-resultado-real.md.
 ## Despliegue Docker mantenible
 
 Este repositorio contiene un único servicio Docker Compose para el proveedor:
