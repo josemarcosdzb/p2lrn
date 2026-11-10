@@ -72,8 +72,11 @@ async function postgresEngine(){
 
 let database;
 try{
- if(engine!=='postgres')throw new Error('LTI_UNIMPLEMENTED_SQL_DIALECT');
- database=await postgresEngine();
+ if(engine==='postgres')database=await postgresEngine();
+ else if(engine==='mysql'||engine==='mariadb'){
+  const {createMysqlEngine}=await import('./lti-mysql-connection.mjs');
+  database=await createMysqlEngine(engine,connectionString);
+ }else throw new Error('LTI_UNIMPLEMENTED_SQL_DIALECT');
  signal({ready:true,engine},readyFlag);
 }catch(err){
  signal({ready:false,...asDbError(err)},readyFlag);
