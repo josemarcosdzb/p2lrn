@@ -23,7 +23,7 @@ function makeBlock(kind){
     wrap.dataset.p2lrnLayout='diagram-scroll';
     wrap.setAttribute('role','region');
     wrap.setAttribute('aria-label','Diagrama desplazable horizontalmente en pantallas pequeñas');
-    setStyle(wrap,{width:'100%',maxWidth:'100%',overflowX:'auto',overflowY:'hidden',
+    setStyle(wrap,{width:'100%',maxWidth:'min(100%, calc(100vw - 48px))',overflowX:'auto',overflowY:'hidden',
       boxSizing:'border-box',margin:'18px 0',padding:'0'});
     const scene=elt('section');
     scene.dataset.p2lrnLayout='diagram-canvas';
