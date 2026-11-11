@@ -200,7 +200,7 @@ async function renderEditor(){
   // Keep the heading for navigation, and the labelled textbox for editing.
   const titleHeading=document.createElement('h1');titleHeading.className='studio-title';
   const title=document.createElement('span');title.className='studio-title-field';title.textContent=titleOf(entity);
-  title.setAttribute('role','textbox');title.setAttribute('aria-label',"Title");title.setAttribute('aria-multiline','true');
+  title.tabIndex=0;title.setAttribute('role','textbox');title.setAttribute('aria-label',"Title");title.setAttribute('aria-multiline','true');
   titleHeading.append(title);
   bindEditable(title,()=>{try{studio.setTitle(entity.id,title.textContent||'');renderTree();}catch(error){setStatus(error.message);}});
   const description=document.createElement('p');description.className='studio-description';description.textContent=entity.description?.es??entity.description?.en??'';
