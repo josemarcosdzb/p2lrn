@@ -46,7 +46,7 @@ jobs:
           node-version: '22'
       - name: Install native SQL drivers (never use SQLite as fallback)
         working-directory: integration/lms
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm install --ignore-scripts --no-audit --no-fund --no-save ../../packages/toolkit ../../packages/player
       - name: Exercise genuine PostgreSQL transactions, session reload and grade outbox
         run: node --test integration/lms/lti-postgres-live.test.mjs
 
@@ -91,7 +91,7 @@ jobs:
           node-version: '22'
       - name: Install native SQL drivers
         working-directory: integration/lms
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm install --ignore-scripts --no-audit --no-fund --no-save ../../packages/toolkit ../../packages/player
       - name: Run genuine MySQL and MariaDB storage, grades and restart checks
         run: node --test integration/lms/lti-mysql-live.test.mjs
 
@@ -122,7 +122,7 @@ jobs:
           node-version: '22'
       - name: Install Microsoft SQL Server driver
         working-directory: integration/lms
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm install --ignore-scripts --no-audit --no-fund --no-save ../../packages/toolkit ../../packages/player
       - name: Create and exercise real SQL Server database, courses, sessions and approved grades
         run: node --test integration/lms/lti-sqlserver-live.test.mjs
 
