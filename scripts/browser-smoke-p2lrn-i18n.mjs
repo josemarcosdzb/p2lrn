@@ -590,7 +590,14 @@ async function fullSiteAccessibilityChrome(){
             if(result.badMedia)issues.push({label,rule:'video-no-poster-or-captions',detail:result.badMedia});
             if(result.brokenAnchors.length)issues.push({label,rule:'broken-anchor',detail:result.brokenAnchors});
             for(const error of result.violations)issues.push({label,rule:'wcag22-aa',detail:error});
-            for(const item of result.incomplete)incomplete.push({label,...item});
+            for(const item of result.incomplete){
+              // Axe marks unsupported ARIA labelling as inconclusive. It is
+              // actionable: naming a generic div/pre without a suitable role
+              // fails assistive-technology semantics. Do not silently pass it.
+              if(item.id==='aria-prohibited-attr')
+                issues.push({label,rule:'unsupported-aria-label',detail:item.samples});
+              incomplete.push({label,...item});
+            }
           }catch(error){
             issues.push({label,rule:'test-or-runtime-error',detail:String(error)});
             if(issues.length===1)await auditPage.screenshot({
