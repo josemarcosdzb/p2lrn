@@ -16,7 +16,8 @@ function plan(){
     for(const learner of ['learner1','learner2'])
      for(const course of ['A','B'])
       actions.push({type:'assertGrade',selector:'.grade-row',gradeSelector:'.grade',
-       learner,course,studentText:'Test learner',expected:80});
+       learner,course,studentText:'Test learner',expected:80,
+       courseHeaderSelector:'.gradebook-course-heading',courseHeaderText:'QA Course '+course});
    }else if(id.includes('resume')){
     actions.push({type:'assertResume',selector:'input:checked',mode:'checked',expected:'true'});
    }else{

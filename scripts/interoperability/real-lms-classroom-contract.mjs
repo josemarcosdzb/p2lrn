@@ -19,7 +19,7 @@ export function validateClassroomPlan(p){
  if(!LMS_NAMES.includes(p.lms))fail('INVALID_REAL_LMS');
  let base;
  try{base=new URL(p.lmsBase);}catch{fail('INVALID_LMS_ORIGIN');}
- if(!['http:','https:'].includes(base.protocol)||base.username||base.password||
+ if(base.protocol!=='http:'||base.username||base.password||
     base.search||base.hash||base.pathname!=='/'||
     !(base.hostname==='localhost'||base.hostname.endsWith('.localhost')))
   fail('LMS_MUST_USE_LOCAL_QA_ORIGIN');
@@ -77,6 +77,7 @@ export function validateClassroomPlan(p){
     if(name!=='teacher-gradebook'||!courseId(a.course)||
        !['learner1','learner2'].includes(a.learner)||
        !safeSelector(a.gradeSelector)||!nonblank(a.studentText,200)||
+       !safeSelector(a.courseHeaderSelector)||!nonblank(a.courseHeaderText,200)||
        typeof a.expected!=='number'||!Number.isFinite(a.expected)||
        a.expected<0||a.expected>100||
        (a.tolerance!==undefined&&(!Number.isFinite(a.tolerance)||a.tolerance<0||a.tolerance>0.01)))

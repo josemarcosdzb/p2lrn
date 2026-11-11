@@ -42,14 +42,15 @@ if(!executing){
 if(process.env.P2LRN_LMS_REAL_E2E!=='YES')
  throw Error('REAL_LMS_E2E_EXPLICIT_OPT_IN_REQUIRED');
 const output=resolve(arg('--output')||'.interop-evidence/real-lms-classroom');
-const evidence=join(output,plan.lms);
+const runId=String(process.env.GITHUB_RUN_ID||new Date().toISOString().replace(/[^0-9]/g,'')).slice(0,32);
+const evidence=join(output,plan.lms,runId);
 await mkdir(evidence,{recursive:true});
 const reportPath=join(evidence,'real-classroom-results.json');
 const report={schema:'p2lrn-lms-real-classroom-result/1',
  lms:plan.lms,status:'BLOQUEADA',startedAt:new Date().toISOString(),
  commit:process.env.GITHUB_SHA||null,
  courses:{A:courses.A.sha256,B:courses.B.sha256},
- providerNpmPublished:false,stages:[],
+ stages:[],
  teacherUploads:0,learnerCompletions:0,officialGradeCells:0,
  note:'PASS requires Chrome/Edge interactions with genuine QA LMS UI and official gradebook'};
 const persist=()=>writeFile(reportPath,JSON.stringify(report,null,2)+'\n');
@@ -142,7 +143,7 @@ async function runAction(browser,a){
  case 'uploadCourse':{
   const file=courses[a.course];
   const payload=file.buf.toString('base64');
-  await browser.evaluate(expression(a,
+  const loaded=await browser.evaluate(expression(a,
    'if(node.type!=="file")throw Error("QA_REAL_FILE_INPUT_REQUIRED");'+
    'const binary=atob('+J(payload)+');'+
    'const bytes=Uint8Array.from(binary,x=>x.charCodeAt(0));'+
@@ -150,6 +151,7 @@ async function runAction(browser,a){
    'dt.items.add(new File([bytes],'+J(file.filename)+',{type:"application/vnd.p2lrn+zip"}));'+
    'node.files=dt.files;node.dispatchEvent(new Event("change",{bubbles:true}));'+
    'return node.files.length===1&&node.files[0].size==='+file.buf.length+';'));
+  if(loaded!==true)throw Error('QA_COURSE_NOT_SELECTED_IN_BROWSER');
   return;
  }
  case 'waitVisible':
@@ -172,6 +174,9 @@ async function runAction(browser,a){
  }
  case 'assertGrade':{
   const test=expression(a,
+   'const header=root.querySelector('+J(a.courseHeaderSelector)+');'+
+   'if(!header||!header.textContent.includes('+J(a.courseHeaderText)+'))'+
+   'throw Error("QA_GRADE_COURSE_HEADER_MISSING");'+
    'const rows=[...root.querySelectorAll('+J(a.selector)+')].filter(r=>'+
    'r.textContent.includes('+J(a.studentText)+'));'+
    'if(rows.length!==1)throw Error("QA_GRADE_STUDENT_ROW_AMBIGUOUS");'+
