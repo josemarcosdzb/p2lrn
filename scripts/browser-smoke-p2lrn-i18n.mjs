@@ -551,8 +551,70 @@ async function questionnaireDocsVisualQA(){
   }
 }
 
+
+async function captureFillBlanksAuthoring(){
+  // Genuine Studio controls, not an imitation or a generated illustration.
+  const evidence=join(repo,'.p2lrn-i18n-ci','evidence','authoring');
+  await mkdir(evidence,{recursive:true});
+  await page.setViewportSize({width:1440,height:1200});
+  const response=await page.goto(base+'/studio/',{waitUntil:'domcontentloaded'});
+  assert.equal(response?.status(),200);
+  await page.waitForFunction(()=>document.documentElement.dataset.p2lrnStudioReady==='true',null,{timeout:20000});
+  const ribbon=page.locator('.p2lrn-studio-ribbon');
+  await ribbon.getByRole('tab',{name:'Insertar'}).click();
+  await ribbon.getByRole('button',{name:'Añadir contenido',exact:true}).click();
+  const dialog=page.locator('dialog.p2lrn-activity-picker');
+  await dialog.waitFor({state:'visible'});
+  await dialog.locator('[data-activity-kind="fill-blanks"]').click();
+  const card=page.locator('.q-card').first();
+  await card.waitFor({timeout:15000});
+  const template=card.locator('.q-blank-template-editor');
+  await template.fill('La Tierra gira alrededor del Sol.');
+  await card.locator('.q-prompt-input').fill('Elige la palabra correcta para completar la frase.');
+  await template.evaluate(node=>{
+    const start=node.value.indexOf('Sol');
+    if(start<0)throw Error('Missing Sol in the real editor');
+    node.focus();node.setSelectionRange(start,start+3);
+  });
+  await card.screenshot({path:join(evidence,'before-converting-selection.png'),animations:'disabled'});
+  await card.locator('.q-blank-convert').click();
+  assert.equal(await page.locator('.q-card .q-blank-row').count(),2,
+    'Studio did not create the blank from the selected word');
+  // New activities start with a placeholder question. Remove the unused
+  // initial blank using Studio's Delete button, retaining the selected "Sol".
+  await page.locator('.q-card .q-blank-row').first().getByRole('button',{name:'Eliminar'}).click();
+  assert.equal(await page.locator('.q-card .q-blank-row').count(),1);
+  await page.locator('.q-card .q-field--mode select').selectOption('drag');
+  await page.locator('.q-card .q-answer-list').fill('Luna\nMarte');
+  const state=await page.evaluate(()=>{
+    const card=document.querySelector('.q-card');
+    const area=card?.querySelector('.q-blank-template-editor');
+    const selected=card?.querySelector('.q-field--mode select');
+    const extras=card?.querySelector('.q-answer-list');
+    const answer=card?.querySelector('.q-blank-row input');
+    return {prompt:card?.querySelector('.q-prompt-input')?.value,
+      sentence:area?.value,mode:selected?.value,distractors:extras?.value,
+      answer:answer?.value,blankRows:card?.querySelectorAll('.q-blank-row').length??0,
+      autoMarkers:(area?.value?.match(/\{\{[^{}]+\}\}/g)||[]).length};
+  });
+  assert.equal(state.mode,'drag');
+  assert.equal(state.answer,'Sol');
+  assert.equal(state.distractors,'Luna\nMarte');
+  assert.equal(state.blankRows,1);
+  assert.equal(state.autoMarkers,1,
+    'The author should select the source word; Studio creates the internal blank');
+  await page.locator('.q-card').first().screenshot({
+    path:join(evidence,'studio-fill-blanks-drag-words-real.png'),animations:'disabled'});
+  await writeFile(join(evidence,'capture-report.json'),
+    JSON.stringify({source:'Real Studio at locally served project source in Chrome',
+      state,notProduction:true},null,2)+'\n','utf8');
+  console.log('P2LRN_REAL_STUDIO_DRAG_WORDS_CAPTURE='+JSON.stringify(state));
+}
+
 try{
-  if(process.argv.includes('--docs-only')){
+  if(process.argv.includes('--capture-fill-blanks')){
+    await captureFillBlanksAuthoring();
+  } else if(process.argv.includes('--docs-only')){
     await siteParity();
     await browserNavigation();
     await questionnaireDocsVisualQA();

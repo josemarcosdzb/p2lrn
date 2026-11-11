@@ -66,6 +66,9 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund --no-save --package-lock=false cheerio@1.2.0 acorn@8.19.0
           node --test scripts/test-site-i18n-ast.mjs scripts/test-site-ui-locales.mjs
           node scripts/verify-site-bilingual.mjs
+      - name: Capture real Studio fill-in-the-blanks with draggable words and distractors
+        if: always()
+        run: node scripts/browser-smoke-p2lrn-i18n.mjs --capture-fill-blanks
       - name: Preserve raw Chromium screenshots and JSON evidence even when a check fails
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
