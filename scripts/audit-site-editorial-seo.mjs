@@ -81,6 +81,9 @@ for(const filename of (await files(site)).sort()){
  if(source==='studio/index.html'&&english&&!redirect &&
     /\bplaceholder=["'](?:Ej\.|Ex\.)\s*30["']/i.test(html))
    add('error',route,'studio-english-placeholder','Untranslated Spanish placeholder in the English Studio controls');
+ if(source==='docs/npm/analytics/index.html'&&!redirect &&
+    /\b(?:redesign branch|rama de rediseño)\b/i.test(html))
+   add('error',route,'unverified-release-terminology','Public Analytics documentation uses internal branch terminology instead of explaining feature availability');
  // Explicit editorial regressions for the inspected teacher and public pages.
  if(source==='docs/studio/index.html'&&!redirect){
    if(!html.includes('id="studio-doc-informacion-adicional"')||

@@ -16,6 +16,7 @@ const handAuthoredEnglishPages=new Set([
   'docs/ejemplos/index.html',
   'docs/entrega-offline/index.html',
   'docs/conectores/lti/index.html',
+  'docs/conectores/lms/index.html',
   'cursos-offline/index.html',
   'crear-cursos-interactivos/index.html',
   'skills/index.html',
