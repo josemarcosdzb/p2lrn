@@ -141,6 +141,24 @@ for(const relative of [
   if(!before.includes(previous))throw Error(relative+': current release marker missing');
   pending.set(relative,before.replaceAll(previous,version));
 }
+await mutateJson('skills/p2lrn-creator/references/official-packages.json',matrix=>{
+  for(const name of ['toolkit','player','studio','analytics']){
+    if(matrix.packages?.[name]!==previous)throw Error('Skill compatibility matrix drift: '+name);
+    matrix.packages[name]=version;
+  }
+  matrix.checkedOn=new Date().toISOString().slice(0,10);
+});
+for(const relative of [
+  'skills/p2lrn-creator/references/official-runtime.md',
+  'skills/p2lrn-creator/references/toolkit-parity.md',
+  'skills/p2lrn-creator/references/blueprint.md',
+  'skills/p2lrn-creator/CORE-INSTRUCTIONS.md',
+  'deploy/netlify/site/en/docs/analytics/index.html'
+]){
+  const before=await contents(relative);
+  if(!before.includes(previous))throw Error(relative+': current compatibility version missing');
+  pending.set(relative,before.replaceAll(previous,version));
+}
 // PUBLISHING.md includes an important historical statement about the previously
 // published immutable prerelease. Do not change that history.
 const publishing='PUBLISHING.md';

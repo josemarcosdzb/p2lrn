@@ -40,7 +40,7 @@ Cada pregunta necesita `id` único, `type`, `prompt`, `points` entero positivo y
 
 **Opción única / opción múltiple / verdadero-falso clásico:** `choices` es una lista `{id,text}` y `solution.choiceIds` indica los IDs correctos. En opción única y verdadero-falso clásico, solo una opción correcta; verdadero/falso clásico utiliza exactamente dos opciones.
 
-**Verdadero/falso con varias afirmaciones (Toolkit 0.5.0-alpha.12, mismo perfil Core 0.4.0):** usar `trueFalseMode: "multiple"`, sin `choices`, con al menos dos afirmaciones `{id,text}` y una respuesta booleana para **cada** ID. Ejemplo:
+**Verdadero/falso con varias afirmaciones (Toolkit 0.5.0-alpha.13, mismo perfil Core 0.4.0):** usar `trueFalseMode: "multiple"`, sin `choices`, con al menos dos afirmaciones `{id,text}` y una respuesta booleana para **cada** ID. Ejemplo:
 
 ```json
 {"id":"vf1","type":"true-false","trueFalseMode":"multiple","prompt":"Indica V o F para cada frase","points":3,"statements":[{"id":"s1","text":"El Sol es una estrella"},{"id":"s2","text":"La Luna es una estrella"},{"id":"s3","text":"Marte es un planeta"}],"solution":{"answers":{"s1":true,"s2":false,"s3":true}}}
@@ -100,6 +100,6 @@ automáticamente al crear un nuevo curso si no se suministra:
 
 ## Límites comprobados del empaquetador instalado
 
-Esta Skill conserva el esquema de manifiesto Core 0.4.0 que también utiliza el Toolkit Node 0.5.0-alpha.12; no significa que incorpore todas las funciones de esa versión de Toolkit/Studio. No adjunta Player, no ofrece paquetes CMD/ZIP autoejecutables, no soporta autorización LTI ni prueba gráficos 3D, y su verificador no sustituye la validación de todos los perfiles oficiales. Consulta `toolkit-parity.md` antes de ofrecer esas capacidades.
+Esta Skill conserva el esquema de manifiesto Core 0.4.0 que también utiliza el Toolkit Node 0.5.0-alpha.13; no significa que incorpore todas las funciones de esa versión de Toolkit/Studio. No adjunta Player, no ofrece paquetes CMD/ZIP autoejecutables, no soporta autorización LTI ni prueba gráficos 3D, y su verificador no sustituye la validación de todos los perfiles oficiales. Consulta `toolkit-parity.md` antes de ofrecer esas capacidades.
 
 El script local rechaza archivos ZIP con symlinks, miembros duplicados, tamaños descomprimidos excesivos y rutas de escape, además de validar hashes de los archivos declarados.

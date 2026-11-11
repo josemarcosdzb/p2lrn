@@ -1,6 +1,6 @@
 # APIs oficiales P2LRN para Skills
 
-P2LRN Core 0.4.0, Toolkit/Player/Studio/Analytics 0.5.0-alpha.12, Authoring API 1. La Skill **invoca componentes publicados**, no duplica Creator, Reader, Player, Studio o Analytics. Las versiones verificadas se encuentran en `official-packages.json` y se comprueban contra el repositorio al construir los ZIP.
+P2LRN Core 0.4.0, Toolkit/Player/Studio/Analytics 0.5.0-alpha.13, Authoring API 1. La Skill **invoca componentes publicados**, no duplica Creator, Reader, Player, Studio o Analytics. Las versiones verificadas se encuentran en `official-packages.json` y se comprueban contra el repositorio al construir los ZIP.
 
 ## Toolkit Node 22+ (cuando está instalado y autorizado)
 

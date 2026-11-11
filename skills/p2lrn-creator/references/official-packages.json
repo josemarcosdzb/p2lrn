@@ -3,12 +3,12 @@
   "apiVersion": 1,
   "format": "0.4.0",
   "packages": {
-    "toolkit": "0.5.0-alpha.12",
-    "player": "0.5.0-alpha.12",
-    "studio": "0.5.0-alpha.12",
-    "analytics": "0.5.0-alpha.12"
+    "toolkit": "0.5.0-alpha.13",
+    "player": "0.5.0-alpha.13",
+    "studio": "0.5.0-alpha.13",
+    "analytics": "0.5.0-alpha.13"
   },
   "requireNode": ">=22",
-  "checkedOn": "2026-11-03",
+  "checkedOn": "2026-11-12",
   "source": "https://github.com/josemarcosdzb/p2lrn"
 }

@@ -8,7 +8,7 @@ import {publishPackageCorrespondingSource,verifyPackageCorrespondingSource} from
 import {publishNativeCorrespondingSource} from '../native-corresponding-source.mjs';
 
 const root=resolve(fileURLToPath(new URL('../../..',import.meta.url)));
-const version='0.5.0-alpha.12';
+const version=JSON.parse(await readFile(join(root,'packages','toolkit','package.json'),'utf8')).version;
 
 test('source manifests cover all three first-party packages with SHA-256',async()=>{
   const out=await mkdtemp(join(tmpdir(),'p2lrn-source-'));

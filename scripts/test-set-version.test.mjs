@@ -21,6 +21,9 @@ const list=[
   'deploy/netlify/site/docs/cdn/index.html',
   'deploy/netlify/site/docs/cdn/studio/index.html',
   'deploy/netlify/site/docs/analytics/index.html',
+  'skills/p2lrn-creator/references/official-packages.json',
+  'skills/p2lrn-creator/references/official-runtime.md',
+  'skills/p2lrn-creator/CORE-INSTRUCTIONS.md',
 ];
 test('version bump dry-run validates five packages including Analytics without writing any file',async()=>{
   const paths=list.map(file=>resolve(root,file));

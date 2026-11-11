@@ -40,6 +40,9 @@ for(const [relative,expected] of markers){
   const content=await readFile(resolve(root,relative),'utf8');
   assert(content.includes(expected),relative+' does not contain correct current version marker '+expected);
 }
+const skillMatrix=JSON.parse(await readFile(resolve(root,'skills/p2lrn-creator/references/official-packages.json'),'utf8'));
+for(const name of ['toolkit','player','studio','analytics'])
+  assert.equal(skillMatrix.packages?.[name],version,'Skill compatibility matrix differs for '+name);
 const capabilities=JSON.parse(await readFile(resolve(root,'packages/toolkit/config/capabilities.json'),'utf8'));
 assert.equal(capabilities.product.version,version,'Capabilities report a different product version');
 for(const relative of ['README.md','packages/player/README.md','packages/studio/README.md','packages/analytics/README.md']){
