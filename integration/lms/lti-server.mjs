@@ -4,8 +4,9 @@
 import http from 'node:http';
 import {createHash,randomBytes,createPublicKey,createPrivateKey,timingSafeEqual} from 'node:crypto';
 import {createReadStream,existsSync,readFileSync,writeFileSync,mkdirSync,statSync} from 'node:fs';
-import {join,resolve,extname,sep} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {join,resolve,extname,sep,dirname} from 'node:path';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+import {createRequire} from 'node:module';
 import {createP2LRNLtiProvider} from './lti-provider.mjs';
 import {createLtiStore} from './lti-store.mjs';
 import {installCanvasDynamicRegistration} from './lti-canvas-registration.mjs';
@@ -18,7 +19,10 @@ import {pinnedLmsFetch,trustedLmsJwksUrl} from './lti-safe-fetch.mjs';
 import {deriveLtiContentScope} from './lti-content-scope.mjs';
 import {createLtiAdminAuthorizer} from './lti-admin-auth.mjs';
 import {decryptLegacySecret,encryptLegacySecret,parseLegacyForm,validateLegacyPlatform,verifyLegacyLaunch,sendLegacyOutcome} from './lti-legacy.mjs';
-import {validatePackageBytes} from '../../packages/toolkit/dist/core/validator.js';
+// Reuse the checked-out Toolkit in development; use npm's public core export
+// after installation from a tarball. Never bundle a second validator.
+const localValidator=resolve(fileURLToPath(new URL('../..',import.meta.url)),'packages/toolkit/dist/core/validator.js');
+const {validatePackageBytes}=await import(existsSync(localValidator)?pathToFileURL(localValidator).href:'@p2lrn/toolkit/core');
 
 const ROOT=resolve(fileURLToPath(new URL('../..',import.meta.url)));
 const AGS_CLAIM='https://purl.imsglobal.org/spec/lti-ags/claim/endpoint';
@@ -317,7 +321,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  const nrps=createLtiNrpsClient({tool,fetchImpl,lookup,allowInsecureLoopback});
  const sessionCookie=secure?'__Host-p2lrn-session':'p2lrn_session';
  const oidcCookie=secure?'__Host-p2lrn-oidc':'p2lrn_oidc';
- const playerDist=resolve(ROOT,'packages/player/dist');
+ const localPlayerDist=resolve(ROOT,'packages/player/dist');
+  const playerDist=existsSync(join(localPlayerDist,'p2lrn.js'))?localPlayerDist:
+   dirname(createRequire(import.meta.url).resolve('@p2lrn/player/loader'));
+  if(!existsSync(join(playerDist,'p2lrn.js')))throw new Error('P2LRN_PLAYER_RUNTIME_MISSING');
  function requireAdmin(req){
   return adminAuthorizer.authenticate(String(req.headers.authorization||''));
  }
