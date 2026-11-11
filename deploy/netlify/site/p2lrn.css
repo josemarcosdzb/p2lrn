@@ -2202,3 +2202,12 @@ html[data-p2lrn-embedded="true"] .viewer-main {width:100%;max-width:none;margin:
 html[data-p2lrn-embedded="true"] .viewer-workbench {display:block;margin:0}
 html[data-p2lrn-embedded="true"] .viewer-stage {width:100%;min-width:0;border:0;border-radius:0;box-shadow:none}
 html[data-p2lrn-embedded="true"] .viewer-stage-head {padding:10px 18px;min-height:45px}
+
+/* Clear, readable context below the interactive Analytics demonstration. */
+.analytics-showcase-guide{max-width:1080px;margin:24px auto 36px;padding:22px 18px;border-top:1px solid var(--line)}
+.analytics-showcase-guide h2{margin:0 0 14px;font-size:clamp(1.35rem,2.7vw,1.85rem);line-height:1.2;letter-spacing:-.025em}
+.analytics-showcase-guide p{max-width:95ch;margin:0 0 14px;color:var(--muted);line-height:1.65}
+.analytics-showcase-guide a{text-decoration:underline;text-underline-offset:3px}
+.analytics-showcase-guide code{overflow-wrap:anywhere;white-space:normal}
+/* Contact guidance is body copy, not fine-print consent text. */
+.section-body>.form-legal-note{font-size:.94rem;line-height:1.65;max-width:80ch;margin:12px 0}

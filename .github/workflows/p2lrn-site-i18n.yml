@@ -59,7 +59,7 @@ jobs:
         run: node scripts/browser-smoke-p2lrn-i18n.mjs --docs-only
       - name: Audit all 144 ES/EN pages for editorial quality, structure, language and SEO intent
         if: always()
-        run: node scripts/audit-site-editorial-seo.mjs
+        run: node scripts/audit-site-editorial-seo.mjs --strict
       - name: Verify bilingual editorial parity and locale-specific JS contracts
         if: always()
         run: |

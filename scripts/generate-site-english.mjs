@@ -63,6 +63,11 @@ const handAuthoredEnglishPages=new Set([
   'docs/troubleshooting/index.html',
   'docs/cdn/analytics/index.html',
   'docs/npm/analytics/index.html',
+  // Keep the manually reviewed English visitor pages and technical reference intact.
+  'analytics/index.html',
+  'contacto/index.html',
+  'demo/index.html',
+  'docs/referencia/index.html',
   // Legal summaries are manually reviewed and must not be rewritten by machine translation.
   'licencia/index.html',
 ]);

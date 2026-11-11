@@ -131,4 +131,4 @@ await writeFile(join(evidence,'editorial-seo-report.json'),JSON.stringify(report
 console.log('P2LRN_EDITORIAL_SEO_AUDIT='+JSON.stringify(report.totals));
 for(const issue of errors.slice(0,60))console.error('EDITORIAL_ERROR '+JSON.stringify(issue));
 for(const issue of warnings.slice(0,25))console.warn('EDITORIAL_WARNING '+JSON.stringify(issue));
-if(errors.length)process.exitCode=1;
+if(errors.length||(process.argv.includes('--strict')&&warnings.length))process.exitCode=1;
