@@ -48,7 +48,9 @@ jobs:
         working-directory: integration/lms
         run: npm install --ignore-scripts --no-audit --no-fund --no-save ../../packages/toolkit ../../packages/player
       - name: Exercise genuine PostgreSQL transactions, session reload and grade outbox
-        run: node --test integration/lms/lti-postgres-live.test.mjs
+        run: |
+          node --test integration/lms/lti-postgres-live.test.mjs
+          node --test integration/lms/lti-installer-live.test.mjs
 
   mysql-mariadb-live:
     name: LTI real MySQL 8.4 and MariaDB 11.8 persistence
@@ -93,7 +95,9 @@ jobs:
         working-directory: integration/lms
         run: npm install --ignore-scripts --no-audit --no-fund --no-save ../../packages/toolkit ../../packages/player
       - name: Run genuine MySQL and MariaDB storage, grades and restart checks
-        run: node --test integration/lms/lti-mysql-live.test.mjs
+        run: |
+          node --test integration/lms/lti-mysql-live.test.mjs
+          node --test integration/lms/lti-installer-live.test.mjs
 
   sqlserver-live:
     name: LTI real Microsoft SQL Server 2022 database and AGS
@@ -124,7 +128,9 @@ jobs:
         working-directory: integration/lms
         run: npm install --ignore-scripts --no-audit --no-fund --no-save ../../packages/toolkit ../../packages/player
       - name: Create and exercise real SQL Server database, courses, sessions and approved grades
-        run: node --test integration/lms/lti-sqlserver-live.test.mjs
+        run: |
+          node --test integration/lms/lti-sqlserver-live.test.mjs
+          node --test integration/lms/lti-installer-live.test.mjs
 
   toolkit-security:
     name: Toolkit ZIP, Player runtime security and Creator
@@ -313,6 +319,10 @@ jobs:
       - name: Build and install actual npm tarballs in Windows
         run: |
           node scripts/verify-npm-pack.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify Windows LTI console installation, RSA/JWKS and credential recovery
+        run: |
+          node --test integration/lms/lti-installer.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Generate Windows native launcher and complete CDN site
         run: |
