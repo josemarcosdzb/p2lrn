@@ -2256,7 +2256,9 @@ async function browserStudioDropKeyboardScenario(){
   const host=document.createElement('div');
   host.id='p2lrn-a11y-drop-regression';host.contentEditable='true';
   Object.assign(host.style,{width:'650px',maxWidth:'100%',minHeight:'400px',padding:'12px',background:'#fff'});
-  document.body.append(host);
+  document.querySelector('main')?.append(host);
+  if(!host.isConnected)document.body.append(host);
+  const sectionTitle=document.createElement('h2');sectionTitle.textContent='Keyboard editing regression';host.append(sectionTitle);
   let changes=0,selected=null,controls=null;
   try{
     const activity=createStudioDropActivity(document);
@@ -2271,6 +2273,10 @@ async function browserStudioDropKeyboardScenario(){
     const press=(node,key,options={})=>node.dispatchEvent(new KeyboardEvent('keydown',
       {key,bubbles:true,cancelable:true,...options}));
     zone.focus();
+    // In a contenteditable ancestor tabindex=0 is insufficient by itself:
+    // Chrome may keep physical keyboard focus on the parent editor.
+    if(document.activeElement!==zone||zone.isContentEditable)
+      throw Error('Studio zone does not receive physical keyboard focus');
     const initialLeft=parseFloat(zone.style.left),initialWidth=parseFloat(zone.style.width);
     press(zone,'ArrowRight');
     const movedLeft=parseFloat(zone.style.left);
@@ -2283,7 +2289,10 @@ async function browserStudioDropKeyboardScenario(){
     const cards=[...activity.querySelectorAll('[data-p2lrn-dnd-item]')];
     const earlier=cards.indexOf(card),later=cards.indexOf(pair2.item);
     if(earlier<0||later<0||earlier===later)throw Error('Two test cards required');
-    card.focus();press(card,'ArrowRight',{altKey:true});
+    card.focus();
+    if(document.activeElement!==card||card.isContentEditable)
+      throw Error('Studio tile does not receive physical keyboard focus');
+    press(card,'ArrowRight',{altKey:true});
     const ordered=[...activity.querySelectorAll('[data-p2lrn-dnd-item]')];
     if(ordered.indexOf(card)!==earlier+1)throw Error('Alt+ArrowRight failed to reorder');
     card.focus();press(card,'Enter');
@@ -2294,7 +2303,8 @@ async function browserStudioDropKeyboardScenario(){
       throw Error('Keyboard drop target has no visible focus outline');
     const added=addStudioDropPair(activity);
     await new Promise(resolve=>setTimeout(resolve,0));
-    if(added.zone.tabIndex!==0||added.item.tabIndex!==0)
+    if(added.zone.tabIndex!==0||added.item.tabIndex!==0||
+       added.zone.isContentEditable||added.item.isContentEditable)
       throw Error('Dynamically added pair not keyboard accessible');
     if(changes<4)throw Error('Keyboard edits did not notify the editor');
     return {ok:true,initialLeft,movedLeft,initialWidth,resizedWidth,coarseTop,
