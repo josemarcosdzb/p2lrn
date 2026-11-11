@@ -78,8 +78,10 @@
       ['en',enHref,english?'Switch to English':"Switch to English"]
     ]){
       const a=document.createElement('a');a.href=href;a.hreflang=lang;a.lang=lang;
-      a.textContent=lang.toUpperCase();a.title=desc;
-      a.setAttribute('aria-label',desc);
+      const visibleLabel=lang.toUpperCase();
+      a.textContent=visibleLabel;a.title=desc;
+      // WCAG 2.5.3: the accessible name begins with the visible label (ES / EN).
+      a.setAttribute('aria-label',visibleLabel+' — '+desc);
       if(lang===(english?'en':'es'))a.setAttribute('aria-current','page');
       switcher.append(a);
     }
