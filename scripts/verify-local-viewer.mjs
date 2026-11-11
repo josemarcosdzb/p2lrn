@@ -2322,7 +2322,8 @@ async function browserStudioHeadingScenario(){
     openDisclosure:disclosure?.open??null,actualFocus:document.activeElement===field,
     focusWidth:styles.outlineWidth,focusStyle:styles.outlineStyle,
     focusColor:styles.outlineColor,rectWidth:field.getBoundingClientRect().width,
-    matchedFocus:field.matches(':focus'),cssSheets:[...document.styleSheets].length,
+    matchedFocus:field.matches(':focus'),documentHasFocus:document.hasFocus(),
+    cssSheets:[...document.styleSheets].length,
     loadedStylesheets:[...document.styleSheets].filter(x=>x.href).map(x=>x.href),
     invalidHeadingRoles:document.querySelectorAll('h1[role=textbox]').length};
 }
@@ -2330,6 +2331,9 @@ async function verifyStudioAccessibility(cdp){
   const results=[];
   for(const locale of ['es','en']){
     await cdp.send('Page.navigate',{url:APP_ORIGIN+(locale==='en'?'/en/studio/':'/studio/')});
+    // In headless CDP, a background page can hold document.activeElement while
+    // not applying :focus. Activate the actual page before keyboard CSS checks.
+    await cdp.send('Page.bringToFront');
     await waitForEval(cdp,
       "document.documentElement.dataset.p2lrnStudioReady==='true' && Boolean(document.querySelector('.studio-title-field'))",
       'Studio accessible heading '+locale,30000);
