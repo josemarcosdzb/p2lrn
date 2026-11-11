@@ -197,13 +197,13 @@ html[data-studio-mode=preview] .studio-toolbar{position:static}
 @media(max-width:650px){.studio-offline-dialog{padding:14px}.studio-offline-fields{grid-template-columns:1fr}.studio-offline-head{flex-wrap:wrap}.studio-offline-review-content strong{min-width:0;display:block}}
 
 /* Keep keyboard focus visible inside editable text blocks. */
-.studio-title-field:focus-visible,.studio-description:focus-visible,.studio-wysiwyg:focus-visible{outline:3px solid #2854ff;outline-offset:3px}
+.studio-title-field:focus,.studio-title-field:focus-visible,.studio-description:focus-visible,.studio-wysiwyg:focus-visible{outline:3px solid #2854ff;outline-offset:3px}
 
 /* A visible keyboard focus indicator must retain 3:1 contrast on light panels. */
 @media (forced-colors:active){
   .format-icon-button:focus-visible,.format-color-button:focus-within,
   .studio-format select:focus-visible,.studio-add-grid button[data-help]:focus-visible,
-  .studio-title-field:focus-visible,.studio-description:focus-visible,.studio-wysiwyg:focus-visible{
+  .studio-title-field:focus,.studio-title-field:focus-visible,.studio-description:focus-visible,.studio-wysiwyg:focus-visible{
     outline:3px solid Highlight;outline-offset:3px;forced-color-adjust:auto;
   }
 }
