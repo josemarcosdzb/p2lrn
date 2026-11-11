@@ -99,3 +99,13 @@ test('LTI-1.1 Basic Outcomes XML uses OAuth body hash and confirmed success, not
   consumerKey:reg.consumerKey,secret,issuerOrigin:reg.issuerOrigin,normalized:0.7,
   fetchImpl:async()=>new Response('<imsx_codeMajor>failure</imsx_codeMajor>',{status:200})}),/NOT_ACCEPTED/);
 });
+
+test('legacy signed launch awaits async nonce, rejects replay and rejects DB outage',async()=>{
+ let calls=0;
+ const granted=verify(params(),{consumeNonce:async()=>{calls++;return true;}});
+ assert.equal(typeof granted.then,'function');
+ assert.equal((await granted).tenantId,reg.tenantId);
+ assert.equal(calls,1);
+ await assert.rejects(verify(params(),{consumeNonce:async()=>false}),/REPLAYED_LEGACY_LAUNCH/);
+ await assert.rejects(verify(params(),{consumeNonce:async()=>{throw Error('DB_OFFLINE');}}),/DB_OFFLINE/);
+});

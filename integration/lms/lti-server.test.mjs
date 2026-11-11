@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createP2LRNLtiServer,parseLtiCookieHeader} from './lti-server.mjs';
+import {resolveAsyncLtiTestDatabase} from './lti-test-sql-guard.mjs';
 import {LTI_CLAIMS} from './launch-contract.mjs';
 
 test('LTI cookie parser preserves complete token values without granting access by cookie syntax',()=>{
@@ -48,7 +49,9 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
  const folder=mkdtempSync(join(tmpdir(),'p2lrn-lti-live-http-'));
  const calls=[],adminToken='testing-admin-token-1234567890123456789';
  const tool={privateKeyPem:TOOL.privateKey.export({format:'pem',type:'pkcs8'}),kid:'tool-key'};
+ const remote=resolveAsyncLtiTestDatabase();
  const gateway=createP2LRNLtiServer({dataDir:folder,baseUrl:BASE,tool,adminToken,
+  ...(remote||{}),
   fetchImpl:async(uri,opts)=>{
    const path=new URL(uri).pathname;
    calls.push({path,method:opts.method,body:String(opts.body)});
@@ -115,9 +118,9 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   const manualData=await manual.json();
   assert.match(manualData.bindingId,/^[a-f0-9]{64}$/);
   assert.equal(manualData.customParameters.p2lrn_binding_id,manualData.bindingId);
-  assert.equal(gateway.store.getBinding({id:manualData.bindingId,
-   tenantId:'school',registrationId:'moodle',deploymentId:'D1'}).entityId,selected.id);
-  assert.equal(gateway.store.getBinding({id:manualData.bindingId,
+  assert.equal((await gateway.store.getBinding({id:manualData.bindingId,
+   tenantId:'school',registrationId:'moodle',deploymentId:'D1'})).entityId,selected.id);
+  assert.equal(await gateway.store.getBinding({id:manualData.bindingId,
    tenantId:'other-school',registrationId:'moodle',deploymentId:'D1'}),null);
 
   async function begin(kind){
@@ -305,8 +308,8 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
    Buffer.from(parts[2],'base64url')),true);
   const uploadedClaim=JSON.parse(Buffer.from(parts[1],'base64url').toString());
   const uploadedBindingId=uploadedClaim[C.items][0].custom.p2lrn_binding_id;
-  assert.equal(gateway.store.getBinding({id:uploadedBindingId,tenantId:'school',
-   registrationId:'moodle',deploymentId:'D1'}).contentRoot,catalogue.contentRoot);
+  assert.equal((await gateway.store.getBinding({id:uploadedBindingId,tenantId:'school',
+   registrationId:'moodle',deploymentId:'D1'})).contentRoot,catalogue.contentRoot);
   assert.equal((await req('/lti/deep-link/confirm',{method:'POST',
    body:uploadForm(uploadTicket,course)})).status,403,
    'one teacher ticket cannot be replayed to create another link');
@@ -358,7 +361,7 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.match(failureHtml,/Vuelve a tu aula virtual|Vuelve al curso de tu aula virtual/);
   assert.doesNotMatch(failureHtml,/not-a-token/);
   // Revoking a deployment invalidates already issued session cookies.
-  gateway.store.upsertPlatform({...registration,deployments:['D2']});
+  await gateway.store.upsertPlatform({...registration,deployments:['D2']});
   assert.equal((await req('/lti/runtime/package',{headers:{Cookie:cookie}})).status,403);
   assert.equal((await req('/lti/runtime/package',{headers:{Cookie:uploadedSessionCookie}})).status,403);
   assert.equal((await postRuntime('state/load',{context:playerContext})).status,403);
