@@ -146,13 +146,14 @@ async function docsRoleNavigationChrome(language){
   const isEnglish=language==='en';
   const evidence=join(repo,'.p2lrn-i18n-ci','evidence');
   await mkdir(evidence,{recursive:true});
-  const teacher=isEnglish?'/en/docs/colaboracion/':'/docs/colaboracion/';
-  const developer=isEnglish?'/en/docs/desarrolladores/colaboracion/':'/docs/desarrolladores/colaboracion/';
+  const teacher=isEnglish?'/en/docs/collaboration/':'/docs/colaboracion/';
+  const developer=isEnglish?'/en/docs/developers/collaboration/':'/docs/desarrolladores/colaboracion/';
   const portal=isEnglish?'/en/docs/developers/':'/docs/desarrolladores/';
   const npm=isEnglish?'/en/docs/npm/':'/docs/npm/';
   const teacherResponse=await page.goto(base+teacher,{waitUntil:'domcontentloaded'});
   assert.equal(teacherResponse?.status(),200,'Teacher collaboration page not found');
   await page.locator('.doc-sidebar a').first().waitFor({timeout:10000});
+  if(isEnglish)console.log('BROWSER_EN_NAV_LINKS='+JSON.stringify(await page.locator('#nav a').evaluateAll(links=>links.map(link=>({href:link.getAttribute('href'),text:link.textContent?.trim(),visible:Boolean(link.getClientRects().length)})))));
   await page.locator('#nav > a[href="'+portal+'"]').waitFor({timeout:10000});
   assert.equal(await page.locator('#nav > details').count(),0,'Developer access must not be hidden in a dropdown');
   assert.equal(await page.locator('.doc-sidebar a[href="'+npm+'"]').count(),0,'Teacher sidebar must not display npm instructions');
