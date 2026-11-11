@@ -181,7 +181,7 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
   }
   function choosePiece(id,{carry=false}={}){
     if(!pieceById.has(id)||runtime.state.completed||placements[id])return false;
-    if(selected!==null&&selected!==id)releaseSelected();
+    if(selected!==null&&(selected!==id||!carry))releaseSelected();
     selected=id;pieceSelect.value=id;
     scene.highlight(boxId(id),true);
     if(carry)scene.carry(boxId(id),true);
