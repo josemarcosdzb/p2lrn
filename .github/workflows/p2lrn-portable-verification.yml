@@ -218,6 +218,8 @@ jobs:
           node --test integration/lms/lti-canvas-registration.test.mjs integration/lms/lti-ags.test.mjs integration/lms/lti-nrps.test.mjs
           node --test integration/lms/lti-server.test.mjs integration/lms/lti-admin-auth.test.mjs integration/lms/lti-installer.test.mjs
           node --test integration/lms/lti-async-store.test.mjs integration/lms/lti-test-sql-guard.test.mjs integration/lms/lti-legacy.test.mjs
+          node --test scripts/interoperability/real-lms-classroom-contract.test.mjs
+          node --check scripts/interoperability/verify-real-lms-classroom.mjs
           node --test integration/lms/lti-safe-fetch.test.mjs integration/lms/lti-content-scope.test.mjs
           node --test scripts/test-contact-turnstile.test.mjs scripts/test-contact-frontend.test.mjs
           node scripts/verify-contact-security.mjs
