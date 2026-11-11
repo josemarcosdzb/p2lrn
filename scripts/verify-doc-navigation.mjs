@@ -40,7 +40,6 @@ for(const marker of [
   "['INTEGRAR', [",
   "['DESARROLLADORES', [",
   "['CONECTORES', [",
-  "['SEGUIMIENTO', [",
   "['REFERENCIA', [",
   "['RECURSOS', [",
   'sidebar.replaceChildren(fragment)',

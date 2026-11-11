@@ -11,7 +11,7 @@ const toolkit=join(repo,'packages','toolkit','web');
 const analyticsSrc=join(repo,'packages','analytics','src');
 const playwrightFile=join(repo,'.p2lrn-i18n-ci','node_modules','playwright-core','index.mjs');
 const {chromium}=await import(pathToFileURL(playwrightFile).href);
-const contentTypes={'.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png'};
+const contentTypes={'.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.jpeg':'image/jpeg'};
 function chromeBinary(){
   const bases=[process.env.P2LRN_BROWSER_EXE,process.env.ProgramFiles,process.env['ProgramFiles(x86)'],process.env.LOCALAPPDATA].filter(Boolean);
   if(process.env.P2LRN_BROWSER_EXE&&existsSync(process.env.P2LRN_BROWSER_EXE))return process.env.P2LRN_BROWSER_EXE;
@@ -436,9 +436,92 @@ async function analyticsChrome(language){
   console.log('BROWSER_ANALYTICS_'+suffix.toUpperCase()+'_FILTERS_CSV_SECURITY=PASS');
 }
 
+
+async function questionnaireDocsVisualQA(){
+  // Browser-certify the documentation actually served by this checkout.
+  // Screenshots are evidence of documentation rendering, NOT evidence of game completion.
+  const evidence=join(repo,'.p2lrn-i18n-ci','evidence','questionnaires');
+  await mkdir(evidence,{recursive:true});
+  const gameSlugs=['standard','memory','matching','ordering','classification',
+    'true-false','word-search','crossword','rosco','3d'];
+  const pages=[...gameSlugs.map(slug=>({slug,route:'questionnaires/'+slug+'/',
+    anchor:'#ejemplo-vista-alumno',expectedImg:2})),
+    {slug:'fill-blanks',route:'questionnaires/',anchor:'#ejemplos-huecos-arrastre',expectedImg:3},
+    {slug:'3d-gallery',route:'juegos-3d/',anchor:'#juego-3d-ordenar',expectedImg:8}];
+  const auditPage=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:1});
+  await auditPage.route(/^https?:\/\/(?!127\.0\.0\.1)/,route=>route.abort());
+  const failures=[],passed=[];
+  let currentRoute='',pageErrors=[];
+  auditPage.on('pageerror',error=>pageErrors.push(currentRoute+': '+error.message));
+  try{
+    for(const language of ['es','en']){
+      for(const entry of pages){
+        const route=(language==='en'?'/en/docs/':'/docs/')+entry.route;
+        currentRoute=route;
+        for(const viewport of [{name:'desktop',width:1280,height:800},
+                                 {name:'mobile',width:390,height:844}]){
+          await auditPage.setViewportSize({width:viewport.width,height:viewport.height});
+          const response=await auditPage.goto(base+route,{waitUntil:'load',timeout:30000}).catch(()=>null);
+          if(response?.status()!==200){failures.push(route+' '+viewport.name+' HTTP '+response?.status());continue;}
+          const details=await auditPage.evaluate(async ({anchor,slug,lang})=>{
+            const images=[...document.querySelectorAll('article.doc-content img')];
+            for(const img of images)img.loading='eager';
+            await Promise.all(images.map(img=>img.decode().catch(()=>{})));
+            const brokenImages=images.filter(img=>!img.complete||img.naturalWidth<1)
+              .map(img=>img.getAttribute('src'));
+            const missingAlternatives=images.filter(img=>!img.hasAttribute('alt')||
+              !Number(img.getAttribute('width'))||!Number(img.getAttribute('height')))
+              .map(img=>img.getAttribute('src'));
+            const section=document.querySelector(anchor);
+            const text=section?.innerText||'';
+            const expected=slug==='3d-gallery'
+              ?(lang==='es'?'Qué debe hacer el alumno':'What the learner must do')
+              :slug==='fill-blanks'
+                ?(lang==='es'?'Las otras tres fichas son distractores':'The other three are distractors')
+                :(lang==='es'?'Cómo se responde':'How the learner responds');
+            const invalidAnchors=[...document.querySelectorAll('article.doc-content a[href^="#"]')]
+              .map(a=>a.getAttribute('href')).filter(h=>h.length>1&&!document.getElementById(h.slice(1)));
+            return {lang:document.documentElement.lang,hasArticle:!!document.querySelector('article.doc-content'),
+              hasTarget:!!section,hasExplanation:text.includes(expected),visibleText:(document.body?.innerText||'').length,
+              imageCount:images.length,brokenImages,missingAlternatives,
+              horizontalOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),
+              invalidAnchors};
+          },{anchor:entry.anchor,slug:entry.slug,lang:language});
+          const problems=[];
+          if(details.lang!==language)problems.push('lang='+details.lang);
+          if(!details.hasArticle||!details.hasTarget||!details.hasExplanation)problems.push('missing meaningful learner instructions');
+          if(details.visibleText<400)problems.push('empty/too short');
+          if(details.imageCount<entry.expectedImg)problems.push('missing screenshot count '+details.imageCount);
+          if(details.brokenImages.length)problems.push('broken images '+details.brokenImages.join(','));
+          if(details.missingAlternatives.length)problems.push('invalid image alt/dimensions '+details.missingAlternatives.join(','));
+          if(details.horizontalOverflow>3)problems.push('horizontal overflow '+details.horizontalOverflow+'px');
+          if(details.invalidAnchors.length)problems.push('broken anchors '+details.invalidAnchors.join(','));
+          const prefix='docs-'+language+'-'+entry.slug+'-'+viewport.name;
+          if(details.hasTarget){
+            await auditPage.locator(entry.anchor).scrollIntoViewIfNeeded();
+            await auditPage.screenshot({path:join(evidence,prefix+'.png'),fullPage:false});
+          }
+          if(problems.length)failures.push(route+' '+viewport.name+': '+problems.join('; '));
+          else passed.push({route,viewport:viewport.name,images:details.imageCount});
+        }
+      }
+    }
+    failures.push(...pageErrors);
+    await writeFile(join(evidence,'browser-report.json'),
+      JSON.stringify({passed,failures,expectedPages:24,expectedViewports:48},null,2)+'\n','utf8');
+    console.log('P2LRN_DOCS_VISUAL_QA='+JSON.stringify({passed:passed.length,failed:failures.length,
+      evidence,firstFailures:failures.slice(0,12)}));
+    assert.deepEqual(failures,[],'Documentation browser visual QA failed');
+    assert.equal(passed.length,48,'Must render all 24 Spanish/English pages in desktop and mobile');
+  }finally{
+    await auditPage.close();
+  }
+}
+
 try{
   await siteParity();
   await browserNavigation();
+  await questionnaireDocsVisualQA();
   await docsRoleNavigationChrome('es');
   await docsRoleNavigationChrome('en');
   await standardQuiz('en');

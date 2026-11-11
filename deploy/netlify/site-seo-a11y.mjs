@@ -210,7 +210,9 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
     if(!descriptionTag)throw Error('Missing meta description: '+route);
     const updatedDescription=descriptionTag.replace(/\bcontent\s*=\s*(["'])([\s\S]*?)\1/i,
       'content="'+escape(seoCopy.description)+'"');
-    if(updatedDescription===descriptionTag)throw Error('Unable to set meta description: '+route);
+    // An already-correct description is valid: the SEO normalizer must be idempotent.
+    if(attr(updatedDescription,'content')!==escape(seoCopy.description))
+      throw Error('Unable to set meta description: '+route);
     result=result.replace(descriptionTag,updatedDescription);
   }
   const title=decode((result.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'').replace(/<[^>]*>/g,'').trim());

@@ -9,6 +9,8 @@ const siteRoot=join(root,'deploy','netlify','site');
 const englishRoot=join(siteRoot,'en');
 // Pages translated by an editor, rather than a machine, must survive a full mirror rebuild.
 const handAuthoredEnglishPages=new Set([
+  // The public English homepage has a reviewed editorial version; do not regenerate it with MT.
+  'index.html',
   'docs/formato-portable-cursos-interactivos/index.html',
   'crear-cursos-interactivos/index.html',
   'skills/index.html',
@@ -491,6 +493,10 @@ for(const rel of handAuthoredEnglishPages){
   const english=await readFile(englishPath,'utf8').catch(()=>null);
   if(!english||!/<html\s+lang="en"/i.test(english))
     throw Error('Missing manually reviewed English editorial source: '+rel);
+  if(rel==='index.html'&&
+    (english.includes('EXPLORA P2LRN')||english.includes('href="/en/docs/formato/"')||
+      !english.includes('EXPLORE P2LRN')||!english.includes('P2LRN: create interactive courses')))
+    throw Error('Manually reviewed English homepage has lost its navigation or editorial content');
   if(rel==='crear-cursos-interactivos/index.html'&&
     (!english.includes('/assets/studio-guide/guide.css')||
       !english.includes('/assets/studio-guide/guide.js')||
