@@ -130,6 +130,25 @@ async function initialize(options){
  console.log('Conectar LMS: p2lrn-lti endpoints --directory '+JSON.stringify(directory));
  console.log('Servicio: p2lrn-lti service --directory '+JSON.stringify(directory));
  console.log('Recuperacion de identidad (opcional): p2lrn-lti export-recovery');
+ if(process.stdin.isTTY&&!options.yes){
+  const save=(await promptText('Guardar ahora una copia CIFRADA solo de claves y configuracion? (s/N)','N')).toLowerCase();
+  if(save==='s'||save==='si'||save==='sí'){
+   const location=await promptText('Destino del archivo cifrado',
+    join(result.directory,'credentials.recovery.json'));
+   const passphrase=await promptHidden('Frase de cifrado (minimo 16 caracteres)');
+   if(passphrase!==await promptHidden('Repetir frase de cifrado'))throw new Error('Frases diferentes');
+   const backup=await exportRecovery(result.directory,location,passphrase);
+   console.log('Identidad cifrada guardada en '+backup.path+
+    '. NO contiene base de datos ni cursos.');
+  }
+  if(process.platform==='linux'){
+   const enable=(await promptText('Activar arranque automatico systemd de usuario? (s/N)','N')).toLowerCase();
+   if(enable==='s'||enable==='si'||enable==='sí'){
+    await enableSystemdUserService(result.directory);
+    console.log('Servicio de usuario activo. El tecnico debe configurar HTTPS y persistencia tras reinicio.');
+   }
+  }
+ }
 }
 async function main(){
  const {command,options}=parse(process.argv.slice(2));
