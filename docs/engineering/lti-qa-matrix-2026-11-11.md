@@ -160,3 +160,135 @@ P2LRN_TEST_LTI_ASYNC_ENABLE=YES P2LRN_TEST_LTI_ASYNC_ENGINE=postgres \
 El CI global, cualquier `npm publish`, las migraciones de producción
 y el despliegue siguen siendo actuaciones distintas que requieren sus
 propios gates. No ejecutar k6 masivo antes de completar G0–G5.
+
+## 7. Validación real de profesores y alumnos en los cinco LMS (gate G4)
+
+**Esta es la prueba determinante, actualmente NO_TESTADA en su recorrido
+integral.** No la sustituye `lti-server.test.mjs`, el trabajo de
+conectividad, el test de un Host web independiente ni la prueba de
+publicación por `/lti/admin/catalog`. Se exige interacción real con la
+interfaz del **LMS**, sesiones de profesor y alumnos distintas y el Player
+dentro de una actividad LTI auténtica del LMS.
+
+### Precondiciones comunes
+
+- Utilizar el **mismo instalador npm del Provider**, registrarlo una vez
+  en el LMS y conservar esa configuración durante los siguientes cursos.
+  Registrar las versiones del Provider npm, Player, Toolkit y LMS. La
+  prueba se bloquea si el Provider del registro npm aún no es instalable
+  desde la versión aprobada; se puede ensayar un tarball exacto como
+  candidato, pero se etiqueta `CANDIDATO_NO_PUBLICADO`.
+- Dos cursos `.p2lrn` auténticos, **A** y **B**, exportados de Studio
+  mediante su interfaz, con `packageId`, `contentRoot` y SHA-256
+  registrados y distintos. No editar ni convertir el archivo por LMS.
+  Cada curso incluirá lección, cuestionario evaluable y, cuando el
+  contenido de ese curso lo permita, actividad 2D/3D/H5P/SCORM.
+- Un profesor y **dos alumnos de pruebas separados por LMS**. Son
+  identidades LMS realmente autenticadas y autorizadas; ningún JWT
+  fabricado, cookie prestada o login administrativo sustituye al alumno.
+  No guardar credenciales, JWT, nombres personales ni PII en evidencias.
+- Instancia aislada y estable, sin alumnos reales, con acceso a la página
+  del LMS, libro de calificaciones, Provider y registro LTI.
+  No instalar otro Provider por cada curso. Si un LMS solo ofrece
+  vinculación manual o LTI legado, registrar el límite exacto de esa
+  versión: no etiquetar como Deep Linking/AGS 1.3 algo que no lo es.
+
+### Casos concretos que debe superar cada plataforma
+
+| ID | Rol y acción en interfaz | Resultado verificable |
+| --- | --- | --- |
+| R01 | Administrador instala Provider y configura LTI **una vez** | Registro persistente, misma identidad/clave y despliegue durante R02–R12 |
+| R02 | Profesor entra al LMS, abre su curso y pulsa añadir herramienta externa P2LRN | Selector real de Deep Linking y rol docente validado |
+| R03 | Profesor **sube A desde ese selector** (no por la API administrativa), elige contenido y guarda | Actividad visible en el curso LMS, enlace firmado, catálogo y hash correctos |
+| R04 | Profesor **sube B desde el mismo LMS** sin entrar a configuración administrativa | Segunda actividad independiente, mismo Provider, hash B distinto de A |
+| R05 | Alumno 1 inicia sesión en LMS y abre A | Player real visible dentro del LMS, imágenes y recursos cargados, sin credenciales técnicas |
+| R06 | Alumno 1 lee la lección, contesta las preguntas y pulsa **Finalizar/Enviar** | Respuestas persistidas y resultado visible; interacción de cuestionario observada, no simple HTTP 200 |
+| R07 | Alumno 1 realiza la actividad 2D/3D/H5P/SCORM de A si la incluye | Interacción y resultado real; guardar captura/vídeo del estado final, no imagen de entrada |
+| R08 | Alumno 1 sale y vuelve a abrir A desde LMS | Se recuperan respuestas, avance, revisión e intento apropiado, sin repetir instalación |
+| R09 | Alumno 2 abre A, falla una respuesta y completa la actividad | Intento y nota propios, sin mostrar progreso ni respuestas del alumno 1 |
+| R10 | Ambos alumnos abren B y realizan el cuestionario | Identidad, permisos, progreso y contenido independientes de A |
+| R11 | Docente consulta el **libro oficial de notas del LMS** | Calificación de cada alumno y actividad identificada correctamente, con valor comprobado frente a resultado aprobado en Provider y AGS/Basic Outcomes realmente soportado |
+| R12 | Profesor actualiza B o copia la actividad dentro de LMS | Se conserva identidad del contenido publicado y no se mezclan intentos; la nota no se duplica ni se dirige a otro recurso |
+
+Una plataforma solo aprueba G4 si R01–R12 y los controles de seguridad
+aplicables tienen evidencia, o si una capacidad optativa se marca
+explícitamente `NO_APLICA` con su razón técnica demostrada. Si una
+actividad evaluable no puede devolver la nota oficial cuando esa era una
+condición de aceptación, la plataforma queda `FAIL` o `BLOQUEADA`,
+**nunca PASS**.
+
+### Comprobaciones negativas obligatorias
+
+1. Alumno no matriculado, despliegue no registrado o recurso de otra
+   institución: acceso denegado. No usar un enlace directo a P2LRN para
+   sortear el LMS.
+2. Replay de OIDC, ticket de profesor gastado, token expirado y CSRF
+   incorrecto: denegación sin crear otra actividad/intento.
+3. Desconexión breve mientras se guarda: reentrada que conserva lo ya
+   confirmado; revisión conflictiva no sobrescribe otra respuesta.
+4. Alumno manipula una puntuación o reenvía evento: el libro oficial no
+   acepta una nota sin verificación del servidor.
+5. Repetir una entrega AGS aprobada, incluida respuesta LMS perdida:
+   comprobar el **libro del LMS**, no solo que la cola local diga
+   `SENT`. Sin duplicados ni sobrescrituras entre alumnos.
+6. Publicación A/B durante reinicio controlado del Provider: archivos,
+   vínculos, sesiones recuperables y registros coherentes. Solo
+   ejecutarlo en entorno descartable y con recuperación preparada.
+
+### Matriz de certificación obligatoria
+
+| Plataforma | Profesor publica A y B | Alumno 1 y 2 completan A/B | Reentrada y aislamiento | Nota en libro oficial | Certificación |
+| --- | --- | --- | --- | --- | --- |
+| Moodle | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO |
+| Canvas | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO |
+| Chamilo | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO |
+| Sakai | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO |
+| Open edX | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO | NO_TESTADO |
+
+Los estados anteriores describen la **ausencia de evidencia integral
+R01–R12 verificada**, no afirman que cada capacidad esté rota ni niegan
+los tests unitarios o parciales existentes. Comprobar por separado qué
+versión de Chamilo expone LTI 1.3, Deep Linking y AGS: Basic Outcomes de
+LTI legado no se presenta como AGS 1.3.
+
+### Evidencia aceptable (no inventar ni extrapolar)
+
+Por cada LMS registrar: SHA commit del Provider, versión npm del
+instalador realmente usado, versión LMS, registro/despliegue con IDs
+redactados, SHA de A/B antes y después, profesor creando ambas actividades
+**dentro del LMS**, captura del alumno contestando y del resultado tras
+`Finalizar`, salida y reentrada, respuesta confirmada de guardado y
+captura/consulta de libro oficial con ambas notas; además, observación
+de reintentos, errores y fecha de captura. Una captura del lanzamiento
+o un código HTTP 200 no acredita que se haya completado una actividad.
+
+Los informes JSON deben identificar por caso `PASS`, `FAIL`,
+`BLOQUEADA` o `NO_TESTADA`, junto con la ruta a una evidencia real
+accesible. Jamás fabricar un `PASS` mediante una clase simulada,
+un LMS ficticio o un screenshot estático. Si no hay credenciales de
+alumno o el LMS no es accesible desde el runner, el caso es
+`BLOQUEADA` o `NO_TESTADA`.
+
+### Recurso y orden de ejecución
+
+Probar **un LMS cada vez** y un Chrome/Edge con dos sesiones separadas
+secuencialmente. No arrancar los cinco LMS, SQL de pruebas y k6 al mismo
+tiempo ni reiniciar infraestructuras del usuario como parte del test.
+Antes de abrir navegador, comprobar memoria disponible y estado de
+los servicios: si hay presión de memoria, detener la prueba sin alterar
+contenedores. Empezar por Moodle como flujo de referencia, luego Canvas,
+Chamilo, Sakai y Open edX; usar exactamente los mismos cursos A y B,
+sin configurarlos de nuevo por plataforma.
+
+El workflow anterior `p2lrn-interoperability-real.yml` es
+**preflight de conectividad**, no esta prueba R01–R12. En la ejecución
+[42889280679](https://github.com/josemarcosdzb/p2lrn/actions/runs/42889280679)
+del 10 de noviembre de 2026, terminó `discover-real-lms`,
+mientras `create-one-real-studio-course` y
+`verify-independent-web-reentry` quedaron `skipped`. La
+aprobación de ese run no equivale a publicar/completar cursos en un LMS.
+
+**Salida de G4:** cinco informes separados que prueben R01–R12
+en los LMS reales. Antes, no declarar al Provider certificado para
+publicación educativa de extremo a extremo; tampoco confundirlo con
+la certificación de escalabilidad G5/G6.
