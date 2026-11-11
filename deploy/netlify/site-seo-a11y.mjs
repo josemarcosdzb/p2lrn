@@ -1,5 +1,5 @@
 // Build-time only. Source documentation HTML and its visible text are never rewritten.
-import {readFile,readdir,writeFile} from 'node:fs/promises';
+import {readFile,readdir,writeFile,stat} from 'node:fs/promises';
 import {join,relative,basename} from 'node:path';
 import {englishRouteFor,spanishRouteFor,canonicalRoute,legacyRouteFor} from './site-routes.mjs';
 
@@ -330,6 +330,74 @@ export function updateHtml(html,route,origin=CANONICAL_ORIGIN){
   return result;
 }
 
+
+// Site-owned media discovered from actual visible page HTML. Never list unused
+// assets, decorative icons, test clips or media from noindex/redirect pages.
+const imageExtension=/\.(?:avif|gif|jpe?g|png|svg|webp)$/i;
+const videoExtension=/\.(?:mp4|mov|og[gv]|webm)$/i;
+function mediaLink(source,route,origin,extension){
+  const text=decode(source).trim();
+  if(!text||/^(?:data|blob|javascript):/i.test(text))return null;
+  let url;
+  try{url=new URL(text,origin+route);}catch{return null;}
+  if(url.origin!==origin||!extension.test(url.pathname))return null;
+  return url.href;
+}
+function discoverPageMedia(html,route,origin){
+  const main=/<main\b[^>]*>[\s\S]*?<\/main>/i.exec(html)?.[0]||'';
+  const images=new Set();
+  for(const tag of tagList(main,'img')){
+    const alt=decode(attr(tag,'alt')??'').trim();
+    const src=mediaLink(attr(tag,'src')||'',route,origin,imageExtension);
+    if(alt&&src)images.add(src);
+  }
+  const videos=[];
+  for(const found of main.matchAll(/(<video\b[^>]*>)([\s\S]*?)<\/video>/gi)){
+    const opening=found[1],body=found[2];
+    const source=tagList(body,'source').map(tag=>
+      mediaLink(attr(tag,'src')||'',route,origin,videoExtension)).find(Boolean);
+    const poster=mediaLink(attr(opening,'poster')||'',route,origin,imageExtension);
+    const title=decode(attr(opening,'data-video-title')||'').trim();
+    const description=decode(attr(opening,'data-video-description')||'').trim();
+    if(!source||!poster||title.length<12||description.length<70)
+      throw Error('Video SEO metadata missing, inaccurate or external: '+route);
+    const tracks=tagList(body,'track').filter(t=>(attr(t,'kind')||'').toLowerCase()==='captions');
+    const locale=languageOfRoute(route);
+    const caption=tracks.find(t=>(attr(t,'srclang')||'').toLowerCase()===locale);
+    if(!caption)throw Error('No '+locale+' caption track for '+route);
+    const captionUrl=mediaLink(attr(caption,'src')||'',route,origin,/\.vtt$/i);
+    if(!captionUrl)throw Error('Invalid video caption path for '+route);
+    images.add(poster);
+    videos.push({title,description,poster,content:source,caption:captionUrl});
+  }
+  return {images:[...images],videos};
+}
+async function verifySiteMedia(outputRoot,mediaByRoute,origin){
+  const assets=new Map();
+  for(const [route,media] of mediaByRoute){
+    for(const item of media.images)assets.set(item,'image');
+    for(const video of media.videos){
+      assets.set(video.content,'video');
+      assets.set(video.caption,'captions');
+      assets.set(video.poster,'poster');
+    }
+  }
+  await Promise.all([...assets].map(async ([uri,kind])=>{
+    const url=new URL(uri);
+    if(url.origin!==origin)throw Error('Sitemap media host mismatch: '+uri);
+    const path=decodeURIComponent(url.pathname);
+    if(!path.startsWith('/')||path.split('/').includes('..'))
+      throw Error('Unsafe sitemap asset path: '+uri);
+    const target=join(outputRoot,path.slice(1));
+    const info=await stat(target).catch(()=>null);
+    if(!info?.isFile()||info.size<1)
+      throw Error('Missing or empty '+kind+' for media sitemap: '+target);
+    if(kind==='video'&&info.size<16000)
+      throw Error('Video is too short or placeholder-like for media sitemap: '+target);
+  }));
+  return assets.size;
+}
+
 export async function normalizeSeoAndAccessibility(outputRoot,{sourceRoot=outputRoot,origin=CANONICAL_ORIGIN,strict=true}={}){
   const sourcePages=(await walk(sourceRoot)).filter(x=>basename(x)==='index.html');
   if(strict&&sourcePages.length<60)throw Error('Site page count dropped below the verified baseline: '+sourcePages.length);
@@ -337,23 +405,58 @@ export async function normalizeSeoAndAccessibility(outputRoot,{sourceRoot=output
   const bilingual=sourcePages.some(path=>relative(sourceRoot,path).replaceAll('\\','/').startsWith('en/'));
   const expectedAliases=bilingual?14:7; // 3 old aliases + 4 legal noindex per locale
   const routes=[];
+  const mediaByRoute=new Map();
   let changed=0,aliases=0;
 
   for(const src of sourcePages){
     const route=canonicalRoute(routeOf(sourceRoot,src));
     const target=route==='/'?join(outputRoot,'index.html'):join(outputRoot,route.slice(1),'index.html');
     const before=await readFile(target,'utf8');
-    const after=updateHtml(before,route,origin);
+    let after=updateHtml(before,route,origin);
+    if(isIndexable(after)){
+      const media=discoverPageMedia(after,route,origin);
+      mediaByRoute.set(route,media);
+      if(media.videos.length&&!hasJsonLdType(after,'VideoObject')){
+        for(let i=0;i<media.videos.length;i++){
+          const video=media.videos[i];
+          after=addJsonLd(after,{'@context':'https://schema.org','@type':'VideoObject',
+            '@id':origin+route+'#video-'+(i+1),name:video.title,
+            description:video.description,thumbnailUrl:video.poster,
+            contentUrl:video.content,url:origin+route,inLanguage:languageOfRoute(route),
+            isAccessibleForFree:true});
+        }
+      }
+      routes.push(route);
+    }else aliases++;
     if(before!==after){await writeFile(target,after,'utf8');changed++;}
-    if(isIndexable(after))routes.push(route);else aliases++;
   }
   if(strict&&(routes.length+aliases!==sourcePages.length||aliases!==expectedAliases))
     throw Error('Route classification changed unexpectedly: '+routes.length+'/'+aliases+' expected aliases '+expectedAliases);
 
   routes.sort((a,b)=>a==='/'?-1:b==='/'?1:a.localeCompare(b,'en'));
-  const xml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+
-    routes.map(r=>'  <url><loc>'+escape(origin+r)+'</loc></url>').join('\n')+
+  const mediaAssets=await verifySiteMedia(outputRoot,mediaByRoute,origin);
+  const xml='<?xml version="1.0" encoding="UTF-8"?>\n'+
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '+
+    'xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" '+
+    'xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n'+
+    routes.map(route=>{
+      const media=mediaByRoute.get(route)??{images:[],videos:[]};
+      const images=media.images.map(uri=>
+        '    <image:image><image:loc>'+escape(uri)+'</image:loc></image:image>').join('\n');
+      const videos=media.videos.map(v=>
+        '    <video:video>\n'+
+        '      <video:thumbnail_loc>'+escape(v.poster)+'</video:thumbnail_loc>\n'+
+        '      <video:title>'+escape(v.title)+'</video:title>\n'+
+        '      <video:description>'+escape(v.description)+'</video:description>\n'+
+        '      <video:content_loc>'+escape(v.content)+'</video:content_loc>\n'+
+        '    </video:video>').join('\n');
+      return '  <url>\n    <loc>'+escape(origin+route)+'</loc>'+
+        (images?'\n'+images:'')+(videos?'\n'+videos:'')+'\n  </url>';
+    }).join('\n')+
     '\n</urlset>\n';
   await writeFile(join(outputRoot,'sitemap.xml'),xml,'utf8');
-  return {total:sourcePages.length,indexable:routes.length,redirects:aliases,changed,sitemapUrls:routes.length,bilingual};
+  return {total:sourcePages.length,indexable:routes.length,redirects:aliases,changed,
+    sitemapUrls:routes.length,bilingual,imageEntries:[...mediaByRoute.values()].reduce((n,m)=>n+m.images.length,0),
+    videoEntries:[...mediaByRoute.values()].reduce((n,m)=>n+m.videos.length,0),
+    mediaAssets};
 }

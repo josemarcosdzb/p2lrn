@@ -125,6 +125,75 @@ const sitemap=await readFile(join(out,'sitemap.xml'),'utf8').catch(()=>{errors.p
 const xmlUrls=[...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]).sort();
 const expected=indexable.map(x=>CANONICAL_ORIGIN+x).sort();
 if(JSON.stringify(xmlUrls)!==JSON.stringify(expected))errors.push('sitemap does not match indexed routes');
+
+if(!sitemap.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"')||
+   !sitemap.includes('xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"'))
+  errors.push('Sitemap missing Google image/video namespaces');
+const sitemapSections=new Map([...sitemap.matchAll(/<url>\s*<loc>([^<]+)<\/loc>([\s\S]*?)<\/url>/g)]
+  .map(match=>[match[1],match[2]]));
+const decodeXml=value=>String(value).replaceAll('&amp;','&').replaceAll('&quot;','"')
+  .replaceAll('&lt;','<').replaceAll('&gt;','>');
+const sitemapAssetCheck=new Set();
+let mediaImageCount=0,mediaVideoCount=0;
+for(const route of indexable){
+  const url=CANONICAL_ORIGIN+route;
+  const section=sitemapSections.get(url)||'';
+  const pageFile=route==='/'?join(out,'index.html'):
+    join(out,...route.slice(1).split('/').filter(Boolean),'index.html');
+  const page=await readFile(pageFile,'utf8');
+  const main=/<main\b[^>]*>[\s\S]*?<\/main>/i.exec(page)?.[0]||'';
+  const images=[...section.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map(m=>decodeXml(m[1]));
+  const videoBlocks=[...section.matchAll(/<video:video>([\s\S]*?)<\/video:video>/g)].map(m=>m[1]);
+  const missingImageSources=new Set();
+  const expectedImages=new Set();
+  for(const tag of tags(main,'img')){
+    const srcValue=attr(tag,'src')||'';
+    if(!(attr(tag,'alt')||'').trim()||!/\.(?:webp|avif|png|jpe?g|gif|svg)(?:$|[?#])/i.test(srcValue))
+      continue;
+    const uri=new URL(srcValue,url);
+    if(uri.origin===CANONICAL_ORIGIN)expectedImages.add(uri.href);
+  }
+  const videoTags=[...main.matchAll(/(<video\b[^>]*>)([\s\S]*?)<\/video>/gi)];
+  for(const [,tag] of videoTags){
+    const poster=attr(tag,'poster');
+    if(poster)expectedImages.add(new URL(poster,url).href);
+  }
+  if(images.length!==new Set(images).size)errors.push(route+' sitemap contains repeated image entries');
+  if(JSON.stringify([...expectedImages].sort())!==JSON.stringify([...images].sort()))
+    errors.push(route+' sitemap images differ from discoverable content and video posters');
+  if(videoBlocks.length!==videoTags.length)
+    errors.push(route+' sitemap has '+videoBlocks.length+' videos but HTML has '+videoTags.length);
+  if(videoTags.length && !page.includes('"@type":"VideoObject"'))
+    errors.push(route+' video without VideoObject structured data');
+  for(const mediaUrl of images){
+    if(!mediaUrl.startsWith(CANONICAL_ORIGIN+'/'))errors.push(route+' external or unsafe image URL');
+    sitemapAssetCheck.add(mediaUrl);
+  }
+  mediaImageCount+=images.length;
+  for(const block of videoBlocks){
+    const value=name=>decodeXml(new RegExp('<video:'+name+'>([^<]+)<\\/video:'+name+'>').exec(block)?.[1]||'');
+    const title=value('title'),description=value('description'),
+      poster=value('thumbnail_loc'),content=value('content_loc');
+    if(title.length<12||description.length<70||!poster||!content)
+      errors.push(route+' invalid video sitemap description, title, thumbnail or media file');
+    if(!/\.(?:webm|mp4|mov|og[gv])$/i.test(new URL(content).pathname))
+      errors.push(route+' unsupported video file in sitemap');
+    if(!images.includes(poster))errors.push(route+' video poster not in image sitemap');
+    sitemapAssetCheck.add(content);
+    sitemapAssetCheck.add(poster);
+    mediaVideoCount++;
+  }
+}
+for(const uri of sitemapAssetCheck){
+  if(!uri.startsWith(CANONICAL_ORIGIN+'/'))continue;
+  const path=decodeURIComponent(new URL(uri).pathname).replace(/^\/+/,'');
+  const file=join(out,path);
+  const media=await stat(file).catch(()=>null);
+  if(!media?.isFile()||media.size<1)errors.push('Sitemap asset unavailable: '+uri);
+}
+if(mediaImageCount<80)errors.push('Image sitemap unexpectedly small: '+mediaImageCount);
+if(mediaVideoCount<6)errors.push('Video sitemap lost a verified ES/EN demonstration: '+mediaVideoCount);
+
 const englishSourcePages=sourcePages.filter(p=>relative(src,p).replaceAll('\\','/').startsWith('en/'));
 const spanishSourcePages=sourcePages.filter(p=>!relative(src,p).replaceAll('\\','/').startsWith('en/'));
 const englishAliases=aliases.filter(route=>route==='/en/'||route.startsWith('/en/'));
