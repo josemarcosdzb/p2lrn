@@ -439,6 +439,8 @@ const EN={
   "La actividad necesita al menos una pregunta": "The activity needs at least one question.",
   "Imagen": "Image",
   "Posición y tamaño de la imagen en el diagrama": "Image position and size in the diagram",
+  "Flechas: mover la zona. Mayús y flechas: cambiar su tamaño. Alt y flechas: paso de cinco.": "Arrow keys: move the zone. Shift plus arrows: resize. Alt plus arrows: move in steps of five.",
+  "Intro: editar zona asociada. Alt y flechas izquierda/derecha: ordenar ficha. Mayús y flechas: cambiar tamaño.": "Enter: edit the linked zone. Alt plus left/right arrows: reorder the tile. Shift plus arrows: resize the tile.",
   "Escribe aquí el texto y selecciona la palabra que quieras ocultar. {{": "Write the text here and select the word you want to hide. {{"
 };
 export function studioLanguage(doc=globalThis.document){
