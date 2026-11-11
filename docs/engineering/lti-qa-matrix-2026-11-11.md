@@ -292,3 +292,90 @@ aprobación de ese run no equivale a publicar/completar cursos en un LMS.
 en los LMS reales. Antes, no declarar al Provider certificado para
 publicación educativa de extremo a extremo; tampoco confundirlo con
 la certificación de escalabilidad G5/G6.
+
+## 8. Ejecutador real de aula: código y condiciones de uso
+
+Se ha incorporado `scripts/interoperability/verify-real-lms-classroom.mjs`,
+apoyado en `chrome-visual.mjs` y el contrato
+`real-lms-classroom-contract.mjs`. Opera DOM real de Chrome/Edge
+contra el LMS local usando el proxy existente; no fabrica JWT, no
+reenvía una puntuación falsa ni considera una API HTTP suficiente para
+demostrar un curso completado. **No es un resultado E2E por sí mismo**.
+
+El plan JSON de cada LMS debe contener exactamente:
+- `schema: "p2lrn-lms-real-classroom/1"`, nombre del LMS, origen HTTP
+  `*.localhost` y `qaOnly: true`.
+- Cursos `A` y `B` con rutas a los **dos archivos reales de Studio**
+  y sus respectivos SHA-256 diferentes. El runner valida bytes antes
+  de abrir navegador. Tope de 8 MiB por curso para esta comprobación
+  ligera; los cursos grandes requieren un ensayo separado.
+- Ocho fases ordenadas, con navegación y selectores obtenidos
+  de la **interfaz real del LMS**, no inventados ni copiados de otra
+  versión: `teacher-publish-a`, `teacher-publish-b`,
+  `learner1-complete-a`, `learner1-resume-a`,
+  `learner1-complete-b`, `learner2-complete-a`,
+  `learner2-complete-b`, `teacher-gradebook`.
+- Acciones DOM permitidas: `goto` (ruta del propio LMS), `click`,
+  `fillEnv`, `select`, `uploadCourse`, `waitVisible`,
+  `waitText`, `assertCompletion`, `assertResume`,
+  `assertGrade`. Las claves se introducen solo desde variables
+  `P2LRN_QA_*` del entorno; nunca se guardan en el plan ni se
+  publican en capturas. Para un iframe del mismo origen se acepta
+  `frame` con su selector CSS. Un iframe entre orígenes
+  incompatible se bloquea y no se marca PASS.
+- En la fase del profesor se requieren **cuatro comprobaciones
+  numéricas del libro de calificaciones**: curso A y B para
+  alumno 1 y alumno 2. Cada `assertGrade` selecciona fila del
+  alumno (`selector` y `studentText`), celda de nota
+  (`gradeSelector`), encabezado del curso
+  (`courseHeaderSelector` y `courseHeaderText`), curso
+  `A/B`, alumno `learner1/learner2`, puntuación numérica
+  `expected` y tolerancia opcional `tolerance`. Un texto del
+  Player no satisface una prueba de libro de calificaciones.
+
+La semántica de la nota sigue intacta: el navegador no es autoridad.
+El Provider debe recibir la aprobación del servidor por un mecanismo
+autorizado y el **LMS** debe incorporar la nota efectivamente. Si
+no existe ese flujo, la prueba de grado falla y se debe corregir
+el producto; está prohibido modificar el test para aparentar que se
+entregó.
+
+El verificador obtiene captura al finalizar cada fase satisfactoria,
+guarda un JSON por ejecución y declara `PASS_REAL_CLASSROOM`
+**únicamente** después de superar las ocho fases y cuatro notas
+oficiales. Usa un solo navegador a la vez (perfiles separados por
+docente/alumnos), un LMS por ejecución, presupuesto de 12 minutos
+y requiere al menos **4 GiB de RAM libre** antes del arranque y
+de abrir otro perfil. Si no hay suficiente memoria devuelve
+`BLOQUEADA_RECURSOS`; sin credenciales de QA devuelve bloqueo.
+El proxy debe responder desde el origen real; un HTTP 200 vacío
+no es disponibilidad. No inicia Docker ni restaura servicios.
+
+```powershell
+# Comprobación de contrato y SHA, NO abre Chrome ni publica cursos:
+node scripts/interoperability/verify-real-lms-classroom.mjs --plan RUTA_PLAN_MOODLE.json
+
+# Solo con dos cursos auténticos, selectores verificados, cuentas QA,
+# suficiente RAM y autorización expresa, UN LMS por vez:
+$env:P2LRN_LMS_REAL_E2E='YES'
+node scripts/interoperability/verify-real-lms-classroom.mjs --plan RUTA_PLAN_MOODLE.json --execute-real --output .interop-evidence/real-lms-classroom
+```
+
+**Última evidencia disponible antes de este ejecutador:** en el
+workflow `p2lrn-interoperability-real.yml`, run
+[42889280679](https://github.com/josemarcosdzb/p2lrn/actions/runs/42889280679)
+del 10/11/2026, el host informó de **1.44 GiB** de RAM libre;
+Canvas devolvió HTTP 200 con cuerpo vacío en el proxy;
+Moodle solo mostró redirección de login; Chamilo, Sakai y
+Open edX respondieron con contenido sin autenticación.
+No se observó ninguna sesión docente ni alumno, y las fases
+de Studio/realización del alumno estaban `skipped`. Por tanto,
+en ese estado **no se autoriza disparar el test con navegador
+ni se certifica ningún LMS**.
+
+Si se necesita comprobar un sitio con Provider npm nuevo, el
+entorno debe demostrar también que la versión instalada coincide
+con el tarball o versión examinada. El runner del aula verifica
+comportamiento visual y notas, **no certifica por sí solo**
+instalación del paquete npm, escalabilidad ni equivalencia con el
+CDN. Esos son gates independientes.
