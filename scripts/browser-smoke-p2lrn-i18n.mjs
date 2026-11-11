@@ -180,6 +180,52 @@ async function docsRoleNavigationChrome(language){
   console.log('BROWSER_DOCS_'+language.toUpperCase()+'_AUDIENCE_SEPARATION=PASS');
 }
 
+async function editorialDocsChrome(language){
+  const en=language==='en';
+  const evidence=join(repo,'.p2lrn-i18n-ci','evidence');
+  await mkdir(evidence,{recursive:true});
+  const guide=en?'/en/docs/studio/':'/docs/studio/';
+  const developers=en?'/en/docs/developers/':'/docs/desarrolladores/';
+  const gallery=en?'/en/docs/3d-games/':'/docs/juegos-3d/';
+  const commercial=en?'/en/create-interactive-courses/':'/crear-cursos-interactivos/';
+  const studioResponse=await page.goto(base+guide,{waitUntil:'domcontentloaded'});
+  assert.equal(studioResponse?.status(),200,'Studio guide unavailable: '+language);
+  const advice=page.locator('#studio-doc-informacion-adicional');
+  assert.equal(await advice.locator('section.doc-section > h3').count(),9,
+    'Studio guide must preserve nine clearly visible authoring topics');
+  assert.equal(await page.locator('details.studio-doc-appendix').count(),0,
+    'Teacher guidance must not remain hidden in a technical accordion');
+  const first=advice.locator('#studio-apendice-1');
+  await first.scrollIntoViewIfNeeded();
+  assert.equal(await first.isVisible(),true,'First teacher topic is not visible');
+  await page.screenshot({path:join(evidence,'editorial-'+language+'-studio-guidance.png')});
+  await advice.locator('a[href="'+developers+'"]').click();
+  await page.waitForURL(base+developers);
+  assert.ok(await page.locator('h1').first().isVisible(),
+    'The independent developer documentation did not open');
+
+  const galleryResponse=await page.goto(base+gallery,{waitUntil:'domcontentloaded'});
+  assert.equal(galleryResponse?.status(),200,'3D authoring guide unavailable');
+  const area=page.locator('#ejemplos-reales-3d');
+  assert.equal(await area.locator('img[src^="/assets/activity-examples/1"]').count(),4,
+    'Expected four real 3D opening-screen images');
+  const label=en?'Opening screen only:':'Pantalla inicial del juego:';
+  assert.equal(await area.locator('figcaption').filter({hasText:label}).count(),4,
+    'All 3D entry images must explicitly disclaim completion');
+  const first3D=area.locator('figcaption').filter({hasText:label}).first();
+  await first3D.scrollIntoViewIfNeeded();
+  await page.screenshot({path:join(evidence,'editorial-'+language+'-3d-entry.png')});
+
+  const landingResponse=await page.goto(base+commercial,{waitUntil:'domcontentloaded'});
+  assert.equal(landingResponse?.status(),200,'Commercial Studio page unavailable');
+  const sourceText=en?'local Studio installation':'instalación local de Studio';
+  const note=page.locator('p.studio-guide-warning').filter({hasText:sourceText}).first();
+  await note.scrollIntoViewIfNeeded();
+  assert.equal(await note.isVisible(),true,'Source of real Studio captures is not explained');
+  await page.screenshot({path:join(evidence,'editorial-'+language+'-studio-provenance.png')});
+  console.log('BROWSER_EDITORIAL_DOCS_'+language.toUpperCase()+'=PASS');
+}
+
 async function standardQuiz(language){
   await page.goto(base+(language==='en'?'/en/':'/'),{waitUntil:'domcontentloaded'});
   await page.locator('body > nav.language-switch').waitFor();
@@ -691,6 +737,8 @@ try{
     await questionnaireDocsVisualQA();
     await docsRoleNavigationChrome('es');
     await docsRoleNavigationChrome('en');
+    await editorialDocsChrome('es');
+    await editorialDocsChrome('en');
     assert.deepEqual(exceptions,[],'Browser uncaught errors during docs QA: '+exceptions.join('; '));
     console.log('P2LRN_BROWSER_DOCS_ONLY=PASS');
   } else {
