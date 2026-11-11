@@ -26,6 +26,22 @@ const PROFILE_FILES=Object.freeze({
 function bad(message){throw new Error('P2LRN_INSTALL_'+message)}
 function secret(){return randomBytes(48).toString('base64url')}
 const hash=value=>createHash('sha256').update(value).digest('hex');
+let windowsSid=null;
+async function restrictWindowsAcl(path,isDirectory=false){
+ if(process.platform!=='win32')return;
+ if(!windowsSid){
+  const identity=await promisify(execFile)('whoami',['/user','/fo','csv','/nh'],{
+   windowsHide:true,timeout:10000
+  });
+  windowsSid=identity.stdout.match(/S-1-\d+(?:-\d+)+/)?.[0];
+  if(!windowsSid)bad('WINDOWS_OWNER_SID_MISSING');
+ }
+ const ace='*'+windowsSid+':'+(isDirectory?'(OI)(CI)':'')+'F';
+ await promisify(execFile)('icacls',[path,'/inheritance:r','/grant:r',ace],{
+  windowsHide:true,timeout:10000
+ });
+}
+
 function ensureDirectoryPath(path){
  const absolute=resolve(String(path||''));
  if(!absolute||absolute===resolve('/')||absolute===resolve(homedir()))
@@ -35,7 +51,11 @@ function ensureDirectoryPath(path){
 async function secureFile(path,value){
  // Exclusive create prevents overwriting a valid private key during setup.
  const fd=await open(path,'wx',0o600);
- try{await fd.writeFile(String(value),'utf8');}finally{await fd.close()}
+ try{
+  await restrictWindowsAcl(path,false);
+  await fd.writeFile(String(value),'utf8');
+ }catch(error){await fd.close();await rm(path,{force:true});throw error}
+ finally{await fd.close().catch(()=>{})}
  if(process.platform!=='win32')await chmod(path,0o600);
 }
 async function privatePath(path,kind){
@@ -119,6 +139,7 @@ export async function installLti(options){
  const {mkdtemp}=await import('node:fs/promises');
  const staging=await mkdtemp(join(parent,'.p2lrn-lti-install-'));
  if(process.platform!=='win32')await chmod(staging,0o700);
+ await restrictWindowsAcl(staging,true);
  let moved=false;
  try{
   const tool=makeKey(),master=secret(),admin=secret();
@@ -322,6 +343,7 @@ export async function importRecovery(archive,directory,passphrase){
  const {mkdtemp}=await import('node:fs/promises');
  const staging=await mkdtemp(join(parent,'.p2lrn-lti-restore-'));
  if(process.platform!=='win32')await chmod(staging,0o700);
+ await restrictWindowsAcl(staging,true);
  let moved=false;
  try{
   const restoredConfig={...cfg,requiresHostRestore:true};
