@@ -13,6 +13,11 @@ const playwrightFile=join(repo,'.p2lrn-i18n-ci','node_modules','playwright-core'
 const {chromium}=await import(pathToFileURL(playwrightFile).href);
 const contentTypes={'.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.jpeg':'image/jpeg'};
 function chromeBinary(){
+  if(process.platform!=='win32'){
+    const installed=chromium.executablePath();
+    if(existsSync(installed))return installed;
+    throw Error('Playwright Chromium is not installed on the Linux browser runner.');
+  }
   const bases=[process.env.P2LRN_BROWSER_EXE,process.env.ProgramFiles,process.env['ProgramFiles(x86)'],process.env.LOCALAPPDATA].filter(Boolean);
   if(process.env.P2LRN_BROWSER_EXE&&existsSync(process.env.P2LRN_BROWSER_EXE))return process.env.P2LRN_BROWSER_EXE;
   for(const root of bases){
@@ -519,6 +524,11 @@ async function questionnaireDocsVisualQA(){
 }
 
 try{
+  if(process.argv.includes('--docs-only')){
+    await questionnaireDocsVisualQA();
+    assert.deepEqual(exceptions,[],'Browser uncaught errors during docs QA: '+exceptions.join('; '));
+    console.log('P2LRN_BROWSER_DOCS_ONLY=PASS');
+  } else {
   await siteParity();
   await browserNavigation();
   await questionnaireDocsVisualQA();
@@ -536,6 +546,7 @@ try{
   await analyticsChrome('en');
   assert.deepEqual(exceptions,[],'Browser uncaught errors: '+exceptions.join('; '));
   console.log('P2LRN_BROWSER_I18N_SUITE=PASS');
+  }
 }finally{
   await browser.close();
   await new Promise(resolve=>server.close(resolve));
