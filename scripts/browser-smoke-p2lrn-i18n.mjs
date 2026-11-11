@@ -566,9 +566,23 @@ async function captureFillBlanksAuthoring(){
   await ribbon.getByRole('button',{name:'Añadir contenido',exact:true}).click();
   const dialog=page.locator('dialog.p2lrn-activity-picker');
   await dialog.waitFor({state:'visible'});
+  await dialog.locator('input[type="radio"][value="same-page"]').check();
   await dialog.locator('[data-activity-kind="fill-blanks"]').click();
+  await page.waitForFunction(()=>document.querySelector('h1.studio-title')?.textContent?.includes('Rellenar huecos'),null,{timeout:15000});
   const card=page.locator('.q-card').first();
-  await card.waitFor({timeout:15000});
+  try {
+    await card.waitFor({timeout:12000});
+  } catch (error) {
+    const diagnostics=await page.evaluate(()=>({
+      title:document.querySelector('h1.studio-title')?.textContent,
+      editing:!!document.querySelector('.questionnaire-visual-editor'),
+      cardCount:document.querySelectorAll('.q-card').length,
+      bodyText:document.body?.innerText?.slice(0,2500)
+    }));
+    await page.screenshot({path:join(evidence,'fill-blanks-authoring-error.png'),fullPage:false});
+    await writeFile(join(evidence,'fill-blanks-authoring-error.json'),JSON.stringify(diagnostics,null,2));
+    throw Error('Real Studio authoring editor not visible: '+JSON.stringify(diagnostics)+'; '+String(error));
+  }
   const template=card.locator('.q-blank-template-editor');
   await template.fill('La Tierra gira alrededor del Sol.');
   await card.locator('.q-prompt-input').fill('Elige la palabra correcta para completar la frase.');
