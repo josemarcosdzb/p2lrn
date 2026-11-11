@@ -529,6 +529,9 @@ main{max-width:1220px;margin:0 auto;padding:0 24px}
   white-space:nowrap;
 }
 .site-footer__legal a:hover,.site-footer__legal a:focus-visible{color:#fff;text-decoration:underline;text-underline-offset:4px}
+/* WCAG 2.2 AA 2.5.8: the two footer implementations must provide 24px+ targets,
+   including at 320 CSS px. Keep the link text, order and destination unchanged. */
+.footer-legal a,.site-footer__legal a{display:inline-flex;align-items:center;min-height:32px;padding:6px 4px;margin-inline:2px}
 @media(max-width:960px){
   .site-footer__main{grid-template-columns:repeat(3,minmax(0,1fr));gap:30px;padding-top:44px}
   .site-footer__intro{grid-column:1/-1;max-width:550px}

@@ -562,6 +562,20 @@ async function fullSiteAccessibilityChrome(){
                   summary:n.failureSummary,html:n.html?.slice(0,320)}))}));
               return {lang:document.documentElement.lang,violations,incomplete,
                 overflow:Math.max(0,document.documentElement.scrollWidth-window.innerWidth),
+                overflowElements:document.documentElement.scrollWidth>window.innerWidth+2?
+                  [...document.body.querySelectorAll('*')].filter(el=>{
+                    if(!el.getClientRects().length)return false;
+                    const rect=el.getBoundingClientRect();
+                    return rect.right>window.innerWidth+2||rect.left< -2;
+                  }).slice(0,25).map(el=>({
+                    tag:el.tagName,className:el.className?.toString().slice(0,150),
+                    width:Math.round(el.getBoundingClientRect().width),
+                    left:Math.round(el.getBoundingClientRect().left),
+                    right:Math.round(el.getBoundingClientRect().right),
+                    minWidth:getComputedStyle(el).minWidth,
+                    overflowX:getComputedStyle(el).overflowX,
+                    sample:el.outerHTML.slice(0,170)
+                  })):[],
                 h1:document.querySelectorAll('h1').length,
                 headingInfo:[...document.querySelectorAll('h1')].map(el=>({
                   text:el.textContent?.trim().slice(0,90),role:el.getAttribute('role'),
@@ -588,7 +602,7 @@ async function fullSiteAccessibilityChrome(){
             if(studioRoute&&result.headingInfo.some(h=>h.editable&&h.role==='heading'))
               issues.push({label,rule:'studio-editor-heading-role',
                 detail:result.headingInfo});
-            if(result.overflow>2)issues.push({label,rule:'mobile-or-desktop-overflow',detail:result.overflow});
+            if(result.overflow>2)issues.push({label,rule:'mobile-or-desktop-overflow',detail:{pixels:result.overflow,elements:result.overflowElements}});
             if(result.badMedia)issues.push({label,rule:'video-no-poster-or-captions',detail:result.badMedia});
             if(result.brokenAnchors.length)issues.push({label,rule:'broken-anchor',detail:result.brokenAnchors});
             for(const error of result.violations)issues.push({label,rule:'wcag22-aa',detail:error});
