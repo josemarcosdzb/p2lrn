@@ -636,6 +636,50 @@ async function captureFillBlanksAuthoring(){
     JSON.stringify({source:'Real Studio at locally served project source in Chrome',
       state,notProduction:true},null,2)+'\n','utf8');
   console.log('P2LRN_REAL_STUDIO_DRAG_WORDS_CAPTURE='+JSON.stringify(state));
+
+  // Use the actual exported Studio package inside its learner preview.
+  // The student must see the word bank, place words, correct a mistake and finish.
+  try {
+    await page.locator('[data-mode-preview]').click();
+    const student=page.locator('[data-preview-stage] p2lrn-player');
+    const slot=student.locator('.p2lrn-fill-slot').first();
+    await slot.waitFor({state:'visible',timeout:30000});
+    const wordButtons=student.locator('.p2lrn-fill-chip');
+    const words=(await wordButtons.allTextContents()).map(x=>x.trim());
+    assert.deepEqual([...words].sort(),['Luna','Marte','Sol'].sort(),
+      'Learner word bank must contain the correct answer and two distractors');
+    const maskedSentence=await student.locator('.p2lrn-fill-template').innerText();
+    assert.doesNotMatch(maskedSentence,/\{\{[^{}]+\}\}/,
+      'Technical blank identifiers must not appear to learners');
+    assert.doesNotMatch(maskedSentence,/\bSol\b/,
+      'Correct answer must not leak into the unfinished sentence');
+    await page.screenshot({path:join(evidence,'student-unanswered.png'),fullPage:false});
+    await student.getByRole('button',{name:'Finalizar',exact:true}).click();
+    assert.equal(await slot.count(),1,'Student finished an unanswered activity');
+    await wordButtons.filter({hasText:'Luna'}).first().click();
+    await slot.click();
+    assert.equal((await slot.textContent()).trim(),'Luna','Distractor was not placed in blank');
+    await page.screenshot({path:join(evidence,'student-distractor-selected.png'),fullPage:false});
+    await slot.click();
+    assert.notEqual((await slot.textContent()).trim(),'Luna','Cannot remove placed word');
+    await wordButtons.filter({hasText:'Sol'}).first().click();
+    await slot.click();
+    assert.equal((await slot.textContent()).trim(),'Sol','Correct word was not placed in blank');
+    await page.screenshot({path:join(evidence,'student-answer-corrected.png'),fullPage:false});
+    await student.getByRole('button',{name:'Finalizar',exact:true}).click();
+    await student.locator('.p2lrn-q-result').waitFor({timeout:18000});
+    const result=(await student.locator('.p2lrn-q-result').innerText()).slice(0,1000);
+    await page.screenshot({path:join(evidence,'student-submitted-result.png'),fullPage:false});
+    await writeFile(join(evidence,'student-interaction-report.json'),
+      JSON.stringify({source:'real Studio preview, original edited package',words,maskedSentence,
+        incompleteFinishBlocked:true,distractorRemoved:true,correctWordPlaced:true,result},null,2)+'\n','utf8');
+    console.log('P2LRN_REAL_STUDENT_FILL_BLANKS='+JSON.stringify({words,maskedSentence,result}));
+  }catch(error){
+    await page.screenshot({path:join(evidence,'student-interaction-error.png'),fullPage:false}).catch(()=>{});
+    await writeFile(join(evidence,'student-interaction-error.json'),
+      JSON.stringify({message:String(error),url:page.url()},null,2)+'\n','utf8');
+    throw error;
+  }
 }
 
 try{
