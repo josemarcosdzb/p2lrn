@@ -5,6 +5,8 @@
 import {readFile,writeFile,mkdir,stat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {resolve,join,basename} from 'node:path';
+import {existsSync} from 'node:fs';
+import {fileURLToPath,pathToFileURL} from 'node:url';
 import {freemem} from 'node:os';
 import {request as httpRequest} from 'node:http';
 import {launchInteropChrome} from './chrome-visual.mjs';
@@ -13,6 +15,12 @@ import {validateClassroomPlan,STAGES} from './real-lms-classroom-contract.mjs';
 const MIN_FREE_BYTES=4*1024*1024*1024;
 const MAX_COURSE_BYTES=8*1024*1024;
 const MAX_RUN_MS=12*60*1000;
+// Reuse the SAME official Toolkit validator used by the actual Provider.
+// Restrict expansion to a small bounded QA course, never inspect opaque ZIPs.
+const toolkitValidator=resolve(fileURLToPath(new URL('../../',import.meta.url)),
+ 'packages/toolkit/dist/core/validator.js');
+const {validatePackageBytes}=await import(existsSync(toolkitValidator)?
+ pathToFileURL(toolkitValidator).href:'@p2lrn/toolkit/core');
 const flags=process.argv.slice(2);
 const arg=key=>{const p=flags.indexOf(key);return p<0?null:flags[p+1];};
 const executing=flags.includes('--execute-real');
@@ -31,12 +39,32 @@ for(const id of ['A','B']){
  const digest=createHash('sha256').update(buf).digest('hex');
  if(digest.toLowerCase()!==plan.courses[id].sha256.toLowerCase())
   throw Error('LMS_REAL_COURSE_INTEGRITY_'+id);
- courses[id]={buf,sha256:digest,filename:basename(file)};
+ let parsed;
+ try{
+  parsed=validatePackageBytes(buf,{
+   strictProfiles:true,validateProfilePayloads:true,
+   zipLimits:{entries:1200,entryBytes:8*1024*1024,
+    totalUncompressedBytes:32*1024*1024,
+    centralDirectoryBytes:2*1024*1024,compressionRatio:30},
+   nestedZipLimits:{entries:1200,entryBytes:8*1024*1024,
+    totalUncompressedBytes:64*1024*1024,
+    centralDirectoryBytes:2*1024*1024,compressionRatio:30}
+  });
+ }catch{throw Error('INVALID_OFFICIAL_P2LRN_PACKAGE_'+id);}
+ if(!parsed?.graph?.entities?.some(e=>e.type==='course')||
+    !parsed.manifest?.integrity?.contentRoot)
+  throw Error('COURSE_ENTITY_OR_INTEGRITY_MISSING_'+id);
+ courses[id]={buf,sha256:digest,filename:basename(file),
+  contentRoot:parsed.manifest.integrity.contentRoot};
+
 }
+if(courses.A.contentRoot===courses.B.contentRoot)
+ throw Error('DISTINCT_REAL_COURSE_CONTENT_REQUIRED');
 if(!executing){
  console.log(JSON.stringify({status:'PLAN_VALIDATED_NOT_EXECUTED',
   lms:plan.lms,stages:contract.stageCount,courses:{
-   A:courses.A.sha256,B:courses.B.sha256}}));
+   A:{sha256:courses.A.sha256,contentRoot:courses.A.contentRoot},
+   B:{sha256:courses.B.sha256,contentRoot:courses.B.contentRoot}}}));
  process.exit(0);
 }
 if(process.env.P2LRN_LMS_REAL_E2E!=='YES')
@@ -49,7 +77,8 @@ const reportPath=join(evidence,'real-classroom-results.json');
 const report={schema:'p2lrn-lms-real-classroom-result/1',
  lms:plan.lms,status:'BLOQUEADA',startedAt:new Date().toISOString(),
  commit:process.env.GITHUB_SHA||null,
- courses:{A:courses.A.sha256,B:courses.B.sha256},
+ courses:{A:{sha256:courses.A.sha256,contentRoot:courses.A.contentRoot},
+  B:{sha256:courses.B.sha256,contentRoot:courses.B.contentRoot}},
  stages:[],
  teacherUploads:0,learnerCompletions:0,officialGradeCells:0,
  note:'PASS requires Chrome/Edge interactions with genuine QA LMS UI and official gradebook'};
