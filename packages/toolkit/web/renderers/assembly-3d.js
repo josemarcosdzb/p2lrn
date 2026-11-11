@@ -164,11 +164,27 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
     rotateButtons.querySelectorAll('button').forEach(b=>{b.disabled=locked||Boolean(placements[activeId()]);});
     if(allPlaced())setText('Montaje completado. Puedes finalizar la actividad.');
   }
-  function choosePiece(id){
+  function releaseSelected(){
+    if(selected===null)return;
+    const id=selected,live=scene.getTranslation?.(boxId(id));
+    scene.carry(boxId(id),false);
+    if(!placements[id]&&finite(live,3)){
+      // Use the last rendered position, not the old authored transform.
+      // This is the same click-to-carry/release contract as ordering and
+      // classification, but keeps the assembly mesh's rotation and scale.
+      const next={...transforms.get(id),position:[...live]};
+      transforms.set(id,next);
+      persistFreePose(id,next);
+    }
+    scene.highlight(boxId(id),false);
+    selected=null;
+  }
+  function choosePiece(id,{carry=false}={}){
     if(!pieceById.has(id)||runtime.state.completed||placements[id])return false;
-    if(selected!==null){scene.carry(boxId(selected),false);scene.highlight(boxId(selected),false);}
+    if(selected!==null&&selected!==id)releaseSelected();
     selected=id;pieceSelect.value=id;
     scene.highlight(boxId(id),true);
+    if(carry)scene.carry(boxId(id),true);
     setText('Pieza seleccionada. Oriéntala y selecciona su destino.');
     update();return true;
   }
@@ -294,10 +310,12 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
         persistFreePose(id,current);
         const overTarget=target?.kind==='assembly-target';
         const completed=overTarget&&place(id,target.id,{draggedPosition:finalPosition});
+        scene.highlight(boxId(id),false);
+        selected=null;
         if(!completed&&!overTarget)setText('Pieza desplazada. Sigue acercándola a su destino.');
-        // Preserve selection and progress after a failed placement so the
-        // player can rotate and move the same piece again.
-        dragging=null;
+        // Every completed pointer gesture releases the piece; selecting
+        // another may not move the old one or leave it attached to the hand.
+        dragging=null;update();
         return true;
       }
       if(phase==='cancel'){
@@ -315,15 +333,13 @@ export async function buildAssemblyControls({trial,runtime,scene,status,pkg,onPr
       if(runtime.state.completed)return true;
       if(meta.kind==='scene-empty'){
         if(selected!==null){
-          scene.highlight(boxId(selected),false);
-          persistFreePose(selected,transforms.get(selected));
-          selected=null;
+          releaseSelected();
           setText('Pieza soltada donde la has dejado.');
           update();
         }
         return true;
       }
-      if(meta.kind==='assembly-piece'){choosePiece(meta.id);return true;}
+      if(meta.kind==='assembly-piece'){choosePiece(meta.id,{carry:true});return true;}
       if(meta.kind==='assembly-target'){
         if(!selected){setText('Selecciona una pieza antes de elegir destino.');return true;}
         place(selected,meta.id);return true;
