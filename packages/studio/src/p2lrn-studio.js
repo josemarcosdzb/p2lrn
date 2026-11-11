@@ -21,7 +21,7 @@ import {saveLatestDraft,loadLatestDraft,clearLatestDraft} from './runtime/browse
 import {exportOfflineAssignmentBundle, parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
 import {latestManualReviewAnswers,createP2LRNManualReviewReport} from './runtime/manual-grading.js';
 
-export const P2LRN_STUDIO_VERSION='0.5.0-alpha.12';
+export const P2LRN_STUDIO_VERSION='0.5.0-alpha.13';
 
 const css=`
 :host{display:block;min-height:640px;font-family:Inter,system-ui,sans-serif;color:#111827}

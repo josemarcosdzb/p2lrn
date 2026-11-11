@@ -1,5 +1,5 @@
-export const version: "0.5.0-alpha.12";
-export const toolkitVersion: "0.5.0-alpha.12";
+export const version: "0.5.0-alpha.13";
+export const toolkitVersion: "0.5.0-alpha.13";
 export const coreVersion: "0.4.0";
 export const HOST_ADAPTER_VERSION: "1";
 
@@ -393,8 +393,8 @@ export function inspectPackageExecution(pkg:unknown,options?:{
 }):Promise<P2LRNPackageExecutionReport>;
 
 export interface P2LRNPublicAPI {
-  readonly version: "0.5.0-alpha.12";
-  readonly toolkitVersion: "0.5.0-alpha.12";
+  readonly version: "0.5.0-alpha.13";
+  readonly toolkitVersion: "0.5.0-alpha.13";
   readonly coreVersion: "0.4.0";
   readonly mount: typeof mountP2LRN;
   readonly createResultRecorder:typeof createResultRecorder;
@@ -456,9 +456,9 @@ export interface P2LRNPublicAPI {
 }
 
 export class P2LRNPlayerElement extends HTMLElement {
-  static readonly p2lrnVersion: "0.5.0-alpha.12";
+  static readonly p2lrnVersion: "0.5.0-alpha.13";
   /** @deprecated Compatibility alias for Alpha15 integrations. */
-  static readonly p2rlnVersion: "0.5.0-alpha.12";
+  static readonly p2rlnVersion: "0.5.0-alpha.13";
   startResultCapture(options:P2LRNResultOptions):P2LRNResultRecorder;
   readonly resultRecorder:P2LRNResultRecorder|null;
   readonly packageId:string|null;

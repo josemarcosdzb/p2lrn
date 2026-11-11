@@ -1,4 +1,4 @@
-# P2LRN Node.js / TypeScript 0.5.0-alpha.12
+# P2LRN Node.js / TypeScript 0.5.0-alpha.13
 
 **Derechos de los cursos:** quien crea, importa o distribuye un curso debe verificar y respetar los permisos y licencias de los materiales que incorpora (incluidas actividades H5P/SCORM, imágenes y vídeo), conservar las atribuciones exigidas y obtener las autorizaciones necesarias. P2LRN no concede derechos sobre obras ajenas. Esta responsabilidad sobre *contenido del curso* es distinta de la que corresponde al distribuidor de bibliotecas de software incluidas en sus paquetes. Véase [Derechos y licencias de los cursos](docs/DERECHOS-CONTENIDOS-CURSOS.md).
 
@@ -17,7 +17,7 @@ Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeS
 
 ## Identidad P2LRN
 
-La distribución `0.5.0-alpha.12` alinea `@p2lrn/player`, `@p2lrn/toolkit` y `@p2lrn/h5p-libraries` y `@p2lrn/studio`. El Reader documental forma parte del Toolkit como subpath `@p2lrn/toolkit/document-reader`.
+La distribución `0.5.0-alpha.13` alinea `@p2lrn/player`, `@p2lrn/toolkit` y `@p2lrn/h5p-libraries` y `@p2lrn/studio`. El Reader documental forma parte del Toolkit como subpath `@p2lrn/toolkit/document-reader`.
 
 La salida nueva usa:
 

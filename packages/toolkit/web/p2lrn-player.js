@@ -27,8 +27,8 @@ import {configureRuntimeHost, getRuntimeHostConfig} from './runtime-host-config.
 import {canonicalIdentifier, canonicalizeIdentifiers, identifierIs, parseP2LRNUntrustedJson} from './identifiers.js';
 import {PROGRESSION_PROFILE, createProgressionModel, normalizeProgressionState, progressionContext, progressionEnabled, progressionRule, updateProgressionState, validateProgressionGraph} from './progression-core.js';
 
-export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.12';
-export const P2LRN_TOOLKIT_VERSION = '0.5.0-alpha.12';
+export const P2LRN_WEB_SDK_VERSION = '0.5.0-alpha.13';
+export const P2LRN_TOOLKIT_VERSION = '0.5.0-alpha.13';
 export const P2LRN_CORE_VERSION = '0.4.0';
 
 export const DEFAULT_LIMITS = Object.freeze({

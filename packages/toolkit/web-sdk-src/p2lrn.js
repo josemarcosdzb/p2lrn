@@ -1,6 +1,6 @@
 (function (global, doc) {
   'use strict';
-  const version = '0.5.0-alpha.12';
+  const version = '0.5.0-alpha.13';
   const key = '__P2LRN_CDN_LOADER__';
 
   function conflict(found) {

@@ -112,7 +112,7 @@ export async function buildH5pLibraries({output = join(packageRoot, 'dist')} = {
     for (const file of files) bytes += (await stat(file.path)).size;
     const manifest = {
       schema:'https://p2lrn.org/schema/h5p-library-catalog/1',
-      packageVersion:'0.5.0-alpha.12',
+      packageVersion:'0.5.0-alpha.13',
       source:{
         repository:'Lumieducation/Lumi',
         commit:LUMI_H5P_LIBRARY_COMMIT,

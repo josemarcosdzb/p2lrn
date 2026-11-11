@@ -1,6 +1,6 @@
 {
   "name": "@p2lrn/studio",
-  "version": "0.5.0-alpha.12",
+  "version": "0.5.0-alpha.13",
   "description": "Embeddable P2LRN visual authoring Studio for browser and server-backed course persistence",
   "type": "module",
   "sideEffects": true,
@@ -40,7 +40,7 @@
     "node": ">=18"
   },
   "peerDependencies": {
-    "@p2lrn/player": "0.5.0-alpha.12"
+    "@p2lrn/player": "0.5.0-alpha.13"
   },
   "scripts": {
     "build:dist": "node ./scripts/build-dist.mjs",
@@ -67,7 +67,7 @@
     "p2lrn-studio": "./bin/p2lrn-studio.mjs"
   },
   "dependencies": {
-    "@p2lrn/toolkit": "0.5.0-alpha.12",
+    "@p2lrn/toolkit": "0.5.0-alpha.13",
     "pdfjs-dist": ">=6.2.108 <7"
   }
 }
