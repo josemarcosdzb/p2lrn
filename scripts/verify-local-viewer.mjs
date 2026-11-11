@@ -2303,6 +2303,10 @@ async function browserStudioDropKeyboardScenario(){
   }finally{controls?.dispose();host.remove();}
 }
 function browserStudioHeadingScenario(){
+  // The lesson-properties disclosure is closed initially; activate it before
+  // checking whether its nested title editor can actually receive focus.
+  const disclosure=document.querySelector('details.p2lrn-studio-lesson-properties');
+  if(disclosure&&!disclosure.open)disclosure.open=true;
   const heading=document.querySelector('h1.studio-title');
   const field=heading?.querySelector('.studio-title-field');
   if(!heading||!field)return {ok:false};
