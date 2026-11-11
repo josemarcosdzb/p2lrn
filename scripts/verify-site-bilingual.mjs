@@ -109,7 +109,10 @@ function idsOf($){return $('[id]').map((_,el)=>$(el).attr('id')).get().sort();}
 function dataContract($){
   return $('*').map((_,el)=>{
     const attrs=el.attribs??{};
-    const data=Object.keys(attrs).filter(key=>key.startsWith('data-')).sort().map(key=>(key==='data-help'||key==='data-locale')?key:key+'='+attrs[key]);
+    // Video SEO titles and descriptions are human-translated prose, not interactive contracts.
+    // Preserve their presence in both languages while comparing all functional data-* values.
+    const localizedAttrs=new Set(['data-help','data-locale','data-video-title','data-video-description']);
+    const data=Object.keys(attrs).filter(key=>key.startsWith('data-')).sort().map(key=>localizedAttrs.has(key)?key:key+'='+attrs[key]);
     const role=attrs.role?['role='+attrs.role]:[];
     const name=attrs.name?['name='+attrs.name]:[];
     const type=attrs.type?['type='+attrs.type]:[];
