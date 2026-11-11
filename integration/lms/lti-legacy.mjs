@@ -109,8 +109,8 @@ export function verifyLegacyLaunch({params,registration,secret,requestUrl,consum
  const contextId=str(params.context_id,'CONTEXT',512);
  const bindingId=str(params.custom_p2lrn_binding_id??params.p2lrn_binding_id,'BINDING',128);
  if(!/^[a-f0-9]{64}$/i.test(bindingId))throw Error('INVALID_LEGACY_CONTENT_BINDING');
- if(typeof consumeNonce!=='function'||!consumeNonce(registration.id,sha(n),seconds))
-  throw Error('REPLAYED_LEGACY_LAUNCH');
+ if(typeof consumeNonce!=='function')throw Error('REPLAYED_LEGACY_LAUNCH');
+ const consumed=consumeNonce(registration.id,sha(n),seconds);
  const source=params.lis_result_sourcedid||null,service=params.lis_outcome_service_url||null;
  let basicOutcome=null;
  if(source&&service){
@@ -123,9 +123,16 @@ export function verifyLegacyLaunch({params,registration,secret,requestUrl,consum
    basicOutcome={serviceUrl:url.toString(),sourceId:str(source,'RESULT_SOURCE',4096),protocol:'legacy'};
   }
  }
- return Object.freeze({registrationId:registration.id,tenantId:registration.tenantId,
+ const verified=Object.freeze({registrationId:registration.id,tenantId:registration.tenantId,
   deploymentId:'legacy',bindingId,platformSubject:userId,learnerKey:sha(registration.id+':'+userId),
   resourceLinkId,contextId,basicOutcome});
+ // Preserve the synchronous SQLite contract, and await remote SQL nonce consumption.
+ if(consumed&&typeof consumed.then==='function')return consumed.then(accepted=>{
+  if(!accepted)throw Error('REPLAYED_LEGACY_LAUNCH');
+  return verified;
+ });
+ if(!consumed)throw Error('REPLAYED_LEGACY_LAUNCH');
+ return verified;
 }
 export async function sendLegacyOutcome({serviceUrl,sourceId,consumerKey,secret,issuerOrigin,
  normalized,fetchImpl=fetch,allowInsecureLocal=false,nonce=randomBytes(20).toString('hex'),now=Math.floor(Date.now()/1000)}){

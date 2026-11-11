@@ -19,6 +19,8 @@
     "bin/",
     "host-adapter.mjs",
     "launch-contract.mjs",
+    "lti-async-store.mjs",
+    "lti-store-service-worker.mjs",
     "lti-admin-auth.mjs",
     "lti-ags.mjs",
     "lti-canvas-registration.mjs",
