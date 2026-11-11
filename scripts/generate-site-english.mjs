@@ -68,6 +68,7 @@ const handAuthoredEnglishPages=new Set([
   'contacto/index.html',
   'demo/index.html',
   'docs/referencia/index.html',
+  'docs/skills/index.html',
   // Legal summaries are manually reviewed and must not be rewritten by machine translation.
   'licencia/index.html',
 ]);
