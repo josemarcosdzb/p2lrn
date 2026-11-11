@@ -266,6 +266,8 @@ jobs:
           npm run build
       - name: Verify NPM packaging, manifests and local tarballs (do not publish)
         run: node scripts/verify-npm-pack.mjs
+      - name: Install the real LTI npm tarball into a clean project and exercise the HTTP server
+        run: node scripts/verify-lti-npm-install.mjs
       - name: Verify npm registry state without changing tags
         run: node scripts/check-public-npm-registry.mjs
 
