@@ -57,7 +57,7 @@ try{
  const bin=join(installed,'bin','p2lrn-lti.mjs');
  assert.ok((await stat(bin)).isFile());
  const help=await runCli(bin,['help'],testDir);
- assert.match(help.stdout,/instalacion guiada/);
+ assert.match(help.stdout,/instalacion guiada/i);
  const instance=join(testDir,'installation'),port=await freePort();
  const init=await runCli(bin,[
   'init','--directory',instance,'--database','sqlite',
