@@ -54,7 +54,8 @@
   },
   "scripts": {
     "test": "node --test *.test.mjs",
-    "test:postgres": "node --test lti-postgres-live.test.mjs"
+    "test:postgres": "node --test lti-postgres-live.test.mjs",
+    "prepublishOnly": "node ../../scripts/check-lti-publish-ready.mjs"
   },
   "publishConfig": {
     "access": "public"
