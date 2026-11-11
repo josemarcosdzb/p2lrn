@@ -1,18 +1,67 @@
 {
-  "name": "@p2lrn/lti-database-drivers",
-  "private": true,
+  "name": "@p2lrn/lti-provider",
+  "version": "0.5.0-alpha.12",
+  "description": "Standalone P2LRN LTI 1.3 Provider with guided console installation and SQL backends",
   "type": "module",
-  "description": "Database connectors for the standalone P2LRN LTI provider; independent from Studio and Player",
+  "license": "SEE LICENSE IN LICENSE",
   "engines": {
     "node": ">=22.13.0"
   },
+  "bin": {
+    "p2lrn-lti": "./bin/p2lrn-lti.mjs"
+  },
+  "exports": {
+    ".": "./lti-server.mjs",
+    "./installer": "./lti-installer.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin/",
+    "host-adapter.mjs",
+    "launch-contract.mjs",
+    "lti-admin-auth.mjs",
+    "lti-ags.mjs",
+    "lti-canvas-registration.mjs",
+    "lti-content-scope.mjs",
+    "lti-database-worker.mjs",
+    "lti-database.mjs",
+    "lti-installer.mjs",
+    "lti-legacy.mjs",
+    "lti-local-qa-gateway.mjs",
+    "lti-mysql-connection.mjs",
+    "lti-mysql-dialect.mjs",
+    "lti-nrps.mjs",
+    "lti-picker-ui.mjs",
+    "lti-provider.mjs",
+    "lti-safe-fetch.mjs",
+    "lti-server.mjs",
+    "lti-sqlserver-connection.mjs",
+    "lti-sqlserver-dialect.mjs",
+    "lti-store.mjs",
+    "lti-user-errors.mjs",
+    "p2lrn-lti.mjs",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
   "dependencies": {
+    "@p2lrn/toolkit": "0.5.0-alpha.12",
+    "@p2lrn/player": "0.5.0-alpha.12",
     "pg": "^8.23.1",
     "mysql2": "^3.15.2",
     "mariadb": "^3.4.5",
     "mssql": "^11.0.1"
   },
   "scripts": {
+    "test": "node --test *.test.mjs",
     "test:postgres": "node --test lti-postgres-live.test.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josemarcosdzb/p2lrn.git",
+    "directory": "integration/lms"
   }
 }
