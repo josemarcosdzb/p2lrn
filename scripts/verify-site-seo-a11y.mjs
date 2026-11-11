@@ -144,14 +144,27 @@ for(const route of indexable){
   const main=/<main\b[^>]*>[\s\S]*?<\/main>/i.exec(page)?.[0]||'';
   const images=[...section.matchAll(/<image:loc>([^<]+)<\/image:loc>/g)].map(m=>decodeXml(m[1]));
   const videoBlocks=[...section.matchAll(/<video:video>([\s\S]*?)<\/video:video>/g)].map(m=>m[1]);
-  const missingImageSources=new Set();
   const expectedImages=new Set();
+  const indexImage=raw=>{
+    const candidate=String(raw||'').trim().replaceAll('&amp;','&');
+    if(!candidate)return;
+    let uri;
+    try{uri=new URL(candidate,url);}catch{return;}
+    if(uri.origin===CANONICAL_ORIGIN&&/\.(?:webp|avif|png|jpe?g|gif|svg)$/i.test(uri.pathname))
+      expectedImages.add(uri.href);
+  };
+  const indexSrcset=srcset=>{
+    for(const item of String(srcset||'').split(','))indexImage(item.trim().split(/\s+/)[0]);
+  };
   for(const tag of tags(main,'img')){
-    const srcValue=attr(tag,'src')||'';
-    if(!(attr(tag,'alt')||'').trim()||!/\.(?:webp|avif|png|jpe?g|gif|svg)(?:$|[?#])/i.test(srcValue))
-      continue;
-    const uri=new URL(srcValue,url);
-    if(uri.origin===CANONICAL_ORIGIN)expectedImages.add(uri.href);
+    if(!(attr(tag,'alt')||'').trim())continue;
+    indexImage(attr(tag,'src'));
+    indexSrcset(attr(tag,'srcset'));
+  }
+  for(const picture of main.matchAll(/<picture\b[^>]*>[\s\S]*?<\/picture>/gi)){
+    const fallback=tags(picture[0],'img')[0]||'';
+    if(!(attr(fallback,'alt')||'').trim())continue;
+    for(const tag of tags(picture[0],'source'))indexSrcset(attr(tag,'srcset'));
   }
   const videoTags=[...main.matchAll(/(<video\b[^>]*>)([\s\S]*?)<\/video>/gi)];
   for(const [,tag] of videoTags){

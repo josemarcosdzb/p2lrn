@@ -14,6 +14,10 @@ await mkdir(evidence,{recursive:true});
 const report={source:'Actual static ES/EN pages, copied to an ephemeral compile folder',
   verified:false,checks:[],errors:[]};
 try{
+  // A committed static sitemap is a dangerous stale alternative to the
+  // production-generated index (especially for images and videos).
+  const staleSourceSitemap=await stat(join(sourceRoot,'sitemap.xml')).then(()=>true).catch(()=>false);
+  assert.equal(staleSourceSitemap,false,'Remove obsolete source sitemap; only the production compiler creates it');
   await rm(staging,{recursive:true,force:true});
   await cp(sourceRoot,staging,{recursive:true,force:true});
   // Netlify's full compiler maps several English source filenames to their
@@ -72,10 +76,31 @@ try{
   assert.deepEqual(duplicateVideoRefs,[],'Missing required video sitemap elements');
   const mediaRoutes=routes.filter(page=>page.xml.includes('<image:image>')||page.xml.includes('<video:video>'));
   assert.ok(mediaRoutes.length>=25,'Images or videos missing from documentation routes');
+  // Google Video rich results require uploadDate. The real first publication
+  // dates have not been established: never invent them from git timestamps.
+  const missingUploadDate=[];
+  for(const route of required){
+    const page=routes.find(x=>x.url==='https://p2lrn.org'+route);
+    const html=await readFile(route==='/'?join(staging,'index.html'):
+      join(staging,...route.slice(1).split('/').filter(Boolean),'index.html'),'utf8');
+    const structured=[...html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
+      .flatMap(match=>{const payload=JSON.parse(match[1]);return Array.isArray(payload)?payload:
+        payload['@graph']??[payload];});
+    const video=structured.find(item=>item['@type']==='VideoObject' &&
+      item.contentUrl==='https://p2lrn.org'+(
+        /<video:content_loc>([^<]+)<\/video:content_loc>/.exec(page?.xml??'')?.[1]
+          ?.replace('https://p2lrn.org','')??'__missing__'));
+    assert.ok(video,'VideoObject must match the actual sitemap media URL: '+route);
+    if(!video.uploadDate)missingUploadDate.push(route);
+  }
+  assert.ok(routes.find(x=>x.url==='https://p2lrn.org/')?.xml
+    .includes('/assets/hero/optimized/'),'Responsive homepage images absent from sitemap');
   report.verified=true;
   report.summary={pages:build.indexable,videoEntries:build.videoEntries,
     imageEntries:build.imageEntries,distinctAssets:build.mediaAssets,mediaRoutes:mediaRoutes.length,
-    indexationClaim:'Eligible for crawling, not proof of Google indexation'};
+    googleVideoRichResults:{eligible:missingUploadDate.length===0,missingVerifiedUploadDate:missingUploadDate,
+      reason:missingUploadDate.length?'Google requires real uploadDate. Do not derive it from the repository or current build.':null},
+    indexationClaim:'Sitemap is eligible for crawling; Search Console indexation is unverified'};
   report.checks.push('Bilingual sitemap','Indexable landing pages','Image URLs',
     'Video poster and downloadable file','Video metadata','Caption files',
     'Local assets exist and are nonempty','No stale redirect or noindex media URLs');

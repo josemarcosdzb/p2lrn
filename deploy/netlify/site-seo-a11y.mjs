@@ -343,13 +343,28 @@ function mediaLink(source,route,origin,extension){
   if(url.origin!==origin||!extension.test(url.pathname))return null;
   return url.href;
 }
+// Index the actual responsive image assets, not only the PNG/JPEG fallback.
+// Only include sources belonging to a <picture> with meaningful fallback alt.
+function responsiveImageUrls(srcset,route,origin){
+  return String(srcset||'').split(',').map(candidate=>
+    mediaLink(candidate.trim().split(/\s+/)[0],route,origin,imageExtension)).filter(Boolean);
+}
 function discoverPageMedia(html,route,origin){
   const main=/<main\b[^>]*>[\s\S]*?<\/main>/i.exec(html)?.[0]||'';
   const images=new Set();
   for(const tag of tagList(main,'img')){
     const alt=decode(attr(tag,'alt')??'').trim();
+    if(!alt)continue; // Decorative images are not indexed as content.
     const src=mediaLink(attr(tag,'src')||'',route,origin,imageExtension);
-    if(alt&&src)images.add(src);
+    if(src)images.add(src);
+    for(const uri of responsiveImageUrls(attr(tag,'srcset'),route,origin))images.add(uri);
+  }
+  for(const picture of main.matchAll(/<picture\b[^>]*>[\s\S]*?<\/picture>/gi)){
+    const fallback=tagList(picture[0],'img')[0]??'';
+    if(!decode(attr(fallback,'alt')??'').trim())continue;
+    for(const tag of tagList(picture[0],'source')){
+      for(const uri of responsiveImageUrls(attr(tag,'srcset'),route,origin))images.add(uri);
+    }
   }
   const videos=[];
   for(const found of main.matchAll(/(<video\b[^>]*>)([\s\S]*?)<\/video>/gi)){

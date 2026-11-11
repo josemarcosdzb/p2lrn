@@ -73,6 +73,14 @@ for(const filename of (await files(site)).sort()){
  const noSize=images.filter(t=>!/\bwidth="\d+"/i.test(t)||!/\bheight="\d+"/i.test(t)).length;
  if(noAlt)add('error',route,'image-alt',noAlt+' images without alt');
  if(noSize)add('warning',route,'image-size',noSize+' images without explicit dimensions');
+ // Check visible public-facing captions and translated Studio controls, rather than
+ // assuming a passed meta-description/word-count audit proves editorial quality.
+ if(source==='index.html'&&!redirect &&
+    /development (?:branch|build)|not certified production|sesión local de desarrollo|rama de desarrollo/i.test(html))
+   add('error',route,'homepage-release-jargon','Public homepage screenshot captions contain internal release language');
+ if(source==='studio/index.html'&&english&&!redirect &&
+    /\bplaceholder=["'](?:Ej\.|Ex\.)\s*30["']/i.test(html))
+   add('error',route,'studio-english-placeholder','Untranslated Spanish placeholder in the English Studio controls');
  // Explicit editorial regressions for the inspected teacher and public pages.
  if(source==='docs/studio/index.html'&&!redirect){
    if(!html.includes('id="studio-doc-informacion-adicional"')||

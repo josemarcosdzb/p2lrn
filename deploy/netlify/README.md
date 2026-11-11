@@ -44,6 +44,22 @@ runtime-host/h5p-libraries/
 
 The CDN stores reusable runtime libraries only. It does not become a store for user/course `.p2lrn`, H5P or SCORM packages.
 
+## Multimedia search sitemap
+
+**Only the build output is authoritative.** `deploy/netlify/site/sitemap.xml` is
+not maintained because it would immediately become stale as translated pages,
+screenshots and videos change. `build-site.mjs` generates
+`.netlify-cdn/sitemap.xml` from the real indexable HTML pages and checks
+image URLs, meaningful responsive image variants, video thumbnails, video files
+and caption tracks. Use `node scripts/verify-site-media-seo.mjs` for
+the isolated pre-deploy audit; publishing the unbuilt source directory is not
+supported. Google Search Console is required to determine real indexing.
+
+Google video-rich-result eligibility additionally requires the **actual first
+publication date** (`VideoObject.uploadDate`); do not manufacture that date
+from the filename or build time. Until provenance is verified, the media report
+must explicitly declare this limitation.
+
 ## Published paths
 
 The canonical integration URL is stable and does not change on every alpha/minor
