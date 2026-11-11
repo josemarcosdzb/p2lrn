@@ -53,15 +53,17 @@ jobs:
         run: |
           npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save --package-lock=false playwright-core@1.64.1 axe-core@4.10.3
           node .p2lrn-i18n-ci/node_modules/playwright-core/cli.js install --with-deps chromium
+      - name: Validate all 48 real browser views, language navigation and teacher/developer paths
+        run: node scripts/browser-smoke-p2lrn-i18n.mjs --docs-only
+      - name: Audit all 144 ES/EN pages for editorial quality, structure, language and SEO intent
+        if: always()
+        run: node scripts/audit-site-editorial-seo.mjs
       - name: Verify bilingual editorial parity and locale-specific JS contracts
+        if: always()
         run: |
           npm install --ignore-scripts --no-audit --no-fund --no-save --package-lock=false cheerio@1.2.0 acorn@8.19.0
           node --test scripts/test-site-i18n-ast.mjs scripts/test-site-ui-locales.mjs
           node scripts/verify-site-bilingual.mjs
-      - name: Audit all 144 ES/EN pages for editorial quality, structure, language and SEO intent
-        run: node scripts/audit-site-editorial-seo.mjs
-      - name: Validate all 48 real browser views, language navigation and teacher/developer paths
-        run: node scripts/browser-smoke-p2lrn-i18n.mjs --docs-only
       - name: Preserve raw Chromium screenshots and JSON evidence even when a check fails
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
