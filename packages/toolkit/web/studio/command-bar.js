@@ -244,7 +244,9 @@ export function collapseStudioLessonProperties({header,title}={}){
   const doc=header.ownerDocument;
   const details=doc.createElement('details');details.className='p2lrn-studio-lesson-properties';
   const summary=doc.createElement('summary');
-  summary.setAttribute('aria-label',studioUiText('Editar título y descripción de la lección',doc));
+  // <summary> gets its accessible name from the visible lesson label,
+  // title and editing hint. Overriding it with an aria-label omitted "Lección"
+  // and failed WCAG 2.5.3 (label in name) in both languages.
   const label=doc.createElement('span');label.className='p2lrn-studio-property-label';label.textContent='Propiedades de lección';
   const name=doc.createElement('strong');name.className='p2lrn-studio-property-name';
   const sync=()=>{name.textContent=title.textContent?.trim()||'Lección sin título';};
