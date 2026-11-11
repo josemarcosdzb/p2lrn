@@ -53,11 +53,15 @@ try{
  ];
  await npm(['init','-y'],testDir);
  await npm(['install','--ignore-scripts','--no-audit','--no-fund',...tarballs],testDir);
+ await npm(['audit','--omit=dev','--audit-level=high'],testDir);
  const installed=join(testDir,'node_modules','@p2lrn','lti-provider');
  const bin=join(installed,'bin','p2lrn-lti.mjs');
  assert.ok((await stat(bin)).isFile());
  const help=await runCli(bin,['help'],testDir);
  assert.match(help.stdout,/instalacion guiada/i);
+ const npmCommand=join(testDir,'node_modules','.bin','p2lrn-lti');
+ const npmResult=await call(npmCommand,['help'],{cwd:testDir,timeout:20000});
+ assert.match(npmResult.stdout,/instalacion guiada/i,'npm command shim must be executable');
  const instance=join(testDir,'installation'),port=await freePort();
  const init=await runCli(bin,[
   'init','--directory',instance,'--database','sqlite',
