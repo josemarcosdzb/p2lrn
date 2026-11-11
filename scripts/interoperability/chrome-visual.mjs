@@ -14,7 +14,7 @@ const browsers=()=>{
   ];
   return names.filter(Boolean).find(existsSync);
 };
-export async function launchInteropChrome({downloadDir,evidenceDir}){
+export async function launchInteropChrome({downloadDir,evidenceDir,localHostResolver=false}){
   const exe=browsers();if(!exe)throw new Error('Real Chrome or Edge browser missing');
   await mkdir(downloadDir,{recursive:true});await mkdir(evidenceDir,{recursive:true});
   const profile=await mkdtemp(join(tmpdir(),'p2lrn-real-interop-browser-'));
@@ -22,7 +22,9 @@ export async function launchInteropChrome({downloadDir,evidenceDir}){
     '--headless=new','--no-first-run','--disable-extensions',
     '--disable-background-networking','--no-default-browser-check',
     '--remote-debugging-port=0','--user-data-dir='+profile,
-    '--window-size=1440,1000','about:blank',
+    '--window-size=1440,1000',
+    ...(localHostResolver?['--host-resolver-rules=MAP *.localhost 127.0.0.1']:[]),
+    'about:blank',
   ],{windowsHide:true,stdio:'ignore'});
   let debuggerPort=0;
   for(let i=0;i<130;i++){
