@@ -363,7 +363,10 @@ export function createLtiStore(filename,options={}){
    sql("SELECT o.id FROM ags_outbox o JOIN attempts a ON a.id=o.attempt_id WHERE o.status='PENDING' AND a.tenant_id=? ORDER BY o.created_at LIMIT 50").all(tenantId);
   return rows.map(r=>r.id);
  };
- const getAttemptTenant=attemptId=>sql('SELECT tenant_id AS tenantId FROM attempts WHERE id=?').get(req(attemptId,'attemptId'))?.tenantId??null;
+ // Use the stored snake_case column name: PostgreSQL folds unquoted SQL
+ // aliases such as tenantId to lowercase, which must never deny a valid
+ // tenant-scoped approval or make cross-tenant authorization ambiguous.
+ const getAttemptTenant=attemptId=>sql('SELECT tenant_id FROM attempts WHERE id=?').get(req(attemptId,'attemptId'))?.tenant_id??null;
  const listAttempts=tenantId=>sql('SELECT id,tenant_id,binding_id,context_id,status,created_at,updated_at FROM attempts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,contextId:r.context_id,status:r.status,createdAt:r.created_at,updatedAt:r.updated_at}));
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
  return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,replacePlatformJwks,registerCanvasDynamicPlatform,activateCanvasDynamicDeployment,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,

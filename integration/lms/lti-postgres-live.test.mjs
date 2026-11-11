@@ -47,6 +47,8 @@ test('real PostgreSQL persists LTI logins, course sessions, progress and approve
    tokenHash:'1'.repeat(64),csrfHash:'2'.repeat(64),
    expiresAt:Math.floor(Date.now()/1000)+3600,canReceiveGrades:true});
   assert.equal(store.getSession('1'.repeat(64)).attemptId,session.attemptId);
+  assert.equal(store.getAttemptTenant(session.attemptId),tenantId,
+   'actual PostgreSQL must preserve tenant identity across grade authorization');
   assert.equal(store.saveState(session.attemptId,'course','assessment',{step:1}).revision,1);
   assert.deepEqual(store.getState(session.attemptId,'course','assessment'),
    {value:{step:1},revision:1});

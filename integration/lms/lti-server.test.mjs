@@ -272,6 +272,8 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   const attempts=await (await req('/lti/admin/attempts?tenantId=school',{headers:admin})).json();
   assert.equal(attempts.attempts.length,1);
   assert.equal(attempts.attempts[0].status,'IN_PROGRESS','new session must reuse one existing learner attempt');
+  assert.equal(await gateway.store.getAttemptTenant(attempts.attempts[0].id),'school',
+    'PostgreSQL must resolve the attempt tenant before authorizing grade approval');
   const grade=await req('/lti/admin/grades',{method:'POST',
    headers:{...admin,'Content-Type':'application/json'},
    body:JSON.stringify({attemptId:attempts.attempts[0].id,normalized:0.8,completed:true})});

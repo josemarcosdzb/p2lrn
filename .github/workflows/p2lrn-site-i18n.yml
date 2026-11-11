@@ -22,6 +22,8 @@ on:
       - 'scripts/audit_public_site.mjs'
       # A release build can change the bilingual output even without new translations.
       - 'deploy/netlify/build-site.mjs'
+      # LMS updates can change documented end-to-end course and grade behavior.
+      - 'integration/lms/lti-store.mjs'
       - 'deploy/netlify/site-seo-a11y.mjs'
       - '.github/workflows/p2lrn-site-i18n.yml'
       - 'deploy/netlify/site/p2lrn.css'
