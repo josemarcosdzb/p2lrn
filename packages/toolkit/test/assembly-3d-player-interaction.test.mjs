@@ -40,13 +40,19 @@ class FakeElement {
   }
 }
 function sceneFixture(){
-  const positions=new Map(),patches=[],frames=[];
+  const positions=new Map(),patches=[],frames=[],carried=new Set(),carryEvents=[];
   const scene={
     addCage(){},addBox({id,position}){positions.set(id,{position:[...position],rotation:[0,0,0,1],scale:[1,1,1]});},
     setTransform(id,transform){positions.set(id,structuredClone(transform));return true;},
+    getTranslation(id){return [...positions.get(id).position];},
     setTranslation(id,position){positions.get(id).position=[...position];return true;},
     getObjectLocalBounds(){return null;},
-    carry(){},highlight(){},
+    carry(id,on=true){
+      carryEvents.push({id,on});
+      if(on){carried.clear();carried.add(id);}
+      else carried.delete(id);
+    },
+    highlight(){},
     frameObjects(ids,options){frames.push({ids,options});return true;},
   };
   const stored=new Map();
@@ -57,7 +63,7 @@ function sceneFixture(){
     setGameState(key,value){stored.set(key,value);},
     applyPatch(questionId,patch){patches.push({questionId,patch});},
   };
-  return {scene,positions,patches,frames,runtime};
+  return {scene,positions,patches,frames,carried,carryEvents,runtime};
 }
 async function setup({fixture=sceneFixture()}={}){
   const previous=globalThis.document;
@@ -184,4 +190,39 @@ test('assembly restores invalid free pose across navigation, keeps cancelled pos
       }finally{reopened.restore();}
     }finally{reentered.restore();}
   }finally{ctx.restore();}
+});
+
+test('assembly click-to-carry uses the same single held object and persistent release as ordering',async()=>{
+  const c=await setup();
+  try{
+    const a='assembly:piece-1',b='assembly:piece-2';
+    assert.equal(c.controls.interact(hit('piece-1')),true);
+    assert.deepEqual([...c.carried],[a],'clicking a piece must really pick it up');
+    const first=[2.5,1.45,4.5];
+    c.scene.setTranslation(a,first); // Same position the real hand reached.
+    c.controls.interact(hit('piece-2'));
+    assert.deepEqual([...c.carried],[b],'picking B must immediately release A');
+    assert.deepEqual(c.positions.get(a).position,first,'released A must not snap back');
+    const key='3d:assembly:free-poses:q1:attempt-1';
+    assert.deepEqual(c.runtime.getGameState(key,null)['piece-1'].position,first);
+    const second=[-2.7,1.3,3.2];
+    c.scene.setTranslation(b,second);
+    c.controls.interact({kind:'scene-empty'});
+    assert.deepEqual([...c.carried],[],'empty ground releases the single carried piece');
+    assert.deepEqual(c.positions.get(b).position,second);
+    assert.deepEqual(c.runtime.getGameState(key,null)['piece-2'].position,second);
+    assert.equal(c.patches.length,0,'free movement cannot award points');
+    // Starting a direct drag from a carried piece must stop follow-by-hand.
+    c.controls.interact(hit('piece-1'));
+    assert.deepEqual([...c.carried],[a]);
+    const from=[first[0]+0.3,first[1],first[2]];
+    c.scene.setTranslation(a,from);
+    assert.equal(c.controls.drag(hit('piece-1'),'start',{position:from}),true);
+    assert.deepEqual([...c.carried],[]);
+    const to=[from[0]+0.5,from[1],from[2]-0.4];
+    c.controls.drag(hit('piece-1'),'move',{position:to});
+    c.controls.drag(hit('piece-1'),'end',{position:to,target:null});
+    assert.deepEqual(c.positions.get(a).position,to);
+    assert.deepEqual(c.runtime.getGameState(key,null)['piece-1'].position,to);
+  }finally{c.restore();}
 });
