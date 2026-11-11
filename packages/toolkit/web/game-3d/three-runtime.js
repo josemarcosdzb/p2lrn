@@ -439,6 +439,9 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
   }
 
   function addNode({id,text,position=[0,1,0],color='#334155',interaction=null}={}) {
+    // Matching endpoints are anchors for ropes, not movable answer pieces.
+    // Give them the same immovable kinematic treatment as destination zones,
+    // so walking past them cannot drag the rope or move an answer inadvertently.
     const size=[2.55,1.12,1.5];
     const mesh=new THREE.Mesh(
       new THREE.BoxGeometry(...size),
@@ -452,7 +455,7 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     stage.add(mesh);
     meshes.set(String(id),mesh);
     if (interaction) interactables.push(mesh);
-    physicsWorld.createBox?.({id:String(id),position:normalizePosition(position),halfExtents:[size[0]/2,size[1]/2,size[2]/2],dynamic:true});
+    physicsWorld.createBox?.({id:String(id),position:normalizePosition(position),halfExtents:[size[0]/2,size[1]/2,size[2]/2],dynamic:false});
     bodies.add(String(id));
     return mesh;
   }
