@@ -2303,11 +2303,11 @@ async function browserStudioDropKeyboardScenario(){
   }finally{controls?.dispose();host.remove();}
 }
 function browserStudioHeadingScenario(){
-  // The lesson-properties disclosure is closed initially; activate it before
-  // checking whether its nested title editor can actually receive focus.
-  const disclosure=document.querySelector('details.p2lrn-studio-lesson-properties');
-  if(disclosure&&!disclosure.open)disclosure.open=true;
   const heading=document.querySelector('h1.studio-title');
+  // Open the ACTUAL ancestor of this title. Other lesson inspectors can also
+  // have disclosures, so a global query may open the wrong one.
+  const disclosure=heading?.closest('details');
+  if(disclosure&&!disclosure.open)disclosure.open=true;
   const field=heading?.querySelector('.studio-title-field');
   if(!heading||!field)return {ok:false};
   field.focus();
@@ -2315,6 +2315,7 @@ function browserStudioHeadingScenario(){
   return {ok:true,heading:heading.tagName,headingRole:heading.getAttribute('role'),
     titleText:heading.textContent,editorRole:field.getAttribute('role'),
     editable:field.isContentEditable,label:field.getAttribute('aria-label'),
+    openDisclosure:disclosure?.open??null,actualFocus:document.activeElement===field,
     focusWidth:styles.outlineWidth,focusStyle:styles.outlineStyle,
     focusColor:styles.outlineColor,
     invalidHeadingRoles:document.querySelectorAll('h1[role=textbox]').length};
@@ -2329,7 +2330,7 @@ async function verifyStudioAccessibility(cdp){
     const heading=await evalTop(cdp,'('+browserStudioHeadingScenario.toString()+')()');
     invariant(heading?.ok&&heading.heading==='H1'&&heading.headingRole===null&&
       heading.editorRole==='textbox'&&heading.editable&&heading.label&&
-      heading.invalidHeadingRoles===0&&heading.focusStyle==='solid'&&
+      heading.actualFocus&&heading.invalidHeadingRoles===0&&heading.focusStyle==='solid'&&
       parseFloat(heading.focusWidth)>=3,
       'Studio title/heading/focus regression '+locale+': '+JSON.stringify(heading));
     const drag=await evalTop(cdp,'('+browserStudioDropKeyboardScenario.toString()+')()');
@@ -2379,7 +2380,13 @@ try{
   chrome=await launchChrome(chromePath);
   cdp=await connectPage(chrome.browserWs);
 
-  if(process.env.P2LRN_QUEST3D_ONLY==='1'){
+  if(process.env.P2LRN_ACCESSIBILITY_ONLY==='1'){
+    const accessibility=await verifyStudioAccessibility(cdp);
+    await mkdir(visualEvidenceRoot,{recursive:true});
+    await writeFile(join(visualEvidenceRoot,'accessibility-report.json'),
+      JSON.stringify({ok:true,accessibility},null,2)+'\n');
+    console.log('P2LRN_ACCESSIBILITY_BROWSER_REPORT='+JSON.stringify(accessibility));
+  }else if(process.env.P2LRN_QUEST3D_ONLY==='1'){
     const threeGame=await verifyThreeGameInteractionAndResume(cdp);
     const assemblyStart=await verifyAssemblyScatteredViewport(cdp);
     const pointerDrag=await verifyThreePointerDragAndRope(cdp);
