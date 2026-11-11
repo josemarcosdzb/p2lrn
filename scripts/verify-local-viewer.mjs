@@ -2302,22 +2302,27 @@ async function browserStudioDropKeyboardScenario(){
       dynamicPairsAccessible:true,changes};
   }finally{controls?.dispose();host.remove();}
 }
-function browserStudioHeadingScenario(){
+async function browserStudioHeadingScenario(){
   const heading=document.querySelector('h1.studio-title');
   // Open the ACTUAL ancestor of this title. Other lesson inspectors can also
   // have disclosures, so a global query may open the wrong one.
   const disclosure=heading?.closest('details');
   if(disclosure&&!disclosure.open)disclosure.open=true;
+  // A closed details element is not rendered. Let Chrome reflow the now
+  // visible editor before asserting focus and its computed outline.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   const field=heading?.querySelector('.studio-title-field');
   if(!heading||!field)return {ok:false};
   field.focus();
+  await new Promise(resolve=>requestAnimationFrame(resolve));
   const styles=getComputedStyle(field);
   return {ok:true,heading:heading.tagName,headingRole:heading.getAttribute('role'),
     titleText:heading.textContent,editorRole:field.getAttribute('role'),
     editable:field.isContentEditable,label:field.getAttribute('aria-label'),
     openDisclosure:disclosure?.open??null,actualFocus:document.activeElement===field,
     focusWidth:styles.outlineWidth,focusStyle:styles.outlineStyle,
-    focusColor:styles.outlineColor,
+    focusColor:styles.outlineColor,rectWidth:field.getBoundingClientRect().width,
+    cssSheets:[...document.styleSheets].length,
     invalidHeadingRoles:document.querySelectorAll('h1[role=textbox]').length};
 }
 async function verifyStudioAccessibility(cdp){
