@@ -799,9 +799,49 @@ async function browserAssemblyInteraction(){
     canvas.dispatchEvent(new KeyboardEvent('keyup',{bubbles:true,code:'KeyD',key:'d'}));
     const keyboardDistance=game.camera.position.distanceTo(keyboardBefore);
     if(keyboardDistance<0.2)throw Error('Assembly WASD did not move the Three camera');
+
+    // Same click-to-carry and empty-floor release as ordering/classification.
+    // Test two consecutive picks against the actual Three scene, not a mock.
+    const horizontal=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
+    const aId='assembly:piece-1',bId='assembly:piece-2';
+    const originalA=game.getTranslation(aId);
+    controller.interact({kind:'assembly-piece',id:'piece-1'});
+    game.setMovementVector(0,1);
+    await sleep(400);
+    game.setMovementVector(0,0);
+    const heldA=game.getTranslation(aId);
+    const carriedFirstMoved=horizontal(originalA,heldA);
+    if(carriedFirstMoved<0.35)
+      throw Error('Assembly click did not carry piece 1 with the student: '+carriedFirstMoved);
+    controller.interact({kind:'assembly-piece',id:'piece-2'});
+    const releasedA=game.getTranslation(aId);
+    const originalB=game.getTranslation(bId);
+    game.setMovementVector(0,1);
+    await sleep(420);
+    game.setMovementVector(0,0);
+    const releasedFirstDrift=horizontal(releasedA,game.getTranslation(aId));
+    const carriedSecondMoved=horizontal(originalB,game.getTranslation(bId));
+    if(releasedFirstDrift>0.12||carriedSecondMoved<0.35)
+      throw Error('Assembly still accumulates carried pieces: '+
+        JSON.stringify({releasedFirstDrift,carriedSecondMoved}));
+    controller.interact({kind:'scene-empty'});
+    const releasedB=game.getTranslation(bId);
+    game.setMovementVector(1,0);
+    await sleep(360);
+    game.setMovementVector(0,0);
+    const releasedSecondDrift=horizontal(releasedB,game.getTranslation(bId));
+    if(releasedSecondDrift>0.12)
+      throw Error('Assembly piece still follows student after release: '+releasedSecondDrift);
+    const poses=runtime.getGameState('3d:assembly:free-poses:qa-assembly:attempt-1',null);
+    if(!poses?.['piece-1']||!poses?.['piece-2']||
+      horizontal(poses['piece-1'].position,releasedA)>0.12||
+      horizontal(poses['piece-2'].position,releasedB)>0.12)
+      throw Error('Assembly did not persist both released positions');
+    if(patches.length)throw Error('Assembly movement alone awarded points');
     globalThis.__p2lrnAssemblyQA={game,canvas};
     return {realWebGL:true,avatarVisible:true,avatarDistance,
       firstDelta,secondDelta,joystickDistance,keyboardDistance,
+      carriedFirstMoved,carriedSecondMoved,releasedFirstDrift,releasedSecondDrift,
       noUnearnedScores:patches.length===0};
   }catch(error){game?.destroy();canvas.remove();throw error;}
 }
@@ -813,7 +853,10 @@ async function verifyAssemblyLiveInput(cdp){
   try{
     invariant(result?.realWebGL&&result.avatarVisible&&result.avatarDistance>0.2&&
       result.firstDelta>0.2&&result.secondDelta>0.2&&
-      result.joystickDistance>0.2&&result.keyboardDistance>0.2&&result.noUnearnedScores,
+      result.joystickDistance>0.2&&result.keyboardDistance>0.2&&
+      result.carriedFirstMoved>0.35&&result.carriedSecondMoved>0.35&&
+      result.releasedFirstDrift<0.12&&result.releasedSecondDrift<0.12&&
+      result.noUnearnedScores,
       'Assembly real drag/navigation regression: '+JSON.stringify(result));
     const screenshot=await captureElementVisualEvidence(cdp,'3d-assembly-live-drag-and-navigation',
       "document.getElementById('p2lrn-assembly-live-qa')",{maxHeight:1000});
