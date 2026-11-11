@@ -49,3 +49,19 @@ test('fallback room prevents dynamic boxes from leaving playable floor',async()=
   assert.ok(pos.x<=11&&pos.z>=-12&&pos.y>=0.45,'teleport stays confined');
   world.destroy();
 });
+
+test('3D fallback physics treats matching rope endpoints as fixed, like Rapier',async()=>{
+  const world=await createNoPhysicsWorld();
+  world.createBox({id:'matching-left',position:[0,0.75,4],dynamic:false});
+  world.createBox({id:'ordering-box',position:[0,0.75,2],dynamic:true});
+  const anchor=world.transform('matching-left').translation;
+  const before={...anchor};
+  assert.equal(world.applyImpulse('matching-left',[8,0,4]),false);
+  assert.deepEqual(world.transform('matching-left').translation,before);
+  assert.equal(world.applyImpulse('ordering-box',[8,0,4]),true);
+  assert.notEqual(world.transform('ordering-box').translation.x,0);
+  // Explicit authored movement still works for fixed endpoints.
+  assert.equal(world.setTranslation('matching-left',[2,0.75,4]),true);
+  assert.equal(world.transform('matching-left').translation.x,2);
+  world.destroy();
+});
