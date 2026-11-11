@@ -438,6 +438,7 @@ const EN={
   "Opción": "Option",
   "La actividad necesita al menos una pregunta": "The activity needs at least one question.",
   "Imagen": "Image",
+  "Posición y tamaño de la imagen en el diagrama": "Image position and size in the diagram",
   "Escribe aquí el texto y selecciona la palabra que quieras ocultar. {{": "Write the text here and select the word you want to hide. {{"
 };
 export function studioLanguage(doc=globalThis.document){
