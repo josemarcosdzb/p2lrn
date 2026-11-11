@@ -18,6 +18,7 @@ on:
       - 'scripts/generate-site-english.mjs'
       - 'scripts/browser-smoke-p2lrn-i18n.mjs'
       - 'scripts/audit-site-editorial-seo.mjs'
+      - '.github/workflows/p2lrn-site-i18n.yml'
       - 'deploy/netlify/site/p2lrn.css'
       - 'scripts/verify-site-bilingual.mjs'
       - 'scripts/site-i18n-ast.mjs'
@@ -54,6 +55,7 @@ jobs:
           npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save --package-lock=false playwright-core@1.64.1 axe-core@4.10.3
           node .p2lrn-i18n-ci/node_modules/playwright-core/cli.js install --with-deps chromium
       - name: Validate all 48 real browser views, language navigation and teacher/developer paths
+        if: always()
         run: node scripts/browser-smoke-p2lrn-i18n.mjs --docs-only
       - name: Audit all 144 ES/EN pages for editorial quality, structure, language and SEO intent
         if: always()
