@@ -124,6 +124,12 @@ for(const file of sourceHtml){
   catch{continue;}
   const es=load(esHtml,{decodeEntities:false}),en=load(enHtmlText,{decodeEntities:false});
   const localizedGallery=rel===STUDIO_LOCALIZED_GALLERY;
+  const localizedStudio=rel==='docs/studio/index.html';
+  // The actual English editor uses direct controls and a smaller set of genuine
+  // screenshots. Never substitute Spanish captures or synthetic English UI.
+  if(localizedStudio&&(!enHtmlText.includes('English interface presents direct controls')||
+     !enHtmlText.includes('en-editor-real.webp')||!esHtml.includes('studio-movil.webp')))
+    errors.push(rel+': documented locale-specific Studio interface evidence is missing.');
   // Never substitute Spanish screenshots for English UI evidence. Their
   // documented asymmetry is intentional until the real English menu adds
   // assembly; the browser verifies actual images and their descriptions.
@@ -132,7 +138,7 @@ for(const file of sourceHtml){
       !enHtmlText.includes('Assembly 3D was not present in the actual English menu.')))
     errors.push(rel+': locale-specific Studio screenshots have no factual explanation.');
   for(const selector of PARITY_SELECTORS){
-    if(localizedGallery&&['h3','a','img'].includes(selector))continue;
+    if((localizedGallery||localizedStudio)&&['h3','a','img'].includes(selector))continue;
     // Inline code references are prose; executable <pre> examples and copy
     // controls must still have equivalent counts and browser functionality.
     if(selector==='code')continue; // Inline references are language-specific; complete <pre> examples remain parity checked.
@@ -151,7 +157,7 @@ for(const file of sourceHtml){
   }
   // Translated anchors may intentionally be named in English. The important
   // invariant is their presence and whether same-page links actually resolve.
-  if(esIds.length!==enIds.length)
+  if(!localizedStudio&&esIds.length!==enIds.length)
     errors.push(rel+': mismatched document anchor count ('+esIds.length+' ES vs '+enIds.length+' EN).');
   const esContract=dataContract(es),enContract=dataContract(en);
   if(JSON.stringify(esContract)!==JSON.stringify(enContract))
@@ -161,12 +167,23 @@ for(const file of sourceHtml){
   const comparableLinks=$=>$('a[href]').map((_,el)=>$(el).attr('href')??'').get()
     .filter(href=>!href.startsWith('/assets/')&&!href.startsWith('#'));
   const esLinks=comparableLinks(es),enLinks=comparableLinks(en);
-  if(esLinks.length!==enLinks.length)
-    errors.push(rel+': document navigation link count differs ('+esLinks.length+' ES vs '+enLinks.length+' EN).');
-  for(let i=0;i<Math.min(esLinks.length,enLinks.length);i++){
-    const expected=expectedEnglishHref(esLinks[i]).split('#')[0];
-    const found=enLinks[i].split('#')[0];
-    if(expected!==found)errors.push(rel+': navigation link '+i+' expected '+expected+' but found '+found+'.');
+  if(localizedStudio){
+    // Gallery and editorial section order are intentionally locale-specific;
+    // every critical learner/developer destination must still exist directly.
+    for(const route of ['/en/studio/','/en/demo/','/en/docs/questionnaires/',
+      '/en/docs/offline-delivery/','/en/docs/integration/','/en/docs/developers/',
+      '/en/docs/cdn/studio/']){
+      if(!enLinks.some(href=>href.split('#')[0]===route))
+        errors.push(rel+': English Studio guide missing required destination '+route);
+    }
+  }else{
+    if(esLinks.length!==enLinks.length)
+      errors.push(rel+': document navigation link count differs ('+esLinks.length+' ES vs '+enLinks.length+' EN).');
+    for(let i=0;i<Math.min(esLinks.length,enLinks.length);i++){
+      const expected=expectedEnglishHref(esLinks[i]).split('#')[0];
+      const found=enLinks[i].split('#')[0];
+      if(expected!==found)errors.push(rel+': navigation link '+i+' expected '+expected+' but found '+found+'.');
+    }
   }
 }
 
@@ -254,17 +271,30 @@ if(!homeEs.includes('<h3>PAQUETE</h3>')||homeEs.includes('<h3>PACKAGE</h3>'))
   errors.push('Spanish homepage lost its translated PAQUETE heading');
 if(!homeEn.includes('EXPLORE P2LRN')||homeEn.includes('EXPLORA P2LRN'))
   errors.push('English homepage has a Spanish discovery label');
-if(!homeEn.includes('name="description" content="Build portable interactive courses'))
-  errors.push('English homepage lost its hand-edited description');
+const englishMeta=homeEn.match(/<meta\s+name="description"\s+content="([^"]+)"/i)?.[1]||'';
+if(englishMeta.length<100||!englishMeta.includes('portable interactive courses')||
+   !englishMeta.includes('Studio')||!englishMeta.includes('Player'))
+  errors.push('English homepage description no longer explains P2LRN, portable courses, Studio and Player');
 for(const [html,lang] of [[homeEs,'es'],[homeEn,'en']]){
   const video=html.match(/<video\b[^>]*>/i)?.[0]||'';
   if(!html.includes('VideoObject')||!video.includes('poster=')||!video.includes('title=')||!video.includes('controls'))
     errors.push(lang+' homepage lacks accessible video metadata');
 }
 for(const [html,lang] of [[coursesEs,'es'],[coursesEn,'en']]){
-  const img=html.match(/<img\b[^>]*src=["']\/assets\/hero\/studio\.png["'][^>]*>/i)?.[0]||'';
-  if(!img.includes('alt=')||img.length<100)
-    errors.push(lang+' course creation page lacks descriptive Studio screenshot');
+  const expected=lang==='es'?'/assets/studio-guide/editor-real.webp':
+    '/assets/studio-guide/en-editor-real.webp';
+  const images=[...html.matchAll(/<img\b[^>]*>/gi)].map(m=>m[0]);
+  const img=images.find(tag=>tag.includes('src="'+expected+'"'))||'';
+  const alt=img.match(/\balt="([^"]+)"/i)?.[1]||'';
+  const width=Number(img.match(/\bwidth="(\d+)"/i)?.[1]);
+  const height=Number(img.match(/\bheight="(\d+)"/i)?.[1]);
+  if(!/studio/i.test(alt)||alt.length<45||width<300||height<250)
+    errors.push(lang+' course creation page lacks a descriptive, dimensioned real Studio screenshot');
+  try{
+    const original=await readFile(join(siteRoot,...expected.slice(1).split('/')));
+    if(original.length<1000)errors.push(lang+' Studio screenshot asset is unexpectedly small');
+  }catch{errors.push(lang+' Studio screenshot file is missing: '+expected);}
+
   const skills=[...html.matchAll(/<a\b[^>]*href=["']\/(?:en\/)?skills\/["']/g)];
   if(skills.length!==1)errors.push(lang+' course creation page duplicates the Skills link');
   if((html.match(/<article class="landing-faq-item">/g)||[]).length!==6)
