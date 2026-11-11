@@ -1201,8 +1201,22 @@ async function browserRetained3DDrops(){
         releaseDrift:horizontal(afterDrop,target),switchDrift:horizontal(afterNext,target),
         restoredDrift:horizontal(restored,target),blankClickReleases:true});
     }
+    // Matching is the sole anchored-object exception: the rope moves,
+    // but the two answer endpoints must not be pushed by the player.
+    game.reset();game.resetPlayer();
+    game.addNode({id:'qa-match-anchor',text:'Relación fija',
+      position:[0,0.78,5.9],interaction:{kind:'matching-left',id:'qa-anchor'}});
+    await sleep(100);
+    const anchorBefore=game.getTranslation('qa-match-anchor');
+    game.setMovementVector(0,1);
+    await sleep(650);
+    game.setMovementVector(0,0);
+    const matchingAnchorDrift=horizontal(anchorBefore,game.getTranslation('qa-match-anchor'));
+    if(matchingAnchorDrift>0.08)
+      throw Error('Moving the student pushed a matching rope anchor: '+matchingAnchorDrift);
     globalThis.__p2lrnRetainedDropQA={game,canvas};
-    return {physics:game.physics,results,scoredInvalidDrops:patches.length};
+    return {physics:game.physics,results,matchingAnchorDrift,
+      scoredInvalidDrops:patches.length};
   }catch(error){game?.destroy();canvas.remove();throw error;}
 }
 async function verifyRetained3DDrops(cdp){
@@ -1213,7 +1227,7 @@ async function verifyRetained3DDrops(cdp){
   try{
     invariant(result?.physics==='rapier'&&result.results?.length===2&&
       result.results.every(item=>item.blankClickReleases&&item.restoredDrift<0.24)&&
-      result.scoredInvalidDrops===0,
+      result.matchingAnchorDrift<0.08&&result.scoredInvalidDrops===0,
       'Physical drop contract failed: '+JSON.stringify(result));
     const screenshot=await captureElementVisualEvidence(cdp,'3d-rapier-free-drop-persistence',
       "document.getElementById('p2lrn-physical-free-drop-qa')",{maxHeight:900});
