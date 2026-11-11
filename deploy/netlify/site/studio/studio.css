@@ -20,7 +20,7 @@ html[data-studio-mode=preview] .studio-toolbar{position:static}
 .format-separator{width:1px;height:28px;background:#e1e5eb;margin:0 2px;flex:0 0 auto}
 .format-icon-button,.format-color-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;min-width:38px;border:1px solid #d8dde6;border-radius:8px;background:#fff;color:#151922;padding:0;cursor:pointer;transition:border-color .12s ease,background .12s ease,box-shadow .12s ease}
 .format-icon-button:hover,.format-color-button:hover{border-color:#aeb6c2;background:#f8fafc}
-.format-icon-button:focus-visible,.format-color-button:focus-within,.studio-format select:focus-visible{outline:2px solid #8ea6ff;outline-offset:1px}
+.format-icon-button:focus-visible,.format-color-button:focus-within,.studio-format select:focus-visible{outline:3px solid #2854ff;outline-offset:3px}
 .format-icon-button strong,.format-icon-button em,.format-icon-button u,.strike-icon{font:700 1rem/1 Arial,sans-serif}
 .format-icon-button em{font-style:italic}
 .format-icon-button u{text-decoration:underline;text-underline-offset:3px}
@@ -197,3 +197,17 @@ html[data-studio-mode=preview] .studio-toolbar{position:static}
 
 /* Keep keyboard focus visible inside editable text blocks. */
 .studio-title:focus-visible,.studio-description:focus-visible,.studio-wysiwyg:focus-visible{outline:3px solid #2854ff;outline-offset:3px}
+
+/* A visible keyboard focus indicator must retain 3:1 contrast on light panels. */
+@media (forced-colors:active){
+  .format-icon-button:focus-visible,.format-color-button:focus-within,
+  .studio-format select:focus-visible,.studio-add-grid button[data-help]:focus-visible,
+  .studio-title:focus-visible,.studio-description:focus-visible,.studio-wysiwyg:focus-visible{
+    outline:3px solid Highlight;outline-offset:3px;forced-color-adjust:auto;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  .studio-format button,.studio-format select,.studio-add-grid button{
+    transition:none!important;animation:none!important;
+  }
+}
