@@ -10,6 +10,44 @@ The npm distribution consists of five version-aligned packages:
 
 All five packages currently use the same release version: `0.5.0-alpha.12`.
 
+### Paquete npm adicional para el Provider LTI (solo servidor)
+
+El Provider LTI universal se entrega por separado como **@p2lrn/lti-provider**,
+con el comando **p2lrn-lti** y versión alineada 0.5.0-alpha.12.
+No se ha creado otro servidor: el paquete contiene el Provider actual de
+integration/lms, con dependencias del Toolkit y Player oficiales.
+No añade ejecutables a la web estática ni al CDN y no utiliza Supabase.
+
+Su proceso de comprobación es independiente del empaquetado de los cinco
+módulos de navegador: scripts/verify-lti-npm-install.mjs realiza npm pack,
+instala el paquete real junto a los tarballs Toolkit/Player/H5P del mismo
+commit en un proyecto vacío, crea configuración/credenciales, prueba el
+arranque HTTP/JWKS y sirve el Player instalado. En paralelo, CI ejecuta
+operaciones reales con PostgreSQL, MySQL, MariaDB y SQL Server.
+
+**Estado: candidato npm, no publicado.** El script prepublishOnly exige
+aprobación explícita del operador mediante P2LRN_LTI_RELEASE_APPROVED=YES
+y que las versiones exactas de Toolkit y Player ya estén publicadas
+en el registro npm. Nunca ejecutar npm publish sin superar los gates
+de distribución y pruebas. Una versión alfa se publica bajo el tag next,
+no se promociona automáticamente a latest.
+
+Una vez estén publicados los paquetes compatibles, el administrador
+podrá ejecutar desde una consola:
+
+    npm install -g @p2lrn/lti-provider@0.5.0-alpha.12
+    p2lrn-lti init
+    p2lrn-lti doctor --public
+
+El instalador permite elegir los cinco motores SQL y preparar un proxy
+HTTPS existente o plantilla Caddy. Guarda la identidad y secretos en el host,
+permite exportar opcionalmente solo esos secretos cifrados y **nunca**
+programa backups de datos, bases de datos ni paquetes de cursos.
+Los backups de datos educativos corresponden a la plataforma o técnico.
+Más detalles en integration/lms/README.md.
+
+
+
 Candidate release notes: `spec/RELEASE-NOTES-0.5.0-alpha.11.md`. The executable acceptance matrix is `spec/E2E-MATRIX-0.5.0-alpha.11.md` plus `scripts/verify-connected-e2e-matrix.mjs`.
 
 ## Required gates
