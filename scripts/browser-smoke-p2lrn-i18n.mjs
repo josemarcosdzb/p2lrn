@@ -4,6 +4,7 @@ import {readFile,stat,readdir,mkdir,writeFile} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import {dirname,extname,join,resolve,sep} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
+import {ENGLISH_ROUTES,SPANISH_ROUTES} from '../deploy/netlify/site-routes.mjs';
 
 const repo=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const site=join(repo,'deploy','netlify','site');
@@ -52,7 +53,11 @@ async function fileFor(urlPath){
     ['/studio/runtime/',join(toolkit,'studio')],
     ['/studio/',join(toolkit,'')], // fallback only, source site takes precedence
   ];
+  // Netlify publishes canonical English routes even though authored pages retain
+  // their Spanish-named source directories. Resolve aliases like production does.
   const candidates=[join(site,clean.slice(1))];
+  if(Object.hasOwn(SPANISH_ROUTES,clean))
+    candidates.push(join(site,'en',SPANISH_ROUTES[clean].slice(1)));
   for(const [prefix,root] of routes)if(clean.startsWith(prefix))candidates.push(join(root,clean.slice(prefix.length)));
   for(let target of candidates){
     if(!target.startsWith(repo+sep))continue;
@@ -75,6 +80,13 @@ const server=createServer(async(req,res)=>{
       const source=bytes.toString('utf8');
       if(!source.includes("from 'three'"))throw Error('Pinned Three.js addon imports changed: '+pathname);
       bytes=Buffer.from(source.replaceAll("from 'three'","from '../three.module.js'"));
+    }
+    // The production Netlify build prepends these exact public route maps to
+    // both JS bundles. Serve the same mapping in Chromium's isolated source server.
+    if(pathname==='/p2lrn.js'||pathname==='/en/p2lrn.js'){
+      const preamble='globalThis.__P2LRN_ENGLISH_ROUTES='+JSON.stringify(ENGLISH_ROUTES)+';\n'+
+        'globalThis.__P2LRN_SPANISH_ROUTES='+JSON.stringify(SPANISH_ROUTES)+';\n';
+      bytes=Buffer.from(preamble+bytes.toString('utf8'),'utf8');
     }
     res.writeHead(200,{'Content-Type':contentTypes[extname(target)]||'application/octet-stream','Cache-Control':'no-store'});
     res.end(bytes);
