@@ -106,6 +106,25 @@ try{
  assert.equal(player.status,200,'Installed server could not load npm Player dist');
  const playerBytes=await player.arrayBuffer();
  assert.ok(playerBytes.byteLength>0,'Installed npm Player asset must contain real script bytes');
+ // This complete signed protocol test imports the server ONLY from the
+ // installed @p2lrn/lti-provider tarball. It checks real OIDC/JWT, Deep
+ // Linking, learning state, grades and controlled LMS OAuth/AGS responses.
+ const installedServer=join(installed,'lti-server.mjs');
+ assert.ok((await stat(installedServer)).isFile());
+ const {stdout:ltiProtocolResults}=await call(process.execPath,[
+  '--test','--test-concurrency=1',join(root,'integration/lms/lti-server.test.mjs')
+ ],{cwd:testDir,timeout:160000,maxBuffer:8*1024*1024,
+   env:{...process.env,
+     P2LRN_TEST_INSTALLED_LTI_SERVER:installedServer,
+     P2LRN_TEST_LTI_ASYNC_ENABLE:'',
+     P2LRN_TEST_LTI_ASYNC_ENGINE:''}});
+ assert.match(ltiProtocolResults,/\# fail 0\b/,
+  'Signed LTI teacher/learner protocol regression against installed npm must pass');
+ assert.match(ltiProtocolResults,/standalone HTTP integration: trusted LMS admin, Deep Linking, Player/,
+  'Installed npm provider must complete a signed LTI HTTP integration');
+ console.log(JSON.stringify({ltiProtocolFromInstalledNpm:true,
+  ltiProtocolUsesSimulatedLmsEndpoints:true,
+  realLmsCourseCompletionCertified:false}));
  console.log(JSON.stringify({
   ok:true,package:'@p2lrn/lti-provider',version,
   sourceOfTruth:'installed-local-npm-tarballs',freshProject:true,

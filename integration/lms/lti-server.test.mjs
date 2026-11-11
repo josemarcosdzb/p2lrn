@@ -4,8 +4,14 @@ import {createHash,generateKeyPairSync,sign,verify} from 'node:crypto';
 import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,dirname} from 'node:path';
-import {fileURLToPath} from 'node:url';
-import {createP2LRNLtiServer,parseLtiCookieHeader} from './lti-server.mjs';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+// In the clean npm gate the actual installed tarball supplies the runtime.
+// The source route remains the default for ordinary regression tests.
+const packageEntrypoint=process.env.P2LRN_TEST_INSTALLED_LTI_SERVER;
+const runtimeUrl=packageEntrypoint
+ ? pathToFileURL(resolve(packageEntrypoint)).href
+ : new URL('./lti-server.mjs',import.meta.url).href;
+const {createP2LRNLtiServer,parseLtiCookieHeader}=await import(runtimeUrl);
 import {resolveAsyncLtiTestDatabase} from './lti-test-sql-guard.mjs';
 import {LTI_CLAIMS} from './launch-contract.mjs';
 
