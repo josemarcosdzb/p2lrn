@@ -2322,7 +2322,8 @@ async function browserStudioHeadingScenario(){
     openDisclosure:disclosure?.open??null,actualFocus:document.activeElement===field,
     focusWidth:styles.outlineWidth,focusStyle:styles.outlineStyle,
     focusColor:styles.outlineColor,rectWidth:field.getBoundingClientRect().width,
-    cssSheets:[...document.styleSheets].length,
+    matchedFocus:field.matches(':focus'),cssSheets:[...document.styleSheets].length,
+    loadedStylesheets:[...document.styleSheets].filter(x=>x.href).map(x=>x.href),
     invalidHeadingRoles:document.querySelectorAll('h1[role=textbox]').length};
 }
 async function verifyStudioAccessibility(cdp){
@@ -2332,6 +2333,10 @@ async function verifyStudioAccessibility(cdp){
     await waitForEval(cdp,
       "document.documentElement.dataset.p2lrnStudioReady==='true' && Boolean(document.querySelector('.studio-title-field'))",
       'Studio accessible heading '+locale,30000);
+    // Wait for the stylesheet, not merely for the editor's JavaScript ready flag.
+    await waitForEval(cdp,"Boolean([...document.styleSheets].find(x=>x.href?.includes('/studio/studio.css'))?.cssRules?.length)",
+      'Studio stylesheet load '+locale,20000);
+    await sleep(450);
     const heading=await evalTop(cdp,'('+browserStudioHeadingScenario.toString()+')()');
     invariant(heading?.ok&&heading.heading==='H1'&&heading.headingRole===null&&
       heading.editorRole==='textbox'&&heading.editable&&heading.label&&
