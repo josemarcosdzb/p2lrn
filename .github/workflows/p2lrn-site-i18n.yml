@@ -18,6 +18,8 @@ on:
       - 'scripts/generate-site-english.mjs'
       - 'scripts/browser-smoke-p2lrn-i18n.mjs'
       - 'scripts/audit-site-editorial-seo.mjs'
+      - 'scripts/verify-site-media-seo.mjs'
+      - 'deploy/netlify/site-seo-a11y.mjs'
       - '.github/workflows/p2lrn-site-i18n.yml'
       - 'deploy/netlify/site/p2lrn.css'
       - 'scripts/verify-site-bilingual.mjs'
@@ -60,6 +62,9 @@ jobs:
       - name: Audit all 144 ES/EN pages for editorial quality, structure, language and SEO intent
         if: always()
         run: node scripts/audit-site-editorial-seo.mjs --strict
+      - name: Verify that all public images and videos are discoverable through the bilingual sitemap
+        if: always()
+        run: node scripts/verify-site-media-seo.mjs
       - name: Verify bilingual editorial parity and locale-specific JS contracts
         if: always()
         run: |
