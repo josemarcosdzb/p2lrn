@@ -1,4 +1,88 @@
-# P2LRN LTI 1.3: servidor universal independiente de AulaP2P
+# Provider LTI de P2LRN: instalación con consola npm
+
+## Instalación guiada (paquete candidato, todavía sin publicar)
+
+El paquete de servidor se llama **@p2lrn/lti-provider** e incorpora el
+comando **p2lrn-lti**. Es el Provider LTI actual, no un servidor duplicado.
+Utiliza Toolkit y Player oficiales como dependencias npm. Instalar el
+paquete no configura ningún servicio ni genera secretos silenciosamente.
+
+Cuando se publiquen versiones compatibles de los paquetes y se aprueben
+las pruebas del instalador, el uso previsto será:
+
+    npm install -g @p2lrn/lti-provider@0.5.0-alpha.12
+    p2lrn-lti init
+
+A día de hoy, la versión nueva se prueba como tarball npm generado desde
+el repositorio, no debe anunciarse como disponible en el registro público.
+
+## Flujo del instalador
+
+1. **Dominio.** El administrador introduce el origen HTTPS, por ejemplo
+   https://lti.ejemplo.edu. El dominio DNS es propiedad del host.
+2. **Base de datos.** Se elige SQLite, PostgreSQL, MariaDB, MySQL o SQL
+   Server. SQLite crea un archivo local; para motores externos el técnico
+   facilita una URL de conexión mediante entrada oculta o --db-url-file.
+   El asistente comprueba conexión y esquema SQL real, sin fallback.
+   La plataforma suministra permisos de creación de tablas.
+3. **HTTPS.** Se elige un proxy existente de la institución o se genera
+   un Caddyfile. Caddy puede emitir automáticamente el certificado solo
+   cuando DNS apunta al servidor y están abiertos 80/443. El instalador
+   no cambia DNS, el firewall ni certificados de una instalación ajena.
+4. **Credenciales.** RSA 3072 bits, identificador de firma, secreto interno
+   y token de administrador se generan criptográficamente. Las claves
+   privadas quedan en un directorio restringido del host. Se conserva
+   un hash de la credencial delegada; el token inicial expira al año.
+5. **Arranque.** El Provider escucha por defecto solo en 127.0.0.1:37891.
+   Linux puede habilitar un servicio systemd de usuario con confirmación.
+   En otros sistemas, el técnico gestiona su propio servicio persistente.
+6. **Conexión LMS.** El comando endpoints muestra URLs de login OIDC,
+   Launch, JWKS, Deep Linking y registro Canvas; el administrador registra
+   cada LMS una vez. El profesor puede publicar múltiples cursos distintos
+   sin repetir instalación ni introducir datos técnicos.
+
+Comandos (tras instalar el paquete):
+
+    p2lrn-lti init
+    p2lrn-lti doctor --public
+    p2lrn-lti start
+    p2lrn-lti endpoints
+    p2lrn-lti service
+    p2lrn-lti service --enable --yes
+    p2lrn-lti rotate-admin
+    p2lrn-lti export-recovery
+
+--directory permite elegir la carpeta. Los parámetros --domain, --database,
+--port y --proxy evitan preguntas de un asistente cuando lo opera un técnico.
+--db-url-file permite indicar contraseñas SQL sin ponerlas en argumentos
+de la terminal. --yes confirma explícitamente cambios para automatización
+controlada; --json proporciona datos estructurados sin secretos.
+
+## Recuperación de identidad mínima, sin backups gestionados por P2LRN
+
+El administrador puede exportar una copia cifrada de **las claves RSA,
+la identidad del Provider y los secretos de conexión**; para recuperarla:
+
+    p2lrn-lti import-recovery --input /ruta/identidad-cifrada.json
+    # El técnico restaura en el host su base de datos y los archivos de cursos
+    p2lrn-lti restore-complete
+    p2lrn-lti doctor --public
+
+Tras importar, el arranque está bloqueado hasta la confirmación expresa
+del técnico. **P2LRN no hace ni programa backups de bases de datos,
+cursos o volúmenes, y no transmite secretos a servicios externos.**
+Estas tareas son responsabilidad de la plataforma educativa o del
+administrador de sistemas. Exportar la identidad NO equivale a una
+copia de seguridad de datos educativos.
+
+La generación de la configuración, la comprobación SQL y el arranque
+HTTP no garantizan que el DNS, el certificado de producción ni la
+instalación de cada LMS hayan sido aprobados. Es obligatorio ejecutar
+doctor --public y pruebas de profesor/alumno para certificarlo.
+
+---
+
+## Arquitectura y compatibilidad LTI 1.3 (servidor existente)
 
 Este módulo implementa un proveedor LTI 1.3 cuyo propietario es P2LRN. Moodle, Chamilo y Sakai sirven como entornos de pruebas; Canvas, Open edX y otras plataformas LTI compatibles deben utilizar los mismos endpoints, sin código especializado para cada LMS.
 
