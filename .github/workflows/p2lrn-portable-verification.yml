@@ -10,6 +10,12 @@ on:
       - 'scripts/**'
       - 'integration/lms/**'
   workflow_dispatch:
+    inputs:
+      npm_provider_only:
+        description: 'Run only npm-packed Provider installation, startup, CLI and HTTP smoke'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -20,6 +26,7 @@ concurrency:
 
 jobs:
   postgres-live:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.npm_provider_only }}
     name: LTI real PostgreSQL database, persistence and AGS
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -64,6 +71,7 @@ jobs:
         run: node --test integration/lms/lti-server.test.mjs
 
   mysql-mariadb-live:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.npm_provider_only }}
     name: LTI real MySQL 8.4 and MariaDB 11.8 persistence
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -113,6 +121,7 @@ jobs:
           P2LRN_TEST_LTI_ASYNC_ENABLE=YES P2LRN_TEST_LTI_ASYNC_ENGINE=mariadb node --test integration/lms/lti-async-sql-live.test.mjs
 
   sqlserver-live:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.npm_provider_only }}
     name: LTI real Microsoft SQL Server 2022 database and AGS
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -147,6 +156,7 @@ jobs:
           P2LRN_TEST_LTI_ASYNC_ENABLE=YES P2LRN_TEST_LTI_ASYNC_ENGINE=sqlserver node --test integration/lms/lti-async-sql-live.test.mjs
 
   toolkit-security:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.npm_provider_only }}
     name: Toolkit ZIP, Player runtime security and Creator
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -186,6 +196,7 @@ jobs:
           node --test packages/toolkit/test/creator-import-disk-path-security.test.mjs
 
   studio-analytics-player:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.npm_provider_only }}
     name: Studio, Analytics, Player and host boundary tests
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -237,6 +248,7 @@ jobs:
           node --check deploy/netlify/site/studio/studio.js
 
   cdn-release:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.npm_provider_only }}
     name: Build site, verify CDN SRI, headers and npm byte identity
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -295,6 +307,7 @@ jobs:
         run: node scripts/check-public-npm-registry.mjs
 
   windows-hosted-smoke:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.npm_provider_only }}
     name: Windows hosted security, native build and package/CDN parity
     runs-on: windows-latest
     timeout-minutes: 40
