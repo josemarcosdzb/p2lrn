@@ -19,6 +19,7 @@ on:
       - 'scripts/browser-smoke-p2lrn-i18n.mjs'
       - 'scripts/audit-site-editorial-seo.mjs'
       - 'scripts/verify-site-media-seo.mjs'
+      - 'scripts/audit_public_site.mjs'
       - 'deploy/netlify/site-seo-a11y.mjs'
       - '.github/workflows/p2lrn-site-i18n.yml'
       - 'deploy/netlify/site/p2lrn.css'
@@ -68,6 +69,9 @@ jobs:
       - name: Verify that all public images and videos are discoverable through the bilingual sitemap
         if: always()
         run: node scripts/verify-site-media-seo.mjs
+      - name: Check real published sitemap, canonicals, images, videos and ES/EN links
+        if: always()
+        run: node scripts/audit_public_site.mjs --origin https://p2lrn.org
       - name: Verify bilingual editorial parity and locale-specific JS contracts
         if: always()
         run: |
