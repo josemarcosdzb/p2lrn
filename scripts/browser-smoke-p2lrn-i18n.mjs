@@ -694,6 +694,17 @@ async function captureFillBlanksAuthoring(){
   // Use the actual exported Studio package inside its learner preview.
   // The student must see the word bank, place words, correct a mistake and finish.
   try {
+    // The standalone test server serves source modules and does not contain the
+    // CDN-generated /player/current/dist bundle. Load the REAL official Player
+    // module before exercising Studio; never install a mock API or fake Player.
+    await page.evaluate(async()=>{
+      const sdk=await import('/toolkit-web/p2lrn-player.js');
+      if(typeof sdk.openP2LRNPackageBytes!=='function' ||
+          typeof globalThis.P2LRN?.openPackageBytes!=='function')
+        throw Error('The official P2LRN Player runtime was not initialized');
+      globalThis.P2LRNReady=Promise.resolve(globalThis.P2LRN);
+      await globalThis.P2LRNReady;
+    });
     // Use the visible Student preview control, not the hidden legacy toolbar.
     await page.locator('.p2lrn-studio-ribbon [data-ui-action="preview"]').click();
     const student=page.locator('[data-preview-stage] p2lrn-player');
