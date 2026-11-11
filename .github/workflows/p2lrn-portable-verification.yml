@@ -196,7 +196,7 @@ jobs:
         run: |
           node --test integration/lms/lti-provider.test.mjs integration/lms/lti-store.test.mjs
           node --test integration/lms/lti-canvas-registration.test.mjs integration/lms/lti-ags.test.mjs integration/lms/lti-nrps.test.mjs
-          node --test integration/lms/lti-server.test.mjs integration/lms/lti-admin-auth.test.mjs
+          node --test integration/lms/lti-server.test.mjs integration/lms/lti-admin-auth.test.mjs integration/lms/lti-installer.test.mjs
           node --test integration/lms/lti-safe-fetch.test.mjs integration/lms/lti-content-scope.test.mjs
           node --test scripts/test-contact-turnstile.test.mjs scripts/test-contact-frontend.test.mjs
           node scripts/verify-contact-security.mjs
