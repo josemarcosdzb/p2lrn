@@ -704,7 +704,11 @@ export async function createThreeGameScene(canvas,{onInteraction=()=>{},onDrag=(
     // floor there instead of leaving it floating at hand height.
     if(physicsWorld.kind==='none'){
       const mesh=meshes.get(keyId);
-      if(mesh?.isMesh&&mesh.geometry){
+      // Ground-only boxes settle vertically when Rapier is unavailable.
+      // Assembly pieces occupy authored 3D volumes: grounding them here
+      // teleports them away from the exact point where the user released.
+      if(mesh?.isMesh&&mesh.geometry&&
+        mesh.userData?.p2lrnInteraction?.kind!=='assembly-piece'){
         if(!mesh.geometry.boundingBox)mesh.geometry.computeBoundingBox();
         const bounds=mesh.geometry.boundingBox;
         const halfHeight=Math.max(0.1,(bounds.max.y-bounds.min.y)*Math.abs(mesh.scale.y)/2);
