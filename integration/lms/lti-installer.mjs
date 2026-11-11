@@ -1,13 +1,15 @@
 // Standalone P2LRN LTI command-line installation and lifecycle.
 // Only machine identity and connection secrets are managed here. Backups of
 // course content and databases belong exclusively to the host/operator.
-import {createHash,generateKeyPairSync,randomBytes,createCipheriv,scryptSync,createPublicKey,createPrivateKey} from 'node:crypto';
-import {mkdir,readFile,writeFile,rename,rm,lstat,chmod,stat,open} from 'node:fs/promises';
+import {createHash,generateKeyPairSync,randomBytes,createCipheriv,createDecipheriv,scryptSync,createPublicKey,createPrivateKey} from 'node:crypto';
+import {mkdir,readFile,writeFile,rename,rm,lstat,chmod,stat,open,symlink,readlink} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
-import {homedir,userInfo} from 'node:os';
+import {homedir} from 'node:os';
 import {join,dirname,resolve} from 'node:path';
 import {lookup} from 'node:dns/promises';
-import {spawn} from 'node:child_process';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {fileURLToPath} from 'node:url';
 import {createLtiStore} from './lti-store.mjs';
 
 export const LTI_INSTALL_VERSION=1;
@@ -95,7 +97,7 @@ export function caddyConfiguration(domain,port){
  '}\n';
 }
 export function systemdUserService(instanceDirectory){
- const entry=resolve(new URL('./bin/p2lrn-lti.mjs',import.meta.url).pathname);
+ const entry=fileURLToPath(new URL('./bin/p2lrn-lti.mjs',import.meta.url));
  const node=process.execPath;
  const quote=v=>'"'+String(v).replace(/[%\\"]/g,x=>x==='%'?'%%':'\\'+x)+'"';
  return '[Unit]\nDescription=P2LRN LTI Provider\nAfter=network-online.target\nWants=network-online.target\n\n'+
@@ -199,6 +201,7 @@ export async function testLtiDatabase(directory=LTI_DEFAULT_DIR){
 }
 export async function startLti(directory=LTI_DEFAULT_DIR){
  const state=await readInstallation(directory,{includeSecrets:true});
+ if(state.config.requiresHostRestore)bad('HOST_DATA_RESTORE_REQUIRED');
  const {createP2LRNLtiServer}=await import('./lti-server.mjs');
  const {config,secrets,root}=state;
  const gateway=createP2LRNLtiServer({
@@ -270,6 +273,114 @@ export async function exportRecovery(directory,output,passphrase){
  return {encrypted:true,path:location,includesCourseData:false,
   includesDatabaseDump:false,responsibility:'platform-or-technician'};
 }
+// Recover ONLY provider identity / connection settings. The hosting platform
+// must restore the actual database and content files itself before activation.
+export async function importRecovery(archive,directory,passphrase){
+ if(typeof passphrase!=='string'||passphrase.length<16||passphrase.length>4096)
+  bad('STRONG_RECOVERY_PASSPHRASE_REQUIRED');
+ const root=ensureDirectoryPath(directory||LTI_DEFAULT_DIR);
+ if(existsSync(root))bad('ALREADY_INSTALLED');
+ const file=await readFile(resolve(requiredName(archive)));
+ if(file.length>4*1024*1024)bad('RECOVERY_TOO_LARGE');
+ let envelope;
+ try{envelope=JSON.parse(file.toString('utf8'))}catch{bad('INVALID_RECOVERY_FORMAT')}
+ if(envelope.schema!=='p2lrn-lti-encrypted-recovery/1'||
+    envelope.kdf!=='scrypt-N32768-r8-p1'||
+    envelope.encryption!=='aes-256-gcm')bad('UNKNOWN_RECOVERY_FORMAT');
+ let decrypted;
+ try{
+  const salt=Buffer.from(envelope.salt,'base64');
+  const iv=Buffer.from(envelope.iv,'base64');
+  const tag=Buffer.from(envelope.tag,'base64');
+  if(salt.length!==24||iv.length!==12||tag.length!==16)
+   bad('INVALID_RECOVERY_PARAMETERS');
+  const key=scryptSync(passphrase,salt,32,{N:1<<15,r:8,p:1,maxmem:64*1024*1024});
+  const decipher=createDecipheriv('aes-256-gcm',key,iv);
+  decipher.setAuthTag(tag);
+  decrypted=JSON.parse(Buffer.concat([
+   decipher.update(Buffer.from(envelope.ciphertext,'base64')),decipher.final()
+  ]).toString('utf8'));
+ }catch{bad('RECOVERY_DECRYPTION_FAILED')}
+ if(decrypted.schema!=='p2lrn-lti-recovery/1')bad('UNKNOWN_RECOVERY_FORMAT');
+ const cfg=decrypted.config,keys=decrypted.keys;
+ if(!cfg||!keys||typeof keys.key!=='string'||
+    typeof keys.master!=='string'||keys.master.length<32||
+    typeof keys.admin!=='string'||keys.admin.length<32||
+    typeof keys.scopes!=='string')bad('RECOVERY_INCOMPLETE');
+ const settings=validateInstallationOptions({
+  directory:root,domain:cfg.domain,engine:cfg.engine,proxy:cfg.proxy,port:cfg.port,
+  databaseUrl:keys.database
+ });
+ const calculatedKid='p2lrn-'+hash(createPublicKey(createPrivateKey(keys.key))
+  .export({format:'der',type:'spki'})).slice(0,32);
+ if(calculatedKid!==cfg.kid)bad('RECOVERY_RSA_MISMATCH');
+ const scopes=JSON.parse(keys.scopes);
+ if(!Array.isArray(scopes)||!scopes.some(s=>s.sha256===hash(keys.admin)))
+  bad('RECOVERY_ADMIN_MISMATCH');
+ const parent=dirname(root);
+ await mkdir(parent,{recursive:true,mode:0o700});
+ const {mkdtemp}=await import('node:fs/promises');
+ const staging=await mkdtemp(join(parent,'.p2lrn-lti-restore-'));
+ if(process.platform!=='win32')await chmod(staging,0o700);
+ let moved=false;
+ try{
+  const restoredConfig={...cfg,requiresHostRestore:true};
+  await secureFile(join(staging,PROFILE_FILES.config),JSON.stringify(restoredConfig,null,2)+'\n');
+  await secureFile(join(staging,PROFILE_FILES.key),keys.key+'\n');
+  await secureFile(join(staging,PROFILE_FILES.master),keys.master+'\n');
+  await secureFile(join(staging,PROFILE_FILES.admin),keys.admin+'\n');
+  await secureFile(join(staging,PROFILE_FILES.scopes),keys.scopes+'\n');
+  if(settings.engine!=='sqlite')
+   await secureFile(join(staging,PROFILE_FILES.database),keys.database+'\n');
+  await mkdir(join(staging,'data'),{mode:0o700});
+  if(cfg.proxy==='caddy')
+   await writeFile(join(staging,'Caddyfile'),caddyConfiguration(cfg.domain,cfg.port),{mode:0o600,flag:'wx'});
+  if(process.platform==='linux')
+   await writeFile(join(staging,'p2lrn-lti.service'),systemdUserService(root),{mode:0o600,flag:'wx'});
+  await rename(staging,root);moved=true;
+  return {restoredIdentity:true,directory:root,requiresHostDataRestore:true,
+   coursesRestored:false,databaseRestored:false,
+   responsibility:'platform-or-technician'};
+ }finally{if(!moved)await rm(staging,{recursive:true,force:true})}
+}
+export async function acknowledgeRestoredData(directory=LTI_DEFAULT_DIR){
+ const {root,config}=await readInstallation(directory,{includeSecrets:true});
+ if(!config.requiresHostRestore)return {alreadyActivated:true};
+ if(config.engine==='sqlite'&&!existsSync(join(root,'data','lti.sqlite')))
+  bad('SQLITE_DATABASE_BACKUP_NOT_RESTORED');
+ // External databases must be restored by the platform before confirmation;
+ // verifying SQL connectivity cannot prove that its educational data exists.
+ await testLtiDatabase(root);
+ const next={...config,requiresHostRestore:false};
+ const target=join(root,PROFILE_FILES.config);
+ const temp=join(root,'.activation-'+randomBytes(8).toString('hex'));
+ await secureFile(temp,JSON.stringify(next,null,2)+'\n');
+ try{await rename(temp,target)}finally{if(existsSync(temp))await rm(temp,{force:true})}
+ return {activated:true,restoredDataConfirmedByOperator:true,backupsManagedByHost:true};
+}
+export async function enableSystemdUserService(directory=LTI_DEFAULT_DIR){
+ if(process.platform!=='linux')bad('SYSTEMD_ONLY_SUPPORTED_ON_LINUX');
+ const {root}=await readInstallation(directory);
+ const unit=join(root,'p2lrn-lti.service');
+ await privatePath(unit,'file');
+ const destination=join(homedir(),'.config','systemd','user');
+ await mkdir(destination,{recursive:true,mode:0o700});
+ const link=join(destination,'p2lrn-lti.service');
+ if(existsSync(link)){
+  if(await readlink(link)!==unit)bad('CONFLICTING_SYSTEMD_UNIT');
+ }else await symlink(unit,link);
+ const exec=promisify(execFile);
+ for(const args of [
+  ['--user','daemon-reload'],
+  ['--user','enable','--now','p2lrn-lti.service'],
+  ['--user','is-active','--quiet','p2lrn-lti.service']
+ ]){
+  await exec('systemctl',args,{timeout:20000,maxBuffer:1024*1024});
+ }
+ return {service:'p2lrn-lti.service',started:true,enabled:true,
+  hostMustConfigureCaddyAndRebootPersistence:true};
+}
+
 export function serviceInstructions(directory=LTI_DEFAULT_DIR){
  const dir=ensureDirectoryPath(directory);
  return process.platform==='linux'?{
