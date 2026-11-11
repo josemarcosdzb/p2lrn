@@ -555,7 +555,9 @@ async function fullSiteAccessibilityChrome(){
                 values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}});
               const violations=a.violations.map(v=>({id:v.id,impact:v.impact,
                 nodes:v.nodes.slice(0,8).map(n=>({target:n.target,summary:n.failureSummary}))}));
-              const incomplete=a.incomplete.map(v=>({id:v.id,nodes:v.nodes.length}));
+              const incomplete=a.incomplete.map(v=>({id:v.id,nodes:v.nodes.length,
+                samples:v.nodes.slice(0,10).map(n=>({target:n.target,
+                  summary:n.failureSummary,html:n.html?.slice(0,320)}))}));
               return {lang:document.documentElement.lang,violations,incomplete,
                 overflow:Math.max(0,document.documentElement.scrollWidth-window.innerWidth),
                 h1:document.querySelectorAll('h1').length,
@@ -572,7 +574,18 @@ async function fullSiteAccessibilityChrome(){
             tested.push({route,viewport:v.name,violationCount:result.violations.length,
               incompleteCount:result.incomplete.length,overflow:result.overflow});
             if(result.lang!==lang)issues.push({label,rule:'html-lang',detail:result.lang});
-            if(result.h1!==1)issues.push({label,rule:'h1',detail:{count:result.h1,headings:result.headingInfo}});
+            // The Studio HTML has one page H1 plus two user-authored editable
+            // lesson headings. Do not mistake the content being edited for
+            // the application page's own heading; still require one page H1.
+            const studioRoute=route==='/studio/'||route==='/en/studio/';
+            const pageHeadings=studioRoute
+              ?result.headingInfo.filter(h=>!h.editable).length
+              :result.h1;
+            if(pageHeadings!==1)issues.push({label,rule:'page-h1',
+              detail:{count:pageHeadings,raw:result.h1,headings:result.headingInfo}});
+            if(studioRoute&&result.headingInfo.some(h=>h.editable&&h.role==='heading'))
+              issues.push({label,rule:'studio-editor-heading-role',
+                detail:result.headingInfo});
             if(result.overflow>2)issues.push({label,rule:'mobile-or-desktop-overflow',detail:result.overflow});
             if(result.badMedia)issues.push({label,rule:'video-no-poster-or-captions',detail:result.badMedia});
             if(result.brokenAnchors.length)issues.push({label,rule:'broken-anchor',detail:result.brokenAnchors});
