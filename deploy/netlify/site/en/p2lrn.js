@@ -183,111 +183,15 @@
   ];
 
   const GLOBAL_NAV = [
-    {
-      label: "Documentation",
-      active: ['/docs/','/docs/empezar/','/docs/que-usar/','/docs/conceptos/','/docs/formato/','/docs/formato-portable-cursos-interactivos/'],
-      items: [
-        ['/docs/',"Home"],
-        ['/docs/empezar/',"Before you start"],
-        ['/docs/que-usar/',"Component map"],
-        ['/docs/conceptos/',"Concepts"],
-        ['/docs/formato/',"P2LRN format"],
-        ['/docs/formato-portable-cursos-interactivos/',"Portability guide"],
-      ],
-    },
-    {
-      label: "Install",
-      active: ['/docs/instalar/','/docs/npm/','/docs/npm/*','/docs/cdn/','/docs/cdn/*'],
-      items: [
-        ['/docs/instalar/',"Choose an installation"],
-        ['/docs/npm/','NPM'],
-        ['/docs/npm/studio/',"Studio with npm"],
-        ['/docs/cdn/','CDN'],
-        ['/docs/cdn/studio/',"Studio via CDN"],
-      ],
-    },
-    {
-      label: "Create",
-      active: ['/studio/','/crear-cursos-interactivos/','/cursos-offline/','/docs/studio/','/docs/entrega-offline/','/docs/paquetes/*','/docs/toolkit/','/docs/cli/'],
-      items: [
-        ['/studio/',"Open Studio"],
-        ['/crear-cursos-interactivos/',"Create interactive courses"],
-        ['/cursos-offline/',"Offline courses without an LMS"],
-        ['/docs/studio/',"Studio guide"],
-        ['/docs/entrega-offline/',"Offline delivery"],
-        ['/docs/paquetes/',"Create packages"],
-        ['/docs/paquetes/multipart/','Multipart'],
-        ['/docs/toolkit/','Toolkit'],
-        ['/docs/cli/','CLI'],
-      ],
-    },
-    { label: 'Viewer', href: '/demo/', active: ['/demo/'] },
-    {
-      label: "Play",
-      active: ['/docs/player/','/demo/','/juegos-educativos-3d/','/docs/questionnaires/*','/docs/juegos-3d/','/docs/ejemplos/'],
-      wide: true,
-      items: [
-        ['/docs/player/','Player'],
-        ['/demo/',"Viewer"],
-        ['/juegos-educativos-3d/',"3D educational games"],
-        ['/docs/questionnaires/',"Quizzes and games"],
-        ['/docs/questionnaires/standard/',"Standard questionnaire"],
-        ['/docs/questionnaires/memory/',"Memory"],
-        ['/docs/questionnaires/matching/',"Matching"],
-        ['/docs/questionnaires/ordering/',"Ordering"],
-        ['/docs/questionnaires/classification/',"Classification"],
-        ['/docs/questionnaires/true-false/',"True / false"],
-        ['/docs/questionnaires/word-search/',"Word search"],
-        ['/docs/questionnaires/crossword/',"Crossword"],
-        ['/docs/questionnaires/rosco/',"Word wheel"],
-        ['/docs/questionnaires/3d/',"3D game"],
-        ['/docs/juegos-3d/',"3D architecture"],
-        ['/docs/ejemplos/',"Examples"],
-      ],
-    },
-    {
-      label: "Integrate",
-      active: ['/docs/integracion/','/docs/colaboracion/','/docs/eventos/','/docs/conectores/*','/docs/skills/'],
-      items: [
-        ['/docs/integracion/',"Integration"],
-        ['/docs/colaboracion/',"Collaboration"],
-        ['/docs/eventos/',"Events"],
-        ['/docs/conectores/',"Connectors: overview"],
-        ['/docs/conectores/ia/',"AI connectors"],
-        ['/docs/conectores/lms/',"LMS platforms"],
-        ['/docs/conectores/lti/','LTI 1.3'],
-      ],
-    },
-    {
-      label: "Tracking",
-      active: ['/docs/progresion/','/docs/metricas/'],
-      items: [
-        ['/docs/progresion/',"Progression"],
-        ['/docs/metricas/',"Metrics and analytics"],
-      ],
-    },
-    {
-      label: 'Analytics',
-      active: ['/docs/analytics/','/analytics/'],
-      items: [
-        ['/docs/analytics/',"Analytics guide"],
-        ['/analytics/',"Open Analytics"],
-      ],
-    },
-    {
-      label: "Reference",
-      active: ['/docs/compatibilidad/','/docs/recetas/','/docs/glosario/','/docs/referencia/','/docs/troubleshooting/'],
-      items: [
-        ['/docs/compatibilidad/',"Compatibility"],
-        ['/docs/recetas/',"Recipes"],
-        ['/docs/glosario/',"Glossary"],
-        ['/docs/referencia/',"Technical reference"],
-        ['/docs/troubleshooting/',"Troubleshooting"],
-      ],
-    },
+    {label:'Documentation',href:'/docs/',active:['/docs/']},
+    {label:'Teachers',href:'/docs/empezar-facil/',active:['/docs/empezar/','/docs/empezar-facil/']},
+    {label:'Studio',href:'/docs/studio/',active:['/docs/studio/']},
+    {label:'Learning games',href:'/docs/questionnaires/',active:['/docs/questionnaires/*','/docs/juegos-3d/','/docs/colaboracion/']},
+    {label:'Viewer',href:'/demo/',active:['/demo/']},
+    {label:'Developers',href:'/docs/desarrolladores/',active:['/docs/desarrolladores/*']}
   ];
 
-  // English pages have their own /en/ URLs; normalize for internal route matching.
+    // English pages have their own /en/ URLs; normalize for internal route matching.
   const normalizePath = (value) => {
     // Route comparisons use the same logical path for both languages.
     // English pages keep their /en/ URL, while the navigation config remains
@@ -485,68 +389,74 @@
   });
 
   const GLOBAL_SIDEBAR = [
-    ["GET STARTED", [
-      ['/docs/',"Documentation"],
-      ['/docs/empezar/',"Before you start"],
-      ['/docs/empezar-facil/',"Quick start"],
+    ['GET STARTED',[
+      ['/docs/','Documentation'],
+      ['/docs/empezar/','Before creating a course'],
+      ['/docs/empezar-facil/','First course with Studio']
     ]],
-    ["INSTALL", [
-      ['/docs/instalar/',"Installation"],
+    ['CREATE',[
+      ['/docs/studio/','Visual Studio guide'],
+      ['/docs/questionnaires/','Quizzes and learning games'],
+      ['/docs/entrega-offline/','Offline delivery without an LMS'],
+      ['/docs/colaboracion/','Collaboration for teachers']
+    ]],
+    ['PLAY',[
+      ['/docs/ejemplos/','Example courses'],
+      ['/juegos-educativos-3d/','3D educational games']
+    ]],
+    ['DEVELOPERS',[
+      ['/docs/desarrolladores/','Developer documentation'],
+      ['/docs/desarrolladores/primeros-pasos/','First HTML integration']
+    ]],
+    ['INSTALL',[
+      ['/docs/instalar/','Components and versions'],
       ['/docs/cdn/','CDN'],
-      ['/docs/cdn/studio/',"Studio via CDN"],
+      ['/docs/cdn/studio/','Studio via CDN'],
+      ['/docs/cdn/analytics/','Analytics via CDN'],
       ['/docs/npm/','NPM'],
-      ['/docs/npm/studio/',"Studio with npm"],
+      ['/docs/npm/studio/','Studio via npm'],
+      ['/docs/npm/analytics/','Analytics via npm'],
+      ['/docs/toolkit/','Toolkit and Reader'],
+      ['/docs/cli/','Command-line tools']
     ]],
-    ["CREATE", [
-      ['/docs/studio/',"Visual Studio editor"],
-      ['/docs/entrega-offline/',"Offline delivery"],
-      ['/docs/paquetes/',"Create packages"],
-      ['/docs/paquetes/multipart/','Multipart'],
-      ['/docs/toolkit/','Toolkit'],
-      ['/docs/cli/','CLI'],
+    ['INTEGRATE',[
+      ['/docs/integracion/','Host, identity and access'],
+      ['/docs/player/','Embed Player'],
+      ['/docs/desarrolladores/colaboracion/','Collaboration and Host'],
+      ['/docs/eventos/','Player events'],
+      ['/docs/juegos-3d/','3D games integration'],
+      ['/docs/progresion/','Progression rules'],
+      ['/docs/metricas/','Events and metrics'],
+      ['/docs/analytics/','Analytics for platforms']
     ]],
-    ["PLAY", [
-      ['/docs/player/','Player'],
-      ['/docs/questionnaires/',"Quizzes and games"],
-      ['/docs/juegos-3d/',"3D games"],
-      ['/docs/ejemplos/',"Examples"],
+    ['CONNECTORS',[
+      ['/docs/conectores/','Choose a connector']
     ]],
-    ['INTEGRAR', [
-      ['/docs/integracion/',"Integration"],
-      ['/docs/colaboracion/',"Collaboration"],
-      ['/docs/eventos/',"Events"],
+    ['REFERENCE',[
+      ['/docs/compatibilidad/','Compatibility'],
+      ['/docs/paquetes/','Package structure'],
+      ['/docs/paquetes/multipart/','Multipart packages'],
+      ['/docs/recetas/','Integration recipes'],
+      ['/docs/glosario/','Glossary'],
+      ['/docs/referencia/','API reference'],
+      ['/docs/troubleshooting/','Troubleshooting']
     ]],
-    ["CONNECTORS", [
-      ['/docs/conectores/',"Connectors and integration"],
-    ]],
-    ["TRACKING", [
-      ['/docs/progresion/',"Progression"],
-      ['/docs/metricas/',"Metrics and analytics"],
-    ]],
-    ['ANALYTICS', [
-      ['/docs/analytics/','P2LRN Analytics'],
-      ['/analytics/',"Open demo dashboard ↗"],
-    ]],
-    ["REFERENCE", [
-      ['/docs/compatibilidad/',"Compatibility"],
-      ['/docs/recetas/',"Recipes"],
-      ['/docs/glosario/',"Glossary"],
-      ['/docs/referencia/',"Technical reference"],
-      ['/docs/troubleshooting/',"Troubleshooting"],
-    ]],
-    ["RESOURCES", [
-      ['/studio/',"Open Studio ↗"],
-      ['/demo/',"Viewer ↗"],
-      ['/examples/catalog.json',"Examples catalog ↗"],
-    ]],
+    ['RESOURCES',[
+      ['/studio/','Open Studio ↗'],
+      ['/demo/','Learner viewer ↗'],
+      ['/examples/catalog.json','Course catalog ↗']
+    ]]
   ];
 
-  const DOC_SIDEBAR_CHILDREN = new Map([
-    ['/docs/empezar/',[
-      ['/docs/que-usar/',"Component map"],
-      ['/docs/conceptos/',"Fundamental concepts"],
-      ['/docs/formato/',"P2LRN format"],
-      ['/docs/formato-portable-cursos-interactivos/',"Portability guide"],
+    const DOC_SIDEBAR_CHILDREN = new Map([
+    ['/docs/desarrolladores/',[
+      ['/docs/desarrolladores/actividades/','Quizzes and game integration'],
+      ['/docs/desarrolladores/juegos-3d/','3D game engine'],
+      ['/docs/desarrolladores/colaboracion/','Collaboration, API and permissions'],
+      ['/docs/que-usar/','Component map'],
+      ['/docs/conceptos/','Format concepts'],
+      ['/docs/formato/','P2LRN package format'],
+      ['/docs/formato-portable-cursos-interactivos/','Portability guide'],
     ]],
     ['/docs/conectores/',[
       ['/docs/conectores/ia/',"AI connectors"],
@@ -579,9 +489,12 @@
     REFERENCIA:"Reference",
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
-    ['/docs/que-usar/',['/docs/empezar/',"Before you start"]],
-    ['/docs/conceptos/',['/docs/empezar/',"Before you start"]],
-    ['/docs/formato/',['/docs/empezar/',"Before you start"]],
+    ['/docs/desarrolladores/actividades/',['/docs/desarrolladores/','Developers']],
+    ['/docs/desarrolladores/juegos-3d/',['/docs/desarrolladores/','Developers']],
+    ['/docs/desarrolladores/colaboracion/',['/docs/desarrolladores/','Developers']],
+    ['/docs/que-usar/',['/docs/desarrolladores/',"Developers"]],
+    ['/docs/conceptos/',['/docs/desarrolladores/',"Developers"]],
+    ['/docs/formato/',['/docs/desarrolladores/',"Developers"]],
     ['/docs/formato-portable-cursos-interactivos/',['/docs/formato/',"P2LRN format"]],
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/npm/analytics/',['/docs/npm/','NPM']],
@@ -624,7 +537,18 @@
     const current = normalizePath(window.location.pathname);
     const selected = sidebarPath(current);
     const fragment = document.createDocumentFragment();
+    // Teacher guides show authoring and learner paths; APIs live in Developers.
+    const teacherRoutes=new Set([
+      '/docs/','/docs/empezar/','/docs/empezar-facil/',
+      '/docs/studio/','/docs/entrega-offline/','/docs/ejemplos/',
+      '/docs/colaboracion/','/docs/juegos-3d/'
+    ]);
+    const forTeachers=teacherRoutes.has(current)||current.startsWith('/docs/questionnaires/');
+    const visibleSections=forTeachers
+      ?new Set(['GET STARTED','CREATE','PLAY','DEVELOPERS','RESOURCES'])
+      :new Set(['DEVELOPERS','INSTALL','INTEGRATE','CONNECTORS','REFERENCE','RESOURCES']);
     for (const [section,items] of GLOBAL_SIDEBAR) {
+      if(!visibleSections.has(section))continue;
       const label=document.createElement('span');
       label.textContent=section;
       fragment.append(label);
