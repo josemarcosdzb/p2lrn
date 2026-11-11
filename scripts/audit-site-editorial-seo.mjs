@@ -39,6 +39,20 @@ for(const filename of (await files(site)).sort()){
  const foundLang=attribute(/<html\b[^>]*>/i.exec(html)?.[0]??'','lang');
  const h1=[...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map(m=>compact(m[1]));
  const headings=[...html.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h([1-6])>/gi)].map(m=>({from:m[1],to:m[3],text:compact(m[2])}));
+ // Audit the raw heading token stream as well: a loose regex can miss an
+ // opening <h3> wrongly closed with </h4> and still report zero problems.
+ const headingStack=[];
+ for(const match of html.matchAll(/<(\/?)h([1-6])\b[^>]*>/gi)){
+   const level=Number(match[2]);
+   if(match[1]===''){headingStack.push({level,index:match.index});continue;}
+   const opened=headingStack.pop();
+   if(!opened||opened.level!==level)
+     add('error',route,'heading-close-mismatch',
+       'Closing h'+level+' at offset '+match.index+' does not match '+(opened?'h'+opened.level+' at '+opened.index:'an opening heading'));
+ }
+ if(headingStack.length)
+   add('error',route,'heading-unclosed',headingStack.map(h=>'h'+h.level+' at '+h.index).join(', '));
+
  const article=/<article class="doc-content">([\s\S]*?)<\/article>/i.exec(html)?.[1]||
    /<main\b[^>]*>([\s\S]*?)<\/main>/i.exec(html)?.[1]||html;
  const words=compact(article).split(/\s+/).filter(Boolean).length;
@@ -59,6 +73,29 @@ for(const filename of (await files(site)).sort()){
  const noSize=images.filter(t=>!/\bwidth="\d+"/i.test(t)||!/\bheight="\d+"/i.test(t)).length;
  if(noAlt)add('error',route,'image-alt',noAlt+' images without alt');
  if(noSize)add('warning',route,'image-size',noSize+' images without explicit dimensions');
+ // Explicit editorial regressions for the inspected teacher and public pages.
+ if(source==='docs/studio/index.html'&&!redirect){
+   if(!html.includes('id="studio-doc-informacion-adicional"')||
+      html.includes('<details class="studio-doc-appendix"'))
+     add('error',route,'studio-manual','The practical teacher guidance must be visible, not a collapsed technical appendix');
+   if(/collaboration\.room|URL\+SHA-256|materializeSharedResource|resourceLibrary\s*\(/i.test(html))
+     add('error',route,'studio-internals','The teacher guide contains implementation details');
+   if((html.match(/id="studio-apendice-[1-9]"/g)||[]).length!==9)
+     add('error',route,'studio-sections','Studio guidance lost one of the nine original navigation anchors');
+ }
+ if(source==='crear-cursos-interactivos/index.html'&&!redirect){
+   if(/development (?:branch|build)|entorno local de desarrollo|rama de desarrollo/i.test(html))
+     add('error',route,'site-language','Internal release terminology appears in public course-creation copy');
+   if(!(english?/local Studio installation/i:/instalación local de Studio/i).test(html))
+     add('error',route,'screenshot-provenance','Public Studio images need clear source disclosure in ordinary language');
+ }
+ if(source==='docs/juegos-3d/index.html'&&!redirect){
+   const entryImages=(html.match(/src="\/assets\/activity-examples\/1[2-5]-3d-[^"]+\.webp"/g)||[]).length;
+   if(entryImages!==4)add('error',route,'3d-images','Expected four authentic 3D entry-screen images');
+   const captions=english?'Opening screen only:':'Pantalla inicial del juego:';
+   if(html.split(captions).length-1!==4)
+     add('error',route,'3d-provenance','Each 3D entry screenshot must explicitly state it does not prove a completed game');
+ }
  if(role==='teacher'&&!redirect){
   if(/<pre\b/i.test(article))add('error',route,'teacher-code','Code blocks in teacher-facing article');
   if(/(?:resourceLibrary|materializeSharedResource|exportOfflineAssignment|reviewOfflineResult)\(/i.test(article)||
@@ -68,6 +105,9 @@ for(const filename of (await files(site)).sort()){
  if(english){
   const untranslated=headings.filter(h=>/\b(?:Decisiones binarias|Experiencia espacial|Cómo se configura|Palabras extra \/ distractores|Para profesores)\b/i.test(h.text));
   if(untranslated.length)add('error',route,'untranslated-heading',untranslated.map(h=>h.text).join('; '));
+  if(source.startsWith('docs/questionnaires/') &&
+     /<h[1-6]\b[^>]*>[^<]*(?:Decisiones binarias|Experiencia espacial)/i.test(html))
+     add('error',route,'untranslated-questionnaire','Untranslated Spanish questionnaire heading in English guide');
  }
  if(intent[source]&&!redirect&&!intent[source][english?1:0].test(title+' '+desc+' '+h1.join(' ')))
   add('warning',route,'search-intent','Title/H1/description may miss the source-backed query intent');
