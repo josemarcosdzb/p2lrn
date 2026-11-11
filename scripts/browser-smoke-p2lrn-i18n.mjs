@@ -686,7 +686,8 @@ async function captureFillBlanksAuthoring(){
   // Use the actual exported Studio package inside its learner preview.
   // The student must see the word bank, place words, correct a mistake and finish.
   try {
-    await page.locator('[data-mode-preview]').click();
+    // Use the visible Student preview control, not the hidden legacy toolbar.
+    await page.locator('.p2lrn-studio-ribbon [data-ui-action="preview"]').click();
     const student=page.locator('[data-preview-stage] p2lrn-player');
     const slot=student.locator('.p2lrn-fill-slot').first();
     await slot.waitFor({state:'visible',timeout:30000});
