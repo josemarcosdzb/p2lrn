@@ -114,10 +114,9 @@ try{
  const {stdout:ltiProtocolResults}=await call(process.execPath,[
   '--test','--test-concurrency=1',join(root,'integration/lms/lti-server.test.mjs')
  ],{cwd:testDir,timeout:160000,maxBuffer:8*1024*1024,
-   env:{...process.env,
-     P2LRN_TEST_INSTALLED_LTI_SERVER:installedServer,
-     P2LRN_TEST_LTI_ASYNC_ENABLE:'',
-     P2LRN_TEST_LTI_ASYNC_ENGINE:''}});
+   env:{...Object.fromEntries(Object.entries(process.env).filter(([key])=>
+     !key.startsWith('P2LRN_TEST_LTI_ASYNC_'))),
+     P2LRN_TEST_INSTALLED_LTI_SERVER:installedServer}});
  assert.match(ltiProtocolResults,/\# fail 0\b/,
   'Signed LTI teacher/learner protocol regression against installed npm must pass');
  assert.match(ltiProtocolResults,/standalone HTTP integration: trusted LMS admin, Deep Linking, Player/,
