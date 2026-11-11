@@ -41,7 +41,7 @@ nav small{display:block;color:#667085;text-transform:uppercase;font:600 10px ui-
 .stage{padding:18px;min-width:0}
 .sheet{max-width:980px;min-height:520px;margin:auto;background:#fff;border-radius:8px;padding:26px}
 .title,.description,.surface{outline:2px solid transparent;outline-offset:3px}
-.title-input:focus-visible,.description:focus-visible,.surface:focus-visible{outline:3px solid #0f766e;outline-offset:3px;background:#f0fdfa}
+.title-input:focus,.title-input:focus-visible,.description:focus-visible,.surface:focus-visible{outline:3px solid #0f766e;outline-offset:3px;background:#f0fdfa}
 .title{font-size:34px;margin:0 0 8px}
 .title-input{display:block;min-height:1.2em;overflow-wrap:anywhere}
 .description{color:#667085;margin:0 0 18px;min-height:1.4em}
