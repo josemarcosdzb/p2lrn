@@ -100,7 +100,8 @@ try{
  assert.ok(publicJwks.some(k=>k.kid===installation.config.kid));
  const player=await fetch(local+'/lti/assets/player/p2lrn.js');
  assert.equal(player.status,200,'Installed server could not load npm Player dist');
- assert.ok(Number(player.headers.get('content-length'))>0);
+ const playerBytes=await player.arrayBuffer();
+ assert.ok(playerBytes.byteLength>0,'Installed npm Player asset must contain real script bytes');
  console.log(JSON.stringify({
   ok:true,package:'@p2lrn/lti-provider',version,
   sourceOfTruth:'installed-local-npm-tarballs',freshProject:true,
