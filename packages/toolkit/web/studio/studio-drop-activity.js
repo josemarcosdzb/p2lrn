@@ -1,3 +1,5 @@
+import {studioUiText} from './studio-ui-i18n.js';
+
 // Drag-and-drop lesson authoring. Only inert HTML, text, images and constrained
 // data attributes are saved. The Player activates this markup inside a sandbox.
 const MAX_IMAGE_BYTES=5*1024*1024;
@@ -245,6 +247,8 @@ export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=
       '.p2lrn-studio-drop-editing [data-p2lrn-dnd-item]{cursor:grab!important;position:relative}',
       '.p2lrn-studio-drop-editing [data-p2lrn-dnd-zone]::after,.p2lrn-studio-drop-editing [data-p2lrn-dnd-item]::after{content:"";position:absolute;right:2px;bottom:2px;width:12px;height:12px;border-right:3px solid #2563eb;border-bottom:3px solid #2563eb;pointer-events:none;opacity:.85}',
       '.p2lrn-studio-drop-editing [data-p2lrn-dnd-board].p2lrn-drop-board-target{outline:3px solid #2563eb;outline-offset:2px}',
+      '.p2lrn-studio-drop-editing [data-p2lrn-dnd-zone]:focus-visible,.p2lrn-studio-drop-editing [data-p2lrn-dnd-item]:focus-visible{outline:3px solid #1d4ed8!important;outline-offset:3px}',
+      '@media(forced-colors:active){.p2lrn-studio-drop-editing [data-p2lrn-dnd-zone]:focus-visible,.p2lrn-studio-drop-editing [data-p2lrn-dnd-item]:focus-visible{outline:3px solid Highlight!important;outline-offset:3px}}',
     ].join('\n');
     styleHost.append(style);
   }
@@ -259,6 +263,71 @@ export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=
       .find(zone=>zone.dataset.p2lrnDndAccept===item?.dataset.p2lrnDndItem)??null;
   };
   const cleanup=state=>{state?.ghost?.remove();state?.board?.classList.remove('p2lrn-drop-board-target');};
+  // Keyboard editing is equivalent to dragging: all positions/sizes are edited
+  // through the same inline styles that pointer gestures and Player export use.
+  const decorateKeyboardTargets=()=>{
+    for(const zone of surface.querySelectorAll('[data-p2lrn-dnd-zone]')){
+      zone.tabIndex=0;
+      zone.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight');
+      zone.setAttribute('aria-description',studioUiText('Flechas: mover la zona. Mayús y flechas: cambiar su tamaño. Alt y flechas: paso de cinco.',doc));
+    }
+    for(const item of surface.querySelectorAll('[data-p2lrn-dnd-item]')){
+      item.tabIndex=0;
+      item.setAttribute('aria-keyshortcuts','Enter Alt+ArrowLeft Alt+ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight');
+      item.setAttribute('aria-description',studioUiText('Intro: editar zona asociada. Alt y flechas izquierda/derecha: ordenar ficha. Mayús y flechas: cambiar tamaño.',doc));
+    }
+  };
+  decorateKeyboardTargets();
+  const KeyboardObserver=doc.defaultView?.MutationObserver;
+  const keyboardObserver=KeyboardObserver?new KeyboardObserver(decorateKeyboardTargets):null;
+  keyboardObserver?.observe(surface,{childList:true,subtree:true});
+  const onKeyDown=event=>{
+    const target=event.target;
+    // Never hijack arrow keys while a teacher is editing actual text or numbers.
+    if(target?.matches?.('input,textarea,select,[contenteditable=true]'))return;
+    const item=target?.closest?.('[data-p2lrn-dnd-item]');
+    const zone=item?null:target?.closest?.('[data-p2lrn-dnd-zone]');
+    if((item||zone)&&!surface.contains(item||zone))return;
+    const delta={
+      ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],
+    }[event.key];
+    if(item){
+      if(event.key==='Enter'||event.key===' '){
+        event.preventDefault();const linked=matchingZone(item);select(linked);linked?.focus();return;
+      }
+      if(!delta)return;
+      const tray=item.closest('[data-p2lrn-dnd-tray]');
+      if(event.altKey&&!event.shiftKey&&delta[0]&&tray){
+        const siblings=[...tray.querySelectorAll('[data-p2lrn-dnd-item]')];
+        const index=siblings.indexOf(item),next=siblings[index+delta[0]];
+        event.preventDefault();
+        if(next){if(delta[0]<0)next.before(item);else next.after(item);onChange();}
+        item.focus();return;
+      }
+      if(event.shiftKey){
+        event.preventDefault();
+        const rect=item.getBoundingClientRect(),step=event.altKey?20:8;
+        const width=Math.round(clamp(rect.width+delta[0]*step,72,Math.max(72,tray?.clientWidth??rect.width)));
+        const height=Math.round(clamp(rect.height+delta[1]*step,44,360));
+        Object.assign(item.style,{width:width+'px',minWidth:width+'px',height:height+'px',minHeight:height+'px'});
+        onChange();
+      }
+      return;
+    }
+    if(!zone||!delta)return;
+    event.preventDefault();select(zone);
+    const left=parseFloat(zone.style.left)||0,top=parseFloat(zone.style.top)||0;
+    const width=parseFloat(zone.style.width)||25,height=parseFloat(zone.style.height)||25;
+    const step=event.altKey?5:1;
+    if(event.shiftKey){
+      zone.style.width=percent(clamp(width+delta[0]*step,8,100-left));
+      zone.style.height=percent(clamp(height+delta[1]*step,8,100-top));
+    }else{
+      zone.style.left=percent(clamp(left+delta[0]*step,0,100-width));
+      zone.style.top=percent(clamp(top+delta[1]*step,0,100-height));
+    }
+    onChange();
+  };
   const onPointerDown=event=>{
     if(event.button!==0)return;
     const item=event.target.closest?.('[data-p2lrn-dnd-item]');
@@ -377,11 +446,12 @@ export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=
     if(!event.target.closest?.('[data-p2lrn-dnd="1"]'))select(null);
   };
   const handlers=[['pointerdown',onPointerDown],['pointermove',onPointerMove],
-    ['pointerup',onPointerUp],['pointercancel',onPointerUp],['click',onClick]];
+    ['pointerup',onPointerUp],['pointercancel',onPointerUp],['click',onClick],
+    ['keydown',onKeyDown]];
   for(const [name,handler] of handlers)surface.addEventListener(name,handler);
   return {get selectedZone(){return selected&&surface.contains(selected)?selected:null;},select,
     dispose(){
-      select(null);cleanup(drag);drag=null;
+      select(null);cleanup(drag);drag=null;keyboardObserver?.disconnect();
       surface.classList.remove('p2lrn-studio-drop-editing');
       for(const [name,handler] of handlers)surface.removeEventListener(name,handler);
     }};
