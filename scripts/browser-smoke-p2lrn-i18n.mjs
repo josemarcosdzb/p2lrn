@@ -530,7 +530,9 @@ async function fullSiteAccessibilityChrome(){
   }
   const allPages=(await listPages(site)).sort();
   assert.ok(allPages.length>=70,'Too few original pages for complete site coverage');
-  const views=[{name:'desktop',width:1280,height:800},{name:'mobile',width:390,height:844}];
+  // WCAG 1.4.10: check 320 CSS px reflow, not just common 390px mobiles.
+  const views=[{name:'desktop',width:1280,height:800},{name:'mobile',width:390,height:844},
+    {name:'reflow-320',width:320,height:720}];
   const auditPage=await browser.newPage({viewport:{width:1280,height:800}});
   await auditPage.route(/^https?:\/\/(?!127\.0\.0\.1)/,route=>route.abort());
   const issues=[],incomplete=[],skipped=[],tested=[];
@@ -626,7 +628,7 @@ async function fullSiteAccessibilityChrome(){
   }
   const report={source:'Actual P2LRN authored HTML in local Chromium, not public deployment',
     requiredStandard:'WCAG 2.2 A/AA automated checks; manual AT review still mandatory',
-    pages:allPages.length,views:tested.length,expectedViews:(allPages.length-skipped.length)*4,
+    pages:allPages.length,views:tested.length,expectedViews:(allPages.length-skipped.length)*views.length*2,
     skipped,issues,incomplete,tested};
   await writeFile(join(folder,'full-site-a11y.json'),JSON.stringify(report,null,2)+'\n','utf8');
   console.log('P2LRN_FULL_SITE_A11Y='+JSON.stringify({pages:report.pages,views:report.views,
