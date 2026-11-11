@@ -59,3 +59,17 @@ test('only explicit secrets from QA environment, no hardcoded credentials or arb
  p.stages[0].actions[1].env='P2LRN_QA_TEACHER_PASSWORD';
  p.stages[0].actions[0].path='//external.example.net/';assert.throws(()=>validateClassroomPlan(p));
 });
+
+test('a picker message, wrong Player, reused course title or absent LMS grade cannot pass',()=>{
+ for(const mutate of [
+  p=>{p.stages[0].actions=p.stages[0].actions.filter(a=>a.type!=='assertPublished');},
+  p=>{p.stages[1].actions=p.stages[1].actions.filter(a=>a.type!=='click');},
+  p=>{p.stages[2].actions=p.stages[2].actions.filter(a=>a.type!=='assertPlayerCourse');},
+  p=>{p.stages[2].actions.find(a=>a.type==='assertPlayerCourse').course='B';},
+  p=>{p.courses.B.title=p.courses.A.title;},
+  p=>{p.stages.at(-1).actions.find(a=>a.type==='assertGrade').courseHeaderText='Other course';}
+ ]){
+  const p=plan();mutate(p);
+  assert.throws(()=>validateClassroomPlan(p));
+ }
+});
