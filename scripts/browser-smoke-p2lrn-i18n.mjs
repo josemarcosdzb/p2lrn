@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {createServer} from 'node:http';
 import {readFile,stat,readdir,mkdir,writeFile} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
@@ -746,6 +747,47 @@ async function captureFillBlanksAuthoring(){
       JSON.stringify({source:'real Studio preview, original edited package',words,maskedSentence,
         incompleteFinishBlocked:true,distractorRemoved:true,correctWordPlaced:true,result},null,2)+'\n','utf8');
     console.log('P2LRN_REAL_STUDENT_FILL_BLANKS='+JSON.stringify({words,maskedSentence,result}));
+
+    // Professor returns to the editor, exports the same real package and opens
+    // that downloaded file through Studio's File control. No API fixture.
+    await page.locator('.p2lrn-studio-ribbon [data-ui-action="edit"]').click();
+    await page.locator('.p2lrn-studio-ribbon .p2lrn-file-menu > summary').click();
+    const pendingDownload=page.waitForEvent('download',{timeout:30000});
+    await page.locator('.p2lrn-studio-ribbon .p2lrn-file-menu [data-ui-action="export"]').click();
+    const exported=await pendingDownload;
+    const filePath=join(evidence,'studio-fill-blanks-roundtrip.p2lrn');
+    await exported.saveAs(filePath);
+    const originalBytes=await readFile(filePath);
+    assert.ok(originalBytes.length>1500,'Exported course is unexpectedly empty');
+    const hash='sha256:'+createHash('sha256').update(originalBytes).digest('hex');
+    await page.locator('input[data-file]').setInputFiles(filePath);
+    const restoredActivity=page.locator('.studio-tree-node button').filter({hasText:'Rellenar huecos'}).last();
+    await restoredActivity.waitFor({state:'visible',timeout:30000});
+    await restoredActivity.click();
+    const restoredCard=page.locator('.q-card').first();
+    await restoredCard.waitFor({state:'visible',timeout:20000});
+    const restored=await restoredCard.evaluate(card=>({
+      sentence:card.querySelector('.q-blank-template-editor')?.value,
+      mode:card.querySelector('.q-field--mode select')?.value,
+      correct:card.querySelector('.q-blank-row input')?.value,
+      distractors:card.querySelector('.q-answer-list')?.value,
+      blankCount:card.querySelectorAll('.q-blank-row').length,
+      feedback:[...document.querySelectorAll('.questionnaire-visual-editor label')]
+        .find(label=>label.textContent?.includes('Mostrar resultados al alumno'))?.querySelector('select')?.value
+    }));
+    assert.equal(restored.mode,'drag');
+    assert.equal(restored.correct,'Sol');
+    assert.equal(restored.distractors,'Luna\nMarte');
+    assert.equal(restored.blankCount,1);
+    assert.equal(restored.feedback,'after-submit');
+    assert.match(restored.sentence,/La Tierra gira alrededor del \{\{[^{}]+\}\}\./);
+    await page.screenshot({path:join(evidence,'studio-reopened-exported-course.png'),fullPage:false});
+    await writeFile(join(evidence,'export-roundtrip-report.json'),
+      JSON.stringify({file:exported.suggestedFilename(),bytes:originalBytes.length,sha256:hash,
+        restored,originalAuthoring:state,verified: true},null,2)+'\n','utf8');
+    console.log('P2LRN_REAL_STUDIO_EXPORT_ROUNDTRIP='+JSON.stringify({
+      bytes:originalBytes.length,sha256:hash,restored}));
+
   }catch(error){
     await page.screenshot({path:join(evidence,'student-interaction-error.png'),fullPage:false}).catch(()=>{});
     await writeFile(join(evidence,'student-interaction-error.json'),
