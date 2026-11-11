@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,readFileSync,rmSync,statSync,existsSync} from 'node:fs';
+import {mkdtempSync,readFileSync,rmSync,statSync,existsSync,copyFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createServer} from 'node:net';
 import {createPrivateKey} from 'node:crypto';
 import {
  installLti,readInstallation,testLtiDatabase,startLti,exportRecovery,
- publicLmsEndpoints,validateInstallationOptions,caddyConfiguration
+ publicLmsEndpoints,validateInstallationOptions,caddyConfiguration,
+ importRecovery,acknowledgeRestoredData,systemdUserService
 } from './lti-installer.mjs';
 
 async function freePort(){
@@ -92,4 +93,40 @@ test('LMS registration endpoints are identical for all compatible hosts',()=>{
  assert.equal(endpoints.login,'https://lti.example.org/lti/login');
  assert.equal(endpoints.deepLink,'https://lti.example.org/lti/deep-link');
  assert.equal(endpoints.jwks,'https://lti.example.org/lti/jwks');
+});
+
+test('encrypted identity recovery never restores course/database files and blocks premature server start',async()=>{
+ const root=mkdtempSync(join(tmpdir(),'p2lrn-lti-recover-'));
+ const orig=join(root,'original'),restored=join(root,'recovered');
+ const file=join(root,'identity.json');
+ const phrase='recovery-keyphrase-with-strong-entropy-2026';
+ try{
+  await installLti({domain:'https://lti.example.org',engine:'sqlite',directory:orig});
+  const identity=await exportRecovery(orig,file,phrase);
+  assert.equal(identity.includesCourseData,false);
+  assert.equal(identity.includesDatabaseDump,false);
+  await assert.rejects(importRecovery(file,restored,'wrong-password-long-enough'),
+   /RECOVERY_DECRYPTION_FAILED/);
+  assert.equal(existsSync(restored),false,'a wrong passphrase must leave no partial install');
+  const result=await importRecovery(file,restored,phrase);
+  assert.equal(result.requiresHostDataRestore,true);
+  assert.equal(existsSync(join(restored,'data','lti.sqlite')),false);
+  await assert.rejects(startLti(restored),/HOST_DATA_RESTORE_REQUIRED/);
+  await assert.rejects(acknowledgeRestoredData(restored),
+   /SQLITE_DATABASE_BACKUP_NOT_RESTORED/);
+  copyFileSync(join(orig,'data','lti.sqlite'),join(restored,'data','lti.sqlite'));
+  const confirmation=await acknowledgeRestoredData(restored);
+  assert.equal(confirmation.activated,true);
+  assert.equal((await readInstallation(restored)).config.requiresHostRestore,false);
+  assert.equal(readFileSync(join(orig,'tool-key.pem'),'utf8').trim(),
+    readFileSync(join(restored,'tool-key.pem'),'utf8').trim());
+  assert.equal((await testLtiDatabase(restored)).connected,true);
+ }finally{rmSync(root,{recursive:true,force:true})}
+});
+test('service file starts the same npm entrypoint, stays unprivileged and never schedules backups',()=>{
+ const service=systemdUserService('/srv/p2lrn-lti');
+ assert.match(service,/ExecStart=.*p2lrn-lti\.mjs/);
+ assert.match(service,/NoNewPrivileges=true/);
+ assert.match(service,/UMask=0077/);
+ assert.doesNotMatch(service,/cron|backup|dump|supabase/i);
 });
