@@ -88,8 +88,8 @@ export function databaseConnectionFromFields({engine,hostname,port,database,user
   bad('DATABASE_HOST_INVALID');
  uri.port=String(chosenPort);
  uri.pathname='/'+encodeURIComponent(database.trim());
- uri.username=username;
- uri.password=password;
+ uri.username=encodeURIComponent(username);
+ uri.password=encodeURIComponent(password);
  if(engine==='postgres')uri.searchParams.set('sslmode',tls?'verify-full':'disable');
  else if(engine==='mysql'||engine==='mariadb')
   uri.searchParams.set('ssl',tls?'true':'false');
