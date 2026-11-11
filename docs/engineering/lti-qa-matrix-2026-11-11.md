@@ -317,8 +317,8 @@ El plan JSON de cada LMS debe contener exactamente:
   `learner2-complete-b`, `teacher-gradebook`.
 - Acciones DOM permitidas: `goto` (ruta del propio LMS), `click`,
   `fillEnv`, `select`, `uploadCourse`, `waitVisible`,
-  `waitText`, `assertCompletion`, `assertResume`,
-  `assertGrade`. Las claves se introducen solo desde variables
+  `waitText`, `assertPublished`, `assertPlayerCourse`,
+  `assertCompletion`, `assertResume`, `assertGrade`. Las claves se introducen solo desde variables
   `P2LRN_QA_*` del entorno; nunca se guardan en el plan ni se
   publican en capturas. Para un iframe del mismo origen se acepta
   `frame` con su selector CSS. Un iframe entre orígenes
@@ -339,6 +339,14 @@ autorizado y el **LMS** debe incorporar la nota efectivamente. Si
 no existe ese flujo, la prueba de grado falla y se debe corregir
 el producto; está prohibido modificar el test para aparentar que se
 entregó.
+
+El contrato obliga a que el profesor seleccione el archivo real y
+  después guarde la actividad en la interfaz del LMS; exige una prueba
+  visible de publicación fuera del iframe. Los alumnos deben cargar
+  el Player con el `contentRoot` exacto del paquete verificado y realizar
+  interacciones con respuesta y finalización, no abrir otro curso.
+  También exige títulos diferentes para A y B: una versión modificada
+  del mismo título no sirve para certificar dos cursos independientes.
 
 El verificador obtiene captura al finalizar cada fase satisfactoria,
 guarda un JSON por ejecución y declara `PASS_REAL_CLASSROOM`
@@ -439,7 +447,7 @@ visual, calificación oficial ni carga del LMS.
 
 El contrato de aula
 `scripts/interoperability/real-lms-classroom-contract.test.mjs`
-se ejecutó en un entorno Node 22 aislado: **3/3 pruebas aprobadas**.
+se ejecutó en un entorno Node 22 aislado: **4/4 pruebas aprobadas**.
 Se compararon sus Git blobs con los archivos de `main` antes
 de atribuir los resultados al código publicado. El ejecutor
 `verify-real-lms-classroom.mjs` superó `node --check` con la misma
