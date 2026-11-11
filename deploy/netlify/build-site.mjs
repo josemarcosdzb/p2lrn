@@ -670,11 +670,11 @@ for(const pathParts of studioFooterPaths){
 }
 
 const requiredLegalRoutes = [
-  ['aviso-legal','Aviso legal | P2LRN'],
+  ['aviso-legal','Aviso legal y uso del sitio web de P2LRN'],
   ['terminos','Términos y condiciones | P2LRN'],
   ['cookies','Política de cookies | P2LRN'],
   ['privacidad','Política de privacidad | P2LRN'],
-  ['licencia','Licencia | P2LRN'],
+  ['licencia','Licencias y condiciones de uso de P2LRN'],
 ];
 const legalProblems = [];
 const forbiddenLegalPlaceholders = /(?:\[PENDIENTE(?:[^\]]*)?\]|TODO\s*[:\[-]\s*(?:LEGAL|REPLACE|CONFIRM|FILL)|FIXME\s*[:\[-]\s*(?:LEGAL|REPLACE|CONFIRM|FILL)|YOUR COMPANY|COMPANY NAME|example@example\.com)/i;
