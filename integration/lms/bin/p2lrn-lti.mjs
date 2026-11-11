@@ -6,7 +6,7 @@ import {join,resolve} from 'node:path';
 import {
  LTI_SQL_ENGINES,LTI_DEFAULT_DIR,installLti,startLti,readInstallation,
  testLtiDatabase,publicHttpsDoctor,publicLmsEndpoints,serviceInstructions,
- rotateAdministrator,exportRecovery
+ rotateAdministrator,exportRecovery,importRecovery,acknowledgeRestoredData,enableSystemdUserService
 } from '../lti-installer.mjs';
 
 const HELP=[
@@ -17,19 +17,22 @@ const HELP=[
  'p2lrn-lti doctor [--public]         Comprobar SQL y HTTPS publico',
  'p2lrn-lti endpoints                 URLs para conectar cualquier LMS',
  'p2lrn-lti service                   Instrucciones de servicio en el host',
+ 'p2lrn-lti service --enable --yes    Activa servicio systemd de usuario en Linux',
  'p2lrn-lti rotate-admin              Revocar credencial anterior',
  'p2lrn-lti export-recovery           Exportar identidad cifrada, SIN datos',
+ 'p2lrn-lti import-recovery           Restaurar SOLO identidad en ruta nueva',
+ 'p2lrn-lti restore-complete          Confirmar que el tecnico repuso los datos',
  '',
  'Opciones: --directory, --domain, --database, --db-url-file, --proxy, --port,',
- '          --output, --yes, --json, --public',
+ '          --input, --output, --yes, --json, --public, --enable',
  'No instala servicios al hacer npm install; no crea backups de cursos ni bases de datos.'
 ].join('\n');
 
 function parse(args){
  const [command='help',...tail]=args;
  const options={},positional=[];
- const boolean=new Set(['yes','public','json']);
- const known=new Set(['directory','domain','database','db-url-file','proxy','port','yes','public','output','json']);
+ const boolean=new Set(['yes','public','json','enable']);
+ const known=new Set(['directory','domain','database','db-url-file','proxy','port','yes','public','output','input','json','enable']);
  for(let i=0;i<tail.length;i++){
   const part=tail[i];
   if(!part.startsWith('--')){positional.push(part);continue}
@@ -156,6 +159,14 @@ async function main(){
    (https.healthy?'verificado':https.checked===false?'no comprobado':'pendiente o fallido'),options.json);
  }
  if(command==='service'){
+  if(options.enable){
+   if(!options.yes){
+    const reply=await promptText('Habilitar servicio systemd? Escribe SI');
+    if(reply!=='SI')throw new Error('Cancelado');
+   }
+   const result=await enableSystemdUserService(directory);
+   return show(options.json?result:'Servicio P2LRN activo y habilitado. Revisa la configuracion HTTPS del host.',options.json);
+  }
   const result=serviceInstructions(directory);
   return show(options.json?result:result.note||result.commands?.join('\n')||JSON.stringify(result,null,2),options.json);
  }
@@ -175,6 +186,25 @@ async function main(){
   const result=await exportRecovery(directory,output,passphrase);
   return show(options.json?result:'Identidad cifrada guardada en '+result.path+
    '. La base de datos y los cursos NO estan incluidos.',options.json);
+ }
+ if(command==='import-recovery'){
+  const archive=options.input||await promptText('Archivo cifrado de identidad');
+  const passphrase=await promptHidden('Frase de recuperacion');
+  const result=await importRecovery(archive,directory,passphrase);
+  return show(options.json?result:
+   'Identidad recuperada en '+result.directory+
+   '. Antes de arrancar, el tecnico debe restaurar cursos y datos de la plataforma.'+
+   '\nDespués: p2lrn-lti restore-complete --directory '+JSON.stringify(directory),options.json);
+ }
+ if(command==='restore-complete'){
+  if(!options.yes){
+   const confirmation=await promptText(
+    'Confirmas que la plataforma ha restaurado la base de datos y archivos de cursos? Escribe SI');
+   if(confirmation!=='SI')throw new Error('Cancelado');
+  }
+  const result=await acknowledgeRestoredData(directory);
+  return show(options.json?result:
+   'Estado de restauracion confirmado. Ejecuta doctor antes de abrir el servicio al LMS.',options.json);
  }
  throw new Error('Comando desconocido: '+command+'\n'+HELP);
 }
