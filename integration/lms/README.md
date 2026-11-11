@@ -22,7 +22,9 @@ el repositorio, no debe anunciarse como disponible en el registro público.
    https://lti.ejemplo.edu. El dominio DNS es propiedad del host.
 2. **Base de datos.** Se elige SQLite, PostgreSQL, MariaDB, MySQL o SQL
    Server. SQLite crea un archivo local; para motores externos el técnico
-   facilita una URL de conexión mediante entrada oculta o --db-url-file.
+   introduce servidor, puerto, nombre de base de datos, usuario y contraseña
+   oculta; el instalador construye la URL de conexión. Para operadores
+   avanzados se admite --db-url-file (archivo privado).
    El asistente comprueba conexión y esquema SQL real, sin fallback.
    La plataforma suministra permisos de creación de tablas.
 3. **HTTPS.** Se elige un proxy existente de la institución o se genera

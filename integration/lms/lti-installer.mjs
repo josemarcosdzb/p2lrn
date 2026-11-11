@@ -65,6 +65,41 @@ async function privatePath(path,kind){
  if(process.platform!=='win32' && (st.mode&0o077)!==0)
   bad('INSECURE_FILE_PERMISSIONS');
 }
+// Guided wizard users enter individual fields; passwords stay out of argv,
+// logs and shell history. Advanced operators may supply a private DB URL file.
+export function databaseConnectionFromFields({engine,hostname,port,database,username,password,tls=true}){
+ if(!['postgres','mysql','mariadb','sqlserver'].includes(engine))
+  bad('UNKNOWN_DATABASE');
+ if(typeof hostname!=='string'||!hostname||
+    hostname.length>253||/[/@\s?#\\]/.test(hostname))
+  bad('DATABASE_HOST_INVALID');
+ if(typeof database!=='string'||!database.trim()||
+    database.length>128||/[\/\x00-\x1f]/.test(database))
+  bad('DATABASE_NAME_INVALID');
+ if(typeof username!=='string'||!username||username.length>128||
+    /[\x00-\x1f]/.test(username)||typeof password!=='string'||!password)
+  bad('DATABASE_CREDENTIALS_REQUIRED');
+ const defaults={postgres:5432,mariadb:3306,mysql:3306,sqlserver:1433};
+ const chosenPort=port==null?defaults[engine]:Number(port);
+ if(!Number.isInteger(chosenPort)||chosenPort<1||chosenPort>65535)
+  bad('DATABASE_PORT_INVALID');
+ const uri=new URL(engine+'://'+hostname+'/');
+ if(!uri.hostname||uri.pathname!=='/'||uri.username||uri.password||uri.search||uri.hash)
+  bad('DATABASE_HOST_INVALID');
+ uri.port=String(chosenPort);
+ uri.pathname='/'+encodeURIComponent(database.trim());
+ uri.username=username;
+ uri.password=password;
+ if(engine==='postgres')uri.searchParams.set('sslmode',tls?'verify-full':'disable');
+ else if(engine==='mysql'||engine==='mariadb')
+  uri.searchParams.set('ssl',tls?'true':'false');
+ else{
+  uri.searchParams.set('encrypt',tls?'true':'false');
+  uri.searchParams.set('trustServerCertificate','false');
+ }
+ return uri.href;
+}
+
 export function validateInstallationOptions(options){
  const engine=String(options.engine||'sqlite').toLowerCase();
  if(!LTI_SQL_ENGINES.includes(engine))bad('UNKNOWN_DATABASE');

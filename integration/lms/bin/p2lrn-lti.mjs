@@ -6,7 +6,8 @@ import {join,resolve} from 'node:path';
 import {
  LTI_SQL_ENGINES,LTI_DEFAULT_DIR,installLti,startLti,readInstallation,
  testLtiDatabase,publicHttpsDoctor,publicLmsEndpoints,serviceInstructions,
- rotateAdministrator,exportRecovery,importRecovery,acknowledgeRestoredData,enableSystemdUserService
+ rotateAdministrator,exportRecovery,importRecovery,acknowledgeRestoredData,enableSystemdUserService,
+ databaseConnectionFromFields
 } from '../lti-installer.mjs';
 
 const HELP=[
@@ -106,7 +107,22 @@ async function initialize(options){
   if(options['db-url-file'])
    databaseUrl=String(await readFile(resolve(options['db-url-file']),'utf8')).trim();
   else if(process.env.P2LRN_LTI_DB_URL)databaseUrl=process.env.P2LRN_LTI_DB_URL;
-  else databaseUrl=await promptHidden('URL SQL (oculta)');
+  else{
+   const host=await promptText('Servidor SQL, por ejemplo db.ejemplo.es','127.0.0.1');
+   const standardPort=engine==='postgres'?'5432':engine==='sqlserver'?'1433':'3306';
+   const sqlPort=await promptText('Puerto de SQL',standardPort);
+   const database=await promptText('Nombre de la base de datos','p2lrn');
+   const username=await promptText('Usuario de base de datos','p2lrn');
+   const password=await promptHidden('Contrasena de base de datos (oculta)');
+   const localhost=['localhost','127.0.0.1','::1','[::1]'].includes(host.toLowerCase());
+   const encrypted=(await promptText('Usar TLS con certificado valido? (S/n)',
+     localhost?'n':'S')).trim().toLowerCase();
+   const tls=encrypted!=='n'&&encrypted!=='no';
+   if(!tls)console.log('Aviso: conexion SQL sin TLS; usala solo dentro de una red protegida.');
+   databaseUrl=databaseConnectionFromFields({
+    engine,hostname:host,port:sqlPort,database,username,password,tls
+   });
+  }
  }
  if(!options.json)console.log([
   'Instalacion privada: '+resolve(directory),'Dominio: '+domain,'Motor: '+engine,

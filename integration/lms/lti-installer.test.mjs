@@ -8,7 +8,7 @@ import {createPrivateKey} from 'node:crypto';
 import {
  installLti,readInstallation,testLtiDatabase,startLti,exportRecovery,
  publicLmsEndpoints,validateInstallationOptions,caddyConfiguration,
- importRecovery,acknowledgeRestoredData,systemdUserService
+ importRecovery,acknowledgeRestoredData,systemdUserService,databaseConnectionFromFields
 } from './lti-installer.mjs';
 
 async function freePort(){
@@ -129,4 +129,25 @@ test('service file starts the same npm entrypoint, stays unprivileged and never 
  assert.match(service,/NoNewPrivileges=true/);
  assert.match(service,/UMask=0077/);
  assert.doesNotMatch(service,/cron|backup|dump|supabase/i);
+});
+
+test('guided SQL wizard builds safe native connection strings from ordinary fields',()=>{
+ for(const engine of ['postgres','mysql','mariadb','sqlserver']){
+  const url=databaseConnectionFromFields({
+   engine,hostname:'db.example.org',database:'learning',username:'school@group',
+   password:'not-a-real-pass:/?#@&%+漢',tls:true
+  });
+  const parsed=new URL(url);
+  assert.equal(parsed.hostname,'db.example.org');
+  assert.equal(decodeURIComponent(parsed.username),'school@group');
+  assert.equal(decodeURIComponent(parsed.password),'not-a-real-pass:/?#@&%+漢');
+  assert.equal(decodeURIComponent(parsed.pathname.slice(1)),'learning');
+  assert.ok(!url.includes('not-a-real-pass:/?#@&%+漢'));
+  assert.equal(parsed.searchParams.get('sslmode')??parsed.searchParams.get('ssl')??
+   parsed.searchParams.get('encrypt'),engine==='postgres'?'verify-full':'true');
+ }
+ assert.throws(()=>databaseConnectionFromFields({engine:'mysql',hostname:'db.example.org',
+  database:'learning',username:'test',password:''}),/DATABASE_CREDENTIALS_REQUIRED/);
+ assert.throws(()=>databaseConnectionFromFields({engine:'postgres',hostname:'bad.example.org@evil.test',
+  database:'learning',username:'test',password:'test'}),/DATABASE_HOST_INVALID/);
 });
