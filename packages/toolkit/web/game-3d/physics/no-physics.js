@@ -9,8 +9,8 @@ export async function createNoPhysicsWorld() {
   return {
     kind:'none',
     createGround(){ return null; },
-    createBox({id, position = [0,0,0],halfExtents=[0.75,0.45,0.75]}) {
-      const state={halfExtents,translation:null,rotation:{x:0,y:0,z:0,w:1}};
+    createBox({id, position = [0,0,0],halfExtents=[0.75,0.45,0.75],dynamic=true}) {
+      const state={halfExtents,dynamic:Boolean(dynamic),translation:null,rotation:{x:0,y:0,z:0,w:1}};
       state.translation=confine(state,position);
       bodies.set(String(id),state);
       return state;
@@ -24,7 +24,7 @@ export async function createNoPhysicsWorld() {
     transform(id) { return bodies.get(String(id)) ?? null; },
     applyImpulse(id, impulse) {
       const state=bodies.get(String(id));
-      if (!state) return false;
+      if (!state||!state.dynamic) return false;
       state.translation=confine(state,[
         state.translation.x+(Number(impulse[0])||0)*0.08,
         state.translation.y+(Number(impulse[1])||0)*0.08,
