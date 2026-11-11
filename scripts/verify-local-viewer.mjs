@@ -2327,6 +2327,40 @@ async function browserStudioHeadingScenario(){
     loadedStylesheets:[...document.styleSheets].filter(x=>x.href).map(x=>x.href),
     invalidHeadingRoles:document.querySelectorAll('h1[role=textbox]').length};
 }
+async function browserHomepageTextSpacingScenario(){
+  const style=document.createElement('style');
+  style.dataset.p2lrnReflowTest='1';
+  style.textContent='*{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important}p{margin-bottom:2em!important}';
+  document.head.append(style);
+  try{
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const width=window.innerWidth,scrollWidth=document.documentElement.scrollWidth;
+    const headings=[...document.querySelectorAll('section.section h2')];
+    return {width,scrollWidth,overflow:Math.max(0,scrollWidth-width),
+      h2:headings.length,wraps:headings.map(h=>getComputedStyle(h).overflowWrap)};
+  }finally{style.remove();}
+}
+async function verifyHomepageTextSpacingReflow(cdp){
+  const results=[];
+  await cdp.send('Emulation.setDeviceMetricsOverride',
+    {width:320,height:768,deviceScaleFactor:1,mobile:false});
+  try{
+    for(const locale of ['es','en']){
+      await cdp.send('Page.navigate',{url:APP_ORIGIN+(locale==='en'?'/en/':'/')});
+      await cdp.send('Page.bringToFront');
+      await waitForEval(cdp,
+        "document.readyState==='complete' && document.querySelectorAll('section.section h2').length>0",
+        'homepage text spacing reflow '+locale,25000);
+      const result=await evalTop(cdp,'('+browserHomepageTextSpacingScenario.toString()+')()');
+      invariant(result?.width===320&&result.overflow===0&&result.h2>0,
+        'Homepage fails WCAG 1.4.12 text spacing at 320 CSS pixels '+locale+': '+
+          JSON.stringify(result));
+      results.push({locale,...result});
+    }
+    return results;
+  }finally{await cdp.send('Emulation.clearDeviceMetricsOverride');}
+}
+
 async function verifyStudioAccessibility(cdp){
   const results=[];
   for(const locale of ['es','en']){
@@ -2354,7 +2388,8 @@ async function verifyStudioAccessibility(cdp){
       'Language switch accessible names omit ES/EN '+locale);
     results.push({locale,heading,drag,language});
   }
-  return {ok:true,results};
+  const reflow=await verifyHomepageTextSpacingReflow(cdp);
+  return {ok:true,results,reflow};
 }
 
 let appServer=null,runtimeServer=null,collaborationServer=null,chrome=null,cdp=null;
