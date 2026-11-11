@@ -18,7 +18,7 @@
 .studio-guide-card figure{margin:0 0 .6rem}
 .studio-guide-card .studio-guide-image-link img{max-height:330px;object-fit:contain}
 .studio-guide-card p{margin:.2rem 0 .6rem}
-.studio-guide-card a:not(.studio-guide-image-link),.studio-guide-section a:not(.studio-guide-image-link){color:#075eb6;text-decoration:underline;text-underline-offset:3px}
+.studio-guide-card a:not(.studio-guide-image-link):not(.button),.studio-guide-section a:not(.studio-guide-image-link):not(.button){color:#075eb6;text-decoration:underline;text-underline-offset:3px}
 .studio-guide-card .studio-guide-steps{padding-left:1.3rem;margin:.2rem 0 .6rem}
 .studio-guide-chip{display:inline-block;border:1px solid #cbd8ea;background:#edf3fb;color:#214b79;border-radius:99px;font-size:.75rem;padding:.2rem .65rem;font-weight:700;align-self:flex-start}
 .studio-guide-warning{border-left:4px solid #365e8c;background:#e8f0fb;padding:.9rem 1rem;border-radius:0 12px 12px 0;color:#244263;margin:1rem 0}
