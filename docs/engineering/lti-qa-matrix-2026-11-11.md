@@ -379,3 +379,91 @@ con el tarball o versión examinada. El runner del aula verifica
 comportamiento visual y notas, **no certifica por sí solo**
 instalación del paquete npm, escalabilidad ni equivalencia con el
 CDN. Esos son gates independientes.
+
+## 9. Evidencia real del equipo (11 de noviembre de 2026)
+
+Inspección efectuada de forma **no destructiva** en la estación Windows
+existente, sin instalar, borrar ni arrancar contenedores de LMS ni Provider.
+Estas son mediciones y resultados, no resultados inventados para completar
+la matriz.
+
+| Comprobación | Resultado observado |
+| --- | --- |
+| Memoria física libre (primera inspección actual) | 5,45 GiB |
+| Memoria física libre (antes de validar los cursos) | 5,08 GiB |
+| Docker: contenedor `p2lrn-lti-provider` en `ps -a` | No existe (ni arrancado ni detenido) |
+| Proxy /lti/health con Host de Moodle, Chamilo, Sakai, Canvas y Open edX | HTTP 404 en los cinco casos |
+| Registro npm `@p2lrn/lti-provider` | HTTP 404 en consulta al registro público |
+| Ejecución real del profesor y alumnado en un LMS | NO_TESTADA |
+| Notas recibidas en el libro oficial de LMS | NO_TESTADAS |
+
+El contenedor ausente **no se ha restaurado**, respetando la decisión de
+probar el paquete correcto y no una implementación anterior. Un LMS
+saludable no basta si su Provider LTI no está instalado y registrado.
+El **Provider candidato** de este checkout se declara en
+`integration/lms/package.json` como `@p2lrn/lti-provider@0.5.0-alpha.12`.
+No decir que esa versión se puede instalar del npm público: el registro
+consultado no devolvió el paquete. El tarball local necesita su propio
+gate de instalación en limpio antes de un E2E candidato.
+
+### Dos paquetes auténticos verificados por Toolkit
+
+Se usó el validador **oficial** `packages/toolkit/dist/core/validator.js`
+del checkout existente, mediante Node con `--max-old-space-size=256`,
+`strictProfiles: true`, `validateProfilePayloads: true` y límites
+explícitos de expansión de ZIP y archivos anidados. No se inició Chrome,
+no se modificó ninguno de los dos binarios y no se enviaron cursos al LMS.
+
+**A — Studio original**, archivo existente:
+`P2LRN-INTEROP-0474eb9b/seguridad-informatica.p2lrn`
+
+- SHA-256: `cce43503ea425ec4f1e6203c8ef6556beb999e71c08e59d5511091a6b931a380`
+- Bytes: `1.080.127`; entidades del grafo: `18`.
+- `packageId`: `urn:uuid:4bf07628-ade6-4605-9444-1f645b4da5be`
+- `contentRoot`: `sha256:e0fb13f5092e0d1d9cf6cf552632279b30bf89c6364662b1dbdf5cfe80804323`
+
+**B — modificación real de Studio**, archivo existente:
+`P2LRN-INTEROP-V2-0d052efe/seguridad-informatica-v2.p2lrn`
+
+- SHA-256: `cf1cf719cd2b78975b3034fbdbb0bb29f2730eca4a0772647595ac3ebb30dce7`
+- Bytes: `1.080.148`; entidades del grafo: `18`.
+- `packageId`: `urn:uuid:da3e2b71-1315-4b26-8bab-bd7ecb2dcde4`
+- `contentRoot`: `sha256:a2d9b2dc395443edd46de415d8f38543a877fcaec860d60ccb61193cc12b4823`
+
+**Resultado:** ambos `validatePackageBytes` fueron correctos,
+con `contentRoot` diferentes. B es una **versión modificada**,
+por tanto estas dos muestras no sustituyen la prueba final de
+**dos cursos independientes creados y publicados por un profesor**
+desde Studio/LMS. La validación del ZIP tampoco acredita interacción
+visual, calificación oficial ni carga del LMS.
+
+El contrato de aula
+`scripts/interoperability/real-lms-classroom-contract.test.mjs`
+se ejecutó en un entorno Node 22 aislado: **3/3 pruebas aprobadas**.
+Se compararon sus Git blobs con los archivos de `main` antes
+de atribuir los resultados al código publicado. El ejecutor
+`verify-real-lms-classroom.mjs` superó `node --check` con la misma
+identidad de blob que GitHub. **No se ejecutó la suite de navegación**
+porque faltan los prerrequisitos del Provider y sus registros.
+
+### Decisión de los gates actuales
+
+- **Cursos A y B:** PASS en validación estructural oficial.
+- **Contrato del ejecutor de aula:** PASS en las tres pruebas unitarias.
+- **Instalación nueva del Provider vía npm público:** BLOQUEADA
+  por paquete ausente del registro; no se reutiliza el contenedor viejo.
+- **Lanzamiento LTI desde los cinco LMS:** BLOQUEADO por
+  endpoint 404 y Provider no presente.
+- **Profesor publica, alumnos resuelven, notas en libro del LMS:**
+  NO_TESTADO; **0/5 plataformas certificadas**.
+- **Escalabilidad de miles de alumnos:** NO_TESTADA.
+
+Para ejecutar R01–R12 sin alterar lo anterior hay que disponer de
+una instalación **de prueba** del Provider construido a partir del
+tarball npm candidato aprobado, con Toolkit y Player del mismo
+SHA, configuración LTI registrada una sola vez en el LMS de prueba,
+cuentas docentes y de dos alumnos ficticios, y rutas operativas.
+El runner debe verificar libre >=4 GiB antes del Chrome y abrir un
+solo LMS por vez. Hasta que estos prerrequisitos existan, lanzar
+el workflow, simular llamadas o fabricar tokens no sería una
+prueba válida.
