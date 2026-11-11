@@ -21,7 +21,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: p2lrn-portable-main
+  # A manual npm-only smoke must not be cancelled by unrelated main pushes.
+  group: ${{ github.event_name == 'workflow_dispatch' && inputs.npm_provider_only && 'p2lrn-portable-npm-only' || 'p2lrn-portable-main' }}
   cancel-in-progress: true
 
 jobs:
