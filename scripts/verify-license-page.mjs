@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {resolve,join} from 'node:path';
-import {englishRouteFor} from '../deploy/netlify/site-routes.mjs';
+import {ENGLISH_ROUTES,englishRouteFor} from '../deploy/netlify/site-routes.mjs';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const read=(path)=>readFile(join(root,path),'utf8');
@@ -88,7 +88,10 @@ const esLinks=links(es),enLinks=links(en);
 assert.equal(esLinks.length,enLinks.length,'Bilingual navigation count');
 for(let i=0;i<esLinks.length;i++){
   const url=esLinks[i];
-  const matchedRoute=['/docs/','/docs/empezar/','/docs/player/','/docs/toolkit/','/docs/npm/','/contacto/']
+  // Prefer the canonical longest route; a generic /docs/ prefix must not
+  // swallow translated paths such as /docs/empezar/ -> /en/docs/getting-started/.
+  const matchedRoute=[...Object.keys(ENGLISH_ROUTES),'/docs/']
+    .sort((left,right)=>right.length-left.length)
     .find(prefix=>url.startsWith(prefix));
   const expected=url==='/'?'/en/':matchedRoute
     ?englishRouteFor(matchedRoute)+url.slice(matchedRoute.length):url;
