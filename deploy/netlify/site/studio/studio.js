@@ -187,7 +187,7 @@ function installSafeStudioHtmlPaste(node){
     const plain=source?.getData?.('text/plain')??'';
     if(!html&&!plain)return;
     event.preventDefault();
-    const plainOnly=node.matches('h1[contenteditable],p[contenteditable],pre[contenteditable]');
+    const plainOnly=node.matches('h1[contenteditable],p[contenteditable],pre[contenteditable],.studio-title-field[contenteditable]');
     const fragment=document.createDocumentFragment();
     if(plainOnly||!html){
       fragment.append(document.createTextNode(plain||sanitizeHtml(html).body.textContent||''));
@@ -282,13 +282,16 @@ async function renderEditor(){
   const sheet=document.createElement('article');sheet.className='studio-sheet p2lrn-studio-sheet';
   const head=document.createElement('header');head.className='studio-sheet-head p2lrn-studio-sheet-head';
   const type=document.createElement('span');type.className='studio-entity-type';type.textContent=entity.type;
-  const title=document.createElement('h1');title.className='studio-title';title.textContent=titleOf(entity);
+  // Preserve a real level-one heading while exposing an independently labelled editable field.
+  const titleHeading=document.createElement('h1');titleHeading.className='studio-title';
+  const title=document.createElement('span');title.className='studio-title-field';title.textContent=titleOf(entity);
   title.setAttribute('role','textbox');title.setAttribute('aria-label','Título');title.setAttribute('aria-multiline','true');
+  titleHeading.append(title);
   bindEditable(title,()=>{try{studio.setTitle(entity.id,title.textContent||'');renderTree();}catch(error){setStatus(error.message);}});
   const description=document.createElement('p');description.className='studio-description';description.textContent=entity.description?.es??entity.description?.en??'';
   description.dataset.placeholder='Descripción';description.setAttribute('role','textbox');description.setAttribute('aria-label','Descripción');description.setAttribute('aria-multiline','true');
   bindEditable(description,()=>studio.setDescription(entity.id,description.textContent||''));
-  head.append(type,title,description);sheet.append(head);
+  head.append(type,titleHeading,description);sheet.append(head);
   const content=document.createElement('div');content.className='studio-content';sheet.append(content);
   editorStage.append(sheet);
 
