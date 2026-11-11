@@ -144,7 +144,7 @@ export async function installLti(options){
   });
   try{
    if(typeof store.count!=='function')bad('DATABASE_NOT_READY');
-   store.count();
+   store.count('platforms');
   }finally{store.close()}
   if(settings.proxy==='caddy')
    await writeFile(join(staging,'Caddyfile'),caddyConfiguration(settings.domain,settings.port),{mode:0o600,flag:'wx'});
@@ -193,7 +193,7 @@ export async function testLtiDatabase(directory=LTI_DEFAULT_DIR){
   engine:instance.config.engine,connectionString:instance.secrets.database
  });
  try{
-  const stats=store.count();
+  const stats={platforms:store.count('platforms'),courses:store.count('catalog'),attempts:store.count('attempts')};
   return {connected:true,engine:instance.config.engine,stats};
  }finally{store.close()}
 }
