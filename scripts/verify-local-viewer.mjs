@@ -2129,7 +2129,20 @@ async function prepareConnectedArchitectureFixtures(){
   await writeFile(join(dir,'shared-resource.p2lrn'),sharedExport.bytes);
 
   const offlineDocument=createP2LRNStudioDocument({title:'Contenido web offline de prueba',language:'es'});
-  const offlineActivity=offlineDocument.addLesson(offlineDocument.rootId,{title:'Lección web offline',language:'es'});
+  const {WEB_CONTENT_PROFILE,WEB_CONTENT_MAPPING_EXTENSION}=await import('../packages/toolkit/web/web-content-core.js');
+  // Use a genuine web-content representation, not a plain Studio lesson.
+  // Only a web-content bundle is eligible for the authenticated virtual-asset
+  // Service Worker route. Its index file is removed from the host after caching.
+  const offlineActivity=offlineDocument.addEmbeddedResource(offlineDocument.rootId,{
+    title:'Lección web offline',language:'es',filename:'index.html',
+    mediaType:'text/html',profile:WEB_CONTENT_PROFILE,
+    bytes:new TextEncoder().encode('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Offline</title></head><body><h1>Contenido P2LRN offline verificado</h1></body></html>')
+  });
+  const rep=offlineDocument.representationForActivity(offlineActivity.id)?.representation;
+  if(!rep?.location?.path)throw Error('Offline fixture has no embedded web-content entrypoint.');
+  rep.extensions={[WEB_CONTENT_MAPPING_EXTENSION]:{
+    version:'1',entrypoint:'index.html',assets:{'index.html':rep.location.path}
+  }};
   const offlineExport=await exportP2LRNPackage(offlineDocument);
   await writeFile(join(dir,'offline-web.p2lrn'),offlineExport.bytes);
   return Object.freeze({activityId:activity.id,collaborationActivityId:poll.id,sharedActivityId:sharedActivity.id,sharedSvg,sharedDigest,offlineNodeId:offlineActivity.id,offlineSource:join(dir,'offline-web.p2lrn')});
