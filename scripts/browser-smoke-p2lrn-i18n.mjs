@@ -559,6 +559,10 @@ async function fullSiteAccessibilityChrome(){
               return {lang:document.documentElement.lang,violations,incomplete,
                 overflow:Math.max(0,document.documentElement.scrollWidth-window.innerWidth),
                 h1:document.querySelectorAll('h1').length,
+                headingInfo:[...document.querySelectorAll('h1')].map(el=>({
+                  text:el.textContent?.trim().slice(0,90),role:el.getAttribute('role'),
+                  editable:!!el.closest('[contenteditable="true"],.studio-sheet,.studio-editor'),
+                  classes:el.className?.toString().slice(0,120)})),
                 badMedia:[...document.querySelectorAll('video')].filter(video=>
                   !video.poster||!video.querySelector('track[kind="captions"]')).length,
                 brokenAnchors:[...document.querySelectorAll('a[href^="#"]')]
@@ -568,7 +572,7 @@ async function fullSiteAccessibilityChrome(){
             tested.push({route,viewport:v.name,violationCount:result.violations.length,
               incompleteCount:result.incomplete.length,overflow:result.overflow});
             if(result.lang!==lang)issues.push({label,rule:'html-lang',detail:result.lang});
-            if(result.h1!==1)issues.push({label,rule:'h1',detail:result.h1});
+            if(result.h1!==1)issues.push({label,rule:'h1',detail:{count:result.h1,headings:result.headingInfo}});
             if(result.overflow>2)issues.push({label,rule:'mobile-or-desktop-overflow',detail:result.overflow});
             if(result.badMedia)issues.push({label,rule:'video-no-poster-or-captions',detail:result.badMedia});
             if(result.brokenAnchors.length)issues.push({label,rule:'broken-anchor',detail:result.brokenAnchors});
