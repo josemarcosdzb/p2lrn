@@ -407,6 +407,7 @@ export class P2LRNStudioElement extends HTMLElement{
   async _queuedInsertionParent(){
     const pending=this.#pendingPlacement;this.#pendingPlacement=null;
     if(!pending)return this._insertionParent();
+    if(this.#studio.isCompositeActivity(pending.sourceId))return pending.sourceId;
     return pending.placement==='same-page'?
       this.#studio.samePageInsertionParent(pending.sourceId):this.#studio.pageInsertionParent(pending.sourceId);
   }
@@ -428,8 +429,11 @@ export class P2LRNStudioElement extends HTMLElement{
       scorePoints=Number(raw);
       if(!Number.isInteger(scorePoints)||scorePoints<1||scorePoints>100)throw new Error('Elige entre 1 y 100 puntos.');
     }
-    const parent=placement==='same-page'?
-      await this.#studio.samePageInsertionParent(sourceId):this.#studio.pageInsertionParent(sourceId);
+    // A selected composite is an explicit activity container. Do not route
+    // its children to the surrounding unit via pageInsertionParent().
+    const parent=this.#studio.isCompositeActivity(sourceId)?sourceId:
+      placement==='same-page'?
+        await this.#studio.samePageInsertionParent(sourceId):this.#studio.pageInsertionParent(sourceId);
     const old=this.#selected;this.#selected=parent;
     try{
     if(kind==='lesson')return this._selectCreated(this.#studio.addLesson(this._insertionParent(),{title:'Nueva lección',language:'es'}));

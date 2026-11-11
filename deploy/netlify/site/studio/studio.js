@@ -476,8 +476,9 @@ let pendingContentPlacement=null;
 async function preparePendingPlacement(){
   const choice=pendingContentPlacement;pendingContentPlacement=null;
   if(!choice)return;
-  selectedId=choice.placement==='same-page'?
-    await studio.samePageInsertionParent(choice.sourceId):studio.pageInsertionParent(choice.sourceId);
+  selectedId=studio.isCompositeActivity(choice.sourceId)?choice.sourceId:
+    choice.placement==='same-page'?
+      await studio.samePageInsertionParent(choice.sourceId):studio.pageInsertionParent(choice.sourceId);
 }
 async function addResourceFile(file){await preparePendingPlacement();const activity=studio.addEmbeddedResource(insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:mediaTypeForFile(file),bytes:new Uint8Array(await file.arrayBuffer())});await selectCreated(activity,'Archivo añadido');}
 function extractedDocumentHtml(result){const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');return '<!doctype html><html><head><meta charset="utf-8"></head><body>'+result.blocks.map((b)=>b.type==='TITLE'?'<h2>'+esc(b.text)+'</h2>':b.type==='LIST'?'<li>'+esc(b.text)+'</li>':b.type==='SEPARATOR'?'<hr>':'<p>'+esc(b.text)+'</p>').join('')+'</body></html>';}
@@ -557,7 +558,10 @@ async function addContentKind(kind,{placement='new-page'}={}){
     if(!Number.isInteger(scorePoints)||scorePoints<1||scorePoints>100)throw new Error('Elige entre 1 y 100 puntos.');
   }
   const previous=selectedId;
-  const target=placement==='same-page'?await studio.samePageInsertionParent(sourceId):studio.pageInsertionParent(sourceId);
+  // Keep the selected activity-group as insertion parent; an explicit
+  // composite is never silently replaced by its enclosing course unit.
+  const target=studio.isCompositeActivity(sourceId)?sourceId:
+    placement==='same-page'?await studio.samePageInsertionParent(sourceId):studio.pageInsertionParent(sourceId);
   selectedId=target;
   try{
   if(!studio)throw new Error('Crea o abre un curso primero.');

@@ -447,8 +447,13 @@ async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXap
   if(requireXapi) invariant(state.xapi,`${name}: cmi5 initialized without forwarding an xAPI statement. ${state.tail}`);
   if (automaticRuntime) {
     invariant(!state.runtimeBase.startsWith(RUNTIME_ORIGIN),name+': automatic mode must not use a dedicated runtime origin');
-    const probe=await evalTop(cdp,String.raw`(()=>{const frame=document.getElementById('demo-player')?.shadowRoot?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-frame');return {sandbox:frame?.getAttribute('sandbox')||'',srcdoc:!!frame?.srcdoc,accessible:(()=>{try{return !!frame?.contentDocument}catch{return false}})()}})()`);
-    invariant(probe?.srcdoc,name+': automatic runtime did not use a srcdoc frame');
+    const probe=await evalTop(cdp,String.raw`(()=>{const frame=document.getElementById('demo-player')?.shadowRoot?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-runtime');return {sandbox:frame?.getAttribute('sandbox')||'',srcdoc:!!frame?.srcdoc,src:frame?.getAttribute('src')||'',accessible:(()=>{try{return !!frame?.contentDocument}catch{return false}})()}})()`);
+    // HTTP(S) automatic opaque shells deliberately use separate static host
+    // documents to avoid inheriting the LMS CSP; file: previews use srcdoc.
+    const opaqueUrl=probe?.src?new URL(probe.src,APP_ORIGIN):null;
+    const trustedOpaqueHost=opaqueUrl?.origin===new URL(APP_ORIGIN).origin&&
+      ['/runtime-host/package-opaque.html','/runtime-host/h5p-opaque.html'].some(path=>opaqueUrl.pathname.endsWith(path));
+    invariant(probe?.srcdoc||trustedOpaqueHost,name+': automatic iframe is neither a srcdoc nor a verified opaque host: '+JSON.stringify(probe));
     invariant(!probe?.sandbox.includes('allow-same-origin'),name+': opaque iframe unexpectedly has allow-same-origin');
     invariant(!probe?.accessible,name+': application can access executable iframe content');
   } else {
@@ -2245,7 +2250,7 @@ async function verifyConnectedArchitecture(cdp,fixture){
     };
   })()`);
   invariant(offline.cacheCount===1,'Offline package cache entry disappeared during playback.');
-  invariant(offline.frameSrc.includes('/__p2lrn__/v1/'),'Offline web package did not resolve through the verified static-resource bridge.');
+  invariant(offline.frameSrc.includes('/__p2lrn__/v1/'),'Offline web package did not resolve through the verified static-resource bridge: '+JSON.stringify(offline));
   return Object.freeze({capability,collaboration,collaborationScreenshot,sharedResource,sharedResourceScreenshot,cached,offline});
 }
 
