@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {cp,mkdir,readFile,rm,stat,writeFile,readdir} from 'node:fs/promises';
 import {join,resolve,relative,basename,dirname} from 'node:path';
 import {normalizeSeoAndAccessibility,routeOf} from '../deploy/netlify/site-seo-a11y.mjs';
-import {canonicalRoute} from '../deploy/netlify/site-routes.mjs';
+import {canonicalRoute,englishRouteFor} from '../deploy/netlify/site-routes.mjs';
 
 const root=resolve(import.meta.dirname,'..');
 const sourceRoot=join(root,'deploy','netlify','site');
@@ -53,8 +53,8 @@ try{
   assert.equal(videos.length,build.videoEntries,'Video sitemap count mismatch');
   assert.ok(build.imageEntries>=80,'Too few meaningful site images in sitemap');
   assert.ok(build.videoEntries>=6,'ES/EN video sitemap lost real recordings');
-  const required=['/','/en/','/crear-cursos-interactivos/','/en/crear-cursos-interactivos/',
-    '/docs/studio/','/en/docs/studio/'];
+  const required=['/','/en/','/crear-cursos-interactivos/',englishRouteFor('/crear-cursos-interactivos/'),
+    '/docs/studio/',englishRouteFor('/docs/studio/')];
   for(const route of required){
     const match=routes.find(row=>row.url==='https://p2lrn.org'+route);
     assert.ok(match,'Required media landing page missing: '+route);
