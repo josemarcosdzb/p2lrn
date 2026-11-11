@@ -1,9 +1,10 @@
 // Checks media indexing from real bilingual site HTML, without shipping a
 // separate crawl/indexing implementation or inventing video publication dates.
 import assert from 'node:assert/strict';
-import {cp,mkdir,readFile,rm,writeFile} from 'node:fs/promises';
-import {join,resolve} from 'node:path';
-import {normalizeSeoAndAccessibility} from '../deploy/netlify/site-seo-a11y.mjs';
+import {cp,mkdir,readFile,rm,stat,writeFile,readdir} from 'node:fs/promises';
+import {join,resolve,relative,basename,dirname} from 'node:path';
+import {normalizeSeoAndAccessibility,routeOf} from '../deploy/netlify/site-seo-a11y.mjs';
+import {canonicalRoute} from '../deploy/netlify/site-routes.mjs';
 
 const root=resolve(import.meta.dirname,'..');
 const sourceRoot=join(root,'deploy','netlify','site');
@@ -15,6 +16,27 @@ const report={source:'Actual static ES/EN pages, copied to an ephemeral compile 
 try{
   await rm(staging,{recursive:true,force:true});
   await cp(sourceRoot,staging,{recursive:true,force:true});
+  // Netlify's full compiler maps several English source filenames to their
+  // final canonical routes. Prepare those output paths in the temporary build
+  // before running the exact production sitemap normalizer.
+  async function scan(dir){
+    const found=[];
+    for(const entry of await readdir(dir,{withFileTypes:true})){
+      const full=join(dir,entry.name);
+      if(entry.isDirectory())found.push(...await scan(full));
+      else if(entry.isFile()&&basename(full)==='index.html')found.push(full);
+    }
+    return found;
+  }
+  for(const sourcePage of await scan(sourceRoot)){
+    const route=canonicalRoute(routeOf(sourceRoot,sourcePage));
+    const target=route==='/'?join(staging,'index.html'):
+      join(staging,...route.slice(1).split('/').filter(Boolean),'index.html');
+    if(!await stat(target).catch(()=>null)){
+      await mkdir(dirname(target),{recursive:true});
+      await cp(sourcePage,target);
+    }
+  }
   const build=await normalizeSeoAndAccessibility(staging,{sourceRoot,strict:true});
   const xml=await readFile(join(staging,'sitemap.xml'),'utf8');
   assert.ok(xml.includes('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"'),'Image namespace missing');
