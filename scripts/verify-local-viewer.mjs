@@ -824,8 +824,14 @@ async function browserAssemblyInteraction(){
     if(releasedFirstDrift>0.12||carriedSecondMoved<0.35)
       throw Error('Assembly still accumulates carried pieces: '+
         JSON.stringify({releasedFirstDrift,carriedSecondMoved}));
+    const lastHeldB=game.getTranslation(bId);
     controller.interact({kind:'scene-empty'});
     const releasedB=game.getTranslation(bId);
+    // Y is important in assembly: dropping a 3D part must not teleport it
+    // onto the room floor as if it were a ground-level classification box.
+    const releasedVerticalDrift=Math.abs(releasedB[1]-lastHeldB[1]);
+    if(releasedVerticalDrift>0.12)
+      throw Error('Assembly release changed the piece height: '+releasedVerticalDrift);
     game.setMovementVector(1,0);
     await sleep(360);
     game.setMovementVector(0,0);
@@ -842,7 +848,7 @@ async function browserAssemblyInteraction(){
     return {realWebGL:true,avatarVisible:true,avatarDistance,
       firstDelta,secondDelta,joystickDistance,keyboardDistance,
       carriedFirstMoved,carriedSecondMoved,releasedFirstDrift,releasedSecondDrift,
-      noUnearnedScores:patches.length===0};
+      releasedVerticalDrift,noUnearnedScores:patches.length===0};
   }catch(error){game?.destroy();canvas.remove();throw error;}
 }
 async function verifyAssemblyLiveInput(cdp){
@@ -856,7 +862,7 @@ async function verifyAssemblyLiveInput(cdp){
       result.joystickDistance>0.2&&result.keyboardDistance>0.2&&
       result.carriedFirstMoved>0.35&&result.carriedSecondMoved>0.35&&
       result.releasedFirstDrift<0.12&&result.releasedSecondDrift<0.12&&
-      result.noUnearnedScores,
+      result.releasedVerticalDrift<0.12&&result.noUnearnedScores,
       'Assembly real drag/navigation regression: '+JSON.stringify(result));
     const screenshot=await captureElementVisualEvidence(cdp,'3d-assembly-live-drag-and-navigation',
       "document.getElementById('p2lrn-assembly-live-qa')",{maxHeight:1000});
