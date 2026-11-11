@@ -478,7 +478,7 @@ export class P2LRNStudioElement extends HTMLElement{
     if(this.#mode==='preview'){await this._renderPreview();return;}
     const sheet=document.createElement('article');sheet.className='sheet p2lrn-studio-sheet';
     const titleHeading=document.createElement('h1');titleHeading.className='title';
-    const title=document.createElement('span');title.className='title-input';title.textContent=this.#studio.title(entity.id);title.contentEditable='true';title.setAttribute('role','textbox');title.setAttribute('aria-label','Título');title.setAttribute('aria-multiline','true');
+    const title=document.createElement('span');title.className='title-input';title.textContent=this.#studio.title(entity.id);title.contentEditable='true';title.tabIndex=0;title.setAttribute('role','textbox');title.setAttribute('aria-label','Título');title.setAttribute('aria-multiline','true');
     titleHeading.append(title);
     const desc=document.createElement('p');desc.className='description';desc.textContent=entity.description?.es??entity.description?.en??'';desc.contentEditable='true';desc.setAttribute('role','textbox');desc.setAttribute('aria-label','Descripción');desc.setAttribute('aria-multiline','true');
     title.oninput=()=>{this.#studio.setTitle(entity.id,title.textContent||'');this._renderTree();this._updateState();};
