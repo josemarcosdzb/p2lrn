@@ -41,8 +41,9 @@ nav small{display:block;color:#667085;text-transform:uppercase;font:600 10px ui-
 .stage{padding:18px;min-width:0}
 .sheet{max-width:980px;min-height:520px;margin:auto;background:#fff;border-radius:8px;padding:26px}
 .title,.description,.surface{outline:2px solid transparent;outline-offset:3px}
-.title:focus-visible,.description:focus-visible,.surface:focus-visible{outline:3px solid #0f766e;outline-offset:3px;background:#f0fdfa}
+.title-input:focus-visible,.description:focus-visible,.surface:focus-visible{outline:3px solid #0f766e;outline-offset:3px;background:#f0fdfa}
 .title{font-size:34px;margin:0 0 8px}
+.title-input{display:block;min-height:1.2em;overflow-wrap:anywhere}
 .description{color:#667085;margin:0 0 18px;min-height:1.4em}
 .surface{min-height:340px;border:1px dashed #98a2b3;border-radius:7px;padding:16px;line-height:1.6}
 .notice{padding:14px;border:1px solid #d9dee7;border-radius:7px;background:#f8fafc;color:#667085}
@@ -476,13 +477,15 @@ export class P2LRNStudioElement extends HTMLElement{
     const entity=this.#studio?.entity(this.#selected);if(!entity)return;
     if(this.#mode==='preview'){await this._renderPreview();return;}
     const sheet=document.createElement('article');sheet.className='sheet p2lrn-studio-sheet';
-    const title=document.createElement('h1');title.className='title';title.textContent=this.#studio.title(entity.id);title.contentEditable='true';title.setAttribute('role','textbox');title.setAttribute('aria-label','Título');title.setAttribute('aria-multiline','true');
+    const titleHeading=document.createElement('h1');titleHeading.className='title';
+    const title=document.createElement('span');title.className='title-input';title.textContent=this.#studio.title(entity.id);title.contentEditable='true';title.setAttribute('role','textbox');title.setAttribute('aria-label','Título');title.setAttribute('aria-multiline','true');
+    titleHeading.append(title);
     const desc=document.createElement('p');desc.className='description';desc.textContent=entity.description?.es??entity.description?.en??'';desc.contentEditable='true';desc.setAttribute('role','textbox');desc.setAttribute('aria-label','Descripción');desc.setAttribute('aria-multiline','true');
     title.oninput=()=>{this.#studio.setTitle(entity.id,title.textContent||'');this._renderTree();this._updateState();};
     desc.oninput=()=>{this.#studio.setDescription(entity.id,desc.textContent||'');this._updateState();};
     const head=document.createElement('header');head.className='p2lrn-studio-sheet-head';
     const type=document.createElement('span');type.className='studio-entity-type';type.textContent=entity.type;
-    head.append(type,title,desc);sheet.append(head);
+    head.append(type,titleHeading,desc);sheet.append(head);
     if(entity.type==='course'){
       const rights=document.createElement('section');rights.className='rights-panel';
       const heading=document.createElement('h2');heading.textContent='Autoría y derechos';rights.append(heading);
