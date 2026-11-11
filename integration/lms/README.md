@@ -88,7 +88,7 @@ Este módulo implementa un proveedor LTI 1.3 cuyo propietario es P2LRN. Moodle, 
 
 Componentes:
 - lti-provider.mjs: validación JWT RS256, OIDC state/nonce y Deep Linking firmado.
-- lti-store.mjs: SQLite persistente (Node.js 22.13+) para registros, despliegues, cursos, alumnos pseudónimos, intentos, estado, eventos y cola AGS.
+- lti-store.mjs: persistencia SQL con SQLite, PostgreSQL, MariaDB, MySQL o SQL Server (Node.js 22.13+) para registros, despliegues, cursos, alumnos pseudónimos, intentos, estado, eventos y cola AGS.
 - lti-server.mjs: servidor HTTP independiente, registro administrativo, catálogo, selector del profesor, Player, cookies seguras y APIs de seguimiento.
 - lti-ags.mjs: token OAuth2 firmado y envío de notas oficiales aprobadas por el servidor.
 - Los paquetes .p2lrn siguen siendo portables: ni tokens, ni matrículas, ni nombres privados se escriben en el archivo del curso.
@@ -119,7 +119,7 @@ base de datos de Canvas y no hacen falta claves manuales en el navegador.
 
 Los nuevos despliegues de Canvas se activan en P2LRN solo tras recibir un
 lanzamiento con JWT firmado, audiencia, emisor, estado, nonce y destino validos.
-La lista de despliegues se guarda en SQLite y sobrevive a reinicios.
+La lista de despliegues se guarda en el motor SQL seleccionado y sobrevive a reinicios.
 Las instalaciones previas creadas manualmente se conservan; no se eliminan
 Developer Keys ni actividades existentes sin una migracion verificada.
 
@@ -134,7 +134,9 @@ panel Canvas de una institucion, seleccion Deep Linking, entrada de alumno y
 entrega AGS a su libro de calificaciones. Las pruebas automatizadas del
 protocolo no sustituyen esa demostracion de extremo a extremo.
 
-## Preparación
+## Preparación manual avanzada (para operación desde el repositorio)
+
+La instalación recomendada es el asistente npm descrito al principio. Este procedimiento manual conserva compatibilidad con despliegues existentes.
 
 Requiere Node.js 22.13 o posterior y las distribuciones compiladas de Toolkit y Player.
 
@@ -150,7 +152,7 @@ Generar una clave privada RSA de 3072 bits, guardarla en un archivo PEM persiste
 
 Configurar en el proceso las variables de entorno:
 - P2LRN_LTI_BASE_URL = https://lti.tu-dominio.es
-- P2LRN_LTI_DATA_DIR = ruta privada de datos SQLite y cursos
+- P2LRN_LTI_DATA_DIR = ruta privada de cursos y de datos SQLite, si se eligió SQLite
 - P2LRN_LTI_KEY_FILE = ruta persistente al PEM privado
 - P2LRN_LTI_ADMIN_TOKEN = token aleatorio secreto de 32 caracteres como mínimo
 - P2LRN_LTI_PORT = 37891 (opcional)
@@ -161,7 +163,7 @@ Arrancar desde la raíz del repositorio:
 
     node integration/lms/lti-server.mjs
 
-El servidor escucha por defecto en loopback y necesita un proxy HTTPS de confianza para exposición pública. Comprobar GET /lti/health y GET /lti/jwks. Jamás publicar el token administrativo, el PEM privado, la base SQLite o el directorio de paquetes. No regenerar la clave cada vez que arranque.
+El servidor escucha por defecto en loopback y necesita un proxy HTTPS de confianza para exposición pública. Comprobar GET /lti/health y GET /lti/jwks. Jamás publicar el token administrativo, el PEM privado, la base de datos de la institución o el directorio de paquetes. No regenerar la clave cada vez que arranque.
 
 ### HTTP local sin instalar certificados
 
@@ -333,7 +335,7 @@ Ejecutar los tests en Windows con el job lms-contracts-windows de P2LRN CI, o de
 
 Los tests HTTP automatizados usan una plataforma de ensayo que firma JWT reales, un paquete auténtico y una respuesta OAuth/AGS simulada. **No certifican** que Moodle, Chamilo o Sakai ya tengan la herramienta P2LRN registrada. Para verificar cada instancia real, completar registro bidireccional, HTTPS, selección profesor, lanzamiento alumno, reanudación y recepción de nota AGS en esa plataforma.
 
-SQLite WAL está orientado a un único servidor; escalar a varios procesos/servidores requiere una base de datos compartida. NRPS 2.0 está implementado como lectura opcional de matrículas, pero las instalaciones LMS reales aún requieren pruebas. Los navegadores que bloqueen por completo las cookies de terceros pueden requerir un flujo de almacenamiento o postMessage específico de LTI que se debe comprobar en E2E.
+SQLite WAL está orientado a un único servidor; los cuatro motores SQL externos permiten conectar varios procesos al mismo almacenamiento, previa configuración y validación del host. NRPS 2.0 está implementado como lectura opcional de matrículas, pero las instalaciones LMS reales aún requieren pruebas. Los navegadores que bloqueen por completo las cookies de terceros pueden requerir un flujo de almacenamiento o postMessage específico de LTI que se debe comprobar en E2E.
 
 
 ### NRPS 2.0: matrícula y roles por curso
@@ -343,7 +345,7 @@ El proveedor de P2LRN incorpora `integration/lms/lti-nrps.mjs`, que consulta el 
 - `GET /lti/runtime/nrps/memberships`: la sesión del profesor consulta exclusivamente el contexto autorizado del lanzamiento. Un alumno recibe HTTP 403.
 - `GET /lti/admin/nrps/contexts?tenantId=...`: el administrador ve los contextos previamente identificados, sin listado de personas.
 - `GET /lti/admin/nrps/memberships?tenantId=...&registrationId=...&deploymentId=...&contextId=...`: el administrador, con Bearer privado, consulta una lista concreta, ligada a institución, registro, despliegue y contexto.
-- Los miembros se consultan directamente desde el LMS. Se devuelven `userId`, `roles`, `status` y campos opcionales permitidos. No se conserva una copia permanente del listado; las tablas SQLite adicionales contienen solamente la URL de servicio validada, su contexto, las autorizaciones de roles y los orígenes de confianza.
+- Los miembros se consultan directamente desde el LMS. Se devuelven `userId`, `roles`, `status` y campos opcionales permitidos. No se conserva una copia permanente del listado; las tablas del motor SQL seleccionado contienen solamente la URL de servicio validada, su contexto, las autorizaciones de roles y los orígenes de confianza.
 - Si la API NRPS reside en un origen HTTPS diferente al del issuer o token endpoint, el administrador debe añadir ese origen a `nrpsAllowedOrigins` de la plataforma registrada. No se aceptan URLs proporcionadas por el navegador.
 - El cliente limita 25 páginas, 5.000 miembros y 2 MiB por página, valida contenido y contexto, prohíbe redirecciones y rechaza destinos no autorizados.
 
@@ -375,7 +377,7 @@ La integracion usa una solucion acotada, no unsafe-inline global para scripts:
 
 Al desplegar una modificacion, compilar el mismo Player existente con
 node packages/player/scripts/build-dist.mjs y actualizar el proveedor LTI
-sin regenerar sus claves, su base SQLite ni sus cursos. Confirmar en un
+sin regenerar sus claves, su base de datos ni sus cursos. Confirmar en un
 navegador real (no solo HTTP 200): pregunta H5P visible y boton Check
 funcional; pagina SCORM visible y boton Next funcional; pruebas de
 packages/toolkit/test/opaque-runtime-bootstrap-nonce.test.mjs,
@@ -391,7 +393,7 @@ Las IP fijas en Docker ExtraHosts pueden quedar obsoletas cuando se recrean los 
 
 La CLI del proveedor usa integration/lms/lti-local-qa-gateway.mjs cuando el modo local inseguro de QA esta autorizado mediante P2LRN_LTI_DEV_INSECURE=true. El modulo resuelve el alias interno del proxy y utiliza node:http preservando Host del LMS; exige un destino privado y no opera para HTTPS externos. Se permite configurar la etiqueta DNS mediante P2LRN_LTI_DEV_LMS_GATEWAY. El modo HTTPS de produccion conserva su transporte y sus controles existentes.
 
-Para comprobarlo, ejecutar los tests integration/lms/*.test.mjs y consultar el endpoint /lti/health mediante el Host original. Comparar recuentos de SQLite antes y despues de actualizar. El reintento oficial de AGS debe usar solo POST /lti/admin/ags/retry, con autenticacion administrativa y un intento calificable previamente aprobado por el servidor. Confirmar la nota tambien en el libro del LMS, no solo en el outbox.
+Para comprobarlo, ejecutar los tests integration/lms/*.test.mjs y consultar el endpoint /lti/health mediante el Host original. Comparar recuentos del motor SQL seleccionado antes y despues de actualizar. El reintento oficial de AGS debe usar solo POST /lti/admin/ags/retry, con autenticacion administrativa y un intento calificable previamente aprobado por el servidor. Confirmar la nota tambien en el libro del LMS, no solo en el outbox.
 
 Resultado real: 44/44 pruebas LTI correctas, reintento del alumno QA de Moodle exitoso (HTTP 200, SENT) y 85/100 en grade_grades, curso historico 2. La nota de la cuenta administradora que no tiene rol de alumno sigue sin poder entregarse legitimamente. El curso nuevo de seguridad informatica y los otros LMS siguen pendientes de certificacion integral; consultar docs/interop/2026-11-07-prueba-real.md.
 
@@ -403,7 +405,7 @@ P2LRN conserva el proveedor **LTI 1.3** en `/lti/login`, `/lti/launch`, `/lti/de
 
 - Para LTI 1.0/1.1, registrar un consumidor autorizado con `POST /lti/admin/legacy/platforms` (Bearer administrativo existente). El cuerpo JSON admite `id` con prefijo `legacy:`, `tenantId`, `consumerKey`, `sharedSecret` fuerte (24 caracteres o más), `issuerOrigin`, `launchUrl` terminado en `/lti/legacy/launch` y `status: "ACTIVE"`. La respuesta y `GET /lti/admin/legacy/platforms` **nunca muestran el secreto**; se cifra con AES-256-GCM mediante una clave derivada de la identidad RSA persistente del proveedor. Hay que conservar esa identidad para restaurar las inscripciones antiguas.
 - `POST /lti/admin/legacy/bindings` recibe `registrationId`, `catalogId` y `entityId` del catálogo real. Devuelve `p2lrn_binding_id`. En el campo de parámetros personalizados de Chamilo se introduce `p2lrn_binding_id=<id>`; Chamilo envía `custom_p2lrn_binding_id` en el formulario firmado. No se duplica el archivo del curso ni se reutiliza una vinculación JWT 1.3 como vinculación OAuth1.
-- El endpoint antiguo **solo acepta** formularios firmados por OAuth 1.0a con HMAC-SHA1 o HMAC-SHA256, marca temporal ±300 s, nonce de un solo uso persistido en SQLite, URL exacta permitida, clave de consumidor registrada, identificador de alumno y vínculo de contenido autorizado. Rechaza ausencia/alteración de firma, peticiones repetidas, mezcla con `id_token` o `state`, reuso de un vínculo de otra institución, secretos débiles y hosts de resultado no registrados. HTTP solo se admite en las instalaciones `.localhost` de QA con `P2LRN_LTI_DEV_INSECURE=true`.
+- El endpoint antiguo **solo acepta** formularios firmados por OAuth 1.0a con HMAC-SHA1 o HMAC-SHA256, marca temporal ±300 s, nonce de un solo uso persistido en el motor SQL seleccionado, URL exacta permitida, clave de consumidor registrada, identificador de alumno y vínculo de contenido autorizado. Rechaza ausencia/alteración de firma, peticiones repetidas, mezcla con `id_token` o `state`, reuso de un vínculo de otra institución, secretos débiles y hosts de resultado no registrados. HTTP solo se admite en las instalaciones `.localhost` de QA con `P2LRN_LTI_DEV_INSECURE=true`.
 - Cuando el lanzamiento lleva `lis_outcome_service_url` y `lis_result_sourcedid` válidos, el servidor puede devolver notas por **LTI 1.1 Basic Outcomes** con XML POX, OAuth `oauth_body_hash`, y verificación de respuesta de éxito del LMS. El resultado de la actividad **no se envía** por el mero reporte del navegador: exige la misma autorización del servidor de notas que en LTI 1.3. Sin servicio de notas, una calificación no se marca oficial. El proveedor acepta el literal `LTI-1p0` emitido por Chamilo, pero la devolución de resultados sigue dependiendo del servicio Basic Outcomes declarado y de su aceptación efectiva.
 
 ### LTI 1.3: sin cambios en la autenticación original
@@ -456,10 +458,10 @@ Esta mejora facilita la publicación después de la configuración institucional
 
 ## Seguridad de administración y publicación (2026-11-10)
 
-El proveedor LTI dispone de cuotas de solicitudes persistentes en SQLite, limpieza
+El proveedor LTI dispone de cuotas de solicitudes persistentes en el motor SQL seleccionado, limpieza
 de transacciones OIDC/tickets/sesiones caducadas y un máximo de cuatro cargas
 de cursos simultáneas. La limpieza conserva intentos, progreso y calificaciones.
-Las cuotas son compartidas solo entre procesos que utilizan el mismo SQLite.
+Con SQLite, las cuotas solo se comparten entre procesos que utilizan el mismo archivo. Con motores externos, dependen de la misma base de datos y de sus transacciones.
 El proxy HTTPS todavía debe imponer límites de conexiones, tamaños y tráfico.
 
 ### Credenciales del registro de Canvas
