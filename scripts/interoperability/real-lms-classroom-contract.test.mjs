@@ -5,13 +5,16 @@ function plan(){
  const a='a'.repeat(64),b='b'.repeat(64);
  return {schema:'p2lrn-lms-real-classroom/1',lms:'moodle',
   lmsBase:'http://qa-moodle.localhost/',qaOnly:true,
-  courses:{A:{file:'qa-course-a.p2lrn',sha256:a},
-   B:{file:'qa-course-b.p2lrn',sha256:b}},
+  courses:{A:{title:'QA Course A',file:'qa-course-a.p2lrn',sha256:a},
+   B:{title:'QA Course B',file:'qa-course-b.p2lrn',sha256:b}},
   stages:STAGES.map(([id,actor])=>{
    const actions=[{type:'goto',path:'/course/view.php?id=1'}];
    if(id.startsWith('teacher-publish')){
     actions.push({type:'uploadCourse',course:id.endsWith('a')?'A':'B',selector:'input[type=file]'});
-    actions.push({type:'waitText',selector:'.activity',text:'Curso publicado'});
+    actions.push({type:'click',selector:'button.save'});
+    const course=id.endsWith('a')?'A':'B';
+    actions.push({type:'assertPublished',course,selector:'.lms-activity',
+     pagePath:'/course/view.php',text:'QA Course '+course});
    }else if(id.endsWith('gradebook')){
     for(const learner of ['learner1','learner2'])
      for(const course of ['A','B'])
@@ -19,8 +22,11 @@ function plan(){
        learner,course,studentText:'Test learner',expected:80,
        courseHeaderSelector:'.gradebook-course-heading',courseHeaderText:'QA Course '+course});
    }else if(id.includes('resume')){
+    actions.push({type:'assertPlayerCourse',selector:'p2lrn-player',course:'A'});
     actions.push({type:'assertResume',selector:'input:checked',mode:'checked',expected:'true'});
    }else{
+    actions.push({type:'assertPlayerCourse',selector:'p2lrn-player',course:id.endsWith('a')?'A':'B'});
+    actions.push({type:'click',selector:'input.answer'});
     actions.push({type:'click',selector:'button.submit'});
     actions.push({type:'assertCompletion',selector:'.result',text:'Completado'});
    }

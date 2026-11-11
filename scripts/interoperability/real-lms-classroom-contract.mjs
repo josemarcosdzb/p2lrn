@@ -7,7 +7,7 @@ export const STAGES=Object.freeze([
  ['learner2-complete-b','learner2'],['teacher-gradebook','teacher']
 ]);
 const ACTIONS=new Set(['goto','click','fillEnv','select','uploadCourse',
- 'waitVisible','waitText','assertCompletion','assertResume','assertGrade']);
+ 'waitVisible','waitText','assertPublished','assertPlayerCourse','assertCompletion','assertResume','assertGrade']);
 const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 const fail=code=>{throw new Error(code);};
 const nonblank=(s,n=256)=>typeof s==='string'&&s.length>0&&s.length<=n;
@@ -28,10 +28,12 @@ export function validateClassroomPlan(p){
   fail('TWO_REAL_COURSES_REQUIRED');
  for(const id of ['A','B']){
   const c=p.courses[id];
-  if(!c||!nonblank(c.file,2048)||!(/^[a-f0-9]{64}$/i).test(c.sha256)||
+  if(!c||!nonblank(c.title,180)||!nonblank(c.file,2048)||!(/^[a-f0-9]{64}$/i).test(c.sha256)||
      !c.file.toLowerCase().endsWith('.p2lrn'))fail('INVALID_REAL_COURSE_'+id);
  }
- if(p.courses.A.sha256===p.courses.B.sha256)fail('DISTINCT_COURSES_REQUIRED');
+ if(p.courses.A.sha256===p.courses.B.sha256||
+    p.courses.A.title.trim().toLowerCase()===p.courses.B.title.trim().toLowerCase())
+  fail('DISTINCT_COURSES_REQUIRED');
  if(!Array.isArray(p.stages)||p.stages.length!==STAGES.length)fail('INVALID_REAL_STAGES');
  const allGrade=new Set();
  for(let i=0;i<STAGES.length;i++){
@@ -39,8 +41,10 @@ export function validateClassroomPlan(p){
   if(!stage||stage.id!==name||stage.actor!==actor||
      !Array.isArray(stage.actions)||stage.actions.length<2||stage.actions.length>80)
    fail('INVALID_REAL_STAGE_'+name);
-  let evidenceCount=0,uploaded=0,completed=0,resumed=0;
-  for(const a of stage.actions){
+  let evidenceCount=0,uploaded=0,completed=0,resumed=0,published=0,playerCourse=0;
+  let lastUpload=-1,lastSaveClick=-1,lastPublish=-1,interactions=0;
+  for(let actionIndex=0;actionIndex<stage.actions.length;actionIndex++){
+   const a=stage.actions[actionIndex];
    if(!a||!ACTIONS.has(a.type))fail('INVALID_REAL_ACTION');
    if(a.type==='goto'){
     if(!nonblank(a.path,1024)||!a.path.startsWith('/')||
@@ -60,7 +64,26 @@ export function validateClassroomPlan(p){
    if(a.type==='uploadCourse'){
     if(actor!=='teacher'||!courseId(a.course))fail('REAL_UPLOAD_MUST_BE_TEACHER');
     if(name!=='teacher-publish-'+a.course.toLowerCase())fail('COURSE_UPLOAD_WRONG_STAGE');
-    uploaded++;
+    uploaded++;lastUpload=actionIndex;
+   }
+   if(a.type==='click'||a.type==='select'){
+    interactions++;
+    if(lastUpload>=0&&actionIndex>lastUpload)lastSaveClick=actionIndex;
+   }
+   if(a.type==='assertPublished'){
+    if(actor!=='teacher'||!courseId(a.course)||
+       name!=='teacher-publish-'+a.course.toLowerCase()||a.frame!==undefined||
+       a.text!==p.courses[a.course].title||
+       !nonblank(a.pagePath,400)||!a.pagePath.startsWith('/')||
+       a.pagePath.startsWith('//')||a.pagePath.startsWith('/lti/'))
+     fail('INVALID_LMS_PUBLICATION_PROOF');
+    published++;lastPublish=actionIndex;evidenceCount++;
+   }
+   if(a.type==='assertPlayerCourse'){
+    const expected=name.includes('-a')?'A':'B';
+    if(actor==='teacher'||!courseId(a.course)||a.course!==expected)
+     fail('INVALID_LMS_PLAYER_COURSE');
+    playerCourse++;evidenceCount++;
    }
    if(a.type==='waitText'||a.type==='assertCompletion'){
     if(!nonblank(a.text,300))fail('REAL_UI_ASSERTION_REQUIRED');
@@ -77,7 +100,8 @@ export function validateClassroomPlan(p){
     if(name!=='teacher-gradebook'||!courseId(a.course)||
        !['learner1','learner2'].includes(a.learner)||
        !safeSelector(a.gradeSelector)||!nonblank(a.studentText,200)||
-       !safeSelector(a.courseHeaderSelector)||!nonblank(a.courseHeaderText,200)||
+       !safeSelector(a.courseHeaderSelector)||
+       a.courseHeaderText!==p.courses[a.course].title||
        typeof a.expected!=='number'||!Number.isFinite(a.expected)||
        a.expected<0||a.expected>100||
        (a.tolerance!==undefined&&(!Number.isFinite(a.tolerance)||a.tolerance<0||a.tolerance>0.01)))
@@ -89,10 +113,12 @@ export function validateClassroomPlan(p){
   }
   if(evidenceCount<1)fail('NO_REAL_UI_ASSERTION_'+name);
   if(name==='teacher-publish-a'||name==='teacher-publish-b'){
-   if(uploaded!==1)fail('MISSING_REAL_TEACHER_UPLOAD_'+name);
+   if(uploaded!==1||published!==1||!(lastUpload<lastSaveClick&&lastSaveClick<lastPublish))
+    fail('MISSING_REAL_LMS_PUBLICATION_'+name);
   }
-  if(name.includes('complete')&&completed<1)fail('MISSING_REAL_LEARNER_COMPLETION_'+name);
-  if(name==='learner1-resume-a'&&resumed<1)fail('MISSING_REAL_REENTRY_CHECK');
+  if(name.includes('complete')&&(completed<1||playerCourse!==1||interactions<2))
+   fail('MISSING_REAL_LEARNER_COMPLETION_'+name);
+  if(name==='learner1-resume-a'&&(resumed<1||playerCourse!==1))fail('MISSING_REAL_REENTRY_CHECK');
  }
  if(allGrade.size!==4)fail('FOUR_OFFICIAL_GRADES_REQUIRED');
  return Object.freeze({lms:p.lms,stageCount:STAGES.length,

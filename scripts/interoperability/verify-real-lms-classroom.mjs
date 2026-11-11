@@ -183,6 +183,20 @@ async function runAction(browser,a){
   if(loaded!==true)throw Error('QA_COURSE_NOT_SELECTED_IN_BROWSER');
   return;
  }
+ case 'assertPublished':
+  await browser.wait(expression(a,
+   'if(!location.pathname.startsWith('+J(a.pagePath)+'))return false;'+
+   'return '+visible+'&&node.textContent.includes('+J(a.text)+');'),
+   {timeout:20000,label:'course published inside actual LMS course page'});
+  return;
+ case 'assertPlayerCourse':{
+  const expected=courses[a.course].contentRoot;
+  await browser.wait(expression(a,
+   'if(node.tagName.toLowerCase()!=="p2lrn-player")return false;'+
+   'return String(node.contentRoot||"")==='+J(expected)+';'),
+   {timeout:25000,label:'real Player loaded verified course contentRoot'});
+  return;
+ }
  case 'waitVisible':
   await browser.wait(expression(a,'return Boolean('+visible+');'),
    {timeout:20000,label:'real visible LMS element'});
