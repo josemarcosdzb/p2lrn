@@ -36,3 +36,13 @@ test('Studio creates a new valid course from zero and can grow its structure',as
   const text=new TextDecoder().decode(await reopened.payload(rep.location.path).read());
   assert.match(text,/Contenido creado desde cero/);
 });
+
+
+test('New games require a learner answer before final submission',async()=>{
+  const doc=createP2LRNStudioDocument({title:'Prueba',language:'es'});
+  const unit=doc.children(doc.rootId)[0];
+  const activity=doc.addGame(unit.id,{kind:'fill-blanks',title:'Completar huecos',language:'es'});
+  const questionnaire=await doc.readQuestionnaire(activity.id);
+  assert.equal(questionnaire.payload.questions.length,1);
+  assert.equal(questionnaire.payload.questions[0].required,true);
+});

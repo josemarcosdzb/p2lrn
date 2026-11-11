@@ -594,7 +594,9 @@ export class P2LRNStudioDocument{
     else if(questionKind==='fill-blanks')questions=[{id:'q1',type:'fill-blanks',prompt:'Completa los huecos',body:'Escribe aquí una frase con {{b1}}.',inputMode:'text',points:1,blanks:[{id:'b1',label:'Hueco 1'}],solution:{answers:{b1:['Respuesta']}}}];
     else if(questionKind==='matching'||questionKind==='memory')questions=[{id:'q1',type:'matching',prompt:'Relaciona cada elemento',points:1,left:[{id:'l1',text:'España'},{id:'l2',text:'Francia'},{id:'l3',text:'Italia'}],right:[{id:'r1',text:'Madrid'},{id:'r2',text:'París'},{id:'r3',text:'Roma'}],solution:{pairs:[{left:'l1',right:'r1'},{left:'l2',right:'r2'},{left:'l3',right:'r3'}]}}];
     else questions=[{id:'q1',type:'text',prompt:'Empieza por A',points:1,solution:{acceptedAnswers:['Arbol']}},{id:'q2',type:'text',prompt:'Empieza por B',points:1,solution:{acceptedAnswers:['Barco']}},{id:'q3',type:'text',prompt:'Empieza por C',points:1,solution:{acceptedAnswers:['Casa']}},{id:'q4',type:'text',prompt:'Empieza por D',points:1,solution:{acceptedAnswers:['Dado']}}];
-    return this.addQuestionnaire(parentId,{title,language,renderer:threeDKind?renderers['3d']:(renderers[kind]??renderers.standard),payload:{...common,questions}});
+    // New educational games are finishable only after the learner responds. An author
+    // can still explicitly relax a question's required flag in an existing quiz.
+    return this.addQuestionnaire(parentId,{title,language,renderer:threeDKind?renderers['3d']:(renderers[kind]??renderers.standard),payload:{...common,questions:questions.map(question=>({...question,required:true}))}});
   }
 
   addLesson(parentId=this.rootId,{title='Nueva lección',language='es'}={}){

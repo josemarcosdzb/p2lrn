@@ -2,6 +2,7 @@
 import test from 'node:test';
 import {fillBlankDistractors,fillBlankInputMode,fillBlankParts,fillBlankTemplate,fillBlankWordBank} from '../web/fill-blanks-core.js';
 import {validateQuestionnaire,scoreQuestion} from '../web/questionnaire-core.js';
+import {answerIsMeaningful} from '../web/questionnaire-session.js';
 
 const base=(overrides={})=>({
   schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',
@@ -67,4 +68,13 @@ test('underscore placeholders place draggable answers inline, not after the sent
   const built=fillBlankTemplate(q);
   assert.equal(built.template,'El {{b1}} es una estrella y la {{b2}} es un planeta.');
   assert.deepEqual(fillBlankParts(q).parts.filter(item=>item.type==='blank').map(item=>item.id),['b1','b2']);
+});
+
+
+test('required fill-blanks are incomplete until every blank is filled',()=>{
+  const question=base().questions[0];
+  assert.equal(answerIsMeaningful(question,{blanks:{}}),false);
+  assert.equal(answerIsMeaningful(question,{blanks:{b1:'function'}}),false);
+  assert.equal(answerIsMeaningful(question,{blanks:{b1:'function',b2:'  '}}),false);
+  assert.equal(answerIsMeaningful(question,{blanks:{b1:'function',b2:'string'}}),true);
 });
