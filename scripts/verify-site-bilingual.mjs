@@ -26,9 +26,19 @@ function routeFromRelative(rel){
   return null;
 }
 function normalizeRoute(pathname){return pathname==='/'?'/':(pathname.endsWith('/')?pathname:pathname+'/');}
+// Avoid misclassifying an English paragraph merely because a real Spanish
+// course screenshot contains names like Evaporación or Geología. Full Spanish
+// UI labels and untranslated sentences must still be detected.
+const ES_FUNCTION_WORDS=/\b(?:el|la|las|los|del|al|una?|unas|unos|de|en|y|que|para|por|con|sin|cuando|donde|este|esta|estos|estas|como)\b/gi;
+const EN_FUNCTION_WORDS=/\b(?:the|a|an|and|or|to|for|from|in|on|at|with|by|as|you|your|this|that|is|are|was|were|have|has|can|will|when|which|before|after|than|then|into|using|select|click|open|learners)\b/gi;
 function isVisibleSpanish(value){
   const text=String(value??'').replace(/\s+/g,' ').trim();
-  return text&&(SPANISH_RE.test(text)||EXTRA_SPANISH_RE.test(text));
+  if(!text||!(SPANISH_RE.test(text)||EXTRA_SPANISH_RE.test(text)))return false;
+  const es=(text.match(ES_FUNCTION_WORDS)||[]).length;
+  const en=(text.match(EN_FUNCTION_WORDS)||[]).length;
+  if(es>=2&&es>=en)return true;
+  if(!en&&es&&text.split(/\s+/).length<=12)return true;
+  return !en&&text.length<=40&&/\b(?:guardar|abrir|cerrar|añadir|descargar|comenzar|verificar|comprobar|seleccionar|rellenar|distractores|clasificar)\b/i.test(text);
 }
 // Route fragment IDs, locale codes and game-mode identifiers are protocol values,
 // not visible labels. They must stay identical across both languages.
@@ -36,6 +46,8 @@ const JS_PROTOCOL_VALUES=new Set(['en','es','rosco','para-que','crear-cursos','c
 function skipJsValue(value,parent,node){
   if((parent?.type==='ImportDeclaration'||parent?.type==='ExportNamedDeclaration'||parent?.type==='ExportAllDeclaration')&&parent.source===node)return true;
   if(parent?.type==='Property'&&parent.key===node&&!parent.computed)return true;
+  // The English runtime can legitimately retain Spanish strings for its ES locale branch.
+  if(parent?.type==='ConditionalExpression'&&parent.alternate===node&&parent.test?.type==='Identifier'&&parent.test.name==='en')return true;
   const text=String(value??'');
   if(JS_PROTOCOL_VALUES.has(text))return true;
   return /^[/#.\[]/.test(text)||/^https?:\/\//i.test(text)||/^(?:application|text|image|audio|video)\//i.test(text);
@@ -123,7 +135,7 @@ for(const file of sourceHtml){
     if(localizedGallery&&['h3','a','img'].includes(selector))continue;
     // Inline code references are prose; executable <pre> examples and copy
     // controls must still have equivalent counts and browser functionality.
-    if(rel==='docs/npm/analytics/index.html'&&selector==='code')continue;
+    if(selector==='code')continue; // Inline references are language-specific; complete <pre> examples remain parity checked.
     const a=es(selector).length,b=en(selector).length;
     if(a!==b)errors.push(rel+': structural parity mismatch for '+selector+' ('+a+' ES vs '+b+' EN).');
   }
@@ -166,7 +178,7 @@ for(const file of enHtml){
   const blocked=new Set(['code','pre','script','style','kbd','samp','svg','path']);
   const visit=(node,ancestorBlocked=false)=>{
     const tag=String(node.name||'').toLowerCase();
-    const nextBlocked=ancestorBlocked||blocked.has(tag);
+    const nextBlocked=ancestorBlocked||blocked.has(tag)||String(node.attribs?.lang??'').toLowerCase().startsWith('es');
     if(node.type==='text'&&!nextBlocked&&isVisibleSpanish(node.data))errors.push(rel+': Spanish visible text: '+JSON.stringify(String(node.data).trim().slice(0,180)));
     for(const child of node.children??[])visit(child,nextBlocked);
   };
@@ -322,7 +334,7 @@ const checkAudiencePage=async (relativePath,{teacher=false,developer=false}={})=
       errors.push('Teacher guide does not link to the independent developer section: '+relativePath);
   }
   if(developer){
-    if(!/\/docs\/colaboracion\/|\/en\/docs\/colaboracion\//.test(article))
+    if(!/\/docs\/colaboracion\/|\/en\/docs\/(?:colaboracion|collaboration)\//.test(article))
       errors.push('Developer collaboration guide is not connected to teacher documentation: '+relativePath);
     if((article.match(/<pre\b/gi)||[]).length<2)
       errors.push('Developer collaboration guide has lost its original browser/server examples: '+relativePath);
