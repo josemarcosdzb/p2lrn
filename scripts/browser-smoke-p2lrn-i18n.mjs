@@ -553,7 +553,11 @@ async function questionnaireDocsVisualQA(){
 
 try{
   if(process.argv.includes('--docs-only')){
+    await siteParity();
+    await browserNavigation();
     await questionnaireDocsVisualQA();
+    await docsRoleNavigationChrome('es');
+    await docsRoleNavigationChrome('en');
     assert.deepEqual(exceptions,[],'Browser uncaught errors during docs QA: '+exceptions.join('; '));
     console.log('P2LRN_BROWSER_DOCS_ONLY=PASS');
   } else {

@@ -52,14 +52,19 @@ jobs:
         run: |
           npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save --package-lock=false playwright-core@1.64.1 axe-core@4.10.3
           node .p2lrn-i18n-ci/node_modules/playwright-core/cli.js install --with-deps chromium
-      - name: Validate all 48 real browser views, images, content, navigation and overflow
+      - name: Verify bilingual editorial parity and locale-specific JS contracts
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund --no-save --package-lock=false cheerio@1.2.0 acorn@8.19.0
+          node --test scripts/test-site-i18n-ast.mjs scripts/test-site-ui-locales.mjs
+          node scripts/verify-site-bilingual.mjs
+      - name: Validate all 48 real browser views, language navigation and teacher/developer paths
         run: node scripts/browser-smoke-p2lrn-i18n.mjs --docs-only
       - name: Preserve raw Chromium screenshots and JSON evidence even when a check fails
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: p2lrn-docs-24-pages-48-views-chromium
-          path: .p2lrn-i18n-ci/evidence/questionnaires/
+          path: .p2lrn-i18n-ci/evidence/
           if-no-files-found: warn
           retention-days: 7
 
