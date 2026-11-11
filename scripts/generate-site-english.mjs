@@ -48,6 +48,14 @@ const handAuthoredEnglishPages=new Set([
   'docs/progresion/index.html',
   'docs/metricas/index.html',
   'docs/conceptos/index.html',
+  // Preserve the reviewed developer pages and later English editorial corrections.
+  'docs/analytics/index.html',
+  'docs/cdn/index.html',
+  'docs/cdn/studio/index.html',
+  'docs/eventos/index.html',
+  'docs/paquetes/index.html',
+  'docs/player/index.html',
+  'docs/troubleshooting/index.html',
   // Legal summaries are manually reviewed and must not be rewritten by machine translation.
   'licencia/index.html',
 ]);
