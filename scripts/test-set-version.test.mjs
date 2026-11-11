@@ -11,6 +11,7 @@ const script=resolve(root,'scripts/set-version.mjs');
 const list=[
   'packages/player/package.json','packages/studio/package.json',
   'packages/toolkit/package.json','packages/h5p-libraries/package.json','packages/analytics/package.json',
+  'integration/lms/package.json','integration/lms/README.md','packages/player/types/index.d.ts',
   'packages/toolkit/config/capabilities.json','packages/studio/src/p2lrn-studio.js','packages/analytics/src/model.js',
   'packages/toolkit/web/p2lrn-player.js','packages/toolkit/web-sdk-src/p2lrn.js',
   'packages/player/server/runtime-host.mjs',

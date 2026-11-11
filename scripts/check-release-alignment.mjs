@@ -13,6 +13,10 @@ for(const name of names)pkg[name]=JSON.parse(await readFile(resolve(root,'packag
 const versions=[...new Set(names.map(name=>pkg[name].version))];
 assert.equal(versions.length,1,'Five npm package versions must match');
 const version=versions[0];
+const lti=JSON.parse(await readFile(resolve(root,'integration/lms/package.json'),'utf8'));
+assert.equal(lti.version,version,'LTI Provider release version differs');
+assert.equal(lti.dependencies?.['@p2lrn/toolkit'],version,'LTI Provider Toolkit pin differs');
+assert.equal(lti.dependencies?.['@p2lrn/player'],version,'LTI Provider Player pin differs');
 assert.match(version,/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u);
 assert.equal(pkg.player.peerDependencies?.['@p2lrn/h5p-libraries'],version,'Player H5P optional peer must be pinned');
 assert.equal(pkg.studio.peerDependencies?.['@p2lrn/player'],version,'Studio Player peer must be pinned');
@@ -29,6 +33,8 @@ const markers=[
   ['packages/h5p-libraries/scripts/build.mjs',"packageVersion:'"+version+"'"],
   ['packages/toolkit/test/toolkit.test.mjs',"assert.equal(capabilities.product.version,'"+version+"')"],
   ['PUBLISHING.md','All five packages currently use the same release version: '+String.fromCharCode(96)+version],
+  ['integration/lms/README.md','@p2lrn/lti-provider@'+version],
+  ['packages/player/types/index.d.ts','export const version: "'+version+'"'],
 ];
 for(const [relative,expected] of markers){
   const content=await readFile(resolve(root,relative),'utf8');

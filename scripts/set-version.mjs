@@ -13,7 +13,7 @@ if(!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/u.test(versi
   console.error('Usage: node scripts/set-version.mjs <semver> [--dry-run] [--expect-current=<semver>]');
   process.exit(2);
 }
-const paths=['h5p-libraries','toolkit','player','studio','analytics'];
+const paths=['h5p-libraries','toolkit','player','studio','analytics','lti-provider'];
 const originals=new Map(),pending=new Map();
 async function contents(relative){
   if(pending.has(relative))return pending.get(relative);
@@ -42,7 +42,7 @@ function internalPin(object,name){
   object[name]=version;
 }
 const manifests=await Promise.all(paths.map(async name=>{
-  const relative='packages/'+name+'/package.json';
+  const relative=name==='lti-provider'?'integration/lms/package.json':'packages/'+name+'/package.json';
   return {name,relative,json:JSON.parse(await contents(relative))};
 }));
 const versions=[...new Set(manifests.map(x=>x.json.version))];
@@ -63,6 +63,10 @@ for(const {name,relative} of manifests){
     if(name==='studio'){
       internalPin(pkg.dependencies,'@p2lrn/toolkit');
       internalPin(pkg.peerDependencies,'@p2lrn/player');
+    }
+    if(name==='lti-provider'){
+      internalPin(pkg.dependencies,'@p2lrn/toolkit');
+      internalPin(pkg.dependencies,'@p2lrn/player');
     }
   });
 }
@@ -103,6 +107,8 @@ for(const relative of [
   'README.md','packages/player/README.md','packages/toolkit/README.md',
   'packages/studio/README.md',
   'packages/analytics/README.md',
+  'integration/lms/README.md',
+  'packages/player/types/index.d.ts',
 ]){
   const before=await contents(relative);
   // Versionless package READMEs are valid and must remain unchanged.
@@ -116,6 +122,20 @@ for(const relative of [
   'deploy/netlify/site/docs/cdn/index.html',
   'deploy/netlify/site/docs/cdn/studio/index.html',
   'deploy/netlify/site/docs/analytics/index.html',
+  'deploy/netlify/site/docs/npm/analytics/index.html',
+  'deploy/netlify/site/docs/cdn/analytics/index.html',
+  'deploy/netlify/site/docs/skills/index.html',
+  'deploy/netlify/site/docs/toolkit/index.html',
+  'deploy/netlify/site/en/docs/npm/index.html',
+  'deploy/netlify/site/en/docs/npm/studio/index.html',
+  'deploy/netlify/site/en/docs/npm/analytics/index.html',
+  'deploy/netlify/site/en/docs/cdn/index.html',
+  'deploy/netlify/site/en/docs/cdn/studio/index.html',
+  'deploy/netlify/site/en/docs/cdn/analytics/index.html',
+  'deploy/netlify/site/en/docs/skills/index.html',
+  'deploy/netlify/site/en/docs/toolkit/index.html',
+  'deploy/netlify/site/licencia/index.html',
+  'deploy/netlify/site/en/licencia/index.html',
 ]){
   const before=await contents(relative);
   if(!before.includes(previous))throw Error(relative+': current release marker missing');
@@ -127,7 +147,14 @@ const publishing='PUBLISHING.md';
 const before=await contents(publishing);
 const needle='All five packages currently use the same release version: \`'+previous+'\`.';
 if(!before.includes(needle))throw Error('PUBLISHING.md current version marker missing');
-pending.set(publishing,before.replace(needle,'All five packages currently use the same release version: \`'+version+'\`.'));
+let publishingNext=before.replace(needle,'All five packages currently use the same release version: \`'+version+'\`.');
+const ltiStart=publishingNext.indexOf('### Paquete npm adicional para el Provider LTI');
+const ltiEnd=publishingNext.indexOf('Candidate release notes:',ltiStart);
+if(ltiStart<0||ltiEnd<0||ltiEnd<=ltiStart)throw Error('PUBLISHING.md LTI section markers missing');
+const ltiSection=publishingNext.slice(ltiStart,ltiEnd);
+if(!ltiSection.includes(previous))throw Error('LTI Provider version missing in PUBLISHING.md');
+publishingNext=publishingNext.slice(0,ltiStart)+ltiSection.replaceAll(previous,version)+publishingNext.slice(ltiEnd);
+pending.set(publishing,publishingNext);
 const changes=[...pending.entries()].filter(([path,value])=>value!==originals.get(path));
 if(changes.length!==pending.size)throw Error('Version bump contained unexpected no-op changes');
 if(!dryRun){
