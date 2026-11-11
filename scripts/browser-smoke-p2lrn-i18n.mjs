@@ -213,6 +213,14 @@ async function editorialDocsChrome(language){
   assert.equal(await area.locator('figcaption').filter({hasText:label}).count(),4,
     'All 3D entry images must explicitly disclaim completion');
   const first3D=area.locator('figcaption').filter({hasText:label}).first();
+  const openingImage=area.locator('#juego-3d-ordenar .p2lrn-example-shot img').first();
+  await openingImage.scrollIntoViewIfNeeded();
+  // A lazy-loaded image can have a visible <img> box with zero real pixels.
+  // Never submit a blank screenshot as visual proof.
+  await page.waitForFunction(()=>{
+    const image=document.querySelector('#juego-3d-ordenar .p2lrn-example-shot img');
+    return image?.complete&&image.naturalWidth>100&&image.naturalHeight>100;
+  },null,{timeout:12000});
   await first3D.scrollIntoViewIfNeeded();
   await page.screenshot({path:join(evidence,'editorial-'+language+'-3d-entry.png')});
 
