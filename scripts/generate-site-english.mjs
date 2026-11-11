@@ -12,6 +12,11 @@ const handAuthoredEnglishPages=new Set([
   // The public English homepage has a reviewed editorial version; do not regenerate it with MT.
   'index.html',
   'docs/formato-portable-cursos-interactivos/index.html',
+  'docs/formato/index.html',
+  'docs/ejemplos/index.html',
+  'docs/entrega-offline/index.html',
+  'docs/conectores/lti/index.html',
+  'cursos-offline/index.html',
   'crear-cursos-interactivos/index.html',
   'skills/index.html',
   // Bilingual editorial and teacher-facing guides have been reviewed and corrected

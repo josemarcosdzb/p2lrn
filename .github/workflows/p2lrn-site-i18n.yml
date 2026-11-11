@@ -17,6 +17,7 @@ on:
       - '!deploy/netlify/site/en/**'
       - 'scripts/generate-site-english.mjs'
       - 'scripts/browser-smoke-p2lrn-i18n.mjs'
+      - 'scripts/audit-site-editorial-seo.mjs'
       - 'deploy/netlify/site/p2lrn.css'
       - 'scripts/verify-site-bilingual.mjs'
       - 'scripts/site-i18n-ast.mjs'
@@ -57,6 +58,8 @@ jobs:
           npm install --ignore-scripts --no-audit --no-fund --no-save --package-lock=false cheerio@1.2.0 acorn@8.19.0
           node --test scripts/test-site-i18n-ast.mjs scripts/test-site-ui-locales.mjs
           node scripts/verify-site-bilingual.mjs
+      - name: Audit all 144 ES/EN pages for editorial quality, structure, language and SEO intent
+        run: node scripts/audit-site-editorial-seo.mjs
       - name: Validate all 48 real browser views, language navigation and teacher/developer paths
         run: node scripts/browser-smoke-p2lrn-i18n.mjs --docs-only
       - name: Preserve raw Chromium screenshots and JSON evidence even when a check fails
