@@ -751,7 +751,7 @@ async function captureFillBlanksAuthoring(){
     // Professor returns to the editor, exports the same real package and opens
     // that downloaded file through Studio's File control. No API fixture.
     await page.locator('.p2lrn-studio-ribbon [data-ui-action="edit"]').click();
-    await page.locator('.p2lrn-studio-ribbon .p2lrn-file-menu > summary').click();
+    await page.locator('.p2lrn-studio-ribbon .p2lrn-file-menu > summary').filter({hasText:/^Archivo$/}).click();
     const pendingDownload=page.waitForEvent('download',{timeout:30000});
     await page.locator('.p2lrn-studio-ribbon .p2lrn-file-menu [data-ui-action="export"]').click();
     const exported=await pendingDownload;
