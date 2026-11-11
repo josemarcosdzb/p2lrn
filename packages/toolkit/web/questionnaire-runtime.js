@@ -76,7 +76,23 @@ export class QuestionnaireRuntime {
   }
 
   setAnswer(question, answer) {
-    return this.session.replaceAnswer(question.id, answer);
+    const accepted = this.session.replaceAnswer(question.id, answer);
+    if (!accepted || !this.notice) return accepted;
+    // A required-answer warning is actionable feedback, not a permanent
+    // error banner. Update or dismiss it when the learner edits an answer.
+    const expired = new Set(this.state.timing?.expiredQuestions ?? []);
+    const missing = this.payload.questions.filter((item) =>
+      item.required && !expired.has(item.id) &&
+      !answerIsMeaningful(item, this.state.answers[item.id]));
+    const alert = this.container?.querySelector('.p2lrn-q-notice[role="alert"]');
+    if (missing.length) {
+      this.notice = playerUiText(`Faltan ${missing.length} pregunta${missing.length === 1 ? '' : 's'} obligatoria${missing.length === 1 ? '' : 's'}.`);
+      if (alert) alert.textContent = this.notice;
+    } else {
+      this.notice = null;
+      alert?.remove();
+    }
+    return accepted;
   }
 
   answeredCount() { return this.session.answeredCount(); }

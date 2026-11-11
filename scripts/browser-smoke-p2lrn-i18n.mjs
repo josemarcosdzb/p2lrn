@@ -667,6 +667,9 @@ async function captureFillBlanksAuthoring(){
   assert.equal(await page.locator('.q-card .q-blank-row').count(),1);
   await page.locator('.q-card .q-field--mode select').selectOption('drag');
   await page.locator('.q-card .q-answer-list').fill('Luna\nMarte');
+  // Make the teacher's score feedback visible after submission, using the
+  // official authoring control rather than changing a global default.
+  await page.locator('.questionnaire-visual-editor label').filter({hasText:'Mostrar resultados al alumno'}).locator('select').selectOption('after-submit');
   const state=await page.evaluate(()=>{
     const card=document.querySelector('.q-card');
     const area=card?.querySelector('.q-blank-template-editor');
@@ -722,9 +725,11 @@ async function captureFillBlanksAuthoring(){
     await page.screenshot({path:join(evidence,'student-unanswered.png'),fullPage:false});
     await student.getByRole('button',{name:'Finalizar',exact:true}).click();
     assert.equal(await slot.count(),1,'Student finished an unanswered activity');
-    await wordButtons.filter({hasText:'Luna'}).first().click();
-    await slot.click();
-    assert.equal((await slot.textContent()).trim(),'Luna','Distractor was not placed in blank');
+    // Real HTML5 pointer drag (in addition to the accessible select+place path).
+    await wordButtons.filter({hasText:'Luna'}).first().dragTo(slot);
+    assert.equal((await slot.textContent()).trim(),'Luna','Real drag did not place distractor');
+    assert.equal(await student.locator('.p2lrn-q-notice[role="alert"]').count(),0,
+      'Required-answer warning must disappear once the learner answers');
     await page.screenshot({path:join(evidence,'student-distractor-selected.png'),fullPage:false});
     await slot.click();
     assert.notEqual((await slot.textContent()).trim(),'Luna','Cannot remove placed word');
@@ -735,6 +740,7 @@ async function captureFillBlanksAuthoring(){
     await student.getByRole('button',{name:'Finalizar',exact:true}).click();
     await student.locator('.p2lrn-q-result').waitFor({timeout:18000});
     const result=(await student.locator('.p2lrn-q-result').innerText()).slice(0,1000);
+    assert.match(result,/1\s*\/\s*1/, 'Student must see the score when the teacher enables feedback');
     await page.screenshot({path:join(evidence,'student-submitted-result.png'),fullPage:false});
     await writeFile(join(evidence,'student-interaction-report.json'),
       JSON.stringify({source:'real Studio preview, original edited package',words,maskedSentence,
