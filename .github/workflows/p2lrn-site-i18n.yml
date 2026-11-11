@@ -20,6 +20,8 @@ on:
       - 'scripts/audit-site-editorial-seo.mjs'
       - 'scripts/verify-site-media-seo.mjs'
       - 'scripts/audit_public_site.mjs'
+      # A release build can change the bilingual output even without new translations.
+      - 'deploy/netlify/build-site.mjs'
       - 'deploy/netlify/site-seo-a11y.mjs'
       - '.github/workflows/p2lrn-site-i18n.yml'
       - 'deploy/netlify/site/p2lrn.css'

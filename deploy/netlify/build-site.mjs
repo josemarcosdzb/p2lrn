@@ -428,8 +428,8 @@ if(bilingualSite){
     const counterpart=english?routeFile(esRoute):routeFile(enRoute);
     if(!(await exists(counterpart)))throw new Error('Missing language counterpart for '+route);
     const languageSwitch='<nav class="language-switch" data-language-switch aria-label="'+(english?'Language':'Idioma')+'">'+
-      '<a href="'+esRoute+'" lang="es" hreflang="es"'+(english?'':' aria-current="page"')+'>ES</a>'+
-      '<a href="'+enRoute+'" lang="en" hreflang="en"'+(english?' aria-current="page"':'')+'>EN</a>'+
+      '<a href="'+esRoute+'" lang="es" hreflang="es" aria-label="ES — '+(english?'Switch to Spanish':'Cambiar a español')+'"'+(english?'':' aria-current="page"')+'>ES</a>'+
+      '<a href="'+enRoute+'" lang="en" hreflang="en" aria-label="EN — '+(english?'Switch to English':'Cambiar a inglés')+'"'+(english?' aria-current="page"':'')+'>EN</a>'+
       '</nav>';
     if(/<\/header>/i.test(html))html=html.replace(/<\/header>/i,languageSwitch+'</header>');
     else html=html.replace(/<body\b[^>]*>/i,tag=>tag+languageSwitch);
@@ -459,8 +459,9 @@ for (const htmlPath of htmlFiles) {
     const esRoute=english?spanishRouteFor(route):route;
     const enRoute=english?route:englishRouteFor(route);
     if((html.match(/data-language-switch/g)||[]).length!==1)throw new Error('Duplicate or missing ES EN language switch in '+route);
-    const esLink='href="'+esRoute+'" lang="es" hreflang="es"';
-    const enLink='href="'+enRoute+'" lang="en" hreflang="en"';
+    // The visible ES/EN abbreviations must begin the accessible name (WCAG 2.5.3).
+    const esLink='href="'+esRoute+'" lang="es" hreflang="es" aria-label="ES — '+(english?'Switch to Spanish':'Cambiar a español')+'"';
+    const enLink='href="'+enRoute+'" lang="en" hreflang="en" aria-label="EN — '+(english?'Switch to English':'Cambiar a inglés')+'"';
     if(!html.includes(esLink)||!html.includes(enLink))throw new Error('Broken paired language links in '+route);
     const currentNeedle=english?enLink+' aria-current="page"':esLink+' aria-current="page"';
     if(!html.includes(currentNeedle))throw new Error('Language switch does not mark the active locale in '+route);

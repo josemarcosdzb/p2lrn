@@ -96,7 +96,14 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   assert.equal((await req('/lti/admin/platforms',{method:'POST',
    headers:{...admin,'Content-Type':'application/json'},body:JSON.stringify(registration)})).status,201);
   assert.equal((await req('/lti/admin/platforms')).status,403);
-  assert.equal((await (await req('/lti/admin/platforms',{headers:admin})).json()).platforms.length,1);
+  // This is a privileged, cross-tenant admin listing. Earlier real-SQL tests
+  // intentionally leave distinct tenant registrations in the same database.
+  // Validate exactly one copy of OUR registration rather than a global row count.
+  const platforms=(await (await req('/lti/admin/platforms',{headers:admin})).json()).platforms;
+  const registered=platforms.filter(row=>row.id===registration.id);
+  assert.equal(registered.length,1,'the current LMS registration must appear exactly once');
+  assert.equal(registered[0].tenantId,registration.tenantId);
+  assert.equal(registered[0].status,'ACTIVE');
 
   const course=readFileSync(resolve(HERE,'../../examples/canonical/minimal-course.p2lrn'));
   const imported=await req('/lti/admin/catalog',{method:'POST',
@@ -268,10 +275,18 @@ test('standalone HTTP integration: trusted LMS admin, Deep Linking, Player, pers
   const grade=await req('/lti/admin/grades',{method:'POST',
    headers:{...admin,'Content-Type':'application/json'},
    body:JSON.stringify({attemptId:attempts.attempts[0].id,normalized:0.8,completed:true})});
-  assert.equal(grade.status,200,await grade.text());
+  const approval=await grade.json();
+  assert.equal(grade.status,200,JSON.stringify(approval));
+  assert.equal(approval.serverApproved,true);
+  assert.equal(approval.ags.delivered,true,'the server must complete actual AGS delivery');
   assert.deepEqual(calls.map(x=>x.path),['/token','/ags/items/1/scores']);
+  // The wildcard administrator sees every tenant's queue: other SQL fixtures
+  // may legitimately have pending grades. The approved school delivery must
+  // be absent, and that tenant's own queue must be fully drained.
   const pending=await (await req('/lti/admin/ags/pending',{headers:admin})).json();
-  assert.equal(pending.pending.length,0);
+  assert.ok(Array.isArray(pending.pending));
+  assert.equal(pending.pending.includes(approval.outboxId),false);
+  assert.deepEqual(await gateway.store.listPending('school'),[]);
 
   // One-step teacher upload from the actual signed LTI Deep Linking picker.
   // No administrative bearer token may be present in the browser request.
