@@ -128,8 +128,13 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
   const move=button('Mover','data-lesson-media-move');move.title='Arrastra para mover la imagen o vídeo. Flechas para ajustes precisos.';
   const diagramGeometry=doc.createElement('fieldset');
   diagramGeometry.setAttribute('data-lesson-media-diagram-geometry','');
-  diagramGeometry.setAttribute('aria-label','Posición y tamaño de la imagen en el diagrama');
-  diagramGeometry.style.cssText='display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;padding:3px 6px;border:1px solid #d5e3ee;border-radius:8px';
+  diagramGeometry.hidden=true;
+  diagramGeometry.style.cssText='align-items:center;gap:4px;flex-wrap:wrap;max-width:100%;padding:3px 6px;border:1px solid #d5e3ee;border-radius:8px';
+  // A real legend preserves the field group's name for screen readers.
+  const diagramLegend=doc.createElement('legend');
+  diagramLegend.textContent=studioUiText('Posición y tamaño de la imagen en el diagrama',doc);
+  diagramLegend.style.cssText='font:600 12px/1.35 system-ui,sans-serif;padding:0 4px';
+  diagramGeometry.append(diagramLegend);
   const mediaField=(labelText,attr)=>{
     const label=doc.createElement('label');label.textContent=labelText;
     label.style.cssText='display:inline-flex;align-items:center;gap:3px;font-size:12px';
@@ -206,6 +211,7 @@ export function mountLessonImageEditor({host,surface,onChange=()=>{},onStatus:re
     cover.disabled=!selected?.matches?.(VIDEO);
     const diagram=!!selected&&isDiagramMedia(selected);
     diagramGeometry.hidden=!diagram;
+    diagramGeometry.style.display=diagram?'inline-flex':'none';
     if(diagram){
       mediaX.value=String(Number.parseFloat(selected.style.left)||0);
       mediaY.value=String(Number.parseFloat(selected.style.top)||0);
