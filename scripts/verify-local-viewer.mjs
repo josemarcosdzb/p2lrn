@@ -2249,6 +2249,95 @@ async function verifyConnectedArchitecture(cdp,fixture){
   return Object.freeze({capability,collaboration,collaborationScreenshot,sharedResource,sharedResourceScreenshot,cached,offline});
 }
 
+// Browser accessibility gate; this exercises the actual Studio authoring module.
+async function browserStudioDropKeyboardScenario(){
+  const {createStudioDropActivity,addStudioDropPair,mountStudioDropAuthoring}=
+    await import('/studio/runtime/studio-drop-activity.js');
+  const host=document.createElement('div');
+  host.id='p2lrn-a11y-drop-regression';host.contentEditable='true';
+  Object.assign(host.style,{width:'650px',maxWidth:'100%',minHeight:'400px',padding:'12px',background:'#fff'});
+  document.body.append(host);
+  let changes=0,selected=null,controls=null;
+  try{
+    const activity=createStudioDropActivity(document);
+    host.append(activity);
+    const pair1=addStudioDropPair(activity),pair2=addStudioDropPair(activity);
+    controls=mountStudioDropAuthoring({surface:host,onSelected:zone=>{selected=zone;},
+      onChange:()=>{changes++;}});
+    const zone=pair1.zone,card=pair1.item;
+    if(zone.tabIndex!==0||card.tabIndex!==0)throw Error('Drop targets not keyboard focusable');
+    if(!zone.getAttribute('aria-description')||!card.getAttribute('aria-description'))
+      throw Error('Keyboard instructions are missing');
+    const press=(node,key,options={})=>node.dispatchEvent(new KeyboardEvent('keydown',
+      {key,bubbles:true,cancelable:true,...options}));
+    zone.focus();
+    const initialLeft=parseFloat(zone.style.left),initialWidth=parseFloat(zone.style.width);
+    press(zone,'ArrowRight');
+    const movedLeft=parseFloat(zone.style.left);
+    press(zone,'ArrowRight',{shiftKey:true});
+    const resizedWidth=parseFloat(zone.style.width);
+    press(zone,'ArrowDown',{altKey:true});
+    const coarseTop=parseFloat(zone.style.top);
+    if(movedLeft!==initialLeft+1||resizedWidth!==initialWidth+1||
+       !Number.isFinite(coarseTop))throw Error('Keyboard zone edits not persisted');
+    const cards=[...activity.querySelectorAll('[data-p2lrn-dnd-item]')];
+    const earlier=cards.indexOf(card),later=cards.indexOf(pair2.item);
+    if(earlier<0||later<0||earlier===later)throw Error('Two test cards required');
+    card.focus();press(card,'ArrowRight',{altKey:true});
+    const ordered=[...activity.querySelectorAll('[data-p2lrn-dnd-item]')];
+    if(ordered.indexOf(card)!==earlier+1)throw Error('Alt+ArrowRight failed to reorder');
+    card.focus();press(card,'Enter');
+    if(document.activeElement!==zone||selected!==zone)
+      throw Error('Enter on card did not focus its matching zone');
+    const focus=getComputedStyle(zone);
+    if(focus.outlineStyle==='none'||parseFloat(focus.outlineWidth)<3)
+      throw Error('Keyboard drop target has no visible focus outline');
+    const added=addStudioDropPair(activity);
+    await new Promise(resolve=>setTimeout(resolve,0));
+    if(added.zone.tabIndex!==0||added.item.tabIndex!==0)
+      throw Error('Dynamically added pair not keyboard accessible');
+    if(changes<4)throw Error('Keyboard edits did not notify the editor');
+    return {ok:true,initialLeft,movedLeft,initialWidth,resizedWidth,coarseTop,
+      reordersCards:true,enterFocusesZone:true,focusWidth:focus.outlineWidth,
+      dynamicPairsAccessible:true,changes};
+  }finally{controls?.dispose();host.remove();}
+}
+function browserStudioHeadingScenario(){
+  const heading=document.querySelector('h1.studio-title');
+  const field=heading?.querySelector('.studio-title-field');
+  if(!heading||!field)return {ok:false};
+  field.focus();
+  const styles=getComputedStyle(field);
+  return {ok:true,heading:heading.tagName,headingRole:heading.getAttribute('role'),
+    titleText:heading.textContent,editorRole:field.getAttribute('role'),
+    editable:field.isContentEditable,label:field.getAttribute('aria-label'),
+    focusWidth:styles.outlineWidth,focusStyle:styles.outlineStyle,
+    focusColor:styles.outlineColor,
+    invalidHeadingRoles:document.querySelectorAll('h1[role=textbox]').length};
+}
+async function verifyStudioAccessibility(cdp){
+  const results=[];
+  for(const locale of ['es','en']){
+    await cdp.send('Page.navigate',{url:APP_ORIGIN+(locale==='en'?'/en/studio/':'/studio/')});
+    await waitForEval(cdp,
+      "document.documentElement.dataset.p2lrnStudioReady==='true' && Boolean(document.querySelector('.studio-title-field'))",
+      'Studio accessible heading '+locale,30000);
+    const heading=await evalTop(cdp,'('+browserStudioHeadingScenario.toString()+')()');
+    invariant(heading?.ok&&heading.heading==='H1'&&heading.headingRole===null&&
+      heading.editorRole==='textbox'&&heading.editable&&heading.label&&
+      heading.invalidHeadingRoles===0&&heading.focusStyle==='solid'&&
+      parseFloat(heading.focusWidth)>=3,
+      'Studio title/heading/focus regression '+locale+': '+JSON.stringify(heading));
+    const drag=await evalTop(cdp,'('+browserStudioDropKeyboardScenario.toString()+')()');
+    invariant(drag?.ok,'Studio keyboard drop interaction '+locale+': '+JSON.stringify(drag));
+    const language=await evalTop(cdp,"[...document.querySelectorAll('.language-switch a')].map(a=>({visible:a.textContent.trim(),name:a.getAttribute('aria-label')||''}))");
+    invariant(language.length===2&&language.every(x=>x.name.startsWith(x.visible)),
+      'Language switch accessible names omit ES/EN '+locale);
+    results.push({locale,heading,drag,language});
+  }
+  return {ok:true,results};
+}
+
 let appServer=null,runtimeServer=null,collaborationServer=null,chrome=null,cdp=null;
 try{
   // Match build-site.mjs: the static Studio page imports the toolkit's canonical browser modules.
@@ -2295,7 +2384,8 @@ try{
     const assemblyLive=await verifyAssemblyLiveInput(cdp);
     const singleCarry=await verifyExclusiveCarryInBrowser(cdp);
     const threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);
-    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,scoredDrops,retainedDrops,assemblyLive,singleCarry,threeMobile};
+    const accessibility=await verifyStudioAccessibility(cdp);
+    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,scoredDrops,retainedDrops,assemblyLive,singleCarry,threeMobile,accessibility};
     await mkdir(visualEvidenceRoot,{recursive:true});
     await writeFile(join(visualEvidenceRoot,'quest3d-report.json'),JSON.stringify(report,null,2)+'\n');
     console.log('P2LRN_QUEST3D_BROWSER_REPORT='+JSON.stringify(report));
@@ -2340,13 +2430,16 @@ try{
   catch(error){failures.push({name:'three-mobile-joystick-and-desktop-entry',message:String(error?.message||error)});}
   let narrow=null;
   try{narrow=await verifyNarrowLayout(cdp);}catch(error){failures.push({name:'narrow-layout',message:String(error?.message||error)});}
+  let accessibility=null;
+  try{accessibility=await verifyStudioAccessibility(cdp);}
+  catch(error){failures.push({name:'studio-keyboard-accessibility',message:String(error?.message||error)});}
   let studioUI=null;
   try{studioUI=await verifyStudioComponentUI(cdp,chromePath);}catch(error){failures.push({name:'studio-component-cdn',message:String(error?.message||error)});}
   let studioSiteUI=null;
   try{studioSiteUI=await verifyStudioSiteUI(cdp);}catch(error){failures.push({name:'studio-website-ui',message:String(error?.message||error)});}
   let connectedArchitecture=null;
   try{connectedArchitecture=await verifyConnectedArchitecture(cdp,connectedFixture);}catch(error){failures.push({name:'connected-architecture',message:String(error?.message||error)});}
-  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,pointerDrag,threeMobile,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
+  console.log(JSON.stringify({ok:failures.length===0,chrome:chromePath,cases,nativeGames,threeGame,pointerDrag,threeMobile,accessibility,studioUI,studioSiteUI,connectedArchitecture,failures,narrow:narrow?{innerWidth:narrow.innerWidth,pageOverflow:narrow.pageOverflow,grid:narrow.grid,shell:narrow.shell,console:narrow.console}:null},null,2));
   invariant(failures.length===0,`Local viewer verification failed: ${JSON.stringify(failures)}`);
   }
 }finally{
