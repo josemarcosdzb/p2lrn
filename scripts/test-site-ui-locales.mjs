@@ -61,3 +61,17 @@ test('English runtime has stable absolute Studio imports, no extra private runti
   assert.match(studio,/samePageInsertionParent\(/,'English Studio must support same-page insertion');
   assert.match(studio,/assembly-3d/,'English Studio must expose 3D assembly');
 });
+
+test('reviewed glossary distinguishes educational semantics',async()=>{
+  const terms=JSON.parse(await readFile('scripts/site-en-translations.json','utf8'));
+  const errors=[];
+  for(const [spanish,english] of Object.entries(terms)){
+    if(/intentos?/i.test(spanish)&&/\bintents?\b/i.test(english))errors.push('attempt: '+spanish);
+    if(/calificaci[oó]n/i.test(spanish)&&/\bratings?\b/i.test(english))errors.push('grade: '+spanish);
+    if(/nota oficial/i.test(spanish)&&/\bofficial note\b/i.test(english))errors.push('official grade: '+spanish);
+    if(/clasificaci[oó]n/i.test(spanish)&&/\brating question\b/i.test(english))errors.push('classification: '+spanish);
+    if(/permisos/i.test(spanish)&&/\bpermits?\b/i.test(english))errors.push('permissions: '+spanish);
+  }
+  assert.deepEqual(errors,[],'Unreviewed false-friend translation in the English site');
+  assert.equal(terms['apuntando a'],'pointing to');
+});

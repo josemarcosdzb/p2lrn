@@ -113,6 +113,19 @@ for(const filename of (await files(site)).sort()){
     /<code>(?:studio\.)?(?:resourceLibrary|materializeSharedResource)/i.test(article))
    add('error',route,'teacher-api','Developer API in teacher-facing article');
  }
+ if(english&&!redirect){
+  // Check educational terminology, not just language tags and translated headings.
+  const visibleProse=compact(article.replace(/<pre\b[^>]*>[\s\S]*?<\/pre>/gi,' '));
+  const falseFriends=[
+    ['grade-meaning',/\b(?:official ratings|official note)\b/i],
+    ['attempt-meaning',/\b(?:intents and rich interactions|intent cycle|intent inspection|registration\/intent)\b/i],
+    ['classification-meaning',/\brating question\b/i],
+    ['platform-meaning',/\b(?:two facilities|group, call and attempt|roles, permits and registration)\b/i],
+    ['untranslated-prose',/\bapuntando a\b/i]
+  ];
+  for(const [code,pattern] of falseFriends)
+    if(pattern.test(visibleProse))add('error',route,code,'Incorrect English educational terminology: '+pattern);
+ }
  if(english){
   const untranslated=headings.filter(h=>/\b(?:Decisiones binarias|Experiencia espacial|Cómo se configura|Palabras extra \/ distractores|Para profesores)\b/i.test(h.text));
   if(untranslated.length)add('error',route,'untranslated-heading',untranslated.map(h=>h.text).join('; '));
