@@ -265,14 +265,23 @@ export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=
   const cleanup=state=>{state?.ghost?.remove();state?.board?.classList.remove('p2lrn-drop-board-target');};
   // Keyboard editing is equivalent to dragging: all positions/sizes are edited
   // through the same inline styles that pointer gestures and Player export use.
+  // Nested contenteditable descendants can send real keyboard events to the
+  // root editor instead of the focused tile/zone, even with tabindex=0. Make
+  // each drag target an independent non-editable focus stop while authoring.
+  const previousEditable=new Map();
+  const makeKeyboardFocusStop=node=>{
+    if(!previousEditable.has(node))previousEditable.set(node,node.getAttribute('contenteditable'));
+    node.contentEditable='false';
+    node.tabIndex=0;
+  };
   const decorateKeyboardTargets=()=>{
     for(const zone of surface.querySelectorAll('[data-p2lrn-dnd-zone]')){
-      zone.tabIndex=0;
+      makeKeyboardFocusStop(zone);
       zone.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight');
       zone.setAttribute('aria-description',studioUiText('Flechas: mover la zona. Mayús y flechas: cambiar su tamaño. Alt y flechas: paso de cinco.',doc));
     }
     for(const item of surface.querySelectorAll('[data-p2lrn-dnd-item]')){
-      item.tabIndex=0;
+      makeKeyboardFocusStop(item);
       item.setAttribute('aria-keyshortcuts','Enter Alt+ArrowLeft Alt+ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight');
       item.setAttribute('aria-description',studioUiText('Intro: editar zona asociada. Alt y flechas izquierda/derecha: ordenar ficha. Mayús y flechas: cambiar tamaño.',doc));
     }
@@ -452,6 +461,11 @@ export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=
   return {get selectedZone(){return selected&&surface.contains(selected)?selected:null;},select,
     dispose(){
       select(null);cleanup(drag);drag=null;keyboardObserver?.disconnect();
+      for(const [node,original] of previousEditable){
+        if(original===null)node.removeAttribute('contenteditable');
+        else node.setAttribute('contenteditable',original);
+      }
+      previousEditable.clear();
       surface.classList.remove('p2lrn-studio-drop-editing');
       for(const [name,handler] of handlers)surface.removeEventListener(name,handler);
     }};
