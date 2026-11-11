@@ -103,7 +103,8 @@
 .p2lrn-crossword-clue-list { margin: 0; padding-left: 1.8rem; display: grid; gap: .35rem; }
 .p2lrn-crossword-clue-list li { padding-left: .15rem; }
 .p2lrn-crossword-clue { display: block; width: 100%; padding: .55rem .65rem; border: 1px solid transparent; border-radius: .5rem; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; line-height: 1.45; }
-.p2lrn-crossword-clue:hover, .p2lrn-crossword-clue:focus-visible { background: #eff6ff; border-color: #bfd7ff; outline: none; }
+.p2lrn-crossword-clue:hover, .p2lrn-crossword-clue:focus-visible { background: #eff6ff; border-color: #bfd7ff; }
+.p2lrn-crossword-clue:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 3px; }
 .p2lrn-crossword-clue.is-current { background: #dbeafe; border-color: #93c5fd; font-weight: 650; }
 
 /* Rosco keeps a real circular layout for any number of authored letters. */
@@ -374,3 +375,9 @@
 .p2lrn-3d-stage:fullscreen{width:100vw;height:100dvh;border-radius:0;display:grid;place-items:stretch;background:#050b16}
 .p2lrn-3d-stage:fullscreen .p2lrn-3d-canvas{width:100%;height:100%;max-height:100dvh}
 @media(max-width:700px){.p2lrn-3d-stage .p2lrn-3d-canvas{height:clamp(24rem,68svh,42rem)}}
+
+@media (forced-colors:active){
+ .p2lrn-crossword-clue:focus-visible,.p2lrn-3d-canvas:focus-visible,
+ .p2lrn-game-button:focus-visible,.p2lrn-game-card:focus-visible,
+ .p2lrn-game-choice:focus-visible {outline:3px solid Highlight;outline-offset:3px;}
+}
