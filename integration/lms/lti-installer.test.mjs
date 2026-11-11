@@ -71,7 +71,7 @@ test('real SQLite installation creates RSA, scoped operator key, private profile
   const keys=(await jwks.json()).keys;
   assert.ok(keys.length>=1);
   assert.equal(keys[0].kid,read.config.kid);
-  assert.equal((await fetch(local+'/lti/player/p2lrn.js')).status,200);
+  assert.equal((await fetch(local+'/lti/assets/player/p2lrn.js')).status,200);
   await assert.rejects(installLti({
    domain:'https://lti.example.org',engine:'sqlite',port,proxy:'caddy',directory:dir
   }),/ALREADY_INSTALLED/);
