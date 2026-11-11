@@ -17,6 +17,7 @@ on:
       - '!deploy/netlify/site/en/**'
       - 'scripts/generate-site-english.mjs'
       - 'scripts/browser-smoke-p2lrn-i18n.mjs'
+      - 'deploy/netlify/site/p2lrn.css'
       - 'scripts/verify-site-bilingual.mjs'
       - 'scripts/site-i18n-ast.mjs'
       - 'scripts/test-site-i18n-ast.mjs'
@@ -49,7 +50,7 @@ jobs:
           node-version: '22'
       - name: Install pinned browser and required Linux dependencies
         run: |
-          npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save --package-lock=false playwright-core@1.64.1
+          npm install --prefix .p2lrn-i18n-ci --ignore-scripts --no-audit --no-fund --no-save --package-lock=false playwright-core@1.64.1 axe-core@4.10.3
           node .p2lrn-i18n-ci/node_modules/playwright-core/cli.js install --with-deps chromium
       - name: Validate all 48 real browser views, images, content, navigation and overflow
         run: node scripts/browser-smoke-p2lrn-i18n.mjs --docs-only

@@ -455,7 +455,7 @@ async function questionnaireDocsVisualQA(){
     {slug:'3d-gallery',route:'juegos-3d/',anchor:'#juego-3d-ordenar',expectedImg:8}];
   const auditPage=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:1});
   await auditPage.route(/^https?:\/\/(?!127\.0\.0\.1)/,route=>route.abort());
-  const failures=[],passed=[];
+  const failures=[],passed=[],accessibilityResults=[];
   let currentRoute='',pageErrors=[];
   auditPage.on('pageerror',error=>pageErrors.push(currentRoute+': '+error.message));
   try{
@@ -492,7 +492,18 @@ async function questionnaireDocsVisualQA(){
               horizontalOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),
               invalidAnchors};
           },{anchor:entry.anchor,slug:entry.slug,lang:language});
+          await auditPage.addScriptTag({path:join(repo,'.p2lrn-i18n-ci','node_modules','axe-core','axe.min.js')});
+          const accessibility=await auditPage.evaluate(async()=>{
+            const report=await window.axe.run(document,{runOnly:{type:'tag',
+              values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}});
+            return {violations:report.violations.map(v=>({id:v.id,impact:v.impact,
+              description:v.help,nodes:v.nodes.slice(0,8).map(n=>({target:n.target,
+                summary:n.failureSummary}))})),
+              incomplete:report.incomplete.map(v=>({id:v.id,impact:v.impact,count:v.nodes.length}))};
+          });
+          accessibilityResults.push({route,viewport:viewport.name,...accessibility});
           const problems=[];
+          if(accessibility.violations.length)problems.push('WCAG 2.2 AA: '+JSON.stringify(accessibility.violations));
           if(details.lang!==language)problems.push('lang='+details.lang);
           if(!details.hasArticle||!details.hasTarget||!details.hasExplanation)problems.push('missing meaningful learner instructions');
           if(details.visibleText<400)problems.push('empty/too short');
@@ -503,7 +514,21 @@ async function questionnaireDocsVisualQA(){
           if(details.invalidAnchors.length)problems.push('broken anchors '+details.invalidAnchors.join(','));
           const prefix='docs-'+language+'-'+entry.slug+'-'+viewport.name;
           if(details.hasTarget){
-            await auditPage.locator(entry.anchor).scrollIntoViewIfNeeded();
+            await auditPage.locator(entry.anchor).evaluate(node=>
+              node.scrollIntoView({block:'start',behavior:'instant'}));
+            const anchorLayout=await auditPage.evaluate(anchor=>{
+              const target=document.querySelector(anchor);
+              const header=document.querySelector('.site-header');
+              const toggle=document.querySelector('.docs-sidebar-toggle');
+              const overlays=[header,toggle].filter(Boolean).map(node=>node.getBoundingClientRect());
+              const visibleBottom=Math.max(...overlays.filter(rect=>rect.height>0).map(rect=>rect.bottom),0);
+              return {targetTop:target?.getBoundingClientRect().top??0,
+                overlaysBottom:visibleBottom,scrollY:window.scrollY,
+                maxScroll:document.documentElement.scrollHeight-innerHeight};
+            },entry.anchor);
+            if(anchorLayout.targetTop+2<anchorLayout.overlaysBottom &&
+              anchorLayout.scrollY<anchorLayout.maxScroll-2)
+              problems.push('Anchor title hidden under sticky navigation: '+JSON.stringify(anchorLayout));
             await auditPage.screenshot({path:join(evidence,prefix+'.png'),fullPage:false});
           }
           if(problems.length)failures.push(route+' '+viewport.name+': '+problems.join('; '));
@@ -512,8 +537,11 @@ async function questionnaireDocsVisualQA(){
       }
     }
     failures.push(...pageErrors);
+    await writeFile(join(evidence,'accessibility-report.json'),
+      JSON.stringify(accessibilityResults,null,2)+'\n','utf8');
     await writeFile(join(evidence,'browser-report.json'),
-      JSON.stringify({passed,failures,expectedPages:24,expectedViewports:48},null,2)+'\n','utf8');
+      JSON.stringify({passed,failures,expectedPages:24,expectedViewports:48,
+        accessibilityAudits:accessibilityResults.length},null,2)+'\n','utf8');
     console.log('P2LRN_DOCS_VISUAL_QA='+JSON.stringify({passed:passed.length,failed:failures.length,
       evidence,firstFailures:failures.slice(0,12)}));
     assert.deepEqual(failures,[],'Documentation browser visual QA failed');

@@ -1046,7 +1046,9 @@ main{max-width:1220px;margin:0 auto;padding:0 24px}
   .doc-breadcrumbs ol{width:max-content;max-width:none;flex-wrap:nowrap}
   .doc-breadcrumbs li{white-space:nowrap}
   .doc-section>h2{scroll-margin-top:136px}
-  .doc-section[id],.doc-anchor-alias[id]{scroll-margin-top:136px}
+  /* The sticky documentation index sits below the 64px global header.
+     Fragment navigation must leave enough space for its measured height. */
+  .doc-content [id],.doc-section[id],.doc-anchor-alias[id]{scroll-margin-top:calc(64px + var(--docs-index-toggle-height, 80px) + 20px)}
 }
 
 
