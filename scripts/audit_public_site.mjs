@@ -54,6 +54,7 @@ try{
  for(const url of [...urls,...imageEntries,...videoEntries])
   if(!url.startsWith(origin+'/')||new URL(url).origin!==origin)
     fail('off-domain-url',url);
+ const captionUrls=new Set();
  let next=0;
  async function worker(){
   while(next<urlEntries.length){
@@ -84,6 +85,34 @@ try{
     // Presence of an empty alt is intentional for a decorative image.
     outcome.missingAlt=tags(html,'img').filter(t=>!/\balt\s*=/.test(t)).length;
     if(outcome.missingAlt)fail('image-alt',{url:item.url,count:outcome.missingAlt});
+    // Verify the videos that a visitor actually sees on this page. A sitemap
+    // and a successful WebM HEAD request do not establish accessible playback.
+    const videos=[...html.matchAll(/<video\b[^>]*>[\s\S]*?<\/video>/gi)].map(m=>m[0]);
+    outcome.videos=videos.length;
+    if(videos.length&&!/"@type"\s*:\s*"VideoObject"/i.test(html))
+      fail('video-structured-data',{url:item.url,count:videos.length});
+    for(const video of videos){
+      const opening=/<video\b[^>]*>/i.exec(video)?.[0]||'';
+      const poster=attribute(opening,'poster');
+      const source=tags(video,'source').map(t=>attribute(t,'src')).find(Boolean);
+      const caption=tags(video,'track').find(t=>attribute(t,'kind').toLowerCase()==='captions'&&
+        attribute(t,'srclang').toLowerCase()===lang);
+      if(!poster||!source||!caption){
+        fail('video-accessibility',{url:item.url,poster:Boolean(poster),
+          videoSource:Boolean(source),captionForLanguage:Boolean(caption)});
+        continue;
+      }
+      const posterUrl=new URL(poster,item.url).href;
+      const videoUrl=new URL(source,item.url).href;
+      if(!imageEntries.includes(posterUrl))fail('video-poster-not-indexed',{url:item.url,poster:posterUrl});
+      if(!videoEntries.includes(videoUrl))fail('video-media-not-indexed',{url:item.url,video:videoUrl});
+      const trackSource=attribute(caption,'src');
+      if(!trackSource){fail('video-caption-src',{url:item.url});continue;}
+      const trackUrl=new URL(trackSource,item.url);
+      if(trackUrl.origin!==origin||!trackUrl.pathname.endsWith('.vtt')){
+        fail('video-caption-origin',{url:item.url,caption:trackUrl.href});
+      }else captionUrls.add(trackUrl.href);
+    }
    }catch(error){outcome.error=String(error).slice(0,300);fail('html-fetch',outcome);}
    report.pages.push(outcome);
   }
@@ -108,6 +137,23 @@ try{
   }catch(error){fail('media-fetch',{url:uri,error:String(error)});}
  }
  report.multimedia.verifiedAssets=verifiedAssets;
+ // A caption URL must return actual WebVTT cues in production, not merely a
+ // placeholder or a successful HEAD response for an unrelated HTML page.
+ let verifiedCaptions=0;
+ for(const uri of captionUrls){
+  try{
+   const response=await fetchPage(uri);
+   if(response.status!==200){fail('caption-http',{url:uri,status:response.status});continue;}
+   const content=await response.text();
+   if(!content.trimStart().startsWith('WEBVTT')||
+      !/\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}/.test(content)){
+    fail('caption-invalid-vtt',{url:uri});
+   }else verifiedCaptions++;
+  }catch(error){fail('caption-fetch',{url:uri,error:String(error)});}
+ }
+ report.multimedia.captionFiles=captionUrls.size;
+ report.multimedia.verifiedCaptions=verifiedCaptions;
+ if(videoEntries.length&&captionUrls.size===0)fail('no-video-captions','Sitemap contains videos but pages have no valid caption tracks');
 }catch(error){
  fail('auditor-exception',String(error?.stack||error));
 }finally{
