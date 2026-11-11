@@ -44,7 +44,7 @@ jobs:
   docs-visual-qa:
     name: Verify 24 ES/EN guides at desktop and mobile widths in real Chromium
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     permissions:
       contents: read
     steps:
@@ -59,6 +59,9 @@ jobs:
       - name: Validate all 48 real browser views, language navigation and teacher/developer paths
         if: always()
         run: node scripts/browser-smoke-p2lrn-i18n.mjs --docs-only
+      - name: Audit WCAG 2.2 A/AA, keyboard entry, media alternatives and overflow on every public ES/EN page
+        if: always()
+        run: node scripts/browser-smoke-p2lrn-i18n.mjs --site-a11y
       - name: Audit all 144 ES/EN pages for editorial quality, structure, language and SEO intent
         if: always()
         run: node scripts/audit-site-editorial-seo.mjs --strict

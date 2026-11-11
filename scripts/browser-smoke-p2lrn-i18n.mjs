@@ -5,7 +5,7 @@ import {readFile,stat,readdir,mkdir,writeFile} from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import {dirname,extname,join,resolve,sep} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
-import {ENGLISH_ROUTES,SPANISH_ROUTES} from '../deploy/netlify/site-routes.mjs';
+import {ENGLISH_ROUTES,SPANISH_ROUTES,englishRouteFor} from '../deploy/netlify/site-routes.mjs';
 
 const repo=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const site=join(repo,'deploy','netlify','site');
@@ -510,6 +510,108 @@ async function analyticsChrome(language){
 }
 
 
+
+// Coverage beyond the illustrated guides: crawl every authored public page
+// using the same real Chromium renderer and axe-core that validate Studio.
+// This checks deterministic HTML accessibility in ES/EN and both viewports;
+// keyboard/AT usability and deployed output must be reviewed separately.
+async function fullSiteAccessibilityChrome(){
+  const folder=join(repo,'.p2lrn-i18n-ci','evidence','full-site-a11y');
+  await mkdir(folder,{recursive:true});
+  async function listPages(dir,prefix=''){
+    const found=[];
+    for(const ent of await readdir(dir,{withFileTypes:true})){
+      if(prefix===''&&ent.name==='en')continue;
+      const full=join(dir,ent.name);
+      if(ent.isDirectory())found.push(...await listPages(full,prefix+ent.name+'/'));
+      else if(ent.isFile()&&ent.name==='index.html')found.push(prefix+'index.html');
+    }
+    return found;
+  }
+  const allPages=(await listPages(site)).sort();
+  assert.ok(allPages.length>=70,'Too few original pages for complete site coverage');
+  const views=[{name:'desktop',width:1280,height:800},{name:'mobile',width:390,height:844}];
+  const auditPage=await browser.newPage({viewport:{width:1280,height:800}});
+  await auditPage.route(/^https?:\/\/(?!127\.0\.0\.1)/,route=>route.abort());
+  const issues=[],incomplete=[],skipped=[],tested=[];
+  try{
+    for(const rel of allPages){
+      const html=await readFile(join(site,rel),'utf8');
+      if(/<meta\b[^>]*http-equiv=["']refresh["']/i.test(html)){
+        skipped.push(rel+' redirects to its canonical page');
+        continue;
+      }
+      const es=rel==='index.html'?'/':'/'+rel.slice(0,-'index.html'.length);
+      for(const [lang,route] of [['es',es],['en',englishRouteFor(es)]]){
+        for(const v of views){
+          const label=route+' '+v.name;
+          try{
+            await auditPage.setViewportSize({width:v.width,height:v.height});
+            const response=await auditPage.goto(base+route,{waitUntil:'load',timeout:20000});
+            if(response?.status()!==200)throw Error('HTTP '+response?.status());
+            await auditPage.addScriptTag({path:join(repo,'.p2lrn-i18n-ci','node_modules','axe-core','axe.min.js')});
+            const result=await auditPage.evaluate(async expectedLang=>{
+              const a=await window.axe.run(document,{runOnly:{type:'tag',
+                values:['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}});
+              const violations=a.violations.map(v=>({id:v.id,impact:v.impact,
+                nodes:v.nodes.slice(0,8).map(n=>({target:n.target,summary:n.failureSummary}))}));
+              const incomplete=a.incomplete.map(v=>({id:v.id,nodes:v.nodes.length}));
+              return {lang:document.documentElement.lang,violations,incomplete,
+                overflow:Math.max(0,document.documentElement.scrollWidth-window.innerWidth),
+                h1:document.querySelectorAll('h1').length,
+                badMedia:[...document.querySelectorAll('video')].filter(video=>
+                  !video.poster||!video.querySelector('track[kind="captions"]')).length,
+                brokenAnchors:[...document.querySelectorAll('a[href^="#"]')]
+                  .filter(a=>a.hash.length>1&&!document.getElementById(decodeURIComponent(a.hash.slice(1))))
+                  .map(a=>a.getAttribute('href')).slice(0,10)};
+            },lang);
+            tested.push({route,viewport:v.name,violationCount:result.violations.length,
+              incompleteCount:result.incomplete.length,overflow:result.overflow});
+            if(result.lang!==lang)issues.push({label,rule:'html-lang',detail:result.lang});
+            if(result.h1!==1)issues.push({label,rule:'h1',detail:result.h1});
+            if(result.overflow>2)issues.push({label,rule:'mobile-or-desktop-overflow',detail:result.overflow});
+            if(result.badMedia)issues.push({label,rule:'video-no-poster-or-captions',detail:result.badMedia});
+            if(result.brokenAnchors.length)issues.push({label,rule:'broken-anchor',detail:result.brokenAnchors});
+            for(const error of result.violations)issues.push({label,rule:'wcag22-aa',detail:error});
+            for(const item of result.incomplete)incomplete.push({label,...item});
+          }catch(error){
+            issues.push({label,rule:'test-or-runtime-error',detail:String(error)});
+            if(issues.length===1)await auditPage.screenshot({
+              path:join(folder,'first-failure.png'),fullPage:false}).catch(()=>{});
+          }
+        }
+      }
+    }
+    // Verify that the first Tab on critical routes lands on an actual
+    // keyboard-accessible control. Mouse-only controls must be reviewed manually.
+    for(const route of ['/', '/en/', '/docs/', '/en/docs/',
+      '/crear-cursos-interactivos/',englishRouteFor('/crear-cursos-interactivos/'),
+      '/analytics/',englishRouteFor('/analytics/')]){
+      await auditPage.goto(base+route,{waitUntil:'load'});
+      await auditPage.keyboard.press('Tab');
+      const keyboard=await auditPage.evaluate(()=>{
+        const el=document.activeElement;
+        return {tag:el?.tagName,rects:el?.getClientRects().length??0,
+          tabindex:el?.getAttribute('tabindex'),text:(el?.textContent||'').trim().slice(0,70)};
+      });
+      if(!keyboard.tag||keyboard.tag==='BODY'||keyboard.rects===0)
+        issues.push({label:route,rule:'keyboard-first-tab',detail:keyboard});
+    }
+  } finally {
+    await auditPage.close();
+  }
+  const report={source:'Actual P2LRN authored HTML in local Chromium, not public deployment',
+    requiredStandard:'WCAG 2.2 A/AA automated checks; manual AT review still mandatory',
+    pages:allPages.length,views:tested.length,expectedViews:(allPages.length-skipped.length)*4,
+    skipped,issues,incomplete,tested};
+  await writeFile(join(folder,'full-site-a11y.json'),JSON.stringify(report,null,2)+'\n','utf8');
+  console.log('P2LRN_FULL_SITE_A11Y='+JSON.stringify({pages:report.pages,views:report.views,
+    expectedViews:report.expectedViews,errors:issues.length,incomplete:incomplete.length,
+    skipped:skipped.length,firstErrors:issues.slice(0,10)}));
+  assert.equal(tested.length,report.expectedViews,'Full site page coverage was incomplete');
+  assert.equal(issues.length,0,'WCAG/browser regressions across the full bilingual site');
+}
+
 async function questionnaireDocsVisualQA(){
   // Browser-certify the documentation actually served by this checkout.
   // Screenshots are evidence of documentation rendering, NOT evidence of game completion.
@@ -797,7 +899,9 @@ async function captureFillBlanksAuthoring(){
 }
 
 try{
-  if(process.argv.includes('--capture-fill-blanks')){
+  if(process.argv.includes('--site-a11y')){
+    await fullSiteAccessibilityChrome();
+  } else if(process.argv.includes('--capture-fill-blanks')){
     await captureFillBlanksAuthoring();
   } else if(process.argv.includes('--docs-only')){
     await siteParity();
