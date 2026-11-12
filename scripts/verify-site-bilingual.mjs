@@ -404,9 +404,24 @@ const recipesEnglish=await readFile(join(enRoot,'docs/recetas/index.html'),'utf8
 if(/\basigna\b|\bescucha\b|\busa\b|\bFACILITY\b/.test(recipesEnglish))
   errors.push('English developer recipes contain Spanish instructions.');
 const navSource=await readFile(join(siteRoot,'p2lrn.js'),'utf8');
+const englishNavSource=await readFile(join(siteRoot,'en','p2lrn.js'),'utf8');
+const navSourcePattern=/const SITE_NAV = (\[[^\r\n]+\]);/;
+const esNavSource=navSourcePattern.exec(navSource)?.[1];
+const enNavSource=navSourcePattern.exec(englishNavSource)?.[1];
 if(!navSource.includes("const visibleSections=forTeachers")||
-   !navSource.includes("label:'Desarrolladores',href:'/docs/desarrolladores/'"))
-  errors.push('Documentation navigation no longer separates teachers and developers.');
+   !navSource.includes("['SOLUCIONES', [")||
+   !navSource.includes("['DESARROLLADORES', ["))
+  errors.push('Documentation sidebar must keep teacher and developer guides separate while showing all solutions.');
+if(!esNavSource||!enNavSource)errors.push('The header must have one static and client-side ES/EN navigation source.');
+else{
+  const esMenu=JSON.parse(esNavSource),enMenu=JSON.parse(enNavSource);
+  if(JSON.stringify(esMenu.map(x=>x.href))!==JSON.stringify(enMenu.map(x=>x.href))||
+     esMenu.length!==6||
+     !esMenu.some(x=>x.href==='/docs/desarrolladores/')||
+     !esMenu.some(x=>x.href==='/docs/')||
+     esMenu.some(x=>x.href==='/skills/'||x.href==='/juegos-educativos-3d/'))
+    errors.push('Header destinations must remain identical, while Skills and 3D games belong to the left documentation index.');
+}
 
 if(errors.length){
   console.error('P2LRN bilingual site verification failed with '+errors.length+' problem(s).');
