@@ -2221,3 +2221,17 @@ html[data-p2lrn-embedded="true"] .viewer-stage-head {padding:10px 18px;min-heigh
 @media(max-width:700px){
   .section h2{overflow-wrap:anywhere;hyphens:auto}
 }
+
+/* Three product guides precede Contact without changing the existing design system. */
+.homepage-guides{width:min(100%,1280px);margin:clamp(2rem,4vw,4rem) auto 0}
+.homepage-guides>.section-label{margin:0 0 .75rem}
+.homepage-guides>.studio-guide-section{margin:0 0 1.2rem;max-width:none}
+.homepage-guides .studio-guide-overview{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.homepage-guides .studio-guide-overview .button{margin:.5rem .55rem .3rem 0;max-width:100%;white-space:normal}
+.home-guide-analytics-points{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;min-width:0}
+.home-guide-analytics-points>div{padding:18px 16px;border:1px solid #cbd8e8;border-radius:10px;background:#fff;display:grid;gap:5px}
+.home-guide-analytics-points span{font:.8rem var(--mono);color:#24569d}
+.home-guide-analytics-points strong{font-size:1rem;line-height:1.45;color:#17263f;overflow-wrap:break-word}
+.homepage-guides .studio-guide-section h2{line-height:1.18;overflow-wrap:break-word}
+@media(max-width:760px){.homepage-guides .studio-guide-overview{grid-template-columns:1fr}.home-guide-analytics-points{grid-template-columns:1fr 1fr}}
+@media(max-width:410px){.home-guide-analytics-points{grid-template-columns:1fr}}
