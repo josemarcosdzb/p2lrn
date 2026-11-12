@@ -2256,3 +2256,10 @@ body.landing-page .landing-hero h1{line-height:1.14;padding-block:.055em;overflo
 .analytics-demo-notice span{font-size:.9rem;flex:1 1 260px;min-width:0;overflow-wrap:break-word}
 .analytics-demo-panel>.analytics-demo-status{margin:0;padding:10px 17px}
 .analytics-demo-panel>p2lrn-analytics{display:block;min-width:0;width:100%;max-width:100%}
+
+/* Larger responsive Player viewport; native fullscreen is inside the official Player. */
+.viewer-page .viewer-main{width:min(1740px,calc(100% - 24px));max-width:1740px}
+.viewer-page .viewer-player-shell{padding:clamp(6px,1vw,14px);min-height:min(86vh,1400px)}
+.viewer-page .viewer-player-shell p2lrn-player{min-height:min(80vh,1300px)}
+.viewer-page .viewer-workbench{grid-template-columns:minmax(0,1fr)}
+@media(max-width:650px){.viewer-page .viewer-player-shell{min-height:70vh}.viewer-page .viewer-player-shell p2lrn-player{min-height:65vh}}

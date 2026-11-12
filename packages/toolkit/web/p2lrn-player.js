@@ -596,6 +596,25 @@ export class P2LRNPlayerElement extends HTMLElementBase {
   }
   get runtimeBaseUrl() { return this.getAttribute('runtime-base-url') || getRuntimeHostConfig().baseUrl; }
 
+  // Apply source, selected node and renderer as one transaction: hosts must not
+  // trigger three loads while changing lesson or package attributes.
+  async loadSource(src,{node=undefined,renderer=undefined}={}){
+    const value=String(src??'').trim();
+    if(!value)throw new TypeError('P2LRN Player source must be a non-empty URL.');
+    const suppressed=this._suppressAutoReload;
+    this._suppressAutoReload=true;
+    try{
+      this.setAttribute('src',value);
+      if(node===null)this.removeAttribute('node');
+      else if(node!==undefined)this.setAttribute('node',String(node));
+      if(renderer===null)this.removeAttribute('renderer');
+      else if(renderer!==undefined)this.setAttribute('renderer',String(renderer));
+    }finally{
+      this._suppressAutoReload=suppressed;
+    }
+    if(this.isConnected&&!suppressed)await this.reload();
+  }
+
   async reload() {
     const src = this.getAttribute('src');
     if(!src){

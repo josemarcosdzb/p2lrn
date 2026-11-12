@@ -472,6 +472,7 @@ export class P2LRNPlayerElement extends HTMLElement {
   stopActivityTracking(): Readonly<P2LRNActivitySnapshot> | null;
   runtimeBaseUrl: string | null;
   reload(): Promise<void>;
+  loadSource(src:string, options?:{node?:string|null;renderer?:string|null}): Promise<void>;
 }
 
 export const DEFAULT_LIMITS: Readonly<Record<string, number>>;

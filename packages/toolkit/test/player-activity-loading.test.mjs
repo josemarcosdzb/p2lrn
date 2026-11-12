@@ -56,3 +56,11 @@ test('the official Player supports fullscreen and synchronized folding lesson ou
  assert.match(style,/:host\(:fullscreen\)/);
  assert.match(style,/\.p2lrn-layout-nav-hidden/);
 });
+
+test('host can change src, node and renderer in one supported loadSource call',async()=>{
+ const source=await readFile(new URL('../web/p2lrn-player.js',import.meta.url),'utf8');
+ assert.match(source,/async loadSource\(src,\{node=undefined,renderer=undefined\}=\{\}\)/);
+ assert.match(source,/this\._suppressAutoReload=true/);
+ assert.match(source,/this\.setAttribute\('src',value\)/);
+ assert.match(source,/if\(this\.isConnected&&!suppressed\)await this\.reload\(\)/);
+});

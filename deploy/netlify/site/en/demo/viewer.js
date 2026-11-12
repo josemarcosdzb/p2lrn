@@ -201,7 +201,7 @@
     currentSource=src;
     const local=localPackages.get(src);
     const renderer=rendererSelect.value.trim();
-    if(renderer)player.setAttribute('renderer',renderer);else player.removeAttribute('renderer');
+    // Renderer and source are applied atomically by the Player below.
     setState('LOADING',"Loading package");
     label.textContent=sourceName(src);
     updateLocalSummary(local?.name||null);
@@ -212,8 +212,12 @@
     try{
       await inspect(src);
       if(generation!==loadSequence)return;
-      if(player.getAttribute('src')===src)await player.reload();
-      else player.setAttribute('src',src);
+      if(typeof player.loadSource==='function')await player.loadSource(src,{node:null,renderer:renderer||null});
+      else{
+        if(renderer)player.setAttribute('renderer',renderer);else player.removeAttribute('renderer');
+        if(player.getAttribute('src')===src)await player.reload();
+        else player.setAttribute('src',src);
+      }
       const next=new URL(location.href);
       // Blob URLs do not survive navigation and must not be published as links.
       if(local)next.searchParams.delete('src');
