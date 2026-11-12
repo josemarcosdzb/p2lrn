@@ -43,12 +43,12 @@ permissions:
 
 concurrency:
   # A manual npm-only smoke must not be cancelled by unrelated main pushes.
-  group: ${{ github.event_name == 'workflow_dispatch' && inputs.quest3d_only && 'p2lrn-portable-quest3d' || (github.event_name == 'workflow_dispatch' && inputs.npm_provider_only && 'p2lrn-portable-npm-only' || 'p2lrn-portable-main') }}
-  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.quest3d_only) }}
+  group: ${{ ((github.event_name == 'workflow_dispatch' && inputs.quest3d_only) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]'))) && 'p2lrn-portable-quest3d' || (github.event_name == 'workflow_dispatch' && inputs.npm_provider_only && 'p2lrn-portable-npm-only' || 'p2lrn-portable-main') }}
+  cancel-in-progress: ${{ !((github.event_name == 'workflow_dispatch' && inputs.quest3d_only) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]'))) }}
 
 jobs:
   postgres-live:
-    if: ${{ github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only) }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only)) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: LTI real PostgreSQL database, persistence and AGS
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -93,7 +93,7 @@ jobs:
         run: node --test integration/lms/lti-server.test.mjs
 
   mysql-mariadb-live:
-    if: ${{ github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only) }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only)) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: LTI real MySQL 8.4 and MariaDB 11.8 persistence
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -143,7 +143,7 @@ jobs:
           P2LRN_TEST_LTI_ASYNC_ENABLE=YES P2LRN_TEST_LTI_ASYNC_ENGINE=mariadb node --test integration/lms/lti-async-sql-live.test.mjs
 
   sqlserver-live:
-    if: ${{ github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only) }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only)) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: LTI real Microsoft SQL Server 2022 database and AGS
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -178,7 +178,7 @@ jobs:
           P2LRN_TEST_LTI_ASYNC_ENABLE=YES P2LRN_TEST_LTI_ASYNC_ENGINE=sqlserver node --test integration/lms/lti-async-sql-live.test.mjs
 
   toolkit-security:
-    if: ${{ github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only) }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only)) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: Toolkit ZIP, Player runtime security and Creator
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -218,7 +218,7 @@ jobs:
           node --test packages/toolkit/test/creator-import-disk-path-security.test.mjs
 
   studio-analytics-player:
-    if: ${{ github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only) }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only)) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: Studio, Analytics, Player and host boundary tests
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -270,7 +270,7 @@ jobs:
           node --check deploy/netlify/site/studio/studio.js
 
   cdn-release:
-    if: ${{ github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only) }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only)) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: Build site, verify CDN SRI, headers and npm byte identity
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -306,7 +306,7 @@ jobs:
           node scripts/verify-site-seo-a11y.mjs
 
   npm-pack-security:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.quest3d_only }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || !inputs.quest3d_only) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: Stage all NPM tarballs and inspect packaged files
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -330,7 +330,7 @@ jobs:
         run: node scripts/check-public-npm-registry.mjs
 
   windows-hosted-smoke:
-    if: ${{ github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only) }}
+    if: ${{ (github.event_name != 'workflow_dispatch' || !(inputs.npm_provider_only || inputs.quest3d_only)) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: Windows hosted security, native build and package/CDN parity
     runs-on: windows-latest
     timeout-minutes: 40
@@ -441,7 +441,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   quest3d-focused:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.quest3d_only }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.quest3d_only) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: Targeted Windows Chrome/Edge 3D regression with per-case evidence
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 25
@@ -450,7 +450,7 @@ jobs:
         shell: powershell
     env:
       P2LRN_QUEST3D_ONLY: '1'
-      P2LRN_QUEST3D_CASE: ${{ inputs.quest3d_case }}
+      P2LRN_QUEST3D_CASE: ${{ github.event_name == 'push' && 'three-game' || inputs.quest3d_case }}
       P2LRN_QUEST3D_OUTPUT_DIR: .visual-evidence/quest3d-hosted
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
