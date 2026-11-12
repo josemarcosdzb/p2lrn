@@ -1,4 +1,4 @@
-name: Publish P2LRN 0.5.0-alpha.14 (six npm packages)
+name: Stage P2LRN 0.5.0-alpha.14 (six npm packages)
 on:
   push:
     branches: [main]
@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    name: Publish six official packages including LTI Provider
+    name: Stage six official packages including LTI Provider
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 55
     defaults:
@@ -89,34 +89,38 @@ jobs:
             Write-Host "STAGED=$($entry[1]) BYTES=$((Get-Item $tar).Length)"
           }
           Write-Host 'ALL_SIX_NPM_TARBALLS_BUILT'
-      - name: Publish to public npm with next tag (no latest tag changes)
+      - name: Stage six official tarballs in npm with next tag (2FA approval happens on npmjs.com)
         run: |
           $ErrorActionPreference='Stop'
           $head=(git ls-remote origin refs/heads/main | Select-Object -First 1) -split '\s+'
-          if($LASTEXITCODE -ne 0 -or $head[0] -ne $env:GITHUB_SHA) {throw 'Main changed after packing; refusing publication'}
+          if($LASTEXITCODE -ne 0 -or $head[0] -ne $env:GITHUB_SHA) {throw 'Main changed after packing; refusing stale npm staging'}
           $out=Join-Path $env:RUNNER_TEMP ('p2lrn-npm-release-'+$env:GITHUB_RUN_ID)
           foreach($name in @('h5p-libraries','toolkit','player','studio','analytics','lti-provider')) {
             $tgz=Join-Path $out ("p2lrn-$name-$env:P2LRN_RELEASE_VERSION.tgz")
             if(-not (Test-Path -LiteralPath $tgz -PathType Leaf)) {throw "Tarball missing: $name"}
           }
+          # Reuse the working P2LRN release procedure from earlier alpha releases.
+          # npm stage publish accepts the existing npm session without asking for
+          # 2FA on a headless runner. npmjs.com prompts for 2FA at approval time.
           foreach($name in @('h5p-libraries','toolkit','player','studio','analytics','lti-provider')) {
             $tgz=Join-Path $out ("p2lrn-$name-$env:P2LRN_RELEASE_VERSION.tgz")
-            npm publish $tgz --tag next --access public --registry=https://registry.npmjs.org
-            if($LASTEXITCODE -ne 0) {throw "npm rejected publication of @p2lrn/$name; later packages were not attempted"}
-            Write-Host "NPM_PUBLISH_ACCEPTED=@p2lrn/$name@$env:P2LRN_RELEASE_VERSION"
+            npx --yes npm@11.21.2 stage publish $tgz --tag next --access public --registry=https://registry.npmjs.org
+            if($LASTEXITCODE -ne 0) {throw "npm staging failed for @p2lrn/$name; verify Staged Packages before retrying"}
+            Write-Host "NPM_STAGED_FOR_APPROVAL=@p2lrn/$name@$env:P2LRN_RELEASE_VERSION"
           }
-      - name: Verify published versions and next dist-tags directly from npm
+          Write-Host 'ALL_SIX_NPM_STAGES_CREATED_NEXT_TAG_APPROVAL_REQUIRED'
+      - name: Inspect staged versions without publishing or changing tags
         run: |
           $ErrorActionPreference='Stop'
           foreach($name in @('h5p-libraries','toolkit','player','studio','analytics','lti-provider')) {
             $pkg='@p2lrn/'+$name
-            $version=(& npm view ($pkg+'@'+$env:P2LRN_RELEASE_VERSION) version --registry=https://registry.npmjs.org --prefer-online).Trim()
-            if($LASTEXITCODE -ne 0 -or $version -ne $env:P2LRN_RELEASE_VERSION) {throw "Registry version missing: $pkg"}
-            $tag=(& npm dist-tag ls $pkg --registry=https://registry.npmjs.org | Select-String '^next:' | Select-Object -First 1).ToString()
-            if($LASTEXITCODE -ne 0 -or $tag -notmatch [regex]::Escape($env:P2LRN_RELEASE_VERSION)) {throw "next dist-tag does not match: $pkg"}
-            Write-Host "NPM_PUBLIC_VERIFIED=$pkg@$version $tag"
+            $list=& npx --yes npm@11.21.2 stage list $pkg --registry=https://registry.npmjs.org
+            if($LASTEXITCODE -ne 0) {throw "Unable to inspect pending npm stage for $pkg"}
+            $description=($list -join ' ')
+            if($description -notmatch [regex]::Escape($env:P2LRN_RELEASE_VERSION)) {throw "Staged $pkg version $env:P2LRN_RELEASE_VERSION not listed"}
+            Write-Host "NPM_STAGED_VERIFIED=$pkg@$env:P2LRN_RELEASE_VERSION"
           }
-          Write-Host "ALL_SIX_PUBLIC_NPM_PACKAGES_VERIFIED"
+          Write-Host 'ALL_SIX_NPM_STAGED_PACKAGES_WAITING_FOR_OWNER_APPROVAL'
       - name: Remove only this job's temporary tarballs
         if: always()
         run: |
