@@ -325,7 +325,7 @@ body.studio-doc-page .studio-guide-control-crop--create img{width:107.7%!importa
 body.studio-doc-page .studio-guide-control-crop--organize{width:min(100%,620px);aspect-ratio:620/56}
 body.studio-doc-page .studio-guide-control-crop--organize img{width:211.3%!important;transform:translate(-.75%,-54.5%)}
 body.studio-doc-page .studio-guide-control-crop--interactive{width:min(100%,460px);aspect-ratio:460/56}
-body.studio-doc-page .studio-guide-control-crop--interactive img{width:284.8%!important;transform:translate(-45%,-54.5%)}
+body.studio-doc-page .studio-guide-control-crop--interactive img{width:200%!important;transform:translate(-53%,-47.5%)}
 body.studio-doc-page .studio-guide-choice-entry dt a{display:block;width:fit-content;max-width:100%;min-height:28px;padding:3px 7px 3px 0;color:#155397;text-decoration:underline;text-underline-offset:3px;line-height:1.4}
 body.studio-doc-page .studio-guide-choice-entry dt a::after{content:' ↗';font-size:.8em}
 body.studio-doc-page .studio-guide-choice-entry dt a:focus-visible{outline:3px solid #1459ab;outline-offset:3px}
