@@ -12,6 +12,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
+    # Staging must never recur merely because the workflow file changed.
+    if: github.event_name == 'workflow_dispatch'
     name: Stage six official packages including LTI Provider
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 55
@@ -146,3 +148,61 @@ jobs:
           if((Test-Path -LiteralPath $out) -and $out.StartsWith($env:RUNNER_TEMP,[StringComparison]::OrdinalIgnoreCase)) {
             Remove-Item -LiteralPath $out -Recurse -Force
           }
+
+  verify-published:
+    # Focused registry check after npm 2FA approval. No staging, deploy or LMS changes.
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[verify-public-npm]')
+    name: Verify six published npm packages and LTI CLI
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: Select supported Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Read actual public registry and install published Provider in isolated temporary directory
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $version='0.5.0-alpha.14'
+          $registry='https://registry.npmjs.org'
+          $names=@('h5p-libraries','toolkit','player','studio','analytics','lti-provider')
+          foreach($name in $names){
+            $package='@p2lrn/'+$name
+            $raw=& npm view "$package@$version" version --json --registry=$registry
+            if($LASTEXITCODE -ne 0){throw "NPM_REGISTRY_MISSING=$package@$version"}
+            $seen=([string]($raw | Out-String).Trim() | ConvertFrom-Json)
+            if($seen -ne $version){throw "NPM_REGISTRY_WRONG_VERSION=$package ($seen)"}
+            Write-Output "NPM_PUBLIC_CONFIRMED=$package@$version"
+          }
+          $dir=Join-Path $env:RUNNER_TEMP ('p2lrn-public-npm-check-'+$env:GITHUB_RUN_ID)
+          if(Test-Path -LiteralPath $dir){throw 'QA_DIRECTORY_EXISTS_REFUSING_OVERWRITE'}
+          New-Item -Path $dir -ItemType Directory -ErrorAction Stop | Out-Null
+          try{
+            & npm install --prefix $dir --no-save --no-package-lock --ignore-scripts --no-audit --no-fund "@p2lrn/lti-provider@$version" --registry=$registry
+            if($LASTEXITCODE -ne 0){throw 'PUBLIC_LTI_PROVIDER_INSTALL_FAILED'}
+            $installed=Join-Path $dir 'node_modules\@p2lrn\lti-provider'
+            $manifest=Get-Content -LiteralPath (Join-Path $installed 'package.json') -Raw | ConvertFrom-Json
+            if($manifest.name -ne '@p2lrn/lti-provider' -or $manifest.version -ne $version){throw 'PUBLIC_LTI_PROVIDER_MANIFEST_MISMATCH'}
+            foreach($dependency in @('@p2lrn/toolkit','@p2lrn/player')){
+              if($manifest.dependencies.$dependency -ne $version){throw "PUBLIC_LTI_DEPENDENCY_NOT_ALIGNED=$dependency"}
+            }
+            $cli=Join-Path $installed 'bin\p2lrn-lti.mjs'
+            if(!(Test-Path -LiteralPath $cli -PathType Leaf)){throw 'PUBLIC_LTI_PROVIDER_CLI_MISSING'}
+            $help=(& node $cli help 2>&1 | Out-String)
+            if($LASTEXITCODE -ne 0){throw 'PUBLIC_LTI_PROVIDER_CLI_FAILED'}
+            foreach($required in @('platform add','platform list','platform disable','sqlite','postgres','mariadb','mysql','sqlserver')){
+              if(!$help.Contains($required)){throw "PUBLIC_LTI_CLI_FEATURE_MISSING=$required"}
+            }
+            Write-Output 'PUBLIC_LTI_CLI_PLATFORM_AND_SQL_OPTIONS_CONFIRMED=YES'
+            Write-Output "PUBLIC_LTI_INSTALLED_FROM_REGISTRY=@p2lrn/lti-provider@$version"
+          }finally{
+            if(Test-Path -LiteralPath $dir){
+              if(!$dir.StartsWith($env:RUNNER_TEMP,[StringComparison]::OrdinalIgnoreCase)){throw 'UNSAFE_QA_CLEANUP_PATH'}
+              Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction Stop
+            }
+          }
+
