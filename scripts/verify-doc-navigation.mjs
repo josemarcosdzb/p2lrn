@@ -75,7 +75,7 @@ for(let i=0;i<sectionNames.length;i++){
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map(x=>({href:x[1],label:x[2]}));
 const hrefs=sidebarLinks.map(x=>x.href);
-if(hrefs.length!==38)failures.push('expected 38 global role-grouped links, found '+hrefs.length);
+if(hrefs.length!==39)failures.push('expected 39 global role-grouped links, found '+hrefs.length);
 const duplicates=hrefs.filter((href,i)=>hrefs.indexOf(href)!==i);
 if(duplicates.length)failures.push('duplicate global sidebar links: '+[...new Set(duplicates)]);
 for(const route of ['/docs/','/docs/empezar-facil/','/docs/studio/','/docs/questionnaires/','/docs/entrega-offline/'])

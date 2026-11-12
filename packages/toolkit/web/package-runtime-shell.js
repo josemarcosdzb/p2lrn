@@ -175,6 +175,15 @@ function stripSourceMapDirectives(source) {
     .replace(/\/\/[#@]\s*sourceMappingURL=.*$/gmu, '')
     .replace(/\/\*[#@]\s*sourceMappingURL=[\s\S]*?\*\//gmu, '');
 }
+// Object URLs identify exact immutable Blob keys. The query string from an
+// imported source's cache-busting URL must not be appended to a blob:null URL.
+function packagedObjectUrl(reference){
+  const url=urls.get(reference.path);
+  if(!url)return null;
+  const raw=String(reference.suffix??'');
+  const hash=raw.match(/#[^#?]*$/u)?.[0]??'';
+  return url+( /^#[A-Za-z0-9._:%-]{1,128}$/u.test(hash) ? hash : '' );
+}
 function rewriteCss(css, base, stack = new Set()) {
   return String(css)
     .replace(/@import\s+(?:url\()?\s*(['"]?)([^'")\s;]+)\1\s*\)?\s*;/giu, (all, _q, ref) => {
@@ -185,7 +194,7 @@ function rewriteCss(css, base, stack = new Set()) {
     })
     .replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/giu, (all, _q, ref) => {
       const resolved = resolveBundledMedia(base, ref);
-      return resolved && urls.has(resolved.path) ? `url("${urls.get(resolved.path)}${resolved.suffix}")` : all;
+      return resolved && urls.has(resolved.path) ? `url("${packagedObjectUrl(resolved)}")` : all;
     });
 }
 function rewriteElementTree(root, path) {
@@ -232,14 +241,14 @@ function rewriteElementTree(root, path) {
         el.setAttribute('data-p2lrn-frame-member', resolved.path);
         continue;
       }
-      if (urls.has(resolved.path)) el.setAttribute(attr, urls.get(resolved.path) + resolved.suffix);
+      if (urls.has(resolved.path)) el.setAttribute(attr, packagedObjectUrl(resolved));
     }
     if (el.hasAttribute('style')) el.setAttribute('style', rewriteCss(el.getAttribute('style'), path));
     if (el.hasAttribute('srcset')) {
       el.setAttribute('srcset', el.getAttribute('srcset').split(',').map((item) => {
         const bits = item.trim().split(/\s+/);
         const resolved = resolveBundledMedia(path, bits[0]);
-        if (resolved && urls.has(resolved.path)) bits[0] = urls.get(resolved.path) + resolved.suffix;
+        if (resolved && urls.has(resolved.path)) bits[0] = packagedObjectUrl(resolved);
         return bits.join(' ');
       }).join(', '));
     }
