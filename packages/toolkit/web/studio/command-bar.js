@@ -355,6 +355,7 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     const limits=node(doc,'p','',t('Límites del Player: 256 MiB por recurso, 64 MiB por parte y 512 partes. Requiere publicación HTTP(S) de todas las partes.'));
     const status=node(doc,'p','p2lrn-multipart-status');
     status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+    size.addEventListener('input',()=>{status.textContent='';});
     const row=node(doc,'div','p2lrn-multipart-actions');
     const cancel=button(doc,t('Cancelar'));cancel.addEventListener('click',()=>dialog.close());
     const submit=button(doc,t('Generar ZIP multipart'),{cls:'p2lrn-primary'});submit.type='submit';
