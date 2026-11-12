@@ -66,6 +66,7 @@ const handAuthoredEnglishPages=new Set([
   'docs/cdn/studio/index.html',
   'docs/eventos/index.html',
   'docs/paquetes/index.html',
+  'docs/paquetes/multipart/index.html',
   'docs/player/index.html',
   'docs/troubleshooting/index.html',
   'docs/cdn/analytics/index.html',
