@@ -185,9 +185,10 @@ async function connectPage(browserWs){
   // original browser is rendering Studio and 3D. Give its DevTools handshake
   // a bounded chance to complete, and refresh a stale target on retry.
   let socket=null,lastConnectError=null;
-  for(let attempt=1;attempt<=2&&!socket;attempt++){
+  const discoveryDeadline=Date.now()+35000;
+  for(let attempt=1;attempt<=2&&!socket&&Date.now()<discoveryDeadline;attempt++){
     let target=null;
-    for(let i=0;i<80&&!target;i++){
+    for(let i=0;i<80&&!target&&Date.now()<discoveryDeadline;i++){
       try{
         const targets=await (await fetch(origin+'/json/list',{signal:AbortSignal.timeout(3500)})).json();
         target=targets.find((item)=>item.type==='page'&&!item.url.startsWith('devtools://'))||null;
@@ -214,7 +215,8 @@ async function connectPage(browserWs){
         const onError=()=>complete(new Error('Page DevTools socket failed.'));
         candidate.addEventListener('open',onOpen);
         candidate.addEventListener('error',onError);
-        timer=setTimeout(()=>complete(new Error('Page DevTools socket timeout.')),12000);
+        timer=setTimeout(()=>complete(new Error('Page DevTools socket timeout.')),
+          Math.min(12000,Math.max(1000,discoveryDeadline-Date.now())));
       });
       socket=candidate;
     }catch(error){
@@ -2645,7 +2647,26 @@ try{
   try{cdp?.socket?.close();}catch{}
   if(chrome?.child?.exitCode===null)chrome.child.kill();
   if(chrome?.profile)await rm(chrome.profile,{recursive:true,force:true}).catch(()=>{});
-  await new Promise((resolvePromise)=>appServer?appServer.close(()=>resolvePromise()):resolvePromise());
-  await new Promise((resolvePromise)=>runtimeServer?runtimeServer.close(()=>resolvePromise()):resolvePromise());
-  await new Promise((resolvePromise)=>collaborationServer?collaborationServer.close(()=>resolvePromise()):resolvePromise());
+  // Chrome may retain persistent HTTP connections after a failed WebGL
+  // regression. Ensure QA cleanup cannot conceal the original failure by
+  // hanging on server.close() until the GitHub job-wide timeout.
+  const stopServer=async(server,name)=>{
+    if(!server)return;
+    try{server.closeAllConnections?.();}catch{}
+    await new Promise(resolvePromise=>{
+      let settled=false;
+      const finish=()=>{if(settled)return;settled=true;clearTimeout(timer);resolvePromise();};
+      const timer=setTimeout(()=>{
+        console.warn('P2LRN_QA_CLEANUP_WARNING='+name+' did not close within 5s');
+        finish();
+      },5000);
+      try{server.close(finish);}catch(error){
+        console.warn('P2LRN_QA_CLEANUP_WARNING='+name+': '+String(error));
+        finish();
+      }
+    });
+  };
+  await stopServer(appServer,'app');
+  await stopServer(runtimeServer,'runtime');
+  await stopServer(collaborationServer,'collaboration');
 }
