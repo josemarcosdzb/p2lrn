@@ -230,7 +230,8 @@ for(const [prefix,locale] of [['','es'],['en/','en']]){
   if(!quick.includes('id="primer-curso"')||!quick.includes('id="integracion-desarrolladores"')||
      quick.indexOf('id="primer-curso"')>quick.indexOf('id="integracion-desarrolladores"')||
      !quick.includes('<details class="p2lrn-dev-details">')||
-     (quick.match(/<pre\b/gi)||[]).length!==1)
+     (quick.match(/<pre\b/gi)||[]).length!==0||
+     !quick.includes(locale==='es'?'integración HTML':'HTML integration'))
     failures.push(locale+': quick start does not separate visual Studio course authoring from preserved developer HTML');
   if(imageCount<4||!landing.includes('configuracion-ensamblaje-3d-studio.webp')||
      !landing.includes('15-3d-ensamblar.webp')||
