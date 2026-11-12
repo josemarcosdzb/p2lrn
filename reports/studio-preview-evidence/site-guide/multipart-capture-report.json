@@ -1,0 +1,32 @@
+{
+    "source":  "GitHub Actions Chromium on immutable candidate",
+    "head_sha":  "1b01fafab3eb5c0b866b0105fdf6b33a3ff99de4",
+    "captures":  [
+                     {
+                         "path":  "deploy/netlify/site/assets/studio-guide/multipart-studio-menu-es.png",
+                         "sha256":  "7be3e596e62bb4a129f9b394e1f5a0b6d1d4ea253f58e8f51344545a9fb58bde",
+                         "size":  96823
+                     },
+                     {
+                         "path":  "deploy/netlify/site/assets/studio-guide/multipart-studio-field-es.png",
+                         "sha256":  "88ac482b09c1e69a499d5405fb63d82357a6e33c7da06777a00680b9ef054f9d",
+                         "size":  111939
+                     },
+                     {
+                         "path":  "deploy/netlify/site/assets/studio-guide/multipart-studio-menu-en.png",
+                         "sha256":  "d6fe95c662dbffc6862b65185d2dbaa4764628526a10c4c0b89c58a06bc3fa3c",
+                         "size":  89636
+                     },
+                     {
+                         "path":  "deploy/netlify/site/assets/studio-guide/multipart-studio-field-en.png",
+                         "sha256":  "113c2bd6122445fc19ac403ea4db7f9c364cc3258ddd3fb568eaddcf88c3abb1",
+                         "size":  104058
+                     }
+                 ],
+    "original_ui_commit":  "1b01fafab3eb5c0b866b0105fdf6b33a3ff99de4",
+    "width":  1280,
+    "screenshot_artifact_id":  13949014217,
+    "run_id":  43230421891,
+    "height":  800,
+    "notes":  "Real browser screenshots of the new control; not proof of a production deployment or multipart playback."
+}`n
