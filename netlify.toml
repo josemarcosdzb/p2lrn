@@ -1,9 +1,9 @@
 [build]
-  # Owner-approved one-time production deployment (2026-11-12).
+  # Owner-approved one-time follow-up production deployment (2026-11-12).
   # Only the release commit containing the unique marker below builds.
   # Every subsequent Git push without that marker remains frozen.
   # Bash exit 1: build; exit 0: skip. No permanent auto-deployment.
-  ignore = "git log -1 --format=%B | grep -Fq P2LRN_NETLIFY_DEPLOY_AUTHORIZED_20261112_1929 && exit 1 || exit 0"
+  ignore = "git log -1 --format=%B | grep -Fq P2LRN_NETLIFY_DEPLOY_AUTHORIZED_20261112_2050 && exit 1 || exit 0"
   command = "node deploy/netlify/build-site.mjs"
   publish = ".netlify-cdn"
 
