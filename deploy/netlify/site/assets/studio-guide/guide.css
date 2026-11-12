@@ -79,8 +79,8 @@ body.studio-doc-page .studio-guide-step--wide .studio-guide-step-copy,body.studi
 body.studio-doc-page .studio-guide-step--portrait .studio-guide-step-media{display:flex;justify-content:center;align-items:flex-start}
 body.studio-doc-page .studio-guide-step--portrait .studio-guide-frame{width:min(100%,500px)}
 body.studio-doc-page .studio-guide-step--portrait .studio-guide-image-link img{width:auto;max-width:100%;max-height:560px;margin:auto}
-body.studio-doc-page .studio-guide-step--toolbar .studio-guide-image-link{overflow-x:auto}
-body.studio-doc-page .studio-guide-step--toolbar .studio-guide-image-link img{min-width:min(1120px,115vw);width:100%;max-width:none}
+body.studio-doc-page .studio-guide-step--toolbar .studio-guide-image-link{overflow:hidden}
+body.studio-doc-page .studio-guide-step--toolbar .studio-guide-image-link img{min-width:0;width:100%;max-width:100%;height:auto}
 body.studio-doc-page .studio-guide-step--wide .studio-guide-image-link img{max-height:680px;object-fit:contain}
 body.studio-doc-page .studio-guide-step-label{font-size:.75rem;font-weight:850;letter-spacing:.11em;text-transform:uppercase;color:#225b99;margin:0 0 .4rem}
 body.studio-doc-page .studio-guide-step-copy h3{font-size:clamp(1.4rem,2vw,1.88rem);margin:0 0 .8rem;letter-spacing:-.025em}
@@ -276,3 +276,17 @@ body.studio-doc-page .studio-doc-appendix-body .doc-callout{border-radius:0;back
     outline:3px solid Highlight;outline-offset:3px;
   }
 }
+
+/* The explanation is readable without horizontal scrolling or thumbnail-sized toolbars. */
+body.studio-doc-page .studio-guide-control-samples{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;width:100%;margin:.65rem 0}
+body.studio-doc-page .studio-guide-control-sample{display:inline-flex;align-items:center;justify-content:center;text-align:center;min-height:44px;min-width:114px;max-width:100%;padding:.65rem .85rem;border:1px solid #aebed0;border-radius:7px;background:#fff;color:#172f4a;line-height:1.35;font-weight:700;font-size:.95rem;overflow-wrap:break-word;box-shadow:0 1px 2px rgba(16,35,60,.06)}
+body.studio-doc-page .studio-guide-demo-label{font-size:.85rem;color:#435a74;margin:.55rem 0;font-weight:550}
+body.studio-doc-page .studio-guide-control-sources{margin:.7rem 0 0;font-size:.86rem}
+body.studio-doc-page .studio-guide-control-sources a{color:#145b9e;text-underline-offset:3px}
+body.studio-doc-page .studio-guide-control-sources a:focus-visible{outline:3px solid #2265ba;outline-offset:3px}
+body.studio-doc-page .studio-guide-insert-line{grid-template-columns:minmax(0,1fr);gap:.85rem;padding:1.25rem 0}
+body.studio-doc-page .studio-guide-insert-copy{grid-row:1}
+body.studio-doc-page .studio-guide-insert-media{grid-row:2}
+body.studio-doc-page .studio-guide-choice-body{grid-template-columns:minmax(0,1fr);gap:1.1rem}
+body.studio-doc-page .studio-guide-choice-entries{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:1.15rem}
+@media(max-width:680px){body.studio-doc-page .studio-guide-control-sample{min-width:calc(50% - 5px);flex:1 1 calc(50% - 5px)}body.studio-doc-page .studio-guide-choice-entries{grid-template-columns:minmax(0,1fr)}}

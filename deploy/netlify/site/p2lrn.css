@@ -2244,3 +2244,7 @@ html[data-p2lrn-embedded="true"] .viewer-stage-head {padding:10px 18px;min-heigh
 .landing-section-links a[aria-current="page"]{font-weight:750;text-decoration:underline;text-underline-offset:3px}
 .landing-section-links a:focus-visible{outline:3px solid #225ec1;outline-offset:2px}
 @media(max-width:510px){.landing-section-links strong{flex-basis:100%}.landing-section-links a{flex:1 0 auto;justify-content:center}}
+
+/* Prevent ascenders and descenders being clipped at browser zoom or small widths. */
+.doc-hero h1{line-height:1.1;padding-block:.065em;overflow-wrap:break-word}
+body.landing-page .landing-hero h1{line-height:1.14;padding-block:.055em;overflow-wrap:break-word}
