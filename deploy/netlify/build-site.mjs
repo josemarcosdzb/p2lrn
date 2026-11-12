@@ -504,7 +504,7 @@ const marketingIndexRoutes=new Set([
   'en/crear-cursos-interactivos/index.html','en/juegos-educativos-3d/index.html','en/cursos-offline/index.html'
 ]);
 for (const htmlPath of htmlFiles) {
-  const pageRelative=relative(outputRoot,htmlPath).replaceAll('\','/');
+  const pageRelative=relative(outputRoot,htmlPath).replaceAll('\\','/');
   const pageLocale=pageRelative.startsWith('en/')?'en':'es';
   let html = await readFile(htmlPath,'utf8');
   html = html.replaceAll('0.5.0-alpha.10',productionPublicVersion);
