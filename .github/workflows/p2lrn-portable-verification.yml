@@ -471,7 +471,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node deploy/netlify/build-site.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Run only the selected real Chrome 3D scenario, with independent timeout
+      - name: Run isolated Chrome 3D case with bounded browser connection and cleanup
         run: |
           node --check scripts/verify-local-viewer.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
