@@ -169,8 +169,12 @@ async function docsRoleNavigationChrome(language){
   if(isEnglish)console.log('BROWSER_EN_NAV_LINKS='+JSON.stringify(await page.locator('#nav a').evaluateAll(links=>links.map(link=>({href:link.getAttribute('href'),text:link.textContent?.trim(),visible:Boolean(link.getClientRects().length)})))));
   await page.locator('#nav > a[href="'+portal+'"]').waitFor({timeout:10000});
   assert.equal(await page.locator('#nav > details').count(),1,'Solutions must appear in one contextual dropdown');
-  await page.locator('#nav > details summary').click();
-  assert.equal(await page.locator('#nav > details[open] .nav-dropdown a').count(),3,
+  const solutions=page.locator('#nav > details');
+  // Desktop navigation opens via pointerenter. Clicking its already-open
+  // summary would correctly close it; exercise the actual user interaction.
+  await solutions.locator('summary').hover();
+  await solutions.locator('.nav-dropdown a').first().waitFor({state:'visible',timeout:5000});
+  assert.equal(await solutions.locator('.nav-dropdown a').count(),3,
     'Solutions must preserve the three linked pages within a single header dropdown');
   assert.equal(await page.locator('.doc-sidebar a[href="'+npm+'"]').count(),0,'Teacher sidebar must not display npm instructions');
   assert.equal(await page.locator('article.doc-content pre').count(),0,'Teacher guide must not require code');
