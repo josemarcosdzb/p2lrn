@@ -54,7 +54,7 @@ concurrency:
 
 jobs:
   docs-visual-qa:
-    needs: generate-english-site
+    # Validate the committed ES/EN website in actual Chromium; generation never edits it during push.
     name: Verify 24 ES/EN guides at desktop and mobile widths in real Chromium
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -106,6 +106,8 @@ jobs:
           retention-days: 7
 
   generate-english-site:
+    # English regeneration is explicit, reviewable and never auto-committed during CI.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:

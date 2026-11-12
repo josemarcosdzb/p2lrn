@@ -1,4 +1,4 @@
-import {mkdir,readFile,readdir,rm,writeFile} from 'node:fs/promises';
+import {mkdir,readFile,readdir,writeFile} from 'node:fs/promises';
 import {dirname,extname,join,relative,resolve} from 'node:path';
 import {parseJs,walkAst,structuralLiteral} from './site-i18n-ast.mjs';
 import {load} from 'cheerio';
@@ -17,6 +17,10 @@ const handAuthoredEnglishPages=new Set([
   'docs/entrega-offline/index.html',
   'docs/conectores/lti/index.html',
   'docs/conectores/lms/index.html',
+  // npm and Studio entry pages are deliberately reviewed in English; preserve their own content.
+  'docs/npm/index.html',
+  'docs/npm/studio/index.html',
+  'studio/index.html',
   // The existing English AI guide is reviewed; machine translation changes IDs.
   'docs/conectores/ia/index.html',
   'cursos-offline/index.html',
@@ -453,7 +457,7 @@ function rewriteAbsoluteUrl(value,routes){
 }
 function looksSpanish(value){return MANUAL.has(String(value).trim())||SPANISH_RE.test(String(value));}
 // These string literals are stable section IDs, not language-dependent labels.
-const STRUCTURAL_JS_TOKENS=new Set(['para-que','crear-cursos','en','es','en-US','es-ES','en-GB','es-MX']);
+const STRUCTURAL_JS_TOKENS=new Set(['rosco','para-que','crear-cursos','en','es','en-US','es-ES','en-GB','es-MX']);
 function shouldTranslate(value){
   const text=String(value??'').trim();
   if(!text||STRUCTURAL_JS_TOKENS.has(text)||/^[a-z]{2}(?:-[A-Za-z]{2})?$/.test(text)||TECH_EXACT.has(text)||!/[A-Za-zÁÉÍÓÚÑÜáéíóúñü]/.test(text))return false;
@@ -797,7 +801,7 @@ function translateJson(value,key=''){
 }
 
 console.log('P2LRN_I18N_PHASE=generate-html cache='+Object.keys(cache).length);
-await rm(englishRoot,{recursive:true,force:true});
+// Keep reviewed English and unrelated assets intact. Never remove the entire locale tree.
 await mkdir(englishRoot,{recursive:true});
 for(const file of htmlFiles){
   const rel=relative(siteRoot,file).replaceAll('\\','/');

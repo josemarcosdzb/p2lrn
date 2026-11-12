@@ -33,3 +33,26 @@ test('visits nested object navigation labels while preserving their technical ke
   });
   assert.deepEqual(values,['Soluciones','/docs/','Documentación']);
 });
+
+// Actual Studio game identifiers are executable contracts, not translated interface text.
+test('English Studio uses exactly the same game-kind routing as Spanish Studio',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const [es,en]=await Promise.all([
+    readFile(new URL('../deploy/netlify/site/studio/studio.js',import.meta.url),'utf8'),
+    readFile(new URL('../deploy/netlify/site/en/studio/studio.js',import.meta.url),'utf8')
+  ]);
+  function gameKinds(source){
+    let kinds=null;
+    walkAst(parseJs(source),(node)=>{
+      if(node.type!=='CallExpression'||node.callee?.type!=='MemberExpression'||
+        node.callee.property?.name!=='includes'||node.callee.object?.type!=='ArrayExpression'||
+        node.arguments?.[0]?.name!=='kind')return;
+      const values=node.callee.object.elements.map(item=>item?.value);
+      if(values.includes('memory')&&values.includes('3d'))kinds=values;
+    });
+    return kinds;
+  }
+  const sourceKinds=gameKinds(es),englishKinds=gameKinds(en);
+  assert.ok(sourceKinds?.includes('rosco'),'Source must include the rosco renderer');
+  assert.deepEqual(englishKinds,sourceKinds,'English UI may translate labels but never renderer identifiers');
+});

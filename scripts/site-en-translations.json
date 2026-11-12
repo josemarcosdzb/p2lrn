@@ -3681,5 +3681,12 @@
   "Actividad externa preparada": "External activity prepared",
   "REVISAR RESULTADOS": "REVIEW RESULTS",
   "Guía de resultados": "Results guide",
-  "Conector MCP para IA": "MCP connector for AI"
+  "Conector MCP para IA": "MCP connector for AI",
+  "Ocultar índice": "Hide outline",
+  "Lección actual: —": "Selected lesson: —",
+  "Lección actual:": "Selected lesson:",
+  "Mostrar índice": "Show outline",
+  "Resultado offline abierto": "Offline result opened",
+  "El archivo importado puede contener información real de alumnos. Sus puntuaciones no son notas oficiales sin aceptación de un LMS o Host autorizado.": "The imported file may contain real learner information. Its scores do not become official grades without an authorized LMS or Host.",
+  "Datos de prueba cargados.": "Sample data loaded."
 }
