@@ -23,3 +23,6 @@ packages/document-reader/package-lock.json
 # Private, generated LTI credentials and per-tenant administrative policies
 /integration/lms/.secrets/
 /integration/lms/admin-scopes.local.json
+
+# Generated from the canonical site logo by npm prepack
+/packages/toolkit/assets/p2lrn.ico

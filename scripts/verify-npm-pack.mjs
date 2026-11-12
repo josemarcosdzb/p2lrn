@@ -149,6 +149,7 @@ for (const path of [
 ]) {
   await assertFile(path);
 }
+await run(node, [join(root,'scripts','verify-windows-icon.mjs')]);
 const packedSourceManifest = JSON.parse(await readFile(join(playerRoot,'source','SOURCE-MANIFEST.json'),'utf8'));
 if (packedSourceManifest?.license?.id !== 'P2LRN-NCSL-1.0') {
   throw new Error('Packed Player source snapshot does not declare P2LRN-NCSL-1.0.');

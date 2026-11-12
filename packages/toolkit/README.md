@@ -14,6 +14,34 @@ node dist/cli/main.js --help
 
 Primary commands include `p2lrn-validate`, `p2lrn-reader`, `p2lrn-document-reader`, `p2lrn-create`, `p2lrn-convert`, `p2lrn-delta`, `p2lrn-trust`, `p2lrn-inspect`, `p2lrn-repack`, `p2lrn-multipart`, `p2lrn-extract-source`, `p2lrn-rebuild-examples`, `p2lrn-build-web-sdk` and `p2lrn-build-advanced-example`.
 
+## Windows Explorer .p2lrn icon
+
+The Toolkit npm tarball includes the official P2LRN file icon at
+`assets/p2lrn.ico` (16, 32, 48 and 256 px) and the per-user
+`windows/register-p2lrn-reader.ps1` association script.
+The icon is built from the single official
+`deploy/netlify/site/p2lrn-mark.png` source during npm packaging.
+
+After installing an **npm release that contains these files**, run in
+PowerShell (no administrator rights required):
+
+```powershell
+$script = Join-Path (npm root -g) '@p2lrn\toolkit\windows\register-p2lrn-reader.ps1'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -InspectOnly
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script
+```
+
+First install that Toolkit release globally with npm; older published
+versions do not have the icon. The first command only inspects the
+Reader command and icon path; the second registers the file type under
+`HKCU\Software\Classes`. Windows may need its icon cache
+refreshed. If another application is the user's Windows default for
+`.p2lrn`, select the P2LRN Reader in Windows Settings.
+
+There is no automatic registry modification during `npm install`.
+Never store the icon in a temporary directory because Explorer uses
+the absolute registered icon path.
+
 ## Stable authoring API
 
 `@p2lrn/toolkit/authoring` is the supported integration boundary for P2LRN Studio and other editors. `AUTHORING_API_VERSION` is currently `1`; the editable project schema is `0.3.0`.

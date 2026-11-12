@@ -63,7 +63,7 @@
     "test": "npm run build && node --test test/*.test.mjs",
     "check": "npm run build && npm test",
     "prepublishOnly": "node ../../scripts/check-publish-ready.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build && node ../../scripts/build-windows-icon.mjs"
   },
   "files": [
     "dist/",
@@ -71,6 +71,8 @@
     "web/",
     "web-sdk-src/",
     "web-build/",
+    "assets/",
+    "windows/",
     "README.md",
     "LICENSE",
     "NOTICE.md",
