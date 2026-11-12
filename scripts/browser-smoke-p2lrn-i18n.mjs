@@ -974,10 +974,69 @@ async function captureMultipartStudioChrome(){
       captures.push({lang,file,size:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});
     }
   }
+  // Exercise the same real controls with a large uploaded resource: select a
+  // 1 MiB limit, download the browser-generated ZIP, then check every part.
+  // This is not a mocked exporter/API response.
+  const opened=await page.goto(base+'/studio/',{waitUntil:'domcontentloaded',timeout:30000});
+  assert.equal(opened?.status(),200);
+  await page.waitForFunction(()=>document.documentElement.dataset.p2lrnStudioReady==='true',{timeout:30000});
+  const originalData=Buffer.alloc(2*1048576+37);
+  for(let i=0;i<originalData.length;i++)originalData[i]=i%251;
+  await page.locator('input[data-resource-file]').setInputFiles({
+    name:'multipart-qa-large.bin',mimeType:'application/octet-stream',buffer:originalData,
+  });
+  await page.waitForFunction(()=>document.body.innerText.includes('multipart-qa-large'),null,{timeout:30000});
+  await page.locator('.p2lrn-file-menu > summary').first().click();
+  await page.locator('[data-studio-multipart-entry]').click();
+  const exportDialog=page.locator('dialog.p2lrn-multipart-dialog');
+  await exportDialog.waitFor({state:'visible'});
+  await exportDialog.locator('input[data-studio-multipart-part-size]').fill('1');
+  const downloadPromise=page.waitForEvent('download',{timeout:50000});
+  await exportDialog.locator('button[type=submit]').click();
+  const download=await downloadPromise;
+  assert.match(download.suggestedFilename(),/-multipart\\.zip$/,'Studio did not download a multipart transport ZIP');
+  const zipFile=join(folder,'studio-multipart-real-export.zip');
+  await download.saveAs(zipFile);
+  const zipBytes=await readFile(zipFile);
+  assert.ok(zipBytes.length>originalData.length,'Multipart ZIP must contain the actual binary payload');
+  const {BufferZipArchive}=await import('../packages/toolkit/web/zip-source.js');
+  const {openP2LRNPackageBytes}=await import('../packages/toolkit/web/p2lrn-player.js');
+  const bytes=zipBytes.buffer.slice(zipBytes.byteOffset,zipBytes.byteOffset+zipBytes.byteLength);
+  const zip=await BufferZipArchive.open(bytes,{
+    entries:5000,entryBytes:512*1048576,bufferedEntryBytes:512*1048576,
+    totalUncompressedBytes:1024*1048576,centralDirectoryBytes:64*1048576,compressionRatio:250,
+  });
+  const files=zip.names();
+  const outerName=files.find(item=>item.endsWith('.p2lrn'));
+  const partNames=files.filter(item=>/\\.part[0-9]{3}$/.test(item)).sort();
+  assert.ok(outerName,'No outer .p2lrn course in the exported ZIP');
+  assert.equal(partNames.length,3,'Unexpected number of real multipart chunks');
+  const outerBytes=await zip.read(outerName);
+  const outerBuffer=outerBytes.buffer.slice(outerBytes.byteOffset,outerBytes.byteOffset+outerBytes.byteLength);
+  const pkg=await openP2LRNPackageBytes(outerBuffer);
+  const multipartRep=pkg.graph.entities.filter(entity=>entity.type==='resource')
+    .flatMap(entity=>entity.representations??[])
+    .find(rep=>rep.extensions?.['https://p2lrn.org/profile/multipart']);
+  assert.ok(multipartRep,'Browser-exported package does not contain a real multipart descriptor');
+  const descriptorBytes=await pkg.zip.read(multipartRep.location.path);
+  const multipartDescriptor=JSON.parse(new TextDecoder().decode(descriptorBytes));
+  assert.deepEqual(multipartDescriptor.parts.map(p=>p.href),partNames);
+  const restored=Buffer.concat(await Promise.all(partNames.map(async name=>{
+    const part=await zip.read(name);
+    const declared=multipartDescriptor.parts.find(p=>p.href===name);
+    assert.equal(part.byteLength,declared.size);
+    assert.equal('sha256:'+createHash('sha256').update(part).digest('hex'),declared.byteDigest);
+    return Buffer.from(part);
+  })));
+  assert.deepEqual(restored,originalData,'Studio did not preserve the uploaded resource bytes');
+  const exportEvidence={name:download.suggestedFilename(),bytes:zipBytes.length,
+    sha256:createHash('sha256').update(zipBytes).digest('hex'),
+    outerName,parts:partNames,sourceBytes:originalData.length,hashValidated:true};
   assert.deepEqual(exceptions,[],'Uncaught multipart Studio browser errors');
   await writeFile(join(folder,'multipart-browser-report.json'),
-    JSON.stringify({ok:true,captures,source:'Real Chromium rendering candidate Studio source'},null,2)+'\n');
-  console.log('P2LRN_MULTIPART_STUDIO_CHROME='+JSON.stringify({ok:true,captures}));
+    JSON.stringify({ok:true,captures,exportEvidence,
+      source:'Real Chromium Studio menu, actual ZIP download, canonical P2LRN package and SHA-256 checks'},null,2)+'\n');
+  console.log('P2LRN_MULTIPART_STUDIO_CHROME='+JSON.stringify({ok:true,captures,exportEvidence}));
 }
 
 try{
