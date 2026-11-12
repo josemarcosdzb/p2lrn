@@ -1,5 +1,8 @@
-// Read-only production acceptance gate. Do not confuse a successful local
-// build with the SEO and media files actually deployed at the public domain.
+// POST-DEPLOY ONLY: read-only acceptance of the website actually published.
+// This is not a pre-deploy candidate CI gate while Netlify builds are frozen.
+// A stale public sitemap before deployment means PENDING DEPLOYMENT, not a
+// bilingual/SEO regression in the candidate. For candidate media use
+// scripts/verify-site-media-seo.mjs (see deploy/netlify/README.md).
 import {mkdir,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 const root=resolve(import.meta.dirname,'..');

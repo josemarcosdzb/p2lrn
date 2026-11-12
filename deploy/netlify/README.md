@@ -2,6 +2,16 @@
 
 The Netlify production site is connected to this repository and builds from `main`.
 
+## CI vs production: two separate release gates
+
+**Regla permanente: el CI del candidato no debe fallar por el estado de una web que todavía no se ha desplegado.** Netlify tiene los despliegues automáticos congelados con `[build].ignore = "exit 0"` en `netlify.toml`.
+
+1. **Antes de publicar (`main`, PR o validación manual):** comprobar el SHA candidato, su compilación `.netlify-cdn/`, las páginas y rutas ES/EN, el `sitemap.xml` generado, las entradas de imágenes y vídeos, enlaces, WCAG automático y navegación real en Chromium. Usar `node scripts/verify-site-media-seo.mjs` y las demás pruebas del candidato. **No ejecutar `scripts/audit_public_site.mjs` en este gate.**
+2. **Después del despliegue autorizado a Netlify:** comprobar que la revisión publicada corresponde al SHA aprobado y ejecutar `node scripts/audit_public_site.mjs --origin https://p2lrn.org`, además de las pruebas reales de Studio/Player y rollback si procede. Este es el único momento en que la diferencia entre producción y la entrega aprobada puede constituir un error de publicación.
+3. **Mientras Netlify no se haya desplegado:** si el sitemap público contiene una versión anterior (ejemplo observado el 12-11-2026: 120 URL y ninguna entrada multimedia, frente a 130 URL y entradas de imagen/vídeo del candidato), etiquetar el estado como **PENDIENTE DE DESPLIEGUE**. No interpretarlo como fallo de traducción, SEO o compilación, no bajar los requisitos del sitemap candidato y no repetir la misma incidencia como bloqueo de CI.
+
+El workflow `.github/workflows/p2lrn-site-i18n.yml` valida el candidato **sin consultar el sitemap público**. La auditoría externa permanece disponible para aceptación **posterior** al despliegue. La aprobación del CI **no equivale** a publicación ni a indexación en Google.
+
 ## Production build
 
 Netlify runs:
@@ -113,14 +123,14 @@ The generated Player `release.json` contains byte sizes, SHA-256 digests and SRI
 
 Git-triggered Netlify builds are deliberately frozen by `[build].ignore = "exit 0"`
 in `netlify.toml`. This does not disable manual build hooks. A green source CI
-does not publish the site, and a stale public-site audit must remain visible
-until an explicitly authorized publication is verified.
+does not publish the site. Until the owner approves and verifies a deployment,
+a previously published sitemap is expected and cannot fail pre-deployment CI.
 
-The bilingual workflow is read-only: it regenerates English to check the
-committed mirror, fails if generation changes candidate bytes, and only then
-runs Chromium against that same `github.sha`. Generated translations must be
-reviewed and committed before validating a release; CI must never push a later,
-untested translation commit.
+The bilingual push workflow is read-only: it validates the committed ES/EN
+candidate in Chromium without regenerating or publishing it. English regeneration
+is an explicit manual operation, with its diff checked against the candidate SHA;
+any translated changes require review, commit and a new validation before release.
+Neither job treats the frozen production site as the candidate.
 
 Before publication, record the final source SHA, successful source/build job
 URLs, artifact SHA-256 inventory, accessibility review results, and the

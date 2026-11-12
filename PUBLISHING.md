@@ -1,5 +1,7 @@
 # P2LRN npm publishing
 
+> **Web / Netlify (independiente de npm).** El CI del candidato de `main` no debe comparar su sitemap con la web pública mientras el despliegue está congelado. La auditoría de `https://p2lrn.org` se ejecuta **solo después del despliegue autorizado**. Véase la [separación permanente entre CI y producción](deploy/netlify/README.md#ci-vs-production-two-separate-release-gates). Una diferencia entre versiones no es un fallo de SEO del candidato.
+
 The npm distribution consists of five version-aligned packages:
 
 - `@p2lrn/player` — browser Player, renderers, isolated runtime hosts, Service Worker and pinned `h5p-standalone` core assets.
