@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 import {VISUAL_LAYOUT_BLOCKS,mountVisualLayoutTools} from '../web/studio/visual-layout.js';
 
 test('Studio visual layout exposes semantic, distinct insertion tools',()=>{
