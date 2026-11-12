@@ -1,5 +1,5 @@
 import {P2LRNStudioDocument} from './runtime/authoring-document.js';
-import {exportP2LRNPackage} from './runtime/package-export.js';
+import {exportP2LRNPackage,exportMultipartP2LRNBundle} from './runtime/package-export.js';
 import {exportOfflineAssignmentBundle,parseOfflineAssignmentResult} from './runtime/offline-assignment.js';
 import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
@@ -877,6 +877,18 @@ async function exportPackage(){
   globalThis.P2LRNRecordConversion?.('studio_package_exported');
 }
 
+async function exportMultipartBundle(options={}){
+  if(!studio)throw new Error('Crea o abre un curso primero.');
+  const bundle=await exportMultipartP2LRNBundle(studio,options);
+  downloadStudioBytes(bundle.bytes,bundle.filename,'application/zip');
+  exportedRevision=studio.changeCount;
+  updateChanges();
+  setStatus(document.documentElement.lang.startsWith('en')
+    ?'Multipart exported: '+bundle.partCount+' parts'
+    :'Multipart exportado: '+bundle.partCount+' partes');
+  return bundle;
+}
+
 function hideAddHelp(){
   if(!addHelp)return;
   addHelp.dataset.visible='false';
@@ -1025,6 +1037,7 @@ sharedCommandBar=mountStudioCommandBar({
     recoverDraft:()=>recoverLatestDraft(),
     clearDraft:()=>discardLocalDraft(),
     export:()=>exportPackage(),
+    multipart:(options)=>exportMultipartBundle(options),
     offline:()=>offlineButton.click(),
     review:()=>offlineResultButton.click(),
     addUnit:()=>addUnit(),
