@@ -290,3 +290,14 @@ body.studio-doc-page .studio-guide-insert-media{grid-row:2}
 body.studio-doc-page .studio-guide-choice-body{grid-template-columns:minmax(0,1fr);gap:1.1rem}
 body.studio-doc-page .studio-guide-choice-entries{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:1.15rem}
 @media(max-width:680px){body.studio-doc-page .studio-guide-control-sample{min-width:calc(50% - 5px);flex:1 1 calc(50% - 5px)}body.studio-doc-page .studio-guide-choice-entries{grid-template-columns:minmax(0,1fr)}}
+
+/* Landing editor controls are readable and non-interactive, without sideways scrolling. */
+.studio-guide-card--controls{grid-column:1/-1}
+.studio-guide-card--controls h3{margin:0 0 .3rem}
+.studio-guide-card--controls h4{margin:.7rem 0 .3rem;font-size:.96rem;color:#223e61}
+.studio-guide-card--controls .studio-guide-control-group{margin:.4rem 0 .7rem;min-width:0}
+.studio-guide-card--controls .studio-guide-control-samples{display:flex;flex-wrap:wrap;gap:10px;margin:.4rem 0;min-width:0}
+.studio-guide-card--controls .studio-guide-control-sample{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:112px;padding:8px 14px;border:1px solid #b4c4d5;border-radius:7px;background:#fff;color:#183958;font-size:.95rem;font-weight:700;text-align:center;line-height:1.4;overflow-wrap:anywhere}
+.studio-guide-card--controls .studio-guide-control-source{font-size:.86rem;margin:.6rem 0 0;color:#405875}
+.studio-guide-card--controls .studio-guide-control-source a:focus-visible{outline:3px solid #1767c4;outline-offset:3px}
+@media(max-width:610px){.studio-guide-card--controls .studio-guide-control-sample{flex:1 1 calc(50% - 6px);min-width:0}}
