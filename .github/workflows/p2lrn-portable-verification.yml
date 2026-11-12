@@ -28,6 +28,7 @@ on:
         default: 'all'
         options:
           - all
+          - remaining
           - three-game
           - assembly-start
           - pointer-drag-rope
@@ -450,7 +451,7 @@ jobs:
         shell: powershell
     env:
       P2LRN_QUEST3D_ONLY: '1'
-      P2LRN_QUEST3D_CASE: ${{ github.event_name == 'push' && 'three-game' || inputs.quest3d_case }}
+      P2LRN_QUEST3D_CASE: ${{ github.event_name == 'push' && 'remaining' || inputs.quest3d_case }}
       P2LRN_QUEST3D_OUTPUT_DIR: .visual-evidence/quest3d-hosted
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262

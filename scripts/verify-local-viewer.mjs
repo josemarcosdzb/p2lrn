@@ -2632,7 +2632,7 @@ try{
       ['accessibility','accessibility',verifyStudioAccessibility]
     ];
     const selected=String(process.env.P2LRN_QUEST3D_CASE||'all').trim();
-    invariant(selected==='all'||steps.some(([name])=>name===selected),
+    invariant(selected==='all'||selected==='remaining'||steps.some(([name])=>name===selected),
       'Unknown P2LRN_QUEST3D_CASE: '+selected);
     const report={ok:false,mode:'quest3d-mobile-and-desktop',selected,cases:[]};
     const evidenceFile=join(visualEvidenceRoot,'quest3d-report.json');
@@ -2640,7 +2640,8 @@ try{
     const persist=()=>writeFile(evidenceFile,JSON.stringify(report,null,2)+'\n');
     await persist();
     for(const [name,key,run] of steps){
-      if(selected!=='all'&&selected!==name)continue;
+      if(selected==='remaining'&&name==='three-game')continue;
+      if(selected!=='all'&&selected!=='remaining'&&selected!==name)continue;
       const started=Date.now();
       const maxMs=100000;
       stageLog(name,'START',{deadlineMs:maxMs});
