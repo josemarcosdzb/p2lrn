@@ -458,15 +458,29 @@ export function mountStudioDropAuthoring({surface,onSelected=()=>{},onChange=()=
     ['pointerup',onPointerUp],['pointercancel',onPointerUp],['click',onClick],
     ['keydown',onKeyDown]];
   for(const [name,handler] of handlers)surface.addEventListener(name,handler);
-  return {get selectedZone(){return selected&&surface.contains(selected)?selected:null;},select,
-    dispose(){
+  let interactive=true;
+  const setEnabled=next=>{
+    const enabled=Boolean(next);
+    if(enabled===interactive)return;
+    interactive=enabled;
+    if(enabled){
+      // Resume the existing editor instead of modifying authored markup.
+      decorateKeyboardTargets();
+      keyboardObserver?.observe(surface,{childList:true,subtree:true});
+      for(const [name,handler] of handlers)surface.addEventListener(name,handler);
+    }else{
       select(null);cleanup(drag);drag=null;keyboardObserver?.disconnect();
+      for(const [name,handler] of handlers)surface.removeEventListener(name,handler);
+    }
+  };
+  return {get selectedZone(){return selected&&surface.contains(selected)?selected:null;},select,setEnabled,
+    dispose(){
+      setEnabled(false);
       for(const [node,original] of previousEditable){
         if(original===null)node.removeAttribute('contenteditable');
         else node.setAttribute('contenteditable',original);
       }
       previousEditable.clear();
       surface.classList.remove('p2lrn-studio-drop-editing');
-      for(const [name,handler] of handlers)surface.removeEventListener(name,handler);
     }};
 }

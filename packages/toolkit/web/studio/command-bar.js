@@ -785,7 +785,17 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     refreshButtons();
   }
   function ensureDropAuthoring(next){
-    if(dropSurface===next)return;
+    // Student preview is read-only, but must not serialize a different lesson.
+    // Disposing and remounting the editor changed the ordering of temporary
+    // contenteditable/keyboard attributes inside the saved lesson DOM.
+    if(previewMode&&dropAuthoring&&dropSurface===surface()){
+      dropAuthoring.setEnabled(false);
+      return;
+    }
+    if(dropSurface===next){
+      dropAuthoring?.setEnabled(true);
+      return;
+    }
     dropAuthoring?.dispose();dropAuthoring=null;dropSurface=next;
     if(next)dropAuthoring=mountStudioDropAuthoring({
       surface:next,
