@@ -139,9 +139,9 @@ async function browserNavigation(){
   for(const [route,english] of [['/',false],['/en/',true],['/docs/',false],['/en/docs/',true]]){
     const response=await page.goto(base+route,{waitUntil:'domcontentloaded'});
     assert.equal(response.status(),200);
-    await page.locator('body > nav.language-switch').waitFor({timeout:7000});
+    await page.locator('nav.language-switch').waitFor({timeout:7000});
     assert.equal(await page.locator('html').getAttribute('lang'),english?'en':'es');
-    const nav=page.locator('body > nav.language-switch');
+    const nav=page.locator('nav.language-switch');
     assert.equal(await nav.locator('a[hreflang="es"]').count(),1);
     assert.equal(await nav.locator('a[hreflang="en"]').count(),1);
     assert.equal(await nav.locator('a[aria-current="page"]').getAttribute('hreflang'),english?'en':'es');
@@ -153,6 +153,23 @@ async function browserNavigation(){
   await page.locator('nav.language-switch a[hreflang="en"]').click();
   await page.waitForURL(base+'/en/docs/');
   assert.equal(await page.locator('html').getAttribute('lang'),'en');
+  // At mobile width the language switch belongs to the header. It must
+  // never hide or overlap the actual site navigation button.
+  await page.setViewportSize({width:390,height:844});
+  await page.goto(base+'/docs/',{waitUntil:'domcontentloaded'});
+  const mobileMenu=page.locator('.site-header [data-menu]');
+  const mobileLanguages=page.locator('.site-header nav.language-switch');
+  await mobileMenu.waitFor({state:'visible',timeout:7000});
+  await mobileLanguages.waitFor({state:'visible',timeout:7000});
+  const menuRect=await mobileMenu.boundingBox(),langRect=await mobileLanguages.boundingBox();
+  assert.ok(menuRect&&langRect&&menuRect.x+menuRect.width<=langRect.x+1||
+    menuRect&&langRect&&langRect.x+langRect.width<=menuRect.x+1,
+    'Mobile language selector must not cover the site menu button');
+  await mobileMenu.click();
+  await page.locator('#nav.is-open > a[href="/docs/desarrolladores/"]').waitFor({state:'visible',timeout:7000});
+  await mobileMenu.click();
+  await page.setViewportSize({width:1280,height:800});
+  console.log('BROWSER_MOBILE_HEADER_AND_LANGUAGE=pass');
   console.log('BROWSER_LANGUAGE_SWITCH=pass');
 }
 async function docsRoleNavigationChrome(language){
@@ -247,7 +264,7 @@ async function editorialDocsChrome(language){
 
 async function standardQuiz(language){
   await page.goto(base+(language==='en'?'/en/':'/'),{waitUntil:'domcontentloaded'});
-  await page.locator('body > nav.language-switch').waitFor();
+  await page.locator('nav.language-switch').waitFor();
   await page.evaluate(async()=>{
     document.body.replaceChildren(Object.assign(document.createElement('div'),{id:'test-root'}));
     const {renderQuestionnaire}=await import('/toolkit-web/questionnaire-runtime.js');

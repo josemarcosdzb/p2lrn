@@ -85,7 +85,14 @@
       if(lang===(english?'en':'es'))a.setAttribute('aria-current','page');
       switcher.append(a);
     }
-    document.body.append(switcher);
+    // Place the selector inside the shared header so it cannot cover the
+    // responsive Menu button. Keep a body fallback only for headerless pages.
+    const header=document.querySelector('.site-header');
+    if(header){
+      const menu=header.querySelector('[data-menu]');
+      if(menu)menu.before(switcher);
+      else header.append(switcher);
+    }else document.body.append(switcher);
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
