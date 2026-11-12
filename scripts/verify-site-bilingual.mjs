@@ -145,7 +145,16 @@ for(const file of sourceHtml){
     // Inline code references are prose; executable <pre> examples and copy
     // controls must still have equivalent counts and browser functionality.
     if(selector==='code')continue; // Inline references are language-specific; complete <pre> examples remain parity checked.
-    const a=es(selector).length,b=en(selector).length;
+    // Locale-specific, captioned reference screenshots are optional evidence,
+    // not independently actionable accordions. Compare the actual interactive
+    // <details>/<summary> controls, excluding only the screenshot preview.
+    const optionalPreviews=rel==='crear-cursos-interactivos/index.html'||localizedStudio;
+    const count=$=>{
+      if(!optionalPreviews||!['details','summary'].includes(selector))return $(selector).length;
+      if(selector==='details')return $('details').filter((_,node)=>!$(node).hasClass('studio-guide-source-preview')).length;
+      return $('summary').filter((_,node)=>!$(node).closest('details').hasClass('studio-guide-source-preview')).length;
+    };
+    const a=count(es),b=count(en);
     if(a!==b)errors.push(rel+': structural parity mismatch for '+selector+' ('+a+' ES vs '+b+' EN).');
   }
   const esIds=idsOf(es),enIds=idsOf(en);
