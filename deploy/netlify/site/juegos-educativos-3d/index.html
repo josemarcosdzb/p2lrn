@@ -16,14 +16,15 @@
   <nav class="nav" id="nav" aria-label="Navegación principal"><a href="/studio/">Studio</a><a href="/demo/">Visor</a><a href="/docs/">Documentación</a></nav>
   <button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">Menú</button>
 </header>
-<main id="contenido" class="landing-main">
+<div class="landing-doc-shell doc-main">
+  <aside class="doc-sidebar" aria-label="Navegación de documentación"></aside>
+  <main id="contenido" class="landing-main">
   <nav class="landing-breadcrumbs" aria-label="Ruta de navegación"><a href="/">Inicio</a><span aria-hidden="true">/</span><span aria-current="page">juegos educativos 3d</span></nav>
-  <nav class="landing-section-links" aria-label="Otras soluciones y guías de P2LRN"><strong>Explora P2LRN</strong><a href="/crear-cursos-interactivos/">Crear cursos</a><a href="/juegos-educativos-3d/" aria-current="page">Juegos 3D</a><a href="/cursos-offline/">Cursos offline</a><a href="/analytics/">Analytics</a><a href="/docs/">Documentación</a></nav>
   <section class="landing-hero" aria-labelledby="landing-title">
     <div class="landing-hero-copy">
       <p class="eyebrow">REPRODUCIR / ACTIVIDADES 3D</p>
       <h1 id="landing-title">Crear juegos educativos 3D interactivos para alumnos</h1>
-      <p class="landing-lead">Crea actividades donde el alumno ordena, relaciona, clasifica o ensambla objetos en una escena 3D. Prepáralas con los controles visuales de Studio, revisa la vista del alumno en Player y comprueba las respuestas antes de compartir el curso.</p>
+      <p class="landing-lead">Configura la pregunta normalmente en Studio: escribe el enunciado, los elementos y las respuestas correctas. Para Ordenar, Relacionar y Clasificar, la escena 3D se genera automáticamente a partir de esos datos cuando juega el alumno; no hay que construir otra escena. Ensamblar tiene su editor de piezas y destinos. Comprueba la vista del alumno en Player antes de compartir.</p>
       <div class="hero-actions"><a class="button primary" href="/studio/">Crear un juego en Studio</a><a class="button" href="/docs/juegos-3d/">Consultar la guía 3D</a></div>
     </div>
   </section>
@@ -35,6 +36,13 @@
   </section>
   <section class="landing-section" aria-labelledby="real-3d-heading"><div class="landing-section-heading"><p class="eyebrow">CAPTURAS REALES DE STUDIO Y DEL ALUMNO</p><h2 id="real-3d-heading">Cómo se configura el juego y cómo se ve al jugar</h2></div><p>Estas imágenes muestran el editor y una escena de la partida. Para comprobar la interacción, abre el Visor y termina el ejercicio; una captura no demuestra que el juego esté resuelto.</p><div class="p2lrn-3d-example-row"><h3>Ordenar un proceso en 3D</h3><div class="p2lrn-example-pair"><figure><a href="/assets/activity-examples/configuracion-ordenar-3d-studio.webp" target="_blank" rel="noopener noreferrer" aria-label="Ampliar captura real: Profesor: introduce las etapas y el orden correcto en Studio."><img src="/assets/activity-examples/configuracion-ordenar-3d-studio.webp" width="1014" height="706" loading="lazy" decoding="async" alt="Profesor: introduce las etapas y el orden correcto en Studio."></a><figcaption>Profesor: introduce las etapas y el orden correcto en Studio.</figcaption></figure><figure><a href="/assets/activity-examples/12-3d-ordenar.webp" target="_blank" rel="noopener noreferrer" aria-label="Ampliar captura real: Alumno: coloca las fases del ciclo del agua dentro de la escena."><img src="/assets/activity-examples/12-3d-ordenar.webp" width="1270" height="985" loading="lazy" decoding="async" alt="Alumno: coloca las fases del ciclo del agua dentro de la escena."></a><figcaption>Alumno: coloca las fases del ciclo del agua dentro de la escena.</figcaption></figure></div></div>
 <div class="p2lrn-3d-example-row"><h3>Ensamblar un objeto en 3D</h3><div class="p2lrn-example-pair"><figure><a href="/assets/activity-examples/configuracion-ensamblaje-3d-studio.webp" target="_blank" rel="noopener noreferrer" aria-label="Ampliar captura real: Profesor: selecciona las piezas y ajusta sus posiciones de destino."><img src="/assets/activity-examples/configuracion-ensamblaje-3d-studio.webp" width="1014" height="940" loading="lazy" decoding="async" alt="Profesor: selecciona las piezas y ajusta sus posiciones de destino."></a><figcaption>Profesor: selecciona las piezas y ajusta sus posiciones de destino.</figcaption></figure><figure><a href="/assets/activity-examples/15-3d-ensamblar.webp" target="_blank" rel="noopener noreferrer" aria-label="Ampliar captura real: Escena de ensamblaje capturada durante la partida; la imagen no acredita que se haya terminado el montaje."><img src="/assets/activity-examples/15-3d-ensamblar.webp" width="1270" height="1035" loading="lazy" decoding="async" alt="Escena de ensamblaje capturada durante la partida; la imagen no acredita que se haya terminado el montaje."></a><figcaption>Escena de ensamblaje capturada durante la partida; la imagen no acredita que se haya terminado el montaje.</figcaption></figure></div></div><div class="hero-actions"><a class="button primary" href="/demo/">Abrir el Visor</a><a class="button" href="/docs/juegos-3d/">Ver la guía de los cuatro juegos 3D</a></div></section>
+
+  <section class="landing-section p2lrn-burro-case" id="ejemplo-burro" aria-labelledby="ejemplo-burro-titulo">
+    <div class="landing-section-heading"><p class="eyebrow">CURSO REAL · ENSAMBLAJE 3D</p><h2 id="ejemplo-burro-titulo">Ejemplo: monta el burro pieza a pieza</h2></div>
+    <p>El curso existente <strong>«Monta el burro»</strong> contiene una actividad de ensamblaje 3D con siete piezas. Ábrelo directamente en el Player oficial: no es una imagen fija ni una aplicación independiente. Es un ejemplo para probar, no una partida terminada certificada.</p>
+    <p>Para Ordenar, Relacionar y Clasificar, redactas el enunciado y las respuestas como en cualquier otra actividad de Studio: el Player prepara automáticamente su escena 3D. Para ensamblar este burro se indican las piezas y sus destinos en el editor específico; el Player construye la escena con esa configuración.</p>
+    <div class="hero-actions"><a class="button primary" href="/demo/?src=%2Fexamples%2Fshowcase%2Fcurso-ensamblaje-burro.p2lrn">Jugar al ejemplo del burro en el Visor</a><a class="button" href="/examples/showcase/curso-ensamblaje-burro.p2lrn" download>Descargar curso .p2lrn original</a><a class="button" href="/docs/juegos-3d/">Ver instrucciones paso a paso</a></div>
+  </section>
   <section class="landing-section" aria-labelledby="features-heading">
     <div class="landing-section-heading"><p class="eyebrow">QUÉ PUEDES HACER</p><h2 id="features-heading">Del contenido educativo a la escena</h2></div>
     <div class="landing-card-grid"><article class="landing-card"><h3>Crear desde Studio</h3><p>En «Añadir contenido → Juegos» elige Ordenar 3D, Relacionar 3D, Clasificar 3D o Ensamblaje 3D y rellena los campos de la actividad.</p><a href="/studio/">Abrir el editor <span aria-hidden="true">→</span></a></article>
@@ -53,6 +61,7 @@
   <section class="landing-last" aria-labelledby="last-heading"><div><p class="eyebrow">SIGUIENTE PASO</p><h2 id="last-heading">Prueba una actividad antes de integrarla.</h2><p>El visor permite abrir un paquete de ejemplo con juegos 3D; la documentación explica los formatos y las mecánicas disponibles.</p><div class="landing-last-links"><a class="button" href="/studio/">Crear juego 3D</a><a class="button" href="/docs/questionnaires/3d/">Ver guía de la actividad</a></div></div><aside class="landing-related" aria-label="Otras soluciones"><h3>También te puede interesar</h3><a href="/crear-cursos-interactivos/">Crear el curso <span aria-hidden="true">→</span></a>
 <a href="/cursos-offline/">Distribuirlo offline <span aria-hidden="true">→</span></a></aside></section>
 </main>
+</div>
 <footer><strong>P2LRN</strong><span>Cursos interactivos · Player web · Studio</span><nav aria-label="Información legal"><a href="/licencia/">Licencia</a><a href="/privacidad/">Privacidad</a></nav></footer>
 </body>
 </html>

@@ -484,11 +484,53 @@ const brandHeadFor=(locale='es')=>[
   '<meta property="og:image" content="https://p2lrn.org/p2lrn-mark.png">',
   '<meta name="twitter:image" content="https://p2lrn.org/p2lrn-mark.png">'
 ].join('');
+// Build the initial header from the SAME navigation data used by p2lrn.js.
+// This prevents old per-page menus from flashing before the JavaScript loads.
+const siteNavigation=new Map();
+for(const [locale,source] of [['es','p2lrn.js'],['en','en/p2lrn.js']]){
+  const code=await readFile(join(siteRoot,...source.split('/')),'utf8');
+  const match=/  const SITE_NAV = (\\[[^\\r\\n]+\\]);/.exec(code);
+  if(!match)throw new Error('Missing single canonical SITE_NAV in '+source);
+  const entries=JSON.parse(match[1]);
+  if(entries.length!==6||entries.some(entry=>!entry.href?.startsWith('/')||!entry.label))
+    throw new Error('Invalid site navigation in '+source);
+  siteNavigation.set(locale,entries);
+}
+if(JSON.stringify(siteNavigation.get('es').map(x=>x.href))!==JSON.stringify(siteNavigation.get('en').map(x=>x.href)))
+  throw new Error('Spanish and English top menus must have identical destinations');
+const marketingIndexRoutes=new Set([
+  'crear-cursos-interactivos/index.html','juegos-educativos-3d/index.html','cursos-offline/index.html','skills/index.html',
+  'en/create-interactive-courses/index.html','en/3d-educational-games/index.html','en/offline-courses/index.html','en/skills/index.html',
+  'en/crear-cursos-interactivos/index.html','en/juegos-educativos-3d/index.html','en/cursos-offline/index.html'
+]);
 for (const htmlPath of htmlFiles) {
   const pageRelative=relative(outputRoot,htmlPath).replaceAll('\\','/');
   const pageLocale=pageRelative.startsWith('en/')?'en':'es';
   let html = await readFile(htmlPath,'utf8');
   html = html.replaceAll('0.5.0-alpha.10',productionPublicVersion);
+  // Preserve functional status controls and branding; replace ONLY the top nav.
+  const siteHeader=/<header\\b[^>]*class=["'][^"']*\\bsite-header\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/header>/i.exec(html)?.[0];
+  if(siteHeader){
+    const route=pageUrl(htmlPath);
+    const current=pageLocale==='en'?spanishRouteFor(route):route;
+    const navigation='<nav class="nav" id="nav" aria-label="'+(pageLocale==='en'?'Main navigation':'Navegación principal')+'">'+
+      siteNavigation.get(pageLocale).map(entry=>{
+        const href=pageLocale==='en'?englishRouteFor(entry.href):entry.href;
+        const active=entry.href==='/docs/'
+          ?current.startsWith('/docs/')&&!current.startsWith('/docs/desarrolladores/')
+          :entry.active.some(rule=>rule.endsWith('*')?current.startsWith(rule.slice(0,-1)):current===rule);
+        return '<a class="nav-direct" href="'+href+'"'+(active?' aria-current="page"':'')+'>'+entry.label+'</a>';
+      }).join('')+'</nav>';
+    const navPattern=/<nav\\b(?=[^>]*\\bclass=["'][^"']*\\bnav\\b[^"']*["'])[^>]*>[\\s\\S]*?<\\/nav>/i;
+    let header=siteHeader;
+    if(navPattern.test(header))header=header.replace(navPattern,navigation);
+    else header=header.replace(/(<a\\b[^>]*class=["']brand["'][^>]*>[\\s\\S]*?<\\/a>)/i,'$1'+navigation);
+    if(!header.includes('id="nav"'))throw new Error('Unable to render canonical header for '+pageRelative);
+    if(!/\\bdata-menu\\b/.test(header))
+      header=header.replace(/<\\/header>$/i,'<button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">'+(pageLocale==='en'?'Menu':'Menú')+'</button></header>');
+    html=html.replace(siteHeader,header);
+  }
+
   if(pageRelative==='index.html'||pageRelative==='en/index.html'){
     for(const marker of [playerUrlMarker,playerSriMarker]){
       if(html.split(marker).length!==2)
@@ -655,22 +697,27 @@ const teacherDocPaths=new Set([
   '/docs/studio/','/docs/entrega-offline/','/docs/ejemplos/',
   '/docs/colaboracion/','/docs/juegos-3d/',
 ]);
+// Use the same visible fallback on every documentation and solution page.
+// Both roles and the four solutions remain reachable without client JavaScript.
 const staticDocSidebar=(english,relativePath)=>{
-  const route='/'+(relativePath.endsWith('index.html')?relativePath.slice(0,-'index.html'.length):relativePath);
-  const normalized=route.endsWith('/')?route:route+'/';
-  const spanish=english?spanishRouteFor(normalized):normalized;
-  const teacher=teacherDocPaths.has(spanish)||spanish.startsWith('/docs/questionnaires/');
-  const sections=teacher?teacherDocSections:developerDocSections;
-  const heading=teacher?(english?'Teacher guides':'Guías para profesores')
-    :(english?'Developer guides':'Guías para desarrolladores');
-  const links=sections.map(([path,es,en])=>
+  const fallback=[...new Map([
+    ...teacherDocSections,
+    ...developerDocSections,
+    ['/crear-cursos-interactivos/','Crear cursos interactivos','Create interactive courses'],
+    ['/juegos-educativos-3d/','Juegos educativos 3D','3D educational games'],
+    ['/cursos-offline/','Cursos offline','Offline courses'],
+    ['/skills/','Skills para IA','AI Skills'],
+    ['/docs/skills/','Guía de Skills','Skills guide'],
+  ].map(item=>[item[0],item])).values()];
+  const heading=english?'Documentation menu':'Menú de documentación';
+  const links=fallback.map(([path,es,en])=>
     '<a href="'+(english?englishRouteFor(path):path)+'">'+(english?en:es)+'</a>').join('');
   return '<aside class="doc-sidebar" aria-label="'+(english?'Documentation navigation':'Navegación de documentación')+'">'+
     '<span>'+heading+'</span><nav class="doc-fallback-nav" aria-label="'+heading+'">'+links+'</nav></aside>';
 };
 const docsHtmlFilesForSidebar = htmlFiles.filter((path)=>{
   const rel=relative(outputRoot,path).replaceAll('\\','/');
-  return rel.startsWith('docs/')||rel.startsWith('en/docs/');
+  return rel.startsWith('docs/')||rel.startsWith('en/docs/')||marketingIndexRoutes.has(rel);
 });
 const sidebarProblems = [];
 for (const htmlPath of docsHtmlFilesForSidebar) {
@@ -696,6 +743,8 @@ for (const htmlPath of docsHtmlFilesForSidebar) {
         (staticDocSidebar(rel.startsWith('en/'),rel).match(/<a\s+href=/g)||[]).length) {
     sidebarProblems.push(rel + ': static navigation fallback missing or incomplete');
   }
+  if(marketingIndexRoutes.has(rel)&&!html.includes('landing-doc-shell'))
+    sidebarProblems.push(rel+': marketing guide lacks shared documentation layout');
   const expectedScript=rel.startsWith('en/')?'/en/p2lrn.js':'/p2lrn.js';
   const hasScript=html.includes('src="'+expectedScript)||html.includes("src='"+expectedScript);
   if (!hasScript) sidebarProblems.push(rel + ': shared '+expectedScript+' missing');

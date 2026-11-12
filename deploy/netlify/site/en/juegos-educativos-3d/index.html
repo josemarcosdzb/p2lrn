@@ -14,14 +14,15 @@
   <nav class="nav" id="nav" aria-label="Main navigation"><a href="/en/studio/">Studio</a><a href="/en/demo/">Viewer</a><a href="/en/docs/">Documentation</a></nav>
   <button class="menu" type="button" data-menu="" aria-expanded="false" aria-controls="nav">Menu</button>
 </header>
-<main id="contenido" class="landing-main">
+<div class="landing-doc-shell doc-main">
+  <aside class="doc-sidebar" aria-label="Documentation navigation"></aside>
+  <main id="contenido" class="landing-main">
   <nav class="landing-breadcrumbs" aria-label="Navigation route"><a href="/en/">Home</a><span aria-hidden="true">/</span><span aria-current="page">3d educational games</span></nav>
-  <nav class="landing-section-links" aria-label="Other P2LRN solutions and guides"><strong>Explore P2LRN</strong><a href="/en/create-interactive-courses/">Create courses</a><a href="/en/3d-educational-games/" aria-current="page">3D games</a><a href="/en/offline-courses/">Offline courses</a><a href="/en/analytics/">Analytics</a><a href="/en/docs/">Documentation</a></nav>
   <section class="landing-hero" aria-labelledby="landing-title">
     <div class="landing-hero-copy">
       <p class="eyebrow">PLAY / 3D ACTIVITIES</p>
       <h1 id="landing-title">Create interactive 3D educational games for learners</h1>
-      <p class="landing-lead">Create an interactive lesson where learners order, match, classify or assemble objects in a 3D scene. Set up the activity in Studio, check the learner view in Player and review the answers before sharing the course.</p>
+      <p class="landing-lead">Create the question normally in Studio: write the prompt, items and correct answers. For ordering, matching and classification, the 3D scene is generated automatically from that content when the learner plays; you do not need to build a second scene. Assembly uses its own piece-and-target editor. Check the learner view in Player before sharing.</p>
       <div class="hero-actions"><a class="button primary" href="/en/studio/">Create a game in Studio</a><a class="button" href="/en/docs/3d-games/">Consult the 3D guide</a></div>
     </div>
   </section>
@@ -33,6 +34,13 @@
   </section>
   <section class="landing-section" aria-labelledby="real-3d-heading"><div class="landing-section-heading"><p class="eyebrow">REAL STUDIO AND LEARNER SCREENSHOTS</p><h2 id="real-3d-heading">How a 3D exercise is set up and experienced</h2></div><p>These are screenshots from the editor and learner gameplay, not a substitute for completing the interactive exercise. Open the viewer to test the actual package.</p><div class="p2lrn-3d-example-row"><h3>Order a process in 3D</h3><div class="p2lrn-example-pair"><figure><a href="/assets/activity-examples/configuracion-ordenar-3d-studio.webp" target="_blank" rel="noopener noreferrer" aria-label="Enlarge real screenshot: As the teacher: set the correct order and instructions in Studio."><img src="/assets/activity-examples/configuracion-ordenar-3d-studio.webp" width="1014" height="706" loading="lazy" decoding="async" alt="As the teacher: set the correct order and instructions in Studio."></a><figcaption>As the teacher: set the correct order and instructions in Studio.</figcaption></figure><figure><a href="/assets/activity-examples/12-3d-ordenar.webp" target="_blank" rel="noopener noreferrer" aria-label="Enlarge real screenshot: As the learner: arrange the stages of the water cycle in the 3D scene."><img src="/assets/activity-examples/12-3d-ordenar.webp" width="1270" height="985" loading="lazy" decoding="async" alt="As the learner: arrange the stages of the water cycle in the 3D scene."></a><figcaption>As the learner: arrange the stages of the water cycle in the 3D scene.</figcaption></figure></div></div>
 <div class="p2lrn-3d-example-row"><h3>Assemble a 3D object</h3><div class="p2lrn-example-pair"><figure><a href="/assets/activity-examples/configuracion-ensamblaje-3d-studio.webp" target="_blank" rel="noopener noreferrer" aria-label="Enlarge real screenshot: As the teacher: choose pieces and configure their destination positions."><img src="/assets/activity-examples/configuracion-ensamblaje-3d-studio.webp" width="1014" height="940" loading="lazy" decoding="async" alt="As the teacher: choose pieces and configure their destination positions."></a><figcaption>As the teacher: choose pieces and configure their destination positions.</figcaption></figure><figure><a href="/assets/activity-examples/15-3d-ensamblar.webp" target="_blank" rel="noopener noreferrer" aria-label="Enlarge real screenshot: Learner scene captured during assembly; the picture alone does not establish that assembly finished."><img src="/assets/activity-examples/15-3d-ensamblar.webp" width="1270" height="1035" loading="lazy" decoding="async" alt="Learner scene captured during assembly; the picture alone does not establish that assembly finished."></a><figcaption>Learner scene captured during assembly; the picture alone does not establish that assembly finished.</figcaption></figure></div></div><div class="hero-actions"><a class="button primary" href="/en/demo/">Open the viewer</a><a class="button" href="/en/docs/3d-games/">See the detailed guide for all four modes</a></div></section>
+
+  <section class="landing-section p2lrn-burro-case" id="donkey-example" aria-labelledby="donkey-example-title">
+    <div class="landing-section-heading"><p class="eyebrow">REAL PACKAGE · 3D ASSEMBLY</p><h2 id="donkey-example-title">Example: assemble the donkey</h2></div>
+    <p>The existing <strong>“Assemble the donkey”</strong> course contains a seven-piece 3D assembly activity. Open that exact .p2lrn file in the official Player; it is not a still image or a separate demo application. This is an example to explore, not evidence that a full learner session has passed.</p>
+    <p>For questions in ordering, matching and classification, enter the prompt and correct answers as in any other Studio activity: Player builds the 3D scene automatically. To assemble this donkey, specify the pieces and where they belong using the dedicated assembly editor; Player renders the scene from that configuration.</p>
+    <div class="hero-actions"><a class="button primary" href="/en/demo/?src=%2Fexamples%2Fshowcase%2Fcurso-ensamblaje-burro.p2lrn">Play the donkey example in Player</a><a class="button" href="/examples/showcase/curso-ensamblaje-burro.p2lrn" download>Download the original .p2lrn course</a><a class="button" href="/en/docs/3d-games/">See step-by-step instructions</a></div>
+  </section>
   <section class="landing-section" aria-labelledby="features-heading">
     <div class="landing-section-heading"><p class="eyebrow">WHAT YOU CAN BUILD</p><h2 id="features-heading">From the lesson to the 3D activity</h2></div>
     <div class="landing-card-grid"><article class="landing-card"><h3>Create from Studio</h3><p>From "Add content → Games", choose Ordering 3D, Matching 3D, Classification 3D or Assembly 3D and complete the activity fields.</p><a href="/en/studio/">Open the editor <span aria-hidden="true">→</span></a></article>
@@ -51,6 +59,7 @@
   <section class="landing-last" aria-labelledby="last-heading"><div><p class="eyebrow">NEXT STEP</p><h2 id="last-heading">Try an activity before integrating it.</h2><p>The viewer lets you open an example package; the documentation explains the formats and mechanics available.</p><div class="landing-last-links"><a class="button" href="/en/studio/">Create 3D game</a><a class="button" href="/en/docs/questionnaires/3d/">See activity guide</a></div></div><aside class="landing-related" aria-label="Related guides"><h3>You may also be interested</h3><a href="/en/create-interactive-courses/">Create the course <span aria-hidden="true">→</span></a>
 <a href="/en/offline-courses/">Deliver offline <span aria-hidden="true">→</span></a></aside></section>
 </main>
+</div>
 <footer><strong>P2LRN</strong><span>Interactive courses · Web player · Studio</span><nav aria-label="Legal information"><a href="/en/license/">License</a><a href="/en/privacy/">Privacy</a></nav></footer>
 
 

@@ -166,35 +166,9 @@
   };
   cleanProductionChrome();
 
-  const PUBLIC_NAV = [
-    { label: 'Studio', href: '/studio/', active: ['/studio/'] },
-    { label: 'Visor', href: '/demo/', active: ['/demo/'] },
-    {
-      label: 'Soluciones',
-      active: ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'],
-      items: [
-        ['/crear-cursos-interactivos/','Crear cursos interactivos'],
-        ['/juegos-educativos-3d/','Juegos educativos 3D'],
-        ['/cursos-offline/','Cursos offline sin LMS'],
-      ],
-    },
-    { label: 'Analytics', href: '/analytics/', active: ['/analytics/'] },
-    { label: 'Skills para IA', href: '/skills/', active: ['/skills/'] },
-    { label: 'Documentación', href: '/docs/', active: ['/docs/'] },
-    { label: 'Desarrolladores', href: '/docs/desarrolladores/', active: ['/docs/desarrolladores/*'] },
-    { label: 'Contacto', href: '/contacto/', active: ['/contacto/'] },
-  ];
-
-  // Separate authoring and integration in visible first-level navigation.
-  // Technical references remain reachable from the developer sidebar.
-  const GLOBAL_NAV = [
-    {label:'Documentación',href:'/docs/',active:['/docs/']},
-    {label:'Profesores',href:'/docs/empezar-facil/',active:['/docs/empezar/','/docs/empezar-facil/']},
-    {label:'Studio',href:'/docs/studio/',active:['/docs/studio/']},
-    {label:'Juegos educativos',href:'/docs/questionnaires/',active:['/docs/questionnaires/*','/docs/juegos-3d/','/docs/colaboracion/']},
-    {label:'Visor',href:'/demo/',active:['/demo/']},
-    {label:'Desarrolladores',href:'/docs/desarrolladores/',active:['/docs/desarrolladores/*']},
-  ];
+  // One shared header. build-site.mjs reads this exact JSON for the first HTML paint.
+  // No route-specific top navigation: solutions and Skills live in the left index.
+  const SITE_NAV = [{"label":"Studio","href":"/studio/","active":["/studio/"]},{"label":"Visor","href":"/demo/","active":["/demo/"]},{"label":"Analytics","href":"/analytics/","active":["/analytics/"]},{"label":"Documentación","href":"/docs/","active":["/docs/*"]},{"label":"Desarrolladores","href":"/docs/desarrolladores/","active":["/docs/desarrolladores/*"]},{"label":"Contacto","href":"/contacto/","active":["/contacto/"]}];
 
   const normalizePath = (value) => {
     // Route comparisons use the same logical path for both languages.
@@ -232,9 +206,10 @@
     const current = normalizePath(window.location.pathname);
     const fragment = document.createDocumentFragment();
 
-    const navigationEntries = current.startsWith('/docs/') ? GLOBAL_NAV : PUBLIC_NAV;
+    const navigationEntries = SITE_NAV;
     for (const entry of navigationEntries) {
-      const active = (entry.active || []).some((path) => path.endsWith('*') ? current.startsWith(normalizePath(path.slice(0,-1))) : current === normalizePath(path));
+      const active = (entry.href==='/docs/' && current.startsWith('/docs/') && !current.startsWith('/docs/desarrolladores/')) ||
+        (entry.href!=='/docs/' && (entry.active || []).some((path) => path.endsWith('*') ? current.startsWith(normalizePath(path.slice(0,-1))) : current === normalizePath(path)));
       if (entry.href) {
         const link = document.createElement('a');
         link.className = 'nav-direct';
@@ -398,6 +373,12 @@
       ['/docs/empezar/','Antes de crear'],
       ['/docs/empezar-facil/','Primer curso con Studio'],
     ]],
+    ['SOLUCIONES', [
+      ['/crear-cursos-interactivos/','Crear cursos interactivos'],
+      ['/juegos-educativos-3d/','Juegos educativos 3D'],
+      ['/cursos-offline/','Cursos offline'],
+      ['/skills/','Skills para IA'],
+    ]],
     ['CREAR', [
       ['/docs/studio/','Guía visual de Studio'],
       ['/docs/questionnaires/','Cuestionarios y juegos'],
@@ -406,7 +387,6 @@
     ]],
     ['REPRODUCIR', [
       ['/docs/ejemplos/','Cursos de ejemplo'],
-      ['/juegos-educativos-3d/','Juegos educativos 3D'],
     ]],
     ['REVISAR RESULTADOS', [
       ['/analytics/','Abrir Analytics'],
@@ -488,6 +468,7 @@
   ]);
 
   const DOC_SECTION_LABELS = Object.freeze({
+    SOLUCIONES:'Soluciones',
     EMPEZAR:'Para profesores',
     DESARROLLADORES:'Para desarrolladores',
     INSTALAR:'Instalar',
@@ -550,15 +531,8 @@
     const fragment = document.createDocumentFragment();
     // A teacher should never need to browse API, npm or Host menus to find
     // course authoring help. Developers get their own complete navigation.
-    const teacherRoutes=new Set([
-      '/docs/','/docs/empezar/','/docs/empezar-facil/',
-      '/docs/studio/','/docs/entrega-offline/','/docs/ejemplos/',
-      '/docs/colaboracion/','/docs/juegos-3d/',
-    ]);
-    const forTeachers=teacherRoutes.has(current)||current.startsWith('/docs/questionnaires/');
-    const visibleSections=forTeachers
-      ?new Set(['EMPEZAR','CREAR','REPRODUCIR','REVISAR RESULTADOS','DESARROLLADORES','RECURSOS'])
-      :new Set(['DESARROLLADORES','INSTALAR','INTEGRAR','CONECTORES','REFERENCIA','RECURSOS']);
+    // One stable, complete sidebar for teachers, games and developers.
+    const visibleSections=new Set(GLOBAL_SIDEBAR.map(([section])=>section));
     for (const [section,items] of GLOBAL_SIDEBAR) {
       if(!visibleSections.has(section))continue;
       const label=document.createElement('span');

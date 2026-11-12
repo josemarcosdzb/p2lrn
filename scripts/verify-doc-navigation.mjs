@@ -35,6 +35,7 @@ const js=await readFile(portalScript,'utf8');
 for(const marker of [
   'const GLOBAL_SIDEBAR = [',
   "['EMPEZAR', [",
+  "['SOLUCIONES', [",
   "['CREAR', [",
   "['REPRODUCIR', [",
   "['INTEGRAR', [",
@@ -62,7 +63,7 @@ for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(','doc-page-subn
   if(js.includes(forbidden)) failures.push('p2lrn.js: legacy logic remains: '+forbidden);
 }
 
-const expectedSections=['EMPEZAR','CREAR','REPRODUCIR','REVISAR RESULTADOS','DESARROLLADORES','INSTALAR','INTEGRAR','CONECTORES','REFERENCIA','RECURSOS'];
+const expectedSections=['EMPEZAR','SOLUCIONES','CREAR','REPRODUCIR','REVISAR RESULTADOS','DESARROLLADORES','INSTALAR','INTEGRAR','CONECTORES','REFERENCIA','RECURSOS'];
 const sidebarBlock=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1]??'';
 const sectionNames=[...sidebarBlock.matchAll(/\['([^']+)', \[/g)].map(x=>x[1]);
 if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections))
@@ -75,12 +76,14 @@ for(let i=0;i<sectionNames.length;i++){
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map(x=>({href:x[1],label:x[2]}));
 const hrefs=sidebarLinks.map(x=>x.href);
-if(hrefs.length!==42)failures.push('expected 42 global role-grouped links, found '+hrefs.length);
+if(hrefs.length!==45)failures.push('expected 45 global role-grouped links, found '+hrefs.length);
 const duplicates=hrefs.filter((href,i)=>hrefs.indexOf(href)!==i);
 if(duplicates.length)failures.push('duplicate global sidebar links: '+[...new Set(duplicates)]);
 for(const route of ['/docs/','/docs/empezar-facil/','/docs/studio/','/docs/questionnaires/','/docs/entrega-offline/'])
   if(![...['EMPEZAR','CREAR'].map(k=>sectionChunks.get(k)||'')].some(s=>s.includes("['"+route+"'")))
     failures.push('teacher authoring guide misplaced: '+route);
+for(const route of ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/','/skills/'])
+  if(!(sectionChunks.get('SOLUCIONES')||'').includes("['"+route+"'"))failures.push('related guides missing from one sidebar: '+route);
 const resultLinks=sectionChunks.get('REVISAR RESULTADOS')||'';
 if(!resultLinks.includes("['/analytics/'")||resultLinks.includes("['/docs/analytics/'"))
   failures.push('teacher results menu must link to the Analytics app without duplicating the integration guide');
@@ -133,6 +136,31 @@ for(const route of docRoutes){
   const child=childLinks.some((item)=>item.href===route);
   const iaDetail=connectorIaDetailRoutes.includes(route);
   if(!exact && !child && !iaDetail) failures.push('sidebar does not cover documentation route: '+route);
+}
+
+
+const enScript=await readFile(join(root,'deploy','netlify','site','en','p2lrn.js'),'utf8');
+const navPattern=/const SITE_NAV = (\\[[^\\r\\n]+\\]);/;
+const esNav=navPattern.exec(js)?.[1],enNav=navPattern.exec(enScript)?.[1];
+if(!esNav||!enNav)failures.push('missing canonical site-wide navigation');
+else{
+  const spanish=JSON.parse(esNav),english=JSON.parse(enNav);
+  const routes=['/studio/','/demo/','/analytics/','/docs/','/docs/desarrolladores/','/contacto/'];
+  if(JSON.stringify(spanish.map(v=>v.href))!==JSON.stringify(routes)||
+    JSON.stringify(english.map(v=>v.href))!==JSON.stringify(routes))
+    failures.push('top navigation destinations differ between pages or languages');
+}
+for(const page of ['crear-cursos-interactivos','juegos-educativos-3d','cursos-offline','skills']){
+  for(const locale of ['', 'en/']){
+    const file=join(root,'deploy','netlify','site',...locale.split('/').filter(Boolean),page,'index.html');
+    const html=await readFile(file,'utf8');
+    if(!html.includes('landing-doc-shell doc-main')||!html.includes('class="doc-sidebar"'))
+      failures.push('marketing page missing single left documentation index: '+locale+page);
+    if(html.includes('landing-section-links'))
+      failures.push('duplicated horizontal menu remains: '+locale+page);
+    if(page==='juegos-educativos-3d'&&!html.includes('curso-ensamblaje-burro.p2lrn'))
+      failures.push('missing original donkey 3D course link: '+locale+page);
+  }
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));

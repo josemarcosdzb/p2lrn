@@ -2263,3 +2263,20 @@ body.landing-page .landing-hero h1{line-height:1.14;padding-block:.055em;overflo
 .viewer-page .viewer-player-shell p2lrn-player{min-height:min(80vh,1300px)}
 .viewer-page .viewer-workbench{grid-template-columns:minmax(0,1fr)}
 @media(max-width:650px){.viewer-page .viewer-player-shell{min-height:70vh}.viewer-page .viewer-player-shell p2lrn-player{min-height:65vh}}
+
+/* Public solutions and Skills are sections of the SAME documentation experience.
+   No second horizontal menu, no title clipping and one persistent left index. */
+.landing-doc-shell.doc-main{width:min(calc(100% - 48px),1560px);max-width:none;grid-template-columns:minmax(220px,240px) minmax(0,1fr);align-items:start;gap:clamp(24px,3vw,48px);padding-top:14px;padding-bottom:70px}
+body.landing-page .landing-doc-shell .landing-main{grid-column:2;min-width:0;width:100%;max-width:none;padding:0;margin:0}
+.landing-doc-shell .doc-sidebar{grid-column:1;min-width:0}
+body.landing-page .landing-doc-shell .landing-hero{padding:clamp(30px,4vw,60px) 0 clamp(40px,4vw,62px)}
+body.landing-page .landing-doc-shell .landing-hero h1{max-width:100%;font-size:clamp(2.25rem,4.05vw,4.3rem);line-height:1.2;letter-spacing:-.045em;padding-block:.1em;overflow:visible;overflow-wrap:break-word;text-wrap:pretty}
+.landing-doc-shell .landing-section h2,.landing-doc-shell .landing-last h2{line-height:1.22;padding-block:.07em;overflow:visible;overflow-wrap:break-word}
+.landing-doc-shell .landing-breadcrumbs{padding-top:16px}
+.landing-doc-shell .landing-hero .hero-actions{display:flex;flex-wrap:wrap;gap:10px}
+@media(max-width:1180px){.landing-doc-shell.doc-main{grid-template-columns:210px minmax(0,1fr);width:min(calc(100% - 40px),1120px)}}
+@media(max-width:900px){.landing-doc-shell.doc-main{grid-template-columns:minmax(0,1fr);width:min(calc(100% - 28px),760px);gap:14px;padding-top:15px}
+  body.landing-page .landing-doc-shell .landing-main{grid-column:1;grid-row:auto;order:3}
+  .landing-doc-shell .doc-sidebar{grid-column:1;grid-row:auto;order:1}
+  body.landing-page .landing-doc-shell .landing-hero h1{font-size:clamp(2.05rem,7vw,3.4rem)}}
+@media(max-width:480px){body.landing-page .landing-doc-shell .landing-hero h1{font-size:clamp(1.95rem,8vw,2.65rem)}}
