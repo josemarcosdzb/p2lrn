@@ -168,7 +168,10 @@ async function docsRoleNavigationChrome(language){
   await page.locator('.doc-sidebar a').first().waitFor({timeout:10000});
   if(isEnglish)console.log('BROWSER_EN_NAV_LINKS='+JSON.stringify(await page.locator('#nav a').evaluateAll(links=>links.map(link=>({href:link.getAttribute('href'),text:link.textContent?.trim(),visible:Boolean(link.getClientRects().length)})))));
   await page.locator('#nav > a[href="'+portal+'"]').waitFor({timeout:10000});
-  assert.equal(await page.locator('#nav > details').count(),0,'Developer access must not be hidden in a dropdown');
+  assert.equal(await page.locator('#nav > details').count(),1,'Solutions must appear in one contextual dropdown');
+  await page.locator('#nav > details summary').click();
+  assert.equal(await page.locator('#nav > details[open] .nav-dropdown a').count(),3,
+    'Solutions must preserve the three linked pages within a single header dropdown');
   assert.equal(await page.locator('.doc-sidebar a[href="'+npm+'"]').count(),0,'Teacher sidebar must not display npm instructions');
   assert.equal(await page.locator('article.doc-content pre').count(),0,'Teacher guide must not require code');
   await page.screenshot({path:join(evidence,'docs-'+language+'-teacher.png'),fullPage:false});
@@ -176,7 +179,10 @@ async function docsRoleNavigationChrome(language){
   assert.equal(devResponse?.status(),200,'Developer collaboration page not found');
   await page.locator('.doc-sidebar a[href="'+npm+'"]').waitFor({timeout:10000});
   assert.ok(await page.locator('article.doc-content pre').count()>=2,'Developer reference lost its browser/server examples');
-  assert.equal(await page.locator('#nav > details').count(),0,'Developer navigation must be directly visible');
+  assert.equal(await page.locator('#nav > a[href="'+portal+'"]').count(),1,
+    'Developer navigation must remain a direct header link, not be hidden in Solutions');
+  assert.equal(await page.locator('#nav > details').count(),1,
+    'Developer pages must keep the same Solutions menu as teacher pages');
   await page.screenshot({path:join(evidence,'docs-'+language+'-developer.png'),fullPage:false});
   console.log('BROWSER_DOCS_'+language.toUpperCase()+'_AUDIENCE_SEPARATION=PASS');
 }

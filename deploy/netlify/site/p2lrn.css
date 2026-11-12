@@ -961,7 +961,7 @@ main{max-width:1220px;margin:0 auto;padding:0 24px}
 .nav-dropdown a:hover,.nav-dropdown a:focus-visible,.nav-dropdown a[aria-current="page"]{background:#161b22;color:#fff!important}
 .nav-group:not([open])>.nav-dropdown{display:none}
 .site-header .header-meta{gap:10px;font-size:.64rem;white-space:nowrap}
-@media(max-width:1320px){
+@media(max-width:1180px){
   .site-header{grid-template-columns:1fr auto}
   .site-header .nav{position:absolute;top:64px;left:0;right:0;display:none;align-items:stretch;flex-direction:column;gap:2px;padding:10px 14px 16px;background:#0d1117;border-bottom:1px solid #30363d;max-height:calc(100vh - 64px);overflow:auto}
   .site-header .nav.is-open{display:flex}
