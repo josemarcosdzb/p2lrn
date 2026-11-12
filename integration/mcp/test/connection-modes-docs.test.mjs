@@ -127,7 +127,9 @@ test('LTI bilingual docs have a real deployment workflow and distinguish impleme
 
 test('legacy links redirect to canonical section and are excluded from navigation',()=>{
   const nav=read('deploy/netlify/site/p2lrn.js');
-  const sitemap=read('deploy/netlify/site/sitemap.xml');
+  // Sitemap bytes are generated in .netlify-cdn by the website build,
+  // and validated separately by the production media/SEO gate.
+  // This source-level MCP test enforces canonicals, redirects and indexability.
   const config=read('netlify.toml');
   const redirectBlocks=config.split('[[redirects]]').slice(1);
   for(const [slug,anchor] of legacy){
@@ -140,10 +142,14 @@ test('legacy links redirect to canonical section and are excluded from navigatio
     assert(redirectBlocks.some(block=>block.includes('from = "'+route+'"')&&
       block.includes('to = "'+destination+'"')&&block.includes('status = 301')&&
       block.includes('force = true')),'Production redirect missing '+slug);
-    assert(!sitemap.includes('https://p2lrn.org'+route));
+    assert(page.includes('name="robots" content="noindex,follow"'),'Legacy redirect must not be indexed: '+slug);
     assert(!nav.includes("['"+route+"','"),'Orphan route advertised in navigation: '+slug);
   }
-  for(const [route] of routes)assert(sitemap.includes('https://p2lrn.org'+route));
+  for(const [route] of routes){
+    const page=read('deploy/netlify/site'+route+'index.html');
+    assert(page.includes('rel="canonical"'),'Missing canonical route: '+route);
+    assert(!/name=["']robots["'][^>]*noindex/iu.test(page),'Canonical route marked noindex: '+route);
+  }
   const lms=read('deploy/netlify/site/docs/conectores/lms/index.html');
   assert(lms.includes('class="prev" href="/docs/conectores/ia/"'));
 });
