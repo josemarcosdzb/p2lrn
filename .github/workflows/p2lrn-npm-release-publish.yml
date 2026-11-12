@@ -1,0 +1,126 @@
+name: Publish P2LRN 0.5.0-alpha.14 (six npm packages)
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/p2lrn-npm-release-publish.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p2lrn-npm-release-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    name: Publish six official packages including LTI Provider
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 55
+    defaults:
+      run:
+        shell: powershell
+    env:
+      NPM_CONFIG_REGISTRY: https://registry.npmjs.org
+      P2LRN_RELEASE_VERSION: 0.5.0-alpha.14
+    steps:
+      - name: Checkout exact release commit without persisting GitHub tokens
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Select Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Check source revision, npm identity and absence of conflicting versions
+        run: |
+          $ErrorActionPreference='Stop'
+          $remoteLine=git ls-remote origin refs/heads/main | Select-Object -First 1
+          if($LASTEXITCODE -ne 0 -or -not $remoteLine) {throw 'Unable to verify current main'}
+          $remoteSha=($remoteLine -split '\s+')[0]
+          $localSha=(git rev-parse HEAD).Trim()
+          if($remoteSha -ne $env:GITHUB_SHA -or $localSha -ne $env:GITHUB_SHA) {throw "Main changed; refusing stale npm release: $remoteSha"}
+          $whoami=(& npm whoami --registry=https://registry.npmjs.org).Trim()
+          if($LASTEXITCODE -ne 0 -or $whoami -ne 'josemarcosdiazblanes') {throw 'npm publisher is not authenticated as the package owner on this runner'}
+          $entries=@(
+            @('packages/h5p-libraries','h5p-libraries'),
+            @('packages/toolkit','toolkit'),
+            @('packages/player','player'),
+            @('packages/studio','studio'),
+            @('packages/analytics','analytics'),
+            @('integration/lms','lti-provider')
+          )
+          foreach($entry in $entries) {
+            $manifest=Get-Content (Join-Path $entry[0] 'package.json') -Raw | ConvertFrom-Json
+            $name='@p2lrn/'+$entry[1]
+            if($manifest.name -ne $name -or $manifest.version -ne $env:P2LRN_RELEASE_VERSION) {throw "Unaligned manifest: $name"}
+            $raw=& npm view $name versions --json --registry=https://registry.npmjs.org
+            if($LASTEXITCODE -ne 0) {throw "Unable to inspect npm versions of $name"}
+            $versions=@($raw | ConvertFrom-Json)
+            if($versions -contains $env:P2LRN_RELEASE_VERSION) {throw "Version already exists on npm: $name@$env:P2LRN_RELEASE_VERSION"}
+            Write-Host "AVAILABLE=$name@$env:P2LRN_RELEASE_VERSION"
+          }
+          Write-Host "RELEASE_SOURCE=$env:GITHUB_SHA"
+          Write-Host "NPM_PUBLISHER=$whoami"
+      - name: Build packages and stage all six original npm tarballs
+        run: |
+          $ErrorActionPreference='Stop'
+          npm ci --prefix packages/toolkit --ignore-scripts --no-audit --no-fund
+          if($LASTEXITCODE -ne 0) {throw 'Toolkit dependencies could not be prepared'}
+          npm ci --prefix packages/h5p-libraries --ignore-scripts --no-audit --no-fund
+          if($LASTEXITCODE -ne 0) {throw 'H5P dependencies could not be prepared'}
+          $out=Join-Path $env:RUNNER_TEMP ('p2lrn-npm-release-'+$env:GITHUB_RUN_ID)
+          if(Test-Path -LiteralPath $out) {throw 'Release staging path already exists; refusing overwrite'}
+          New-Item -ItemType Directory -Path $out | Out-Null
+          $entries=@(
+            @('packages/h5p-libraries','h5p-libraries'),
+            @('packages/toolkit','toolkit'),
+            @('packages/player','player'),
+            @('packages/studio','studio'),
+            @('packages/analytics','analytics'),
+            @('integration/lms','lti-provider')
+          )
+          foreach($entry in $entries) {
+            Push-Location $entry[0]
+            try {
+              npm pack --pack-destination $out --registry=https://registry.npmjs.org --json
+              if($LASTEXITCODE -ne 0) {throw "npm pack failed for $($entry[1])"}
+            } finally {Pop-Location}
+            $tar=Join-Path $out ("p2lrn-$($entry[1])-$env:P2LRN_RELEASE_VERSION.tgz")
+            if(-not(Test-Path -LiteralPath $tar -PathType Leaf) -or (Get-Item $tar).Length -lt 100) {throw "Missing or empty tarball: $tar"}
+            Write-Host "STAGED=$($entry[1]) BYTES=$((Get-Item $tar).Length)"
+          }
+          Write-Host 'ALL_SIX_NPM_TARBALLS_BUILT'
+      - name: Publish to public npm with next tag (no latest tag changes)
+        run: |
+          $ErrorActionPreference='Stop'
+          $head=(git ls-remote origin refs/heads/main | Select-Object -First 1) -split '\s+'
+          if($LASTEXITCODE -ne 0 -or $head[0] -ne $env:GITHUB_SHA) {throw 'Main changed after packing; refusing publication'}
+          $out=Join-Path $env:RUNNER_TEMP ('p2lrn-npm-release-'+$env:GITHUB_RUN_ID)
+          foreach($name in @('h5p-libraries','toolkit','player','studio','analytics','lti-provider')) {
+            $tgz=Join-Path $out ("p2lrn-$name-$env:P2LRN_RELEASE_VERSION.tgz")
+            if(-not (Test-Path -LiteralPath $tgz -PathType Leaf)) {throw "Tarball missing: $name"}
+          }
+          foreach($name in @('h5p-libraries','toolkit','player','studio','analytics','lti-provider')) {
+            $tgz=Join-Path $out ("p2lrn-$name-$env:P2LRN_RELEASE_VERSION.tgz")
+            npm publish $tgz --tag next --access public --registry=https://registry.npmjs.org
+            if($LASTEXITCODE -ne 0) {throw "npm rejected publication of @p2lrn/$name; later packages were not attempted"}
+            Write-Host "NPM_PUBLISH_ACCEPTED=@p2lrn/$name@$env:P2LRN_RELEASE_VERSION"
+          }
+      - name: Verify published versions and next dist-tags directly from npm
+        run: |
+          $ErrorActionPreference='Stop'
+          foreach($name in @('h5p-libraries','toolkit','player','studio','analytics','lti-provider')) {
+            $pkg='@p2lrn/'+$name
+            $version=(& npm view ($pkg+'@'+$env:P2LRN_RELEASE_VERSION) version --registry=https://registry.npmjs.org --prefer-online).Trim()
+            if($LASTEXITCODE -ne 0 -or $version -ne $env:P2LRN_RELEASE_VERSION) {throw "Registry version missing: $pkg"}
+            $tag=(& npm dist-tag ls $pkg --registry=https://registry.npmjs.org | Select-String '^next:' | Select-Object -First 1).ToString()
+            if($LASTEXITCODE -ne 0 -or $tag -notmatch [regex]::Escape($env:P2LRN_RELEASE_VERSION)) {throw "next dist-tag does not match: $pkg"}
+            Write-Host "NPM_PUBLIC_VERIFIED=$pkg@$version $tag"
+          }
+          Write-Host "ALL_SIX_PUBLIC_NPM_PACKAGES_VERIFIED"
+      - name: Remove only this job's temporary tarballs
+        if: always()
+        run: |
+          $out=Join-Path $env:RUNNER_TEMP ('p2lrn-npm-release-'+$env:GITHUB_RUN_ID)
+          if((Test-Path -LiteralPath $out) -and $out.StartsWith($env:RUNNER_TEMP,[StringComparison]::OrdinalIgnoreCase)) {
+            Remove-Item -LiteralPath $out -Recurse -Force
+          }
