@@ -2,7 +2,7 @@ name: P2LRN LMS connectivity preflight (NOT full E2E certification)
 on:
   workflow_dispatch:
   push:
-    branches: [mejorastudio]
+    branches: [mejorastudio, main]
     paths:
       - 'scripts/interoperability/**'
       - 'integration/lms/**'
@@ -15,6 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   discover-real-lms:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == 'mejorastudio'
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 15
     steps:
@@ -379,3 +380,48 @@ jobs:
           node scripts/interoperability/verify-independent-web-reentry.mjs --course "$course" --site "$site" --output "$out" --repo (Get-Location).Path
           if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
           Write-Output ('WEB_REAL_LEARNER_REENTRY_REPORT='+$out)
+
+  qa-browser-availability:
+    # Focused read-only probe of the ALREADY OPEN real Windows Moodle browser.
+    # Does not log in, change LMS state, publish courses or fake gradebook evidence.
+    if: github.event_name == 'push' && github.ref_name == 'main' && contains(github.event.head_commit.message, '[qa-browser-availability]')
+    name: Inspect existing authenticated Chrome before real LMS UI operations
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 8
+    steps:
+      - name: Verify real desktop session is accessible without touching LMS data
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $windows=@(Get-Process chrome -ErrorAction SilentlyContinue |
+            Where-Object {$_.MainWindowHandle -ne 0 -and $_.MainWindowTitle -match '(?i)Moodle'})
+          if($windows.Count -lt 1){
+            Write-Output 'REAL_CHROME_MOODLE_WINDOW_VISIBLE=NO'
+            throw 'Runner desktop cannot see the already-open Moodle browser. Do not claim authenticated E2E.'
+          }
+          Add-Type -AssemblyName UIAutomationClient
+          Add-Type -AssemblyName UIAutomationTypes
+          $confirmed=$false
+          foreach($chrome in $windows){
+            $root=[System.Windows.Automation.AutomationElement]::FromHandle($chrome.MainWindowHandle)
+            if(!$root){continue}
+            $els=$root.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+              [System.Windows.Automation.Condition]::TrueCondition)
+            $hasMoodle=(@($els | Where-Object {
+              $_.Current.ControlType -eq [System.Windows.Automation.ControlType]::Document -and
+              $_.Current.Name -match '(?i)Moodle'
+            }).Count -gt 0)
+            $hasAdmin=(@($els | Where-Object {
+              $_.Current.Name -eq 'Site administration' -and
+              $_.Current.IsEnabled
+            }).Count -gt 0)
+            if($hasMoodle -and $hasAdmin){$confirmed=$true;break}
+          }
+          if(!$confirmed){
+            Write-Output 'REAL_CHROME_MOODLE_ADMIN_VISIBLE=NO'
+            throw 'No authorized administrator UI visible from this runner session.'
+          }
+          Write-Output 'REAL_CHROME_MOODLE_ADMIN_VISIBLE=YES'
+          Write-Output 'GUI_READY_FOR_REAL_TEACHER_AND_LEARNER_TESTS=YES'
+          Write-Output 'CERTIFICATION_FROM_THIS_PRECHECK=NONE'
+
