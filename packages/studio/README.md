@@ -55,6 +55,12 @@ The classic loader derives its channel from its own URL, loads the matching Play
 
 Do not use the ESM file directly in plain HTML unless your environment resolves the bare `@p2lrn/player` specifier. The documented CDN entrypoint is `p2lrn-studio.js`.
 
+## Multipart en Studio (web y npm)
+
+Studio incorpora **Archivo → Dividir paquete (multipart)…** con el campo **Tamaño de cada parte (MiB)** (entre 1 y 64, valor inicial 25). Genera un ZIP con un archivo `.p2lrn` y los fragmentos `.partNNN` del recurso embebido más grande que supere el límite. El exportador se comparte entre la web y el componente npm, en `packages/toolkit/web/studio/package-export.js`.
+
+Extrae los archivos y publícalos juntos en el mismo origen HTTP(S) para que el Player pueda reconstruirlos y verificar SHA-256. Las partes no son cursos educativos separados, ni un formato offline autoejecutable. Límites actuales: 256 MiB por recurso, 64 MiB por parte y 512 partes. La exportación no altera el curso abierto. Consulta [la guía en español](../../deploy/netlify/site/docs/paquetes/multipart/index.html) y [la guía en inglés](../../deploy/netlify/site/en/docs/paquetes/multipart/index.html).
+
 ## Entrega offline autorreproducible
 
 Studio puede exportar el curso abierto como una entrega offline autocontenida. **Windows 64 bits · ejecutable EXE (un archivo)** es la opción principal: genera `.p2lrn-offline.exe`, con el curso y el Player incluidos. El alumno hace doble clic, sin instalar P2LRN ni usar CMD o PowerShell. El lanzador nativo verifica el SHA-256 del contenido incorporado, lo extrae a una carpeta temporal privada, sirve la interfaz sólo en `127.0.0.1` y abre el navegador predeterminado. No incluye un navegador propio.
