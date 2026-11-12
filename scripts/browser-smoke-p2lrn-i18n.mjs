@@ -949,7 +949,7 @@ async function captureMultipartStudioChrome(){
     const response=await page.goto(base+url,{waitUntil:'domcontentloaded',timeout:30000});
     assert.equal(response?.status(),200,lang+' Studio HTTP 200');
     await page.waitForFunction(()=>document.documentElement.dataset.p2lrnStudioReady==='true',{timeout:30000});
-    await page.locator('.p2lrn-file-menu > summary').click();
+    await page.locator('.p2lrn-file-menu > summary').first().click();
     const option=page.locator('[data-studio-multipart-entry]');
     await option.waitFor({state:'visible'});
     assert.equal((await option.innerText()).trim(),entryLabel);
