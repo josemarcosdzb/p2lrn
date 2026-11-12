@@ -879,6 +879,7 @@ for(const [rel,source] of jsSources){
     // Do not change language tags inside imported courses or serialized data.
     generated=generated.replace(/(from\s+['"])\.\/runtime\//g,'$1/studio/runtime/');
     generated=generated.replaceAll("language:'es'","language:'en'");
+    generated=generated.replace(/(createP2LRNStudioDocument\(\{title:[^,}]+,language:)\"es\"/g,'$1\"en\"');
   }
   if(rel==='p2lrn.js')generated=generated.replace("toLocaleLowerCase('es')","toLocaleLowerCase('en')");
 

@@ -68,10 +68,10 @@
   function normalizeSource(value){
     const raw=String(value||'').trim();
     if(localPackages.has(raw))return raw;
-    if(!raw)throw new Error("Select a package..........................................................................................................................................................................................................................................................................................................................................................................................................................................................................");
+    if(!raw)throw new Error("Select a package.");
     let url;
-    try{url=new URL(raw,location.href);}catch{throw new Error("The URL of the example is invalid.................................................................................................................................................................................................................................................................................................................................................................................................................................");}
-    if(!['http:','https:'].includes(url.protocol))throw new Error("Only selected packages from the computer and HTTP/HTTPS URLs from the catalog are supported...................................................................................................................................................................................................................................................");
+    try{url=new URL(raw,location.href);}catch{throw new Error("The URL of the example is invalid.");}
+    if(!['http:','https:'].includes(url.protocol))throw new Error("Only selected packages from the computer and HTTP/HTTPS URLs from the catalog are supported.");
     return url.href;
   }
   const sourceName=(src)=>localPackages.get(src)?.name||
@@ -81,9 +81,9 @@
     const count=localPackages.size;
     fileSummary.textContent=count
       ? (selected
-        ? selected+' · '+count+" package(s) of the equipment available in the selector.................................................................................................................................................................................................................................................................................."
-        : count+" package(s) of the equipment available in the selector..................................................................................................................................................................................................................................................................................")
-      : "Select.p2lrn files from the computer. Open in this browser; not sent to the server.....................................................................................................................................................................................................................................................";
+        ? selected+' · '+count+" package(s) of the equipment available in the selector."
+        : count+" package(s) of the equipment available in the selector.")
+      : "Select.p2lrn files from the computer. Open in this browser; not sent to the server.";
   }
   const setField=(key,value)=>{if(fields[key])fields[key].textContent=value==null||value===''?'—':String(value);};
   const stateLabels={ERROR:'ERROR',LOADING:"LOADING",READY:"READY",RENDERED:"RENDERING",BRIDGE:"PREPARING"};
@@ -142,11 +142,11 @@
       "Technical Test File — Not a Full Course";
     const description=document.createElement('p');
     description.textContent=String((en?item.sampleNoteEn:item.sampleNoteEs)||
-      (en?'This source contains minimal test resources.':"The source contains minimal evidence resources.........................................................................................................................................................................................................................................................................................................................................................................................................................................................")).slice(0,400);
+      (en?'This source contains minimal test resources.':"The source contains minimal evidence resources.")).slice(0,400);
     const integrity=document.createElement('p');
     integrity.textContent=en?
       'Verified integrity confirms that the package has not been altered; it does not certify pedagogical completeness or full standard conformance.':
-      "Verified integrity confirms that the package has not been altered; it does not certify that it is a developed course or the complete compliance of the standard.....................................................";
+      "Verified integrity confirms that the package has not been altered; it does not certify that it is a developed course or the complete compliance of the standard.";
     const children=[heading,description,integrity];
     const fullCourse=catalog.find(row=>row.url==='/examples/canonical/external/common-cartridge-topkit.p2lrn')??{url:'/examples/canonical/external/common-cartridge-topkit.p2lrn'};
     if(fullCourse){
