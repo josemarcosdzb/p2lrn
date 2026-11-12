@@ -109,8 +109,8 @@ test('game renderer totals use the questionnaire-wide raw/max contract',async()=
     'questionnaire-crossword.js','questionnaire-rosco.js','questionnaire-word-search.js'];
   for(const renderer of renderers){
     const source=await readFile(new URL('../web/renderers/'+renderer,import.meta.url),'utf8');
-    assert.doesNotMatch(source,/score\\.pointsEarned|score\\.pointsPossible/,renderer+' uses a question-level contract for whole-game score');
-    assert.match(source,/score\\.raw/,renderer+' must display awarded total');
-    assert.match(source,/score\\.max/,renderer+' must display possible total');
+    assert.doesNotMatch(source,/score\.pointsEarned|score\.pointsPossible/,renderer+' uses a question-level contract for whole-game score');
+    assert.match(source,/score\.raw/,renderer+' must display awarded total');
+    assert.match(source,/score\.max/,renderer+' must display possible total');
   }
 });
