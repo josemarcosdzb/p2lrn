@@ -194,6 +194,55 @@ async function connectPage(browserWs){
     if(process.env.P2LRN_QUEST3D_ONLY==='1')
       console.log('P2LRN_CDP_TRACE='+JSON.stringify({phase,...extra}));
   };
+  // The real 3D QA uses the same verified Playwright/CDP transport as the
+  // bilingual browser suite. Windows-hosted Chrome can expose a debug page
+  // yet stall the raw Node WebSocket handshake before any game is evaluated.
+  if(process.env.P2LRN_QUEST3D_ONLY==='1'&&
+      process.env.P2LRN_QUEST3D_USE_PLAYWRIGHT==='1'){
+    const {chromium}=await import('../.p2lrn-i18n-ci/node_modules/playwright-core/index.mjs');
+    cdpTrace('playwright-browser-connect-start');
+    const browser=await chromium.connectOverCDP(browserWs,{timeout:18000});
+    const context=browser.contexts()[0]||await browser.newContext();
+    const page=context.pages().find(x=>x.url()==='about:blank')||
+      context.pages()[0]||await context.newPage();
+    cdpTrace('playwright-page-selected',{url:page.url()});
+    const session=await context.newCDPSession(page);
+    const security=[],exceptions=[],contexts=new Map();
+    session.on('Log.entryAdded',({entry})=>{
+      if(/content security policy|violates the following|refused to|blocked by csp/iu.test(entry?.text||''))
+        security.push({level:entry.level,text:entry.text,url:entry.url||null});
+    });
+    session.on('Runtime.exceptionThrown',({exceptionDetails:d})=>{
+      exceptions.push({text:d?.text||'exception',url:d?.url||null,lineNumber:d?.lineNumber??null,
+        columnNumber:d?.columnNumber??null,description:d?.exception?.description||null});
+    });
+    session.on('Runtime.executionContextCreated',({context:ctx})=>{
+      contexts.set(ctx.id,{id:ctx.id,origin:ctx.origin||'',name:ctx.name||'',frameId:ctx.auxData?.frameId||null});
+    });
+    session.on('Runtime.executionContextDestroyed',({executionContextId})=>contexts.delete(executionContextId));
+    session.on('Runtime.executionContextsCleared',()=>contexts.clear());
+    const send=async(method,params={},timeoutMs=20000)=>{
+      let timer;
+      try{return await Promise.race([
+        session.send(method,params),
+        new Promise((_,reject)=>{
+          timer=setTimeout(()=>reject(new Error('Playwright CDP command timed out: '+method)),timeoutMs);
+        })
+      ]);}finally{if(timer)clearTimeout(timer);}
+    };
+    for(const method of ['Runtime.enable','Log.enable','Page.enable','Network.enable']){
+      cdpTrace('playwright-command-start',{method});
+      await send(method,{},12000);
+      cdpTrace('playwright-command-ok',{method});
+    }
+    await send('Emulation.setDeviceMetricsOverride',
+      {width:1500,height:950,deviceScaleFactor:1,mobile:false},12000);
+    cdpTrace('playwright-cdp-ready');
+    return {socket:{close:()=>{
+      void session.detach().catch(()=>{});
+      void browser.close().catch(()=>{});
+    }},send,security,exceptions,contexts};
+  }
   // The offline double-click E2E starts a second real Chrome while the
   // original browser is rendering Studio and 3D. Give its DevTools handshake
   // a bounded chance to complete, and refresh a stale target on retry.

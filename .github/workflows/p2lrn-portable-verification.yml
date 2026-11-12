@@ -471,7 +471,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node deploy/netlify/build-site.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install existing Playwright CDP transport for the isolated 3D test
+        run: |
+          npm install --prefix .p2lrn-i18n-ci --no-save --package-lock=false --ignore-scripts playwright-core@1.64.1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify isolated 3D browser case with SwANGLE and traced CDP connection
+        env:
+          P2LRN_QUEST3D_USE_PLAYWRIGHT: '1'
         run: |
           node --check scripts/verify-local-viewer.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
