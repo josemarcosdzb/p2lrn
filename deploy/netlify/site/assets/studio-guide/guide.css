@@ -301,3 +301,12 @@ body.studio-doc-page .studio-guide-choice-entries{display:grid;grid-template-col
 .studio-guide-card--controls .studio-guide-control-source{font-size:.86rem;margin:.6rem 0 0;color:#405875}
 .studio-guide-card--controls .studio-guide-control-source a:focus-visible{outline:3px solid #1767c4;outline-offset:3px}
 @media(max-width:610px){.studio-guide-card--controls .studio-guide-control-sample{flex:1 1 calc(50% - 6px);min-width:0}}
+
+/* Optional source screenshots retain media discovery while controls stay legible without side scrolling. */
+.studio-guide-source-preview{min-width:0;max-width:100%;margin:.65rem 0 .3rem;padding-top:.5rem;border-top:1px solid #d9e0ea}
+.studio-guide-source-preview>summary{display:flex;align-items:center;min-height:44px;max-width:100%;padding:.5rem .6rem;border-radius:6px;color:#15548b;font-size:.9rem;font-weight:650;cursor:pointer;outline-offset:3px}
+.studio-guide-source-preview>summary:focus-visible{outline:3px solid #225ec1}
+.studio-guide-source-preview figure{margin:.2rem 0 .6rem;min-width:0;max-width:100%}
+.studio-guide-source-preview a{display:block;max-width:100%;min-width:0;outline-offset:3px}
+.studio-guide-source-preview a:focus-visible{outline:3px solid #225ec1}
+.studio-guide-source-preview img{display:block;max-width:100%;width:100%;height:auto;object-fit:contain;border:1px solid #d1dbe6;border-radius:6px;background:#fff}
