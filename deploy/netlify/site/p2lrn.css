@@ -2289,3 +2289,18 @@ body.landing-page .landing-doc-shell .landing-hero h1{max-width:100%;font-size:c
 .doc-main>.doc-sidebar .docs-search{min-width:0;max-width:100%}
 .doc-main>.doc-sidebar .docs-search input{box-sizing:border-box;max-width:100%;min-width:0}
 @media(max-width:900px){.doc-main>.doc-sidebar{padding-left:14px}}
+
+/* Detailed teacher collaboration instructions use the real Studio selector and
+   never imply a live room exists without an authenticated institutional Host. */
+.collaboration-guide-screenshot{margin:20px 0 12px;max-width:100%;min-width:0}
+.collaboration-guide-screenshot a{display:block;max-width:100%;outline-offset:4px}
+.collaboration-guide-screenshot a:focus-visible{outline:3px solid #155db6}
+.collaboration-guide-screenshot img{display:block;width:min(100%,895px);height:auto;max-width:100%;border:1px solid #d3dce8;border-radius:8px;background:#fff}
+.collaboration-guide-screenshot figcaption{margin:6px 0 0;font-size:.8rem;color:#425470;line-height:1.45}
+.collaboration-guide-intro{margin:20px 0 12px;line-height:1.65;color:#283f60}
+.collaboration-guide-activities{display:grid;gap:14px;margin:16px 0 4px;min-width:0}
+.collaboration-guide-activity{scroll-margin-top:100px;padding:clamp(16px,2vw,22px);border:1px solid #cddbea;border-radius:10px;background:#f8fbff;min-width:0}
+.collaboration-guide-activity h3{margin:0 0 10px;font-size:clamp(1.1rem,1.9vw,1.45rem);line-height:1.3;color:#172d4b}
+.collaboration-guide-activity p{margin:9px 0;color:#2e415e;line-height:1.62}
+.collaboration-guide-activity p strong{color:#183c6c}
+.collaboration-guide-activity:target{outline:3px solid #2163ab;outline-offset:3px}

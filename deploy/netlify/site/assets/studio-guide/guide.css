@@ -337,3 +337,15 @@ body.studio-doc-page .studio-guide-multipart-in-flow .studio-multipart-screensho
 body.studio-doc-page .studio-guide-multipart-in-flow figure{min-width:0;margin:0}
 body.studio-doc-page .studio-guide-multipart-in-flow img{display:block;width:100%;height:auto;max-height:280px;object-fit:contain}
 @media(max-width:650px){body.studio-doc-page .studio-guide-multipart-in-flow .studio-multipart-screenshots{grid-template-columns:minmax(0,1fr)}}
+
+/* Detailed authoring guidance: the existing Studio category list links into this
+   single source; do not introduce another set of fake editor controls. */
+body.studio-doc-page .studio-guide-options-help{margin:1.5rem 0 .3rem;padding:clamp(1rem,2.5vw,1.75rem);border:1px solid #d0dceb;border-radius:14px;background:#f7faff;min-width:0}
+body.studio-doc-page .studio-guide-options-help>h3{margin:0 0 .55rem;font-size:clamp(1.15rem,2.2vw,1.55rem);color:#172b48;line-height:1.35}
+body.studio-doc-page .studio-guide-options-help>p{margin:.4rem 0 1rem;color:#354b67;line-height:1.65}
+body.studio-doc-page .studio-guide-options-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0}
+body.studio-doc-page .studio-guide-option-detail{scroll-margin-top:100px;min-width:0;padding:15px 16px;border:1px solid #d1ddeb;border-radius:9px;background:#fff}
+body.studio-doc-page .studio-guide-option-detail h4{font-size:1rem;line-height:1.35;margin:0 0 .4rem;overflow-wrap:break-word}
+body.studio-doc-page .studio-guide-option-detail p{margin:0;font-size:.9rem;line-height:1.6;color:#304461}
+body.studio-doc-page .studio-guide-option-detail:target{outline:3px solid #1a65b4;outline-offset:3px}
+@media(max-width:720px){body.studio-doc-page .studio-guide-options-grid{grid-template-columns:minmax(0,1fr)}}

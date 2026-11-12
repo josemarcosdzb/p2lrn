@@ -164,6 +164,52 @@ for(const internal of ['materializeSharedResource','exportOfflineAssignment','re
   if(studioTeacherGuide.includes(internal))failures.push('Studio teacher guide leaks internal API '+internal);
 if(!studioTeacherGuide.includes('Vista alumno')||!studioTeacherGuide.includes('Guardar'))
   failures.push('Studio teacher guide must show actual edit/save/learner workflow');
+
+// Every visible Studio content, assessment, collaboration and advanced choice
+// must lead to a real explanation in the same locale. Avoid decorative links.
+const guideLinkContracts=[
+  ['es','deploy/netlify/site/docs/studio/index.html','deploy/netlify/site/docs/colaboracion/index.html','/docs/colaboracion/', '/docs/questionnaires/standard/'],
+  ['en','deploy/netlify/site/en/docs/studio/index.html','deploy/netlify/site/en/docs/colaboracion/index.html','/en/docs/collaboration/', '/en/docs/questionnaires/standard/']
+];
+for(const [locale,studioPath,collabPath,collabRoute,questionRoute] of guideLinkContracts){
+  const studio=await read(studioPath),collaboration=await read(collabPath);
+  const labels=locale==='es'?
+    ['Lección','Archivo / multimedia','URL','Recurso compartido','Biblioteca compartida','Reader / documento','Paquete educativo','Cuestionario','Votación en directo','Pizarra compartida','Revisión entre pares','Componente','Grupo de actividades']:
+    ['Lesson','File / media','URL','Shared resource','Shared library','Reader / document','Educational package','Questionnaire','Live poll','Shared board','Peer review','Component','Activity group'];
+  const sections=[
+    '#studio-guia-recurso-url','#studio-guia-recurso-compartido','#studio-guia-biblioteca',
+    '#studio-guia-documento','#studio-guia-paquete-educativo','#studio-guia-componente',
+    '#studio-guia-grupo-actividades'
+  ];
+  const hrefs=[...studio.matchAll(/<dt><a href="([^"]+)">([^<]+)<\/a><\/dt>/gu)]
+    .map(m=>[m[2],m[1]]);
+  const linkMap=new Map(hrefs);
+  for(const label of labels)
+    if(!linkMap.has(label))failures.push(locale+': Studio option lacks a guidance link: '+label);
+  for(const anchor of sections)
+    if(!studio.includes('id="'+anchor.slice(1)+'"')||
+       !hrefs.some(x=>x[1]===anchor))
+      failures.push(locale+': Studio content/advanced link has no real explanation: '+anchor);
+  if(linkMap.get(locale==='es'?'Cuestionario':'Questionnaire')!==questionRoute)
+    failures.push(locale+': Questionnaire must reach the actual questionnaire guide');
+  for(const [label,id] of [
+    [labels[8],'votacion-en-directo'],
+    [labels[9],'pizarra-compartida'],
+    [labels[10],'revision-entre-pares']
+  ]){
+    if(linkMap.get(label)!==collabRoute+'#'+id||!collaboration.includes('id="'+id+'"'))
+      failures.push(locale+': Collaboration option lacks a real teacher procedure: '+label);
+  }
+  if(!collaboration.includes('collaboration-guide-screenshot')||
+     !collaboration.includes('collaboration-guide-activities')||
+     !collaboration.includes('docs/')||
+     !collaboration.includes('studio/'))
+    failures.push(locale+': Teacher collaboration guide lacks visual workflow or technical separation');
+  const expectedGuideSections=3;
+  if((collaboration.match(/class="collaboration-guide-activity"/gu)||[]).length!==expectedGuideSections)
+    failures.push(locale+': Expected three collaboration procedures in teacher guide');
+}
+
 const ltiDoc=await read('deploy/netlify/site/docs/conectores/lti/index.html');
 for(const stale of [
   'no contiene endpoints OIDC/JWKS o un gateway operativo',
