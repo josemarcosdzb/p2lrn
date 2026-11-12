@@ -234,6 +234,20 @@ function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
  }
  return reg;
 }
+export function learningTitle(value,fallback=''){
+ if(typeof value==='string'&&value.trim())return value.trim().slice(0,200);
+ if(value&&typeof value==='object'&&!Array.isArray(value)){
+  const entries=Object.entries(value);
+  for(const key of ['es','es-ES','en','und']){
+   const found=entries.find(([locale,title])=>locale===key&&typeof title==='string'&&title.trim());
+   if(found)return found[1].trim().slice(0,200);
+  }
+  const first=entries.find(([,title])=>typeof title==='string'&&title.trim());
+  if(first)return first[1].trim().slice(0,200);
+ }
+ return typeof fallback==='string'?fallback.trim().slice(0,200):'';
+}
+
 export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindHost='127.0.0.1',
  fetchImpl,lookup,allowInsecureLoopback=false,adminScopes=null,dbEngine='sqlite',dbUrl}){
  valid(dataDir,'dataDir',4096);valid(baseUrl,'baseUrl');
@@ -394,10 +408,10 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
    strictProfiles:true,validateProfilePayloads:true,zipLimits,nestedZipLimits
   });
   const entities=parsed.graph.entities.filter(e=>['course','unit','activity'].includes(e.type))
-   .map(e=>({id:e.id,type:e.type,title:String(e.title||e.name||e.id).slice(0,200)}));
+   .map(e=>({id:e.id,type:e.type,title:learningTitle(e.title,learningTitle(e.name,e.id))}));
   const course=entities.find(e=>e.type==='course')||entities[0];
   if(!course)throw new Error('P2LRN package contains no publishable learning entities');
-  const title=String(titleHint||course.title||'Curso P2LRN').trim().slice(0,200);
+  const title=learningTitle(titleHint,course.title||'Curso P2LRN');
   return {parsed,entities,course,title,sha:digest(bytes)};
  }
  const verifiedGraphs=new Map();

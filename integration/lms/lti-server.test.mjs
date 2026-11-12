@@ -11,9 +11,19 @@ const packageEntrypoint=process.env.P2LRN_TEST_INSTALLED_LTI_SERVER;
 const runtimeUrl=packageEntrypoint
  ? pathToFileURL(resolve(packageEntrypoint)).href
  : new URL('./lti-server.mjs',import.meta.url).href;
-const {createP2LRNLtiServer,parseLtiCookieHeader}=await import(runtimeUrl);
+const {createP2LRNLtiServer,parseLtiCookieHeader,learningTitle}=await import(runtimeUrl);
 import {resolveAsyncLtiTestDatabase} from './lti-test-sql-guard.mjs';
 import {LTI_CLAIMS} from './launch-contract.mjs';
+
+test('localised course metadata never serialises as [object Object]',()=>{
+ assert.equal(learningTitle({en:'English name',es:' Curso de seguridad '}),'Curso de seguridad');
+ assert.equal(learningTitle({'en-US':'American name'}),'American name');
+ assert.equal(learningTitle({en:'',und:'Neutral title'}),'Neutral title');
+ assert.equal(learningTitle({es:'   '},'Título alternativo'),'Título alternativo');
+ assert.equal(learningTitle(null,'Nombre existente'),'Nombre existente');
+ assert.equal(learningTitle({es:{text:'Nested object'}},'Fallback'),'Fallback');
+ assert.equal(learningTitle({en:'A'.repeat(250)}).length,200);
+});
 
 test('LTI cookie parser preserves complete token values without granting access by cookie syntax',()=>{
  const values=parseLtiCookieHeader(' __Host-p2lrn-session=abc=def==; p2lrn_oidc=xyz ; malformed ; other=x=y');
