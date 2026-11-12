@@ -111,4 +111,23 @@ The generated Player `release.json` contains byte sizes, SHA-256 digests and SRI
 
 ## Automatic deployment
 
-Every push to `main` triggers the connected Netlify production build. No manual ZIP upload is required.
+Git-triggered Netlify builds are deliberately frozen by `[build].ignore = "exit 0"`
+in `netlify.toml`. This does not disable manual build hooks. A green source CI
+does not publish the site, and a stale public-site audit must remain visible
+until an explicitly authorized publication is verified.
+
+The bilingual workflow is read-only: it regenerates English to check the
+committed mirror, fails if generation changes candidate bytes, and only then
+runs Chromium against that same `github.sha`. Generated translations must be
+reviewed and committed before validating a release; CI must never push a later,
+untested translation commit.
+
+Before publication, record the final source SHA, successful source/build job
+URLs, artifact SHA-256 inventory, accessibility review results, and the
+currently published Netlify deploy ID. Keep the freeze in place until the owner
+explicitly approves the release. Publish the validated build output, retain the
+previous deploy for rollback, and then run
+`node scripts/audit_public_site.mjs --origin https://p2lrn.org` and real public
+Studio/Player checks. Restore the recorded previous deploy if a critical
+production check fails. Public reachability and a valid sitemap do not establish
+Google indexation or WCAG conformance.

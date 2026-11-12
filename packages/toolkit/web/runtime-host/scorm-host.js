@@ -1,4 +1,4 @@
-import {createScormApi, isScormRuntimeProtocol, LEGACY_SCORM_RUNTIME_PROTOCOL, normalizeScormVersion, SCORM_RUNTIME_PROTOCOL} from '../scorm-runtime-core.js';
+import {assertScormScriptReferences, createScormApi, isScormRuntimeProtocol, LEGACY_SCORM_RUNTIME_PROTOCOL, normalizeScormVersion, SCORM_RUNTIME_PROTOCOL} from '../scorm-runtime-core.js';
 
 const stage = document.getElementById('stage');
 const files = new Map();
@@ -249,11 +249,10 @@ async function navigate(path, suffix = '') {
   // script load error inside the nested SCO document.
   const documentSource = text(path);
   const parsedScripts = new DOMParser().parseFromString(documentSource, 'text/html');
-  for (const script of parsedScripts.querySelectorAll('script[src]')) {
-    const reference = script.getAttribute('src') || '';
-    if (!/^(?:[a-z][a-z0-9+.-]*:|\/\/)/iu.test(reference) && !resolve(path, reference))
-      throw new Error('SCORM source package is missing JavaScript: ' + reference + ' (in ' + path + ')');
-  }
+  assertScormScriptReferences(
+    [...parsedScripts.querySelectorAll('script[src]')].map(script => script.getAttribute('src') || ''),
+    path, resolve,
+  );
 
   const next = document.createElement('iframe');
   next.id = 'content';

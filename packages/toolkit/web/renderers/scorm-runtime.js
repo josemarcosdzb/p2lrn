@@ -1,6 +1,6 @@
 import {withOpaqueRuntimeBootstrapNonce} from '../opaque-runtime-bootstrap-nonce.js';
 import {openNestedPackage, openPayloadPackage} from '../package-member.js';
-import {createScormApi, isScormRuntimeProtocol, normalizeScormVersion, SCORM_PROFILE, SCORM_RUNTIME_PROTOCOL} from '../scorm-runtime-core.js';
+import {assertScormScriptReferences, createScormApi, isScormRuntimeProtocol, normalizeScormVersion, SCORM_PROFILE, SCORM_RUNTIME_PROTOCOL} from '../scorm-runtime-core.js';
 import {createScorm2004Sequencer,parseScormManifest,inspectScorm2004SequencingSupport} from '../scorm2004-sequencing.js';
 import {dispatchRuntimeEvent} from '../runtime-events.js';
 import {isSafeRuntimeMessage} from '../runtime-message-security.js';
@@ -126,6 +126,7 @@ export function createScormSandboxShell(token, version) {
 let privatePort=null;let privateSend=null;let initialized=false;
 const PROTOCOL=${protocol}; const SCORM_VERSION=${versionLiteral};
 const createScormApi=${apiFactory};
+const assertScormScriptReferences=${assertScormScriptReferences.toString()};
 const stage=document.getElementById('stage'); const files=new Map(); const urls=new Map(); let inlineScriptId=0; let content=null; let runtime=null; let currentPath=''; let identity={learnerId:'',learnerName:'',launchData:''};
 function reply(action,payload={}){ privateSend?.({protocol:PROTOCOL,action,...payload}); }
 function normalize(path){ const out=[]; for(const part of String(path||'').replace(/\\/g,'/').split('/')){ if(!part||part==='.')continue; if(part==='..'){if(!out.length)return null;out.pop();}else out.push(part);} return out.join('/'); }
@@ -181,7 +182,7 @@ async function installLegacyInlineHandlers(doc){
   });
   for(const element of onLoadElements)element.dispatchEvent(new Event('load'));
 }
-async function navigate(path){ if(!files.has(path)){showError('SCORM launch member not found: '+path);return;} const mt=files.get(path).mediaType||''; if(!mt.includes('html')&&!mt.includes('xhtml')){showError('SCORM launch member is not HTML/XHTML: '+path);return;} currentPath=path; const parsed=new DOMParser().parseFromString(rewriteHtml(path),'text/html'); document.title=parsed.title||document.title; document.head.replaceChildren(...[...parsed.head.childNodes].map((node)=>document.importNode(node,true))); document.body.replaceChildren(...[...parsed.body.childNodes].map((node)=>document.importNode(node,true))); wireDocument(document,path); await activateScripts(document); await installLegacyInlineHandlers(document); reply('ready',{member:path}); }
+async function navigate(path){ if(!files.has(path)){showError('SCORM launch member not found: '+path);return;} const mt=files.get(path).mediaType||''; if(!mt.includes('html')&&!mt.includes('xhtml')){showError('SCORM launch member is not HTML/XHTML: '+path);return;} const sourceDocument=new DOMParser().parseFromString(text(path),'text/html'); assertScormScriptReferences([...sourceDocument.querySelectorAll('script[src]')].map(script=>script.getAttribute('src')||''),path,resolve); currentPath=path; const parsed=new DOMParser().parseFromString(rewriteHtml(path),'text/html'); document.title=parsed.title||document.title; document.head.replaceChildren(...[...parsed.head.childNodes].map((node)=>document.importNode(node,true))); document.body.replaceChildren(...[...parsed.body.childNodes].map((node)=>document.importNode(node,true))); wireDocument(document,path); await activateScripts(document); await installLegacyInlineHandlers(document); reply('ready',{member:path}); }
 function showError(message){const pre=document.createElement('pre');pre.className='error';pre.textContent=message;(document.body||document.documentElement).replaceChildren(pre);reply('error',{message});}
 function makeUrls(){ for(const [path,file] of files){ if(file.mediaType.includes('html')||file.mediaType.includes('xhtml')||file.mediaType.includes('css'))continue; urls.set(path,URL.createObjectURL(new Blob([file.buffer],{type:file.mediaType||'application/octet-stream'}))); }
   for(const [path,file] of files){ if(!file.mediaType.includes('css'))continue; const compiled=rewriteCss(text(path),path,new Set([path])); urls.set(path,URL.createObjectURL(new Blob([compiled],{type:'text/css'}))); }

@@ -91,7 +91,7 @@ export function finishPanel(runtime, shell, {
       }
       const reveal=(runtime.payload?.presentation?.showFeedback ?? 'never') !== 'never';
       status.textContent = playerUiText(reveal && score.graded !== false
-        ? `Resultado: ${score.pointsEarned} / ${score.pointsPossible} puntos (${Math.round((score.normalized ?? 0) * 100)}%).`
+        ? `Resultado: ${score.raw} / ${score.max} puntos (${Math.round((score.normalized ?? 0) * 100)}%).`
         : 'Actividad entregada. La corrección no está disponible para el alumno.');
       finish.disabled = true;
       shell.querySelectorAll('button,input,textarea,select').forEach(control=>{control.disabled=true;});

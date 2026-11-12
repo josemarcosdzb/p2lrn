@@ -43,7 +43,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: p2lrn-site-i18n-main
@@ -51,6 +51,7 @@ concurrency:
 
 jobs:
   docs-visual-qa:
+    needs: generate-english-site
     name: Verify 24 ES/EN guides at desktop and mobile widths in real Chromium
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -58,6 +59,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
@@ -104,6 +108,8 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
           fetch-depth: 2
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -153,24 +159,12 @@ jobs:
           node scripts/verify-site-bilingual.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Commit generated English site
+      # CI validates one immutable source revision. Generated translations must
+      # be reviewed and committed before testing, never published after QA.
+      - name: Require generated English to match the exact candidate commit
         shell: powershell
         run: |
-          git add -- deploy/netlify/site/en scripts/site-en-translations.json
-          $changes = git diff --cached --name-only
-          if (-not $changes) {
-            Write-Output 'English mirror already matches the Spanish source.'
-            exit 0
+          git diff --exit-code -- deploy/netlify/site/en scripts/site-en-translations.json
+          if ($LASTEXITCODE -ne 0) {
+            throw 'English generation changed candidate bytes. Commit the generated mirror and validate that new SHA.'
           }
-          git fetch origin main
-          $head = git rev-parse HEAD
-          $remote = git rev-parse origin/main
-          if ($head -ne $remote) {
-            throw 'main advanced while the English mirror was generated; the next main run must regenerate from the new source.'
-          }
-          git config user.name 'p2lrn-i18n-bot'
-          git config user.email 'p2lrn-i18n-bot@users.noreply.github.com'
-          git commit -m 'site(i18n): refresh complete English mirror [skip i18n]'
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git push origin HEAD:main
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

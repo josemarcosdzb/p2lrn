@@ -6,6 +6,17 @@ export function isScormRuntimeProtocol(value) {
   return value === SCORM_RUNTIME_PROTOCOL || value === LEGACY_SCORM_RUNTIME_PROTOCOL;
 }
 
+// Validate the preserved source before rendering or executing any package bytes.
+// Shared by the isolated host and the opaque fallback; no network authority is added.
+export function assertScormScriptReferences(references, member, resolveMember) {
+  for (const reference of references) {
+    if (!/^(?:[a-z][a-z0-9+.-]*:|\/\/)/iu.test(reference) &&
+        !resolveMember(member, reference)) {
+      throw new Error('SCORM source package is missing JavaScript: ' + reference + ' (in ' + member + ')');
+    }
+  }
+}
+
 export function normalizeScormVersion(value) {
   return String(value ?? '').toLowerCase().includes('2004') ? '2004' : '1.2';
 }

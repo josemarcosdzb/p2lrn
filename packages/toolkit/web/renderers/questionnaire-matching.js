@@ -196,7 +196,7 @@ export async function render(options) {
     if(score){
       const reveal=(runtime.payload.presentation?.showFeedback??'never')==='after-submit';
       status.textContent=playerUiText(reveal&&score.graded!==false
-        ?`Resultado: ${score.pointsEarned}/${score.pointsPossible} puntos.`
+        ?`Resultado: ${score.raw}/${score.max} puntos.`
         :'Actividad enviada. La corrección no está disponible para el alumno.');
       finish.disabled=true;
       for(const node of [...leftButtons.values(),...rightButtons.values()])node.disabled=true;

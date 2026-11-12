@@ -168,3 +168,48 @@ Leyenda: «Sitemap» refleja **solo** `sitemap.xml` de origen; «Canonical» ref
 4. Registrar evidencia de capturas, problemas reproducibles, correcciones, auditoría posterior y versión desplegada. No afirmar `WCAG 2.2 AA` completo sin esa fase visual y asistiva.
 
 **Resultado de esta auditoría:** la estructura y rotulación HTML base están relativamente cuidadas, pero existen lagunas SEO generalizadas y problemas de accesibilidad concretos. **No está certificado el despliegue público ni conformidad WCAG**.
+
+
+## Seguimiento del release — 12 de noviembre de 2026
+
+El inventario anterior es histórico. La incidencia #19 contiene los snapshots
+posteriores; no trasladar sus aprobaciones a un SHA nuevo.
+
+Correcciones preparadas para revisión, sin despliegue:
+
+- Las guías de desarrolladores de actividades y juegos 3D recuperan el
+  theme-color y la navegación/contacto de respaldo en español e inglés.
+- Los dos runtimes SCORM usan la misma comprobación previa de scripts
+  ausentes. Un archivo incompleto se rechaza antes de montar el documento;
+  esto no reconstruye recursos ausentes ni certifica su reproducción.
+  No se amplían CSP, permisos del iframe ni acceso a la red.
+- La generación inglesa deja de publicar un commit posterior al QA. El
+  workflow usa permisos de lectura, fija el checkout a github.sha, verifica
+  que regenerar no modifica los bytes comprometidos y ordena Chromium después
+  de esa comprobación. La comprobación de producción permanece activa.
+
+Evidencia existente revisada:
+[artefacto 13930840577](https://github.com/josemarcosdzb/p2lrn/actions/runs/43189853760/artifacts/13930840577),
+SHA de origen 5efd105d712b2d60783caccde7c486f91da609ac,
+digest ZIP SHA-256 08fb25b2ce1b0191cb080525d04fc5bca2b5b19592441deb4691ec5281447c76.
+Su JSON full-site-a11y conserva 98 resultados incompletos, todos de
+color-contrast. Hay símbolos decorativos, pero también textarea, textos de
+portada y controles de Studio: no descartarlos colectivamente.
+
+Pendiente antes de aprobar la publicación:
+
+- CI completo y build sobre el commit final incorporado; la aprobación de las
+  pruebas dirigidas de estas correcciones no sustituye esa ejecución.
+- Revisar los nodos de contraste en su estado visible y con su fondo real,
+  indicando criterio, medición y resultado por caso. Los textos y campos
+  parcialmente tapados requieren además descartar solapamientos reales.
+- Navegación completa con teclado y lectores de pantalla, diálogos, formularios,
+  edición, arrastre alternativo, cuestionarios y 3D; zoom 200/400 % y móvil.
+- Mantener Netlify congelado hasta autorización explícita. Registrar artefacto,
+  deploy anterior y reversión; verificar URLs, recursos y subtítulos públicos
+  tras la publicación autorizada.
+- Documentar la fecha real de publicación del vídeo antes de afirmar
+  elegibilidad de resultados enriquecidos. Search Console seleccionada no
+  demuestra indexación de los recursos nuevos.
+
+No declarar conformidad WCAG 2.2 AA por el resultado de axe-core.

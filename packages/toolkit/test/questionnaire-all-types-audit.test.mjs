@@ -1,6 +1,7 @@
 ﻿import assert from 'node:assert/strict';
 import test from 'node:test';
-import {scoreQuestion,validateQuestionnaire} from '../web/questionnaire-core.js';
+import {scoreQuestion,scoreQuestionnaire,validateQuestionnaire} from '../web/questionnaire-core.js';
+import {readFile} from 'node:fs/promises';
 
 const wrap=(question)=>({
   schema:'https://p2lrn.org/schema/native-questionnaire/0.4.0',
@@ -95,4 +96,21 @@ test('true-false multiple requires an answer for every statement',()=>{
     solution:{answers:{s1:true}},
   };
   assert.throws(()=>validateQuestionnaire(wrap(question)),/every true-false statement requires an answer/);
+});
+
+
+test('game renderer totals use the questionnaire-wide raw/max contract',async()=>{
+  const question=cases.find(({name})=>name==='single-choice').question;
+  const graded=scoreQuestionnaire(wrap(structuredClone(question)),{q1:{choiceIds:['a']}});
+  assert.equal(graded.raw,2);
+  assert.equal(graded.max,2);
+  assert.equal(graded.normalized,1);
+  const renderers=['game-common.js','questionnaire-memory.js','questionnaire-matching.js',
+    'questionnaire-crossword.js','questionnaire-rosco.js','questionnaire-word-search.js'];
+  for(const renderer of renderers){
+    const source=await readFile(new URL('../web/renderers/'+renderer,import.meta.url),'utf8');
+    assert.doesNotMatch(source,/score\\.pointsEarned|score\\.pointsPossible/,renderer+' uses a question-level contract for whole-game score');
+    assert.match(source,/score\\.raw/,renderer+' must display awarded total');
+    assert.match(source,/score\\.max/,renderer+' must display possible total');
+  }
 });
