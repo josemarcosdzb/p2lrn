@@ -11,7 +11,7 @@ async function playerApi(){
 }
 import {COURSE_RIGHTS_FIELDS,COURSE_RIGHTS_LABELS} from './course-rights.js';
 import {P2LRNStudioDocument} from './runtime/authoring-document.js';
-import {exportP2LRNPackage} from './runtime/package-export.js';
+import {exportP2LRNPackage,exportMultipartP2LRNBundle} from './runtime/package-export.js';
 import {createP2LRNStudioDocument} from './runtime/new-document.js';
 import {renderQuestionnaireVisualEditor} from './runtime/questionnaire-editor.js';
 import {renderStructuredVisualEditor} from './runtime/structured-editor.js';
@@ -275,6 +275,7 @@ export class P2LRNStudioElement extends HTMLElement{
         recoverDraft:()=>this.recoverLocalDraft(),
         clearDraft:()=>this.clearLocalDraft(),
         export:()=>this.download(),
+        multipart:(options)=>this.downloadMultipart(options),
         offline:()=>this.showOfflineExportDialog(),
         review:()=>q('[data-result-file]').click(),
         addUnit:()=>this.addUnit(),
@@ -653,6 +654,20 @@ export class P2LRNStudioElement extends HTMLElement{
     this.#savedRevision=this.#studio.changeCount;
     this._updateState();this.setStatus('Paquete exportado y verificado');
     this.dispatchEvent(new CustomEvent('p2lrn-studio-download',{detail:{filename:exported.filename},bubbles:true,composed:true}));
+  }
+  async downloadMultipart(options={}){
+    if(!this.#studio)throw new Error('Crea o abre un curso primero.');
+    const bundle=await exportMultipartP2LRNBundle(this.#studio,options);
+    const url=URL.createObjectURL(new Blob([bundle.bytes],{type:'application/zip'}));
+    const a=document.createElement('a');a.href=url;a.download=bundle.filename;
+    document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    this.#savedRevision=this.#studio.changeCount;
+    this._updateState();this.setStatus('Multipart exportado: '+bundle.partCount+' partes');
+    this.dispatchEvent(new CustomEvent('p2lrn-studio-multipart-download',{detail:{
+      filename:bundle.filename,outerName:bundle.outerName,partCount:bundle.partCount,
+      contentRoot:bundle.contentRoot
+    },bubbles:true,composed:true}));
+    return bundle;
   }
   showOfflineExportDialog(){
     if(!this.#studio){this.setStatus('Crea o abre un curso primero.');return;}
