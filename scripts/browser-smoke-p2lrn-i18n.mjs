@@ -961,12 +961,13 @@ async function captureMultipartStudioChrome(){
     const field=dialog.locator('input[data-studio-multipart-part-size]');
     assert.equal(await field.inputValue(),'25');
     assert.ok((await field.locator('xpath=..').innerText()).includes(fieldLabel));
+    const fieldFile=join(folder,'studio-multipart-field-'+lang+'.png');
+    await page.screenshot({path:fieldFile,animations:'disabled'});
     await field.fill('0');
     await dialog.locator('button[type=submit]').click();
     assert.match(await dialog.locator('[role=status]').innerText(),/1.*64/);
     await field.fill('25');
-    const fieldFile=join(folder,'studio-multipart-field-'+lang+'.png');
-    await page.screenshot({path:fieldFile,animations:'disabled'});
+    assert.equal((await dialog.locator('[role=status]').innerText()).trim(),'','Stale error remains after correcting the input');
     for(const file of [menuFile,fieldFile]){
       const bytes=await readFile(file);
       assert.ok(bytes.length>5000,'Browser screenshot unexpectedly small: '+file);
