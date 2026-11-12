@@ -12,6 +12,8 @@ on:
       - 'packages/toolkit/test/questionnaire-all-types-audit.test.mjs'
       - 'deploy/netlify/site/p2lrn.js'
       - 'deploy/netlify/site/en/p2lrn.js'
+      - 'deploy/netlify/site/en/studio/index.html'
+      - 'deploy/netlify/site/en/studio/studio.js'
       # Published Player and Studio markup is also assembled by this builder.
       - 'deploy/netlify/build-site.mjs'
       # LTI tenant isolation affects Player launches and official LMS outcomes.

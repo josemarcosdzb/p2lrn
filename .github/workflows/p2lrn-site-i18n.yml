@@ -15,6 +15,10 @@ on:
       - 'deploy/netlify/site/analytics/demo.js'
       - 'deploy/netlify/site/site.webmanifest'
       - '!deploy/netlify/site/en/**'
+      # Manually reviewed English Studio is not generated, but changes must still run browser QA.
+      - 'deploy/netlify/site/en/studio/index.html'
+      - 'deploy/netlify/site/en/studio/studio.js'
+      - 'deploy/netlify/site/assets/studio-guide/guide.css'
       - 'scripts/generate-site-english.mjs'
       - 'scripts/browser-smoke-p2lrn-i18n.mjs'
       - 'scripts/audit-site-editorial-seo.mjs'
