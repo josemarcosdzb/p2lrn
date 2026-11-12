@@ -95,3 +95,14 @@
 .community-source-context strong{color:#172b47}
 .community-source-context a{color:#1747a6;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .community-source-context a:focus-visible{outline:3px solid #1747a6;outline-offset:3px}
+
+/* Accessible source-backed examples visible even when scripts are disabled. */
+.p2lrn-featured-grid{list-style:none;margin:18px 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
+.p2lrn-featured-item{display:flex;flex-direction:column;gap:10px;min-width:0;border:1px solid #cbd5e1;border-radius:10px;padding:18px;background:#fff}
+.p2lrn-featured-item h3{margin:0;font-size:1.03rem;line-height:1.4;overflow-wrap:anywhere}
+.p2lrn-featured-item p{margin:0;flex:1;line-height:1.6;color:#475569}
+.p2lrn-featured-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.p2lrn-featured-actions a,.p2lrn-example-modes a{display:inline-flex;align-items:center;min-height:44px;color:#1744a2;text-decoration:underline;text-underline-offset:3px;font-weight:700}
+.p2lrn-featured-actions a:focus-visible,.p2lrn-example-modes a:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+.p2lrn-example-modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 16px;padding-left:22px}
+@media(forced-colors:active){.p2lrn-featured-item{border:1px solid CanvasText}}
