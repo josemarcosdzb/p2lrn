@@ -407,7 +407,7 @@ jobs:
                 $_.type -eq 'page' -and $_.url -match 'jose-moodle-qa-20261017[.]localhost'
               } | Select-Object -First 1)
             }catch{Write-Output 'P2LRN_QA_CDP_ENDPOINT_UNREACHABLE=YES'}
-            if(@($qaTab).Count -gt 0){
+            if($null -ne $qaTab -and @($qaTab).Count -gt 0 -and $null -ne $qaTab[0] -and $qaTab[0].url){
               Write-Output 'P2LRN_QA_CDP_ACCESSIBLE=YES'
               Write-Output ('P2LRN_QA_TAB_TITLE='+([string]$qaTab[0].title))
               Write-Output 'AUTHENTICATED_ADMIN_UI_FROM_CDP=NOT_VERIFIED'
