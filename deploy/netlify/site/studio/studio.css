@@ -212,3 +212,7 @@ html[data-studio-mode=preview] .studio-toolbar{position:static}
     transition:none!important;animation:none!important;
   }
 }
+
+/* A translated status message must never widen the viewport on mobile. */
+.studio-warning[data-unsaved-warning]{max-width:100%;min-width:0;flex-wrap:wrap;overflow-wrap:anywhere;white-space:normal}
+.studio-warning[data-unsaved-warning] span{min-width:0;max-width:100%;flex:1 1 180px;overflow-wrap:anywhere;white-space:normal}

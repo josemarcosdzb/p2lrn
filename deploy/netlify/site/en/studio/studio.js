@@ -343,7 +343,7 @@ async function renderEditor(){
   const editable=await studio.readEditableText(entity.id);
   if(!editable){
     const message=document.createElement('div');message.className='studio-readonly';
-    message.textContent="You can use this content in the course and view it in the viewer, but do not modify it from the editor....................................................................................................................................";
+    message.textContent="You can use this content in the course and view it in the viewer, but do not modify it from the editor.";
     content.append(message);
     const inline=document.createElement('p2lrn-player');inline.className='studio-inline-player';inline.setAttribute('src',studio.sourceUrl);inline.setAttribute('node',entity.id);inline.setAttribute('navigation','external');content.append(inline);
     return;
@@ -413,9 +413,9 @@ async function createNewCourse({automatic=false}={}){
   // Preserve edits when the visitor deliberately starts a different course.
   const modified=studio && hasUnsavedChanges() &&
     !(studio.createdFromScratch && studio.changeCount===1);
-  if(!automatic && modified && !confirm("Unsaved changes will be lost. Create another course??..............................................................................................................................................................................................................................................................................................................................................................................................................................................................."))return;
+  if(!automatic && modified && !confirm("Unsaved changes will be lost. Create another course?"))return;
   revokeUrls();
-  const newDocument=createP2LRNStudioDocument({title:"New course",language:"es"});
+  const newDocument=createP2LRNStudioDocument({title:"New course",language:"en"});
   // Start inside a real editable lesson, not only the course metadata.
   const firstUnitId=newDocument.entity(newDocument.rootId)?.children?.[0];
   const firstLessonId=firstUnitId&&newDocument.entity(firstUnitId)?.children?.[0];
@@ -539,11 +539,11 @@ function chooseComponent(){
 }
 async function addContentKind(kind,{placement='new-page'}={}){
   if(!studio)throw new Error("Create or open a course first.");
-  if(!['same-page','new-page'].includes(placement))throw new Error("Unknown insertion destination............................................................................................................................................................................................................................................................................................................................................................................................................................................................");
+  if(!['same-page','new-page'].includes(placement))throw new Error("Unknown insertion destination.");
   const sourceId=selectedId;
   if(['file','reader','external'].includes(kind)){
     if(kind==='external'&&placement==='same-page')
-      throw new Error("Educational packages are imported as complete units. Choose new page............................................................................................................................................................................................................................................................");
+      throw new Error("Educational packages are imported as complete units. Choose new page.");
     pendingContentPlacement={placement,sourceId};
     if(kind==='file')resourceFileInput.click();
     if(kind==='reader')readerFileInput.click();
@@ -961,8 +961,8 @@ sharedCommandBar=mountStudioCommandBar({
     addContent:()=>addContentButton.click(),
     addKind:(kind,options)=>addContentKind(kind,options),
     canAddSamePage:()=>studio?.entity(selectedId)?.type==='activity',
-    insertImage:()=>{const btn=editorStage.querySelector('[data-insert-lesson-image]');if(!btn)throw new Error("Select an HTML lesson to insert images.......................................................................................................................................................................................................................................................");btn.click();},
-    insertVideo:()=>{const btn=editorStage.querySelector('[data-insert-lesson-video]');if(!btn)throw new Error("Select an HTML lesson to insert video.........................................................................................................................................................................................................................................................");btn.click();},
+    insertImage:()=>{const btn=editorStage.querySelector('[data-insert-lesson-image]');if(!btn)throw new Error("Select an HTML lesson to insert images.");btn.click();},
+    insertVideo:()=>{const btn=editorStage.querySelector('[data-insert-lesson-video]');if(!btn)throw new Error("Select an HTML lesson to insert video.");btn.click();},
     canAddKind:(kind)=>kind!=='shared-library'||Boolean(connectedResourceLibrary),
     preview:()=>setMode('preview'),
     edit:()=>setMode('edit')
@@ -982,7 +982,7 @@ async function initializeStudioWorkspace(){
         // The saved draft is never overwritten or deleted on recovery failure.
         await createNewCourse({automatic:true});
         if(draftMenu)draftMenu.hidden=false;
-        setStatus("Could not recover draft automatically. It is still saved in this browser.......................................................................................................................................................................................................................................................");
+        setStatus("Could not recover draft automatically. It is still saved in this browser.");
         console.warn('P2LRN Studio draft recovery failed',error);
         return;
       }
