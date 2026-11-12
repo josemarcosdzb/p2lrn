@@ -84,8 +84,9 @@ jobs:
       - name: Verify that all public images and videos are discoverable through the bilingual sitemap
         if: always()
         run: node scripts/verify-site-media-seo.mjs
-      - name: Check real published sitemap, canonicals, images, videos and ES/EN links
-        if: always()
+      - name: Check deployed production sitemap and media only during explicit release verification
+        # Push CI validates the immutable candidate; production is not updated by a source commit.
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         run: node scripts/audit_public_site.mjs --origin https://p2lrn.org
       - name: Verify bilingual editorial parity and locale-specific JS contracts
         if: always()
