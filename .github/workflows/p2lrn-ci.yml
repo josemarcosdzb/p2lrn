@@ -806,6 +806,26 @@ jobs:
           go-version: '1.26'
           cache: false
 
+      - name: Inventory canonical P2LRN Windows checkout without modifying its work
+        shell: powershell
+        run: |
+          $root = 'C:\\Users\\Usuario\\Downloads\\p2lrn-local-gallery-20261106'
+          if (-not (Test-Path -LiteralPath (Join-Path $root '.git'))) {
+            Write-Output 'P2LRN_CANONICAL_STATUS=UNAVAILABLE'
+            exit 0
+          }
+          $head = git -C $root rev-parse HEAD
+          $branch = git -C $root branch --show-current
+          $trackedChanges = @(git -C $root status --porcelain=v1 --untracked-files=no)
+          $unmerged = @(git -C $root ls-files -u)
+          $untrackedCount = (git -C $root ls-files --others --exclude-standard | Measure-Object -Line).Lines
+          Write-Output ('P2LRN_CANONICAL_HEAD=' + $head)
+          Write-Output ('P2LRN_CANONICAL_BRANCH=' + $branch)
+          Write-Output ('P2LRN_CANONICAL_TRACKED_CHANGES=' + $trackedChanges.Count)
+          Write-Output ('P2LRN_CANONICAL_UNMERGED_INDEX_ROWS=' + $unmerged.Count)
+          Write-Output ('P2LRN_CANONICAL_UNTRACKED_FILES=' + $untrackedCount)
+          Write-Output ('P2LRN_CI_HEAD=' + (git rev-parse HEAD))
+
       - name: Build Player distribution required by LTI HTTP tests
         run: |
           node packages/player/scripts/build-dist.mjs

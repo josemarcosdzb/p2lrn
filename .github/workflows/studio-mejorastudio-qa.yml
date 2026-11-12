@@ -133,6 +133,36 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/record-studio-complete-activities-demo.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Export reusable real Player and Studio browser runtime for solved-game video
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: p2lrn-studio-runtime-para-video
+          path: |
+            .netlify-cdn/player/current/dist/**
+            .netlify-cdn/studio/**
+            .netlify-cdn/p2lrn-sw.js
+            .visual-evidence/studio-curso-integral/laboratorio-cuestionarios-y-juegos.p2lrn
+          if-no-files-found: warn
+          retention-days: 2
+      - name: Record solved 2D, drag-drop, full 16-letter rosco and 3D game session
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node --check scripts/record-studio-complete-activities-demo.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:P2LRN_RECORD_SOLVE = '1'
+          node scripts/record-studio-complete-activities-demo.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $reportPath = '.visual-evidence/studio-curso-integral/partida-resuelta-report.json'
+          if (!(Test-Path $reportPath)) { throw 'No solved activities evidence report' }
+          $report = Get-Content $reportPath -Raw | ConvertFrom-Json
+          if (@($report.solvedActivities).Count -ne 15) { throw "Expected 15 complete activities, got $(@($report.solvedActivities).Count)" }
+          $failed = @($report.solvedActivities | Where-Object { !$_.ok })
+          if ($failed.Count -gt 0) {
+            Write-Output ('SOLVED_GAMES_FAILURES=' + ($failed | ConvertTo-Json -Depth 5 -Compress))
+            throw "$($failed.Count) real Player activities failed to solve; inspect video before delivery"
+          }
       - name: Upload complete demo course and quality report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
