@@ -38,3 +38,24 @@
 @media(prefers-reduced-motion:reduce){
   .p2lrn-loading-spinner,.p2lrn-stage[data-p2lrn-loading="true"]::before{animation:none}
 }
+
+/* Fullscreen and accessible collapsible course outline. */
+.p2lrn-head-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px}
+.p2lrn-head-button{min-height:40px;padding:7px 12px;border:1px solid #94a9c6;border-radius:7px;background:#fff;color:#153969;cursor:pointer;font:600 12px/1.3 system-ui,sans-serif}
+.p2lrn-head-button:hover{background:#eef4ff}
+.p2lrn-head-button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+.p2lrn-layout-nav-hidden{grid-template-columns:minmax(0,1fr)}
+.p2lrn-nav[hidden]{display:none!important}
+.p2lrn-nav-group{min-width:0}
+.p2lrn-nav-group>summary{cursor:pointer;padding:11px 9px;font-weight:700;line-height:1.35;color:#223c57;border-radius:6px;overflow-wrap:anywhere}
+.p2lrn-nav-group>summary:hover{background:#edf4fa}
+.p2lrn-nav-group>summary:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+.p2lrn-nav-children{padding-left:10px;margin-left:8px;border-left:1px solid #d5deeb}
+.p2lrn-nav button[aria-current="true"]{background:#dceaff;color:#123b72;box-shadow:inset 3px 0 #2563eb;font-weight:700}
+.p2lrn-html{min-height:min(82vh,1100px)}
+:host(:fullscreen){width:100%;height:100%;overflow:auto;contain:none;background:#f7f9fc}
+:host(:fullscreen) .p2lrn-shell{border:0;border-radius:0;min-height:100%}
+:host(:fullscreen) .p2lrn-stage{min-height:calc(100vh - 180px)}
+:host(:fullscreen) .p2lrn-html{min-height:max(680px,calc(100vh - 170px))}
+:host(:fullscreen) .p2lrn-nav{max-height:calc(100vh - 110px)}
+@media(max-width:720px){.p2lrn-layout-nav-hidden{grid-template-columns:1fr}.p2lrn-head-actions{width:100%;justify-content:flex-start}}

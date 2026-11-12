@@ -32,3 +32,27 @@ test('loading indicator is styled, responsive and respects reduced motion',async
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(css,/data-p2lrn-loading-label/);
 });
+
+test('waiting for an initial src is not an error',async()=>{
+ const player=await readFile(new URL('../web/p2lrn-player.js',import.meta.url),'utf8');
+ assert.match(player,/if\(this\.hasAttribute\('src'\)\)void this\.reload\(\)/);
+ assert.match(player,/else this\.#renderIdle\(\)/);
+ assert.doesNotMatch(player,/Falta el atributo src del paquete/);
+});
+test('loading labels have valid characters and translated keys',async()=>{
+ const source=await readFile(new URL('../web/p2lrn-player.js',import.meta.url),'utf8');
+ assert.match(source,/playerUiText\('Cargando actividad…'\)/);
+ assert.match(source,/playerUiText\('La actividad está tardando más de lo habitual…'\)/);
+ assert.doesNotMatch(source,/Cargando actividad\?/);
+});
+test('the official Player supports fullscreen and synchronized folding lesson outline',async()=>{
+ const source=await readFile(new URL('../web/p2lrn-player.js',import.meta.url),'utf8');
+ const style=await readFile(new URL('../web/p2lrn-player.css',import.meta.url),'utf8');
+ assert.match(source,/requestFullscreen\(/);
+ assert.match(source,/exitFullscreen\(/);
+ assert.match(source,/p2lrn:nodechange/);
+ assert.match(source,/details\.p2lrn-nav-group/);
+ assert.match(source,/aria-controls/);
+ assert.match(style,/:host\(:fullscreen\)/);
+ assert.match(style,/\.p2lrn-layout-nav-hidden/);
+});

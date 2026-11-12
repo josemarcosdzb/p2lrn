@@ -475,6 +475,9 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     this._progressionContextValue = null;
     this._progressionLoadedKey = null;
     this._progressionButtons = new Map();
+    this._collapsedUnits = new Set();
+    this._sidebarHidden = false;
+    this._onFullscreenChange = () => this.#syncFullscreenControl();
     this._progressionSaveQueue = Promise.resolve();
     this._onProgressionRuntimeEvent = (event) => { void this.#handleProgressionRuntimeEvent(event); };
     for (const type of ['p2lrn:rendered','p2lrn:score','p2lrn:statechange','p2lrn:complete']) {
@@ -482,7 +485,17 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
-  connectedCallback() { if (!this._suppressAutoReload) void this.reload(); }
+  connectedCallback() {
+    document.addEventListener('fullscreenchange',this._onFullscreenChange);
+    if(this._suppressAutoReload)return;
+    if(this.hasAttribute('src'))void this.reload();
+    else this.#renderIdle();
+  }
+  disconnectedCallback(){
+    document.removeEventListener('fullscreenchange',this._onFullscreenChange);
+    ++this._loadGeneration;
+    this.#cleanupRuntime();
+  }
   attributeChangedCallback(name, oldValue, newValue) {
     if (oldValue === newValue || !this.isConnected || this._suppressAutoReload) return;
     if (name !== 'src' && this._package) {
@@ -585,7 +598,13 @@ export class P2LRNPlayerElement extends HTMLElementBase {
 
   async reload() {
     const src = this.getAttribute('src');
-    if (!src) { this.#renderError('Falta el atributo src del paquete .p2lrn.'); return; }
+    if(!src){
+      ++this._loadGeneration;
+      this.#cleanupRuntime();
+      this._package=null;
+      this.#renderIdle();
+      return;
+    }
     const generation = ++this._loadGeneration;
     this.#cleanupRuntime();
     this.#renderLoading();
@@ -733,6 +752,46 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     }
   }
 
+  #renderIdle(){
+    const shell=this.#base();
+    const head=document.createElement('div');head.className='p2lrn-head';
+    const title=document.createElement('strong');title.textContent='P2LRN';
+    const status=document.createElement('span');status.className='p2lrn-status';status.textContent=playerUiText('Sin paquete');
+    head.append(title,status);
+    const stage=document.createElement('div');stage.className='p2lrn-stage';
+    const message=document.createElement('div');message.className='p2lrn-message';
+    message.textContent=playerUiText('Selecciona un paquete para empezar.');
+    stage.append(message);shell.append(head,stage);
+  }
+  #syncFullscreenControl(){
+    const button=this.shadowRoot?.querySelector('[data-p2lrn-fullscreen]');
+    if(!button)return;
+    const active=document.fullscreenElement===this;
+    button.textContent=playerUiText(active?'Salir de pantalla completa':'Pantalla completa');
+    button.setAttribute('aria-pressed',String(active));
+  }
+  #addFullscreenControl(actions){
+    const button=document.createElement('button');
+    button.type='button';button.className='p2lrn-head-button';button.dataset.p2lrnFullscreen='';
+    button.addEventListener('click',async()=>{
+      try{
+        if(document.fullscreenElement===this)await document.exitFullscreen();
+        else await this.requestFullscreen();
+        this.#syncFullscreenControl();
+      }catch{
+        const status=this.shadowRoot.querySelector('.p2lrn-status');
+        if(status)status.textContent=playerUiText('La pantalla completa no está disponible.');
+      }
+    });
+    actions.append(button);
+    this.#syncFullscreenControl();
+  }
+  #notifyNodeChange(entity){
+    this.dispatchEvent(new CustomEvent('p2lrn:nodechange',{
+      detail:{entityId:entity.id,entityType:entity.type},
+      bubbles:true,composed:true,
+    }));
+  }
   #renderLoading() {
     const shell = this.#base();
     const head = document.createElement('div'); head.className = 'p2lrn-head';
@@ -740,8 +799,10 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const status = document.createElement('span'); status.className = 'p2lrn-status'; status.textContent = 'Verificando paquete…';
     head.append(strong, status);
     const stage = document.createElement('div'); stage.className = 'p2lrn-stage';
-    const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = playerUiText('Cargando contenido educativo.');
-    stage.append(message); shell.append(head, stage);
+    const message=document.createElement('div');message.className='p2lrn-message p2lrn-loading-message';
+    const spinner=document.createElement('span');spinner.className='p2lrn-loading-spinner';spinner.setAttribute('aria-hidden','true');
+    message.append(spinner,document.createTextNode(playerUiText('Cargando contenido educativo.')));
+    stage.setAttribute('aria-busy','true');stage.append(message);shell.append(head,stage);
   }
 
   #renderError(message) {
@@ -776,7 +837,9 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     const transportLabel = pkg.verification?.transport === 'range' ? ' · HTTP Range' : '';
     const zip64Label = pkg.verification?.zip64 ? ' · ZIP64' : '';
     status.textContent = `${integrityLabel} · Formato Core ${pkg.manifest.formatVersion} · Player ${P2LRN_WEB_SDK_VERSION}${transportLabel}${zip64Label}`;
-    head.append(strong, status); shell.append(head);
+    const headActions=document.createElement('div');headActions.className='p2lrn-head-actions';
+    head.append(strong,status,headActions);shell.append(head);
+    this.#addFullscreenControl(headActions);
     const rightsBox=document.createElement('section');rightsBox.className='p2lrn-rights';
     renderCourseRights(rightsBox,(progressionRoot?.type==='course'?progressionRoot:null)??(root.type==='course'?root:null));
     if(!rightsBox.hidden)shell.append(rightsBox);
@@ -788,6 +851,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
         return;
       }
       await this.#renderEntity(root, stage);
+      this.#notifyNodeChange(root);
       if(root.type==='activity'){
         const ordered=[];const seenIds=new Set();
         const visit=entity=>{
@@ -815,45 +879,78 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       layout.append(nav);
     }
     const stage = document.createElement('div'); stage.className = 'p2lrn-stage';
-    layout.append(stage); shell.append(layout);
+    layout.append(stage);shell.append(layout);
+    if(nav){
+      nav.id='p2lrn-content-outline';
+      const toggle=document.createElement('button');
+      toggle.type='button';toggle.className='p2lrn-head-button';
+      toggle.setAttribute('aria-controls',nav.id);
+      const sync=()=>{
+        nav.hidden=this._sidebarHidden;
+        layout.classList.toggle('p2lrn-layout-nav-hidden',this._sidebarHidden);
+        toggle.setAttribute('aria-expanded',String(!this._sidebarHidden));
+        toggle.textContent=playerUiText(this._sidebarHidden?'Mostrar índice':'Ocultar índice');
+      };
+      toggle.addEventListener('click',()=>{this._sidebarHidden=!this._sidebarHidden;sync();});
+      headActions.prepend(toggle);sync();
+    }
     const activities = [];
     const seen = new Set();
-    const walk = (entity, depth = 0) => {
-      if (!entity || seen.has(entity.id)) return;
-      seen.add(entity.id);
-      if (entity.type === 'activity') activities.push(entity);
-      if (nav && entity.type !== 'course') {
-        const button = document.createElement('button');
-        const baseTitle = titleOf(entity);
-        button.type = 'button'; button.className = `depth-${Math.min(depth, 3)}`; button.textContent = baseTitle;
-        button.disabled = entity.type !== 'activity';
-        this._progressionButtons.set(entity.id, {button, entity, baseTitle});
-        if (entity.type === 'activity') button.addEventListener('click', async () => {
-          if (this._progressionModel?.isLocked(entity.id, this._progressionState)) {
-            this.#stageMessage(stage, this.#progressionLockMessage(entity.id));
-            return;
-          }
-          nav.querySelectorAll('[aria-current="true"]').forEach((item) => item.removeAttribute('aria-current'));
-          button.setAttribute('aria-current', 'true');
-          await this.#renderEntity(entity, stage);
-          this.#appendLessonNavigation(stage,entity,activities,async target=>{
-            if(this._progressionModel?.isLocked(target.id,this._progressionState))return;
-            nav.querySelectorAll('[aria-current="true"]').forEach(item=>item.removeAttribute('aria-current'));
-            this._progressionButtons.get(target.id)?.button?.setAttribute('aria-current','true');
-            await this.#renderEntity(target,stage);
-            this.#appendLessonNavigation(stage,target,activities,async next=>{
-              const button=this._progressionButtons.get(next.id)?.button;
-              if(button&&!button.disabled)button.click();
-            });
-          });
-        });
-        nav.append(button);
+    const selectActivity=async(entity)=>{
+      if(this._progressionModel?.isLocked(entity.id,this._progressionState)){
+        this.#stageMessage(stage,this.#progressionLockMessage(entity.id));return;
       }
-      if (!(entity.type === 'activity' && entity.activityType === NATIVE_COMPOSITE_ACTIVITY_TYPE)) {
-        for (const childId of entity.children ?? []) walk(pkg.entities.get(childId), depth + 1);
+      if(nav){
+        nav.querySelectorAll('[aria-current="true"]').forEach(item=>item.removeAttribute('aria-current'));
+        const button=this._progressionButtons.get(entity.id)?.button;
+        button?.setAttribute('aria-current','true');
+        let group=button?.closest('details.p2lrn-nav-group');
+        while(group){
+          group.open=true;this._collapsedUnits.delete(group.dataset.p2lrnUnitId);
+          group=group.parentElement?.closest('details.p2lrn-nav-group');
+        }
+        button?.scrollIntoView?.({block:'nearest'});
+      }
+      await this.#renderEntity(entity,stage);
+      this.#appendLessonNavigation(stage,entity,activities,selectActivity);
+      this.#notifyNodeChange(entity);
+    };
+    const walk=(entity,parent,depth=0)=>{
+      if(!entity||seen.has(entity.id))return;
+      seen.add(entity.id);
+      if(entity.type==='activity')activities.push(entity);
+      let childrenParent=parent;
+      if(nav&&entity.type==='unit'){
+        const group=document.createElement('details');
+        group.className='p2lrn-nav-group';group.dataset.p2lrnUnitId=entity.id;
+        group.open=!this._collapsedUnits.has(entity.id);
+        const summary=document.createElement('summary');summary.textContent=titleOf(entity);
+        const items=document.createElement('div');items.className='p2lrn-nav-children';
+        group.append(summary,items);
+        group.addEventListener('toggle',()=>{
+          if(group.open)this._collapsedUnits.delete(entity.id);
+          else this._collapsedUnits.add(entity.id);
+        });
+        parent.append(group);childrenParent=items;
+      }else if(nav&&entity.type!=='course'){
+        const button=document.createElement('button');button.type='button';
+        button.className=`depth-${Math.min(depth,3)}`;
+        const baseTitle=titleOf(entity);button.textContent=baseTitle;
+        button.disabled=entity.type!=='activity';
+        if(entity.type==='activity'){
+          this._progressionButtons.set(entity.id,{button,entity,baseTitle});
+          button.addEventListener('click',()=>void selectActivity(entity).catch(error=>{
+            this.#renderError(error?.message??String(error));
+            dispatchRuntimeEvent(this,'p2lrn:error',{phase:'navigation',error:String(error?.message??error)},this.#packageContext());
+          }));
+        }
+        parent.append(button);
+      }
+      if(!(entity.type==='activity'&&entity.activityType===NATIVE_COMPOSITE_ACTIVITY_TYPE)){
+        for(const childId of entity.children??[])walk(pkg.entities.get(childId),childrenParent,depth+1);
       }
     };
-    walk(root, 0);
+    walk(root,nav,0);
     // Common Cartridge may contain legitimate webcontent resources that the
     // source LMS did not link from its <organizations> outline (Canvas exports
     // do this for standalone pages). Keep the canonical graph unchanged, but
@@ -895,12 +992,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     if (activities.length) {
       const firstActivity = activities.find((activity) => !this._progressionModel?.isLocked(activity.id, this._progressionState));
       if (firstActivity) {
-        if (nav) this._progressionButtons.get(firstActivity.id)?.button?.setAttribute('aria-current', 'true');
-        await this.#renderEntity(firstActivity, stage);
-        this.#appendLessonNavigation(stage,firstActivity,activities,target=>{
-          const button=this._progressionButtons.get(target.id)?.button;
-          if(button&&!button.disabled)button.click();
-        });
+        await selectActivity(firstActivity);
       } else {
         this.#stageMessage(stage, this.#progressionLockMessage(activities[0].id));
       }
@@ -908,6 +1000,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
       const first=orphanCommonCartridge[0];
       first.button?.setAttribute('aria-current','true');
       await this.#renderEntity(first.resource,stage);
+      this.#notifyNodeChange(first.resource);
     } else {
       const message = document.createElement('div'); message.className = 'p2lrn-message'; message.textContent = 'Este nodo no contiene actividades reproducibles.'; stage.append(message);
     }
@@ -919,7 +1012,7 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     stage.querySelector(':scope > .p2lrn-lesson-navigation')?.remove();
     const bar=document.createElement('nav');
     bar.className='p2lrn-lesson-navigation';
-    bar.setAttribute('aria-label',playerUiText('Navegaci?n entre lecciones'));
+    bar.setAttribute('aria-label',playerUiText('Navegación entre lecciones'));
     const add=(label,target)=>{
       const button=document.createElement('button');button.type='button';
       button.textContent=target?playerUiText(label)+': '+titleOf(target):playerUiText(label);
@@ -982,13 +1075,13 @@ export class P2LRNPlayerElement extends HTMLElementBase {
     };
     this._activityLoading.set(stage,state);
     stage.setAttribute('data-p2lrn-loading','true');
-    stage.dataset.p2lrnLoadingLabel=playerUiText('Cargando actividad?');
+    stage.dataset.p2lrnLoadingLabel=playerUiText('Cargando actividad…');
     stage.setAttribute('aria-busy','true');
     this.addEventListener('p2lrn:activityready', state.onReady);
     this.addEventListener('p2lrn:error', state.onError);
     state.timer=setTimeout(()=>{
       if(this._activityLoading.get(stage)===state)
-        stage.dataset.p2lrnLoadingLabel=playerUiText('La actividad est? tardando m?s de lo habitual?');
+        stage.dataset.p2lrnLoadingLabel=playerUiText('La actividad está tardando más de lo habitual…');
     },12000);
     return state;
   }
