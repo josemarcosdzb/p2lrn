@@ -408,6 +408,10 @@
       ['/docs/ejemplos/','Cursos de ejemplo'],
       ['/juegos-educativos-3d/','Juegos educativos 3D'],
     ]],
+    ['REVISAR RESULTADOS', [
+      ['/analytics/','Abrir Analytics'],
+      ['/docs/analytics/','Guía de resultados'],
+    ]],
     ['DESARROLLADORES', [
       ['/docs/desarrolladores/','Inicio para desarrolladores'],
       ['/docs/desarrolladores/primeros-pasos/','Primer ejemplo HTML'],
@@ -435,6 +439,8 @@
     ]],
     ['CONECTORES', [
       ['/docs/conectores/','Conectores: elegir integración'],
+      ['/docs/skills/','Skills para IA'],
+      ['/docs/conectores/ia/','Conector MCP para IA'],
     ]],
     ['REFERENCIA', [
       ['/docs/compatibilidad/','Compatibilidad'],
@@ -552,7 +558,7 @@
     ]);
     const forTeachers=teacherRoutes.has(current)||current.startsWith('/docs/questionnaires/');
     const visibleSections=forTeachers
-      ?new Set(['EMPEZAR','CREAR','REPRODUCIR','DESARROLLADORES','RECURSOS'])
+      ?new Set(['EMPEZAR','CREAR','REPRODUCIR','REVISAR RESULTADOS','DESARROLLADORES','RECURSOS'])
       :new Set(['DESARROLLADORES','INSTALAR','INTEGRAR','CONECTORES','REFERENCIA','RECURSOS']);
     for (const [section,items] of GLOBAL_SIDEBAR) {
       if(!visibleSections.has(section))continue;
