@@ -68,7 +68,6 @@ const frameExercise=String.raw`(()=>{
     answered:Number(window.__p2lrnQaAnswered||0),submitted:Boolean(window.__p2lrnQaSubmitted),
     score:updatedScore,completed},'*');
 })()`;
-const server=http.createServer`;
 const server=http.createServer(async(req,res)=>{
  const u=new URL(req.url,'http://127.0.0.1');
  if(u.pathname==='/favicon.ico'){res.writeHead(204).end();return;}

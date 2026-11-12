@@ -23,7 +23,7 @@ for(const route of primary){
   const p=pager(html);
   for(const [direction,target] of Object.entries(p)){
     if(!target)continue; // Section landing pages may end a reading journey.
-    if(!/^\/docs\/[a-z0-9/-]*\/$/iu.test(target)||target===route){
+    if(!/^\/(?:docs(?:\/[a-z0-9/-]*)?|demo)\/$/iu.test(target)||target===route){
       failures.push(route+': unsafe/self '+direction+' pager '+target);continue;
     }
     try{await readFile(routeFile(target),'utf8');}
