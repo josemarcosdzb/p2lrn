@@ -202,7 +202,25 @@ function rewriteElementTree(root, path) {
         ['src','poster','background'].includes(attr)
           ? resolveBundledMedia(path,raw)
           : null);
-      if (!resolved) continue;
+      if (!resolved) {
+        // External image URLs cannot be loaded by the isolated package CSP.
+        // Keep useful alt text visible and accessible rather than a broken
+        // image, and never grant imported packages remote network access.
+        if (tag === 'img' && attr === 'src' && /^(?:https?:)?\/\//iu.test(String(raw ?? '').trim())) {
+          const alt = el.getAttribute('alt');
+          if (alt === '') { el.remove(); break; }
+          const label = (alt || '').trim() || 'Imagen externa no incluida en el paquete';
+          const fallback = document.createElement('span');
+          fallback.setAttribute('role', 'img');
+          fallback.setAttribute('aria-label', label);
+          fallback.setAttribute('data-p2lrn-source-missing', 'external-image');
+          fallback.textContent = label;
+          fallback.style.cssText = 'display:inline-block;border:1px dashed currentColor;padding:.25em .5em;max-width:100%';
+          el.replaceWith(fallback);
+          break;
+        }
+        continue;
+      }
       const mt = files.get(resolved.path)?.mediaType || '';
       if ((tag === 'a' || tag === 'area') && (mt.includes('html') || mt.includes('xhtml'))) {
         el.setAttribute(attr, '#');

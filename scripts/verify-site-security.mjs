@@ -27,7 +27,11 @@ for(const route of ["/skills/*","/crear-cursos-interactivos/*","/cursos-offline/
   assert.match(policy,/frame-ancestors 'self'/u,'Missing frame-ancestors '+route);
   assert.ok(!policy.includes("script-src 'unsafe-eval'"),'Executable CSP not allowed on information page: '+route);
   const connect=/connect-src ([^;]+)/u.exec(policy)?.[1]??'';
-  if(route.includes('contact')) assert.equal(connect,"'self' https://yurtnmtesugykrqtujdx.supabase.co");
+  if(route.includes('contact')){
+    assert.equal(connect,"'self' https://yurtnmtesugykrqtujdx.supabase.co https://challenges.cloudflare.com");
+    assert.doesNotMatch(policy,/script-src [^;]*(?:'unsafe-eval'|'wasm-unsafe-eval')/u,'Contact must never allow script evaluation');
+    assert.doesNotMatch(policy,/(?:^|\s)https:(?:\s|;|$)/u,'Contact CSP must not allow arbitrary HTTPS origins');
+  }
   else assert.equal(connect,"'self'");
 }
 for(const route of ['/studio/*','/demo/*']){

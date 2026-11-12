@@ -39,7 +39,8 @@ async function suite(){
   const response={events,errors,frameSrc:child?.src??'',frameSandbox:child?.getAttribute('sandbox')??null,dom:(player?.shadowRoot?.innerText||player?.shadowRoot?.textContent||'').slice(0,500),importedImages,missingSource,unresolved,visual,importedHtmlBytes:importedHtml.length};
     const expectedSourceError=params.get('src')?.includes('scorm12-bilan-moodle.p2lrn');
   const expectedImport=params.get('node');
-  const healthy=events.some(x=>x.type===(interactive?'ready':'rendered')) && !errors.length && (!expectedImport||unresolved===0) && (!expectedImport||importedImages+missingSource>=2) && (!expectedImport||(!!visual&&visual.brokenImages===0&&visual.loadedImages>=importedImages));
+  const visualAssets=!!visual && Number(visual.imageCount||0)+Number(visual.placeholderCount||0)>=2;
+  const healthy=events.some(x=>x.type===(interactive?'ready':'rendered')) && !errors.length && (!expectedImport||unresolved===0) && (!expectedImport||(visualAssets||importedImages+missingSource>=2)) && (!expectedImport||(!!visual&&visual.brokenImages===0&&visual.loadedImages===visual.imageCount));
   status.dataset.status=expectedSourceError?(errors.some(x=>String(x.error).includes('source package is missing JavaScript'))?'PASS':'FAIL'):(healthy?'PASS':'FAIL');
   status.textContent=JSON.stringify(response);
  }catch(error){status.dataset.status='FAIL';status.textContent=JSON.stringify({error:error.stack||String(error),events,errors});}
@@ -84,7 +85,8 @@ try{
   const outcome=await runChromePageGate(await findChrome(),`http://127.0.0.1:${port.port}/?src=${encodeURIComponent(row.path)}${row.node?'&node='+encodeURIComponent(row.node):''}`,profile,{timeoutMs:75000,exerciseExpression:frameExpression});
   const errors=(outcome.browserLogs||[]).filter(l=>l.level==='error'&&l.url!=='/favicon.ico');
    let report={};try{report=JSON.parse(outcome.detail||'{}')}catch{};console.log(JSON.stringify({name:row.name,status:outcome.status,eventTypes:report.events?.map(x=>x.type),runtimeErrors:report.errors?.map(x=>x.error),visual:report.visual,importedImages:report.importedImages,missingSource:report.missingSource,unresolved:report.unresolved,errors:errors.slice(0,5),exceptions:outcome.runtimeExceptions?.slice(0,4)},null,2));
-  if(outcome.status!=='PASS')failures++;
+  const blockedMedia=errors.filter(entry=>/violates.+Content Security Policy/iu.test(String(entry.text??'')));
+  if(outcome.status!=='PASS'||blockedMedia.length)failures++;
  }
 }finally{await new Promise(r=>port.server.close(r));await rm(profile,{recursive:true,force:true,maxRetries:4,retryDelay:200})}
 if(failures)process.exitCode=1;
