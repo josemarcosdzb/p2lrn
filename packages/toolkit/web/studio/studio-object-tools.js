@@ -627,6 +627,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
     event.preventDefault();event.stopPropagation();
     const target=current(),geo=target.getBoundingClientRect();
     drag={pointerId:event.pointerId,kind,target,startX:event.clientX,startY:event.clientY,
+      startRect:{left:geo.left,right:geo.right,top:geo.top,bottom:geo.bottom},
       position:positionOf(target),width:geo.width,height:geo.height,moved:false,
       initialScroll:scrollPane?.scrollTop||0};
     try{event.currentTarget.setPointerCapture?.(event.pointerId);}catch{}
@@ -678,7 +679,7 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
   }
   function finishDrag(event){
     if(!drag||drag.pointerId!==event.pointerId)return;
-    const {moved,kind,target}=drag;drag=null;
+    const {moved,kind,target,startX,startY,startRect,initialScroll}=drag;drag=null;
     try{event.currentTarget.releasePointerCapture?.(event.pointerId);}catch{}
     // Re-hit-test on release because nested layouts can shift during a drag.
     if(moved&&kind==='drag'&&!isDiagramChild(target))markDropTarget(findDropTarget(event,target));
@@ -690,14 +691,26 @@ export function mountStudioObjectTools({host,surface,onStatus=()=>{},onSelection
       const holder=target.parentElement;
       if(holder?.matches?.('[data-p2lrn-layout]:not([data-p2lrn-layout="drag-drop"])')){
         const bounds=target.getBoundingClientRect(),space=holder.getBoundingClientRect();
-        const within=bounds.left>=space.left-6&&bounds.right<=space.right+6&&
-          bounds.top>=space.top-6&&bounds.bottom<=space.bottom+6;
+        // setPosition clamps nested objects to their current parent. Checking
+        // only the clamped rectangle makes detachment impossible: the square
+        // can never visually escape the parent, even when released outside.
+        // Use the pointer's intended destination from the original rectangle.
+        const dx=event.clientX-startX;
+        const dy=event.clientY-startY+((scrollPane?.scrollTop||0)-initialScroll);
+        const intended={left:startRect.left+dx,right:startRect.right+dx,
+          top:startRect.top+dy,bottom:startRect.bottom+dy};
+        const within=(
+          bounds.left>=space.left-6&&bounds.right<=space.right+6&&
+          bounds.top>=space.top-6&&bounds.bottom<=space.bottom+6&&
+          intended.left>=space.left-6&&intended.right<=space.right+6&&
+          intended.top>=space.top-6&&intended.bottom<=space.bottom+6
+        );
         if(!within){
-          // A visibly detached blue square must no longer move with its old
-          // parent. Preserve its screen position when making it a sibling.
+          // Reparent the original node, not a clone; then restore the pointer's
+          // destination relative to its new parent (with safe surface bounds).
           holder.after(target);
           const after=target.getBoundingClientRect(),pos=positionOf(target);
-          setPosition(target,pos.x+bounds.left-after.left,pos.y+bounds.top-after.top);
+          setPosition(target,pos.x+intended.left-after.left,pos.y+intended.top-after.top);
           select(target);onStatus('Objeto separado de su contenedor anterior.');
         }
       }
