@@ -49,4 +49,24 @@
 <p>El proveedor ya tiene pruebas automatizadas comunes; esta matriz por LMS es la evidencia que todavía falta para convertir “compatible por estándar” en “validado en esta versión concreta”.</p></section>
 <nav class="doc-pager"><a class="prev" href="/docs/conectores/ia/"><span>← Anterior</span><strong>Conectores para IA</strong></a>
 <a class="next" href="/docs/conectores/lti/"><span>Siguiente →</span><strong>Módulo LTI 1.3</strong></a></nav>
+<section class="doc-section" id="instalacion-centro">
+<h2>Una instalación por centro; el profesor publica desde su LMS</h2>
+<p>El técnico instala el proveedor P2LRN LTI 1.3 una sola vez. El administrador autoriza la herramienta; el profesor no introduce claves, configuraciones de Docker ni identificadores LTI.</p>
+<ol><li><strong>Administrador:</strong> autoriza P2LRN y habilita la selección de contenido. Canvas admite registro dinámico desde una URL; en Moodle se activa la opción «Mostrar en selector de actividades».</li>
+<li><strong>Profesor:</strong> abre su curso, elige P2LRN, selecciona o sube un archivo <code>.p2lrn</code> y pulsa «Publicar y añadir». No necesita instalar Studio para subir un archivo existente.</li>
+<li><strong>Alumno:</strong> abre la actividad y recupera su progreso desde el LMS. Las notas oficiales requieren AGS autorizado y aceptación en el libro de calificaciones.</li></ol>
+<p>Este recorrido está verificado visualmente en Moodle, incluida la reentrada con una cuenta de alumno mediante «Log in as». Sigue pendiente demostrar las notas oficiales y el flujo equivalente en Canvas, Sakai, Chamilo y Open edX.</p>
+<div class="example-actions"><a class="button" href="/docs/conectores/lti/#docker-provider">Instalar el proveedor con Docker</a><a class="button" href="/docs/troubleshooting/#problemas-lms">Problemas de integración</a></div>
+</section>
+<section class="doc-section" id="validacion-por-plataforma">
+<h2>Estado real de cada plataforma</h2>
+<p>Comprobaciones de las instalaciones locales, 10 de noviembre de 2026. Un registro LTI activo no demuestra el recorrido completo del alumno.</p>
+<div class="reference-table">
+<div><strong>Moodle: publicación y reentrada comprobadas</strong><p>Instalación visible, archivo subido desde el selector, actividad guardada, Player abierto, pregunta respondida y entrega recuperada tras volver a entrar. La sesión del alumno se obtuvo mediante suplantación administrativa autorizada. No está comprobada la nota oficial.</p></div>
+<div><strong>Chamilo: lanzamiento comprobado; configuración reparada en QA</strong><p>El lanzamiento OIDC/LTI 1.3 y el selector de archivos P2LRN se han abierto realmente. El complemento IMS/LTI 1.9.0 devolvía HTTP 500 al configurar herramientas del curso; la corrección local permite abrir esa pantalla con HTTP 200. Falta demostrar una nueva publicación completa, el acceso del alumno y la nota oficial. El laboratorio utiliza un acceso SSO central.</p></div>
+<div><strong>Canvas: integración preparada</strong><p>Existen actividades LTI publicadas y el proveedor dispone de registro dinámico. El inicio de sesión redirige al acceso central; no se ha completado la publicación desde la interfaz.</p></div>
+<div><strong>Sakai: enlaces existentes</strong><p>Las páginas LTI están configuradas. Falta acceder con sesiones reales de profesor y alumno para crear contenido y comprobar calificaciones.</p></div>
+<div><strong>Open edX: bloque LTI publicado</strong><p>El curso y el bloque existen. El inicio de sesión redirige al acceso central, por lo que la publicación desde el profesor y la entrega de notas siguen pendientes.</p></div>
+</div>
+</section>
 </article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>

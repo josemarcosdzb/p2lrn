@@ -122,4 +122,28 @@ Authorization: Bearer PRIVATE_TOKEN</code></pre></div><p>Use real IDs from the p
 <p>More information about the standard at <a href="https://www.1edtech.org/standards/lti" rel="noopener noreferrer">1EdTech LTI</a>. For platform differences, consult <a href="/en/docs/connectors/lms/">LMS connectors</a>.</p></section>
 <nav class="doc-pager"><a class="prev" href="/en/docs/connectors/lms/"><span>← Previous</span><strong>LMS platforms</strong></a>
 <a class="next" href="/en/docs/connectors/"><span>Next →</span><strong>Connectors</strong></a></nav>
+<section class="doc-section" id="docker-provider">
+<h2>Install one provider with Docker</h2>
+<p>A technician installs the provider once for the institution. There is no separate P2LRN plugin for each LMS and no need to convert the course into different packages for Moodle, Canvas, Chamilo, Sakai or Open edX. Teachers then work from their LMS.</p>
+<ol>
+<li><strong>Prepare the server:</strong> use an HTTPS hostname reachable by the LMS and have compiled Toolkit and Player assets. Store the RSA private key and administrative token outside the repository in restricted files.</li>
+<li><strong>Configure the service:</strong> use <code>integration/lms/compose.yaml</code>. Set <code>P2LRN_LTI_BASE_URL</code>, <code>P2LRN_LTI_PRIVATE_KEY_PATH</code> and <code>P2LRN_LTI_ADMIN_TOKEN_PATH</code> in the administrator's environment. Never include secrets in a course package or public documentation.</li>
+<li><strong>Validate and start:</strong> run <code>docker compose -f integration/lms/compose.yaml config</code> and, for a fresh installation, <code>docker compose -f integration/lms/compose.yaml up -d</code>. Do not start a second provider alongside one serving learners.</li>
+<li><strong>Check connectivity:</strong> the HTTPS proxy must serve <code>/lti/health</code> and <code>/lti/jwks</code>, as well as OIDC and Deep Linking endpoints. Internal port 37891 is published only on the server's loopback interface.</li>
+<li><strong>Authorize in the LMS:</strong> the administrator approves the tool once. Canvas Dynamic Registration starts at <code>/lti/register/canvas</code>; Moodle can add P2LRN to its activity chooser.</li>
+</ol>
+<p>SQLite, course packages and other persistent data live in a Docker volume. Preserve the private key across upgrades; replacing it without controlled key rotation can invalidate existing installations.</p>
+<div class="example-actions"><a class="button" href="/en/docs/conectores/lms/#instalacion-centro">Teacher workflow</a><a class="button" href="/en/docs/troubleshooting/#problemas-lms">Installation troubleshooting</a></div>
+</section>
+<section class="doc-section" id="docker-redes">
+<h2>Docker networking, restarts and upgrades</h2>
+<p>In production, the LMS can run on another server and communicate over HTTPS. Moodle, Canvas and the other platforms do not need to share a Docker network with the provider.</p>
+<p>For local labs with several independent Compose projects, declare existing <strong>external networks</strong> using <code>integration/lms/compose.local-qa.yaml</code> and the corresponding network variables. Avoid relying on <code>docker network connect</code> after container recreation. Manually attached networks may be lost when the container is replaced, even if they survive a restart.</p>
+<div class="reference-table">
+<div><strong>Restarts</strong><p>Preserve the SQLite and course volume. Restarting the same container keeps its network attachments; recreating it requires networks to be declared in Compose.</p></div>
+<div><strong>DNS and reverse proxy</strong><p>Use a stable HTTPS hostname with a trusted certificate. Verify that the LMS resolves it and the proxy reaches the provider. Do not mix HTTP and HTTPS within one LTI transaction.</p></div>
+<div><strong>Security and grades</strong><p>Keep OIDC, JWT signatures, state and nonce validation enabled. Approve AGS in the LMS and confirm the gradebook accepted the score; a submitted Player answer is not an official grade.</p></div>
+</div>
+<p><strong>Warning:</strong> optional laboratory settings allow HTTP only on <code>*.localhost</code>. This must never be used for a public deployment.</p>
+</section>
 </article></main><footer><strong>P2LRN</strong><span>Technical documentation</span><div><span data-footer-version="">0.5.0-alpha.11</span><a href="/en/contact/">Contact</a></div></footer></body></html>

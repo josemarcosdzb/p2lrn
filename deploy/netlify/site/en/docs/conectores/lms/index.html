@@ -48,4 +48,24 @@
 <p>P2LRN has general automated contract tests, but they do not replace an end-to-end test against a specific LMS version. Report an integration as validated only after completing those checks in the target instance.</p></section>
 <nav class="doc-pager"><a class="prev" href="/en/docs/connectors/ai/"><span>← Previous</span><strong>AI connectors</strong></a>
 <a class="next" href="/en/docs/connectors/lti/"><span>Next →</span><strong>LTI 1.3 module</strong></a></nav>
+<section class="doc-section" id="instalacion-centro">
+<h2>One installation per institution; teachers publish from their LMS</h2>
+<p>A technician installs the P2LRN LTI 1.3 provider once. An administrator authorizes it; teachers do not handle Docker, LTI keys, or deployment IDs.</p>
+<ol><li><strong>Administrator:</strong> approves the tool and enables content selection. Canvas supports one-URL Dynamic Registration. In Moodle, select “Show in activity chooser and as a preconfigured tool”.</li>
+<li><strong>Teacher:</strong> opens a course, chooses P2LRN, selects or uploads a <code>.p2lrn</code> file and presses “Publish and add”. Studio does not need to be installed to upload an existing package.</li>
+<li><strong>Learner:</strong> opens the activity and resumes progress from their LMS. Official grades require authorized AGS and acceptance by the LMS gradebook.</li></ol>
+<p>The full teacher publishing and learner re-entry sequence has been visually verified in Moodle using the administrator's “Log in as” option for the QA learner. Independent learner authentication, official grades, and equivalent teacher workflows in Canvas, Sakai, Chamilo, and Open edX still need confirmation.</p>
+<div class="example-actions"><a class="button" href="/en/docs/conectores/lti/#docker-provider">Install the provider with Docker</a><a class="button" href="/en/docs/troubleshooting/#problemas-lms">Integration troubleshooting</a></div>
+</section>
+<section class="doc-section" id="validacion-por-plataforma">
+<h2>Actual status of each LMS</h2>
+<p>Local installation verification, 10 November 2026. An active LTI registration is not proof of an end-to-end learner workflow.</p>
+<div class="reference-table">
+<div><strong>Moodle: publishing and re-entry verified</strong><p>The tool was enabled in the activity chooser, a file uploaded through the teacher interface, an activity saved, Player opened, a quiz answer submitted and the submitted state recovered after relaunch. Learner access used the authorized administrator “Log in as” function. Official grade delivery is not verified.</p></div>
+<div><strong>Chamilo: existing launch verified; QA course settings repaired</strong><p>The OIDC/LTI 1.3 launch and P2LRN upload picker have opened in a real browser. IMS/LTI 1.9.0 returned HTTP 500 on course tool settings; the local QA fix restored HTTP 200. Complete teacher publishing, independent learner access and official grades remain unverified. This laboratory uses central SSO.</p></div>
+<div><strong>Canvas: integration configured</strong><p>Existing LTI activities are published and the provider supports Dynamic Registration. Login redirects to the central sign-in service; teacher publishing through the UI has not been completed.</p></div>
+<div><strong>Sakai: existing LTI links</strong><p>Tool pages are configured. Teacher and learner browser sessions, new content and official grades still require real verification.</p></div>
+<div><strong>Open edX: LTI block published</strong><p>The course and block exist. Sign-in redirects to a central service, so teacher publishing and grade delivery are still pending.</p></div>
+</div>
+</section>
 </article></main><footer><strong>P2LRN</strong><span>Technical documentation</span><div><span data-footer-version="">0.5.0-alpha.11</span><a href="/en/contact/">Contact</a></div></footer></body></html>

@@ -123,4 +123,28 @@ Authorization: Bearer TOKEN_PRIVADO</code></pre></div><p>Los identificadores son
 <p>Más información del estándar en <a href="https://www.1edtech.org/standards/lti" rel="noopener noreferrer">1EdTech LTI</a>. Para las diferencias por plataforma consulta <a href="/docs/conectores/lms/">Conectores LMS</a>.</p></section>
 <nav class="doc-pager"><a class="prev" href="/docs/conectores/lms/"><span>← Anterior</span><strong>Plataformas LMS</strong></a>
 <a class="next" href="/docs/conectores/"><span>Siguiente →</span><strong>Conectores</strong></a></nav>
+<section class="doc-section" id="docker-provider">
+<h2>Instalar el proveedor una vez con Docker</h2>
+<p>Esta instalación la hace un administrador técnico. No es necesario instalar un plugin distinto por cada LMS ni preparar una versión del curso para Moodle, Canvas, Chamilo, Sakai u Open edX. Los profesores trabajan después desde la interfaz de su LMS.</p>
+<ol>
+<li><strong>Preparar el servidor:</strong> usar un dominio HTTPS accesible desde los LMS y disponer de los archivos compilados del Player y Toolkit. Guardar fuera del repositorio una clave privada RSA y un token administrativo en archivos con permisos restringidos.</li>
+<li><strong>Configurar el servicio:</strong> utilizar <code>integration/lms/compose.yaml</code>. Definir <code>P2LRN_LTI_BASE_URL</code>, <code>P2LRN_LTI_PRIVATE_KEY_PATH</code> y <code>P2LRN_LTI_ADMIN_TOKEN_PATH</code> en el entorno del administrador. No introducir secretos en el curso ni publicarlos en la web.</li>
+<li><strong>Comprobar y arrancar:</strong> validar la configuración con <code>docker compose -f integration/lms/compose.yaml config</code> y, en una instalación nueva, iniciar el servicio con <code>docker compose -f integration/lms/compose.yaml up -d</code>. No arrancar otra copia si ya existe un proveedor que atiende a los alumnos.</li>
+<li><strong>Comprobar conexión:</strong> el proxy HTTPS debe publicar <code>/lti/health</code> y <code>/lti/jwks</code>, además de las rutas OIDC y Deep Linking. El puerto interno 37891 se expone únicamente en el bucle local del servidor.</li>
+<li><strong>Autorizar en el LMS:</strong> el administrador registra P2LRN una vez. Para Canvas, el proveedor incluye <code>/lti/register/canvas</code>; Moodle permite mostrar la herramienta en su selector de actividades.</li>
+</ol>
+<p>Los datos y cursos residen en un volumen persistente. La clave privada no debe generarse de nuevo al actualizar; un cambio de clave sin rotación controlada puede invalidar instalaciones existentes.</p>
+<div class="example-actions"><a class="button" href="/docs/conectores/lms/#instalacion-centro">Cómo lo utiliza el profesor</a><a class="button" href="/docs/troubleshooting/#problemas-lms">Problemas de instalación</a></div>
+</section>
+<section class="doc-section" id="docker-redes">
+<h2>Docker, redes, reinicios y actualizaciones</h2>
+<p>En producción, el LMS puede estar en otro servidor: normalmente se comunica con el proveedor mediante HTTPS. No hace falta poner Moodle, Canvas y los demás LMS en la misma red Docker.</p>
+<p>En laboratorios con varios proyectos Compose, las redes se deben declarar como <strong>externas</strong> mediante <code>integration/lms/compose.local-qa.yaml</code> y las variables de cada red. Evita depender de <code>docker network connect</code> después de cada recreación. Las conexiones manuales pueden desaparecer al sustituir el contenedor, aunque sobrevivan a un reinicio.</p>
+<div class="reference-table">
+<div><strong>Reinicio</strong><p>Conservar el volumen de SQLite y los cursos. Un reinicio del mismo contenedor mantiene sus redes; una recreación exige que Compose declare las redes necesarias.</p></div>
+<div><strong>DNS y proxy</strong><p>Usar una URL pública estable con HTTPS y certificado válido. Verificar que los LMS resuelven ese nombre y que el proxy alcanza el proveedor. No mezclar HTTP y HTTPS en una misma transacción LTI.</p></div>
+<div><strong>Seguridad y notas</strong><p>Conservar OIDC, firma JWT, estado y nonce. Autorizar AGS desde el LMS y comprobar que el libro de notas recibió el resultado; una respuesta entregada en Player no equivale a una calificación oficial.</p></div>
+</div>
+<p><strong>Advertencia:</strong> la configuración opcional de laboratorio admite HTTP solo con <code>*.localhost</code>. No sirve como configuración pública de producción.</p>
+</section>
 </article></main><footer><strong>P2LRN</strong><span>Documentación técnica</span><div><span data-footer-version>0.5.0-alpha.11</span><a href="/contacto/">Contacto</a></div></footer></body></html>
