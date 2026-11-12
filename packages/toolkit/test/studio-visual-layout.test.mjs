@@ -21,3 +21,11 @@ test('Studio learner preview uses the Player source transaction and tracks lesso
   assert.match(text,/details\.studio-tree-module/);
  }
 });
+
+test('npm Studio follows the same module and Player navigation contract',async()=>{
+ const source=await readFile(new URL('../../studio/src/p2lrn-studio.js',import.meta.url),'utf8');
+ assert.match(source,/p2lrn-studio-module/);
+ assert.match(source,/data-toggle-outline/);
+ assert.match(source,/p2lrn:nodechange/);
+ assert.match(source,/this\.#selected=id;this\._renderTree\(\)/);
+});

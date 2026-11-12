@@ -54,6 +54,17 @@ nav small{display:block;color:#667085;text-transform:uppercase;font:600 10px ui-
 .component-preview{display:grid;gap:6px}.component-preview-card{border:1px solid #d0d5dd;border-radius:10px;padding:14px;background:#f8fafc}.component-preview-card strong{display:block;margin-bottom:6px}.component-preview-card p{margin:0}.timeline-item{cursor:grab}.composite-content{display:grid;gap:12px}.composite-content-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.composite-content-head h3{margin:0 0 4px}.composite-content-head p{margin:0;color:#667085}.composite-list{display:grid;gap:8px}.composite-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #d9dee7;border-radius:8px;padding:10px}.composite-row-meta{display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;min-width:0}.composite-row-meta small{grid-column:2;color:#667085}.drag-handle{grid-row:1/3;color:#98a2b3;cursor:grab}.studio-warning{padding:12px;border:1px solid #f0cf75;border-radius:8px;background:#fffbeb;color:#7a5d00}.studio-choice-dialog{border:0;border-radius:12px;padding:0;width:min(680px,calc(100vw - 30px));box-shadow:0 22px 60px rgba(15,23,42,.28)}.studio-choice-dialog::backdrop{background:rgba(15,23,42,.42)}.studio-choice-shell{padding:16px}.studio-choice-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.studio-choice-head h2{margin:0 0 4px}.studio-choice-head p{margin:0;color:#667085}.studio-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}.studio-choice-card{display:grid;gap:4px;text-align:left;min-height:84px;padding:12px}.studio-choice-card small{color:#667085}.q-add-primary{font-weight:700}.q-tf-mode{max-width:420px}.q-tf-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px;border:1px solid #e1e5eb;border-radius:8px;background:#fafbfc}.q-tf-number{font:700 .72rem/1 ui-monospace,monospace;color:#667085}.q-tf-statement-input{width:100%;min-height:64px;box-sizing:border-box;border:1px solid #cfd5de;border-radius:6px;padding:8px 10px;font:500 .82rem/1.4 Arial,sans-serif;resize:vertical}.q-tf-answer{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.q-tf-answer-option{display:flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid #d0d5dd;border-radius:7px;background:#fff;font-size:.78rem}.q-tf-answer-option input{margin:0}@media(max-width:900px){.q-tf-row{grid-template-columns:auto minmax(0,1fr)}.q-tf-answer,.q-tf-row>.q-danger{grid-column:2}}
 .rights-panel{margin:24px 0 0;padding:18px;border:1px solid #d9dee7;border-radius:9px;background:#f8fafc}.rights-panel h2{font-size:16px;margin:0 0 14px}.rights-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.rights-field{display:flex;flex-direction:column;gap:5px;min-width:0;color:#475467;font-size:12px;font-weight:600}.rights-field input,.rights-field textarea{width:100%;min-width:0;min-height:37px;padding:8px 10px;border:1px solid #cfd5de;border-radius:7px;background:#fff;color:#111827;font:inherit;font-size:13px}.rights-field textarea{min-height:72px;resize:vertical}
 .offline-note{margin:0;color:#667085;font-size:12px;line-height:1.45}.offline-form{display:grid;gap:14px}.offline-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.offline-field{display:grid;gap:5px;font-size:12px;font-weight:700;color:#475467}.offline-field input,.offline-field select{min-height:40px;border:1px solid #cfd5de;border-radius:7px;padding:7px 9px;font:inherit;background:#fff;color:#111827}.offline-check{display:flex;gap:8px;align-items:center;font-size:12px;color:#344054}.offline-check input{width:18px;height:18px}.offline-fixed{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.offline-fixed div{padding:10px;border:1px solid #d9dee7;border-radius:8px;background:#f8fafc}.offline-fixed strong{display:block;font-size:11px}.offline-fixed span{display:block;margin-top:3px;color:#667085;font-size:11px}.offline-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}.offline-status{min-height:18px;color:#667085;font-size:12px}.offline-review{display:grid;gap:14px}.offline-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.offline-summary div{padding:10px;border:1px solid #e1e5eb;border-radius:8px;background:#f8fafc}.offline-summary strong{display:block;font-size:10px;text-transform:uppercase;color:#667085}.offline-summary span{display:block;margin-top:4px;font-weight:700}.offline-bad{color:#b42318}.offline-good{color:#027a48}.offline-review table{width:100%;border-collapse:collapse;font-size:12px}.offline-review th,.offline-review td{padding:7px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}.offline-review pre{max-height:260px;overflow:auto;padding:10px;border-radius:7px;background:#101828;color:#f8fafc;font:11px/1.45 ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
+.body{grid-template-rows:auto minmax(0,1fr)}
+.outline-controls{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:8px 12px;border-bottom:1px solid #d9dee7;background:#fff}
+.outline-controls button{min-height:40px}
+.outline-controls button:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+.outline-controls span{font-size:12px;font-weight:700;color:#344054;overflow-wrap:anywhere}
+.body[data-outline-hidden=true]{grid-template-columns:minmax(0,1fr)}
+.body nav[hidden]{display:none!important}
+.p2lrn-studio-module>summary{cursor:pointer;padding:10px 8px;border-radius:6px;font-weight:700;color:#243b53;overflow-wrap:anywhere}
+.p2lrn-studio-module>summary:hover{background:#eef3fa}
+.p2lrn-studio-module>summary:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+.studio-module-children{margin-left:9px;padding-left:9px;border-left:1px solid #d9dee7}
 [hidden]{display:none!important}
 @media(max-width:760px){.body{grid-template-columns:1fr}nav{max-height:220px;border-right:0;border-bottom:1px solid #d9dee7}.meta{width:100%;margin-left:0}.offline-grid,.offline-fixed{grid-template-columns:1fr}}
 `;
@@ -162,7 +173,7 @@ function filenameFromUrl(value){
 export class P2LRNStudioElement extends HTMLElement{
   static p2lrnStudioVersion=P2LRN_STUDIO_VERSION;
   static get observedAttributes(){return['src','save-endpoint','reader-endpoint','import-endpoint','course-path','offline-runtime-base-url'];}
-  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;#resourceLibrary=null;#unifiedBar=null;#savedRevision=0;#pendingPlacement=null;
+  #studio=null;#selected=null;#sourceUrl=null;#sourceObjectUrl=null;#previewObjectUrl=null;#mode='edit';#root=null;#resourceLibrary=null;#unifiedBar=null;#savedRevision=0;#pendingPlacement=null;#collapsedModules=new Set();
 
   constructor(){
     super();
@@ -208,7 +219,11 @@ export class P2LRNStudioElement extends HTMLElement{
         </div>
         <div class="warn" data-warn hidden><strong>Sin guardar</strong> Guarda un borrador o exporta el curso para conservar los cambios.</div>
         <div class="body" data-body hidden>
-          <nav data-tree></nav>
+          <div class="outline-controls">
+            <button type="button" data-toggle-outline aria-controls="studio-component-outline" aria-expanded="true">Ocultar índice</button>
+            <span data-current-lesson role="status" aria-live="polite">Lección actual: —</span>
+          </div>
+          <nav data-tree id="studio-component-outline" aria-label="Estructura del curso"></nav>
           <main class="stage"><div data-stage></div></main>
         </div>
       </div>`;
@@ -229,6 +244,13 @@ export class P2LRNStudioElement extends HTMLElement{
     q('[data-external-file]').addEventListener('change',()=>{const f=q('[data-external-file]').files?.[0];if(f)this.importExternalPackage(f).catch((e)=>this.setStatus(e.message));q('[data-external-file]').value='';});
     q('[data-edit]').addEventListener('click',()=>this.setMode('edit'));
     q('[data-preview]').addEventListener('click',()=>this.setMode('preview'));
+    q('[data-toggle-outline]').addEventListener('click',()=>{
+      const button=q('[data-toggle-outline]'),body=q('[data-body]'),outline=q('[data-tree]');
+      const expanded=button.getAttribute('aria-expanded')==='true';
+      outline.hidden=expanded;body.dataset.outlineHidden=String(expanded);
+      button.setAttribute('aria-expanded',String(!expanded));
+      button.textContent=expanded?'Mostrar índice':'Ocultar índice';
+    });
     q('[data-download]').addEventListener('click',()=>this.download());
     q('[data-offline]').addEventListener('click',()=>this.showOfflineExportDialog());
     q('[data-review-result]').addEventListener('click',()=>q('[data-result-file]').click());
@@ -333,22 +355,48 @@ export class P2LRNStudioElement extends HTMLElement{
     const nav=this.shadowRoot.querySelector('[data-tree]');nav.replaceChildren();
     const heading=document.createElement('div');heading.className='p2lrn-studio-outline-title';
     const kicker=document.createElement('small');kicker.textContent='CURSO';
-    const titleOfCourse=document.createElement('strong');titleOfCourse.textContent=this.#studio?.title(this.#studio.rootId)||'Curso P2LRN';
-    heading.append(kicker,titleOfCourse);nav.append(heading);
+    const title=document.createElement('strong');title.textContent=this.#studio?.title(this.#studio.rootId)||'Curso P2LRN';
+    heading.append(kicker,title);nav.append(heading);
     const actions=document.createElement('div');actions.className='tree-actions';
-    const unit=document.createElement('button');unit.type='button';unit.textContent='+ Unidad';unit.onclick=()=>this.addUnit().catch((error)=>this.setStatus(error.message));
-    const lesson=document.createElement('button');lesson.type='button';lesson.textContent='+ Lección';lesson.onclick=()=>this.addLesson().catch((error)=>this.setStatus(error.message));
+    const unit=document.createElement('button');unit.type='button';unit.textContent='+ Unidad';unit.onclick=()=>this.addUnit().catch(e=>this.setStatus(e.message));
+    const lesson=document.createElement('button');lesson.type='button';lesson.textContent='+ Lección';lesson.onclick=()=>this.addLesson().catch(e=>this.setStatus(e.message));
     actions.append(unit,lesson);nav.append(actions);
     const seen=new Set();
-    const walk=(entity,depth=0)=>{
-      if(!entity||seen.has(entity.id))return;seen.add(entity.id);
-      const b=document.createElement('button');b.type='button';b.style.paddingLeft=(8+depth*12)+'px';
-      b.innerHTML='<small></small><span></span>';b.querySelector('small').textContent=entity.type;b.querySelector('span').textContent=this.#studio.title(entity.id);
-      if(entity.id===this.#selected)b.setAttribute('aria-current','true');
-      b.onclick=()=>{this.#selected=entity.id;this._renderTree();this._renderEditor();};nav.append(b);
-      (entity.children||[]).forEach((id)=>walk(this.#studio.entity(id),depth+1));
+    const select=(id)=>{
+      this.#selected=id;this._renderTree();
+      if(this.#mode==='preview'){
+        const player=this.shadowRoot.querySelector('[data-stage] p2lrn-player');
+        if(player)player.setAttribute('node',id);else void this._renderEditor();
+      }else void this._renderEditor();
     };
-    walk(this.#studio.entity(this.#studio.rootId));
+    const walk=(entity,parent,depth=0)=>{
+      if(!entity||seen.has(entity.id))return;seen.add(entity.id);
+      let destination=parent;
+      if(entity.type==='unit'&&entity.children?.length){
+        const details=document.createElement('details');details.className='p2lrn-studio-module';
+        details.dataset.moduleId=entity.id;details.open=!this.#collapsedModules.has(entity.id);
+        const summary=document.createElement('summary');summary.textContent=this.#studio.title(entity.id);
+        const nested=document.createElement('div');nested.className='studio-module-children';
+        details.append(summary,nested);parent.append(details);destination=nested;
+        details.addEventListener('toggle',()=>{
+          if(details.open)this.#collapsedModules.delete(entity.id);else this.#collapsedModules.add(entity.id);
+        });
+      }
+      const button=document.createElement('button');button.type='button';
+      button.dataset.entityId=entity.id;button.style.paddingLeft=(8+depth*12)+'px';
+      button.innerHTML='<small></small><span></span>';
+      button.querySelector('small').textContent=entity.type;
+      button.querySelector('span').textContent=this.#studio.title(entity.id);
+      if(entity.id===this.#selected)button.setAttribute('aria-current','true');
+      button.onclick=()=>select(entity.id);destination.append(button);
+      (entity.children||[]).forEach(id=>walk(this.#studio.entity(id),destination,depth+1));
+    };
+    walk(this.#studio.entity(this.#studio.rootId),nav);
+    const current=[...nav.querySelectorAll('[data-entity-id]')].find(x=>x.dataset.entityId===this.#selected);
+    let parent=current?.closest('details.p2lrn-studio-module');
+    while(parent){parent.open=true;this.#collapsedModules.delete(parent.dataset.moduleId);parent=parent.parentElement?.closest('details.p2lrn-studio-module');}
+    const label=this.shadowRoot.querySelector('[data-current-lesson]');
+    if(label)label.textContent='Lección actual: '+(this.#studio?.title(this.#selected)||'—');
   }
   _insertionParent(){
     const current=this.#studio?.entity(this.#selected);if(!current)return this.#studio?.rootId??null;
@@ -555,7 +603,15 @@ export class P2LRNStudioElement extends HTMLElement{
     const exported=await this.exportPackage();
     if(this.#previewObjectUrl)URL.revokeObjectURL(this.#previewObjectUrl);
     this.#previewObjectUrl=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
-    const player=document.createElement('p2lrn-player');player.className='preview';player.setAttribute('navigation','external');player.setAttribute('src',this.#previewObjectUrl);player.setAttribute('node',this.#selected);stage.append(player);
+    const player=document.createElement('p2lrn-player');player.className='preview';
+    player.setAttribute('navigation','external');player.setAttribute('src',this.#previewObjectUrl);player.setAttribute('node',this.#selected);
+    player.addEventListener('p2lrn:nodechange',event=>{
+      if(this.#mode!=='preview'||!this.#studio)return;
+      const id=event.detail?.entityId;
+      if(!id||!this.#studio.entity(id)||this.#selected===id)return;
+      this.#selected=id;this._renderTree();
+    });
+    stage.append(player);
   }
   async setMode(mode){
     this.#mode=mode==='preview'?'preview':'edit';
