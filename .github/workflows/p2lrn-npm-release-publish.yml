@@ -205,4 +205,51 @@ jobs:
               Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction Stop
             }
           }
+  diagnose-terminal-slots:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[diagnose-terminal-slots]')
+    name: Read-only audit of TerminalPC processes and age
+    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: Identify TerminalPC server, descendant processes, and start times without stopping them
+        run: |
+          $ErrorActionPreference='Stop'
+          $all=@(Get-CimInstance Win32_Process)
+          $now=Get-Date
+          $server=@($all | Where-Object {
+            $_.Name -eq 'node.exe' -and $_.CommandLine -match '(?i)chatgpt-terminal-mcp-hardened'
+          })
+          Write-Output ('HOST_PROCESS_COUNT='+$all.Count)
+          Write-Output ('TERMINALPC_NODE_SERVER_COUNT='+$server.Count)
+          $tracked=New-Object 'System.Collections.Generic.HashSet[uint32]'
+          foreach($proc in $server){[void]$tracked.Add([uint32]$proc.ProcessId)}
+          for($i=0;$i -lt 8;$i++){
+            $added=0
+            foreach($proc in $all){
+              if($tracked.Contains([uint32]$proc.ParentProcessId) -and !$tracked.Contains([uint32]$proc.ProcessId)){
+                [void]$tracked.Add([uint32]$proc.ProcessId);$added++
+              }
+            }
+            if($added -eq 0){break}
+          }
+          $children=@($all | Where-Object {
+            $tracked.Contains([uint32]$_.ProcessId)
+          } | Sort-Object CreationDate)
+          foreach($proc in $children){
+            $age=[math]::Round(($now-$proc.CreationDate).TotalMinutes,1)
+            Write-Output ("TERMINAL_TREE pid=$($proc.ProcessId) parent=$($proc.ParentProcessId) name=$($proc.Name) started=$($proc.CreationDate.ToString('o')) age_minutes=$age")
+          }
+          $shells=@($all | Where-Object {
+            $_.Name -in @('powershell.exe','pwsh.exe','cmd.exe')
+          } | Sort-Object CreationDate)
+          Write-Output ('WINDOWS_SHELL_PROCESS_COUNT='+$shells.Count)
+          foreach($proc in ($shells | Select-Object -First 12)){
+            $age=[math]::Round(($now-$proc.CreationDate).TotalMinutes,1)
+            Write-Output ("WINDOWS_SHELL pid=$($proc.ProcessId) parent=$($proc.ParentProcessId) name=$($proc.Name) age_minutes=$age")
+          }
+          Write-Output 'TERMINALPC_PROCESSES_NOT_STOPPED=YES'
+          Write-Output 'NOTE=TerminalPC internal slot registry cannot be inferred from OS process counts alone'
 
