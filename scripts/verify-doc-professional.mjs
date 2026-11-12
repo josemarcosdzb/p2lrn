@@ -49,7 +49,10 @@ for(const file of files){
 
   for(const match of html.matchAll(/<(a|button)\b([^>]*)>([\s\S]*?)<\/\1>/gi)){
     const attrs=match[2], body=strip(match[3]);
-    if(!body&&!/aria-label="[^"]+"/i.test(attrs)&&!/title="[^"]+"/i.test(attrs))failures.push(rel+': unnamed '+match[1]+' control');
+    // A linked informative image is named by its nonempty alt text (accessible-name computation).
+    // Decorative images with alt="" still require a label on the surrounding link.
+    const imageName=/<img\b[^>]*\balt="[^"]+"/i.test(match[3]);
+    if(!body&&!imageName&&!/aria-label="[^"]+"/i.test(attrs)&&!/title="[^"]+"/i.test(attrs))failures.push(rel+': unnamed '+match[1]+' control');
   }
 }
 if(failures.length)throw new Error('Professional documentation audit failed:\n'+failures.join('\n'));
