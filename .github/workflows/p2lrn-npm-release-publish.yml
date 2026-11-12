@@ -33,9 +33,12 @@ jobs:
       - name: Check source revision, npm identity and absence of conflicting versions
         run: |
           $ErrorActionPreference='Stop'
-          $remoteLine=git ls-remote origin refs/heads/main | Select-Object -First 1
-          if($LASTEXITCODE -ne 0 -or -not $remoteLine) {throw 'Unable to verify current main'}
-          $remoteSha=($remoteLine -split '\s+')[0]
+          # Capture all native process output before checking its exit code.
+          # Select-Object -First 1 terminates the git pipe early on PowerShell
+          # and causes a spurious $LASTEXITCODE=-1 even when refs are unchanged.
+          $remoteLines=@(git ls-remote origin refs/heads/main 2>&1)
+          if($LASTEXITCODE -ne 0 -or $remoteLines.Count -ne 1) {throw 'Unable to verify current main'}
+          $remoteSha=(([string]$remoteLines[0]) -split '\s+')[0]
           $localSha=(git rev-parse HEAD).Trim()
           if($remoteSha -ne $env:GITHUB_SHA -or $localSha -ne $env:GITHUB_SHA) {throw "Main changed; refusing stale npm release: $remoteSha"}
           $whoami=(& npm whoami --registry=https://registry.npmjs.org).Trim()
@@ -96,10 +99,10 @@ jobs:
           # Retry the read only; never publish a different source revision.
           $verified=$false
           for($attempt=1; $attempt -le 4; $attempt++) {
-            $remote=git ls-remote origin refs/heads/main 2>&1 | Select-Object -First 1
+            $remoteLines=@(git ls-remote origin refs/heads/main 2>&1)
             $exit=$LASTEXITCODE
-            if($exit -eq 0 -and $remote) {
-              $remoteSha=($remote -split '\s+')[0]
+            if($exit -eq 0 -and $remoteLines.Count -eq 1) {
+              $remoteSha=(([string]$remoteLines[0]) -split '\s+')[0]
               Write-Host "REMOTE_MAIN_SHA=$remoteSha EXPECTED_SHA=$env:GITHUB_SHA"
               if($remoteSha -ne $env:GITHUB_SHA) {throw "Main changed during packing: $remoteSha"}
               $verified=$true
