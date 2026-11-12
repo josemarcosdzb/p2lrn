@@ -42,16 +42,35 @@ const frameExercise=String.raw`(()=>{
     const submit=[...(content?.querySelectorAll('button,[role="button"]')||[])]
       .find(el=>/^\s*Submit Answers\s*$/iu.test(el.textContent||'')&&!el.disabled);
     const selects=[...(content?.querySelectorAll('select')||[])];
-    if(submit&&selects.length){
+    const textInputs=[...(content?.querySelectorAll('input[type="text"],input:not([type])')||[])];
+    if(submit&&(selects.length||textInputs.length)){
       let answered=0;
-      for(const select of selects){
-        const choice=[...select.options].find(o=>!o.disabled&&o.value.trim()!=='');
-        if(choice){select.value=choice.value;select.dispatchEvent(new Event('change',{bubbles:true}));answered++;}
+      // The real CATAPULT pre-test has a required free-text question as well
+      // as a select. Leaving the text blank prevented scoring in Chrome.
+      for(const input of textInputs){
+        const answer=String(input.getAttribute('data-answer')||'').trim();
+        if(!answer)continue;
+        input.value=answer;
+        input.dispatchEvent(new Event('input',{bubbles:true}));
+        input.dispatchEvent(new Event('change',{bubbles:true}));
+        answered++;
       }
-      if(answered){
+      for(const select of selects){
+        const options=[...select.options];
+        const choice=options.find(o=>!o.disabled&&o.dataset.correct==='yes')
+          ??options.find(o=>!o.disabled&&o.value.trim()!=='');
+        if(choice){
+          select.value=choice.value;
+          select.dispatchEvent(new Event('input',{bubbles:true}));
+          select.dispatchEvent(new Event('change',{bubbles:true}));
+          answered++;
+        }
+      }
+      // Only submit when every visible answer control has been completed.
+      if(answered>0&&answered===textInputs.length+selects.length){
         window.__p2lrnQaAnswered=answered;
         window.__p2lrnQaSubmitted=true;
-        submit.click(); // Real learner submission, not a simulated runtime event.
+        submit.click(); // Actual embedded-course button, not a synthetic grade.
       }
     }
   }
