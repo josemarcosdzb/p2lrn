@@ -6,7 +6,20 @@ const site=join(root,'deploy','netlify','site');
 const failures=[];
 const read=(p)=>readFile(join(root,p),'utf8');
 const routeFile=(route)=>route==='/docs/'?join(site,'docs','index.html'):join(site,...route.slice(1).split('/'),'index.html');
-const article=(html)=>/<article class="doc-content">([\s\S]*?)<\/article>/i.exec(html)?.[1]??html;
+// Keep the complete article even when a guide embeds activity <article> cards.
+const article=(html)=>{
+  const open=/<article\b[^>]*class="[^"]*\bdoc-content\b[^"]*"[^>]*>/i.exec(html);
+  if(!open)return html;
+  const start=open.index+open[0].length;
+  const tag=/<\/?article\b[^>]*>/gi;
+  tag.lastIndex=start;
+  let depth=1,match;
+  while((match=tag.exec(html))){
+    depth+=/^<\/article\b/i.test(match[0])?-1:1;
+    if(depth===0)return html.slice(start,match.index);
+  }
+  return html.slice(start);
+};
 const pager=(html)=>{
   const body=article(html);
   const prev=/<a class="prev" href="([^"]+)"/i.exec(body)?.[1]??null;

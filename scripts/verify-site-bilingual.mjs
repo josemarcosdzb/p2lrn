@@ -367,7 +367,7 @@ for(const rel of ['p2lrn.js','studio/studio.js','demo/viewer.js','analytics/demo
 const checkAudiencePage=async (relativePath,{teacher=false,developer=false}={})=>{
   const html=await readFile(join(siteRoot,...relativePath.split('/')),'utf8').catch(()=>null);
   if(!html){errors.push('Missing role-specific documentation: '+relativePath);return;}
-  const article=html.match(/<article class="doc-content">([\s\S]*?)<\/article>/)?.[1]||'';
+  const article=load(html)('article.doc-content').first().html()||'';
   if(!article)errors.push('Role-specific guide has no article: '+relativePath);
   if(teacher){
     if(/<pre\b/i.test(article))errors.push('Teacher guide requires a code block: '+relativePath);

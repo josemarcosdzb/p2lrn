@@ -179,7 +179,7 @@ for(const locale of ['', 'en/']){
     studio.indexOf('<div class="studio-guide-choice-description"><p>'):0);
   if((studio.match(/<dt><a href="[^"]+">/g)||[]).length<13)
     failures.push('each of the 13 Studio games needs a specific documentation link: '+locale);
-  if(!studio.includes('class="studio-guide-multipart-in-flow"')||
+  if(!/<section\b[^>]*class="[^"]*\bstudio-guide-multipart-in-flow\b[^"]*"[^>]*>/i.test(studio)||
      studio.indexOf('id="multipart-studio"')>studio.indexOf('class="doc-pager"'))
     failures.push('multipart must follow File, not the last-page pager: '+locale);
   if(!studio.includes('studio-guide-control-crop--create')||
