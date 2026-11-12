@@ -29,6 +29,14 @@ export function pickerHtml({ticket,contents,cspNonce,errorMessage=null}){
   'const update=()=>{const q=norm(input.value.trim());let n=0;for(const card of items){'+
   'card.hidden=!norm(card.dataset.filter).includes(q);if(!card.hidden)n++;}'+
   'count.textContent=n+" "+(n===1?"curso disponible":"cursos disponibles");empty.hidden=n>0;};input.addEventListener("input",update);update();})();';
+  const uploadCode='(()=>{const input=document.getElementById("p2lrn-file"),zone=document.getElementById("p2lrn-dropzone"),status=document.getElementById("p2lrn-file-status"),button=zone.closest("form").querySelector("button[type=submit]");'+
+ 'function update(){const f=input.files?.[0];if(!f){button.disabled=false;status.textContent="Ningún archivo seleccionado";return;}'+
+ 'if(!f.name.toLowerCase().endsWith(".p2lrn")||f.size===0||f.size>67108864){button.disabled=true;status.textContent="Selecciona un archivo .p2lrn válido de hasta 64 MB.";return;}'+
+   'button.disabled=false;status.textContent=f.name+" - "+(f.size<1048576?(f.size/1024).toFixed(1)+" KB":(f.size/1048576).toFixed(2)+" MB")+" - listo para publicar";}'+
+ 'input.addEventListener("change",update);zone.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("dragging")});'+
+ 'zone.addEventListener("dragleave",()=>zone.classList.remove("dragging"));'+
+ 'zone.addEventListener("drop",e=>{e.preventDefault();zone.classList.remove("dragging");if(e.dataTransfer?.files?.length===1){try{input.files=e.dataTransfer.files;update();}catch{input.focus();}}});'+
+ 'input.closest("form").addEventListener("submit",()=>{if(!button.disabled){button.disabled=true;status.textContent="Publicando el curso en tu aula...";}});})();';
  return '<!doctype html><html lang="es"><head><meta charset="utf-8">'+
   '<meta name="viewport" content="width=device-width,initial-scale=1">'+
   '<meta name="referrer" content="no-referrer"><title>Añadir un curso</title>'+
@@ -45,21 +53,28 @@ export function pickerHtml({ticket,contents,cspNonce,errorMessage=null}){
   '.upload h2{margin:0 0 8px}.upload label{display:block;font-weight:650;margin:12px 0 5px}'+
   '.upload input[type=file]{display:block;max-width:100%;padding:10px 0;font:inherit}'+
   '.upload button{margin-top:10px}.upload p{margin:6px 0}'+
+  '.dropzone{border:2px dashed #6c92bd;border-radius:12px;background:white;padding:15px}'+
+  '.dropzone.dragging{border-color:#1353a1;background:#e8f2ff}'+
+  '#p2lrn-file-help{font-size:.85rem;color:#425670}#p2lrn-file-status{font-weight:600;min-height:1.3em}'+
+  '.upload button:disabled{opacity:.55;cursor:wait}'+
   'details{margin-top:14px;padding-top:11px;border-top:1px solid #e0e6ef}summary{color:#16579a;font-weight:600;cursor:pointer}'+
   'ul{list-style:none;padding:0;margin:10px 0}li{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:9px 0;border-bottom:1px solid #edf2f7}'+
   '[hidden]{display:none!important}@media(max-width:480px){.main-card form,.main-card form button{width:100%}}</style></head>'+
-  '<body><main><h1>Insertar contenido P2LRN</h1><p>Elige un curso y pulsa <b>Añadir curso</b>. Volverás a tu aula. '+
-  'No necesitas descargar archivos ni configurar nada más.</p>'+
-  '<section class="upload"><h2>¿Tu curso todavía no está aquí?</h2>'+
-  '<p>Desde Studio, exporta un archivo <b>.p2lrn</b>. Selecciónalo y se añadirá a esta aula sin convertirlo ni cambiarlo.</p>'+
+  '<body><main><h1>Insertar contenido P2LRN</h1><p>Sube un archivo .p2lrn o elige uno existente. Al publicar volverás a tu aula. '+
+  'No necesitas introducir claves, direcciones técnicas ni identificadores LTI.</p>'+
+  '<section class="upload"><h2>Subir archivo .p2lrn</h2>'+
+  '<p>Selecciona el archivo <b>.p2lrn</b> que ya tengas. Se publicará en esta aula sin convertirlo ni modificar su contenido.</p>'+
   (errorMessage?'<p id="p2lrn-upload-alert" role="alert" tabindex="-1" style="border-left:4px solid #b45309;background:#fff8df;padding:10px"><strong>No se ha publicado.</strong> '+esc(errorMessage)+'</p>':'')+
   '<form method="post" action="/lti/deep-link/confirm" enctype="multipart/form-data">'+
   '<input type="hidden" name="ticket" value="'+esc(ticket)+'">'+
-  '<label for="p2lrn-file">Archivo del curso</label>'+
-  '<input id="p2lrn-file" type="file" name="course" accept=".p2lrn,application/vnd.p2lrn+zip" required>'+
+  '<div id="p2lrn-dropzone" class="dropzone">'+
+  '<label for="p2lrn-file">Arrastra tu curso o selecciónalo</label>'+
+  '<input id="p2lrn-file" type="file" name="course" accept=".p2lrn,application/vnd.p2lrn+zip" aria-describedby="p2lrn-file-help p2lrn-file-status" required>'+
+  '<p id="p2lrn-file-help">Archivo .p2lrn, máximo 64 MB</p>'+
+  '<p id="p2lrn-file-status" role="status" aria-live="polite">Ningún archivo seleccionado</p></div>'+
   '<button type="submit">Publicar y añadir</button></form></section>'+
   '<label for="buscar"><b>O seleccionar un curso publicado</b></label><input id="buscar" type="search" placeholder="Título del curso" autocomplete="off">'+
   '<p id="total" role="status" aria-live="polite"></p>'+cards.join('')+
-  '<p id="vacio" hidden>'+(cards.length?'No hay cursos con ese nombre.':'No hay cursos publicados. Contacta con el administrador de P2LRN.')+'</p>'+
-  '<script nonce="'+esc(cspNonce)+'">'+code+'</script></main></body></html>';
+  '<p id="vacio" hidden>'+(cards.length?'No hay cursos con ese nombre.':'No hay cursos publicados. Sube el primer archivo .p2lrn arriba.')+'</p>'+
+  '<script nonce="'+esc(cspNonce)+'">'+code+uploadCode+'</script></main></body></html>';
 }

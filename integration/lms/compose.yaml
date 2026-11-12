@@ -1,0 +1,47 @@
+# One P2LRN LTI provider, shared by every institution/LMS.
+# TLS must be terminated by the institution's HTTPS reverse proxy.
+# Only the host loopback port is published; never publish 37891 openly.
+services:
+  p2lrn-lti-provider:
+    image: node:22-bookworm-slim
+    init: true
+    restart: unless-stopped
+    working_dir: /app/p2lrn
+    command: ["node", "integration/lms/lti-server.mjs"]
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      P2LRN_LTI_BASE_URL: ${P2LRN_LTI_BASE_URL:?Provide the public HTTPS origin}
+      P2LRN_LTI_DATA_DIR: /srv/p2lrn-data
+      P2LRN_LTI_PORT: "37891"
+      P2LRN_LTI_HOST: 0.0.0.0
+      P2LRN_LTI_KEY_FILE: /run/p2lrn-secrets/private.pem
+      P2LRN_LTI_ADMIN_TOKEN_FILE: /run/p2lrn-secrets/admin-token
+      P2LRN_LTI_DEV_INSECURE: "false"
+    ports:
+      - "127.0.0.1:${P2LRN_LTI_HOST_PORT:-37891}:37891"
+    volumes:
+      - ../..:/app/p2lrn:ro
+      - p2lrn-lti-data:/srv/p2lrn-data
+      - type: bind
+        source: ${P2LRN_LTI_PRIVATE_KEY_PATH:?Specify an existing private key file}
+        target: /run/p2lrn-secrets/private.pem
+        read_only: true
+      - type: bind
+        source: ${P2LRN_LTI_ADMIN_TOKEN_PATH:?Specify an existing administrator token file}
+        target: /run/p2lrn-secrets/admin-token
+        read_only: true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:37891/lti/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 25s
+
+volumes:
+  p2lrn-lti-data:
