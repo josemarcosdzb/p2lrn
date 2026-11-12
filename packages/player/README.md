@@ -4,8 +4,8 @@ Embeddable browser runtime for P2LRN packages. The distributed player is generat
 
 Current versions:
 
-- Web SDK: `0.5.0-alpha.13`
-- Node/TypeScript toolkit: `0.5.0-alpha.13`
+- Web SDK: `0.5.0-alpha.14`
+- Node/TypeScript toolkit: `0.5.0-alpha.14`
 - P2LRN Core: `0.4.0`
 
 ## CDN / plain HTML

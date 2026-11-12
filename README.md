@@ -1,4 +1,4 @@
-# P2LRN Node.js / TypeScript 0.5.0-alpha.13
+# P2LRN Node.js / TypeScript 0.5.0-alpha.14
 
 > **Publicación web y CI — regla permanente.** Netlify tiene congelados los despliegues automáticos por Git. El CI de `main` valida **el candidato construido desde ese commit**: páginas ES/EN, sitemap generado, imágenes, vídeos, enlaces, accesibilidad y navegación. **No debe exigir que `https://p2lrn.org` tenga ya el sitemap del candidato antes de publicar.** Si la web pública muestra otra versión (por ejemplo, 120 URL frente a 130 en el candidato), el estado es **pendiente de despliegue**, no fallo de traducción ni de SEO del candidato. La auditoría de la URL pública se ejecuta **solo después de un despliegue aprobado**. [Procedimiento único: CI y producción](deploy/netlify/README.md#ci-vs-production-two-separate-release-gates).
 
@@ -19,7 +19,7 @@ Esta entrega convierte la implementación principal de P2LRN a **Node.js + TypeS
 
 ## Identidad P2LRN
 
-La distribución `0.5.0-alpha.13` alinea `@p2lrn/player`, `@p2lrn/toolkit` y `@p2lrn/h5p-libraries` y `@p2lrn/studio`. El Reader documental forma parte del Toolkit como subpath `@p2lrn/toolkit/document-reader`.
+La distribución `0.5.0-alpha.14` alinea `@p2lrn/player`, `@p2lrn/toolkit` y `@p2lrn/h5p-libraries` y `@p2lrn/studio`. El Reader documental forma parte del Toolkit como subpath `@p2lrn/toolkit/document-reader`.
 
 La salida nueva usa:
 

@@ -25,7 +25,7 @@ Las figuras y sus ajustes se guardan como HTML y CSS permitidos dentro de la lec
 Install Studio and its Player peer dependency:
 
 ```bash
-npm install @p2lrn/studio@0.5.0-alpha.13 @p2lrn/player@0.5.0-alpha.13
+npm install @p2lrn/studio@0.5.0-alpha.14 @p2lrn/player@0.5.0-alpha.14
 ```
 
 Import Studio from your application code:
@@ -51,7 +51,7 @@ For a plain browser page use the classic Studio loader:
 <p2lrn-studio></p2lrn-studio>
 ```
 
-The classic loader derives its channel from its own URL, loads the matching Player first and then imports `p2lrn-studio.esm.js`. A versioned loader such as `/studio/0.5.0-alpha.13/dist/p2lrn-studio.js` therefore loads the matching Player `0.5.0-alpha.13`.
+The classic loader derives its channel from its own URL, loads the matching Player first and then imports `p2lrn-studio.esm.js`. A versioned loader such as `/studio/0.5.0-alpha.14/dist/p2lrn-studio.js` therefore loads the matching Player `0.5.0-alpha.14`.
 
 Do not use the ESM file directly in plain HTML unless your environment resolves the bare `@p2lrn/player` specifier. The documented CDN entrypoint is `p2lrn-studio.js`.
 

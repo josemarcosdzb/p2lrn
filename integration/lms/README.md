@@ -10,7 +10,7 @@ paquete no configura ningún servicio ni genera secretos silenciosamente.
 Cuando se publiquen versiones compatibles de los paquetes y se aprueben
 las pruebas del instalador, el uso previsto será:
 
-    npm install -g @p2lrn/lti-provider@0.5.0-alpha.13
+    npm install -g @p2lrn/lti-provider@0.5.0-alpha.14
     p2lrn-lti init
 
 A día de hoy, la versión nueva se prueba como tarball npm generado desde

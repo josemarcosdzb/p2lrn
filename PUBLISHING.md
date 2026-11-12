@@ -10,12 +10,12 @@ The npm distribution consists of five version-aligned packages:
 - `@p2lrn/studio` — browser authoring component and optional Host-backed Save, Reader and Import endpoints.
 - `@p2lrn/analytics` — embeddable learner/course analytics dashboard and aggregation helpers.
 
-All five packages currently use the same release version: `0.5.0-alpha.13`.
+All five packages currently use the same release version: `0.5.0-alpha.14`.
 
 ### Paquete npm adicional para el Provider LTI (solo servidor)
 
 El Provider LTI universal se entrega por separado como **@p2lrn/lti-provider**,
-con el comando **p2lrn-lti** y versión alineada 0.5.0-alpha.13.
+con el comando **p2lrn-lti** y versión alineada 0.5.0-alpha.14.
 No se ha creado otro servidor: el paquete contiene el Provider actual de
 integration/lms, con dependencias del Toolkit y Player oficiales.
 No añade ejecutables a la web estática ni al CDN y no utiliza Supabase.
@@ -37,7 +37,7 @@ no se promociona automáticamente a latest.
 Una vez estén publicados los paquetes compatibles, el administrador
 podrá ejecutar desde una consola:
 
-    npm install -g @p2lrn/lti-provider@0.5.0-alpha.13
+    npm install -g @p2lrn/lti-provider@0.5.0-alpha.14
     p2lrn-lti init
     p2lrn-lti doctor --public
 

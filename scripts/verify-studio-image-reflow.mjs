@@ -182,7 +182,7 @@ let profile=null,chrome=null,ws=null,studioServer=null;
 try{
   // Serve only the two audited editor modules on a loopback-only origin.
   // This is closer to production and avoids rewriting the actual module.
-  const assets=new Set(['/lesson-images.js','/studio-ui-i18n.js']);
+  const assets=new Set(['/lesson-images.js','/studio-ui-i18n.js','/visual-layout.js','/studio-shapes.js','/studio-drop-activity.js']);
   studioServer=createServer((req,res)=>{
     const url=new URL(req.url,'http://127.0.0.1');
     if(url.pathname==='/'){

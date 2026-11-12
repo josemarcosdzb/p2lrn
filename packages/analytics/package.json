@@ -1,6 +1,6 @@
 {
   "name": "@p2lrn/analytics",
-  "version": "0.5.0-alpha.13",
+  "version": "0.5.0-alpha.14",
   "description": "Embeddable P2LRN analytics dashboard for learner, course, progress, activity and authoritative grade reporting",
   "type": "module",
   "sideEffects": true,

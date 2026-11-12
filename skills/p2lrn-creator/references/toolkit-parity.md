@@ -1,6 +1,6 @@
 # Matriz de cobertura — Skill instalada, Toolkit, MCP y Studio
 
-Actualizado para el candidato `0.5.0-alpha.13` el 12-11-2026; paquetes Toolkit/Player/Studio/Analytics `0.5.0-alpha.13`, Core `0.4.0`. La revisión del código no certifica el empaquetado publicado ni la UI ejecutada.
+Actualizado para el candidato `0.5.0-alpha.14` el 12-11-2026; paquetes Toolkit/Player/Studio/Analytics `0.5.0-alpha.14`, Core `0.4.0`. La revisión del código no certifica el empaquetado publicado ni la UI ejecutada.
 
 **Regla:** no equiparar una Skill instalada con un conector MCP conectado; no anunciar funcionamiento visual sin pruebas del Player. Si cambian las versiones, volver a comprobar las fuentes, pruebas oficiales y el estado de `main`.
 
@@ -32,7 +32,7 @@ Las cinco variantes de la Skill comparten el mismo contrato y deben incluir `ref
 
 ## Adaptador oficial de Authoring en esta Skill
 
-Cuando Toolkit oficial 0.5.0-alpha.13 esté instalado y autorizado, `scripts/p2lrn_official.mjs` ejecuta operaciones reales `create`, `verify`, `inspect`, `open`, `edit`, `build`, `read-document`. `P2LRNAuthoringWorkspace` se invoca con métodos tipados y exportación nueva; se bloquean versiones no verificadas, sustituciones de archivo y `force`. `Player`, `Studio`, `Analytics` precisan componentes de navegador/Host y no vienen incluidos como binarios en el ZIP. Consultar `references/official-runtime.md` y `official-packages.json`.
+Cuando Toolkit oficial 0.5.0-alpha.14 esté instalado y autorizado, `scripts/p2lrn_official.mjs` ejecuta operaciones reales `create`, `verify`, `inspect`, `open`, `edit`, `build`, `read-document`. `P2LRNAuthoringWorkspace` se invoca con métodos tipados y exportación nueva; se bloquean versiones no verificadas, sustituciones de archivo y `force`. `Player`, `Studio`, `Analytics` precisan componentes de navegador/Host y no vienen incluidos como binarios en el ZIP. Consultar `references/official-runtime.md` y `official-packages.json`.
 
 ## Contrato del MCP real
 
