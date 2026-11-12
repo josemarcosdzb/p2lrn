@@ -69,6 +69,18 @@ const CSS=[
   '.p2lrn-studio-legacy-topbar{display:none!important}',
   '.p2lrn-studio-unified > :not(.p2lrn-studio-ribbon){display:none!important}',
   '.p2lrn-studio-ribbon,.p2lrn-studio-ribbon *{box-sizing:border-box}',
+  '.p2lrn-multipart-dialog{width:min(92vw,520px);max-height:85dvh;overflow:auto;border:1px solid #cbd5e1;border-radius:14px;padding:24px;color:#1f2937;background:#fff;box-shadow:0 18px 60px #0f172a30}',
+  '.p2lrn-multipart-dialog::backdrop{background:#101828a3}',
+  '.p2lrn-multipart-dialog h2{font-size:20px;margin:0 0 12px}',
+  '.p2lrn-multipart-dialog p{line-height:1.55;color:#475467}',
+  '.p2lrn-multipart-form{display:grid;gap:14px}',
+  '.p2lrn-multipart-field{display:grid;gap:7px;font-weight:650}',
+  '.p2lrn-multipart-field input{width:100%;min-height:42px;border:1px solid #94a3b8;border-radius:7px;padding:7px 11px}',
+  '.p2lrn-multipart-field input:focus-visible{outline:3px solid #2563eb;outline-offset:2px}',
+  '.p2lrn-multipart-actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap}',
+  '.p2lrn-multipart-actions button{min-height:40px;padding:7px 14px;border:1px solid #cbd5e1;border-radius:7px;cursor:pointer}',
+  '.p2lrn-multipart-actions .p2lrn-primary{background:#1f2937;color:#fff}',
+  '.p2lrn-multipart-status{min-height:1.5em;margin:0}',
   '.p2lrn-studio-ribbon{font:500 13px/1.35 Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f2937;min-width:0}',
   '.p2lrn-ribbon-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid #e8edf3}',
   '.p2lrn-ribbon-identity{display:flex;align-items:center;gap:10px;min-width:0}',
@@ -300,9 +312,18 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     ['saveDraft','Guardar borrador local'],
     ['recoverDraft','Recuperar borrador'],['clearDraft','Eliminar borrador…'],
     ['export','Descargar .p2lrn'],
+    ['multipart','Dividir paquete (multipart)…'],
     ['offline','Entrega offline'],['review','Revisar entrega']
   ];
-  for(const [id,label] of fileItems){if(actions[id])filePop.append(button(doc,label,{action:id}));}
+  for(const [id,label] of fileItems){
+    if(!actions[id])continue;
+    if(id==='multipart'){
+      const entry=button(doc,studioUiText(label,doc));
+      entry.dataset.studioMultipartEntry='true';
+      entry.addEventListener('click',openMultipartDialog);
+      filePop.append(entry);
+    }else filePop.append(button(doc,label,{action:id}));
+  }
   if(actions.openUrl){
     const field=node(doc,'label','','Abrir desde URL');
     const url=node(doc,'input');url.type='url';url.placeholder='https://.../curso.p2lrn';
@@ -314,6 +335,45 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
     field.append(url,openUrl);filePop.append(field);
   }
   fileMenu.append(filePop);
+  function openMultipartDialog(){
+    fileMenu.open=false;
+    if(!hasDocument){onStatus('Abre o crea un curso primero.');return;}
+    const t=value=>studioUiText(value,doc);
+    const dialog=node(doc,'dialog','p2lrn-multipart-dialog');
+    const title=node(doc,'h2','',t('Dividir un recurso grande en partes'));
+    title.id='p2lrn-multipart-heading-'+(++instance);
+    dialog.setAttribute('aria-labelledby',title.id);
+    const info=node(doc,'p','',t('Se descargará un ZIP con el curso .p2lrn y sus partes. Extrae todos los archivos y publícalos juntos. Las partes no son cursos independientes.'));
+    const form=node(doc,'form','p2lrn-multipart-form');
+    form.noValidate=true;
+    const field=node(doc,'label','p2lrn-multipart-field');
+    field.append(node(doc,'span','',t('Tamaño de cada parte (MiB)')));
+    const size=node(doc,'input');
+    size.type='number';size.min='1';size.max='64';size.step='1';size.value='25';size.required=true;
+    size.dataset.studioMultipartPartSize='true';
+    field.append(size);
+    const limits=node(doc,'p','',t('Límites del Player: 256 MiB por recurso, 64 MiB por parte y 512 partes. Requiere publicación HTTP(S) de todas las partes.'));
+    const status=node(doc,'p','p2lrn-multipart-status');
+    status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+    const row=node(doc,'div','p2lrn-multipart-actions');
+    const cancel=button(doc,t('Cancelar'));cancel.addEventListener('click',()=>dialog.close());
+    const submit=button(doc,t('Generar ZIP multipart'),{cls:'p2lrn-primary'});submit.type='submit';
+    row.append(cancel,submit);form.append(field,limits,status,row);
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const mib=Number(size.value);
+      if(!size.checkValidity()||!Number.isSafeInteger(mib)){
+        status.textContent=t('Introduce un número entero entre 1 y 64 MiB.');size.focus();return;
+      }
+      submit.disabled=true;status.textContent=t('Generando y verificando partes…');
+      try{await actions.multipart({partSizeMiB:mib});dialog.close();}
+      catch(error){status.textContent=String(error?.message??error);onStatus(status.textContent);submit.disabled=false;}
+    });
+    dialog.append(title,info,form);
+    (root.nodeType===9?doc.body:root).append(dialog);
+    dialog.addEventListener('close',()=>{dialog.remove();fileMenu.querySelector('summary')?.focus();},{once:true});
+    dialog.showModal();size.focus();
+  }
   topActions.append(fileMenu);
   const save=button(doc,'Guardar',{action:'save'});
   if(actions.save)topActions.append(save);
@@ -857,6 +917,8 @@ export function mountStudioCommandBar({mount,resolveSurface,actions={},onStatus=
       b.disabled=!hasDocument&&!allowedWithoutDocument.has(action);
     }
     if(contentButton)contentButton.disabled=!hasDocument;
+    const multipartEntry=filePop.querySelector('[data-studio-multipart-entry]');
+    if(multipartEntry)multipartEntry.disabled=!hasDocument;
     refreshButtons();
   }
   setDocument(false);
