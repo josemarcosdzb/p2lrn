@@ -151,7 +151,16 @@ async function launchChrome(chrome){
     const profile=await mkdtemp(join(tmpdir(),'p2lrn-local-viewer-'));
     const args=[
       '--headless=new','--no-sandbox','--no-first-run','--no-default-browser-check','--disable-cache',
-      '--enable-unsafe-swiftshader','--use-gl=swiftshader',`--user-data-dir=${profile}`,'--remote-debugging-port=0','about:blank',
+      '--enable-unsafe-swiftshader',
+      // Chromium's deprecated legacy --use-gl=swiftshader can stall current
+      // Windows headless DevTools before any 3D test starts. Use documented
+      // SwANGLE WebGL instead, only for the focused 3D diagnostic.
+      ...(process.env.P2LRN_QUEST3D_ONLY==='1'
+        ? ['--use-gl=angle','--use-angle=swiftshader-webgl',
+          '--disable-dev-shm-usage','--disable-extensions','--disable-default-apps',
+          '--disable-background-networking','--disable-component-update']
+        : ['--use-gl=swiftshader']),
+      `--user-data-dir=${profile}`,'--remote-debugging-port=0','about:blank',
     ];
     const child=spawn(chrome,args,{stdio:['ignore','ignore','pipe'],windowsHide:true});
     let stderr='';
@@ -181,12 +190,17 @@ async function launchChrome(chrome){
 async function connectPage(browserWs){
   const endpoint=new URL(browserWs);
   const origin=`http://${endpoint.hostname}:${endpoint.port}`;
+  const cdpTrace=(phase,extra={})=>{
+    if(process.env.P2LRN_QUEST3D_ONLY==='1')
+      console.log('P2LRN_CDP_TRACE='+JSON.stringify({phase,...extra}));
+  };
   // The offline double-click E2E starts a second real Chrome while the
   // original browser is rendering Studio and 3D. Give its DevTools handshake
   // a bounded chance to complete, and refresh a stale target on retry.
   let socket=null,lastConnectError=null;
   const discoveryDeadline=Date.now()+35000;
   for(let attempt=1;attempt<=2&&!socket&&Date.now()<discoveryDeadline;attempt++){
+    cdpTrace('target-discovery-start',{attempt,deadlineMs:Math.max(0,discoveryDeadline-Date.now())});
     let target=null;
     for(let i=0;i<80&&!target&&Date.now()<discoveryDeadline;i++){
       try{
@@ -197,8 +211,10 @@ async function connectPage(browserWs){
     }
     if(!target?.webSocketDebuggerUrl){
       lastConnectError=new Error('Chrome page target not found.');
+      cdpTrace('target-discovery-failed',{attempt});
       continue;
     }
+    cdpTrace('target-found',{attempt,targetUrl:target.url,type:target.type});
     const candidate=new WebSocket(target.webSocketDebuggerUrl);
     try{
       await new Promise((resolvePromise,reject)=>{
@@ -219,6 +235,7 @@ async function connectPage(browserWs){
           Math.min(12000,Math.max(1000,discoveryDeadline-Date.now())));
       });
       socket=candidate;
+      cdpTrace('page-socket-connected',{attempt});
     }catch(error){
       lastConnectError=error;
       // Do not leak a late-opening WebSocket after a timed-out attempt.
@@ -274,7 +291,14 @@ async function connectPage(browserWs){
   socket.addEventListener('close',()=>{
     for(const [id,wait] of pending){pending.delete(id);wait.reject(new Error('CDP socket closed before command '+id+' returned'));}
   });
-  await send('Runtime.enable');await send('Log.enable');await send('Page.enable');await send('Network.enable');await send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
+  for(const method of ['Runtime.enable','Log.enable','Page.enable','Network.enable']){
+    cdpTrace('command-start',{method});
+    await send(method,{},12000);
+    cdpTrace('command-ok',{method});
+  }
+  cdpTrace('command-start',{method:'Emulation.setDeviceMetricsOverride'});
+  await send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false},12000);
+  cdpTrace('command-ok',{method:'Emulation.setDeviceMetricsOverride'});
   return {socket,send,security,exceptions,contexts};
 }
 
@@ -2527,8 +2551,16 @@ try{
   chrome=await launchChrome(chromePath);
   if(quest3dMode)stageLog('chrome-launch','PASS',{browser:chromePath});
   if(quest3dMode)stageLog('cdp-connect','START');
-  cdp=await connectPage(chrome.browserWs);
-  if(quest3dMode)stageLog('cdp-connect','PASS');
+  try{
+    cdp=await connectPage(chrome.browserWs);
+    if(quest3dMode)stageLog('cdp-connect','PASS');
+  }catch(error){
+    if(quest3dMode)stageLog('cdp-connect','FAIL',{
+      message:String(error?.message||error).slice(0,1500),
+      browserStderr:chrome?.getStderr?.().slice(-1500)
+    });
+    throw error;
+  }
 
   if(process.env.P2LRN_ACCESSIBILITY_ONLY==='1'){
     const accessibility=await verifyStudioAccessibility(cdp);
