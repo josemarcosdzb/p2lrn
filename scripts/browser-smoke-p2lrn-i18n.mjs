@@ -938,8 +938,51 @@ async function captureFillBlanksAuthoring(){
   }
 }
 
+async function captureMultipartStudioChrome(){
+  const folder=join(repo,'.p2lrn-i18n-ci','evidence','multipart');
+  await mkdir(folder,{recursive:true});
+  const captures=[];
+  for(const [lang,url,entryLabel,fieldLabel] of [
+    ['es','/studio/','Dividir paquete (multipart)…','Tamaño de cada parte (MiB)'],
+    ['en','/en/studio/','Split package (multipart)…','Part size (MiB)']
+  ]){
+    const response=await page.goto(base+url,{waitUntil:'domcontentloaded',timeout:30000});
+    assert.equal(response?.status(),200,lang+' Studio HTTP 200');
+    await page.waitForFunction(()=>document.documentElement.dataset.p2lrnStudioReady==='true',{timeout:30000});
+    await page.locator('.p2lrn-file-menu > summary').click();
+    const option=page.locator('[data-studio-multipart-entry]');
+    await option.waitFor({state:'visible'});
+    assert.equal((await option.innerText()).trim(),entryLabel);
+    const menuFile=join(folder,'studio-multipart-menu-'+lang+'.png');
+    await page.screenshot({path:menuFile,animations:'disabled'});
+    await option.click();
+    const dialog=page.locator('dialog.p2lrn-multipart-dialog');
+    await dialog.waitFor({state:'visible'});
+    const field=dialog.locator('input[data-studio-multipart-part-size]');
+    assert.equal(await field.inputValue(),'25');
+    assert.ok((await field.locator('xpath=..').innerText()).includes(fieldLabel));
+    await field.fill('0');
+    await dialog.locator('button[type=submit]').click();
+    assert.match(await dialog.locator('[role=status]').innerText(),/1.*64/);
+    await field.fill('25');
+    const fieldFile=join(folder,'studio-multipart-field-'+lang+'.png');
+    await page.screenshot({path:fieldFile,animations:'disabled'});
+    for(const file of [menuFile,fieldFile]){
+      const bytes=await readFile(file);
+      assert.ok(bytes.length>5000,'Browser screenshot unexpectedly small: '+file);
+      captures.push({lang,file,size:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')});
+    }
+  }
+  assert.deepEqual(exceptions,[],'Uncaught multipart Studio browser errors');
+  await writeFile(join(folder,'multipart-browser-report.json'),
+    JSON.stringify({ok:true,captures,source:'Real Chromium rendering candidate Studio source'},null,2)+'\n');
+  console.log('P2LRN_MULTIPART_STUDIO_CHROME='+JSON.stringify({ok:true,captures}));
+}
+
 try{
-  if(process.argv.includes('--site-a11y')){
+  if(process.argv.includes('--capture-multipart')){
+    await captureMultipartStudioChrome();
+  } else if(process.argv.includes('--site-a11y')){
     await fullSiteAccessibilityChrome();
   } else if(process.argv.includes('--capture-fill-blanks')){
     await captureFillBlanksAuthoring();
