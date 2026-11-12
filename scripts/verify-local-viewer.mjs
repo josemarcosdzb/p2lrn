@@ -447,7 +447,7 @@ async function waitCase(cdp,name,src,{expectIframe=true,rejectText=[],requireXap
   if(requireXapi) invariant(state.xapi,`${name}: cmi5 initialized without forwarding an xAPI statement. ${state.tail}`);
   if (automaticRuntime) {
     invariant(!state.runtimeBase.startsWith(RUNTIME_ORIGIN),name+': automatic mode must not use a dedicated runtime origin');
-    const probe=await evalTop(cdp,String.raw`(()=>{const frame=document.getElementById('demo-player')?.shadowRoot?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-runtime');return {sandbox:frame?.getAttribute('sandbox')||'',srcdoc:!!frame?.srcdoc,src:frame?.getAttribute('src')||'',accessible:(()=>{try{return !!frame?.contentDocument}catch{return false}})()}})()`);
+    const probe=await evalTop(cdp,String.raw`(()=>{const frame=document.getElementById('demo-player')?.shadowRoot?.querySelector('.p2lrn-package-runtime,.p2lrn-scorm-runtime,.p2lrn-h5p-frame,.p2lrn-h5p-runtime');return {sandbox:frame?.getAttribute('sandbox')||'',srcdoc:!!frame?.srcdoc,src:frame?.getAttribute('src')||'',accessible:(()=>{try{return !!frame?.contentDocument}catch{return false}})()}})()`);
     // HTTP(S) automatic opaque shells deliberately use separate static host
     // documents to avoid inheriting the LMS CSP; file: previews use srcdoc.
     const opaqueUrl=probe?.src?new URL(probe.src,APP_ORIGIN):null;
@@ -1558,7 +1558,9 @@ async function studioComponentScenario(){
     await wait(()=>q('[data-tree]')?.textContent.includes('Unidad'),'add unit');
     click('.tree-actions button:nth-child(2)');
     await wait(()=>{const surface=q('.surface');return surface?.isContentEditable?surface:null;},'add lesson');
-    const title=q('.title');title.textContent='Lección visual P2LRN';title.dispatchEvent(new InputEvent('input',{bubbles:true}));
+    const title=q('.title-input');
+    if(!title?.isContentEditable)throw new Error('Studio editable lesson title missing');
+    title.textContent='Lección visual P2LRN';title.dispatchEvent(new InputEvent('input',{bubbles:true}));
     const surface=q('.surface');surface.textContent='Lección escrita desde la interfaz visual';surface.dispatchEvent(new InputEvent('input',{bubbles:true}));
     const lessonCount=q('[data-tree]').querySelectorAll('button').length;
     const added=[];
@@ -1775,7 +1777,8 @@ async function studioSiteScenario(){
     await wait(()=>q('[data-tree]').textContent.includes('Nueva unidad'),'unit');
     click('[data-add-lesson]');
     const sheet=await wait(()=>q('.studio-wysiwyg[contenteditable=true]'),'lesson');
-    const title=q('.studio-title');
+    const title=q('.studio-title-field');
+    if(!title?.isContentEditable)throw new Error('Studio website editable title missing');
     title.textContent='Lección editada con Studio web';
     title.dispatchEvent(new InputEvent('input',{bubbles:true}));
     sheet.innerHTML='<p>Texto incorporado mediante el editor WYSIWYG real.</p>';
