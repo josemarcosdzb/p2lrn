@@ -80,7 +80,7 @@ let exportedRevision=0;
 let sharedCommandBar=null;
 
 const titleOf=(entity)=>studio?.title(entity.id)??entity.id;
-const setStatus=(value)=>{const message=studioUiText(value);status.textContent=message;sharedCommandBar?.setMessage(message);};
+const setStatus=(value)=>{status.textContent=studioUiText(value);sharedCommandBar?.setMessage(studioUiText(value));};
 const hasUnsavedChanges=()=>Boolean(studio&&studio.changeCount>savedRevision&&studio.changeCount>exportedRevision&&!(studio.createdFromScratch&&studio.changeCount===1));
 const updateChanges=()=>{
   if(!studio){
@@ -94,7 +94,7 @@ const updateChanges=()=>{
   const unsaved=hasUnsavedChanges();
   if(saveState){
     if(unsaved)saveState.textContent=studioUiText("Not saved");
-    else if(studio.createdFromScratch&&studio.changeCount===1)saveState.textContent=studioUiText("New course — not saved");
+    else if(studio.createdFromScratch&&studio.changeCount===1)saveState.textContent=studioUiText("New unsaved course");
     else if(studio.changeCount&&exportedRevision>=studio.changeCount)saveState.textContent=studioUiText("Exported");
     else if(studio.changeCount&&savedRevision>=studio.changeCount)saveState.textContent=studioUiText("Saved in this browser");
     else saveState.textContent=studioUiText("No changes");
@@ -122,16 +122,100 @@ function revokeUrls(){
   if(previewObjectUrl){URL.revokeObjectURL(previewObjectUrl);previewObjectUrl=null;}
 }
 function sanitizeHtml(text){
+  // Lesson HTML is mounted inside Studio's own DOM: only inert editor markup.
+  // Active SCORM/H5P/HTML runtimes remain supported by isolated Player iframes.
   const doc=new DOMParser().parseFromString(String(text),'text/html');
-  doc.querySelectorAll('script,iframe,object,embed,form,meta[http-equiv],base').forEach((node)=>node.remove());
+  const tags=new Set([
+    'html','head','body','main','article','section','header','footer','nav','aside',
+    'h1','h2','h3','h4','h5','h6','p','div','span','br','hr','blockquote',
+    'strong','b','em','i','u','s',"of the",'ins','mark','small','sub','sup','pre','code',
+    'ul','ol','li','dl','dt','dd','figure','figcaption','table','thead','tbody',
+    'tfoot','tr','th','td','caption','a','img','audio','video','source','picture',
+    'details','summary','time','q','abbr'
+  ]);
+  const attrs=new Set([
+    'class','id','title','alt','width','height','style','href','src','poster',
+    'controls','muted','loop','playsinline','preload','target','rel',
+    'colspan','rowspan','scope','align','dir','lang','start','type','reversed',
+    'value','open','role','loading','decoding','datetime','cite'
+  ]);
+  const safeUrl=(raw,attribute,tag)=>{
+    const value=String(raw??'').trim();
+    if(!value||/[\u0000-\u001f\u007f]/.test(value)||value.startsWith('\\')||value.startsWith('//'))
+      return false;
+    if(attribute==='href'&&value.startsWith('#'))return true;
+    if(attribute==='src'&&tag==='img'&&/^data:image\/(?:png|jpeg|gif|webp|avif);base64,[a-z0-9+/=]+$/i.test(value))
+      return true;
+    if((attribute==='src'||attribute==='poster')&&value.startsWith('blob:'))return true;
+    try{
+      const url=new URL(value,'https://p2lrn.invalid/');
+      if(attribute==='href')return ['https:','http:','mailto:','tel:'].includes(url.protocol);
+      return ['https:','http:'].includes(url.protocol);
+    }catch{return false;}
+  };
+  doc.querySelectorAll('script,iframe,frame,frameset,object,embed,form,input,button,select,textarea,meta,base,link,style,svg,math,template,portal')
+    .forEach((node)=>node.remove());
   doc.querySelectorAll('*').forEach((node)=>{
-    for(const attr of [...node.attributes]){
-      const name=attr.name.toLowerCase(),value=attr.value.trim().toLowerCase();
-      if(name.startsWith('on')||((name==='href'||name==='src')&&value.startsWith('javascript:')))node.removeAttribute(attr.name);
+    const tag=node.localName.toLowerCase();
+    if(!tags.has(tag)){
+      if(tag!=='html'&&tag!=='head'&&tag!=='body')
+        node.replaceWith(doc.createTextNode(node.textContent??''));
+      return;
     }
+    for(const attr of [...node.attributes]){
+      const name=attr.name.toLowerCase(),value=attr.value.trim();
+      if(name.startsWith('on')||['srcdoc','srcset','xlink:href'].includes(name)||
+         (!attrs.has(name)&&!name.startsWith('aria-')&&!name.startsWith('data-'))){
+        node.removeAttribute(attr.name);continue;
+      }
+      if(['href','src','poster'].includes(name)&&!safeUrl(value,name,tag)){
+        node.removeAttribute(attr.name);continue;
+      }
+      if(name==='style'&&/(?:url\s*\(|image-set\s*\(|expression\s*\(|@import|behavior\s*:|-moz-binding|position\s*:\s*(?:fixed|sticky)|z-index\s*:|\\)/i.test(value)){
+        node.removeAttribute(attr.name);continue;
+      }
+      if(name==='target'&&value!=='_blank'&&value!=='_self')node.removeAttribute(attr.name);
+    }
+    if(tag==='a'&&node.getAttribute('target')==='_blank')node.setAttribute('rel','noopener noreferrer');
   });
   return doc;
 }
+
+function installSafeStudioHtmlPaste(node){
+  const insert=(event,source)=>{
+    const html=source?.getData?.('text/html')??'';
+    const plain=source?.getData?.('text/plain')??'';
+    if(!html&&!plain)return;
+    event.preventDefault();
+    const plainOnly=node.matches('h1[contenteditable],p[contenteditable],pre[contenteditable],.studio-title-field[contenteditable]');
+    const fragment=document.createDocumentFragment();
+    if(plainOnly||!html){
+      fragment.append(document.createTextNode(plain||sanitizeHtml(html).body.textContent||''));
+    }else{
+      const sanitized=sanitizeHtml(html);
+      for(const child of [...sanitized.body.childNodes])fragment.append(document.importNode(child,true));
+    }
+    const last=fragment.lastChild;
+    const selection=window.getSelection();
+    if(selection?.rangeCount&&node.contains(selection.anchorNode)){
+      const range=selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(fragment);
+      if(last){
+        range.setStartAfter(last);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }else node.append(fragment);
+    node.dispatchEvent(new Event('input',{bubbles:true}));
+  };
+  node.addEventListener('paste',event=>insert(event,event.clipboardData));
+  node.addEventListener('drop',event=>{
+    if(event.dataTransfer?.types?.includes('text/html'))insert(event,event.dataTransfer);
+  });
+}
+
 function markActive(node){
   activeEditable=node;
   editorStage.querySelectorAll('[data-active-editable=true]').forEach((item)=>item.removeAttribute('data-active-editable'));
@@ -139,6 +223,7 @@ function markActive(node){
 }
 function bindEditable(node,onInput){
   node.contentEditable='true';node.spellcheck=true;
+  installSafeStudioHtmlPaste(node);
   node.addEventListener('focus',()=>markActive(node));
   node.addEventListener('mouseup',captureSelection);
   node.addEventListener('keyup',captureSelection);
@@ -197,7 +282,7 @@ async function renderEditor(){
   const sheet=document.createElement('article');sheet.className='studio-sheet p2lrn-studio-sheet';
   const head=document.createElement('header');head.className='studio-sheet-head p2lrn-studio-sheet-head';
   const type=document.createElement('span');type.className='studio-entity-type';type.textContent=entity.type;
-  // Keep the heading for navigation, and the labelled textbox for editing.
+  // Preserve a real level-one heading while exposing an independently labelled editable field.
   const titleHeading=document.createElement('h1');titleHeading.className='studio-title';
   const title=document.createElement('span');title.className='studio-title-field';title.textContent=titleOf(entity);
   title.tabIndex=0;title.setAttribute('role','textbox');title.setAttribute('aria-label',"Title");title.setAttribute('aria-multiline','true');
@@ -247,18 +332,18 @@ async function renderEditor(){
   const questionnaire=await studio.readQuestionnaire(entity.id);
   if(questionnaire){
     const renderer=entity.extensions?.['https://p2lrn.org/ext/renderer-preference/1']?.preferred??'https://p2lrn.org/renderer/questionnaire/standard';
-    renderQuestionnaireVisualEditor(content,{model:studio,activityId:entity.id,payload:questionnaire.payload,renderer,onChange:()=>updateChanges(),onStatus:setStatus});
+    renderQuestionnaireVisualEditor(content,{model:studio,activityId:entity.id,payload:questionnaire.payload,renderer,onChange:()=>updateChanges(),onStatus:setStatus,createScene:async(canvas,options)=>{const api=await (globalThis.P2LRNReady??Promise.resolve(globalThis.P2LRN));if(typeof api?.create3DAuthoringScene!=='function')throw new Error("The Player 3D is not available in this Studio");return api.create3DAuthoringScene(canvas,options);}});
     return;
   }
   const structured=await studio.readStructuredJson(entity.id);
   if(structured){
-    renderStructuredVisualEditor(content,{model:studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>updateChanges(),onStructureChange:()=>{renderTree();updateChanges();},onStatus:setStatus,onSelectActivity:(id)=>{selectedId=id;renderTree();void renderEditor();},onCreateChild:(id)=>{selectedId=id;renderTree();addDialog?.showModal();}});
+    renderStructuredVisualEditor(content,{model:studio,activityId:entity.id,mediaType:structured.mediaType,payload:structured.payload,onChange:()=>updateChanges(),onStructureChange:()=>{renderTree();updateChanges();},onStatus:setStatus,onSelectActivity:(id)=>{selectedId=id;renderTree();void renderEditor();},onCreateChild:(id)=>{selectedId=id;renderTree();sharedCommandBar?.openActivities();}});
     return;
   }
   const editable=await studio.readEditableText(entity.id);
   if(!editable){
     const message=document.createElement('div');message.className='studio-readonly';
-    message.textContent="You can use and preview this content in the course, but you cannot change it in the editor.";
+    message.textContent="You can use this content in the course and view it in the viewer, but do not modify it from the editor....................................................................................................................................";
     content.append(message);
     const inline=document.createElement('p2lrn-player');inline.className='studio-inline-player';inline.setAttribute('src',studio.sourceUrl);inline.setAttribute('node',entity.id);inline.setAttribute('navigation','external');content.append(inline);
     return;
@@ -278,7 +363,9 @@ async function renderEditor(){
     source.body.innerHTML=surface.innerHTML;
     studio.setPayloadText(editable.path,"\n"+source.documentElement.outerHTML);
     updateChanges();
+    sharedCommandBar?.recordChange();
   },onStatus:setStatus});
+  sharedCommandBar?.refresh();
 }
 
 async function buildVerifiedPreview(){
@@ -316,7 +403,7 @@ async function activateStudio(document,{name,recoveredSelectedId=null}={}){
   savedRevision=0;exportedRevision=0;
   packageName.textContent=name||studio.sourceName||"course.p2lrn";
   toolbar.hidden=false;workspace.hidden=false;
-  sharedCommandBar?.setDocument(true,name||studio.sourceName||'P2LRN course');
+  sharedCommandBar?.setDocument(true,name||studio.sourceName||"P2LRN course");
   renderTree();await renderEditor();updateChanges();await setMode('edit');
 }
 async function openPackage(pkg,{name,url,recoveredSelectedId=null}){
@@ -326,9 +413,9 @@ async function createNewCourse({automatic=false}={}){
   // Preserve edits when the visitor deliberately starts a different course.
   const modified=studio && hasUnsavedChanges() &&
     !(studio.createdFromScratch && studio.changeCount===1);
-  if(!automatic && modified && !confirm("Unsaved changes will be lost. Create a new course?"))return;
+  if(!automatic && modified && !confirm("Unsaved changes will be lost. Create another course??..............................................................................................................................................................................................................................................................................................................................................................................................................................................................."))return;
   revokeUrls();
-  const newDocument=createP2LRNStudioDocument({title:"New course",language:"en"});
+  const newDocument=createP2LRNStudioDocument({title:"New course",language:"es"});
   // Start inside a real editable lesson, not only the course metadata.
   const firstUnitId=newDocument.entity(newDocument.rootId)?.children?.[0];
   const firstLessonId=firstUnitId&&newDocument.entity(firstUnitId)?.children?.[0];
@@ -378,14 +465,6 @@ async function openRemote(){
   const pkg=await api.openPackageURL(url);
   await openPackage(pkg,{name:new URL(url).pathname.split("/en/").filter(Boolean).at(-1)||"course.p2lrn",url});
 }
-let pendingContentPlacement=null;
-async function preparePendingPlacement(){
-  const choice=pendingContentPlacement;pendingContentPlacement=null;
-  if(!choice)return;
-  selectedId=choice.placement==='same-page'
-    ?await studio.samePageInsertionParent(choice.sourceId)
-    :studio.pageInsertionParent(choice.sourceId);
-}
 function insertionParent(){
   const current=studio?.entity(selectedId);if(!current)return studio?.rootId??null;
   if(['course','unit'].includes(current.type)||studio.isCompositeActivity(current.id))return current.id;
@@ -393,10 +472,17 @@ function insertionParent(){
 }
 async function selectCreated(activity,statusText){selectedId=activity.id;renderTree();await renderEditor();updateChanges();setStatus(statusText);addDialog?.close();}
 function mediaTypeForFile(file){return file.type||({'md':'text/markdown','markdown':'text/markdown','txt':'text/plain','html':'text/html','htm':'text/html','json':'application/json','mp4':'video/mp4','webm':'video/webm','mp3':'audio/mpeg','wav':'audio/wav','png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','gif':'image/gif','webp':'image/webp','svg':'image/svg+xml'}[file.name.split('.').pop().toLowerCase()]||'application/octet-stream');}
+let pendingContentPlacement=null;
+async function preparePendingPlacement(){
+  const choice=pendingContentPlacement;pendingContentPlacement=null;
+  if(!choice)return;
+  selectedId=studio.isCompositeActivity(choice.sourceId)?choice.sourceId:
+    choice.placement==='same-page'?
+      await studio.samePageInsertionParent(choice.sourceId):studio.pageInsertionParent(choice.sourceId);
+}
 async function addResourceFile(file){await preparePendingPlacement();const activity=studio.addEmbeddedResource(insertionParent(),{title:file.name.replace(/\.[^.]+$/,''),filename:file.name,mediaType:mediaTypeForFile(file),bytes:new Uint8Array(await file.arrayBuffer())});await selectCreated(activity,"File added");}
 function extractedDocumentHtml(result){const esc=(v)=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');return "<meta charset=\"utf-8\">"+result.blocks.map((b)=>b.type==='TITLE'?"<h2></h2>"+esc(b.text)+"":b.type==='LIST'?"<li></li>"+esc(b.text)+"":b.type==='SEPARATOR'?'<hr>':"<p></p>"+esc(b.text)+"<p></p>").join('')+"";}
-async function importExternalFile(file){
-  await preparePendingPlacement();
+async function importExternalFile(file){await preparePendingPlacement();
   if(studio.isCompositeActivity(insertionParent()))throw new Error("Imported educational packages create units. Select a unit to import them.");
   const endpoint=document.body.dataset.importEndpoint||'/api/p2lrn/studio/import';
   const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':file.type||'application/zip','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
@@ -406,8 +492,7 @@ async function importExternalFile(file){
   const root=(pkg.manifest.entrypoints.find((x)=>x.type==='course')??pkg.manifest.entrypoints[0])?.id;const titles=pkg.entities.get(root)?.title??{};const importedTitle=titles.es??titles.en??titles.und??Object.values(titles)[0]??file.name;const wrapper=await studio.importPackage(pkg,insertionParent(),{title:importedTitle});
   selectedId=wrapper.id;renderTree();await renderEditor();updateChanges();setStatus("Educational package imported");addDialog?.close();
 }
-async function addReaderFile(file){
-  await preparePendingPlacement();
+async function addReaderFile(file){await preparePendingPlacement();
   let result;
   const endpoint=document.body.dataset.readerEndpoint||'/api/p2lrn/studio/read';
   const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':file.type||'application/octet-stream','X-P2LRN-Filename':encodeURIComponent(file.name)},body:await file.arrayBuffer()});
@@ -428,7 +513,7 @@ function showStudioChoice(title,subtitle,items,onChoose){
 }
 async function chooseSharedResource(){
   const library=connectedResourceLibrary;
-  if(!library||typeof library.list!=='function'||typeof library.get!=='function')throw new Error("Your institution has not connected a shared resource library to this editor.");
+  if(!library||typeof library.list!=='function'||typeof library.get!=='function')throw new Error("No shared resource library is connected to Studio.");
   const listed=await library.list();
   const items=(listed??[]).filter((entry)=>entry?.digest&&entry?.href).map((entry)=>({...entry,id:entry.digest,label:entry.href.split("/en/").filter(Boolean).at(-1)||entry.digest,description:(entry.mediaType||'application/octet-stream')+' · '+entry.digest.slice(0,22)+'…'}));
   if(!items.length)throw new Error("The library has no resources with a source URL and a verifiable digest.");
@@ -444,7 +529,7 @@ async function materializeSelectedSharedResource(activityId=selectedId){
   if(!entry?.bytes)throw new Error("The resource is not available locally for materialization.");
   const filename=entry.href?.split("/en/").filter(Boolean).at(-1)||'resource.bin';
   const representation=studio.materializeSharedResource(activityId,{bytes:new Uint8Array(entry.bytes),filename,mediaType:entry.mediaType});
-  await renderEditor();updateChanges();setStatus('The resource is now available inside the course');return representation;
+  await renderEditor();updateChanges();setStatus("The resource is already available within the course");return representation;
 }
 globalThis.P2LRNStudioMaterializeSharedResource=materializeSelectedSharedResource;
 
@@ -453,12 +538,12 @@ function chooseComponent(){
   showStudioChoice("Add component","Choose the native block you want to create.",items,async(item)=>{const activity=studio.addNativeComponent(insertionParent(),{componentId:item.id,language:'en'});await selectCreated(activity,item.label+" added");});
 }
 async function addContentKind(kind,{placement='new-page'}={}){
-  if(!studio)throw new Error('Create or open a course first.');
-  if(!['same-page','new-page'].includes(placement))throw new Error('Choose a valid location for the new content.');
+  if(!studio)throw new Error("Create or open a course first.");
+  if(!['same-page','new-page'].includes(placement))throw new Error("Unknown insertion destination............................................................................................................................................................................................................................................................................................................................................................................................................................................................");
   const sourceId=selectedId;
   if(['file','reader','external'].includes(kind)){
     if(kind==='external'&&placement==='same-page')
-      throw new Error('Import educational packages on a new page, not inside this activity.');
+      throw new Error("Educational packages are imported as complete units. Choose new page............................................................................................................................................................................................................................................................");
     pendingContentPlacement={placement,sourceId};
     if(kind==='file')resourceFileInput.click();
     if(kind==='reader')readerFileInput.click();
@@ -467,51 +552,45 @@ async function addContentKind(kind,{placement='new-page'}={}){
   }
   let scorePoints=null;
   if(kind==='drag-scored'){
-    const answer=prompt('Points for this drag-and-drop question (1–100)','5');
-    if(answer===null)return;
-    scorePoints=Number(answer);
-    if(!Number.isInteger(scorePoints)||scorePoints<1||scorePoints>100)
-      throw new Error('Enter a whole number from 1 to 100.');
+    const entered=prompt("Points of the drag question (1 to 100)",'5');
+    if(entered===null)return;
+    scorePoints=Number(entered);
+    if(!Number.isInteger(scorePoints)||scorePoints<1||scorePoints>100)throw new Error("Choose between 1 and 100 points.");
   }
   const previous=selectedId;
-  const target=placement==='same-page'
-    ?await studio.samePageInsertionParent(sourceId)
-    :studio.pageInsertionParent(sourceId);
+  // Keep the selected activity-group as insertion parent; an explicit
+  // composite is never silently replaced by its enclosing course unit.
+  const target=studio.isCompositeActivity(sourceId)?sourceId:
+    placement==='same-page'?await studio.samePageInsertionParent(sourceId):studio.pageInsertionParent(sourceId);
   selectedId=target;
   try{
-    if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:'New lesson',language:'en'});return selectCreated(a,'Lesson added');}
-    if(kind==='url'){const url=prompt('Resource URL');if(!url)return;const title=prompt('Title','Web resource')||'Web resource';const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,'URL added');}
-    if(kind==='shared-library'){await chooseSharedResource();return;}
-    if(kind==='shared-resource'){
-      const url=prompt('Logical URL for the shared resource');if(!url)return;
-      const expectedDigest=prompt('Expected SHA-256 (sha256:...)');if(!expectedDigest)return;
-      const mediaType=prompt('Media type','video/mp4')||'application/octet-stream';
-      const title=prompt('Title','Shared resource')||'Shared resource';
-      const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType,expectedDigest});
-      return selectCreated(a,'Shared resource added');
-    }
-    if(kind==='drag-scored'){
-      const a=studio.addGame(insertionParent(),{kind:'matching',title:'Scored drag and drop',language:'en'});
-      const questionnaire=await studio.readQuestionnaire(a.id);
-      const payload=structuredClone(questionnaire.payload);
-      payload.questions[0].points=scorePoints;
-      studio.setQuestionnaire(a.id,payload);
-      return selectCreated(a,'Scored drag-and-drop question added');
-    }
-    if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:'Questionnaire',language:'en'});return selectCreated(a,'Questionnaire added');}
-    if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'en'});return selectCreated(a,'Live poll added');}
-    if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'en'});return selectCreated(a,'Shared board added');}
-    if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'en'});return selectCreated(a,'Peer review added');}
-    if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword','rosco','3d','3d-matching','3d-classification','assembly-3d'].includes(kind)){
-      const names={memory:'Memory',matching:'Matching',ordering:'Ordering',classification:'Classification',
-        'true-false':'True / false','fill-blanks':'Fill in the blanks','word-search':'Word search',crossword:'Crossword',
-        rosco:'Word wheel','3d':'3D ordering','3d-matching':'3D matching','3d-classification':'3D classification','assembly-3d':'3D assembly'};
-      const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});
-      return selectCreated(a,names[kind]+' added');
-    }
-    if(kind==='component'){chooseComponent();return;}
-    if(kind==='composite'){const a=studio.addComposite(insertionParent(),{title:'Activity group',language:'en',mode:'free',completion:'all'});return selectCreated(a,'Activity group added');}
-    throw new Error('This content type is not supported: '+kind);
+  if(!studio)throw new Error("Create or open a course first.");
+  if(kind==='lesson'){const a=studio.addLesson(insertionParent(),{title:"New lesson",language:'en'});return selectCreated(a,"Lesson added");}
+  if(kind==='url'){const url=prompt("Resource URL");if(!url)return;const title=prompt("Title","Web resource")||"Web resource";const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType:'text/html'});return selectCreated(a,"URL added");}
+  if(kind==='shared-library'){await chooseSharedResource();return;}
+  if(kind==='shared-resource'){
+    const url=prompt("Logical URL for shared resource");if(!url)return;
+    const expectedDigest=prompt("Expected SHA-256 (sha256:...)");if(!expectedDigest)return;
+    const mediaType=prompt("MIME type",'video/mp4')||'application/octet-stream';
+    const title=prompt("Title","Shared resource")||"Shared resource";
+    const a=studio.addRemoteResource(insertionParent(),{title,url,mediaType,expectedDigest});
+    return selectCreated(a,"Shared resource added");
+  }
+  if(kind==='drag-scored'){
+    const activity=studio.addGame(insertionParent(),{kind:'matching',title:"Drag with Points",language:'en'});
+    const questionnaire=await studio.readQuestionnaire(activity.id);
+    const payload=structuredClone(questionnaire.payload);
+    payload.questions[0].points=scorePoints;
+    studio.setQuestionnaire(activity.id,payload);
+    return selectCreated(activity,"Add-on Drag-Punt Question");
+  }
+  if(kind==='questionnaire'){const a=studio.addQuestionnaire(insertionParent(),{title:"Questionnaire",language:'en'});return selectCreated(a,"Questionnaire added");}
+  if(kind==='live-poll'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'poll',language:'en'});return selectCreated(a,"Live poll added");}
+  if(kind==='shared-board'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'board',language:'en'});return selectCreated(a,"Shared board added");}
+  if(kind==='peer-review'){const a=studio.addCollaborationActivity(insertionParent(),{mode:'peer-review',language:'en'});return selectCreated(a,"Peer review added");}
+  if(['memory','matching','ordering','classification','true-false','fill-blanks','word-search','crossword',"word wheel",'3d','3d-matching','3d-classification','assembly-3d'].includes(kind)){const names={memory:"Memory",matching:"Matching",ordering:"Ordering",classification:"Classification",'true-false':"True / false",'fill-blanks':"Fill in the blanks",'word-search':"Word search",crossword:"Crossword",rosco:"Word wheel",'3d':"3D game",'3d-matching':"3D matching",'3d-classification':"3D classification",'assembly-3d':'Ensamblaje 3D'};const a=studio.addGame(insertionParent(),{kind,title:names[kind],language:'en'});return selectCreated(a,names[kind]+" added");}
+  if(kind==='component'){chooseComponent();return;}
+  if(kind==='composite'){const activity=studio.addComposite(insertionParent(),{title:"Activity group",language:'en',mode:'free',completion:'all'});return selectCreated(activity,"Activity group added");}
   }finally{if(selectedId===target)selectedId=previous;}
 }
 function emitFormatInput(name){
@@ -687,8 +766,8 @@ async function reviewOfflineDelivery(file){
     content.append(warning);
   }
   addOfflineReviewRow(content,"File",file.name);
-  addOfflineReviewRow(content,"Result SHA-256",parsed.integrityValid?'Matches':'Does not match');
-  addOfflineReviewRow(content,"Original course",parsed.courseMatches?'Matches':'Does not match');
+  addOfflineReviewRow(content,"Result SHA-256",parsed.integrityValid?'Coincide':'NO coincide');
+  addOfflineReviewRow(content,"Original course",parsed.courseMatches?'Coincide':'NO coincide');
   addOfflineReviewRow(content,"Assignment signature",parsed.signatureValid===true
     ?(parsed.assignmentAuthenticated===true?"Ed25519 signature valid and verified":"Ed25519 signature valid; issuer not yet verified")
     :parsed.signatureValid===false?"INVALID":"Unsigned delivery");
@@ -780,7 +859,6 @@ addLessonButton?.addEventListener('click',()=>void addLesson().catch((error)=>se
 addContentButton?.addEventListener('click',()=>{if(!studio){setStatus("Create or open a course first");return;}addDialog?.showModal();});
 addDialog?.querySelector('[data-add-close]')?.addEventListener('click',()=>addDialog.close());
 addDialog?.querySelectorAll('[data-add-kind]').forEach((button)=>button.addEventListener('click',()=>void addContentKind(button.dataset.addKind).catch((error)=>setStatus(error.message))));
-for(const input of [resourceFileInput,readerFileInput,externalFileInput])input?.addEventListener('cancel',()=>{pendingContentPlacement=null;});
 resourceFileInput?.addEventListener('change',()=>{const file=resourceFileInput.files?.[0];if(file)void addResourceFile(file).catch((error)=>setStatus(error.message));resourceFileInput.value='';});
 readerFileInput?.addEventListener('change',()=>{const file=readerFileInput.files?.[0];if(file)void addReaderFile(file).catch((error)=>setStatus(error.message));readerFileInput.value='';});
 externalFileInput?.addEventListener('change',()=>{const file=externalFileInput.files?.[0];if(file)void importExternalFile(file).catch((error)=>setStatus(error.message));externalFileInput.value='';});
@@ -883,8 +961,8 @@ sharedCommandBar=mountStudioCommandBar({
     addContent:()=>addContentButton.click(),
     addKind:(kind,options)=>addContentKind(kind,options),
     canAddSamePage:()=>studio?.entity(selectedId)?.type==='activity',
-    insertImage:()=>{const btn=editorStage.querySelector('[data-insert-lesson-image]');if(!btn)throw new Error('Select an HTML lesson to add an image.');btn.click();},
-    insertVideo:()=>{const btn=editorStage.querySelector('[data-insert-lesson-video]');if(!btn)throw new Error('Select an HTML lesson to add a video.');btn.click();},
+    insertImage:()=>{const btn=editorStage.querySelector('[data-insert-lesson-image]');if(!btn)throw new Error("Select an HTML lesson to insert images.......................................................................................................................................................................................................................................................");btn.click();},
+    insertVideo:()=>{const btn=editorStage.querySelector('[data-insert-lesson-video]');if(!btn)throw new Error("Select an HTML lesson to insert video.........................................................................................................................................................................................................................................................");btn.click();},
     canAddKind:(kind)=>kind!=='shared-library'||Boolean(connectedResourceLibrary),
     preview:()=>setMode('preview'),
     edit:()=>setMode('edit')
@@ -893,7 +971,7 @@ sharedCommandBar=mountStudioCommandBar({
 async function initializeStudioWorkspace(){
   const guarded=[createCourseButton,openFileButton,openUrlButton];
   guarded.forEach((button)=>{if(button)button.disabled=true;});
-  setStatus("Opening editor…");
+  setStatus("Abriendo editor…");
   try{
     await refreshDraftAvailability();
     if(draftMetadata?.bytes){
@@ -904,14 +982,14 @@ async function initializeStudioWorkspace(){
         // The saved draft is never overwritten or deleted on recovery failure.
         await createNewCourse({automatic:true});
         if(draftMenu)draftMenu.hidden=false;
-        setStatus("Could not automatically restore the saved draft. It has not been deleted.");
+        setStatus("Could not recover draft automatically. It is still saved in this browser.......................................................................................................................................................................................................................................................");
         console.warn('P2LRN Studio draft recovery failed',error);
         return;
       }
     }
     await createNewCourse({automatic:true});
   }catch(error){
-    setStatus("Could not open Studio editor: "+String(error?.message||error));
+    setStatus("Could not open editor:_BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR__BAR___BAR__________BAR________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________ "+String(error?.message||error));
     console.error('P2LRN Studio startup failed',error);
   }finally{
     guarded.forEach((button)=>{if(button)button.disabled=false;});

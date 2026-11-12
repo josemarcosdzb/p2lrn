@@ -168,7 +168,7 @@
 
   const PUBLIC_NAV = [
     { label: 'Studio', href: '/studio/', active: ['/studio/'] },
-    { label: 'Viewer', href: '/demo/', active: ['/demo/'] },
+    { label: "Viewer", href: '/demo/', active: ['/demo/'] },
     {
       label: "Solutions",
       active: ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/'],
@@ -181,19 +181,21 @@
     { label: 'Analytics', href: '/analytics/', active: ['/analytics/'] },
     { label: "AI Skills", href: '/skills/', active: ['/skills/'] },
     { label: "Documentation", href: '/docs/', active: ['/docs/'] },
+    { label: "Developers", href: '/docs/desarrolladores/', active: ['/docs/desarrolladores/*'] },
     { label: "Contact", href: '/contacto/', active: ['/contacto/'] },
   ];
 
+  // Separate authoring and integration in visible first-level navigation.
+  // Technical references remain reachable from the developer sidebar.
   const GLOBAL_NAV = [
-    {label:'Documentation',href:'/docs/',active:['/docs/']},
-    {label:'Teachers',href:'/docs/empezar-facil/',active:['/docs/empezar/','/docs/empezar-facil/']},
+    {label:"Documentation",href:'/docs/',active:['/docs/']},
+    {label:"Teachers",href:'/docs/empezar-facil/',active:['/docs/empezar/','/docs/empezar-facil/']},
     {label:'Studio',href:'/docs/studio/',active:['/docs/studio/']},
-    {label:'Learning games',href:'/docs/questionnaires/',active:['/docs/questionnaires/*','/docs/juegos-3d/','/docs/colaboracion/']},
-    {label:'Viewer',href:'/demo/',active:['/demo/']},
-    {label:'Developers',href:'/docs/desarrolladores/',active:['/docs/desarrolladores/*']}
+    {label:"Educational games",href:'/docs/questionnaires/',active:['/docs/questionnaires/*','/docs/juegos-3d/','/docs/colaboracion/']},
+    {label:"Viewer",href:'/demo/',active:['/demo/']},
+    {label:"Developers",href:'/docs/desarrolladores/',active:['/docs/desarrolladores/*']},
   ];
 
-    // English pages have their own /en/ URLs; normalize for internal route matching.
   const normalizePath = (value) => {
     // Route comparisons use the same logical path for both languages.
     // English pages keep their /en/ URL, while the navigation config remains
@@ -391,74 +393,74 @@
   });
 
   const GLOBAL_SIDEBAR = [
-    ['GET STARTED',[
-      ['/docs/','Documentation'],
-      ['/docs/empezar/','Before creating a course'],
-      ['/docs/empezar-facil/','First course with Studio']
+    ["GET STARTED", [
+      ['/docs/',"Documentation"],
+      ['/docs/empezar/',"Before creating a course"],
+      ['/docs/empezar-facil/',"First course in Studio"],
     ]],
-    ['CREATE',[
-      ['/docs/studio/','Visual Studio guide'],
-      ['/docs/questionnaires/','Quizzes and learning games'],
-      ['/docs/entrega-offline/','Offline delivery without an LMS'],
-      ['/docs/colaboracion/','Collaboration for teachers']
+    ["CREATE", [
+      ['/docs/studio/',"Studio visual guide"],
+      ['/docs/questionnaires/',"Quizzes and games"],
+      ['/docs/entrega-offline/',"Delivery without an LMS"],
+      ['/docs/colaboracion/',"Teacher collaboration"],
     ]],
-    ['PLAY',[
-      ['/docs/ejemplos/','Example courses'],
-      ['/juegos-educativos-3d/','3D educational games']
+    ["PLAY", [
+      ['/docs/ejemplos/',"Course examples"],
+      ['/juegos-educativos-3d/',"3D educational games"],
     ]],
-    ['DEVELOPERS',[
-      ['/docs/desarrolladores/','Developer documentation'],
-      ['/docs/desarrolladores/primeros-pasos/','First HTML integration']
+    ['DESARROLLADORES', [
+      ['/docs/desarrolladores/',"Developer overview"],
+      ['/docs/desarrolladores/primeros-pasos/',"First HTML example"],
     ]],
-    ['INSTALL',[
-      ['/docs/instalar/','Components and versions'],
+    ["INSTALL", [
+      ['/docs/instalar/',"Components and versions"],
       ['/docs/cdn/','CDN'],
-      ['/docs/cdn/studio/','Studio via CDN'],
-      ['/docs/cdn/analytics/','Analytics via CDN'],
+      ['/docs/cdn/studio/',"Studio via CDN"],
+      ['/docs/cdn/analytics/',"Analytics via CDN"],
       ['/docs/npm/','NPM'],
-      ['/docs/npm/studio/','Studio via npm'],
-      ['/docs/npm/analytics/','Analytics via npm'],
-      ['/docs/toolkit/','Toolkit and Reader'],
-      ['/docs/cli/','Command-line tools']
+      ['/docs/npm/studio/',"Studio with npm"],
+      ['/docs/npm/analytics/',"Analytics with NPM"],
+      ['/docs/toolkit/',"Toolkit and Reader"],
+      ['/docs/cli/',"Command-line tools"],
     ]],
-    ['INTEGRATE',[
-      ['/docs/integracion/','Host, identity and access'],
-      ['/docs/player/','Embed Player'],
-      ['/docs/desarrolladores/colaboracion/','Collaboration and Host'],
-      ['/docs/eventos/','Player events'],
-      ['/docs/juegos-3d/','3D games integration'],
-      ['/docs/progresion/','Progression rules'],
-      ['/docs/metricas/','Events and metrics'],
-      ['/docs/analytics/','Analytics for platforms']
+    ['INTEGRAR', [
+      ['/docs/integracion/',"Host, identity and permissions"],
+      ['/docs/player/',"Embedded Player"],
+      ['/docs/desarrolladores/colaboracion/',"Collaboration and Host"],
+      ['/docs/eventos/',"Player events"],
+      ['/docs/juegos-3d/',"3D game architecture"],
+      ['/docs/progresion/',"Progression rules"],
+      ['/docs/metricas/',"Events and metrics"],
+      ['/docs/analytics/',"Analytics for platforms"],
     ]],
-    ['CONNECTORS',[
-      ['/docs/conectores/','Choose a connector']
+    ["CONNECTORS", [
+      ['/docs/conectores/',"Choose a connector"],
     ]],
-    ['REFERENCE',[
-      ['/docs/compatibilidad/','Compatibility'],
-      ['/docs/paquetes/','Package structure'],
-      ['/docs/paquetes/multipart/','Multipart packages'],
-      ['/docs/recetas/','Integration recipes'],
-      ['/docs/glosario/','Glossary'],
-      ['/docs/referencia/','API reference'],
-      ['/docs/troubleshooting/','Troubleshooting']
+    ["REFERENCE", [
+      ['/docs/compatibilidad/',"Compatibility"],
+      ['/docs/paquetes/',"Package structure"],
+      ['/docs/paquetes/multipart/','Multipart'],
+      ['/docs/recetas/',"Technical recipes"],
+      ['/docs/glosario/',"Glossary"],
+      ['/docs/referencia/',"API reference"],
+      ['/docs/troubleshooting/',"Troubleshooting"],
     ]],
-    ['RESOURCES',[
-      ['/studio/','Open Studio ↗'],
-      ['/demo/','Learner viewer ↗'],
-      ['/examples/catalog.json','Course catalog ↗']
-    ]]
+    ["RESOURCES", [
+      ['/studio/',"Open Studio ↗"],
+      ['/demo/',"Learner viewer ↗"],
+      ['/examples/catalog.json',"Course catalog ↗"],
+    ]],
   ];
 
-    const DOC_SIDEBAR_CHILDREN = new Map([
+  const DOC_SIDEBAR_CHILDREN = new Map([
     ['/docs/desarrolladores/',[
-      ['/docs/desarrolladores/actividades/','Quizzes and game integration'],
-      ['/docs/desarrolladores/juegos-3d/','3D game engine'],
-      ['/docs/desarrolladores/colaboracion/','Collaboration, API and permissions'],
-      ['/docs/que-usar/','Component map'],
-      ['/docs/conceptos/','Format concepts'],
-      ['/docs/formato/','P2LRN package format'],
-      ['/docs/formato-portable-cursos-interactivos/','Portability guide'],
+      ['/docs/desarrolladores/actividades/',"Technical reference of games"],
+      ['/docs/desarrolladores/juegos-3d/',"3D Engine for Developers"],
+      ['/docs/desarrolladores/colaboracion/',"Collaboration API and permissions"],
+      ['/docs/que-usar/',"Technical map of components"],
+      ['/docs/conceptos/',"File format concepts"],
+      ['/docs/formato/',"P2LRN format"],
+      ['/docs/formato-portable-cursos-interactivos/',"Portability and versions"],
     ]],
     ['/docs/conectores/',[
       ['/docs/conectores/ia/',"AI connectors"],
@@ -481,7 +483,8 @@
   ]);
 
   const DOC_SECTION_LABELS = Object.freeze({
-    EMPEZAR:"Get started",
+    EMPEZAR:"For teachers",
+    DESARROLLADORES:"For developers",
     INSTALAR:"Install",
     CREAR:"Create",
     REPRODUCIR:"Play",
@@ -491,9 +494,9 @@
     REFERENCIA:"Reference",
   });
   const DOC_BREADCRUMB_PARENTS = new Map([
-    ['/docs/desarrolladores/actividades/',['/docs/desarrolladores/','Developers']],
-    ['/docs/desarrolladores/juegos-3d/',['/docs/desarrolladores/','Developers']],
-    ['/docs/desarrolladores/colaboracion/',['/docs/desarrolladores/','Developers']],
+    ['/docs/desarrolladores/actividades/',['/docs/desarrolladores/',"Developers"]],
+    ['/docs/desarrolladores/juegos-3d/',['/docs/desarrolladores/',"Developers"]],
+    ['/docs/desarrolladores/colaboracion/',['/docs/desarrolladores/',"Developers"]],
     ['/docs/que-usar/',['/docs/desarrolladores/',"Developers"]],
     ['/docs/conceptos/',['/docs/desarrolladores/',"Developers"]],
     ['/docs/formato/',['/docs/desarrolladores/',"Developers"]],
@@ -501,6 +504,7 @@
     ['/docs/npm/studio/',['/docs/npm/','NPM']],
     ['/docs/npm/analytics/',['/docs/npm/','NPM']],
     ['/docs/cdn/studio/',['/docs/cdn/','CDN']],
+    ['/docs/cdn/analytics/',['/docs/cdn/','CDN']],
     ['/docs/paquetes/multipart/',['/docs/paquetes/',"Create packages"]],
     ['/docs/conectores/ia/',['/docs/conectores/',"Connectors and integration"]],
     ['/docs/skills/',['/docs/conectores/',"Connectors and integration"]],
@@ -539,16 +543,17 @@
     const current = normalizePath(window.location.pathname);
     const selected = sidebarPath(current);
     const fragment = document.createDocumentFragment();
-    // Teacher guides show authoring and learner paths; APIs live in Developers.
+    // A teacher should never need to browse API, npm or Host menus to find
+    // course authoring help. Developers get their own complete navigation.
     const teacherRoutes=new Set([
       '/docs/','/docs/empezar/','/docs/empezar-facil/',
       '/docs/studio/','/docs/entrega-offline/','/docs/ejemplos/',
-      '/docs/colaboracion/','/docs/juegos-3d/'
+      '/docs/colaboracion/','/docs/juegos-3d/',
     ]);
     const forTeachers=teacherRoutes.has(current)||current.startsWith('/docs/questionnaires/');
     const visibleSections=forTeachers
-      ?new Set(['GET STARTED','CREATE','PLAY','DEVELOPERS','RESOURCES'])
-      :new Set(['DEVELOPERS','INSTALL','INTEGRATE','CONNECTORS','REFERENCE','RESOURCES']);
+      ?new Set(["GET STARTED","CREATE","PLAY",'DESARROLLADORES',"RESOURCES"])
+      :new Set(['DESARROLLADORES',"INSTALL",'INTEGRAR',"CONNECTORS","REFERENCE","RESOURCES"]);
     for (const [section,items] of GLOBAL_SIDEBAR) {
       if(!visibleSections.has(section))continue;
       const label=document.createElement('span');

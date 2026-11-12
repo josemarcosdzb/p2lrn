@@ -22,7 +22,8 @@
   const nav=document.getElementById('nav');
   const fields={package:document.querySelector('[data-inspect-package]'),format:document.querySelector('[data-inspect-format]'),version:document.querySelector('[data-inspect-version]'),integrity:document.querySelector('[data-inspect-integrity]'),transport:document.querySelector('[data-inspect-transport]'),entrypoints:document.querySelector('[data-inspect-entrypoints]'),profiles:document.querySelector('[data-inspect-profiles]'),renderer:document.querySelector('[data-inspect-renderer]'),entity:document.querySelector('[data-inspect-entity]'),representation:document.querySelector('[data-inspect-representation]')};
   const params=new URLSearchParams(location.search);
-  // Compact presentation when embedded by the English Studio guide.
+  // The same official viewer supports a compact presentation when embedded
+  // from a Studio guide; all runtime and package validation remains unchanged.
   if(params.get('embed')==='1')document.documentElement.dataset.p2lrnEmbedded='true';
   const initialSrc=params.get('src');
   const initialRenderer=params.get('renderer')||'';
@@ -67,22 +68,22 @@
   function normalizeSource(value){
     const raw=String(value||'').trim();
     if(localPackages.has(raw))return raw;
-    if(!raw)throw new Error("Choose a package.");
+    if(!raw)throw new Error("Select a package..........................................................................................................................................................................................................................................................................................................................................................................................................................................................................");
     let url;
-    try{url=new URL(raw,location.href);}catch{throw new Error("The example URL is invalid.");}
-    if(!['http:','https:'].includes(url.protocol))throw new Error("Only selected local packages and HTTP/HTTPS catalog URLs are supported.");
+    try{url=new URL(raw,location.href);}catch{throw new Error("The URL of the example is invalid.................................................................................................................................................................................................................................................................................................................................................................................................................................");}
+    if(!['http:','https:'].includes(url.protocol))throw new Error("Only selected packages from the computer and HTTP/HTTPS URLs from the catalog are supported...................................................................................................................................................................................................................................................");
     return url.href;
   }
   const sourceName=(src)=>localPackages.get(src)?.name||
-    new URL(src,location.href).pathname.split('/').filter(Boolean).at(-1)||src;
+    new URL(src,location.href).pathname.split("/en/").filter(Boolean).at(-1)||src;
   function updateLocalSummary(selected=null){
     if(!fileSummary)return;
     const count=localPackages.size;
     fileSummary.textContent=count
       ? (selected
-        ? selected+' · '+count+" local package(s) in the list."
-        : count+" local package(s) in the list.")
-      : "Choose .p2lrn files from your computer. They open in this browser and are not uploaded to a server.";
+        ? selected+' · '+count+" package(s) of the equipment available in the selector.................................................................................................................................................................................................................................................................................."
+        : count+" package(s) of the equipment available in the selector..................................................................................................................................................................................................................................................................................")
+      : "Select.p2lrn files from the computer. Open in this browser; not sent to the server.....................................................................................................................................................................................................................................................";
   }
   const setField=(key,value)=>{if(fields[key])fields[key].textContent=value==null||value===''?'—':String(value);};
   const stateLabels={ERROR:'ERROR',LOADING:"LOADING",READY:"READY",RENDERED:"RENDERING",BRIDGE:"PREPARING"};
@@ -95,7 +96,7 @@
     sample.replaceChildren();
     const groups=new Map();
     for(const item of catalog){
-      const key=item.sampleRole==='technical-fixture'?'Technical format fixtures (not complete courses)':categoryLabel(item.category);
+      const key=item.sampleRole==='technical-fixture'?"Technical testing of formats (not full courses)":categoryLabel(item.category);
       if(!groups.has(key)){
         const group=document.createElement('optgroup');
         group.label=key;
@@ -110,7 +111,7 @@
     }
     if(localPackages.size){
       const group=document.createElement('optgroup');
-      group.label="Packages from your computer";
+      group.label="Equipment packages";
       for(const [url,file] of localPackages){
         const option=document.createElement('option');
         option.value=url;
@@ -138,22 +139,22 @@
     const en=document.documentElement.lang.toLowerCase().startsWith('en');
     const heading=document.createElement('strong');
     heading.textContent=en?'Technical compatibility fixture — not a complete course':
-      'Archivo de pruebas técnicas — no es un curso completo';
+      "Technical Test File — Not a Full Course";
     const description=document.createElement('p');
     description.textContent=String((en?item.sampleNoteEn:item.sampleNoteEs)||
-      (en?'This source contains minimal test resources.':'La fuente contiene recursos de prueba mínimos.')).slice(0,400);
+      (en?'This source contains minimal test resources.':"The source contains minimal evidence resources.........................................................................................................................................................................................................................................................................................................................................................................................................................................................")).slice(0,400);
     const integrity=document.createElement('p');
     integrity.textContent=en?
       'Verified integrity confirms that the package has not been altered; it does not certify pedagogical completeness or full standard conformance.':
-      'La integridad verificada confirma que el paquete no ha sido alterado; no certifica que sea un curso desarrollado ni la conformidad completa del estándar.';
+      "Verified integrity confirms that the package has not been altered; it does not certify that it is a developed course or the complete compliance of the standard.....................................................";
     const children=[heading,description,integrity];
     const fullCourse=catalog.find(row=>row.url==='/examples/canonical/external/common-cartridge-topkit.p2lrn')??{url:'/examples/canonical/external/common-cartridge-topkit.p2lrn'};
     if(fullCourse){
       const link=document.createElement('a');
-      const dest=new URL(en?'/en/demo/':'/demo/',location.origin);
+      const dest=new URL(en?'/en/demo/':"/en/demo/",location.origin);
       dest.searchParams.set('src',fullCourse.url);
       link.href=dest.pathname+dest.search;
-      link.textContent=en?'Open the more extensive TOPkit course':'Abrir el curso TOPkit, con más contenido';
+      link.textContent=en?'Open the more extensive TOPkit course':"Open the TOPkit course, with more content";
       const note=document.createElement('p');
       note.append(link);
       if(Number.isSafeInteger(fullCourse.bytes)&&fullCourse.bytes>0)
@@ -247,7 +248,7 @@
     }
     if(errors.length){
       write('file-rejected',{files:errors});
-      if(!first)setState('ERROR',"Choose nonempty .p2lrn files.");
+      if(!first)setState('ERROR',"Select valid and non-empty.p2lrn files.");
     }
     if(!first)return;
     refreshCatalog();
@@ -273,7 +274,7 @@
   pauseButton?.addEventListener('click',()=>{paused=!paused;pauseButton.textContent=paused?"Resume":"Pause";});
   copyLogButton?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(log.textContent||'');const before=copyLogButton.textContent;copyLogButton.textContent="Copied";setTimeout(()=>{copyLogButton.textContent=before;},1200);}catch{}});
 
-  for(const name of ['p2lrn:ready','p2lrn:rendered','p2lrn:activityready','p2lrn:xapi','p2lrn:score','p2lrn:statechange','p2lrn:complete','p2lrn:progressionchange','p2lrn:error']){player.addEventListener(name,(event)=>{write(name,event.detail);if(name==='p2lrn:ready')setState('READY',"Player ready");if(name==='p2lrn:rendered'){globalThis.P2LRNRecordConversion?.('player_course_rendered');setState('RENDERED',"Content rendered");setField('renderer',event.detail?.rendererId);setField('entity',event.detail?.entityId||event.detail?.context?.entityId);setField('representation',event.detail?.representationId);}if(name==='p2lrn:error')setState('ERROR',"Playback error");});}
+  for(const name of ['p2lrn:ready','p2lrn:rendered','p2lrn:activityready','p2lrn:xapi','p2lrn:score','p2lrn:statechange','p2lrn:complete','p2lrn:progressionchange','p2lrn:error']){player.addEventListener(name,(event)=>{write(name,event.detail);if(name==='p2lrn:ready')setState('READY',"Checked package; checking content");if(name==='p2lrn:rendered'){globalThis.P2LRNRecordConversion?.('player_course_rendered');setState('RENDERED',"Content rendered");setField('renderer',event.detail?.rendererId);setField('entity',event.detail?.entityId||event.detail?.context?.entityId);setField('representation',event.detail?.representationId);}if(name==='p2lrn:activityready')setState('RENDERED',"External activity prepared");if(name==='p2lrn:error')setState('ERROR',"Playback error");});}
 
   async function boot(){try{const api=await window.P2LRNReady;write('runtime',{status:'registered',version:api?.version||globalThis.P2LRN?.version});if(!automaticRuntime)await configureIsolatedRuntime(api);else write('runtime-host',{status:'automatic-opaque',applicationOrigin:location.origin});try{const response=await fetch('/examples/catalog.json',{cache:'no-store'});if(response.ok)populateCatalog(await response.json());}catch(error){write('catalog-error',{message:error?.message||String(error)});}if(globalThis.P2LRN?.installServiceWorker){setState('BRIDGE',"Preparing verified resources");const pageBridge=await globalThis.P2LRN.installServiceWorker({url:'/p2lrn-sw.js',scope:"/en/"});const bridge=await globalThis.P2LRN.installServiceWorker({url:'/p2lrn-sw.js',scope:'/__p2lrn__/'});write('virtual-resource-bridge',{status:'ready',pageScope:pageBridge?.scope??"/en/",resourceScope:bridge?.scope??'/__p2lrn__/',controlled:Boolean(navigator.serviceWorker.controller)});}rendererSelect.value=[...rendererSelect.options].some((option)=>option.value===initialRenderer)?initialRenderer:'';const start=initialSrc||catalogDefault||catalog[0]?.url||'/examples/generated/scorm12-browser-demo.p2lrn';const item=selectCatalogEntry(start);if(!initialRenderer&&item?.rendererId)rendererSelect.value=item.rendererId;await load(start);}catch(error){write('boot-error',{message:error?.message||String(error)});setState('ERROR',"Error preparing the viewer");}}
   void boot();
