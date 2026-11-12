@@ -44,7 +44,7 @@ permissions:
 concurrency:
   # A manual npm-only smoke must not be cancelled by unrelated main pushes.
   group: ${{ ((github.event_name == 'workflow_dispatch' && inputs.quest3d_only) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]'))) && 'p2lrn-portable-quest3d' || (github.event_name == 'workflow_dispatch' && inputs.npm_provider_only && 'p2lrn-portable-npm-only' || 'p2lrn-portable-main') }}
-  cancel-in-progress: ${{ !((github.event_name == 'workflow_dispatch' && inputs.quest3d_only) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]'))) }}
+  cancel-in-progress: true
 
 jobs:
   postgres-live:
@@ -443,7 +443,7 @@ jobs:
   quest3d-focused:
     if: ${{ (github.event_name == 'workflow_dispatch' && inputs.quest3d_only) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: Targeted Windows Chrome/Edge 3D regression with per-case evidence
-    runs-on: [self-hosted, Windows, X64, p2lrn-windows]
+    runs-on: windows-latest
     timeout-minutes: 25
     defaults:
       run:
