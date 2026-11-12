@@ -99,16 +99,19 @@ test('the build selects page footer after main and protects Studio inner form ac
 
 });
 
-test('both homepages show the original Player CDN script and Web Component example',()=>{
+test('both homepage source templates pin the Player CDN URL and SRI before building',()=>{
   const es=contentAt('deploy/netlify/site/index.html');
   const en=contentAt('deploy/netlify/site/en/index.html');
-  const cdn='https://p2lrn.org/player/current/dist/p2lrn.js';
-  const embed='&lt;script src="'+cdn+'"&gt;&lt;/script&gt;\\n&lt;p2lrn-player src="./course.p2lrn"&gt;&lt;/p2lrn-player&gt;'.replace('\\n','\n');
+  // The source uses version/SRI placeholders. The site build resolves them;
+  // verify-cdn-sri.mjs independently validates the generated distribution.
+  const embed='&lt;script src="__P2LRN_PINNED_PLAYER_URL__" integrity="__P2LRN_PINNED_PLAYER_SRI__" crossorigin="anonymous" referrerpolicy="no-referrer"&gt;&lt;/script&gt;\n&lt;p2lrn-player src="./course.p2lrn"&gt;&lt;/p2lrn-player&gt;'.replace('\\n','\n');
   for(const [locale,html,label] of [['es',es,'CDN · MÍNIMO'],['en',en,'MINIMAL CDN']]){
     assert(html.includes('class="cdn-minimal bridge-cdn"'),locale+': missing CDN card');
-    assert(html.includes('<strong>'+label+'</strong><span>HTML</span>'),locale+': missing original heading');
-    assert(html.includes('<pre><code>'+embed+'</code></pre>'),locale+': missing exact script and player tag');
-    assert.equal((html.match(/player\/current\/dist\/p2lrn\.js/g)||[]).length,1,locale+': duplicate homepage CDN examples');
+    assert(html.includes('<strong>'+label+'</strong><span>HTML</span>'),locale+': missing CDN heading');
+    assert(html.includes('<pre><code>'+embed+'</code></pre>'),locale+': missing script, SRI or Player tag');
+    assert.equal((html.match(/__P2LRN_PINNED_PLAYER_URL__/g)||[]).length,1,locale+': duplicate CDN URL placeholders');
+    assert.equal((html.match(/__P2LRN_PINNED_PLAYER_SRI__/g)||[]).length,1,locale+': duplicate CDN SRI placeholders');
+    assert(!html.includes('<pre><code>&lt;script src="https://'),locale+': unpinned homepage example');
   }
   assert(!es.includes('Incorpora el Player en tu plataforma'));
   assert(!en.includes('Incorporate the Player into your platform'));
