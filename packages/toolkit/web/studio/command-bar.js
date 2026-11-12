@@ -61,7 +61,9 @@ const CSS=[
   // On small screens the hosted toolbar used position:static, making its
   // z-index ineffective and letting the lesson overlay the open editor menu.
   '.p2lrn-studio-unified:not(.studio-toolbar){position:relative!important}',
-  '@media(max-width:900px){.studio-toolbar.p2lrn-studio-unified{position:relative!important}}',
+  // A relative hosted toolbar needs top:auto: the legacy sticky top:64px
+  // otherwise shifts the toolbar over the Player preview at mobile widths.
+  '@media(max-width:900px){.studio-toolbar.p2lrn-studio-unified{position:relative!important;top:auto!important}}',
   '.p2lrn-studio-unified :is(.p2lrn-file-menu,.p2lrn-import-menu,.p2lrn-context-menu)[open]{z-index:200!important}',
   '.p2lrn-studio-unified[hidden]{display:none!important}',
   '.p2lrn-studio-legacy-topbar{display:none!important}',

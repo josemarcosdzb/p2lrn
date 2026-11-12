@@ -181,21 +181,53 @@ async function launchChrome(chrome){
 async function connectPage(browserWs){
   const endpoint=new URL(browserWs);
   const origin=`http://${endpoint.hostname}:${endpoint.port}`;
-  let target=null;
-  for(let i=0;i<80&&!target;i++){
+  // The offline double-click E2E starts a second real Chrome while the
+  // original browser is rendering Studio and 3D. Give its DevTools handshake
+  // a bounded chance to complete, and refresh a stale target on retry.
+  let socket=null,lastConnectError=null;
+  for(let attempt=1;attempt<=2&&!socket;attempt++){
+    let target=null;
+    for(let i=0;i<80&&!target;i++){
+      try{
+        const targets=await (await fetch(origin+'/json/list')).json();
+        target=targets.find((item)=>item.type==='page'&&!item.url.startsWith('devtools://'))||null;
+      }catch{}
+      if(!target)await sleep(100);
+    }
+    if(!target?.webSocketDebuggerUrl){
+      lastConnectError=new Error('Chrome page target not found.');
+      continue;
+    }
+    const candidate=new WebSocket(target.webSocketDebuggerUrl);
     try{
-      const targets=await (await fetch(origin+'/json/list')).json();
-      target=targets.find((item)=>item.type==='page'&&!item.url.startsWith('devtools://'))||null;
-    }catch{}
-    if(!target)await sleep(100);
+      await new Promise((resolvePromise,reject)=>{
+        let timer=null,settled=false;
+        const complete=(error)=>{
+          if(settled)return;
+          settled=true;
+          clearTimeout(timer);
+          candidate.removeEventListener('open',onOpen);
+          candidate.removeEventListener('error',onError);
+          error?reject(error):resolve();
+        };
+        const onOpen=()=>complete();
+        const onError=()=>complete(new Error('Page DevTools socket failed.'));
+        candidate.addEventListener('open',onOpen);
+        candidate.addEventListener('error',onError);
+        timer=setTimeout(()=>complete(new Error('Page DevTools socket timeout.')),12000);
+      });
+      socket=candidate;
+    }catch(error){
+      lastConnectError=error;
+      // Do not leak a late-opening WebSocket after a timed-out attempt.
+      if(candidate.readyState===WebSocket.CONNECTING)
+        candidate.addEventListener('open',()=>candidate.close(),{once:true});
+      else try{candidate.close();}catch{}
+      if(attempt<2)await sleep(400);
+    }
   }
-  invariant(target?.webSocketDebuggerUrl,'Chrome page target not found.');
-  const socket=new WebSocket(target.webSocketDebuggerUrl);
-  await new Promise((resolvePromise,reject)=>{
-    const timer=setTimeout(()=>reject(new Error('Page DevTools socket timeout.')),5000);
-    socket.addEventListener('open',()=>{clearTimeout(timer);resolvePromise();},{once:true});
-    socket.addEventListener('error',()=>{clearTimeout(timer);reject(new Error('Page DevTools socket failed.'));},{once:true});
-  });
+  invariant(socket,'Page DevTools connection failed after two bounded attempts: '+
+    String(lastConnectError?.message||lastConnectError));
   let seq=0;
   const pending=new Map();
   const security=[];
@@ -1936,6 +1968,10 @@ async function studioSiteScenario(){
   }catch(error){return {ok:false,error:String(error?.stack||error)};}
 }
 async function verifyStudioSiteUI(cdp){
+  // Do not inherit an arbitrary 800px default after another test cleared
+  // Chrome's device metrics. Verify the intended desktop and mobile layouts.
+  await cdp.send('Emulation.setDeviceMetricsOverride',
+    {width:1500,height:950,deviceScaleFactor:1,mobile:false});
   await cdp.send('Page.navigate',{url:APP_ORIGIN+'/studio/'});
   const deadline=Date.now()+16000;let loaded=false;
   while(Date.now()<deadline){
@@ -1978,8 +2014,12 @@ async function verifyStudioSiteUI(cdp){
   const unitPreviewScreenshot=await captureVisualEvidence(cdp,'studio-website-unit-single-outline');
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   await sleep(350);
-  const mobile=await evalTop(cdp,"({scrollWidth:document.documentElement.scrollWidth,clientWidth:document.documentElement.clientWidth,playerWidth:document.querySelector('[data-player]')?.getBoundingClientRect().width||0})");
+  const mobile=await evalTop(cdp,"(()=>{const t=document.querySelector('[data-toolbar]'),p=document.querySelector('[data-preview-stage]'),s=getComputedStyle(t);return {scrollWidth:document.documentElement.scrollWidth,clientWidth:document.documentElement.clientWidth,playerWidth:document.querySelector('[data-player]')?.getBoundingClientRect().width||0,mode:document.documentElement.dataset.studioMode,toolbarPosition:s.position,toolbarTop:s.top,toolbarBottom:t.getBoundingClientRect().bottom,previewTop:p.getBoundingClientRect().top};})()");
   invariant(mobile.scrollWidth<=mobile.clientWidth+3,'Studio website overflows mobile viewport: '+JSON.stringify(mobile));
+  invariant(mobile.mode==='preview'&&mobile.toolbarPosition==='relative'&&
+    (mobile.toolbarTop==='auto'||mobile.toolbarTop==='0px')&&
+    mobile.previewTop>=mobile.toolbarBottom-1,
+    'Studio mobile preview toolbar overlaps the Player: '+JSON.stringify(mobile));
   const mobileScreenshot=await captureVisualEvidence(cdp,'studio-website-mobile');
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
   invariant(cdp.exceptions.length===before,'Studio website threw in Chrome: '+JSON.stringify(cdp.exceptions.slice(before)));
