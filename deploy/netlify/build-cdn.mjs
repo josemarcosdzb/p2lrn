@@ -67,6 +67,10 @@ const analyticsPackageDist=join(root,'packages','analytics','dist');
 await cp(analyticsPackageDist,join(outputRoot,'analytics',version,'dist'),{recursive:true,force:true});
 await cp(analyticsPackageDist,join(outputRoot,'analytics','current','dist'),{recursive:true,force:true});
 
+// The Toolkit npm prepack creates the icon; create the identical icon for
+// CDN corresponding-source snapshots before collecting files.
+await execFileAsync(process.execPath,[join(root,'scripts','build-windows-icon.mjs')],{cwd:root,maxBuffer:4*1024*1024});
+
 // Publish inspectable, version-matched corresponding source for every first-party
 // npm/CDN component. Player already has its own full source snapshot above.
 const correspondingSource={};
