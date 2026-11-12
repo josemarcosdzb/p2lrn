@@ -18,6 +18,9 @@ on:
       # Manually reviewed English Studio is not generated, but changes must still run browser QA.
       - 'deploy/netlify/site/en/studio/index.html'
       - 'deploy/netlify/site/en/studio/studio.js'
+      # Manually restored English LMS guides must never bypass bilingual QA.
+      - 'deploy/netlify/site/en/docs/conectores/**'
+      - 'deploy/netlify/site/en/docs/troubleshooting/**'
       - 'deploy/netlify/site/assets/studio-guide/guide.css'
       - 'scripts/generate-site-english.mjs'
       - 'scripts/browser-smoke-p2lrn-i18n.mjs'
