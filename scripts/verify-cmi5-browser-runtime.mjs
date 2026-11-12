@@ -8,10 +8,19 @@ const root=resolve(fileURLToPath(new URL('../',import.meta.url)));
 const cspHost="default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; style-src 'self' blob: 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' blob:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'none'";
 const cspRuntime="default-src 'none'; script-src 'self' blob: 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline' blob:; img-src blob: data:; media-src blob: data:; font-src blob: data:; connect-src blob:; frame-src blob: data: about:; object-src 'none'; form-action 'none'; base-uri 'none'";
 async function suite(){
- const result=document.querySelector('#result'),host=document.querySelector('#host'),state={ready:[],errors:[],frames:[]};
+ const result=document.querySelector('#result'),host=document.querySelector('#host'),state={ready:[],errors:[],frames:[],qaStarted:false};
  document.addEventListener('p2lrn:activityready',e=>state.ready.push({runtime:e.detail?.runtime,member:e.detail?.launchMember}));
  document.addEventListener('p2lrn:error',e=>state.errors.push({phase:e.detail?.phase,error:e.detail?.error}));
- window.addEventListener('message',e=>{if(e.data?.protocol==='p2lrn-cmi5-qa-frame')state.frames.push(e.data);});
+ window.addEventListener('message',e=>{
+   if(e.data?.protocol!=='p2lrn-cmi5-qa-frame')return;
+   state.frames.push(e.data);
+   const frame=host.querySelector('p2lrn-player')?.shadowRoot?.querySelector('iframe.p2lrn-package-runtime');
+   if(!state.qaStarted&&frame&&e.source===frame.contentWindow&&
+       state.ready.some(x=>x.runtime==='external-package')){
+     state.qaStarted=true;
+     frame.contentWindow.postMessage({protocol:'p2lrn-cmi5-qa-start'},'*');
+   }
+ });
  try{
   const {mountP2LRN}=await import('/packages/player/dist/p2lrn-player.js');
   await mountP2LRN(host,{src:'/examples/canonical/external/cmi5-catapult-pre-post.p2lrn'});
@@ -30,6 +39,12 @@ async function suite(){
 }
 const frameExercise=String.raw`(()=>{
   if(window===top||!document.body)return;
+  if(!window.__p2lrnQaGateListener){
+    window.__p2lrnQaGateListener=true;
+    window.addEventListener('message',e=>{
+      if(e.data?.protocol==='p2lrn-cmi5-qa-start')window.__p2lrnQaReady=true;
+    });
+  }
   const body=document.body.innerText||document.body.textContent||'';
   if(body.length<12)return;
   const scorePanel=document.getElementById('score-panel');
@@ -37,7 +52,7 @@ const frameExercise=String.raw`(()=>{
   const complete=Boolean(window.__p2lrnQaSubmitted &&
     scorePanel?.classList.contains('full-overlay-visible') &&
     /^\d{1,3}(?:\.\d+)?$/u.test(scoreValue));
-  if(!window.__p2lrnQaSubmitted&&scorePanel){
+  if(window.__p2lrnQaReady&&!window.__p2lrnQaSubmitted&&scorePanel){
     const content=document.getElementById('content');
     const submit=[...(content?.querySelectorAll('button,[role="button"]')||[])]
       .find(el=>/^\s*Submit Answers\s*$/iu.test(el.textContent||'')&&!el.disabled);
@@ -84,7 +99,7 @@ const frameExercise=String.raw`(()=>{
     buttons:document.querySelectorAll('button,[role="button"]').length,
     controls:[...document.querySelectorAll('button,input,select,a')].slice(0,16).map(x=>({tag:x.tagName,
       txt:(x.textContent||'').trim().slice(0,45),value:x.value||'',type:x.type||'',disabled:Boolean(x.disabled)})),
-    answered:Number(window.__p2lrnQaAnswered||0),submitted:Boolean(window.__p2lrnQaSubmitted),
+    ready:Boolean(window.__p2lrnQaReady),answered:Number(window.__p2lrnQaAnswered||0),submitted:Boolean(window.__p2lrnQaSubmitted),
     score:updatedScore,completed},'*');
 })()`;
 const server=http.createServer(async(req,res)=>{

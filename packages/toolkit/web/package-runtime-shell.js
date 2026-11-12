@@ -371,14 +371,15 @@ function rewriteHtml(path) {
   rewriteDeferredMarkup(doc, path);
   return '<!doctype html>' + doc.documentElement.outerHTML;
 }
-function wireDocument(doc, path) {
-  if (!doc) return;
+function wireDocument(doc, path, {deferLegacyHandlers=false} = {}) {
+  if (!doc) return Promise.resolve();
   // Nested srcdoc frames are separate Document objects: observe and wire
   // handlers in their OWN sandboxed context. The outer MutationObserver cannot
   // see attributes or generated elements inside a child document.
-  observeLegacyHandlers(doc);
-  void installLegacyInlineHandlers(doc).catch(error=>
-    reply('error',{message:'Legacy document handlers: '+String(error?.message??error)}));
+  // Avoid injecting a legacy-handler blob before opaque navigation replaces
+  // original scripts. The ready event must await the eventual handler load.
+  const legacyReady=deferLegacyHandlers ? Promise.resolve() :
+    (observeLegacyHandlers(doc),installLegacyInlineHandlers(doc));
   doc.addEventListener('click', (event) => {
     const anchor = event.target?.closest?.('a,area');
     if (!anchor) return;
@@ -399,9 +400,13 @@ function wireDocument(doc, path) {
     try {
       frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-downloads');
       frame.srcdoc = rewriteHtml(member);
-      frame.addEventListener('load', () => wireDocument(frame.contentDocument, member), {once:true});
+      frame.addEventListener('load', () => {
+        void wireDocument(frame.contentDocument, member).catch(error=>
+          reply('error',{message:'Nested legacy handlers: '+String(error?.message??error)}));
+      }, {once:true});
     } catch {}
   }
+  return legacyReady;
 }
 async function installLegacyInlineHandlers(root) {
   const ownerDoc=root.nodeType===9?root:(root.ownerDocument??document);
@@ -516,10 +521,8 @@ async function navigate(path, suffix = '') {
     const parsed = new DOMParser().parseFromString(rewriteHtml(normalized), 'text/html');
     document.head.replaceChildren(...[...parsed.head.childNodes].map(node => document.importNode(node, true)));
     document.body.replaceChildren(...[...parsed.body.childNodes].map(node => document.importNode(node, true)));
-    wireDocument(document, normalized);
-    // Install before executing any untrusted package script so that handlers
-    // added during script initialization are registered without inline CSP.
-    observeLegacyHandlers();
+    // Do not start converting on* handlers before original scripts are attached.
+    wireDocument(document, normalized, {deferLegacyHandlers:true});
     for (const old of [...document.querySelectorAll('script')]) {
       // DOMParser scripts are inert. An opaque srcdoc frame inherits the
       // embedding document's CSP, which may prohibit inline JavaScript.
@@ -541,6 +544,7 @@ async function navigate(path, suffix = '') {
       if (loaded) await loaded;
     }
     await installLegacyInlineHandlers(document);
+    observeLegacyHandlers(document);
     reply('ready', {member:normalized, suffix:launchSuffix, topology:'opaque-inline'});
     return;
   }
@@ -550,9 +554,11 @@ async function navigate(path, suffix = '') {
   iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-downloads');
   iframe.setAttribute('referrerpolicy', 'no-referrer');
   iframe.addEventListener('load', () => {
-    try { wireDocument(iframe.contentDocument, normalized); } catch {}
-    observeContentFrame(iframe);
-    reply('ready', {member:normalized, suffix:launchSuffix});
+    void (async()=>{
+      await wireDocument(iframe.contentDocument, normalized);
+      observeContentFrame(iframe);
+      reply('ready', {member:normalized, suffix:launchSuffix});
+    })().catch(error=>reply('error',{message:'Package handlers: '+String(error?.message??error)}));
   }, {once:true});
   iframe.srcdoc = rewriteHtml(normalized);
   if (launchSuffix) iframe.dataset.p2lrnLaunchSuffix = launchSuffix;
