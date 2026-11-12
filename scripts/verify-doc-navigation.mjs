@@ -140,7 +140,7 @@ for(const route of docRoutes){
 
 
 const enScript=await readFile(join(root,'deploy','netlify','site','en','p2lrn.js'),'utf8');
-const navPattern=/const SITE_NAV = (\\[[^\\r\\n]+\\]);/;
+const navPattern=/const SITE_NAV = (\[[^\r\n]+\]);/;
 const esNav=navPattern.exec(js)?.[1],enNav=navPattern.exec(enScript)?.[1];
 if(!esNav||!enNav)failures.push('missing canonical site-wide navigation');
 else{

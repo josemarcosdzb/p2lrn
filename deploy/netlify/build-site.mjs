@@ -489,7 +489,7 @@ const brandHeadFor=(locale='es')=>[
 const siteNavigation=new Map();
 for(const [locale,source] of [['es','p2lrn.js'],['en','en/p2lrn.js']]){
   const code=await readFile(join(siteRoot,...source.split('/')),'utf8');
-  const match=/  const SITE_NAV = (\\[[^\\r\\n]+\\]);/.exec(code);
+  const match=/  const SITE_NAV = (\[[^\r\n]+\]);/.exec(code);
   if(!match)throw new Error('Missing single canonical SITE_NAV in '+source);
   const entries=JSON.parse(match[1]);
   if(entries.length!==6||entries.some(entry=>!entry.href?.startsWith('/')||!entry.label))
@@ -504,12 +504,12 @@ const marketingIndexRoutes=new Set([
   'en/crear-cursos-interactivos/index.html','en/juegos-educativos-3d/index.html','en/cursos-offline/index.html'
 ]);
 for (const htmlPath of htmlFiles) {
-  const pageRelative=relative(outputRoot,htmlPath).replaceAll('\\','/');
+  const pageRelative=relative(outputRoot,htmlPath).replaceAll('\','/');
   const pageLocale=pageRelative.startsWith('en/')?'en':'es';
   let html = await readFile(htmlPath,'utf8');
   html = html.replaceAll('0.5.0-alpha.10',productionPublicVersion);
   // Preserve functional status controls and branding; replace ONLY the top nav.
-  const siteHeader=/<header\\b[^>]*class=["'][^"']*\\bsite-header\\b[^"']*["'][^>]*>[\\s\\S]*?<\\/header>/i.exec(html)?.[0];
+  const siteHeader=/<header\b[^>]*class=["'][^"']*\bsite-header\b[^"']*["'][^>]*>[\s\S]*?<\/header>/i.exec(html)?.[0];
   if(siteHeader){
     const route=pageUrl(htmlPath);
     const current=pageLocale==='en'?spanishRouteFor(route):route;
@@ -521,13 +521,13 @@ for (const htmlPath of htmlFiles) {
           :entry.active.some(rule=>rule.endsWith('*')?current.startsWith(rule.slice(0,-1)):current===rule);
         return '<a class="nav-direct" href="'+href+'"'+(active?' aria-current="page"':'')+'>'+entry.label+'</a>';
       }).join('')+'</nav>';
-    const navPattern=/<nav\\b(?=[^>]*\\bclass=["'][^"']*\\bnav\\b[^"']*["'])[^>]*>[\\s\\S]*?<\\/nav>/i;
+    const navPattern=/<nav\b(?=[^>]*\bclass=["'][^"']*\bnav\b[^"']*["'])[^>]*>[\s\S]*?<\/nav>/i;
     let header=siteHeader;
     if(navPattern.test(header))header=header.replace(navPattern,navigation);
-    else header=header.replace(/(<a\\b[^>]*class=["']brand["'][^>]*>[\\s\\S]*?<\\/a>)/i,'$1'+navigation);
+    else header=header.replace(/(<a\b[^>]*class=["']brand["'][^>]*>[\s\S]*?<\/a>)/i,'$1'+navigation);
     if(!header.includes('id="nav"'))throw new Error('Unable to render canonical header for '+pageRelative);
-    if(!/\\bdata-menu\\b/.test(header))
-      header=header.replace(/<\\/header>$/i,'<button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">'+(pageLocale==='en'?'Menu':'Menú')+'</button></header>');
+    if(!/\bdata-menu\b/.test(header))
+      header=header.replace(/<\/header>$/i,'<button class="menu" type="button" data-menu aria-expanded="false" aria-controls="nav">'+(pageLocale==='en'?'Menu':'Menú')+'</button></header>');
     html=html.replace(siteHeader,header);
   }
 
