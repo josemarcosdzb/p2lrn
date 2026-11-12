@@ -245,6 +245,30 @@ export function createLtiStore(filename,options={}){
   sql("INSERT INTO catalog VALUES(?,?,?,?,?,?,?,?,?,'PUBLISHED',?) ON CONFLICT(tenant_id,sha) DO UPDATE SET title=excluded.title").run(c.id??randomUUID(),c.tenantId,c.title,c.packageId,c.contentRoot,c.sha,c.filename,c.bytes,J(c.entities),t());
   return sql('SELECT id FROM catalog WHERE tenant_id=? AND sha=?').get(c.tenantId,c.sha).id;
  }
+ function listCorruptCatalogPackages(){
+  const rows=sql("SELECT tenant_id,sha,filename,package_id,content_root,bytes,title,entities_json FROM catalog WHERE status='PUBLISHED' AND (title=? OR entities_json LIKE ?)")
+   .all('[object Object]','%object Object%');
+  return rows.filter(row=>row.title==='[object Object]'||String(row.entities_json||'').includes('[object Object]'))
+   .slice(0,151).map(row=>({tenantId:row.tenant_id,sha:row.sha,filename:row.filename,
+    packageId:row.package_id,contentRoot:row.content_root,bytes:row.bytes,
+    corruptTitle:row.title==='[object Object]',corruptEntities:String(row.entities_json||'').includes('[object Object]')}));
+ }
+ function repairCorruptCatalogBySha({tenantId,sha,filename,packageId,contentRoot,bytes,title,entities}){
+  for(const [field,value] of Object.entries({tenantId,sha,filename,packageId,contentRoot,title}))req(value,field);
+  if(!Number.isSafeInteger(bytes)||bytes<1||!Array.isArray(entities)||entities.length<1||
+    entities.some(e=>typeof e.title!=='string'||!e.title.trim()||e.title==='[object Object]'))
+   throw new TypeError('INVALID_REPAIRED_PACKAGE_METADATA');
+  const row=sql("SELECT id,title,entities_json FROM catalog WHERE tenant_id=? AND sha=? AND filename=? AND package_id=? AND content_root=? AND bytes=? AND status='PUBLISHED'")
+   .get(tenantId,sha,filename,packageId,contentRoot,bytes);
+  if(!row)return 0;
+  const badTitle=row.title==='[object Object]';
+  const badEntities=String(row.entities_json||'').includes('[object Object]');
+  if(!badTitle&&!badEntities)return 0;
+  const nextTitle=badTitle?title:row.title;
+  const nextEntities=badEntities?J(entities):row.entities_json;
+  return sql('UPDATE catalog SET title=?,entities_json=? WHERE id=? AND title=? AND entities_json=?')
+   .run(nextTitle,nextEntities,row.id,row.title,row.entities_json).changes;
+ }
  const getCatalog=(id,tenantId)=>sql("SELECT * FROM catalog WHERE id=? AND tenant_id=? AND status='PUBLISHED'").get(id,tenantId);
  const listCatalog=tenantId=>sql("SELECT * FROM catalog WHERE tenant_id=? AND status='PUBLISHED' ORDER BY created_at DESC").all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,title:r.title,packageId:r.package_id,contentRoot:r.content_root,entities:P(r.entities_json)}));
  function createBinding({tenantId,registrationId,deploymentId,catalogId,entityId,id}){
@@ -370,6 +394,6 @@ export function createLtiStore(filename,options={}){
  const listAttempts=tenantId=>sql('SELECT id,tenant_id,binding_id,context_id,status,created_at,updated_at FROM attempts WHERE tenant_id=? ORDER BY created_at DESC LIMIT 100').all(tenantId).map(r=>({id:r.id,tenantId:r.tenant_id,bindingId:r.binding_id,contextId:r.context_id,status:r.status,createdAt:r.created_at,updatedAt:r.updated_at}));
  const count=name=>{if(!['platforms','catalog','bindings','attempts','sessions','ags_outbox'].includes(name))throw new TypeError('Unknown table');return Number(sql('SELECT count(*) AS n FROM '+name).get().n);};
  return Object.freeze({close:()=>db.close(),upsertLegacyPlatform,getLegacyRegistrationById,getLegacyRegistrationByConsumerKey,listLegacyPlatforms,consumeLegacyNonce,createLegacyBinding,getLegacyBinding,upsertPlatform,replacePlatformJwks,registerCanvasDynamicPlatform,activateCanvasDynamicDeployment,getRegistration,getRegistrationById,getRegistrationByIssuer,listPlatforms,transactions,
- publishPackage,getCatalog,listCatalog,createBinding,getBinding,createPicker,peekPicker,consumePicker,attachLaunch,getSession,
+ publishPackage,getCatalog,listCatalog,listCorruptCatalogPackages,repairCorruptCatalogBySha,createBinding,getBinding,createPicker,peekPicker,consumePicker,attachLaunch,getSession,
  getState,saveState,listAttempts,appendEvent,observeScore,approveScore,outboxById,markOutbox,listPending,getAttemptTenant,saveNrpsContext,getNrpsContext,listNrpsContexts,pruneExpiredSecurityState,admitSecurityRequest,count});
 }

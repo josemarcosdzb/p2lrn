@@ -221,3 +221,34 @@ test('security admission is durable, finite and independent from education recor
   assert.equal(f.store.admitSecurityRequest(quota),true);
  }finally{f.clean()}
 });
+
+test('catalogue metadata repair is tenant-scoped, idempotent and preserves custom labels',()=>{
+ const f=fixture();
+ try{
+  const sha='e'.repeat(64);
+  const base={tenantId:'school1',packageId:'urn:uuid:metadata-repair',contentRoot:root,
+   sha,filename:sha+'.p2lrn',bytes:1024};
+  const bad=[{id:'course1',type:'course',title:'[object Object]'},
+   {id:'lesson1',type:'activity',title:'[object Object]'}];
+  const good=[{id:'course1',type:'course',title:'Curso de seguridad'},
+   {id:'lesson1',type:'activity',title:'Primera lección'}];
+  const id=f.store.publishPackage({...base,title:'[object Object]',entities:bad});
+  const otherId=f.store.publishPackage({...base,tenantId:'another-school',title:'Otro nombre',entities:good});
+  const pending=f.store.listCorruptCatalogPackages();
+  assert.equal(pending.length,1);
+  assert.equal(pending[0].tenantId,'school1');
+  assert.equal(f.store.repairCorruptCatalogBySha({...base,title:'Curso de seguridad',entities:good}),1);
+  assert.equal(f.store.getCatalog(id,'school1').title,'Curso de seguridad');
+  assert.deepEqual(JSON.parse(f.store.getCatalog(id,'school1').entities_json),good);
+  assert.equal(f.store.getCatalog(otherId,'another-school').title,'Otro nombre');
+  assert.equal(f.store.listCorruptCatalogPackages().length,0);
+  assert.equal(f.store.repairCorruptCatalogBySha({...base,title:'Otro nombre',entities:good}),0);
+  assert.equal(f.store.count('catalog'),2);
+  const second={...base,sha:'f'.repeat(64),filename:'f'.repeat(64)+'.p2lrn'};
+  const custom=f.store.publishPackage({...second,title:'Título elegido por el profesor',entities:bad});
+  assert.equal(f.store.repairCorruptCatalogBySha({...second,title:'Debería ignorarse',entities:good}),1);
+  assert.equal(f.store.getCatalog(custom,'school1').title,'Título elegido por el profesor');
+  assert.deepEqual(JSON.parse(f.store.getCatalog(custom,'school1').entities_json),good);
+  assert.equal(f.store.count('catalog'),3);
+ }finally{f.clean()}
+});

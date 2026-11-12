@@ -414,6 +414,33 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
   const title=learningTitle(titleHint,course.title||'Curso P2LRN');
   return {parsed,entities,course,title,sha:digest(bytes)};
  }
+  async function repairStoredCatalogMetadata(){
+   let rows;
+   try{rows=await store.listCorruptCatalogPackages();}
+   catch(error){
+    // A failed optional migration must not prevent LMS launches.
+    console.warn('P2LRN_CATALOG_REPAIR_UNAVAILABLE',String(error?.code||'DATABASE_ERROR').slice(0,80));
+    return;
+   }
+   let repaired=0,skipped=0;
+   for(const row of rows.slice(0,50)){
+    try{
+     if(!/^[a-f0-9]{64}\.p2lrn$/.test(row.filename)||row.sha+'.p2lrn'!==row.filename||
+       !Number.isSafeInteger(row.bytes)||row.bytes<1||row.bytes>64*1024*1024)
+      throw new Error('INVALID_STORED_PACKAGE');
+     const filename=join(packages,row.filename);
+     if(!existsSync(filename)||!statSync(filename).isFile()||statSync(filename).size!==row.bytes)
+      throw new Error('STORED_PACKAGE_UNAVAILABLE');
+     const inspection=inspectCourseBytes(readFileSync(filename));
+     if(inspection.sha!==row.sha||inspection.parsed.manifest.packageId!==row.packageId||
+       inspection.parsed.manifest.integrity.contentRoot!==row.contentRoot)
+      throw new Error('STORED_PACKAGE_INTEGRITY_MISMATCH');
+     repaired+=await store.repairCorruptCatalogBySha({...row,title:inspection.title,entities:inspection.entities});
+    }catch{skipped++;}
+   }
+   if(repaired||skipped||rows.length>50)
+    console.log('P2LRN_CATALOG_LABEL_REPAIR',JSON.stringify({repaired,skipped,pending:Math.max(0,rows.length-50)}));
+  }
  const verifiedGraphs=new Map();
  function authorizedEntityIds(session){
   const file=resolve(packages,session.filename);
@@ -881,6 +908,7 @@ export function createP2LRNLtiServer({dataDir,baseUrl,tool,adminToken,port,bindH
  return Object.freeze({server,store,provider,deliver,async listen(address=port,hostname=bindHost){
   if(!Number.isInteger(address)||address<0||address>65535)throw new TypeError('Invalid port');
    if(store.ready)await store.ready;
+   await repairStoredCatalogMetadata();
   await new Promise((ok,fail)=>{server.once('error',fail);server.listen(address,hostname,()=>{server.off('error',fail);ok();});});
   return server.address();
  },async close(){if(server.listening)await new Promise((ok,fail)=>server.close(e=>e?fail(e):ok()));await store.close();}});
