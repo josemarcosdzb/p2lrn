@@ -45,6 +45,12 @@
       </div>
     </section>
 
+    <section class="doc-section" id="studio-multipart">
+      <h2>Split packages from Studio</h2>
+      <p>In <a href="/en/studio/">Studio</a>, open <strong>File → Split package (multipart)…</strong>. Set <strong>Part size (MiB)</strong> to a whole number from 1 to 64 (default 25), then select <strong>Generate multipart ZIP</strong>.</p>
+      <p>The downloaded ZIP contains an outer <code>.p2lrn</code> package and its <code>.partNNN</code> files. Extract and host them together under the same HTTP(S) origin and directory. Parts <strong>are not independent courses</strong>. Studio splits the largest embedded resource above the selected limit; the rest of the course stays in the outer package.</p>
+      <p>The current Player limits each logical resource to 256 MiB, parts to 64 MiB, and the descriptor to 512 parts. Studio reports when no resource is large enough rather than creating fake parts. <a href="/en/docs/studio/#multipart-studio">See the teacher guide</a>.</p>
+    </section>
     <section class="doc-section">
       <h2>Basic command</h2><p>Part of an already valid package. The command creates a new package with the Multipart descriptor and writes the parts next to the output file.</p>
       <div class="codebox">
