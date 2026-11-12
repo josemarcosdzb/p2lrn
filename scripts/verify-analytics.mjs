@@ -23,7 +23,10 @@ assert(!component.includes('content:"2"'),'Analytics must not reintroduce the re
 for(const token of ['P2LRNAnalyticsElement','createHttpAnalyticsDataSource','exportCsv'])assert(types.includes(token),'Analytics types missing '+token);
 for(const token of ["analyticsPackage:'@p2lrn/analytics'","/analytics/current/dist/","p2lrn-analytics.esm.js"])assert(cdn.includes(token),'CDN build missing Analytics '+token);
 assert(nav.includes("['INTEGRAR', [")&&nav.includes("const visibleSections=forTeachers"),'Developer integration sidebar must remain separated and visible');
-assert(nav.includes("label: 'Analytics'"),'Analytics top navigation section missing');
+const topSource=/const SITE_NAV = (\[[^\r\n]+\]);/.exec(nav)?.[1];
+assert.ok(topSource,'Canonical top navigation source missing');
+const topMenu=JSON.parse(topSource);
+assert.ok(topMenu.some(item=>item.label==='Analytics'&&item.href==='/analytics/'),'Analytics top navigation section missing');
 assert(nav.includes("['/docs/analytics/','Analytics para plataformas']"),'Analytics guide must remain accessible in the developer integration sidebar');
 for(const token of ['@p2lrn/analytics','analytics/current/dist/p2lrn-analytics.js','authoritative: true'])assert(docs.includes(token),'Analytics docs missing '+token);
 assert(demo.includes('<p2lrn-analytics src="/analytics/demo-data.json"></p2lrn-analytics>'),'Analytics demo is not wired to the component');

@@ -107,6 +107,7 @@ test('only audited P2LRN workflows remain; no hidden deploy or publish jobs',asy
       "p2lrn-interoperability-real.yml",
       "p2lrn-license-design-qa.yml",
       "p2lrn-native-offline-windows.yml",
+      "p2lrn-npm-release-publish.yml",
       "p2lrn-player-i18n.yml",
       "p2lrn-portable-verification.yml",
       "p2lrn-pr-safe.yml",
@@ -116,6 +117,13 @@ test('only audited P2LRN workflows remain; no hidden deploy or publish jobs',asy
       "studio-mejorastudio-qa.yml"
   ];
   assert.deepEqual(names,allowed);
+  const npmRelease=await readFile(resolve(dir,'p2lrn-npm-release-publish.yml'),'utf8');
+  assert.match(npmRelease,/if:\s*github\.event_name == 'workflow_dispatch'/,
+    'npm staging must be explicitly dispatched, never triggered by site updates');
+  assert.match(npmRelease,/permissions:\s*\n\s*contents: read/,
+    'npm staging must not obtain repository write permissions');
+  assert.doesNotMatch(npmRelease,/\bnetlify\s+deploy\b|\bnetlify\s+build\b/i,
+    'npm staging workflow must not deploy the site');
   for(const name of names){
     const yaml=await readFile(resolve(dir,name),'utf8');
     assert.doesNotMatch(yaml,/\bnetlify\s+deploy\b|\bnpm\s+publish\b/i,

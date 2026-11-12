@@ -472,7 +472,11 @@ for(const [file,locale] of [
   const developer=locale==='en'?'/en/docs/developers/':'/docs/desarrolladores/';
   const quickstart=locale==='en'?'/en/docs/quickstart/':'/docs/empezar-facil/';
   const npm=locale==='en'?'/en/docs/installation/':'/docs/instalar/';
-  if(links.length!==8||!links.includes(quickstart)||!links.includes(developer)||links.includes(npm))
+  const solutions=['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/','/skills/'];
+  const expectedSolutions=locale==='en'?solutions.map(englishRouteFor):solutions;
+  if(links.length!==12||new Set(links).size!==links.length||
+     !links.includes(quickstart)||!links.includes(developer)||links.includes(npm)||
+     expectedSolutions.some(route=>!links.includes(route)))
     errors.push('Teacher docs fallback must expose authoring, not installation menus: '+locale);
 }
 
@@ -487,7 +491,12 @@ for(const [file,locale] of [
   const developer=locale==='en'?'/en/docs/developers/':'/docs/desarrolladores/';
   const technical=locale==='en'?'/en/docs/developers/quickstart/':'/docs/desarrolladores/primeros-pasos/';
   const teacher=locale==='en'?'/en/docs/quickstart/':'/docs/empezar-facil/';
-  if(links.length!==11||!links.includes(developer)||!links.includes(technical)||links.includes(teacher))
+  const solutions=['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/','/skills/'];
+  const expectedSolutions=locale==='en'?solutions.map(englishRouteFor):solutions;
+  const skillsGuide=locale==='en'?englishRouteFor('/docs/skills/'):'/docs/skills/';
+  if(links.length!==16||new Set(links).size!==links.length||
+     !links.includes(developer)||!links.includes(technical)||links.includes(teacher)||
+     !links.includes(skillsGuide)||expectedSolutions.some(route=>!links.includes(route)))
     errors.push('Developer docs fallback must show technical guides separately: '+file);
 }
 
