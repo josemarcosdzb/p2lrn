@@ -33,6 +33,7 @@ for(const filename of (await files(site)).sort()){
  const source=english?raw.slice(3):raw, lang=english?'en':'es';
  const route=(english?'/en/':'/')+source.replace(/index\.html$/,'');
  const html=await readFile(filename,'utf8');
+  if(/\.{48,}/.test(html))add('error',route,'editorial-filler','Suspicious long run of punctuation in public HTML');
  const redirect=/<meta[^>]*http-equiv="refresh"/i.test(html);
  const title=compact(/<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1]);
  const desc=attribute(/<meta[^>]*name="description"[^>]*>/i.exec(html)?.[0]??'','content');
@@ -142,6 +143,11 @@ for(const filename of (await files(site)).sort()){
  }
  if(!pairs.has(source))pairs.set(source,new Set());pairs.get(source).add(lang);
  pages.push({route,source,lang,role,title,description:desc,h1:h1[0]??'',words,images:images.length,redirect});
+}
+for(const path of ['studio/studio.js','en/studio/studio.js']){
+  const script=await readFile(join(site,...path.split('/')),'utf8');
+  if(/\.{48,}/.test(script))
+    add('error','/'+path,'studio-script-filler','Suspicious repeated punctuation in Studio messages');
 }
 for(const [source,langs] of pairs)if(langs.size!==2)add('error',source,'language-parity','Missing ES/EN pair');
 if(pages.length<140)add('error','/','page-count','Expected at least 140 authored pages, got '+pages.length);
