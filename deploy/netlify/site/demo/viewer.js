@@ -90,7 +90,7 @@
   const setState=(value,text)=>{const label=stateLabels[value]||value;state.textContent=label;state.dataset.state=value.toLowerCase();if(status)status.textContent=text||label;};
   const renderLog=()=>{log.textContent=records.map((item)=>'['+item.time+'] '+item.name+item.suffix).join('\n')||'[viewer] sin eventos';log.scrollTop=log.scrollHeight;};
   const write=(name,detail)=>{if(paused)return;let suffix='';if(detail!==undefined){try{suffix=' '+JSON.stringify(detail,null,2);}catch{suffix=' '+String(detail);}}records.push({time:new Date().toLocaleTimeString(),name,suffix});if(records.length>MAX_EVENTS)records=records.slice(-MAX_EVENTS);renderLog();};
-  const categoryLabel=(value)=>value==='generated-questionnaire'?'Cuestionarios y juegos':value==='generated-multipart'?'Multipart':value==='generated-external'?'Formatos externos':value==='canonical-external'?'Formatos externos':value==='canonical-reader'?'Ejemplos de Reader':'Ejemplos P2LRN';
+  const categoryLabel=(value)=>value==='creator-course'?'Cursos creados con P2LRN':value==='canonical-questionnaire'?'Cuestionarios nativos':value==='generated-questionnaire'?'Cuestionarios y juegos':value==='generated-multipart'?'Multipart':value==='generated-external'?'Formatos externos':value==='canonical-external'?'Formatos externos':value==='canonical-reader'?'Ejemplos de Reader':'Ejemplos P2LRN';
 
   function refreshCatalog(){
     sample.replaceChildren();
@@ -105,7 +105,7 @@
       }
       const option=document.createElement('option');
       option.value=item.url;
-      option.textContent=item.title||item.url;
+      option.textContent=(document.documentElement.lang.startsWith('en')?(item.titleEn||item.title):item.title)||item.url;
       option.dataset.renderer=item.rendererId||'';
       groups.get(key).append(option);
     }
