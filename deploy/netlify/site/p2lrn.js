@@ -410,7 +410,6 @@
     ]],
     ['REVISAR RESULTADOS', [
       ['/analytics/','Abrir Analytics'],
-      ['/docs/analytics/','Guía de resultados'],
     ]],
     ['DESARROLLADORES', [
       ['/docs/desarrolladores/','Inicio para desarrolladores'],
@@ -563,7 +562,7 @@
     for (const [section,items] of GLOBAL_SIDEBAR) {
       if(!visibleSections.has(section))continue;
       const label=document.createElement('span');
-      label.textContent=section;
+      label.textContent=section==='DESARROLLADORES'?DOC_SECTION_LABELS.DESARROLLADORES:section;
       fragment.append(label);
       for (const [href,textValue] of items) {
         const normalized=normalizePath(href);

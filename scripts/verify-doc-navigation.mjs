@@ -62,7 +62,7 @@ for(const forbidden of ['P2LRN_EXTRA_DOC_LINKS','sidebar.append(','doc-page-subn
   if(js.includes(forbidden)) failures.push('p2lrn.js: legacy logic remains: '+forbidden);
 }
 
-const expectedSections=['EMPEZAR','CREAR','REPRODUCIR','DESARROLLADORES','INSTALAR','INTEGRAR','CONECTORES','REFERENCIA','RECURSOS'];
+const expectedSections=['EMPEZAR','CREAR','REPRODUCIR','REVISAR RESULTADOS','DESARROLLADORES','INSTALAR','INTEGRAR','CONECTORES','REFERENCIA','RECURSOS'];
 const sidebarBlock=/const GLOBAL_SIDEBAR = \[([\s\S]*?)\n  \];/.exec(js)?.[1]??'';
 const sectionNames=[...sidebarBlock.matchAll(/\['([^']+)', \[/g)].map(x=>x[1]);
 if(JSON.stringify(sectionNames)!==JSON.stringify(expectedSections))
@@ -75,18 +75,24 @@ for(let i=0;i<sectionNames.length;i++){
 }
 const sidebarLinks=[...sidebarBlock.matchAll(/\['(\/[^']*)','([^']+)'\]/g)].map(x=>({href:x[1],label:x[2]}));
 const hrefs=sidebarLinks.map(x=>x.href);
-if(hrefs.length!==39)failures.push('expected 39 global role-grouped links, found '+hrefs.length);
+if(hrefs.length!==42)failures.push('expected 42 global role-grouped links, found '+hrefs.length);
 const duplicates=hrefs.filter((href,i)=>hrefs.indexOf(href)!==i);
 if(duplicates.length)failures.push('duplicate global sidebar links: '+[...new Set(duplicates)]);
 for(const route of ['/docs/','/docs/empezar-facil/','/docs/studio/','/docs/questionnaires/','/docs/entrega-offline/'])
   if(![...['EMPEZAR','CREAR'].map(k=>sectionChunks.get(k)||'')].some(s=>s.includes("['"+route+"'")))
     failures.push('teacher authoring guide misplaced: '+route);
+const resultLinks=sectionChunks.get('REVISAR RESULTADOS')||'';
+if(!resultLinks.includes("['/analytics/'")||resultLinks.includes("['/docs/analytics/'"))
+  failures.push('teacher results menu must link to the Analytics app without duplicating the integration guide');
 const teachers=(sectionChunks.get('EMPEZAR')||'')+(sectionChunks.get('CREAR')||'')+(sectionChunks.get('REPRODUCIR')||'');
 for(const route of ['/docs/cdn/','/docs/npm/','/docs/toolkit/','/docs/cli/','/docs/integracion/','/docs/referencia/'])
   if(teachers.includes("['"+route+"'"))failures.push('technical guide mixed into teacher navigation: '+route);
 const developer=(sectionChunks.get('DESARROLLADORES')||'');
 for(const route of ['/docs/desarrolladores/','/docs/desarrolladores/primeros-pasos/'])
   if(!developer.includes("['"+route+"'"))failures.push('missing developer entry: '+route);
+for(const route of ['/docs/skills/','/docs/conectores/ia/'])
+  if(!(sectionChunks.get('CONECTORES')||'').includes("['"+route+"'"))
+    failures.push('Skills/MCP connector missing from developer navigation: '+route);
 const install=(sectionChunks.get('INSTALAR')||'');
 const order=['/docs/instalar/','/docs/cdn/','/docs/cdn/studio/','/docs/npm/','/docs/npm/studio/'].map(h=>install.indexOf("['"+h+"'"));
 if(order.some(x=>x<0)||order.some((x,i)=>i>0&&x<=order[i-1]))
