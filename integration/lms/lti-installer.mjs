@@ -452,3 +452,117 @@ export function serviceInstructions(directory=LTI_DEFAULT_DIR){
   start:'p2lrn-lti start --directory '+JSON.stringify(dir)
  };
 }
+
+
+// Operator-owned LMS registrations share the installation's existing SQL store.
+// No new HTTP server, database, LMS password or user-facing API call is required.
+function installedPlatformStore(state){
+ return createLtiStore(join(state.root,'data','lti.sqlite'),{
+  engine:state.config.engine,connectionString:state.secrets.database
+ });
+}
+async function withInstalledPlatformStore(directory,operation){
+ const state=await readInstallation(directory,{includeSecrets:true});
+ if(state.config.requiresHostRestore)bad('HOST_DATA_RESTORE_REQUIRED');
+ const store=installedPlatformStore(state);
+ try{return await operation(store,state.config)}
+ finally{store.close()}
+}
+function platformField(value,name,max=4096){
+ if(typeof value!=='string'||!value.trim()||value.length>max||
+    /[\x00-\x1f\x7f]/.test(value))bad('INVALID_PLATFORM_'+name);
+ return value.trim();
+}
+function platformSummary(reg){
+ return {id:reg.id,tenantId:reg.tenantId,issuer:reg.issuer,
+  clientId:reg.clientId,deployments:[...reg.deployments],status:reg.status};
+}
+export async function listLtiPlatforms(directory=LTI_DEFAULT_DIR){
+ return withInstalledPlatformStore(directory,store=>store.listPlatforms());
+}
+export async function registerLtiPlatform(directory=LTI_DEFAULT_DIR,profile,{fetchJwks}={}){
+ if(!profile||typeof profile!=='object'||Array.isArray(profile))
+  bad('PLATFORM_PROFILE_REQUIRED');
+ const allowed=new Set(['id','tenantId','issuer','clientId','authUrl',
+  'tokenUrl','jwksUrl','deployments','deepLinkReturnOrigins','nrpsAllowedOrigins']);
+ if(Object.keys(profile).some(key=>!allowed.has(key)))bad('UNKNOWN_PLATFORM_FIELD');
+ const state=await readInstallation(directory,{includeSecrets:true});
+ if(state.config.requiresHostRestore)bad('HOST_DATA_RESTORE_REQUIRED');
+ const issuer=platformField(profile.issuer,'ISSUER');
+ const endpoints=publicLmsEndpoints(state.config.domain);
+ const deployments=profile.deployments;
+ if(!Array.isArray(deployments)||deployments.length<1||deployments.length>50||
+    deployments.some(value=>typeof value!=='string'||!value.trim()||
+      value.length>256||/[\x00-\x1f\x7f]/.test(value))||
+    new Set(deployments).size!==deployments.length)
+  bad('INVALID_PLATFORM_DEPLOYMENTS');
+ const origins=profile.deepLinkReturnOrigins??[new URL(issuer).origin];
+ const extra=profile.nrpsAllowedOrigins??[];
+ if(!Array.isArray(origins)||origins.length<1||origins.length>12||
+    !Array.isArray(extra)||extra.length>12)
+  bad('INVALID_PLATFORM_ORIGINS');
+ const reg={
+  id:platformField(profile.id,'ID',128),
+  tenantId:platformField(profile.tenantId,'TENANT_ID',128),
+  issuer,clientId:platformField(profile.clientId,'CLIENT_ID',256),
+  authUrl:platformField(profile.authUrl,'AUTH_URL'),
+  tokenUrl:platformField(profile.tokenUrl,'TOKEN_URL'),
+  jwksUrl:platformField(profile.jwksUrl,'JWKS_URL'),
+  launchUrl:endpoints.launch,deepLinkLaunchUrl:endpoints.deepLink,
+  deployments:[...deployments],
+  deepLinkReturnOrigins:[...origins],nrpsAllowedOrigins:[...extra],
+  status:'ACTIVE'
+ };
+ // Reuse the exact protocol checks also applied to administrative registration.
+ const {assertTrustedReg}=await import('./lti-server.mjs');
+ assertTrustedReg(reg,state.config.domain);
+ // Pinned HTTPS fetch prevents DNS rebinding/SSRF; no private LMS keys are needed.
+ const secureFetch=fetchJwks??(await import('./lti-safe-fetch.mjs')).pinnedLmsFetch;
+ const response=await secureFetch(reg.jwksUrl,
+  {method:'GET',redirect:'error',signal:AbortSignal.timeout(8000)},
+  {maxResponseBytes:65536});
+ if(response?.status!==200)bad('PLATFORM_JWKS_UNAVAILABLE');
+ let jwks;
+ try{jwks=await response.json()}catch{bad('PLATFORM_JWKS_INVALID_JSON')}
+ if(!Array.isArray(jwks?.keys)||jwks.keys.length<1||jwks.keys.length>50)
+  bad('PLATFORM_JWKS_INVALID_KEYS');
+ const kids=new Set();
+ for(const key of jwks.keys){
+  if(!key||key.kty!=='RSA'||typeof key.kid!=='string'||
+     !key.kid||key.kid.length>256||kids.has(key.kid)||
+     typeof key.n!=='string'||typeof key.e!=='string'||
+     (key.use&&key.use!=='sig')||(key.alg&&key.alg!=='RS256')||
+     Object.keys(key).some(field=>['d','p','q','dp','dq','qi','oth'].includes(field)))
+   bad('PLATFORM_JWKS_INVALID_RSA');
+  kids.add(key.kid);
+  try{
+   const publicKey=createPublicKey({key,format:'jwk'});
+   if(publicKey.asymmetricKeyType!=='rsa'||
+      (publicKey.asymmetricKeyDetails?.modulusLength??0)<2048)
+    bad('PLATFORM_JWKS_WEAK_RSA');
+  }catch(error){
+   if(String(error.message).includes('PLATFORM_JWKS_'))throw error;
+   bad('PLATFORM_JWKS_INVALID_RSA');
+  }
+ }
+ reg.jwks={keys:jwks.keys};
+ const store=installedPlatformStore(state);
+ try{
+  if(store.getRegistrationById(reg.id)||
+     store.listPlatforms().some(current=>current.issuer===reg.issuer&&
+       current.clientId===reg.clientId))
+   bad('PLATFORM_ALREADY_REGISTERED');
+  store.upsertPlatform(reg);
+  return platformSummary(reg);
+ }finally{store.close()}
+}
+export async function disableLtiPlatform(directory=LTI_DEFAULT_DIR,id){
+ const target=platformField(id,'ID',128);
+ return withInstalledPlatformStore(directory,store=>{
+  const existing=store.getRegistrationById(target);
+  if(!existing)bad('PLATFORM_NOT_FOUND');
+  if(existing.status!=='DISABLED')store.upsertPlatform({...existing,status:'DISABLED'});
+  return platformSummary({...existing,status:'DISABLED'});
+ });
+}
+

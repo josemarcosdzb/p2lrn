@@ -60,6 +60,38 @@ Comandos (tras instalar el paquete):
 de la terminal. --yes confirma explícitamente cambios para automatización
 controlada; --json proporciona datos estructurados sin secretos.
 
+### Gestión local de plataformas LMS con el instalador
+
+La instalación mantiene **una sola base de datos** seleccionada en `p2lrn-lti init`:
+SQLite, PostgreSQL, MariaDB, MySQL o SQL Server. No hay migración ni servicio nuevo.
+
+    p2lrn-lti platform add             # asistente LTI 1.3
+    p2lrn-lti platform list --json     # lista sin claves privadas
+    p2lrn-lti platform disable --id ID
+
+`platform add` solicita el identificador de la institución y los datos LTI 1.3
+proporcionados por el LMS: issuer HTTPS, client ID, URL de inicio OIDC,
+URL de token, JWKS y deployment IDs. Obtiene la clave pública con la
+misma descarga DNS-pinned validada del servidor; Launch y Deep Linking
+se derivan de la configuración existente. No solicita contraseñas del LMS
+ni de sus alumnos. No imprime ni almacena claves privadas del LMS.
+
+Para administración autorizada sin interacción:
+
+    p2lrn-lti platform add --input perfil-lti.json --yes --json
+
+El archivo contiene únicamente datos públicos de registro; nunca credenciales.
+No acepta registros repetidos ni actualizaciones implícitas. `platform disable`
+revoca autorización sin borrar cursos, inscripciones ni resultados.
+El acceso al directorio privado de instalación se restringe al operador
+autorizado mediante ACL Windows o permisos Unix.
+
+**Seguridad y compatibilidad:** LTI 1.3 exige HTTPS del LMS. Un host
+`.localhost` por HTTP usado en QA no equivale a un LMS HTTPS de producción
+y no se habilita como excepción global. LTI 1.0/1.1 requiere su flujo
+legado específico. Un registro correcto tampoco sustituye ensayos reales
+con profesor, Deep Linking, dos alumnos y libro de calificaciones.
+
 ## Recuperación de identidad mínima, sin backups gestionados por P2LRN
 
 El administrador puede exportar una copia cifrada de **las claves RSA,

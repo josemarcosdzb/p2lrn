@@ -7,7 +7,7 @@ import {
  LTI_SQL_ENGINES,LTI_DEFAULT_DIR,installLti,startLti,readInstallation,
  testLtiDatabase,publicHttpsDoctor,publicLmsEndpoints,serviceInstructions,
  rotateAdministrator,exportRecovery,importRecovery,acknowledgeRestoredData,enableSystemdUserService,
- databaseConnectionFromFields
+ databaseConnectionFromFields,listLtiPlatforms,registerLtiPlatform,disableLtiPlatform
 } from '../lti-installer.mjs';
 
 const HELP=[
@@ -17,6 +17,9 @@ const HELP=[
  'p2lrn-lti start                     Iniciar Provider',
  'p2lrn-lti doctor [--public]         Comprobar SQL y HTTPS publico',
  'p2lrn-lti endpoints                 URLs para conectar cualquier LMS',
+ 'p2lrn-lti platform add             Registrar LMS LTI 1.3 con asistente',
+ 'p2lrn-lti platform list            Mostrar LMS registrados (sin secretos)',
+ 'p2lrn-lti platform disable         Deshabilitar LMS sin borrar datos',
  'p2lrn-lti service                   Instrucciones de servicio en el host',
  'p2lrn-lti service --enable --yes    Activa servicio systemd de usuario en Linux',
  'p2lrn-lti rotate-admin              Revocar credencial anterior',
@@ -24,16 +27,20 @@ const HELP=[
  'p2lrn-lti import-recovery           Restaurar SOLO identidad en ruta nueva',
  'p2lrn-lti restore-complete          Confirmar que el tecnico repuso los datos',
  '',
+ 'Bases de datos: sqlite, postgres, mariadb, mysql, sqlserver',
  'Opciones: --directory, --domain, --database, --db-url-file, --proxy, --port,',
- '          --input, --output, --yes, --json, --public, --enable',
+ '          --input, --output, --id, --yes, --json, --public, --enable',
  'No instala servicios al hacer npm install; no crea backups de cursos ni bases de datos.'
 ].join('\n');
 
 function parse(args){
- const [command='help',...tail]=args;
+ const [command='help',...rest]=args;
+ const action=command==='platform'&&rest[0]&&!rest[0].startsWith('--')?
+  rest.shift():null;
+ const tail=rest;
  const options={},positional=[];
  const boolean=new Set(['yes','public','json','enable']);
- const known=new Set(['directory','domain','database','db-url-file','proxy','port','yes','public','output','input','json','enable']);
+ const known=new Set(['directory','domain','database','db-url-file','proxy','port','yes','public','output','input','json','enable','id']);
  for(let i=0;i<tail.length;i++){
   const part=tail[i];
   if(!part.startsWith('--')){positional.push(part);continue}
@@ -51,7 +58,7 @@ function parse(args){
   options[key]=value;
  }
  if(positional.length)throw new Error('Argumentos no previstos: '+positional.join(' '));
- return {command,options};
+ return {command,action,options};
 }
 async function promptText(label,fallback){
  if(!process.stdin.isTTY)throw new Error('Indica las opciones requeridas con --yes');
@@ -166,10 +173,63 @@ async function initialize(options){
   }
  }
 }
+
+async function platformCommand(action,options,directory){
+ if(action==='help'||!action){console.log(HELP);return}
+ if(action==='list'){
+  const items=await listLtiPlatforms(directory);
+  return show(options.json?{platforms:items}:
+   items.length?items.map(p=>p.id+' | '+p.tenantId+' | '+p.issuer+
+    ' | '+p.status+' | '+p.deployments.join(', ')).join('\n'):
+    'No hay plataformas registradas.',options.json);
+ }
+ if(action==='add'){
+  let profile;
+  if(options.input){
+   profile=JSON.parse(await readFile(resolve(options.input),'utf8'));
+  }else{
+   if(!process.stdin.isTTY)
+    throw new Error('Usa --input con un perfil LTI o ejecuta el asistente en una terminal');
+   console.log('Conectar LMS LTI 1.3 a la instalacion existente. No se piden claves privadas.');
+   const id=await promptText('ID local de la plataforma');
+   const tenantId=await promptText('ID de institucion (tenant)');
+   const issuer=await promptText('Issuer del LMS (HTTPS)');
+   const clientId=await promptText('Client ID asignado por el LMS');
+   const authUrl=await promptText('URL de autenticacion OIDC del LMS');
+   const tokenUrl=await promptText('URL de token OAuth2 del LMS');
+   const jwksUrl=await promptText('URL de claves publicas JWKS del LMS');
+   const deployments=(await promptText('Deployment IDs (separados por coma)'))
+    .split(',').map(s=>s.trim()).filter(Boolean);
+   profile={id,tenantId,issuer,clientId,authUrl,tokenUrl,jwksUrl,deployments};
+  }
+  if(!options.yes){
+   const preview={id:profile.id,tenantId:profile.tenantId,
+    issuer:profile.issuer,clientId:profile.clientId,deployments:profile.deployments};
+   console.log('Plataforma solicitada: '+JSON.stringify(preview));
+   if(await promptText('Registrar esta plataforma? Escribe SI')!=='SI')
+    throw new Error('Registro cancelado');
+  }
+  const result=await registerLtiPlatform(directory,profile);
+  return show(options.json?result:
+   'Plataforma registrada: '+result.id+' ('+result.status+'). '+
+   'Comprueba ahora Deep Linking con un docente y lanzamiento de un alumno.',options.json);
+ }
+ if(action==='disable'){
+  const id=options.id||await promptText('ID de la plataforma a deshabilitar');
+  if(!options.yes&&await promptText('Deshabilitar sin borrar datos? Escribe SI')!=='SI')
+   throw new Error('Operacion cancelada');
+  const result=await disableLtiPlatform(directory,id);
+  return show(options.json?result:
+   'Plataforma deshabilitada: '+result.id+'. Se conservan los datos educativos.',options.json);
+ }
+ throw new Error('Subcomando platform desconocido: '+action);
+}
+
 async function main(){
- const {command,options}=parse(process.argv.slice(2));
+ const {command,action,options}=parse(process.argv.slice(2));
  const directory=options.directory||LTI_DEFAULT_DIR;
  if(command==='help'||command==='--help'){console.log(HELP);return}
+ if(command==='platform'){await platformCommand(action,options,directory);return}
  if(command==='init'||command==='install'){await initialize(options);return}
  if(command==='start'){
   const running=await startLti(directory);

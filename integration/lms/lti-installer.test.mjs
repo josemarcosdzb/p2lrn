@@ -4,11 +4,12 @@ import {mkdtempSync,readFileSync,rmSync,statSync,existsSync,copyFileSync} from '
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createServer} from 'node:net';
-import {createPrivateKey} from 'node:crypto';
+import {createPrivateKey,generateKeyPairSync} from 'node:crypto';
 import {
  installLti,readInstallation,testLtiDatabase,startLti,exportRecovery,
  publicLmsEndpoints,validateInstallationOptions,caddyConfiguration,
- importRecovery,acknowledgeRestoredData,systemdUserService,databaseConnectionFromFields
+ importRecovery,acknowledgeRestoredData,systemdUserService,databaseConnectionFromFields,
+ listLtiPlatforms,registerLtiPlatform,disableLtiPlatform,LTI_SQL_ENGINES
 } from './lti-installer.mjs';
 
 async function freePort(){
@@ -150,4 +151,58 @@ test('guided SQL wizard builds safe native connection strings from ordinary fiel
   database:'learning',username:'test',password:''}),/DATABASE_CREDENTIALS_REQUIRED/);
  assert.throws(()=>databaseConnectionFromFields({engine:'postgres',hostname:'bad.example.org@evil.test',
   database:'learning',username:'test',password:'test'}),/DATABASE_HOST_INVALID/);
+});
+
+
+test('standalone platform manager uses installed SQLite, rejects duplicates and preserves data on disable',async()=>{
+ const root=mkdtempSync(join(tmpdir(),'p2lrn-lti-platform-'));
+ const directory=join(root,'installed-provider');
+ try{
+  await installLti({domain:'https://lti.example.org',engine:'sqlite',directory});
+  assert.deepEqual(LTI_SQL_ENGINES,['sqlite','postgres','mariadb','mysql','sqlserver']);
+  assert.deepEqual(await listLtiPlatforms(directory),[]);
+  const {publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});
+  const jwk={...publicKey.export({format:'jwk'}),kid:'qa-moodle-2026',use:'sig',alg:'RS256'};
+  const fetched=[];
+  const fetchPublic=async url=>{
+   fetched.push(url);
+   return new Response(JSON.stringify({keys:[jwk]}),{
+    status:200,headers:{'content-type':'application/json'}
+   });
+  };
+  const profile={
+   id:'qa-moodle',tenantId:'school-001',
+   issuer:'https://moodle.example.org',clientId:'real-client-001',
+   authUrl:'https://moodle.example.org/mod/lti/auth.php',
+   tokenUrl:'https://moodle.example.org/mod/lti/token.php',
+   jwksUrl:'https://moodle.example.org/mod/lti/certs.php',
+   deployments:['2']
+  };
+  const added=await registerLtiPlatform(directory,profile,{fetchJwks:fetchPublic});
+  assert.equal(added.status,'ACTIVE');
+  assert.equal(added.issuer,profile.issuer);
+  assert.deepEqual(fetched,[profile.jwksUrl]);
+  assert.equal((await testLtiDatabase(directory)).stats.platforms,1);
+  const listed=await listLtiPlatforms(directory);
+  assert.equal(listed.length,1);
+  assert.equal(listed[0].clientId,profile.clientId);
+  assert.equal('jwks' in listed[0],false,'public listing never includes key material');
+  await assert.rejects(registerLtiPlatform(directory,profile,{fetchJwks:fetchPublic}),
+   /PLATFORM_ALREADY_REGISTERED/);
+  const disabled=await disableLtiPlatform(directory,'qa-moodle');
+  assert.equal(disabled.status,'DISABLED');
+  assert.equal((await listLtiPlatforms(directory))[0].status,'DISABLED');
+  assert.equal((await testLtiDatabase(directory)).stats.platforms,1,
+   'disable must not delete registration or learner data');
+  await assert.rejects(registerLtiPlatform(directory,{
+   ...profile,id:'insecure',issuer:'http://moodle.example.org',
+   authUrl:'http://moodle.example.org/auth.php',
+   tokenUrl:'http://moodle.example.org/token.php',
+   jwksUrl:'http://moodle.example.org/certs.php'
+  },{fetchJwks:fetchPublic}),/LTI platform endpoints must use HTTPS/);
+  await assert.rejects(registerLtiPlatform(directory,{
+   ...profile,id:'invalid-jwk'
+  },{fetchJwks:async()=>new Response(JSON.stringify({keys:[{...jwk,d:'leaked'}]}),
+   {status:200})}),/PLATFORM_JWKS_INVALID_RSA/);
+ }finally{rmSync(root,{recursive:true,force:true})}
 });

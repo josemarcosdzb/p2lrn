@@ -211,7 +211,7 @@ function contextFor(body,session,authorized){
  if(surface.length>180||!surface.trim())throw new Error('INVALID_PLAYER_SURFACE');
  return {entityId:ctx.entityId,surface};
 }
-function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
+export function assertTrustedReg(reg,baseUrl,allowInsecureLocal=false){
  if(!reg||typeof reg!=='object')throw new TypeError('LTI platform JSON object required');
  const direct=reg.launchUrl===baseUrl+'/lti/launch'&&(!reg.deepLinkLaunchUrl||reg.deepLinkLaunchUrl===baseUrl+'/lti/deep-link');
  const localCohost=allowInsecureLocal&&new URL(baseUrl).protocol==='http:'&&
