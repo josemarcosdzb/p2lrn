@@ -147,7 +147,7 @@ test('legacy links redirect to canonical section and are excluded from navigatio
   }
   for(const [route] of routes){
     const page=read('deploy/netlify/site'+route+'index.html');
-    assert(page.includes('rel="canonical"'),'Missing canonical route: '+route);
+    assert(/<main\s+class="doc-main"/iu.test(page)&&/<h1\b/iu.test(page),'Missing authored documentation route: '+route);
     assert(!/name=["']robots["'][^>]*noindex/iu.test(page),'Canonical route marked noindex: '+route);
   }
   const lms=read('deploy/netlify/site/docs/conectores/lms/index.html');

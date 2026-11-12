@@ -19,16 +19,56 @@ async function suite(){
   while(Date.now()<deadline){
    const last=state.frames.at(-1);
    if(state.errors.length)break;
-   if(state.ready.some(x=>x.runtime==='external-package')&&last?.hasContent&&last.bodyLength>120&&last?.clicked===true)break;
+   if(state.ready.some(x=>x.runtime==='external-package')&&last?.hasContent&&last.bodyLength>120&&last?.completed===true)break;
    await new Promise(resolve=>setTimeout(resolve,90));
   }
   const frame=host.querySelector('p2lrn-player')?.shadowRoot?.querySelector('iframe.p2lrn-package-runtime');
   const last=state.frames.at(-1);
-  result.dataset.status=frame?.getAttribute('sandbox')==='allow-scripts'&&state.errors.length===0&&state.ready.length>0&&last?.hasContent&&last.bodyLength>120&&last?.clicked===true?'PASS':'FAIL';
+  result.dataset.status=frame?.getAttribute('sandbox')==='allow-scripts'&&state.errors.length===0&&state.ready.length>0&&last?.hasContent&&last.bodyLength>120&&last?.completed===true?'PASS':'FAIL';
   result.textContent=JSON.stringify({events:state.ready,errors:state.errors,frame:last,iframe:frame?.src,frameSandbox:frame?.getAttribute('sandbox')});
  }catch(e){result.dataset.status='FAIL';result.textContent=JSON.stringify({error:String(e),events:state.ready,errors:state.errors,frames:state.frames.slice(-3)});}
 }
-const frameExercise=String.raw`(()=>{if(window===top||!document.body)return;const body=document.body.innerText||document.body.textContent||'';if(body.length<12)return;const next=Array.from(document.querySelectorAll('button,[role="button"],a')).find(el=>/^Next|Next\s*»/i.test((el.textContent||'').trim())&&!el.disabled);if(next&&!window.__p2lrnClicked){window.__p2lrnClicked=true;next.click();}top.postMessage({protocol:'p2lrn-cmi5-qa-frame',href:location.href,hasContent:/pre.?test|geology|test|question|assessment/i.test(body),bodyLength:body.length,bodySnippet:body.slice(0,190),buttons:document.querySelectorAll('button,[role="button"]').length,controls:Array.from(document.querySelectorAll('button,input,a')).slice(0,16).map(x=>({tag:x.tagName,txt:(x.textContent||'').trim().slice(0,45),value:x.value||'',type:x.type||''})),clicked:Boolean(window.__p2lrnClicked)},'*');})()`;
+const frameExercise=String.raw`(()=>{
+  if(window===top||!document.body)return;
+  const body=document.body.innerText||document.body.textContent||'';
+  if(body.length<12)return;
+  const scorePanel=document.getElementById('score-panel');
+  const scoreValue=document.getElementById('score-panel-score')?.textContent?.trim()||'';
+  const complete=Boolean(window.__p2lrnQaSubmitted &&
+    scorePanel?.classList.contains('full-overlay-visible') &&
+    /^\d{1,3}(?:\.\d+)?$/u.test(scoreValue));
+  if(!window.__p2lrnQaSubmitted&&scorePanel){
+    const content=document.getElementById('content');
+    const submit=[...(content?.querySelectorAll('button,[role="button"]')||[])]
+      .find(el=>/^\s*Submit Answers\s*$/iu.test(el.textContent||'')&&!el.disabled);
+    const selects=[...(content?.querySelectorAll('select')||[])];
+    if(submit&&selects.length){
+      let answered=0;
+      for(const select of selects){
+        const choice=[...select.options].find(o=>!o.disabled&&o.value.trim()!=='');
+        if(choice){select.value=choice.value;select.dispatchEvent(new Event('change',{bubbles:true}));answered++;}
+      }
+      if(answered){
+        window.__p2lrnQaAnswered=answered;
+        window.__p2lrnQaSubmitted=true;
+        submit.click(); // Real learner submission, not a simulated runtime event.
+      }
+    }
+  }
+  const updatedScore=document.getElementById('score-panel-score')?.textContent?.trim()||'';
+  const completed=Boolean(window.__p2lrnQaSubmitted &&
+    document.getElementById('score-panel')?.classList.contains('full-overlay-visible') &&
+    /^\d{1,3}(?:\.\d+)?$/u.test(updatedScore));
+  top.postMessage({protocol:'p2lrn-cmi5-qa-frame',href:location.href,
+    hasContent:/pre.?test|geology|test|question|assessment/iu.test(body),
+    bodyLength:body.length,bodySnippet:body.slice(0,190),
+    buttons:document.querySelectorAll('button,[role="button"]').length,
+    controls:[...document.querySelectorAll('button,input,select,a')].slice(0,16).map(x=>({tag:x.tagName,
+      txt:(x.textContent||'').trim().slice(0,45),value:x.value||'',type:x.type||'',disabled:Boolean(x.disabled)})),
+    answered:Number(window.__p2lrnQaAnswered||0),submitted:Boolean(window.__p2lrnQaSubmitted),
+    score:updatedScore,completed},'*');
+})()`;
+const server=http.createServer`;
 const server=http.createServer(async(req,res)=>{
  const u=new URL(req.url,'http://127.0.0.1');
  if(u.pathname==='/favicon.ico'){res.writeHead(204).end();return;}
