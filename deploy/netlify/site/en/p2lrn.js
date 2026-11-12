@@ -167,8 +167,8 @@
   cleanProductionChrome();
 
   // One shared header. build-site.mjs reads this exact JSON for the first HTML paint.
-  // No route-specific top navigation: solutions and Skills live in the left index.
-  const SITE_NAV = [{"label":"Studio","href":"/studio/","active":["/studio/"]},{"label":"Viewer","href":"/demo/","active":["/demo/"]},{"label":"Analytics","href":"/analytics/","active":["/analytics/"]},{"label":"Documentation","href":"/docs/","active":["/docs/*"]},{"label":"Developers","href":"/docs/desarrolladores/","active":["/docs/desarrolladores/*"]},{"label":"Contact","href":"/contacto/","active":["/contacto/"]}];
+  // The full header is constant; Solutions and Skills link to the same topics in the left documentation index.
+  const SITE_NAV = [{"label":"Studio","href":"/studio/","active":["/studio/"]},{"label":"Viewer","href":"/demo/","active":["/demo/"]},{"label":"Solutions","wide":false,"active":["/crear-cursos-interactivos/","/juegos-educativos-3d/","/cursos-offline/"],"items":[["/crear-cursos-interactivos/","Create courses"],["/juegos-educativos-3d/","3D games"],["/cursos-offline/","Offline courses"]]},{"label":"Analytics","href":"/analytics/","active":["/analytics/"]},{"label":"AI Skills","href":"/skills/","active":["/skills/"]},{"label":"Documentation","href":"/docs/","active":["/docs/*"]},{"label":"Developers","href":"/docs/desarrolladores/","active":["/docs/desarrolladores/*"]},{"label":"Contact","href":"/contacto/","active":["/contacto/"]}];
 
   const normalizePath = (value) => {
     // Route comparisons use the same logical path for both languages.

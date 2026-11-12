@@ -492,7 +492,7 @@ for(const [locale,source] of [['es','p2lrn.js'],['en','en/p2lrn.js']]){
   const match=/  const SITE_NAV = (\[[^\r\n]+\]);/.exec(code);
   if(!match)throw new Error('Missing single canonical SITE_NAV in '+source);
   const entries=JSON.parse(match[1]);
-  if(entries.length!==6||entries.some(entry=>!entry.href?.startsWith('/')||!entry.label))
+  if(entries.length!==8||entries.some(entry=>!entry.label||!(entry.href?.startsWith('/')||(Array.isArray(entry.items)&&entry.items.length>0&&entry.items.every(item=>Array.isArray(item)&&item.length===2&&item[0].startsWith('/'))))))
     throw new Error('Invalid site navigation in '+source);
   siteNavigation.set(locale,entries);
 }
@@ -515,10 +515,17 @@ for (const htmlPath of htmlFiles) {
     const current=pageLocale==='en'?spanishRouteFor(route):route;
     const navigation='<nav class="nav" id="nav" aria-label="'+(pageLocale==='en'?'Main navigation':'Navegación principal')+'">'+
       siteNavigation.get(pageLocale).map(entry=>{
-        const href=pageLocale==='en'?englishRouteFor(entry.href):entry.href;
         const active=entry.href==='/docs/'
           ?current.startsWith('/docs/')&&!current.startsWith('/docs/desarrolladores/')
-          :entry.active.some(rule=>rule.endsWith('*')?current.startsWith(rule.slice(0,-1)):current===rule);
+          :(entry.active||[]).some(rule=>rule.endsWith('*')?current.startsWith(rule.slice(0,-1)):current===rule);
+        if(entry.items){
+          const submenu=entry.items.map(([target,label])=>{
+            const href=pageLocale==='en'?englishRouteFor(target):target;
+            return '<a href="'+href+'"'+(current===target?' aria-current="page"':'')+'>'+label+'</a>';
+          }).join('');
+          return '<details class="nav-group'+(active?' is-active':'')+'"><summary><span>'+entry.label+'</span><i aria-hidden="true">⌄</i></summary><div class="nav-dropdown">'+submenu+'</div></details>';
+        }
+        const href=pageLocale==='en'?englishRouteFor(entry.href):entry.href;
         return '<a class="nav-direct" href="'+href+'"'+(active?' aria-current="page"':'')+'>'+entry.label+'</a>';
       }).join('')+'</nav>';
     const navPattern=/<nav\b(?=[^>]*\bclass=["'][^"']*\bnav\b[^"']*["'])[^>]*>[\s\S]*?<\/nav>/i;

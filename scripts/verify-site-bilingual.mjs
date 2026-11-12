@@ -415,12 +415,13 @@ if(!navSource.includes("const visibleSections=forTeachers")||
 if(!esNavSource||!enNavSource)errors.push('The header must have one static and client-side ES/EN navigation source.');
 else{
   const esMenu=JSON.parse(esNavSource),enMenu=JSON.parse(enNavSource);
-  if(JSON.stringify(esMenu.map(x=>x.href))!==JSON.stringify(enMenu.map(x=>x.href))||
-     esMenu.length!==6||
+  if(JSON.stringify(esMenu.map(x=>x.href||null))!==JSON.stringify(enMenu.map(x=>x.href||null))||
+     esMenu.length!==8||
      !esMenu.some(x=>x.href==='/docs/desarrolladores/')||
      !esMenu.some(x=>x.href==='/docs/')||
-     esMenu.some(x=>x.href==='/skills/'||x.href==='/juegos-educativos-3d/'))
-    errors.push('Header destinations must remain identical, while Skills and 3D games belong to the left documentation index.');
+     !esMenu.some(x=>x.href==='/skills/')||
+     !esMenu.some(x=>x.items?.map(y=>y[0]).includes('/juegos-educativos-3d/')))
+    errors.push('Header must retain the same full eight entries, including contextual Solutions and AI Skills, in both languages.');
 }
 
 if(errors.length){

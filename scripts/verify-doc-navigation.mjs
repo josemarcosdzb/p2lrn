@@ -145,10 +145,17 @@ const esNav=navPattern.exec(js)?.[1],enNav=navPattern.exec(enScript)?.[1];
 if(!esNav||!enNav)failures.push('missing canonical site-wide navigation');
 else{
   const spanish=JSON.parse(esNav),english=JSON.parse(enNav);
-  const routes=['/studio/','/demo/','/analytics/','/docs/','/docs/desarrolladores/','/contacto/'];
-  if(JSON.stringify(spanish.map(v=>v.href))!==JSON.stringify(routes)||
-    JSON.stringify(english.map(v=>v.href))!==JSON.stringify(routes))
+  const routes=['/studio/','/demo/',null,'/analytics/','/skills/','/docs/','/docs/desarrolladores/','/contacto/'];
+  if(JSON.stringify(spanish.map(v=>v.href||null))!==JSON.stringify(routes)||
+    JSON.stringify(english.map(v=>v.href||null))!==JSON.stringify(routes)||
+    spanish.length!==8||english.length!==8)
     failures.push('top navigation destinations differ between pages or languages');
+  for(const navConfig of [spanish,english]){
+    const solutions=navConfig.find(item=>item.items);
+    if(!solutions||solutions.items.length!==3||
+       JSON.stringify(solutions.items.map(item=>item[0]))!==JSON.stringify(['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/']))
+      failures.push('top Solutions dropdown must remain one contextual menu for three existing sections');
+  }
 }
 for(const page of ['crear-cursos-interactivos','juegos-educativos-3d','cursos-offline','skills']){
   for(const locale of ['', 'en/']){
@@ -161,6 +168,23 @@ for(const page of ['crear-cursos-interactivos','juegos-educativos-3d','cursos-of
     if(page==='juegos-educativos-3d'&&!html.includes('curso-ensamblaje-burro.p2lrn'))
       failures.push('missing original donkey 3D course link: '+locale+page);
   }
+}
+
+const siteCss=await readFile(join(root,'deploy','netlify','site','p2lrn.css'),'utf8');
+if(!siteCss.includes('.doc-main{margin-inline:auto;'))
+  failures.push('left documentation grid must be centered within the viewport instead of clipping at x=0');
+for(const locale of ['', 'en/']){
+  const studio=await readFile(join(root,'deploy','netlify','site',...locale.split('/').filter(Boolean),'docs','studio','index.html'),'utf8');
+  const games=studio.slice(studio.indexOf('<div class="studio-guide-choice-description"><p>')>0?
+    studio.indexOf('<div class="studio-guide-choice-description"><p>'):0);
+  if((studio.match(/<dt><a href="[^"]+">/g)||[]).length<13)
+    failures.push('each of the 13 Studio games needs a specific documentation link: '+locale);
+  if(!studio.includes('class="studio-guide-multipart-in-flow"')||
+     studio.indexOf('id="multipart-studio"')>studio.indexOf('class="doc-pager"'))
+    failures.push('multipart must follow File, not the last-page pager: '+locale);
+  if(!studio.includes('studio-guide-control-crop--create')||
+     !studio.includes('studio-guide-control-crop--interactive'))
+    failures.push('Studio insert screenshots must show cropped authentic controls: '+locale);
 }
 
 if(failures.length) throw new Error('Global documentation navigation gate failed:\n'+failures.join('\n'));

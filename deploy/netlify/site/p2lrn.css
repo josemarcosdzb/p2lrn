@@ -961,7 +961,7 @@ main{max-width:1220px;margin:0 auto;padding:0 24px}
 .nav-dropdown a:hover,.nav-dropdown a:focus-visible,.nav-dropdown a[aria-current="page"]{background:#161b22;color:#fff!important}
 .nav-group:not([open])>.nav-dropdown{display:none}
 .site-header .header-meta{gap:10px;font-size:.64rem;white-space:nowrap}
-@media(max-width:1180px){
+@media(max-width:1320px){
   .site-header{grid-template-columns:1fr auto}
   .site-header .nav{position:absolute;top:64px;left:0;right:0;display:none;align-items:stretch;flex-direction:column;gap:2px;padding:10px 14px 16px;background:#0d1117;border-bottom:1px solid #30363d;max-height:calc(100vh - 64px);overflow:auto}
   .site-header .nav.is-open{display:flex}
@@ -2280,3 +2280,12 @@ body.landing-page .landing-doc-shell .landing-hero h1{max-width:100%;font-size:c
   .landing-doc-shell .doc-sidebar{grid-column:1;grid-row:auto;order:1}
   body.landing-page .landing-doc-shell .landing-hero h1{font-size:clamp(2.05rem,7vw,3.4rem)}}
 @media(max-width:480px){body.landing-page .landing-doc-shell .landing-hero h1{font-size:clamp(1.95rem,8vw,2.65rem)}}
+
+/* One centered documentation grid: prevent the left navigation from being
+   clipped against the viewport when a marketing guide reuses doc-main. */
+.doc-main{margin-inline:auto;box-sizing:border-box;max-width:100%;min-width:0}
+.landing-doc-shell.doc-main{margin-inline:auto;box-sizing:border-box;max-width:100%}
+.doc-main>.doc-sidebar{min-width:0;box-sizing:border-box;padding-left:8px}
+.doc-main>.doc-sidebar .docs-search{min-width:0;max-width:100%}
+.doc-main>.doc-sidebar .docs-search input{box-sizing:border-box;max-width:100%;min-width:0}
+@media(max-width:900px){.doc-main>.doc-sidebar{padding-left:14px}}
