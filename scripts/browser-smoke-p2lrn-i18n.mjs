@@ -994,7 +994,7 @@ async function captureMultipartStudioChrome(){
   const downloadPromise=page.waitForEvent('download',{timeout:50000});
   await exportDialog.locator('button[type=submit]').click();
   const download=await downloadPromise;
-  assert.match(download.suggestedFilename(),/-multipart\\.zip$/,'Studio did not download a multipart transport ZIP');
+  assert.match(download.suggestedFilename(),/-multipart\.zip$/,'Studio did not download a multipart transport ZIP');
   const zipFile=join(folder,'studio-multipart-real-export.zip');
   await download.saveAs(zipFile);
   const zipBytes=await readFile(zipFile);
@@ -1008,7 +1008,7 @@ async function captureMultipartStudioChrome(){
   });
   const files=zip.names();
   const outerName=files.find(item=>item.endsWith('.p2lrn'));
-  const partNames=files.filter(item=>/\\.part[0-9]{3}$/.test(item)).sort();
+  const partNames=files.filter(item=>/\.part[0-9]{3}$/.test(item)).sort();
   assert.ok(outerName,'No outer .p2lrn course in the exported ZIP');
   assert.equal(partNames.length,3,'Unexpected number of real multipart chunks');
   const outerBytes=await zip.read(outerName);
