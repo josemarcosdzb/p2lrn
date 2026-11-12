@@ -33,18 +33,44 @@ def describe_toolkit(root:Path):
     return {'found':bool(found),'candidates':found,'runtime_verified':False}
 
 def browser_smoke():
-    if not safe_module('playwright'):return {'status':'blocked','reason':'playwright Python no instalado'}
+    """Render local HTML with an installed Chromium; do not install or download."""
+    if not safe_module('playwright'):
+        return {'status':'blocked','reason':'playwright Python no instalado'}
+    executable_names=('chromium','chromium-browser','google-chrome','google-chrome-stable','chrome')
+    candidates=[('playwright',None)]
+    seen=set()
+    for name in executable_names:
+        path=shutil.which(name)
+        if path and path not in seen:
+            candidates.append(('system',path))
+            seen.add(path)
+    errors=[]
     try:
         from playwright.sync_api import sync_playwright
-        with sync_playwright() as p:
-            b=p.chromium.launch(headless=True)
-            try:
-                page=b.new_page()
-                page.set_content('<html><title>smoke</title><body>OK</body></html>')
-                assert page.title()=='smoke'
-            finally:b.close()
-        return {'status':'pass','reason':'Chromium lanzo y renderizo HTML local'}
-    except Exception as ex:return {'status':'fail','reason':f'{type(ex).__name__}: {str(ex)[:300]}'}
+        with sync_playwright() as playwright:
+            for source, executable in candidates:
+                browser=None
+                try:
+                    options={'headless':True}
+                    if executable:options['executable_path']=executable
+                    browser=playwright.chromium.launch(**options)
+                    page=browser.new_page()
+                    page.set_content('<!doctype html><html><head><title>P2LRN smoke</title></head><body><h1>OK</h1></body></html>')
+                    assert page.title()=='P2LRN smoke'
+                    assert page.locator('h1').inner_text()=='OK'
+                    return {'status':'pass','reason':'Chromium real renderizo HTML local',
+                            'source':source,'executable':executable or 'playwright-managed',
+                            'version':browser.version,
+                            'limitations':'No verifica Player, Studio, tactil real ni LMS'}
+                except Exception as ex:
+                    errors.append(f'{source} ({executable or "managed"}): {type(ex).__name__}: {str(ex)[:160]}')
+                finally:
+                    if browser is not None:browser.close()
+    except Exception as ex:
+        errors.append(f'Playwright: {type(ex).__name__}: {str(ex)[:160]}')
+    return {'status':'blocked' if len(candidates)==1 and "doesn't exist" in ' '.join(errors) else 'fail',
+            'reason':' | '.join(errors)[:540],
+            'attempts':len(candidates)}
 
 def main(argv=None):
     ap=argparse.ArgumentParser(description='Inventario local no destructivo de capacidades')
