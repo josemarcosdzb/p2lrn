@@ -531,8 +531,16 @@
     const fragment = document.createDocumentFragment();
     // A teacher should never need to browse API, npm or Host menus to find
     // course authoring help. Developers get their own complete navigation.
-    // One stable, complete sidebar for teachers, games and developers.
-    const visibleSections=new Set(GLOBAL_SIDEBAR.map(([section])=>section));
+    const teacherRoutes=new Set([
+      '/docs/','/docs/empezar/','/docs/empezar-facil/',
+      '/docs/studio/','/docs/entrega-offline/','/docs/ejemplos/',
+      '/docs/colaboracion/','/docs/juegos-3d/',
+      '/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/','/skills/',
+    ]);
+    const forTeachers=teacherRoutes.has(current)||current.startsWith('/docs/questionnaires/');
+    const visibleSections=forTeachers
+      ?new Set(["GET STARTED","SOLUTIONS","CREATE","PLAY","EXHIBITIONS",'DESARROLLADORES',"RESOURCES"])
+      :new Set(["SOLUTIONS",'DESARROLLADORES',"INSTALL",'INTEGRAR',"CONNECTORS","REFERENCE","RESOURCES"]);
     for (const [section,items] of GLOBAL_SIDEBAR) {
       if(!visibleSections.has(section))continue;
       const label=document.createElement('span');

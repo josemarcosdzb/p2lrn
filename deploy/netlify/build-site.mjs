@@ -700,17 +700,23 @@ const teacherDocPaths=new Set([
 // Use the same visible fallback on every documentation and solution page.
 // Both roles and the four solutions remain reachable without client JavaScript.
 const staticDocSidebar=(english,relativePath)=>{
-  const fallback=[...new Map([
-    ...teacherDocSections,
-    ...developerDocSections,
+  const route='/'+(relativePath.endsWith('index.html')?relativePath.slice(0,-'index.html'.length):relativePath);
+  const normalized=route.endsWith('/')?route:route+'/';
+  const spanish=english?spanishRouteFor(normalized):normalized;
+  const teacher=teacherDocPaths.has(spanish)||spanish.startsWith('/docs/questionnaires/')||
+    ['/crear-cursos-interactivos/','/juegos-educativos-3d/','/cursos-offline/','/skills/'].includes(spanish);
+  const sections=teacher?teacherDocSections:developerDocSections;
+  // The same solution shortcuts remain visible for both audiences.
+  const linksData=[...new Map([
+    ...sections,
     ['/crear-cursos-interactivos/','Crear cursos interactivos','Create interactive courses'],
     ['/juegos-educativos-3d/','Juegos educativos 3D','3D educational games'],
     ['/cursos-offline/','Cursos offline','Offline courses'],
     ['/skills/','Skills para IA','AI Skills'],
-    ['/docs/skills/','Guía de Skills','Skills guide'],
+    ...(teacher?[]:[['/docs/skills/','Guía de Skills','Skills guide']]),
   ].map(item=>[item[0],item])).values()];
   const heading=english?'Documentation menu':'Menú de documentación';
-  const links=fallback.map(([path,es,en])=>
+  const links=linksData.map(([path,es,en])=>
     '<a href="'+(english?englishRouteFor(path):path)+'">'+(english?en:es)+'</a>').join('');
   return '<aside class="doc-sidebar" aria-label="'+(english?'Documentation navigation':'Navegación de documentación')+'">'+
     '<span>'+heading+'</span><nav class="doc-fallback-nav" aria-label="'+heading+'">'+links+'</nav></aside>';
