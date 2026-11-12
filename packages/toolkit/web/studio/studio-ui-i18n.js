@@ -1,6 +1,15 @@
 // Reviewed website/editor UI translations. Do not translate learner-authored content
 // or serialized identifiers. This module is shared by the Spanish and English site.
 const EN={
+  "Dividir paquete (multipart)…": "Split package (multipart)…",
+  "Dividir un recurso grande en partes": "Split a large resource into parts",
+  "Se descargará un ZIP con el curso .p2lrn y sus partes. Extrae todos los archivos y publícalos juntos. Las partes no son cursos independientes.": "A ZIP containing the course .p2lrn and its parts will be downloaded. Extract every file and publish them together. Parts are not standalone courses.",
+  "Tamaño de cada parte (MiB)": "Part size (MiB)",
+  "Límites del Player: 256 MiB por recurso, 64 MiB por parte y 512 partes. Requiere publicación HTTP(S) de todas las partes.": "Player limits: 256 MiB per resource, 64 MiB per part and 512 parts. All parts must be hosted over HTTP(S).",
+  "Generar ZIP multipart": "Generate multipart ZIP",
+  "Introduce un número entero entre 1 y 64 MiB.": "Enter a whole number between 1 and 64 MiB.",
+  "Generando y verificando partes…": "Building and verifying parts…",
+  "Cancelar": "Cancel",
   "Lienzo de diagrama editable": "Editable diagram canvas",
   "Separador de secciones": "Section divider",
   "Pulsa para desplegar": "Expand to see more",
