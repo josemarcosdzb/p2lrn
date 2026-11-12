@@ -189,7 +189,7 @@ async function connectPage(browserWs){
     let target=null;
     for(let i=0;i<80&&!target;i++){
       try{
-        const targets=await (await fetch(origin+'/json/list')).json();
+        const targets=await (await fetch(origin+'/json/list',{signal:AbortSignal.timeout(3500)})).json();
         target=targets.find((item)=>item.type==='page'&&!item.url.startsWith('devtools://'))||null;
       }catch{}
       if(!target)await sleep(100);
@@ -252,11 +252,26 @@ async function connectPage(browserWs){
     if(message.method==='Runtime.executionContextDestroyed')contexts.delete(message.params.executionContextId);
     if(message.method==='Runtime.executionContextsCleared')contexts.clear();
   });
-  const send=(method,params={})=>{
+  // Never let one frozen DevTools command hold the Windows job until GitHub's
+  // global 40-minute timeout. A rejected command is a real QA failure.
+  const send=(method,params={},timeoutMs=60000)=>{
     const id=++seq;
-    socket.send(JSON.stringify({id,method,params}));
-    return new Promise((resolvePromise,reject)=>pending.set(id,{resolve:resolvePromise,reject}));
+    return new Promise((resolvePromise,reject)=>{
+      const timer=setTimeout(()=>{
+        pending.delete(id);
+        reject(new Error('CDP command timed out: '+method+' after '+timeoutMs+'ms'));
+      },timeoutMs);
+      pending.set(id,{
+        resolve:value=>{clearTimeout(timer);resolvePromise(value);},
+        reject:error=>{clearTimeout(timer);reject(error);}
+      });
+      try{socket.send(JSON.stringify({id,method,params}));}
+      catch(error){pending.delete(id);clearTimeout(timer);reject(error);}
+    });
   };
+  socket.addEventListener('close',()=>{
+    for(const [id,wait] of pending){pending.delete(id);wait.reject(new Error('CDP socket closed before command '+id+' returned'));}
+  });
   await send('Runtime.enable');await send('Log.enable');await send('Page.enable');await send('Network.enable');await send('Emulation.setDeviceMetricsOverride',{width:1500,height:950,deviceScaleFactor:1,mobile:false});
   return {socket,send,security,exceptions,contexts};
 }
@@ -273,7 +288,12 @@ async function evalTop(cdp,expression){
 async function waitForEval(cdp,expression,label,timeout=20000){
   const started=Date.now();
   while(Date.now()-started<timeout){
-    try{const value=await evalTop(cdp,expression);if(value)return value;}catch{}
+    try{const value=await evalTop(cdp,expression);if(value)return value;}
+    catch(error){
+      // A navigational DOM probe may throw while loading; a dead CDP command
+      // must instead fail immediately so the exact stalled case is reported.
+      if(/CDP command timed out|CDP socket closed/u.test(String(error?.message)))throw error;
+    }
     await sleep(100);
   }
   throw new Error(`Timed out waiting for ${label}.`);
@@ -2496,9 +2516,17 @@ try{
   await writeFile(viewerPath,localViewer,'utf8');
 
 
+  const quest3dMode=process.env.P2LRN_QUEST3D_ONLY==='1';
+  const stageLog=(name,status,extra={})=>{
+    console.log('P2LRN_QUEST3D_STAGE='+JSON.stringify({case:name,status,...extra}));
+  };
+  if(quest3dMode)stageLog('chrome-launch','START');
   const chromePath=await findChrome();
   chrome=await launchChrome(chromePath);
+  if(quest3dMode)stageLog('chrome-launch','PASS',{browser:chromePath});
+  if(quest3dMode)stageLog('cdp-connect','START');
   cdp=await connectPage(chrome.browserWs);
+  if(quest3dMode)stageLog('cdp-connect','PASS');
 
   if(process.env.P2LRN_ACCESSIBILITY_ONLY==='1'){
     const accessibility=await verifyStudioAccessibility(cdp);
@@ -2506,19 +2534,59 @@ try{
     await writeFile(join(visualEvidenceRoot,'accessibility-report.json'),
       JSON.stringify({ok:true,accessibility},null,2)+'\n');
     console.log('P2LRN_ACCESSIBILITY_BROWSER_REPORT='+JSON.stringify(accessibility));
-  }else if(process.env.P2LRN_QUEST3D_ONLY==='1'){
-    const threeGame=await verifyThreeGameInteractionAndResume(cdp);
-    const assemblyStart=await verifyAssemblyScatteredViewport(cdp);
-    const pointerDrag=await verifyThreePointerDragAndRope(cdp);
-    const scoredDrops=await verifyRealQuest3DDrops(cdp);
-    const retainedDrops=await verifyRetained3DDrops(cdp);
-    const assemblyLive=await verifyAssemblyLiveInput(cdp);
-    const singleCarry=await verifyExclusiveCarryInBrowser(cdp);
-    const threeMobile=await verifyThreeMobileAndDesktopEntry(cdp);
-    const accessibility=await verifyStudioAccessibility(cdp);
-    const report={ok:true,mode:'quest3d-mobile-and-desktop',threeGame,assemblyStart,pointerDrag,scoredDrops,retainedDrops,assemblyLive,singleCarry,threeMobile,accessibility};
+  }else if(quest3dMode){
+    // A separate case label and deadline make the original 32-minute silent
+    // Chrome hang reproducible without re-running previously passed cases.
+    const steps=[
+      ['three-game','threeGame',verifyThreeGameInteractionAndResume],
+      ['assembly-start','assemblyStart',verifyAssemblyScatteredViewport],
+      ['pointer-drag-rope','pointerDrag',verifyThreePointerDragAndRope],
+      ['scored-drops','scoredDrops',verifyRealQuest3DDrops],
+      ['retained-drops','retainedDrops',verifyRetained3DDrops],
+      ['assembly-live','assemblyLive',verifyAssemblyLiveInput],
+      ['single-carry','singleCarry',verifyExclusiveCarryInBrowser],
+      ['mobile-desktop','threeMobile',verifyThreeMobileAndDesktopEntry],
+      ['accessibility','accessibility',verifyStudioAccessibility]
+    ];
+    const selected=String(process.env.P2LRN_QUEST3D_CASE||'all').trim();
+    invariant(selected==='all'||steps.some(([name])=>name===selected),
+      'Unknown P2LRN_QUEST3D_CASE: '+selected);
+    const report={ok:false,mode:'quest3d-mobile-and-desktop',selected,cases:[]};
+    const evidenceFile=join(visualEvidenceRoot,'quest3d-report.json');
     await mkdir(visualEvidenceRoot,{recursive:true});
-    await writeFile(join(visualEvidenceRoot,'quest3d-report.json'),JSON.stringify(report,null,2)+'\n');
+    const persist=()=>writeFile(evidenceFile,JSON.stringify(report,null,2)+'\n');
+    await persist();
+    for(const [name,key,run] of steps){
+      if(selected!=='all'&&selected!==name)continue;
+      const started=Date.now();
+      const maxMs=100000;
+      stageLog(name,'START',{deadlineMs:maxMs});
+      let timer;
+      try{
+        const result=await Promise.race([
+          run(cdp),
+          new Promise((_,reject)=>{
+            timer=setTimeout(()=>reject(new Error(
+              '3D QA case '+name+' exceeded its '+maxMs+'ms deadline')),maxMs);
+          })
+        ]);
+        report[key]=result;
+        report.cases.push({name,status:'PASS',elapsedMs:Date.now()-started});
+        await persist();
+        stageLog(name,'PASS',{elapsedMs:Date.now()-started});
+      }catch(error){
+        const message=String(error?.stack||error);
+        report.failure={case:name,message,elapsedMs:Date.now()-started};
+        report.cases.push({name,status:'FAIL',elapsedMs:Date.now()-started});
+        await persist();
+        stageLog(name,'FAIL',{elapsedMs:Date.now()-started,message:message.slice(0,1500)});
+        throw new Error('3D focused regression failed at '+name+': '+message);
+      }finally{
+        if(timer)clearTimeout(timer);
+      }
+    }
+    report.ok=true;
+    await persist();
     console.log('P2LRN_QUEST3D_BROWSER_REPORT='+JSON.stringify(report));
   }else{
   const cases=[];
