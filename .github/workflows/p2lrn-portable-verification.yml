@@ -444,7 +444,7 @@ jobs:
     if: ${{ (github.event_name == 'workflow_dispatch' && inputs.quest3d_only) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[quest3d focused]')) }}
     name: Targeted Windows Chrome/Edge 3D regression with per-case evidence
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     defaults:
       run:
         shell: powershell
@@ -475,8 +475,16 @@ jobs:
         run: |
           node --check scripts/verify-local-viewer.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node scripts/verify-local-viewer.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # The parent PowerShell watchdog survives an unresponsive Chromium or
+          # Node event loop. Never let a single diagnostic consume 40 minutes.
+          $node=(Get-Command node).Source
+          $process=Start-Process -FilePath $node -ArgumentList 'scripts/verify-local-viewer.mjs' -PassThru -NoNewWindow
+          if (-not $process.WaitForExit(210000)) {
+            Write-Host 'P2LRN_QUEST3D_WATCHDOG=TIMEOUT after 210s'
+            try { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue } catch {}
+            throw 'Focused 3D Chrome diagnostic exceeded its 210-second OS watchdog'
+          }
+          if ($process.ExitCode -ne 0) { exit $process.ExitCode }
       - name: Keep partial scenario report and genuine browser captures even after failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
