@@ -50,6 +50,10 @@ if(offlineExecutable.correspondingSource.archiveSha256!=='sha256:'+createHash('s
 await import('./build-connector-downloads.mjs');
 // Deterministic downloadable P2LRN Skills for four AI platforms.
 await import('./build-skill-downloads.mjs');
+// Additional independently installable P2LRN Skills for all five agents.
+await import('./build-extra-skill-downloads.mjs');
+// Fail the site build when any supplemental download is incomplete or corrupted.
+await import('../../scripts/verify-extra-skill-downloads.mjs');
 await copyFile(join(outputRoot,'player','current','dist','p2lrn-sw.js'),join(outputRoot,'p2lrn-sw.js'));
 await cp(join(root,'packages','toolkit','web','studio'),join(outputRoot,'studio','runtime'),{recursive:true,force:true});
 for(const file of STUDIO_RUNTIME_SHARED_FILES){

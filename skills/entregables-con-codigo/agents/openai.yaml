@@ -1,0 +1,5 @@
+interface:
+  display_name: "Entregables con Código"
+  short_description: "Gráficos y contenidos educativos reproducibles"
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg

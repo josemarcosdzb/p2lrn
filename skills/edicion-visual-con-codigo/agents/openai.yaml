@@ -1,0 +1,5 @@
+interface:
+  display_name: "Edición Visual con Código"
+  short_description: "Imágenes, SVG, vídeo y documentos verificables"
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg

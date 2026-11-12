@@ -1,0 +1,5 @@
+interface:
+  display_name: "P2LRN Curso Ilustrado"
+  short_description: "Cursos, juegos, cuestionarios y QA reales"
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
