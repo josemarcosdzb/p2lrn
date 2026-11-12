@@ -453,6 +453,29 @@ for(const publicJs of ['p2lrn.js','en/p2lrn.js']){
 
 
 const productionPublicVersion = JSON.parse(await readFile(join(root,'packages','player','package.json'),'utf8')).version;
+// The two public homepages show a copyable, immutable Player CDN snippet.
+// Resolve the URL and SRI from the exact same artifacts that build-cdn.mjs
+// has just generated. Source templates deliberately contain placeholders.
+const pinnedCdnIndex=JSON.parse(await readFile(join(outputRoot,'index.json'),'utf8'));
+const pinnedCdnSri=JSON.parse(await readFile(join(outputRoot,'sri.json'),'utf8'));
+const pinnedPlayerPath=pinnedCdnIndex?.player?.classic;
+const pinnedPlayerIntegrity=pinnedCdnIndex?.player?.integrity?.classic;
+const pinnedPlayerVersion=pinnedCdnIndex?.player?.version;
+if(pinnedPlayerVersion!==productionPublicVersion||
+  typeof pinnedPlayerPath!=='string'||
+  !pinnedPlayerPath.startsWith('/player/'+productionPublicVersion+'/dist/')||
+  !/^\/player\/[A-Za-z0-9._-]+\/dist\/[A-Za-z0-9._/-]+\.js$/.test(pinnedPlayerPath)||
+  pinnedPlayerPath.includes('..')||
+  typeof pinnedPlayerIntegrity!=='string'||
+  pinnedCdnSri?.version!==productionPublicVersion||
+  pinnedCdnSri?.resources?.[pinnedPlayerPath]!==pinnedPlayerIntegrity)
+  throw new Error('Homepage CDN example cannot resolve an immutable Player URL/SRI from the release manifest');
+const pinnedPlayerBytes=await readFile(join(outputRoot,...pinnedPlayerPath.slice(1).split('/')));
+if('sha384-'+createHash('sha384').update(pinnedPlayerBytes).digest('base64')!==pinnedPlayerIntegrity)
+  throw new Error('Homepage Player CDN SRI does not match its immutable script bytes');
+const pinnedPlayerUrl='https://p2lrn.org'+pinnedPlayerPath;
+const playerUrlMarker='__P2LRN_PINNED_PLAYER_URL__';
+const playerSriMarker='__P2LRN_PINNED_PLAYER_SRI__';
 const brandHeadFor=(locale='es')=>[
   '<link rel="icon" type="image/png" sizes="96x96" href="/favicon.png">',
   '<link rel="shortcut icon" type="image/png" href="/favicon.png">',
@@ -466,6 +489,16 @@ for (const htmlPath of htmlFiles) {
   const pageLocale=pageRelative.startsWith('en/')?'en':'es';
   let html = await readFile(htmlPath,'utf8');
   html = html.replaceAll('0.5.0-alpha.10',productionPublicVersion);
+  if(pageRelative==='index.html'||pageRelative==='en/index.html'){
+    for(const marker of [playerUrlMarker,playerSriMarker]){
+      if(html.split(marker).length!==2)
+        throw new Error('Missing or duplicated homepage Player CDN placeholder: '+pageRelative+' '+marker);
+    }
+    html=html.replace(playerUrlMarker,pinnedPlayerUrl).replace(playerSriMarker,pinnedPlayerIntegrity);
+    if(html.includes(playerUrlMarker)||html.includes(playerSriMarker))
+      throw new Error('Unresolved homepage Player CDN placeholder: '+pageRelative);
+  }
+
   html = html.replace(/href=["']\/p2lrn\.css(?:\?[^"']*)?["']/gi,'href="/p2lrn.css?v=p2lrn-brand-20261027-v3"');
   // Decorative release badges may be removed, but live application status controls must remain.
   html = html.replace(/<div\s+class=["']header-meta["'][^>]*>[\s\S]*?<\/div>/gi,

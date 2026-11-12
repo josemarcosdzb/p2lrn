@@ -55,4 +55,17 @@ for(const component of ['player','studio','analytics']){
     assert.equal(manifest.resources[asset],index[component].integrity?.[format]);
   }
 }
+// Audit the HTML actually emitted by build-site.mjs, not just its source templates.
+// A valid source placeholder is not a functioning integration example on a website.
+const canonicalPlayerPath=index?.player?.classic;
+const canonicalPlayerSri=index?.player?.integrity?.classic;
+assert.equal(manifest.resources[canonicalPlayerPath],canonicalPlayerSri);
+assert.equal('sha384-'+createHash('sha384').update(await readFile(join(root,canonicalPlayerPath.slice(1)))).digest('base64'),canonicalPlayerSri);
+const pinnedHtmlSnippet='&lt;script src="https://p2lrn.org'+canonicalPlayerPath+'" integrity="'+canonicalPlayerSri+'" crossorigin="anonymous" referrerpolicy="no-referrer"&gt;&lt;/script&gt;';
+for(const homepage of ['index.html','en/index.html']){
+  const html=await readFile(join(root,homepage),'utf8');
+  assert.ok(html.includes(pinnedHtmlSnippet),'Built homepage has no usable immutable CDN URL and SRI: '+homepage);
+  assert.ok(html.includes('&lt;p2lrn-player src="./course.p2lrn"&gt;&lt;/p2lrn-player&gt;'),'Built homepage has no Player web component example: '+homepage);
+  assert.doesNotMatch(html,/__P2LRN_PINNED_PLAYER_(?:URL|SRI)__/,'Unresolved homepage CDN marker: '+homepage);
+}
 console.log(JSON.stringify({ok:true,version,verifiedSriResources:resources.length},null,2));
