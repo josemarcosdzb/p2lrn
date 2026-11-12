@@ -100,7 +100,7 @@ export function writeStoredZip(entries){
   return concat([locals,central,end]);
 }
 
-export async function exportP2LRNPackage(document){
+export async function exportP2LRNPackage(document,{includePayloads=false}={}){
   if(!document?.package||!document?.manifest||!document?.graph)throw new TypeError('Studio document is required.');
   if(typeof document.validateForExport==='function')await document.validateForExport();
   const manifest=structuredClone(document.manifest);
@@ -170,5 +170,85 @@ export async function exportP2LRNPackage(document){
     manifest,
     graph,
     filename:String(document.sourceName||'curso.p2lrn').replace(/\.p2lrn$/i,'')+(document.createdFromScratch?'':'-editado')+'.p2lrn',
+    ...(includePayloads?{payloads}:{}),
   };
+}
+
+/**
+ * Creates a transport ZIP with an outer .p2lrn and binary parts.
+ * The authoring document is never modified. Parts are not courses.
+ */
+export async function exportMultipartP2LRNBundle(document,{partSizeMiB=25}={}){
+  const mib=Number(partSizeMiB);
+  if(!Number.isSafeInteger(mib)||mib<1||mib>64)
+    throw new RangeError('El tamaño de parte debe ser un entero entre 1 y 64 MiB.');
+  const size=mib*1048576;
+  const exported=await exportP2LRNPackage(document,{includePayloads:true});
+  const manifest=structuredClone(exported.manifest);
+  const graph=structuredClone(exported.graph);
+  const profile='https://p2lrn.org/profile/multipart';
+  const media='application/vnd.p2lrn.multipart+json';
+  const byPath=new Map(manifest.files.map(f=>[f.path,f]));
+  const candidates=[];
+  for(const entity of graph.entities??[]){
+    if(entity.type!=='resource')continue;
+    for(const rep of entity.representations??[]){
+      if(rep.extensions?.[profile]||rep.location?.type!=='embedded')continue;
+      const path=rep.location.path;
+      const data=exported.payloads.get(path);
+      if(data?.byteLength>size&&byPath.has(path))candidates.push({rep,path,data});
+    }
+  }
+  candidates.sort((a,b)=>b.data.byteLength-a.data.byteLength);
+  const chosen=candidates[0];
+  if(!chosen)throw new Error('No existe un recurso embebido que supere el tamaño de parte elegido.');
+  if(chosen.data.byteLength>256*1048576)
+    throw new RangeError('El Player no admite recursos multipart mayores de 256 MiB.');
+  const count=Math.ceil(chosen.data.byteLength/size);
+  if(count>512)throw new RangeError('El Player no admite más de 512 partes.');
+  const stem=String(exported.filename).replace(/\.p2lrn$/i,'')
+    .replace(/[^A-Za-z0-9._-]/g,'-').replace(/^\.+/,'').slice(0,90)||'curso';
+  const outerName=stem+'-multipart.p2lrn';
+  const entries=[],parts=[];
+  for(let i=0;i<count;i++){
+    const data=chosen.data.slice(i*size,Math.min(chosen.data.byteLength,(i+1)*size));
+    const href=stem+'-multipart.part'+String(i+1).padStart(3,'0');
+    parts.push({href,size:data.byteLength,byteDigest:await sha256(data)});
+    entries.push({path:href,data});
+  }
+  const multipart={version:'1',mediaType:byPath.get(chosen.path).mediaType,
+    size:chosen.data.byteLength,byteDigest:await sha256(chosen.data),parts};
+  const multipartData=jsonBytes(multipart);
+  const multipartPath='multipart/'+multipart.byteDigest.slice(7)+'.json';
+  for(const entity of graph.entities??[]){
+    for(const rep of entity.representations??[]){
+      const loc=rep.location??{};
+      if((loc.type==='embedded'&&loc.path===chosen.path)||
+        (loc.type==='package-member'&&loc.package===chosen.path)){
+        rep.location={type:'embedded',path:multipartPath};
+        rep.extensions={...(rep.extensions??{}),[profile]:
+          loc.type==='package-member'?{version:'1',member:String(loc.member)}:{version:'1'}};
+      }
+    }
+  }
+  manifest.files=manifest.files.filter(f=>f.path!==chosen.path);
+  manifest.files.push(await descriptor(multipartPath,multipartData,media));
+  manifest.files.sort((a,b)=>a.path.localeCompare(b.path));
+  if(!manifest.profiles.some(p=>p.id===profile))
+    manifest.profiles.push({id:profile,version:'0.4.0',requirement:'required'});
+  manifest.profiles.sort((a,b)=>a.id.localeCompare(b.id));
+  const graphData=jsonBytes(graph);
+  manifest.graph=await descriptor(manifest.graph.path,graphData,manifest.graph.mediaType,manifest.graph.schema);
+  manifest.integrity={algorithm:'sha256',
+    contentRoot:await sha256(encoder.encode(canonicalize(normalizedIntegrityInput(manifest))))};
+  const outer=writeStoredZip([
+    {path:'META-INF/manifest.json',data:jsonBytes(manifest)},
+    {path:manifest.graph.path,data:graphData},
+    ...manifest.files.map(f=>({path:f.path,
+      data:f.path===multipartPath?multipartData:exported.payloads.get(f.path)})),
+  ]);
+  const bytes=writeStoredZip([{path:outerName,data:outer},...entries]);
+  return {filename:stem+'-multipart.zip',bytes,outerName,outerBytes:outer,
+    partCount:count,parts,contentRoot:manifest.integrity.contentRoot,
+    representationId:chosen.rep.id};
 }
