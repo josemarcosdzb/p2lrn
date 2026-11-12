@@ -1,0 +1,36 @@
+{
+  "schema": "https://p2lrn.org/schema/showcase-catalog/1",
+  "version": 1,
+  "courses": [
+    {
+      "file": "viaje-al-centro-de-la-tierra-cloud.p2lrn",
+      "title": "Viaje al centro de la Tierra — Cloud",
+      "titleEn": "Journey to the Centre of the Earth — Cloud",
+      "descriptionEs": "Curso de geología y atmósfera con seis unidades y 19 actividades.",
+      "descriptionEn": "Geology and atmosphere course with six units and 19 activities.",
+      "sha256": "sha256:2a97ff46b97464ba74592a8ee3e9aeb7ec5e90b5f01b68446a4d107d692172a8",
+      "bytes": 875562,
+      "packageId": "urn:uuid:b86fabc3-0f82-46a5-ab60-5049942227bf"
+    },
+    {
+      "file": "viaje-al-centro-de-la-tierra-chatgpt.p2lrn",
+      "title": "Viaje al centro de la Tierra — ChatGPT",
+      "titleEn": "Journey to the Centre of the Earth — ChatGPT",
+      "descriptionEs": "Otra versión del curso de geología y atmósfera, con seis unidades y 19 actividades.",
+      "descriptionEn": "A separate version of the geology and atmosphere course, with six units and 19 activities.",
+      "sha256": "sha256:cf601f3cfe6050c6aba1bef9efa2f2aa17b97131040be42a9fe44d23ae610757",
+      "bytes": 11078241,
+      "packageId": "urn:uuid:2cca7b6d-686b-5311-b34c-ff86b5b66ebf"
+    },
+    {
+      "file": "curso-ensamblaje-burro.p2lrn",
+      "title": "Monta el burro — ensamblaje 3D",
+      "titleEn": "Assemble the donkey — 3D activity",
+      "descriptionEs": "Curso de ensamblaje 3D con un ejercicio de siete piezas.",
+      "descriptionEn": "3D assembly course featuring a seven-piece exercise.",
+      "sha256": "sha256:89925a72e1a190c2f4089701b29faf94a4b9fe930a56f34fb229745adf7020cf",
+      "bytes": 1036956,
+      "packageId": "urn:uuid:70295e9d-18e9-4e0b-8854-6190b3223bcc"
+    }
+  ]
+}

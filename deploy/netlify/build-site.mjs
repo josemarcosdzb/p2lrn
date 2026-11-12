@@ -198,9 +198,92 @@ if(freeSamplesSeen.size!==freeProvenanceMap.size)
   throw new Error('Community sample provenance includes files absent from the public corpus: '+
     [...freeProvenanceMap.keys()].filter(id=>!freeSamplesSeen.has(id)).join(', '));
 
-// Native documentation fixtures are verified during the build, but must not be published.
+// Only creator-supplied, hash-pinned course bytes are eligible for the showcase.
+const showcaseSource=join(root,'examples','showcase');
+const showcaseMetadata=JSON.parse(await readFile(join(showcaseSource,'catalog.json'),'utf8'));
+if(showcaseMetadata?.schema!=='https://p2lrn.org/schema/showcase-catalog/1'||
+   showcaseMetadata.version!==1||!Array.isArray(showcaseMetadata.courses)||
+   showcaseMetadata.courses.length<1||showcaseMetadata.courses.length>25)
+  throw new Error('Invalid showcase catalog');
+const showcaseOutput=join(examplesOutput,'showcase');
+await mkdir(showcaseOutput,{recursive:true});
+const showcaseEntries=[];
+const seenShowcase=new Set();
+for(const item of showcaseMetadata.courses){
+  if(!/^[a-z0-9][a-z0-9-]*\.p2lrn$/u.test(item?.file??'')||seenShowcase.has(item.file))
+    throw new Error('Unsafe or duplicate showcase filename');
+  if(![item.title,item.titleEn,item.descriptionEs,item.descriptionEn].every(
+    value=>typeof value==='string'&&value.trim()===value&&value.length>=12&&value.length<=300))
+    throw new Error('Invalid showcase description: '+item.file);
+  if(!/^sha256:[0-9a-f]{64}$/u.test(item.sha256)||!Number.isSafeInteger(item.bytes)||
+     item.bytes<100||item.bytes>40_000_000||!/^urn:uuid:[0-9a-f-]{36}$/u.test(item.packageId))
+    throw new Error('Invalid showcase digest, size or packageId: '+item.file);
+  seenShowcase.add(item.file);
+  const source=join(showcaseSource,item.file),destination=join(showcaseOutput,item.file);
+  const bytes=await readFile(source);
+  if(bytes.length!==item.bytes||
+     'sha256:'+createHash('sha256').update(bytes).digest('hex')!==item.sha256)
+    throw new Error('Showcase source SHA-256 mismatch: '+item.file);
+  const inspected=await inspectPackage(source);
+  if(inspected.packageId!==item.packageId||!inspected.entrypoints.some(entry=>entry.type==='course'))
+    throw new Error('Showcase package identity or course entrypoint mismatch: '+item.file);
+  await copyFile(source,destination);
+  if(!(await readFile(destination)).equals(bytes))throw new Error('Showcase bytes changed: '+item.file);
+  showcaseEntries.push({
+    title:item.title,titleEn:item.titleEn,descriptionEs:item.descriptionEs,
+    descriptionEn:item.descriptionEn,category:'creator-course',
+    url:'/examples/showcase/'+item.file,source:'examples/showcase/'+item.file,
+    sourceSha256:item.sha256,rendererId:null,profiles:inspected.profiles,
+    entrypoints:inspected.entrypoints,packageId:inspected.packageId,
+    formatVersion:inspected.formatVersion,bytes:inspected.bytes,browserVerified:false,
+  });
+}
+const nativeQuestionnaireSpecs=[
+  {file:'native-questionnaire-course.p2lrn',title:'Curso de ejemplo con cuestionario nativo',
+   titleEn:'Sample course with a native questionnaire',
+   descriptionEs:'Paquete de ejemplo con una actividad de cuestionario nativo.',
+   descriptionEn:'Sample package containing one native questionnaire activity.'},
+  {file:'native-questionnaire-games-course.p2lrn',title:'Juego de palabras conectadas',
+   titleEn:'Connected words game',
+   descriptionEs:'Paquete de ejemplo con un juego de palabras conectadas.',
+   descriptionEn:'Sample package containing a connected words game.'},
+];
+const nativeQuestionnaireEntries=[];
+for(const item of nativeQuestionnaireSpecs){
+  const source=join(canonicalSource,item.file),destination=join(canonicalOutput,item.file);
+  const inspected=await inspectPackage(source);
+  await copyFile(source,destination);
+  const bytes=await readFile(source);
+  if(!(await readFile(destination)).equals(bytes))
+    throw new Error('Native questionnaire example bytes changed: '+item.file);
+  nativeQuestionnaireEntries.push({
+    title:item.title,titleEn:item.titleEn,
+    descriptionEs:item.descriptionEs,descriptionEn:item.descriptionEn,
+    category:'canonical-questionnaire',url:'/examples/canonical/'+item.file,
+    source:'examples/canonical/'+item.file,
+    sourceSha256:'sha256:'+createHash('sha256').update(bytes).digest('hex'),
+    rendererId:null,profiles:inspected.profiles,entrypoints:inspected.entrypoints,
+    packageId:inspected.packageId,formatVersion:inspected.formatVersion,
+    bytes:inspected.bytes,browserVerified:false,
+  });
+}
+
+// Keep source-backed questionnaire demonstrations in the public catalog.
 const documentationExamples = await buildDocExamples({outputRoot:examplesOutput});
 const generatedEntries = documentationExamples.filter((entry)=>entry.category==='generated-external');
+const questionnaireTitlesEn=Object.freeze({"standard":"Standard questionnaire","memory":"Memory","matching":"Matching","ordering":"Ordering","classification":"Classification","true-false":"True or false","word-search":"Word search","crossword":"Crossword","rosco":"Word wheel","3d":"3D activities"});
+const generatedQuestionnaireEntries=documentationExamples
+  .filter(entry=>entry.category==='generated-questionnaire')
+  .map(entry=>{
+    const slug=/^\/examples\/generated\/questionnaire-([a-z0-9-]+)\.p2lrn$/u.exec(entry.url)?.[1];
+    if(!slug||!Object.hasOwn(questionnaireTitlesEn,slug))
+      throw new Error('Unexpected native questionnaire demo: '+entry.url);
+    return {...entry,titleEn:questionnaireTitlesEn[slug],
+      descriptionEs:'Actividad individual de demostración generada y verificada en la compilación.',
+      descriptionEn:'Single-activity demonstration generated and validated at build time.',
+      browserVerified:false};
+  });
+
 const requiredExecutableExamples = ['scorm12-browser-demo.p2lrn','qti3-interactive-demo.p2lrn'];
 for (const name of requiredExecutableExamples) {
   const demoPath = join(examplesOutput,'generated',name);
@@ -213,7 +296,7 @@ const catalog = {
   defaultExample:verifiedDefaultViewerExample.url,
   schema:'https://p2lrn.org/schema/docs-example-catalog/1',
   version:'1',
-  examples:[...canonicalEntries,...generatedEntries],
+  examples:[...showcaseEntries,...nativeQuestionnaireEntries,...generatedQuestionnaireEntries,...canonicalEntries,...generatedEntries],
 };
 await writeFile(join(examplesOutput,'catalog.json'),JSON.stringify(catalog,null,2)+'\n');
 
@@ -955,7 +1038,7 @@ async function exists(path) {
 // QA fixtures are used to verify questionnaire and multipart functionality during the build,
 // but only imported SCORM and QTI packages are distributed on the public site.
 for(const example of documentationExamples){
-  if(example.category==='generated-external')continue;
+  if(example.category==='generated-external'||example.category==='generated-questionnaire')continue;
   if(!example.url.startsWith('/examples/'))throw new Error('Invalid QA example path');
   const parts=example.url.slice('/examples/'.length).split('/');
   if(parts.some((part)=>!part||part==='.'||part==='..'))throw new Error('Unsafe QA example path');
@@ -966,6 +1049,9 @@ await rm(join(examplesOutput,'multipart-demo'),{recursive:true,force:true});
 const expectedPublicCoursePaths = new Set([
   ...canonicalEntries.map((entry)=>entry.url),
   ...generatedEntries.map((entry)=>entry.url),
+  ...showcaseEntries.map((entry)=>entry.url),
+  ...nativeQuestionnaireEntries.map((entry)=>entry.url),
+  ...generatedQuestionnaireEntries.map((entry)=>entry.url),
 ]);
 const actuallyPublishedCourses = (await walk(examplesOutput))
   .filter((path)=>path.endsWith('.p2lrn')||path.endsWith('.p2rln'))
