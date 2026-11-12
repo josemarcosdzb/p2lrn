@@ -192,7 +192,7 @@ jobs:
             }
             $cli=Join-Path $installed 'bin\p2lrn-lti.mjs'
             if(!(Test-Path -LiteralPath $cli -PathType Leaf)){throw 'PUBLIC_LTI_PROVIDER_CLI_MISSING'}
-            $help=(& node $cli help 2>&1 | Out-String)
+            $help=(& node $cli help | Out-String)
             if($LASTEXITCODE -ne 0){throw 'PUBLIC_LTI_PROVIDER_CLI_FAILED'}
             foreach($required in @('platform add','platform list','platform disable','sqlite','postgres','mariadb','mysql','sqlserver')){
               if(!$help.Contains($required)){throw "PUBLIC_LTI_CLI_FEATURE_MISSING=$required"}
