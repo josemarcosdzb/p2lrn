@@ -10,3 +10,14 @@ test('Studio visual layout exposes semantic, distinct insertion tools',()=>{
 test('Studio visual editor refuses missing editable surfaces',()=>{
   assert.throws(()=>mountVisualLayoutTools({}),/require host and editable surface/);
 });
+
+test('Studio learner preview uses the Player source transaction and tracks lesson navigation',async()=>{
+ const hosted=await readFile(new URL('../../../deploy/netlify/site/studio/studio.js',import.meta.url),'utf8');
+ const english=await readFile(new URL('../../../deploy/netlify/site/en/studio/studio.js',import.meta.url),'utf8');
+ for(const text of [hosted,english]){
+  assert.match(text,/player\.loadSource\(next,\{node:selectedId\}\)/);
+  assert.match(text,/player\.addEventListener\('p2lrn:nodechange'/);
+  assert.match(text,/selectedId=id;\s*renderTree\(\)/);
+  assert.match(text,/details\.studio-tree-module/);
+ }
+});

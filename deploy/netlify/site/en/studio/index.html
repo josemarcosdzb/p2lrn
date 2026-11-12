@@ -132,7 +132,11 @@
   </div>
 
   <section class="studio-workspace" data-workspace="" hidden="">
-    <aside class="studio-outline">
+    <div class="studio-workspace-actions">
+      <button class="button" type="button" data-toggle-outline aria-controls="studio-outline-panel" aria-expanded="true">Hide outline</button>
+      <span data-current-lesson role="status" aria-live="polite">Selected lesson: —</span>
+    </div>
+    <aside class="studio-outline" id="studio-outline-panel">
       <div class="studio-outline-head"><span>COURSE</span><strong data-package-name="">—</strong></div>
       <nav data-tree="" aria-label="Course structure"></nav>
     </aside>

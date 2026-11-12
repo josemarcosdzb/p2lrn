@@ -30,6 +30,10 @@ const openUrlButton=document.querySelector('[data-open-url]');
 const toolbar=document.querySelector('[data-toolbar]');
 const workspace=document.querySelector('[data-workspace]');
 const tree=document.querySelector('[data-tree]');
+const outlinePanel=document.querySelector('[data-workspace] .studio-outline');
+const outlineToggle=document.querySelector('[data-toggle-outline]');
+const currentLessonLabel=document.querySelector('[data-current-lesson]');
+const collapsedUnits=new Set();
 const packageName=document.querySelector('[data-package-name]');
 const editorStage=document.querySelector('[data-editor-stage]');
 const previewStage=document.querySelector('[data-preview-stage]');
@@ -253,25 +257,63 @@ function updateFormatState(){
 
 function renderTree(){
   tree.replaceChildren();
+  if(!studio)return;
   const root=studio.entity(studio.rootId);
   const seen=new Set();
-  const walk=(entity,parent)=>{
-    if(!entity||seen.has(entity.id))return;
-    seen.add(entity.id);
+  const choose=(id)=>{
+    selectedId=id;renderTree();
+    if(mode==='preview'){
+      if(previewObjectUrl&&player.getAttribute('src')===previewObjectUrl)
+        player.setAttribute('node',id);
+      else void refreshPreview().catch(error=>setStatus(error.message));
+    }else void renderEditor().catch(error=>setStatus(error.message));
+  };
+  const addButton=(entity,parent)=>{
     const wrap=document.createElement('div');wrap.className='studio-tree-node';
-    const button=document.createElement('button');button.type='button';button.dataset.entityId=entity.id;
+    const button=document.createElement('button');button.type='button';
+    button.dataset.entityId=entity.id;
     button.innerHTML='<span class="type"></span><span class="title"></span>';
     button.querySelector('.type').textContent=entity.type;
     button.querySelector('.title').textContent=titleOf(entity);
     if(entity.id===selectedId)button.setAttribute('aria-current','true');
-    button.addEventListener('click',()=>{selectedId=entity.id;renderTree();void renderEditor();if(mode==='preview')void refreshPreview();});
+    button.addEventListener('click',()=>choose(entity.id));
     wrap.append(button);parent.append(wrap);
-    if(entity.children?.length){
-      const children=document.createElement('div');children.className='studio-tree-children';wrap.append(children);
-      entity.children.forEach((id)=>walk(studio.entity(id),children));
+  };
+  const walk=(entity,parent)=>{
+    if(!entity||seen.has(entity.id))return;
+    seen.add(entity.id);
+    if(entity.type==='unit'&&entity.children?.length){
+      const group=document.createElement('details');group.className='studio-tree-module';
+      group.dataset.moduleId=entity.id;
+      group.open=!collapsedUnits.has(entity.id);
+      const summary=document.createElement('summary');summary.textContent=titleOf(entity);
+      const children=document.createElement('div');children.className='studio-tree-children';
+      group.append(summary,children);parent.append(group);
+      group.addEventListener('toggle',()=>{
+        if(group.open)collapsedUnits.delete(entity.id);
+        else collapsedUnits.add(entity.id);
+      });
+      addButton(entity,children);
+      entity.children.forEach(id=>walk(studio.entity(id),children));
+    }else{
+      addButton(entity,parent);
+      if(entity.children?.length){
+        const wrap=parent.lastElementChild;
+        const children=document.createElement('div');children.className='studio-tree-children';
+        wrap.append(children);entity.children.forEach(id=>walk(studio.entity(id),children));
+      }
     }
   };
   walk(root,tree);
+  const active=[...tree.querySelectorAll('[data-entity-id]')]
+    .find(button=>button.dataset.entityId===selectedId);
+  let ancestor=active?.closest('details.studio-tree-module');
+  while(ancestor){
+    ancestor.open=true;collapsedUnits.delete(ancestor.dataset.moduleId);
+    ancestor=ancestor.parentElement?.closest('details.studio-tree-module');
+  }
+  if(currentLessonLabel)currentLessonLabel.textContent=
+    (document.documentElement.lang.startsWith('en')?'Selected lesson: ':'Lección actual: ')+titleOf(studio.entity(selectedId));
   updateStructureActions();
 }
 async function renderEditor(){
@@ -379,11 +421,24 @@ async function refreshPreview(){
   if(!studio||!selectedId)return;
   setStatus('Generando vista alumno…');
   const exported=await buildVerifiedPreview();
-  if(previewObjectUrl)URL.revokeObjectURL(previewObjectUrl);
-  previewObjectUrl=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
-  player.setAttribute('src',previewObjectUrl);player.setAttribute('node',selectedId);
-  await player.reload?.();
-  setStatus('Vista alumno');
+  const next=URL.createObjectURL(new Blob([exported.bytes],{type:'application/vnd.p2lrn+zip'}));
+  const previous=previewObjectUrl;
+  previewObjectUrl=next;
+  try{
+    if(typeof player.loadSource==='function')await player.loadSource(next,{node:selectedId});
+    else{
+      player.setAttribute('node',selectedId);
+      player.setAttribute('src',next);
+      await player.reload?.();
+    }
+    if(previous)URL.revokeObjectURL(previous);
+    setStatus('Vista alumno');
+  }catch(error){
+    previewObjectUrl=previous;
+    URL.revokeObjectURL(next);
+    setStatus(error?.message||String(error));
+    throw error;
+  }
 }
 async function setMode(next){
   if(!studio)return;
@@ -866,6 +921,22 @@ openFileButton?.addEventListener('click',()=>fileInput.click());
 fileInput.addEventListener('change',()=>{const file=fileInput.files?.[0];fileInput.value='';if(file)void openLocal(file).catch((error)=>setStatus(error.message));});
 openUrlButton.addEventListener('click',()=>void openRemote().catch((error)=>setStatus(error.message)));
 urlInput.addEventListener('keydown',(event)=>{if(event.key==='Enter'){event.preventDefault();void openRemote().catch((error)=>setStatus(error.message));}});
+player.addEventListener('p2lrn:nodechange',(event)=>{
+  if(mode!=='preview'||!studio)return;
+  const id=event.detail?.entityId;
+  if(!id||!studio.entity(id)||selectedId===id)return;
+  selectedId=id;
+  renderTree();
+});
+outlineToggle?.addEventListener('click',()=>{
+  const expanded=outlineToggle.getAttribute('aria-expanded')==='true';
+  outlinePanel.hidden=expanded;
+  workspace.dataset.outlineHidden=String(expanded);
+  outlineToggle.setAttribute('aria-expanded',String(!expanded));
+  outlineToggle.textContent=document.documentElement.lang.startsWith('en')
+    ?(expanded?'Show outline':'Hide outline')
+    :(expanded?'Mostrar índice':'Ocultar índice');
+});
 editButton.addEventListener('click',()=>void setMode('edit').catch((error)=>setStatus(error.message)));
 previewButton.addEventListener('click',()=>void setMode('preview').catch((error)=>setStatus(error.message)));
 document.querySelectorAll('[data-command]').forEach((button)=>{

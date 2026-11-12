@@ -216,3 +216,24 @@ html[data-studio-mode=preview] .studio-toolbar{position:static}
 /* A translated status message must never widen the viewport on mobile. */
 .studio-warning[data-unsaved-warning]{max-width:100%;min-width:0;flex-wrap:wrap;overflow-wrap:anywhere;white-space:normal}
 .studio-warning[data-unsaved-warning] span{min-width:0;max-width:100%;flex:1 1 180px;overflow-wrap:anywhere;white-space:normal}
+
+/* Course index controls remain accessible when the index is hidden. */
+.studio-workspace-actions{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:0 2px;min-width:0}
+.studio-workspace-actions button{min-height:44px}
+.studio-workspace-actions button:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+.studio-workspace-actions [data-current-lesson]{font-size:.86rem;font-weight:700;color:#344054;overflow-wrap:anywhere;min-width:0}
+.studio-workspace[data-outline-hidden="true"]{grid-template-columns:minmax(0,1fr)}
+.studio-workspace .studio-outline[hidden]{display:none!important}
+.studio-outline nav{max-height:min(79vh,1150px);overflow-y:auto;scrollbar-gutter:stable}
+.studio-tree-module{min-width:0}
+.studio-tree-module>summary{cursor:pointer;padding:11px 10px;margin:4px;border-radius:6px;font-size:.86rem;line-height:1.45;font-weight:750;color:#243b53;overflow-wrap:anywhere}
+.studio-tree-module>summary:hover{background:#eef3fa}
+.studio-tree-module>summary:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+.studio-tree-module[open]>summary{background:#f3f6fa}
+.studio-tree-module .studio-tree-node .type{font-size:.58rem}
+html[data-studio-mode=preview] .studio-toolbar{grid-template-columns:auto minmax(0,1fr);grid-template-areas:'mode save'}
+html[data-studio-mode=preview] .studio-toolbar .studio-format,
+html[data-studio-mode=preview] .studio-toolbar .studio-structure{display:none}
+html[data-studio-mode=preview] .studio-preview-stage{min-height:min(88vh,1350px);padding:clamp(6px,1vw,12px)}
+html[data-studio-mode=preview] .studio-preview-stage p2lrn-player{min-height:min(84vh,1300px);width:100%}
+@media(max-width:900px){.studio-workspace-actions{grid-column:1}.studio-outline nav{max-height:36vh}}
