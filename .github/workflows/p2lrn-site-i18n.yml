@@ -18,6 +18,8 @@ on:
       # Manually reviewed English Studio is not generated, but changes must still run browser QA.
       - 'deploy/netlify/site/en/studio/index.html'
       - 'deploy/netlify/site/en/studio/studio.js'
+      # Reviewed English Studio guide is independent editorial source: validate it too.
+      - 'deploy/netlify/site/en/docs/studio/index.html'
       # Manually restored English LMS guides must never bypass bilingual QA.
       - 'deploy/netlify/site/en/docs/conectores/**'
       - 'deploy/netlify/site/en/docs/troubleshooting/**'
