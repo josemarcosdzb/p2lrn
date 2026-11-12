@@ -878,7 +878,7 @@ async function exportPackage(){
 }
 
 async function exportMultipartBundle(options={}){
-  if(!studio)throw new Error('Crea o abre un curso primero.');
+  if(!studio)throw new Error('Create or open a course first.');
   const bundle=await exportMultipartP2LRNBundle(studio,options);
   downloadStudioBytes(bundle.bytes,bundle.filename,'application/zip');
   exportedRevision=studio.changeCount;
