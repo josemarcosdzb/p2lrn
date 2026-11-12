@@ -17,6 +17,8 @@ const handAuthoredEnglishPages=new Set([
   'docs/entrega-offline/index.html',
   'docs/conectores/lti/index.html',
   'docs/conectores/lms/index.html',
+  // The existing English AI guide is reviewed; machine translation changes IDs.
+  'docs/conectores/ia/index.html',
   'cursos-offline/index.html',
   'crear-cursos-interactivos/index.html',
   'skills/index.html',

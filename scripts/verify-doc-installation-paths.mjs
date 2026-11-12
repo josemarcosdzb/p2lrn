@@ -52,7 +52,8 @@ for(const eventName of ['p2lrn-studio-create','p2lrn-studio-open','p2lrn-studio-
 forbid('npm studio article',channelArticle(npmStudioDoc),'CDN');
 forbid('npm studio article',channelArticle(npmStudioDoc),'p2lrn.netlify.app');
 
-must('cdn docs',cdnDoc,'/player/current/dist/p2lrn.js');
+must('cdn docs',cdnDoc,'/player/'+version+'/dist/p2lrn.js');
+must('cdn docs',cdnDoc,'/player/current/');
 must('cdn docs',cdnDoc,'/player/'+version+'/dist/p2lrn.js');
 must('cdn docs',cdnDoc,'/docs/cdn/studio/');
 for(const token of ['npm install','npx ','@p2lrn/'])forbid('cdn docs article',channelArticle(cdnDoc),token);
@@ -71,8 +72,9 @@ must('studio source',studioSource,"observedAttributes(){return['src','save-endpo
 must('studio cli',studioCli,'generatedEndpoints:{save:true,reader:materialized.generatedReader,import:materialized.generatedImport}');
 must('studio README',studioReadme,'npm install @p2lrn/studio@'+version+' @p2lrn/player@'+version);
 if(startDoc.includes('npm install')||startDoc.includes('p2lrn.netlify.app'))failures.push('start docs must orient without embedding installation code');
-must('easy-start docs',easyStartDoc,'/player/current/dist/p2lrn.js');
-must('easy-start docs',easyStartDoc,'questionnaire-standard.p2lrn');
+must('easy-start docs',easyStartDoc,'href="/studio/"');
+must('easy-start docs',easyStartDoc,'Cuestionario');
+must('easy-start docs',easyStartDoc,'href="/docs/studio/"');
 for(const token of ['npm install','npx ','@p2lrn/'])forbid('easy-start article',channelArticle(easyStartDoc),token);
 
 forbid('css',css,'.doc-content .example-actions .button{color:inherit;text-decoration:none}');
@@ -102,6 +104,7 @@ for(const file of htmlFiles){
     if(href==='/studio/')target=join(site,'studio','index.html');
     else if(href==='/demo/')target=join(site,'demo','index.html');
     else if(href==='/contacto/')target=join(site,'contacto','index.html');
+    else if(/\.(?:css|js)$/iu.test(href))target=join(site,...href.slice(1).split('/'));
     else target=join(site,...href.slice(1).split('/'),'index.html');
     try{if(!(await stat(target)).isFile())failures.push(rel+': missing static route '+href)}catch{failures.push(rel+': missing static route '+href)}
   }
