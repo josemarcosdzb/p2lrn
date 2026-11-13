@@ -45,6 +45,12 @@ on:
       - 'packages/analytics/src/p2lrn-analytics.js'
       # Workflow-only edits can be checked via workflow_dispatch without regenerating English.
   workflow_dispatch:
+    inputs:
+      regenerate_english:
+        description: 'Regenerate the English mirror in addition to checking the website'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -111,7 +117,7 @@ jobs:
 
   generate-english-site:
     # English regeneration is explicit, reviewable and never auto-committed during CI.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.regenerate_english }}
     runs-on: [self-hosted, Windows, X64, p2lrn-windows]
     timeout-minutes: 45
     steps:
