@@ -2304,3 +2304,30 @@ body.landing-page .landing-doc-shell .landing-hero h1{max-width:100%;font-size:c
 .collaboration-guide-activity p{margin:9px 0;color:#2e415e;line-height:1.62}
 .collaboration-guide-activity p strong{color:#183c6c}
 .collaboration-guide-activity:target{outline:3px solid #2163ab;outline-offset:3px}
+
+/* Homepage hero: preserve complete title glyphs and line boxes at every width.
+   The previous short line-height + oversized selector clipped "Juegos".
+   Keep the cinematic carousel overflow, but never clip the H1 text itself. */
+.hero-showcase .hero-center{max-width:100%;min-width:0;overflow:visible}
+.hero-showcase h1.hero-title{
+  max-width:min(100%,900px);
+  margin:26px auto 0;
+  padding:.13em .05em .2em;
+  font-size:clamp(2.05rem,4vw,4.4rem);
+  line-height:1.2;
+  letter-spacing:-.037em;
+  overflow:visible;
+  overflow-wrap:normal;
+  word-break:normal;
+  hyphens:none;
+  text-wrap:balance;
+}
+@media(max-width:760px){
+  .hero-showcase h1.hero-title{font-size:clamp(1.9rem,7vw,3rem);line-height:1.22;padding:.13em .05em .2em}
+}
+@media(max-width:360px){
+  .hero-showcase h1.hero-title{font-size:clamp(1.65rem,8vw,1.95rem);overflow-wrap:break-word}
+}
+/* A 4:3 recording in a wide carousel must remain fully visible, not be
+   cropped to fit the thumbnail ratio. The real poster uses the same ratio. */
+.hero-slide[data-video-slide] video{object-fit:contain;object-position:center;background:#07152f}
